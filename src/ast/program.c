@@ -18,7 +18,6 @@ cubec_ast_program_t cubec_create_ast_program(cubec_allocator_t allocator) {
   cubec_ast_node_initialize(allocator, &program->super);
   program->super.type = CUBEC_NODE_TYPE_PROGRAM;
   cubec_list_initialize_t initialize = {.autofree = true};
-  program->imports = cubec_create_list(allocator, &initialize);
   program->statements = cubec_create_list(allocator, &initialize);
   return program;
 }
@@ -44,16 +43,24 @@ cubec_ast_node_t cubec_read_ast_program(cubec_allocator_t allocator,
       err = stat;
       goto onerror;
     }
-    cubec_list_append(program->imports, allocator, stat);
+    cubec_list_append(program->statements, allocator, stat);
     err = cubec_ast_skip_all(allocator, &current, end);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;
     }
     cubec_allocator_free(allocator, err);
-  }
-  for (;;) {
-    // TODO: read statements
-    break;
+    if (*current.offset != ';') {
+      err = cubec_create_ast_error(allocator, *position, current,
+                                   "Invalid or unexpected token, missing ';'");
+      goto onerror;
+    }
+    current.offset++;
+    current.column++;
+    err = cubec_ast_skip_all(allocator, &current, end);
+    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      goto onerror;
+    }
+    cubec_allocator_free(allocator, err);
   }
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {

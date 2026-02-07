@@ -31,6 +31,9 @@ void cubec_delete_allocator(cubec_allocator_t allocator) {
 void *cubec_allocator_alloc(cubec_allocator_t self, size_t len,
                             void (*dispose)(void *self,
                                             cubec_allocator_t allocator)) {
+  if (!len) {
+    return NULL;
+  }
   cubec_control_block_t control_block = (cubec_control_block_t)self->alloc(
       sizeof(struct _cubec_control_block_t) + len);
   control_block->dispose = dispose;

@@ -4,6 +4,8 @@
 #include "core/location.h"
 #include "core/position.h"
 #include <string.h>
+#include <unicode/uchar.h>
+#include <unicode/umachine.h>
 void cubec_ast_node_initialize(cubec_allocator_t allocator,
                                cubec_ast_node_t self) {
   self->type = 0;
@@ -18,14 +20,13 @@ void cubec_ast_node_initialize(cubec_allocator_t allocator,
 void cubec_ast_node_dispose(cubec_allocator_t allocator,
                             cubec_ast_node_t self) {}
 
-uint32_t cubec_ast_read_code(cubec_position_t *position,
-                             cubec_position_t *end) {
-  uint32_t code = 0;
+int32_t cubec_ast_read_code(cubec_position_t *position, cubec_position_t *end) {
+  int32_t code = 0;
   size_t offset = 0;
   size_t len = end->offset - position->offset;
   U8_NEXT(position->offset, offset, len, code);
   position->offset += offset;
-  if (U_FAILURE(code)) {
+  if (code >= 0) {
     if (code == '\\' && *position->offset == 'u') {
       position->offset++;
       position->column++;
@@ -120,8 +121,8 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
                                     cubec_position_t *end) {
   cubec_position_t current = *position;
   while (*current.offset) {
-    uint32_t code = cubec_ast_read_code(&current, end);
-    if (U_FAILURE(code)) {
+    int32_t code = cubec_ast_read_code(&current, end);
+    if (code < 0) {
       return cubec_create_ast_error(allocator, *position, current,
                                     "Invalid unicode code");
     }
@@ -129,13 +130,9 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
       *position = current;
       continue;
     }
-    if (code == '\n' || code == '\r' || code == 0x2028 || code == 0x2029) {
-      *position = current;
-      continue;
-    }
     if (code == '/') {
       code = cubec_ast_read_code(&current, end);
-      if (U_FAILURE(code)) {
+      if (code < 0) {
         return cubec_create_ast_error(allocator, *position, current,
                                       "Invalid unicode code");
       }
@@ -146,7 +143,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
             break;
           }
           code = cubec_ast_read_code(&current, end);
-          if (U_FAILURE(code)) {
+          if (code < 0) {
             return cubec_create_ast_error(allocator, *position, current,
                                           "Invalid unicode code");
           }
@@ -161,7 +158,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
                                           "Missing multiline comment end '*/'");
           }
           code = cubec_ast_read_code(&current, end);
-          if (U_FAILURE(code)) {
+          if (code < 0) {
             return cubec_create_ast_error(allocator, *position, current,
                                           "Invalid unicode code");
           }
@@ -172,7 +169,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
                   "Missing multiline comment end '*/'");
             }
             code = cubec_ast_read_code(&current, end);
-            if (U_FAILURE(code)) {
+            if (code < 0) {
               return cubec_create_ast_error(allocator, *position, current,
                                             "Invalid unicode code");
             }
@@ -189,6 +186,9 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
       }
       break;
     }
+    current.offset--;
+    current.column--;
+    break;
   }
   return NULL;
 }

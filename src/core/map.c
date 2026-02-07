@@ -64,11 +64,12 @@ cubec_map_t cubec_create_map(cubec_allocator_t allocator,
   map->end->last = map->begin;
   return map;
 }
-cubec_map_node_t cubec_map_find(cubec_map_t self, void *key, void *cmp_arg) {
+cubec_map_node_t cubec_map_find(cubec_map_t self, const void *key,
+                                void *cmp_arg) {
   cubec_map_node_t it = self->begin->next;
   while (it != self->end) {
     if (self->compare) {
-      if (self->compare(it->key, key, cmp_arg)) {
+      if (self->compare(it->key, key, cmp_arg) == 0) {
         return it;
       }
     } else {
@@ -98,15 +99,15 @@ void cubec_map_set(cubec_map_t self, cubec_allocator_t allocator, void *key,
   }
   node->value = value;
 }
-void *cubec_map_get(cubec_map_t self, void *key, void *cmp_arg) {
+void *cubec_map_get(cubec_map_t self, const void *key, void *cmp_arg) {
   cubec_map_node_t node = cubec_map_find(self, key, cmp_arg);
   if (node) {
     return node->value;
   }
   return NULL;
 }
-void cubec_map_delete(cubec_map_t self, cubec_allocator_t allocator, void *key,
-                      void *cmp_arg) {
+void cubec_map_delete(cubec_map_t self, cubec_allocator_t allocator,
+                      const void *key, void *cmp_arg) {
   cubec_map_node_t node = cubec_map_find(self, key, cmp_arg);
   if (node) {
     if (self->autofree_key) {
@@ -119,10 +120,22 @@ void cubec_map_delete(cubec_map_t self, cubec_allocator_t allocator, void *key,
     self->size--;
   }
 }
-bool cubec_map_has(cubec_map_t self, void *key, void *cmp_arg) {
+bool cubec_map_has(cubec_map_t self, const void *key, void *cmp_arg) {
   return cubec_map_find(self, key, cmp_arg) != NULL;
 }
-size_t cubec_map_get_length(cubec_map_t self) { return self->size; }
+void cubec_map_clear(cubec_map_t self, cubec_allocator_t allocator) {
+  while (self->size) {
+    if (self->autofree_key) {
+      cubec_allocator_free(allocator, self->begin->next->key);
+    }
+    if (self->autofree_value) {
+      cubec_allocator_free(allocator, self->begin->next->value);
+    }
+    cubec_allocator_free(allocator, self->begin->next);
+    self->size--;
+  }
+}
+size_t cubec_map_get_size(cubec_map_t self) { return self->size; }
 cubec_map_node_t cubec_map_get_begin(cubec_map_t self) { return self->begin; }
 cubec_map_node_t cubec_map_get_end(cubec_map_t self) { return self->end; }
 cubec_map_node_t cubec_map_get_first(cubec_map_t self) {
@@ -130,6 +143,12 @@ cubec_map_node_t cubec_map_get_first(cubec_map_t self) {
 }
 cubec_map_node_t cubec_map_get_last(cubec_map_t self) {
   return self->end->last;
+}
+cubec_map_node_t cubec_map_node_get_next(cubec_map_node_t self) {
+  return self->next;
+}
+cubec_map_node_t cubec_map_node_get_last(cubec_map_node_t self) {
+  return self->last;
 }
 void *cubec_map_node_get_key(cubec_map_node_t self) { return self->key; }
 void *cubec_map_node_get_value(cubec_map_node_t self) { return self->value; }

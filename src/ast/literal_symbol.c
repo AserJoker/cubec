@@ -36,8 +36,8 @@ cubec_ast_node_t cubec_read_ast_literal_symbol(cubec_allocator_t allocator,
     current = *position;
     const char *src = symbols[offset];
     while (*src) {
-      uint32_t code = cubec_ast_read_code(&current, end);
-      if (U_FAILURE(code)) {
+      int32_t code = cubec_ast_read_code(&current, end);
+      if (code < 0) {
         return cubec_create_ast_error(allocator, *position, current,
                                       "Invalid unicode code");
       }
@@ -46,6 +46,10 @@ cubec_ast_node_t cubec_read_ast_literal_symbol(cubec_allocator_t allocator,
       }
       src++;
     }
+    if (!*src) {
+      break;
+    }
+    offset++;
   }
   cubec_ast_literal_symbol_t symbol =
       cubec_create_ast_literal_symbol(allocator);

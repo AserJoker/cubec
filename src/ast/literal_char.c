@@ -29,8 +29,8 @@ cubec_ast_node_t cubec_read_ast_literal_char(cubec_allocator_t allocator,
     return cubec_create_ast_error(allocator, *position, current,
                                   "Invalid charactor literal, missing '\''");
   }
-  uint32_t code = cubec_ast_read_code(&current, end);
-  if (U_FAILURE(code)) {
+  int32_t code = cubec_ast_read_code(&current, end);
+  if (code < 0) {
     return cubec_create_ast_error(allocator, *position, current,
                                   "Invalid unicode code");
   }
@@ -40,7 +40,7 @@ cubec_ast_node_t cubec_read_ast_literal_char(cubec_allocator_t allocator,
                                     "Invalid charactor literal, missing '\''");
     }
     code = cubec_ast_read_code(&current, end);
-    if (U_FAILURE(code)) {
+    if (code < 0) {
       return cubec_create_ast_error(allocator, *position, current,
                                     "Invalid unicode code");
     }

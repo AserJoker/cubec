@@ -3,6 +3,7 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/position.h"
+#include <unicode/uchar.h>
 #include <unicode/urename.h>
 #include <unicode/utypes.h>
 
@@ -26,8 +27,8 @@ cubec_ast_node_t cubec_read_ast_literal_identifier(cubec_allocator_t allocator,
                                                    cubec_position_t *position,
                                                    cubec_position_t *end) {
   cubec_position_t current = *position;
-  uint32_t code = cubec_ast_read_code(&current, end);
-  if (U_FAILURE(code)) {
+  int32_t code = cubec_ast_read_code(&current, end);
+  if (code < 0) {
     return cubec_create_ast_error(allocator, *position, current,
                                   "Invalid unicode code");
   }
@@ -35,12 +36,14 @@ cubec_ast_node_t cubec_read_ast_literal_identifier(cubec_allocator_t allocator,
     return NULL;
   }
   while (*current.offset) {
+    cubec_position_t backup = current;
     code = cubec_ast_read_code(&current, end);
-    if (U_FAILURE(code)) {
+    if (code < 0) {
       return cubec_create_ast_error(allocator, *position, current,
                                     "Invalid unicode code");
     }
     if (!u_isIDPart(code)) {
+      current = backup;
       break;
     }
   }

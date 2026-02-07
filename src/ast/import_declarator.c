@@ -40,7 +40,7 @@ cubec_read_ast_import_declarator_alias(cubec_allocator_t allocator,
   cubec_allocator_free(allocator, err);
   cubec_ast_node_t token =
       cubec_read_ast_literal_identifier(allocator, &current, end);
-  if (!cubec_location_is(token->loc, "as")) {
+  if (!token || !cubec_location_is(token->loc, "as")) {
     cubec_allocator_free(allocator, token);
     return NULL;
   }

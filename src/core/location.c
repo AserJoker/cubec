@@ -11,7 +11,7 @@ char *cubec_location_get(cubec_location_t self, cubec_allocator_t allocator) {
 }
 bool cubec_location_is(cubec_location_t self, const char *str) {
   const char *s = self.begin.offset;
-  while (s != self.end.offset) {
+  while (s != self.end.offset && *str) {
     if (*s != *str) {
       return false;
     }

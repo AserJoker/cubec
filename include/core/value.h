@@ -77,6 +77,8 @@ cubec_value_t cubec_value_append(cubec_value_t self,
                                  cubec_allocator_t allocator,
                                  cubec_value_t value);
 
+char *cubec_value_to_json(cubec_value_t self, cubec_allocator_t allocator);
+
 #ifdef __cplusplus
 }
 #endif

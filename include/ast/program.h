@@ -9,7 +9,6 @@ extern "C" {
 #endif
 typedef struct _cubec_ast_program_t {
   struct _cubec_ast_node_t super;
-  cubec_list_t imports;
   cubec_list_t statements;
 } *cubec_ast_program_t;
 cubec_ast_node_t cubec_read_ast_program(cubec_allocator_t allocator,
