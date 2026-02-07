@@ -1,0 +1,12 @@
+declaration_type =>
+    literal_identifier<'const'>|
+    literal_identifier<'var'>|
+    statement_declaration<'using'>
+
+statement_declaration =>
+    annotation*
+    declaration_type
+    space
+    (
+        declarator_varaible
+    )+
