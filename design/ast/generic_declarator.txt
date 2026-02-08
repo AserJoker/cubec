@@ -1,0 +1,13 @@
+generic_declarator =>
+    literal_identifier
+    (
+        space?
+        literal_identifier<'extends'>
+        expression_type
+    )?
+generic_declarator =>
+    literal_identifier
+    space?
+    literal_symbol<':'>
+    space?
+    expression_type
