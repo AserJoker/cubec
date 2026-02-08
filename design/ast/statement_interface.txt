@@ -23,16 +23,6 @@ statement_interface =>
         space?
         literal_symbol<'>'>
     )?
-    (
-        space
-        literal_identifier<'extends'>
-        expression_type
-        (
-            space?
-            literal_symbol<','>
-            expression_type
-        )*
-    )?
     space?
     literal_symbol<'{'>
     (
