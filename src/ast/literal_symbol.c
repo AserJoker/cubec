@@ -18,15 +18,15 @@ cubec_create_ast_literal_symbol(cubec_allocator_t allocator) {
 }
 
 static const char *symbols[] = {
-    ">>=", "<<=", "==", "!=", ">=", "<=", "+=", "-=", "*=", "/=", "%=",
-    "|=",  "&=",  "^=", "??", "||", "&&", ">>", "<<", "+",  "-",  "*",
-    "/",   "%",   "?",  ":",  ".",  ",",  "=",  ";",  "<",  ">",  "&",
-    "|",   "!",   "^",  "(",  ")",  "{",  "}",  "[",  "]",  NULL,
+    ">>=", "<<=", "??=", "==", "!=", ">=", "<=", "+=", "-=", "*=", "/=", "%=",
+    "|=",  "&=",  "^=",  "??", "||", "&&", ">>", "<<", "++", "--", "+",  "-",
+    "*",   "/",   "%",   "?",  ":",  ".",  ",",  "=",  ";",  "<",  ">",  "&",
+    "|",   "!",   "^",   "~",  "(",  ")",  "{",  "}",  "[",  "]",  NULL,
 };
 
 cubec_ast_node_t cubec_read_ast_literal_symbol(cubec_allocator_t allocator,
                                                cubec_position_t *position,
-                                               cubec_position_t *end) {
+                                               const char *end) {
   cubec_position_t current = *position;
   size_t offset = 0;
   for (;;) {

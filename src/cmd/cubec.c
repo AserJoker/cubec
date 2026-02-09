@@ -18,15 +18,12 @@ int main(int argc, char *argv[]) {
   fread(source, len, 1, fp);
   source[len] = 0;
   fclose(fp);
-  cubec_location_t loc;
-  loc.begin.column = 0;
-  loc.begin.line = 0;
-  loc.begin.offset = source;
-  loc.end.column = 0;
-  loc.end.line = 0;
-  loc.end.offset = source + len;
+  cubec_position_t begin;
+  begin.column = 0;
+  begin.line = 0;
+  begin.offset = source;
   cubec_ast_node_t root =
-      cubec_read_ast_program(allocator, &loc.begin, &loc.end);
+      cubec_read_ast_program(allocator, &begin, source + len);
   if (root->type == CUBEC_NODE_TYPE_ERROR) {
     printf("Failed to compile: %s \n at %s:%" PRIuPTR ": %" PRIuPTR,
            ((cubec_error_t)root)->message, "./main.cubec", root->loc.begin.line,

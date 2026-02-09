@@ -25,7 +25,7 @@ cubec_create_ast_literal_identifier(cubec_allocator_t allocator) {
 
 cubec_ast_node_t cubec_read_ast_literal_identifier(cubec_allocator_t allocator,
                                                    cubec_position_t *position,
-                                                   cubec_position_t *end) {
+                                                   const char *end) {
   cubec_position_t current = *position;
   int32_t code = cubec_ast_read_code(&current, end);
   if (code < 0) {

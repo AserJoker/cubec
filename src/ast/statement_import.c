@@ -29,7 +29,7 @@ cubec_create_ast_statement_import(cubec_allocator_t allocator) {
 }
 cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
                                                  cubec_position_t *position,
-                                                 cubec_position_t *end) {
+                                                 const char *end) {
   cubec_position_t current = *position;
   cubec_ast_statement_import_t node = NULL;
   cubec_ast_node_t err = NULL;
@@ -204,6 +204,23 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
     }
     node->source = token;
   }
+  err = cubec_ast_skip_all(allocator, &current, end);
+  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    goto onerror;
+  }
+  cubec_allocator_free(allocator, err);
+  token = cubec_read_ast_literal_symbol(allocator, &current, end);
+  if (token->type == CUBEC_NODE_TYPE_ERROR) {
+    err = token;
+    goto onerror;
+  }
+  if (!token || !cubec_location_is(token->loc, ";")) {
+    cubec_allocator_free(allocator, token);
+    err = cubec_create_ast_error(allocator, *position, current,
+                                 "Invalid import statement, missing ';'");
+    goto onerror;
+  }
+  cubec_allocator_free(allocator, token);
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;

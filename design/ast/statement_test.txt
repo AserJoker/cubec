@@ -1,0 +1,29 @@
+
+test_body => 
+    statement_if|
+    statement_for|
+    statement_while|
+    statement_dowhile|
+    statement_switch|
+    statement_match|
+    statement_return|
+    statement_label|
+    statement_defer|
+    statement_declaration|
+    statement_expression|
+    statement_type|
+    statement_empty|
+    statement_assert|
+    statement_mock
+
+statement_test =>
+    literal_identifier<'test'>
+    space?
+    literal_string
+    space?
+    literal_symbol<'{'>
+    (
+        space
+        test_body
+    )?
+    literal_symbol<'}'>

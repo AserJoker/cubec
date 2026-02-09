@@ -24,7 +24,7 @@ cubec_ast_program_t cubec_create_ast_program(cubec_allocator_t allocator) {
 
 cubec_ast_node_t cubec_read_ast_program(cubec_allocator_t allocator,
                                         cubec_position_t *position,
-                                        cubec_position_t *end) {
+                                        const char *end) {
   cubec_position_t current = *position;
   cubec_ast_program_t program = NULL;
   cubec_ast_node_t err = cubec_ast_skip_all(allocator, &current, end);
@@ -44,18 +44,6 @@ cubec_ast_node_t cubec_read_ast_program(cubec_allocator_t allocator,
       goto onerror;
     }
     cubec_list_append(program->statements, allocator, stat);
-    err = cubec_ast_skip_all(allocator, &current, end);
-    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-      goto onerror;
-    }
-    cubec_allocator_free(allocator, err);
-    if (*current.offset != ';') {
-      err = cubec_create_ast_error(allocator, *position, current,
-                                   "Invalid or unexpected token, missing ';'");
-      goto onerror;
-    }
-    current.offset++;
-    current.column++;
     err = cubec_ast_skip_all(allocator, &current, end);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;

@@ -15,7 +15,7 @@ cubec_ast_literal_symbol_t
 cubec_create_ast_literal_symbol(cubec_allocator_t allocator);
 cubec_ast_node_t cubec_read_ast_literal_symbol(cubec_allocator_t allocator,
                                                cubec_position_t *position,
-                                               cubec_position_t *end);
+                                               const char *end);
 
 #ifdef __cplusplus
 }

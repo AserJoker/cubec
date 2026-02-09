@@ -27,10 +27,8 @@ cubec_create_ast_import_declarator(cubec_allocator_t allocator) {
   return declarator;
 }
 
-static cubec_ast_node_t
-cubec_read_ast_import_declarator_alias(cubec_allocator_t allocator,
-                                       cubec_position_t *position,
-                                       cubec_position_t *end) {
+static cubec_ast_node_t cubec_read_ast_import_declarator_alias(
+    cubec_allocator_t allocator, cubec_position_t *position, const char *end) {
   cubec_position_t current = *position;
   cubec_ast_node_t err = NULL;
   err = cubec_ast_skip_all(allocator, &current, end);
@@ -62,7 +60,7 @@ cubec_read_ast_import_declarator_alias(cubec_allocator_t allocator,
 
 cubec_ast_node_t cubec_read_ast_import_declarator(cubec_allocator_t allocator,
                                                   cubec_position_t *position,
-                                                  cubec_position_t *end) {
+                                                  const char *end) {
   cubec_position_t current = *position;
   cubec_ast_import_declarator node = NULL;
   cubec_ast_node_t err = NULL;
@@ -97,7 +95,7 @@ onerror:
 
 cubec_ast_node_t cubec_read_ast_import_namespace(cubec_allocator_t allocator,
                                                  cubec_position_t *position,
-                                                 cubec_position_t *end) {
+                                                 const char *end) {
   cubec_position_t current = *position;
   cubec_ast_import_declarator node = NULL;
   cubec_ast_node_t err = NULL;

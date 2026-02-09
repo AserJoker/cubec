@@ -13,7 +13,7 @@ typedef struct _cubec_ast_program_t {
 } *cubec_ast_program_t;
 cubec_ast_node_t cubec_read_ast_program(cubec_allocator_t allocator,
                                         cubec_position_t *position,
-                                        cubec_position_t *end);
+                                        const char *end);
 cubec_ast_program_t cubec_create_ast_program(cubec_allocator_t allocator);
 #ifdef __cplusplus
 }
