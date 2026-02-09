@@ -6,6 +6,7 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/value.h"
+#include <inttypes.h>
 #include <stdio.h>
 int main(int argc, char *argv[]) {
   cubec_allocator_t allocator = cubec_create_allocator(NULL);
@@ -27,7 +28,7 @@ int main(int argc, char *argv[]) {
   cubec_ast_node_t root =
       cubec_read_ast_program(allocator, &loc.begin, &loc.end);
   if (root->type == CUBEC_NODE_TYPE_ERROR) {
-    printf("Failed to compile: %s \n at %s:%lld:%lld",
+    printf("Failed to compile: %s \n at %s:%" PRIuPTR ": %" PRIuPTR,
            ((cubec_error_t)root)->message, "./main.cubec", root->loc.begin.line,
            root->loc.begin.column);
   } else {
