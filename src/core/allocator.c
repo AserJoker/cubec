@@ -34,18 +34,17 @@ void *cubec_allocator_alloc(cubec_allocator_t self, size_t len,
   if (!len) {
     return NULL;
   }
-  cubec_control_block_t control_block = (cubec_control_block_t)self->alloc(
-      sizeof(struct _cubec_control_block_t) + len);
+  cubec_control_block_t control_block =
+      (cubec_control_block_t)self->alloc(sizeof(cubec_dispose_fn_t) + len);
   control_block->dispose = dispose;
-  return control_block->data;
+  return &control_block->data;
 }
 void cubec_allocator_free(cubec_allocator_t self, void *data) {
   if (data == NULL) {
     return;
   }
   cubec_control_block_t block =
-      (cubec_control_block_t)((uint8_t *)data -
-                              offsetof(struct _cubec_control_block_t, data));
+      (cubec_control_block_t)(((uint8_t *)data) - sizeof(cubec_dispose_fn_t));
   if (block->dispose != NULL) {
     block->dispose(block->data, self);
   }

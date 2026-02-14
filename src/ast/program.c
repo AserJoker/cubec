@@ -1,6 +1,7 @@
 #include "ast/program.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "ast/statement_expression.h"
 #include "ast/statement_import.h"
 #include "core/allocator.h"
 #include "core/list.h"
@@ -36,6 +37,9 @@ cubec_ast_node_t cubec_read_ast_program(cubec_allocator_t allocator,
   for (;;) {
     cubec_ast_node_t stat =
         cubec_read_ast_statement_import(allocator, &current, end);
+    if (!stat) {
+      stat = cubec_read_ast_statement_expression(allocator, &current, end);
+    }
     if (!stat) {
       break;
     }

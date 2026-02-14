@@ -1,5 +1,6 @@
 #include "ast/expression_assigment.h"
 #include "ast/expression.h"
+#include "ast/expression_member.h"
 #include "ast/literal_identifier.h"
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
@@ -15,9 +16,10 @@ cubec_ast_expression_assigment_dispose(cubec_ast_expression_assigment_t self,
   cubec_allocator_free(allocator, self->value);
 }
 cubec_ast_expression_assigment_t
-cubec_create_ast_expression_cassigment(cubec_allocator_t allocator) {
-  cubec_ast_expression_assigment_t node =
-      cubec_create_ast_expression_cassigment(allocator);
+cubec_create_ast_expression_assigment(cubec_allocator_t allocator) {
+  cubec_ast_expression_assigment_t node = cubec_allocator_alloc(
+      allocator, sizeof(struct _cubec_ast_expression_assigment_t),
+      (cubec_dispose_fn_t)cubec_ast_expression_assigment_dispose);
   cubec_ast_node_initialize(allocator, &node->super);
   node->identifier = NULL;
   node->value = NULL;
@@ -35,16 +37,19 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
   cubec_ast_expression_assigment_t node = NULL;
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_expression_cassigment(allocator);
+  node = cubec_create_ast_expression_assigment(allocator);
   node->identifier =
       cubec_read_ast_literal_identifier(allocator, &current, end);
   if (!node->identifier) {
-    // TODO: read member
+    // TODO: new([allocator,] type [,identifier]);
+  }
+  if (!node->identifier) {
+    node->identifier =
+        cubec_read_ast_expression_member(allocator, position, end);
   }
   if (!node->identifier) {
     goto onerror;
   }
-
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;

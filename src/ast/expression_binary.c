@@ -33,7 +33,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_or(
   cubec_ast_expression_binary_t node = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_binary(allocator);
-  node->left = cubec_read_ast_expression4(allocator, &current, end);
+  node->left = cubec_read_ast_expression5(allocator, &current, end);
   if (!node->left) {
     goto onerror;
   }
@@ -91,7 +91,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_and(
   cubec_ast_expression_binary_t node = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_binary(allocator);
-  node->left = cubec_read_ast_expression5(allocator, &current, end);
+  node->left = cubec_read_ast_expression6(allocator, &current, end);
   if (!node->left) {
     goto onerror;
   }
@@ -148,7 +148,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
   cubec_ast_expression_binary_t node = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_binary(allocator);
-  node->left = cubec_read_ast_expression6(allocator, &current, end);
+  node->left = cubec_read_ast_expression7(allocator, &current, end);
   if (!node->left) {
     goto onerror;
   }
@@ -179,7 +179,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression6(allocator, &current, end);
+  node->right = cubec_read_ast_expression7(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexcepted expression");
@@ -204,7 +204,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
   cubec_ast_expression_binary_t node = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_binary(allocator);
-  node->left = cubec_read_ast_expression7(allocator, &current, end);
+  node->left = cubec_read_ast_expression8(allocator, &current, end);
   if (!node->left) {
     goto onerror;
   }
@@ -235,7 +235,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression7(allocator, &current, end);
+  node->right = cubec_read_ast_expression8(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexcepted expression");
@@ -260,7 +260,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
   cubec_ast_expression_binary_t node = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_binary(allocator);
-  node->left = cubec_read_ast_expression8(allocator, &current, end);
+  node->left = cubec_read_ast_expression9(allocator, &current, end);
   if (!node->left) {
     goto onerror;
   }
@@ -291,7 +291,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression8(allocator, &current, end);
+  node->right = cubec_read_ast_expression9(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexcepted expression");
@@ -317,7 +317,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_equal(
   cubec_ast_expression_binary_t node = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_binary(allocator);
-  node->left = cubec_read_ast_expression9(allocator, &current, end);
+  node->left = cubec_read_ast_expression10(allocator, &current, end);
   if (!node->left) {
     goto onerror;
   }
@@ -349,7 +349,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_equal(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression9(allocator, &current, end);
+  node->right = cubec_read_ast_expression10(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexcepted expression");
@@ -375,7 +375,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_relation(
   cubec_ast_expression_binary_t node = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_binary(allocator);
-  node->left = cubec_read_ast_expression10(allocator, &current, end);
+  node->left = cubec_read_ast_expression11(allocator, &current, end);
   if (!node->left) {
     goto onerror;
   }
@@ -409,7 +409,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_relation(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression10(allocator, &current, end);
+  node->right = cubec_read_ast_expression11(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexcepted expression");
@@ -435,7 +435,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
   cubec_ast_expression_binary_t node = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_binary(allocator);
-  node->left = cubec_read_ast_expression11(allocator, &current, end);
+  node->left = cubec_read_ast_expression12(allocator, &current, end);
   if (!node->left) {
     goto onerror;
   }
@@ -467,7 +467,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression11(allocator, &current, end);
+  node->right = cubec_read_ast_expression12(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexcepted expression");
@@ -492,7 +492,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_additive(
   cubec_ast_expression_binary_t node = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_binary(allocator);
-  node->left = cubec_read_ast_expression12(allocator, &current, end);
+  node->left = cubec_read_ast_expression13(allocator, &current, end);
   if (!node->left) {
     goto onerror;
   }
@@ -524,7 +524,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_additive(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression12(allocator, &current, end);
+  node->right = cubec_read_ast_expression13(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexcepted expression");
@@ -549,7 +549,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
   cubec_ast_expression_binary_t node = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_binary(allocator);
-  node->left = cubec_read_ast_expression13(allocator, &current, end);
+  node->left = cubec_read_ast_expression14(allocator, &current, end);
   if (!node->left) {
     goto onerror;
   }
@@ -582,7 +582,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression13(allocator, &current, end);
+  node->right = cubec_read_ast_expression14(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexcepted expression");
@@ -635,7 +635,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_prefix(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression14(allocator, &current, end);
+  node->right = cubec_read_ast_expression16(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexcepted expression");
@@ -661,7 +661,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_postfix(
   cubec_ast_expression_binary_t node = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_binary(allocator);
-  node->left = cubec_read_ast_expression15(allocator, &current, end);
+  node->left = cubec_read_ast_expression17(allocator, &current, end);
   if (!node->left) {
     goto onerror;
   }
@@ -686,7 +686,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_postfix(
     goto onerror;
   }
   if (!cubec_location_is(node->opt->loc, "++") &&
-      cubec_location_is(node->opt->loc, "--")) {
+      !cubec_location_is(node->opt->loc, "--")) {
     goto onerror;
   }
   node->super.loc.begin = *position;

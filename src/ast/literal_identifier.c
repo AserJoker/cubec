@@ -32,7 +32,7 @@ cubec_ast_node_t cubec_read_ast_literal_identifier(cubec_allocator_t allocator,
     return cubec_create_ast_error(allocator, *position, current,
                                   "Invalid unicode code");
   }
-  if (!u_isIDPart(code)) {
+  if (!u_isIDStart(code)) {
     return NULL;
   }
   while (*current.offset) {

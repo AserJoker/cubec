@@ -6,6 +6,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+cubec_ast_node_t cubec_read_ast_expression(cubec_allocator_t allocator,
+                                           cubec_position_t *position,
+                                           const char *end);
 
 cubec_ast_node_t cubec_read_ast_expression1(cubec_allocator_t allocator,
                                             cubec_position_t *position,
@@ -56,6 +59,12 @@ cubec_ast_node_t cubec_read_ast_expression16(cubec_allocator_t allocator,
                                              cubec_position_t *position,
                                              const char *end);
 cubec_ast_node_t cubec_read_ast_expression17(cubec_allocator_t allocator,
+                                             cubec_position_t *position,
+                                             const char *end);
+cubec_ast_node_t cubec_read_ast_expression18(cubec_allocator_t allocator,
+                                             cubec_position_t *position,
+                                             const char *end);
+cubec_ast_node_t cubec_read_ast_expression19(cubec_allocator_t allocator,
                                              cubec_position_t *position,
                                              const char *end);
 

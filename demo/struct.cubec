@@ -1,0 +1,39 @@
+import { Buffer } from 'memory';
+import { Error } from 'error';
+import { read, open, close, FileMode } from 'posix';
+interface Readable{
+    func read(len: uint64_t): Buffer|Error;
+}
+export struct File implements Readable {
+    private fd:int32_t;
+    func open(path: String,mode: FileMode) File|Error {
+        let file = try new(File);
+        file.fd = try open(path, mode);
+        return file;
+    }
+}
+
+meta (self:File) dispose(): Error|void {
+    try self.close();
+}
+
+meta (self:File) equals(fd:int32_t):boolean {
+    return self.fd == fd;
+}
+
+func (self:File) close(): Error|void {
+    try close(self.fd);
+}
+
+func (self:File) read(len:uint64_t): Buffer|Error {
+    let buffer = try new(Buffer);
+    try buffer.resize(len);
+    _ = try read(self.fd, buffer);
+    return buffer;
+}
+
+test "FileTest" {
+    using file = try File.open("./1.txt", FileMode.O_RDONLY);
+    using buf = try file.read(1024);
+    assert buf.toString() == "hello world";
+}

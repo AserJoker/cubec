@@ -15,7 +15,7 @@ typedef struct _cubec_ast_expression_comma_t {
 } *cubec_ast_expression_comma_t;
 
 cubec_ast_expression_comma_t
-cubec_create_ast_expression_common(cubec_allocator_t allocator);
+cubec_create_ast_expression_comma(cubec_allocator_t allocator);
 
 cubec_ast_node_t cubec_read_ast_expression_comma(cubec_allocator_t allocator,
                                                  cubec_position_t *position,

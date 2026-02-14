@@ -1,0 +1,5 @@
+import { print } from 'io';
+func main(argc: int32_t, argv: str[]): int32_t {
+    print("hello world");
+    return 0;
+}

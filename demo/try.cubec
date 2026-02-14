@@ -1,0 +1,13 @@
+import { printf } from 'io';
+import { Error } from 'error';
+func div(a: int32_t, b:int32_t): Error|int32_t {
+    if (b == 0) {
+        return Error.create("division with zero");
+    }
+    return a/b;
+}
+
+func test(): Error|void {
+   const res =  try div(1,0);
+   try printf("%d\n", res);
+}

@@ -1,0 +1,14 @@
+import { print } from 'io';
+compiletime func logger(current:func(int32_t,int32_t):int32_t) {
+    return func (int32_t a,int32_t b):int32_t{
+        print("start");
+        const res = current(a,b);
+        print("end);
+        return res;
+    }
+}
+
+[[logger]]
+func add(a:int32_t ,b: int32_t) :int32_t {
+    return a+b;
+}

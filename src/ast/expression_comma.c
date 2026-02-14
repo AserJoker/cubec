@@ -11,7 +11,7 @@ cubec_ast_expression_comma_dispose(cubec_ast_expression_comma_t self,
   cubec_allocator_free(allocator, self->next);
 }
 cubec_ast_expression_comma_t
-cubec_create_ast_expression_common(cubec_allocator_t allocator) {
+cubec_create_ast_expression_comma(cubec_allocator_t allocator) {
   cubec_ast_expression_comma_t node = cubec_allocator_alloc(
       allocator, sizeof(struct _cubec_ast_expression_comma_t),
       (cubec_dispose_fn_t)cubec_ast_expression_comma_dispose);
@@ -28,7 +28,7 @@ cubec_ast_node_t cubec_read_ast_expression_comma(cubec_allocator_t allocator,
   cubec_position_t current = *position;
   cubec_ast_expression_comma_t node = NULL;
   cubec_ast_node_t err = NULL;
-  node = cubec_create_ast_expression_common(allocator);
+  node = cubec_create_ast_expression_comma(allocator);
   node->current = cubec_read_ast_expression2(allocator, &current, end);
   if (!node->current) {
     goto onerror;
@@ -44,7 +44,6 @@ cubec_ast_node_t cubec_read_ast_expression_comma(cubec_allocator_t allocator,
   }
   cubec_allocator_free(allocator, err);
   if (*current.offset != ',') {
-    cubec_allocator_free(allocator, node);
     goto onerror;
   }
   current.offset++;
