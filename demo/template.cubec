@@ -1,0 +1,6 @@
+template add(a:anytype,b:anytype) {
+    return a+b;
+}
+const fn = @add(int32_t,int32_t); // -> func(int32_t,int32_t):int32_t;
+const c = add(1,2); // -> auto instance
+const type = typeof add; // Template

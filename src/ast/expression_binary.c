@@ -656,6 +656,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_prefix(
       !cubec_location_is(node->opt->loc, "-") &&
       !cubec_location_is(node->opt->loc, "~") &&
       !cubec_location_is(node->opt->loc, "await") &&
+      !cubec_location_is(node->opt->loc, "typeof") &&
       !cubec_location_is(node->opt->loc, "sizeof")) {
     goto onerror;
   }

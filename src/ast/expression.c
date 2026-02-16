@@ -4,6 +4,7 @@
 #include "ast/expression_comma.h"
 #include "ast/expression_compute_member.h"
 #include "ast/expression_member.h"
+#include "ast/expression_template_generator.h"
 #include "ast/literal_char.h"
 #include "ast/literal_identifier.h"
 #include "ast/literal_numeric.h"
@@ -238,7 +239,11 @@ cubec_ast_node_t cubec_read_ast_expression19(cubec_allocator_t allocator,
                                              const char *end) {
   cubec_ast_node_t node = NULL;
   // TODO: func
-  // TODO: template generator
+  // TODO: template
+  node = cubec_read_ast_expression_template_generator(allocator, position, end);
+  if (node) {
+    return node;
+  }
   node = cubec_read_ast_literal_numeric(allocator, position, end);
   if (node) {
     return node;

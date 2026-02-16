@@ -2,6 +2,7 @@
 #include "ast/expression_assigment.h"
 #include "ast/expression_binary.h"
 #include "ast/expression_compute_member.h"
+#include "ast/expression_template_generator.h"
 #include "ast/import_declarator.h"
 #include "ast/literal_identifier.h"
 #include "ast/literal_string.h"
@@ -15,6 +16,7 @@
 #include "astwriter/expression_binary.h"
 #include "astwriter/expression_compute_member.h"
 #include "astwriter/expression_member.h"
+#include "astwriter/expression_template_generator.h"
 #include "astwriter/import_declarator.h"
 #include "astwriter/literal_char.h"
 #include "astwriter/literal_identifier.h"
@@ -337,6 +339,8 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
                                "CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER"));
     break;
   case CUBEC_NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR:
+    value = cubec_write_ast_expression_template_generator(
+        allocator, (cubec_ast_expression_template_generator_t)self);
     cubec_value_set_field(value, allocator, "type",
                           cubec_value_set_string(
                               cubec_create_value(allocator), allocator,
