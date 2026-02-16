@@ -436,30 +436,30 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
                                "CUBEC_NODE_TYPE_EXPRESSION_COMMON"));
     break;
   }
-  cubec_value_t location =
-      cubec_value_set_object(cubec_create_value(allocator), allocator);
-  cubec_value_t begin =
-      cubec_value_set_object(cubec_create_value(allocator), allocator);
-  cubec_value_t end =
-      cubec_value_set_object(cubec_create_value(allocator), allocator);
-  cubec_value_set_field(begin, allocator, "line",
-                        cubec_value_set_number(cubec_create_value(allocator),
-                                               allocator,
-                                               self->loc.begin.line));
-  cubec_value_set_field(begin, allocator, "column",
-                        cubec_value_set_number(cubec_create_value(allocator),
-                                               allocator,
-                                               self->loc.begin.column));
-  cubec_value_set_field(end, allocator, "line",
-                        cubec_value_set_number(cubec_create_value(allocator),
-                                               allocator, self->loc.end.line));
-  cubec_value_set_field(end, allocator, "column",
-                        cubec_value_set_number(cubec_create_value(allocator),
-                                               allocator,
-                                               self->loc.end.column));
-  cubec_value_set_field(location, allocator, "begin", begin);
-  cubec_value_set_field(location, allocator, "end", end);
-  cubec_value_set_field(value, allocator, "location", location);
+  // cubec_value_t location =
+  //     cubec_value_set_object(cubec_create_value(allocator), allocator);
+  // cubec_value_t begin =
+  //     cubec_value_set_object(cubec_create_value(allocator), allocator);
+  // cubec_value_t end =
+  //     cubec_value_set_object(cubec_create_value(allocator), allocator);
+  // cubec_value_set_field(begin, allocator, "line",
+  //                       cubec_value_set_number(cubec_create_value(allocator),
+  //                                              allocator,
+  //                                              self->loc.begin.line));
+  // cubec_value_set_field(begin, allocator, "column",
+  //                       cubec_value_set_number(cubec_create_value(allocator),
+  //                                              allocator,
+  //                                              self->loc.begin.column));
+  // cubec_value_set_field(end, allocator, "line",
+  //                       cubec_value_set_number(cubec_create_value(allocator),
+  //                                              allocator, self->loc.end.line));
+  // cubec_value_set_field(end, allocator, "column",
+  //                       cubec_value_set_number(cubec_create_value(allocator),
+  //                                              allocator,
+  //                                              self->loc.end.column));
+  // cubec_value_set_field(location, allocator, "begin", begin);
+  // cubec_value_set_field(location, allocator, "end", end);
+  // cubec_value_set_field(value, allocator, "location", location);
   char *src = cubec_location_get(self->loc, allocator);
   cubec_value_t text =
       cubec_value_set_string(cubec_create_value(allocator), allocator, src);

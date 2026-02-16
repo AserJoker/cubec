@@ -3,6 +3,7 @@
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "ast/variable_declarator.h"
 #include "core/allocator.h"
 #include "core/list.h"
 #include "core/location.h"
@@ -57,7 +58,36 @@ cubec_ast_node_t cubec_read_ast_statement_declaration(
     goto onerror;
   }
   for (;;) {
-    // TODO: read declaration
+    cubec_ast_node_t item =
+        cubec_read_ast_variable_declarator(allocator, &current, end);
+    if (!item) {
+      err = cubec_create_ast_error(allocator, *position, current,
+                                   "Invalid or unexpected token");
+      goto onerror;
+    }
+    if (item->type == CUBEC_NODE_TYPE_ERROR) {
+      err = item;
+      goto onerror;
+    }
+    cubec_list_append(node->declarations, allocator, item);
+    err = cubec_ast_skip_all(allocator, &current, end);
+    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      goto onerror;
+    }
+    if (*current.offset == ';') {
+      break;
+    }
+    if (*current.offset != ',') {
+      err = cubec_create_ast_error(allocator, *position, current,
+                                   "Invalid or unexpected token");
+      goto onerror;
+    }
+    current.offset++;
+    current.column++;
+    err = cubec_ast_skip_all(allocator, &current, end);
+    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      goto onerror;
+    }
   }
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {

@@ -1,10 +1,9 @@
 #include "ast/expression_template_generator.h"
 #include "ast/expression.h"
-#include "ast/expression_spread.h"
+#include "ast/expression_call.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
-#include "core/list.h"
 #include "core/position.h"
 
 static void cubec_ast_expression_template_generator_dispose(
@@ -21,10 +20,7 @@ cubec_create_ast_expression_template_generator(cubec_allocator_t allocator) {
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR;
   self->temp = NULL;
-  cubec_list_initialize_t initialize = {
-      .autofree = true,
-  };
-  self->args = cubec_create_list(allocator, &initialize);
+  self->args = NULL;
   return self;
 }
 
@@ -53,72 +49,18 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
   if (temp->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
-  node->temp = temp;
-  err = cubec_ast_skip_all(allocator, &current, end);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-    goto onerror;
-  }
-  if (*current.offset != '<') {
+  if (temp->type != CUBEC_NODE_TYPE_EXPRESSION_CALL) {
     err = cubec_create_ast_error(
         allocator, *position, current,
-        "Invalid template generator expression, missing '<'");
+        "Invalid or unexpected template generator expression");
     goto onerror;
   }
-  current.column++;
-  current.offset++;
-  err = cubec_ast_skip_all(allocator, &current, end);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-    goto onerror;
-  }
-  if (*current.offset != '>') {
-    for (;;) {
-      cubec_ast_node_t item = NULL;
-      if (!item) {
-        item = cubec_read_ast_expression_spread(allocator, &current, end);
-      }
-      if (!item) {
-        item = cubec_read_ast_expression2(allocator, &current, end);
-      }
-      if (!item) {
-        err = cubec_create_ast_error(allocator, *position, current,
-                                     "Invalid template generator argument");
-        goto onerror;
-      }
-      if (item->type == CUBEC_NODE_TYPE_ERROR) {
-        err = item;
-        goto onerror;
-      }
-      cubec_list_append(node->args, allocator, item);
-      err = cubec_ast_skip_all(allocator, &current, end);
-      if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-        goto onerror;
-      }
-      if (*current.offset == '>') {
-        break;
-      }
-      if (*current.offset != ',') {
-        err = cubec_create_ast_error(
-            allocator, *position, current,
-            "Invalid template generator expression, missing ','");
-        goto onerror;
-      } else {
-        current.offset++;
-        current.column++;
-        err = cubec_ast_skip_all(allocator, &current, end);
-        if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-          goto onerror;
-        }
-      }
-    }
-  }
-  if (*current.offset != '>') {
-    err = cubec_create_ast_error(
-        allocator, *position, current,
-        "Invalid template generator expression, missing '>'");
-    goto onerror;
-  }
-  current.offset++;
-  current.column++;
+  cubec_ast_expression_call_t call = (cubec_ast_expression_call_t)temp;
+  node->temp = call->callee;
+  call->callee = NULL;
+  node->args = call->args;
+  call->args = NULL;
+  cubec_allocator_free(allocator, call);
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
