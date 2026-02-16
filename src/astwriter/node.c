@@ -1,7 +1,11 @@
 #include "astwriter/node.h"
 #include "ast/expression_assigment.h"
 #include "ast/expression_binary.h"
+#include "ast/expression_call.h"
+#include "ast/expression_comma.h"
 #include "ast/expression_compute_member.h"
+#include "ast/expression_group.h"
+#include "ast/expression_spread.h"
 #include "ast/expression_template_generator.h"
 #include "ast/import_declarator.h"
 #include "ast/literal_identifier.h"
@@ -14,8 +18,12 @@
 #include "ast/variable_declarator.h"
 #include "astwriter/expression_assigment.h"
 #include "astwriter/expression_binary.h"
+#include "astwriter/expression_call.h"
+#include "astwriter/expression_comma.h"
 #include "astwriter/expression_compute_member.h"
+#include "astwriter/expression_group.h"
 #include "astwriter/expression_member.h"
+#include "astwriter/expression_spread.h"
 #include "astwriter/expression_template_generator.h"
 #include "astwriter/import_declarator.h"
 #include "astwriter/literal_char.h"
@@ -317,6 +325,8 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
                                "CUBEC_NODE_TYPE_EXPRESSION_BINARY"));
     break;
   case CUBEC_NODE_TYPE_EXPRESSION_CALL:
+    value = cubec_write_ast_expression_call(allocator,
+                                            (cubec_ast_expression_call_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
@@ -365,12 +375,16 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
                                "CUBEC_NODE_TYPE_EXPRESSION_DELETE"));
     break;
   case CUBEC_NODE_TYPE_EXPRESSION_GROUP:
+    value = cubec_write_ast_expression_group(
+        allocator, (cubec_ast_expression_group_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_EXPRESSION_GROUP"));
     break;
   case CUBEC_NODE_TYPE_EXPRESSION_SPREAD:
+    value = cubec_write_ast_expression_spread(
+        allocator, (cubec_ast_expression_spread_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
@@ -414,6 +428,8 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
                                                  "CUBEC_NODE_TYPE_PROGRAM"));
     break;
   case CUBEC_NODE_TYPE_EXPRESSION_COMMON:
+    value = cubec_write_ast_expression_comma(
+        allocator, (cubec_ast_expression_comma_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,

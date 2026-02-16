@@ -1,8 +1,10 @@
 #include "ast/expression.h"
 #include "ast/expression_assigment.h"
 #include "ast/expression_binary.h"
+#include "ast/expression_call.h"
 #include "ast/expression_comma.h"
 #include "ast/expression_compute_member.h"
+#include "ast/expression_group.h"
 #include "ast/expression_member.h"
 #include "ast/expression_template_generator.h"
 #include "ast/literal_char.h"
@@ -203,7 +205,7 @@ cubec_ast_node_t cubec_read_ast_expression18(cubec_allocator_t allocator,
             cubec_read_ast_expression_compute_member(allocator, &current, end);
       }
       if (!next) {
-        // TODO: call
+        next = cubec_read_ast_expression_call(allocator, &current, end);
       }
       if (next) {
         if (next->type == CUBEC_NODE_TYPE_ERROR) {
@@ -224,7 +226,10 @@ cubec_ast_node_t cubec_read_ast_expression18(cubec_allocator_t allocator,
           node = &member->super;
           member->super.loc.begin = *position;
         } else if (next->type == CUBEC_NODE_TYPE_EXPRESSION_CALL) {
-          // TODO: call
+          cubec_ast_expression_call_t call = (cubec_ast_expression_call_t)next;
+          call->callee = node;
+          node = &call->super;
+          call->super.loc.begin = *position;
         }
       } else {
         break;
@@ -240,6 +245,10 @@ cubec_ast_node_t cubec_read_ast_expression19(cubec_allocator_t allocator,
   cubec_ast_node_t node = NULL;
   // TODO: func
   // TODO: template
+  node = cubec_read_ast_expression_group(allocator, position, end);
+  if (node) {
+    return node;
+  }
   node = cubec_read_ast_expression_template_generator(allocator, position, end);
   if (node) {
     return node;

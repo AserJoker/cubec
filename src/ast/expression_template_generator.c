@@ -1,10 +1,12 @@
 #include "ast/expression_template_generator.h"
 #include "ast/expression.h"
+#include "ast/expression_spread.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/list.h"
 #include "core/position.h"
+
 static void cubec_ast_expression_template_generator_dispose(
     cubec_ast_expression_template_generator_t self,
     cubec_allocator_t allocator) {
@@ -56,10 +58,10 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
-  if (*current.offset != '(') {
+  if (*current.offset != '<') {
     err = cubec_create_ast_error(
         allocator, *position, current,
-        "Invalid template generator expression, missing '('");
+        "Invalid template generator expression, missing '<'");
     goto onerror;
   }
   current.column++;
@@ -68,10 +70,15 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
-  if (*current.offset != ')') {
+  if (*current.offset != '>') {
     for (;;) {
-      cubec_ast_node_t item =
-          cubec_read_ast_expression2(allocator, &current, end);
+      cubec_ast_node_t item = NULL;
+      if (!item) {
+        item = cubec_read_ast_expression_spread(allocator, &current, end);
+      }
+      if (!item) {
+        item = cubec_read_ast_expression2(allocator, &current, end);
+      }
       if (!item) {
         err = cubec_create_ast_error(allocator, *position, current,
                                      "Invalid template generator argument");
@@ -86,7 +93,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         goto onerror;
       }
-      if (*current.offset == ')') {
+      if (*current.offset == '>') {
         break;
       }
       if (*current.offset != ',') {
@@ -104,10 +111,10 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
       }
     }
   }
-  if (*current.offset != ')') {
+  if (*current.offset != '>') {
     err = cubec_create_ast_error(
         allocator, *position, current,
-        "Invalid template generator expression, missing ')'");
+        "Invalid template generator expression, missing '>'");
     goto onerror;
   }
   current.offset++;
