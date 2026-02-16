@@ -19,15 +19,15 @@ int main(int argc, char *argv[]) {
   source[len] = 0;
   fclose(fp);
   cubec_position_t begin;
-  begin.column = 0;
-  begin.line = 0;
+  begin.column = 1;
+  begin.line = 1;
   begin.offset = source;
   cubec_ast_node_t root =
       cubec_read_ast_program(allocator, &begin, source + len);
   if (root->type == CUBEC_NODE_TYPE_ERROR) {
     printf("Failed to compile: %s \n at %s:%" PRIuPTR ":%" PRIuPTR "\n",
-           ((cubec_error_t)root)->message, "./main.cubec", root->loc.begin.line,
-           root->loc.begin.column);
+           ((cubec_error_t)root)->message, "./main.cubec", root->loc.end.line,
+           root->loc.end.column);
   } else {
     cubec_value_t ast = cubec_write_ast_node(root, allocator);
     char *json = cubec_value_to_json(ast, allocator);

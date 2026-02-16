@@ -1,5 +1,5 @@
 import { print } from 'io';
-compiletime func logger(current:func(int32_t,int32_t):int32_t) {
+comptime func logger(current:func(int32_t,int32_t):int32_t):typeof(current) {
     return func (int32_t a,int32_t b):int32_t{
         print("start");
         const res = current(a,b);
@@ -11,4 +11,30 @@ compiletime func logger(current:func(int32_t,int32_t):int32_t) {
 [[logger]]
 func add(a:int32_t ,b: int32_t) :int32_t {
     return a+b;
+}
+
+import {Type,Kind,Struct,Interface,CompileError} from 'comptime';
+
+comptime func has(stru:Type, field:str): Type {
+    if(stru.isStruct()) {
+        const t = try Struct(stru);
+        if(!t.hasField(field)) {
+            CompileError("struct {} is not has field '{}'",stru.getName(),field);
+        }
+    }
+    else if(stru.isInterface()) {
+        const t = try Interface(stru);
+        if(!t.hasField(field)) {
+            CompileError("interface {} is not has field '{}'",stru.getName(),field);
+        }
+    }
+    else{
+        CompileError("type {} is not interface/struct",stru.getName());
+    }
+    return stru;
+}
+
+[[has("name")]]
+struct Test {
+    name:String;
 }

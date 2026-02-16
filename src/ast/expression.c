@@ -2,11 +2,16 @@
 #include "ast/expression_assigment.h"
 #include "ast/expression_binary.h"
 #include "ast/expression_comma.h"
+#include "ast/expression_compute_member.h"
 #include "ast/expression_member.h"
 #include "ast/literal_char.h"
 #include "ast/literal_identifier.h"
+#include "ast/literal_numeric.h"
 #include "ast/literal_string.h"
 #include "ast/node.h"
+#include "ast/node_type.h"
+#include "core/allocator.h"
+#include "core/position.h"
 
 cubec_ast_node_t cubec_read_ast_expression(cubec_allocator_t allocator,
                                            cubec_position_t *position,
@@ -180,20 +185,64 @@ cubec_ast_node_t cubec_read_ast_expression18(cubec_allocator_t allocator,
                                              cubec_position_t *position,
                                              const char *end) {
   cubec_ast_node_t node = NULL;
-  node = cubec_read_ast_expression_member(allocator, position, end);
+  cubec_position_t current = *position;
+  node = cubec_read_ast_expression19(allocator, &current, end);
   if (node) {
-    return node;
+    for (;;) {
+      cubec_ast_node_t err = cubec_ast_skip_all(allocator, &current, end);
+      if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+        return err;
+      }
+      cubec_ast_node_t next = NULL;
+      if (!next) {
+        next = cubec_read_ast_expression_member(allocator, &current, end);
+      }
+      if (!next) {
+        next =
+            cubec_read_ast_expression_compute_member(allocator, &current, end);
+      }
+      if (!next) {
+        // TODO: call
+      }
+      if (next) {
+        if (next->type == CUBEC_NODE_TYPE_ERROR) {
+          cubec_allocator_free(allocator, node);
+          next->loc.begin = *position;
+          return next;
+        }
+        if (next->type == CUBEC_NODE_TYPE_EXPRESSION_MEMBER) {
+          cubec_ast_expression_member_t member =
+              (cubec_ast_expression_member_t)next;
+          member->host = node;
+          node = &member->super;
+          member->super.loc.begin = *position;
+        } else if (next->type == CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
+          cubec_ast_expression_compute_member_t member =
+              (cubec_ast_expression_compute_member_t)next;
+          member->host = node;
+          node = &member->super;
+          member->super.loc.begin = *position;
+        } else if (next->type == CUBEC_NODE_TYPE_EXPRESSION_CALL) {
+          // TODO: call
+        }
+      } else {
+        break;
+      }
+    }
   }
-  // TODO: call
-  // TODO: member call
-  return cubec_read_ast_expression19(allocator, position, end);
+  *position = current;
+  return node;
 }
 cubec_ast_node_t cubec_read_ast_expression19(cubec_allocator_t allocator,
                                              cubec_position_t *position,
                                              const char *end) {
   cubec_ast_node_t node = NULL;
   // TODO: func
-  // TODO: numeric
+  // TODO: template generator
+  node = cubec_read_ast_literal_numeric(allocator, position, end);
+  if (node) {
+    return node;
+  }
   node = cubec_read_ast_literal_char(allocator, position, end);
   if (node) {
     return node;

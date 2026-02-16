@@ -1,0 +1,5 @@
+var file:File;
+using file = new(File);
+const file = new(File);
+let file = new(File);
+const {key,value} = pair;

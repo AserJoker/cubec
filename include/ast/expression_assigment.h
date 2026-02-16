@@ -12,7 +12,7 @@ typedef struct _cubec_ast_expression_assigment_t {
   struct _cubec_ast_node_t super;
   cubec_ast_node_t identifier;
   cubec_ast_node_t value;
-  cubec_ast_node_t token;
+  cubec_ast_node_t opt;
 } *cubec_ast_expression_assigment_t;
 
 cubec_ast_expression_assigment_t

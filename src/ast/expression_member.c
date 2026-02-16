@@ -1,5 +1,4 @@
 #include "ast/expression_member.h"
-#include "ast/expression.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -29,23 +28,12 @@ cubec_ast_node_t cubec_read_ast_expression_member(cubec_allocator_t allocator,
   cubec_ast_expression_member_t node = NULL;
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_expression_member(allocator);
-  cubec_ast_node_t host = cubec_read_ast_expression19(allocator, &current, end);
-  if (!host) {
-    goto onerror;
-  }
-  if (host->type == CUBEC_NODE_TYPE_ERROR) {
-    err = host;
-    goto onerror;
-  }
-  node->host = host;
-  err = cubec_ast_skip_all(allocator, &current, end);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-    goto onerror;
-  }
   if (*current.offset != '.') {
     goto onerror;
   }
+  current.offset++;
+  current.column++;
+  node = cubec_create_ast_expression_member(allocator);
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
@@ -55,7 +43,7 @@ cubec_ast_node_t cubec_read_ast_expression_member(cubec_allocator_t allocator,
   if (!field) {
     err = cubec_create_ast_error(
         allocator, *position, current,
-        "Invalid or unexcepted token, missing field for member expression");
+        "Invalid or unexpected token, missing field for member expression");
     goto onerror;
   }
   if (field->type == CUBEC_NODE_TYPE_ERROR) {

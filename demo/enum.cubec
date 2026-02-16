@@ -8,7 +8,7 @@ enum Type2:str{
     C("C),
 }
 
-compiletime func getItemName(item:Enum):str {
+comptime func getItemName(item:Enum):str {
     return type(item).name();
 }
 

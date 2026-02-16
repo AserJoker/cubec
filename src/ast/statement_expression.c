@@ -42,7 +42,7 @@ cubec_ast_node_t cubec_read_ast_statement_expression(
   }
   cubec_ast_node_t token =
       cubec_read_ast_literal_symbol(allocator, &current, end);
-  if (token->type == CUBEC_NODE_TYPE_ERROR) {
+  if (token && token->type == CUBEC_NODE_TYPE_ERROR) {
     err = token;
     goto onerror;
   }

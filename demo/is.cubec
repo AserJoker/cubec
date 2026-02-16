@@ -1,0 +1,10 @@
+func isActive(str:String): str is "Active" {
+    return str == "Active";
+}
+
+func test(){
+    const active = "Active"; // active:string;
+    if(isActive(active)) {
+        // active:"Active"
+    }
+}

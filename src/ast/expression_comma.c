@@ -40,23 +40,31 @@ cubec_ast_node_t cubec_read_ast_expression_comma(cubec_allocator_t allocator,
   }
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-    return err;
+    goto onerror;
   }
   cubec_allocator_free(allocator, err);
   if (*current.offset != ',') {
+    err = node->current;
+    node->current = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   current.offset++;
   current.column++;
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-    return err;
+    goto onerror;
   }
   cubec_allocator_free(allocator, err);
   node->next = cubec_read_ast_expression1(allocator, &current, end);
   if (!node->next) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Invalid comma expression");
+    goto onerror;
+  }
+  if (node->next->type == CUBEC_NODE_TYPE_ERROR) {
+    err = node->next;
+    node->next = NULL;
     goto onerror;
   }
   node->super.loc.begin = *position;

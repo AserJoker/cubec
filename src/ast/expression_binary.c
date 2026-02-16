@@ -58,6 +58,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_or(
   }
   if (!cubec_location_is(node->opt->loc, "||") &&
       !cubec_location_is(node->opt->loc, "??")) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end);
@@ -68,7 +71,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_or(
   node->right = cubec_read_ast_expression4(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
-                                 "Unexcepted expression");
+                                 "Unexpected expression");
     goto onerror;
   }
   if (node->right->type == CUBEC_NODE_TYPE_ERROR) {
@@ -115,6 +118,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_and(
     goto onerror;
   }
   if (!cubec_location_is(node->opt->loc, "&&")) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end);
@@ -125,7 +131,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_and(
   node->right = cubec_read_ast_expression5(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
-                                 "Unexcepted expression");
+                                 "Unexpected expression");
     goto onerror;
   }
   if (node->right->type == CUBEC_NODE_TYPE_ERROR) {
@@ -172,6 +178,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
     goto onerror;
   }
   if (!cubec_location_is(node->opt->loc, "|")) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end);
@@ -182,7 +191,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
   node->right = cubec_read_ast_expression7(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
-                                 "Unexcepted expression");
+                                 "Unexpected expression");
     goto onerror;
   }
   if (node->right->type == CUBEC_NODE_TYPE_ERROR) {
@@ -228,6 +237,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
     goto onerror;
   }
   if (!cubec_location_is(node->opt->loc, "^")) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end);
@@ -238,7 +250,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
   node->right = cubec_read_ast_expression8(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
-                                 "Unexcepted expression");
+                                 "Unexpected expression");
     goto onerror;
   }
   if (node->right->type == CUBEC_NODE_TYPE_ERROR) {
@@ -284,6 +296,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
     goto onerror;
   }
   if (!cubec_location_is(node->opt->loc, "&")) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end);
@@ -294,7 +309,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
   node->right = cubec_read_ast_expression9(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
-                                 "Unexcepted expression");
+                                 "Unexpected expression");
     goto onerror;
   }
   if (node->right->type == CUBEC_NODE_TYPE_ERROR) {
@@ -342,6 +357,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_equal(
   }
   if (!cubec_location_is(node->opt->loc, "==") &&
       !cubec_location_is(node->opt->loc, "!=")) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end);
@@ -352,7 +370,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_equal(
   node->right = cubec_read_ast_expression10(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
-                                 "Unexcepted expression");
+                                 "Unexpected expression");
     goto onerror;
   }
   if (node->right->type == CUBEC_NODE_TYPE_ERROR) {
@@ -402,6 +420,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_relation(
       !cubec_location_is(node->opt->loc, "<") &&
       !cubec_location_is(node->opt->loc, ">=") &&
       !cubec_location_is(node->opt->loc, "<=")) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end);
@@ -412,7 +433,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_relation(
   node->right = cubec_read_ast_expression11(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
-                                 "Unexcepted expression");
+                                 "Unexpected expression");
     goto onerror;
   }
   if (node->right->type == CUBEC_NODE_TYPE_ERROR) {
@@ -460,6 +481,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
   }
   if (!cubec_location_is(node->opt->loc, ">>") &&
       !cubec_location_is(node->opt->loc, "<<")) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end);
@@ -470,7 +494,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
   node->right = cubec_read_ast_expression12(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
-                                 "Unexcepted expression");
+                                 "Unexpected expression");
     goto onerror;
   }
   if (node->right->type == CUBEC_NODE_TYPE_ERROR) {
@@ -517,6 +541,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_additive(
   }
   if (!cubec_location_is(node->opt->loc, "+") &&
       !cubec_location_is(node->opt->loc, "-")) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end);
@@ -527,7 +554,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_additive(
   node->right = cubec_read_ast_expression13(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
-                                 "Unexcepted expression");
+                                 "Unexpected expression");
     goto onerror;
   }
   if (node->right->type == CUBEC_NODE_TYPE_ERROR) {
@@ -575,6 +602,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
   if (!cubec_location_is(node->opt->loc, "*") &&
       !cubec_location_is(node->opt->loc, "/") &&
       !cubec_location_is(node->opt->loc, "%")) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end);
@@ -585,7 +615,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
   node->right = cubec_read_ast_expression14(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
-                                 "Unexcepted expression");
+                                 "Unexpected expression");
     goto onerror;
   }
   if (node->right->type == CUBEC_NODE_TYPE_ERROR) {
@@ -638,7 +668,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_prefix(
   node->right = cubec_read_ast_expression16(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
-                                 "Unexcepted expression");
+                                 "Unexpected expression");
     goto onerror;
   }
   if (node->right->type == CUBEC_NODE_TYPE_ERROR) {
@@ -687,6 +717,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_postfix(
   }
   if (!cubec_location_is(node->opt->loc, "++") &&
       !cubec_location_is(node->opt->loc, "--")) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   node->super.loc.begin = *position;
