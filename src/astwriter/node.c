@@ -1,4 +1,7 @@
 #include "astwriter/node.h"
+#include "ast/array_declarator.h"
+#include "ast/enum_declarator.h"
+#include "ast/enum_field.h"
 #include "ast/expression_assigment.h"
 #include "ast/expression_binary.h"
 #include "ast/expression_call.h"
@@ -7,7 +10,12 @@
 #include "ast/expression_group.h"
 #include "ast/expression_spread.h"
 #include "ast/expression_template_generator.h"
+#include "ast/function_argument.h"
+#include "ast/function_body.h"
 #include "ast/import_declarator.h"
+#include "ast/initialize_field.h"
+#include "ast/initialize_list.h"
+#include "ast/interface_declarator.h"
 #include "ast/literal_identifier.h"
 #include "ast/literal_string.h"
 #include "ast/node_type.h"
@@ -16,6 +24,10 @@
 #include "ast/statement_expression.h"
 #include "ast/statement_import.h"
 #include "ast/variable_declarator.h"
+#include "astwriter/array_declarator.h"
+#include "astwriter/decorator.h"
+#include "astwriter/enum_declarator.h"
+#include "astwriter/enum_field.h"
 #include "astwriter/expression_assigment.h"
 #include "astwriter/expression_binary.h"
 #include "astwriter/expression_call.h"
@@ -25,7 +37,14 @@
 #include "astwriter/expression_member.h"
 #include "astwriter/expression_spread.h"
 #include "astwriter/expression_template_generator.h"
+#include "astwriter/function_argument.h"
+#include "astwriter/function_body.h"
+#include "astwriter/function_declarator.h"
+#include "astwriter/function_self.h"
 #include "astwriter/import_declarator.h"
+#include "astwriter/initialize_field.h"
+#include "astwriter/initialize_list.h"
+#include "astwriter/interface_declarator.h"
 #include "astwriter/literal_char.h"
 #include "astwriter/literal_identifier.h"
 #include "astwriter/literal_numeric.h"
@@ -140,47 +159,11 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_STATEMENT_FUNCTION"));
     break;
-  case CUBEC_NODE_TYPE_FUNCTION_BODY:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_FUNCTION_BODY"));
-    break;
-  case CUBEC_NODE_TYPE_FUNCTION_SELF:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_FUNCTION_SELF"));
-    break;
   case CUBEC_NODE_TYPE_STATEMENT_STRUCT:
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_STATEMENT_STRUCT"));
-    break;
-  case CUBEC_NODE_TYPE_STRUCT_FIELD:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_STRUCT_FIELD"));
-    break;
-  case CUBEC_NODE_TYPE_STATEMENT_UNION:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_STATEMENT_UNION"));
-    break;
-  case CUBEC_NODE_TYPE_STATEMENT_INTERFACE:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_STATEMENT_INTERFACE"));
-    break;
-  case CUBEC_NODE_TYPE_INTERFACE_METHOD:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_INTERFACE_METHOD"));
     break;
   case CUBEC_NODE_TYPE_STATEMENT_ENUM:
     cubec_value_set_field(
@@ -188,11 +171,12 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_STATEMENT_ENUM"));
     break;
-  case CUBEC_NODE_TYPE_ENUM_OPTION:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_ENUM_OPTION"));
+  case CUBEC_NODE_TYPE_ENUM_FIELD:
+    value = cubec_write_ast_enum_field(allocator, (cubec_ast_enum_field_t)self);
+    cubec_value_set_field(value, allocator, "type",
+                          cubec_value_set_string(cubec_create_value(allocator),
+                                                 allocator,
+                                                 "CUBEC_NODE_TYPE_ENUM_FIELD"));
     break;
   case CUBEC_NODE_TYPE_STATEMENT_DECLARATION:
     value = cubec_write_ast_statement_declaration(
@@ -362,12 +346,6 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_EXPRESSION_CONDITION"));
     break;
-  case CUBEC_NODE_TYPE_EXPRESSION_AWAIT:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_EXPRESSION_AWAIT"));
-    break;
   case CUBEC_NODE_TYPE_EXPRESSION_DELETE:
     cubec_value_set_field(
         value, allocator, "type",
@@ -390,36 +368,6 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_EXPRESSION_SPREAD"));
     break;
-  case CUBEC_NODE_TYPE_EXPRESSION_FUNCTION:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_EXPRESSION_FUNCTION"));
-    break;
-  case CUBEC_NODE_TYPE_EXPRESSION_STRUCT:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_EXPRESSION_STRUCT"));
-    break;
-  case CUBEC_NODE_TYPE_EXPRESSION_TRY:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_EXPRESSION_TRY"));
-    break;
-  case CUBEC_NODE_TYPE_EXPRESSION_MOVE:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_EXPRESSION_MOVE"));
-    break;
-  case CUBEC_NODE_TYPE_EXPRESSION_CLONE:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_EXPRESSION_CLONE"));
-    break;
   case CUBEC_NODE_TYPE_PROGRAM:
     value = cubec_write_ast_program(allocator, (cubec_ast_program_t)self);
     cubec_value_set_field(value, allocator, "type",
@@ -434,6 +382,91 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_EXPRESSION_COMMON"));
+    break;
+  case CUBEC_NODE_TYPE_STRUCT_DECLARATOR:
+    cubec_value_set_field(
+        value, allocator, "type",
+        cubec_value_set_string(cubec_create_value(allocator), allocator,
+                               "CUBEC_NODE_TYPE_STRUCT_DECLARATOR"));
+    break;
+  case CUBEC_NODE_TYPE_ENUM_DECLARATOR:
+    value = cubec_write_ast_enum_declarator(allocator,
+                                            (cubec_ast_enum_declarator_t)self);
+    cubec_value_set_field(
+        value, allocator, "type",
+        cubec_value_set_string(cubec_create_value(allocator), allocator,
+                               "CUBEC_NODE_TYPE_ENUM_DECLARATOR"));
+    break;
+  case CUBEC_NODE_TYPE_FUNCTION_DECLARATOR:
+    value = cubec_write_ast_function_declarator(
+        allocator, (cubec_ast_function_declarator_t)self);
+    cubec_value_set_field(
+        value, allocator, "type",
+        cubec_value_set_string(cubec_create_value(allocator), allocator,
+                               "CUBEC_NODE_TYPE_FUNCTION_DECLARATOR"));
+    break;
+  case CUBEC_NODE_TYPE_FUNCTION_ARGUMENT:
+    value = cubec_write_ast_function_argument(
+        allocator, (cubec_ast_function_argument_t)self);
+    cubec_value_set_field(
+        value, allocator, "type",
+        cubec_value_set_string(cubec_create_value(allocator), allocator,
+                               "CUBEC_NODE_TYPE_FUNCTION_ARGUMENT"));
+    break;
+  case CUBEC_NODE_TYPE_FUNCTION_BODY:
+    value = cubec_write_ast_function_body(allocator,
+                                          (cubec_ast_function_body_t)self);
+    cubec_value_set_field(
+        value, allocator, "type",
+        cubec_value_set_string(cubec_create_value(allocator), allocator,
+                               "CUBEC_NODE_TYPE_FUNCTION_BODY"));
+    break;
+  case CUBEC_NODE_TYPE_FUNCTION_SELF:
+    value = cubec_write_ast_function_self(allocator,
+                                          (cubec_ast_function_self_t)self);
+    cubec_value_set_field(
+        value, allocator, "type",
+        cubec_value_set_string(cubec_create_value(allocator), allocator,
+                               "CUBEC_NODE_TYPE_FUNCTION_SELF"));
+    break;
+  case CUBEC_NODE_TYPE_INITIALIZE_LIST:
+    value = cubec_write_ast_initialize_list(allocator,
+                                            (cubec_ast_initialize_list_t)self);
+    cubec_value_set_field(
+        value, allocator, "type",
+        cubec_value_set_string(cubec_create_value(allocator), allocator,
+                               "CUBEC_NODE_TYPE_INITIALIZE_LIST"));
+    break;
+  case CUBEC_NODE_TYPE_INITIALIZE_FIELD:
+    value = cubec_write_ast_initialize_field(
+        allocator, (cubec_ast_initialize_field_t)self);
+    cubec_value_set_field(
+        value, allocator, "type",
+        cubec_value_set_string(cubec_create_value(allocator), allocator,
+                               "CUBEC_NODE_TYPE_INITIALIZE_FIELD"));
+    break;
+  case CUBEC_NODE_TYPE_ARRAY_DECLARATOR:
+    value = cubec_write_ast_array_declarator(
+        allocator, (cubec_ast_array_declarator_t)self);
+    cubec_value_set_field(
+        value, allocator, "type",
+        cubec_value_set_string(cubec_create_value(allocator), allocator,
+                               "CUBEC_NODE_TYPE_ARRAY_DECLARATOR"));
+    break;
+  case CUBEC_NODE_TYPE_DECORATOR:
+    value = cubec_write_ast_decorator(allocator, (cubec_ast_decorator_t)self);
+    cubec_value_set_field(value, allocator, "type",
+                          cubec_value_set_string(cubec_create_value(allocator),
+                                                 allocator,
+                                                 "CUBEC_NODE_TYPE_DECORATOR"));
+    break;
+  case CUBEC_NODE_TYPE_INTERFACE_DECLARATOR:
+    value = cubec_write_ast_interface_declarator(
+        allocator, (cubec_ast_interface_declarator_t)self);
+    cubec_value_set_field(
+        value, allocator, "type",
+        cubec_value_set_string(cubec_create_value(allocator), allocator,
+                               "CUBEC_NODE_TYPE_INTERFACE_DECLARATOR"));
     break;
   }
   // cubec_value_t location =
@@ -452,7 +485,8 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
   //                                              self->loc.begin.column));
   // cubec_value_set_field(end, allocator, "line",
   //                       cubec_value_set_number(cubec_create_value(allocator),
-  //                                              allocator, self->loc.end.line));
+  //                                              allocator,
+  //                                              self->loc.end.line));
   // cubec_value_set_field(end, allocator, "column",
   //                       cubec_value_set_number(cubec_create_value(allocator),
   //                                              allocator,

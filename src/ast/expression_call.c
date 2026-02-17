@@ -1,6 +1,7 @@
 #include "ast/expression_call.h"
 #include "ast/expression.h"
 #include "ast/expression_spread.h"
+#include "ast/initialize_list.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
@@ -44,39 +45,49 @@ cubec_ast_node_t cubec_read_ast_expression_call(cubec_allocator_t allocator,
     goto onerror;
   }
   if (*current.offset != ')') {
-    for (;;) {
-      cubec_ast_node_t item =
-          cubec_read_ast_expression_spread(allocator, &current, end);
-      if (!item) {
-        item = cubec_read_ast_expression2(allocator, &current, end);
-      }
-      if (!item) {
-        err = cubec_create_ast_error(allocator, *position, current,
-                                     "Invalid or unexpected token");
+    cubec_ast_node_t initialize_list =
+        cubec_read_ast_initialize_list(allocator, &current, end);
+    if (initialize_list) {
+      if (initialize_list->type == CUBEC_NODE_TYPE_ERROR) {
+        err = initialize_list;
         goto onerror;
       }
-      if (item->type == CUBEC_NODE_TYPE_ERROR) {
-        err = item;
-        goto onerror;
-      }
-      cubec_list_append(node->args, allocator, item);
-      err = cubec_ast_skip_all(allocator, &current, end);
-      if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-        goto onerror;
-      }
-      if (*current.offset == ')') {
-        break;
-      }
-      if (*current.offset != ',') {
-        err = cubec_create_ast_error(allocator, *position, current,
-                                     "Invalid or unexpected token");
-        goto onerror;
-      }
-      current.column++;
-      current.offset++;
-      err = cubec_ast_skip_all(allocator, &current, end);
-      if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-        goto onerror;
+      cubec_list_append(node->args, allocator, initialize_list);
+    } else {
+      for (;;) {
+        cubec_ast_node_t item =
+            cubec_read_ast_expression_spread(allocator, &current, end);
+        if (!item) {
+          item = cubec_read_ast_expression3(allocator, &current, end);
+        }
+        if (!item) {
+          err = cubec_create_ast_error(allocator, *position, current,
+                                       "Invalid or unexpected token");
+          goto onerror;
+        }
+        if (item->type == CUBEC_NODE_TYPE_ERROR) {
+          err = item;
+          goto onerror;
+        }
+        cubec_list_append(node->args, allocator, item);
+        err = cubec_ast_skip_all(allocator, &current, end);
+        if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+          goto onerror;
+        }
+        if (*current.offset == ')') {
+          break;
+        }
+        if (*current.offset != ',') {
+          err = cubec_create_ast_error(allocator, *position, current,
+                                       "Invalid or unexpected token");
+          goto onerror;
+        }
+        current.column++;
+        current.offset++;
+        err = cubec_ast_skip_all(allocator, &current, end);
+        if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+          goto onerror;
+        }
       }
     }
   }

@@ -1,4 +1,6 @@
 #include "ast/expression.h"
+#include "ast/array_declarator.h"
+#include "ast/enum_declarator.h"
 #include "ast/expression_assigment.h"
 #include "ast/expression_binary.h"
 #include "ast/expression_call.h"
@@ -7,6 +9,8 @@
 #include "ast/expression_group.h"
 #include "ast/expression_member.h"
 #include "ast/expression_template_generator.h"
+#include "ast/function_declarator.h"
+#include "ast/interface_declarator.h"
 #include "ast/literal_char.h"
 #include "ast/literal_identifier.h"
 #include "ast/literal_numeric.h"
@@ -243,13 +247,28 @@ cubec_ast_node_t cubec_read_ast_expression19(cubec_allocator_t allocator,
                                              cubec_position_t *position,
                                              const char *end) {
   cubec_ast_node_t node = NULL;
-  // TODO: func
-  // TODO: template
+  // TODO: struct
   node = cubec_read_ast_expression_group(allocator, position, end);
   if (node) {
     return node;
   }
   node = cubec_read_ast_expression_template_generator(allocator, position, end);
+  if (node) {
+    return node;
+  }
+  node = cubec_read_ast_interface_declarator(allocator, position, end);
+  if (node) {
+    return node;
+  }
+  node = cubec_read_ast_function_declarator(allocator, position, end);
+  if (node) {
+    return node;
+  }
+  node = cubec_read_ast_enum_declarator(allocator, position, end);
+  if (node) {
+    return node;
+  }
+  node = cubec_read_ast_array_declarator(allocator, position, end);
   if (node) {
     return node;
   }

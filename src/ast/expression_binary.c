@@ -49,6 +49,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_or(
   cubec_allocator_free(allocator, err);
   node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
   if (!node->opt) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
@@ -110,6 +113,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_and(
   cubec_allocator_free(allocator, err);
   node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
   if (!node->opt) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
@@ -170,6 +176,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
   cubec_allocator_free(allocator, err);
   node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
   if (!node->opt) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
@@ -229,6 +238,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
   cubec_allocator_free(allocator, err);
   node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
   if (!node->opt) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
@@ -288,6 +300,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
   cubec_allocator_free(allocator, err);
   node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
   if (!node->opt) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
@@ -348,6 +363,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_equal(
   cubec_allocator_free(allocator, err);
   node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
   if (!node->opt) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
@@ -409,6 +427,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_relation(
   cubec_allocator_free(allocator, err);
   node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
   if (!node->opt) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
@@ -472,6 +493,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
   cubec_allocator_free(allocator, err);
   node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
   if (!node->opt) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
@@ -532,6 +556,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_additive(
   cubec_allocator_free(allocator, err);
   node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
   if (!node->opt) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
@@ -592,6 +619,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
   cubec_allocator_free(allocator, err);
   node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
   if (!node->opt) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
@@ -655,7 +685,8 @@ cubec_ast_node_t cubec_read_ast_expression_binary_prefix(
       !cubec_location_is(node->opt->loc, "+") &&
       !cubec_location_is(node->opt->loc, "-") &&
       !cubec_location_is(node->opt->loc, "~") &&
-      !cubec_location_is(node->opt->loc, "await") &&
+      !cubec_location_is(node->opt->loc, "&") &&
+      !cubec_location_is(node->opt->loc, "try") &&
       !cubec_location_is(node->opt->loc, "typeof") &&
       !cubec_location_is(node->opt->loc, "sizeof")) {
     goto onerror;
@@ -709,6 +740,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_postfix(
   cubec_allocator_free(allocator, err);
   node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
   if (!node->opt) {
+    err = node->left;
+    node->left = NULL;
+    *position = err->loc.end;
     goto onerror;
   }
   if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {

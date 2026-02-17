@@ -45,7 +45,6 @@ cubec_ast_node_t cubec_read_ast_statement_declaration(
     goto onerror;
   }
   if (!cubec_location_is(kind->loc, "const") &&
-      !cubec_location_is(kind->loc, "var") &&
       !cubec_location_is(kind->loc, "using") &&
       !cubec_location_is(kind->loc, "let") &&
       !cubec_location_is(kind->loc, "type")) {

@@ -1,9 +1,7 @@
 #include "ast/program.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "ast/statement_declaration.h"
-#include "ast/statement_expression.h"
-#include "ast/statement_import.h"
+#include "ast/statement.h"
 #include "core/allocator.h"
 #include "core/list.h"
 #include "core/position.h"
@@ -36,14 +34,7 @@ cubec_ast_node_t cubec_read_ast_program(cubec_allocator_t allocator,
   cubec_allocator_free(allocator, err);
   program = cubec_create_ast_program(allocator);
   for (;;) {
-    cubec_ast_node_t stat =
-        cubec_read_ast_statement_import(allocator, &current, end);
-    if (!stat) {
-      stat = cubec_read_ast_statement_declaration(allocator, &current, end);
-    }
-    if (!stat) {
-      stat = cubec_read_ast_statement_expression(allocator, &current, end);
-    }
+    cubec_ast_node_t stat = cubec_read_ast_statement(allocator, &current, end);
     if (!stat) {
       break;
     }
@@ -56,7 +47,6 @@ cubec_ast_node_t cubec_read_ast_program(cubec_allocator_t allocator,
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;
     }
-    cubec_allocator_free(allocator, err);
   }
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {

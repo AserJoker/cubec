@@ -41,15 +41,6 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
   node->identifier =
       cubec_read_ast_literal_identifier(allocator, &current, end);
   if (!node->identifier) {
-    // TODO: new([allocator,] type [,identifier]);
-  }
-  if (!node->identifier) {
-    // TODO: {a:a.b,b:c,...obj} = item;
-  }
-  if (!node->identifier) {
-    // TODO: [a.b,c,...arr] = item;
-  }
-  if (!node->identifier) {
     node->identifier =
         cubec_read_ast_expression_member(allocator, position, end);
   }
@@ -86,9 +77,8 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  cubec_allocator_free(allocator, err);
 
-  node->value = cubec_read_ast_expression2(allocator, &current, end);
+  node->value = cubec_read_ast_expression3(allocator, &current, end);
   if (!node->value) {
     err = cubec_create_ast_error(
         allocator, *position, current,
