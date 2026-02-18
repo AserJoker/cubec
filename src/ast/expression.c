@@ -5,6 +5,7 @@
 #include "ast/expression_call.h"
 #include "ast/expression_comma.h"
 #include "ast/expression_compute_member.h"
+#include "ast/expression_condition.h"
 #include "ast/expression_group.h"
 #include "ast/expression_member.h"
 #include "ast/expression_slice.h"
@@ -50,11 +51,11 @@ cubec_ast_node_t cubec_read_ast_expression2(cubec_allocator_t allocator,
 cubec_ast_node_t cubec_read_ast_expression3(cubec_allocator_t allocator,
                                             cubec_position_t *position,
                                             const char *end) {
-  cubec_ast_node_t node = NULL;
+  cubec_ast_node_t node =
+      cubec_read_ast_expression_condition(allocator, position, end);
   if (node) {
     return node;
   }
-  // TODO: triple
   return cubec_read_ast_expression4(allocator, position, end);
 }
 

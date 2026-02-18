@@ -6,6 +6,7 @@
 #include "ast/expression_call.h"
 #include "ast/expression_comma.h"
 #include "ast/expression_compute_member.h"
+#include "ast/expression_condition.h"
 #include "ast/expression_group.h"
 #include "ast/expression_slice.h"
 #include "ast/expression_spread.h"
@@ -32,6 +33,7 @@
 #include "astwriter/expression_call.h"
 #include "astwriter/expression_comma.h"
 #include "astwriter/expression_compute_member.h"
+#include "astwriter/expression_condition.h"
 #include "astwriter/expression_group.h"
 #include "astwriter/expression_member.h"
 #include "astwriter/expression_slice.h"
@@ -340,6 +342,8 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
                               "CUBEC_NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR"));
     break;
   case CUBEC_NODE_TYPE_EXPRESSION_CONDITION:
+    value = cubec_write_ast_expression_condition(
+        allocator, (cubec_ast_expression_condition_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
