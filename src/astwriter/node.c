@@ -7,6 +7,7 @@
 #include "ast/expression_comma.h"
 #include "ast/expression_compute_member.h"
 #include "ast/expression_group.h"
+#include "ast/expression_slice.h"
 #include "ast/expression_spread.h"
 #include "ast/expression_template_generator.h"
 #include "ast/function_argument.h"
@@ -33,6 +34,7 @@
 #include "astwriter/expression_compute_member.h"
 #include "astwriter/expression_group.h"
 #include "astwriter/expression_member.h"
+#include "astwriter/expression_slice.h"
 #include "astwriter/expression_spread.h"
 #include "astwriter/expression_template_generator.h"
 #include "astwriter/function_argument.h"
@@ -449,11 +451,13 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_INTERFACE_DECLARATOR"));
     break;
-  case CUBEC_NODE_TYPE_SLICE_DECLARATOR:
+  case CUBEC_NODE_TYPE_EXPRESSION_SLICE:
+    value = cubec_write_ast_expression_slice(
+        allocator, (cubec_ast_expression_slice_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_SLICE_DECLARATOR"));
+                               "CUBEC_NODE_TYPE_EXPRESSION_SLICE"));
     break;
   }
   // cubec_value_t location =

@@ -7,6 +7,7 @@
 #include "ast/expression_compute_member.h"
 #include "ast/expression_group.h"
 #include "ast/expression_member.h"
+#include "ast/expression_slice.h"
 #include "ast/expression_template_generator.h"
 #include "ast/function_declarator.h"
 #include "ast/interface_declarator.h"
@@ -204,6 +205,9 @@ cubec_ast_node_t cubec_read_ast_expression18(cubec_allocator_t allocator,
       }
       cubec_ast_node_t next = NULL;
       if (!next) {
+        next = cubec_read_ast_expression_slice(allocator, &current, end);
+      }
+      if (!next) {
         next = cubec_read_ast_expression_member(allocator, &current, end);
       }
       if (!next) {
@@ -236,6 +240,12 @@ cubec_ast_node_t cubec_read_ast_expression18(cubec_allocator_t allocator,
           call->callee = node;
           node = &call->super;
           call->super.loc.begin = *position;
+        } else if (next->type == CUBEC_NODE_TYPE_EXPRESSION_SLICE) {
+          cubec_ast_expression_slice_t slice =
+              (cubec_ast_expression_slice_t)next;
+          slice->host = node;
+          node = &slice->super;
+          slice->super.loc.begin = *position;
         }
       } else {
         break;
