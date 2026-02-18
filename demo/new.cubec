@@ -1,28 +1,61 @@
 import { default_heap_allocator } from 'memory';
-import { Type } from 'compiler'
-comptime func new(type:Type):type {
-    const result = type(default_heap_allocator.calloc(sizeof(type)));
-    if(type.isStruct()) {
-        const stru = Struct(type);
-        foreach(const extend : stru.extends) {
-            foreach(const method:extend.methods) {
-                if(!method.name){
-                    continue;
-                }
-                const func = Type.findFunction(method.name,type,...arraymethod.args) ??
-                             Type.findFunction(method.name,type.ref(),...method.args);
-                if(func&&func.type == method.type){
-                    result[method.name] = func;
-                }
+import { Type } from 'compiler';
+type _VTable = Map(str, Method);
+comptime func _build(stru:Struct, extend:Struct, path:str, vtable:&_VTable) {
+    foreach(size_t idx=0;idx<extend.fields.size();idx++) {
+        const field = extend.fields[idx];
+        if(!field.isInterface()){
+            continue;
+        }
+        const key = field + "." +field.name;
+        if(vtable.has(key)){
+            continue;
+        }
+        const inter = Interface(field);
+        for(const method:stru.methods) {
+            if(method.name != inter.name) {
+                continue;
             }
+            if(inter.return_type != method.return_type) {
+                continue;
+            }
+            if(inter.args[1:] != method.args[1:]){
+                continue;
+            }
+            vtable.set(key, method);
+        }
+    }
+    foreach(const ext:extend.extends) {
+        _build(stru,ext,path+"."+ext.name,vtable);
+    }
+    foreach(const ext:extend.extends) {
+        _build(extend,ext,ext.name,vtable);
+    }
+ }
+comptime func _build(stru:Struct,vtable:&_VTable) {
+    foreach(const extend:stru.extends) {
+        _build(t,extend,extend.name,vtable);
+    }
+    return vtable;
+}
+inline func new(t:Type):t {
+    const result = t(default_heap_allocator.calloc(sizeof(t)));
+    if(t.isStruct()) {
+        const stru = Struct(stru);
+        const vtable = _VTable();
+        _build(stru,vtable);
+        foreach(const pair:vtable) {
+            const field = pair.key;
+            const method = pair.value;
+            result[field] = (typeof result[field])(method.pointer);
         }
     }
     return result;
 }
-template delete(value:anytype) {
+comptime template delete(value:anytype) {
     type t = typeof(value);
     if(!t.isStruct()&&!t.isArray()){
         CompileError("cannot delete '{}'", t.name);
     }
-    default_heap_allocator.free(pointer(t));
+    try default_heap_allocator.free(pointer(t));
 }

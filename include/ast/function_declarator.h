@@ -10,7 +10,6 @@ typedef struct _cubec_ast_function_declarator_t {
   struct _cubec_ast_node_t super;
   cubec_ast_node_t identifier;
   cubec_ast_node_t kind;
-  cubec_ast_node_t self;
   cubec_ast_node_t type;
   cubec_ast_node_t body;
   cubec_list_t args;

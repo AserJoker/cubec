@@ -3,7 +3,6 @@
 #include "ast/expression.h"
 #include "ast/function_argument.h"
 #include "ast/function_body.h"
-#include "ast/function_self.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -18,7 +17,6 @@ cubec_ast_function_declarator_dispose(cubec_ast_function_declarator_t self,
   cubec_allocator_free(allocator, self->decorators);
   cubec_allocator_free(allocator, self->kind);
   cubec_allocator_free(allocator, self->identifier);
-  cubec_allocator_free(allocator, self->self);
   cubec_allocator_free(allocator, self->args);
   cubec_allocator_free(allocator, self->type);
   cubec_allocator_free(allocator, self->body);
@@ -32,7 +30,6 @@ cubec_create_ast_function_declarator(cubec_allocator_t allocator) {
   self->super.type = CUBEC_NODE_TYPE_FUNCTION_DECLARATOR;
   self->kind = NULL;
   self->identifier = NULL;
-  self->self = NULL;
   self->body = NULL;
   self->type = NULL;
   cubec_list_initialize_t initialize = {
@@ -86,15 +83,6 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  cubec_ast_node_t self =
-      cubec_read_ast_function_self(allocator, &current, end);
-  if (self) {
-    if (self->type == CUBEC_NODE_TYPE_ERROR) {
-      err = self;
-      goto onerror;
-    }
-    node->self = self;
-  }
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
@@ -107,11 +95,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
       goto onerror;
     }
     node->identifier = identifier;
-  } else if (node->self) {
-    current = node->self->loc.begin;
-    cubec_allocator_free(allocator, node->self);
-    node->self = NULL;
-  }
+  } 
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;

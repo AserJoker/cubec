@@ -29,32 +29,40 @@ cubec_ast_node_t cubec_read_ast_initialize_field(cubec_allocator_t allocator,
       cubec_create_ast_initialize_field(allocator);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
-  cubec_ast_node_t identifier =
-      cubec_read_ast_literal_identifier(allocator, &current, end);
-  if (!identifier) {
-    err = cubec_create_ast_error(allocator, *position, current,
-                                 "Invalid initialize list");
-    goto onerror;
-  }
-  if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
-    err = identifier;
-    goto onerror;
-  }
-  node->identifier = identifier;
-  err = cubec_ast_skip_all(allocator, &current, end);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-    return err;
-  }
-  if (*current.offset != '=') {
-    err = cubec_create_ast_error(allocator, *position, current,
-                                 "Invalid initialize list, missing '='");
-    goto onerror;
-  }
-  current.offset++;
-  current.column++;
-  err = cubec_ast_skip_all(allocator, &current, end);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-    return err;
+  if (*current.offset == '.') {
+    current.offset++;
+    current.column++;
+    err = cubec_ast_skip_all(allocator, &current, end);
+    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      return err;
+    }
+    cubec_ast_node_t identifier =
+        cubec_read_ast_literal_identifier(allocator, &current, end);
+    if (!identifier) {
+      err = cubec_create_ast_error(allocator, *position, current,
+                                   "Invalid initialize list");
+      goto onerror;
+    }
+    if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
+      err = identifier;
+      goto onerror;
+    }
+    node->identifier = identifier;
+    err = cubec_ast_skip_all(allocator, &current, end);
+    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      return err;
+    }
+    if (*current.offset != '=') {
+      err = cubec_create_ast_error(allocator, *position, current,
+                                   "Invalid initialize list, missing '='");
+      goto onerror;
+    }
+    current.offset++;
+    current.column++;
+    err = cubec_ast_skip_all(allocator, &current, end);
+    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      return err;
+    }
   }
   cubec_ast_node_t initialize =
       cubec_read_ast_expression3(allocator, &current, end);
