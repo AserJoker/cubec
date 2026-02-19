@@ -1,4 +1,5 @@
 #include "ast/statement_declaration.h"
+#include "ast/decorator.h"
 #include "ast/literal_identifier.h"
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
@@ -14,6 +15,7 @@ cubec_ast_statement_declaration_dispose(cubec_ast_statement_declaration_t self,
                                         cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->kind);
   cubec_allocator_free(allocator, self->declarations);
+  cubec_allocator_free(allocator, self->decorators);
 }
 cubec_ast_statement_declaration_t
 cubec_create_ast_statement_declaration(cubec_allocator_t allocator) {
@@ -27,6 +29,7 @@ cubec_create_ast_statement_declaration(cubec_allocator_t allocator) {
       .autofree = true,
   };
   self->declarations = cubec_create_list(allocator, &initialize);
+  self->decorators = cubec_create_list(allocator, &initialize);
   return self;
 }
 cubec_ast_node_t cubec_read_ast_statement_declaration(
@@ -35,6 +38,21 @@ cubec_ast_node_t cubec_read_ast_statement_declaration(
       cubec_create_ast_statement_declaration(allocator);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
+  for (;;) {
+    cubec_ast_node_t decorator =
+        cubec_read_ast_decorator(allocator, &current, end);
+    if (!decorator) {
+      break;
+    }
+    if (decorator->type == CUBEC_NODE_TYPE_ERROR) {
+      goto onerror;
+    }
+    cubec_list_append(node->decorators, allocator, decorator);
+    err = cubec_ast_skip_all(allocator, &current, end);
+    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      return err;
+    }
+  }
   cubec_ast_node_t kind =
       cubec_read_ast_literal_identifier(allocator, &current, end);
   if (!kind) {
@@ -47,7 +65,7 @@ cubec_ast_node_t cubec_read_ast_statement_declaration(
   if (!cubec_location_is(kind->loc, "const") &&
       !cubec_location_is(kind->loc, "using") &&
       !cubec_location_is(kind->loc, "let") &&
-      !cubec_location_is(kind->loc, "type")) {
+      !cubec_location_is(kind->loc, "comptime")) {
     cubec_allocator_free(allocator, kind);
     goto onerror;
   }

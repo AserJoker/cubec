@@ -696,7 +696,6 @@ cubec_ast_node_t cubec_read_ast_expression_binary_prefix(
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  cubec_allocator_free(allocator, err);
   node->right = cubec_read_ast_expression16(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,

@@ -63,26 +63,38 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   }
   cubec_ast_node_t kind =
       cubec_read_ast_literal_identifier(allocator, &current, end);
-  if (!kind) {
+  if (kind) {
+    if (kind->type == CUBEC_NODE_TYPE_ERROR) {
+      err = kind;
+      goto onerror;
+    }
+    if (!cubec_location_is(kind->loc, "inline") &&
+        !cubec_location_is(kind->loc, "template") &&
+        !cubec_location_is(kind->loc, "comptime")) {
+      current = *position;
+      cubec_allocator_free(allocator, kind);
+    } else {
+      node->kind = kind;
+      err = cubec_ast_skip_all(allocator, &current, end);
+      if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+        return err;
+      }
+    }
+  }
+  cubec_ast_node_t token =
+      cubec_read_ast_literal_identifier(allocator, &current, end);
+  if (!token) {
     goto onerror;
   }
-  if (kind->type == CUBEC_NODE_TYPE_ERROR) {
-    err = kind;
+  if (token->type == CUBEC_NODE_TYPE_ERROR) {
+    err = token;
     goto onerror;
   }
-  if (!cubec_location_is(kind->loc, "method") &&
-      !cubec_location_is(kind->loc, "func") &&
-      !cubec_location_is(kind->loc, "cfunc") &&
-      !cubec_location_is(kind->loc, "template") &&
-      !cubec_location_is(kind->loc, "meta")) {
-    cubec_allocator_free(allocator, kind);
+  if (!cubec_location_is(token->loc, "func")) {
+    cubec_allocator_free(allocator, token);
     goto onerror;
   }
-  node->kind = kind;
-  err = cubec_ast_skip_all(allocator, &current, end);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-    return err;
-  }
+  cubec_allocator_free(allocator, token);
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
@@ -95,14 +107,16 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
       goto onerror;
     }
     node->identifier = identifier;
-  } 
+  }
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != '(') {
-    err = cubec_create_ast_error(allocator, *position, current,
-                                 "Invalid function expression, missing '('");
+    if (!cubec_location_is(node->kind->loc, "comptime")) {
+      err = cubec_create_ast_error(allocator, *position, current,
+                                   "Invalid function expression, missing '('");
+    }
     goto onerror;
   }
   current.offset++;

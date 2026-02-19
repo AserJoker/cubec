@@ -18,8 +18,10 @@
 #include "ast/literal_string.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "ast/struct_declarator.h"
 #include "core/allocator.h"
 #include "core/position.h"
+
 
 cubec_ast_node_t cubec_read_ast_expression(cubec_allocator_t allocator,
                                            cubec_position_t *position,
@@ -260,7 +262,10 @@ cubec_ast_node_t cubec_read_ast_expression19(cubec_allocator_t allocator,
                                              cubec_position_t *position,
                                              const char *end) {
   cubec_ast_node_t node = NULL;
-  // TODO: struct
+  node = cubec_read_ast_struct_declarator(allocator, position, end);
+  if (node) {
+    return node;
+  }
   node = cubec_read_ast_expression_group(allocator, position, end);
   if (node) {
     return node;

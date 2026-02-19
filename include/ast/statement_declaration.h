@@ -10,6 +10,7 @@ typedef struct _cubec_ast_statement_declaration_t {
   struct _cubec_ast_node_t super;
   cubec_ast_node_t kind;
   cubec_list_t declarations;
+  cubec_list_t decorators;
 } *cubec_ast_statement_declaration_t;
 cubec_ast_statement_declaration_t
 cubec_create_ast_statement_declaration(cubec_allocator_t allocator);

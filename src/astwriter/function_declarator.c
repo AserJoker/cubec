@@ -17,8 +17,10 @@ cubec_write_ast_function_declarator(cubec_allocator_t allocator,
     it = cubec_list_node_next(it);
   }
   cubec_value_set_field(value, allocator, "decorators", decorators);
-  cubec_value_set_field(value, allocator, "kind",
-                        cubec_write_ast_node(self->kind, allocator));
+  if (self->kind) {
+    cubec_value_set_field(value, allocator, "kind",
+                          cubec_write_ast_node(self->kind, allocator));
+  }
   if (self->identifier) {
     cubec_value_set_field(value, allocator, "identifier",
                           cubec_write_ast_node(self->identifier, allocator));
