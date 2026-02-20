@@ -7,6 +7,7 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/list.h"
+#include "core/location.h"
 #include "core/position.h"
 static void
 cubec_ast_function_argument_dispose(cubec_ast_function_argument_t self,

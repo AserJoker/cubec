@@ -71,7 +71,6 @@ cubec_ast_node_t cubec_read_ast_interface_declarator(
         goto onerror;
       }
       cubec_list_append(node->args, allocator, arg);
-
       err = cubec_ast_skip_all(allocator, &current, end);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;

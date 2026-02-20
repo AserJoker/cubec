@@ -36,6 +36,16 @@ cubec_ast_node_t cubec_read_ast_statement_function(cubec_allocator_t allocator,
     goto onerror;
   }
   node->function = function;
+  err = cubec_ast_skip_all(allocator, &current, end);
+  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    return err;
+  }
+  if (*current.offset == ';') {
+    current.offset++;
+    current.column++;
+  } else {
+    current = function->loc.end;
+  }
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
