@@ -36,7 +36,7 @@ cubec_ast_node_t cubec_read_ast_decorator(cubec_allocator_t allocator,
     return err;
   }
   cubec_ast_node_t expression =
-      cubec_read_ast_expression3(allocator, &current, end);
+      cubec_read_ast_expression2(allocator, &current, end);
   if (!expression) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Invalid or unexpected token");

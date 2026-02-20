@@ -1,7 +1,0 @@
-func test():void {
-    print("start\n");
-    defer {
-        print("end\n");
-    }
-    print("running\n");
-}

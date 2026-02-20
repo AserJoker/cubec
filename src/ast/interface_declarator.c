@@ -63,7 +63,7 @@ cubec_ast_node_t cubec_read_ast_interface_declarator(
   if (*current.offset != ')') {
     for (;;) {
       cubec_ast_node_t arg =
-          cubec_read_ast_expression3(allocator, &current, end);
+          cubec_read_ast_expression2(allocator, &current, end);
       if (!arg) {
         goto onerror;
       }
@@ -105,7 +105,7 @@ cubec_ast_node_t cubec_read_ast_interface_declarator(
   current.offset++;
   current.column++;
   cubec_ast_node_t return_type =
-      cubec_read_ast_expression3(allocator, &current, end);
+      cubec_read_ast_expression2(allocator, &current, end);
   if (!return_type) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Invalid interface expression");

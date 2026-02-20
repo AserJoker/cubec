@@ -77,7 +77,7 @@ cubec_ast_node_t cubec_read_ast_function_argument(cubec_allocator_t allocator,
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
-  cubec_ast_node_t type = cubec_read_ast_expression3(allocator, &current, end);
+  cubec_ast_node_t type = cubec_read_ast_expression2(allocator, &current, end);
   if (!type) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Invalid function argument, missing type");

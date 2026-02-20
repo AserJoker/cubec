@@ -41,7 +41,7 @@ cubec_ast_node_t cubec_read_ast_expression_slice(cubec_allocator_t allocator,
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
-  cubec_ast_node_t start = cubec_read_ast_expression3(allocator, &current, end);
+  cubec_ast_node_t start = cubec_read_ast_expression2(allocator, &current, end);
   if (start) {
     if (start->type == CUBEC_NODE_TYPE_ERROR) {
       err = start;
@@ -59,7 +59,7 @@ cubec_ast_node_t cubec_read_ast_expression_slice(cubec_allocator_t allocator,
   current.offset++;
   current.column++;
   cubec_ast_node_t end_index =
-      cubec_read_ast_expression3(allocator, &current, end);
+      cubec_read_ast_expression2(allocator, &current, end);
   if (end_index) {
     if (end_index->type == CUBEC_NODE_TYPE_ERROR) {
       err = end_index;

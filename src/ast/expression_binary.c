@@ -197,7 +197,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression7(allocator, &current, end);
+  node->right = cubec_read_ast_expression6(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexpected expression");
@@ -259,7 +259,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression8(allocator, &current, end);
+  node->right = cubec_read_ast_expression7(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexpected expression");
@@ -321,7 +321,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression9(allocator, &current, end);
+  node->right = cubec_read_ast_expression8(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexpected expression");
@@ -385,7 +385,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_equal(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression10(allocator, &current, end);
+  node->right = cubec_read_ast_expression9(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexpected expression");
@@ -451,7 +451,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_relation(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression11(allocator, &current, end);
+  node->right = cubec_read_ast_expression10(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexpected expression");
@@ -515,7 +515,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression12(allocator, &current, end);
+  node->right = cubec_read_ast_expression11(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexpected expression");
@@ -578,7 +578,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_additive(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression13(allocator, &current, end);
+  node->right = cubec_read_ast_expression12(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexpected expression");
@@ -642,7 +642,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
     return err;
   }
   cubec_allocator_free(allocator, err);
-  node->right = cubec_read_ast_expression14(allocator, &current, end);
+  node->right = cubec_read_ast_expression13(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexpected expression");
@@ -696,7 +696,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_prefix(
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  node->right = cubec_read_ast_expression16(allocator, &current, end);
+  node->right = cubec_read_ast_expression15(allocator, &current, end);
   if (!node->right) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Unexpected expression");

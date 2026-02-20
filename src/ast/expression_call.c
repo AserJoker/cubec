@@ -58,7 +58,7 @@ cubec_ast_node_t cubec_read_ast_expression_call(cubec_allocator_t allocator,
         cubec_ast_node_t item =
             cubec_read_ast_expression_spread(allocator, &current, end);
         if (!item) {
-          item = cubec_read_ast_expression3(allocator, &current, end);
+          item = cubec_read_ast_expression2(allocator, &current, end);
         }
         if (!item) {
           err = cubec_create_ast_error(allocator, *position, current,

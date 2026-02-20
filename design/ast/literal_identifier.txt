@@ -1,0 +1,1 @@
+literal_identifier = (ID_Start)(ID_Continue)*

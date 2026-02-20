@@ -1,2 +1,0 @@
-statement_function =>
-    expression_function

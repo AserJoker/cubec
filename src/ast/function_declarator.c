@@ -184,7 +184,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
       return err;
     }
     cubec_ast_node_t type =
-        cubec_read_ast_expression3(allocator, &current, end);
+        cubec_read_ast_expression2(allocator, &current, end);
     if (!type) {
       err = cubec_create_ast_error(allocator, *position, current,
                                    "Invalid function expression");

@@ -1,8 +1,0 @@
-import_declarator =>
-    literal_identifier
-    (
-        space
-        literal_identifier<'as'>
-        space
-        literal_identifier
-    )?

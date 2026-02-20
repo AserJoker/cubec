@@ -1,1 +1,0 @@
-typeof func(int32_t,int32_t):int32_t; // -> Interface

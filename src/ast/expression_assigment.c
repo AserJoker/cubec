@@ -78,7 +78,7 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
     return err;
   }
 
-  node->value = cubec_read_ast_expression3(allocator, &current, end);
+  node->value = cubec_read_ast_expression2(allocator, &current, end);
   if (!node->value) {
     err = cubec_create_ast_error(
         allocator, *position, current,
