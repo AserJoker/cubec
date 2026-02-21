@@ -46,7 +46,7 @@ cubec_ast_node_t cubec_read_ast_statement_return(cubec_allocator_t allocator,
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  cubec_ast_node_t value = cubec_read_ast_expression2(allocator, &current, end);
+  cubec_ast_node_t value = cubec_read_ast_expression(allocator, &current, end);
   if (value) {
     if (value->type == CUBEC_NODE_TYPE_ERROR) {
       err = value;

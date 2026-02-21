@@ -19,6 +19,7 @@ cubec_create_ast_switch_case(cubec_allocator_t allocator) {
       cubec_allocator_alloc(allocator, sizeof(struct _cubec_ast_switch_case_t),
                             (cubec_dispose_fn_t)cubec_ast_switch_case_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
+  self->super.type = CUBEC_NODE_TYPE_SWITCH_CASE;
   self->condition = NULL;
   cubec_list_initialize_t initialize = {
       .autofree = true,
@@ -43,6 +44,10 @@ cubec_ast_node_t cubec_read_ast_switch_case(cubec_allocator_t allocator,
   }
   if (cubec_location_is(token->loc, "case")) {
     cubec_allocator_free(allocator, token);
+    err = cubec_ast_skip_all(allocator, &current, end);
+    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      return err;
+    }
     cubec_ast_node_t condition =
         cubec_read_ast_expression(allocator, &current, end);
     if (!condition) {
@@ -57,8 +62,10 @@ cubec_ast_node_t cubec_read_ast_switch_case(cubec_allocator_t allocator,
     node->condition = condition;
   } else if (cubec_location_is(token->loc, "default")) {
     cubec_allocator_free(allocator, token);
+  } else {
+    cubec_allocator_free(allocator, token);
+    goto onerror;
   }
-  cubec_allocator_free(allocator, token);
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
@@ -87,11 +94,13 @@ cubec_ast_node_t cubec_read_ast_switch_case(cubec_allocator_t allocator,
       }
       if (cubec_location_is(token->loc, "case") ||
           cubec_location_is(token->loc, "default")) {
+        current = token->loc.begin;
         cubec_allocator_free(allocator, token);
         break;
+      } else {
+        current = token->loc.begin;
+        cubec_allocator_free(allocator, token);
       }
-      current = token->loc.begin;
-      cubec_allocator_free(allocator, token);
     }
     err = cubec_ast_skip_all(allocator, &current, end);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
