@@ -1,6 +1,8 @@
 #include "ast/statement.h"
 #include "ast/node.h"
 #include "ast/statement_block.h"
+#include "ast/statement_break.h"
+#include "ast/statement_continue.h"
 #include "ast/statement_declaration.h"
 #include "ast/statement_empty.h"
 #include "ast/statement_enum.h"
@@ -23,6 +25,14 @@ cubec_ast_node_t cubec_read_ast_statement(cubec_allocator_t allocator,
     return node;
   }
   node = cubec_read_ast_statement_return(allocator, position, end);
+  if (node) {
+    return node;
+  }
+  node = cubec_read_ast_statement_break(allocator, position, end);
+  if (node) {
+    return node;
+  }
+  node = cubec_read_ast_statement_continue(allocator, position, end);
   if (node) {
     return node;
   }

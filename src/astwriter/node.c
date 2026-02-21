@@ -22,10 +22,14 @@
 #include "ast/node_type.h"
 #include "ast/program.h"
 #include "ast/statement_block.h"
+#include "ast/statement_break.h"
+#include "ast/statement_continue.h"
 #include "ast/statement_declaration.h"
+#include "ast/statement_defer.h"
 #include "ast/statement_empty.h"
 #include "ast/statement_expression.h"
 #include "ast/statement_function.h"
+#include "ast/statement_if.h"
 #include "ast/statement_import.h"
 #include "ast/statement_return.h"
 #include "ast/statement_struct.h"
@@ -60,11 +64,15 @@
 #include "astwriter/literal_symbol.h"
 #include "astwriter/program.h"
 #include "astwriter/statement_block.h"
+#include "astwriter/statement_break.h"
+#include "astwriter/statement_continue.h"
 #include "astwriter/statement_declaration.h"
+#include "astwriter/statement_defer.h"
 #include "astwriter/statement_empty.h"
 #include "astwriter/statement_enum.h"
 #include "astwriter/statement_expression.h"
 #include "astwriter/statement_function.h"
+#include "astwriter/statement_if.h"
 #include "astwriter/statement_import.h"
 #include "astwriter/statement_return.h"
 #include "astwriter/statement_struct.h"
@@ -224,7 +232,8 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
                                "CUBEC_NODE_TYPE_STATEMENT_EXPRESSION"));
     break;
   case CUBEC_NODE_TYPE_STATEMENT_IF:
-    // TODO:
+    value =
+        cubec_write_ast_statement_if(allocator, (cubec_ast_statement_if_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
@@ -273,21 +282,24 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
                                "CUBEC_NODE_TYPE_STATEMENT_FOREACH"));
     break;
   case CUBEC_NODE_TYPE_STATEMENT_DEFER:
-    // TODO:
+    value = cubec_write_ast_statement_defer(allocator,
+                                            (cubec_ast_statement_defer_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_STATEMENT_DEFER"));
     break;
   case CUBEC_NODE_TYPE_STATEMENT_BREAK:
-    // TODO:
+    value = cubec_write_ast_statement_break(allocator,
+                                            (cubec_ast_statement_break_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_STATEMENT_BREAK"));
     break;
   case CUBEC_NODE_TYPE_STATEMENT_CONTINUE:
-    // TODO:
+    value = cubec_write_ast_statement_continue(
+        allocator, (cubec_ast_statement_continue_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
