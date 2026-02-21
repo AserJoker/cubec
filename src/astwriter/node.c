@@ -33,6 +33,7 @@
 #include "ast/statement_import.h"
 #include "ast/statement_return.h"
 #include "ast/statement_struct.h"
+#include "ast/statement_test.h"
 #include "ast/struct_declarator.h"
 #include "ast/struct_field.h"
 #include "ast/variable_declarator.h"
@@ -76,6 +77,7 @@
 #include "astwriter/statement_import.h"
 #include "astwriter/statement_return.h"
 #include "astwriter/statement_struct.h"
+#include "astwriter/statement_test.h"
 #include "astwriter/struct_declarator.h"
 #include "astwriter/struct_field.h"
 #include "astwriter/variable_declarator.h"
@@ -321,7 +323,8 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
                                "CUBEC_NODE_TYPE_STATEMENT_MATCH"));
     break;
   case CUBEC_NODE_TYPE_STATEMENT_TEST:
-    // TODO:
+    value = cubec_write_ast_statement_test(allocator,
+                                           (cubec_ast_statement_test_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,

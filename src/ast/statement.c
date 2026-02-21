@@ -4,13 +4,16 @@
 #include "ast/statement_break.h"
 #include "ast/statement_continue.h"
 #include "ast/statement_declaration.h"
+#include "ast/statement_defer.h"
 #include "ast/statement_empty.h"
 #include "ast/statement_enum.h"
 #include "ast/statement_expression.h"
 #include "ast/statement_function.h"
+#include "ast/statement_if.h"
 #include "ast/statement_import.h"
 #include "ast/statement_return.h"
 #include "ast/statement_struct.h"
+#include "ast/statement_test.h"
 
 cubec_ast_node_t cubec_read_ast_statement(cubec_allocator_t allocator,
                                           cubec_position_t *position,
@@ -21,6 +24,18 @@ cubec_ast_node_t cubec_read_ast_statement(cubec_allocator_t allocator,
     return node;
   }
   node = cubec_read_ast_statement_block(allocator, position, end);
+  if (node) {
+    return node;
+  }
+  node = cubec_read_ast_statement_test(allocator, position, end);
+  if (node) {
+    return node;
+  }
+  node = cubec_read_ast_statement_if(allocator, position, end);
+  if (node) {
+    return node;
+  }
+  node = cubec_read_ast_statement_defer(allocator, position, end);
   if (node) {
     return node;
   }
