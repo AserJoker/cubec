@@ -315,13 +315,6 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_STATEMENT_RETURN"));
     break;
-  case CUBEC_NODE_TYPE_STATEMENT_MATCH:
-    // TODO:
-    cubec_value_set_field(
-        value, allocator, "type",
-        cubec_value_set_string(cubec_create_value(allocator), allocator,
-                               "CUBEC_NODE_TYPE_STATEMENT_MATCH"));
-    break;
   case CUBEC_NODE_TYPE_STATEMENT_TEST:
     value = cubec_write_ast_statement_test(allocator,
                                            (cubec_ast_statement_test_t)self);
