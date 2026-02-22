@@ -29,6 +29,7 @@
 #include "ast/statement_do_while.h"
 #include "ast/statement_empty.h"
 #include "ast/statement_expression.h"
+#include "ast/statement_for.h"
 #include "ast/statement_function.h"
 #include "ast/statement_if.h"
 #include "ast/statement_import.h"
@@ -76,6 +77,8 @@
 #include "astwriter/statement_empty.h"
 #include "astwriter/statement_enum.h"
 #include "astwriter/statement_expression.h"
+#include "astwriter/statement_for.h"
+#include "astwriter/statement_foreach.h"
 #include "astwriter/statement_function.h"
 #include "astwriter/statement_if.h"
 #include "astwriter/statement_import.h"
@@ -274,14 +277,16 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
                                "CUBEC_NODE_TYPE_STATEMENT_DO_WHILE"));
     break;
   case CUBEC_NODE_TYPE_STATEMENT_FOR:
-    // TODO:
+    value = cubec_write_ast_statement_for(allocator,
+                                          (cubec_ast_statement_for_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_STATEMENT_FOR"));
     break;
   case CUBEC_NODE_TYPE_STATEMENT_FOREACH:
-    // TODO:
+    value = cubec_write_ast_statement_foreach(
+        allocator, (cubec_ast_statement_foreach_t)self);
     cubec_value_set_field(
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,

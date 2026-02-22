@@ -9,6 +9,8 @@
 #include "ast/statement_empty.h"
 #include "ast/statement_enum.h"
 #include "ast/statement_expression.h"
+#include "ast/statement_for.h"
+#include "ast/statement_foreach.h"
 #include "ast/statement_function.h"
 #include "ast/statement_if.h"
 #include "ast/statement_import.h"
@@ -47,6 +49,14 @@ cubec_ast_node_t cubec_read_ast_statement(cubec_allocator_t allocator,
     return node;
   }
   node = cubec_read_ast_statement_if(allocator, position, end);
+  if (node) {
+    return node;
+  }
+  node = cubec_read_ast_statement_for(allocator, position, end);
+  if (node) {
+    return node;
+  }
+  node = cubec_read_ast_statement_foreach(allocator, position, end);
   if (node) {
     return node;
   }
