@@ -21,6 +21,7 @@ target_link_libraries(cubec PRIVATE
 enable_testing()
 file(GLOB_RECURSE TEST_SOURCE ${PROJECT_SOURCE_DIR}/test/*.cpp)
 add_executable(cubec_test ${SRC_CORE} ${SRC_AST} ${SRC_ASTWRITER} ${TEST_SOURCE})
+target_include_directories(cubec_test PUBLIC ${PROJECT_SOURCE_DIR}/test)
 target_link_libraries(cubec_test PRIVATE
     ICU::i18n
     ICU::uc

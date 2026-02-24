@@ -260,7 +260,7 @@ void cubec_value_to_json_string(cubec_value_t self, cubec_allocator_t allocator,
   case CUBEC_VALUE_TYPE_OBJECT: {
     cubec_map_t map = (cubec_map_t)self->value;
     cubec_string_concat(str, allocator, "{");
-    cubec_map_node_t it = cubec_map_get_first(map);
+    cubec_list_node_t it = cubec_map_get_first(map);
     size_t idx = 0;
     while (it != cubec_map_get_end(map)) {
       const char *key = cubec_map_node_get_key(it);
