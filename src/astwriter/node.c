@@ -1,4 +1,5 @@
 #include "astwriter/node.h"
+#include "ast/array_declarator.h"
 #include "ast/enum_declarator.h"
 #include "ast/enum_field.h"
 #include "ast/expression_assigment.h"
@@ -41,6 +42,7 @@
 #include "ast/struct_declarator.h"
 #include "ast/struct_field.h"
 #include "ast/variable_declarator.h"
+#include "astwriter/array_declarator.h"
 #include "astwriter/decorator.h"
 #include "astwriter/enum_declarator.h"
 #include "astwriter/enum_field.h"
@@ -418,6 +420,14 @@ cubec_value_t cubec_write_ast_node(cubec_ast_node_t self,
         value, allocator, "type",
         cubec_value_set_string(cubec_create_value(allocator), allocator,
                                "CUBEC_NODE_TYPE_EXPRESSION_COMMON"));
+    break;
+  case CUBEC_NODE_TYPE_ARRAY_DECLARATOR:
+    value = cubec_write_ast_array_declarator(
+        allocator, (cubec_ast_array_declarator_t)self);
+    cubec_value_set_field(
+        value, allocator, "type",
+        cubec_value_set_string(cubec_create_value(allocator), allocator,
+                               "CUBEC_NODE_TYPE_ARRAY_DECLARATOR"));
     break;
   case CUBEC_NODE_TYPE_STRUCT_DECLARATOR:
     value = cubec_write_ast_struct_declarator(

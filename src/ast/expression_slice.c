@@ -4,7 +4,6 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/position.h"
-#include <corecrt_search.h>
 static void
 cubec_ast_expression_slice_dispose(cubec_ast_expression_slice_t self,
                                    cubec_allocator_t allocator) {

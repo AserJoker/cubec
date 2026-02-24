@@ -1,4 +1,5 @@
 #include "ast/expression.h"
+#include "ast/array_declarator.h"
 #include "ast/enum_declarator.h"
 #include "ast/expression_assigment.h"
 #include "ast/expression_binary.h"
@@ -21,7 +22,6 @@
 #include "ast/struct_declarator.h"
 #include "core/allocator.h"
 #include "core/position.h"
-
 
 cubec_ast_node_t cubec_read_ast_expression(cubec_allocator_t allocator,
                                            cubec_position_t *position,
@@ -262,6 +262,10 @@ cubec_ast_node_t cubec_read_ast_expression19(cubec_allocator_t allocator,
                                              cubec_position_t *position,
                                              const char *end) {
   cubec_ast_node_t node = NULL;
+  node = cubec_read_ast_array_declarator(allocator, position, end);
+  if (node) {
+    return node;
+  }
   node = cubec_read_ast_struct_declarator(allocator, position, end);
   if (node) {
     return node;

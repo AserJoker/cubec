@@ -1,7 +1,6 @@
 
 #include "core/allocator.h"
 #include <gtest/gtest.h>
-#include <vcruntime_new.h>
 class test_allocator : public testing::Test {};
 TEST_F(test_allocator, alloc_and_free) {
   static size_t counter = 0;

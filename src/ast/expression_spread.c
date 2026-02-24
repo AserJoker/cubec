@@ -6,7 +6,6 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
-#include <corecrt_search.h>
 static void
 cubec_ast_expression_spread_dispose(cubec_ast_expression_spread_t self,
                                     cubec_allocator_t allocator) {
