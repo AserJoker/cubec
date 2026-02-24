@@ -24,6 +24,7 @@ cubec_create_ast_statement_switch(cubec_allocator_t allocator) {
   self->condition = NULL;
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   self->cases = cubec_create_list(allocator, &initialize);
   return self;

@@ -34,6 +34,7 @@ cubec_create_ast_function_declarator(cubec_allocator_t allocator) {
   self->type = NULL;
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   self->args = cubec_create_list(allocator, &initialize);
   self->decorators = cubec_create_list(allocator, &initialize);

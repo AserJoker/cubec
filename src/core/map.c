@@ -46,6 +46,7 @@ cubec_map_t cubec_create_map(cubec_allocator_t allocator,
   }
   cubec_list_initialize_t linit = {
       .autofree = true,
+      .compare = NULL,
   };
   map->data = cubec_create_list(allocator, &linit);
   return map;

@@ -18,6 +18,7 @@ cubec_create_ast_function_body(cubec_allocator_t allocator) {
   self->super.type = CUBEC_NODE_TYPE_FUNCTION_BODY;
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   self->statements = cubec_create_list(allocator, &initialize);
   return self;

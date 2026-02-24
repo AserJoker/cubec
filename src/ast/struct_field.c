@@ -21,6 +21,7 @@ cubec_create_ast_struct_field(cubec_allocator_t allocator) {
   self->declarator = NULL;
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   self->decorators = cubec_create_list(allocator, &initialize);
   return self;

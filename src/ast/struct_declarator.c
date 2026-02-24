@@ -29,6 +29,7 @@ cubec_create_ast_struct_declarator(cubec_allocator_t allocator) {
   self->super.type = CUBEC_NODE_TYPE_STRUCT_DECLARATOR;
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   self->fields = cubec_create_list(allocator, &initialize);
   self->methods = cubec_create_list(allocator, &initialize);

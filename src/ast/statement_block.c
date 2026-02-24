@@ -16,6 +16,7 @@ cubec_create_ast_statement_block(cubec_allocator_t allocator) {
   self->super.type = CUBEC_NODE_TYPE_STATEMENT_BLOCK;
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   self->statements = cubec_create_list(allocator, &initialize);
   return self;

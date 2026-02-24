@@ -11,6 +11,7 @@ TEST_F(test_list, create) {
 TEST_F(test_list, auto_free) {
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   cubec_list_t list = cubec_create_list(allocator, &initialize);
   cubec_list_append(list, allocator,
@@ -20,6 +21,7 @@ TEST_F(test_list, auto_free) {
 TEST_F(test_list, replace) {
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   cubec_list_t list = cubec_create_list(allocator, &initialize);
   cubec_list_append(list, allocator,
@@ -33,6 +35,7 @@ TEST_F(test_list, replace) {
 TEST_F(test_list, remove) {
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   cubec_list_t list = cubec_create_list(allocator, &initialize);
   cubec_list_append(list, allocator,

@@ -26,6 +26,7 @@ cubec_create_ast_statement_declaration(cubec_allocator_t allocator) {
   self->kind = NULL;
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   self->declarations = cubec_create_list(allocator, &initialize);
   self->decorators = cubec_create_list(allocator, &initialize);

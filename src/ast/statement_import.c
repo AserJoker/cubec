@@ -23,7 +23,10 @@ cubec_create_ast_statement_import(cubec_allocator_t allocator) {
   cubec_ast_node_initialize(allocator, &statement->super);
   statement->super.type = CUBEC_NODE_TYPE_STATEMENT_IMPORT;
   statement->source = NULL;
-  cubec_list_initialize_t initialize = {true};
+  cubec_list_initialize_t initialize = {
+      true,
+      .compare = NULL,
+  };
   statement->declarators = cubec_create_list(allocator, &initialize);
   return statement;
 }

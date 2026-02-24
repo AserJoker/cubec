@@ -22,6 +22,7 @@ cubec_create_ast_expression_call(cubec_allocator_t allocator) {
   self->callee = NULL;
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   self->args = cubec_create_list(allocator, &initialize);
   return self;

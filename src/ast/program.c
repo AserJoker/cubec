@@ -17,7 +17,10 @@ cubec_ast_program_t cubec_create_ast_program(cubec_allocator_t allocator) {
                             (cubec_dispose_fn_t)cubec_program_dispose);
   cubec_ast_node_initialize(allocator, &program->super);
   program->super.type = CUBEC_NODE_TYPE_PROGRAM;
-  cubec_list_initialize_t initialize = {.autofree = true};
+  cubec_list_initialize_t initialize = {
+      .autofree = true,
+      .compare = NULL,
+  };
   program->statements = cubec_create_list(allocator, &initialize);
   return program;
 }

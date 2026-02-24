@@ -24,6 +24,7 @@ cubec_create_ast_enum_field(cubec_allocator_t allocator) {
   self->value = NULL;
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   self->decorators = cubec_create_list(allocator, &initialize);
   return self;

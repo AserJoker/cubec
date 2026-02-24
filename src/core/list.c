@@ -48,8 +48,10 @@ cubec_list_t cubec_create_list(cubec_allocator_t allocator,
       cubec_allocator_alloc(allocator, sizeof(struct _cubec_list_t),
                             (cubec_dispose_fn_t)cubec_list_dispose);
   list->autofree = false;
+  list->compare = NULL;
   if (initialize) {
     list->autofree = initialize->autofree;
+    list->compare = initialize->compare;
   }
   list->size = 0;
   list->begin = cubec_create_list_node(allocator);

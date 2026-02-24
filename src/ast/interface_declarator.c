@@ -23,6 +23,7 @@ cubec_create_ast_interface_declarator(cubec_allocator_t allocator) {
   self->return_type = NULL;
   cubec_list_initialize_t initialize = {
       .autofree = true,
+      .compare = NULL,
   };
   self->args = cubec_create_list(allocator, &initialize);
   return self;
