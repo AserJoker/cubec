@@ -12,6 +12,7 @@ struct _cubec_list_node_t;
 typedef struct _cubec_list_node_t *cubec_list_node_t;
 typedef struct cubec_list_initialize_t {
   bool autofree;
+  cubec_compare_fn_t compare;
 } cubec_list_initialize_t;
 
 cubec_list_t cubec_create_list(cubec_allocator_t allocator,
@@ -41,8 +42,8 @@ void cubec_list_insert(cubec_list_t self, cubec_allocator_t allocator,
 void cubec_list_erase(cubec_list_t self, cubec_allocator_t allocator,
                       cubec_list_node_t position);
 
-cubec_list_node_t cubec_list_find(cubec_list_t self, void *data,
-                                  cubec_compare_fn_t compare, void *cmp_arg);
+cubec_list_node_t cubec_list_find(cubec_list_t self, const void *data,
+                                  void *cmp_arg);
 
 cubec_list_node_t cubec_list_node_next(cubec_list_node_t self);
 

@@ -1,11 +1,13 @@
 #include "core/list.h"
 #include "core/allocator.h"
+#include "core/compare.h"
 
 struct _cubec_list_t {
   bool autofree;
   cubec_list_node_t begin;
   cubec_list_node_t end;
   size_t size;
+  cubec_compare_fn_t compare;
 };
 struct _cubec_list_node_t {
   cubec_list_node_t next;
@@ -122,13 +124,13 @@ void cubec_list_erase(cubec_list_t self, cubec_allocator_t allocator,
   self->size--;
 }
 
-cubec_list_node_t cubec_list_find(cubec_list_t self, void *data,
-                                  cubec_compare_fn_t compare, void *cmp_arg) {
+cubec_list_node_t cubec_list_find(cubec_list_t self,const void *data,
+                                  void *cmp_arg) {
   cubec_list_node_t it = self->begin->next;
   while (it != self->end) {
-    if (compare && compare(data, it->data, cmp_arg) == 0) {
+    if (self->compare && self->compare(data, it->data, cmp_arg) == 0) {
       return it;
-    } else if (!compare && data == it->data) {
+    } else if (!self->compare && data == it->data) {
       return it;
     }
     it = it->next;

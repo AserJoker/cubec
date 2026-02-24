@@ -5,7 +5,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef int64_t (*cubec_hash_fn_t)(void *data, void *arg);
+typedef int64_t (*cubec_hash_fn_t)(const void *data, void *arg);
 #ifdef __cplusplus
 }
 #endif
