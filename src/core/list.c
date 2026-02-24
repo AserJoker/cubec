@@ -57,7 +57,9 @@ cubec_list_t cubec_create_list(cubec_allocator_t allocator,
   return list;
 }
 
-cubec_list_node_t cubec_list_get_begin(cubec_list_t self) { return self->begin; }
+cubec_list_node_t cubec_list_get_begin(cubec_list_t self) {
+  return self->begin;
+}
 
 cubec_list_node_t cubec_list_get_end(cubec_list_t self) { return self->end; }
 
@@ -143,3 +145,8 @@ cubec_list_node_t cubec_list_node_last(cubec_list_node_t self) {
 }
 
 void *cubec_list_node_get(cubec_list_node_t self) { return self->data; }
+void *cubec_list_node_move(cubec_list_node_t self) {
+  void *data = self->data;
+  self->data = NULL;
+  return data;
+}

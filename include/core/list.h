@@ -50,6 +50,8 @@ cubec_list_node_t cubec_list_node_last(cubec_list_node_t self);
 
 void *cubec_list_node_get(cubec_list_node_t self);
 
+void *cubec_list_node_move(cubec_list_node_t self);
+
 #ifdef __cplusplus
 }
 #endif
