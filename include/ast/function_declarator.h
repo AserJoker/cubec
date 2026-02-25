@@ -13,6 +13,7 @@ typedef struct _cubec_ast_function_declarator_t {
   cubec_ast_node_t type;
   cubec_ast_node_t body;
   cubec_list_t args;
+  cubec_list_t closure;
   cubec_list_t decorators;
 } *cubec_ast_function_declarator_t;
 cubec_ast_function_declarator_t

@@ -16,6 +16,7 @@ cubec_ast_function_declarator_dispose(cubec_ast_function_declarator_t self,
                                       cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->decorators);
   cubec_allocator_free(allocator, self->kind);
+  cubec_allocator_free(allocator, self->closure);
   cubec_allocator_free(allocator, self->identifier);
   cubec_allocator_free(allocator, self->args);
   cubec_allocator_free(allocator, self->type);
@@ -37,6 +38,7 @@ cubec_create_ast_function_declarator(cubec_allocator_t allocator) {
       .compare = NULL,
   };
   self->args = cubec_create_list(allocator, &initialize);
+  self->closure = cubec_create_list(allocator, &initialize);
   self->decorators = cubec_create_list(allocator, &initialize);
   return self;
 }
@@ -96,6 +98,55 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
     goto onerror;
   }
   cubec_allocator_free(allocator, token);
+  if (*current.offset == '<') {
+    current.offset++;
+    current.column++;
+    err = cubec_ast_skip_all(allocator, &current, end);
+    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      return err;
+    }
+    if (*current.offset != '>') {
+      for (;;) {
+        cubec_ast_node_t id =
+            cubec_read_ast_literal_identifier(allocator, &current, end);
+        if (!id) {
+          err = cubec_create_ast_error(allocator, *position, current,
+                                       "Invalid function expression");
+          goto onerror;
+        }
+        if (id->type == CUBEC_NODE_TYPE_ERROR) {
+          err = id;
+          goto onerror;
+        }
+        cubec_list_append(node->closure, allocator, id);
+        err = cubec_ast_skip_all(allocator, &current, end);
+        if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+          return err;
+        }
+        if (*current.offset == '>') {
+          break;
+        }
+        if (*current.offset != ',') {
+          err = cubec_create_ast_error(allocator, *position, current,
+                                       "Invalid function expression");
+          goto onerror;
+        }
+        current.offset++;
+        current.column++;
+        err = cubec_ast_skip_all(allocator, &current, end);
+        if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+          return err;
+        }
+      }
+    }
+    if (*current.offset != '>') {
+      err = cubec_create_ast_error(allocator, *position, current,
+                                   "Invalid function expression");
+      goto onerror;
+    }
+    current.offset++;
+    current.column++;
+  }
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;

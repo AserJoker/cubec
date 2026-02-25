@@ -21,6 +21,16 @@ cubec_write_ast_function_declarator(cubec_allocator_t allocator,
     cubec_value_set_field(value, allocator, "kind",
                           cubec_write_ast_node(self->kind, allocator));
   }
+  cubec_value_t closure = cubec_create_value(allocator);
+  cubec_value_set_array(closure, allocator);
+  it = cubec_list_get_first(self->closure);
+  while (it != cubec_list_get_end(self->closure)) {
+    cubec_ast_node_t item = cubec_list_node_get(it);
+    cubec_value_append(closure, allocator,
+                       cubec_write_ast_node(item, allocator));
+    it = cubec_list_node_next(it);
+  }
+  cubec_value_set_field(value, allocator, "closure", closure);
   if (self->identifier) {
     cubec_value_set_field(value, allocator, "identifier",
                           cubec_write_ast_node(self->identifier, allocator));
