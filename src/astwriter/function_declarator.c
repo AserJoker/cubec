@@ -48,7 +48,9 @@ cubec_write_ast_function_declarator(cubec_allocator_t allocator,
     cubec_value_set_field(value, allocator, "return_type",
                           cubec_write_ast_node(self->type, allocator));
   }
-  cubec_value_set_field(value, allocator, "body",
-                        cubec_write_ast_node(self->body, allocator));
+  if (self->body) {
+    cubec_value_set_field(value, allocator, "body",
+                          cubec_write_ast_node(self->body, allocator));
+  }
   return value;
 }
