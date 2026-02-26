@@ -1,7 +1,7 @@
 #ifndef _H_CUBEC_ENGINE_VARIABLE_
 #define _H_CUBEC_ENGINE_VARIABLE_
 #include "core/allocator.h"
-#include "core/value.h"
+#include "engine/value.h"
 #include <stdbool.h>
 #ifdef __cplusplus
 extern "C" {

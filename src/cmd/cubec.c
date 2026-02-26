@@ -4,8 +4,8 @@
 #include "ast/program.h"
 #include "astwriter/node.h"
 #include "core/allocator.h"
+#include "core/any.h"
 #include "core/location.h"
-#include "core/value.h"
 #include <inttypes.h>
 #include <stdio.h>
 int main(int argc, char *argv[]) {
@@ -29,8 +29,8 @@ int main(int argc, char *argv[]) {
            ((cubec_error_t)root)->message, "./main.cubec", root->loc.end.line,
            root->loc.end.column);
   } else {
-    cubec_value_t ast = cubec_write_ast_node(root, allocator);
-    char *json = cubec_value_to_json(ast, allocator);
+    cubec_any_t ast = cubec_write_ast_node(root, allocator);
+    char *json = cubec_any_to_json(ast, allocator);
     printf("%s\n", json);
     cubec_allocator_free(allocator, json);
     cubec_allocator_free(allocator, ast);

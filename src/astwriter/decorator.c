@@ -1,13 +1,13 @@
 #include "astwriter/decorator.h"
 #include "astwriter/node.h"
-#include "core/value.h"
+#include "core/any.h"
 
-cubec_value_t cubec_write_ast_decorator(cubec_allocator_t allocator,
-                                        cubec_ast_decorator_t self) {
+cubec_any_t cubec_write_ast_decorator(cubec_allocator_t allocator,
+                                      cubec_ast_decorator_t self) {
 
-  cubec_value_t value = cubec_create_value(allocator);
-  cubec_value_set_object(value, allocator);
-  cubec_value_set_field(value, allocator, "expression",
-                        cubec_write_ast_node(self->expression, allocator));
+  cubec_any_t value = cubec_create_any(allocator);
+  cubec_any_set_object(value, allocator);
+  cubec_any_set_field(value, allocator, "expression",
+                      cubec_write_ast_node(self->expression, allocator));
   return value;
 }
