@@ -26,6 +26,8 @@ cubec_string_t cubec_string_concat(cubec_string_t self,
                                    const char *source);
 int cubec_string_compare(cubec_string_t self, const char *source);
 
+char *cubec_create_cstring(cubec_allocator_t allocator, const char *source);
+
 #ifdef __cplusplus
 }
 #endif

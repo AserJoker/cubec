@@ -99,6 +99,10 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
     goto onerror;
   }
   cubec_allocator_free(allocator, token);
+  err = cubec_ast_skip_all(allocator, &current, end);
+  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    return err;
+  }
   if (*current.offset == '<') {
     current.offset++;
     current.column++;

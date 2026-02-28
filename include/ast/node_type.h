@@ -57,6 +57,7 @@ typedef enum _cubec_ast_node_type_t {
   CUBEC_NODE_TYPE_PROGRAM,
   CUBEC_NODE_TYPE_DECORATOR,
   CUBEC_NODE_TYPE_INTERFACE_DECLARATOR,
+  CUBEC_NODE_TYPE_UNION_DECLARATOR,
 } cubec_ast_node_type_t;
 #ifdef __cplusplus
 }

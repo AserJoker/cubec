@@ -77,3 +77,10 @@ cubec_string_t cubec_string_concat(cubec_string_t self,
 int cubec_string_compare(cubec_string_t self, const char *source) {
   return strcmp(self->data, source);
 }
+char *cubec_create_cstring(cubec_allocator_t allocator, const char *source) {
+  size_t len = strlen(source);
+  char *s = cubec_allocator_alloc(allocator, len + 1, NULL);
+  strcpy(s, source);
+  s[len] = 0;
+  return s;
+}
