@@ -1,9 +1,9 @@
 #include "ast/array_declarator.h"
-#include "ast/expression.h"
 #include "ast/literal_identifier.h"
 #include "ast/literal_numeric.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "ast/type.h"
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
@@ -74,8 +74,7 @@ cubec_ast_node_t cubec_read_ast_array_declarator(cubec_allocator_t allocator,
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  cubec_ast_node_t item_type =
-      cubec_read_ast_expression3(allocator, &current, end);
+  cubec_ast_node_t item_type = cubec_read_ast_type(allocator, &current, end);
   if (!item_type) {
     goto onerror;
   }

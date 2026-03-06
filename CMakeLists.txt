@@ -11,7 +11,8 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/core SRC_CORE)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/ast SRC_AST)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/astwriter SRC_ASTWRITER)
-add_executable(cubec ${SRC_CORE} ${SRC_AST} ${SRC_ASTWRITER} ${PROJECT_SOURCE_DIR}/src/cmd/cubec.c)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/engine SRC_ENGINE)
+add_executable(cubec ${SRC_CORE} ${SRC_AST} ${SRC_ASTWRITER} ${SRC_ENGINE} ${PROJECT_SOURCE_DIR}/src/cmd/cubec.c)
 target_link_libraries(cubec PRIVATE
     ICU::i18n
     ICU::uc

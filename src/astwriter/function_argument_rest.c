@@ -1,10 +1,9 @@
-#include "astwriter/function_argument.h"
+#include "astwriter/function_argument_rest.h"
 #include "astwriter/node.h"
 #include "core/any.h"
 
-cubec_any_t
-cubec_write_ast_function_argument(cubec_allocator_t allocator,
-                                  cubec_ast_function_argument_t self) {
+cubec_any_t cubec_write_ast_function_argument_rest(
+    cubec_allocator_t allocator, cubec_ast_function_argument_rest_t self) {
 
   cubec_any_t value =
       cubec_any_set_object(cubec_create_any(allocator), allocator);

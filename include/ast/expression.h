@@ -2,6 +2,7 @@
 #define _H_CUBEC_NODE_EXPRESSION_
 #include "ast/node.h"
 #include "core/allocator.h"
+#include "core/position.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {

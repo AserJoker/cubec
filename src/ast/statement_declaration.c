@@ -63,10 +63,11 @@ cubec_ast_node_t cubec_read_ast_statement_declaration(
     goto onerror;
   }
   if (!cubec_location_is(kind->loc, "const") &&
-      !cubec_location_is(kind->loc, "using") &&
       !cubec_location_is(kind->loc, "extern") &&
       !cubec_location_is(kind->loc, "let") &&
-      !cubec_location_is(kind->loc, "comptime")) {
+      !cubec_location_is(kind->loc, "comptime") &&
+      !cubec_location_is(kind->loc, "register") &&
+      !cubec_location_is(kind->loc, "builtin")) {
     cubec_allocator_free(allocator, kind);
     goto onerror;
   }

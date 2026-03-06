@@ -1,11 +1,12 @@
 #include "ast/function_declarator.h"
 #include "ast/decorator.h"
-#include "ast/expression.h"
 #include "ast/function_argument.h"
+#include "ast/function_argument_rest.h"
 #include "ast/function_body.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "ast/type.h"
 #include "core/allocator.h"
 #include "core/list.h"
 #include "core/location.h"
@@ -74,7 +75,8 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
     if (!cubec_location_is(kind->loc, "inline") &&
         !cubec_location_is(kind->loc, "template") &&
         !cubec_location_is(kind->loc, "comptime") &&
-        !cubec_location_is(kind->loc, "extern")) {
+        !cubec_location_is(kind->loc, "extern") &&
+        !cubec_location_is(kind->loc, "builtin")) {
       current = *position;
       cubec_allocator_free(allocator, kind);
     } else {
@@ -185,8 +187,13 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   }
   if (*current.offset != ')') {
     for (;;) {
-      cubec_ast_node_t arg =
-          cubec_read_ast_function_argument(allocator, &current, end);
+      cubec_ast_node_t arg = NULL;
+      if (!arg) {
+        arg = cubec_read_ast_function_argument_rest(allocator, &current, end);
+      }
+      if (!arg) {
+        arg = cubec_read_ast_function_argument(allocator, &current, end);
+      }
       if (!arg) {
         err = cubec_create_ast_error(allocator, *position, current,
                                      "Invalid function expression");
@@ -240,31 +247,22 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
     }
-    cubec_ast_node_t type =
-        cubec_read_ast_expression2(allocator, &current, end);
-    if (!type) {
-      err = cubec_create_ast_error(allocator, *position, current,
-                                   "Invalid function expression");
-      goto onerror;
+    cubec_ast_node_t type = cubec_read_ast_type(allocator, &current, end);
+    if (type) {
+      if (type->type == CUBEC_NODE_TYPE_ERROR) {
+        err = type;
+        goto onerror;
+      }
+      node->type = type;
     }
-    if (type->type == CUBEC_NODE_TYPE_ERROR) {
-      err = type;
-      goto onerror;
-    }
-    node->type = type;
   }
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  if (!cubec_location_is(node->kind->loc, "extern")) {
-    cubec_ast_node_t body =
-        cubec_read_ast_function_body(allocator, &current, end);
-    if (!body) {
-      err = cubec_create_ast_error(allocator, *position, current,
-                                   "Invalid function expression");
-      goto onerror;
-    }
+  cubec_ast_node_t body =
+      cubec_read_ast_function_body(allocator, &current, end);
+  if (body) {
     if (body->type == CUBEC_NODE_TYPE_ERROR) {
       err = body;
       goto onerror;

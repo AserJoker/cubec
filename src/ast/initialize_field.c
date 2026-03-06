@@ -1,5 +1,6 @@
 #include "ast/initialize_field.h"
 #include "ast/expression.h"
+#include "ast/initialize_list.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -66,6 +67,9 @@ cubec_ast_node_t cubec_read_ast_initialize_field(cubec_allocator_t allocator,
   }
   cubec_ast_node_t initialize =
       cubec_read_ast_expression2(allocator, &current, end);
+  if (!initialize) {
+    initialize = cubec_read_ast_initialize_list(allocator, &current, end);
+  }
   if (!initialize) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Invalid initialize list");

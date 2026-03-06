@@ -3,6 +3,7 @@
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "ast/type.h"
 #include "core/allocator.h"
 #include "core/position.h"
 static void
@@ -52,8 +53,7 @@ cubec_ast_node_t cubec_read_ast_variable_declarator(cubec_allocator_t allocator,
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;
     }
-    cubec_ast_node_t type =
-        cubec_read_ast_expression3(allocator, &current, end);
+    cubec_ast_node_t type = cubec_read_ast_type(allocator, &current, end);
     if (!type) {
       err = cubec_create_ast_error(allocator, *position, current,
                                    "Invalid or unexpected token");

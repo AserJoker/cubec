@@ -1,10 +1,11 @@
 
 #include "ast/function_argument.h"
 #include "ast/decorator.h"
-#include "ast/expression.h"
 #include "ast/literal_identifier.h"
+#include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "ast/type.h"
 #include "core/allocator.h"
 #include "core/list.h"
 #include "core/location.h"
@@ -57,6 +58,14 @@ cubec_ast_node_t cubec_read_ast_function_argument(cubec_allocator_t allocator,
   cubec_ast_node_t identifier =
       cubec_read_ast_literal_identifier(allocator, &current, end);
   if (!identifier) {
+    identifier = cubec_read_ast_literal_symbol(allocator, &current, end);
+    if (identifier && !cubec_location_is(identifier->loc, "...")) {
+      current = identifier->loc.begin;
+      cubec_allocator_free(allocator, identifier);
+      identifier = NULL;
+    }
+  }
+  if (!identifier) {
     goto onerror;
   }
   if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
@@ -64,32 +73,34 @@ cubec_ast_node_t cubec_read_ast_function_argument(cubec_allocator_t allocator,
     goto onerror;
   }
   node->identifier = identifier;
-  err = cubec_ast_skip_all(allocator, &current, end);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-    goto onerror;
+  if (identifier->type != CUBEC_NODE_TYPE_LITERAL_SYMBOL) {
+    err = cubec_ast_skip_all(allocator, &current, end);
+    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      goto onerror;
+    }
+    if (*current.offset != ':') {
+      err = cubec_create_ast_error(allocator, *position, current,
+                                   "Invalid function argument, missing ':'");
+      goto onerror;
+    }
+    current.offset++;
+    current.column++;
+    err = cubec_ast_skip_all(allocator, &current, end);
+    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      goto onerror;
+    }
+    cubec_ast_node_t type = cubec_read_ast_type(allocator, &current, end);
+    if (!type) {
+      err = cubec_create_ast_error(allocator, *position, current,
+                                   "Invalid function argument, missing type");
+      goto onerror;
+    }
+    if (type->type == CUBEC_NODE_TYPE_ERROR) {
+      err = type;
+      goto onerror;
+    }
+    node->type = type;
   }
-  if (*current.offset != ':') {
-    err = cubec_create_ast_error(allocator, *position, current,
-                                 "Invalid function argument, missing ':'");
-    goto onerror;
-  }
-  current.offset++;
-  current.column++;
-  err = cubec_ast_skip_all(allocator, &current, end);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-    goto onerror;
-  }
-  cubec_ast_node_t type = cubec_read_ast_expression2(allocator, &current, end);
-  if (!type) {
-    err = cubec_create_ast_error(allocator, *position, current,
-                                 "Invalid function argument, missing type");
-    goto onerror;
-  }
-  if (type->type == CUBEC_NODE_TYPE_ERROR) {
-    err = type;
-    goto onerror;
-  }
-  node->type = type;
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;

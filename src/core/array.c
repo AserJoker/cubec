@@ -1,10 +1,13 @@
 #include "core/array.h"
 #include "core/allocator.h"
+#include "core/compare.h"
+#include <stdint.h>
 struct _cubec_array_t {
   void **data;
   size_t size;
   size_t capacity;
   bool autofree;
+  cubec_compare_fn_t compare;
 };
 static void cubec_array_dispose(cubec_array_t self,
                                 cubec_allocator_t allocator) {
@@ -22,6 +25,7 @@ cubec_array_t cubec_create_array(cubec_allocator_t allocator,
   if (initialize) {
     array->autofree = initialize->autofree;
     array->capacity = initialize->capacity;
+    array->compare = initialize->compare;
     if (array->capacity) {
       array->data = cubec_allocator_alloc(
           allocator, sizeof(void *) * array->capacity, NULL);
@@ -32,8 +36,10 @@ cubec_array_t cubec_create_array(cubec_allocator_t allocator,
   }
   return array;
 }
-size_t cubec_array_get_size(cubec_array_t self) { return self->size; }
-size_t cubec_array_get_capacity(cubec_array_t self) { return self->capacity; }
+size_t cubec_array_get_size(const cubec_array_t self) { return self->size; }
+size_t cubec_array_get_capacity(const cubec_array_t self) {
+  return self->capacity;
+}
 cubec_array_t cubec_array_shrink_to_fit(cubec_array_t self,
                                         cubec_allocator_t allocator) {
   if (self->size < self->capacity) {
@@ -71,7 +77,7 @@ cubec_array_t cubec_array_resize(cubec_array_t self,
   }
   return self;
 }
-void *cubec_array_get_index(cubec_array_t self, size_t index) {
+void *cubec_array_get_index(const cubec_array_t self, size_t index) {
   if (index >= self->size) {
     return NULL;
   }
@@ -121,4 +127,59 @@ void cubec_array_swap(cubec_array_t self, size_t origin, size_t target) {
 
 void cubec_array_clear(cubec_array_t self, cubec_allocator_t allocator) {
   cubec_array_resize(self, allocator, 0);
+}
+
+static void cubec_array_qsort(void **begin, size_t size,
+                              cubec_compare_fn_t compare, void *cmp_arg) {
+  if (size <= 1) {
+    return;
+  }
+  void *pivot = begin[size - 1];
+  size_t i = 0;
+  for (size_t j = 0; j < size - 1; j++) {
+    if (compare(begin[j], pivot, cmp_arg) <= 0) {
+      void *tmp = begin[i];
+      begin[i] = begin[j];
+      begin[j] = tmp;
+      i++;
+    }
+  }
+  void *temp = begin[i];
+  begin[i] = pivot;
+  begin[size - 1] = temp;
+  cubec_array_qsort(begin, i, compare, cmp_arg);
+  cubec_array_qsort(begin + i + 1, size - i - 1, compare, cmp_arg);
+}
+
+void cubec_array_sort(cubec_array_t self, void *cmp_arg) {
+  if (self->compare) {
+    cubec_array_qsort(self->data, self->size, self->compare, cmp_arg);
+  }
+}
+cubec_array_t cubec_array_clone(cubec_allocator_t allocator,
+                                const cubec_array_t src) {
+  cubec_array_initialize_t initialize = {
+      .autofree = src->autofree,
+      .capacity = src->capacity,
+      .compare = src->compare,
+  };
+  cubec_array_t array = cubec_create_array(allocator, &initialize);
+  cubec_array_resize(array, allocator, src->size);
+  for (size_t idx = 0; idx < src->size; idx++) {
+    array->data[idx] = src->data[idx];
+  }
+  return array;
+}
+size_t cubec_array_find_index(cubec_array_t self, const void *value,
+                              void *cmp_arg) {
+  for (size_t idx = 0; idx < self->size; idx++) {
+    if (self->compare) {
+      if (self->compare(self->data[idx], value, cmp_arg) == 0) {
+        return idx;
+      }
+    } else if (self->data[idx] == value) {
+      return idx;
+    }
+  }
+  return (size_t)-1;
 }

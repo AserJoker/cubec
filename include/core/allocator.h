@@ -15,9 +15,12 @@ typedef struct {
 cubec_allocator_t
 cubec_create_allocator(cubec_allocator_initialize_t *initialize);
 void cubec_delete_allocator(cubec_allocator_t allocator);
-void *cubec_allocator_alloc(cubec_allocator_t self, size_t len,
-                            void (*dispose)(void *self,
-                                            cubec_allocator_t allocator));
+
+void *cubec_allocator_alloc_debug(cubec_allocator_t self, size_t len,
+                                  cubec_dispose_fn_t dispose,
+                                  const char *filename, size_t line);
+#define cubec_allocator_alloc(self, len, dispose)                              \
+  cubec_allocator_alloc_debug(self, len, dispose, __FILE__, __LINE__)
 void cubec_allocator_free(cubec_allocator_t self, void *data);
 #ifdef __cplusplus
 }

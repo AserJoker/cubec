@@ -1,10 +1,10 @@
 #include "ast/enum_declarator.h"
 #include "ast/decorator.h"
 #include "ast/enum_field.h"
-#include "ast/expression.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "ast/type.h"
 #include "core/allocator.h"
 #include "core/list.h"
 #include "core/location.h"
@@ -92,8 +92,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
     }
-    cubec_ast_node_t type =
-        cubec_read_ast_expression2(allocator, &current, end);
+    cubec_ast_node_t type = cubec_read_ast_type(allocator, &current, end);
     if (!type) {
       err = cubec_create_ast_error(allocator, *position, current,
                                    "Invalid enum declarator, missing 'type'");

@@ -1,8 +1,10 @@
 #include "ast/interface_declarator.h"
-#include "ast/expression.h"
 #include "ast/literal_identifier.h"
+#include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "ast/type.h"
+#include "ast/variable_declarator.h"
 #include "core/allocator.h"
 #include "core/list.h"
 #include "core/location.h"
@@ -63,8 +65,21 @@ cubec_ast_node_t cubec_read_ast_interface_declarator(
   }
   if (*current.offset != ')') {
     for (;;) {
-      cubec_ast_node_t arg =
-          cubec_read_ast_expression2(allocator, &current, end);
+      cubec_ast_node_t arg = NULL;
+      if (!arg) {
+        arg = cubec_read_ast_literal_symbol(allocator, &current, end);
+        if (arg && !cubec_location_is(arg->loc, "...")) {
+          current = arg->loc.begin;
+          cubec_allocator_free(allocator, arg);
+          arg = NULL;
+        }
+      }
+      if (!arg) {
+        arg = cubec_read_ast_variable_declarator(allocator, &current, end);
+      }
+      if (!arg) {
+        arg = cubec_read_ast_type(allocator, &current, end);
+      }
       if (!arg) {
         goto onerror;
       }
@@ -104,8 +119,7 @@ cubec_ast_node_t cubec_read_ast_interface_declarator(
   }
   current.offset++;
   current.column++;
-  cubec_ast_node_t return_type =
-      cubec_read_ast_expression2(allocator, &current, end);
+  cubec_ast_node_t return_type = cubec_read_ast_type(allocator, &current, end);
   if (!return_type) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Invalid interface expression");

@@ -59,6 +59,7 @@
 #include "astwriter/expression_spread.h"
 #include "astwriter/expression_template_generator.h"
 #include "astwriter/function_argument.h"
+#include "astwriter/function_argument_rest.h"
 #include "astwriter/function_body.h"
 #include "astwriter/function_declarator.h"
 #include "astwriter/import_declarator.h"
@@ -71,6 +72,7 @@
 #include "astwriter/literal_string.h"
 #include "astwriter/literal_symbol.h"
 #include "astwriter/program.h"
+#include "astwriter/ptr_declarator.h"
 #include "astwriter/statement_block.h"
 #include "astwriter/statement_break.h"
 #include "astwriter/statement_continue.h"
@@ -93,6 +95,7 @@
 #include "astwriter/struct_declarator.h"
 #include "astwriter/struct_field.h"
 #include "astwriter/switch_case.h"
+#include "astwriter/type.h"
 #include "astwriter/union_declarator.h"
 #include "astwriter/variable_declarator.h"
 #include "core/allocator.h"
@@ -463,6 +466,14 @@ cubec_any_t cubec_write_ast_node(cubec_ast_node_t self,
         cubec_any_set_string(cubec_create_any(allocator), allocator,
                              "CUBEC_NODE_TYPE_FUNCTION_ARGUMENT"));
     break;
+  case CUBEC_NODE_TYPE_FUNCTION_ARGUMENT_REST:
+    value = cubec_write_ast_function_argument_rest(
+        allocator, (cubec_ast_function_argument_rest_t)self);
+    cubec_any_set_field(
+        value, allocator, "type",
+        cubec_any_set_string(cubec_create_any(allocator), allocator,
+                             "CUBEC_NODE_TYPE_FUNCTION_ARGUMENT_REST"));
+    break;
   case CUBEC_NODE_TYPE_FUNCTION_BODY:
     value = cubec_write_ast_function_body(allocator,
                                           (cubec_ast_function_body_t)self);
@@ -517,6 +528,7 @@ cubec_any_t cubec_write_ast_node(cubec_ast_node_t self,
                         cubec_any_set_string(cubec_create_any(allocator),
                                              allocator,
                                              "CUBEC_NODE_TYPE_STRUCT_FIELD"));
+    break;
   case CUBEC_NODE_TYPE_UNION_DECLARATOR:
     value = cubec_write_ast_union_declarator(
         allocator, (cubec_ast_union_declarator_t)self);
@@ -524,6 +536,21 @@ cubec_any_t cubec_write_ast_node(cubec_ast_node_t self,
         value, allocator, "type",
         cubec_any_set_string(cubec_create_any(allocator), allocator,
                              "CUBEC_NODE_TYPE_UNION_DECLARATOR"));
+    break;
+  case CUBEC_NODE_TYPE_TYPE:
+    value = cubec_write_ast_type(allocator, (cubec_ast_type_t)self);
+    cubec_any_set_field(value, allocator, "type",
+                        cubec_any_set_string(cubec_create_any(allocator),
+                                             allocator,
+                                             "CUBEC_NODE_TYPE_TYPE"));
+    break;
+  case CUBEC_NODE_TYPE_PTR_DECLARATOR:
+    value = cubec_write_ast_ptr_declarator(allocator,
+                                           (cubec_ast_ptr_declarator_t)self);
+    cubec_any_set_field(value, allocator, "type",
+                        cubec_any_set_string(cubec_create_any(allocator),
+                                             allocator,
+                                             "CUBEC_NODE_TYPE_PTR_DECLARATOR"));
     break;
   }
   // cubec_any_t location =

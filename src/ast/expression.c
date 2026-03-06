@@ -19,9 +19,11 @@
 #include "ast/literal_string.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "ast/ptr_declarator.h"
 #include "ast/struct_declarator.h"
 #include "ast/union_declarator.h"
 #include "core/allocator.h"
+#include "core/location.h"
 #include "core/position.h"
 
 cubec_ast_node_t cubec_read_ast_expression(cubec_allocator_t allocator,
@@ -203,6 +205,7 @@ cubec_ast_node_t cubec_read_ast_expression18(cubec_allocator_t allocator,
       return node;
     }
     for (;;) {
+      cubec_position_t curr = current;
       cubec_ast_node_t err = cubec_ast_skip_all(allocator, &current, end);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;
@@ -252,6 +255,7 @@ cubec_ast_node_t cubec_read_ast_expression18(cubec_allocator_t allocator,
           slice->super.loc.begin = *position;
         }
       } else {
+        current = curr;
         break;
       }
     }
@@ -263,6 +267,10 @@ cubec_ast_node_t cubec_read_ast_expression19(cubec_allocator_t allocator,
                                              cubec_position_t *position,
                                              const char *end) {
   cubec_ast_node_t node = NULL;
+  node = cubec_read_ast_ptr_declarator(allocator, position, end);
+  if (node) {
+    return node;
+  }
   node = cubec_read_ast_union_declarator(allocator, position, end);
   if (node) {
     return node;

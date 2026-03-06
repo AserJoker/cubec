@@ -3,56 +3,49 @@ source_filename = "./test.cpp"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-%class.anon = type { ptr, ptr }
+$_ZTI1A = comdat any
+
+$_ZTS1A = comdat any
+
+$_ZTI1B = comdat any
+
+$_ZTS1B = comdat any
+
+@_ZTI1A = linkonce_odr dso_local constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS1A }, comdat, align 8
+@_ZTVN10__cxxabiv117__class_type_infoE = external global [0 x ptr]
+@_ZTS1A = linkonce_odr dso_local constant [3 x i8] c"1A\00", comdat, align 1
+@_ZTI1B = linkonce_odr dso_local constant { ptr, ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2), ptr @_ZTS1B, ptr @_ZTI1A }, comdat, align 8
+@_ZTVN10__cxxabiv120__si_class_type_infoE = external global [0 x ptr]
+@_ZTS1B = linkonce_odr dso_local constant [3 x i8] c"1B\00", comdat, align 1
 
 ; Function Attrs: mustprogress noinline nounwind optnone uwtable
-define dso_local { ptr, ptr } @_Z6get_fnv() #0 {
-  %1 = alloca %class.anon, align 8
+define dso_local void @_Z4testP1A(ptr noundef %0) #0 {
   %2 = alloca ptr, align 8
   %3 = alloca ptr, align 8
-  store ptr null, ptr %2, align 8
-  store ptr null, ptr %3, align 8
-  %4 = getelementptr inbounds nuw %class.anon, ptr %1, i32 0, i32 0
-  %5 = load ptr, ptr %2, align 8
-  store ptr %5, ptr %4, align 8
-  %6 = getelementptr inbounds nuw %class.anon, ptr %1, i32 0, i32 1
-  %7 = load ptr, ptr %3, align 8
-  store ptr %7, ptr %6, align 8
-  %8 = load { ptr, ptr }, ptr %1, align 8
-  ret { ptr, ptr } %8
-}
-
-; Function Attrs: mustprogress noinline optnone uwtable
-define dso_local noundef i32 @_Z3runv() #1 {
-  %1 = alloca %class.anon, align 8
-  %2 = call { ptr, ptr } @_Z6get_fnv()
-  %3 = getelementptr inbounds nuw { ptr, ptr }, ptr %1, i32 0, i32 0
-  %4 = extractvalue { ptr, ptr } %2, 0
-  store ptr %4, ptr %3, align 8
-  %5 = getelementptr inbounds nuw { ptr, ptr }, ptr %1, i32 0, i32 1
-  %6 = extractvalue { ptr, ptr } %2, 1
-  store ptr %6, ptr %5, align 8
-  %7 = call noundef i32 @"_ZZ6get_fnvENK3$_0clEv"(ptr noundef nonnull align 8 dereferenceable(16) %1)
-  ret i32 %7
-}
-
-; Function Attrs: mustprogress noinline nounwind optnone uwtable
-define internal noundef i32 @"_ZZ6get_fnvENK3$_0clEv"(ptr noundef nonnull align 8 dereferenceable(16) %0) #0 align 2 {
-  %2 = alloca ptr, align 8
   store ptr %0, ptr %2, align 8
-  %3 = load ptr, ptr %2, align 8
-  %4 = getelementptr inbounds nuw %class.anon, ptr %3, i32 0, i32 0
-  %5 = load ptr, ptr %4, align 8
-  %6 = load i32, ptr %5, align 4
-  %7 = getelementptr inbounds nuw %class.anon, ptr %3, i32 0, i32 1
-  %8 = load ptr, ptr %7, align 8
-  %9 = load i32, ptr %8, align 4
-  %10 = add nsw i32 %6, %9
-  ret i32 %10
+  %4 = load ptr, ptr %2, align 8
+  %5 = icmp eq ptr %4, null
+  br i1 %5, label %8, label %6
+
+6:                                                ; preds = %1
+  %7 = call ptr @__dynamic_cast(ptr %4, ptr @_ZTI1A, ptr @_ZTI1B, i64 0) #2
+  br label %9
+
+8:                                                ; preds = %1
+  br label %9
+
+9:                                                ; preds = %8, %6
+  %10 = phi ptr [ %7, %6 ], [ null, %8 ]
+  store ptr %10, ptr %3, align 8
+  ret void
 }
+
+; Function Attrs: nounwind willreturn memory(read)
+declare ptr @__dynamic_cast(ptr, ptr, ptr, i64) #1
 
 attributes #0 = { mustprogress noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
-attributes #1 = { mustprogress noinline optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+attributes #1 = { nounwind willreturn memory(read) }
+attributes #2 = { nounwind }
 
 !llvm.module.flags = !{!0, !1, !2, !3, !4}
 !llvm.ident = !{!5}
