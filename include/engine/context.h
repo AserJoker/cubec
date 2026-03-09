@@ -84,6 +84,16 @@ void cubec_context_add_struct_attribute(cubec_context_t self,
                                         cubec_type_t struct_type,
                                         const char *field, cubec_value_t value);
 
+cubec_type_t cubec_context_create_enum_type(cubec_context_t self,
+                                            cubec_type_t type);
+
+void cubec_context_add_enum_option(cubec_context_t self, cubec_type_t enum_type,
+                                   const char *name, cubec_value_t value);
+
+cubec_value_t cubec_context_create_enum_value(cubec_context_t self,
+                                              cubec_type_t type,
+                                              const char *option,const char *name);
+
 cubec_value_t cubec_context_create_union_value(cubec_context_t self,
                                                cubec_type_t type,
                                                cubec_value_t value,

@@ -9,6 +9,7 @@
 #include "core/map.h"
 #include "core/string.h"
 #include "engine/array.h"
+#include "engine/enum.h"
 #include "engine/function.h"
 #include "engine/ptr.h"
 #include "engine/scope.h"
@@ -354,6 +355,42 @@ void cubec_context_add_struct_attribute(cubec_context_t self,
   cubec_value_t val = cubec_clone_value(self->allocator, value);
   cubec_map_set(meta->attributes, self->allocator,
                 cubec_create_cstring(self->allocator, field), val, NULL);
+}
+
+cubec_type_t cubec_context_create_enum_type(cubec_context_t self,
+                                            cubec_type_t type) {
+  static size_t counter = 0;
+  char name[32];
+  sprintf(name, "enum@%" PRIuPTR, counter++);
+  cubec_enum_meta_t meta = cubec_create_enum_meta(self->allocator, type);
+  return cubec_context_create_type(self, CUBEC_VALUE_TYPE_ENUM, type->size,
+                                   NULL, meta);
+}
+void cubec_context_add_enum_option(cubec_context_t self, cubec_type_t enum_type,
+                                   const char *name, cubec_value_t value) {
+  cubec_enum_meta_t meta = enum_type->meta;
+  cubec_value_t val = cubec_clone_value(self->allocator, value);
+  cubec_enum_option_t opt =
+      cubec_create_enum_option(self->allocator, name, val);
+  cubec_array_push(meta->options, self->allocator, opt);
+}
+cubec_value_t cubec_context_create_enum_value(cubec_context_t self,
+                                              cubec_type_t type,
+                                              const char *option,
+                                              const char *name) {
+  cubec_enum_meta_t meta = type->meta;
+  cubec_enum_option_t opt = NULL;
+  for (size_t idx = 0; idx < cubec_array_get_size(meta->options); idx++) {
+    cubec_enum_option_t o = cubec_array_get_index(meta->options, idx);
+    if (strcmp(o->name, option) == 0) {
+      opt = o;
+      break;
+    }
+  }
+  if (!opt) {
+    return NULL;
+  }
+  return cubec_context_create_value(self, meta->type, opt->value->data, name);
 }
 
 cubec_value_t cubec_context_create_union_value(cubec_context_t self,
