@@ -39,10 +39,11 @@ static void cubec_context_init_types(cubec_context_t self) {
       .autofree = true,
   };
   self->types = cubec_create_list(self->allocator, &initialize);
-  self->named_types.self_type =
-      cubec_context_create_type(self, CUBEC_VALUE_TYPE_PTR, 0, "Self", NULL);
   self->named_types.undefined_type = cubec_context_create_type(
       self, CUBEC_VALUE_TYPE_UNDEFINED, 0, "undefined", NULL);
+  self->named_types.type_type = cubec_context_create_type(
+      self, CUBEC_VALUE_TYPE_TYPE, sizeof(struct _cubec_type_data_t), "type",
+      NULL);
   self->named_types.int8_type = cubec_context_create_type(
       self, CUBEC_VALUE_TYPE_INT8, sizeof(int8_t), "int8", NULL);
   self->named_types.int16_type = cubec_context_create_type(
@@ -373,6 +374,16 @@ void cubec_context_add_enum_option(cubec_context_t self, cubec_type_t enum_type,
   cubec_enum_option_t opt =
       cubec_create_enum_option(self->allocator, name, val);
   cubec_array_push(meta->options, self->allocator, opt);
+}
+
+cubec_value_t cubec_context_create_type_value(cubec_context_t self,
+                                              cubec_type_t type,
+                                              const char *name) {
+  struct _cubec_type_data_t data = {
+      .type = type,
+  };
+  return cubec_context_create_value(self, self->named_types.type_type, &data,
+                                    name);
 }
 cubec_value_t cubec_context_create_enum_value(cubec_context_t self,
                                               cubec_type_t type,
