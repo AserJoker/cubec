@@ -16,8 +16,10 @@ cubec_any_t cubec_write_ast_enum_declarator(cubec_allocator_t allocator,
     it = cubec_list_node_next(it);
   }
   cubec_any_set_field(value, allocator, "decorators", decorators);
-  cubec_any_set_field(value, allocator, "identifier",
-                      cubec_write_ast_node(self->identifier, allocator));
+  if (self->identifier) {
+    cubec_any_set_field(value, allocator, "identifier",
+                        cubec_write_ast_node(self->identifier, allocator));
+  }
   if (self->type) {
     cubec_any_set_field(value, allocator, "enum_type",
                         cubec_write_ast_node(self->type, allocator));
