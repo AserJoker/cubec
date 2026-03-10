@@ -2,9 +2,10 @@
 #define _H_CUBEC_ENGINE_CONTEXT_
 #include "ast/node.h"
 #include "core/allocator.h"
-#include "core/array.h"
 #include "core/list.h"
+#include "core/map.h"
 #include "engine/function.h"
+#include "engine/module.h"
 #include "engine/scope.h"
 #include "engine/type.h"
 #include "engine/value.h"
@@ -37,10 +38,19 @@ struct _cubec_context_t {
     cubec_type_t error_type;
   } named_types;
   struct {
+    cubec_value_t undefined;
   } constants;
   cubec_list_t strings;
   cubec_list_t functions;
+  cubec_module_t module;
+  cubec_map_t modules;
 };
+
+typedef enum _cubec_eval_type_t {
+  CUBEC_EVAL_MODULE,
+  CUBEC_EVAL_INLINE,
+} cubec_eval_type_t;
+
 cubec_context_t cubec_create_context(cubec_allocator_t allocator);
 
 void cubec_context_push(cubec_context_t self);
@@ -62,9 +72,6 @@ cubec_type_t cubec_context_get_ptr_array_type(cubec_context_t self,
                                               cubec_type_t src);
 
 cubec_type_t cubec_context_get_ref_type(cubec_context_t self, cubec_type_t src);
-
-cubec_type_t cubec_context_create_union_type(cubec_context_t self,
-                                             const cubec_array_t types);
 
 cubec_type_t cubec_context_create_function_type(cubec_context_t self,
                                                 size_t argc, cubec_type_t *argv,
@@ -97,14 +104,6 @@ cubec_value_t cubec_context_create_enum_value(cubec_context_t self,
                                               cubec_type_t type,
                                               const char *option,
                                               const char *name);
-
-cubec_value_t cubec_context_create_union_value(cubec_context_t self,
-                                               cubec_type_t type,
-                                               cubec_value_t value,
-                                               const char *name);
-
-cubec_value_t cubec_context_unwrap_union(cubec_context_t self,
-                                         cubec_value_t value);
 
 cubec_value_t cubec_context_get_index(cubec_context_t self, cubec_value_t value,
                                       size_t idx);
@@ -170,10 +169,13 @@ cubec_value_t cubec_context_create_str(cubec_context_t self, const char *value,
 cubec_value_t cubec_context_load_value(cubec_context_t self, const char *name);
 
 cubec_value_t cubec_context_eval(cubec_context_t self, const char *filename,
-                                 const char *source);
+                                 const char *source, cubec_eval_type_t type);
 
 cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t function,
                                  size_t argc, cubec_value_t *argv);
+
+cubec_value_t cubec_context_is_equal(cubec_context_t self, cubec_value_t left,
+                                     cubec_value_t right);
 
 #ifdef __cplusplus
 }

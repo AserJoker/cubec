@@ -95,7 +95,7 @@ int32_t cubec_ast_read_code(cubec_position_t *position, const char *end) {
   return code;
 }
 
-static void cubec_error_dispose(cubec_error_t self,
+static void cubec_error_dispose(cubec_ast_error_t self,
                                 cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->message);
 }
@@ -104,8 +104,8 @@ cubec_ast_node_t cubec_create_ast_error(cubec_allocator_t allocator,
                                         cubec_position_t begin,
                                         cubec_position_t end,
                                         const char *message) {
-  cubec_error_t node =
-      cubec_allocator_alloc(allocator, sizeof(struct _cubec_error_t),
+  cubec_ast_error_t node =
+      cubec_allocator_alloc(allocator, sizeof(struct _cubec_ast_error_t),
                             (cubec_dispose_fn_t)cubec_error_dispose);
   node->super.type = CUBEC_NODE_TYPE_ERROR;
   node->super.loc.begin = begin;

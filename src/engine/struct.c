@@ -4,23 +4,44 @@
 #include "core/compare.h"
 #include "core/map.h"
 #include "core/string.h"
+#include "engine/type.h"
 #include <string.h>
 
-static void cubec_struct_field_desc_dispose(cubec_struct_field_desc_t self,
+static void cubec_struct_field_desc_dispose(cubec_struct_field_t self,
                                             cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->name);
 }
 
-cubec_struct_field_desc_t
-cubec_create_struct_field_desc(cubec_allocator_t allocator, const char *name,
-                               size_t offset, cubec_type_t type) {
-  cubec_struct_field_desc_t self = cubec_allocator_alloc(
-      allocator, sizeof(struct _cubec_struct_field_desc_t),
+cubec_struct_field_t cubec_create_struct_field_desc(cubec_allocator_t allocator,
+                                                    const char *name,
+                                                    size_t offset,
+                                                    cubec_type_t type) {
+  cubec_struct_field_t self = cubec_allocator_alloc(
+      allocator, sizeof(struct _cubec_struct_field_t),
       (cubec_dispose_fn_t)cubec_struct_field_desc_dispose);
   self->name = cubec_create_cstring(allocator, name);
   self->offset = offset;
   self->type = type;
   return self;
+}
+static void cubec_flat_struct(cubec_allocator_t allocator, cubec_array_t array,
+                              cubec_array_t fields) {
+  for (size_t idx = 0; idx < cubec_array_get_size(fields); idx++) {
+    cubec_struct_field_t field = cubec_array_get_index(fields, idx);
+    if (field->type->kind == CUBEC_VALUE_TYPE_STRUCT) {
+      cubec_struct_meta_t meta = field->type->meta;
+      cubec_flat_struct(allocator, array, meta->fields);
+    } else {
+      cubec_array_push(array, allocator, field);
+    }
+  }
+}
+
+cubec_array_t cubec_flat_struct_fields(cubec_allocator_t allocator,
+                                       cubec_array_t fields) {
+  cubec_array_t result = cubec_create_array(allocator, NULL);
+  cubec_flat_struct(allocator, result, fields);
+  return result;
 }
 
 static void cubec_struct_meta_dispose(cubec_struct_meta_t self,

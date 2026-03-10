@@ -12,16 +12,6 @@ struct _cubec_ptr_meta_t {
 cubec_ptr_meta_t cubec_create_ptr_meta(cubec_allocator_t allocator,
                                        cubec_type_t type);
 
-typedef struct _cubec_ptr_array_meta_t *cubec_ptr_array_meta_t;
-struct _cubec_ptr_array_meta_t {
-  cubec_type_t type;
-};
-cubec_ptr_array_meta_t cubec_create_ptr_array_meta(cubec_allocator_t allocator,
-                                                   cubec_type_t type);
-typedef struct _cubec_ptr_data_t *cubec_ptr_data_t;
-struct _cubec_ptr_data_t {
-  void *data;
-};
 #ifdef __cplusplus
 }
 #endif

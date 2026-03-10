@@ -8,15 +8,19 @@
 extern "C" {
 #endif
 
-typedef struct _cubec_struct_field_desc_t *cubec_struct_field_desc_t;
-struct _cubec_struct_field_desc_t {
+typedef struct _cubec_struct_field_t *cubec_struct_field_t;
+struct _cubec_struct_field_t {
   char *name;
   size_t offset;
   cubec_type_t type;
 };
-cubec_struct_field_desc_t
-cubec_create_struct_field_desc(cubec_allocator_t allocator, const char *name,
-                               size_t offset, cubec_type_t type);
+cubec_struct_field_t cubec_create_struct_field_desc(cubec_allocator_t allocator,
+                                                    const char *name,
+                                                    size_t offset,
+                                                    cubec_type_t type);
+
+cubec_array_t cubec_flat_struct_fields(cubec_allocator_t allocator,
+                                       cubec_array_t fields);
 typedef struct _cubec_struct_meta_t *cubec_struct_meta_t;
 struct _cubec_struct_meta_t {
   cubec_array_t fields;

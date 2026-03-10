@@ -1,0 +1,1 @@
+unsigned char get(char a) { return a; }

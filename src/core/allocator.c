@@ -92,7 +92,7 @@ void cubec_allocator_free(cubec_allocator_t self, void *data) {
       (cubec_control_block_t)((uint8_t *)data -
                               sizeof(struct _cubec_control_block_t));
   if (block->dispose != NULL) {
-    block->dispose(&block[1], self);
+    block->dispose(data, self);
   }
   if (self->list == block) {
     self->list = block->next;

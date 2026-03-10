@@ -21,7 +21,6 @@
 #include "ast/node_type.h"
 #include "ast/ptr_declarator.h"
 #include "ast/struct_declarator.h"
-#include "ast/union_declarator.h"
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
@@ -268,10 +267,6 @@ cubec_ast_node_t cubec_read_ast_expression19(cubec_allocator_t allocator,
                                              const char *end) {
   cubec_ast_node_t node = NULL;
   node = cubec_read_ast_ptr_declarator(allocator, position, end);
-  if (node) {
-    return node;
-  }
-  node = cubec_read_ast_union_declarator(allocator, position, end);
   if (node) {
     return node;
   }

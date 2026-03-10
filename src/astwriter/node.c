@@ -41,7 +41,6 @@
 #include "ast/statement_while.h"
 #include "ast/struct_declarator.h"
 #include "ast/struct_field.h"
-#include "ast/union_declarator.h"
 #include "ast/variable_declarator.h"
 #include "astwriter/array_declarator.h"
 #include "astwriter/decorator.h"
@@ -96,7 +95,6 @@
 #include "astwriter/struct_field.h"
 #include "astwriter/switch_case.h"
 #include "astwriter/type.h"
-#include "astwriter/union_declarator.h"
 #include "astwriter/variable_declarator.h"
 #include "core/allocator.h"
 #include "core/any.h"
@@ -528,14 +526,6 @@ cubec_any_t cubec_write_ast_node(cubec_ast_node_t self,
                         cubec_any_set_string(cubec_create_any(allocator),
                                              allocator,
                                              "CUBEC_NODE_TYPE_STRUCT_FIELD"));
-    break;
-  case CUBEC_NODE_TYPE_UNION_DECLARATOR:
-    value = cubec_write_ast_union_declarator(
-        allocator, (cubec_ast_union_declarator_t)self);
-    cubec_any_set_field(
-        value, allocator, "type",
-        cubec_any_set_string(cubec_create_any(allocator), allocator,
-                             "CUBEC_NODE_TYPE_UNION_DECLARATOR"));
     break;
   case CUBEC_NODE_TYPE_TYPE:
     value = cubec_write_ast_type(allocator, (cubec_ast_type_t)self);
