@@ -9,6 +9,7 @@ extern "C" {
 typedef struct _cubec_ast_initialize_list_t {
   struct _cubec_ast_node_t super;
   cubec_list_t fields;
+  cubec_ast_node_t type;
 } *cubec_ast_initialize_list_t;
 cubec_ast_initialize_list_t
 cubec_create_ast_initialize_list(cubec_allocator_t allocator);

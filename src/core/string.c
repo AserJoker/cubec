@@ -1,5 +1,6 @@
 #include "core/string.h"
 #include "core/allocator.h"
+#include <math.h>
 #include <string.h>
 struct _cubec_string_t {
   char *data;
@@ -83,4 +84,73 @@ char *cubec_create_cstring(cubec_allocator_t allocator, const char *source) {
   strcpy(s, source);
   s[len] = 0;
   return s;
+}
+const char *cubec_cstring_to_int(const char *source, size_t *value, int radix) {
+  size_t val = 0;
+  while (*source) {
+    if (*source != '_') {
+      if (radix == 2) {
+        if (*source >= '0' && *source <= '1') {
+          val = val * radix + (*source - '0');
+        } else {
+          break;
+        }
+      } else if (radix == 8) {
+        if (*source >= '0' && *source <= '7') {
+          val = val * radix + (*source - '0');
+        } else {
+          break;
+        }
+      } else if (radix == 10) {
+        if (*source >= '0' && *source <= '9') {
+          val = val * radix + (*source - '0');
+        } else {
+          break;
+        }
+      } else if (radix == 16) {
+        if (*source >= '0' && *source <= '9') {
+          val = val * radix + (*source - '0');
+        } else if (*source >= 'a' && *source <= 'f') {
+          val = val * radix + (*source - 'a');
+        } else if (*source >= 'A' && *source <= 'F') {
+          val = val * radix + (*source - 'A');
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+    source++;
+  }
+  *value = val;
+  return source;
+}
+const char *cubec_cstring_to_dec(const char *source, double *value) {
+  size_t integer = 0;
+  source = cubec_cstring_to_int(source, &integer, 10);
+  double val = integer;
+  if (*source == '.') {
+    source++;
+    double mask = 0.1;
+    while (*source) {
+      if (*source != '_') {
+        if (*source >= '0' && *source <= '9') {
+          val = val + (*source - '0') * mask;
+          mask *= 0.1;
+        } else {
+          break;
+        }
+      }
+      source++;
+    }
+  }
+  if (*source == 'e' || *source == 'E') {
+    source++;
+    size_t e = 0;
+    source = cubec_cstring_to_int(source, &e, 10);
+    val = val * pow(10, e);
+  }
+  *value = val;
+  return source;
 }

@@ -16,7 +16,7 @@ struct _cubec_module_t {
 };
 cubec_module_t cubec_create_module(cubec_allocator_t allocator,
                                    const char *dirname, const char *filename,
-                                   const char *source, cubec_ast_node_t node);
+                                   char *source, cubec_ast_node_t node);
 
 #ifdef __cplusplus
 }

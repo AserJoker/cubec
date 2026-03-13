@@ -20,7 +20,7 @@ struct _cubec_context_t {
   cubec_scope_t current;
   cubec_list_t types;
   struct {
-    cubec_type_t undefined_type;
+    cubec_type_t void_type;
     cubec_type_t type_type;
     cubec_type_t int8_type;
     cubec_type_t int16_type;
@@ -40,10 +40,10 @@ struct _cubec_context_t {
   struct {
     cubec_value_t undefined;
   } constants;
-  cubec_list_t strings;
   cubec_list_t functions;
   cubec_module_t module;
   cubec_map_t modules;
+  cubec_list_t strings;
 };
 
 typedef enum _cubec_eval_type_t {
@@ -61,11 +61,6 @@ cubec_type_t cubec_context_create_type(cubec_context_t self,
                                        cubec_type_kind_t kind, size_t size,
                                        const char *name, void *meta);
 
-cubec_type_t cubec_context_load_type(cubec_context_t self, const char *name);
-
-cubec_type_t cubec_context_store_type(cubec_context_t self, const char *name,
-                                      cubec_type_t type);
-
 cubec_type_t cubec_context_get_ptr_type(cubec_context_t self, cubec_type_t src);
 
 cubec_type_t cubec_context_get_ptr_array_type(cubec_context_t self,
@@ -81,7 +76,8 @@ cubec_type_t cubec_context_create_function_type(cubec_context_t self,
 cubec_type_t cubec_context_create_array_type(cubec_context_t self,
                                              cubec_type_t type, size_t length);
 
-cubec_type_t cubec_context_create_struct_type(cubec_context_t self);
+cubec_type_t cubec_context_create_struct_type(cubec_context_t self,
+                                              const char *name);
 
 void cubec_context_add_struct_field(cubec_context_t self,
                                     cubec_type_t struct_type, const char *field,
@@ -91,10 +87,14 @@ void cubec_context_add_struct_attribute(cubec_context_t self,
                                         const char *field, cubec_value_t value);
 
 cubec_type_t cubec_context_create_enum_type(cubec_context_t self,
-                                            cubec_type_t type);
+                                            cubec_type_t type,
+                                            const char *name);
 
 void cubec_context_add_enum_option(cubec_context_t self, cubec_type_t enum_type,
                                    const char *name, cubec_value_t value);
+
+cubec_value_t cubec_context_resolve_enum(cubec_context_t self,
+                                         cubec_value_t value, const char *name);
 
 cubec_value_t cubec_context_create_type_value(cubec_context_t self,
                                               cubec_type_t type,
@@ -110,6 +110,9 @@ cubec_value_t cubec_context_get_index(cubec_context_t self, cubec_value_t value,
 
 cubec_value_t cubec_context_get_field(cubec_context_t self, cubec_value_t value,
                                       const char *field);
+
+cubec_value_t cubec_context_set_field(cubec_context_t self, cubec_value_t stru,
+                                      const char *field, cubec_value_t value);
 
 cubec_value_t cubec_context_create_comptime_function(cubec_context_t self,
                                                      cubec_type_t type,
@@ -160,22 +163,31 @@ cubec_value_t cubec_context_create_float64(cubec_context_t self, double value,
 cubec_value_t cubec_context_create_boolean(cubec_context_t self, bool value,
                                            const char *name);
 
-cubec_value_t cubec_context_create_undefined(cubec_context_t self,
-                                             const char *name);
+cubec_value_t cubec_context_get_undefined(cubec_context_t self);
 
 cubec_value_t cubec_context_create_str(cubec_context_t self, const char *value,
                                        const char *name);
 
+cubec_value_t cubec_context_create_opaque(cubec_context_t self,
+                                          const void *value, const char *name);
+
 cubec_value_t cubec_context_load_value(cubec_context_t self, const char *name);
 
 cubec_value_t cubec_context_eval(cubec_context_t self, const char *filename,
-                                 const char *source, cubec_eval_type_t type);
-
+                                 char *source, cubec_eval_type_t type);
+bool cubec_context_is_type_equal(cubec_context_t self, cubec_type_t dst,
+                                 cubec_type_t src);
+cubec_value_t cubec_context_convert(cubec_context_t self, cubec_type_t dst,
+                                    cubec_value_t value);
 cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t function,
                                  size_t argc, cubec_value_t *argv);
 
-cubec_value_t cubec_context_is_equal(cubec_context_t self, cubec_value_t left,
-                                     cubec_value_t right);
+cubec_value_t cubec_context_to_str(cubec_context_t self, cubec_value_t value);
+
+cubec_value_t cubec_context_get_length(cubec_context_t self,
+                                       cubec_value_t value);
+cubec_value_t cubec_context_to_uint64(cubec_context_t self,
+                                      cubec_value_t value);
 
 #ifdef __cplusplus
 }

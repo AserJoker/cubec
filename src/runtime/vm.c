@@ -1,11 +1,22 @@
 #include "runtime/vm.h"
+#include "ast/expression_call.h"
+#include "ast/literal_char.h"
+#include "ast/literal_identifier.h"
+#include "ast/literal_numeric.h"
 #include "ast/node.h"
 #include "ast/program.h"
 #include "core/allocator.h"
 #include "core/list.h"
 #include "engine/context.h"
 #include "runtime/error.h"
+#include "runtime/expression_binary.h"
+#include "runtime/expression_call.h"
+#include "runtime/literal_char.h"
+#include "runtime/literal_identifier.h"
+#include "runtime/literal_numeric.h"
+#include "runtime/literal_string.h"
 #include "runtime/program.h"
+#include "runtime/statement_expression.h"
 static void cubec_vm_dispose(cubec_vm_t self, cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->stack);
 }
@@ -19,15 +30,32 @@ cubec_value_t cubec_vm_run(cubec_vm_t self, cubec_context_t ctx,
                            cubec_ast_node_t node) {
   switch (node->type) {
   case CUBEC_NODE_TYPE_ERROR:
-    return cubec_run_error_node(ctx, self, (cubec_ast_error_t)node);
+    return cubec_run_error(ctx, self, (cubec_ast_error_t)node);
   case CUBEC_NODE_TYPE_PROGRAM:
-    return cubec_run_program_node(ctx, self, (cubec_ast_program_t)node);
-  case CUBEC_NODE_TYPE_LITERAL_IDENTIFIER:
+    return cubec_run_program(ctx, self, (cubec_ast_program_t)node);
+  case CUBEC_NODE_TYPE_STATEMENT_EXPRESSION:
+    return cubec_run_statement_expression(
+        ctx, self, (cubec_ast_statement_expression_t)node);
+
   case CUBEC_NODE_TYPE_LITERAL_NUMERIC:
+    return cubec_run_literal_numeric(ctx, self,
+                                     (cubec_ast_literal_numeric_t)node);
+  case CUBEC_NODE_TYPE_EXPRESSION_CALL:
+    return cubec_run_expression_call(ctx, self,
+                                     (cubec_ast_expression_call_t)node);
+  case CUBEC_NODE_TYPE_LITERAL_IDENTIFIER:
+    return cubec_run_literal_identifier(ctx, self,
+                                        (cubec_ast_literal_identifier_t)node);
   case CUBEC_NODE_TYPE_LITERAL_STRING:
-  case CUBEC_NODE_TYPE_LITERAL_SYMBOL:
+    return cubec_run_literal_string(ctx, self,
+                                    (cubec_ast_literal_string_t)node);
   case CUBEC_NODE_TYPE_LITERAL_CHAR:
+    return cubec_run_literal_char(ctx, self, (cubec_ast_literal_char_t)node);
   case CUBEC_NODE_TYPE_STATEMENT_EMPTY:
+    return cubec_context_get_undefined(ctx);
+  case CUBEC_NODE_TYPE_EXPRESSION_BINARY:
+    return cubec_run_expression_binary(ctx, self,
+                                       (cubec_ast_expression_binary_t)node);
   case CUBEC_NODE_TYPE_STATEMENT_BLOCK:
   case CUBEC_NODE_TYPE_STATEMENT_IMPORT:
   case CUBEC_NODE_TYPE_IMPORT_DECLARATOR:
@@ -38,7 +66,6 @@ cubec_value_t cubec_vm_run(cubec_vm_t self, cubec_context_t ctx,
   case CUBEC_NODE_TYPE_ENUM_FIELD:
   case CUBEC_NODE_TYPE_STATEMENT_DECLARATION:
   case CUBEC_NODE_TYPE_VARIABLE_DECLARATOR:
-  case CUBEC_NODE_TYPE_STATEMENT_EXPRESSION:
   case CUBEC_NODE_TYPE_STATEMENT_IF:
   case CUBEC_NODE_TYPE_STATEMENT_SWITCH:
   case CUBEC_NODE_TYPE_SWITCH_CASE:
@@ -53,8 +80,6 @@ cubec_value_t cubec_vm_run(cubec_vm_t self, cubec_context_t ctx,
   case CUBEC_NODE_TYPE_STATEMENT_TEST:
   case CUBEC_NODE_TYPE_ARRAY_DECLARATOR:
   case CUBEC_NODE_TYPE_EXPRESSION_ASSIGMENT:
-  case CUBEC_NODE_TYPE_EXPRESSION_BINARY:
-  case CUBEC_NODE_TYPE_EXPRESSION_CALL:
   case CUBEC_NODE_TYPE_EXPRESSION_MEMBER:
   case CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER:
   case CUBEC_NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR:
@@ -79,5 +104,5 @@ cubec_value_t cubec_vm_run(cubec_vm_t self, cubec_context_t ctx,
   default:
     return cubec_context_create_error(ctx, "Not implement", NULL);
   }
-  return cubec_context_create_undefined(ctx, NULL);
+  return cubec_context_get_undefined(ctx);
 }

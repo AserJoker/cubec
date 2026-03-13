@@ -16,7 +16,7 @@ static void cubec_module_dispose(cubec_module_t self,
 
 cubec_module_t cubec_create_module(cubec_allocator_t allocator,
                                    const char *dirname, const char *filename,
-                                   const char *source, cubec_ast_node_t node) {
+                                   char *source, cubec_ast_node_t node) {
   cubec_module_t self =
       cubec_allocator_alloc(allocator, sizeof(struct _cubec_module_t),
                             (cubec_dispose_fn_t)cubec_module_dispose);
@@ -28,7 +28,7 @@ cubec_module_t cubec_create_module(cubec_allocator_t allocator,
       .compare = (cubec_compare_fn_t)strcmp,
   };
   self->exports = cubec_create_map(allocator, &initialize);
-  self->source = cubec_create_cstring(allocator, source);
+  self->source = source;
   self->node = node;
   return self;
 }

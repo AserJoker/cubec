@@ -6,7 +6,9 @@
 #include "core/location.h"
 #include "core/position.h"
 static void cubec_ast_literal_numeric_dispose(cubec_ast_literal_numeric_t self,
-                                              cubec_allocator_t allocator) {}
+                                              cubec_allocator_t allocator) {
+  cubec_allocator_free(allocator, self->flag);
+}
 cubec_ast_literal_numeric_t
 cubec_create_ast_literal_numeric(cubec_allocator_t allocator) {
   cubec_ast_literal_numeric_t self = cubec_allocator_alloc(
@@ -14,6 +16,9 @@ cubec_create_ast_literal_numeric(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_literal_numeric_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_LITERAL_NUMERIC;
+  self->is_exp = false;
+  self->is_float = false;
+  self->flag = NULL;
   return self;
 }
 
@@ -56,16 +61,14 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
       }
       if (!cubec_location_is(token->loc, "u") &&
           !cubec_location_is(token->loc, "l") &&
-          !cubec_location_is(token->loc, "ul") &&
-          !cubec_location_is(token->loc, "ll") &&
-          !cubec_location_is(token->loc, "ull")) {
+          !cubec_location_is(token->loc, "ul")) {
         current = token->loc.begin;
         cubec_allocator_free(allocator, token);
         err = cubec_create_ast_error(allocator, *position, current,
                                      "Invalid or unexpected token");
         goto onerror;
       }
-      cubec_allocator_free(allocator, token);
+      node->flag = token;
     }
   } else if (*current.offset == '0' &&
              (*(current.offset + 1) == 'o' || *(current.offset + 1) == 'O')) {
@@ -95,16 +98,14 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
       }
       if (!cubec_location_is(token->loc, "u") &&
           !cubec_location_is(token->loc, "l") &&
-          !cubec_location_is(token->loc, "ul") &&
-          !cubec_location_is(token->loc, "ll") &&
-          !cubec_location_is(token->loc, "ull")) {
+          !cubec_location_is(token->loc, "ul")) {
         current = token->loc.begin;
         cubec_allocator_free(allocator, token);
         err = cubec_create_ast_error(allocator, *position, current,
                                      "Invalid or unexpected token");
         goto onerror;
       }
-      cubec_allocator_free(allocator, token);
+      node->flag = token;
     }
   } else if (*current.offset == '0' &&
              (*(current.offset + 1) == 'b' || *(current.offset + 1) == 'B')) {
@@ -134,16 +135,14 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
       }
       if (!cubec_location_is(token->loc, "u") &&
           !cubec_location_is(token->loc, "l") &&
-          !cubec_location_is(token->loc, "ul") &&
-          !cubec_location_is(token->loc, "ll") &&
-          !cubec_location_is(token->loc, "ull")) {
+          !cubec_location_is(token->loc, "ul")) {
         current = token->loc.begin;
         cubec_allocator_free(allocator, token);
         err = cubec_create_ast_error(allocator, *position, current,
                                      "Invalid or unexpected token");
         goto onerror;
       }
-      cubec_allocator_free(allocator, token);
+      node->flag = token;
     }
   } else if (*current.offset >= '0' && *current.offset <= '9' ||
              *current.offset == '.') {
@@ -159,9 +158,8 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
         goto onerror;
       }
     }
-    bool isFloat = false;
     if (*current.offset == '.') {
-      isFloat = true;
+      node->is_float = true;
       current.offset++;
       current.column++;
       if ((*current.offset < '0' || *current.offset > '9') &&
@@ -184,6 +182,7 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
     if (*current.offset == 'e' || *current.offset == 'E') {
       current.offset++;
       current.column++;
+      node->is_exp = true;
       if (*current.offset < '0' || *current.offset > '9') {
         err = cubec_create_ast_error(allocator, *position, current,
                                      "Invalid or unexpected token");
@@ -207,12 +206,10 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
         err = token;
         goto onerror;
       }
-      if (!isFloat) {
+      if (!node->is_float) {
         if (!cubec_location_is(token->loc, "u") &&
             !cubec_location_is(token->loc, "l") &&
-            !cubec_location_is(token->loc, "ul") &&
-            !cubec_location_is(token->loc, "ll") &&
-            !cubec_location_is(token->loc, "ull")) {
+            !cubec_location_is(token->loc, "ul")) {
           current = token->loc.begin;
           cubec_allocator_free(allocator, token);
           err = cubec_create_ast_error(allocator, *position, current,
@@ -228,7 +225,7 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
           goto onerror;
         }
       }
-      cubec_allocator_free(allocator, token);
+      node->flag = token;
     }
   } else {
     goto onerror;

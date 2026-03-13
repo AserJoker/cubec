@@ -35,6 +35,7 @@ cubec_array_t cubec_array_clone(cubec_allocator_t allocator,
                                 const cubec_array_t src);
 size_t cubec_array_find_index(cubec_array_t self, const void *value,
                               void *cmp_arg);
+void *cubec_array_get_data(cubec_array_t self);
 #ifdef __cplusplus
 }
 #endif

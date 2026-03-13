@@ -7,8 +7,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-cubec_value_t cubec_run_program_node(cubec_context_t ctx, cubec_vm_t vm,
-                                     cubec_ast_program_t node);
+cubec_value_t cubec_run_program(cubec_context_t ctx, cubec_vm_t vm,
+                                cubec_ast_program_t node);
 #ifdef __cplusplus
 }
 #endif

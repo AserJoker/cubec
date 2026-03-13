@@ -28,6 +28,9 @@ int cubec_string_compare(cubec_string_t self, const char *source);
 
 char *cubec_create_cstring(cubec_allocator_t allocator, const char *source);
 
+const char *cubec_cstring_to_int(const char *source, size_t *value, int radix);
+const char *cubec_cstring_to_dec(const char *source, double *value);
+
 #ifdef __cplusplus
 }
 #endif

@@ -33,9 +33,9 @@ static void cubec_context_dispose(cubec_context_t self,
     cubec_context_pop(self);
   }
   cubec_allocator_free(allocator, self->types);
-  cubec_allocator_free(allocator, self->strings);
   cubec_allocator_free(allocator, self->functions);
   cubec_allocator_free(allocator, self->modules);
+  cubec_allocator_free(allocator, self->strings);
 }
 
 static void cubec_context_init_types(cubec_context_t self) {
@@ -43,11 +43,8 @@ static void cubec_context_init_types(cubec_context_t self) {
       .autofree = true,
   };
   self->types = cubec_create_list(self->allocator, &initialize);
-  self->named_types.undefined_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_UNDEFINED, 0, "undefined", NULL);
-  self->named_types.type_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_TYPE, sizeof(struct _cubec_type_data_t), "type",
-      NULL);
+  self->named_types.void_type = cubec_context_create_type(
+      self, CUBEC_VALUE_TYPE_UNDEFINED, 0, "void", NULL);
   self->named_types.int8_type = cubec_context_create_type(
       self, CUBEC_VALUE_TYPE_INT8, sizeof(int8_t), "int8", NULL);
   self->named_types.int16_type = cubec_context_create_type(
@@ -75,12 +72,45 @@ static void cubec_context_init_types(cubec_context_t self) {
   self->named_types.opaque_type = cubec_context_create_type(
       self, CUBEC_VALUE_TYPE_OPAQUE, sizeof(void *), "opaque", NULL);
   self->named_types.error_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_ERROR, sizeof(char *), "error", NULL);
+      self, CUBEC_VALUE_TYPE_ERROR, sizeof(const char *), "error", NULL);
+  self->named_types.type_type = cubec_context_create_struct_type(self, "Type");
+  cubec_context_add_struct_field(self, self->named_types.type_type, "kind",
+                                 self->named_types.int32_type);
+  cubec_context_add_struct_field(self, self->named_types.type_type, "size",
+                                 self->named_types.uint64_type);
+  cubec_context_add_struct_field(self, self->named_types.type_type, "name",
+                                 self->named_types.str_type);
+  cubec_context_add_struct_field(self, self->named_types.type_type, "data",
+                                 self->named_types.opaque_type);
+
+  cubec_context_create_type_value(self, self->named_types.void_type, "void");
+  cubec_context_create_type_value(self, self->named_types.type_type, "Type");
+  cubec_context_create_type_value(self, self->named_types.int8_type, "int8");
+  cubec_context_create_type_value(self, self->named_types.int16_type, "int16");
+  cubec_context_create_type_value(self, self->named_types.int32_type, "int32");
+  cubec_context_create_type_value(self, self->named_types.int64_type, "int64");
+  cubec_context_create_type_value(self, self->named_types.uint8_type, "uint8");
+  cubec_context_create_type_value(self, self->named_types.uint16_type,
+                                  "uint16");
+  cubec_context_create_type_value(self, self->named_types.uint32_type,
+                                  "uint32");
+  cubec_context_create_type_value(self, self->named_types.uint64_type,
+                                  "uint64");
+  cubec_context_create_type_value(self, self->named_types.float32_type,
+                                  "float32");
+  cubec_context_create_type_value(self, self->named_types.float64_type,
+                                  "float64");
+  cubec_context_create_type_value(self, self->named_types.boolean_type,
+                                  "boolean");
+  cubec_context_create_type_value(self, self->named_types.str_type, "str");
+  cubec_context_create_type_value(self, self->named_types.opaque_type,
+                                  "opaque");
+  cubec_context_create_type_value(self, self->named_types.error_type, "error");
 }
 
 static void cubec_context_init_constants(cubec_context_t self) {
   self->constants.undefined = cubec_context_create_value(
-      self, self->named_types.undefined_type, NULL, "undefined");
+      self, self->named_types.void_type, NULL, "undefined");
 }
 
 cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
@@ -90,14 +120,14 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
   self->allocator = allocator;
   self->root = cubec_create_scope(allocator, NULL);
   self->current = self->root;
-  cubec_list_initialize_t strings_initialize = {
-      .autofree = true,
-  };
-  self->strings = cubec_create_list(self->allocator, &strings_initialize);
   cubec_list_initialize_t function_initialize = {
       .autofree = true,
   };
   self->functions = cubec_create_list(self->allocator, &function_initialize);
+  cubec_list_initialize_t string_initialize = {
+      .autofree = true,
+  };
+  self->strings = cubec_create_list(self->allocator, &string_initialize);
   cubec_map_initialize_t module_initialize = {
       .autofree_key = true,
       .autofree_value = true,
@@ -141,34 +171,22 @@ cubec_type_t cubec_context_create_type(cubec_context_t self,
   cubec_type_t type =
       cubec_create_type(self->allocator, kind, size, name, meta);
   cubec_list_append(self->types, self->allocator, type);
-  if (name) {
-    cubec_scope_store_type(self->root, self->allocator, name, type);
-  }
   return type;
 }
 
 cubec_type_t cubec_context_load_type(cubec_context_t self, const char *name) {
-  cubec_scope_t scope = self->current;
-  while (scope) {
-    cubec_type_t type = cubec_scope_load_type(scope, name);
-    if (type) {
+  for (cubec_list_node_t it = cubec_list_get_first(self->types);
+       it != cubec_list_get_end(self->types); it = cubec_list_node_next(it)) {
+    cubec_type_t type = cubec_list_node_get(it);
+    if (type->name && strcmp(type->name, name) == 0) {
       return type;
     }
-    scope = scope->parent;
   }
   return NULL;
-}
-cubec_type_t cubec_context_store_type(cubec_context_t self, const char *name,
-                                      cubec_type_t type) {
-  cubec_scope_store_type(self->current, self->allocator, name, type);
-  return type;
 }
 
 cubec_type_t cubec_context_get_ptr_type(cubec_context_t self,
                                         cubec_type_t src) {
-  if (src->kind == CUBEC_VALUE_TYPE_PTR) {
-    return src;
-  }
   if (src->kind == CUBEC_VALUE_TYPE_REF) {
     src = src->meta;
   }
@@ -252,8 +270,8 @@ cubec_type_t cubec_context_create_function_type(cubec_context_t self,
     offset += strlen(arg->name);
   }
   if (variadic) {
-    strcpy(&name[offset], ",...");
-    offset += 4;
+    strcpy(&name[offset], "...");
+    offset += 3;
   }
   name[offset++] = ')';
   name[offset++] = ':';
@@ -284,10 +302,8 @@ cubec_type_t cubec_context_create_array_type(cubec_context_t self,
   return array_type;
 }
 
-cubec_type_t cubec_context_create_struct_type(cubec_context_t self) {
-  static size_t counter = 0;
-  char name[32];
-  sprintf(name, "struct@%" PRIuPTR, counter++);
+cubec_type_t cubec_context_create_struct_type(cubec_context_t self,
+                                              const char *name) {
   cubec_struct_meta_t meta = cubec_create_struct_meta(self->allocator);
   return cubec_context_create_type(self, CUBEC_VALUE_TYPE_STRUCT, 0, name,
                                    meta);
@@ -330,13 +346,11 @@ void cubec_context_add_struct_attribute(cubec_context_t self,
 }
 
 cubec_type_t cubec_context_create_enum_type(cubec_context_t self,
-                                            cubec_type_t type) {
-  static size_t counter = 0;
-  char name[32];
-  sprintf(name, "enum@%" PRIuPTR, counter++);
+                                            cubec_type_t type,
+                                            const char *name) {
   cubec_enum_meta_t meta = cubec_create_enum_meta(self->allocator, type);
   return cubec_context_create_type(self, CUBEC_VALUE_TYPE_ENUM, type->size,
-                                   NULL, meta);
+                                   name, meta);
 }
 void cubec_context_add_enum_option(cubec_context_t self, cubec_type_t enum_type,
                                    const char *name, cubec_value_t value) {
@@ -346,14 +360,28 @@ void cubec_context_add_enum_option(cubec_context_t self, cubec_type_t enum_type,
                 cubec_create_cstring(self->allocator, name), val, NULL);
 }
 
+cubec_value_t cubec_context_resolve_enum(cubec_context_t self,
+                                         cubec_value_t value,
+                                         const char *name) {
+  cubec_enum_meta_t meta = value->type->meta;
+  return cubec_context_create_value(self, meta->type, value->data, NULL);
+}
+
 cubec_value_t cubec_context_create_type_value(cubec_context_t self,
                                               cubec_type_t type,
                                               const char *name) {
-  struct _cubec_type_data_t data = {
-      .type = type,
-  };
-  return cubec_context_create_value(self, self->named_types.type_type, &data,
-                                    name);
+
+  cubec_value_t val =
+      cubec_context_create_value(self, self->named_types.type_type, NULL, name);
+  cubec_value_t kind = cubec_context_create_int32(self, type->kind, NULL);
+  cubec_value_t data = cubec_context_create_opaque(self, type, NULL);
+  cubec_value_t str_name = cubec_context_create_str(self, type->name, NULL);
+  cubec_value_t size = cubec_context_create_uint64(self, type->size, NULL);
+  cubec_context_set_field(self, val, "kind", kind);
+  cubec_context_set_field(self, val, "name", str_name);
+  cubec_context_set_field(self, val, "size", size);
+  cubec_context_set_field(self, val, "data", data);
+  return val;
 }
 cubec_value_t cubec_context_create_enum_value(cubec_context_t self,
                                               cubec_type_t type,
@@ -366,7 +394,7 @@ cubec_value_t cubec_context_create_enum_value(cubec_context_t self,
     sprintf(name, "Unknown option '%s' in enum", option);
     return cubec_context_create_error(self, name, NULL);
   }
-  return cubec_context_create_value(self, meta->type, value->data, name);
+  return cubec_context_create_value(self, type, value->data, name);
 }
 
 cubec_value_t cubec_context_get_index(cubec_context_t self, cubec_value_t value,
@@ -391,11 +419,38 @@ cubec_value_t cubec_context_get_field(cubec_context_t self, cubec_value_t value,
     }
   }
   if (!desc) {
-    return NULL;
+    char msg[strlen(field) + 32];
+    sprintf(msg, "Field '%s' is not in struct", field);
+    return cubec_context_create_error(self, msg, NULL);
   }
   uint8_t *data = value->data;
   return cubec_context_create_value(self, desc->type, &data[desc->offset],
                                     NULL);
+}
+
+cubec_value_t cubec_context_set_field(cubec_context_t self, cubec_value_t stru,
+                                      const char *field, cubec_value_t value) {
+  cubec_struct_meta_t meta = stru->type->meta;
+  cubec_struct_field_t desc = NULL;
+  for (size_t idx = 0; idx < cubec_array_get_size(meta->fields); idx++) {
+    cubec_struct_field_t f = cubec_array_get_index(meta->fields, idx);
+    if (strcmp(f->name, field) == 0) {
+      desc = f;
+      break;
+    }
+  }
+  if (!desc) {
+    char msg[strlen(field) + 32];
+    sprintf(msg, "Field '%s' is not in struct", field);
+    return cubec_context_create_error(self, msg, NULL);
+  }
+  if (!cubec_context_is_type_equal(self, desc->type, value->type)) {
+    char msg[strlen(field) + 32];
+    sprintf(msg, "Field '%s' is not in struct", field);
+    return cubec_context_create_error(self, msg, NULL);
+  }
+  memcpy(stru->data + desc->offset, value->data, value->type->size);
+  return cubec_context_create_boolean(self, true, NULL);
 }
 
 cubec_value_t cubec_context_create_comptime_function(cubec_context_t self,
@@ -427,9 +482,9 @@ cubec_context_create_native_function(cubec_context_t self, cubec_type_t type,
 cubec_value_t cubec_context_create_error(cubec_context_t self,
                                          const char *message,
                                          const char *name) {
-  char *msg = cubec_create_cstring(self->allocator, message);
-  cubec_list_append(self->strings, self->allocator, msg);
-  return cubec_context_create_value(self, self->named_types.error_type, &msg,
+  char *str = cubec_create_cstring(self->allocator, message);
+  cubec_list_append(self->strings, self->allocator, str);
+  return cubec_context_create_value(self, self->named_types.error_type, &str,
                                     name);
 }
 
@@ -523,15 +578,21 @@ cubec_value_t cubec_context_create_boolean(cubec_context_t self, bool value,
   return cubec_context_create_value(self, self->named_types.boolean_type,
                                     &value, name);
 }
-cubec_value_t cubec_context_create_undefined(cubec_context_t self,
-                                             const char *name) {
+cubec_value_t cubec_context_get_undefined(cubec_context_t self) {
   return self->constants.undefined;
 }
+
 cubec_value_t cubec_context_create_str(cubec_context_t self, const char *value,
                                        const char *name) {
   char *str = cubec_create_cstring(self->allocator, value);
   cubec_list_append(self->strings, self->allocator, str);
   return cubec_context_create_value(self, self->named_types.str_type, &str,
+                                    name);
+}
+
+cubec_value_t cubec_context_create_opaque(cubec_context_t self,
+                                          const void *value, const char *name) {
+  return cubec_context_create_value(self, self->named_types.str_type, &value,
                                     name);
 }
 cubec_value_t cubec_context_load_value(cubec_context_t self, const char *name) {
@@ -543,11 +604,13 @@ cubec_value_t cubec_context_load_value(cubec_context_t self, const char *name) {
     }
     scope = scope->parent;
   }
-  return cubec_context_create_undefined(self, NULL);
+  char msg[strlen(name) + 32];
+  sprintf(msg, "Use of undeclared identifier '%s'", name);
+  return cubec_context_create_error(self, msg, NULL);
 }
 
 cubec_value_t cubec_context_eval(cubec_context_t self, const char *filename,
-                                 const char *src, cubec_eval_type_t type) {
+                                 char *src, cubec_eval_type_t type) {
   if (type == CUBEC_EVAL_INLINE) {
     cubec_position_t position = {
         .column = 0,
@@ -591,8 +654,7 @@ cubec_value_t cubec_context_eval(cubec_context_t self, const char *filename,
       cubec_ast_node_t node =
           cubec_read_ast_program(self->allocator, &begin, src + strlen(src));
       module =
-          cubec_create_module(self->allocator, dirname, filename, src, node);
-      cubec_allocator_free(self->allocator, source);
+          cubec_create_module(self->allocator, dirname, filename, source, node);
       cubec_map_set(self->modules, self->allocator,
                     cubec_create_cstring(self->allocator, fullpath), module,
                     NULL);
@@ -605,15 +667,15 @@ cubec_value_t cubec_context_eval(cubec_context_t self, const char *filename,
     cubec_allocator_free(self->allocator, fullpath);
     cubec_allocator_free(self->allocator, dirname);
     if (!result) {
-      result = cubec_context_create_undefined(self, NULL);
+      result = cubec_context_get_undefined(self);
     }
     return result;
   }
   return self->constants.undefined;
 }
 
-static bool cubec_context_is_type_equal(cubec_context_t self, cubec_type_t dst,
-                                        cubec_type_t src) {
+bool cubec_context_is_type_equal(cubec_context_t self, cubec_type_t dst,
+                                 cubec_type_t src) {
   if (dst->kind != src->kind) {
     return false;
   }
@@ -712,73 +774,153 @@ cubec_value_t cubec_context_convert(cubec_context_t self, cubec_type_t dst,
   if (cubec_context_is_type_equal(self, dst, src)) {
     return cubec_context_create_value(self, dst, value->data, NULL);
   }
-  if (dst->kind >= CUBEC_VALUE_TYPE_INT8 &&
-      dst->kind <= CUBEC_VALUE_TYPE_UINT64) {
-    if (src->kind >= CUBEC_VALUE_TYPE_INT8 &&
-        src->kind <= CUBEC_VALUE_TYPE_INT64) {
-      int64_t val = 0;
-      if (src->kind == CUBEC_VALUE_TYPE_INT8) {
-        val = *(int8_t *)value->data;
-      } else if (src->kind == CUBEC_VALUE_TYPE_INT16) {
-        val = *(int16_t *)value->data;
-      } else if (src->kind == CUBEC_VALUE_TYPE_INT32) {
-        val = *(int32_t *)value->data;
-      } else if (src->kind == CUBEC_VALUE_TYPE_INT64) {
-        val = *(int64_t *)value->data;
-      }
-      if (dst->kind == CUBEC_VALUE_TYPE_INT8) {
-        return cubec_context_create_int8(self, (int8_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_INT16) {
-        return cubec_context_create_int8(self, (int16_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_INT32) {
-        return cubec_context_create_int8(self, (int32_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_INT64) {
-        return cubec_context_create_int8(self, (int64_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_UINT8) {
-        return cubec_context_create_int8(self, (uint8_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_UINT16) {
-        return cubec_context_create_int8(self, (uint16_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_UINT32) {
-        return cubec_context_create_int8(self, (uint32_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_UINT64) {
-        return cubec_context_create_int8(self, (uint64_t)val, NULL);
-      }
+  if (src->kind >= CUBEC_VALUE_TYPE_INT8 &&
+      src->kind <= CUBEC_VALUE_TYPE_INT64) {
+    int64_t val = 0;
+    if (src->kind == CUBEC_VALUE_TYPE_INT8) {
+      val = *(int8_t *)value->data;
+    } else if (src->kind == CUBEC_VALUE_TYPE_INT16) {
+      val = *(int16_t *)value->data;
+    } else if (src->kind == CUBEC_VALUE_TYPE_INT32) {
+      val = *(int32_t *)value->data;
+    } else if (src->kind == CUBEC_VALUE_TYPE_INT64) {
+      val = *(int64_t *)value->data;
     }
-    if (src->kind >= CUBEC_VALUE_TYPE_UINT8 &&
-        src->kind <= CUBEC_VALUE_TYPE_UINT64) {
-      uint64_t val = 0;
-      if (src->kind == CUBEC_VALUE_TYPE_UINT8) {
-        val = *(uint8_t *)value->data;
-      } else if (src->kind == CUBEC_VALUE_TYPE_UINT16) {
-        val = *(uint16_t *)value->data;
-      } else if (src->kind == CUBEC_VALUE_TYPE_UINT32) {
-        val = *(uint32_t *)value->data;
-      } else if (src->kind == CUBEC_VALUE_TYPE_UINT64) {
-        val = *(uint64_t *)value->data;
+    if (dst->kind == CUBEC_VALUE_TYPE_INT8) {
+      if (val > INT8_MAX || val < INT8_MIN) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'int8'", val);
+        return cubec_context_create_error(self, msg, NULL);
       }
-      if (dst->kind == CUBEC_VALUE_TYPE_INT8) {
-        return cubec_context_create_int8(self, (int8_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_INT16) {
-        return cubec_context_create_int8(self, (int16_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_INT32) {
-        return cubec_context_create_int8(self, (int32_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_INT64) {
-        return cubec_context_create_int8(self, (int64_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_UINT8) {
-        return cubec_context_create_int8(self, (uint8_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_UINT16) {
-        return cubec_context_create_int8(self, (uint16_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_UINT32) {
-        return cubec_context_create_int8(self, (uint32_t)val, NULL);
-      } else if (dst->kind == CUBEC_VALUE_TYPE_UINT64) {
-        return cubec_context_create_int8(self, (uint64_t)val, NULL);
+      return cubec_context_create_int8(self, (int8_t)val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_INT16) {
+      if (val > INT16_MAX || val < INT16_MIN) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'int16'", val);
+        return cubec_context_create_error(self, msg, NULL);
       }
+      return cubec_context_create_int16(self, (int8_t)val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_INT32) {
+      if (val > INT32_MAX || val < INT32_MIN) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'int32'", val);
+        return cubec_context_create_error(self, msg, NULL);
+      }
+      return cubec_context_create_int32(self, (int8_t)val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_INT64) {
+      return cubec_context_create_int64(self, val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_UINT8) {
+      if (val > UINT8_MAX || val < 0) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'uint8'", val);
+        return cubec_context_create_error(self, msg, NULL);
+      }
+      return cubec_context_create_uint8(self, (int8_t)val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_UINT16) {
+      if (val > UINT16_MAX || val < 0) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'uint16'",
+                val);
+        return cubec_context_create_error(self, msg, NULL);
+      }
+      return cubec_context_create_uint16(self, (int8_t)val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_UINT32) {
+      if (val > UINT32_MAX || val < 0) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'uint32'",
+                val);
+        return cubec_context_create_error(self, msg, NULL);
+      }
+      return cubec_context_create_uint32(self, (int8_t)val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_UINT64) {
+      if (val < 0) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'uint64'",
+                val);
+        return cubec_context_create_error(self, msg, NULL);
+      }
+      return cubec_context_create_uint64(self, val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_FLOAT32) {
+      return cubec_context_create_float32(self, val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_FLOAT64) {
+      return cubec_context_create_float64(self, val, NULL);
     }
   }
-  if (dst->kind == CUBEC_VALUE_TYPE_FLOAT64 &&
-      src->kind == CUBEC_VALUE_TYPE_FLOAT32) {
-    float val = *(float *)value->data;
-    return cubec_context_create_float64(self, (double)val, NULL);
+
+  if (src->kind >= CUBEC_VALUE_TYPE_UINT8 &&
+      src->kind <= CUBEC_VALUE_TYPE_UINT64) {
+    uint64_t val = 0;
+    if (src->kind == CUBEC_VALUE_TYPE_UINT8) {
+      val = *(uint8_t *)value->data;
+    } else if (src->kind == CUBEC_VALUE_TYPE_UINT16) {
+      val = *(uint16_t *)value->data;
+    } else if (src->kind == CUBEC_VALUE_TYPE_UINT32) {
+      val = *(uint32_t *)value->data;
+    } else if (src->kind == CUBEC_VALUE_TYPE_UINT64) {
+      val = *(uint64_t *)value->data;
+    }
+    if (dst->kind == CUBEC_VALUE_TYPE_INT8) {
+      if (val > INT8_MAX) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'int8'", val);
+        return cubec_context_create_error(self, msg, NULL);
+      }
+      return cubec_context_create_int8(self, (int8_t)val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_INT16) {
+      if (val > INT16_MAX) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'int16'", val);
+        return cubec_context_create_error(self, msg, NULL);
+      }
+      return cubec_context_create_int16(self, (int8_t)val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_INT32) {
+      if (val > INT32_MAX) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'int32'", val);
+        return cubec_context_create_error(self, msg, NULL);
+      }
+      return cubec_context_create_int32(self, (int8_t)val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_INT64) {
+      return cubec_context_create_int64(self, val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_UINT8) {
+      if (val > UINT8_MAX) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'uint8'", val);
+        return cubec_context_create_error(self, msg, NULL);
+      }
+      return cubec_context_create_uint8(self, (int8_t)val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_UINT16) {
+      if (val > UINT16_MAX) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'uint16'",
+                val);
+        return cubec_context_create_error(self, msg, NULL);
+      }
+      return cubec_context_create_uint16(self, (int8_t)val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_UINT32) {
+      if (val > UINT32_MAX) {
+        char msg[128];
+        sprintf(msg, "Implicit conversion from '%" PRIdPTR "' to 'uint32'",
+                val);
+        return cubec_context_create_error(self, msg, NULL);
+      }
+      return cubec_context_create_uint32(self, (int8_t)val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_UINT64) {
+      return cubec_context_create_uint64(self, val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_FLOAT32) {
+      return cubec_context_create_float32(self, val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_FLOAT64) {
+      return cubec_context_create_float64(self, val, NULL);
+    }
+  }
+  if (src->kind == CUBEC_VALUE_TYPE_FLOAT32 ||
+      src->kind == CUBEC_VALUE_TYPE_FLOAT64) {
+    double val = *(double *)value->data;
+    if (dst->kind == CUBEC_VALUE_TYPE_FLOAT32) {
+      return cubec_context_create_float32(self, val, NULL);
+    } else if (dst->kind == CUBEC_VALUE_TYPE_FLOAT64) {
+      return cubec_context_create_float64(self, val, NULL);
+    }
   }
   if (dst->kind == CUBEC_VALUE_TYPE_REF) {
     cubec_ptr_meta_t meta = dst->meta;
@@ -845,7 +987,21 @@ cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t function,
     cubec_context_push(self);
     cubec_value_t args[argc];
     for (size_t idx = 0; idx < argc; idx++) {
-      args[idx] = cubec_context_convert(self, argv[idx]->type, argv[idx]->data);
+      cubec_value_t arg = NULL;
+      if (idx < cubec_array_get_size(meta->args)) {
+        arg = cubec_context_convert(
+            self, cubec_array_get_index(meta->args, idx), argv[idx]);
+      } else if (meta->variadic) {
+        arg = cubec_context_create_value(self, argv[idx]->type, argv[idx]->data,
+                                         NULL);
+      } else {
+        arg = cubec_context_create_error(
+            self, "Too many args for call function", NULL);
+      }
+      if (arg->type->kind == CUBEC_VALUE_TYPE_ERROR) {
+        return arg;
+      }
+      args[idx] = arg;
     }
     cubec_value_t res = NULL;
     if (desc->kind == CUBEC_FUNCTION_NATIVE) {
@@ -856,7 +1012,15 @@ cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t function,
       res = cubec_context_create_error(
           self, "Cannot call runtime function on comptime context", NULL);
     }
-    memcpy(result->data, res->data, result->type->size);
+    if (res->type->kind == CUBEC_VALUE_TYPE_ERROR) {
+      result->type = res->type;
+      cubec_allocator_free(self->allocator, result->data);
+      result->data =
+          cubec_allocator_alloc(self->allocator, result->type->size, NULL);
+      memcpy(result->data, res->data, result->type->size);
+    } else {
+      memcpy(result->data, res->data, result->type->size);
+    }
     cubec_context_pop(self);
     return result;
   } else if (function->type->kind == CUBEC_VALUE_TYPE_REF) {
@@ -884,5 +1048,320 @@ cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t function,
       }
     }
     return cubec_context_create_error(self, "Value is not callable", NULL);
+  }
+}
+cubec_value_t cubec_context_to_str(cubec_context_t self, cubec_value_t value) {
+  switch (value->type->kind) {
+  case CUBEC_VALUE_TYPE_ERROR: {
+    const char **data = value->data;
+    char msg[strlen(*data) + 16];
+    sprintf(msg, "error: %s", *data);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_UNDEFINED: {
+    return cubec_context_create_str(self, "undefined", NULL);
+  }
+  case CUBEC_VALUE_TYPE_INT8: {
+    int8_t val = *(int8_t *)value->data;
+    char msg[8];
+    sprintf(msg, "%d", val);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_INT16: {
+    int16_t val = *(int16_t *)value->data;
+    char msg[8];
+    sprintf(msg, "%d", val);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_INT32: {
+    int32_t val = *(int32_t *)value->data;
+    char msg[16];
+    sprintf(msg, "%d", val);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_INT64: {
+    int64_t val = *(int64_t *)value->data;
+    char msg[16];
+    sprintf(msg, "%" PRIdPTR, val);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_UINT8: {
+    uint8_t val = *(uint8_t *)value->data;
+    char msg[16];
+    sprintf(msg, "%u", val);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_UINT16: {
+    uint16_t val = *(uint16_t *)value->data;
+    char msg[16];
+    sprintf(msg, "%u", val);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_UINT32: {
+    uint32_t val = *(uint32_t *)value->data;
+    char msg[16];
+    sprintf(msg, "%u", val);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_UINT64: {
+    uint64_t val = *(uint64_t *)value->data;
+    char msg[16];
+    sprintf(msg, "%" PRIuPTR, val);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_FLOAT32: {
+    float val = *(float *)value->data;
+    char msg[32];
+    sprintf(msg, "%g", val);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_FLOAT64: {
+    double val = *(double *)value->data;
+    char msg[32];
+    sprintf(msg, "%g", val);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_BOOLEAN: {
+    bool val = *(bool *)value->data;
+    return cubec_context_create_str(self, val ? "true" : "false", NULL);
+  }
+  case CUBEC_VALUE_TYPE_STR: {
+    const char **data = value->data;
+    char msg[strlen(*data) * 2 + 3];
+    char *dst = &msg[0];
+    *dst++ = '\"';
+    const char *src = *data;
+    while (*src) {
+      if (*src == '\n') {
+        *dst++ = '\\';
+        *dst++ = 'n';
+      } else if (*src == '\r') {
+        *dst++ = '\\';
+        *dst++ = 'r';
+      } else if (*src == '\t') {
+        *dst++ = '\\';
+        *dst++ = 't';
+      } else if (*src == '\f') {
+        *dst++ = '\\';
+        *dst++ = 'f';
+      } else if (*src == '\a') {
+        *dst++ = '\\';
+        *dst++ = 'a';
+      } else if (*src == '\b') {
+        *dst++ = '\\';
+        *dst++ = 'b';
+      } else if (*src == '\?') {
+        *dst++ = '\\';
+        *dst++ = '?';
+      } else if (*src == '\'') {
+        *dst++ = '\\';
+        *dst++ = '\'';
+      } else if (*src == '\"') {
+        *dst++ = '\\';
+        *dst++ = '\"';
+      } else {
+        *dst++ = *src;
+      }
+      src++;
+    }
+    *dst++ = '\"';
+    *dst = 0;
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_OPAQUE: {
+    intptr_t opaque = (intptr_t)value->data;
+    char msg[64];
+    sprintf(msg, "opaque(0x%" PRIxPTR ")", opaque);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_PTR: {
+    cubec_ptr_meta_t meta = value->type->meta;
+    intptr_t address = (intptr_t)value->data;
+    char msg[64 + strlen(meta->type->name)];
+    sprintf(msg, "*%s(0x%" PRIxPTR ")", meta->type->name, address);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_PTR_ARRAY: {
+    cubec_ptr_meta_t meta = value->type->meta;
+    intptr_t address = (intptr_t)value->data;
+    char msg[64 + strlen(meta->type->name)];
+    sprintf(msg, "[*]%s(0x%" PRIxPTR ")", meta->type->name, address);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_REF: {
+    cubec_ptr_meta_t meta = value->type->meta;
+    intptr_t address = (intptr_t)value->data;
+    char msg[64 + strlen(meta->type->name)];
+    sprintf(msg, "&%s(0x%" PRIxPTR ")", meta->type->name, address);
+    return cubec_context_create_str(self, msg, NULL);
+  }
+  case CUBEC_VALUE_TYPE_STRUCT: {
+    cubec_struct_meta_t meta = value->type->meta;
+    size_t len = 0;
+    cubec_array_initialize_t initialize = {
+        .autofree = true,
+    };
+    cubec_array_t fields = cubec_create_array(self->allocator, &initialize);
+    for (size_t idx = 0; idx < cubec_array_get_size(meta->fields); idx++) {
+      cubec_struct_field_t field = cubec_array_get_index(meta->fields, idx);
+      cubec_value_t val = cubec_context_get_field(self, value, field->name);
+      if (val->type->kind == CUBEC_VALUE_TYPE_ERROR) {
+        cubec_allocator_free(self->allocator, fields);
+        return val;
+      }
+      val = cubec_context_to_str(self, val);
+      if (val->type->kind == CUBEC_VALUE_TYPE_ERROR) {
+        cubec_allocator_free(self->allocator, fields);
+        return val;
+      }
+      const char **v = val->data;
+      char *str = cubec_allocator_alloc(
+          self->allocator, strlen(*v) + strlen(field->name) + 8, NULL);
+      sprintf(str, "%s: %s", field->name, *v);
+      len += strlen(str);
+      cubec_array_push(fields, self->allocator, str);
+    }
+    if (value->type->name) {
+      len += strlen(value->type->name);
+    } else {
+      len += 6;
+    }
+    char str[len + 32];
+    size_t offset = 0;
+    if (value->type->name) {
+      strcpy(&str[offset], value->type->name);
+      offset += strlen(value->type->name);
+    } else {
+      strcpy(&str[offset], "struct");
+      offset += 6;
+    }
+    str[offset++] = '{';
+    str[offset++] = ' ';
+    for (size_t idx = 0; idx < cubec_array_get_size(fields); idx++) {
+      if (idx != 0) {
+        str[offset++] = ',';
+        str[offset++] = ' ';
+      }
+      const char *s = cubec_array_get_index(fields, idx);
+      strcpy(&str[offset], s);
+      offset += strlen(s);
+    }
+    str[offset++] = '}';
+    str[offset] = 0;
+    cubec_allocator_free(self->allocator, fields);
+    return cubec_context_create_str(self, str, NULL);
+  }
+  case CUBEC_VALUE_TYPE_ARRAY: {
+    cubec_array_meta_t meta = value->type->meta;
+    size_t len = 0;
+    cubec_array_t items = cubec_create_array(self->allocator, NULL);
+    for (size_t idx = 0; idx < meta->length; idx++) {
+      cubec_value_t val = cubec_context_get_index(self, value, idx);
+      if (val->type->kind == CUBEC_VALUE_TYPE_ERROR) {
+        cubec_allocator_free(self->allocator, items);
+        return val;
+      }
+      val = cubec_context_to_str(self, val);
+      if (val->type->kind == CUBEC_VALUE_TYPE_ERROR) {
+        cubec_allocator_free(self->allocator, items);
+        return val;
+      }
+      const char **str = val->data;
+      cubec_array_push(items, self->allocator, (void *)*str);
+      len += strlen(*str);
+    }
+    char str[strlen(value->type->name) + len + 32];
+    size_t offset = 0;
+    strcpy(&str[offset], value->type->name);
+    offset += strlen(value->type->name);
+    str[offset++] = '[';
+    for (size_t idx = 0; idx < cubec_array_get_size(items); idx++) {
+      if (idx != 0) {
+        strcpy(&str[offset], ", ");
+        offset += 2;
+      }
+      const char *s = cubec_array_get_index(items, idx);
+      strcpy(&str[offset], s);
+      offset += strlen(s);
+    }
+    str[offset++] = ']';
+    str[offset] = 0;
+    cubec_allocator_free(self->allocator, items);
+    return cubec_context_create_str(self, str, NULL);
+  }
+  case CUBEC_VALUE_TYPE_FUNCTION: {
+    char str[strlen(value->type->name) + 32];
+    sprintf(str, "%s(0x%" PRIxPTR ")", value->type->name,
+            (intptr_t)value->data);
+    return cubec_context_create_str(self, str, NULL);
+  }
+  case CUBEC_VALUE_TYPE_ENUM: {
+    cubec_value_t val = cubec_context_resolve_enum(self, value, NULL);
+    val = cubec_context_to_str(self, val);
+    if (val->type->kind == CUBEC_VALUE_TYPE_ERROR) {
+      return val;
+    }
+    const char **s = val->data;
+    char str[strlen(*s) + strlen(value->type->name) + 32];
+    sprintf(str, "%s{%s}", val->type->name, *s);
+    return cubec_context_create_str(self, str, NULL);
+  }
+  }
+}
+
+cubec_value_t cubec_context_get_length(cubec_context_t self,
+                                       cubec_value_t value) {
+  if (value->type->kind == CUBEC_VALUE_TYPE_ARRAY) {
+    return cubec_context_create_uint64(
+        self, ((cubec_array_meta_t)value->type)->length, NULL);
+  } else if (value->type->kind == CUBEC_VALUE_TYPE_STRUCT) {
+    cubec_value_t func = cubec_map_get(
+        ((cubec_struct_meta_t)value->type->meta)->attributes, "__len__", NULL);
+    if (func && func->type->kind == CUBEC_VALUE_TYPE_FUNCTION) {
+      return cubec_context_call(self, func, 1, &value);
+    }
+  }
+  char msg[strlen(value->type->name) + 32];
+  sprintf(msg, "Cannot get length of %s", value->type->name);
+  return cubec_context_create_error(self, msg, NULL);
+}
+cubec_value_t cubec_context_to_uint64(cubec_context_t self,
+                                      cubec_value_t value) {
+  if (value->type->kind >= CUBEC_VALUE_TYPE_INT8 &&
+      value->type->kind <= CUBEC_VALUE_TYPE_UINT64) {
+    uint64_t val = 0;
+    switch (value->type->kind) {
+    case CUBEC_VALUE_TYPE_INT8:
+      val = *(int8_t *)value->data;
+      break;
+    case CUBEC_VALUE_TYPE_INT16:
+      val = *(int16_t *)value->data;
+      break;
+    case CUBEC_VALUE_TYPE_INT32:
+      val = *(int32_t *)value->data;
+      break;
+    case CUBEC_VALUE_TYPE_INT64:
+      val = *(int64_t *)value->data;
+      break;
+    case CUBEC_VALUE_TYPE_UINT8:
+      val = *(uint8_t *)value->data;
+      break;
+    case CUBEC_VALUE_TYPE_UINT16:
+      val = *(uint16_t *)value->data;
+      break;
+    case CUBEC_VALUE_TYPE_UINT32:
+      val = *(uint32_t *)value->data;
+      break;
+    case CUBEC_VALUE_TYPE_UINT64:
+      val = *(uint64_t *)value->data;
+      break;
+    default:
+      break;
+    }
+    return cubec_context_create_uint64(self, val, NULL);
+  } else {
+    char msg[strlen(value->type->name) + 32];
+    sprintf(msg, "Cannot convert uint64 from %s", value->type->name);
+    return cubec_context_create_error(self, msg, NULL);
   }
 }

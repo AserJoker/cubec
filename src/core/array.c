@@ -183,3 +183,4 @@ size_t cubec_array_find_index(cubec_array_t self, const void *value,
   }
   return (size_t)-1;
 }
+void *cubec_array_get_data(cubec_array_t self) { return self->data; }

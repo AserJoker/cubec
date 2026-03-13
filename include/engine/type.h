@@ -29,7 +29,6 @@ typedef enum _cubec_type_kind_t {
   CUBEC_VALUE_TYPE_ARRAY,
   CUBEC_VALUE_TYPE_FUNCTION,
   CUBEC_VALUE_TYPE_ENUM,
-  CUBEC_VALUE_TYPE_TYPE,
 } cubec_type_kind_t;
 
 typedef struct _cubec_type_t *cubec_type_t;
@@ -42,10 +41,6 @@ struct _cubec_type_t {
 cubec_type_t cubec_create_type(cubec_allocator_t allocator,
                                cubec_type_kind_t kind, size_t size,
                                const char *name, void *meta);
-typedef struct _cubec_type_data_t *cubec_type_data_t;
-struct _cubec_type_data_t {
-  cubec_type_t type;
-};
 #ifdef __cplusplus
 }
 #endif

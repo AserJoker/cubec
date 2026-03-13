@@ -2,12 +2,14 @@
 #include "ast/initialize_field.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "ast/type.h"
 #include "core/allocator.h"
 #include "core/list.h"
 #include "core/position.h"
 static void cubec_ast_initialize_list_dispose(cubec_ast_initialize_list_t self,
                                               cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->fields);
+  cubec_allocator_free(allocator, self->type);
 }
 cubec_ast_initialize_list_t
 cubec_create_ast_initialize_list(cubec_allocator_t allocator) {
@@ -21,6 +23,7 @@ cubec_create_ast_initialize_list(cubec_allocator_t allocator) {
       .compare = NULL,
   };
   self->fields = cubec_create_list(allocator, &initialize);
+  self->type = NULL;
   return self;
 }
 cubec_ast_node_t cubec_read_ast_initialize_list(cubec_allocator_t allocator,
@@ -30,6 +33,15 @@ cubec_ast_node_t cubec_read_ast_initialize_list(cubec_allocator_t allocator,
       cubec_create_ast_initialize_list(allocator);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
+  cubec_ast_node_t type = cubec_read_ast_type(allocator, &current, end);
+  if (!type) {
+    goto onerror;
+  }
+  if (type->type == CUBEC_NODE_TYPE_ERROR) {
+    err = type;
+    goto onerror;
+  }
+  node->type = type;
   if (*current.offset != '{') {
     goto onerror;
   }

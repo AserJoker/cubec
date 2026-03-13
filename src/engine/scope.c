@@ -11,7 +11,6 @@ static void cubec_scope_dispose(cubec_scope_t self,
   cubec_allocator_free(allocator, self->variables);
   cubec_allocator_free(allocator, self->named_variables);
   cubec_allocator_free(allocator, self->defers);
-  cubec_allocator_free(allocator, self->types);
   if (self->parent) {
     cubec_list_node_t it = cubec_list_find(self->parent->children, self, NULL);
     cubec_list_erase(self->parent->children, allocator, it);
@@ -39,21 +38,15 @@ cubec_scope_t cubec_create_scope(cubec_allocator_t allocator,
       .compare = (cubec_compare_fn_t)strcmp,
   };
   self->named_variables = cubec_create_map(allocator, &map_initialize);
-  self->types = cubec_create_map(allocator, &map_initialize);
   return self;
-}
-void cubec_scope_store_type(cubec_scope_t self, cubec_allocator_t allocator,
-                            const char *name, cubec_type_t type) {
-  cubec_map_set(self->types, allocator, cubec_create_cstring(allocator, name),
-                type, NULL);
-}
-cubec_type_t cubec_scope_load_type(cubec_scope_t self, const char *name) {
-  return cubec_map_get(self->types, name, NULL);
 }
 void cubec_scope_store_value(cubec_scope_t self, cubec_allocator_t allocator,
                              cubec_value_t value, const char *name) {
   cubec_list_append(self->variables, allocator, value);
   if (name) {
+    if (cubec_map_has(self->named_variables, name, NULL)) {
+      cubec_map_delete(self->named_variables, allocator, name, NULL);
+    }
     cubec_map_set(self->named_variables, allocator,
                   cubec_create_cstring(allocator, name), value, NULL);
   }
