@@ -30,6 +30,7 @@ cubec_create_allocator(cubec_allocator_initialize_t *initialize) {
   cubec_allocator_t allocator = alloc_fn(sizeof(struct _cubec_allocator_t));
   allocator->alloc = alloc_fn;
   allocator->free = free_fn;
+  allocator->list = NULL;
   return allocator;
 }
 void cubec_delete_allocator(cubec_allocator_t allocator) {

@@ -20,12 +20,13 @@
 #include "engine/value.h"
 #include "runtime/vm.h"
 #include <inttypes.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 
 static void cubec_context_dispose(cubec_context_t self,
                                   cubec_allocator_t allocator) {
