@@ -11,9 +11,10 @@
 #include "core/position.h"
 static void
 cubec_ast_statement_import_dispose(cubec_ast_statement_import_t self,
-                                   cubec_allocator_t allcoator) {
-  cubec_allocator_free(allcoator, self->declarators);
-  cubec_allocator_free(allcoator, self->source);
+                                   cubec_allocator_t allocator) {
+  cubec_allocator_free(allocator, self->declarators);
+  cubec_allocator_free(allocator, self->source);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_statement_import_t
 cubec_create_ast_statement_import(cubec_allocator_t allocator) {

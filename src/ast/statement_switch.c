@@ -13,6 +13,7 @@ cubec_ast_statement_switch_dispose(cubec_ast_statement_switch_t self,
                                    cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->condition);
   cubec_allocator_free(allocator, self->cases);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_statement_switch_t
 cubec_create_ast_statement_switch(cubec_allocator_t allocator) {

@@ -8,6 +8,7 @@
 static void cubec_ast_decorator_dispose(cubec_ast_decorator_t self,
                                         cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->expression);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 
 cubec_ast_decorator_t cubec_create_ast_decorator(cubec_allocator_t allocator) {

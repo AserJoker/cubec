@@ -8,6 +8,7 @@ static void
 cubec_ast_statement_function_dispose(cubec_ast_statement_function_t self,
                                      cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->function);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_statement_function_t
 cubec_create_ast_statement_function(cubec_allocator_t allocator) {

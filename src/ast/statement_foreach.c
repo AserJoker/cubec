@@ -13,6 +13,7 @@ cubec_ast_statement_foreach_dispose(cubec_ast_statement_foreach_t self,
   cubec_allocator_free(allocator, self->identifier);
   cubec_allocator_free(allocator, self->expression);
   cubec_allocator_free(allocator, self->body);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_statement_foreach_t
 cubec_create_ast_statement_foreach(cubec_allocator_t allocator) {

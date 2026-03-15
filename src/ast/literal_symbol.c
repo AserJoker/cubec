@@ -1,5 +1,6 @@
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
+#include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/position.h"
 #include <unicode/utypes.h>

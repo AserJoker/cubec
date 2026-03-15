@@ -11,6 +11,7 @@ static void cubec_ast_expression_call_dispose(cubec_ast_expression_call_t self,
                                               cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->callee);
   cubec_allocator_free(allocator, self->args);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_expression_call_t
 cubec_create_ast_expression_call(cubec_allocator_t allocator) {

@@ -2,7 +2,9 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/location.h"
+#include "core/map.h"
 #include "core/position.h"
+#include "core/string.h"
 #include <string.h>
 #include <unicode/uchar.h>
 #include <unicode/umachine.h>
@@ -15,10 +17,18 @@ void cubec_ast_node_initialize(cubec_allocator_t allocator,
   self->loc.end.offset = NULL;
   self->loc.end.column = 0;
   self->loc.end.line = 0;
+  cubec_map_initialize_t initialize = {
+      .autofree_key = true,
+      .autofree_value = false,
+      .compare = (cubec_compare_fn_t)strcmp,
+  };
+  self->meta = cubec_create_map(allocator, &initialize);
 }
 
 void cubec_ast_node_dispose(cubec_allocator_t allocator,
-                            cubec_ast_node_t self) {}
+                            cubec_ast_node_t self) {
+  cubec_allocator_free(allocator, self->meta);
+}
 
 int32_t cubec_ast_read_code(cubec_position_t *position, const char *end) {
   int32_t code = 0;
@@ -95,9 +105,17 @@ int32_t cubec_ast_read_code(cubec_position_t *position, const char *end) {
   return code;
 }
 
+void cubec_ast_init_field(cubec_ast_node_t self, cubec_allocator_t allocator,
+                          const char *name, cubec_ast_node_t *field) {
+  cubec_map_set(self->meta, allocator, cubec_create_cstring(allocator, name),
+                field, NULL);
+  *field = NULL;
+}
+
 static void cubec_error_dispose(cubec_ast_error_t self,
                                 cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->message);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 
 cubec_ast_node_t cubec_create_ast_error(cubec_allocator_t allocator,

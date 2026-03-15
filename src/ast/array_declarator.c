@@ -13,6 +13,7 @@ cubec_ast_array_declarator_dispose(cubec_ast_array_declarator_t self,
                                    cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->length);
   cubec_allocator_free(allocator, self->item_type);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 
 cubec_ast_array_declarator_t

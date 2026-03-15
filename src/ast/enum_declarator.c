@@ -15,6 +15,7 @@ static void cubec_ast_enum_declarator_dispose(cubec_ast_enum_declarator_t self,
   cubec_allocator_free(allocator, self->identifier);
   cubec_allocator_free(allocator, self->type);
   cubec_allocator_free(allocator, self->fields);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_enum_declarator_t
 cubec_create_ast_enum_declarator(cubec_allocator_t allocator) {

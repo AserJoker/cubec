@@ -4,7 +4,9 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 static void cubec_ast_statement_break_dispose(cubec_ast_statement_break_t self,
-                                              cubec_allocator_t allocator) {}
+                                              cubec_allocator_t allocator) {
+  cubec_ast_node_dispose(allocator, &self->super);
+}
 cubec_ast_statement_break_t
 cubec_create_ast_statement_break(cubec_allocator_t allocator) {
   cubec_ast_statement_break_t self = cubec_allocator_alloc(

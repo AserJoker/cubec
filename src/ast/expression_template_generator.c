@@ -12,6 +12,7 @@ static void cubec_ast_expression_template_generator_dispose(
     cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->temp);
   cubec_allocator_free(allocator, self->args);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_expression_template_generator_t
 cubec_create_ast_expression_template_generator(cubec_allocator_t allocator) {

@@ -12,6 +12,7 @@ static void cubec_ast_statement_if_dispose(cubec_ast_statement_if_t self,
   cubec_allocator_free(allocator, self->condition);
   cubec_allocator_free(allocator, self->alternate);
   cubec_allocator_free(allocator, self->consequent);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_statement_if_t
 cubec_create_ast_statement_if(cubec_allocator_t allocator) {

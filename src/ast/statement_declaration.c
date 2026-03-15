@@ -15,6 +15,7 @@ cubec_ast_statement_declaration_dispose(cubec_ast_statement_declaration_t self,
   cubec_allocator_free(allocator, self->kind);
   cubec_allocator_free(allocator, self->declarations);
   cubec_allocator_free(allocator, self->decorators);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_statement_declaration_t
 cubec_create_ast_statement_declaration(cubec_allocator_t allocator) {

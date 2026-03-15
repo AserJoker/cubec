@@ -8,6 +8,7 @@
 static void cubec_ast_literal_numeric_dispose(cubec_ast_literal_numeric_t self,
                                               cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->flag);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_literal_numeric_t
 cubec_create_ast_literal_numeric(cubec_allocator_t allocator) {

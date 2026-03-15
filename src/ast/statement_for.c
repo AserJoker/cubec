@@ -14,6 +14,7 @@ static void cubec_ast_statement_for_dispose(cubec_ast_statement_for_t self,
   cubec_allocator_free(allocator, self->init);
   cubec_allocator_free(allocator, self->condition);
   cubec_allocator_free(allocator, self->after);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_statement_for_t
 cubec_create_ast_statement_for(cubec_allocator_t allocator) {

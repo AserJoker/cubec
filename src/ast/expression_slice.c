@@ -10,6 +10,7 @@ cubec_ast_expression_slice_dispose(cubec_ast_expression_slice_t self,
   cubec_allocator_free(allocator, self->host);
   cubec_allocator_free(allocator, self->start);
   cubec_allocator_free(allocator, self->end);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_expression_slice_t
 cubec_create_ast_expression_slice(cubec_allocator_t allocator) {

@@ -32,7 +32,10 @@ cubec_value_t cubec_run_expression_call(cubec_context_t ctx, cubec_vm_t vm,
         cubec_allocator_free(ctx->allocator, argv);
         return length;
       }
-      length = cubec_context_to_uint64(ctx, length);
+      length = cubec_context_convert(ctx, ctx->named_types.uint64_type, length);
+      if (length->type->kind == CUBEC_VALUE_TYPE_ERROR) {
+        return length;
+      }
       size_t len = *(uint64_t *)length->data;
       for (size_t idx = 0; idx < len; idx++) {
         cubec_value_t item = cubec_context_get_index(ctx, val, idx);

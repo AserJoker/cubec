@@ -9,6 +9,7 @@ cubec_ast_expression_comma_dispose(cubec_ast_expression_comma_t self,
                                    cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->current);
   cubec_allocator_free(allocator, self->next);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_expression_comma_t
 cubec_create_ast_expression_comma(cubec_allocator_t allocator) {

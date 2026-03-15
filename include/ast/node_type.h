@@ -4,6 +4,7 @@
 extern "C" {
 #endif
 typedef enum _cubec_ast_node_type_t {
+  CUBEC_NODE_TYPE_LIST,
   CUBEC_NODE_TYPE_ERROR,
   CUBEC_NODE_TYPE_LITERAL_IDENTIFIER,
   CUBEC_NODE_TYPE_LITERAL_NUMERIC,
@@ -60,6 +61,7 @@ typedef enum _cubec_ast_node_type_t {
   CUBEC_NODE_TYPE_INTERFACE_DECLARATOR,
   CUBEC_NODE_TYPE_PTR_DECLARATOR,
   CUBEC_NODE_TYPE_TYPE,
+  CUBEC_NODE_MAX,
 } cubec_ast_node_type_t;
 #ifdef __cplusplus
 }

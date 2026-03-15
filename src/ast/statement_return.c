@@ -10,6 +10,7 @@ static void
 cubec_ast_statement_return_dispose(cubec_ast_statement_return_t self,
                                    cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->value);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_statement_return_t
 cubec_create_ast_statement_return(cubec_allocator_t allocator) {

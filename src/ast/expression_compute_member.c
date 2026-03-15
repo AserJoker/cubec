@@ -9,6 +9,7 @@ static void cubec_ast_expression_compute_member_dispose(
     cubec_ast_expression_compute_member_t self, cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->host);
   cubec_allocator_free(allocator, self->field);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_expression_compute_member_t
 cubec_create_ast_expression_compute_member(cubec_allocator_t allocator) {

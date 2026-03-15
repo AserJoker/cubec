@@ -16,6 +16,7 @@ cubec_ast_function_argument_dispose(cubec_ast_function_argument_t self,
   cubec_allocator_free(allocator, self->decorators);
   cubec_allocator_free(allocator, self->identifier);
   cubec_allocator_free(allocator, self->type);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_function_argument_t
 cubec_create_ast_function_argument(cubec_allocator_t allocator) {

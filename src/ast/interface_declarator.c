@@ -14,6 +14,7 @@ cubec_ast_interface_declarator_dispose(cubec_ast_interface_declarator_t self,
                                        cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->args);
   cubec_allocator_free(allocator, self->return_type);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_interface_declarator_t
 cubec_create_ast_interface_declarator(cubec_allocator_t allocator) {

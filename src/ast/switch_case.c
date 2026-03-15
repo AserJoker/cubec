@@ -12,6 +12,7 @@ static void cubec_ast_switch_case_dispose(cubec_ast_switch_case_t self,
                                           cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->condition);
   cubec_allocator_free(allocator, self->statements);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_switch_case_t
 cubec_create_ast_switch_case(cubec_allocator_t allocator) {

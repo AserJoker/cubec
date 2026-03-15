@@ -13,6 +13,7 @@ cubec_ast_expression_binary_dispose(cubec_ast_expression_binary_t self,
   cubec_allocator_free(allocator, self->left);
   cubec_allocator_free(allocator, self->right);
   cubec_allocator_free(allocator, self->opt);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 
 cubec_ast_expression_binary_t
@@ -667,17 +668,27 @@ cubec_ast_node_t cubec_read_ast_expression_binary_prefix(
   cubec_ast_expression_binary_t node = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_binary(allocator);
-  node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
-  if (!node->opt) {
-    node->opt = cubec_read_ast_literal_identifier(allocator, &current, end);
-  }
-  if (!node->opt) {
-    goto onerror;
-  }
-  if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
-    err = node->opt;
-    node->opt = NULL;
-    goto onerror;
+  if (*current.offset == '&') {
+    node->opt = cubec_allocator_alloc(
+        allocator, sizeof(struct _cubec_ast_literal_symbol_t), NULL);
+    node->opt->loc.begin = current;
+    current.offset++;
+    current.column++;
+    node->opt->loc.end = current;
+    node->opt->type = CUBEC_NODE_TYPE_LITERAL_SYMBOL;
+  } else {
+    node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
+    if (!node->opt) {
+      node->opt = cubec_read_ast_literal_identifier(allocator, &current, end);
+    }
+    if (!node->opt) {
+      goto onerror;
+    }
+    if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
+      err = node->opt;
+      node->opt = NULL;
+      goto onerror;
+    }
   }
   if (!cubec_location_is(node->opt->loc, "!") &&
       !cubec_location_is(node->opt->loc, "++") &&

@@ -8,6 +8,7 @@ static void
 cubec_ast_expression_group_dispose(cubec_ast_expression_group_t self,
                                    cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->body);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_expression_group_t
 cubec_create_ast_expression_group(cubec_allocator_t allocator) {

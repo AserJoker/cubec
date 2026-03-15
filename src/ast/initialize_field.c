@@ -11,6 +11,7 @@ cubec_ast_initialize_field_dispose(cubec_ast_initialize_field_t self,
                                    cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->initialize);
   cubec_allocator_free(allocator, self->identifier);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_initialize_field_t
 cubec_create_ast_initialize_field(cubec_allocator_t allocator) {

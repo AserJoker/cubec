@@ -10,9 +10,10 @@
 
 static void
 cubec_ast_import_declarator_dispose(cubec_ast_import_declarator self,
-                                    cubec_allocator_t allcator) {
-  cubec_allocator_free(allcator, self->alias);
-  cubec_allocator_free(allcator, self->identifier);
+                                    cubec_allocator_t allocator) {
+  cubec_allocator_free(allocator, self->alias);
+  cubec_allocator_free(allocator, self->identifier);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 
 cubec_ast_import_declarator

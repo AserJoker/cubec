@@ -19,6 +19,7 @@ cubec_ast_struct_declarator_dispose(cubec_ast_struct_declarator_t self,
   cubec_allocator_free(allocator, self->attributes);
   cubec_allocator_free(allocator, self->decorators);
   cubec_allocator_free(allocator, self->identifier);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_struct_declarator_t
 cubec_create_ast_struct_declarator(cubec_allocator_t allocator) {

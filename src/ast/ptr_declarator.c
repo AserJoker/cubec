@@ -13,6 +13,7 @@ static void cubec_ast_ptr_declarator_dispose(cubec_ast_ptr_declarator_t self,
   cubec_allocator_free(allocator, self->decorators);
   cubec_allocator_free(allocator, self->kind);
   cubec_allocator_free(allocator, self->type);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_ptr_declarator_t
 cubec_create_ast_ptr_declarator(cubec_allocator_t allocator) {

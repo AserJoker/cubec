@@ -5,7 +5,9 @@
 #include "core/allocator.h"
 static void
 cubec_ast_statement_continue_dispose(cubec_ast_statement_continue_t self,
-                                     cubec_allocator_t allocator) {}
+                                     cubec_allocator_t allocator) {
+  cubec_ast_node_dispose(allocator, &self->super);
+}
 cubec_ast_statement_continue_t
 cubec_create_ast_statement_continue(cubec_allocator_t allocator) {
   cubec_ast_statement_continue_t self = cubec_allocator_alloc(

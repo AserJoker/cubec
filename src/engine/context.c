@@ -17,6 +17,7 @@
 #include "engine/scope.h"
 #include "engine/struct.h"
 #include "engine/type.h"
+#include "engine/union.h"
 #include "engine/value.h"
 #include "runtime/vm.h"
 #include <inttypes.h>
@@ -26,7 +27,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <xkeycheck.h>
 
 static void cubec_context_dispose(cubec_context_t self,
                                   cubec_allocator_t allocator) {
@@ -1307,6 +1308,12 @@ cubec_value_t cubec_context_to_str(cubec_context_t self, cubec_value_t value) {
     sprintf(str, "%s{%s}", val->type->name, *s);
     return cubec_context_create_str(self, str, NULL);
   }
+  case CUBEC_VALUE_TYPE_UNION: {
+    cubec_union_data_t data = value->data;
+    cubec_value_t value =
+        cubec_context_create_value(self, data->type, &data->data, NULL);
+    return cubec_context_to_str(self, value);
+  };
   }
 }
 
@@ -1328,8 +1335,10 @@ cubec_value_t cubec_context_get_length(cubec_context_t self,
 }
 cubec_value_t cubec_context_to_uint64(cubec_context_t self,
                                       cubec_value_t value) {
-  if (value->type->kind >= CUBEC_VALUE_TYPE_INT8 &&
-      value->type->kind <= CUBEC_VALUE_TYPE_UINT64) {
+  if ((value->type->kind >= CUBEC_VALUE_TYPE_INT8 &&
+       value->type->kind <= CUBEC_VALUE_TYPE_UINT64) ||
+      value->type->kind == CUBEC_VALUE_TYPE_FLOAT32 ||
+      value->type->kind == CUBEC_VALUE_TYPE_FLOAT64) {
     uint64_t val = 0;
     switch (value->type->kind) {
     case CUBEC_VALUE_TYPE_INT8:
@@ -1356,13 +1365,67 @@ cubec_value_t cubec_context_to_uint64(cubec_context_t self,
     case CUBEC_VALUE_TYPE_UINT64:
       val = *(uint64_t *)value->data;
       break;
+    case CUBEC_VALUE_TYPE_FLOAT32:
+      val = *(float *)value->data;
+      break;
+    case CUBEC_VALUE_TYPE_FLOAT64:
+      val = *(double *)value->data;
+      break;
     default:
       break;
     }
     return cubec_context_create_uint64(self, val, NULL);
   } else {
     char msg[strlen(value->type->name) + 32];
-    sprintf(msg, "Cannot convert uint64 from %s", value->type->name);
+    sprintf(msg, "Cannot convert '%s' to uint64", value->type->name);
     return cubec_context_create_error(self, msg, NULL);
+  }
+}
+cubec_value_t cubec_context_to_boolean(cubec_context_t self,
+                                       cubec_value_t value) {
+  switch (value->type->kind) {
+  case CUBEC_VALUE_TYPE_ERROR:
+    return value;
+  case CUBEC_VALUE_TYPE_UNDEFINED:
+    return cubec_context_create_boolean(self, false, NULL);
+  case CUBEC_VALUE_TYPE_INT8:
+    return cubec_context_create_boolean(self, *(int8_t *)value->data, NULL);
+  case CUBEC_VALUE_TYPE_INT16:
+    return cubec_context_create_boolean(self, *(int16_t *)value->data, NULL);
+  case CUBEC_VALUE_TYPE_INT32:
+    return cubec_context_create_boolean(self, *(int32_t *)value->data, NULL);
+  case CUBEC_VALUE_TYPE_INT64:
+    return cubec_context_create_boolean(self, *(int64_t *)value->data, NULL);
+  case CUBEC_VALUE_TYPE_UINT8:
+    return cubec_context_create_boolean(self, *(uint8_t *)value->data, NULL);
+  case CUBEC_VALUE_TYPE_UINT16:
+    return cubec_context_create_boolean(self, *(uint16_t *)value->data, NULL);
+  case CUBEC_VALUE_TYPE_UINT32:
+    return cubec_context_create_boolean(self, *(uint32_t *)value->data, NULL);
+  case CUBEC_VALUE_TYPE_UINT64:
+    return cubec_context_create_boolean(self, *(uint64_t *)value->data, NULL);
+  case CUBEC_VALUE_TYPE_FLOAT32:
+    return cubec_context_create_boolean(self, *(float *)value->data, NULL);
+  case CUBEC_VALUE_TYPE_FLOAT64:
+    return cubec_context_create_boolean(self, *(double *)value->data, NULL);
+  case CUBEC_VALUE_TYPE_BOOLEAN:
+    return cubec_context_create_boolean(self, *(bool *)value->data, NULL);
+  case CUBEC_VALUE_TYPE_STR:
+    return cubec_context_create_boolean(self, true, NULL);
+  case CUBEC_VALUE_TYPE_OPAQUE:
+    return cubec_context_create_boolean(self, *(void **)value->data, NULL);
+  case CUBEC_VALUE_TYPE_PTR:
+    return cubec_context_create_boolean(self, *(void **)value->data, NULL);
+  case CUBEC_VALUE_TYPE_PTR_ARRAY:
+    return cubec_context_create_boolean(self, *(void **)value->data, NULL);
+  case CUBEC_VALUE_TYPE_REF: {
+    cubec_value_t *val = value->data;
+    return cubec_context_to_boolean(self, *val);
+  }
+  default: {
+    char msg[strlen(value->type->name) + 128];
+    sprintf(msg, "Cannot convert '%s' to boolean", value->type->name);
+    return cubec_context_create_error(self, msg, NULL);
+  }
   }
 }

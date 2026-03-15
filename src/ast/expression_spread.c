@@ -10,6 +10,7 @@ static void
 cubec_ast_expression_spread_dispose(cubec_ast_expression_spread_t self,
                                     cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->expression);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_expression_spread_t
 cubec_create_ast_expression_spread(cubec_allocator_t allocator) {

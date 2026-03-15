@@ -10,6 +10,7 @@ static void cubec_ast_initialize_list_dispose(cubec_ast_initialize_list_t self,
                                               cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->fields);
   cubec_allocator_free(allocator, self->type);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_initialize_list_t
 cubec_create_ast_initialize_list(cubec_allocator_t allocator) {

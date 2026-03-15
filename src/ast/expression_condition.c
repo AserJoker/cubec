@@ -10,6 +10,7 @@ cubec_ast_expression_condition_dispose(cubec_ast_expression_condition_t self,
   cubec_allocator_free(allocator, self->condition);
   cubec_allocator_free(allocator, self->alternate);
   cubec_allocator_free(allocator, self->consequent);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_expression_condition_t
 cubec_create_ast_expression_condition(cubec_allocator_t allocator) {

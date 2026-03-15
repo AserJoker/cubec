@@ -4,6 +4,7 @@
 #include "ast/literal_identifier.h"
 #include "ast/literal_numeric.h"
 #include "ast/node.h"
+#include "ast/node_type.h"
 #include "ast/program.h"
 #include "core/allocator.h"
 #include "core/list.h"
@@ -17,6 +18,7 @@
 #include "runtime/literal_string.h"
 #include "runtime/program.h"
 #include "runtime/statement_expression.h"
+
 static void cubec_vm_dispose(cubec_vm_t self, cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->stack);
 }
@@ -28,7 +30,8 @@ cubec_vm_t cubec_create_vm(cubec_allocator_t allocaor) {
 }
 cubec_value_t cubec_vm_run(cubec_vm_t self, cubec_context_t ctx,
                            cubec_ast_node_t node) {
-  switch (node->type) {
+  cubec_ast_node_type_t type = node->type;
+  switch (type) {
   case CUBEC_NODE_TYPE_ERROR:
     return cubec_run_error(ctx, self, (cubec_ast_error_t)node);
   case CUBEC_NODE_TYPE_PROGRAM:

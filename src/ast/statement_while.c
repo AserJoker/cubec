@@ -10,6 +10,7 @@ static void cubec_ast_statement_while_dispose(cubec_ast_statement_while_t self,
                                               cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->condition);
   cubec_allocator_free(allocator, self->body);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_statement_while_t
 cubec_create_ast_statement_while(cubec_allocator_t allocator) {

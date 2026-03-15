@@ -14,6 +14,7 @@ cubec_ast_expression_assigment_dispose(cubec_ast_expression_assigment_t self,
   cubec_allocator_free(allocator, self->identifier);
   cubec_allocator_free(allocator, self->opt);
   cubec_allocator_free(allocator, self->value);
+  cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_expression_assigment_t
 cubec_create_ast_expression_assigment(cubec_allocator_t allocator) {

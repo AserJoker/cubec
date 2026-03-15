@@ -188,6 +188,8 @@ cubec_value_t cubec_context_get_length(cubec_context_t self,
                                        cubec_value_t value);
 cubec_value_t cubec_context_to_uint64(cubec_context_t self,
                                       cubec_value_t value);
+cubec_value_t cubec_context_to_boolean(cubec_context_t self,
+                                       cubec_value_t value);
 
 #ifdef __cplusplus
 }
