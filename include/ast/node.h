@@ -12,12 +12,14 @@ extern "C" {
 #include <unicode/urename.h>
 #include <unicode/utf8.h>
 #include <unicode/utypes.h>
-
-typedef struct _cubec_ast_node_t {
+struct _cubec_ast_node_t;
+typedef struct _cubec_ast_node_t *cubec_ast_node_t;
+struct _cubec_ast_node_t {
   cubec_location_t loc;
   size_t type;
   cubec_map_t meta;
-} *cubec_ast_node_t;
+  cubec_ast_node_t parent;
+};
 
 void cubec_ast_node_initialize(cubec_allocator_t allocator,
                                cubec_ast_node_t self);
@@ -28,6 +30,7 @@ int32_t cubec_ast_read_code(cubec_position_t *position, const char *end);
 
 void cubec_ast_init_field(cubec_ast_node_t self, cubec_allocator_t allocator,
                           const char *name, cubec_ast_node_t *field);
+void cubec_ast_init_parent(cubec_ast_node_t node, cubec_ast_node_t parent);
 
 typedef struct _cubec_ast_error_t {
   struct _cubec_ast_node_t super;
@@ -45,10 +48,13 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
 
 typedef struct _cubec_ast_list_node_t {
   struct _cubec_ast_node_t super;
-  cubec_list_node_t items;
+  cubec_list_t items;
 } *cubec_ast_list_node_t;
 
 cubec_ast_list_node_t cubec_create_ast_list_node(cubec_allocator_t allocator);
+void cubec_ast_list_node_append(cubec_ast_node_t self,
+                                cubec_allocator_t allocator,
+                                cubec_ast_node_t item);
 
 #ifdef __cplusplus
 }

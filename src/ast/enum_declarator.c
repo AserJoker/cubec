@@ -6,7 +6,6 @@
 #include "ast/node_type.h"
 #include "ast/type.h"
 #include "core/allocator.h"
-#include "core/list.h"
 #include "core/location.h"
 #include "core/position.h"
 static void cubec_ast_enum_declarator_dispose(cubec_ast_enum_declarator_t self,
@@ -26,12 +25,8 @@ cubec_create_ast_enum_declarator(cubec_allocator_t allocator) {
   self->super.type = CUBEC_NODE_TYPE_ENUM_DECLARATOR;
   self->identifier = NULL;
   self->type = NULL;
-  cubec_list_initialize_t initialize = {
-      .autofree = true,
-      .compare = NULL,
-  };
-  self->decorators = cubec_create_list(allocator, &initialize);
-  self->fields = cubec_create_list(allocator, &initialize);
+  self->decorators = &cubec_create_ast_list_node(allocator)->super;
+  self->fields = &cubec_create_ast_list_node(allocator)->super;
   return self;
 }
 cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
@@ -50,7 +45,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
     if (decorator->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;
     }
-    cubec_list_append(node->decorators, allocator, decorator);
+    cubec_ast_list_node_append(node->decorators, allocator, decorator);
     err = cubec_ast_skip_all(allocator, &current, end);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
@@ -134,7 +129,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
         err = item;
         goto onerror;
       }
-      cubec_list_append(node->fields, allocator, item);
+      cubec_ast_list_node_append(node->fields, allocator, item);
       err = cubec_ast_skip_all(allocator, &current, end);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;
@@ -172,6 +167,10 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_init_parent(node->decorators, &node->super);
+  cubec_ast_init_parent(node->fields, &node->super);
+  cubec_ast_init_parent(node->identifier, &node->super);
+  cubec_ast_init_parent(node->type, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

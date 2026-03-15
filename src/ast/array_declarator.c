@@ -23,8 +23,8 @@ cubec_create_ast_array_declarator(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_array_declarator_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_ARRAY_DECLARATOR;
-  self->length = NULL;
-  self->item_type = NULL;
+  cubec_ast_init_field(&self->super, allocator, "length", &self->length);
+  cubec_ast_init_field(&self->super, allocator, "item_type", &self->item_type);
   return self;
 }
 
@@ -87,6 +87,8 @@ cubec_ast_node_t cubec_read_ast_array_declarator(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_init_parent(node->item_type, &node->super);
+  cubec_ast_init_parent(node->length, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

@@ -1,13 +1,18 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
+#include "core/any.h"
+#include "core/list.h"
 #include "core/location.h"
 #include "core/map.h"
 #include "core/position.h"
 #include "core/string.h"
+#include <inttypes.h>
+#include <stdio.h>
 #include <string.h>
 #include <unicode/uchar.h>
 #include <unicode/umachine.h>
+
 void cubec_ast_node_initialize(cubec_allocator_t allocator,
                                cubec_ast_node_t self) {
   self->type = 0;
@@ -23,6 +28,7 @@ void cubec_ast_node_initialize(cubec_allocator_t allocator,
       .compare = (cubec_compare_fn_t)strcmp,
   };
   self->meta = cubec_create_map(allocator, &initialize);
+  self->parent = NULL;
 }
 
 void cubec_ast_node_dispose(cubec_allocator_t allocator,
@@ -110,6 +116,11 @@ void cubec_ast_init_field(cubec_ast_node_t self, cubec_allocator_t allocator,
   cubec_map_set(self->meta, allocator, cubec_create_cstring(allocator, name),
                 field, NULL);
   *field = NULL;
+}
+void cubec_ast_init_parent(cubec_ast_node_t node, cubec_ast_node_t parent) {
+  if (node) {
+    node->parent = parent;
+  }
 }
 
 static void cubec_error_dispose(cubec_ast_error_t self,
@@ -209,4 +220,29 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
     break;
   }
   return NULL;
+}
+static void cubec_ast_list_node_dispose(cubec_ast_list_node_t self,
+                                        cubec_allocator_t allocator) {
+  cubec_allocator_free(allocator, self->items);
+  cubec_ast_node_dispose(allocator, &self->super);
+}
+
+cubec_ast_list_node_t cubec_create_ast_list_node(cubec_allocator_t allocator) {
+  cubec_ast_list_node_t node =
+      cubec_allocator_alloc(allocator, sizeof(struct _cubec_ast_list_node_t),
+                            (cubec_dispose_fn_t)cubec_ast_list_node_dispose);
+  cubec_ast_node_initialize(allocator, &node->super);
+  node->super.type = CUBEC_ANY_TYPE_ARRAY;
+  cubec_list_initialize_t initialize = {
+      .autofree = true,
+  };
+  node->items = cubec_create_list(allocator, &initialize);
+  return node;
+}
+void cubec_ast_list_node_append(cubec_ast_node_t self,
+                                cubec_allocator_t allocator,
+                                cubec_ast_node_t item) {
+  cubec_ast_list_node_t list = (cubec_ast_list_node_t)self;
+  cubec_list_append(list->items, allocator, item);
+  item->parent = &list->super;
 }
