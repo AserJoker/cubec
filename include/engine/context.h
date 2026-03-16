@@ -173,8 +173,6 @@ cubec_value_t cubec_context_create_opaque(cubec_context_t self,
 
 cubec_value_t cubec_context_load_value(cubec_context_t self, const char *name);
 
-cubec_value_t cubec_context_eval(cubec_context_t self, const char *filename,
-                                 char *source, cubec_eval_type_t type);
 bool cubec_context_is_type_equal(cubec_context_t self, cubec_type_t dst,
                                  cubec_type_t src);
 cubec_value_t cubec_context_convert(cubec_context_t self, cubec_type_t dst,

@@ -21,9 +21,9 @@ cubec_create_ast_variable_declarator(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_variable_declarator_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_VARIABLE_DECLARATOR;
-  self->identifier = NULL;
-  self->type = NULL;
-  self->initialize = NULL;
+  cubec_ast_set_field(self, allocator, identifier);
+  cubec_ast_set_field(self, allocator, type);
+  cubec_ast_set_field(self, allocator, initialize);
   return self;
 }
 cubec_ast_node_t cubec_read_ast_variable_declarator(cubec_allocator_t allocator,
@@ -93,6 +93,9 @@ cubec_ast_node_t cubec_read_ast_variable_declarator(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->identifier, &node->super);
+  cubec_ast_set_parent(node->initialize, &node->super);
+  cubec_ast_set_parent(node->type, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

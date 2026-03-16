@@ -1,7 +1,6 @@
 #ifndef _H_CUBEC_NODE_FUNCTION_ARGUMENT_
 #define _H_CUBEC_NODE_FUNCTION_ARGUMENT_
 #include "ast/node.h"
-#include "core/list.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
@@ -10,7 +9,7 @@ typedef struct _cubec_ast_function_argument_t {
   struct _cubec_ast_node_t super;
   cubec_ast_node_t identifier;
   cubec_ast_node_t type;
-  cubec_list_t decorators;
+  cubec_ast_node_t decorators;
 } *cubec_ast_function_argument_t;
 cubec_ast_function_argument_t
 cubec_create_ast_function_argument(cubec_allocator_t allocator);

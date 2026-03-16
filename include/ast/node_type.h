@@ -61,7 +61,7 @@ typedef enum _cubec_ast_node_type_t {
   CUBEC_NODE_TYPE_INTERFACE_DECLARATOR,
   CUBEC_NODE_TYPE_PTR_DECLARATOR,
   CUBEC_NODE_TYPE_TYPE,
-  CUBEC_NODE_MAX,
+  CUBEC_NODE_TYPE_MAX,
 } cubec_ast_node_type_t;
 #ifdef __cplusplus
 }

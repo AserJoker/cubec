@@ -4,7 +4,6 @@
 #include "ast/node_type.h"
 #include "ast/type.h"
 #include "core/allocator.h"
-#include "core/list.h"
 #include "core/position.h"
 
 static void cubec_ast_expression_template_generator_dispose(
@@ -21,8 +20,9 @@ cubec_create_ast_expression_template_generator(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_expression_template_generator_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR;
-  self->temp = NULL;
-  self->args = NULL;
+  cubec_ast_set_field(self, allocator, temp);
+  cubec_ast_set_field(self, allocator, args);
+  self->args = cubec_create_ast_list_node(allocator);
   return self;
 }
 
@@ -80,7 +80,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
         err = item;
         goto onerror;
       }
-      cubec_list_append(node->args, allocator, item);
+      cubec_ast_list_node_append(node->args, allocator, item);
       err = cubec_ast_skip_all(allocator, &current, end);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         goto onerror;
@@ -115,6 +115,8 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->temp, &node->super);
+  cubec_ast_set_parent(node->args, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

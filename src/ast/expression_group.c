@@ -17,7 +17,7 @@ cubec_create_ast_expression_group(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_expression_group_dispose);
   cubec_ast_node_initialize(allocator, &group->super);
   group->super.type = CUBEC_NODE_TYPE_EXPRESSION_GROUP;
-  group->body = NULL;
+  cubec_ast_set_field(group, allocator, body);
   return group;
 }
 
@@ -64,6 +64,7 @@ cubec_ast_node_t cubec_read_ast_expression_group(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->body, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

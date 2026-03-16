@@ -19,7 +19,7 @@ cubec_create_ast_statement_return(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_statement_return_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_STATEMENT_RETURN;
-  self->value = NULL;
+  cubec_ast_set_field(self, allocator, value);
   return self;
 }
 cubec_ast_node_t cubec_read_ast_statement_return(cubec_allocator_t allocator,
@@ -69,6 +69,7 @@ cubec_ast_node_t cubec_read_ast_statement_return(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->value, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

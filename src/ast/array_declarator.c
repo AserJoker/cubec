@@ -87,8 +87,8 @@ cubec_ast_node_t cubec_read_ast_array_declarator(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
-  cubec_ast_init_parent(node->item_type, &node->super);
-  cubec_ast_init_parent(node->length, &node->super);
+  cubec_ast_set_parent(node->item_type, &node->super);
+  cubec_ast_set_parent(node->length, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

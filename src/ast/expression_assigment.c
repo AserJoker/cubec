@@ -22,9 +22,9 @@ cubec_create_ast_expression_assigment(cubec_allocator_t allocator) {
       allocator, sizeof(struct _cubec_ast_expression_assigment_t),
       (cubec_dispose_fn_t)cubec_ast_expression_assigment_dispose);
   cubec_ast_node_initialize(allocator, &node->super);
-  node->identifier = NULL;
-  node->value = NULL;
-  node->opt = NULL;
+  cubec_ast_set_field(node, allocator, identifier);
+  cubec_ast_set_field(node, allocator, value);
+  cubec_ast_set_field(node, allocator, opt);
   node->super.type = CUBEC_NODE_TYPE_EXPRESSION_ASSIGMENT;
   return node;
 }
@@ -94,6 +94,9 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->identifier, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
+  cubec_ast_set_parent(node->value, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

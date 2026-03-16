@@ -30,7 +30,9 @@ int32_t cubec_ast_read_code(cubec_position_t *position, const char *end);
 
 void cubec_ast_init_field(cubec_ast_node_t self, cubec_allocator_t allocator,
                           const char *name, cubec_ast_node_t *field);
-void cubec_ast_init_parent(cubec_ast_node_t node, cubec_ast_node_t parent);
+#define cubec_ast_set_field(self, allocator, field)                            \
+  cubec_ast_init_field(&self->super, allocator, #field, &self->field)
+void cubec_ast_set_parent(cubec_ast_node_t node, cubec_ast_node_t parent);
 
 typedef struct _cubec_ast_error_t {
   struct _cubec_ast_node_t super;
@@ -51,10 +53,18 @@ typedef struct _cubec_ast_list_node_t {
   cubec_list_t items;
 } *cubec_ast_list_node_t;
 
-cubec_ast_list_node_t cubec_create_ast_list_node(cubec_allocator_t allocator);
+cubec_ast_node_t cubec_create_ast_list_node(cubec_allocator_t allocator);
 void cubec_ast_list_node_append(cubec_ast_node_t self,
                                 cubec_allocator_t allocator,
                                 cubec_ast_node_t item);
+
+typedef cubec_ast_node_t (*cubec_ast_visit_fn_t)(cubec_ast_node_t node,
+                                                 cubec_allocator_t allocator,
+                                                 void *arg);
+
+cubec_ast_node_t cubec_visit_node(cubec_ast_node_t node,
+                                  cubec_allocator_t allocator,
+                                  cubec_ast_visit_fn_t visit, void *arg);
 
 #ifdef __cplusplus
 }

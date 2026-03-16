@@ -1,7 +1,6 @@
 #ifndef _H_CUBEC_NODE_PTR_DECLARATOR_
 #define _H_CUBEC_NODE_PTR_DECLARATOR_
 #include "ast/node.h"
-#include "core/list.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
@@ -9,7 +8,7 @@ extern "C" {
 typedef struct _cubec_ast_ptr_declarator_t {
   struct _cubec_ast_node_t super;
   cubec_ast_node_t kind;
-  cubec_list_t decorators;
+  cubec_ast_node_t decorators;
   cubec_ast_node_t type;
 } *cubec_ast_ptr_declarator_t;
 cubec_ast_ptr_declarator_t

@@ -5,7 +5,6 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
-#include "core/list.h"
 #include "core/position.h"
 static void cubec_ast_expression_call_dispose(cubec_ast_expression_call_t self,
                                               cubec_allocator_t allocator) {
@@ -20,12 +19,9 @@ cubec_create_ast_expression_call(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_expression_call_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_EXPRESSION_CALL;
-  self->callee = NULL;
-  cubec_list_initialize_t initialize = {
-      .autofree = true,
-      .compare = NULL,
-  };
-  self->args = cubec_create_list(allocator, &initialize);
+  cubec_ast_set_field(self, allocator, callee);
+  cubec_ast_set_field(self, allocator, args);
+  self->args = cubec_create_ast_list_node(allocator);
   return self;
 }
 
@@ -54,7 +50,7 @@ cubec_ast_node_t cubec_read_ast_expression_call(cubec_allocator_t allocator,
         err = initialize_list;
         goto onerror;
       }
-      cubec_list_append(node->args, allocator, initialize_list);
+      cubec_ast_list_node_append(node->args, allocator, initialize_list);
     } else {
       for (;;) {
         cubec_ast_node_t item =
@@ -71,7 +67,7 @@ cubec_ast_node_t cubec_read_ast_expression_call(cubec_allocator_t allocator,
           err = item;
           goto onerror;
         }
-        cubec_list_append(node->args, allocator, item);
+        cubec_ast_list_node_append(node->args, allocator, item);
         err = cubec_ast_skip_all(allocator, &current, end);
         if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
           goto onerror;
@@ -109,6 +105,8 @@ cubec_ast_node_t cubec_read_ast_expression_call(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->args, &node->super);
+  cubec_ast_set_parent(node->callee, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

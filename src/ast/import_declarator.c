@@ -23,8 +23,8 @@ cubec_create_ast_import_declarator(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_import_declarator_dispose);
   cubec_ast_node_initialize(allocator, &declarator->super);
   declarator->super.type = CUBEC_NODE_TYPE_IMPORT_DECLARATOR;
-  declarator->alias = NULL;
-  declarator->identifier = NULL;
+  cubec_ast_set_field(declarator, allocator, alias);
+  cubec_ast_set_field(declarator, allocator, identifier);
   return declarator;
 }
 
@@ -88,6 +88,8 @@ cubec_ast_node_t cubec_read_ast_import_declarator(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->identifier, &node->super);
+  cubec_ast_set_parent(node->alias, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

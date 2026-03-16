@@ -18,8 +18,8 @@ cubec_create_ast_expression_member(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_expression_member_dispose);
   cubec_ast_node_initialize(allocator, &member->super);
   member->super.type = CUBEC_NODE_TYPE_EXPRESSION_MEMBER;
-  member->field = NULL;
-  member->host = NULL;
+  cubec_ast_set_field(member, allocator, host);
+  cubec_ast_set_field(member, allocator, field);
   return member;
 }
 
@@ -55,6 +55,8 @@ cubec_ast_node_t cubec_read_ast_expression_member(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->host, &node->super);
+  cubec_ast_set_parent(node->field, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

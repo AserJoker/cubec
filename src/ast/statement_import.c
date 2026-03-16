@@ -6,7 +6,6 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
-#include "core/list.h"
 #include "core/location.h"
 #include "core/position.h"
 static void
@@ -23,12 +22,9 @@ cubec_create_ast_statement_import(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_statement_import_dispose);
   cubec_ast_node_initialize(allocator, &statement->super);
   statement->super.type = CUBEC_NODE_TYPE_STATEMENT_IMPORT;
-  statement->source = NULL;
-  cubec_list_initialize_t initialize = {
-      true,
-      .compare = NULL,
-  };
-  statement->declarators = cubec_create_list(allocator, &initialize);
+  cubec_ast_set_field(statement, allocator, source);
+  cubec_ast_set_field(statement, allocator, declarators);
+  statement->declarators = cubec_create_ast_list_node(allocator);
   return statement;
 }
 cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
@@ -95,7 +91,7 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
           err = declarator;
           goto onerror;
         }
-        cubec_list_append(node->declarators, allocator, declarator);
+        cubec_ast_list_node_append(node->declarators, allocator, declarator);
       } else if (cubec_location_is(token->loc, "{")) {
         cubec_allocator_free(allocator, token);
         err = cubec_ast_skip_all(allocator, &current, end);
@@ -118,7 +114,8 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
               err = declarator;
               goto onerror;
             }
-            cubec_list_append(node->declarators, allocator, declarator);
+            cubec_ast_list_node_append(node->declarators, allocator,
+                                       declarator);
             err = cubec_ast_skip_all(allocator, &current, end);
             if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
               goto onerror;
@@ -228,6 +225,8 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->source, &node->super);
+  cubec_ast_set_parent(node->declarators, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

@@ -1,25 +1,19 @@
 #include "engine/context.h"
-#include "ast/expression.h"
 #include "ast/node.h"
-#include "ast/program.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/list.h"
 #include "core/map.h"
-#include "core/path.h"
-#include "core/position.h"
 #include "core/string.h"
 #include "engine/array.h"
 #include "engine/enum.h"
 #include "engine/function.h"
-#include "engine/module.h"
 #include "engine/ptr.h"
 #include "engine/scope.h"
 #include "engine/struct.h"
 #include "engine/type.h"
 #include "engine/union.h"
 #include "engine/value.h"
-#include "runtime/vm.h"
 #include <inttypes.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -27,7 +21,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <xkeycheck.h>
 
 static void cubec_context_dispose(cubec_context_t self,
                                   cubec_allocator_t allocator) {
@@ -609,71 +602,6 @@ cubec_value_t cubec_context_load_value(cubec_context_t self, const char *name) {
   char msg[strlen(name) + 32];
   sprintf(msg, "Use of undeclared identifier '%s'", name);
   return cubec_context_create_error(self, msg, NULL);
-}
-
-cubec_value_t cubec_context_eval(cubec_context_t self, const char *filename,
-                                 char *src, cubec_eval_type_t type) {
-  if (type == CUBEC_EVAL_INLINE) {
-    cubec_position_t position = {
-        .column = 0,
-        .line = 0,
-        .offset = src,
-    };
-    cubec_ast_node_t node = cubec_read_ast_expression(
-        self->allocator, &position, src + strlen(src));
-    cubec_vm_t vm = cubec_create_vm(self->allocator);
-    cubec_value_t value = cubec_vm_run(vm, self, node);
-    cubec_allocator_free(self->allocator, vm);
-    return value;
-  } else if (type == CUBEC_EVAL_MODULE) {
-    cubec_path_t path = cubec_create_path(self->allocator, filename);
-    path = cubec_path_absolute(path, self->allocator);
-    char *fullpath = cubec_path_to_string(path, self->allocator);
-    cubec_path_t parent = cubec_path_parent(path, self->allocator);
-    cubec_allocator_free(self->allocator, path);
-    char *dirname = cubec_path_to_string(parent, self->allocator);
-    cubec_allocator_free(self->allocator, parent);
-    cubec_module_t module = cubec_map_get(self->modules, fullpath, NULL);
-    cubec_value_t result = NULL;
-    if (!module) {
-      char *source = NULL;
-      if (!src) {
-        FILE *fp = fopen(fullpath, "rb");
-        fseek(fp, 0, SEEK_END);
-        size_t len = ftell(fp);
-        source = cubec_allocator_alloc(self->allocator, len + 1, NULL);
-        fseek(fp, 0, SEEK_SET);
-        fread(source, len, 1, fp);
-        source[len] = 0;
-        fclose(fp);
-        src = source;
-      }
-      cubec_position_t begin = {
-          .column = 1,
-          .line = 1,
-          .offset = src,
-      };
-      cubec_ast_node_t node =
-          cubec_read_ast_program(self->allocator, &begin, src + strlen(src));
-      module =
-          cubec_create_module(self->allocator, dirname, filename, source, node);
-      cubec_map_set(self->modules, self->allocator,
-                    cubec_create_cstring(self->allocator, fullpath), module,
-                    NULL);
-      cubec_module_t current_module = self->module;
-      self->module = module;
-      cubec_vm_t vm = cubec_create_vm(self->allocator);
-      result = cubec_vm_run(vm, self, node);
-      cubec_allocator_free(self->allocator, vm);
-    }
-    cubec_allocator_free(self->allocator, fullpath);
-    cubec_allocator_free(self->allocator, dirname);
-    if (!result) {
-      result = cubec_context_get_undefined(self);
-    }
-    return result;
-  }
-  return self->constants.undefined;
 }
 
 bool cubec_context_is_type_equal(cubec_context_t self, cubec_type_t dst,

@@ -5,7 +5,6 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
-#include "core/list.h"
 #include "core/position.h"
 static void cubec_ast_enum_field_dispose(cubec_ast_enum_field_t self,
                                          cubec_allocator_t allocator) {
@@ -21,13 +20,10 @@ cubec_create_ast_enum_field(cubec_allocator_t allocator) {
                             (cubec_dispose_fn_t)cubec_ast_enum_field_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_ENUM_FIELD;
-  self->identifier = NULL;
-  self->value = NULL;
-  cubec_list_initialize_t initialize = {
-      .autofree = true,
-      .compare = NULL,
-  };
-  self->decorators = cubec_create_list(allocator, &initialize);
+  cubec_ast_set_field(self, allocator, identifier);
+  cubec_ast_set_field(self, allocator, value);
+  cubec_ast_set_field(self, allocator, decorators);
+  self->decorators = cubec_create_ast_list_node(allocator);
   return self;
 }
 cubec_ast_node_t cubec_read_ast_enum_field(cubec_allocator_t allocator,
@@ -45,7 +41,7 @@ cubec_ast_node_t cubec_read_ast_enum_field(cubec_allocator_t allocator,
     if (decorator->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;
     }
-    cubec_list_append(node->decorators, allocator, decorator);
+    cubec_ast_list_node_append(node->decorators, allocator, decorator);
     err = cubec_ast_skip_all(allocator, &current, end);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
@@ -90,6 +86,9 @@ cubec_ast_node_t cubec_read_ast_enum_field(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(&node->super, node->identifier);
+  cubec_ast_set_parent(&node->super, node->value);
+  cubec_ast_set_parent(&node->super, node->decorators);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

@@ -23,10 +23,12 @@ cubec_create_ast_enum_declarator(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_enum_declarator_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_ENUM_DECLARATOR;
-  self->identifier = NULL;
-  self->type = NULL;
-  self->decorators = &cubec_create_ast_list_node(allocator)->super;
-  self->fields = &cubec_create_ast_list_node(allocator)->super;
+  cubec_ast_set_field(self, allocator, identifier);
+  cubec_ast_set_field(self, allocator, type);
+  cubec_ast_set_field(self, allocator, decorators);
+  cubec_ast_set_field(self, allocator, fields);
+  self->decorators = cubec_create_ast_list_node(allocator);
+  self->fields = cubec_create_ast_list_node(allocator);
   return self;
 }
 cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
@@ -167,10 +169,10 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
-  cubec_ast_init_parent(node->decorators, &node->super);
-  cubec_ast_init_parent(node->fields, &node->super);
-  cubec_ast_init_parent(node->identifier, &node->super);
-  cubec_ast_init_parent(node->type, &node->super);
+  cubec_ast_set_parent(node->decorators, &node->super);
+  cubec_ast_set_parent(node->fields, &node->super);
+  cubec_ast_set_parent(node->identifier, &node->super);
+  cubec_ast_set_parent(node->type, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

@@ -63,7 +63,7 @@ cubec_ast_node_t cubec_read_ast_decorator(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
-  cubec_ast_init_parent(node->expression, &node->super);
+  cubec_ast_set_parent(node->expression, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

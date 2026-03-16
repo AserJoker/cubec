@@ -235,23 +235,27 @@ cubec_ast_node_t cubec_read_ast_expression18(cubec_allocator_t allocator,
           member->host = node;
           node = &member->super;
           member->super.loc.begin = *position;
+          cubec_ast_set_parent(member->host, &member->super);
         } else if (next->type == CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
           cubec_ast_expression_compute_member_t member =
               (cubec_ast_expression_compute_member_t)next;
           member->host = node;
           node = &member->super;
           member->super.loc.begin = *position;
+          cubec_ast_set_parent(member->host, &member->super);
         } else if (next->type == CUBEC_NODE_TYPE_EXPRESSION_CALL) {
           cubec_ast_expression_call_t call = (cubec_ast_expression_call_t)next;
           call->callee = node;
           node = &call->super;
           call->super.loc.begin = *position;
+          cubec_ast_set_parent(call->callee, &call->super);
         } else if (next->type == CUBEC_NODE_TYPE_EXPRESSION_SLICE) {
           cubec_ast_expression_slice_t slice =
               (cubec_ast_expression_slice_t)next;
           slice->host = node;
           node = &slice->super;
           slice->super.loc.begin = *position;
+          cubec_ast_set_parent(slice->host, &slice->super);
         }
       } else {
         current = curr;

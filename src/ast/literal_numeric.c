@@ -19,7 +19,7 @@ cubec_create_ast_literal_numeric(cubec_allocator_t allocator) {
   self->super.type = CUBEC_NODE_TYPE_LITERAL_NUMERIC;
   self->is_exp = false;
   self->is_float = false;
-  self->flag = NULL;
+  cubec_ast_set_field(self, allocator, flag);
   return self;
 }
 
@@ -234,6 +234,7 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->flag, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

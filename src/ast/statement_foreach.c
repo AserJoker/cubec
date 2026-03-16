@@ -22,10 +22,10 @@ cubec_create_ast_statement_foreach(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_statement_foreach_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_STATEMENT_FOREACH;
-  self->kind = NULL;
-  self->identifier = NULL;
-  self->expression = NULL;
-  self->body = NULL;
+  cubec_ast_set_field(self, allocator, kind);
+  cubec_ast_set_field(self, allocator, identifier);
+  cubec_ast_set_field(self, allocator, expression);
+  cubec_ast_set_field(self, allocator, body);
   return self;
 }
 cubec_ast_node_t cubec_read_ast_statement_foreach(cubec_allocator_t allocator,
@@ -76,7 +76,6 @@ cubec_ast_node_t cubec_read_ast_statement_foreach(cubec_allocator_t allocator,
     goto onerror;
   }
   if (!cubec_location_is(kind->loc, "const") &&
-      !cubec_location_is(kind->loc, "let") &&
       !cubec_location_is(kind->loc, "let")) {
     current = kind->loc.begin;
     cubec_allocator_free(allocator, kind);
@@ -155,6 +154,10 @@ cubec_ast_node_t cubec_read_ast_statement_foreach(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->kind, &node->super);
+  cubec_ast_set_parent(node->identifier, &node->super);
+  cubec_ast_set_parent(node->expression, &node->super);
+  cubec_ast_set_parent(node->body, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

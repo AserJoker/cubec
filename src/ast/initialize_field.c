@@ -20,8 +20,8 @@ cubec_create_ast_initialize_field(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_initialize_field_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_INITIALIZE_FIELD;
-  self->initialize = NULL;
-  self->identifier = NULL;
+  cubec_ast_set_field(self, allocator, initialize);
+  cubec_ast_set_field(self, allocator, identifier);
   return self;
 }
 cubec_ast_node_t cubec_read_ast_initialize_field(cubec_allocator_t allocator,
@@ -84,6 +84,8 @@ cubec_ast_node_t cubec_read_ast_initialize_field(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->identifier, &node->super);
+  cubec_ast_set_parent(node->initialize, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

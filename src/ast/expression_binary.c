@@ -22,9 +22,9 @@ cubec_create_ast_expression_binary(cubec_allocator_t allocator) {
       allocator, sizeof(struct _cubec_ast_expression_binary_t),
       (cubec_dispose_fn_t)cubec_ast_expression_binary_dispose);
   cubec_ast_node_initialize(allocator, &node->super);
-  node->left = NULL;
-  node->right = NULL;
-  node->opt = NULL;
+  cubec_ast_set_field(node, allocator, left);
+  cubec_ast_set_field(node, allocator, right);
+  cubec_ast_set_field(node, allocator, opt);
   node->super.type = CUBEC_NODE_TYPE_EXPRESSION_BINARY;
   return node;
 }
@@ -86,6 +86,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_or(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->left, &node->super);
+  cubec_ast_set_parent(node->right, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);
@@ -149,6 +152,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_and(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->left, &node->super);
+  cubec_ast_set_parent(node->right, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);
@@ -212,6 +218,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->left, &node->super);
+  cubec_ast_set_parent(node->right, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);
@@ -274,6 +283,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->left, &node->super);
+  cubec_ast_set_parent(node->right, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);
@@ -336,6 +348,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->left, &node->super);
+  cubec_ast_set_parent(node->right, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);
@@ -400,6 +415,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_equal(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->left, &node->super);
+  cubec_ast_set_parent(node->right, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);
@@ -466,6 +484,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_relation(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->left, &node->super);
+  cubec_ast_set_parent(node->right, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);
@@ -530,6 +551,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->left, &node->super);
+  cubec_ast_set_parent(node->right, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);
@@ -593,6 +617,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_additive(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->left, &node->super);
+  cubec_ast_set_parent(node->right, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);
@@ -657,6 +684,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->left, &node->super);
+  cubec_ast_set_parent(node->right, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);
@@ -720,6 +750,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_prefix(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->left, &node->super);
+  cubec_ast_set_parent(node->right, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);
@@ -769,6 +802,9 @@ cubec_ast_node_t cubec_read_ast_expression_binary_postfix(
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->left, &node->super);
+  cubec_ast_set_parent(node->right, &node->super);
+  cubec_ast_set_parent(node->opt, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

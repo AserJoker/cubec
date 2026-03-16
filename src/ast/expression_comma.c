@@ -17,8 +17,8 @@ cubec_create_ast_expression_comma(cubec_allocator_t allocator) {
       allocator, sizeof(struct _cubec_ast_expression_comma_t),
       (cubec_dispose_fn_t)cubec_ast_expression_comma_dispose);
   cubec_ast_node_initialize(allocator, &node->super);
-  node->current = NULL;
-  node->next = NULL;
+  cubec_ast_set_field(node, allocator, current);
+  cubec_ast_set_field(node, allocator, next);
   node->super.type = CUBEC_NODE_TYPE_EXPRESSION_COMMON;
   return node;
 }
@@ -71,6 +71,8 @@ cubec_ast_node_t cubec_read_ast_expression_comma(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->current, &node->super);
+  cubec_ast_set_parent(node->next, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

@@ -1,5 +1,6 @@
 #include "ast/statement_enum.h"
 #include "ast/enum_declarator.h"
+#include "ast/node.h"
 #include "ast/node_type.h"
 
 static void cubec_ast_statement_enum_dispose(cubec_ast_statement_enum_t self,
@@ -14,7 +15,7 @@ cubec_create_ast_statement_enum(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_statement_enum_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_STATEMENT_ENUM;
-  self->enu = NULL;
+  cubec_ast_set_field(self, allocator, enu);
   return self;
 }
 cubec_ast_node_t cubec_read_ast_statement_enum(cubec_allocator_t allocator,
@@ -46,6 +47,7 @@ cubec_ast_node_t cubec_read_ast_statement_enum(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->enu, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);

@@ -19,9 +19,9 @@ cubec_create_ast_expression_slice(cubec_allocator_t allocator) {
       (cubec_dispose_fn_t)cubec_ast_expression_slice_dispose);
   cubec_ast_node_initialize(allocator, &self->super);
   self->super.type = CUBEC_NODE_TYPE_EXPRESSION_SLICE;
-  self->host = NULL;
-  self->start = NULL;
-  self->end = NULL;
+  cubec_ast_set_field(self, allocator, host);
+  cubec_ast_set_field(self, allocator, start);
+  cubec_ast_set_field(self, allocator, end);
   return self;
 }
 
@@ -81,6 +81,9 @@ cubec_ast_node_t cubec_read_ast_expression_slice(cubec_allocator_t allocator,
   node->super.loc.begin = *position;
   node->super.loc.end = current;
   *position = current;
+  cubec_ast_set_parent(node->host, &node->super);
+  cubec_ast_set_parent(node->start, &node->super);
+  cubec_ast_set_parent(node->end, &node->super);
   return &node->super;
 onerror:
   cubec_allocator_free(allocator, node);
