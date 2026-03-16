@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_STATEMENT_FOR_
-#define _H_CUBEC_NODE_STATEMENT_FOR_
+#ifndef _H_CUBEC_AST_STATEMENT_FOR_
+#define _H_CUBEC_AST_STATEMENT_FOR_
 #include "ast/node.h"
 #include <stdint.h>
 #ifdef __cplusplus

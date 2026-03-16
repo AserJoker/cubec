@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_ENUM_FIELD_
-#define _H_CUBEC_NODE_ENUM_FIELD_
+#ifndef _H_CUBEC_AST_ENUM_FIELD_
+#define _H_CUBEC_AST_ENUM_FIELD_
 #include "ast/node.h"
 #include <stdint.h>
 #ifdef __cplusplus

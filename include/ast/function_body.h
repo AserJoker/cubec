@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_FUNCTION_BODY_
-#define _H_CUBEC_NODE_FUNCTION_BODY_
+#ifndef _H_CUBEC_AST_FUNCTION_BODY_
+#define _H_CUBEC_AST_FUNCTION_BODY_
 #include "ast/node.h"
 #include <stdint.h>
 #ifdef __cplusplus

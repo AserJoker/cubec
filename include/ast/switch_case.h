@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_SWITCH_CASE_
-#define _H_CUBEC_NODE_SWITCH_CASE_
+#ifndef _H_CUBEC_AST_SWITCH_CASE_
+#define _H_CUBEC_AST_SWITCH_CASE_
 #include "ast/node.h"
 #include <stdint.h>
 #ifdef __cplusplus

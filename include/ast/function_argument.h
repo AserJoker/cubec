@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_FUNCTION_ARGUMENT_
-#define _H_CUBEC_NODE_FUNCTION_ARGUMENT_
+#ifndef _H_CUBEC_AST_FUNCTION_ARGUMENT_
+#define _H_CUBEC_AST_FUNCTION_ARGUMENT_
 #include "ast/node.h"
 #include <stdint.h>
 #ifdef __cplusplus

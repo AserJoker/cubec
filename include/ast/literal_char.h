@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_LITERAL_CHAR_
-#define _H_CUBEC_NODE_LITERAL_CHAR_
+#ifndef _H_CUBEC_AST_LITERAL_CHAR_
+#define _H_CUBEC_AST_LITERAL_CHAR_
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/position.h"

@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_STATEMENT_RETURN_
-#define _H_CUBEC_NODE_STATEMENT_RETURN_
+#ifndef _H_CUBEC_AST_STATEMENT_RETURN_
+#define _H_CUBEC_AST_STATEMENT_RETURN_
 #include "ast/node.h"
 #include <stdint.h>
 #ifdef __cplusplus

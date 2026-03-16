@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_NODE_TYPE_
-#define _H_CUBEC_NODE_NODE_TYPE_
+#ifndef _H_CUBEC_AST_NODE_TYPE_
+#define _H_CUBEC_AST_NODE_TYPE_
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_EXPRESSION_BINARY_
-#define _H_CUBEC_NODE_EXPRESSION_BINARY_
+#ifndef _H_CUBEC_AST_EXPRESSION_BINARY_
+#define _H_CUBEC_AST_EXPRESSION_BINARY_
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/position.h"

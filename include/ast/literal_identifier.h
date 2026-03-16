@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_LITERAL_IDENTIFIER_
-#define _H_CUBEC_NODE_LITERAL_IDENTIFIER_
+#ifndef _H_CUBEC_AST_LITERAL_IDENTIFIER_
+#define _H_CUBEC_AST_LITERAL_IDENTIFIER_
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/position.h"

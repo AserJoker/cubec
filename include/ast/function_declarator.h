@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_FUNCTION_DECLARATOR_
-#define _H_CUBEC_NODE_FUNCTION_DECLARATOR_
+#ifndef _H_CUBEC_AST_FUNCTION_DECLARATOR_
+#define _H_CUBEC_AST_FUNCTION_DECLARATOR_
 #include "ast/node.h"
 #include <stdint.h>
 #ifdef __cplusplus

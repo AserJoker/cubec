@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_STATEMENT_IMPORT_
-#define _H_CUBEC_NODE_STATEMENT_IMPORT_
+#ifndef _H_CUBEC_AST_STATEMENT_IMPORT_
+#define _H_CUBEC_AST_STATEMENT_IMPORT_
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/position.h"

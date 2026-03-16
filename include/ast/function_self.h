@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_FUNCTION_SELF_
-#define _H_CUBEC_NODE_FUNCTION_SELF_
+#ifndef _H_CUBEC_AST_FUNCTION_SELF_
+#define _H_CUBEC_AST_FUNCTION_SELF_
 #include "ast/node.h"
 #include <stdint.h>
 #ifdef __cplusplus

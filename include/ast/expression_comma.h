@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_EXPRESSION_COMMA_
-#define _H_CUBEC_NODE_EXPRESSION_COMMA_
+#ifndef _H_CUBEC_AST_EXPRESSION_COMMA_
+#define _H_CUBEC_AST_EXPRESSION_COMMA_
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/position.h"

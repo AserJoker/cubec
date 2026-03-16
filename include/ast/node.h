@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_NODE_
-#define _H_CUBEC_NODE_NODE_
+#ifndef _H_CUBEC_AST_NODE_
+#define _H_CUBEC_AST_NODE_
 #include "core/allocator.h"
 #include "core/list.h"
 #include "core/map.h"

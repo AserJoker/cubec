@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_NODE_TYPE_STATEMENT_
-#define _H_CUBEC_NODE_TYPE_STATEMENT_
+#ifndef _H_CUBEC_AST_TYPE_STATEMENT_
+#define _H_CUBEC_AST_TYPE_STATEMENT_
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/position.h"
