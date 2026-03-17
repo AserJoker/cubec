@@ -282,3 +282,169 @@ cubec_ast_node_t cubec_visit_node(cubec_ast_node_t node,
   }
   return NULL;
 }
+
+static const char *type_names[] = {
+    "CUBEC_NODE_TYPE_LIST",
+    "CUBEC_NODE_TYPE_ERROR",
+    "CUBEC_NODE_TYPE_LITERAL_IDENTIFIER",
+    "CUBEC_NODE_TYPE_LITERAL_NUMERIC",
+    "CUBEC_NODE_TYPE_LITERAL_STRING",
+    "CUBEC_NODE_TYPE_LITERAL_SYMBOL",
+    "CUBEC_NODE_TYPE_LITERAL_CHAR",
+    "CUBEC_NODE_TYPE_STATEMENT_EMPTY",
+    "CUBEC_NODE_TYPE_STATEMENT_BLOCK",
+    "CUBEC_NODE_TYPE_STATEMENT_IMPORT",
+    "CUBEC_NODE_TYPE_IMPORT_DECLARATOR",
+    "CUBEC_NODE_TYPE_IMPORT_NAMESPACE",
+    "CUBEC_NODE_TYPE_STATEMENT_FUNCTION",
+    "CUBEC_NODE_TYPE_STATEMENT_STRUCT",
+    "CUBEC_NODE_TYPE_STATEMENT_ENUM",
+    "CUBEC_NODE_TYPE_ENUM_FIELD",
+    "CUBEC_NODE_TYPE_STATEMENT_DECLARATION",
+    "CUBEC_NODE_TYPE_VARIABLE_DECLARATOR",
+    "CUBEC_NODE_TYPE_STATEMENT_EXPRESSION",
+    "CUBEC_NODE_TYPE_STATEMENT_IF",
+    "CUBEC_NODE_TYPE_STATEMENT_SWITCH",
+    "CUBEC_NODE_TYPE_SWITCH_CASE",
+    "CUBEC_NODE_TYPE_STATEMENT_WHILE",
+    "CUBEC_NODE_TYPE_STATEMENT_DO_WHILE",
+    "CUBEC_NODE_TYPE_STATEMENT_FOR",
+    "CUBEC_NODE_TYPE_STATEMENT_FOREACH",
+    "CUBEC_NODE_TYPE_STATEMENT_DEFER",
+    "CUBEC_NODE_TYPE_STATEMENT_BREAK",
+    "CUBEC_NODE_TYPE_STATEMENT_CONTINUE",
+    "CUBEC_NODE_TYPE_STATEMENT_RETURN",
+    "CUBEC_NODE_TYPE_STATEMENT_TEST",
+    "CUBEC_NODE_TYPE_ARRAY_DECLARATOR",
+    "CUBEC_NODE_TYPE_EXPRESSION_ASSIGMENT",
+    "CUBEC_NODE_TYPE_EXPRESSION_BINARY",
+    "CUBEC_NODE_TYPE_EXPRESSION_CALL",
+    "CUBEC_NODE_TYPE_EXPRESSION_MEMBER",
+    "CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER",
+    "CUBEC_NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR",
+    "CUBEC_NODE_TYPE_EXPRESSION_CONDITION",
+    "CUBEC_NODE_TYPE_EXPRESSION_COMMON",
+    "CUBEC_NODE_TYPE_EXPRESSION_GROUP",
+    "CUBEC_NODE_TYPE_EXPRESSION_SPREAD",
+    "CUBEC_NODE_TYPE_STRUCT_DECLARATOR",
+    "CUBEC_NODE_TYPE_STRUCT_FIELD",
+    "CUBEC_NODE_TYPE_ENUM_DECLARATOR",
+    "CUBEC_NODE_TYPE_FUNCTION_DECLARATOR",
+    "CUBEC_NODE_TYPE_FUNCTION_BODY",
+    "CUBEC_NODE_TYPE_FUNCTION_ARGUMENT",
+    "CUBEC_NODE_TYPE_FUNCTION_ARGUMENT_REST",
+    "CUBEC_NODE_TYPE_EXPRESSION_SLICE",
+    "CUBEC_NODE_TYPE_INITIALIZE_LIST",
+    "CUBEC_NODE_TYPE_INITIALIZE_FIELD",
+    "CUBEC_NODE_TYPE_PROGRAM",
+    "CUBEC_NODE_TYPE_DECORATOR",
+    "CUBEC_NODE_TYPE_INTERFACE_DECLARATOR",
+    "CUBEC_NODE_TYPE_PTR_DECLARATOR",
+    "CUBEC_NODE_TYPE_TYPE",
+};
+
+char *encode_text(cubec_allocator_t allocator, const char *source) {
+  char *res = cubec_allocator_alloc(allocator, strlen(source) * 2 + 1, NULL);
+  const char *src = source;
+  char *dst = res;
+  while (*src) {
+    if (*src == '\"') {
+      *dst++ = '\\';
+      *dst++ = '\"';
+    } else if (*src == '\n') {
+      *dst++ = '\\';
+      *dst++ = 'n';
+    } else if (*src == '\r') {
+      *dst++ = '\\';
+      *dst++ = 'r';
+    } else if (*src == '\t') {
+      *dst++ = '\\';
+      *dst++ = 't';
+    } else if (*src == '\\') {
+      *dst++ = '\\';
+      *dst++ = '\\';
+    } else if (*src == '\f') {
+      *dst++ = '\\';
+      *dst++ = 'f';
+    } else if (*src == '\a') {
+      *dst++ = '\\';
+      *dst++ = 'a';
+    } else if (*src == '\b') {
+      *dst++ = '\\';
+      *dst++ = 'b';
+    } else {
+      *dst++ = *src;
+    }
+    src++;
+  }
+  *dst = 0;
+  return res;
+}
+
+cubec_ast_node_t cubec_print_node(cubec_ast_node_t node,
+                                  cubec_allocator_t allocator,
+                                  cubec_string_t out) {
+  if (node->type == CUBEC_NODE_TYPE_LIST) {
+    cubec_ast_list_node_t list = (cubec_ast_list_node_t)node;
+    cubec_string_concat(out, allocator, "[");
+    cubec_list_node_t it = cubec_list_get_first(list->items);
+    while (it != cubec_list_get_end(list->items)) {
+      if (it != cubec_list_get_first(list->items)) {
+        cubec_string_concat(out, allocator, ",");
+      }
+      cubec_ast_node_t item = cubec_list_node_get(it);
+      cubec_ast_node_t err = cubec_print_node(item, allocator, out);
+      if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+        return err;
+      }
+      it = cubec_list_node_next(it);
+    }
+    cubec_string_concat(out, allocator, "]");
+  } else {
+    cubec_string_concat(out, allocator, "{");
+    if (node->type < CUBEC_NODE_TYPE_MAX) {
+      char s[strlen(type_names[node->type]) + 32];
+      sprintf(s, "\"node_type\":\"%s\"", type_names[node->type]);
+      cubec_string_concat(out, allocator, s);
+    } else {
+      char s[128];
+      sprintf(s, "\"node_type\":\"CUBEC_NODE_TYPE_MAX + %" PRIuPTR "\"",
+              node->type - CUBEC_NODE_TYPE_MAX);
+      cubec_string_concat(out, allocator, s);
+    }
+    char *text = cubec_location_get(node->loc, allocator);
+    char *encoded_text = encode_text(allocator, text);
+    cubec_allocator_free(allocator, text);
+    char s[strlen(encoded_text) + 32];
+    sprintf(s, ",\"text\":\"%s\"", encoded_text);
+    cubec_string_concat(out, allocator, s);
+    cubec_allocator_free(allocator, encoded_text);
+    cubec_list_node_t it = cubec_map_get_first(node->meta);
+    while (it != cubec_map_get_end(node->meta)) {
+      const char *key = cubec_map_node_get_key(it);
+      cubec_ast_node_t *value = cubec_map_node_get_value(it);
+      if (*value) {
+        cubec_string_concat(out, allocator, ",");
+        char s[strlen(key) + 32];
+        sprintf(s, "\"%s\":", key);
+        cubec_string_concat(out, allocator, s);
+        cubec_ast_node_t err = cubec_print_node(*value, allocator, out);
+        if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+          return err;
+        }
+      }
+      it = cubec_map_node_get_next(it);
+    }
+    cubec_string_concat(out, allocator, "}");
+  }
+  return NULL;
+}
+
+char *cubec_ast_write_json(cubec_allocator_t allocator, cubec_ast_node_t node) {
+  cubec_string_t str = cubec_create_string(allocator, NULL);
+  cubec_visit_node(node, allocator, (cubec_ast_visit_fn_t)cubec_print_node,
+                   str);
+  char *s = cubec_create_cstring(allocator, cubec_string_get(str));
+  cubec_allocator_free(allocator, str);
+  return s;
+}
