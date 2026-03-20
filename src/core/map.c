@@ -8,6 +8,7 @@ struct _cubec_map_t {
   bool autofree_value;
   cubec_compare_fn_t compare;
   cubec_list_t data;
+  cubec_allocator_t allocator;
 };
 
 typedef struct _cubec_map_node_t {
@@ -27,7 +28,7 @@ static cubec_map_node_t cubec_create_map_node(cubec_allocator_t allocator) {
   return node;
 }
 static void cubec_map_dispose(cubec_map_t self, cubec_allocator_t allocator) {
-  cubec_map_clear(self, allocator);
+  cubec_map_clear(self);
   cubec_allocator_free(allocator, self->data);
 }
 
@@ -70,18 +71,17 @@ cubec_list_node_t cubec_map_find(cubec_map_t self, const void *key,
   return NULL;
 }
 
-void cubec_map_set(cubec_map_t self, cubec_allocator_t allocator, void *key,
-                   void *value, void *cmp_arg) {
+void cubec_map_set(cubec_map_t self, void *key, void *value, void *cmp_arg) {
   cubec_list_node_t it = cubec_map_find(self, key, cmp_arg);
   if (!it) {
-    cubec_map_node_t node = cubec_create_map_node(allocator);
+    cubec_map_node_t node = cubec_create_map_node(self->allocator);
     node->key = key;
-    cubec_list_append(self->data, allocator, node);
+    cubec_list_append(self->data, node);
     it = cubec_list_get_last(self->data);
   }
   cubec_map_node_t node = cubec_list_node_get(it);
   if (node->value && node->value != value && self->autofree_value) {
-    cubec_allocator_free(allocator, node->value);
+    cubec_allocator_free(self->allocator, node->value);
   }
   node->value = value;
 }
@@ -93,34 +93,33 @@ void *cubec_map_get(cubec_map_t self, const void *key, void *cmp_arg) {
   }
   return NULL;
 }
-void cubec_map_delete(cubec_map_t self, cubec_allocator_t allocator,
-                      const void *key, void *cmp_arg) {
+void cubec_map_delete(cubec_map_t self, const void *key, void *cmp_arg) {
   cubec_list_node_t it = cubec_map_find(self, key, cmp_arg);
   if (it) {
     cubec_map_node_t node = cubec_list_node_get(it);
     if (self->autofree_key) {
-      cubec_allocator_free(allocator, node->key);
+      cubec_allocator_free(self->allocator, node->key);
     }
     if (self->autofree_value) {
-      cubec_allocator_free(allocator, node->value);
+      cubec_allocator_free(self->allocator, node->value);
     }
-    cubec_list_erase(self->data, allocator, it);
+    cubec_list_erase(self->data, it);
   }
 }
 bool cubec_map_has(cubec_map_t self, const void *key, void *cmp_arg) {
   return cubec_map_find(self, key, cmp_arg) != NULL;
 }
-void cubec_map_clear(cubec_map_t self, cubec_allocator_t allocator) {
+void cubec_map_clear(cubec_map_t self) {
   while (cubec_list_get_size(self->data)) {
     cubec_list_node_t it = cubec_list_get_first(self->data);
     cubec_map_node_t node = cubec_list_node_get(it);
     if (self->autofree_key) {
-      cubec_allocator_free(allocator, node->key);
+      cubec_allocator_free(self->allocator, node->key);
     }
     if (self->autofree_value) {
-      cubec_allocator_free(allocator, node->value);
+      cubec_allocator_free(self->allocator, node->value);
     }
-    cubec_list_erase(self->data, allocator, it);
+    cubec_list_erase(self->data, it);
   }
 }
 size_t cubec_map_get_size(cubec_map_t self) {
@@ -150,20 +149,19 @@ void *cubec_map_node_get_key(cubec_list_node_t self) {
 void *cubec_map_node_get_value(cubec_list_node_t self) {
   return ((cubec_map_node_t)cubec_list_node_get(self))->value;
 }
-void cubec_map_node_set_key(cubec_list_node_t self, cubec_allocator_t allocator,
-                            cubec_map_t map, void *key) {
+void cubec_map_node_set_key(cubec_list_node_t self, cubec_map_t map,
+                            void *key) {
   cubec_map_node_t node = cubec_list_node_get(self);
   if (node->key && map->autofree_key && node->key != key) {
-    cubec_allocator_free(allocator, node->key);
+    cubec_allocator_free(map->allocator, node->key);
   }
   node->key = key;
 }
-void cubec_map_node_set_value(cubec_list_node_t self,
-                              cubec_allocator_t allocator, cubec_map_t map,
+void cubec_map_node_set_value(cubec_list_node_t self, cubec_map_t map,
                               void *value) {
   cubec_map_node_t node = cubec_list_node_get(self);
   if (node->value && map->autofree_value && value != node->value) {
-    cubec_allocator_free(allocator, node->value);
+    cubec_allocator_free(map->allocator, node->value);
   }
   node->value = value;
 }

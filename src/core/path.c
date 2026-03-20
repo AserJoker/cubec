@@ -28,20 +28,20 @@ bool cubec_path_append(cubec_path_t path, cubec_allocator_t allocator,
   }
   if (strcmp(part, "..") == 0) {
     if (cubec_list_get_size(path->parts) == 0) {
-      cubec_list_append(path->parts, allocator,
+      cubec_list_append(path->parts, 
                         cubec_create_cstring(allocator, part));
       return true;
     }
     char *last = cubec_list_node_get(cubec_list_get_last(path->parts));
     if (strcmp(last, "..") == 0) {
-      cubec_list_append(path->parts, allocator,
+      cubec_list_append(path->parts, 
                         cubec_create_cstring(allocator, part));
       return true;
     }
-    cubec_list_erase(path->parts, allocator, cubec_list_get_last(path->parts));
+    cubec_list_erase(path->parts, cubec_list_get_last(path->parts));
     return false;
   }
-  cubec_list_append(path->parts, allocator,
+  cubec_list_append(path->parts,
                     cubec_create_cstring(allocator, part));
   return true;
 }
@@ -62,7 +62,7 @@ cubec_path_t cubec_create_path(cubec_allocator_t allocator,
     size_t offset = 0;
     size_t len = strlen(source) + 1;
     if (*source == '/') {
-      cubec_list_append(path->parts, allocator,
+      cubec_list_append(path->parts, 
                         cubec_create_cstring(allocator, "/"));
       source++;
     }
@@ -81,7 +81,7 @@ cubec_path_t cubec_create_path(cubec_allocator_t allocator,
       }
       part[offset] = 0;
       if (offset > 0) {
-        cubec_list_append(path->parts, allocator, part);
+        cubec_list_append(path->parts,  part);
       } else {
         cubec_allocator_free(allocator, part);
       }
@@ -119,7 +119,7 @@ cubec_path_t cubec_path_clone(cubec_path_t current,
   for (cubec_list_node_t it = cubec_list_get_first(current->parts);
        it != cubec_list_get_end(current->parts);
        it = cubec_list_node_next(it)) {
-    cubec_list_append(path->parts, allocator,
+    cubec_list_append(path->parts,
                       cubec_create_cstring(allocator, cubec_list_node_get(it)));
   }
   return path;
@@ -140,7 +140,6 @@ cubec_path_t cubec_path_absolute(cubec_path_t current,
   cubec_path_t cwd = cubec_path_current(allocator);
   cubec_path_t result = cubec_path_concat(cwd, allocator, current);
   cubec_allocator_free(allocator, cwd);
-  cubec_allocator_free(allocator, current);
   return result;
 }
 
@@ -154,7 +153,7 @@ cubec_path_t cubec_path_parent(cubec_path_t current,
        it != cubec_list_get_last(current->parts);
        it = cubec_list_node_next(it)) {
     char *part = cubec_list_node_get(it);
-    cubec_list_append(result->parts, allocator,
+    cubec_list_append(result->parts,
                       cubec_create_cstring(allocator, part));
   }
   return result;

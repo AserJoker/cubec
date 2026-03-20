@@ -28,19 +28,16 @@ cubec_list_node_t cubec_list_get_last(cubec_list_t self);
 
 size_t cubec_list_get_size(cubec_list_t self);
 
-void cubec_list_clear(cubec_list_t self, cubec_allocator_t allocator);
+void cubec_list_clear(cubec_list_t self);
 
-void cubec_list_set_data(cubec_list_t self, cubec_allocator_t allocator,
-                         cubec_list_node_t node, void *data);
+void cubec_list_set_data(cubec_list_t self, cubec_list_node_t node, void *data);
 
-void cubec_list_append(cubec_list_t self, cubec_allocator_t allocator,
+void cubec_list_append(cubec_list_t self, void *data);
+
+void cubec_list_insert(cubec_list_t self, cubec_list_node_t position,
                        void *data);
 
-void cubec_list_insert(cubec_list_t self, cubec_allocator_t allocator,
-                       cubec_list_node_t position, void *data);
-
-void cubec_list_erase(cubec_list_t self, cubec_allocator_t allocator,
-                      cubec_list_node_t position);
+void cubec_list_erase(cubec_list_t self, cubec_list_node_t position);
 
 cubec_list_node_t cubec_list_find(cubec_list_t self, const void *data,
                                   void *cmp_arg);

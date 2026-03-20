@@ -112,8 +112,7 @@ int32_t cubec_ast_read_code(cubec_position_t *position, const char *end) {
 
 void cubec_ast_init_field(cubec_ast_node_t self, cubec_allocator_t allocator,
                           const char *name, cubec_ast_node_t *field) {
-  cubec_map_set(self->meta, allocator, cubec_create_cstring(allocator, name),
-                field, NULL);
+  cubec_map_set(self->meta, cubec_create_cstring(allocator, name), field, NULL);
   *field = NULL;
 }
 void cubec_ast_set_parent(cubec_ast_node_t node, cubec_ast_node_t parent) {
@@ -242,7 +241,7 @@ void cubec_ast_list_node_append(cubec_ast_node_t self,
                                 cubec_allocator_t allocator,
                                 cubec_ast_node_t item) {
   cubec_ast_list_node_t list = (cubec_ast_list_node_t)self;
-  cubec_list_append(list->items, allocator, item);
+  cubec_list_append(list->items, item);
   item->parent = &list->super;
 }
 cubec_ast_node_t cubec_visit_node(cubec_ast_node_t node,

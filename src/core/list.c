@@ -14,10 +14,11 @@ struct _cubec_list_t {
   struct _cubec_list_node_t end;
   size_t size;
   cubec_compare_fn_t compare;
+  cubec_allocator_t allocator;
 };
 
 static void cubec_list_dispose(cubec_list_t self, cubec_allocator_t allocator) {
-  cubec_list_clear(self, allocator);
+  cubec_list_clear(self);
 }
 
 static void cubec_list_node_dispose(cubec_list_node_t self,
@@ -46,6 +47,7 @@ cubec_list_t cubec_create_list(cubec_allocator_t allocator,
                             (cubec_dispose_fn_t)cubec_list_dispose);
   list->autofree = false;
   list->compare = NULL;
+  list->allocator = allocator;
   if (initialize) {
     list->autofree = initialize->autofree;
     list->compare = initialize->compare;
@@ -76,36 +78,35 @@ cubec_list_node_t cubec_list_get_last(cubec_list_t self) {
 
 size_t cubec_list_get_size(cubec_list_t self) { return self->size; }
 
-void cubec_list_clear(cubec_list_t self, cubec_allocator_t allocator) {
+void cubec_list_clear(cubec_list_t self) {
   while (self->size) {
     if (self->autofree) {
-      cubec_allocator_free(allocator, self->begin.next->data);
+      cubec_allocator_free(self->allocator, self->begin.next->data);
     }
-    cubec_allocator_free(allocator, self->begin.next);
+    cubec_allocator_free(self->allocator, self->begin.next);
     self->size--;
   }
 }
 
-void cubec_list_set_data(cubec_list_t self, cubec_allocator_t allocator,
-                         cubec_list_node_t node, void *data) {
+void cubec_list_set_data(cubec_list_t self, cubec_list_node_t node,
+                         void *data) {
   if (node->data == data) {
     return;
   }
   if (self->autofree) {
-    cubec_allocator_free(allocator, node->data);
+    cubec_allocator_free(self->allocator, node->data);
   }
   node->data = data;
 }
 
-void cubec_list_append(cubec_list_t self, cubec_allocator_t allocator,
-                       void *data) {
+void cubec_list_append(cubec_list_t self, void *data) {
   cubec_list_node_t position = self->end.last;
-  cubec_list_insert(self, allocator, position, data);
+  cubec_list_insert(self, position, data);
 }
 
-void cubec_list_insert(cubec_list_t self, cubec_allocator_t allocator,
-                       cubec_list_node_t position, void *data) {
-  cubec_list_node_t node = cubec_create_list_node(allocator);
+void cubec_list_insert(cubec_list_t self, cubec_list_node_t position,
+                       void *data) {
+  cubec_list_node_t node = cubec_create_list_node(self->allocator);
   node->data = data;
   node->last = position;
   node->next = position->next;
@@ -114,12 +115,11 @@ void cubec_list_insert(cubec_list_t self, cubec_allocator_t allocator,
   self->size++;
 }
 
-void cubec_list_erase(cubec_list_t self, cubec_allocator_t allocator,
-                      cubec_list_node_t position) {
+void cubec_list_erase(cubec_list_t self, cubec_list_node_t position) {
   if (self->autofree) {
-    cubec_allocator_free(allocator, position->data);
+    cubec_allocator_free(self->allocator, position->data);
   }
-  cubec_allocator_free(allocator, position);
+  cubec_allocator_free(self->allocator, position);
   self->size--;
 }
 

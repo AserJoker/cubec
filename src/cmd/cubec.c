@@ -11,9 +11,10 @@
 
 char *absolute(cubec_allocator_t allocator, const char *filename) {
   cubec_path_t path = cubec_create_path(allocator, filename);
-  path = cubec_path_absolute(path, allocator);
-  char *fullname = cubec_path_to_string(path, allocator);
+  cubec_path_t abs = cubec_path_absolute(path, allocator);
   cubec_allocator_free(allocator, path);
+  char *fullname = cubec_path_to_string(abs, allocator);
+  cubec_allocator_free(allocator, abs);
   return fullname;
 }
 

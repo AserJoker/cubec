@@ -14,7 +14,7 @@ TEST_F(test_list, auto_free) {
       .compare = NULL,
   };
   cubec_list_t list = cubec_create_list(allocator, &initialize);
-  cubec_list_append(list, allocator,
+  cubec_list_append(list,
                     cubec_allocator_alloc(allocator, sizeof(int32_t), NULL));
   cubec_allocator_free(allocator, list);
 }
@@ -24,10 +24,10 @@ TEST_F(test_list, replace) {
       .compare = NULL,
   };
   cubec_list_t list = cubec_create_list(allocator, &initialize);
-  cubec_list_append(list, allocator,
+  cubec_list_append(list,
                     cubec_allocator_alloc(allocator, sizeof(int32_t), NULL));
   cubec_list_node_t it = cubec_list_get_first(list);
-  cubec_list_set_data(list, allocator, it,
+  cubec_list_set_data(list, it,
                       cubec_allocator_alloc(allocator, sizeof(int32_t), NULL));
   EXPECT_EQ(cubec_list_get_size(list), 1);
   cubec_allocator_free(allocator, list);
@@ -38,10 +38,10 @@ TEST_F(test_list, remove) {
       .compare = NULL,
   };
   cubec_list_t list = cubec_create_list(allocator, &initialize);
-  cubec_list_append(list, allocator,
+  cubec_list_append(list,
                     cubec_allocator_alloc(allocator, sizeof(int32_t), NULL));
   cubec_list_node_t it = cubec_list_get_first(list);
-  cubec_list_erase(list, allocator, it);
+  cubec_list_erase(list, it);
   EXPECT_EQ(cubec_list_get_size(list), 0);
   cubec_allocator_free(allocator, list);
 }
@@ -51,7 +51,7 @@ TEST_F(test_list, foreach) {
       1, 2, 3, 4, 5,
   };
   for (auto &item : data) {
-    cubec_list_append(list, allocator, &item);
+    cubec_list_append(list, &item);
   }
   EXPECT_EQ(cubec_list_get_size(list), 5);
   cubec_list_node_t it = cubec_list_get_first(list);
@@ -67,7 +67,7 @@ TEST_F(test_list, foreach) {
 TEST_F(test_list, move) {
   cubec_list_t list = cubec_create_list(allocator, NULL);
   int32_t data = 123;
-  cubec_list_append(list, allocator, &data);
+  cubec_list_append(list, &data);
   cubec_list_node_t it = cubec_list_get_first(list);
   EXPECT_EQ(cubec_list_node_get(it), &data);
   cubec_list_node_move(it);
