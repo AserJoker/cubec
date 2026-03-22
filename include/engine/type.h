@@ -29,6 +29,7 @@ typedef enum _cubec_type_kind_t {
   CUBEC_TYPE_KIND_ENUM,
   CUBEC_TYPE_KIND_RESULT,
   CUBEC_TYPE_KIND_FUNCTION,
+  CUBEC_TYPE_KIND_TEMPLATE,
 } cubec_type_kind_t;
 typedef struct _cubec_type_t *cubec_type_t;
 struct _cubec_type_t {

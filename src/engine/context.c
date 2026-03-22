@@ -347,44 +347,123 @@ cubec_value_t cubec_context_create_struct(cubec_context_t self,
 }
 cubec_value_t cubec_context_set_index(cubec_context_t self, cubec_value_t arr,
                                       size_t idx, cubec_value_t value) {
-  if (arr->type->kind == CUBEC_TYPE_KIND_ARRAY) {
-    cubec_array_meta_t meta = arr->type->meta;
-    if (meta->len <= idx) {
+  cubec_type_t dst_type = arr->type;
+  void *dst = arr->data;
+  cubec_type_t src_type = value->type;
+  void *src = value->data;
+  if (dst_type->kind == CUBEC_TYPE_KIND_REF) {
+    cubec_ref_meta_t meta = dst_type->meta;
+    dst_type = meta->type;
+    dst = *(void **)dst;
+  }
+  if (src_type->kind == CUBEC_TYPE_KIND_REF) {
+    cubec_ref_meta_t meta = src_type->meta;
+    src_type = meta->type;
+    src = *(void **)src;
+  }
+  // TODO: check type
+  if (dst_type->kind == CUBEC_TYPE_KIND_ARRAY) {
+    cubec_array_meta_t meta = dst_type->meta;
+    if (idx >= meta->len) {
       return cubec_context_create_error(self, "Out of range");
     }
-    uint8_t *start = arr->data + idx * meta->type->size;
-    memcpy(start, value->data, meta->type->size);
+    uint8_t *offset = dst + meta->type->size * idx;
+    memcpy(offset, src, src_type->size);
     return self->value_undefined;
   }
-  if (arr->type->kind == CUBEC_TYPE_KIND_PTR_ARRAY) {
-    cubec_ptr_meta_t meta = arr->type->meta;
-    uint8_t *start = *(uint8_t **)arr->data + idx * meta->type->size;
-    memcpy(start, value->data, meta->type->size);
+  if (dst_type->kind == CUBEC_TYPE_KIND_PTR_ARRAY) {
+    cubec_ptr_meta_t meta = dst_type->meta;
+    uint8_t *offset = dst + meta->type->size * idx;
+    memcpy(offset, src, src_type->size);
     return self->value_undefined;
-  }
-  if (arr->type->kind == CUBEC_TYPE_KIND_STRUCT) {
-    cubec_struct_meta_t meta = arr->type->meta;
-    for (size_t idx = 0; idx < cubec_array_get_size(meta->attributes); idx++) {
-      cubec_struct_field_t field = cubec_array_get_index(meta->attributes, idx);
-      if (field->type->kind == CUBEC_TYPE_KIND_FUNCTION &&
-          strcmp(field->name, "__get_index__") == 0) {
-        cubec_value_t func = cubec_context_create_value(
-            self, field->type, false, (uint8_t *)arr->data + field->offset,
-            NULL);
-        // TODO: call __get_index__
-      }
-    }
   }
   return cubec_context_create_error(
       self, "Cannot set %" PRIuPTR " from value(type = %s)", idx,
       type_kind_strings[arr->type->kind]);
 }
 cubec_value_t cubec_context_get_index(cubec_context_t self, cubec_value_t arr,
-                                      size_t idx);
+                                      size_t idx) {
+  cubec_type_t type = arr->type;
+  void *dst = arr->data;
+  if (type->kind == CUBEC_TYPE_KIND_REF) {
+    cubec_ref_meta_t meta = type->meta;
+    type = meta->type;
+    dst = *(void **)dst;
+  }
+  if (type->kind == CUBEC_TYPE_KIND_ARRAY) {
+    cubec_array_meta_t meta = type->meta;
+    if (meta->len <= idx) {
+      return cubec_context_create_error(self, "Out of range");
+    }
+    uint8_t *start = dst + idx * meta->type->size;
+    return cubec_context_create_value(self, meta->type, arr->is_mutable, start,
+                                      NULL);
+  }
+  if (type->kind == CUBEC_TYPE_KIND_PTR_ARRAY) {
+    cubec_ptr_meta_t meta = type->meta;
+    uint8_t *start = *(uint8_t **)dst + idx * meta->type->size;
+    return cubec_context_create_value(self, meta->type, arr->is_mutable, start,
+                                      NULL);
+  }
+  return cubec_context_create_error(
+      self, "Cannot get %" PRIuPTR " from value(type = %s)", idx,
+      type_kind_strings[arr->type->kind]);
+}
 cubec_value_t cubec_context_set_field(cubec_context_t self, cubec_value_t obj,
-                                      const char *field, cubec_value_t value);
+                                      const char *name, cubec_value_t value) {
+  cubec_type_t type = obj->type;
+  void *dst = obj->data;
+  if (type->kind == CUBEC_TYPE_KIND_REF) {
+    cubec_ref_meta_t meta = type->meta;
+    type = meta->type;
+    dst = *(void **)dst;
+  }
+  if (type->kind == CUBEC_TYPE_KIND_PTR) {
+    cubec_ptr_meta_t meta = type->meta;
+    type = meta->type;
+    dst = *(void **)dst;
+  }
+  if (type->kind == CUBEC_TYPE_KIND_STRUCT) {
+    cubec_struct_meta_t meta = type->meta;
+    for (size_t idx = 0; idx < cubec_array_get_size(meta->fields); idx++) {
+      cubec_struct_field_t field = cubec_array_get_index(meta->fields, idx);
+      if (strcmp(field->name, name) == 0) {
+        memcpy(dst + field->offset, value->data, value->type->size);
+        return self->value_undefined;
+      }
+    }
+  }
+  return cubec_context_create_error(self, "Cannot set %s from value(type = %s)",
+                                    name, type_kind_strings[obj->type->kind]);
+}
+
 cubec_value_t cubec_context_get_field(cubec_context_t self, cubec_value_t obj,
-                                      const char *field);
+                                      const char *name) {
+  cubec_type_t type = obj->type;
+  void *dst = obj->data;
+  if (type->kind == CUBEC_TYPE_KIND_REF) {
+    cubec_ref_meta_t meta = type->meta;
+    type = meta->type;
+    dst = *(void **)dst;
+  }
+  if (type->kind == CUBEC_TYPE_KIND_PTR) {
+    cubec_ptr_meta_t meta = type->meta;
+    type = meta->type;
+    dst = *(void **)dst;
+  }
+  if (type->kind == CUBEC_TYPE_KIND_STRUCT) {
+    cubec_struct_meta_t meta = type->meta;
+    for (size_t idx = 0; idx < cubec_array_get_size(meta->fields); idx++) {
+      cubec_struct_field_t field = cubec_array_get_index(meta->fields, idx);
+      if (strcmp(field->name, name) == 0) {
+        return cubec_context_create_value(self, field->type, obj->is_mutable,
+                                          dst + field->offset, NULL);
+      }
+    }
+  }
+  return cubec_context_create_error(self, "Cannot get %s from value(type = %s)",
+                                    name, type_kind_strings[obj->type->kind]);
+}
 
 cubec_value_t cubec_context_create_error(cubec_context_t self, const char *fmt,
                                          ...) {
