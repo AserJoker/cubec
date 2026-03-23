@@ -60,8 +60,8 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
   self->root = cubec_create_scope(allocator, NULL);
   self->current = self->root;
 
-  self->type_str = cubec_context_create_type(self, CUBEC_TYPE_KIND_ERROR,
-                                             sizeof(const char *), NULL);
+  self->type_error = cubec_context_create_type(self, CUBEC_TYPE_KIND_ERROR,
+                                               sizeof(const char *), NULL);
   self->type_void =
       cubec_context_create_type(self, CUBEC_TYPE_KIND_VOID, 0, NULL);
   self->value_undefined = cubec_context_create_value(self, self->type_void,
@@ -612,7 +612,9 @@ cubec_value_t cubec_context_create_error(cubec_context_t self, const char *fmt,
   va_list args;
   va_start(args, fmt);
   size_t len = vsnprintf(NULL, 0, fmt, args);
-  char *msg = cubec_allocator_alloc(self->allocator, len + sizeof(bool), NULL);
+  char *msg = cubec_allocator_alloc(self->allocator, len + 1, NULL);
+  va_end(args);
+  va_start(args, fmt);
   vsprintf(msg, fmt, args);
   va_end(args);
   cubec_array_push(self->strings, msg);

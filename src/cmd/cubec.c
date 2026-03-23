@@ -1,10 +1,15 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "ast/program.h"
+#include "c/program.h"
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/path.h"
 #include "core/position.h"
+#include "core/string.h"
+#include "engine/context.h"
+#include "engine/type.h"
+#include "engine/value.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -46,6 +51,7 @@ int main(int argc, char *argv[]) {
   char *filename = absolute(allocator, "./main.cubec");
   char *source = read(allocator, filename);
   cubec_ast_node_t node = compile(allocator, filename, source);
+  cubec_context_t ctx = cubec_create_context(allocator);
   if (node->type == CUBEC_NODE_TYPE_ERROR) {
     cubec_ast_error_t error = (cubec_ast_error_t)node;
     fprintf(stderr,
@@ -53,10 +59,16 @@ int main(int argc, char *argv[]) {
             error->message, "./main.cubec", node->loc.end.line,
             node->loc.end.column);
   } else {
-    char *json = cubec_ast_write_json(allocator, node);
-    fprintf(stdout, "%s\n", json);
-    cubec_allocator_free(allocator, json);
+    cubec_string_t csource = cubec_create_string(allocator, NULL);
+    cubec_value_t err =
+        cubec_c_write_program(ctx, (cubec_ast_program_t)node, &csource);
+    if (err->type->kind == CUBEC_TYPE_KIND_ERROR) {
+      const char *error = *(const char **)err->data;
+      fprintf(stderr, "%s\n", error);
+    }
+    cubec_allocator_free(allocator, csource);
   }
+  cubec_allocator_free(allocator, ctx);
   cubec_allocator_free(allocator, node);
   cubec_allocator_free(allocator, source);
   cubec_allocator_free(allocator, filename);

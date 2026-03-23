@@ -57,7 +57,6 @@ cubec_ast_node_t cubec_create_ast_list_node(cubec_allocator_t allocator);
 void cubec_ast_list_node_append(cubec_ast_node_t self,
                                 cubec_allocator_t allocator,
                                 cubec_ast_node_t item);
-
 char *cubec_ast_write_json(cubec_allocator_t allocator, cubec_ast_node_t node);
 
 #ifdef __cplusplus
