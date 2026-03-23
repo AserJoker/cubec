@@ -15,7 +15,11 @@ cubec_struct_meta_t cubec_create_struct_meta(cubec_allocator_t allocator,
       cubec_allocator_alloc(allocator, sizeof(struct _cubec_struct_meta_t),
                             (cubec_dispose_fn_t)cubec_struct_meta_dispose);
   self->align = align;
-  self->name = cubec_create_cstring(allocator, name);
+  if (name) {
+    self->name = cubec_create_cstring(allocator, name);
+  } else {
+    self->name = NULL;
+  }
   cubec_array_initialize_t initialize = {
       .autofree = true,
   };

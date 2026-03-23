@@ -9,6 +9,7 @@ typedef struct _cubec_ast_interface_declarator_t {
   struct _cubec_ast_node_t super;
   cubec_ast_node_t args;
   cubec_ast_node_t type;
+  cubec_ast_node_t ptr;
 } *cubec_ast_interface_declarator_t;
 
 cubec_ast_interface_declarator_t

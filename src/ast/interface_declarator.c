@@ -13,6 +13,7 @@ cubec_ast_interface_declarator_dispose(cubec_ast_interface_declarator_t self,
                                        cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->args);
   cubec_allocator_free(allocator, self->type);
+  cubec_allocator_free(allocator, self->ptr);
   cubec_ast_node_dispose(allocator, &self->super);
 }
 cubec_ast_interface_declarator_t
@@ -24,6 +25,7 @@ cubec_create_ast_interface_declarator(cubec_allocator_t allocator) {
   self->super.type = CUBEC_NODE_TYPE_INTERFACE_DECLARATOR;
   cubec_ast_set_field(self, allocator, type);
   cubec_ast_set_field(self, allocator, args);
+  cubec_ast_set_field(self, allocator, ptr);
   self->args = cubec_create_ast_list_node(allocator);
   return self;
 }
@@ -50,6 +52,27 @@ cubec_ast_node_t cubec_read_ast_interface_declarator(
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
+  }
+  if (*current.offset == '*') {
+    token = cubec_read_ast_literal_symbol(allocator, &current, end);
+    if (token) {
+      if (token->type == CUBEC_NODE_TYPE_ERROR) {
+        err = token;
+        goto onerror;
+      }
+      if (!cubec_location_is(token->loc, "*")) {
+        current = token->loc.begin;
+        cubec_allocator_free(allocator, token);
+      } else {
+        node->ptr = token;
+        err = cubec_ast_skip_all(allocator, &current, end);
+        if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+          return err;
+        }
+      }
+    } else {
+      goto onerror;
+    }
   }
   if (*current.offset != '(') {
     goto onerror;

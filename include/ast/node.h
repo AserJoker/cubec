@@ -58,14 +58,6 @@ void cubec_ast_list_node_append(cubec_ast_node_t self,
                                 cubec_allocator_t allocator,
                                 cubec_ast_node_t item);
 
-typedef cubec_ast_node_t (*cubec_ast_visit_fn_t)(cubec_ast_node_t node,
-                                                 cubec_allocator_t allocator,
-                                                 void *arg);
-
-cubec_ast_node_t cubec_visit_node(cubec_ast_node_t node,
-                                  cubec_allocator_t allocator,
-                                  cubec_ast_visit_fn_t visit, void *arg);
-
 char *cubec_ast_write_json(cubec_allocator_t allocator, cubec_ast_node_t node);
 
 #ifdef __cplusplus

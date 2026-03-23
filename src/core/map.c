@@ -50,6 +50,7 @@ cubec_map_t cubec_create_map(cubec_allocator_t allocator,
       .compare = NULL,
   };
   map->data = cubec_create_list(allocator, &linit);
+  map->allocator = allocator;
   return map;
 }
 cubec_list_node_t cubec_map_find(cubec_map_t self, const void *key,

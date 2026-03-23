@@ -1,7 +1,6 @@
 #include "ast/expression_assigment.h"
 #include "ast/expression.h"
-#include "ast/expression_member.h"
-#include "ast/literal_identifier.h"
+#include "ast/expression_binary.h"
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -39,13 +38,24 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
   node = cubec_create_ast_expression_assigment(allocator);
-  node->identifier =
-      cubec_read_ast_literal_identifier(allocator, &current, end);
-  if (!node->identifier) {
+  if (*current.offset == '*') {
     node->identifier =
-        cubec_read_ast_expression_member(allocator, position, end);
+        cubec_read_ast_expression_binary_prefix(allocator, position, end);
+    if (!node->identifier) {
+      goto onerror;
+    }
+  } else {
+    node->identifier = cubec_read_ast_expression18(allocator, &current, end);
   }
   if (!node->identifier) {
+    goto onerror;
+  }
+  if (node->identifier->type == CUBEC_NODE_TYPE_ERROR) {
+    goto onerror;
+  }
+  if (node->identifier->type != CUBEC_NODE_TYPE_LITERAL_IDENTIFIER &&
+      node->identifier->type != CUBEC_NODE_TYPE_EXPRESSION_MEMBER &&
+      node->identifier->type != CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end);

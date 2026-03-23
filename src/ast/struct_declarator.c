@@ -69,7 +69,8 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
     err = token;
     goto onerror;
   }
-  if (!cubec_location_is(token->loc, "struct")) {
+  if (!cubec_location_is(token->loc, "struct") &&
+      !cubec_location_is(token->loc, "union")) {
     cubec_allocator_free(allocator, token);
     goto onerror;
   }

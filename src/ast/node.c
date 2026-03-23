@@ -134,6 +134,7 @@ cubec_ast_node_t cubec_create_ast_error(cubec_allocator_t allocator,
   cubec_ast_error_t node =
       cubec_allocator_alloc(allocator, sizeof(struct _cubec_ast_error_t),
                             (cubec_dispose_fn_t)cubec_error_dispose);
+  cubec_ast_node_initialize(allocator, &node->super);
   node->super.type = CUBEC_NODE_TYPE_ERROR;
   node->super.loc.begin = begin;
   node->super.loc.end = end;
@@ -244,43 +245,6 @@ void cubec_ast_list_node_append(cubec_ast_node_t self,
   cubec_list_append(list->items, item);
   item->parent = &list->super;
 }
-cubec_ast_node_t cubec_visit_node(cubec_ast_node_t node,
-                                  cubec_allocator_t allocator,
-                                  cubec_ast_visit_fn_t visit, void *arg) {
-  if (!node) {
-    return NULL;
-  }
-  cubec_ast_node_t next = visit(node, allocator, arg);
-  if (next) {
-    if (next->type == CUBEC_NODE_TYPE_ERROR) {
-      return next;
-    }
-    if (next->type == CUBEC_NODE_TYPE_LIST) {
-      cubec_ast_list_node_t list = (cubec_ast_list_node_t)next;
-      cubec_list_node_t it = cubec_list_get_first(list->items);
-      while (it != cubec_list_get_end(list->items)) {
-        cubec_ast_node_t item = cubec_list_node_get(it);
-        item = cubec_visit_node(node, allocator, visit, arg);
-        if (item && item->type == CUBEC_NODE_TYPE_ERROR) {
-          return item;
-        }
-        it = cubec_list_node_next(it);
-      }
-    } else {
-      cubec_map_t meta = next->meta;
-      cubec_list_node_t it = cubec_map_get_first(meta);
-      while (it != cubec_map_get_end(meta)) {
-        cubec_ast_node_t *item = cubec_map_node_get_value(it);
-        cubec_ast_node_t err = cubec_visit_node(*item, allocator, visit, arg);
-        if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-          return err;
-        }
-        it = cubec_map_node_get_next(it);
-      }
-    }
-  }
-  return NULL;
-}
 
 static const char *type_names[] = {
     "CUBEC_NODE_TYPE_LIST",
@@ -342,7 +306,7 @@ static const char *type_names[] = {
     "CUBEC_NODE_TYPE_TYPE",
 };
 
-char *encode_text(cubec_allocator_t allocator, const char *source) {
+static char *encode_text(cubec_allocator_t allocator, const char *source) {
   char *res = cubec_allocator_alloc(allocator, strlen(source) * 2 + 1, NULL);
   const char *src = source;
   char *dst = res;
@@ -380,9 +344,8 @@ char *encode_text(cubec_allocator_t allocator, const char *source) {
   return res;
 }
 
-cubec_ast_node_t cubec_print_node(cubec_ast_node_t node,
-                                  cubec_allocator_t allocator,
-                                  cubec_string_t out) {
+static void cubec_print_node(cubec_ast_node_t node, cubec_allocator_t allocator,
+                             cubec_string_t out) {
   if (node->type == CUBEC_NODE_TYPE_LIST) {
     cubec_ast_list_node_t list = (cubec_ast_list_node_t)node;
     cubec_string_concat(out, allocator, "[");
@@ -392,10 +355,7 @@ cubec_ast_node_t cubec_print_node(cubec_ast_node_t node,
         cubec_string_concat(out, allocator, ",");
       }
       cubec_ast_node_t item = cubec_list_node_get(it);
-      cubec_ast_node_t err = cubec_print_node(item, allocator, out);
-      if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-        return err;
-      }
+      cubec_print_node(item, allocator, out);
       it = cubec_list_node_next(it);
     }
     cubec_string_concat(out, allocator, "]");
@@ -427,22 +387,17 @@ cubec_ast_node_t cubec_print_node(cubec_ast_node_t node,
         char s[strlen(key) + 32];
         sprintf(s, "\"%s\":", key);
         cubec_string_concat(out, allocator, s);
-        cubec_ast_node_t err = cubec_print_node(*value, allocator, out);
-        if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-          return err;
-        }
+        cubec_print_node(*value, allocator, out);
       }
       it = cubec_map_node_get_next(it);
     }
     cubec_string_concat(out, allocator, "}");
   }
-  return NULL;
 }
 
 char *cubec_ast_write_json(cubec_allocator_t allocator, cubec_ast_node_t node) {
   cubec_string_t str = cubec_create_string(allocator, NULL);
-  cubec_visit_node(node, allocator, (cubec_ast_visit_fn_t)cubec_print_node,
-                   str);
+  cubec_print_node(node, allocator, str);
   char *s = cubec_create_cstring(allocator, cubec_string_get(str));
   cubec_allocator_free(allocator, str);
   return s;

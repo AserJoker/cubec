@@ -1,8 +1,10 @@
 #ifndef _H_CUBEC_ENGINE_CONTEXT_
 #define _H_CUBEC_ENGINE_CONTEXT_
+#include "ast/node.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/map.h"
+#include "engine/function.h"
 #include "engine/module.h"
 #include "engine/scope.h"
 #include "engine/type.h"
@@ -19,6 +21,7 @@ struct _cubec_context_t {
   cubec_array_t types;
   cubec_map_t modules;
   cubec_array_t strings;
+  cubec_array_t functions;
 
   cubec_type_t type_void;
   cubec_type_t type_int8;
@@ -38,6 +41,10 @@ struct _cubec_context_t {
 
   cubec_value_t value_undefined;
 };
+typedef enum _cubec_eval_type_t {
+  CUBEC_EVAL_MODULE,
+  CUBEC_EVAL_INLINE,
+} cubec_eval_type_t;
 cubec_context_t cubec_create_context(cubec_allocator_t allocator);
 cubec_module_t cubec_context_get_module(cubec_context_t self, const char *name);
 cubec_type_t cubec_context_create_type(cubec_context_t self,
@@ -48,8 +55,6 @@ void cubec_context_pop_scope(cubec_context_t self);
 cubec_type_t cubec_context_create_ptr_type(cubec_context_t self,
                                            cubec_type_t type, bool is_mutable,
                                            bool is_volatile);
-cubec_type_t cubec_context_create_ref_type(cubec_context_t self,
-                                           cubec_type_t type);
 cubec_type_t cubec_context_create_ptr_array_type(cubec_context_t self,
                                                  cubec_type_t type,
                                                  bool is_mutable,
@@ -58,6 +63,8 @@ cubec_type_t cubec_context_create_array_type(cubec_context_t self,
                                              cubec_type_t type, size_t length);
 cubec_type_t cubec_context_create_struct_type(cubec_context_t self,
                                               size_t align, const char *name);
+cubec_type_t cubec_context_create_union_type(cubec_context_t self, size_t align,
+                                             const char *name);
 cubec_value_t cubec_context_add_struct_field(cubec_context_t self,
                                              cubec_type_t stru,
                                              const char *name,
@@ -69,6 +76,11 @@ cubec_value_t cubec_context_add_struct_attribute(cubec_context_t self,
 cubec_type_t cubec_context_create_result_type(cubec_context_t self,
                                               cubec_type_t type,
                                               cubec_type_t etype);
+cubec_type_t cubec_context_create_function_type(cubec_context_t self,
+                                                cubec_type_t type,
+                                                size_t num_args,
+                                                cubec_type_t *args,
+                                                bool is_variadic);
 cubec_value_t cubec_context_create_value(cubec_context_t self,
                                          cubec_type_t type, bool is_mutable,
                                          const void *data, const char *name);
@@ -100,15 +112,33 @@ cubec_value_t cubec_context_create_ptr(cubec_context_t self,
 cubec_value_t cubec_context_create_ptr_array(cubec_context_t self,
                                              cubec_value_t value,
                                              bool is_mutable, const char *name);
-cubec_value_t cubec_context_create_ref(cubec_context_t self,
-                                       cubec_value_t value, bool is_mutable,
-                                       const char *name);
 cubec_value_t cubec_context_create_array(cubec_context_t self,
                                          cubec_type_t type, size_t length,
                                          bool is_mutable, const char *name);
 cubec_value_t cubec_context_create_struct(cubec_context_t self,
                                           cubec_type_t type, bool is_mutable,
                                           const char *name);
+cubec_value_t cubec_context_create_union(cubec_context_t self,
+                                         cubec_type_t type, bool is_mutable,
+                                         const char *name);
+cubec_value_t cubec_context_create_error(cubec_context_t self, const char *fmt,
+                                         ...);
+cubec_value_t cubec_context_create_result(cubec_context_t self,
+                                          cubec_type_t type,
+                                          cubec_value_t value,
+                                          cubec_value_t error, bool is_mutable,
+                                          const char *name);
+cubec_value_t cubec_context_create_function(cubec_context_t self,
+                                            cubec_type_t type,
+                                            cubec_ast_node_t node,
+                                            bool is_mutable, const char *name);
+cubec_value_t cubec_context_create_native(cubec_context_t self,
+                                          cubec_type_t type,
+                                          cubec_native_handle_t native,
+                                          bool is_mutable, const char *name);
+bool cubec_context_check_type(cubec_context_t self, cubec_type_t dst,
+                              cubec_type_t src);
+char *cubec_context_type_to_string(cubec_context_t self, cubec_type_t type);
 cubec_value_t cubec_context_set_index(cubec_context_t self, cubec_value_t arr,
                                       size_t idx, cubec_value_t value);
 cubec_value_t cubec_context_get_index(cubec_context_t self, cubec_value_t arr,
@@ -117,13 +147,8 @@ cubec_value_t cubec_context_set_field(cubec_context_t self, cubec_value_t obj,
                                       const char *field, cubec_value_t value);
 cubec_value_t cubec_context_get_field(cubec_context_t self, cubec_value_t obj,
                                       const char *field);
-cubec_value_t cubec_context_create_error(cubec_context_t self, const char *fmt,
-                                         ...);
-cubec_value_t cubec_context_create_result(cubec_context_t self,
-                                          cubec_type_t type,
-                                          cubec_value_t value,
-                                          cubec_value_t error, bool is_mutable,
-                                          const char *name);
+cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
+                                 size_t argc, cubec_value_t *argv);
 #ifdef __cplusplus
 }
 #endif
