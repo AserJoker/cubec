@@ -60,8 +60,8 @@ int main(int argc, char *argv[]) {
             node->loc.end.column);
   } else {
     cubec_string_t csource = cubec_create_string(allocator, NULL);
-    cubec_value_t err =
-        cubec_c_write_program(ctx, (cubec_ast_program_t)node, &csource);
+    cubec_value_t err = cubec_c_write_program(ctx, (cubec_ast_program_t)node,
+                                              "./main.cubec", &csource);
     if (err->type->kind == CUBEC_TYPE_KIND_ERROR) {
       const char *error = *(const char **)err->data;
       fprintf(stderr, "%s\n", error);

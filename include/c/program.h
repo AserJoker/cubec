@@ -9,6 +9,7 @@ extern "C" {
 #endif
 cubec_value_t cubec_c_write_program(cubec_context_t self,
                                     cubec_ast_program_t program,
+                                    const char *filename,
                                     cubec_string_t *output);
 #ifdef __cplusplus
 }
