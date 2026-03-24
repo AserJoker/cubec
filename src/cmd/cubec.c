@@ -1,14 +1,11 @@
 #include "ast/node.h"
-#include "ast/node_type.h"
 #include "ast/program.h"
-#include "c/program.h"
 #include "core/allocator.h"
-#include "core/location.h"
 #include "core/path.h"
 #include "core/position.h"
 #include "core/string.h"
 #include "engine/context.h"
-#include "engine/type.h"
+#include "engine/module.h"
 #include "engine/value.h"
 #include <inttypes.h>
 #include <stdio.h>
@@ -48,29 +45,18 @@ cubec_ast_node_t compile(cubec_allocator_t allocator, const char *filename,
 
 int main(int argc, char *argv[]) {
   cubec_allocator_t allocator = cubec_create_allocator(NULL);
-  char *filename = absolute(allocator, "./main.cubec");
-  char *source = read(allocator, filename);
-  cubec_ast_node_t node = compile(allocator, filename, source);
   cubec_context_t ctx = cubec_create_context(allocator);
-  if (node->type == CUBEC_NODE_TYPE_ERROR) {
-    cubec_ast_error_t error = (cubec_ast_error_t)node;
-    fprintf(stderr,
-            "Failed to compile: %s at\n  %s:%" PRIuPTR ":%" PRIuPTR "\n",
-            error->message, "./main.cubec", node->loc.end.line,
-            node->loc.end.column);
+  char *filename = absolute(allocator, "./main.cubec");
+  cubec_value_t err = cubec_context_load_module(ctx, filename);
+  if (err->type == ctx->type_error) {
+    const char *message = *(const char **)err->data;
+    fprintf(stderr, "%s\n", message);
   } else {
-    cubec_string_t csource = cubec_create_string(allocator, NULL);
-    cubec_value_t err = cubec_c_write_program(ctx, (cubec_ast_program_t)node,
-                                              "./main.cubec", &csource);
-    if (err->type->kind == CUBEC_TYPE_KIND_ERROR) {
-      const char *error = *(const char **)err->data;
-      fprintf(stderr, "%s\n", error);
-    }
-    cubec_allocator_free(allocator, csource);
+    cubec_module_t mod = cubec_context_get_module(ctx, filename);
+    const char *dst = cubec_string_get(mod->data);
+    printf("%s\n", dst);
   }
   cubec_allocator_free(allocator, ctx);
-  cubec_allocator_free(allocator, node);
-  cubec_allocator_free(allocator, source);
   cubec_allocator_free(allocator, filename);
   cubec_delete_allocator(allocator);
   return 0;

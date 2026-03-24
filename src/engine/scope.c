@@ -1,7 +1,9 @@
 #include "engine/scope.h"
 #include "core/allocator.h"
 #include "core/array.h"
+#include "core/compare.h"
 #include "core/map.h"
+#include <string.h>
 static void cubec_scope_dispose(cubec_scope_t self,
                                 cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->defers);
@@ -22,6 +24,7 @@ cubec_scope_t cubec_create_scope(cubec_allocator_t allocator,
   cubec_map_initialize_t variables_initialize = {
       .autofree_key = true,
       .autofree_value = false,
+      .compare = (cubec_compare_fn_t)strcmp,
   };
   self->variables = cubec_create_map(allocator, &variables_initialize);
   return self;

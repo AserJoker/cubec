@@ -18,10 +18,10 @@ struct _cubec_context_t {
   cubec_allocator_t allocator;
   cubec_scope_t root;
   cubec_scope_t current;
-  cubec_array_t types;
   cubec_map_t modules;
   cubec_array_t strings;
-  cubec_array_t functions;
+  cubec_module_t module;
+  cubec_module_t global;
 
   cubec_type_t type_void;
   cubec_type_t type_int8;
@@ -32,6 +32,8 @@ struct _cubec_context_t {
   cubec_type_t type_uint16;
   cubec_type_t type_uint32;
   cubec_type_t type_uint64;
+  cubec_type_t type_float32;
+  cubec_type_t type_float64;
   cubec_type_t type_boolean;
   cubec_type_t type_str;
   cubec_type_t type_opaque;
@@ -47,9 +49,12 @@ typedef enum _cubec_eval_type_t {
 } cubec_eval_type_t;
 cubec_context_t cubec_create_context(cubec_allocator_t allocator);
 cubec_module_t cubec_context_get_module(cubec_context_t self, const char *name);
+cubec_value_t cubec_context_load_module(cubec_context_t self, const char *name);
+cubec_module_t cubec_context_set_module(cubec_context_t self,
+                                        cubec_module_t module);
 cubec_type_t cubec_context_create_type(cubec_context_t self,
                                        cubec_type_kind_t kind, size_t size,
-                                       void *meta);
+                                       void *meta, const char *name);
 void cubec_context_push_scope(cubec_context_t self);
 void cubec_context_pop_scope(cubec_context_t self);
 cubec_type_t cubec_context_create_ptr_type(cubec_context_t self,
@@ -100,6 +105,10 @@ cubec_value_t cubec_context_create_uint32(cubec_context_t self, uint32_t value,
                                           bool is_mutable, const char *name);
 cubec_value_t cubec_context_create_uint64(cubec_context_t self, uint64_t value,
                                           bool is_mutable, const char *name);
+cubec_value_t cubec_context_create_float32(cubec_context_t self, float value,
+                                           bool is_mutable, const char *name);
+cubec_value_t cubec_context_create_float64(cubec_context_t self, double value,
+                                           bool is_mutable, const char *name);
 cubec_value_t cubec_context_create_boolean(cubec_context_t self, bool value,
                                            bool is_mutable, const char *name);
 cubec_value_t cubec_context_create_str(cubec_context_t self, const char *str,
@@ -149,6 +158,8 @@ cubec_value_t cubec_context_get_field(cubec_context_t self, cubec_value_t obj,
                                       const char *field);
 cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
                                  size_t argc, cubec_value_t *argv);
+cubec_value_t cubec_context_load_value(cubec_context_t self, const char *name);
+
 #ifdef __cplusplus
 }
 #endif

@@ -9,6 +9,37 @@ char *cubec_location_get(cubec_location_t self, cubec_allocator_t allocator) {
   memcpy(result, self.begin.offset, len - 1);
   return result;
 }
+char *cubec_location_get_str(cubec_location_t self,
+                             cubec_allocator_t allocator) {
+  size_t len = self.end.offset - self.begin.offset + 1;
+  char *result = cubec_allocator_alloc(allocator, len, NULL);
+  char *dst = result;
+  const char *src = self.begin.offset + 1;
+  while (src != self.end.offset - 1) {
+    if (*src == '\\') {
+      src++;
+      if (*src == 'n') {
+        *dst++ = '\n';
+      } else if (*src == 'r') {
+        *dst++ = '\r';
+      } else if (*src == 'a') {
+        *dst++ = '\a';
+      } else if (*src == 'b') {
+        *dst++ = '\b';
+      } else if (*src == '\\') {
+        *dst++ = '\\';
+      } else if (*src == 't') {
+        *dst++ = '\t';
+      } else if (*src == 'f') {
+        *dst++ = '\f';
+      }
+    } else {
+      *dst++ = *src++;
+    }
+  }
+  *dst = 0;
+  return result;
+}
 char *cubec_location_get_line(cubec_location_t self,
                               cubec_allocator_t allocator) {
   const char *begin = self.begin.offset;

@@ -17,6 +17,8 @@ typedef enum _cubec_type_kind_t {
   CUBEC_TYPE_KIND_UINT16,
   CUBEC_TYPE_KIND_UINT32,
   CUBEC_TYPE_KIND_UINT64,
+  CUBEC_TYPE_KIND_FLOAT32,
+  CUBEC_TYPE_KIND_FLOAT64,
   CUBEC_TYPE_KIND_BOOLEAN,
   CUBEC_TYPE_KIND_STR,
   CUBEC_TYPE_KIND_OPAQUE,
@@ -29,6 +31,7 @@ typedef enum _cubec_type_kind_t {
   CUBEC_TYPE_KIND_RESULT,
   CUBEC_TYPE_KIND_FUNCTION,
   CUBEC_TYPE_KIND_TEMPLATE,
+  CUBEC_TYPE_KIND_TYPE,
 } cubec_type_kind_t;
 typedef struct _cubec_type_t *cubec_type_t;
 struct _cubec_type_t {

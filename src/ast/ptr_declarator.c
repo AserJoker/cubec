@@ -42,8 +42,7 @@ cubec_ast_node_t cubec_read_ast_ptr_declarator(cubec_allocator_t allocator,
     err = kind;
     goto onerror;
   }
-  if (!cubec_location_is(kind->loc, "&") &&
-      !cubec_location_is(kind->loc, "*") &&
+  if (!cubec_location_is(kind->loc, "*") &&
       !cubec_location_is(kind->loc, "[*]")) {
     cubec_allocator_free(allocator, kind);
     goto onerror;
