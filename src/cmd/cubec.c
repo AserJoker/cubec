@@ -170,7 +170,7 @@ void print_value(cubec_context_t ctx, cubec_value_t value) {
     break;
   }
   case CUBEC_TYPE_KIND_TYPE: {
-    cubec_type_t t = value->type;
+    cubec_type_t t = *(cubec_type_t *)value->data;
     char *type_name = cubec_context_type_to_string(ctx, t);
     printf("type{ kind: %" PRIuPTR ", name: \"%s\", size: %" PRIuPTR " }",
            (uint64_t)t->kind, type_name, t->size);
