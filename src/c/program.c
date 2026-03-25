@@ -2,8 +2,8 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "ast/statement_import.h"
+#include "ast/statement_test.h"
 #include "c/statement_declaration.h"
-#include "c/writer.h"
 #include "core/allocator.h"
 #include "core/list.h"
 #include "core/location.h"
@@ -12,6 +12,7 @@
 #include "engine/module.h"
 #include "engine/type.h"
 #include "engine/value.h"
+#include "eval/statement_test.h"
 #include <inttypes.h>
 #include <unistd.h>
 
@@ -43,7 +44,7 @@ cubec_value_t cubec_c_write_program(cubec_context_t self,
         cubec_allocator_free(self->allocator, fp);
       }
       if (access(fullsrc, 0) != 0) {
-        cubec_value_t err = cubec_c_create_error(
+        cubec_value_t err = cubec_context_create_compile_error(
             self, node, filename,
             "Failed to load module '%s', file is not exists", src);
         cubec_allocator_free(self->allocator, src);
@@ -53,9 +54,9 @@ cubec_value_t cubec_c_write_program(cubec_context_t self,
       cubec_value_t err = cubec_context_load_module(self, fullsrc);
       if (err->type == CUBEC_TYPE_KIND_ERROR) {
         const char *msg = *(const char **)err->data;
-        err = cubec_c_create_error(self, node, filename,
-                                   "Failed to load module '%s'\ncaused by: %s",
-                                   src, msg);
+        err = cubec_context_create_compile_error(
+            self, node, filename, "Failed to load module '%s'\ncaused by: %s",
+            src, msg);
         cubec_allocator_free(self->allocator, src);
         cubec_allocator_free(self->allocator, fullsrc);
         return err;
@@ -74,8 +75,10 @@ cubec_value_t cubec_c_write_program(cubec_context_t self,
         return err;
       }
     } else if (node->type == CUBEC_NODE_TYPE_STATEMENT_TEST) {
+      cubec_eval_statement_test(self, (cubec_ast_statement_test_t)node,
+                                filename);
     } else {
-      return cubec_c_create_error(
+      return cubec_context_create_compile_error(
           self, node, filename,
           "Top statement only support "
           "import,function,struct,enum,variable declaration,test");

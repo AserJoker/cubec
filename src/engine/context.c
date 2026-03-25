@@ -50,6 +50,9 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
       .compare = (cubec_compare_fn_t)strcmp,
   };
   self->strings = cubec_create_array(allocator, &strings_initialize);
+
+  self->eval_mode = CUBEC_EVAL_RUNTIME;
+
   self->root = cubec_create_scope(allocator, NULL);
   self->current = self->root;
 
@@ -676,6 +679,44 @@ cubec_value_t cubec_context_create_error(cubec_context_t self, const char *fmt,
   cubec_array_push(self->strings, msg);
   return cubec_context_create_value(self, self->type_error, false, &msg, NULL);
 }
+cubec_value_t cubec_context_create_compile_error(cubec_context_t self,
+                                                 cubec_ast_node_t node,
+                                                 const char *filename,
+                                                 const char *fmt, ...) {
+  char num[16];
+  sprintf(num, "%" PRIuPTR " | ", node->loc.begin.line);
+  char *line = cubec_location_get_line(node->loc, self->allocator);
+  size_t len = strlen(line);
+  size_t column = node->loc.begin.column - 1;
+  len += strlen(num);
+  char marks[len + 1];
+  memset(marks, 0, len + 1);
+  for (size_t id = 0; id < len; id++) {
+    if (id < column + strlen(num)) {
+      marks[id] = ' ';
+    } else if (id < node->loc.end.column - 1 + strlen(num)) {
+      marks[id] = '^';
+    }
+  }
+  va_list args;
+  va_start(args, fmt);
+  len = vsnprintf(NULL, 0, fmt, args);
+  char *msg = cubec_allocator_alloc(self->allocator, len + 1, NULL);
+  va_end(args);
+  va_start(args, fmt);
+  vsprintf(msg, fmt, args);
+  va_end(args);
+  cubec_value_t err =
+      cubec_context_create_error(self,
+                                 "%s:%" PRIuPTR ":%" PRIuPTR ": error: %s\n"
+                                 "%s%s\n"
+                                 "%s\n",
+                                 filename, node->loc.begin.line,
+                                 node->loc.begin.column, msg, num, line, marks);
+  cubec_allocator_free(self->allocator, line);
+  cubec_allocator_free(self->allocator, msg);
+  return err;
+}
 
 cubec_value_t cubec_context_create_value(cubec_context_t self,
                                          cubec_type_t type, bool is_mutable,
@@ -724,8 +765,19 @@ cubec_value_t cubec_context_create_native(cubec_context_t self,
   cubec_array_push(self->module->functions, func);
   return cubec_context_create_value(self, type, is_mutable, &func, name);
 }
+cubec_value_t cubec_context_create_type_value(cubec_context_t self,
+                                              cubec_type_t type,
+                                              bool is_mutable,
+                                              const char *name) {
+  return cubec_context_create_value(self, self->type_type, is_mutable, &type,
+                                    name);
+}
 cubec_value_t cubec_context_set_index(cubec_context_t self, cubec_value_t arr,
                                       size_t idx, cubec_value_t value) {
+  if (!arr->is_mutable) {
+    return cubec_context_create_error(self,
+                                      "Read-only variable is not assignable");
+  }
   cubec_type_t dst_type = arr->type;
   void *dst = arr->data;
   cubec_type_t src_type = value->type;
@@ -792,11 +844,8 @@ cubec_value_t cubec_context_set_index(cubec_context_t self, cubec_value_t arr,
     memcpy(offset, src, src_type->size);
     return self->value_undefined;
   }
-  char *type_name = cubec_context_type_to_string(self, arr->type);
-  cubec_value_t error = cubec_context_create_error(
-      self, "Cannot set %" PRIuPTR " from value(type = %s)", idx, type_name);
-  cubec_allocator_free(self->allocator, type_name);
-  return error;
+  return cubec_context_create_error(
+      self, "Subscripted value is not an array, ptr array");
 }
 cubec_value_t cubec_context_get_index(cubec_context_t self, cubec_value_t arr,
                                       size_t idx) {
@@ -825,14 +874,15 @@ cubec_value_t cubec_context_get_index(cubec_context_t self, cubec_value_t arr,
     return cubec_context_create_value(self, meta->type, arr->is_mutable, start,
                                       NULL);
   }
-  char *type_name = cubec_context_type_to_string(self, arr->type);
-  cubec_value_t error = cubec_context_create_error(
-      self, "Cannot get %" PRIuPTR " from value(type = %s)", idx, type_name);
-  cubec_allocator_free(self->allocator, type_name);
-  return error;
+  return cubec_context_create_error(
+      self, "Subscripted value is not an array, ptr array");
 }
 cubec_value_t cubec_context_set_field(cubec_context_t self, cubec_value_t obj,
                                       const char *name, cubec_value_t value) {
+  if (!value->is_mutable) {
+    return cubec_context_create_error(self,
+                                      "Read-only variable is not assignable");
+  }
   cubec_type_t type = obj->type;
   void *dst = obj->data;
   if (type->kind == CUBEC_TYPE_KIND_PTR) {
@@ -876,10 +926,44 @@ cubec_value_t cubec_context_set_field(cubec_context_t self, cubec_value_t obj,
         }
       }
     }
+  } else if (type->kind == CUBEC_TYPE_KIND_UNION) {
+    cubec_union_meta_t meta = type->meta;
+    for (size_t idx = 0; idx < cubec_array_get_size(meta->fields); idx++) {
+      cubec_union_field_t field = cubec_array_get_index(meta->fields, idx);
+      if (strcmp(field->name, name) == 0) {
+        if (field->type->kind == CUBEC_TYPE_KIND_PTR_ARRAY &&
+            value->type->kind == CUBEC_TYPE_KIND_ARRAY) {
+          if (value->data) {
+            value = cubec_context_create_value(
+                self, field->type, value->is_mutable, &value->data, NULL);
+          } else {
+            value = cubec_context_create_value(self, field->type,
+                                               value->is_mutable, NULL, NULL);
+          }
+        }
+        if (!cubec_context_check_type(self, field->type, value->type)) {
+          char *dst_name = cubec_context_type_to_string(self, field->type);
+          char *src_name = cubec_context_type_to_string(self, value->type);
+          cubec_value_t error = cubec_context_create_error(
+              self, "Cannot convert %s to %s", src_name, dst_name);
+          cubec_allocator_free(self->allocator, dst_name);
+          cubec_allocator_free(self->allocator, src_name);
+          return error;
+        }
+        if (!dst || !value->data) {
+          return cubec_context_create_value(self, value->type,
+                                            value->is_mutable, NULL, NULL);
+        } else {
+          memcpy(dst, value->data, value->type->size);
+          return cubec_context_create_value(
+              self, value->type, value->is_mutable, value->data, NULL);
+        }
+      }
+    }
   }
   char *type_name = cubec_context_type_to_string(self, obj->type);
   cubec_value_t error = cubec_context_create_error(
-      self, "Cannot set %s from value(type = %s)", name, type_name);
+      self, "No member named '%s' in '%s'", name, type_name);
   cubec_allocator_free(self->allocator, type_name);
   return error;
 }
@@ -909,9 +993,23 @@ cubec_value_t cubec_context_get_field(cubec_context_t self, cubec_value_t obj,
       }
     }
   }
+  if (type->kind == CUBEC_TYPE_KIND_UNION) {
+    cubec_union_meta_t meta = type->meta;
+    for (size_t idx = 0; idx < cubec_array_get_size(meta->fields); idx++) {
+      cubec_union_field_t field = cubec_array_get_index(meta->fields, idx);
+      if (strcmp(field->name, name) == 0) {
+        if (!dst) {
+          return cubec_context_create_value(self, field->type, obj->is_mutable,
+                                            NULL, NULL);
+        }
+        return cubec_context_create_value(self, field->type, obj->is_mutable,
+                                          dst, NULL);
+      }
+    }
+  }
   char *type_name = cubec_context_type_to_string(self, obj->type);
   cubec_value_t error = cubec_context_create_error(
-      self, "Cannot get %s from value(type = %s)", name, type_name);
+      self, "No member named '%s' in '%s'", name, type_name);
   cubec_allocator_free(self->allocator, type_name);
   return error;
 }
@@ -932,7 +1030,7 @@ cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
     cubec_value_t result = NULL;
     for (size_t idx = 0; idx < argc; idx++) {
       cubec_value_t arg = argv[idx];
-      if (idx > cubec_array_get_size(meta->args)) {
+      if (idx >= cubec_array_get_size(meta->args)) {
         if (!meta->is_variadic) {
           char *type_name = cubec_context_type_to_string(self, func->type);
           result = cubec_context_create_error(
@@ -1013,4 +1111,132 @@ cubec_value_t cubec_context_load_value(cubec_context_t self, const char *name) {
     scope = scope->parent;
   }
   return NULL;
+}
+cubec_value_t cubec_context_inc_value(cubec_context_t self,
+                                      cubec_value_t value) {
+  if (!value->is_mutable) {
+    return cubec_context_create_error(self, "Expression is not assignable");
+  }
+  if (value->type->kind < CUBEC_TYPE_KIND_INT8 &&
+      value->type->kind > CUBEC_TYPE_KIND_UINT64) {
+    char *type_name = cubec_context_type_to_string(self, value->type);
+    cubec_value_t err = cubec_context_create_error(
+        self, "Cannot increment value of type '%s'", type_name);
+    cubec_allocator_free(self->allocator, type_name);
+    return err;
+  }
+  switch (value->type->kind) {
+  case CUBEC_TYPE_KIND_INT8:
+    (*(int8_t *)(value->data))++;
+    break;
+  case CUBEC_TYPE_KIND_INT16:
+    (*(int16_t *)(value->data))++;
+    break;
+  case CUBEC_TYPE_KIND_INT32:
+    (*(int32_t *)(value->data))++;
+    break;
+  case CUBEC_TYPE_KIND_INT64:
+    (*(int64_t *)(value->data))++;
+    break;
+  case CUBEC_TYPE_KIND_UINT8:
+    (*(uint8_t *)(value->data))++;
+    break;
+  case CUBEC_TYPE_KIND_UINT16:
+    (*(uint16_t *)(value->data))++;
+    break;
+  case CUBEC_TYPE_KIND_UINT32:
+    (*(uint32_t *)(value->data))++;
+    break;
+  case CUBEC_TYPE_KIND_UINT64:
+    (*(uint64_t *)(value->data))++;
+    break;
+  default: {
+    char *type_name = cubec_context_type_to_string(self, value->type);
+    cubec_value_t err = cubec_context_create_error(
+        self, "Cannot increment value of type '%s'", type_name);
+    cubec_allocator_free(self->allocator, type_name);
+    return err;
+  }
+  }
+  return self->value_undefined;
+}
+int64_t cubec_context_value_to_int64(cubec_context_t self,
+                                     cubec_value_t value) {
+  switch (value->type->kind) {
+  case CUBEC_TYPE_KIND_INT8:
+    return *(int8_t *)value->data;
+  case CUBEC_TYPE_KIND_INT16:
+    return *(int16_t *)value->data;
+  case CUBEC_TYPE_KIND_INT32:
+    return *(int32_t *)value->data;
+  case CUBEC_TYPE_KIND_INT64:
+    return *(int64_t *)value->data;
+  default:
+    break;
+  }
+  return 0;
+}
+uint64_t cubec_context_value_to_uint64(cubec_context_t self,
+                                       cubec_value_t value) {
+  switch (value->type->kind) {
+  case CUBEC_TYPE_KIND_UINT8:
+    return *(uint8_t *)value->data;
+  case CUBEC_TYPE_KIND_UINT16:
+    return *(uint16_t *)value->data;
+  case CUBEC_TYPE_KIND_UINT32:
+    return *(uint32_t *)value->data;
+  case CUBEC_TYPE_KIND_UINT64:
+    return *(uint64_t *)value->data;
+  default:
+    break;
+  }
+  return 0;
+}
+cubec_value_t cubec_context_dec_value(cubec_context_t self,
+                                      cubec_value_t value) {
+  if (!value->is_mutable) {
+    return cubec_context_create_error(self, "Expression is not assignable");
+  }
+  if (value->type->kind < CUBEC_TYPE_KIND_INT8 &&
+      value->type->kind > CUBEC_TYPE_KIND_UINT64) {
+    char *type_name = cubec_context_type_to_string(self, value->type);
+    cubec_value_t err = cubec_context_create_error(
+        self, "Cannot increment value of type '%s'", type_name);
+    cubec_allocator_free(self->allocator, type_name);
+    return err;
+  }
+  switch (value->type->kind) {
+  case CUBEC_TYPE_KIND_INT8:
+    (*(int8_t *)(value->data))--;
+    break;
+  case CUBEC_TYPE_KIND_INT16:
+    (*(int16_t *)(value->data))--;
+    break;
+  case CUBEC_TYPE_KIND_INT32:
+    (*(int32_t *)(value->data))--;
+    break;
+  case CUBEC_TYPE_KIND_INT64:
+    (*(int64_t *)(value->data))--;
+    break;
+  case CUBEC_TYPE_KIND_UINT8:
+    (*(uint8_t *)(value->data))--;
+    break;
+  case CUBEC_TYPE_KIND_UINT16:
+    (*(uint16_t *)(value->data))--;
+    break;
+  case CUBEC_TYPE_KIND_UINT32:
+    (*(uint32_t *)(value->data))--;
+    break;
+  case CUBEC_TYPE_KIND_UINT64:
+    (*(uint64_t *)(value->data))--;
+    break;
+  default: {
+    char *type_name = cubec_context_type_to_string(self, value->type);
+    cubec_value_t err = cubec_context_create_error(
+        self, "Cannot increment value of type '%s'", type_name);
+    cubec_allocator_free(self->allocator, type_name);
+    return err;
+  }
+  }
+  return self->value_undefined;
 }

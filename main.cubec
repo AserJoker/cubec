@@ -1,1 +1,7 @@
-const a:int8,b:str,c:[*] const int16;
+test "prefix increment" {
+    print(++a);
+    print(a);
+}
+test "string" {
+    print("Hello world");
+}

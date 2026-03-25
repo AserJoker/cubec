@@ -49,7 +49,7 @@ char *cubec_location_get_line(cubec_location_t self,
     col--;
   }
   const char *end = begin;
-  while (end != self.end.offset) {
+  while (*end) {
     if (*end == '\n' || *end == '\r') {
       break;
     }

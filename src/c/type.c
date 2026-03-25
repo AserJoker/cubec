@@ -1,115 +1,147 @@
 #include "c/type.h"
 #include "ast/node.h"
-#include "ast/node_type.h"
-#include "ast/ptr_declarator.h"
-#include "c/ptr_declarator.h"
-#include "c/writer.h"
-#include "core/allocator.h"
+#include "core/list.h"
 #include "core/string.h"
+#include "engine/array.h"
 #include "engine/context.h"
+#include "engine/enum.h"
+#include "engine/function.h"
+#include "engine/ptr.h"
+#include "engine/result.h"
+#include "engine/struct.h"
 #include "engine/type.h"
+#include "engine/union.h"
 #include "engine/value.h"
+#include "eval/type.h"
+#include <inttypes.h>
+#include <stdio.h>
+
+static void cubec_type_to_c(cubec_context_t ctx, cubec_type_t type,
+                            cubec_string_t *output) {
+  switch (type->kind) {
+  case CUBEC_TYPE_KIND_VOID:
+    cubec_string_concat(*output, ctx->allocator, "void");
+    break;
+  case CUBEC_TYPE_KIND_INT8:
+    cubec_string_concat(*output, ctx->allocator, "int8_t");
+    break;
+  case CUBEC_TYPE_KIND_INT16:
+    cubec_string_concat(*output, ctx->allocator, "int16_t");
+    break;
+  case CUBEC_TYPE_KIND_INT32:
+    cubec_string_concat(*output, ctx->allocator, "int32_t");
+    break;
+  case CUBEC_TYPE_KIND_INT64:
+    cubec_string_concat(*output, ctx->allocator, "int64_t");
+    break;
+  case CUBEC_TYPE_KIND_UINT8:
+    cubec_string_concat(*output, ctx->allocator, "uint8_t");
+    break;
+  case CUBEC_TYPE_KIND_UINT16:
+    cubec_string_concat(*output, ctx->allocator, "uint16_t");
+    break;
+  case CUBEC_TYPE_KIND_UINT32:
+    cubec_string_concat(*output, ctx->allocator, "uint32_t");
+    break;
+  case CUBEC_TYPE_KIND_UINT64:
+    cubec_string_concat(*output, ctx->allocator, "uint64_t");
+    break;
+  case CUBEC_TYPE_KIND_FLOAT32:
+    cubec_string_concat(*output, ctx->allocator, "float");
+    break;
+  case CUBEC_TYPE_KIND_FLOAT64:
+    cubec_string_concat(*output, ctx->allocator, "double");
+    break;
+  case CUBEC_TYPE_KIND_BOOLEAN:
+    cubec_string_concat(*output, ctx->allocator, "bool");
+    break;
+  case CUBEC_TYPE_KIND_STR:
+    cubec_string_concat(*output, ctx->allocator, "const char *");
+    break;
+  case CUBEC_TYPE_KIND_OPAQUE:
+    cubec_string_concat(*output, ctx->allocator, "void *");
+    break;
+  case CUBEC_TYPE_KIND_PTR:
+  case CUBEC_TYPE_KIND_PTR_ARRAY: {
+    cubec_ptr_meta_t meta = type->meta;
+    cubec_type_to_c(ctx, meta->type, output);
+    cubec_string_concat(*output, ctx->allocator, " *");
+    if (!meta->is_mutable) {
+      cubec_string_concat(*output, ctx->allocator, " const");
+    }
+    if (!meta->is_volatile) {
+      cubec_string_concat(*output, ctx->allocator, " volatile");
+    }
+    break;
+  }
+  case CUBEC_TYPE_KIND_ARRAY: {
+    cubec_array_meta_t meta = type->meta;
+    cubec_type_to_c(ctx, meta->type, output);
+    char num[32];
+    sprintf(num, "[%" PRIuPTR "]", meta->len);
+    cubec_string_concat(*output, ctx->allocator, num);
+    break;
+  }
+  case CUBEC_TYPE_KIND_ENUM: {
+    cubec_enum_meta_t meta = type->meta;
+    cubec_type_to_c(ctx, meta->type, output);
+    break;
+  }
+  case CUBEC_TYPE_KIND_STRUCT: {
+    cubec_struct_meta_t meta = type->meta;
+    cubec_string_concat(*output, ctx->allocator, "struct ");
+    // TODO:
+    break;
+  }
+  case CUBEC_TYPE_KIND_UNION: {
+    cubec_union_meta_t meta = type->meta;
+    cubec_string_concat(*output, ctx->allocator, "union ");
+    // TODO:
+    break;
+  }
+  case CUBEC_TYPE_KIND_RESULT: {
+    cubec_result_meta_t meta = type->meta;
+    cubec_string_concat(*output, ctx->allocator, "struct ");
+    // TODO:
+    break;
+  }
+  case CUBEC_TYPE_KIND_FUNCTION: {
+    cubec_function_meta_t meta = type->meta;
+    cubec_type_to_c(ctx, meta->type, output);
+    cubec_string_concat(*output, ctx->allocator, " (*)");
+    cubec_string_concat(*output, ctx->allocator, "(");
+    cubec_ast_list_node_t list = (cubec_ast_list_node_t)meta->args;
+    if (!cubec_list_get_size(list->items)) {
+      cubec_string_concat(*output, ctx->allocator, "void");
+    } else {
+      for (cubec_list_node_t it = cubec_list_get_first(list->items);
+           it != cubec_list_get_end(list->items);
+           it = cubec_list_node_next(it)) {
+        if (it != cubec_list_get_first(list->items)) {
+          cubec_string_concat(*output, ctx->allocator, ", ");
+        }
+        cubec_type_t arg_type = cubec_list_node_get(it);
+        cubec_type_to_c(ctx, arg_type, output);
+      }
+      if (meta->is_variadic) {
+        cubec_string_concat(*output, ctx->allocator, ", ...");
+      }
+    }
+    cubec_string_concat(*output, ctx->allocator, ")");
+    break;
+  }
+  default:
+    break;
+  }
+}
 
 cubec_value_t cubec_c_write_type(cubec_context_t self, cubec_ast_type_t type,
                                  const char *filename, cubec_string_t *output) {
-  if (type->expression->type == CUBEC_NODE_TYPE_LITERAL_IDENTIFIER) {
-    char *name = cubec_location_get(type->expression->loc, self->allocator);
-    cubec_value_t val = cubec_context_load_value(self, name);
-    if (!val) {
-      cubec_value_t err =
-          cubec_c_create_error(self, type->expression, filename,
-                               "Use of undeclared identifier '%s'", name);
-      cubec_allocator_free(self->allocator, name);
-      return err;
-    }
-    if (val->type->kind == CUBEC_TYPE_KIND_ERROR) {
-      cubec_allocator_free(self->allocator, name);
-      return val;
-    }
-    if (val->type->kind != CUBEC_TYPE_KIND_TYPE) {
-      cubec_value_t err = cubec_c_create_error(self, type->expression, filename,
-                                               "'%s' is not type", name);
-      cubec_allocator_free(self->allocator, name);
-      return err;
-    }
-    cubec_type_t t = *(cubec_type_t *)val->data;
-    switch (t->kind) {
-    case CUBEC_TYPE_KIND_VOID:
-      cubec_string_concat(*output, self->allocator, "void");
-      break;
-    case CUBEC_TYPE_KIND_INT8:
-      cubec_string_concat(*output, self->allocator, "int8_t");
-      break;
-    case CUBEC_TYPE_KIND_INT16:
-      cubec_string_concat(*output, self->allocator, "int16_t");
-      break;
-    case CUBEC_TYPE_KIND_INT32:
-      cubec_string_concat(*output, self->allocator, "int32_t");
-      break;
-    case CUBEC_TYPE_KIND_INT64:
-      cubec_string_concat(*output, self->allocator, "int64_t");
-      break;
-    case CUBEC_TYPE_KIND_UINT8:
-      cubec_string_concat(*output, self->allocator, "uint8_t");
-      break;
-    case CUBEC_TYPE_KIND_UINT16:
-      cubec_string_concat(*output, self->allocator, "uint16_t");
-      break;
-    case CUBEC_TYPE_KIND_UINT32:
-      cubec_string_concat(*output, self->allocator, "uint32_t");
-      break;
-    case CUBEC_TYPE_KIND_UINT64:
-      cubec_string_concat(*output, self->allocator, "uint64_t");
-      break;
-    case CUBEC_TYPE_KIND_FLOAT32:
-      cubec_string_concat(*output, self->allocator, "float");
-      break;
-    case CUBEC_TYPE_KIND_FLOAT64:
-      cubec_string_concat(*output, self->allocator, "double");
-      break;
-    case CUBEC_TYPE_KIND_BOOLEAN:
-      cubec_string_concat(*output, self->allocator, "bool");
-      break;
-    case CUBEC_TYPE_KIND_STR:
-      cubec_string_concat(*output, self->allocator, "const char*");
-      break;
-    case CUBEC_TYPE_KIND_OPAQUE:
-      cubec_string_concat(*output, self->allocator, "void*");
-      break;
-    case CUBEC_TYPE_KIND_STRUCT:
-      cubec_string_concat(*output, self->allocator, "struct ");
-      cubec_string_concat(*output, self->allocator, name);
-      break;
-    case CUBEC_TYPE_KIND_UNION:
-      cubec_string_concat(*output, self->allocator, "union ");
-      cubec_string_concat(*output, self->allocator, name);
-      break;
-    case CUBEC_TYPE_KIND_PTR:
-    case CUBEC_TYPE_KIND_PTR_ARRAY:
-    case CUBEC_TYPE_KIND_ARRAY:
-    case CUBEC_TYPE_KIND_ENUM:
-    case CUBEC_TYPE_KIND_RESULT:
-    case CUBEC_TYPE_KIND_FUNCTION:
-      cubec_string_concat(*output, self->allocator, name);
-      break;
-    default: {
-      cubec_value_t err = cubec_c_create_error(self, type->expression, filename,
-                                               "'%s' is not type", name);
-      cubec_allocator_free(self->allocator, name);
-      return err;
-    }
-    }
-    cubec_allocator_free(self->allocator, name);
-    return self->value_undefined;
-  } else if (type->expression->type == CUBEC_NODE_TYPE_PTR_DECLARATOR) {
-    return cubec_c_write_ptr_declarator(
-        self, (cubec_ast_ptr_declarator_t)type->expression, filename, output);
-  } else if (type->expression->type == CUBEC_NODE_TYPE_STRUCT_DECLARATOR) {
-  } else if (type->expression->type == CUBEC_NODE_TYPE_ARRAY_DECLARATOR) {
-  } else if (type->expression->type == CUBEC_NODE_TYPE_ENUM_DECLARATOR) {
-  } else {
-    return cubec_c_create_error(self, &type->super, filename,
-                                "Invalid type expression");
+  cubec_value_t t = cubec_eval_type(self, type, filename);
+  if (t->type->kind == CUBEC_TYPE_KIND_ERROR) {
+    return t;
   }
+  cubec_type_t tt = *(cubec_type_t *)t->data;
+  cubec_type_to_c(self, tt, output);
   return self->value_undefined;
 }

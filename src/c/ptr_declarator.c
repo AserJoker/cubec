@@ -2,7 +2,6 @@
 #include "ast/node_type.h"
 #include "ast/type.h"
 #include "c/type.h"
-#include "c/writer.h"
 #include <string.h>
 
 cubec_value_t cubec_c_write_ptr_declarator(cubec_context_t self,
@@ -23,14 +22,14 @@ cubec_value_t cubec_c_write_ptr_declarator(cubec_context_t self,
     }
     cubec_ast_node_t dec = cubec_list_node_get(it);
     if (dec->type != CUBEC_NODE_TYPE_LITERAL_IDENTIFIER) {
-      return cubec_c_create_error(self, dec, filename,
-                                  "Invalid pointer decorator");
+      return cubec_context_create_compile_error(self, dec, filename,
+                                                "Invalid pointer decorator");
     }
     char *d = cubec_location_get(dec->loc, self->allocator);
     if (strcmp(d, "const") != 0 && strcmp(d, "volatite") != 0) {
       cubec_allocator_free(self->allocator, d);
-      return cubec_c_create_error(self, dec, filename,
-                                  "Unknown pointer decorator");
+      return cubec_context_create_compile_error(self, dec, filename,
+                                                "Unknown pointer decorator");
     }
     cubec_string_concat(*output, self->allocator, d);
     cubec_allocator_free(self->allocator, d);
