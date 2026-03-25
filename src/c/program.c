@@ -14,7 +14,12 @@
 #include "engine/value.h"
 #include "eval/statement_test.h"
 #include <inttypes.h>
+#ifdef _WIN32
+#include <io.h>
+#define access _access
+#else
 #include <unistd.h>
+#endif
 
 cubec_value_t cubec_c_write_program(cubec_context_t self,
                                     cubec_ast_program_t program,
