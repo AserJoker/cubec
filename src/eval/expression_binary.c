@@ -2,6 +2,8 @@
 #include "ast/expression_binary.h"
 #include "ast/expression_compute_member.h"
 #include "ast/expression_member.h"
+#include "ast/literal_identifier.h"
+#include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/location.h"
@@ -13,6 +15,68 @@
 #include "eval/literal_identifier.h"
 #include <inttypes.h>
 #include <stdbool.h>
+static bool cubec_is_reference(cubec_ast_node_t node) {
+  if (node->type == CUBEC_NODE_TYPE_EXPRESSION_BINARY) {
+    cubec_ast_expression_binary_t binary = (cubec_ast_expression_binary_t)node;
+    if (!binary->left && binary->right &&
+        cubec_location_is(binary->opt->loc, "*")) {
+      return true;
+    }
+  }
+  return false;
+}
+static cubec_value_t
+cubec_eval_prefix_member_inc(cubec_context_t ctx,
+                             cubec_ast_expression_member_t member,
+                             const char *filename) {}
+static cubec_value_t cubec_eval_prefix_compute_member_inc(
+    cubec_context_t ctx, cubec_ast_expression_compute_member_t member,
+    const char *filename) {}
+
+static cubec_value_t
+cubec_eval_prefix_reference_inc(cubec_context_t ctx,
+                                cubec_ast_expression_binary_t ref,
+                                const char *filename) {}
+
+static cubec_value_t cubec_eval_prefix_inc(cubec_context_t ctx,
+                                           cubec_ast_expression_binary_t expr,
+                                           const char *filename) {
+  cubec_ast_node_t node = expr->right;
+  if (node->type == CUBEC_NODE_TYPE_LITERAL_IDENTIFIER) {
+    cubec_value_t value = cubec_eval_literal_identifier(
+        ctx, (cubec_ast_literal_identifier_t)node, filename);
+    if (value->type->kind == CUBEC_TYPE_KIND_ERROR) {
+      return value;
+    }
+    cubec_value_t err = cubec_context_inc_value(ctx, value);
+    if (err->type->kind == CUBEC_TYPE_KIND_ERROR) {
+      return cubec_context_create_compile_error(ctx, &expr->super, filename,
+                                                *(const char **)err->data);
+    }
+    return value;
+  } else if (node->type == CUBEC_NODE_TYPE_EXPRESSION_MEMBER) {
+    return cubec_eval_prefix_member_inc(
+        ctx, (cubec_ast_expression_member_t)node, filename);
+  } else if (node->type == CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
+    return cubec_eval_prefix_compute_member_inc(
+        ctx, (cubec_ast_expression_compute_member_t)node, filename);
+  } else if (cubec_is_reference(node)) {
+    return cubec_eval_prefix_reference_inc(
+        ctx, (cubec_ast_expression_binary_t)node, filename);
+  } else {
+    return cubec_context_create_compile_error(ctx, &expr->super, filename,
+                                              "Expression is not assignable");
+  }
+}
+static cubec_value_t cubec_eval_prefix_dec(cubec_context_t ctx,
+                                           cubec_ast_expression_binary_t expr,
+                                           const char *filename) {}
+static cubec_value_t cubec_eval_postfix_inc(cubec_context_t ctx,
+                                            cubec_ast_expression_binary_t expr,
+                                            const char *filename) {}
+static cubec_value_t cubec_eval_postfix_dec(cubec_context_t ctx,
+                                            cubec_ast_expression_binary_t expr,
+                                            const char *filename) {}
 
 cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
                                            cubec_ast_expression_binary_t expr,
