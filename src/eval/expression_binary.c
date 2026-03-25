@@ -1,4 +1,5 @@
 #include "eval/expression_binary.h"
+#include "ast/expression_binary.h"
 #include "ast/expression_compute_member.h"
 #include "ast/expression_member.h"
 #include "ast/node_type.h"
@@ -29,6 +30,12 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
         if (value->type->kind == CUBEC_TYPE_KIND_ERROR) {
           return value;
         }
+      } else if (expr->right->type == CUBEC_NODE_TYPE_EXPRESSION_BINARY &&
+                 !((cubec_ast_expression_binary_t)expr->right)->left &&
+                 cubec_location_is(
+                     ((cubec_ast_expression_binary_t)expr->right)->opt->loc,
+                     "*")) {
+        // TODO: ref
       } else if (expr->right->type == CUBEC_NODE_TYPE_EXPRESSION_MEMBER) {
         cubec_ast_expression_member_t member =
             (cubec_ast_expression_member_t)expr->right;
@@ -130,6 +137,12 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
                                                       filename, msg);
           }
         }
+      } else if (expr->right->type == CUBEC_NODE_TYPE_EXPRESSION_BINARY &&
+                 !((cubec_ast_expression_binary_t)expr->right)->left &&
+                 cubec_location_is(
+                     ((cubec_ast_expression_binary_t)expr->right)->opt->loc,
+                     "*")) {
+        // TODO: ref
       }
       cubec_allocator_free(ctx->allocator, field);
       return res;
@@ -201,6 +214,12 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
         return cubec_context_create_compile_error(ctx, &member->super, filename,
                                                   msg);
       }
+    } else if (expr->left->type == CUBEC_NODE_TYPE_EXPRESSION_BINARY &&
+               !((cubec_ast_expression_binary_t)expr->left)->left &&
+               cubec_location_is(
+                   ((cubec_ast_expression_binary_t)expr->left)->opt->loc,
+                   "*")) {
+      // TODO: ref
     } else {
       return cubec_context_create_compile_error(ctx, &expr->super, filename,
                                                 "Expression is not assignable");
@@ -251,6 +270,12 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
                                                     msg);
         }
       }
+    } else if (expr->left->type == CUBEC_NODE_TYPE_EXPRESSION_BINARY &&
+               !((cubec_ast_expression_binary_t)expr->left)->left &&
+               cubec_location_is(
+                   ((cubec_ast_expression_binary_t)expr->left)->opt->loc,
+                   "*")) {
+      // TODO: ref
     }
     cubec_allocator_free(ctx->allocator, field);
     return res;
