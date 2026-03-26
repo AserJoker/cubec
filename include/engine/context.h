@@ -139,6 +139,10 @@ cubec_value_t cubec_context_create_compile_error(cubec_context_t self,
                                                  cubec_ast_node_t node,
                                                  const char *filename,
                                                  const char *fmt, ...);
+cubec_value_t cubec_context_convert_compile_error(cubec_context_t self,
+                                                  cubec_ast_node_t node,
+                                                  const char *filename,
+                                                  cubec_value_t error);
 cubec_value_t cubec_context_create_result(cubec_context_t self,
                                           cubec_type_t type,
                                           cubec_value_t value,
@@ -178,7 +182,18 @@ cubec_value_t cubec_context_dec_value(cubec_context_t self,
 int64_t cubec_context_value_to_int64(cubec_context_t self, cubec_value_t value);
 uint64_t cubec_context_value_to_uint64(cubec_context_t self,
                                        cubec_value_t value);
-
+cubec_value_t cubec_context_read_ptr(cubec_context_t ctx, cubec_value_t value);
+cubec_value_t cubec_context_write_ptr(cubec_context_t ctx, cubec_value_t ptr,
+                                      cubec_value_t value);
+cubec_value_t cubec_context_to_boolean(cubec_context_t ctx,
+                                       cubec_value_t value);
+cubec_value_t cubec_context_plus(cubec_context_t ctx, cubec_value_t value);
+cubec_value_t cubec_context_negtive(cubec_context_t ctx, cubec_value_t value);
+cubec_value_t cubec_context_typeof(cubec_context_t ctx, cubec_value_t value);
+cubec_value_t cubec_context_bitwise_not(cubec_context_t ctx,
+                                        cubec_value_t value);
+cubec_value_t cubec_context_logical_not(cubec_context_t ctx,
+                                        cubec_value_t value);
 #ifdef __cplusplus
 }
 #endif

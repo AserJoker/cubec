@@ -2,6 +2,7 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/list.h"
+#include "core/location.h"
 #include "engine/context.h"
 #include "engine/type.h"
 #include "engine/value.h"
@@ -13,6 +14,11 @@ cubec_value_t cubec_eval_expression_call(cubec_context_t ctx,
   if (expr->callee->type == CUBEC_NODE_TYPE_EXPRESSION_MEMBER) {
     return ctx->value_undefined;
   } else {
+    if (expr->callee->type == CUBEC_NODE_TYPE_LITERAL_IDENTIFIER) {
+      if (cubec_location_is(expr->callee->loc, "typeof")) {
+      } else if (cubec_location_is(expr->callee->loc, "sizeof")) {
+      }
+    }
     cubec_value_t callee = cubec_eval_expression(ctx, expr->callee, filename);
     if (callee->type->kind == CUBEC_TYPE_KIND_ERROR) {
       return callee;

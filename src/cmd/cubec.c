@@ -7,6 +7,7 @@
 #include "core/string.h"
 #include "engine/array.h"
 #include "engine/context.h"
+#include "engine/enum.h"
 #include "engine/function.h"
 #include "engine/module.h"
 #include "engine/struct.h"
@@ -149,7 +150,15 @@ void print_value(cubec_context_t ctx, cubec_value_t value) {
   }
   case CUBEC_TYPE_KIND_ENUM: {
     char *type_name = cubec_context_type_to_string(ctx, value->type);
+    uint32_t idx = *(uint32_t *)value->data;
+    cubec_enum_meta_t meta = value->type->meta;
+    cubec_enum_option_t opt = cubec_array_get_index(meta->options, idx);
     printf("%s{", type_name);
+    printf("%s(", opt->name);
+    cubec_value_t val =
+        cubec_context_create_value(ctx, meta->type, false, opt->value, NULL);
+    print_value(ctx, val);
+    printf(")");
     printf("}");
     cubec_allocator_free(ctx->allocator, type_name);
     break;
@@ -197,7 +206,7 @@ cubec_value_t print(cubec_context_t ctx, size_t argc, cubec_value_t argv[]) {
 int main(int argc, char *argv[]) {
   cubec_allocator_t allocator = cubec_create_allocator(NULL);
   cubec_context_t ctx = cubec_create_context(allocator);
-  cubec_context_create_int8(ctx, 0, true, "a");
+  cubec_context_create_int32(ctx, 0, true, "a");
   cubec_type_t print_fn_t =
       cubec_context_create_function_type(ctx, ctx->type_void, 0, NULL, true);
   cubec_context_create_native(ctx, print_fn_t, print, false, "print");

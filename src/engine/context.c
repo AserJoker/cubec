@@ -638,8 +638,8 @@ char *cubec_context_type_to_string(cubec_context_t self, cubec_type_t type) {
     len += 32;
     char *s = cubec_allocator_alloc(self->allocator, len, NULL);
     size_t offset = 0;
-    strcpy(&s[offset], "func ");
-    offset += 5;
+    strcpy(&s[offset], "func");
+    offset += 4;
     s[offset++] = '(';
     for (size_t idx = 0; idx < cubec_array_get_size(arr); idx++) {
       if (idx != 0) {
@@ -649,6 +649,12 @@ char *cubec_context_type_to_string(cubec_context_t self, cubec_type_t type) {
       char *arg = cubec_array_get_index(arr, idx);
       strcpy(&s[offset], arg);
       offset += strlen(arg);
+    }
+    if (meta->is_variadic) {
+      strcpy(&s[offset], "...");
+      offset += 3;
+    } else if (!cubec_array_get_size(arr)) {
+      strcpy(&s[offset], "void");
     }
     s[offset++] = ')';
     s[offset++] = ':';
@@ -718,6 +724,17 @@ cubec_value_t cubec_context_create_compile_error(cubec_context_t self,
   return err;
 }
 
+cubec_value_t cubec_context_convert_compile_error(cubec_context_t self,
+                                                  cubec_ast_node_t node,
+                                                  const char *filename,
+                                                  cubec_value_t error) {
+  if (error->type->kind != CUBEC_TYPE_KIND_ERROR) {
+    return cubec_context_create_compile_error(self, node, filename,
+                                              "Invalid compile error");
+  }
+  return cubec_context_create_compile_error(self, node, filename,
+                                            *(const char **)error->data);
+}
 cubec_value_t cubec_context_create_value(cubec_context_t self,
                                          cubec_type_t type, bool is_mutable,
                                          const void *data, const char *name) {
@@ -1239,4 +1256,173 @@ cubec_value_t cubec_context_dec_value(cubec_context_t self,
   }
   }
   return self->value_undefined;
+}
+cubec_value_t cubec_context_read_ptr(cubec_context_t ctx, cubec_value_t value) {
+  if (value->type->kind != CUBEC_TYPE_KIND_PTR) {
+    return cubec_context_create_error(ctx,
+                                      "Indirection requires pointer operand");
+  }
+  cubec_ptr_meta_t ptr = value->type->meta;
+  return cubec_context_create_value(ctx, ptr->type, value->is_mutable,
+                                    *(void **)value->data, NULL);
+}
+cubec_value_t cubec_context_write_ptr(cubec_context_t ctx, cubec_value_t ptr,
+                                      cubec_value_t value) {
+  if (value->type->kind != CUBEC_TYPE_KIND_PTR) {
+    return cubec_context_create_error(ctx,
+                                      "Indirection requires pointer operand");
+  }
+  if (!ptr->is_mutable) {
+    return cubec_context_create_error(ctx,
+                                      "Read-only variable is not assignable");
+  }
+  cubec_ptr_meta_t meta = ptr->type->meta;
+  if (!cubec_context_check_type(ctx, meta->type, value->type)) {
+    return cubec_context_create_error(ctx,
+                                      "Incompatible pointer types assigning");
+  }
+  memcpy(*(void **)ptr->data, value->data, meta->type->size);
+  return ctx->value_undefined;
+}
+cubec_value_t cubec_context_to_boolean(cubec_context_t ctx,
+                                       cubec_value_t value) {
+  switch (value->type->kind) {
+  case CUBEC_TYPE_KIND_BOOLEAN:
+    return value;
+  case CUBEC_TYPE_KIND_INT8:
+    return cubec_context_create_boolean(ctx, *(int8_t *)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_INT16:
+    return cubec_context_create_boolean(ctx, *(int16_t *)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_INT32:
+    return cubec_context_create_boolean(ctx, *(int32_t *)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_INT64:
+    return cubec_context_create_boolean(ctx, *(int64_t *)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_UINT8:
+    return cubec_context_create_boolean(ctx, *(uint8_t *)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_UINT16:
+    return cubec_context_create_boolean(ctx, *(uint16_t *)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_UINT32:
+    return cubec_context_create_boolean(ctx, *(uint32_t *)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_UINT64:
+    return cubec_context_create_boolean(ctx, *(uint64_t *)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_FLOAT32:
+    return cubec_context_create_boolean(ctx, *(float *)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_FLOAT64:
+    return cubec_context_create_boolean(ctx, *(double *)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_STR:
+    return cubec_context_create_boolean(ctx, true, false, NULL);
+  case CUBEC_TYPE_KIND_OPAQUE:
+    return cubec_context_create_boolean(ctx, *(void **)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_PTR:
+    return cubec_context_create_boolean(ctx, *(void **)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_PTR_ARRAY:
+    return cubec_context_create_boolean(ctx, *(void **)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_RESULT:
+    return cubec_context_create_boolean(
+        ctx, ((cubec_result_data_t)value->data)->flag, false, NULL);
+  default:
+    break;
+  }
+  return cubec_context_create_error(ctx, "Cannot convert value to boolean");
+}
+
+cubec_value_t cubec_context_plus(cubec_context_t ctx, cubec_value_t value) {
+  if (value->type->kind >= 0 && value->type->kind <= CUBEC_TYPE_KIND_FLOAT64) {
+    return value;
+  }
+  return cubec_context_create_error(
+      ctx, "Invalid argument type to unary expression");
+}
+cubec_value_t cubec_context_negtive(cubec_context_t ctx, cubec_value_t value) {
+  switch (value->type->kind) {
+  case CUBEC_TYPE_KIND_INT8:
+    return cubec_context_create_int8(ctx, -*(int8_t *)value->data, false, NULL);
+  case CUBEC_TYPE_KIND_INT16:
+    return cubec_context_create_int16(ctx, -*(int16_t *)value->data, false,
+                                      NULL);
+  case CUBEC_TYPE_KIND_INT32:
+    return cubec_context_create_int32(ctx, -*(int32_t *)value->data, false,
+                                      NULL);
+  case CUBEC_TYPE_KIND_INT64:
+    return cubec_context_create_int64(ctx, -*(int64_t *)value->data, false,
+                                      NULL);
+  case CUBEC_TYPE_KIND_UINT8:
+    return cubec_context_create_uint8(ctx, -*(uint8_t *)value->data, false,
+                                      NULL);
+  case CUBEC_TYPE_KIND_UINT16:
+    return cubec_context_create_uint16(ctx, -*(uint16_t *)value->data, false,
+                                       NULL);
+  case CUBEC_TYPE_KIND_UINT32:
+    return cubec_context_create_uint32(ctx, -*(uint32_t *)value->data, false,
+                                       NULL);
+  case CUBEC_TYPE_KIND_UINT64:
+    return cubec_context_create_uint64(ctx, -*(uint64_t *)value->data, false,
+                                       NULL);
+  case CUBEC_TYPE_KIND_FLOAT32:
+    return cubec_context_create_float32(ctx, -*(float *)value->data, false,
+                                        NULL);
+  case CUBEC_TYPE_KIND_FLOAT64:
+    return cubec_context_create_float64(ctx, -*(double *)value->data, false,
+                                        NULL);
+  default:
+    break;
+  }
+  return cubec_context_create_error(
+      ctx, "Invalid argument type to unary expression");
+}
+cubec_value_t cubec_context_typeof(cubec_context_t ctx, cubec_value_t value) {
+  return cubec_context_create_type_value(ctx, value->type, false, NULL);
+}
+cubec_value_t cubec_context_bitwise_not(cubec_context_t ctx,
+                                        cubec_value_t value) {
+  switch (value->type->kind) {
+  case CUBEC_TYPE_KIND_INT8:
+    return cubec_context_create_int8(ctx, ~*(int8_t *)value->data, false, NULL);
+  case CUBEC_TYPE_KIND_INT16:
+    return cubec_context_create_int16(ctx, ~*(int16_t *)value->data, false,
+                                      NULL);
+  case CUBEC_TYPE_KIND_INT32:
+    return cubec_context_create_int32(ctx, ~*(int32_t *)value->data, false,
+                                      NULL);
+  case CUBEC_TYPE_KIND_INT64:
+    return cubec_context_create_int64(ctx, ~*(int64_t *)value->data, false,
+                                      NULL);
+  case CUBEC_TYPE_KIND_UINT8:
+    return cubec_context_create_uint8(ctx, ~*(uint8_t *)value->data, false,
+                                      NULL);
+  case CUBEC_TYPE_KIND_UINT16:
+    return cubec_context_create_uint16(ctx, ~*(uint16_t *)value->data, false,
+                                       NULL);
+  case CUBEC_TYPE_KIND_UINT32:
+    return cubec_context_create_uint32(ctx, ~*(uint32_t *)value->data, false,
+                                       NULL);
+  case CUBEC_TYPE_KIND_UINT64:
+    return cubec_context_create_uint64(ctx, ~*(uint64_t *)value->data, false,
+                                       NULL);
+  default:
+    break;
+  }
+  return cubec_context_create_error(
+      ctx, "Invalid argument type to unary expression");
+}
+cubec_value_t cubec_context_logical_not(cubec_context_t ctx,
+                                        cubec_value_t value) {
+  value = cubec_context_to_boolean(ctx, value);
+  if (value->type->kind == CUBEC_TYPE_KIND_ERROR) {
+    return value;
+  }
+  return cubec_context_create_boolean(ctx, !*(bool *)value->data, false, NULL);
 }

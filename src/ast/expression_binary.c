@@ -1,6 +1,5 @@
 #include "ast/expression_binary.h"
 #include "ast/expression.h"
-#include "ast/literal_identifier.h"
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -709,9 +708,6 @@ cubec_ast_node_t cubec_read_ast_expression_binary_prefix(
   } else {
     node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
     if (!node->opt) {
-      node->opt = cubec_read_ast_literal_identifier(allocator, &current, end);
-    }
-    if (!node->opt) {
       goto onerror;
     }
     if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
@@ -727,8 +723,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_prefix(
       !cubec_location_is(node->opt->loc, "-") &&
       !cubec_location_is(node->opt->loc, "~") &&
       !cubec_location_is(node->opt->loc, "&") &&
-      !cubec_location_is(node->opt->loc, "*") &&
-      !cubec_location_is(node->opt->loc, "try")) {
+      !cubec_location_is(node->opt->loc, "*")) {
     goto onerror;
   }
 
