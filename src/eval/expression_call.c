@@ -35,7 +35,7 @@ cubec_value_t cubec_eval_expression_call(cubec_context_t ctx,
       if (arg->type->kind == CUBEC_TYPE_KIND_ERROR) {
         return arg;
       }
-      argv[idx++] = arg;
+      argv[idx] = arg;
     }
     cubec_value_t res = cubec_context_call(ctx, callee, argc, argv);
     if (res->type->kind == CUBEC_TYPE_KIND_ERROR) {

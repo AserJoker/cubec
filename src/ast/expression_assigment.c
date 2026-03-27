@@ -33,6 +33,7 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
     goto onerror;
   }
   if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
+    err = identifier;
     goto onerror;
   }
   cubec_ast_add_child(allocator, node, "identifier", identifier);

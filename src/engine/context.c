@@ -87,9 +87,9 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
   self->type_uint64 = cubec_context_create_type(
       self, CUBEC_TYPE_KIND_UINT64, sizeof(uint64_t), NULL, "uint64");
   self->type_float32 = cubec_context_create_type(
-      self, CUBEC_TYPE_KIND_UINT32, sizeof(uint32_t), NULL, "float32");
+      self, CUBEC_TYPE_KIND_FLOAT32, sizeof(float), NULL, "float32");
   self->type_float64 = cubec_context_create_type(
-      self, CUBEC_TYPE_KIND_UINT64, sizeof(uint64_t), NULL, "float64");
+      self, CUBEC_TYPE_KIND_FLOAT64, sizeof(double), NULL, "float64");
   self->type_boolean = cubec_context_create_type(self, CUBEC_TYPE_KIND_BOOLEAN,
                                                  sizeof(bool), NULL, "boolean");
   self->type_str = cubec_context_create_type(self, CUBEC_TYPE_KIND_STR,
@@ -149,7 +149,8 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
   if (node->type == CUBEC_NODE_TYPE_ERROR) {
     cubec_ast_error_t error = (cubec_ast_error_t)node;
     cubec_value_t err = cubec_context_create_error(
-        self, "Failed to compile %s: %s", name, error->message);
+        self, "Failed to compile %s:%" PRIuPTR ":%" PRIuPTR " %s", name,
+        node->loc.end.line, node->loc.end.column, error->message);
     cubec_allocator_free(self->allocator, node);
     return err;
   }
@@ -310,13 +311,13 @@ cubec_value_t cubec_context_create_uint64(cubec_context_t self, uint64_t value,
 }
 cubec_value_t cubec_context_create_float32(cubec_context_t self, float value,
                                            bool is_mutable, const char *name) {
-  return cubec_context_create_value(self, self->type_uint64, is_mutable, &value,
-                                    name);
+  return cubec_context_create_value(self, self->type_float32, is_mutable,
+                                    &value, name);
 }
 cubec_value_t cubec_context_create_float64(cubec_context_t self, double value,
                                            bool is_mutable, const char *name) {
-  return cubec_context_create_value(self, self->type_uint64, is_mutable, &value,
-                                    name);
+  return cubec_context_create_value(self, self->type_float64, is_mutable,
+                                    &value, name);
 }
 cubec_value_t cubec_context_create_boolean(cubec_context_t self, bool value,
                                            bool is_mutable, const char *name) {
