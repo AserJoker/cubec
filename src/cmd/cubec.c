@@ -1,9 +1,6 @@
-#include "ast/node.h"
-#include "ast/program.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/path.h"
-#include "core/position.h"
 #include "core/string.h"
 #include "engine/array.h"
 #include "engine/context.h"
@@ -41,16 +38,6 @@ char *read(cubec_allocator_t allocator, const char *fullname) {
   return source;
 }
 
-cubec_ast_node_t compile(cubec_allocator_t allocator, const char *filename,
-                         const char *source) {
-  cubec_position_t position = {
-      .column = 1,
-      .line = 1,
-      .offset = source,
-  };
-
-  return cubec_read_ast_program(allocator, &position, source + strlen(source));
-}
 void print_value(cubec_context_t ctx, cubec_value_t value) {
   switch (value->type->kind) {
   case CUBEC_TYPE_KIND_BOOLEAN:
@@ -210,7 +197,6 @@ int main(int argc, char *argv[]) {
   cubec_type_t print_fn_t =
       cubec_context_create_function_type(ctx, ctx->type_void, 0, NULL, true);
   cubec_context_create_native(ctx, print_fn_t, print, false, "print");
-
   char *filename = absolute(allocator, "./main.cubec");
   cubec_value_t err = cubec_context_load_module(ctx, filename);
   if (err->type == ctx->type_error) {
@@ -221,8 +207,8 @@ int main(int argc, char *argv[]) {
     const char *dst = cubec_string_get(mod->data);
     printf("%s\n", dst);
   }
-  cubec_allocator_free(allocator, ctx);
   cubec_allocator_free(allocator, filename);
+  cubec_allocator_free(allocator, ctx);
   cubec_delete_allocator(allocator);
   return 0;
 }

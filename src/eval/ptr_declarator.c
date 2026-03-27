@@ -1,18 +1,17 @@
 #include "eval/ptr_declarator.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "ast/type.h"
-#include "core/list.h"
+#include "core/array.h"
 #include "core/location.h"
+#include "core/map.h"
 #include "engine/context.h"
 #include "engine/type.h"
 #include "eval/type.h"
 cubec_value_t cubec_eval_ptr_declarator(cubec_context_t ctx,
-                                        cubec_ast_ptr_declarator_t ptr,
+                                        cubec_ast_node_t ptr,
                                         const char *filename) {
-
-  cubec_value_t base =
-      cubec_eval_type(ctx, (cubec_ast_type_t)ptr->type, filename);
+  cubec_ast_node_t type_node = cubec_map_get(ptr->children, "type", NULL);
+  cubec_value_t base = cubec_eval_type(ctx, type_node, filename);
   if (base->type->kind == CUBEC_TYPE_KIND_ERROR) {
     return base;
   }
@@ -21,10 +20,10 @@ cubec_value_t cubec_eval_ptr_declarator(cubec_context_t ctx,
   bool is_volatile = false;
   bool mask_mutable = false;
   bool mask_volatile = false;
-  cubec_ast_list_node_t list = (cubec_ast_list_node_t)ptr->decorators;
-  for (cubec_list_node_t it = cubec_list_get_first(list->items);
-       it != cubec_list_get_end(list->items); it = cubec_list_node_next(it)) {
-    cubec_ast_node_t dec = cubec_list_node_get(it);
+  cubec_ast_node_t decorators =
+      cubec_map_get(ptr->children, "decorators", NULL);
+  for (size_t idx = 0; idx < cubec_array_get_size(decorators->items); idx++) {
+    cubec_ast_node_t dec = cubec_array_get_index(decorators->items, idx);
     if (dec->type != CUBEC_NODE_TYPE_LITERAL_IDENTIFIER) {
       return cubec_context_create_compile_error(ctx, dec, filename,
                                                 "Unknown pointer decorator");
@@ -46,14 +45,15 @@ cubec_value_t cubec_eval_ptr_declarator(cubec_context_t ctx,
     }
   }
   cubec_type_t type = NULL;
-  if (cubec_location_is(ptr->kind->loc, "[*]")) {
+  cubec_ast_node_t kind = cubec_map_get(ptr->children, "kind", NULL);
+  if (cubec_location_is(kind->loc, "[*]")) {
     type = cubec_context_create_ptr_array_type(ctx, base_type, is_mutable,
                                                is_volatile);
-  } else if (cubec_location_is(ptr->kind->loc, "*")) {
+  } else if (cubec_location_is(kind->loc, "*")) {
     type =
         cubec_context_create_ptr_type(ctx, base_type, is_mutable, is_volatile);
   } else {
-    return cubec_context_create_compile_error(ctx, ptr->kind, filename,
+    return cubec_context_create_compile_error(ctx, kind, filename,
                                               "Unknown pointer kind");
   }
   return cubec_context_create_type_value(ctx, type, false, NULL);

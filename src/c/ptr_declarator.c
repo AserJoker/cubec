@@ -1,26 +1,27 @@
 #include "c/ptr_declarator.h"
+#include "ast/node.h"
 #include "ast/node_type.h"
-#include "ast/type.h"
 #include "c/type.h"
+#include "core/array.h"
+#include "core/map.h"
 #include <string.h>
 
 cubec_value_t cubec_c_write_ptr_declarator(cubec_context_t self,
-                                           cubec_ast_ptr_declarator_t ptr,
+                                           cubec_ast_node_t ptr,
                                            const char *filename,
                                            cubec_string_t *output) {
-  cubec_value_t err =
-      cubec_c_write_type(self, (cubec_ast_type_t)ptr->type, filename, output);
+  cubec_ast_node_t type = cubec_map_get(ptr->children, "type", NULL);
+  cubec_value_t err = cubec_c_write_type(self, type, filename, output);
   if (err->type->kind == CUBEC_TYPE_KIND_ERROR) {
     return err;
   }
   cubec_string_concat(*output, self->allocator, "*");
-  cubec_ast_list_node_t list = (cubec_ast_list_node_t)ptr->decorators;
-  for (cubec_list_node_t it = cubec_list_get_first(list->items);
-       it != cubec_list_get_end(list->items); it = cubec_list_node_next(it)) {
-    if (it != cubec_list_get_first(list->items)) {
+  cubec_ast_node_t list = cubec_map_get(ptr->children, "decorators", NULL);
+  for (size_t idx = 0; idx < cubec_array_get_size(list->items); idx++) {
+    if (idx != 0) {
       cubec_string_concat(*output, self->allocator, " ");
     }
-    cubec_ast_node_t dec = cubec_list_node_get(it);
+    cubec_ast_node_t dec = cubec_array_get_index(list->items, idx);
     if (dec->type != CUBEC_NODE_TYPE_LITERAL_IDENTIFIER) {
       return cubec_context_create_compile_error(self, dec, filename,
                                                 "Invalid pointer decorator");

@@ -6,30 +6,13 @@
 #include "core/allocator.h"
 #include "core/position.h"
 
-static void cubec_ast_expression_template_generator_dispose(
-    cubec_ast_expression_template_generator_t self,
-    cubec_allocator_t allocator) {
-  cubec_allocator_free(allocator, self->temp);
-  cubec_allocator_free(allocator, self->args);
-  cubec_ast_node_dispose(allocator, &self->super);
-}
-cubec_ast_expression_template_generator_t
-cubec_create_ast_expression_template_generator(cubec_allocator_t allocator) {
-  cubec_ast_expression_template_generator_t self = cubec_allocator_alloc(
-      allocator, sizeof(struct _cubec_ast_expression_template_generator_t),
-      (cubec_dispose_fn_t)cubec_ast_expression_template_generator_dispose);
-  cubec_ast_node_initialize(allocator, &self->super);
-  self->super.type = CUBEC_NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR;
-  cubec_ast_set_field(self, allocator, temp);
-  cubec_ast_set_field(self, allocator, args);
-  self->args = cubec_create_ast_list_node(allocator);
-  return self;
-}
-
 cubec_ast_node_t cubec_read_ast_expression_template_generator(
     cubec_allocator_t allocator, cubec_position_t *position, const char *end) {
-  cubec_ast_expression_template_generator_t node =
-      cubec_create_ast_expression_template_generator(allocator);
+  cubec_ast_node_t node = cubec_create_ast_node(
+      allocator, CUBEC_NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR);
+  cubec_ast_node_t args =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  cubec_ast_add_child(allocator, node, "args", args);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
   if (*current.offset != '@') {
@@ -80,7 +63,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
         err = item;
         goto onerror;
       }
-      cubec_ast_list_node_append(node->args, allocator, item);
+      cubec_ast_add_item(allocator, args, item);
       err = cubec_ast_skip_all(allocator, &current, end);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         goto onerror;
@@ -112,12 +95,11 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
         "Invalid or unexpected template generator expression");
     goto onerror;
   }
-  node->super.loc.begin = *position;
-  node->super.loc.end = current;
+  node->loc.begin = *position;
+  node->loc.end = current;
   *position = current;
-  cubec_ast_set_parent(node->temp, &node->super);
-  cubec_ast_set_parent(node->args, &node->super);
-  return &node->super;
+
+  return node;
 onerror:
   cubec_allocator_free(allocator, node);
   return err;

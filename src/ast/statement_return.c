@@ -6,27 +6,12 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
-static void
-cubec_ast_statement_return_dispose(cubec_ast_statement_return_t self,
-                                   cubec_allocator_t allocator) {
-  cubec_allocator_free(allocator, self->value);
-  cubec_ast_node_dispose(allocator, &self->super);
-}
-cubec_ast_statement_return_t
-cubec_create_ast_statement_return(cubec_allocator_t allocator) {
-  cubec_ast_statement_return_t self = cubec_allocator_alloc(
-      allocator, sizeof(struct _cubec_ast_statement_return_t),
-      (cubec_dispose_fn_t)cubec_ast_statement_return_dispose);
-  cubec_ast_node_initialize(allocator, &self->super);
-  self->super.type = CUBEC_NODE_TYPE_STATEMENT_RETURN;
-  cubec_ast_set_field(self, allocator, value);
-  return self;
-}
+
 cubec_ast_node_t cubec_read_ast_statement_return(cubec_allocator_t allocator,
                                                  cubec_position_t *position,
                                                  const char *end) {
-  cubec_ast_statement_return_t node =
-      cubec_create_ast_statement_return(allocator);
+  cubec_ast_node_t node =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_RETURN);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
   cubec_ast_node_t token =
@@ -53,7 +38,7 @@ cubec_ast_node_t cubec_read_ast_statement_return(cubec_allocator_t allocator,
       err = value;
       goto onerror;
     }
-    node->value = value;
+    cubec_ast_add_child(allocator, node, "value", value);
   }
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
@@ -66,11 +51,11 @@ cubec_ast_node_t cubec_read_ast_statement_return(cubec_allocator_t allocator,
   }
   current.offset++;
   current.column++;
-  node->super.loc.begin = *position;
-  node->super.loc.end = current;
+  node->loc.begin = *position;
+  node->loc.end = current;
   *position = current;
-  cubec_ast_set_parent(node->value, &node->super);
-  return &node->super;
+
+  return node;
 onerror:
   cubec_allocator_free(allocator, node);
   return err;

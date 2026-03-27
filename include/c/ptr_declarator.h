@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 cubec_value_t cubec_c_write_ptr_declarator(cubec_context_t self,
-                                           cubec_ast_ptr_declarator_t dec,
+                                           cubec_ast_node_t dec,
                                            const char *filename,
                                            cubec_string_t *output);
 #ifdef __cplusplus

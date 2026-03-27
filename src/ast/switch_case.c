@@ -7,32 +7,19 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
-static void cubec_ast_switch_case_dispose(cubec_ast_switch_case_t self,
-                                          cubec_allocator_t allocator) {
-  cubec_allocator_free(allocator, self->condition);
-  cubec_allocator_free(allocator, self->statements);
-  cubec_ast_node_dispose(allocator, &self->super);
-}
-cubec_ast_switch_case_t
-cubec_create_ast_switch_case(cubec_allocator_t allocator) {
-  cubec_ast_switch_case_t self =
-      cubec_allocator_alloc(allocator, sizeof(struct _cubec_ast_switch_case_t),
-                            (cubec_dispose_fn_t)cubec_ast_switch_case_dispose);
-  cubec_ast_node_initialize(allocator, &self->super);
-  self->super.type = CUBEC_NODE_TYPE_SWITCH_CASE;
-  cubec_ast_set_field(self, allocator, condition);
-  cubec_ast_set_field(self, allocator, statements);
-  self->statements = cubec_create_ast_list_node(allocator);
-  return self;
-}
+
 cubec_ast_node_t cubec_read_ast_switch_case(cubec_allocator_t allocator,
                                             cubec_position_t *position,
                                             const char *end) {
-  cubec_ast_switch_case_t node = cubec_create_ast_switch_case(allocator);
+  cubec_ast_node_t node =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_SWITCH_CASE);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
   cubec_ast_node_t token =
       cubec_read_ast_literal_identifier(allocator, &current, end);
+  cubec_ast_node_t statements =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  cubec_ast_add_child(allocator, node, "statements", statements);
   if (!token) {
     goto onerror;
   }
@@ -57,7 +44,7 @@ cubec_ast_node_t cubec_read_ast_switch_case(cubec_allocator_t allocator,
       err = condition;
       goto onerror;
     }
-    node->condition = condition;
+    cubec_ast_add_child(allocator, node, "condition", condition);
   } else if (cubec_location_is(token->loc, "default")) {
     cubec_allocator_free(allocator, token);
   } else {
@@ -115,18 +102,17 @@ cubec_ast_node_t cubec_read_ast_switch_case(cubec_allocator_t allocator,
       err = statement;
       goto onerror;
     }
-    cubec_ast_list_node_append(node->statements, allocator, statement);
+    cubec_ast_add_item(allocator, statements, statement);
     err = cubec_ast_skip_all(allocator, &current, end);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
     }
   }
-  node->super.loc.begin = *position;
-  node->super.loc.end = current;
+  node->loc.begin = *position;
+  node->loc.end = current;
   *position = current;
-  cubec_ast_set_parent(node->condition, &node->super);
-  cubec_ast_set_parent(node->statements, &node->super);
-  return &node->super;
+
+  return node;
 onerror:
   cubec_allocator_free(allocator, node);
   return err;

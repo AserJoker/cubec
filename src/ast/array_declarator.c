@@ -8,31 +8,11 @@
 #include "core/location.h"
 #include "core/position.h"
 
-static void
-cubec_ast_array_declarator_dispose(cubec_ast_array_declarator_t self,
-                                   cubec_allocator_t allocator) {
-  cubec_allocator_free(allocator, self->length);
-  cubec_allocator_free(allocator, self->item_type);
-  cubec_ast_node_dispose(allocator, &self->super);
-}
-
-cubec_ast_array_declarator_t
-cubec_create_ast_array_declarator(cubec_allocator_t allocator) {
-  cubec_ast_array_declarator_t self = cubec_allocator_alloc(
-      allocator, sizeof(struct _cubec_ast_array_declarator_t),
-      (cubec_dispose_fn_t)cubec_ast_array_declarator_dispose);
-  cubec_ast_node_initialize(allocator, &self->super);
-  self->super.type = CUBEC_NODE_TYPE_ARRAY_DECLARATOR;
-  cubec_ast_init_field(&self->super, allocator, "length", &self->length);
-  cubec_ast_init_field(&self->super, allocator, "item_type", &self->item_type);
-  return self;
-}
-
 cubec_ast_node_t cubec_read_ast_array_declarator(cubec_allocator_t allocator,
                                                  cubec_position_t *position,
                                                  const char *end) {
-  cubec_ast_array_declarator_t node =
-      cubec_create_ast_array_declarator(allocator);
+  cubec_ast_node_t node =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_ARRAY_DECLARATOR);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
   if (*current.offset != '[') {
@@ -61,7 +41,7 @@ cubec_ast_node_t cubec_read_ast_array_declarator(cubec_allocator_t allocator,
     cubec_allocator_free(allocator, length);
     goto onerror;
   }
-  node->length = length;
+  cubec_ast_add_child(allocator, node, "length", length);
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
@@ -83,13 +63,11 @@ cubec_ast_node_t cubec_read_ast_array_declarator(cubec_allocator_t allocator,
     err = item_type;
     goto onerror;
   }
-  node->item_type = item_type;
-  node->super.loc.begin = *position;
-  node->super.loc.end = current;
+  cubec_ast_add_child(allocator, node, "item_type", item_type);
+  node->loc.begin = *position;
+  node->loc.end = current;
   *position = current;
-  cubec_ast_set_parent(node->item_type, &node->super);
-  cubec_ast_set_parent(node->length, &node->super);
-  return &node->super;
+  return node;
 onerror:
   cubec_allocator_free(allocator, node);
   return err;

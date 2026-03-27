@@ -6,27 +6,8 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/location.h"
+#include "core/map.h"
 #include "core/position.h"
-static void
-cubec_ast_expression_assigment_dispose(cubec_ast_expression_assigment_t self,
-                                       cubec_allocator_t allocator) {
-  cubec_allocator_free(allocator, self->identifier);
-  cubec_allocator_free(allocator, self->opt);
-  cubec_allocator_free(allocator, self->value);
-  cubec_ast_node_dispose(allocator, &self->super);
-}
-cubec_ast_expression_assigment_t
-cubec_create_ast_expression_assigment(cubec_allocator_t allocator) {
-  cubec_ast_expression_assigment_t node = cubec_allocator_alloc(
-      allocator, sizeof(struct _cubec_ast_expression_assigment_t),
-      (cubec_dispose_fn_t)cubec_ast_expression_assigment_dispose);
-  cubec_ast_node_initialize(allocator, &node->super);
-  cubec_ast_set_field(node, allocator, identifier);
-  cubec_ast_set_field(node, allocator, value);
-  cubec_ast_set_field(node, allocator, opt);
-  node->super.type = CUBEC_NODE_TYPE_EXPRESSION_ASSIGMENT;
-  return node;
-}
 
 cubec_ast_node_t cubec_read_ast_expression_assigment(
     cubec_allocator_t allocator, cubec_position_t *position, const char *end) {
@@ -34,28 +15,30 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
       "=",  "+=", "-=", "*=",  "/=",  "%=",  ">>=", "<<=",
       "&=", "|=", "^=", "&&=", "||=", "??=", NULL,
   };
-  cubec_ast_expression_assigment_t node = NULL;
+  cubec_ast_node_t node =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_ASSIGMENT);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_expression_assigment(allocator);
+  cubec_ast_node_t identifier = NULL;
   if (*current.offset == '*') {
-    node->identifier =
+    cubec_ast_node_t identifier =
         cubec_read_ast_expression_binary_prefix(allocator, position, end);
-    if (!node->identifier) {
+    if (identifier) {
       goto onerror;
     }
   } else {
-    node->identifier = cubec_read_ast_expression18(allocator, &current, end);
+    identifier = cubec_read_ast_expression18(allocator, &current, end);
   }
-  if (!node->identifier) {
+  if (!identifier) {
     goto onerror;
   }
-  if (node->identifier->type == CUBEC_NODE_TYPE_ERROR) {
+  if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
-  if (node->identifier->type != CUBEC_NODE_TYPE_LITERAL_IDENTIFIER &&
-      node->identifier->type != CUBEC_NODE_TYPE_EXPRESSION_MEMBER &&
-      node->identifier->type != CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
+  cubec_ast_add_child(allocator, node, "identifier", identifier);
+  if (identifier->type != CUBEC_NODE_TYPE_LITERAL_IDENTIFIER &&
+      identifier->type != CUBEC_NODE_TYPE_EXPRESSION_MEMBER &&
+      identifier->type != CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end);
@@ -64,23 +47,26 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
   }
   cubec_allocator_free(allocator, err);
 
-  node->opt = cubec_read_ast_literal_symbol(allocator, &current, end);
-  if (!node->opt) {
+  cubec_ast_node_t opt =
+      cubec_read_ast_literal_symbol(allocator, &current, end);
+  if (!opt) {
     goto onerror;
   }
-  if (node->opt->type == CUBEC_NODE_TYPE_ERROR) {
-    err = node->opt;
-    node->opt = NULL;
+  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+    err = opt;
     goto onerror;
   }
+  cubec_ast_add_child(allocator, node, "opt", opt);
   size_t idx = 0;
   while (opts[idx] != NULL) {
-    if (cubec_location_is(node->opt->loc, opts[idx])) {
+    if (cubec_location_is(opt->loc, opts[idx])) {
       break;
     }
     idx++;
   }
   if (opts[idx] == NULL) {
+    err = cubec_map_move(node->children, "identifier", NULL);
+    *position = err->loc.end;
     goto onerror;
   }
 
@@ -89,25 +75,22 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
     return err;
   }
 
-  node->value = cubec_read_ast_expression2(allocator, &current, end);
-  if (!node->value) {
+  cubec_ast_node_t value = cubec_read_ast_expression2(allocator, &current, end);
+  if (!value) {
     err = cubec_create_ast_error(
         allocator, *position, current,
         "Invalid or unexpected token, missing initialize expression");
     goto onerror;
   }
-  if (node->value->type == CUBEC_NODE_TYPE_ERROR) {
-    err = node->value;
-    node->value = NULL;
+  if (value->type == CUBEC_NODE_TYPE_ERROR) {
+    err = value;
     goto onerror;
   }
-  node->super.loc.begin = *position;
-  node->super.loc.end = current;
+  cubec_ast_add_child(allocator, node, "value", value);
+  node->loc.begin = *position;
+  node->loc.end = current;
   *position = current;
-  cubec_ast_set_parent(node->identifier, &node->super);
-  cubec_ast_set_parent(node->opt, &node->super);
-  cubec_ast_set_parent(node->value, &node->super);
-  return &node->super;
+  return node;
 onerror:
   cubec_allocator_free(allocator, node);
   return err;

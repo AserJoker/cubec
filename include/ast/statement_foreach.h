@@ -5,15 +5,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef struct _cubec_ast_statement_foreach_t {
-  struct _cubec_ast_node_t super;
-  cubec_ast_node_t kind;
-  cubec_ast_node_t identifier;
-  cubec_ast_node_t expression;
-  cubec_ast_node_t body;
-} *cubec_ast_statement_foreach_t;
-cubec_ast_statement_foreach_t
-cubec_create_ast_statement_foreach(cubec_allocator_t allocator);
 cubec_ast_node_t cubec_read_ast_statement_foreach(cubec_allocator_t allocator,
                                                   cubec_position_t *position,
                                                   const char *end);

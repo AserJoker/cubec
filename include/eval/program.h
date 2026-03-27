@@ -6,8 +6,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-cubec_value_t cubec_eval_program(cubec_context_t ctx,
-                                 cubec_ast_program_t program,
+cubec_value_t cubec_eval_program(cubec_context_t ctx, cubec_ast_node_t program,
                                  const char *filename);
 #ifdef __cplusplus
 }

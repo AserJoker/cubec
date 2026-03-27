@@ -7,22 +7,6 @@
 #include <unicode/urename.h>
 #include <unicode/utypes.h>
 
-static void
-cubec_ast_literal_identifier_dispose(cubec_ast_literal_identifier_t self,
-                                     cubec_allocator_t allocator) {
-  cubec_ast_node_dispose(allocator, &self->super);
-}
-
-cubec_ast_literal_identifier_t
-cubec_create_ast_literal_identifier(cubec_allocator_t allocator) {
-  cubec_ast_literal_identifier_t identifier = cubec_allocator_alloc(
-      allocator, sizeof(struct _cubec_ast_literal_identifier_t),
-      (cubec_dispose_fn_t)cubec_ast_literal_identifier_dispose);
-  cubec_ast_node_initialize(allocator, &identifier->super);
-  identifier->super.type = CUBEC_NODE_TYPE_LITERAL_IDENTIFIER;
-  return identifier;
-}
-
 cubec_ast_node_t cubec_read_ast_literal_identifier(cubec_allocator_t allocator,
                                                    cubec_position_t *position,
                                                    const char *end) {
@@ -47,10 +31,10 @@ cubec_ast_node_t cubec_read_ast_literal_identifier(cubec_allocator_t allocator,
       break;
     }
   }
-  cubec_ast_literal_identifier_t identifier =
-      cubec_create_ast_literal_identifier(allocator);
-  identifier->super.loc.begin = *position;
-  identifier->super.loc.end = current;
+  cubec_ast_node_t identifier =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_IDENTIFIER);
+  identifier->loc.begin = *position;
+  identifier->loc.end = current;
   *position = current;
-  return &identifier->super;
+  return identifier;
 }

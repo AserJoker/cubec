@@ -1,20 +1,7 @@
 #include "ast/literal_char.h"
+#include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/position.h"
-static void cubec_ast_literal_char_dispose(cubec_ast_literal_char_t self,
-                                           cubec_allocator_t allocator) {
-  cubec_ast_node_dispose(allocator, &self->super);
-}
-
-cubec_ast_literal_char_t
-cubec_create_ast_literal_char(cubec_allocator_t allocator) {
-  cubec_ast_literal_char_t chr =
-      cubec_allocator_alloc(allocator, sizeof(struct _cubec_ast_literal_char_t),
-                            (cubec_dispose_fn_t)cubec_ast_literal_char_dispose);
-  cubec_ast_node_initialize(allocator, &chr->super);
-  chr->super.type = CUBEC_NODE_TYPE_LITERAL_CHAR;
-  return chr;
-}
 
 cubec_ast_node_t cubec_read_ast_literal_char(cubec_allocator_t allocator,
                                              cubec_position_t *position,
@@ -54,9 +41,10 @@ cubec_ast_node_t cubec_read_ast_literal_char(cubec_allocator_t allocator,
   }
   current.offset++;
   current.column++;
-  cubec_ast_literal_char_t chr = cubec_create_ast_literal_char(allocator);
-  chr->super.loc.begin = *position;
-  chr->super.loc.end = current;
+  cubec_ast_node_t chr =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_CHAR);
+  chr->loc.begin = *position;
+  chr->loc.end = current;
   *position = current;
-  return &chr->super;
+  return chr;
 }

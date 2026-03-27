@@ -7,10 +7,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-cubec_value_t
-cubec_c_write_variable_declarator(cubec_context_t self,
-                                  cubec_ast_variable_declarator_t dec,
-                                  const char *filename, cubec_string_t *output);
+cubec_value_t cubec_c_write_variable_declarator(cubec_context_t self,
+                                                cubec_ast_node_t dec,
+                                                const char *filename,
+                                                cubec_string_t *output);
 #ifdef __cplusplus
 }
 #endif

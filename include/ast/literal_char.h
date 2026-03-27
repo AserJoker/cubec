@@ -6,11 +6,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef struct _cubec_ast_literal_char_t {
-  struct _cubec_ast_node_t super;
-} *cubec_ast_literal_char_t;
-cubec_ast_literal_char_t
-cubec_create_ast_literal_char(cubec_allocator_t allocator);
 
 cubec_ast_node_t cubec_read_ast_literal_char(cubec_allocator_t allocator,
                                              cubec_position_t *position,

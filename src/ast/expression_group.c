@@ -4,11 +4,11 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/position.h"
-
 cubec_ast_node_t cubec_read_ast_expression_group(cubec_allocator_t allocator,
                                                  cubec_position_t *position,
                                                  const char *end) {
-  cubec_ast_node_t node = NULL;
+  cubec_ast_node_t node =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_GROUP);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
   if (*current.offset != '(') {
@@ -16,21 +16,22 @@ cubec_ast_node_t cubec_read_ast_expression_group(cubec_allocator_t allocator,
   }
   current.offset++;
   current.column++;
+
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
-  node = cubec_read_ast_expression(allocator, &current, end);
-  if (!node) {
+  cubec_ast_node_t body = cubec_read_ast_expression(allocator, &current, end);
+  if (!body) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Invalid group expression");
     goto onerror;
   }
-  if (node->type == CUBEC_NODE_TYPE_ERROR) {
-    err = node;
-    node = NULL;
+  if (body->type == CUBEC_NODE_TYPE_ERROR) {
+    err = body;
     goto onerror;
   }
+  cubec_ast_add_child(allocator, node, "body", body);
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
@@ -43,7 +44,10 @@ cubec_ast_node_t cubec_read_ast_expression_group(cubec_allocator_t allocator,
   }
   current.offset++;
   current.column++;
+  node->loc.begin = *position;
+  node->loc.end = current;
   *position = current;
+
   return node;
 onerror:
   cubec_allocator_free(allocator, node);

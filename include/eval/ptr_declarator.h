@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 cubec_value_t cubec_eval_ptr_declarator(cubec_context_t ctx,
-                                        cubec_ast_ptr_declarator_t type,
+                                        cubec_ast_node_t type,
                                         const char *filename);
 #ifdef __cpluplus
 }

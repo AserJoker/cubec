@@ -5,14 +5,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef struct _cubec_ast_function_argument_t {
-  struct _cubec_ast_node_t super;
-  cubec_ast_node_t identifier;
-  cubec_ast_node_t type;
-  cubec_ast_node_t decorators;
-} *cubec_ast_function_argument_t;
-cubec_ast_function_argument_t
-cubec_create_ast_function_argument(cubec_allocator_t allocator);
 cubec_ast_node_t cubec_read_ast_function_argument(cubec_allocator_t allocator,
                                                   cubec_position_t *position,
                                                   const char *end);

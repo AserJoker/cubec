@@ -6,10 +6,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-cubec_value_t
-cubec_eval_literal_identifier(cubec_context_t ctx,
-                              cubec_ast_literal_identifier_t identifier,
-                              const char *filename);
+cubec_value_t cubec_eval_literal_identifier(cubec_context_t ctx,
+                                            cubec_ast_node_t identifier,
+                                            const char *filename);
 #ifdef __cplusplus
 }
 #endif

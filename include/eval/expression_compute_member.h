@@ -6,10 +6,9 @@
 #ifdef __cpluplus
 extern "C" {
 #endif
-cubec_value_t
-cubec_eval_expression_compute_member(cubec_context_t ctx,
-                                     cubec_ast_expression_compute_member_t expr,
-                                     const char *filename);
+cubec_value_t cubec_eval_expression_compute_member(cubec_context_t ctx,
+                                                   cubec_ast_node_t expr,
+                                                   const char *filename);
 #ifdef __cpluplus
 }
 #endif

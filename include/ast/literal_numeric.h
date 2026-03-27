@@ -6,14 +6,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef struct _cubec_ast_literal_numeric_t {
-  struct _cubec_ast_node_t super;
-  bool is_float;
-  bool is_exp;
-  cubec_ast_node_t flag;
-} *cubec_ast_literal_numeric_t;
-cubec_ast_literal_numeric_t
-cubec_create_ast_literal_numeric(cubec_allocator_t allocator);
 
 cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
                                                 cubec_position_t *position,

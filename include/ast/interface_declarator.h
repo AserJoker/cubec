@@ -5,15 +5,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef struct _cubec_ast_interface_declarator_t {
-  struct _cubec_ast_node_t super;
-  cubec_ast_node_t args;
-  cubec_ast_node_t type;
-  cubec_ast_node_t ptr;
-} *cubec_ast_interface_declarator_t;
-
-cubec_ast_interface_declarator_t
-cubec_create_ast_interface_declarator(cubec_allocator_t allocator);
 
 cubec_ast_node_t cubec_read_ast_interface_declarator(
     cubec_allocator_t allocator, cubec_position_t *position, const char *end);

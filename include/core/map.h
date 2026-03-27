@@ -32,6 +32,7 @@ void *cubec_map_node_get_value(cubec_list_node_t self);
 void cubec_map_node_set_key(cubec_list_node_t self, cubec_map_t map, void *key);
 void cubec_map_node_set_value(cubec_list_node_t self, cubec_map_t map,
                               void *value);
+void *cubec_map_move(cubec_map_t map, const void *key, void *cmp_arg);
 #ifdef __cplusplus
 }
 #endif

@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
-                                           cubec_ast_expression_binary_t expr,
+                                           cubec_ast_node_t expr,
                                            const char *filename);
 #ifdef __cpluplus
 }

@@ -1,6 +1,6 @@
 #include "engine/context.h"
+#include "ast/node.h"
 #include "ast/node_type.h"
-#include "ast/program.h"
 #include "c/program.h"
 #include "core/allocator.h"
 #include "core/array.h"
@@ -141,13 +141,11 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
   fread(src, len, 1, fp);
   src[len] = 0;
   fclose(fp);
-  cubec_position_t pos = {
-      .column = 1,
-      .line = 1,
-      .offset = src,
+  cubec_visit_ast_fn_t visits[] = {
+      // TODO:
   };
   cubec_ast_node_t node =
-      cubec_read_ast_program(self->allocator, &pos, src + len);
+      cubec_read_ast_node(self->allocator, src, self, 0, NULL);
   if (node->type == CUBEC_NODE_TYPE_ERROR) {
     cubec_ast_error_t error = (cubec_ast_error_t)node;
     cubec_value_t err = cubec_context_create_error(
@@ -155,12 +153,13 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
     cubec_allocator_free(self->allocator, node);
     return err;
   }
+  char *json = cubec_ast_write_json(self->allocator, node);
+  printf("%s\n", json);
+  cubec_allocator_free(self->allocator, json);
   cubec_module_t mod = cubec_create_module(self->allocator, name);
   cubec_map_set(self->modules, mod->filename, mod, NULL);
   mod->node = node;
-  cubec_value_t err =
-      cubec_c_write_program(self, (cubec_ast_program_t)node, name, &mod->data);
-  return err;
+  return cubec_c_write_program(self, node, name, &mod->data);
 }
 cubec_module_t cubec_context_set_module(cubec_context_t self,
                                         cubec_module_t module) {

@@ -9,34 +9,16 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
-static void
-cubec_ast_function_argument_dispose(cubec_ast_function_argument_t self,
-                                    cubec_allocator_t allocator) {
-  cubec_allocator_free(allocator, self->decorators);
-  cubec_allocator_free(allocator, self->identifier);
-  cubec_allocator_free(allocator, self->type);
-  cubec_ast_node_dispose(allocator, &self->super);
-}
-cubec_ast_function_argument_t
-cubec_create_ast_function_argument(cubec_allocator_t allocator) {
-  cubec_ast_function_argument_t self = cubec_allocator_alloc(
-      allocator, sizeof(struct _cubec_ast_function_argument_t),
-      (cubec_dispose_fn_t)cubec_ast_function_argument_dispose);
-  cubec_ast_node_initialize(allocator, &self->super);
-  self->super.type = CUBEC_NODE_TYPE_FUNCTION_ARGUMENT;
-  cubec_ast_set_field(self, allocator, identifier);
-  cubec_ast_set_field(self, allocator, type);
-  cubec_ast_set_field(self, allocator, decorators);
-  self->decorators = cubec_create_ast_list_node(allocator);
-  return self;
-}
 cubec_ast_node_t cubec_read_ast_function_argument(cubec_allocator_t allocator,
                                                   cubec_position_t *position,
                                                   const char *end) {
-  cubec_ast_function_argument_t node =
-      cubec_create_ast_function_argument(allocator);
+  cubec_ast_node_t node =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_FUNCTION_ARGUMENT);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
+  cubec_ast_node_t decorators =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  cubec_ast_add_child(allocator, node, "decorators", decorators);
   for (;;) {
     cubec_ast_node_t decorator =
         cubec_read_ast_decorator(allocator, &current, end);
@@ -46,7 +28,7 @@ cubec_ast_node_t cubec_read_ast_function_argument(cubec_allocator_t allocator,
     if (decorator->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;
     }
-    cubec_ast_list_node_append(node->decorators, allocator, decorator);
+    cubec_ast_add_item(allocator, decorators, decorator);
     err = cubec_ast_skip_all(allocator, &current, end);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
@@ -69,7 +51,7 @@ cubec_ast_node_t cubec_read_ast_function_argument(cubec_allocator_t allocator,
     err = identifier;
     goto onerror;
   }
-  node->identifier = identifier;
+  cubec_ast_add_child(allocator, node, "identifier", identifier);
   if (identifier->type != CUBEC_NODE_TYPE_LITERAL_SYMBOL) {
     err = cubec_ast_skip_all(allocator, &current, end);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
@@ -96,15 +78,13 @@ cubec_ast_node_t cubec_read_ast_function_argument(cubec_allocator_t allocator,
       err = type;
       goto onerror;
     }
-    node->type = type;
+    cubec_ast_add_child(allocator, node, "type", type);
   }
-  node->super.loc.begin = *position;
-  node->super.loc.end = current;
+  node->loc.begin = *position;
+  node->loc.end = current;
   *position = current;
-  cubec_ast_set_parent(node->identifier, &node->super);
-  cubec_ast_set_parent(node->type, &node->super);
-  cubec_ast_set_parent(node->decorators, &node->super);
-  return &node->super;
+
+  return node;
 onerror:
   cubec_allocator_free(allocator, node);
   return err;

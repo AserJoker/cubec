@@ -1,12 +1,11 @@
 #include "c/program.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "ast/statement_import.h"
-#include "ast/statement_test.h"
 #include "c/statement_declaration.h"
 #include "core/allocator.h"
-#include "core/list.h"
+#include "core/array.h"
 #include "core/location.h"
+#include "core/map.h"
 #include "core/path.h"
 #include "engine/context.h"
 #include "engine/module.h"
@@ -22,19 +21,18 @@
 #endif
 
 cubec_value_t cubec_c_write_program(cubec_context_t self,
-                                    cubec_ast_program_t program,
+                                    cubec_ast_node_t program,
                                     const char *filename,
                                     cubec_string_t *output) {
   cubec_module_t module = cubec_context_get_module(self, filename);
   cubec_module_t parent = cubec_context_set_module(self, module);
-  cubec_ast_list_node_t list = (cubec_ast_list_node_t)program->statements;
-  cubec_list_t items = list->items;
-  cubec_list_node_t it = cubec_list_get_first(items);
-  while (it != cubec_list_get_end(items)) {
-    cubec_ast_node_t node = cubec_list_node_get(it);
+  cubec_ast_node_t list = cubec_map_get(program->children, "statements", NULL);
+  cubec_array_t items = list->items;
+  for (size_t idx = 0; idx < cubec_array_get_size(items); idx++) {
+    cubec_ast_node_t node = cubec_array_get_index(items, idx);
     if (node->type == CUBEC_NODE_TYPE_STATEMENT_IMPORT) {
-      cubec_ast_statement_import_t sts = (cubec_ast_statement_import_t)node;
-      char *src = cubec_location_get_str(sts->source->loc, self->allocator);
+      cubec_ast_node_t source = cubec_map_get(node->children, "source", NULL);
+      char *src = cubec_location_get_str(source->loc, self->allocator);
       cubec_module_t dep = NULL;
       dep = cubec_context_get_module(self, src);
       char *fullsrc = src;
@@ -74,21 +72,19 @@ cubec_value_t cubec_c_write_program(cubec_context_t self,
     } else if (node->type == CUBEC_NODE_TYPE_STATEMENT_STRUCT) {
     } else if (node->type == CUBEC_NODE_TYPE_STATEMENT_ENUM) {
     } else if (node->type == CUBEC_NODE_TYPE_STATEMENT_DECLARATION) {
-      cubec_value_t err = cubec_c_write_statement_declaration(
-          self, (cubec_ast_statement_declaration_t)node, filename, output);
+      cubec_value_t err =
+          cubec_c_write_statement_declaration(self, node, filename, output);
       if (err->type->kind == CUBEC_TYPE_KIND_ERROR) {
         return err;
       }
     } else if (node->type == CUBEC_NODE_TYPE_STATEMENT_TEST) {
-      cubec_eval_statement_test(self, (cubec_ast_statement_test_t)node,
-                                filename);
+      cubec_eval_statement_test(self, node, filename);
     } else {
       return cubec_context_create_compile_error(
           self, node, filename,
           "Top statement only support "
           "import,function,struct,enum,variable declaration,test");
     }
-    it = cubec_list_node_next(it);
   }
   cubec_context_set_module(self, parent);
   return self->value_undefined;

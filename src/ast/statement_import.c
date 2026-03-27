@@ -7,29 +7,12 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
-static void
-cubec_ast_statement_import_dispose(cubec_ast_statement_import_t self,
-                                   cubec_allocator_t allocator) {
-  cubec_allocator_free(allocator, self->identifier);
-  cubec_allocator_free(allocator, self->source);
-  cubec_ast_node_dispose(allocator, &self->super);
-}
-cubec_ast_statement_import_t
-cubec_create_ast_statement_import(cubec_allocator_t allocator) {
-  cubec_ast_statement_import_t statement = cubec_allocator_alloc(
-      allocator, sizeof(struct _cubec_ast_statement_import_t),
-      (cubec_dispose_fn_t)cubec_ast_statement_import_dispose);
-  cubec_ast_node_initialize(allocator, &statement->super);
-  statement->super.type = CUBEC_NODE_TYPE_STATEMENT_IMPORT;
-  cubec_ast_set_field(statement, allocator, source);
-  cubec_ast_set_field(statement, allocator, identifier);
-  return statement;
-}
+
 cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
                                                  cubec_position_t *position,
                                                  const char *end) {
   cubec_position_t current = *position;
-  cubec_ast_statement_import_t node = NULL;
+  cubec_ast_node_t node = NULL;
   cubec_ast_node_t err = NULL;
   cubec_ast_node_t identifier =
       cubec_read_ast_literal_identifier(allocator, &current, end);
@@ -45,7 +28,7 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
     return NULL;
   }
   cubec_allocator_free(allocator, identifier);
-  node = cubec_create_ast_statement_import(allocator);
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_IMPORT);
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
@@ -66,7 +49,7 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
-  node->identifier = identifier;
+  cubec_ast_add_child(allocator, node, "identifier", identifier);
   cubec_ast_node_t token =
       cubec_read_ast_literal_identifier(allocator, &current, end);
   if (!token) {
@@ -99,7 +82,7 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
     err = token;
     goto onerror;
   }
-  node->source = token;
+  cubec_ast_add_child(allocator, node, "source", token);
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
@@ -117,12 +100,11 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
     goto onerror;
   }
   cubec_allocator_free(allocator, token);
-  node->super.loc.begin = *position;
-  node->super.loc.end = current;
+  node->loc.begin = *position;
+  node->loc.end = current;
   *position = current;
-  cubec_ast_set_parent(node->source, &node->super);
-  cubec_ast_set_parent(node->identifier, &node->super);
-  return &node->super;
+
+  return node;
 onerror:
   cubec_allocator_free(allocator, node);
   return err;

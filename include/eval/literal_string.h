@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 cubec_value_t cubec_eval_literal_string(cubec_context_t ctx,
-                                        cubec_ast_literal_string_t str,
+                                        cubec_ast_node_t str,
                                         const char *filename);
 #ifdef __cplusplus
 }

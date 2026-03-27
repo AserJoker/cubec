@@ -1,6 +1,6 @@
 #include "c/type.h"
 #include "ast/node.h"
-#include "core/list.h"
+#include "core/array.h"
 #include "core/string.h"
 #include "engine/array.h"
 #include "engine/context.h"
@@ -110,17 +110,15 @@ static void cubec_type_to_c(cubec_context_t ctx, cubec_type_t type,
     cubec_type_to_c(ctx, meta->type, output);
     cubec_string_concat(*output, ctx->allocator, " (*)");
     cubec_string_concat(*output, ctx->allocator, "(");
-    cubec_ast_list_node_t list = (cubec_ast_list_node_t)meta->args;
-    if (!cubec_list_get_size(list->items)) {
+    cubec_array_t args = meta->args;
+    if (!cubec_array_get_size(args)) {
       cubec_string_concat(*output, ctx->allocator, "void");
     } else {
-      for (cubec_list_node_t it = cubec_list_get_first(list->items);
-           it != cubec_list_get_end(list->items);
-           it = cubec_list_node_next(it)) {
-        if (it != cubec_list_get_first(list->items)) {
+      for (size_t idx = 0; idx < cubec_array_get_size(args); idx++) {
+        if (idx != 0) {
           cubec_string_concat(*output, ctx->allocator, ", ");
         }
-        cubec_type_t arg_type = cubec_list_node_get(it);
+        cubec_type_t arg_type = cubec_array_get_index(args, idx);
         cubec_type_to_c(ctx, arg_type, output);
       }
       if (meta->is_variadic) {
@@ -135,7 +133,7 @@ static void cubec_type_to_c(cubec_context_t ctx, cubec_type_t type,
   }
 }
 
-cubec_value_t cubec_c_write_type(cubec_context_t self, cubec_ast_type_t type,
+cubec_value_t cubec_c_write_type(cubec_context_t self, cubec_ast_node_t type,
                                  const char *filename, cubec_string_t *output) {
   cubec_value_t t = cubec_eval_type(self, type, filename);
   if (t->type->kind == CUBEC_TYPE_KIND_ERROR) {

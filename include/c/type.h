@@ -7,7 +7,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-cubec_value_t cubec_c_write_type(cubec_context_t self, cubec_ast_type_t type,
+cubec_value_t cubec_c_write_type(cubec_context_t self, cubec_ast_node_t type,
                                  const char *filename, cubec_string_t *output);
 #ifdef __cplusplus
 }

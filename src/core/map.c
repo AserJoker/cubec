@@ -77,14 +77,20 @@ void cubec_map_set(cubec_map_t self, void *key, void *value, void *cmp_arg) {
   if (!it) {
     cubec_map_node_t node = cubec_create_map_node(self->allocator);
     node->key = key;
+    node->value = value;
     cubec_list_append(self->data, node);
     it = cubec_list_get_last(self->data);
+  } else {
+    cubec_map_node_t node = cubec_list_node_get(it);
+    if (node->key != key && self->autofree_key) {
+      cubec_allocator_free(self->allocator, node->key);
+    }
+    node->key = key;
+    if (node->value && node->value != value && self->autofree_value) {
+      cubec_allocator_free(self->allocator, node->value);
+    }
+    node->value = value;
   }
-  cubec_map_node_t node = cubec_list_node_get(it);
-  if (node->value && node->value != value && self->autofree_value) {
-    cubec_allocator_free(self->allocator, node->value);
-  }
-  node->value = value;
 }
 void *cubec_map_get(cubec_map_t self, const void *key, void *cmp_arg) {
   cubec_list_node_t it = cubec_map_find(self, key, cmp_arg);
@@ -165,4 +171,19 @@ void cubec_map_node_set_value(cubec_list_node_t self, cubec_map_t map,
     cubec_allocator_free(map->allocator, node->value);
   }
   node->value = value;
+}
+void *cubec_map_move(cubec_map_t map, const void *key, void *cmp_arg) {
+  cubec_list_node_t it = cubec_map_find(map, key, cmp_arg);
+  if (it) {
+    cubec_map_node_t node = cubec_list_node_move(it);
+    void *res = node->value;
+    node->value = NULL;
+    if (map->autofree_key) {
+      cubec_allocator_free(map->allocator, node->key);
+    }
+    cubec_allocator_free(map->allocator, node);
+    cubec_list_erase(map->data, it);
+    return res;
+  }
+  return NULL;
 }

@@ -3,50 +3,32 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
+#include "core/map.h"
 #include "core/position.h"
-static void
-cubec_ast_expression_comma_dispose(cubec_ast_expression_comma_t self,
-                                   cubec_allocator_t allocator) {
-  cubec_allocator_free(allocator, self->current);
-  cubec_allocator_free(allocator, self->next);
-  cubec_ast_node_dispose(allocator, &self->super);
-}
-cubec_ast_expression_comma_t
-cubec_create_ast_expression_comma(cubec_allocator_t allocator) {
-  cubec_ast_expression_comma_t node = cubec_allocator_alloc(
-      allocator, sizeof(struct _cubec_ast_expression_comma_t),
-      (cubec_dispose_fn_t)cubec_ast_expression_comma_dispose);
-  cubec_ast_node_initialize(allocator, &node->super);
-  cubec_ast_set_field(node, allocator, current);
-  cubec_ast_set_field(node, allocator, next);
-  node->super.type = CUBEC_NODE_TYPE_EXPRESSION_COMMON;
-  return node;
-}
 
 cubec_ast_node_t cubec_read_ast_expression_comma(cubec_allocator_t allocator,
                                                  cubec_position_t *position,
                                                  const char *end) {
   cubec_position_t current = *position;
-  cubec_ast_expression_comma_t node = NULL;
+  cubec_ast_node_t node = NULL;
   cubec_ast_node_t err = NULL;
-  node = cubec_create_ast_expression_comma(allocator);
-  node->current = cubec_read_ast_expression2(allocator, &current, end);
-  if (!node->current) {
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_COMMON);
+  cubec_ast_node_t curr = cubec_read_ast_expression2(allocator, &current, end);
+  if (!curr) {
     goto onerror;
   }
-  if (node->current->type == CUBEC_NODE_TYPE_ERROR) {
-    err = node->current;
-    node->current = NULL;
+  if (curr->type == CUBEC_NODE_TYPE_ERROR) {
+    err = curr;
     goto onerror;
   }
+  cubec_ast_add_child(allocator, node, "current", curr);
   err = cubec_ast_skip_all(allocator, &current, end);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
   cubec_allocator_free(allocator, err);
   if (*current.offset != ',') {
-    err = node->current;
-    node->current = NULL;
+    err = cubec_map_move(node->children, "current", NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -57,23 +39,21 @@ cubec_ast_node_t cubec_read_ast_expression_comma(cubec_allocator_t allocator,
     goto onerror;
   }
   cubec_allocator_free(allocator, err);
-  node->next = cubec_read_ast_expression1(allocator, &current, end);
-  if (!node->next) {
+  cubec_ast_node_t next = cubec_read_ast_expression1(allocator, &current, end);
+  if (!next) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Invalid comma expression");
     goto onerror;
   }
-  if (node->next->type == CUBEC_NODE_TYPE_ERROR) {
-    err = node->next;
-    node->next = NULL;
+  if (next->type == CUBEC_NODE_TYPE_ERROR) {
+    err = next;
     goto onerror;
   }
-  node->super.loc.begin = *position;
-  node->super.loc.end = current;
+  cubec_ast_add_child(allocator, node, "next", next);
+  node->loc.begin = *position;
+  node->loc.end = current;
   *position = current;
-  cubec_ast_set_parent(node->current, &node->super);
-  cubec_ast_set_parent(node->next, &node->super);
-  return &node->super;
+  return node;
 onerror:
   cubec_allocator_free(allocator, node);
   return err;
