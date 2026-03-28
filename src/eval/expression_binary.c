@@ -306,8 +306,12 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
                                                     value, false, NULL);
               }
             } else {
-              value = cubec_context_create_value(ctx, meta->type, false,
-                                                 &data->data, NULL);
+              if (meta->type->kind == CUBEC_TYPE_KIND_VOID) {
+                return ctx->value_undefined;
+              } else {
+                value = cubec_context_create_value(ctx, meta->type, false,
+                                                   &data->data, NULL);
+              }
             }
           }
         }
