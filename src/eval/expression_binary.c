@@ -4,7 +4,10 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/map.h"
+#include "core/position.h"
 #include "engine/context.h"
+#include "engine/function.h"
+#include "engine/result.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "eval/expression.h"
@@ -281,6 +284,33 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
       } else if (cubec_location_is(opt->loc, "sizeof")) {
         value =
             cubec_context_create_uint64(ctx, value->type->size, false, NULL);
+      } else if (cubec_location_is(opt->loc, "try")) {
+        if (!ctx->scope_value ||
+            ctx->scope_value->type->kind != CUBEC_TYPE_KIND_FUNCTION) {
+          value = cubec_context_create_error(
+              ctx, "try expression only used in function");
+        } else {
+          if (value->type->kind == CUBEC_TYPE_KIND_RESULT) {
+            cubec_result_data_t data = value->data;
+            cubec_result_meta_t meta = value->type->meta;
+            if (data->flag) {
+              cubec_value_t func = ctx->scope_value;
+              cubec_function_meta_t func_meta = func->data;
+              if (func_meta->type->kind == CUBEC_TYPE_KIND_RESULT) {
+                value = cubec_context_create_error(
+                    ctx, "try expression only used in Result function");
+              } else {
+                value = cubec_context_create_value(ctx, meta->error_type, false,
+                                                   &data->data, NULL);
+                value = cubec_context_create_result(ctx, func_meta->type, NULL,
+                                                    value, false, NULL);
+              }
+            } else {
+              value = cubec_context_create_value(ctx, meta->type, false,
+                                                 &data->data, NULL);
+            }
+          }
+        }
       } else {
         value = cubec_context_create_compile_error(ctx, expr, filename,
                                                    "Invalid operator");

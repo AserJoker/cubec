@@ -50,6 +50,8 @@ struct _cubec_context_t {
 
   cubec_eval_mode_t eval_mode;
   cubec_array_t visits;
+
+  cubec_value_t scope_value;
 };
 cubec_context_t cubec_create_context(cubec_allocator_t allocator);
 void cubec_add_visit(cubec_context_t self, cubec_visit_ast_fn_t visit);

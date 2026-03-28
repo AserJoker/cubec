@@ -98,6 +98,7 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
                                              sizeof(const char *), NULL, "str");
   self->type_opaque = cubec_context_create_type(self, CUBEC_TYPE_KIND_OPAQUE,
                                                 sizeof(void *), NULL, "opaque");
+  self->scope_value = NULL;
   return self;
 }
 void cubec_add_visit(cubec_context_t self, cubec_visit_ast_fn_t visit) {
@@ -1083,8 +1084,11 @@ cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
     if (!result) {
       cubec_function_desc_t desc = *(cubec_function_desc_t *)func->data;
       if (desc->kind == CUBEC_FUNCTION_NATIVE) {
+        cubec_value_t current = self->scope_value;
+        self->scope_value = func;
         result = desc->native(self, cubec_array_get_size(arguments),
                               cubec_array_get_data(arguments));
+        self->scope_value = current;
         if (!cubec_context_check_type(self, result->type, meta->type)) {
           char *dst_name = cubec_context_type_to_string(self, meta->type);
           char *src_name = cubec_context_type_to_string(self, result->type);
@@ -1095,7 +1099,10 @@ cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
           cubec_allocator_free(self->allocator, src_name);
         }
       } else if (desc->kind == CUBEC_FUNCTION_RUNTIME) {
+        cubec_value_t current = self->scope_value;
+        self->scope_value = func;
         result = cubec_context_create_value(self, meta->type, true, NULL, NULL);
+        self->scope_value = current;
       } else if (desc->kind == CUBEC_FUNCTION_COMPTIME) {
         // TODO: eval desc->node;
       }
