@@ -497,6 +497,7 @@ cubec_ast_node_t cubec_visit_ast_node(cubec_allocator_t allocator,
       item = cubec_visit_ast_node(allocator, item, ctx, num_visits, visits);
       if (item == node && item->changed) {
         it = cubec_map_get_first(node->children);
+        item->changed = false;
         continue;
       }
       if (item->changed) {
