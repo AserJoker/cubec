@@ -4,3 +4,5 @@ build
 *.dll
 *.exe
 *.pdb
+cubec
+cubec_test

@@ -1,7 +1,4 @@
 test "prefix increment" {
-    print(++a);
-    print(a);
-}
-test "string" {
-    print("Hello world");
+  (((a)))++;
+  print(a);
 }

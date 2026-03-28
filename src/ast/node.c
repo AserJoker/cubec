@@ -122,12 +122,14 @@ size_t cubec_ast_get_length(cubec_ast_node_t node) {
 void cubec_ast_set_item(cubec_allocator_t allocator, cubec_ast_node_t node,
                         size_t idx, cubec_ast_node_t item) {
   cubec_array_set(node->items, idx, item);
+  item->parent = node;
   node->changed = true;
 }
 void cubec_ast_set_child(cubec_allocator_t allocator, cubec_ast_node_t node,
                          const char *name, cubec_ast_node_t child) {
   cubec_map_set(node->children, cubec_create_cstring(allocator, name), child,
                 NULL);
+  child->parent = node;
   node->changed = true;
 }
 
@@ -474,7 +476,8 @@ cubec_ast_node_t cubec_visit_ast_node(cubec_allocator_t allocator,
     }
   }
   if (node->type == CUBEC_NODE_TYPE_LIST) {
-    for (size_t idx = 0; idx < cubec_array_get_size(node->items); idx++) {
+    size_t idx = 0;
+    while (idx < cubec_array_get_size(node->items)) {
       cubec_ast_node_t item = cubec_array_get(node->items, idx);
       item = cubec_visit_ast_node(allocator, item, ctx, num_visits, visits);
       if (item == node && item->changed) {
@@ -488,11 +491,11 @@ cubec_ast_node_t cubec_visit_ast_node(cubec_allocator_t allocator,
       if (item->type == CUBEC_NODE_TYPE_ERROR) {
         return item;
       }
+      idx++;
     }
   } else {
-    for (cubec_list_node_t it = cubec_map_get_first(node->children);
-         it != cubec_map_get_end(node->children);
-         it = cubec_list_node_next(it)) {
+    cubec_list_node_t it = cubec_map_get_first(node->children);
+    while (it != cubec_map_get_end(node->children)) {
       cubec_ast_node_t item = cubec_map_node_get_value(it);
       item = cubec_visit_ast_node(allocator, item, ctx, num_visits, visits);
       if (item == node && item->changed) {
@@ -506,6 +509,7 @@ cubec_ast_node_t cubec_visit_ast_node(cubec_allocator_t allocator,
       if (item->type == CUBEC_NODE_TYPE_ERROR) {
         return item;
       }
+      it = cubec_list_node_next(it);
     }
   }
   return node;
