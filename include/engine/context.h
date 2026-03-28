@@ -49,10 +49,10 @@ struct _cubec_context_t {
   cubec_value_t value_undefined;
 
   cubec_eval_mode_t eval_mode;
-  size_t num_visits;
-  cubec_visit_ast_fn_t *visits;
+  cubec_array_t visits;
 };
 cubec_context_t cubec_create_context(cubec_allocator_t allocator);
+void cubec_add_visit(cubec_context_t self, cubec_visit_ast_fn_t visit);
 cubec_module_t cubec_context_get_module(cubec_context_t self, const char *name);
 cubec_value_t cubec_context_load_module(cubec_context_t self, const char *name);
 cubec_module_t cubec_context_set_module(cubec_context_t self,

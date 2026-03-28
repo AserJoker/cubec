@@ -32,6 +32,7 @@ static void cubec_context_dispose(cubec_context_t self,
   cubec_allocator_free(allocator, self->modules);
   cubec_allocator_free(allocator, self->global);
   cubec_allocator_free(allocator, self->strings);
+  cubec_allocator_free(allocator, self->visits);
 }
 
 cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
@@ -55,8 +56,7 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
 
   self->root = cubec_create_scope(allocator, NULL);
   self->current = self->root;
-  self->num_visits = 0;
-  self->visits = NULL;
+  self->visits = cubec_create_array(allocator, NULL);
 
   self->module = cubec_create_module(allocator, NULL);
   self->global = self->module;
@@ -99,6 +99,9 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
   self->type_opaque = cubec_context_create_type(self, CUBEC_TYPE_KIND_OPAQUE,
                                                 sizeof(void *), NULL, "opaque");
   return self;
+}
+void cubec_add_visit(cubec_context_t self, cubec_visit_ast_fn_t visit) {
+  cubec_array_push(self->visits, visit);
 }
 
 cubec_type_t cubec_context_create_type(cubec_context_t self,
@@ -143,8 +146,9 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
   fread(src, len, 1, fp);
   src[len] = 0;
   fclose(fp);
-  cubec_ast_node_t node = cubec_read_ast_node(self->allocator, src, self,
-                                              self->num_visits, self->visits);
+  cubec_ast_node_t node = cubec_read_ast_node(
+      self->allocator, src, self, cubec_array_get_size(self->visits),
+      cubec_array_get_data(self->visits));
   if (node->type == CUBEC_NODE_TYPE_ERROR) {
     cubec_ast_error_t error = (cubec_ast_error_t)node;
     cubec_value_t err = cubec_context_create_error(

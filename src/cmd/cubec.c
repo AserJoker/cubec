@@ -1,5 +1,4 @@
 #include "ast/node.h"
-#include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/path.h"
@@ -13,6 +12,7 @@
 #include "engine/type.h"
 #include "engine/union.h"
 #include "engine/value.h"
+#include "pass/unwrap_group.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -191,31 +191,10 @@ cubec_value_t print(cubec_context_t ctx, size_t argc, cubec_value_t argv[]) {
   printf("\n");
   return ctx->value_undefined;
 }
-static cubec_ast_node_t cubec_visit_unwrap_group(cubec_allocator_t allocator,
-                                                 cubec_ast_node_t node,
-                                                 cubec_context_t ctx) {
-  if (node->type == CUBEC_NODE_TYPE_EXPRESSION_GROUP) {
-    cubec_ast_node_t parent = node->parent;
-    cubec_ast_node_t body = cubec_ast_move_child(allocator, node, "body");
-    if (parent->type == CUBEC_NODE_TYPE_LIST) {
-      size_t idx = cubec_ast_get_item_index(parent, node);
-      cubec_ast_set_item(allocator, parent, idx, body);
-    } else {
-      const char *name = cubec_ast_get_child_name(parent, node);
-      cubec_ast_set_child(allocator, parent, name, body);
-    }
-    return parent;
-  }
-  return node;
-}
-static cubec_visit_ast_fn_t visits[] = {
-    (cubec_visit_ast_fn_t)cubec_visit_unwrap_group,
-};
 int main(int argc, char *argv[]) {
   cubec_allocator_t allocator = cubec_create_allocator(NULL);
   cubec_context_t ctx = cubec_create_context(allocator);
-  ctx->num_visits = sizeof(visits) / sizeof(cubec_visit_ast_fn_t);
-  ctx->visits = visits;
+  cubec_add_visit(ctx, (cubec_visit_ast_fn_t)cubec_visit_unwrap_group);
   cubec_context_create_int32(ctx, 0, true, "a");
   cubec_type_t print_fn_t =
       cubec_context_create_function_type(ctx, ctx->type_void, 0, NULL, true);
