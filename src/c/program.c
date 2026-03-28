@@ -29,7 +29,7 @@ cubec_value_t cubec_c_write_program(cubec_context_t self,
   cubec_ast_node_t list = cubec_map_get(program->children, "statements", NULL);
   cubec_array_t items = list->items;
   for (size_t idx = 0; idx < cubec_array_get_size(items); idx++) {
-    cubec_ast_node_t node = cubec_array_get_index(items, idx);
+    cubec_ast_node_t node = cubec_array_get(items, idx);
     if (node->type == CUBEC_NODE_TYPE_STATEMENT_IMPORT) {
       cubec_ast_node_t source = cubec_map_get(node->children, "source", NULL);
       char *src = cubec_location_get_str(source->loc, self->allocator);

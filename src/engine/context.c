@@ -55,6 +55,8 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
 
   self->root = cubec_create_scope(allocator, NULL);
   self->current = self->root;
+  self->num_visits = 0;
+  self->visits = NULL;
 
   self->module = cubec_create_module(allocator, NULL);
   self->global = self->module;
@@ -141,11 +143,8 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
   fread(src, len, 1, fp);
   src[len] = 0;
   fclose(fp);
-  cubec_visit_ast_fn_t visits[] = {
-      // TODO:
-  };
-  cubec_ast_node_t node =
-      cubec_read_ast_node(self->allocator, src, self, 0, NULL);
+  cubec_ast_node_t node = cubec_read_ast_node(self->allocator, src, self,
+                                              self->num_visits, self->visits);
   if (node->type == CUBEC_NODE_TYPE_ERROR) {
     cubec_ast_error_t error = (cubec_ast_error_t)node;
     cubec_value_t err = cubec_context_create_error(
@@ -217,7 +216,7 @@ cubec_value_t cubec_context_add_struct_field(cubec_context_t self,
   }
   cubec_struct_meta_t meta = stru->meta;
   for (size_t idx = 0; idx < cubec_array_get_size(meta->fields); idx++) {
-    cubec_struct_field_t field = cubec_array_get_index(meta->fields, idx);
+    cubec_struct_field_t field = cubec_array_get(meta->fields, idx);
     if (strcmp(field->name, name) == 0) {
       return cubec_context_create_error(self, "Duplicate field %s in struct",
                                         name);
@@ -239,8 +238,7 @@ cubec_value_t cubec_context_add_struct_attribute(cubec_context_t self,
   }
   cubec_struct_meta_t meta = stru->meta;
   for (size_t idx = 0; idx < cubec_array_get_size(meta->attributes); idx++) {
-    cubec_struct_attribute_t attribute =
-        cubec_array_get_index(meta->attributes, idx);
+    cubec_struct_attribute_t attribute = cubec_array_get(meta->attributes, idx);
     if (strcmp(attribute->name, name) == 0) {
       return cubec_context_create_error(
           self, "Duplicate attribute %s in struct", name);
@@ -421,10 +419,8 @@ bool cubec_context_check_type(cubec_context_t self, cubec_type_t dst,
       return false;
     }
     for (size_t idx = 0; idx < cubec_array_get_size(dst_meta->options); idx++) {
-      cubec_enum_option_t dst_option =
-          cubec_array_get_index(dst_meta->options, idx);
-      cubec_enum_option_t src_option =
-          cubec_array_get_index(src_meta->options, idx);
+      cubec_enum_option_t dst_option = cubec_array_get(dst_meta->options, idx);
+      cubec_enum_option_t src_option = cubec_array_get(src_meta->options, idx);
       if (strcmp(dst_option->name, src_option->name) != 0) {
         return false;
       }
@@ -445,10 +441,8 @@ bool cubec_context_check_type(cubec_context_t self, cubec_type_t dst,
       return false;
     }
     for (size_t idx = 0; idx < cubec_array_get_size(dst_meta->fields); idx++) {
-      cubec_struct_field_t dst_field =
-          cubec_array_get_index(dst_meta->fields, idx);
-      cubec_struct_field_t src_field =
-          cubec_array_get_index(src_meta->fields, idx);
+      cubec_struct_field_t dst_field = cubec_array_get(dst_meta->fields, idx);
+      cubec_struct_field_t src_field = cubec_array_get(src_meta->fields, idx);
       if (strcmp(dst_field->name, src_field->name) != 0) {
         return false;
       }
@@ -474,8 +468,8 @@ bool cubec_context_check_type(cubec_context_t self, cubec_type_t dst,
       return false;
     }
     for (size_t idx = 0; idx < cubec_array_get_size(dst_meta->args); idx++) {
-      cubec_type_t dst_arg = cubec_array_get_index(dst_meta->args, idx);
-      cubec_type_t src_arg = cubec_array_get_index(src_meta->args, idx);
+      cubec_type_t dst_arg = cubec_array_get(dst_meta->args, idx);
+      cubec_type_t src_arg = cubec_array_get(src_meta->args, idx);
       if (!cubec_context_check_type(self, dst_arg, src_arg)) {
         return false;
       }
@@ -492,12 +486,11 @@ bool cubec_context_check_type(cubec_context_t self, cubec_type_t dst,
       return false;
     }
     for (size_t idx = 0; idx < cubec_array_get_size(dst_meta->fields); idx++) {
-      cubec_union_field_t dst_field =
-          cubec_array_get_index(dst_meta->fields, idx);
+      cubec_union_field_t dst_field = cubec_array_get(dst_meta->fields, idx);
       cubec_union_field_t src_field = NULL;
       for (size_t iidx = 0; iidx < cubec_array_get_size(src_meta->fields);
            iidx++) {
-        src_field = cubec_array_get_index(src_meta->fields, iidx);
+        src_field = cubec_array_get(src_meta->fields, iidx);
         if (strcmp(dst_field->name, src_field->name) != 0) {
           break;
         }
@@ -629,7 +622,7 @@ char *cubec_context_type_to_string(cubec_context_t self, cubec_type_t type) {
     };
     cubec_array_t arr = cubec_create_array(self->allocator, &initialize);
     for (size_t idx = 0; cubec_array_get_size(meta->args); idx++) {
-      cubec_type_t arg = cubec_array_get_index(meta->args, idx);
+      cubec_type_t arg = cubec_array_get(meta->args, idx);
       char *s = cubec_context_type_to_string(self, arg);
       len += strlen(s);
       len++;
@@ -646,7 +639,7 @@ char *cubec_context_type_to_string(cubec_context_t self, cubec_type_t type) {
         s[offset++] = ',';
         s[offset++] = ' ';
       }
-      char *arg = cubec_array_get_index(arr, idx);
+      char *arg = cubec_array_get(arr, idx);
       strcpy(&s[offset], arg);
       offset += strlen(arg);
     }
@@ -912,7 +905,7 @@ cubec_value_t cubec_context_set_field(cubec_context_t self, cubec_value_t obj,
   if (type->kind == CUBEC_TYPE_KIND_STRUCT) {
     cubec_struct_meta_t meta = type->meta;
     for (size_t idx = 0; idx < cubec_array_get_size(meta->fields); idx++) {
-      cubec_struct_field_t field = cubec_array_get_index(meta->fields, idx);
+      cubec_struct_field_t field = cubec_array_get(meta->fields, idx);
       if (strcmp(field->name, name) == 0) {
         if (field->type->kind == CUBEC_TYPE_KIND_PTR_ARRAY &&
             value->type->kind == CUBEC_TYPE_KIND_ARRAY) {
@@ -946,7 +939,7 @@ cubec_value_t cubec_context_set_field(cubec_context_t self, cubec_value_t obj,
   } else if (type->kind == CUBEC_TYPE_KIND_UNION) {
     cubec_union_meta_t meta = type->meta;
     for (size_t idx = 0; idx < cubec_array_get_size(meta->fields); idx++) {
-      cubec_union_field_t field = cubec_array_get_index(meta->fields, idx);
+      cubec_union_field_t field = cubec_array_get(meta->fields, idx);
       if (strcmp(field->name, name) == 0) {
         if (field->type->kind == CUBEC_TYPE_KIND_PTR_ARRAY &&
             value->type->kind == CUBEC_TYPE_KIND_ARRAY) {
@@ -999,7 +992,7 @@ cubec_value_t cubec_context_get_field(cubec_context_t self, cubec_value_t obj,
   if (type->kind == CUBEC_TYPE_KIND_STRUCT) {
     cubec_struct_meta_t meta = type->meta;
     for (size_t idx = 0; idx < cubec_array_get_size(meta->fields); idx++) {
-      cubec_struct_field_t field = cubec_array_get_index(meta->fields, idx);
+      cubec_struct_field_t field = cubec_array_get(meta->fields, idx);
       if (strcmp(field->name, name) == 0) {
         if (!dst) {
           return cubec_context_create_value(self, field->type, obj->is_mutable,
@@ -1013,7 +1006,7 @@ cubec_value_t cubec_context_get_field(cubec_context_t self, cubec_value_t obj,
   if (type->kind == CUBEC_TYPE_KIND_UNION) {
     cubec_union_meta_t meta = type->meta;
     for (size_t idx = 0; idx < cubec_array_get_size(meta->fields); idx++) {
-      cubec_union_field_t field = cubec_array_get_index(meta->fields, idx);
+      cubec_union_field_t field = cubec_array_get(meta->fields, idx);
       if (strcmp(field->name, name) == 0) {
         if (!dst) {
           return cubec_context_create_value(self, field->type, obj->is_mutable,
@@ -1060,7 +1053,7 @@ cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
             arguments,
             cubec_context_create_value(self, arg->type, true, arg->data, NULL));
       } else {
-        cubec_type_t dst = cubec_array_get_index(meta->args, idx);
+        cubec_type_t dst = cubec_array_get(meta->args, idx);
         if (dst->kind == CUBEC_TYPE_KIND_PTR_ARRAY &&
             arg->type->kind == CUBEC_TYPE_KIND_ARRAY) {
           if (arg->data) {

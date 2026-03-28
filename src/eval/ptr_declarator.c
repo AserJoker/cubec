@@ -23,7 +23,7 @@ cubec_value_t cubec_eval_ptr_declarator(cubec_context_t ctx,
   cubec_ast_node_t decorators =
       cubec_map_get(ptr->children, "decorators", NULL);
   for (size_t idx = 0; idx < cubec_array_get_size(decorators->items); idx++) {
-    cubec_ast_node_t dec = cubec_array_get_index(decorators->items, idx);
+    cubec_ast_node_t dec = cubec_array_get(decorators->items, idx);
     if (dec->type != CUBEC_NODE_TYPE_LITERAL_IDENTIFIER) {
       return cubec_context_create_compile_error(ctx, dec, filename,
                                                 "Unknown pointer decorator");

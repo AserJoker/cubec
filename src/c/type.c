@@ -118,7 +118,7 @@ static void cubec_type_to_c(cubec_context_t ctx, cubec_type_t type,
         if (idx != 0) {
           cubec_string_concat(*output, ctx->allocator, ", ");
         }
-        cubec_type_t arg_type = cubec_array_get_index(args, idx);
+        cubec_type_t arg_type = cubec_array_get(args, idx);
         cubec_type_to_c(ctx, arg_type, output);
       }
       if (meta->is_variadic) {

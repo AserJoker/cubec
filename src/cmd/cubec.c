@@ -1,3 +1,5 @@
+#include "ast/node.h"
+#include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/path.h"
@@ -109,7 +111,7 @@ void print_value(cubec_context_t ctx, cubec_value_t value) {
       if (idx != 0) {
         printf(", ");
       }
-      cubec_struct_field_t field = cubec_array_get_index(meta->fields, idx);
+      cubec_struct_field_t field = cubec_array_get(meta->fields, idx);
       printf("%s:", field->name);
       cubec_value_t item = cubec_context_get_field(ctx, value, field->name);
       print_value(ctx, item);
@@ -126,7 +128,7 @@ void print_value(cubec_context_t ctx, cubec_value_t value) {
       if (idx != 0) {
         printf(", ");
       }
-      cubec_union_field_t field = cubec_array_get_index(meta->fields, idx);
+      cubec_union_field_t field = cubec_array_get(meta->fields, idx);
       printf("%s: ", field->name);
       cubec_value_t item = cubec_context_get_field(ctx, value, field->name);
       print_value(ctx, item);
@@ -139,7 +141,7 @@ void print_value(cubec_context_t ctx, cubec_value_t value) {
     char *type_name = cubec_context_type_to_string(ctx, value->type);
     uint32_t idx = *(uint32_t *)value->data;
     cubec_enum_meta_t meta = value->type->meta;
-    cubec_enum_option_t opt = cubec_array_get_index(meta->options, idx);
+    cubec_enum_option_t opt = cubec_array_get(meta->options, idx);
     printf("%s{", type_name);
     printf("%s(", opt->name);
     cubec_value_t val =
@@ -189,10 +191,31 @@ cubec_value_t print(cubec_context_t ctx, size_t argc, cubec_value_t argv[]) {
   printf("\n");
   return ctx->value_undefined;
 }
-
+static cubec_ast_node_t cubec_visit_unwrap_group(cubec_allocator_t allocator,
+                                                 cubec_ast_node_t node,
+                                                 cubec_context_t ctx) {
+  if (node->type == CUBEC_NODE_TYPE_EXPRESSION_GROUP) {
+    cubec_ast_node_t parent = node->parent;
+    cubec_ast_node_t body = cubec_ast_move_child(allocator, node, "body");
+    if (parent->type == CUBEC_NODE_TYPE_LIST) {
+      size_t idx = cubec_ast_get_item_index(parent, node);
+      cubec_ast_set_item(allocator, parent, idx, body);
+    } else {
+      const char *name = cubec_ast_get_child_name(parent, node);
+      cubec_ast_set_child(allocator, parent, name, body);
+    }
+    return parent;
+  }
+  return node;
+}
+static cubec_visit_ast_fn_t visits[] = {
+    (cubec_visit_ast_fn_t)cubec_visit_unwrap_group,
+};
 int main(int argc, char *argv[]) {
   cubec_allocator_t allocator = cubec_create_allocator(NULL);
   cubec_context_t ctx = cubec_create_context(allocator);
+  ctx->num_visits = sizeof(visits) / sizeof(cubec_visit_ast_fn_t);
+  ctx->visits = visits;
   cubec_context_create_int32(ctx, 0, true, "a");
   cubec_type_t print_fn_t =
       cubec_context_create_function_type(ctx, ctx->type_void, 0, NULL, true);

@@ -12,7 +12,7 @@ cubec_value_t cubec_eval_statement_block(cubec_context_t ctx,
   cubec_ast_node_t statements =
       cubec_map_get(sts->children, "statements", NULL);
   for (size_t idx = 0; idx < cubec_array_get_size(statements->items); idx++) {
-    cubec_ast_node_t node = cubec_array_get_index(statements->items, idx);
+    cubec_ast_node_t node = cubec_array_get(statements->items, idx);
     if (node->type == CUBEC_NODE_TYPE_STATEMENT_EXPRESSION) {
       cubec_value_t err = cubec_eval_statement_expression(ctx, node, filename);
       if (err->type->kind == CUBEC_TYPE_KIND_ERROR) {

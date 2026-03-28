@@ -21,7 +21,7 @@ cubec_value_t cubec_c_write_ptr_declarator(cubec_context_t self,
     if (idx != 0) {
       cubec_string_concat(*output, self->allocator, " ");
     }
-    cubec_ast_node_t dec = cubec_array_get_index(list->items, idx);
+    cubec_ast_node_t dec = cubec_array_get(list->items, idx);
     if (dec->type != CUBEC_NODE_TYPE_LITERAL_IDENTIFIER) {
       return cubec_context_create_compile_error(self, dec, filename,
                                                 "Invalid pointer decorator");

@@ -78,13 +78,49 @@ cubec_array_t cubec_array_resize(cubec_array_t self, size_t size) {
   }
   return self;
 }
-void *cubec_array_get_index(const cubec_array_t self, size_t index) {
+void *cubec_array_get(const cubec_array_t self, size_t index) {
   if (index >= self->size) {
     return NULL;
   }
   return self->data[index];
 }
-void cubec_array_set_index(cubec_array_t self, size_t index, void *data) {
+void cubec_array_del(cubec_array_t self, size_t index) {
+  if (index >= self->size) {
+    return;
+  }
+  if (self->autofree) {
+    cubec_allocator_free(self->allocator, self->data[index]);
+  }
+  while (index < self->size - 1) {
+    self->data[index] = self->data[index + 1];
+    index++;
+  }
+  self->size--;
+  self->data[self->size] = NULL;
+}
+
+void *cubec_array_move(cubec_array_t self, size_t index) {
+  if (index >= self->size) {
+    return NULL;
+  }
+  void *data = self->data[index];
+  while (index < self->size - 1) {
+    self->data[index] = self->data[index + 1];
+    index++;
+  }
+  self->size--;
+  self->data[self->size] = NULL;
+  return data;
+}
+void *cubec_array_replace(cubec_array_t self, size_t index, void *data) {
+  if (index >= self->size) {
+    return NULL;
+  }
+  void *current = self->data[index];
+  self->data[index] = data;
+  return current;
+}
+void cubec_array_set(cubec_array_t self, size_t index, void *data) {
   if (index >= self->size) {
     return;
   }
@@ -93,6 +129,18 @@ void cubec_array_set_index(cubec_array_t self, size_t index, void *data) {
   }
   self->data[index] = data;
 }
+
+void cubec_array_insert(cubec_array_t self, size_t index, void *data) {
+  if (self->size + 1 >= self->capacity) {
+    cubec_array_resize(self, self->size + 1);
+  }
+  for (size_t idx = index; idx < self->size; idx++) {
+    self->data[idx + 1] = self->data[idx];
+  }
+  self->data[index] = data;
+  self->size++;
+}
+
 void cubec_array_push(cubec_array_t self, void *data) {
   if (self->size >= self->capacity) {
     cubec_array_resize(self, self->capacity == 0 ? 1 : self->capacity * 2);

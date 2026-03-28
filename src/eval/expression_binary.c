@@ -276,6 +276,11 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
         } else {
           value = cubec_context_read_ptr(ctx, value);
         }
+      } else if (cubec_location_is(opt->loc, "typeof")) {
+        value = cubec_context_create_type_value(ctx, value->type, false, NULL);
+      } else if (cubec_location_is(opt->loc, "sizeof")) {
+        value =
+            cubec_context_create_uint64(ctx, value->type->size, false, NULL);
       } else {
         value = cubec_context_create_compile_error(ctx, expr, filename,
                                                    "Invalid operator");

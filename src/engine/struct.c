@@ -46,7 +46,7 @@ void cubec_struct_add_field(cubec_type_t stru, cubec_allocator_t allocator,
   if (size == 0) {
     stru->size = 0;
   } else {
-    cubec_struct_field_t last = cubec_array_get_index(meta->fields, size - 1);
+    cubec_struct_field_t last = cubec_array_get(meta->fields, size - 1);
     self->offset = last->offset + last->type->size;
     if (self->offset % self->type->size != 0) {
       self->offset =

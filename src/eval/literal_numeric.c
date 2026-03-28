@@ -57,8 +57,9 @@ cubec_value_t cubec_eval_literal_numeric(cubec_context_t ctx,
     if (*pstr == 'u') {
       if (*(pstr + 1) == 'l') {
         value = cubec_context_create_uint64(ctx, val, false, NULL);
+      } else {
+        value = cubec_context_create_uint32(ctx, val, false, NULL);
       }
-      value = cubec_context_create_uint32(ctx, val, false, NULL);
     } else if (*pstr == 'l') {
       value = cubec_context_create_int64(ctx, val, false, NULL);
     } else {
@@ -129,8 +130,9 @@ cubec_value_t cubec_eval_literal_numeric(cubec_context_t ctx,
       if (*pstr == 'u') {
         if (*(pstr + 1) == 'l') {
           value = cubec_context_create_uint64(ctx, val, false, NULL);
+        } else {
+          value = cubec_context_create_uint32(ctx, val, false, NULL);
         }
-        value = cubec_context_create_uint32(ctx, val, false, NULL);
       } else if (*pstr == 'l') {
         value = cubec_context_create_int64(ctx, val, false, NULL);
       } else {
