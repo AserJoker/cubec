@@ -133,7 +133,8 @@ void cubec_ast_set_child(cubec_allocator_t allocator, cubec_ast_node_t node,
   node->changed = true;
 }
 
-int32_t cubec_ast_read_code(cubec_position_t *position, const char *end) {
+int32_t cubec_ast_read_code(cubec_position_t *position, const char *end,
+                            const char *filename) {
   int32_t code = 0;
   size_t offset = 0;
   size_t len = end - position->offset;
@@ -232,11 +233,11 @@ cubec_ast_node_t cubec_create_ast_error(cubec_allocator_t allocator,
 }
 
 cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
-                                    cubec_position_t *position,
-                                    const char *end) {
+                                    cubec_position_t *position, const char *end,
+                                    const char *filename) {
   cubec_position_t current = *position;
   while (*current.offset) {
-    int32_t code = cubec_ast_read_code(&current, end);
+    int32_t code = cubec_ast_read_code(&current, end, filename);
     if (code < 0) {
       return cubec_create_ast_error(allocator, *position, current,
                                     "Invalid unicode code");
@@ -246,7 +247,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
       continue;
     }
     if (code == '/') {
-      code = cubec_ast_read_code(&current, end);
+      code = cubec_ast_read_code(&current, end, filename);
       if (code < 0) {
         return cubec_create_ast_error(allocator, *position, current,
                                       "Invalid unicode code");
@@ -257,7 +258,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
           if (*current.offset == 0) {
             break;
           }
-          code = cubec_ast_read_code(&current, end);
+          code = cubec_ast_read_code(&current, end, filename);
           if (code < 0) {
             return cubec_create_ast_error(allocator, *position, current,
                                           "Invalid unicode code");
@@ -272,7 +273,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
             return cubec_create_ast_error(allocator, *position, current,
                                           "Missing multiline comment end '*/'");
           }
-          code = cubec_ast_read_code(&current, end);
+          code = cubec_ast_read_code(&current, end, filename);
           if (code < 0) {
             return cubec_create_ast_error(allocator, *position, current,
                                           "Invalid unicode code");
@@ -283,7 +284,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
                   allocator, *position, current,
                   "Missing multiline comment end '*/'");
             }
-            code = cubec_ast_read_code(&current, end);
+            code = cubec_ast_read_code(&current, end, filename);
             if (code < 0) {
               return cubec_create_ast_error(allocator, *position, current,
                                             "Invalid unicode code");
@@ -516,8 +517,8 @@ cubec_ast_node_t cubec_visit_ast_node(cubec_allocator_t allocator,
 }
 
 cubec_ast_node_t cubec_read_ast_node(cubec_allocator_t allocator,
-                                     const char *source, void *ctx,
-                                     size_t num_visits,
+                                     const char *filename, const char *source,
+                                     void *ctx, size_t num_visits,
                                      cubec_visit_ast_fn_t visits[]) {
   cubec_position_t pos = {
       .column = 1,
@@ -525,6 +526,7 @@ cubec_ast_node_t cubec_read_ast_node(cubec_allocator_t allocator,
       .offset = source,
   };
   const char *end = strlen(source) + source;
-  cubec_ast_node_t program = cubec_read_ast_program(allocator, &pos, end);
+  cubec_ast_node_t program =
+      cubec_read_ast_program(allocator, &pos, end, filename);
   return cubec_visit_ast_node(allocator, program, ctx, num_visits, visits);
 }

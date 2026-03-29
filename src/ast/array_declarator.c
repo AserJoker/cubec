@@ -10,7 +10,8 @@
 
 cubec_ast_node_t cubec_read_ast_array_declarator(cubec_allocator_t allocator,
                                                  cubec_position_t *position,
-                                                 const char *end) {
+                                                 const char *end,
+                                                 const char *filename) {
   cubec_ast_node_t node =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_ARRAY_DECLARATOR);
   cubec_ast_node_t err = NULL;
@@ -20,14 +21,15 @@ cubec_ast_node_t cubec_read_ast_array_declarator(cubec_allocator_t allocator,
   }
   current.offset++;
   current.column++;
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   cubec_ast_node_t length =
-      cubec_read_ast_literal_numeric(allocator, &current, end);
+      cubec_read_ast_literal_numeric(allocator, &current, end, filename);
   if (!length) {
-    length = cubec_read_ast_literal_identifier(allocator, &current, end);
+    length =
+        cubec_read_ast_literal_identifier(allocator, &current, end, filename);
   }
   if (!length) {
     goto onerror;
@@ -42,7 +44,7 @@ cubec_ast_node_t cubec_read_ast_array_declarator(cubec_allocator_t allocator,
     goto onerror;
   }
   cubec_ast_add_child(allocator, node, "length", length);
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
@@ -51,11 +53,12 @@ cubec_ast_node_t cubec_read_ast_array_declarator(cubec_allocator_t allocator,
   }
   current.offset++;
   current.column++;
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  cubec_ast_node_t item_type = cubec_read_ast_type(allocator, &current, end);
+  cubec_ast_node_t item_type =
+      cubec_read_ast_type(allocator, &current, end, filename);
   if (!item_type) {
     goto onerror;
   }
@@ -66,6 +69,7 @@ cubec_ast_node_t cubec_read_ast_array_declarator(cubec_allocator_t allocator,
   cubec_ast_add_child(allocator, node, "item_type", item_type);
   node->loc.begin = *position;
   node->loc.end = current;
+  node->loc.filename = filename;
   *position = current;
   return node;
 onerror:

@@ -16,6 +16,9 @@ cubec_value_t cubec_eval_expression_call(cubec_context_t ctx,
     return ctx->value_undefined;
   } else {
     cubec_value_t callee = cubec_eval_expression(ctx, callee_node, filename);
+    if (!callee) {
+      return NULL;
+    }
     if (callee->type->kind == CUBEC_TYPE_KIND_ERROR) {
       return callee;
     }
@@ -26,6 +29,9 @@ cubec_value_t cubec_eval_expression_call(cubec_context_t ctx,
     for (size_t idx = 0; idx < cubec_array_get_size(args_node->items); idx++) {
       cubec_ast_node_t arg_node = cubec_array_get(args_node->items, idx);
       cubec_value_t arg = cubec_eval_expression(ctx, arg_node, filename);
+      if (!arg) {
+        return NULL;
+      }
       if (arg->type->kind == CUBEC_TYPE_KIND_ERROR) {
         return arg;
       }

@@ -24,6 +24,7 @@ cubec_array_t cubec_create_array(cubec_allocator_t allocator,
   array->size = 0;
   array->data = NULL;
   array->allocator = allocator;
+  array->compare = NULL;
   if (initialize) {
     array->autofree = initialize->autofree;
     array->capacity = initialize->capacity;

@@ -4,7 +4,6 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/map.h"
-#include "core/position.h"
 #include "engine/context.h"
 #include "engine/function.h"
 #include "engine/result.h"
@@ -34,6 +33,9 @@ static cubec_value_t cubec_eval_member_self_opt(cubec_context_t ctx,
   cubec_ast_node_t host_node = cubec_map_get(member->children, "host", NULL);
   cubec_ast_node_t field_node = cubec_map_get(member->children, "field", NULL);
   cubec_value_t host = cubec_eval_expression(ctx, host_node, filename);
+  if (!host) {
+    return NULL;
+  }
   if (host->type->kind == CUBEC_TYPE_KIND_ERROR) {
     return host;
   }
@@ -76,12 +78,24 @@ static cubec_value_t cubec_eval_compute_member_self_opt(cubec_context_t ctx,
                                                         cubec_ast_node_t opt,
                                                         bool prefix) {
   cubec_ast_node_t host_node = cubec_map_get(member->children, "host", NULL);
+  if (!host_node) {
+    return NULL;
+  }
   cubec_ast_node_t field_node = cubec_map_get(member->children, "field", NULL);
+  if (!host_node) {
+    return NULL;
+  }
   cubec_value_t host = cubec_eval_expression(ctx, host_node, filename);
+  if (!host) {
+    return NULL;
+  }
   if (host->type->kind == CUBEC_TYPE_KIND_ERROR) {
     return host;
   }
   cubec_value_t vfield = cubec_eval_expression(ctx, field_node, filename);
+  if (!vfield) {
+    return NULL;
+  }
   if (vfield->type->kind == CUBEC_TYPE_KIND_ERROR) {
     return vfield;
   }
@@ -167,6 +181,9 @@ static cubec_value_t cubec_eval_reference_self_opt(cubec_context_t ctx,
                                                    bool prefix) {
   cubec_ast_node_t right = cubec_map_get(ref->children, "right", NULL);
   cubec_value_t ptr = cubec_eval_expression(ctx, right, filename);
+  if (!ptr) {
+    return NULL;
+  }
   if (ptr->type->kind == CUBEC_TYPE_KIND_ERROR) {
     return ptr;
   }
@@ -211,6 +228,9 @@ static cubec_value_t cubec_eval_self_opt(cubec_context_t ctx,
   }
   if (node->type == CUBEC_NODE_TYPE_LITERAL_IDENTIFIER) {
     cubec_value_t value = cubec_eval_literal_identifier(ctx, node, filename);
+    if (!value) {
+      return NULL;
+    }
     if (value->type->kind == CUBEC_TYPE_KIND_ERROR) {
       return value;
     }
@@ -258,6 +278,9 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
       return cubec_eval_self_opt(ctx, expr, filename, opt, true);
     } else {
       cubec_value_t value = cubec_eval_expression(ctx, right_node, filename);
+      if (!value) {
+        return NULL;
+      }
       if (value->type->kind == CUBEC_TYPE_KIND_ERROR) {
         return value;
       }
@@ -285,8 +308,8 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
         value =
             cubec_context_create_uint64(ctx, value->type->size, false, NULL);
       } else if (cubec_location_is(opt->loc, "try")) {
-        if (!ctx->scope_value ||
-            ctx->scope_value->type->kind != CUBEC_TYPE_KIND_FUNCTION) {
+        if (!ctx->scope_host ||
+            ctx->scope_host->type->kind != CUBEC_TYPE_KIND_FUNCTION) {
           value = cubec_context_create_error(
               ctx, "try expression only used in function");
         } else {
@@ -294,7 +317,7 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
             cubec_result_data_t data = value->data;
             cubec_result_meta_t meta = value->type->meta;
             if (data->flag) {
-              cubec_value_t func = ctx->scope_value;
+              cubec_value_t func = ctx->scope_host;
               cubec_function_meta_t func_meta = func->data;
               if (func_meta->type->kind == CUBEC_TYPE_KIND_RESULT) {
                 value = cubec_context_create_error(
@@ -304,6 +327,8 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
                                                    &data->data, NULL);
                 value = cubec_context_create_result(ctx, func_meta->type, NULL,
                                                     value, false, NULL);
+                ctx->eval_result = value;
+                return NULL;
               }
             } else {
               if (meta->type->kind == CUBEC_TYPE_KIND_VOID) {
@@ -335,10 +360,16 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
     }
   } else {
     cubec_value_t left = cubec_eval_expression(ctx, left_node, filename);
+    if (!left) {
+      return NULL;
+    }
     if (left->type->kind == CUBEC_TYPE_KIND_ERROR) {
       return left;
     }
     cubec_value_t right = cubec_eval_expression(ctx, right_node, filename);
+    if (!right) {
+      return NULL;
+    }
     if (right->type->kind == CUBEC_TYPE_KIND_ERROR) {
       return right;
     }

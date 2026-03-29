@@ -9,13 +9,14 @@
 
 cubec_ast_node_t cubec_read_ast_expression_spread(cubec_allocator_t allocator,
                                                   cubec_position_t *position,
-                                                  const char *end) {
+                                                  const char *end,
+                                                  const char *filename) {
   cubec_ast_node_t node =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_SPREAD);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
   cubec_ast_node_t symbol =
-      cubec_read_ast_literal_symbol(allocator, &current, end);
+      cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (!symbol) {
     goto onerror;
   }
@@ -27,12 +28,12 @@ cubec_ast_node_t cubec_read_ast_expression_spread(cubec_allocator_t allocator,
     goto onerror;
   }
   cubec_allocator_free(allocator, symbol);
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
   cubec_ast_node_t expression =
-      cubec_read_ast_expression18(allocator, &current, end);
+      cubec_read_ast_expression18(allocator, &current, end, filename);
   if (!expression) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Invalid spread expression");
@@ -45,6 +46,7 @@ cubec_ast_node_t cubec_read_ast_expression_spread(cubec_allocator_t allocator,
   cubec_ast_add_child(allocator, node, "expression", expression);
   node->loc.begin = *position;
   node->loc.end = current;
+  node->loc.filename = filename;
   *position = current;
 
   return node;

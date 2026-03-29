@@ -7,7 +7,8 @@
 #include "core/position.h"
 
 cubec_ast_node_t cubec_read_ast_expression_template_generator(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end) {
+    cubec_allocator_t allocator, cubec_position_t *position, const char *end,
+    const char *filename) {
   cubec_ast_node_t node = cubec_create_ast_node(
       allocator, CUBEC_NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR);
   cubec_ast_node_t args =
@@ -20,11 +21,12 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
   }
   current.column++;
   current.offset++;
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
-  cubec_ast_node_t temp = cubec_read_ast_expression18(allocator, &current, end);
+  cubec_ast_node_t temp =
+      cubec_read_ast_expression18(allocator, &current, end, filename);
   if (!temp) {
     err = cubec_create_ast_error(
         allocator, *position, current,
@@ -34,7 +36,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
   if (temp->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
@@ -46,13 +48,14 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
   }
   current.offset++;
   current.column++;
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (*current.offset != '>') {
     for (;;) {
-      cubec_ast_node_t item = cubec_read_ast_type(allocator, &current, end);
+      cubec_ast_node_t item =
+          cubec_read_ast_type(allocator, &current, end, filename);
       if (!item) {
         err = cubec_create_ast_error(
             allocator, *position, current,
@@ -64,7 +67,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
         goto onerror;
       }
       cubec_ast_add_item(allocator, args, item);
-      err = cubec_ast_skip_all(allocator, &current, end);
+      err = cubec_ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         goto onerror;
       }
@@ -79,13 +82,13 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
       }
       current.offset++;
       current.column++;
-      err = cubec_ast_skip_all(allocator, &current, end);
+      err = cubec_ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         goto onerror;
       }
     }
   }
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
@@ -97,6 +100,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
   }
   node->loc.begin = *position;
   node->loc.end = current;
+  node->loc.filename = filename;
   *position = current;
 
   return node;

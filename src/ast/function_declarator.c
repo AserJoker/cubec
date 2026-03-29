@@ -13,7 +13,8 @@
 
 cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
                                                     cubec_position_t *position,
-                                                    const char *end) {
+                                                    const char *end,
+                                                    const char *filename) {
   cubec_ast_node_t node =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_FUNCTION_DECLARATOR);
   cubec_ast_node_t err = NULL;
@@ -29,7 +30,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   cubec_ast_add_child(allocator, node, "args", args);
   for (;;) {
     cubec_ast_node_t decorator =
-        cubec_read_ast_decorator(allocator, &current, end);
+        cubec_read_ast_decorator(allocator, &current, end, filename);
     if (!decorator) {
       break;
     }
@@ -37,35 +38,33 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
       goto onerror;
     }
     cubec_ast_add_item(allocator, decorators, decorator);
-    err = cubec_ast_skip_all(allocator, &current, end);
+    err = cubec_ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
     }
   }
   cubec_ast_node_t kind =
-      cubec_read_ast_literal_identifier(allocator, &current, end);
+      cubec_read_ast_literal_identifier(allocator, &current, end, filename);
   if (kind) {
     if (kind->type == CUBEC_NODE_TYPE_ERROR) {
       err = kind;
       goto onerror;
     }
-    if (!cubec_location_is(kind->loc, "inline") &&
-        !cubec_location_is(kind->loc, "template") &&
-        !cubec_location_is(kind->loc, "comptime") &&
+    if (!cubec_location_is(kind->loc, "comptime") &&
         !cubec_location_is(kind->loc, "extern") &&
         !cubec_location_is(kind->loc, "builtin")) {
       current = *position;
       cubec_allocator_free(allocator, kind);
     } else {
       cubec_ast_add_child(allocator, node, "kind", kind);
-      err = cubec_ast_skip_all(allocator, &current, end);
+      err = cubec_ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;
       }
     }
   }
   cubec_ast_node_t token =
-      cubec_read_ast_literal_identifier(allocator, &current, end);
+      cubec_read_ast_literal_identifier(allocator, &current, end, filename);
   if (!token) {
     goto onerror;
   }
@@ -78,21 +77,21 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
     goto onerror;
   }
   cubec_allocator_free(allocator, token);
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset == '<') {
     current.offset++;
     current.column++;
-    err = cubec_ast_skip_all(allocator, &current, end);
+    err = cubec_ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
     }
     if (*current.offset != '>') {
       for (;;) {
-        cubec_ast_node_t id =
-            cubec_read_ast_literal_identifier(allocator, &current, end);
+        cubec_ast_node_t id = cubec_read_ast_literal_identifier(
+            allocator, &current, end, filename);
         if (!id) {
           err = cubec_create_ast_error(allocator, *position, current,
                                        "Invalid function expression");
@@ -103,7 +102,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
           goto onerror;
         }
         cubec_ast_add_item(allocator, closure, id);
-        err = cubec_ast_skip_all(allocator, &current, end);
+        err = cubec_ast_skip_all(allocator, &current, end, filename);
         if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
           return err;
         }
@@ -117,7 +116,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
         }
         current.offset++;
         current.column++;
-        err = cubec_ast_skip_all(allocator, &current, end);
+        err = cubec_ast_skip_all(allocator, &current, end, filename);
         if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
           return err;
         }
@@ -131,12 +130,12 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
     current.offset++;
     current.column++;
   }
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   cubec_ast_node_t identifier =
-      cubec_read_ast_literal_identifier(allocator, &current, end);
+      cubec_read_ast_literal_identifier(allocator, &current, end, filename);
   if (identifier) {
     if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
       err = identifier;
@@ -144,7 +143,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
     }
     cubec_ast_add_child(allocator, node, "identifier", identifier);
   }
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
@@ -158,7 +157,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   current.offset++;
   current.column++;
 
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
@@ -166,10 +165,12 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
     for (;;) {
       cubec_ast_node_t arg = NULL;
       if (!arg) {
-        arg = cubec_read_ast_function_argument_rest(allocator, &current, end);
+        arg = cubec_read_ast_function_argument_rest(allocator, &current, end,
+                                                    filename);
       }
       if (!arg) {
-        arg = cubec_read_ast_function_argument(allocator, &current, end);
+        arg = cubec_read_ast_function_argument(allocator, &current, end,
+                                               filename);
       }
       if (!arg) {
         err = cubec_create_ast_error(allocator, *position, current,
@@ -181,7 +182,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
         goto onerror;
       }
       cubec_ast_add_item(allocator, args, arg);
-      err = cubec_ast_skip_all(allocator, &current, end);
+      err = cubec_ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;
       }
@@ -195,13 +196,13 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
       }
       current.offset++;
       current.column++;
-      err = cubec_ast_skip_all(allocator, &current, end);
+      err = cubec_ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;
       }
     }
   }
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
@@ -213,18 +214,19 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   current.offset++;
   current.column++;
 
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset == ':') {
     current.offset++;
     current.column++;
-    err = cubec_ast_skip_all(allocator, &current, end);
+    err = cubec_ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
     }
-    cubec_ast_node_t type = cubec_read_ast_type(allocator, &current, end);
+    cubec_ast_node_t type =
+        cubec_read_ast_type(allocator, &current, end, filename);
     if (type) {
       if (type->type == CUBEC_NODE_TYPE_ERROR) {
         err = type;
@@ -233,12 +235,12 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
       cubec_ast_add_child(allocator, node, "type", type);
     }
   }
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   cubec_ast_node_t body =
-      cubec_read_ast_function_body(allocator, &current, end);
+      cubec_read_ast_function_body(allocator, &current, end, filename);
   if (body) {
     if (body->type == CUBEC_NODE_TYPE_ERROR) {
       err = body;
@@ -248,6 +250,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   }
   node->loc.begin = *position;
   node->loc.end = current;
+  node->loc.filename = filename;
   *position = current;
 
   return node;

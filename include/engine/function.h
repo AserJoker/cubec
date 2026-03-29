@@ -21,6 +21,7 @@ cubec_function_meta_t cubec_create_function_meta(cubec_allocator_t allocator,
                                                  cubec_type_t *args,
                                                  bool is_variadic);
 typedef enum _cubec_function_kind_t {
+  CUBEC_FUNCTION_BUILTIN,
   CUBEC_FUNCTION_NATIVE,
   CUBEC_FUNCTION_RUNTIME,
   CUBEC_FUNCTION_COMPTIME,

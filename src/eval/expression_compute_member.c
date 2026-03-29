@@ -12,10 +12,16 @@ cubec_value_t cubec_eval_expression_compute_member(cubec_context_t ctx,
   cubec_ast_node_t host_node = cubec_map_get(expr->children, "host", NULL);
   cubec_ast_node_t field_node = cubec_map_get(expr->children, "field", NULL);
   cubec_value_t host = cubec_eval_expression(ctx, host_node, filename);
+  if (!host) {
+    return NULL;
+  }
   if (host->type->kind == CUBEC_TYPE_KIND_ERROR) {
     return host;
   }
   cubec_value_t field = cubec_eval_expression(ctx, field_node, filename);
+  if (!field) {
+    return NULL;
+  }
   if (field->type->kind == CUBEC_TYPE_KIND_ERROR) {
     return field;
   }

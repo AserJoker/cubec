@@ -51,7 +51,8 @@ struct _cubec_context_t {
   cubec_eval_mode_t eval_mode;
   cubec_array_t visits;
 
-  cubec_value_t scope_value;
+  cubec_value_t scope_host;
+  cubec_value_t eval_result;
 };
 cubec_context_t cubec_create_context(cubec_allocator_t allocator);
 void cubec_add_visit(cubec_context_t self, cubec_visit_ast_fn_t visit);
@@ -160,6 +161,10 @@ cubec_value_t cubec_context_create_native(cubec_context_t self,
                                           cubec_type_t type,
                                           cubec_native_handle_t native,
                                           bool is_mutable, const char *name);
+cubec_value_t cubec_context_create_builtin(cubec_context_t self,
+                                           cubec_type_t type,
+                                           cubec_native_handle_t native,
+                                           bool is_mutable, const char *name);
 cubec_value_t cubec_context_create_type_value(cubec_context_t self,
                                               cubec_type_t type,
                                               bool is_mutable,

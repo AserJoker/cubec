@@ -3,6 +3,7 @@
 #include "eval/expression_binary.h"
 #include "eval/expression_call.h"
 #include "eval/expression_member.h"
+#include "eval/function_declarator.h"
 #include "eval/literal_identifier.h"
 #include "eval/literal_numeric.h"
 #include "eval/literal_string.h"
@@ -23,6 +24,8 @@ cubec_value_t cubec_eval_expression(cubec_context_t ctx, cubec_ast_node_t expr,
     return cubec_eval_expression_call(ctx, expr, filename);
   } else if (expr->type == CUBEC_NODE_TYPE_LITERAL_NUMERIC) {
     return cubec_eval_literal_numeric(ctx, expr, filename);
+  } else if (expr->type == CUBEC_NODE_TYPE_FUNCTION_DECLARATOR) {
+    return cubec_eval_function_declarator(ctx, expr, filename);
   } else {
     return cubec_context_create_compile_error(ctx, expr, filename,
                                               "Unknown expression type");

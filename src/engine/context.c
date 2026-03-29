@@ -5,6 +5,7 @@
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/compare.h"
+#include "core/location.h"
 #include "core/map.h"
 #include "core/string.h"
 #include "engine/array.h"
@@ -18,6 +19,7 @@
 #include "engine/type.h"
 #include "engine/union.h"
 #include "engine/value.h"
+#include "eval/function_body.h"
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -98,7 +100,8 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
                                              sizeof(const char *), NULL, "str");
   self->type_opaque = cubec_context_create_type(self, CUBEC_TYPE_KIND_OPAQUE,
                                                 sizeof(void *), NULL, "opaque");
-  self->scope_value = NULL;
+  self->scope_host = NULL;
+  self->eval_result = self->value_undefined;
   return self;
 }
 void cubec_add_visit(cubec_context_t self, cubec_visit_ast_fn_t visit) {
@@ -148,7 +151,7 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
   src[len] = 0;
   fclose(fp);
   cubec_ast_node_t node = cubec_read_ast_node(
-      self->allocator, src, self, cubec_array_get_size(self->visits),
+      self->allocator, name, src, self, cubec_array_get_size(self->visits),
       cubec_array_get_data(self->visits));
   if (node->type == CUBEC_NODE_TYPE_ERROR) {
     cubec_ast_error_t error = (cubec_ast_error_t)node;
@@ -780,6 +783,15 @@ cubec_value_t cubec_context_create_native(cubec_context_t self,
   cubec_array_push(self->module->functions, func);
   return cubec_context_create_value(self, type, is_mutable, &func, name);
 }
+cubec_value_t cubec_context_create_builtin(cubec_context_t self,
+                                           cubec_type_t type,
+                                           cubec_native_handle_t native,
+                                           bool is_mutable, const char *name) {
+  cubec_function_desc_t func = cubec_create_function_desc(
+      self->allocator, CUBEC_FUNCTION_BUILTIN, native, name);
+  cubec_array_push(self->module->functions, func);
+  return cubec_context_create_value(self, type, is_mutable, &func, name);
+}
 cubec_value_t cubec_context_create_type_value(cubec_context_t self,
                                               cubec_type_t type,
                                               bool is_mutable,
@@ -1030,97 +1042,133 @@ cubec_value_t cubec_context_get_field(cubec_context_t self, cubec_value_t obj,
 }
 cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
                                  size_t argc, cubec_value_t *argv) {
+  cubec_value_t callee = NULL;
+  cubec_array_t arguments = cubec_create_array(self->allocator, NULL);
   if (func->type->kind == CUBEC_TYPE_KIND_FUNCTION) {
-    cubec_function_meta_t meta = func->type->meta;
-    if (argc < cubec_array_get_size(meta->args)) {
-      char *type_name = cubec_context_type_to_string(self, func->type);
-      cubec_value_t error = cubec_context_create_error(
-          self, "Cannot call value(type = %s) with %" PRIuPTR " arguments",
-          type_name, argc);
-      cubec_allocator_free(self->allocator, type_name);
-      return error;
-    }
-    cubec_array_t arguments = cubec_create_array(self->allocator, NULL);
-    cubec_context_push_scope(self);
-    cubec_value_t result = NULL;
-    for (size_t idx = 0; idx < argc; idx++) {
-      cubec_value_t arg = argv[idx];
-      if (idx >= cubec_array_get_size(meta->args)) {
-        if (!meta->is_variadic) {
-          char *type_name = cubec_context_type_to_string(self, func->type);
-          result = cubec_context_create_error(
-              self, "Cannot call value(type = %s) with %" PRIuPTR " arguments",
-              type_name, argc);
-          cubec_allocator_free(self->allocator, type_name);
-          break;
-        }
-        cubec_array_push(
-            arguments,
-            cubec_context_create_value(self, arg->type, true, arg->data, NULL));
-      } else {
-        cubec_type_t dst = cubec_array_get(meta->args, idx);
-        if (dst->kind == CUBEC_TYPE_KIND_PTR_ARRAY &&
-            arg->type->kind == CUBEC_TYPE_KIND_ARRAY) {
-          if (arg->data) {
-            arg = cubec_context_create_value(self, dst, true, &arg->data, NULL);
-          } else {
-            arg = cubec_context_create_value(self, dst, true, NULL, NULL);
-          }
-        }
-        if (!cubec_context_check_type(self, dst, argv[idx]->type)) {
-          char *dst_name = cubec_context_type_to_string(self, dst);
-          char *src_name = cubec_context_type_to_string(self, argv[idx]->type);
-          result = cubec_context_create_error(
-              self, "Cannot convert argument[%" PRIuPTR "] (type = %s) to %s",
-              idx, src_name, dst_name);
-          cubec_allocator_free(self->allocator, dst_name);
-          cubec_allocator_free(self->allocator, src_name);
-          break;
-        }
-        cubec_array_push(arguments, cubec_context_create_value(
-                                        self, dst, true, arg->data, NULL));
-      }
-    }
-    if (!result) {
-      cubec_function_desc_t desc = *(cubec_function_desc_t *)func->data;
-      if (desc->kind == CUBEC_FUNCTION_NATIVE) {
-        cubec_value_t current = self->scope_value;
-        self->scope_value = func;
-        result = desc->native(self, cubec_array_get_size(arguments),
-                              cubec_array_get_data(arguments));
-        self->scope_value = current;
-        if (!cubec_context_check_type(self, result->type, meta->type)) {
-          char *dst_name = cubec_context_type_to_string(self, meta->type);
-          char *src_name = cubec_context_type_to_string(self, result->type);
-          result = cubec_context_create_error(
-              self, "Cannot convert native function return type %s to %s",
-              dst_name, src_name);
-          cubec_allocator_free(self->allocator, dst_name);
-          cubec_allocator_free(self->allocator, src_name);
-        }
-      } else if (desc->kind == CUBEC_FUNCTION_RUNTIME) {
-        cubec_value_t current = self->scope_value;
-        self->scope_value = func;
-        result = cubec_context_create_value(self, meta->type, true, NULL, NULL);
-        self->scope_value = current;
-      } else if (desc->kind == CUBEC_FUNCTION_COMPTIME) {
-        // TODO: eval desc->node;
-      }
-    }
+    callee = func;
+  } else {
     cubec_allocator_free(self->allocator, arguments);
-    cubec_scope_t scope = self->current;
-    self->current = self->current->parent;
-    result = cubec_context_create_value(self, result->type, result->is_mutable,
-                                        result->data, NULL);
-    self->current = scope;
-    cubec_context_pop_scope(self);
-    return result;
+    char *type_name = cubec_context_type_to_string(self, func->type);
+    cubec_value_t error = cubec_context_create_error(
+        self, "Cannot call value(type = %s)", type_name);
+    cubec_allocator_free(self->allocator, type_name);
+    return error;
   }
-  char *type_name = cubec_context_type_to_string(self, func->type);
-  cubec_value_t error = cubec_context_create_error(
-      self, "Cannot call value(type = %s)", type_name);
-  cubec_allocator_free(self->allocator, type_name);
-  return error;
+  cubec_function_meta_t meta = func->type->meta;
+  if (argc < cubec_array_get_size(meta->args)) {
+    char *type_name = cubec_context_type_to_string(self, func->type);
+    cubec_value_t error = cubec_context_create_error(
+        self, "Cannot call value(type = %s) with %" PRIuPTR " arguments",
+        type_name, argc);
+    cubec_allocator_free(self->allocator, type_name);
+    return error;
+  }
+  cubec_scope_t parent = self->current;
+  cubec_context_push_scope(self);
+  cubec_value_t result = NULL;
+  for (size_t idx = 0; idx < argc; idx++) {
+    cubec_value_t arg = argv[idx];
+    if (idx >= cubec_array_get_size(meta->args)) {
+      if (!meta->is_variadic) {
+        char *type_name = cubec_context_type_to_string(self, func->type);
+        result = cubec_context_create_error(
+            self, "Cannot call value(type = %s) with %" PRIuPTR " arguments",
+            type_name, argc);
+        cubec_allocator_free(self->allocator, type_name);
+        cubec_allocator_free(self->allocator, arguments);
+        return result;
+      }
+      cubec_array_push(arguments, cubec_context_create_value(
+                                      self, arg->type, true, arg->data, NULL));
+    } else {
+      cubec_type_t dst = cubec_array_get(meta->args, idx);
+      if (dst->kind == CUBEC_TYPE_KIND_PTR_ARRAY &&
+          arg->type->kind == CUBEC_TYPE_KIND_ARRAY) {
+        if (arg->data) {
+          arg = cubec_context_create_value(self, dst, true, &arg->data, NULL);
+        } else {
+          arg = cubec_context_create_value(self, dst, true, NULL, NULL);
+        }
+      }
+      if (!cubec_context_check_type(self, dst, argv[idx]->type)) {
+        char *dst_name = cubec_context_type_to_string(self, dst);
+        char *src_name = cubec_context_type_to_string(self, argv[idx]->type);
+        result = cubec_context_create_error(
+            self, "Cannot convert argument[%" PRIuPTR "] (type = %s) to %s",
+            idx, src_name, dst_name);
+        cubec_allocator_free(self->allocator, dst_name);
+        cubec_allocator_free(self->allocator, src_name);
+        cubec_allocator_free(self->allocator, arguments);
+        return result;
+      }
+      cubec_array_push(arguments, cubec_context_create_value(self, dst, true,
+                                                             arg->data, NULL));
+    }
+  }
+  cubec_function_desc_t desc = *(cubec_function_desc_t *)func->data;
+  if (desc->kind == CUBEC_FUNCTION_BUILTIN) {
+    cubec_value_t current = self->scope_host;
+    self->scope_host = func;
+    result = desc->native(self, cubec_array_get_size(arguments),
+                          cubec_array_get_data(arguments));
+    self->scope_host = current;
+
+  } else if (desc->kind == CUBEC_FUNCTION_COMPTIME ||
+             (desc->kind == CUBEC_FUNCTION_RUNTIME &&
+              self->eval_mode == CUBEC_EVAL_TEST)) {
+    cubec_value_t current = self->scope_host;
+    self->scope_host = func;
+    cubec_ast_node_t node = desc->node;
+    cubec_ast_node_t args = cubec_ast_get_child(self->allocator, node, "args");
+    for (size_t idx = 0; idx < cubec_ast_get_length(args); idx++) {
+      cubec_ast_node_t arg = cubec_array_get(args->items, idx);
+      if (arg->type == CUBEC_NODE_TYPE_FUNCTION_ARGUMENT) {
+        cubec_ast_node_t identifier =
+            cubec_ast_get_child(self->allocator, arg, "identifier");
+        char *name = cubec_location_get(identifier->loc, self->allocator);
+        cubec_value_t arg = cubec_array_get(arguments, idx);
+        cubec_map_set(self->current->variables, name, arg, NULL);
+      }
+    }
+    cubec_ast_node_t body = cubec_ast_get_child(self->allocator, node, "body");
+    result = cubec_eval_function_body(self, body, node->loc.filename);
+    self->scope_host = current;
+    if (result->type->kind == CUBEC_TYPE_KIND_ERROR) {
+      const char *message = *(const char **)result->data;
+      fprintf(stdout, "%s", message);
+      const char *name = desc->name;
+      if (!name) {
+        name = "(anonymous)";
+      }
+      result =
+          cubec_context_create_error(self, "Failed to call function: %s", name);
+    }
+  } else if (desc->kind == CUBEC_FUNCTION_RUNTIME) {
+    result = cubec_context_create_value(self, meta->type, true, NULL, NULL);
+  } else {
+    result = cubec_context_create_error(
+        self, "Cannot call native function in runtime statement");
+  }
+  cubec_allocator_free(self->allocator, arguments);
+  if (result->type->kind != CUBEC_TYPE_KIND_ERROR &&
+      !cubec_context_check_type(self, result->type, meta->type)) {
+    char *dst_name = cubec_context_type_to_string(self, meta->type);
+    char *src_name = cubec_context_type_to_string(self, result->type);
+    result = cubec_context_create_error(
+        self, "Cannot convert native function return type %s to %s", dst_name,
+        src_name);
+    cubec_allocator_free(self->allocator, dst_name);
+    cubec_allocator_free(self->allocator, src_name);
+  }
+  cubec_scope_t scope = self->current;
+  self->current = parent;
+  result = cubec_context_create_value(self, result->type, result->is_mutable,
+                                      result->data, NULL);
+  self->current = scope;
+  while (self->current != parent) {
+    cubec_context_pop_scope(self);
+  }
+  return result;
 }
 cubec_value_t cubec_context_load_value(cubec_context_t self, const char *name) {
   cubec_scope_t scope = self->current;

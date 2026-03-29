@@ -10,7 +10,8 @@
 #include "core/position.h"
 cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
                                                 cubec_position_t *position,
-                                                const char *end) {
+                                                const char *end,
+                                                const char *filename) {
   cubec_ast_node_t node =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_ENUM_DECLARATOR);
   cubec_ast_node_t err = NULL;
@@ -23,7 +24,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
   cubec_ast_add_child(allocator, node, "fields", fields);
   for (;;) {
     cubec_ast_node_t decorator =
-        cubec_read_ast_decorator(allocator, &current, end);
+        cubec_read_ast_decorator(allocator, &current, end, filename);
     if (!decorator) {
       break;
     }
@@ -31,13 +32,13 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
       goto onerror;
     }
     cubec_ast_add_item(allocator, decorators, decorator);
-    err = cubec_ast_skip_all(allocator, &current, end);
+    err = cubec_ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
     }
   }
   cubec_ast_node_t token =
-      cubec_read_ast_literal_identifier(allocator, &current, end);
+      cubec_read_ast_literal_identifier(allocator, &current, end, filename);
   if (!token) {
     goto onerror;
   }
@@ -50,12 +51,12 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
     goto onerror;
   }
   cubec_allocator_free(allocator, token);
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   cubec_ast_node_t identifier =
-      cubec_read_ast_literal_identifier(allocator, &current, end);
+      cubec_read_ast_literal_identifier(allocator, &current, end, filename);
   if (identifier) {
     if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
       err = identifier;
@@ -63,18 +64,19 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
     }
     cubec_ast_add_child(allocator, node, "identifier", identifier);
   }
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset == ':') {
     current.offset++;
     current.column++;
-    err = cubec_ast_skip_all(allocator, &current, end);
+    err = cubec_ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
     }
-    cubec_ast_node_t type = cubec_read_ast_type(allocator, &current, end);
+    cubec_ast_node_t type =
+        cubec_read_ast_type(allocator, &current, end, filename);
     if (!type) {
       err = cubec_create_ast_error(allocator, *position, current,
                                    "Invalid enum declarator, missing 'type'");
@@ -86,7 +88,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
     }
     cubec_ast_add_child(allocator, node, "type", type);
   }
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
@@ -97,14 +99,14 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
   }
   current.column++;
   current.offset++;
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != '}') {
     for (;;) {
       cubec_ast_node_t item =
-          cubec_read_ast_enum_field(allocator, &current, end);
+          cubec_read_ast_enum_field(allocator, &current, end, filename);
       if (!item) {
         err = cubec_create_ast_error(allocator, *position, current,
                                      "Invalid enum declarator");
@@ -115,7 +117,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
         goto onerror;
       }
       cubec_ast_add_item(allocator, fields, item);
-      err = cubec_ast_skip_all(allocator, &current, end);
+      err = cubec_ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;
       }
@@ -129,7 +131,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
       }
       current.offset++;
       current.column++;
-      err = cubec_ast_skip_all(allocator, &current, end);
+      err = cubec_ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;
       }
@@ -138,7 +140,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
       }
     }
   }
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
@@ -151,6 +153,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
   current.column++;
   node->loc.begin = *position;
   node->loc.end = current;
+  node->loc.filename = filename;
   *position = current;
   return node;
 onerror:

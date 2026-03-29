@@ -9,6 +9,7 @@ extern "C" {
 typedef struct _cubec_location_t {
   cubec_position_t begin;
   cubec_position_t end;
+  const char *filename;
 } cubec_location_t;
 char *cubec_location_get(cubec_location_t self, cubec_allocator_t allocator);
 char *cubec_location_get_str(cubec_location_t self,

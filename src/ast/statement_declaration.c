@@ -8,14 +8,16 @@
 #include "core/location.h"
 #include "core/position.h"
 
-cubec_ast_node_t cubec_read_ast_statement_declaration(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end) {
+cubec_ast_node_t
+cubec_read_ast_statement_declaration(cubec_allocator_t allocator,
+                                     cubec_position_t *position,
+                                     const char *end, const char *filename) {
   cubec_ast_node_t node =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_DECLARATION);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
   cubec_ast_node_t kind =
-      cubec_read_ast_literal_identifier(allocator, &current, end);
+      cubec_read_ast_literal_identifier(allocator, &current, end, filename);
   if (!kind) {
     goto onerror;
   }
@@ -33,7 +35,7 @@ cubec_ast_node_t cubec_read_ast_statement_declaration(
     goto onerror;
   }
   cubec_ast_add_child(allocator, node, "kind", kind);
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
@@ -41,7 +43,7 @@ cubec_ast_node_t cubec_read_ast_statement_declaration(
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
   for (;;) {
     cubec_ast_node_t item =
-        cubec_read_ast_variable_declarator(allocator, &current, end);
+        cubec_read_ast_variable_declarator(allocator, &current, end, filename);
     if (!item) {
       err = cubec_create_ast_error(allocator, *position, current,
                                    "Invalid or unexpected token");
@@ -52,7 +54,7 @@ cubec_ast_node_t cubec_read_ast_statement_declaration(
       goto onerror;
     }
     cubec_ast_add_item(allocator, declarations, item);
-    err = cubec_ast_skip_all(allocator, &current, end);
+    err = cubec_ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;
     }
@@ -66,17 +68,17 @@ cubec_ast_node_t cubec_read_ast_statement_declaration(
     }
     current.offset++;
     current.column++;
-    err = cubec_ast_skip_all(allocator, &current, end);
+    err = cubec_ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;
     }
   }
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
   cubec_ast_node_t token =
-      cubec_read_ast_literal_symbol(allocator, &current, end);
+      cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (token && token->type == CUBEC_NODE_TYPE_ERROR) {
     err = token;
     goto onerror;
@@ -90,6 +92,7 @@ cubec_ast_node_t cubec_read_ast_statement_declaration(
   cubec_allocator_free(allocator, token);
   node->loc.begin = *position;
   node->loc.end = current;
+  node->loc.filename = filename;
   *position = current;
 
   return node;

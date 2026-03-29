@@ -6,7 +6,8 @@
 
 cubec_ast_node_t cubec_read_ast_statement_empty(cubec_allocator_t allocator,
                                                 cubec_position_t *position,
-                                                const char *end) {
+                                                const char *end,
+                                                const char *filename) {
   cubec_ast_node_t node =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_EMPTY);
   cubec_ast_node_t err = NULL;
@@ -18,6 +19,7 @@ cubec_ast_node_t cubec_read_ast_statement_empty(cubec_allocator_t allocator,
   current.column++;
   node->loc.begin = *position;
   node->loc.end = current;
+  node->loc.filename = filename;
   *position = current;
   return node;
 onerror:

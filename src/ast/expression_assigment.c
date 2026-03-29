@@ -9,8 +9,10 @@
 #include "core/map.h"
 #include "core/position.h"
 
-cubec_ast_node_t cubec_read_ast_expression_assigment(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end) {
+cubec_ast_node_t
+cubec_read_ast_expression_assigment(cubec_allocator_t allocator,
+                                    cubec_position_t *position, const char *end,
+                                    const char *filename) {
   static const char *opts[] = {
       "=",  "+=", "-=", "*=",  "/=",  "%=",  ">>=", "<<=",
       "&=", "|=", "^=", "&&=", "||=", "??=", NULL,
@@ -21,13 +23,14 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
   cubec_position_t current = *position;
   cubec_ast_node_t identifier = NULL;
   if (*current.offset == '*') {
-    cubec_ast_node_t identifier =
-        cubec_read_ast_expression_binary_prefix(allocator, position, end);
+    cubec_ast_node_t identifier = cubec_read_ast_expression_binary_prefix(
+        allocator, position, end, filename);
     if (identifier) {
       goto onerror;
     }
   } else {
-    identifier = cubec_read_ast_expression18(allocator, &current, end);
+    identifier =
+        cubec_read_ast_expression18(allocator, &current, end, filename);
   }
   if (!identifier) {
     goto onerror;
@@ -42,14 +45,14 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
       identifier->type != CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
     goto onerror;
   }
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   cubec_allocator_free(allocator, err);
 
   cubec_ast_node_t opt =
-      cubec_read_ast_literal_symbol(allocator, &current, end);
+      cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (!opt) {
     goto onerror;
   }
@@ -71,12 +74,13 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
     goto onerror;
   }
 
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
 
-  cubec_ast_node_t value = cubec_read_ast_expression2(allocator, &current, end);
+  cubec_ast_node_t value =
+      cubec_read_ast_expression2(allocator, &current, end, filename);
   if (!value) {
     err = cubec_create_ast_error(
         allocator, *position, current,
@@ -90,6 +94,7 @@ cubec_ast_node_t cubec_read_ast_expression_assigment(
   cubec_ast_add_child(allocator, node, "value", value);
   node->loc.begin = *position;
   node->loc.end = current;
+  node->loc.filename = filename;
   *position = current;
   return node;
 onerror:

@@ -6,9 +6,10 @@
 
 cubec_ast_node_t cubec_read_ast_literal_string(cubec_allocator_t allocator,
                                                cubec_position_t *position,
-                                               const char *end) {
+                                               const char *end,
+                                               const char *filename) {
   cubec_position_t current = *position;
-  int32_t code = cubec_ast_read_code(&current, end);
+  int32_t code = cubec_ast_read_code(&current, end, filename);
   if (code < 0) {
     return cubec_create_ast_error(allocator, *position, current,
                                   "Invalid unicode code");
@@ -21,7 +22,7 @@ cubec_ast_node_t cubec_read_ast_literal_string(cubec_allocator_t allocator,
       return cubec_create_ast_error(allocator, *position, current,
                                     "Invalid string literal, missing '\"'");
     }
-    code = cubec_ast_read_code(&current, end);
+    code = cubec_ast_read_code(&current, end, filename);
     if (code < 0) {
       return cubec_create_ast_error(allocator, *position, current,
                                     "Invalid unicode code");
@@ -35,7 +36,7 @@ cubec_ast_node_t cubec_read_ast_literal_string(cubec_allocator_t allocator,
         return cubec_create_ast_error(allocator, *position, current,
                                       "Invalid string literal, missing '\"'");
       }
-      code = cubec_ast_read_code(&current, end);
+      code = cubec_ast_read_code(&current, end, filename);
       if (code < 0) {
         return cubec_create_ast_error(allocator, *position, current,
                                       "Invalid unicode code");
@@ -50,6 +51,7 @@ cubec_ast_node_t cubec_read_ast_literal_string(cubec_allocator_t allocator,
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_STRING);
   string->loc.begin = *position;
   string->loc.end = current;
+  string->loc.filename = filename;
   *position = current;
   return string;
 }

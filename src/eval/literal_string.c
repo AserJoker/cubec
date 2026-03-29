@@ -4,7 +4,6 @@
 #include "core/location.h"
 #include "engine/context.h"
 #include <stdbool.h>
-#include <string.h>
 
 cubec_value_t cubec_eval_literal_string(cubec_context_t ctx,
                                         cubec_ast_node_t str,

@@ -5,13 +5,14 @@
 
 cubec_ast_node_t cubec_read_ast_statement_enum(cubec_allocator_t allocator,
                                                cubec_position_t *position,
-                                               const char *end) {
+                                               const char *end,
+                                               const char *filename) {
   cubec_ast_node_t node =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_ENUM);
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
   cubec_ast_node_t enu =
-      cubec_read_ast_enum_declarator(allocator, &current, end);
+      cubec_read_ast_enum_declarator(allocator, &current, end, filename);
   if (!enu) {
     goto onerror;
   }
@@ -20,7 +21,7 @@ cubec_ast_node_t cubec_read_ast_statement_enum(cubec_allocator_t allocator,
     goto onerror;
   }
   cubec_ast_add_child(allocator, node, "enum", enu);
-  err = cubec_ast_skip_all(allocator, &current, end);
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
@@ -32,6 +33,7 @@ cubec_ast_node_t cubec_read_ast_statement_enum(cubec_allocator_t allocator,
   }
   node->loc.begin = *position;
   node->loc.end = current;
+  node->loc.filename = filename;
   *position = current;
 
   return node;

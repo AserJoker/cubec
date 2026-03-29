@@ -12,6 +12,9 @@ cubec_value_t cubec_eval_ptr_declarator(cubec_context_t ctx,
                                         const char *filename) {
   cubec_ast_node_t type_node = cubec_map_get(ptr->children, "type", NULL);
   cubec_value_t base = cubec_eval_type(ctx, type_node, filename);
+  if (!base) {
+    return NULL;
+  }
   if (base->type->kind == CUBEC_TYPE_KIND_ERROR) {
     return base;
   }

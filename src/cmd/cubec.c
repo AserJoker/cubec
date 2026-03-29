@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
   cubec_context_create_int32(ctx, 0, true, "a");
   cubec_type_t print_fn_t =
       cubec_context_create_function_type(ctx, ctx->type_void, 0, NULL, true);
-  cubec_context_create_native(ctx, print_fn_t, print, false, "print");
+  cubec_context_create_builtin(ctx, print_fn_t, print, false, "print");
   char *filename = absolute(allocator, "./main.cubec");
   cubec_value_t err = cubec_context_load_module(ctx, filename);
   if (err->type == ctx->type_error) {
