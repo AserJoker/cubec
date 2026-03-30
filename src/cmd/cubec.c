@@ -55,7 +55,7 @@ void print_value(cubec_context_t ctx, cubec_value_t value) {
     printf("%d", *(int32_t *)value->data);
     break;
   case CUBEC_TYPE_KIND_INT64:
-    printf("%" PRIuPTR, *(int64_t *)value->data);
+    printf("%" PRIdPTR, *(int64_t *)value->data);
     break;
   case CUBEC_TYPE_KIND_UINT8:
     printf("%u", *(uint8_t *)value->data);
@@ -191,14 +191,163 @@ cubec_value_t print(cubec_context_t ctx, size_t argc, cubec_value_t argv[]) {
   printf("\n");
   return ctx->value_undefined;
 }
+cubec_value_t cast(cubec_context_t ctx, size_t argc, cubec_value_t argv[]) {
+  if (argc < 2) {
+    return cubec_context_create_error(
+        ctx, "Cast require 2 arguments, received %" PRIuPTR, argc);
+  }
+  if (argv[0]->type->kind != CUBEC_TYPE_KIND_TYPE) {
+    return cubec_context_create_error(
+        ctx, "The 'type' argument must be of type 'type'");
+  }
+  cubec_type_t type = *(cubec_type_t *)argv[0]->data;
+  cubec_value_t value = argv[1];
+  if (type->kind >= CUBEC_TYPE_KIND_INT8 &&
+          type->kind <= CUBEC_TYPE_KIND_UINT64 ||
+      value->type->kind == CUBEC_TYPE_KIND_BOOLEAN) {
+    if (value->type->kind >= CUBEC_TYPE_KIND_INT8 &&
+            value->type->kind <= CUBEC_TYPE_KIND_INT64 ||
+        value->type->kind == CUBEC_TYPE_KIND_BOOLEAN) {
+      int64_t val = 0;
+      switch (value->type->kind) {
+      case CUBEC_TYPE_KIND_BOOLEAN:
+        val = *(bool *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_INT8:
+        val = *(int8_t *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_INT16:
+        val = *(int16_t *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_INT32:
+        val = *(int32_t *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_INT64:
+        val = *(int64_t *)value->data;
+        break;
+      default:
+        return cubec_context_create_error(ctx, "Invalid cast");
+      }
+      switch (type->kind) {
+      case CUBEC_TYPE_KIND_BOOLEAN:
+        return cubec_context_create_boolean(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT8:
+        return cubec_context_create_int8(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT16:
+        return cubec_context_create_int16(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT32:
+        return cubec_context_create_int32(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT64:
+        return cubec_context_create_int64(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT8:
+        return cubec_context_create_uint8(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT16:
+        return cubec_context_create_uint16(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT32:
+        return cubec_context_create_uint32(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT64:
+        return cubec_context_create_uint64(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_FLOAT32:
+        return cubec_context_create_float32(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_FLOAT64:
+        return cubec_context_create_float64(ctx, val, false, NULL);
+      default:
+        break;
+      }
+    } else if (value->type->kind >= CUBEC_TYPE_KIND_UINT8 &&
+               value->type->kind <= CUBEC_TYPE_KIND_UINT64) {
+      uint64_t val = 0;
+      switch (value->type->kind) {
+      case CUBEC_TYPE_KIND_UINT8:
+        val = *(uint8_t *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_UINT16:
+        val = *(uint16_t *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_UINT32:
+        val = *(uint32_t *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_UINT64:
+        val = *(uint64_t *)value->data;
+        break;
+      default:
+        return cubec_context_create_error(ctx, "Invalid cast");
+      }
+      switch (type->kind) {
+      case CUBEC_TYPE_KIND_BOOLEAN:
+        return cubec_context_create_boolean(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT8:
+        return cubec_context_create_int8(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT16:
+        return cubec_context_create_int16(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT32:
+        return cubec_context_create_int32(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT64:
+        return cubec_context_create_int64(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT8:
+        return cubec_context_create_uint8(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT16:
+        return cubec_context_create_uint16(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT32:
+        return cubec_context_create_uint32(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT64:
+        return cubec_context_create_uint64(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_FLOAT32:
+        return cubec_context_create_float32(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_FLOAT64:
+        return cubec_context_create_float64(ctx, val, false, NULL);
+      default:
+        break;
+      }
+    } else if (value->type->kind >= CUBEC_TYPE_KIND_FLOAT32 &&
+               value->type->kind <= CUBEC_TYPE_KIND_FLOAT64) {
+      double val = 0;
+      switch (value->type->kind) {
+      case CUBEC_TYPE_KIND_FLOAT32:
+        val = *(float *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_FLOAT64:
+        val = *(double *)value->data;
+        break;
+      default:
+        return cubec_context_create_error(ctx, "Invalid cast");
+      }
+      switch (type->kind) {
+      case CUBEC_TYPE_KIND_BOOLEAN:
+        return cubec_context_create_boolean(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT8:
+        return cubec_context_create_int8(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT16:
+        return cubec_context_create_int16(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT32:
+        return cubec_context_create_int32(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT64:
+        return cubec_context_create_int64(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT8:
+        return cubec_context_create_uint8(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT16:
+        return cubec_context_create_uint16(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT32:
+        return cubec_context_create_uint32(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT64:
+        return cubec_context_create_uint64(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_FLOAT32:
+        return cubec_context_create_float32(ctx, val, false, NULL);
+      case CUBEC_TYPE_KIND_FLOAT64:
+        return cubec_context_create_float64(ctx, val, false, NULL);
+      default:
+        break;
+      }
+    }
+  }
+  return cubec_context_create_error(ctx, "Invalid cast");
+}
 int main(int argc, char *argv[]) {
   cubec_allocator_t allocator = cubec_create_allocator(NULL);
   cubec_context_t ctx = cubec_create_context(allocator);
   cubec_add_visit(ctx, (cubec_visit_ast_fn_t)cubec_visit_unwrap_group);
-  cubec_context_create_int32(ctx, 0, true, "a");
-  cubec_type_t print_fn_t =
-      cubec_context_create_function_type(ctx, ctx->type_void, 0, NULL, true);
-  cubec_context_create_builtin(ctx, print_fn_t, print, false, "print");
+  cubec_context_create_builtin(ctx, print, false, "print");
+  cubec_context_create_builtin(ctx, cast, false, "cast");
   char *filename = absolute(allocator, "./main.cubec");
   cubec_value_t err = cubec_context_load_module(ctx, filename);
   if (err->type == ctx->type_error) {

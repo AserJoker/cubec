@@ -1,6 +1,3 @@
 test "prefix increment" {
-  func tt(a:int32):void {
-    print(-a);
-  }
-  tt(123u);
+  print(1.0f);
 }

@@ -51,8 +51,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
       goto onerror;
     }
     if (!cubec_location_is(kind->loc, "comptime") &&
-        !cubec_location_is(kind->loc, "extern") &&
-        !cubec_location_is(kind->loc, "builtin")) {
+        !cubec_location_is(kind->loc, "extern")) {
       current = *position;
       cubec_allocator_free(allocator, kind);
     } else {

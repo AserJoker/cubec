@@ -30,7 +30,17 @@ cubec_value_t cubec_eval_literal_numeric(cubec_context_t ctx,
       }
       pstr++;
     }
-    value = cubec_context_create_int32(ctx, val, false, NULL);
+    if (*pstr == 'u') {
+      if (*(pstr + 1) == 'l') {
+        value = cubec_context_create_uint64(ctx, val, false, NULL);
+      } else {
+        value = cubec_context_create_uint32(ctx, val, false, NULL);
+      }
+    } else if (*pstr == 'l') {
+      value = cubec_context_create_int64(ctx, val, false, NULL);
+    } else {
+      value = cubec_context_create_int32(ctx, val, false, NULL);
+    }
   } else if (*pstr == '0' && (*(pstr + 1) == 'o' || *(pstr + 1) == 'O')) {
     pstr += 2;
     uint64_t val = 0;
@@ -42,7 +52,17 @@ cubec_value_t cubec_eval_literal_numeric(cubec_context_t ctx,
       }
       pstr++;
     }
-    value = cubec_context_create_int32(ctx, val, false, NULL);
+    if (*pstr == 'u') {
+      if (*(pstr + 1) == 'l') {
+        value = cubec_context_create_uint64(ctx, val, false, NULL);
+      } else {
+        value = cubec_context_create_uint32(ctx, val, false, NULL);
+      }
+    } else if (*pstr == 'l') {
+      value = cubec_context_create_int64(ctx, val, false, NULL);
+    } else {
+      value = cubec_context_create_int32(ctx, val, false, NULL);
+    }
   } else if (*pstr == '0' && (*(pstr + 1) == 'b' || *(pstr + 1) == 'B')) {
     pstr += 2;
     uint64_t val = 0;
@@ -134,7 +154,13 @@ cubec_value_t cubec_eval_literal_numeric(cubec_context_t ctx,
           value = cubec_context_create_uint32(ctx, val, false, NULL);
         }
       } else if (*pstr == 'l') {
-        value = cubec_context_create_int64(ctx, val, false, NULL);
+        if (*(pstr + 1) == 'f') {
+          value = cubec_context_create_float64(ctx, val, false, NULL);
+        } else {
+          value = cubec_context_create_int64(ctx, val, false, NULL);
+        }
+      } else if (*pstr == 'f') {
+        value = cubec_context_create_float32(ctx, val, false, NULL);
       } else {
         value = cubec_context_create_int32(ctx, val, false, NULL);
       }

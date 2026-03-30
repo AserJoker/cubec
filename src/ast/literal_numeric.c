@@ -138,8 +138,17 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
       err = token;
       goto onerror;
     }
-    cubec_ast_add_child(allocator, node, "flag", token);
+    if (!cubec_location_is(token->loc, "u") &&
+        !cubec_location_is(token->loc, "l") &&
+        !cubec_location_is(token->loc, "f") &&
+        !cubec_location_is(token->loc, "ul")) {
+      cubec_allocator_free(allocator, token);
+      err = cubec_create_ast_error(allocator, *position, current,
+                                   "Invalid or unexpected token");
+      goto onerror;
+    }
   }
+  cubec_allocator_free(allocator, token);
   node->loc.begin = *position;
   node->loc.end = current;
   node->loc.filename = filename;

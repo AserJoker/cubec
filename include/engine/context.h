@@ -28,6 +28,7 @@ struct _cubec_context_t {
   cubec_module_t module;
   cubec_module_t global;
 
+  cubec_type_t type_any;
   cubec_type_t type_void;
   cubec_type_t type_int8;
   cubec_type_t type_int16;
@@ -45,6 +46,7 @@ struct _cubec_context_t {
 
   cubec_type_t type_error;
   cubec_type_t type_type;
+  cubec_type_t type_builtin;
 
   cubec_value_t value_undefined;
 
@@ -162,7 +164,6 @@ cubec_value_t cubec_context_create_native(cubec_context_t self,
                                           cubec_native_handle_t native,
                                           bool is_mutable, const char *name);
 cubec_value_t cubec_context_create_builtin(cubec_context_t self,
-                                           cubec_type_t type,
                                            cubec_native_handle_t native,
                                            bool is_mutable, const char *name);
 cubec_value_t cubec_context_create_type_value(cubec_context_t self,
@@ -182,6 +183,8 @@ cubec_value_t cubec_context_get_field(cubec_context_t self, cubec_value_t obj,
                                       const char *field);
 cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
                                  size_t argc, cubec_value_t *argv);
+cubec_value_t cubec_context_convert(cubec_context_t self, cubec_type_t type,
+                                    cubec_value_t value);
 cubec_value_t cubec_context_load_value(cubec_context_t self, const char *name);
 
 cubec_value_t cubec_context_inc_value(cubec_context_t self,

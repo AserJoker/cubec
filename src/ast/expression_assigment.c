@@ -6,7 +6,6 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/location.h"
-#include "core/map.h"
 #include "core/position.h"
 
 cubec_ast_node_t
@@ -69,8 +68,6 @@ cubec_read_ast_expression_assigment(cubec_allocator_t allocator,
     idx++;
   }
   if (opts[idx] == NULL) {
-    err = cubec_map_move(node->children, "identifier", NULL);
-    *position = err->loc.end;
     goto onerror;
   }
 

@@ -8,6 +8,7 @@ extern "C" {
 #endif
 typedef enum _cubec_type_kind_t {
   CUBEC_TYPE_KIND_ERROR,
+  CUBEC_TYPE_KIND_ANY,
   CUBEC_TYPE_KIND_VOID,
   CUBEC_TYPE_KIND_BOOLEAN,
   CUBEC_TYPE_KIND_INT8,
@@ -30,7 +31,7 @@ typedef enum _cubec_type_kind_t {
   CUBEC_TYPE_KIND_ENUM,
   CUBEC_TYPE_KIND_RESULT,
   CUBEC_TYPE_KIND_FUNCTION,
-  CUBEC_TYPE_KIND_TEMPLATE,
+  CUBEC_TYPE_KIND_BUILTIN,
   CUBEC_TYPE_KIND_TYPE,
 } cubec_type_kind_t;
 typedef struct _cubec_type_t *cubec_type_t;

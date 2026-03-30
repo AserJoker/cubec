@@ -70,8 +70,13 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
 
   self->type_error = cubec_context_create_type(
       self, CUBEC_TYPE_KIND_ERROR, sizeof(const char *), NULL, NULL);
+  self->type_any =
+      cubec_context_create_type(self, CUBEC_TYPE_KIND_ANY, 0, NULL, "any");
   self->type_void =
       cubec_context_create_type(self, CUBEC_TYPE_KIND_VOID, 0, NULL, "void");
+  self->type_builtin = cubec_context_create_type(self, CUBEC_TYPE_KIND_BUILTIN,
+                                                 sizeof(void *), NULL, NULL);
+
   self->value_undefined = cubec_context_create_value(self, self->type_void,
                                                      false, NULL, "undefined");
   self->type_int8 = cubec_context_create_type(self, CUBEC_TYPE_KIND_INT8,
@@ -387,17 +392,14 @@ cubec_value_t cubec_context_create_union(cubec_context_t self,
 
 bool cubec_context_check_type(cubec_context_t self, cubec_type_t dst,
                               cubec_type_t src) {
+  if (dst->kind == CUBEC_TYPE_KIND_ANY) {
+    return true;
+  }
   if (src->kind == CUBEC_TYPE_KIND_ARRAY &&
       dst->kind == CUBEC_TYPE_KIND_PTR_ARRAY) {
     cubec_ptr_meta_t dst_meta = dst->meta;
     cubec_array_meta_t src_meta = src->meta;
     return cubec_context_check_type(self, dst_meta->type, src_meta->type);
-  }
-  if (dst->kind >= CUBEC_TYPE_KIND_INT8 &&
-      dst->kind <= CUBEC_TYPE_KIND_UINT64 &&
-      src->kind >= CUBEC_TYPE_KIND_INT8 &&
-      src->kind <= CUBEC_TYPE_KIND_UINT64) {
-    return true;
   }
   if (src->kind != dst->kind) {
     return false;
@@ -515,6 +517,8 @@ bool cubec_context_check_type(cubec_context_t self, cubec_type_t dst,
 }
 char *cubec_context_type_to_string(cubec_context_t self, cubec_type_t type) {
   switch (type->kind) {
+  case CUBEC_TYPE_KIND_ANY:
+    return cubec_create_cstring(self->allocator, "any");
   case CUBEC_TYPE_KIND_TYPE:
     return cubec_create_cstring(self->allocator, "type");
   case CUBEC_TYPE_KIND_ERROR:
@@ -667,7 +671,7 @@ char *cubec_context_type_to_string(cubec_context_t self, cubec_type_t type) {
     cubec_allocator_free(self->allocator, r_name);
     return s;
   }
-  case CUBEC_TYPE_KIND_TEMPLATE:
+  case CUBEC_TYPE_KIND_BUILTIN:
     break;
   }
   return NULL;
@@ -784,13 +788,13 @@ cubec_value_t cubec_context_create_native(cubec_context_t self,
   return cubec_context_create_value(self, type, is_mutable, &func, name);
 }
 cubec_value_t cubec_context_create_builtin(cubec_context_t self,
-                                           cubec_type_t type,
                                            cubec_native_handle_t native,
                                            bool is_mutable, const char *name) {
   cubec_function_desc_t func = cubec_create_function_desc(
       self->allocator, CUBEC_FUNCTION_BUILTIN, native, name);
   cubec_array_push(self->module->functions, func);
-  return cubec_context_create_value(self, type, is_mutable, &func, name);
+  return cubec_context_create_value(self, self->type_builtin, is_mutable, &func,
+                                    name);
 }
 cubec_value_t cubec_context_create_type_value(cubec_context_t self,
                                               cubec_type_t type,
@@ -1044,7 +1048,8 @@ cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
                                  size_t argc, cubec_value_t *argv) {
   cubec_value_t callee = NULL;
   cubec_array_t arguments = cubec_create_array(self->allocator, NULL);
-  if (func->type->kind == CUBEC_TYPE_KIND_FUNCTION) {
+  if (func->type->kind == CUBEC_TYPE_KIND_FUNCTION ||
+      func->type->kind == CUBEC_TYPE_KIND_BUILTIN) {
     callee = func;
   } else {
     cubec_allocator_free(self->allocator, arguments);
@@ -1055,7 +1060,7 @@ cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
     return error;
   }
   cubec_function_meta_t meta = func->type->meta;
-  if (argc < cubec_array_get_size(meta->args)) {
+  if (meta && argc < cubec_array_get_size(meta->args)) {
     char *type_name = cubec_context_type_to_string(self, func->type);
     cubec_value_t error = cubec_context_create_error(
         self, "Cannot call value(type = %s) with %" PRIuPTR " arguments",
@@ -1068,42 +1073,34 @@ cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
   cubec_value_t result = NULL;
   for (size_t idx = 0; idx < argc; idx++) {
     cubec_value_t arg = argv[idx];
-    if (idx >= cubec_array_get_size(meta->args)) {
-      if (!meta->is_variadic) {
-        char *type_name = cubec_context_type_to_string(self, func->type);
-        result = cubec_context_create_error(
-            self, "Cannot call value(type = %s) with %" PRIuPTR " arguments",
-            type_name, argc);
-        cubec_allocator_free(self->allocator, type_name);
-        cubec_allocator_free(self->allocator, arguments);
-        return result;
-      }
-      cubec_array_push(arguments, cubec_context_create_value(
-                                      self, arg->type, true, arg->data, NULL));
-    } else {
-      cubec_type_t dst = cubec_array_get(meta->args, idx);
-      if (dst->kind == CUBEC_TYPE_KIND_PTR_ARRAY &&
-          arg->type->kind == CUBEC_TYPE_KIND_ARRAY) {
-        if (arg->data) {
-          arg = cubec_context_create_value(self, dst, true, &arg->data, NULL);
-        } else {
-          arg = cubec_context_create_value(self, dst, true, NULL, NULL);
+    if (meta) {
+      if (idx >= cubec_array_get_size(meta->args)) {
+        if (!meta->is_variadic) {
+          char *type_name = cubec_context_type_to_string(self, func->type);
+          result = cubec_context_create_error(
+              self, "Cannot call value(type = %s) with %" PRIuPTR " arguments",
+              type_name, argc);
+          cubec_allocator_free(self->allocator, type_name);
+          cubec_allocator_free(self->allocator, arguments);
+          return result;
+        }
+      } else {
+        cubec_type_t dst = cubec_array_get(meta->args, idx);
+        if (!cubec_context_check_type(self, dst, argv[idx]->type)) {
+          char *dst_name = cubec_context_type_to_string(self, dst);
+          char *src_name = cubec_context_type_to_string(self, argv[idx]->type);
+          result = cubec_context_create_error(
+              self, "Cannot convert argument[%" PRIuPTR "] (type = %s) to %s",
+              idx, src_name, dst_name);
+          cubec_allocator_free(self->allocator, dst_name);
+          cubec_allocator_free(self->allocator, src_name);
+          cubec_allocator_free(self->allocator, arguments);
+          return result;
         }
       }
-      if (!cubec_context_check_type(self, dst, argv[idx]->type)) {
-        char *dst_name = cubec_context_type_to_string(self, dst);
-        char *src_name = cubec_context_type_to_string(self, argv[idx]->type);
-        result = cubec_context_create_error(
-            self, "Cannot convert argument[%" PRIuPTR "] (type = %s) to %s",
-            idx, src_name, dst_name);
-        cubec_allocator_free(self->allocator, dst_name);
-        cubec_allocator_free(self->allocator, src_name);
-        cubec_allocator_free(self->allocator, arguments);
-        return result;
-      }
-      cubec_array_push(arguments, cubec_context_create_value(self, dst, true,
-                                                             arg->data, NULL));
     }
+    cubec_array_push(arguments, cubec_context_create_value(
+                                    self, arg->type, true, arg->data, NULL));
   }
   cubec_function_desc_t desc = *(cubec_function_desc_t *)func->data;
   if (desc->kind == CUBEC_FUNCTION_BUILTIN) {
@@ -1150,15 +1147,17 @@ cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
         self, "Cannot call native function in runtime statement");
   }
   cubec_allocator_free(self->allocator, arguments);
-  if (result->type->kind != CUBEC_TYPE_KIND_ERROR &&
-      !cubec_context_check_type(self, result->type, meta->type)) {
-    char *dst_name = cubec_context_type_to_string(self, meta->type);
-    char *src_name = cubec_context_type_to_string(self, result->type);
-    result = cubec_context_create_error(
-        self, "Cannot convert native function return type %s to %s", dst_name,
-        src_name);
-    cubec_allocator_free(self->allocator, dst_name);
-    cubec_allocator_free(self->allocator, src_name);
+  if (func->type->kind != CUBEC_TYPE_KIND_BUILTIN) {
+    if (result->type->kind != CUBEC_TYPE_KIND_ERROR &&
+        !cubec_context_check_type(self, meta->type, result->type)) {
+      char *dst_name = cubec_context_type_to_string(self, meta->type);
+      char *src_name = cubec_context_type_to_string(self, result->type);
+      result = cubec_context_create_error(
+          self, "Cannot convert native function return type %s to %s", dst_name,
+          src_name);
+      cubec_allocator_free(self->allocator, dst_name);
+      cubec_allocator_free(self->allocator, src_name);
+    }
   }
   cubec_scope_t scope = self->current;
   self->current = parent;
@@ -1170,6 +1169,148 @@ cubec_value_t cubec_context_call(cubec_context_t self, cubec_value_t func,
   }
   return result;
 }
+
+cubec_value_t cubec_context_convert(cubec_context_t self, cubec_type_t type,
+                                    cubec_value_t value) {
+  if (type->kind == CUBEC_TYPE_KIND_ANY) {
+    return value;
+  }
+  if (type->kind == CUBEC_TYPE_KIND_PTR_ARRAY) {
+    cubec_ptr_meta_t dst_meta = type->meta;
+    cubec_array_meta_t src_meta = value->type->meta;
+    if (cubec_context_check_type(self, dst_meta->type, src_meta->type)) {
+      return cubec_context_create_ptr_array(self, value, false, NULL);
+    }
+  }
+  if (value->type->kind >= CUBEC_TYPE_KIND_INT8 &&
+      value->type->kind <= CUBEC_TYPE_KIND_FLOAT64) {
+    if (value->type->kind >= CUBEC_TYPE_KIND_INT8 &&
+        value->type->kind <= CUBEC_TYPE_KIND_INT64 &&
+        value->type->kind <= type->kind) {
+      int64_t val = 0;
+      switch (value->type->kind) {
+      case CUBEC_TYPE_KIND_INT8:
+        val = *(int8_t *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_INT16:
+        val = *(int16_t *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_INT32:
+        val = *(int32_t *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_INT64:
+        val = *(int64_t *)value->data;
+        break;
+      default:
+        return value;
+      }
+      switch (type->kind) {
+      case CUBEC_TYPE_KIND_INT8:
+        return cubec_context_create_int8(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT16:
+        return cubec_context_create_int16(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT32:
+        return cubec_context_create_int32(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT64:
+        return cubec_context_create_int64(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT8:
+        return cubec_context_create_uint8(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT16:
+        return cubec_context_create_uint16(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT32:
+        return cubec_context_create_uint32(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT64:
+        return cubec_context_create_uint64(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_FLOAT32:
+        return cubec_context_create_float32(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_FLOAT64:
+        return cubec_context_create_float64(self, val, false, NULL);
+      default:
+        return value;
+      }
+    }
+    if (value->type->kind >= CUBEC_TYPE_KIND_UINT8 &&
+        value->type->kind <= CUBEC_TYPE_KIND_UINT64 &&
+        value->type->kind <= type->kind) {
+      uint64_t val = 0;
+      switch (value->type->kind) {
+      case CUBEC_TYPE_KIND_UINT8:
+        val = *(uint8_t *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_UINT16:
+        val = *(uint16_t *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_UINT32:
+        val = *(uint32_t *)value->data;
+        break;
+      case CUBEC_TYPE_KIND_UINT64:
+        val = *(uint64_t *)value->data;
+        break;
+      default:
+        return value;
+      }
+      switch (type->kind) {
+      case CUBEC_TYPE_KIND_INT8:
+        return cubec_context_create_int8(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT16:
+        return cubec_context_create_int16(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT32:
+        return cubec_context_create_int32(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT64:
+        return cubec_context_create_int64(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT8:
+        return cubec_context_create_uint8(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT16:
+        return cubec_context_create_uint16(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT32:
+        return cubec_context_create_uint32(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT64:
+        return cubec_context_create_uint64(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_FLOAT32:
+        return cubec_context_create_float32(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_FLOAT64:
+        return cubec_context_create_float64(self, val, false, NULL);
+      default:
+        return value;
+      }
+    }
+    if (value->type->kind >= CUBEC_TYPE_KIND_FLOAT32 &&
+        value->type->kind <= CUBEC_TYPE_KIND_FLOAT64) {
+      double val = 0;
+      if (value->type->kind == CUBEC_TYPE_KIND_FLOAT32) {
+        val = *(float *)value->data;
+      } else if (value->type->kind == CUBEC_TYPE_KIND_FLOAT64) {
+        val = *(double *)value->data;
+      }
+      switch (type->kind) {
+      case CUBEC_TYPE_KIND_INT8:
+        return cubec_context_create_int8(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT16:
+        return cubec_context_create_int16(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT32:
+        return cubec_context_create_int32(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_INT64:
+        return cubec_context_create_int64(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT8:
+        return cubec_context_create_uint8(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT16:
+        return cubec_context_create_uint16(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT32:
+        return cubec_context_create_uint32(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_UINT64:
+        return cubec_context_create_uint64(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_FLOAT32:
+        return cubec_context_create_float32(self, val, false, NULL);
+      case CUBEC_TYPE_KIND_FLOAT64:
+        return cubec_context_create_float64(self, val, false, NULL);
+      default:
+        return value;
+      }
+    }
+  }
+  return value;
+}
+
 cubec_value_t cubec_context_load_value(cubec_context_t self, const char *name) {
   cubec_scope_t scope = self->current;
   while (scope) {

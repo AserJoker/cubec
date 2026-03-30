@@ -34,7 +34,7 @@ cubec_ast_node_t cubec_read_ast_initialize_list(cubec_allocator_t allocator,
     return err;
   }
   cubec_ast_node_t fields =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_INITIALIZE_LIST);
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
   cubec_ast_add_child(allocator, node, "fields", fields);
   if (*current.offset != '}') {
     for (;;) {
