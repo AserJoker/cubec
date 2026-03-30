@@ -2,24 +2,19 @@
 #define _H_CUBEC_ENGINE_MODULE_
 #include "ast/node.h"
 #include "core/allocator.h"
-#include "core/array.h"
-#include "core/string.h"
+#include "engine/scope.h"
+#include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 typedef struct _cubec_module_t *cubec_module_t;
-struct _cubec_module_t {
-  cubec_array_t types;
-  cubec_array_t functions;
-  cubec_map_t variables;
-  cubec_map_t dependences;
-  char *filename;
-  char *dirname;
-  cubec_string_t data;
-  cubec_ast_node_t node;
-};
 cubec_module_t cubec_create_module(cubec_allocator_t allocator,
-                                   const char *filename);
+                                   cubec_ast_node_t node, const char *filename,
+                                   cubec_scope_t parent);
+const char *cubec_module_get_filename(cubec_module_t self);
+const char *cubec_module_get_dirname(cubec_module_t self);
+cubec_ast_node_t cubec_module_get_node(cubec_module_t self);
+cubec_scope_t cubec_module_get_scope(cubec_module_t self);
 #ifdef __cplusplus
 }
 #endif

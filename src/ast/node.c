@@ -528,5 +528,8 @@ cubec_ast_node_t cubec_read_ast_node(cubec_allocator_t allocator,
   const char *end = strlen(source) + source;
   cubec_ast_node_t program =
       cubec_read_ast_program(allocator, &pos, end, filename);
+  if (program->type == CUBEC_NODE_TYPE_ERROR) {
+    return program;
+  }
   return cubec_visit_ast_node(allocator, program, ctx, num_visits, visits);
 }

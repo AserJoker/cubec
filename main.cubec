@@ -1,3 +1,26 @@
-test "prefix increment" {
-  print(1.0f);
+func test(...args:[_]int32_t){
+  uint64_t length = len(args);
+  print("length: %d",len(args));
+  for(uint64_t idx = 0;idx<length;idx++){
+    print(args[idx]);
+    print(",");
+  }
+}
+func main(argc:int32_t,argv:[*]str):int32_t {
+  test(1,2,3)
+  return 0;
+}
+
+func test_0(...args:[3]int32_t){
+  print("length: %d",3);
+  print(args[0]);
+  print(",");
+  print(args[1]);
+  print(",");
+  print(args[2]);
+  print(",");
+}
+func main(argc:int32_t,argv:[*]str):int32_t {
+  print("hello world\n");
+  return 0;
 }
