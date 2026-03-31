@@ -7,6 +7,7 @@
 #include "core/map.h"
 #include "engine/module.h"
 #include "engine/scope.h"
+#include "engine/struct.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include <stdarg.h>
@@ -230,4 +231,13 @@ cubec_value_t cubec_context_load(cubec_context_t self, const char *name) {
     scope = cubec_scope_get_parent(scope);
   }
   return NULL;
+}
+
+cubec_type_t cubec_context_create_struct_type(cubec_context_t self,
+                                              size_t align, const char *name) {
+  cubec_struct_meta_t meta =
+      cubec_create_struct_meta(self->allocator, align, name);
+  cubec_type_t type =
+      cubec_context_create_type(self, CUBEC_VALUE_TYPE_STRUCT, 1, meta);
+  return type;
 }

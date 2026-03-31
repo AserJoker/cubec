@@ -21,4 +21,5 @@ cubec_type_t cubec_create_type(cubec_allocator_t allocator,
 }
 cubec_type_kind_t cubec_type_get_kind(cubec_type_t self) { return self->kind; }
 size_t cubec_type_get_size(cubec_type_t self) { return self->size; }
+void cubec_type_set_size(cubec_type_t self, size_t size) { self->size = size; }
 void *cubec_type_get_meta(cubec_type_t self) { return self->meta; }
