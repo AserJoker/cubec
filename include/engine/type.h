@@ -33,14 +33,18 @@ typedef enum _cubec_type_kind_t {
   CUBEC_VALUE_TYPE_RESULT,
   CUBEC_VALUE_TYPE_OPTIONAL,
   CUBEC_VALUE_TYPE_FUNCTION,
+  CUBEC_VALUE_TYPE_BUILTIN,
 } cubec_type_kind_t;
 typedef struct _cubec_type_t *cubec_type_t;
 cubec_type_t cubec_create_type(cubec_allocator_t allocator,
-                               cubec_type_kind_t kind, size_t size, void *meta);
+                               cubec_type_kind_t kind, size_t size,
+                               size_t align, void *meta);
 cubec_type_kind_t cubec_type_get_kind(cubec_type_t self);
 size_t cubec_type_get_size(cubec_type_t self);
 void cubec_type_set_size(cubec_type_t self, size_t size);
 void *cubec_type_get_meta(cubec_type_t self);
+size_t cubec_type_get_align(cubec_type_t self);
+void cubec_type_set_align(cubec_type_t self, size_t align);
 #ifdef __cplusplus
 }
 #endif
