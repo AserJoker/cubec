@@ -34,17 +34,45 @@ static cubec_union_meta_t cubec_create_union_meta(cubec_allocator_t allocator,
   self->attributes = cubec_create_array(allocator, &attributes_initialize);
   return self;
 }
+static bool cubec_union_type_is_equal(cubec_type_t self, cubec_type_t another) {
+  cubec_union_meta_t self_meta = cubec_type_get_meta(self);
+  cubec_union_meta_t another_meta = cubec_type_get_meta(another);
+  if (cubec_array_get_size(self_meta->fields) !=
+      cubec_array_get_size(another_meta->fields)) {
+    return false;
+  }
+  for (size_t idx = 0; idx < cubec_array_get_size(self_meta->fields); idx++) {
+    cubec_union_field_t self_field = cubec_array_get(self_meta->fields, idx);
+    cubec_union_field_t another_field = cubec_array_get(self_meta->fields, idx);
+    if (strcmp(self_field->name, another_field->name) != 0) {
+      return false;
+    }
+    if (!cubec_type_is_equal(self_field->type, another_field->type)) {
+      return false;
+    }
+  }
+  return true;
+}
+static char *cubec_union_type_to_string(cubec_type_t self,
+                                        cubec_allocator_t allocator) {
+  cubec_union_meta_t meta = cubec_type_get_meta(self);
+  size_t len = 32;
+  if (meta->name) {
+    return cubec_create_cstring(allocator, meta->name);
+  }
+  return cubec_create_cstring(allocator, "union (unnamed){...}");
+}
 cubec_type_t cubec_context_union_type(cubec_context_t ctx, size_t align,
                                       const char *name) {
   cubec_union_meta_t meta =
       cubec_create_union_meta(cubec_context_get_allocator(ctx), name);
-  return cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_UNION, 1, align, meta);
+  struct _cubec_type_operator_t opt = {
+      .is_type_equal = cubec_union_type_is_equal,
+      .type_to_string = cubec_union_type_to_string,
+  };
+  return cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_UNION, 1, align, meta,
+                                   &opt, name);
 }
-struct _cubec_union_field_t {
-  char *name;
-  cubec_type_t type;
-};
-typedef struct _cubec_union_field_t *cubec_union_field_t;
 static void cubec_union_field_dispose(cubec_union_field_t self,
                                       cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->name);
@@ -76,11 +104,6 @@ void cubec_union_type_add_field(cubec_type_t self, cubec_allocator_t allocator,
   cubec_type_set_align(self, align);
   cubec_type_set_size(self, size);
 }
-struct _cubec_union_attribute_t {
-  char *name;
-  cubec_value_t value;
-};
-typedef struct _cubec_union_attribute_t *cubec_union_attribute_t;
 static void cubec_union_attribute_dispose(cubec_union_attribute_t self,
                                           cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->name);
@@ -107,22 +130,12 @@ void cubec_union_type_add_attribute(cubec_type_t self,
 cubec_array_t cubec_union_type_get_fields(cubec_type_t self,
                                           cubec_allocator_t allocator) {
   cubec_union_meta_t meta = cubec_type_get_meta(self);
-  cubec_array_t fields = cubec_create_array(allocator, NULL);
-  for (size_t idx; idx < cubec_array_get_size(meta->fields); idx++) {
-    cubec_union_field_t field = cubec_array_get(meta->fields, idx);
-    cubec_array_push(fields, field->name);
-  }
-  return fields;
+  return meta->fields;
 }
 cubec_array_t cubec_union_type_get_attributes(cubec_type_t self,
                                               cubec_allocator_t allocator) {
   cubec_union_meta_t meta = cubec_type_get_meta(self);
-  cubec_array_t attributes = cubec_create_array(allocator, NULL);
-  for (size_t idx; idx < cubec_array_get_size(meta->attributes); idx++) {
-    cubec_union_attribute_t attr = cubec_array_get(meta->attributes, idx);
-    cubec_array_push(attributes, attr->name);
-  }
-  return attributes;
+  return meta->attributes;
 }
 cubec_type_t cubec_union_type_get_field(cubec_type_t self, const char *name) {
   cubec_union_meta_t meta = cubec_type_get_meta(self);

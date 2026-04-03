@@ -1,6 +1,9 @@
 #include "engine/value.h"
 #include "core/allocator.h"
 #include "engine/type.h"
+#include <inttypes.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 struct _cubec_value_t {
   cubec_type_t type;

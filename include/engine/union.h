@@ -9,6 +9,16 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+struct _cubec_union_attribute_t {
+  char *name;
+  cubec_value_t value;
+};
+typedef struct _cubec_union_attribute_t *cubec_union_attribute_t;
+struct _cubec_union_field_t {
+  char *name;
+  cubec_type_t type;
+};
+typedef struct _cubec_union_field_t *cubec_union_field_t;
 cubec_type_t cubec_context_union_type(cubec_context_t ctx, size_t align,
                                       const char *name);
 void cubec_union_type_add_field(cubec_type_t self, cubec_allocator_t allocator,

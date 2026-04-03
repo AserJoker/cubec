@@ -29,8 +29,7 @@ cubec_read_ast_statement_declaration(cubec_allocator_t allocator,
       !cubec_location_is(kind->loc, "extern") &&
       !cubec_location_is(kind->loc, "let") &&
       !cubec_location_is(kind->loc, "comptime") &&
-      !cubec_location_is(kind->loc, "register") &&
-      !cubec_location_is(kind->loc, "builtin")) {
+      !cubec_location_is(kind->loc, "register")) {
     cubec_allocator_free(allocator, kind);
     goto onerror;
   }

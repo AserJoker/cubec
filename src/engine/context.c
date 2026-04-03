@@ -5,10 +5,18 @@
 #include "core/array.h"
 #include "core/compare.h"
 #include "core/map.h"
+#include "core/string.h"
+#include "engine/builtin.h"
+#include "engine/error.h"
 #include "engine/module.h"
+#include "engine/numeric.h"
+#include "engine/opaque.h"
 #include "engine/scope.h"
+#include "engine/str.h"
 #include "engine/type.h"
 #include "engine/value.h"
+#include "engine/void.h"
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -20,27 +28,12 @@ struct _cubec_context_t {
 
   cubec_map_t modules;
   cubec_array_t types;
+  cubec_array_t strings;
 
-  cubec_type_t error_type;
-  cubec_type_t any_type;
-  cubec_type_t void_type;
   cubec_type_t type_type;
-  cubec_type_t module_type;
-  cubec_type_t bool_type;
-  cubec_type_t int8_type;
-  cubec_type_t int16_type;
-  cubec_type_t int32_type;
-  cubec_type_t int64_type;
-  cubec_type_t uint8_type;
-  cubec_type_t uint16_type;
-  cubec_type_t uint32_type;
-  cubec_type_t uint64_type;
-  cubec_type_t float16_type;
-  cubec_type_t float32_type;
-  cubec_type_t float64_type;
-  cubec_type_t str_type;
-  cubec_type_t opaque_type;
-  cubec_type_t builtin_type;
+  cubec_type_t type_any;
+
+  cubec_value_t value_undefined;
 
   cubec_scope_t root;
   cubec_scope_t scope;
@@ -52,93 +45,47 @@ static void cubec_context_dispose(cubec_context_t self,
   cubec_allocator_free(allocator, self->modules);
   cubec_allocator_free(allocator, self->root);
   cubec_allocator_free(allocator, self->visits);
+  cubec_allocator_free(allocator, self->strings);
+}
+
+static char *cubec_type_type_to_string(cubec_type_t self,
+                                       cubec_allocator_t allocator) {
+  return cubec_create_cstring(allocator, "type");
+}
+
+static void cubec_init_type_type(cubec_context_t self) {
+  struct _cubec_type_operator_t opt = {
+      .type_to_string = cubec_type_type_to_string,
+  };
+  cubec_type_t type_type = cubec_create_type(
+      self->allocator, CUBEC_VALUE_TYPE_TYPE, sizeof(cubec_type_t *),
+      sizeof(cubec_type_t *), NULL, &opt);
+  cubec_context_create_value(self, type_type, false, &type_type, "type");
+  cubec_array_push(self->types, type_type);
+  self->type_type = type_type;
+}
+
+static void cubec_init_any_type(cubec_context_t self) {
+  self->type_any = cubec_context_create_type(self, CUBEC_VALUE_TYPE_ANY, 0, 0,
+                                             NULL, NULL, "any");
 }
 
 static void cubec_context_init_type(cubec_context_t self) {
-  self->void_type = cubec_context_create_type(self, CUBEC_VALUE_TYPE_VOID, 0,
-                                              sizeof(void *), NULL);
-  self->any_type = cubec_context_create_type(self, CUBEC_VALUE_TYPE_ANY, 0,
-                                             sizeof(void *), NULL);
-  self->error_type = cubec_context_create_type(self, CUBEC_VALUE_TYPE_ERROR,
-                                               sizeof(const char *),
-                                               sizeof(const char *), NULL);
-  self->error_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_MODULE, sizeof(const cubec_module_t *),
-      sizeof(const cubec_module_t *), NULL);
-  self->type_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_TYPE, sizeof(const cubec_type_t *),
-      sizeof(const cubec_type_t *), NULL);
-
-  self->bool_type = cubec_context_create_type(self, CUBEC_VALUE_TYPE_BOOL,
-                                              sizeof(bool), sizeof(bool), NULL);
-  self->int8_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_INT8, sizeof(int8_t), sizeof(int8_t), NULL);
-  self->int16_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_INT16, sizeof(int16_t), sizeof(int16_t), NULL);
-  self->int32_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_INT32, sizeof(int32_t), sizeof(int32_t), NULL);
-  self->int64_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_INT64, sizeof(int64_t), sizeof(int64_t), NULL);
-  self->uint8_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_UINT8, sizeof(uint8_t), sizeof(uint8_t), NULL);
-  self->uint16_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_UINT16, sizeof(uint16_t), sizeof(uint16_t), NULL);
-  self->uint32_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_UINT32, sizeof(uint32_t), sizeof(uint32_t), NULL);
-  self->uint64_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_UINT64, sizeof(uint64_t), sizeof(uint64_t), NULL);
-  self->float16_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_FLOAT16, sizeof(_Float16), sizeof(_Float16), NULL);
-  self->float32_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_FLOAT32, sizeof(float), sizeof(float), NULL);
-  self->float64_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_FLOAT64, sizeof(double), sizeof(double), NULL);
-  self->str_type = cubec_context_create_type(self, CUBEC_VALUE_TYPE_STR,
-                                             sizeof(const char *),
-                                             sizeof(const char *), NULL);
-  self->opaque_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_OPAQUE, sizeof(void *), sizeof(void *), NULL);
-
-  self->builtin_type = cubec_context_create_type(
-      self, CUBEC_VALUE_TYPE_BUILTIN, sizeof(void *), sizeof(void *), NULL);
+  cubec_init_type_type(self);
+  cubec_init_any_type(self);
+  cubec_init_void_type(self);
+  cubec_init_numeric_type(self);
+  cubec_init_error_type(self);
+  cubec_init_builtin_type(self);
+  cubec_init_opaque_type(self);
+  cubec_init_str_type(self);
 }
 
 static void cubec_context_init_value(cubec_context_t self) {
-  cubec_context_create_value(self, self->void_type, false, NULL, "undefined");
-  cubec_context_create_value(self, self->type_type, false, &self->type_type,
-                             "type");
-  cubec_context_create_value(self, self->type_type, false, &self->void_type,
-                             "void");
-  cubec_context_create_value(self, self->type_type, false, &self->bool_type,
-                             "bool");
-  cubec_context_create_value(self, self->type_type, false, &self->int8_type,
-                             "i8");
-  cubec_context_create_value(self, self->type_type, false, &self->int16_type,
-                             "i16");
-  cubec_context_create_value(self, self->type_type, false, &self->int16_type,
-                             "i32");
-  cubec_context_create_value(self, self->type_type, false, &self->int32_type,
-                             "i64");
-  cubec_context_create_value(self, self->type_type, false, &self->uint8_type,
-                             "u8");
-  cubec_context_create_value(self, self->type_type, false, &self->uint16_type,
-                             "u16");
-  cubec_context_create_value(self, self->type_type, false, &self->uint16_type,
-                             "u32");
-  cubec_context_create_value(self, self->type_type, false, &self->uint32_type,
-                             "u64");
-  cubec_context_create_value(self, self->type_type, false, &self->float16_type,
-                             "f16");
-  cubec_context_create_value(self, self->type_type, false, &self->float32_type,
-                             "f32");
-  cubec_context_create_value(self, self->type_type, false, &self->float64_type,
-                             "f64");
-  cubec_context_create_value(self, self->type_type, false, &self->builtin_type,
-                             "builtin");
-  cubec_context_create_value(self, self->type_type, false, &self->str_type,
-                             "str");
-  cubec_context_create_value(self, self->type_type, false, &self->opaque_type,
-                             "opaque");
+  cubec_value_t vtype = cubec_context_load(self, "void");
+  cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
+  self->value_undefined =
+      cubec_context_create_value(self, type, false, NULL, NULL);
 }
 
 cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
@@ -153,14 +100,18 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
       .autofree = true,
   };
   self->types = cubec_create_array(allocator, &types_initialize);
-  cubec_context_init_type(self);
-  cubec_context_init_value(self);
+  cubec_array_initialize_t strings_initialize = {
+      .autofree = true,
+  };
+  self->strings = cubec_create_array(allocator, &strings_initialize);
   cubec_map_initialize_t module_initialize = {
       .autofree_value = true,
       .autofree_key = false,
       .compare = (cubec_compare_fn_t)strcmp,
   };
   self->modules = cubec_create_map(allocator, &module_initialize);
+  cubec_context_init_type(self);
+  cubec_context_init_value(self);
   return self;
 }
 
@@ -175,8 +126,7 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
   if (!module) {
     FILE *fp = fopen(filename, "rb");
     if (!fp) {
-      return cubec_context_create_error(self, "File '%s' is not exist",
-                                        filename);
+      return cubec_create_error(self, "File '%s' is not exist", filename);
     }
     fseek(fp, 0, SEEK_END);
     size_t len = ftell(fp);
@@ -191,25 +141,29 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
         self->allocator, filename, source, self, num_visits, visits);
     if (node->type == CUBEC_NODE_TYPE_ERROR) {
       cubec_ast_error_t error = (cubec_ast_error_t)node;
-      cubec_value_t res =
-          cubec_context_create_error(self, "%s", error->message);
+      cubec_value_t res = cubec_create_error(self, "%s", error->message);
       cubec_allocator_free(self->allocator, node);
       return res;
     }
-    module = cubec_create_module(self->allocator, node, filename, self->root);
+    cubec_value_t value = self->value_undefined; // TODO: eval module;
+    module = cubec_create_module(self->allocator, node, filename, value);
     cubec_map_set(self->modules, (void *)cubec_module_get_filename(module),
                   module, NULL);
   }
-  return cubec_context_create_value(self, self->module_type, false, &module,
-                                    name);
+  return cubec_module_get_value(module);
 }
 
 cubec_type_t cubec_context_create_type(cubec_context_t self,
                                        cubec_type_kind_t kind, size_t size,
-                                       size_t align, void *meta) {
+                                       size_t align, void *meta,
+                                       cubec_type_operator_t opt,
+                                       const char *name) {
   cubec_type_t type =
-      cubec_create_type(self->allocator, kind, size, align, meta);
+      cubec_create_type(self->allocator, kind, size, align, meta, opt);
   cubec_array_push(self->types, type);
+  if (name) {
+    cubec_context_create_value(self, self->type_type, false, &type, name);
+  }
   return type;
 }
 
@@ -222,19 +176,6 @@ cubec_value_t cubec_context_create_value(cubec_context_t self,
   return value;
 }
 
-cubec_value_t cubec_context_create_error(cubec_context_t self, const char *fmt,
-                                         ...) {
-  va_list args;
-  va_start(args, fmt);
-  size_t len = vsnprintf(NULL, 0, fmt, args);
-  va_end(args);
-  char message[len + 1];
-  va_start(args, fmt);
-  vsprintf(message, fmt, args);
-  va_end(args);
-  return cubec_context_create_value(self, self->error_type, false, &message,
-                                    NULL);
-}
 cubec_value_t cubec_context_load(cubec_context_t self, const char *name) {
   cubec_scope_t scope = self->scope;
   while (scope) {
@@ -245,6 +186,21 @@ cubec_value_t cubec_context_load(cubec_context_t self, const char *name) {
     scope = cubec_scope_get_parent(scope);
   }
   return NULL;
+}
+cubec_type_t cubec_context_load_type(cubec_context_t self, const char *name) {
+  cubec_value_t vtype = cubec_context_load(self, name);
+  if (vtype) {
+    cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
+    return type;
+  }
+  return NULL;
+}
+
+char *const cubec_context_create_cstring(cubec_context_t self,
+                                         const char *src) {
+  char *str = cubec_create_cstring(self->allocator, src);
+  cubec_array_push(self->strings, str);
+  return str;
 }
 
 cubec_allocator_t cubec_context_get_allocator(cubec_context_t self) {

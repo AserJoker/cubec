@@ -40,20 +40,51 @@ static cubec_struct_meta_t cubec_create_struct_meta(cubec_allocator_t allocator,
   }
   return self;
 }
+static bool cubec_struct_type_is_equal(cubec_type_t self,
+                                       cubec_type_t another) {
+  cubec_struct_meta_t self_meta = cubec_type_get_meta(self);
+  cubec_struct_meta_t another_meta = cubec_type_get_meta(another);
+  if (cubec_array_get_size(self_meta->fields) !=
+      cubec_array_get_size(another_meta->fields)) {
+    return false;
+  }
+  for (size_t idx = 0; idx < cubec_array_get_size(self_meta->fields); idx++) {
+    cubec_struct_field_t self_field = cubec_array_get(self_meta->fields, idx);
+    cubec_struct_field_t another_field =
+        cubec_array_get(self_meta->fields, idx);
+    if (self_field->offset != another_field->offset) {
+      return false;
+    }
+    if (strcmp(self_field->name, another_field->name) != 0) {
+      return false;
+    }
+    if (!cubec_type_is_equal(self_field->type, another_field->type)) {
+      return false;
+    }
+  }
+  return true;
+}
+static char *cubec_struct_type_to_string(cubec_type_t self,
+                                         cubec_allocator_t allocator) {
+  cubec_struct_meta_t meta = cubec_type_get_meta(self);
+  size_t len = 32;
+  if (meta->name) {
+    return cubec_create_cstring(allocator, meta->name);
+  }
+  return cubec_create_cstring(allocator, "struct (unnamed){...}");
+}
 cubec_type_t cubec_context_create_struct_type(cubec_context_t ctx, size_t align,
                                               const char *name) {
   cubec_struct_meta_t meta =
       cubec_create_struct_meta(cubec_context_get_allocator(ctx), name);
-  return cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_STRUCT, 1, align,
-                                   meta);
+  struct _cubec_type_operator_t opt = {
+      .is_type_equal = cubec_struct_type_is_equal,
+      .type_to_string = cubec_struct_type_to_string,
+  };
+  return cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_STRUCT, 1, align, meta,
+                                   &opt, name);
 }
 
-struct _cubec_struct_field_t {
-  char *name;
-  cubec_type_t type;
-  size_t offset;
-};
-typedef struct _cubec_struct_field_t *cubec_struct_field_t;
 static void cubec_struct_field_dispose(cubec_struct_field_t self,
                                        cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->name);
@@ -98,11 +129,6 @@ void cubec_struct_type_add_field(cubec_type_t self, cubec_allocator_t allocator,
   cubec_type_set_size(self, size);
 }
 
-struct _cubec_struct_attribute_t {
-  char *name;
-  cubec_value_t value;
-};
-typedef struct _cubec_struct_attribute_t *cubec_struct_attribute_t;
 static void cubec_struct_attribute_dispose(cubec_struct_attribute_t self,
                                            cubec_allocator_t allocator) {
   cubec_allocator_free(allocator, self->name);
@@ -126,30 +152,7 @@ void cubec_struct_type_add_attribute(cubec_type_t self,
   cubec_struct_meta_t meta = cubec_type_get_meta(self);
   cubec_array_push(meta->attributes, attr);
 }
-cubec_array_t cubec_struct_type_get_fields(cubec_type_t self,
-                                           cubec_allocator_t allocator) {
-  cubec_array_t fields = cubec_create_array(allocator, NULL);
-  cubec_struct_meta_t meta = cubec_type_get_meta(self);
-  size_t size = cubec_array_get_size(meta->fields);
-  cubec_array_resize(fields, size);
-  for (size_t idx = 0; idx < size; idx++) {
-    cubec_struct_field_t field = cubec_array_get(meta->fields, idx);
-    cubec_array_push(fields, field->name);
-  }
-  return fields;
-}
-cubec_array_t cubec_struct_type_get_attributes(cubec_type_t self,
-                                               cubec_allocator_t allocator) {
-  cubec_array_t attributes = cubec_create_array(allocator, NULL);
-  cubec_struct_meta_t meta = cubec_type_get_meta(self);
-  size_t size = cubec_array_get_size(meta->attributes);
-  cubec_array_resize(attributes, size);
-  for (size_t idx = 0; idx < size; idx++) {
-    cubec_struct_attribute_t attr = cubec_array_get(meta->attributes, idx);
-    cubec_array_push(attributes, attr->name);
-  }
-  return attributes;
-}
+
 cubec_type_t cubec_struct_type_get_field(cubec_type_t self, const char *name) {
   cubec_struct_meta_t meta = cubec_type_get_meta(self);
   size_t size = cubec_array_get_size(meta->fields);
@@ -183,4 +186,12 @@ cubec_value_t cubec_struct_type_get_attribute(cubec_type_t self,
     }
   }
   return NULL;
+}
+cubec_array_t cubec_struct_type_get_fields(cubec_type_t self) {
+  cubec_struct_meta_t meta = cubec_type_get_meta(self);
+  return meta->fields;
+}
+cubec_array_t cubec_struct_type_get_attributes(cubec_type_t self) {
+  cubec_struct_meta_t meta = cubec_type_get_meta(self);
+  return meta->attributes;
 }

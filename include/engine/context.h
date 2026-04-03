@@ -25,12 +25,14 @@ cubec_value_t cubec_context_create_value(cubec_context_t self,
 
 cubec_type_t cubec_context_create_type(cubec_context_t self,
                                        cubec_type_kind_t kind, size_t size,
-                                       size_t align, void *meta);
-
-cubec_value_t cubec_context_create_error(cubec_context_t self, const char *fmt,
-                                         ...);
+                                       size_t align, void *meta,
+                                       cubec_type_operator_t opt,
+                                       const char *name);
 
 cubec_value_t cubec_context_load(cubec_context_t self, const char *name);
+cubec_type_t cubec_context_load_type(cubec_context_t self, const char *name);
+
+char *const cubec_context_create_cstring(cubec_context_t self, const char *src);
 #ifdef __cplusplus
 }
 #endif

@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_ENGINE_FUNCTION_
 #define _H_CUBEC_ENGINE_FUNCTION_
+#include "ast/node.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "engine/context.h"
 #include "engine/type.h"
-#include "engine/value.h"
 #include <stdbool.h>
 #include <stdint.h>
 #ifdef __cplusplus
@@ -20,8 +20,9 @@ cubec_type_t cubec_function_type_get_type(cubec_type_t self);
 
 bool cubec_function_type_is_variadic(cubec_type_t self);
 
-typedef cubec_value_t (*cubec_function_fn_t)(cubec_context_t ctx, size_t argc,
-                                             cubec_value_t *argv);
+cubec_value_t cubec_create_function(cubec_context_t ctx, cubec_type_t func_type,
+                                    cubec_ast_node_t func, bool mutable,
+                                    const char *name);
 
 #ifdef __cplusplus
 }
