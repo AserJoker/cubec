@@ -8,6 +8,7 @@
 extern "C" {
 #endif
 typedef struct _cubec_value_t *cubec_value_t;
+struct _cubec_context_t;
 cubec_value_t cubec_create_value(cubec_allocator_t allocator, cubec_type_t type,
                                  bool mutable, const void *data);
 cubec_type_t cubec_value_get_type(cubec_value_t value);
@@ -16,6 +17,24 @@ void *cubec_value_get_data(cubec_value_t value);
 cubec_value_t cubec_value_clone(cubec_allocator_t allocator,
                                 cubec_value_t value);
 bool cubec_value_is_error(cubec_value_t value);
+
+cubec_value_t cubec_value_to_string(cubec_value_t self,
+                                    struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_get_index(cubec_value_t self,
+                                    struct _cubec_context_t *ctx, size_t idx);
+cubec_value_t cubec_value_set_index(cubec_value_t self,
+                                    struct _cubec_context_t *ctx, size_t idx,
+                                    cubec_value_t item);
+cubec_value_t cubec_value_get_field(cubec_value_t self,
+                                    struct _cubec_context_t *ctx,
+                                    const char *name);
+cubec_value_t cubec_value_set_field(cubec_value_t self,
+                                    struct _cubec_context_t *ctx,
+                                    const char *name, cubec_value_t value);
+cubec_value_t cubec_value_get_length(cubec_value_t self,
+                                     struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_call(cubec_value_t self, struct _cubec_context_t *ctx,
+                               size_t argc, cubec_value_t argv[]);
 #ifdef __cplusplus
 }
 #endif

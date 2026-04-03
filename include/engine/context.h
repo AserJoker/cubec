@@ -33,6 +33,8 @@ cubec_value_t cubec_context_load(cubec_context_t self, const char *name);
 cubec_type_t cubec_context_load_type(cubec_context_t self, const char *name);
 
 char *const cubec_context_create_cstring(cubec_context_t self, const char *src);
+
+cubec_value_t cubec_context_get_undefined(cubec_context_t self);
 #ifdef __cplusplus
 }
 #endif

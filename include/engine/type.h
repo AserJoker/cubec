@@ -33,14 +33,50 @@ typedef enum _cubec_type_kind_t {
   CUBEC_VALUE_TYPE_UNION,
   CUBEC_VALUE_TYPE_FUNCTION,
 } cubec_type_kind_t;
+struct _cubec_value_t;
+struct _cubec_context_t;
 typedef struct _cubec_type_t *cubec_type_t;
 typedef bool (*cubec_type_is_equal_fn_t)(cubec_type_t self,
                                          cubec_type_t another);
+
 typedef char *(*cubec_type_to_string_fn_t)(cubec_type_t self,
                                            cubec_allocator_t allocator);
+
+typedef struct _cubec_value_t *(*cubec_get_field_fn_t)(
+    struct _cubec_value_t *self, struct _cubec_context_t *ctx,
+    const char *name);
+
+typedef struct _cubec_value_t *(*cubec_set_field_fn_t)(
+    struct _cubec_value_t *self, struct _cubec_context_t *ctx, const char *name,
+    struct _cubec_value_t *value);
+
+typedef struct _cubec_value_t *(*cubec_get_index_fn_t)(
+    struct _cubec_value_t *self, struct _cubec_context_t *ctx, size_t idx);
+
+typedef struct _cubec_value_t *(*cubec_set_index_fn_t)(
+    struct _cubec_value_t *self, struct _cubec_context_t *ctx, size_t idx,
+    struct _cubec_value_t *value);
+
+typedef struct _cubec_value_t *(*cubec_get_length_fn_t)(
+    struct _cubec_value_t *self, struct _cubec_context_t *ctx);
+
+typedef struct _cubec_value_t *(*cubec_to_string_fn_t)(
+    struct _cubec_value_t *self, struct _cubec_context_t *ctx);
+
+typedef struct _cubec_value_t *(*cubec_call_fn_t)(
+    struct _cubec_value_t *self, struct _cubec_context_t *ctx, size_t argc,
+    struct _cubec_value_t *argv[]);
+
 typedef struct _cubec_type_operator_t {
   cubec_type_is_equal_fn_t is_type_equal;
   cubec_type_to_string_fn_t type_to_string;
+  cubec_to_string_fn_t to_string;
+  cubec_get_field_fn_t get_field;
+  cubec_set_field_fn_t set_field;
+  cubec_get_index_fn_t get_index;
+  cubec_set_index_fn_t set_index;
+  cubec_get_length_fn_t get_length;
+  cubec_call_fn_t call;
 } *cubec_type_operator_t;
 cubec_type_t cubec_create_type(cubec_allocator_t allocator,
                                cubec_type_kind_t kind, size_t size,

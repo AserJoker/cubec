@@ -1,11 +1,14 @@
 #include "engine/numeric.h"
 #include "core/allocator.h"
-#include "core/position.h"
 #include "core/string.h"
 #include "engine/context.h"
+#include "engine/str.h"
 #include "engine/type.h"
 #include "engine/value.h"
+#include <inttypes.h>
+#include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #define DECLAR_INTEGER(size, opt)                                              \
   cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_INT##size,                   \
                             sizeof(int##size##_t), sizeof(int##size##_t),      \
@@ -50,10 +53,53 @@ static char *cubec_numeric_type_to_string(cubec_type_t self,
   }
   return NULL;
 }
+static cubec_value_t cubec_numeric_to_string(cubec_value_t self,
+                                             cubec_context_t ctx) {
+  cubec_type_t type = cubec_value_get_type(self);
+  cubec_type_kind_t kind = cubec_type_get_kind(type);
+  char str[32] = {0};
+  void *data = cubec_value_get_data(self);
+  switch (kind) {
+  case CUBEC_VALUE_TYPE_INT8:
+    sprintf(str, "%d", *(int8_t *)data);
+    break;
+  case CUBEC_VALUE_TYPE_INT16:
+    sprintf(str, "%d", *(int16_t *)data);
+    break;
+  case CUBEC_VALUE_TYPE_INT32:
+    sprintf(str, "%d", *(int32_t *)data);
+    break;
+  case CUBEC_VALUE_TYPE_INT64:
+    sprintf(str, "%" PRIdPTR, *(int64_t *)data);
+    break;
+  case CUBEC_VALUE_TYPE_UINT8:
+    sprintf(str, "%u", *(uint8_t *)data);
+    break;
+  case CUBEC_VALUE_TYPE_UINT16:
+    sprintf(str, "%u", *(uint16_t *)data);
+    break;
+  case CUBEC_VALUE_TYPE_UINT32:
+    sprintf(str, "%u", *(uint32_t *)data);
+    break;
+  case CUBEC_VALUE_TYPE_UINT64:
+    sprintf(str, "%" PRIuPTR, *(uint64_t *)data);
+    break;
+  case CUBEC_VALUE_TYPE_FLOAT16:
+    sprintf(str, "%g", (double)*(float16_t *)data);
+  case CUBEC_VALUE_TYPE_FLOAT32:
+    sprintf(str, "%g", *(float32_t *)data);
+  case CUBEC_VALUE_TYPE_FLOAT64:
+    sprintf(str, "%g", *(float64_t *)data);
+  default:
+    break;
+  }
+  return cubec_create_str(ctx, str, NULL);
+}
 
 void cubec_init_numeric_type(cubec_context_t ctx) {
   struct _cubec_type_operator_t opt = {
-      .type_to_string = cubec_numeric_type_to_string,
+      .type_to_string = &cubec_numeric_type_to_string,
+      .to_string = &cubec_numeric_to_string,
   };
   DECLAR_INTEGER(8, &opt);
   DECLAR_INTEGER(16, &opt);

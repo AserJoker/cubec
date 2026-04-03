@@ -40,6 +40,7 @@ cubec_read_ast_statement_declaration(cubec_allocator_t allocator,
   }
   cubec_ast_node_t declarations =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  cubec_ast_add_child(allocator, node, "declarations", declarations);
   for (;;) {
     cubec_ast_node_t item =
         cubec_read_ast_variable_declarator(allocator, &current, end, filename);

@@ -3,6 +3,9 @@
 #include "core/array.h"
 #include "core/string.h"
 #include "engine/context.h"
+#include "engine/error.h"
+#include "engine/numeric.h"
+#include "engine/str.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include <string.h>
@@ -73,6 +76,103 @@ static char *cubec_struct_type_to_string(cubec_type_t self,
   }
   return cubec_create_cstring(allocator, "struct (unnamed){...}");
 }
+static cubec_value_t cubec_struct_to_string(cubec_value_t self,
+                                            cubec_context_t ctx) {
+  size_t len = 8;
+  cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
+  cubec_type_t type = cubec_value_get_type(self);
+  cubec_struct_meta_t meta = cubec_type_get_meta(type);
+  char *type_name = cubec_struct_type_to_string(type, allocator);
+  len += strlen(type_name);
+  size_t num_fields = cubec_array_get_size(meta->fields);
+  const char *fields[num_fields];
+  for (size_t idx = 0; idx < num_fields; idx++) {
+    cubec_struct_field_t field = cubec_array_get(meta->fields, idx);
+    len += strlen(field->name) + 3;
+    cubec_value_t value = cubec_value_get_field(self, ctx, field->name);
+    value = cubec_value_to_string(value, ctx);
+    fields[idx] = *(const char **)cubec_value_get_data(value);
+    len += strlen(fields[idx]) + 2;
+  }
+  char str[len];
+  size_t offset = 0;
+  strcpy(&str[offset], type_name);
+  offset += strlen(type_name);
+  str[offset++] = '{';
+  for (size_t idx = 0; idx < num_fields; idx++) {
+    if (idx != 0) {
+      str[offset++] = ',';
+      str[offset++] = ' ';
+    }
+    cubec_struct_field_t field = cubec_array_get(meta->fields, idx);
+    strcpy(&str[offset], field->name);
+    offset += strlen(field->name);
+    str[offset++] = ' ';
+    str[offset++] = '=';
+    str[offset++] = ' ';
+    strcpy(&str[offset], fields[idx]);
+    offset += strlen(fields[idx]);
+  }
+  str[offset++] = '}';
+  return cubec_create_str(ctx, str, NULL);
+}
+static cubec_value_t cubec_struct_get_length(cubec_value_t self,
+                                             cubec_context_t ctx) {
+  cubec_type_t type = cubec_value_get_type(self);
+  cubec_struct_meta_t meta = cubec_type_get_meta(type);
+  return cubec_create_uint64(ctx, cubec_array_get_size(meta->fields), false,
+                             NULL);
+}
+static cubec_value_t cubec_struct_get_field(cubec_value_t self,
+                                            cubec_context_t ctx,
+                                            const char *name) {
+  cubec_type_t type = cubec_value_get_type(self);
+  cubec_struct_meta_t meta = cubec_type_get_meta(type);
+  size_t num_fields = cubec_array_get_size(meta->fields);
+  uint8_t *data = cubec_value_get_data(self);
+  bool mutable = cubec_value_is_mutable(self);
+  for (size_t idx = 0; idx < num_fields; idx++) {
+    cubec_struct_field_t field = cubec_array_get(meta->fields, idx);
+    if (strcmp(field->name, name) == 0) {
+      return cubec_context_create_value(ctx, field->type, mutable,
+                                        data + field->offset, NULL);
+    }
+  }
+  return cubec_create_error(ctx, "No member named '%s' in value", name);
+}
+static cubec_value_t cubec_struct_set_field(cubec_value_t self,
+                                            cubec_context_t ctx,
+                                            const char *name,
+                                            cubec_value_t value) {
+  cubec_type_t type = cubec_value_get_type(self);
+  cubec_struct_meta_t meta = cubec_type_get_meta(type);
+  size_t num_fields = cubec_array_get_size(meta->fields);
+  uint8_t *data = cubec_value_get_data(self);
+  bool mutable = cubec_value_is_mutable(self);
+  cubec_type_t item_type = cubec_value_get_type(value);
+  cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
+  if (!mutable) {
+    return cubec_create_error(ctx, "Cannot assign to const variable");
+  }
+  for (size_t idx = 0; idx < num_fields; idx++) {
+    cubec_struct_field_t field = cubec_array_get(meta->fields, idx);
+    if (strcmp(field->name, name) == 0) {
+      if (!cubec_type_is_equal(field->type, item_type)) {
+        char *dst_type = cubec_type_to_string(field->type, allocator);
+        char *src_type = cubec_type_to_string(item_type, allocator);
+        cubec_value_t error = cubec_create_error(
+            ctx, "Cannot assign '%s' to '%s'", dst_type, src_type);
+        cubec_allocator_free(allocator, dst_type);
+        cubec_allocator_free(allocator, src_type);
+        return error;
+      }
+      memcpy(data + field->offset, cubec_value_get_data(value),
+             cubec_type_get_size(field->type));
+      return cubec_context_get_undefined(ctx);
+    }
+  }
+  return cubec_create_error(ctx, "No member named '%s' in value", name);
+}
 cubec_type_t cubec_context_create_struct_type(cubec_context_t ctx, size_t align,
                                               const char *name) {
   cubec_struct_meta_t meta =
@@ -80,6 +180,10 @@ cubec_type_t cubec_context_create_struct_type(cubec_context_t ctx, size_t align,
   struct _cubec_type_operator_t opt = {
       .is_type_equal = cubec_struct_type_is_equal,
       .type_to_string = cubec_struct_type_to_string,
+      .to_string = cubec_struct_to_string,
+      .get_length = cubec_struct_get_length,
+      .get_field = cubec_struct_get_field,
+      .set_field = cubec_struct_set_field,
   };
   return cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_STRUCT, 1, align, meta,
                                    &opt, name);

@@ -3,6 +3,7 @@
 #include "core/array.h"
 #include "core/string.h"
 #include "engine/context.h"
+#include "engine/error.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include <string.h>
@@ -62,6 +63,56 @@ static char *cubec_union_type_to_string(cubec_type_t self,
   }
   return cubec_create_cstring(allocator, "union (unnamed){...}");
 }
+
+static cubec_value_t cubec_union_get_field(cubec_value_t self,
+                                           cubec_context_t ctx,
+                                           const char *name) {
+  cubec_type_t type = cubec_value_get_type(self);
+  cubec_union_meta_t meta = cubec_type_get_meta(type);
+  size_t num_fields = cubec_array_get_size(meta->fields);
+  uint8_t *data = cubec_value_get_data(self);
+  bool mutable = cubec_value_is_mutable(self);
+  for (size_t idx = 0; idx < num_fields; idx++) {
+    cubec_union_field_t field = cubec_array_get(meta->fields, idx);
+    if (strcmp(field->name, name) == 0) {
+      return cubec_context_create_value(ctx, field->type, mutable, data, NULL);
+    }
+  }
+  return cubec_create_error(ctx, "No member named '%s' in value", name);
+}
+static cubec_value_t cubec_union_set_field(cubec_value_t self,
+                                           cubec_context_t ctx,
+                                           const char *name,
+                                           cubec_value_t value) {
+  cubec_type_t type = cubec_value_get_type(self);
+  cubec_union_meta_t meta = cubec_type_get_meta(type);
+  size_t num_fields = cubec_array_get_size(meta->fields);
+  uint8_t *data = cubec_value_get_data(self);
+  bool mutable = cubec_value_is_mutable(self);
+  cubec_type_t item_type = cubec_value_get_type(value);
+  cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
+  if (!mutable) {
+    return cubec_create_error(ctx, "Cannot assign to const variable");
+  }
+  for (size_t idx = 0; idx < num_fields; idx++) {
+    cubec_union_field_t field = cubec_array_get(meta->fields, idx);
+    if (strcmp(field->name, name) == 0) {
+      if (!cubec_type_is_equal(field->type, item_type)) {
+        char *dst_type = cubec_type_to_string(field->type, allocator);
+        char *src_type = cubec_type_to_string(item_type, allocator);
+        cubec_value_t error = cubec_create_error(
+            ctx, "Cannot assign '%s' to '%s'", dst_type, src_type);
+        cubec_allocator_free(allocator, dst_type);
+        cubec_allocator_free(allocator, src_type);
+        return error;
+      }
+      memcpy(data, cubec_value_get_data(value),
+             cubec_type_get_size(field->type));
+      return cubec_context_get_undefined(ctx);
+    }
+  }
+  return cubec_create_error(ctx, "No member named '%s' in value", name);
+}
 cubec_type_t cubec_context_union_type(cubec_context_t ctx, size_t align,
                                       const char *name) {
   cubec_union_meta_t meta =
@@ -69,6 +120,8 @@ cubec_type_t cubec_context_union_type(cubec_context_t ctx, size_t align,
   struct _cubec_type_operator_t opt = {
       .is_type_equal = cubec_union_type_is_equal,
       .type_to_string = cubec_union_type_to_string,
+      .get_field = cubec_union_get_field,
+      .set_field = cubec_union_set_field,
   };
   return cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_UNION, 1, align, meta,
                                    &opt, name);

@@ -203,6 +203,10 @@ char *const cubec_context_create_cstring(cubec_context_t self,
   return str;
 }
 
+cubec_value_t cubec_context_get_undefined(cubec_context_t self) {
+  return self->value_undefined;
+}
+
 cubec_allocator_t cubec_context_get_allocator(cubec_context_t self) {
   return self->allocator;
 }

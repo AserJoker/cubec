@@ -15,14 +15,13 @@ cubec_ast_node_t cubec_read_ast_initialize_list(cubec_allocator_t allocator,
   cubec_position_t current = *position;
   cubec_ast_node_t type =
       cubec_read_ast_type(allocator, &current, end, filename);
-  if (!type) {
-    goto onerror;
+  if (type) {
+    if (type->type == CUBEC_NODE_TYPE_ERROR) {
+      err = type;
+      goto onerror;
+    }
+    cubec_ast_add_child(allocator, node, "type", type);
   }
-  if (type->type == CUBEC_NODE_TYPE_ERROR) {
-    err = type;
-    goto onerror;
-  }
-  cubec_ast_add_child(allocator, node, "type", type);
   if (*current.offset != '{') {
     goto onerror;
   }
