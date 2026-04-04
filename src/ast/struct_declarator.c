@@ -40,7 +40,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
     if (decorator->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;
     }
-    cubec_ast_add_item(allocator, decorators, decorator);
+    cubec_ast_add_item(decorators, decorator);
     err = cubec_ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
@@ -98,7 +98,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item(allocator, attributes, item);
+        cubec_ast_add_item(attributes, item);
         goto next;
       }
       item = cubec_read_ast_enum_declarator(allocator, &current, end, filename);
@@ -107,7 +107,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item(allocator, attributes, item);
+        cubec_ast_add_item(attributes, item);
         goto next;
       }
       item = cubec_read_ast_function_declarator(allocator, &current, end,
@@ -117,7 +117,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item(allocator, methods, item);
+        cubec_ast_add_item( methods, item);
         goto next;
       }
       item = cubec_read_ast_statement_declaration(allocator, &current, end,
@@ -127,7 +127,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item(allocator, attributes, item);
+        cubec_ast_add_item( attributes, item);
         goto next;
       }
       item = cubec_read_ast_struct_field(allocator, &current, end, filename);
@@ -136,7 +136,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item(allocator, fields, item);
+        cubec_ast_add_item( fields, item);
         current.offset++;
         current.column++;
         goto next;

@@ -66,7 +66,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
         err = item;
         goto onerror;
       }
-      cubec_ast_add_item(allocator, args, item);
+      cubec_ast_add_item(args, item);
       err = cubec_ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         goto onerror;

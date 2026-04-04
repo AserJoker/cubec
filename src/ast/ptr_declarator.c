@@ -50,7 +50,7 @@ cubec_ast_node_t cubec_read_ast_ptr_declarator(cubec_allocator_t allocator,
     }
     if (cubec_location_is(item->loc, "volatile") ||
         cubec_location_is(item->loc, "const")) {
-      cubec_ast_add_item(allocator, decorators, item);
+      cubec_ast_add_item(decorators, item);
     } else {
       current = item->loc.begin;
       cubec_allocator_free(allocator, item);

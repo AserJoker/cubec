@@ -53,7 +53,7 @@ cubec_read_ast_statement_declaration(cubec_allocator_t allocator,
       err = item;
       goto onerror;
     }
-    cubec_ast_add_item(allocator, declarations, item);
+    cubec_ast_add_item(declarations, item);
     err = cubec_ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;

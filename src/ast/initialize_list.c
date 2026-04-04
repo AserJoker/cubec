@@ -48,7 +48,7 @@ cubec_ast_node_t cubec_read_ast_initialize_list(cubec_allocator_t allocator,
         err = item;
         goto onerror;
       }
-      cubec_ast_add_item(allocator, fields, item);
+      cubec_ast_add_item(fields, item);
       err = cubec_ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;

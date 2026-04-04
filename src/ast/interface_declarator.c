@@ -91,7 +91,7 @@ cubec_read_ast_interface_declarator(cubec_allocator_t allocator,
       if (arg->type == CUBEC_NODE_TYPE_ERROR) {
         goto onerror;
       }
-      cubec_ast_add_item(allocator, args, arg);
+      cubec_ast_add_item(args, arg);
       err = cubec_ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;

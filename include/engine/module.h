@@ -10,7 +10,7 @@ extern "C" {
 typedef struct _cubec_module_t *cubec_module_t;
 cubec_module_t cubec_create_module(cubec_allocator_t allocator,
                                    cubec_ast_node_t node, const char *filename,
-                                   cubec_value_t value);
+                                   char *source, cubec_value_t value);
 const char *cubec_module_get_filename(cubec_module_t self);
 const char *cubec_module_get_dirname(cubec_module_t self);
 cubec_ast_node_t cubec_module_get_node(cubec_module_t self);

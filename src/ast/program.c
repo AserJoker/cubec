@@ -29,7 +29,7 @@ cubec_ast_node_t cubec_read_ast_program(cubec_allocator_t allocator,
       err = stat;
       goto onerror;
     }
-    cubec_ast_add_item(allocator, statements, stat);
+    cubec_ast_add_item(statements, stat);
     err = cubec_ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;

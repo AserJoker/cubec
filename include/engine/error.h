@@ -4,7 +4,6 @@
 #include "engine/value.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/cdefs.h>
 #ifdef __cplusplus
 extern "C" {
 #endif

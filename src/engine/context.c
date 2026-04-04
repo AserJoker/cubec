@@ -16,6 +16,8 @@
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/void.h"
+#include "writer/context.h"
+#include "writer/program.h"
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -131,7 +133,7 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
     fseek(fp, 0, SEEK_END);
     size_t len = ftell(fp);
     fseek(fp, 0, SEEK_SET);
-    char source[len + 1];
+    char *source = cubec_allocator_alloc(self->allocator, len + 1, NULL);
     fread(source, len, 1, fp);
     source[len] = 0;
     fclose(fp);
@@ -146,11 +148,30 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
       return res;
     }
     cubec_value_t value = self->value_undefined; // TODO: eval module;
-    module = cubec_create_module(self->allocator, node, filename, value);
+    module =
+        cubec_create_module(self->allocator, node, filename, source, value);
     cubec_map_set(self->modules, (void *)cubec_module_get_filename(module),
                   module, NULL);
   }
   return cubec_module_get_value(module);
+}
+
+cubec_value_t cubec_context_write_module(cubec_context_t self,
+                                         const char *filename,
+                                         const char *dst_filename) {
+  cubec_module_t module = cubec_map_get(self->modules, filename, NULL);
+  if (!module) {
+    return cubec_create_error(self, "module %s is not loaded", filename);
+  }
+  FILE *fp = fopen(dst_filename, "w");
+  cubec_write_context ctx = {
+      .allocator = self->allocator,
+      .indent = 0,
+  };
+  cubec_ast_node_t node = cubec_module_get_node(module);
+  cubec_write_program(fp, node, &ctx);
+  fclose(fp);
+  return self->value_undefined;
 }
 
 cubec_type_t cubec_context_create_type(cubec_context_t self,

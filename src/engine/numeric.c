@@ -42,8 +42,6 @@ static char *cubec_numeric_type_to_string(cubec_type_t self,
     return cubec_create_cstring(allocator, "u32");
   case CUBEC_VALUE_TYPE_UINT64:
     return cubec_create_cstring(allocator, "u64");
-  case CUBEC_VALUE_TYPE_FLOAT16:
-    return cubec_create_cstring(allocator, "f16");
   case CUBEC_VALUE_TYPE_FLOAT32:
     return cubec_create_cstring(allocator, "f32");
   case CUBEC_VALUE_TYPE_FLOAT64:
@@ -84,12 +82,12 @@ static cubec_value_t cubec_numeric_to_string(cubec_value_t self,
   case CUBEC_VALUE_TYPE_UINT64:
     sprintf(str, "%" PRIuPTR, *(uint64_t *)data);
     break;
-  case CUBEC_VALUE_TYPE_FLOAT16:
-    sprintf(str, "%g", (double)*(float16_t *)data);
   case CUBEC_VALUE_TYPE_FLOAT32:
     sprintf(str, "%g", *(float32_t *)data);
+    break;
   case CUBEC_VALUE_TYPE_FLOAT64:
     sprintf(str, "%g", *(float64_t *)data);
+    break;
   default:
     break;
   }
@@ -158,12 +156,6 @@ cubec_value_t cubec_create_uint32(cubec_context_t ctx, uint32_t value,
 cubec_value_t cubec_create_uint64(cubec_context_t ctx, uint64_t value,
                                   bool mutable, const char *name) {
   cubec_value_t vtype = cubec_context_load(ctx, "u64");
-  cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
-  return cubec_context_create_value(ctx, type, mutable, &value, name);
-}
-cubec_value_t cubec_create_float16(cubec_context_t ctx, float16_t value,
-                                   bool mutable, const char *name) {
-  cubec_value_t vtype = cubec_context_load(ctx, "f16");
   cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
   return cubec_context_create_value(ctx, type, mutable, &value, name);
 }

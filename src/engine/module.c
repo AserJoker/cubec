@@ -7,6 +7,7 @@
 struct _cubec_module_t {
   char *filename;
   char *dirname;
+  char *source;
   cubec_ast_node_t node;
   cubec_value_t value;
 };
@@ -15,10 +16,11 @@ static void cubec_module_dispose(cubec_module_t module,
   cubec_allocator_free(allocator, module->node);
   cubec_allocator_free(allocator, module->dirname);
   cubec_allocator_free(allocator, module->filename);
+  cubec_allocator_free(allocator, module->source);
 }
 cubec_module_t cubec_create_module(cubec_allocator_t allocator,
                                    cubec_ast_node_t node, const char *filename,
-                                   cubec_value_t value) {
+                                   char *source, cubec_value_t value) {
   cubec_path_t path = cubec_create_path(allocator, filename);
   cubec_path_t parent_path = cubec_path_parent(path, allocator);
   char *dirname = cubec_path_to_string(parent_path, allocator);
@@ -31,6 +33,7 @@ cubec_module_t cubec_create_module(cubec_allocator_t allocator,
   module->dirname = dirname;
   module->filename = cubec_create_cstring(allocator, filename);
   module->value = value;
+  module->source = source;
   return module;
 }
 const char *cubec_module_get_filename(cubec_module_t self) {

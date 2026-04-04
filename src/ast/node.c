@@ -53,19 +53,19 @@ void cubec_ast_add_child(cubec_allocator_t allocator, cubec_ast_node_t node,
   child->parent = node;
   node->changed = true;
 }
-void cubec_ast_remove_child(cubec_allocator_t allocator, cubec_ast_node_t node,
-                            const char *name) {
+void cubec_ast_remove_child(cubec_ast_node_t node, const char *name) {
   cubec_map_delete(node->children, name, NULL);
   node->changed = true;
 }
-cubec_ast_node_t cubec_ast_move_child(cubec_allocator_t allocator,
-                                      cubec_ast_node_t node, const char *name) {
+cubec_ast_node_t cubec_ast_move_child(cubec_ast_node_t node, const char *name) {
   node->changed = true;
   return cubec_map_move(node->children, name, NULL);
 }
-cubec_ast_node_t cubec_ast_get_child(cubec_allocator_t allocator,
-                                     cubec_ast_node_t node, const char *name) {
+cubec_ast_node_t cubec_ast_get_child(cubec_ast_node_t node, const char *name) {
   return cubec_map_get(node->children, name, NULL);
+}
+cubec_ast_node_t cubec_ast_get_item(cubec_ast_node_t node, size_t idx) {
+  return cubec_array_get(node->items, idx);
 }
 const char *cubec_ast_get_child_name(cubec_ast_node_t node,
                                      cubec_ast_node_t child) {
@@ -89,38 +89,34 @@ size_t cubec_ast_get_item_index(cubec_ast_node_t node, cubec_ast_node_t child) {
   }
   return (size_t)idx;
 }
-void cubec_ast_add_item(cubec_allocator_t allocator, cubec_ast_node_t node,
-                        cubec_ast_node_t item) {
+void cubec_ast_add_item(cubec_ast_node_t node, cubec_ast_node_t item) {
   cubec_array_push(node->items, item);
   item->parent = node;
   node->changed = true;
 }
-void cubec_ast_remove_item(cubec_allocator_t allocator, cubec_ast_node_t node,
-                           size_t idx) {
+void cubec_ast_remove_item(cubec_ast_node_t node, size_t idx) {
   cubec_array_del(node->items, idx);
   node->changed = true;
 }
-cubec_ast_node_t cubec_ast_move_item(cubec_allocator_t allocator,
-                                     cubec_ast_node_t node, size_t idx) {
+cubec_ast_node_t cubec_ast_move_item(cubec_ast_node_t node, size_t idx) {
   node->changed = true;
   return cubec_array_move(node->items, idx);
 }
-cubec_ast_node_t cubec_ast_replace_item(cubec_allocator_t allocator,
-                                        cubec_ast_node_t node, size_t idx,
+cubec_ast_node_t cubec_ast_replace_item(cubec_ast_node_t node, size_t idx,
                                         cubec_ast_node_t item) {
   node->changed = true;
   return cubec_array_replace(node->items, idx, item);
 }
-void cubec_ast_insert_item(cubec_allocator_t allocator, cubec_ast_node_t node,
-                           size_t pos, cubec_ast_node_t item) {
+void cubec_ast_insert_item(cubec_ast_node_t node, size_t pos,
+                           cubec_ast_node_t item) {
   node->changed = true;
   cubec_array_insert(node->items, pos, item);
 }
 size_t cubec_ast_get_length(cubec_ast_node_t node) {
   return cubec_array_get_size(node->items);
 }
-void cubec_ast_set_item(cubec_allocator_t allocator, cubec_ast_node_t node,
-                        size_t idx, cubec_ast_node_t item) {
+void cubec_ast_set_item(cubec_ast_node_t node, size_t idx,
+                        cubec_ast_node_t item) {
   cubec_array_set(node->items, idx, item);
   item->parent = node;
   node->changed = true;

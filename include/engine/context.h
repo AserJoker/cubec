@@ -19,6 +19,10 @@ void cubec_context_add_visit(cubec_context_t self, cubec_visit_ast_fn_t visit);
 cubec_value_t cubec_context_load_module(cubec_context_t self,
                                         const char *filename, const char *name);
 
+cubec_value_t cubec_context_write_module(cubec_context_t self,
+                                         const char *filename,
+                                         const char *dst_filename);
+
 cubec_value_t cubec_context_create_value(cubec_context_t self,
                                          cubec_type_t type, bool mutable,
                                          void *data, const char *name);

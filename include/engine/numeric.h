@@ -27,8 +27,6 @@ cubec_value_t cubec_create_uint32(cubec_context_t ctx, uint32_t value,
                                   bool mutable, const char *name);
 cubec_value_t cubec_create_uint64(cubec_context_t ctx, uint64_t value,
                                   bool mutable, const char *name);
-cubec_value_t cubec_create_float16(cubec_context_t ctx, float16_t value,
-                                   bool mutable, const char *name);
 cubec_value_t cubec_create_float32(cubec_context_t ctx, float32_t value,
                                    bool mutable, const char *name);
 cubec_value_t cubec_create_float64(cubec_context_t ctx, float64_t value,

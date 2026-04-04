@@ -34,7 +34,7 @@ cubec_ast_node_t cubec_read_ast_expression_call(cubec_allocator_t allocator,
         err = initialize_list;
         goto onerror;
       }
-      cubec_ast_add_item(allocator, args, initialize_list);
+      cubec_ast_add_item(args, initialize_list);
     } else {
       for (;;) {
         cubec_ast_node_t item = cubec_read_ast_expression_spread(
@@ -51,7 +51,7 @@ cubec_ast_node_t cubec_read_ast_expression_call(cubec_allocator_t allocator,
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item(allocator, args, item);
+        cubec_ast_add_item(args, item);
         err = cubec_ast_skip_all(allocator, &current, end, filename);
         if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
           goto onerror;

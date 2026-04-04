@@ -99,7 +99,7 @@ cubec_ast_node_t cubec_read_ast_statement_switch(cubec_allocator_t allocator,
         err = cas;
         goto onerror;
       }
-      cubec_ast_add_item(allocator, cases, cas);
+      cubec_ast_add_item(cases, cas);
       err = cubec_ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;

@@ -16,7 +16,8 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src/c SRC_C)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/eval SRC_EVAL)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/pass SRC_PASS)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/runtime SRC_RUNTIME)
-add_executable(cubec ${SRC_CORE} ${SRC_AST} ${SRC_ENGINE} ${SRC_C} ${SRC_EVAL} ${SRC_PASS} ${SRC_RUNTIME} ${PROJECT_SOURCE_DIR}/src/cmd/cubec.c)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/writer SRC_WRITER)
+add_executable(cubec ${SRC_CORE} ${SRC_AST} ${SRC_ENGINE} ${SRC_C} ${SRC_EVAL} ${SRC_PASS} ${SRC_WRITER} ${SRC_RUNTIME} ${PROJECT_SOURCE_DIR}/src/cmd/cubec.c)
 target_link_libraries(cubec PRIVATE
     ICU::i18n
     ICU::uc
@@ -25,7 +26,7 @@ target_link_libraries(cubec PRIVATE
 )
 enable_testing()
 file(GLOB_RECURSE TEST_SOURCE ${PROJECT_SOURCE_DIR}/test/*.cpp)
-add_executable(cubec_test ${SRC_CORE} ${SRC_AST} ${SRC_ENGINE} ${SRC_C} ${SRC_EVAL} ${SRC_PASS} ${SRC_RUNTIME} ${TEST_SOURCE})
+add_executable(cubec_test ${SRC_CORE} ${SRC_AST} ${SRC_ENGINE} ${SRC_C} ${SRC_EVAL} ${SRC_WRITER} ${SRC_PASS} ${SRC_RUNTIME} ${TEST_SOURCE})
 target_include_directories(cubec_test PUBLIC ${PROJECT_SOURCE_DIR}/test)
 target_link_libraries(cubec_test PRIVATE
     ICU::i18n
