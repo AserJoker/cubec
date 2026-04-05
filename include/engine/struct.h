@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_ENGINE_STRUCT_
 #define _H_CUBEC_ENGINE_STRUCT_
 #include "core/allocator.h"
+#include "core/array.h"
 #include "engine/context.h"
 #include "engine/type.h"
 #include "engine/value.h"

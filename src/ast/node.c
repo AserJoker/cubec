@@ -480,7 +480,7 @@ cubec_ast_node_t cubec_visit_ast_node(cubec_allocator_t allocator,
         continue;
       }
       if (item->changed) {
-        return item;
+        return node;
       }
       if (item->type == CUBEC_NODE_TYPE_ERROR) {
         return item;
@@ -498,7 +498,7 @@ cubec_ast_node_t cubec_visit_ast_node(cubec_allocator_t allocator,
         continue;
       }
       if (item->changed) {
-        return item;
+        return node;
       }
       if (item->type == CUBEC_NODE_TYPE_ERROR) {
         return item;
