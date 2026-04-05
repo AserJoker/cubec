@@ -1,5 +1,4 @@
 #include "ast/literal_numeric.h"
-#include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
@@ -131,29 +130,10 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
   } else {
     goto onerror;
   }
-  cubec_ast_node_t token =
-      cubec_read_ast_literal_identifier(allocator, &current, end, filename);
-  if (token) {
-    if (token->type == CUBEC_NODE_TYPE_ERROR) {
-      err = token;
-      goto onerror;
-    }
-    if (!cubec_location_is(token->loc, "u") &&
-        !cubec_location_is(token->loc, "l") &&
-        !cubec_location_is(token->loc, "f") &&
-        !cubec_location_is(token->loc, "ul")) {
-      cubec_allocator_free(allocator, token);
-      err = cubec_create_ast_error(allocator, *position, current,
-                                   "Invalid or unexpected token");
-      goto onerror;
-    }
-  }
-  cubec_allocator_free(allocator, token);
   node->loc.begin = *position;
   node->loc.end = current;
   node->loc.filename = filename;
   *position = current;
-
   return node;
 onerror:
   cubec_allocator_free(allocator, node);
