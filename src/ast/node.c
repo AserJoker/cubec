@@ -460,23 +460,20 @@ char *cubec_ast_write_json(cubec_allocator_t allocator, cubec_ast_node_t node) {
 
 cubec_ast_node_t cubec_visit_ast_node(cubec_allocator_t allocator,
                                       cubec_ast_node_t node, void *ctx,
-                                      size_t num_visits,
-                                      cubec_visit_ast_fn_t visits[]) {
+                                      cubec_visit_ast_fn_t visit) {
   node->changed = false;
-  for (size_t idx = 0; idx < num_visits; idx++) {
-    node = visits[idx](allocator, node, ctx);
-    if (node->changed) {
-      return node;
-    }
-    if (node->type == CUBEC_NODE_TYPE_ERROR) {
-      return node;
-    }
+  node = visit(allocator, node, ctx);
+  if (node->changed) {
+    return node;
+  }
+  if (node->type == CUBEC_NODE_TYPE_ERROR) {
+    return node;
   }
   if (node->type == CUBEC_NODE_TYPE_LIST) {
     size_t idx = 0;
     while (idx < cubec_array_get_size(node->items)) {
       cubec_ast_node_t item = cubec_array_get(node->items, idx);
-      item = cubec_visit_ast_node(allocator, item, ctx, num_visits, visits);
+      item = cubec_visit_ast_node(allocator, item, ctx, visit);
       if (item == node && item->changed) {
         idx = 0;
         node->changed = false;
@@ -494,7 +491,7 @@ cubec_ast_node_t cubec_visit_ast_node(cubec_allocator_t allocator,
     cubec_list_node_t it = cubec_map_get_first(node->children);
     while (it != cubec_map_get_end(node->children)) {
       cubec_ast_node_t item = cubec_map_node_get_value(it);
-      item = cubec_visit_ast_node(allocator, item, ctx, num_visits, visits);
+      item = cubec_visit_ast_node(allocator, item, ctx, visit);
       if (item == node && item->changed) {
         it = cubec_map_get_first(node->children);
         item->changed = false;
@@ -514,8 +511,7 @@ cubec_ast_node_t cubec_visit_ast_node(cubec_allocator_t allocator,
 
 cubec_ast_node_t cubec_read_ast_node(cubec_allocator_t allocator,
                                      const char *filename, const char *source,
-                                     void *ctx, size_t num_visits,
-                                     cubec_visit_ast_fn_t visits[]) {
+                                     void *ctx, cubec_visit_ast_fn_t visit) {
   cubec_position_t pos = {
       .column = 1,
       .line = 1,
@@ -527,5 +523,5 @@ cubec_ast_node_t cubec_read_ast_node(cubec_allocator_t allocator,
   if (program->type == CUBEC_NODE_TYPE_ERROR) {
     return program;
   }
-  return cubec_visit_ast_node(allocator, program, ctx, num_visits, visits);
+  return cubec_visit_ast_node(allocator, program, ctx, visit);
 }

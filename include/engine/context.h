@@ -14,7 +14,7 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator);
 
 cubec_allocator_t cubec_context_get_allocator(cubec_context_t self);
 
-void cubec_context_add_visit(cubec_context_t self, cubec_visit_ast_fn_t visit);
+void cubec_context_set_visit(cubec_context_t self, cubec_visit_ast_fn_t visit);
 
 cubec_value_t cubec_context_load_module(cubec_context_t self,
                                         const char *filename, const char *name);

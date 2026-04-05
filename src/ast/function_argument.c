@@ -1,11 +1,11 @@
 
 #include "ast/function_argument.h"
 #include "ast/decorator.h"
+#include "ast/expression.h"
 #include "ast/literal_identifier.h"
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "ast/type.h"
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
@@ -71,7 +71,7 @@ cubec_ast_node_t cubec_read_ast_function_argument(cubec_allocator_t allocator,
       goto onerror;
     }
     cubec_ast_node_t type =
-        cubec_read_ast_type(allocator, &current, end, filename);
+        cubec_read_ast_expression18(allocator, &current, end, filename);
     if (!type) {
       err = cubec_create_ast_error(allocator, *position, current,
                                    "Invalid function argument, missing type");

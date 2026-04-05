@@ -1,12 +1,12 @@
 #include "ast/function_declarator.h"
 #include "ast/decorator.h"
+#include "ast/expression.h"
 #include "ast/function_argument.h"
 #include "ast/function_argument_rest.h"
 #include "ast/function_body.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "ast/type.h"
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
@@ -225,7 +225,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
       return err;
     }
     cubec_ast_node_t type =
-        cubec_read_ast_type(allocator, &current, end, filename);
+        cubec_read_ast_expression18(allocator, &current, end, filename);
     if (type) {
       if (type->type == CUBEC_NODE_TYPE_ERROR) {
         err = type;

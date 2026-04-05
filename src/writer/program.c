@@ -1,6 +1,7 @@
 #include "writer/program.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "writer/statement_declaration.h"
 #include "writer/statement_import.h"
 void cubec_write_program(FILE *fp, cubec_ast_node_t node,
                          cubec_write_context *ctx) {
@@ -11,6 +12,7 @@ void cubec_write_program(FILE *fp, cubec_ast_node_t node,
     if (node->type == CUBEC_NODE_TYPE_STATEMENT_IMPORT) {
       cubec_write_statement_import(fp, node, ctx);
     } else if (node->type == CUBEC_NODE_TYPE_STATEMENT_DECLARATION) {
+      cubec_write_statement_declaration(fp, node, ctx);
     } else if (node->type == CUBEC_NODE_TYPE_STATEMENT_FUNCTION) {
     } else if (node->type == CUBEC_NODE_TYPE_STATEMENT_STRUCT) {
     } else if (node->type == CUBEC_NODE_TYPE_STATEMENT_ENUM) {

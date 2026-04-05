@@ -1,8 +1,8 @@
 #include "ast/initialize_list.h"
+#include "ast/expression.h"
 #include "ast/initialize_field.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "ast/type.h"
 #include "core/allocator.h"
 #include "core/position.h"
 cubec_ast_node_t cubec_read_ast_initialize_list(cubec_allocator_t allocator,
@@ -14,7 +14,7 @@ cubec_ast_node_t cubec_read_ast_initialize_list(cubec_allocator_t allocator,
   cubec_ast_node_t err = NULL;
   cubec_position_t current = *position;
   cubec_ast_node_t type =
-      cubec_read_ast_type(allocator, &current, end, filename);
+      cubec_read_ast_expression18(allocator, &current, end, filename);
   if (type) {
     if (type->type == CUBEC_NODE_TYPE_ERROR) {
       err = type;

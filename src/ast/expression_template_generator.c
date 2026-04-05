@@ -2,7 +2,6 @@
 #include "ast/expression.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "ast/type.h"
 #include "core/allocator.h"
 #include "core/position.h"
 
@@ -55,7 +54,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
   if (*current.offset != '>') {
     for (;;) {
       cubec_ast_node_t item =
-          cubec_read_ast_type(allocator, &current, end, filename);
+          cubec_read_ast_expression18(allocator, &current, end, filename);
       if (!item) {
         err = cubec_create_ast_error(
             allocator, *position, current,

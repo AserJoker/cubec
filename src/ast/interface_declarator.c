@@ -1,9 +1,9 @@
 #include "ast/interface_declarator.h"
+#include "ast/expression.h"
 #include "ast/literal_identifier.h"
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "ast/type.h"
 #include "ast/variable_declarator.h"
 #include "core/allocator.h"
 #include "core/location.h"
@@ -83,7 +83,7 @@ cubec_read_ast_interface_declarator(cubec_allocator_t allocator,
                                                  filename);
       }
       if (!arg) {
-        arg = cubec_read_ast_type(allocator, &current, end, filename);
+        arg = cubec_read_ast_expression18(allocator, &current, end, filename);
       }
       if (!arg) {
         goto onerror;
@@ -125,7 +125,7 @@ cubec_read_ast_interface_declarator(cubec_allocator_t allocator,
   current.offset++;
   current.column++;
   cubec_ast_node_t return_type =
-      cubec_read_ast_type(allocator, &current, end, filename);
+      cubec_read_ast_expression18(allocator, &current, end, filename);
   if (!return_type) {
     err = cubec_create_ast_error(allocator, *position, current,
                                  "Invalid interface expression");

@@ -26,7 +26,7 @@
 struct _cubec_context_t {
   cubec_allocator_t allocator;
 
-  cubec_array_t visits;
+  cubec_visit_ast_fn_t visit;
 
   cubec_map_t modules;
   cubec_array_t types;
@@ -46,7 +46,6 @@ static void cubec_context_dispose(cubec_context_t self,
   cubec_allocator_free(allocator, self->types);
   cubec_allocator_free(allocator, self->modules);
   cubec_allocator_free(allocator, self->root);
-  cubec_allocator_free(allocator, self->visits);
   cubec_allocator_free(allocator, self->strings);
 }
 
@@ -95,7 +94,7 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
       cubec_allocator_alloc(allocator, sizeof(struct _cubec_context_t),
                             (cubec_dispose_fn_t)cubec_context_dispose);
   self->allocator = allocator;
-  self->visits = cubec_create_array(allocator, NULL);
+  self->visit = NULL;
   self->root = cubec_create_scope(allocator, NULL);
   self->scope = self->root;
   cubec_array_initialize_t types_initialize = {
@@ -117,8 +116,8 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
   return self;
 }
 
-void cubec_context_add_visit(cubec_context_t self, cubec_visit_ast_fn_t visit) {
-  cubec_array_push(self->visits, visit);
+void cubec_context_set_visit(cubec_context_t self, cubec_visit_ast_fn_t visit) {
+  self->visit = visit;
 }
 
 cubec_value_t cubec_context_load_module(cubec_context_t self,
@@ -137,10 +136,8 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
     fread(source, len, 1, fp);
     source[len] = 0;
     fclose(fp);
-    size_t num_visits = cubec_array_get_size(self->visits);
-    cubec_visit_ast_fn_t *visits = cubec_array_get_data(self->visits);
-    cubec_ast_node_t node = cubec_read_ast_node(
-        self->allocator, filename, source, self, num_visits, visits);
+    cubec_ast_node_t node = cubec_read_ast_node(self->allocator, filename,
+                                                source, self, self->visit);
     if (node->type == CUBEC_NODE_TYPE_ERROR) {
       cubec_ast_error_t error = (cubec_ast_error_t)node;
       cubec_value_t res = cubec_create_error(self, "%s", error->message);
