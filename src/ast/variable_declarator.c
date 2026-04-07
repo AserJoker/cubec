@@ -53,35 +53,37 @@ cubec_ast_node_t cubec_read_ast_variable_declarator(cubec_allocator_t allocator,
       goto onerror;
     }
   }
-  if (*current.offset == '=') {
-    current.offset++;
-    current.column++;
-    err = cubec_ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-      goto onerror;
-    }
-    cubec_ast_node_t initialize =
-        cubec_read_ast_expression2(allocator, &current, end, filename);
-    if (!initialize) {
-      initialize =
-          cubec_read_ast_initialize_list(allocator, &current, end, filename);
-    }
-    if (!initialize) {
-      err = cubec_create_ast_error(allocator, *position, current,
-                                   "Invalid or unexpected token");
-      goto onerror;
-    }
-    if (initialize->type == CUBEC_NODE_TYPE_ERROR) {
-      err = initialize;
-      goto onerror;
-    }
+  if (*current.offset != '=') {
+    err = cubec_create_ast_error(allocator, *position, current,
+                                 "variable declartion initialize missing");
+    goto onerror;
+  }
+  current.offset++;
+  current.column++;
+  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    goto onerror;
+  }
+  cubec_ast_node_t initialize =
+      cubec_read_ast_expression2(allocator, &current, end, filename);
+  if (!initialize) {
+    initialize =
+        cubec_read_ast_initialize_list(allocator, &current, end, filename);
+  }
+  if (!initialize) {
+    err = cubec_create_ast_error(allocator, *position, current,
+                                 "Invalid or unexpected token");
+    goto onerror;
+  }
+  if (initialize->type == CUBEC_NODE_TYPE_ERROR) {
+    err = initialize;
+    goto onerror;
     cubec_ast_add_child(allocator, node, "initialize", initialize);
   }
   node->loc.begin = *position;
   node->loc.end = current;
   node->loc.filename = filename;
   *position = current;
-
   return node;
 onerror:
   cubec_allocator_free(allocator, node);

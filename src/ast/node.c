@@ -525,3 +525,24 @@ cubec_ast_node_t cubec_read_ast_node(cubec_allocator_t allocator,
   }
   return cubec_visit_ast_node(allocator, program, ctx, visit);
 }
+cubec_ast_node_t cubec_clone_ast_node(cubec_allocator_t allocator,
+                                      cubec_ast_node_t node) {
+  cubec_ast_node_t n = cubec_create_ast_node(allocator, node->type);
+  if (node->type == CUBEC_NODE_TYPE_LIST) {
+    for (size_t idx = 0; idx < cubec_ast_get_length(node); idx++) {
+      cubec_ast_node_t item = cubec_ast_get_item(node, idx);
+      item = cubec_clone_ast_node(allocator, item);
+      cubec_ast_add_item(n, item);
+    }
+  } else {
+    for (cubec_list_node_t it = cubec_map_get_first(node->children);
+         it != cubec_map_get_end(node->children);
+         it = cubec_map_node_get_next(it)) {
+      const char *key = cubec_map_node_get_key(it);
+      cubec_ast_node_t child = cubec_map_node_get_value(it);
+      child = cubec_clone_ast_node(allocator, child);
+      cubec_ast_add_child(allocator, n, key, child);
+    }
+  }
+  return node;
+}

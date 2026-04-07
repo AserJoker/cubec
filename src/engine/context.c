@@ -218,7 +218,14 @@ cubec_type_t cubec_context_load_type(cubec_context_t self, const char *name) {
   }
   return NULL;
 }
-
+cubec_value_t cubec_context_declar(cubec_context_t self, const char *name,
+                                   cubec_value_t value) {
+  if (cubec_scope_load(self->scope, name)) {
+    return cubec_create_error(self, "Duplicate variable declaration");
+  }
+  cubec_scope_store(self->scope, self->allocator, value, name);
+  return value;
+}
 char *const cubec_context_create_cstring(cubec_context_t self,
                                          const char *src) {
   char *str = cubec_create_cstring(self->allocator, src);

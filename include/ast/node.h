@@ -75,6 +75,8 @@ typedef cubec_ast_node_t (*cubec_visit_ast_fn_t)(cubec_allocator_t allocator,
 cubec_ast_node_t cubec_read_ast_node(cubec_allocator_t allocator,
                                      const char *filename, const char *source,
                                      void *ctx, cubec_visit_ast_fn_t visit);
+cubec_ast_node_t cubec_clone_ast_node(cubec_allocator_t allocator,
+                                      cubec_ast_node_t node);
 
 #ifdef __cplusplus
 }

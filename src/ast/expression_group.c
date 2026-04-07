@@ -33,7 +33,7 @@ cubec_ast_node_t cubec_read_ast_expression_group(cubec_allocator_t allocator,
     err = body;
     goto onerror;
   }
-  cubec_ast_add_child(allocator, node, "body", body);
+  cubec_ast_add_child(allocator, node, "expression", body);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
@@ -55,4 +55,10 @@ cubec_ast_node_t cubec_read_ast_expression_group(cubec_allocator_t allocator,
 onerror:
   cubec_allocator_free(allocator, node);
   return err;
+}
+cubec_ast_node_t cubec_ast_unwrap_group(cubec_ast_node_t node) {
+  while (node->type == CUBEC_NODE_TYPE_EXPRESSION_GROUP) {
+    node = cubec_ast_get_child(node, "expression");
+  }
+  return node;
 }
