@@ -54,7 +54,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_or(
   cubec_ast_node_t right =
       cubec_read_ast_expression4(allocator, &current, end, filename);
   if (!right) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Unexpected expression");
     goto onerror;
   }
@@ -119,7 +119,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_and(
   cubec_ast_node_t right =
       cubec_read_ast_expression5(allocator, &current, end, filename);
   if (!right) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Unexpected expression");
     goto onerror;
   }
@@ -183,7 +183,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
   cubec_ast_node_t right =
       cubec_read_ast_expression6(allocator, &current, end, filename);
   if (!right) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Unexpected expression");
     goto onerror;
   }
@@ -248,7 +248,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
   cubec_ast_node_t right =
       cubec_read_ast_expression7(allocator, &current, end, filename);
   if (!right) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Unexpected expression");
     goto onerror;
   }
@@ -313,7 +313,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
   cubec_ast_node_t right =
       cubec_read_ast_expression8(allocator, &current, end, filename);
   if (!right) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Unexpected expression");
     goto onerror;
   }
@@ -381,7 +381,7 @@ cubec_read_ast_expression_binary_equal(cubec_allocator_t allocator,
   cubec_ast_node_t right =
       cubec_read_ast_expression9(allocator, &current, end, filename);
   if (!right) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Unexpected expression");
     goto onerror;
   }
@@ -450,7 +450,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_relation(
   cubec_ast_node_t right =
       cubec_read_ast_expression10(allocator, &current, end, filename);
   if (!right) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Unexpected expression");
     goto onerror;
   }
@@ -516,7 +516,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
   cubec_ast_node_t right =
       cubec_read_ast_expression11(allocator, &current, end, filename);
   if (!right) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Unexpected expression");
     goto onerror;
   }
@@ -581,7 +581,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_additive(
   cubec_ast_node_t right =
       cubec_read_ast_expression12(allocator, &current, end, filename);
   if (!right) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Unexpected expression");
     goto onerror;
   }
@@ -646,7 +646,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
   cubec_ast_node_t right =
       cubec_read_ast_expression13(allocator, &current, end, filename);
   if (!right) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Unexpected expression");
     goto onerror;
   }
@@ -711,7 +711,7 @@ cubec_read_ast_expression_binary_prefix(cubec_allocator_t allocator,
   cubec_ast_node_t right =
       cubec_read_ast_expression15(allocator, &current, end, filename);
   if (!right) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Unexpected expression");
     goto onerror;
   }

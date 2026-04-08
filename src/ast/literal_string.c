@@ -11,7 +11,7 @@ cubec_ast_node_t cubec_read_ast_literal_string(cubec_allocator_t allocator,
   cubec_position_t current = *position;
   int32_t code = cubec_ast_read_code(&current, end, filename);
   if (code < 0) {
-    return cubec_create_ast_error(allocator, *position, current,
+    return cubec_create_ast_error(allocator, *position, current, filename,
                                   "Invalid unicode code");
   }
   if (code != '\"') {
@@ -19,26 +19,26 @@ cubec_ast_node_t cubec_read_ast_literal_string(cubec_allocator_t allocator,
   }
   for (;;) {
     if (!*current.offset) {
-      return cubec_create_ast_error(allocator, *position, current,
+      return cubec_create_ast_error(allocator, *position, current, filename,
                                     "Invalid string literal, missing '\"'");
     }
     code = cubec_ast_read_code(&current, end, filename);
     if (code < 0) {
-      return cubec_create_ast_error(allocator, *position, current,
+      return cubec_create_ast_error(allocator, *position, current, filename,
                                     "Invalid unicode code");
     }
     if (code == '\n' || code == '\r' || code == 0x2028 || code == 2029) {
-      return cubec_create_ast_error(allocator, *position, current,
+      return cubec_create_ast_error(allocator, *position, current, filename,
                                     "Invalid string literal, missing '\"'");
     }
     if (code == '\\') {
       if (!*current.offset) {
-        return cubec_create_ast_error(allocator, *position, current,
+        return cubec_create_ast_error(allocator, *position, current, filename,
                                       "Invalid string literal, missing '\"'");
       }
       code = cubec_ast_read_code(&current, end, filename);
       if (code < 0) {
-        return cubec_create_ast_error(allocator, *position, current,
+        return cubec_create_ast_error(allocator, *position, current, filename,
                                       "Invalid unicode code");
       }
       continue;

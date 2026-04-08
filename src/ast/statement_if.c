@@ -36,7 +36,7 @@ cubec_ast_node_t cubec_read_ast_statement_if(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != '(') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid statement, missing '('");
     goto onerror;
   }
@@ -49,7 +49,7 @@ cubec_ast_node_t cubec_read_ast_statement_if(cubec_allocator_t allocator,
   cubec_ast_node_t condition =
       cubec_read_ast_expression(allocator, &current, end, filename);
   if (!condition) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid statement, missing condition");
     goto onerror;
   }
@@ -63,7 +63,7 @@ cubec_ast_node_t cubec_read_ast_statement_if(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != ')') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid if statement, missing ')'");
     goto onerror;
   }
@@ -76,7 +76,7 @@ cubec_ast_node_t cubec_read_ast_statement_if(cubec_allocator_t allocator,
   cubec_ast_node_t consequent =
       cubec_read_ast_statement(allocator, &current, end, filename);
   if (!consequent) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid statement, missing consequent");
     goto onerror;
   }
@@ -103,7 +103,7 @@ cubec_ast_node_t cubec_read_ast_statement_if(cubec_allocator_t allocator,
     cubec_ast_node_t alternate =
         cubec_read_ast_statement(allocator, &current, end, filename);
     if (!alternate) {
-      err = cubec_create_ast_error(allocator, *position, current,
+      err = cubec_create_ast_error(allocator, *position, current, filename,
                                    "Invalid statement, missing alternate");
       goto onerror;
     }

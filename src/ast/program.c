@@ -41,7 +41,7 @@ cubec_ast_node_t cubec_read_ast_program(cubec_allocator_t allocator,
   }
   cubec_allocator_free(allocator, err);
   if (*current.offset) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid or unexpected token");
     goto onerror;
   }

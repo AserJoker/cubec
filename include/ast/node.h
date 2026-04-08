@@ -61,6 +61,7 @@ typedef struct _cubec_ast_error_t {
 cubec_ast_node_t cubec_create_ast_error(cubec_allocator_t allocator,
                                         cubec_position_t begin,
                                         cubec_position_t end,
+                                        const char *filename,
                                         const char *message);
 
 cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,

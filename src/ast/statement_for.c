@@ -37,7 +37,7 @@ cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != '(') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid statement, missing '('");
     goto onerror;
   }
@@ -53,7 +53,7 @@ cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
     init = cubec_read_ast_statement_empty(allocator, &current, end, filename);
   }
   if (!init) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid for statement, missing initialize");
     goto onerror;
   }
@@ -73,7 +73,7 @@ cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
         cubec_read_ast_statement_empty(allocator, &current, end, filename);
   }
   if (!conditon) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid for statement, missing condition");
     goto onerror;
   }
@@ -100,7 +100,7 @@ cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != ')') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid statement, missing ')'");
     goto onerror;
   }
@@ -113,7 +113,7 @@ cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
   cubec_ast_node_t body =
       cubec_read_ast_statement(allocator, &current, end, filename);
   if (!body) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid for statement, missing body");
     goto onerror;
   }

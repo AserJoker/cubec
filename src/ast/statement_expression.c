@@ -36,7 +36,7 @@ cubec_read_ast_statement_expression(cubec_allocator_t allocator,
   }
   if (!token || !cubec_location_is(token->loc, ";")) {
     cubec_allocator_free(allocator, token);
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid expression statement, missing ';'");
     goto onerror;
   }

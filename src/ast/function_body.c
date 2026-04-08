@@ -47,7 +47,7 @@ cubec_ast_node_t cubec_read_ast_function_body(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != '}') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid function expression, missing '}'");
     goto onerror;
   }

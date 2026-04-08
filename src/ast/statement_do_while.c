@@ -38,7 +38,7 @@ cubec_ast_node_t cubec_read_ast_statement_do_while(cubec_allocator_t allocator,
   cubec_ast_node_t body =
       cubec_read_ast_statement(allocator, &current, end, filename);
   if (!body) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid do-while statement");
     goto onerror;
   }
@@ -53,7 +53,7 @@ cubec_ast_node_t cubec_read_ast_statement_do_while(cubec_allocator_t allocator,
   }
   token = cubec_read_ast_literal_identifier(allocator, &current, end, filename);
   if (!token) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid do-while statement");
     goto onerror;
   }
@@ -63,7 +63,7 @@ cubec_ast_node_t cubec_read_ast_statement_do_while(cubec_allocator_t allocator,
   }
   if (!cubec_location_is(token->loc, "while")) {
     cubec_allocator_free(allocator, token);
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid do-while statement");
     goto onerror;
   }
@@ -73,7 +73,7 @@ cubec_ast_node_t cubec_read_ast_statement_do_while(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != '(') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid do-while statement, missing '('");
     goto onerror;
   }
@@ -86,7 +86,7 @@ cubec_ast_node_t cubec_read_ast_statement_do_while(cubec_allocator_t allocator,
   cubec_ast_node_t condition =
       cubec_read_ast_expression(allocator, &current, end, filename);
   if (!condition) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid do-while statement");
     goto onerror;
   }
@@ -100,7 +100,7 @@ cubec_ast_node_t cubec_read_ast_statement_do_while(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != ')') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid do-while statement, missing ')'");
     goto onerror;
   }
@@ -111,7 +111,7 @@ cubec_ast_node_t cubec_read_ast_statement_do_while(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != ';') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid do-while statement, missing ';'");
     goto onerror;
   }

@@ -38,7 +38,7 @@ cubec_ast_node_t cubec_read_ast_statement_switch(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != '(') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid switch statement, missing '('");
     goto onerror;
   }
@@ -51,7 +51,7 @@ cubec_ast_node_t cubec_read_ast_statement_switch(cubec_allocator_t allocator,
   cubec_ast_node_t condition =
       cubec_read_ast_expression(allocator, &current, end, filename);
   if (!condition) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid switch statement, missing condition");
     goto onerror;
   }
@@ -65,7 +65,7 @@ cubec_ast_node_t cubec_read_ast_statement_switch(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != ')') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid switch statement, missing ')'");
     goto onerror;
   }
@@ -76,7 +76,7 @@ cubec_ast_node_t cubec_read_ast_statement_switch(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != '{') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid switch statement, missing '{'");
     goto onerror;
   }
@@ -91,7 +91,7 @@ cubec_ast_node_t cubec_read_ast_statement_switch(cubec_allocator_t allocator,
       cubec_ast_node_t cas =
           cubec_read_ast_switch_case(allocator, &current, end, filename);
       if (!cas) {
-        err = cubec_create_ast_error(allocator, *position, current,
+        err = cubec_create_ast_error(allocator, *position, current, filename,
                                      "Invalid switch statement");
         goto onerror;
       }

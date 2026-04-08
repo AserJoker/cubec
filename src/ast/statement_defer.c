@@ -41,7 +41,7 @@ cubec_ast_node_t cubec_read_ast_statement_defer(cubec_allocator_t allocator,
         cubec_read_ast_statement_expression(allocator, &current, end, filename);
   }
   if (!statement) {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid defer statement");
     goto onerror;
   }

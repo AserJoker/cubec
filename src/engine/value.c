@@ -39,6 +39,9 @@ bool cubec_value_type_is(cubec_value_t value, cubec_type_kind_t kind) {
   return cubec_type_get_kind(value->type) == kind;
 }
 bool cubec_value_is_mutable(cubec_value_t value) { return value->mutable; }
+void cubec_value_set_mutable(cubec_value_t value, bool mutable) {
+  value->mutable = mutable;
+}
 void *cubec_value_get_data(cubec_value_t value) { return value->data; }
 cubec_value_t cubec_value_clone(cubec_allocator_t allocator,
                                 cubec_value_t value) {

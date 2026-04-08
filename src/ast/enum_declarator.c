@@ -78,7 +78,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
     cubec_ast_node_t type =
         cubec_read_ast_expression18(allocator, &current, end, filename);
     if (!type) {
-      err = cubec_create_ast_error(allocator, *position, current,
+      err = cubec_create_ast_error(allocator, *position, current, filename,
                                    "Invalid enum declarator, missing 'type'");
       goto onerror;
     }
@@ -93,7 +93,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != '{') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid enum declarator, missing '{'");
     goto onerror;
   }
@@ -108,7 +108,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
       cubec_ast_node_t item =
           cubec_read_ast_enum_field(allocator, &current, end, filename);
       if (!item) {
-        err = cubec_create_ast_error(allocator, *position, current,
+        err = cubec_create_ast_error(allocator, *position, current, filename,
                                      "Invalid enum declarator");
         goto onerror;
       }
@@ -125,7 +125,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
         break;
       }
       if (*current.offset != ',') {
-        err = cubec_create_ast_error(allocator, *position, current,
+        err = cubec_create_ast_error(allocator, *position, current, filename,
                                      "Invalid enum declarator, missing ','");
         goto onerror;
       }
@@ -145,7 +145,7 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != '}') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid enum declarator, missing '}'");
     goto onerror;
   }

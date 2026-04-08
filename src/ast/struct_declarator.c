@@ -79,7 +79,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != '{') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid struct declarator, missing '{'");
     goto onerror;
   }
@@ -117,7 +117,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item( methods, item);
+        cubec_ast_add_item(methods, item);
         goto next;
       }
       item = cubec_read_ast_statement_declaration(allocator, &current, end,
@@ -127,7 +127,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item( attributes, item);
+        cubec_ast_add_item(attributes, item);
         goto next;
       }
       item = cubec_read_ast_struct_field(allocator, &current, end, filename);
@@ -136,12 +136,12 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item( fields, item);
+        cubec_ast_add_item(fields, item);
         current.offset++;
         current.column++;
         goto next;
       }
-      err = cubec_create_ast_error(allocator, *position, current,
+      err = cubec_create_ast_error(allocator, *position, current, filename,
                                    "Invalid struct field");
       goto onerror;
     next:
@@ -159,7 +159,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != '}') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid struct declarator, missing '}'");
     goto onerror;
   }

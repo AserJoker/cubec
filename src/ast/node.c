@@ -100,7 +100,9 @@ void cubec_ast_remove_item(cubec_ast_node_t node, size_t idx) {
 }
 cubec_ast_node_t cubec_ast_move_item(cubec_ast_node_t node, size_t idx) {
   node->changed = true;
-  return cubec_array_move(node->items, idx);
+  cubec_ast_node_t current = cubec_array_move(node->items, idx);
+  current->parent = NULL;
+  return current;
 }
 cubec_ast_node_t cubec_ast_replace_item(cubec_ast_node_t node, size_t idx,
                                         cubec_ast_node_t item) {
@@ -111,6 +113,7 @@ void cubec_ast_insert_item(cubec_ast_node_t node, size_t pos,
                            cubec_ast_node_t item) {
   node->changed = true;
   cubec_array_insert(node->items, pos, item);
+  item->parent = node;
 }
 size_t cubec_ast_get_length(cubec_ast_node_t node) {
   return cubec_array_get_size(node->items);
@@ -214,6 +217,7 @@ static void cubec_error_dispose(cubec_ast_error_t self,
 cubec_ast_node_t cubec_create_ast_error(cubec_allocator_t allocator,
                                         cubec_position_t begin,
                                         cubec_position_t end,
+                                        const char *filename,
                                         const char *message) {
   cubec_ast_error_t node =
       cubec_allocator_alloc(allocator, sizeof(struct _cubec_ast_error_t),
@@ -222,6 +226,7 @@ cubec_ast_node_t cubec_create_ast_error(cubec_allocator_t allocator,
   node->super.type = CUBEC_NODE_TYPE_ERROR;
   node->super.loc.begin = begin;
   node->super.loc.end = end;
+  node->super.loc.filename = filename;
   size_t len = strlen(message);
   node->message = cubec_allocator_alloc(allocator, len + 1, NULL);
   strcpy(node->message, message);
@@ -235,7 +240,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
   while (*current.offset) {
     int32_t code = cubec_ast_read_code(&current, end, filename);
     if (code < 0) {
-      return cubec_create_ast_error(allocator, *position, current,
+      return cubec_create_ast_error(allocator, *position, current, filename,
                                     "Invalid unicode code");
     }
     if (u_isWhitespace(code)) {
@@ -245,7 +250,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
     if (code == '/') {
       code = cubec_ast_read_code(&current, end, filename);
       if (code < 0) {
-        return cubec_create_ast_error(allocator, *position, current,
+        return cubec_create_ast_error(allocator, *position, current, filename,
                                       "Invalid unicode code");
       }
       if (code == '/') {
@@ -257,7 +262,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
           code = cubec_ast_read_code(&current, end, filename);
           if (code < 0) {
             return cubec_create_ast_error(allocator, *position, current,
-                                          "Invalid unicode code");
+                                          filename, "Invalid unicode code");
           }
         }
         *position = current;
@@ -267,23 +272,24 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
         while (true) {
           if (*current.offset == 0) {
             return cubec_create_ast_error(allocator, *position, current,
+                                          filename,
                                           "Missing multiline comment end '*/'");
           }
           code = cubec_ast_read_code(&current, end, filename);
           if (code < 0) {
             return cubec_create_ast_error(allocator, *position, current,
-                                          "Invalid unicode code");
+                                          filename, "Invalid unicode code");
           }
           if (code == '\\') {
             if (!*current.offset) {
               return cubec_create_ast_error(
-                  allocator, *position, current,
+                  allocator, *position, current, filename,
                   "Missing multiline comment end '*/'");
             }
             code = cubec_ast_read_code(&current, end, filename);
             if (code < 0) {
               return cubec_create_ast_error(allocator, *position, current,
-                                            "Invalid unicode code");
+                                            filename, "Invalid unicode code");
             }
             continue;
           }
@@ -528,6 +534,7 @@ cubec_ast_node_t cubec_read_ast_node(cubec_allocator_t allocator,
 cubec_ast_node_t cubec_clone_ast_node(cubec_allocator_t allocator,
                                       cubec_ast_node_t node) {
   cubec_ast_node_t n = cubec_create_ast_node(allocator, node->type);
+  n->loc = node->loc;
   if (node->type == CUBEC_NODE_TYPE_LIST) {
     for (size_t idx = 0; idx < cubec_ast_get_length(node); idx++) {
       cubec_ast_node_t item = cubec_ast_get_item(node, idx);
@@ -544,5 +551,5 @@ cubec_ast_node_t cubec_clone_ast_node(cubec_allocator_t allocator,
       cubec_ast_add_child(allocator, n, key, child);
     }
   }
-  return node;
+  return n;
 }

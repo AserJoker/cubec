@@ -1,0 +1,15 @@
+#ifndef _H_CUBEC_WRITE_INITIALIZE_LIST_
+#define _H_CUBEC_WRITE_INITIALIZE_LIST_
+#include "ast/node.h"
+#include "context.h"
+#include <stdio.h>
+
+#ifdef __cplusplus__
+extern "C" {
+#endif
+void cubec_write_initialize_list(FILE *fp, cubec_ast_node_t node,
+                                 cubec_write_context *ctx);
+#ifdef __cplusplus__
+}
+#endif
+#endif

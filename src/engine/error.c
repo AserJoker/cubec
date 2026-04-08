@@ -4,7 +4,6 @@
 #include "engine/context.h"
 #include "engine/type.h"
 #include "engine/value.h"
-#include <corecrt_search.h>
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -42,7 +41,7 @@ cubec_value_t cubec_create_compile_error(cubec_context_t ctx,
   size_t len = strlen(line);
   char marks[len + 1];
   for (size_t idx = 0; idx < len; idx++) {
-    if (idx >= node->loc.begin.column && idx <= node->loc.end.column) {
+    if (idx >= node->loc.begin.column - 1 && idx < node->loc.end.column - 1) {
       marks[idx] = '^';
     } else {
       marks[idx] = ' ';
@@ -69,6 +68,7 @@ cubec_value_t cubec_create_compile_error(cubec_context_t ctx,
           node->loc.filename, node->loc.begin.column, node->loc.begin.line,
           message, line_number, line, (int)len, " ", marks);
   const char *str = cubec_context_create_cstring(ctx, msg);
+  cubec_allocator_free(allocator, line);
   return cubec_context_create_value(ctx, type, false, &str, NULL);
 }
 cubec_value_t cubec_convert_compile_error(cubec_context_t ctx,

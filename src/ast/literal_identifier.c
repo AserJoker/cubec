@@ -14,7 +14,7 @@ cubec_ast_node_t cubec_read_ast_literal_identifier(cubec_allocator_t allocator,
   cubec_position_t current = *position;
   int32_t code = cubec_ast_read_code(&current, end, filename);
   if (code < 0) {
-    return cubec_create_ast_error(allocator, *position, current,
+    return cubec_create_ast_error(allocator, *position, current, filename,
                                   "Invalid unicode code");
   }
   if (!u_isIDStart(code) && code != '_') {
@@ -24,7 +24,7 @@ cubec_ast_node_t cubec_read_ast_literal_identifier(cubec_allocator_t allocator,
     cubec_position_t backup = current;
     code = cubec_ast_read_code(&current, end, filename);
     if (code < 0) {
-      return cubec_create_ast_error(allocator, *position, current,
+      return cubec_create_ast_error(allocator, *position, current, filename,
                                     "Invalid unicode code");
     }
     if (!u_isIDPart(code)) {

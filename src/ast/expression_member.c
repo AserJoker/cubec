@@ -26,7 +26,7 @@ cubec_ast_node_t cubec_read_ast_expression_member(cubec_allocator_t allocator,
       cubec_read_ast_literal_identifier(allocator, &current, end, filename);
   if (!field) {
     err = cubec_create_ast_error(
-        allocator, *position, current,
+        allocator, *position, current, filename,
         "Invalid or unexpected token, missing field for member expression");
     goto onerror;
   }

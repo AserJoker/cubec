@@ -28,7 +28,7 @@ cubec_ast_node_t cubec_read_ast_literal_symbol(cubec_allocator_t allocator,
     while (*src) {
       int32_t code = cubec_ast_read_code(&current, end, filename);
       if (code < 0) {
-        return cubec_create_ast_error(allocator, *position, current,
+        return cubec_create_ast_error(allocator, *position, current, filename,
                                       "Invalid unicode code");
       }
       if (*src != code) {

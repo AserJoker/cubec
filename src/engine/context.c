@@ -16,6 +16,7 @@
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/void.h"
+#include "pass/declar_flat.h"
 #include "pass/type_fix.h"
 #include "writer/context.h"
 #include "writer/program.h"
@@ -91,6 +92,10 @@ static void cubec_context_init_value(cubec_context_t self) {
 static cubec_ast_node_t cubec_context_visit_node(cubec_allocator_t allocator,
                                                  cubec_ast_node_t node,
                                                  cubec_context_t ctx) {
+  node = cubec_pass_declar_flat(allocator, node, ctx);
+  if (node->changed || node->type == CUBEC_NODE_TYPE_ERROR) {
+    return node;
+  }
   node = cubec_pass_type_fix(allocator, node, ctx);
   if (node->changed || node->type == CUBEC_NODE_TYPE_ERROR) {
     return node;
@@ -145,8 +150,10 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
                             (cubec_visit_ast_fn_t)cubec_context_visit_node);
     if (node->type == CUBEC_NODE_TYPE_ERROR) {
       cubec_ast_error_t error = (cubec_ast_error_t)node;
-      cubec_value_t res = cubec_create_error(self, "%s", error->message);
+      cubec_value_t res =
+          cubec_create_compile_error(self, node, error->message);
       cubec_allocator_free(self->allocator, node);
+      cubec_allocator_free(self->allocator, source);
       return res;
     }
     cubec_value_t value = self->value_undefined; // TODO: eval module;

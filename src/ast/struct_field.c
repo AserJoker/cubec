@@ -26,7 +26,7 @@ cubec_ast_node_t cubec_read_ast_struct_field(cubec_allocator_t allocator,
     if (decorator->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;
     }
-    cubec_ast_add_item( decorators, decorator);
+    cubec_ast_add_item(decorators, decorator);
     err = cubec_ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
@@ -47,7 +47,7 @@ cubec_ast_node_t cubec_read_ast_struct_field(cubec_allocator_t allocator,
     return err;
   }
   if (*current.offset != ';') {
-    err = cubec_create_ast_error(allocator, *position, current,
+    err = cubec_create_ast_error(allocator, *position, current, filename,
                                  "Invalid struct field");
     goto onerror;
   }
