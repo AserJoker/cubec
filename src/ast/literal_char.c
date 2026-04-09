@@ -13,32 +13,21 @@ cubec_ast_node_t cubec_read_ast_literal_char(cubec_allocator_t allocator,
   }
   current.offset++;
   current.column++;
-  if (!*current.offset) {
-    return cubec_create_ast_error(allocator, *position, current, filename,
-                                  "Invalid charactor literal, missing '\''");
-  }
-  int32_t code = cubec_ast_read_code(&current, end, filename);
-  if (code < 0) {
-    return cubec_create_ast_error(allocator, *position, current, filename,
-                                  "Invalid unicode code");
-  }
-  if (code == '\\') {
+  for (;;) {
     if (!*current.offset) {
       return cubec_create_ast_error(allocator, *position, current, filename,
                                     "Invalid charactor literal, missing '\''");
     }
-    code = cubec_ast_read_code(&current, end, filename);
-    if (code < 0) {
-      return cubec_create_ast_error(allocator, *position, current, filename,
-                                    "Invalid unicode code");
+    if (*current.offset == '\'') {
+      break;
     }
-  } else if (code == '\n' || code == '\r' || code == 0x2028 || code == 0x2029) {
-    return cubec_create_ast_error(allocator, *position, current, filename,
-                                  "Invalid charactor literal, missing '\''");
-  }
-  if (*current.offset != '\'') {
-    return cubec_create_ast_error(allocator, *position, current, filename,
-                                  "Invalid charactor literal, missing '\''");
+    if (*current.offset == '\\') {
+      current.offset += 2;
+      current.column += 2;
+    } else {
+      current.offset++;
+      current.column++;
+    }
   }
   current.offset++;
   current.column++;

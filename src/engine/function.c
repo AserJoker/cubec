@@ -98,9 +98,9 @@ static char *cubec_function_type_to_string(cubec_type_t self,
   cubec_allocator_free(allocator, type_str);
   return str;
 }
-cubec_type_t cubec_create_function_type(cubec_context_t ctx, cubec_type_t type,
-                                        size_t num_args, cubec_type_t args[],
-                                        bool variadic) {
+cubec_value_t cubec_create_function_type(cubec_context_t ctx, cubec_type_t type,
+                                         size_t num_args, cubec_type_t args[],
+                                         bool variadic) {
   cubec_function_meta_t meta = cubec_create_function_meta(
       cubec_context_get_allocator(ctx), type, num_args, args, variadic);
   struct _cubec_type_operator_t opt = {

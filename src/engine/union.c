@@ -113,7 +113,7 @@ static cubec_value_t cubec_union_set_field(cubec_value_t self,
   }
   return cubec_create_error(ctx, "No member named '%s' in value", name);
 }
-cubec_type_t cubec_context_union_type(cubec_context_t ctx, size_t align,
+cubec_value_t cubec_create_union_type(cubec_context_t ctx, size_t align,
                                       const char *name) {
   cubec_union_meta_t meta =
       cubec_create_union_meta(cubec_context_get_allocator(ctx), name);

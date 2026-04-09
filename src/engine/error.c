@@ -61,12 +61,12 @@ cubec_value_t cubec_create_compile_error(cubec_context_t ctx,
   sprintf(line_number, "%" PRIuPTR " |", node->loc.begin.line);
   size_t str_len =
       snprintf(NULL, 0, "%s:%" PRIuPTR ":%" PRIuPTR ": error: %s\n%s%s\n%*s%s",
-               node->loc.filename, node->loc.begin.column, node->loc.begin.line,
+               node->loc.filename, node->loc.end.line, node->loc.end.column,
                message, line_number, line, (int)len, " ", marks);
   char msg[str_len + 1];
   sprintf(msg, "%s:%" PRIuPTR ":%" PRIuPTR ": error: %s\n%s%s\n%*s%s",
-          node->loc.filename, node->loc.begin.column, node->loc.begin.line,
-          message, line_number, line, (int)len, " ", marks);
+          node->loc.filename, node->loc.end.line, node->loc.end.column, message,
+          line_number, line, (int)len, " ", marks);
   const char *str = cubec_context_create_cstring(ctx, msg);
   cubec_allocator_free(allocator, line);
   return cubec_context_create_value(ctx, type, false, &str, NULL);

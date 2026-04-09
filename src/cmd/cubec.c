@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   cubec_allocator_t allocator = cubec_create_allocator(NULL);
   cubec_context_t ctx = cubec_create_context(allocator);
   char *filename = absolute(allocator, "./main.cubec");
-  cubec_value_t err = cubec_context_load_module(ctx, filename, NULL);
+  cubec_value_t err = cubec_context_load_module(ctx, filename);
   cubec_context_write_module(ctx, filename, "./main.resolved.cubec");
   if (cubec_value_is_error(err)) {
     const char *message = *(const char **)cubec_value_get_data(err);

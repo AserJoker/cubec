@@ -21,8 +21,8 @@ struct _cubec_struct_field_t {
   size_t offset;
 };
 typedef struct _cubec_struct_field_t *cubec_struct_field_t;
-cubec_type_t cubec_context_create_struct_type(cubec_context_t ctx, size_t align,
-                                              const char *name);
+cubec_value_t cubec_create_struct_type(cubec_context_t ctx, size_t align,
+                                      const char *name);
 void cubec_struct_type_add_field(cubec_type_t self, cubec_allocator_t allocator,
                                  const char *name, cubec_type_t type);
 void cubec_struct_type_add_attribute(cubec_type_t self,

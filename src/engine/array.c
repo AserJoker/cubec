@@ -117,8 +117,8 @@ static cubec_value_t cubec_array_set_index(cubec_value_t self,
   memcpy(data, cubec_value_get_data(value), cubec_type_get_size(meta->type));
   return cubec_context_get_undefined(ctx);
 }
-cubec_type_t cubec_create_array_type(cubec_context_t self, cubec_type_t type,
-                                     size_t length) {
+cubec_value_t cubec_create_array_type(cubec_context_t self, cubec_type_t type,
+                                      size_t length) {
   cubec_array_meta_t meta =
       cubec_create_array_meta(cubec_context_get_allocator(self), type, length);
   struct _cubec_type_operator_t opt = {

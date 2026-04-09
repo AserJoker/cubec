@@ -13,9 +13,11 @@
 #include "engine/opaque.h"
 #include "engine/scope.h"
 #include "engine/str.h"
+#include "engine/struct.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/void.h"
+#include "eval/program.h"
 #include "pass/declar_flat.h"
 #include "pass/type_fix.h"
 #include "writer/context.h"
@@ -33,12 +35,12 @@ struct _cubec_context_t {
   cubec_array_t strings;
 
   cubec_type_t type_type;
-  cubec_type_t type_any;
 
   cubec_value_t value_undefined;
 
   cubec_scope_t root;
   cubec_scope_t scope;
+  cubec_value_t self;
 };
 
 static void cubec_context_dispose(cubec_context_t self,
@@ -67,8 +69,8 @@ static void cubec_init_type_type(cubec_context_t self) {
 }
 
 static void cubec_init_any_type(cubec_context_t self) {
-  self->type_any = cubec_context_create_type(self, CUBEC_VALUE_TYPE_ANY, 0, 0,
-                                             NULL, NULL, "any");
+  cubec_context_create_type(self, CUBEC_VALUE_TYPE_ANY, 0, 0, NULL, NULL,
+                            "any");
 }
 
 static void cubec_context_init_type(cubec_context_t self) {
@@ -126,12 +128,12 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
   self->modules = cubec_create_map(allocator, &module_initialize);
   cubec_context_init_type(self);
   cubec_context_init_value(self);
+  self->self = NULL;
   return self;
 }
 
 cubec_value_t cubec_context_load_module(cubec_context_t self,
-                                        const char *filename,
-                                        const char *name) {
+                                        const char *filename) {
   cubec_module_t module = cubec_map_get(self->modules, filename, NULL);
   if (!module) {
     FILE *fp = fopen(filename, "rb");
@@ -156,7 +158,12 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
       cubec_allocator_free(self->allocator, source);
       return res;
     }
-    cubec_value_t value = self->value_undefined; // TODO: eval module;
+    cubec_value_t value = cubec_eval_program(self, node);
+    if (cubec_value_is_error(value)) {
+      cubec_allocator_free(self->allocator, node);
+      cubec_allocator_free(self->allocator, source);
+      return value;
+    }
     module =
         cubec_create_module(self->allocator, node, filename, source, value);
     cubec_map_set(self->modules, (void *)cubec_module_get_filename(module),
@@ -183,18 +190,15 @@ cubec_value_t cubec_context_write_module(cubec_context_t self,
   return self->value_undefined;
 }
 
-cubec_type_t cubec_context_create_type(cubec_context_t self,
-                                       cubec_type_kind_t kind, size_t size,
-                                       size_t align, void *meta,
-                                       cubec_type_operator_t opt,
-                                       const char *name) {
+cubec_value_t cubec_context_create_type(cubec_context_t self,
+                                        cubec_type_kind_t kind, size_t size,
+                                        size_t align, void *meta,
+                                        cubec_type_operator_t opt,
+                                        const char *name) {
   cubec_type_t type =
       cubec_create_type(self->allocator, kind, size, align, meta, opt);
   cubec_array_push(self->types, type);
-  if (name) {
-    cubec_context_create_value(self, self->type_type, false, &type, name);
-  }
-  return type;
+  return cubec_context_create_value(self, self->type_type, false, &type, name);
 }
 
 cubec_value_t cubec_context_create_value(cubec_context_t self,
@@ -215,7 +219,11 @@ cubec_value_t cubec_context_load(cubec_context_t self, const char *name) {
     }
     scope = cubec_scope_get_parent(scope);
   }
-  return NULL;
+  if (self->self) {
+    cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(self->self);
+    return cubec_struct_type_get_attribute(type, name);
+  }
+  return cubec_create_error(self, "use of undeclared identifier '%s'", name);
 }
 cubec_type_t cubec_context_load_type(cubec_context_t self, const char *name) {
   cubec_value_t vtype = cubec_context_load(self, name);
@@ -230,8 +238,22 @@ cubec_value_t cubec_context_declar(cubec_context_t self, const char *name,
   if (cubec_scope_load(self->scope, name)) {
     return cubec_create_error(self, "Duplicate variable declaration");
   }
-  cubec_scope_store(self->scope, self->allocator, value, name);
+  if (self->self) {
+    cubec_type_t stru = *(cubec_type_t *)cubec_value_get_data(self->self);
+    cubec_struct_type_add_attribute(stru, self->allocator, name, value);
+  } else {
+    cubec_scope_store(self->scope, self->allocator, value, name);
+  }
   return value;
+}
+cubec_value_t cubec_context_set_self(cubec_context_t self,
+                                     cubec_value_t value) {
+  cubec_value_t old = self->self;
+  self->self = value;
+  return old;
+}
+cubec_value_t cubec_context_get_self(cubec_context_t self) {
+  return self->self;
 }
 char *const cubec_context_create_cstring(cubec_context_t self,
                                          const char *src) {

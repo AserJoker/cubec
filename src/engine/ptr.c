@@ -69,8 +69,8 @@ static char *cubec_ptr_type_to_string(cubec_type_t self,
   str[offset] = 0;
   return str;
 }
-cubec_type_t cubec_create_ptr_type(cubec_context_t ctx, cubec_type_t type,
-                                   bool mutable, bool volatile_) {
+cubec_value_t cubec_create_ptr_type(cubec_context_t ctx, cubec_type_t type,
+                                    bool mutable, bool volatile_) {
   cubec_ptr_meta_t meta = cubec_create_ptr_meta(
       cubec_context_get_allocator(ctx), type, mutable, volatile_);
   struct _cubec_type_operator_t opt = {
@@ -79,8 +79,9 @@ cubec_type_t cubec_create_ptr_type(cubec_context_t ctx, cubec_type_t type,
   return cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_PTR, sizeof(void *),
                                    sizeof(void *), meta, &opt, NULL);
 }
-cubec_type_t cubec_create_ptr_array_type(cubec_context_t ctx, cubec_type_t type,
-                                         bool mutable, bool volatile_) {
+cubec_value_t cubec_create_ptr_array_type(cubec_context_t ctx,
+                                          cubec_type_t type, bool mutable,
+                                          bool volatile_) {
   cubec_ptr_meta_t meta = cubec_create_ptr_meta(
       cubec_context_get_allocator(ctx), type, mutable, volatile_);
   struct _cubec_type_operator_t opt = {};

@@ -173,8 +173,8 @@ static cubec_value_t cubec_struct_set_field(cubec_value_t self,
   }
   return cubec_create_error(ctx, "No member named '%s' in value", name);
 }
-cubec_type_t cubec_context_create_struct_type(cubec_context_t ctx, size_t align,
-                                              const char *name) {
+cubec_value_t cubec_create_struct_type(cubec_context_t ctx, size_t align,
+                                       const char *name) {
   cubec_struct_meta_t meta =
       cubec_create_struct_meta(cubec_context_get_allocator(ctx), name);
   struct _cubec_type_operator_t opt = {
