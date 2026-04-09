@@ -15,6 +15,7 @@
 #include "engine/str.h"
 #include "engine/struct.h"
 #include "engine/type.h"
+#include "engine/union.h"
 #include "engine/value.h"
 #include "engine/void.h"
 #include "eval/program.h"
@@ -40,7 +41,7 @@ struct _cubec_context_t {
 
   cubec_scope_t root;
   cubec_scope_t scope;
-  cubec_value_t self;
+  cubec_value_t eval_context;
 };
 
 static void cubec_context_dispose(cubec_context_t self,
@@ -128,7 +129,7 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
   self->modules = cubec_create_map(allocator, &module_initialize);
   cubec_context_init_type(self);
   cubec_context_init_value(self);
-  self->self = NULL;
+  self->eval_context = NULL;
   return self;
 }
 
@@ -219,9 +220,17 @@ cubec_value_t cubec_context_load(cubec_context_t self, const char *name) {
     }
     scope = cubec_scope_get_parent(scope);
   }
-  if (self->self) {
-    cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(self->self);
-    return cubec_struct_type_get_attribute(type, name);
+  if (self->eval_context) {
+    cubec_type_t ctx_type = cubec_value_get_type(self->eval_context);
+    if (cubec_type_get_kind(ctx_type) == CUBEC_VALUE_TYPE_TYPE) {
+      cubec_type_t type =
+          *(cubec_type_t *)cubec_value_get_data(self->eval_context);
+      if (cubec_type_get_kind(type) == CUBEC_VALUE_TYPE_STRUCT) {
+        return cubec_struct_type_get_attribute(type, name);
+      } else if (cubec_type_get_kind(type) == CUBEC_VALUE_TYPE_UNION) {
+        return cubec_union_type_get_attribute(type, name);
+      }
+    }
   }
   return cubec_create_error(self, "use of undeclared identifier '%s'", name);
 }
@@ -238,22 +247,34 @@ cubec_value_t cubec_context_declar(cubec_context_t self, const char *name,
   if (cubec_scope_load(self->scope, name)) {
     return cubec_create_error(self, "Duplicate variable declaration");
   }
-  if (self->self) {
-    cubec_type_t stru = *(cubec_type_t *)cubec_value_get_data(self->self);
-    cubec_struct_type_add_attribute(stru, self->allocator, name, value);
-  } else {
-    cubec_scope_store(self->scope, self->allocator, value, name);
+  if (self->eval_context) {
+    cubec_type_t ctx_type = cubec_value_get_type(self->eval_context);
+    if (cubec_type_get_kind(ctx_type) == CUBEC_VALUE_TYPE_TYPE) {
+      cubec_type_t type =
+          *(cubec_type_t *)cubec_value_get_data(self->eval_context);
+      if (cubec_type_get_kind(type) == CUBEC_VALUE_TYPE_STRUCT) {
+        cubec_struct_type_add_attribute(type, self->allocator, name, value);
+      } else if (cubec_type_get_kind(type) == CUBEC_VALUE_TYPE_UNION) {
+        cubec_union_type_add_attribute(type, self->allocator, name, value);
+      }
+    }
   }
+  if (self->eval_context) {
+    cubec_type_t stru =
+        *(cubec_type_t *)cubec_value_get_data(self->eval_context);
+    cubec_struct_type_add_attribute(stru, self->allocator, name, value);
+  }
+  cubec_scope_store(self->scope, self->allocator, value, name);
   return value;
 }
-cubec_value_t cubec_context_set_self(cubec_context_t self,
-                                     cubec_value_t value) {
-  cubec_value_t old = self->self;
-  self->self = value;
+cubec_value_t cubec_context_set_eval_context(cubec_context_t self,
+                                             cubec_value_t value) {
+  cubec_value_t old = self->eval_context;
+  self->eval_context = value;
   return old;
 }
-cubec_value_t cubec_context_get_self(cubec_context_t self) {
-  return self->self;
+cubec_value_t cubec_context_get_eval_context(cubec_context_t self) {
+  return self->eval_context;
 }
 char *const cubec_context_create_cstring(cubec_context_t self,
                                          const char *src) {

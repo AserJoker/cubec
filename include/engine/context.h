@@ -35,8 +35,9 @@ cubec_type_t cubec_context_load_type(cubec_context_t self, const char *name);
 cubec_value_t cubec_context_declar(cubec_context_t self, const char *name,
                                    cubec_value_t value);
 
-cubec_value_t cubec_context_set_self(cubec_context_t self, cubec_value_t value);
-cubec_value_t cubec_context_get_self(cubec_context_t self);
+cubec_value_t cubec_context_set_eval_context(cubec_context_t self,
+                                             cubec_value_t value);
+cubec_value_t cubec_context_get_eval_context(cubec_context_t self);
 
 char *const cubec_context_create_cstring(cubec_context_t self, const char *src);
 
