@@ -42,6 +42,9 @@ cubec_value_t cubec_context_get_eval_context(cubec_context_t self);
 char *const cubec_context_create_cstring(cubec_context_t self, const char *src);
 
 cubec_value_t cubec_context_get_undefined(cubec_context_t self);
+
+void cubec_context_push_scope(cubec_context_t self);
+void cubec_context_pop_scope(cubec_context_t self);
 #ifdef __cplusplus
 }
 #endif

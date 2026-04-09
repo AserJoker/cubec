@@ -207,7 +207,11 @@ cubec_value_t cubec_context_create_value(cubec_context_t self,
                                          void *data, const char *name) {
   cubec_value_t value =
       cubec_create_value(self->allocator, type, mutable, data);
-  cubec_scope_store(self->scope, self->allocator, value, name);
+  if (name) {
+    cubec_context_declar(self, name, value);
+  } else {
+    cubec_scope_store(self->scope, self->allocator, value, name);
+  }
   return value;
 }
 
@@ -289,4 +293,12 @@ cubec_value_t cubec_context_get_undefined(cubec_context_t self) {
 
 cubec_allocator_t cubec_context_get_allocator(cubec_context_t self) {
   return self->allocator;
+}
+void cubec_context_push_scope(cubec_context_t self) {
+  self->scope = cubec_create_scope(self->allocator, self->scope);
+}
+void cubec_context_pop_scope(cubec_context_t self) {
+  cubec_scope_t scope = self->scope;
+  self->scope = cubec_scope_get_parent(self->scope);
+  cubec_allocator_free(self->allocator, scope);
 }
