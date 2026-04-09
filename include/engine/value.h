@@ -43,6 +43,9 @@ cubec_value_t cubec_value_call(cubec_value_t self, struct _cubec_context_t *ctx,
 cubec_value_t cubec_value_convert(cubec_value_t self,
                                   struct _cubec_context_t *ctx,
                                   cubec_type_t type);
+cubec_value_t cubec_value_safe_convert(cubec_value_t self,
+                                       struct _cubec_context_t *ctx,
+                                       cubec_type_t type);
 cubec_value_t cubec_value_add(cubec_value_t self, struct _cubec_context_t *ctx,
                               cubec_value_t another);
 cubec_value_t cubec_value_sub(cubec_value_t self, struct _cubec_context_t *ctx,

@@ -19,7 +19,7 @@
                             sizeof(uint##size##_t), sizeof(uint##size##_t),    \
                             NULL, opt, "u" #size)
 #define DECLAR_FLOAT(size, opt)                                                \
-  cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_UINT##size,                  \
+  cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_FLOAT##size,                 \
                             sizeof(float##size##_t), sizeof(float##size##_t),  \
                             NULL, opt, "f" #size)
 

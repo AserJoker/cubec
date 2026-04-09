@@ -57,7 +57,7 @@ cubec_value_t cubec_value_assigment(cubec_value_t self, cubec_context_t ctx,
   cubec_type_t ltype = cubec_value_get_type(self);
   cubec_type_t rtype = cubec_value_get_type(value);
   if (!cubec_type_is_equal(ltype, rtype)) {
-    value = cubec_value_convert(value, ctx, ltype);
+    value = cubec_value_safe_convert(value, ctx, ltype);
     if (cubec_value_is_error(value)) {
       return value;
     }
@@ -161,6 +161,38 @@ cubec_value_t cubec_value_convert(cubec_value_t self,
   }
   return opt->convert(self, ctx, type);
 }
+cubec_value_t cubec_value_safe_convert(cubec_value_t self,
+                                       struct _cubec_context_t *ctx,
+                                       cubec_type_t type) {
+  cubec_type_t ltype = cubec_value_get_type(self);
+  cubec_type_t rtype = type;
+  cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
+  cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
+  if (lkind >= CUBEC_VALUE_TYPE_INT8 && lkind <= CUBEC_VALUE_TYPE_INT64) {
+    if (rkind >= CUBEC_VALUE_TYPE_INT8 && rkind <= CUBEC_VALUE_TYPE_INT64) {
+      return cubec_value_convert(self, ctx, type);
+    }
+  }
+  if (lkind >= CUBEC_VALUE_TYPE_UINT8 && lkind <= CUBEC_VALUE_TYPE_UINT64) {
+    if (rkind >= CUBEC_VALUE_TYPE_UINT8 && rkind <= CUBEC_VALUE_TYPE_UINT64) {
+      return cubec_value_convert(self, ctx, type);
+    }
+  }
+  if (lkind >= CUBEC_VALUE_TYPE_FLOAT32 && lkind <= CUBEC_VALUE_TYPE_FLOAT64) {
+    if (rkind >= CUBEC_VALUE_TYPE_FLOAT32 &&
+        rkind <= CUBEC_VALUE_TYPE_FLOAT64) {
+      return cubec_value_convert(self, ctx, type);
+    }
+  }
+  cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
+  char *dst_name = cubec_type_to_string(rtype, allocator);
+  char *src_name = cubec_type_to_string(ltype, allocator);
+  cubec_value_t err = cubec_create_error(ctx, "Cannot convert '%s' to '%s'",
+                                         src_name, dst_name);
+  cubec_allocator_free(allocator, src_name);
+  cubec_allocator_free(allocator, dst_name);
+  return err;
+}
 cubec_value_t cubec_value_add(cubec_value_t self, struct _cubec_context_t *ctx,
                               cubec_value_t another) {
   cubec_type_t ltype = cubec_value_get_type(self);
@@ -181,13 +213,13 @@ cubec_value_t cubec_value_add(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -215,13 +247,13 @@ cubec_value_t cubec_value_sub(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -249,13 +281,13 @@ cubec_value_t cubec_value_mul(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -283,13 +315,13 @@ cubec_value_t cubec_value_div(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -317,13 +349,13 @@ cubec_value_t cubec_value_mod(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -351,13 +383,13 @@ cubec_value_t cubec_value_and(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -385,13 +417,13 @@ cubec_value_t cubec_value_or(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -419,13 +451,13 @@ cubec_value_t cubec_value_xor(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -453,13 +485,13 @@ cubec_value_t cubec_value_shl(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -487,13 +519,13 @@ cubec_value_t cubec_value_shr(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -521,13 +553,13 @@ cubec_value_t cubec_value_eq(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -555,13 +587,13 @@ cubec_value_t cubec_value_ne(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -589,13 +621,13 @@ cubec_value_t cubec_value_lt(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -623,13 +655,13 @@ cubec_value_t cubec_value_gt(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -657,13 +689,13 @@ cubec_value_t cubec_value_le(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;
@@ -691,13 +723,13 @@ cubec_value_t cubec_value_ge(cubec_value_t self, struct _cubec_context_t *ctx,
     cubec_type_kind_t lkind = cubec_type_get_kind(ltype);
     cubec_type_kind_t rkind = cubec_type_get_kind(rtype);
     if (lkind > rkind) {
-      another = cubec_value_convert(another, ctx, ltype);
+      another = cubec_value_safe_convert(another, ctx, ltype);
     }
     if (cubec_value_is_error(another)) {
       return another;
     }
     if (lkind < rkind) {
-      self = cubec_value_convert(self, ctx, rtype);
+      self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
       return self;

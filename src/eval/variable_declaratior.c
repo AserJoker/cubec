@@ -1,3 +1,4 @@
+#include "eval/variable_declaratior.h"
 #include "ast/expression_group.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -8,7 +9,6 @@
 #include "engine/type.h"
 #include "engine/value.h"
 #include "eval/expression.h"
-#include "eval/variable_declaratior.h"
 
 cubec_value_t cubec_eval_variable_declaratior(cubec_context_t ctx,
                                               cubec_ast_node_t node) {
@@ -51,13 +51,10 @@ cubec_value_t cubec_eval_variable_declaratior(cubec_context_t ctx,
   if (value_type) {
     cubec_type_t current_type = cubec_value_get_type(value);
     if (!cubec_type_is_equal(value_type, current_type)) {
-      char *dst_type = cubec_type_to_string(value_type, allocator);
-      char *src_type = cubec_type_to_string(current_type, allocator);
-      cubec_value_t err = cubec_create_compile_error(
-          ctx, node, "cannot convert '%s' to '%s'", src_type, dst_type);
-      cubec_allocator_free(allocator, src_type);
-      cubec_allocator_free(allocator, dst_type);
-      return err;
+      value = cubec_value_safe_convert(value, ctx, value_type);
+      if (cubec_value_is_error(value)) {
+        return cubec_convert_compile_error(ctx, node, value);
+      }
     }
   }
   char *c_id = cubec_location_get(identifier->loc, allocator);
