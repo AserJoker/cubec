@@ -107,6 +107,18 @@ static cubec_value_t cubec_numeric_to_string(cubec_value_t self,
     type##_t right = *(type##_t *)cubec_value_get_data(another);               \
     return cubec_create_##rtype(ctx, left opt right, true, NULL);              \
   }
+
+#define DECLAR_SINGLE_OPT(type, rtype, name, opt)                              \
+  static cubec_value_t cubec_##type##_##name(cubec_value_t self,               \
+                                             cubec_context_t ctx) {            \
+    if (!cubec_value_get_data(self)) {                                         \
+      cubec_value_t vtype = cubec_context_load(ctx, #rtype);                   \
+      cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);        \
+      return cubec_context_create_value(ctx, type, false, NULL, NULL);         \
+    }                                                                          \
+    type##_t left = *(type##_t *)cubec_value_get_data(self);                   \
+    return cubec_create_##rtype(ctx, opt left, true, NULL);                    \
+  }
 DECLAR_BINARY_OPT(i8, i8, add, +);
 DECLAR_BINARY_OPT(i8, i8, sub, -);
 DECLAR_BINARY_OPT(i8, i8, div, /);
@@ -117,6 +129,9 @@ DECLAR_BINARY_OPT(i8, i8, or, |);
 DECLAR_BINARY_OPT(i8, i8, xor, ^);
 DECLAR_BINARY_OPT(i8, i8, shl, <<);
 DECLAR_BINARY_OPT(i8, i8, shr, >>);
+DECLAR_SINGLE_OPT(i8, i8, plus, +);
+DECLAR_SINGLE_OPT(i8, i8, neg, -);
+DECLAR_SINGLE_OPT(i8, i8, bitwise_not, ~);
 
 DECLAR_BINARY_OPT(i8, boolean, eq, ==);
 DECLAR_BINARY_OPT(i8, boolean, ne, !=);
@@ -135,6 +150,9 @@ DECLAR_BINARY_OPT(i16, i16, or, |);
 DECLAR_BINARY_OPT(i16, i16, xor, ^);
 DECLAR_BINARY_OPT(i16, i16, shl, <<);
 DECLAR_BINARY_OPT(i16, i16, shr, >>);
+DECLAR_SINGLE_OPT(i16, i16, plus, +);
+DECLAR_SINGLE_OPT(i16, i16, neg, -);
+DECLAR_SINGLE_OPT(i16, i16, bitwise_not, ~);
 
 DECLAR_BINARY_OPT(i16, boolean, eq, ==);
 DECLAR_BINARY_OPT(i16, boolean, ne, !=);
@@ -153,6 +171,9 @@ DECLAR_BINARY_OPT(i32, i32, or, |);
 DECLAR_BINARY_OPT(i32, i32, xor, ^);
 DECLAR_BINARY_OPT(i32, i32, shl, <<);
 DECLAR_BINARY_OPT(i32, i32, shr, >>);
+DECLAR_SINGLE_OPT(i32, i32, plus, +);
+DECLAR_SINGLE_OPT(i32, i32, neg, -);
+DECLAR_SINGLE_OPT(i32, i32, bitwise_not, ~);
 
 DECLAR_BINARY_OPT(i32, boolean, eq, ==);
 DECLAR_BINARY_OPT(i32, boolean, ne, !=);
@@ -171,6 +192,9 @@ DECLAR_BINARY_OPT(i64, i64, or, |);
 DECLAR_BINARY_OPT(i64, i64, xor, ^);
 DECLAR_BINARY_OPT(i64, i64, shl, <<);
 DECLAR_BINARY_OPT(i64, i64, shr, >>);
+DECLAR_SINGLE_OPT(i64, i64, plus, +);
+DECLAR_SINGLE_OPT(i64, i64, neg, -);
+DECLAR_SINGLE_OPT(i64, i64, bitwise_not, ~);
 
 DECLAR_BINARY_OPT(i64, boolean, eq, ==);
 DECLAR_BINARY_OPT(i64, boolean, ne, !=);
@@ -189,6 +213,8 @@ DECLAR_BINARY_OPT(u8, u8, or, |);
 DECLAR_BINARY_OPT(u8, u8, xor, ^);
 DECLAR_BINARY_OPT(u8, u8, shl, <<);
 DECLAR_BINARY_OPT(u8, u8, shr, >>);
+DECLAR_SINGLE_OPT(u8, u8, plus, +);
+DECLAR_SINGLE_OPT(u8, u8, bitwise_not, ~);
 
 DECLAR_BINARY_OPT(u8, boolean, eq, ==);
 DECLAR_BINARY_OPT(u8, boolean, ne, !=);
@@ -207,6 +233,8 @@ DECLAR_BINARY_OPT(u16, u16, or, |);
 DECLAR_BINARY_OPT(u16, u16, xor, ^);
 DECLAR_BINARY_OPT(u16, u16, shl, <<);
 DECLAR_BINARY_OPT(u16, u16, shr, >>);
+DECLAR_SINGLE_OPT(u16, u16, plus, +);
+DECLAR_SINGLE_OPT(u16, u16, bitwise_not, ~);
 
 DECLAR_BINARY_OPT(u16, boolean, eq, ==);
 DECLAR_BINARY_OPT(u16, boolean, ne, !=);
@@ -225,6 +253,8 @@ DECLAR_BINARY_OPT(u32, u32, or, |);
 DECLAR_BINARY_OPT(u32, u32, xor, ^);
 DECLAR_BINARY_OPT(u32, u32, shl, <<);
 DECLAR_BINARY_OPT(u32, u32, shr, >>);
+DECLAR_SINGLE_OPT(u32, u32, plus, +);
+DECLAR_SINGLE_OPT(u32, u32, bitwise_not, ~);
 
 DECLAR_BINARY_OPT(u32, boolean, eq, ==);
 DECLAR_BINARY_OPT(u32, boolean, ne, !=);
@@ -243,6 +273,8 @@ DECLAR_BINARY_OPT(u64, u64, or, |);
 DECLAR_BINARY_OPT(u64, u64, xor, ^);
 DECLAR_BINARY_OPT(u64, u64, shl, <<);
 DECLAR_BINARY_OPT(u64, u64, shr, >>);
+DECLAR_SINGLE_OPT(u64, u64, plus, +);
+DECLAR_SINGLE_OPT(u64, u64, bitwise_not, ~);
 
 DECLAR_BINARY_OPT(u64, boolean, eq, ==);
 DECLAR_BINARY_OPT(u64, boolean, ne, !=);
@@ -255,6 +287,8 @@ DECLAR_BINARY_OPT(f32, f32, add, +);
 DECLAR_BINARY_OPT(f32, f32, sub, -);
 DECLAR_BINARY_OPT(f32, f32, div, /);
 DECLAR_BINARY_OPT(f32, f32, mul, *);
+DECLAR_SINGLE_OPT(f32, f32, plus, +);
+DECLAR_SINGLE_OPT(f32, f32, neg, -);
 
 DECLAR_BINARY_OPT(f32, boolean, eq, ==);
 DECLAR_BINARY_OPT(f32, boolean, ne, !=);
@@ -267,6 +301,8 @@ DECLAR_BINARY_OPT(f64, f64, add, +);
 DECLAR_BINARY_OPT(f64, f64, sub, -);
 DECLAR_BINARY_OPT(f64, f64, div, /);
 DECLAR_BINARY_OPT(f64, f64, mul, *);
+DECLAR_SINGLE_OPT(f64, f64, plus, +);
+DECLAR_SINGLE_OPT(f64, f64, neg, -);
 
 DECLAR_BINARY_OPT(f64, boolean, eq, ==);
 DECLAR_BINARY_OPT(f64, boolean, ne, !=);
@@ -377,6 +413,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .xor_opt = cubec_i8_xor,
       .shl_opt = cubec_i8_shl,
       .shr_opt = cubec_i8_shr,
+      .bitwise_not_opt = cubec_i8_bitwise_not,
 
       .eq_opt = cubec_i8_eq,
       .ne_opt = cubec_i8_ne,
@@ -384,6 +421,8 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .lt_opt = cubec_i8_lt,
       .ge_opt = cubec_i8_ge,
       .le_opt = cubec_i8_le,
+      .plus_opt = cubec_i8_plus,
+      .neg_opt = cubec_i8_neg,
 
       .convert = cubec_i8_convert,
   };
@@ -401,6 +440,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .xor_opt = cubec_i16_xor,
       .shl_opt = cubec_i16_shl,
       .shr_opt = cubec_i16_shr,
+      .bitwise_not_opt = cubec_i16_bitwise_not,
 
       .eq_opt = cubec_i16_eq,
       .ne_opt = cubec_i16_ne,
@@ -408,6 +448,8 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .lt_opt = cubec_i16_lt,
       .ge_opt = cubec_i16_ge,
       .le_opt = cubec_i16_le,
+      .plus_opt = cubec_i16_plus,
+      .neg_opt = cubec_i16_neg,
 
       .convert = cubec_i16_convert,
   };
@@ -425,6 +467,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .xor_opt = cubec_i32_xor,
       .shl_opt = cubec_i32_shl,
       .shr_opt = cubec_i32_shr,
+      .bitwise_not_opt = cubec_i32_bitwise_not,
 
       .eq_opt = cubec_i32_eq,
       .ne_opt = cubec_i32_ne,
@@ -432,6 +475,8 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .lt_opt = cubec_i32_lt,
       .ge_opt = cubec_i32_ge,
       .le_opt = cubec_i32_le,
+      .plus_opt = cubec_i32_plus,
+      .neg_opt = cubec_i32_neg,
 
       .convert = cubec_i32_convert,
   };
@@ -449,6 +494,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .xor_opt = cubec_i64_xor,
       .shl_opt = cubec_i64_shl,
       .shr_opt = cubec_i64_shr,
+      .bitwise_not_opt = cubec_i64_bitwise_not,
 
       .eq_opt = cubec_i64_eq,
       .ne_opt = cubec_i64_ne,
@@ -456,6 +502,8 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .lt_opt = cubec_i64_lt,
       .ge_opt = cubec_i64_ge,
       .le_opt = cubec_i64_le,
+      .plus_opt = cubec_i64_plus,
+      .neg_opt = cubec_i64_neg,
 
       .convert = cubec_i64_convert,
   };
@@ -473,6 +521,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .xor_opt = cubec_u8_xor,
       .shl_opt = cubec_u8_shl,
       .shr_opt = cubec_u8_shr,
+      .bitwise_not_opt = cubec_u8_bitwise_not,
 
       .eq_opt = cubec_u8_eq,
       .ne_opt = cubec_u8_ne,
@@ -480,6 +529,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .lt_opt = cubec_u8_lt,
       .ge_opt = cubec_u8_ge,
       .le_opt = cubec_u8_le,
+      .plus_opt = cubec_u8_plus,
 
       .convert = cubec_u8_convert,
   };
@@ -497,6 +547,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .xor_opt = cubec_u16_xor,
       .shl_opt = cubec_u16_shl,
       .shr_opt = cubec_u16_shr,
+      .bitwise_not_opt = cubec_u16_bitwise_not,
 
       .eq_opt = cubec_u16_eq,
       .ne_opt = cubec_u16_ne,
@@ -504,6 +555,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .lt_opt = cubec_u16_lt,
       .ge_opt = cubec_u16_ge,
       .le_opt = cubec_u16_le,
+      .plus_opt = cubec_u16_plus,
 
       .convert = cubec_u16_convert,
   };
@@ -521,6 +573,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .xor_opt = cubec_u32_xor,
       .shl_opt = cubec_u32_shl,
       .shr_opt = cubec_u32_shr,
+      .bitwise_not_opt = cubec_u32_bitwise_not,
 
       .eq_opt = cubec_u32_eq,
       .ne_opt = cubec_u32_ne,
@@ -528,6 +581,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .lt_opt = cubec_u32_lt,
       .ge_opt = cubec_u32_ge,
       .le_opt = cubec_u32_le,
+      .plus_opt = cubec_u32_plus,
 
       .convert = cubec_u32_convert,
   };
@@ -545,6 +599,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .xor_opt = cubec_u64_xor,
       .shl_opt = cubec_u64_shl,
       .shr_opt = cubec_u64_shr,
+      .bitwise_not_opt = cubec_u64_bitwise_not,
 
       .eq_opt = cubec_u64_eq,
       .ne_opt = cubec_u64_ne,
@@ -552,6 +607,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .lt_opt = cubec_u64_lt,
       .ge_opt = cubec_u64_ge,
       .le_opt = cubec_u64_le,
+      .plus_opt = cubec_u64_plus,
 
       .convert = cubec_u64_convert,
   };
@@ -570,6 +626,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .lt_opt = cubec_f32_lt,
       .ge_opt = cubec_f32_ge,
       .le_opt = cubec_f32_le,
+      .plus_opt = cubec_f32_plus,
 
       .convert = cubec_f32_convert,
   };
@@ -588,6 +645,7 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .lt_opt = cubec_f64_lt,
       .ge_opt = cubec_f64_ge,
       .le_opt = cubec_f64_le,
+      .plus_opt = cubec_f64_plus,
 
       .convert = cubec_f64_convert,
   };

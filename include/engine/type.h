@@ -104,8 +104,16 @@ typedef struct _cubec_type_operator_t {
   cubec_binary_fn_t gt_opt;
   cubec_binary_fn_t le_opt;
   cubec_binary_fn_t ge_opt;
+  cubec_binary_fn_t logical_and_opt;
+  cubec_binary_fn_t logical_or_opt;
   cubec_single_fn_t plus_opt;
   cubec_single_fn_t neg_opt;
+  cubec_single_fn_t logical_not_opt;
+  cubec_single_fn_t bitwise_not_opt;
+  cubec_single_fn_t prefix_inc;
+  cubec_single_fn_t prefix_dec;
+  cubec_single_fn_t postfix_inc;
+  cubec_single_fn_t postfix_dec;
 } *cubec_type_operator_t;
 cubec_type_t cubec_create_type(cubec_allocator_t allocator,
                                cubec_type_kind_t kind, size_t size,

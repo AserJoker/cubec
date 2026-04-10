@@ -42,6 +42,7 @@ gtest_discover_tests(cubec_test)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     message(STATUS "Target platform is Windows")
+
     if("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" OR
         "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         message(STATUS "Compiler is Clang")

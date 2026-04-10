@@ -78,6 +78,27 @@ cubec_value_t cubec_value_le(cubec_value_t self, struct _cubec_context_t *ctx,
                              cubec_value_t another);
 cubec_value_t cubec_value_ge(cubec_value_t self, struct _cubec_context_t *ctx,
                              cubec_value_t another);
+cubec_value_t cubec_value_plus(cubec_value_t self,
+                               struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_neg(cubec_value_t self, struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_bitwise_not(cubec_value_t self,
+                                      struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_logical_not(cubec_value_t self,
+                                      struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_logical_and(cubec_value_t self,
+                                      struct _cubec_context_t *ctx,
+                                      cubec_value_t another);
+cubec_value_t cubec_value_logical_or(cubec_value_t self,
+                                     struct _cubec_context_t *ctx,
+                                     cubec_value_t another);
+cubec_value_t cubec_value_prefix_inc(cubec_value_t self,
+                                     struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_prefix_dec(cubec_value_t self,
+                                     struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_postfix_inc(cubec_value_t self,
+                                      struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_postfix_dec(cubec_value_t self,
+                                      struct _cubec_context_t *ctx);
 #ifdef __cplusplus
 }
 #endif

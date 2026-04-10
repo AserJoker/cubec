@@ -2,6 +2,7 @@
 #include "ast/node_type.h"
 #include "engine/error.h"
 #include "eval/expression_assigment.h"
+#include "eval/expression_binary.h"
 #include "eval/expression_call.h"
 #include "eval/expression_condition.h"
 #include "eval/expression_group.h"
@@ -31,6 +32,8 @@ cubec_value_t cubec_eval_expression(cubec_context_t ctx,
     return cubec_eval_ptr_declarator(ctx, node);
   } else if (node->type == CUBEC_NODE_TYPE_EXPRESSION_CALL) {
     return cubec_eval_expression_call(ctx, node);
+  } else if (node->type == CUBEC_NODE_TYPE_EXPRESSION_BINARY) {
+    return cubec_eval_expression_binary(ctx, node);
   }
   return cubec_create_compile_error(ctx, node, "unsupport expression");
 }

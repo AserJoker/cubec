@@ -1,6 +1,5 @@
 func main(argc:i32,argv:[*]str):void {
-    const a = 1;
-    const b = 2;
-    const c = a+b;
+    const a:u8 = 1;
+    const c = ~a;
     print(c);
 }
