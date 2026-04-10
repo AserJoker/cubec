@@ -74,10 +74,18 @@ bool cubec_value_is_error(cubec_value_t value) {
 cubec_value_t cubec_value_to_string(cubec_value_t self, cubec_context_t ctx) {
   cubec_type_t type = cubec_value_get_type(self);
   cubec_type_operator_t opt = cubec_type_get_operator(type);
+  cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
+  if (!cubec_value_get_data(self)) {
+    char *type_name = cubec_type_to_string(type, allocator);
+    size_t len = snprintf(NULL, 0, "%s{<runtime>}", type_name);
+    char str[len + 1];
+    sprintf(str, "%s{<runtime>}", type_name);
+    cubec_allocator_free(allocator, type_name);
+    return cubec_create_str(ctx, str, NULL);
+  }
   if (opt->to_string) {
     return opt->to_string(self, ctx);
   }
-  cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
   char *type_name = cubec_type_to_string(type, allocator);
   void *data = cubec_value_get_data(self);
   size_t len =
@@ -94,7 +102,7 @@ cubec_value_t cubec_value_get_index(cubec_value_t self, cubec_context_t ctx,
   if (opt->get_index) {
     return opt->get_index(self, ctx, idx);
   }
-  return cubec_create_error(ctx, "Value does not support index access");
+  return cubec_create_error(ctx, "value does not support index access");
 }
 cubec_value_t cubec_value_set_index(cubec_value_t self,
                                     struct _cubec_context_t *ctx, size_t idx,
@@ -104,7 +112,7 @@ cubec_value_t cubec_value_set_index(cubec_value_t self,
   if (opt->set_index) {
     return opt->set_index(self, ctx, idx, item);
   }
-  return cubec_create_error(ctx, "Value does not support index access");
+  return cubec_create_error(ctx, "value does not support index access");
 }
 cubec_value_t cubec_value_get_field(cubec_value_t self, cubec_context_t ctx,
                                     const char *name) {
@@ -113,7 +121,7 @@ cubec_value_t cubec_value_get_field(cubec_value_t self, cubec_context_t ctx,
   if (opt->get_field) {
     return opt->get_field(self, ctx, name);
   }
-  return cubec_create_error(ctx, "Value does not support member access");
+  return cubec_create_error(ctx, "value does not support member access");
 }
 cubec_value_t cubec_value_set_field(cubec_value_t self,
                                     struct _cubec_context_t *ctx,
@@ -123,7 +131,7 @@ cubec_value_t cubec_value_set_field(cubec_value_t self,
   if (opt->set_field) {
     return opt->set_field(self, ctx, name, value);
   }
-  return cubec_create_error(ctx, "Value does not support member access");
+  return cubec_create_error(ctx, "value does not support member access");
 }
 cubec_value_t cubec_value_get_length(cubec_value_t self,
                                      struct _cubec_context_t *ctx) {
@@ -132,17 +140,16 @@ cubec_value_t cubec_value_get_length(cubec_value_t self,
   if (opt->get_length) {
     return opt->get_length(self, ctx);
   }
-  return cubec_create_error(ctx, "Value does not support get length");
+  return cubec_create_error(ctx, "value does not support get length");
 }
 cubec_value_t cubec_value_call(cubec_value_t self, cubec_context_t ctx,
                                size_t argc, cubec_value_t argv[]) {
-
   cubec_type_t type = cubec_value_get_type(self);
   cubec_type_operator_t opt = cubec_type_get_operator(type);
   if (opt->call) {
     return opt->call(self, ctx, argc, argv);
   }
-  return cubec_create_error(ctx, "Value is not callable");
+  return cubec_create_error(ctx, "value is not callable");
 }
 cubec_value_t cubec_value_convert(cubec_value_t self,
                                   struct _cubec_context_t *ctx,

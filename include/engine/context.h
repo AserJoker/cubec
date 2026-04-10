@@ -7,6 +7,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 typedef struct _cubec_context_t *cubec_context_t;
 
 cubec_context_t cubec_create_context(cubec_allocator_t allocator);

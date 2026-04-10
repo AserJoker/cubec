@@ -60,5 +60,5 @@ cubec_value_t cubec_eval_literal_char(cubec_context_t ctx,
     return cubec_create_compile_error(ctx, node,
                                       "Multi-character character constant");
   }
-  return cubec_create_uint8(ctx, c, false, NULL);
+  return cubec_create_u8(ctx, c, false, NULL);
 }

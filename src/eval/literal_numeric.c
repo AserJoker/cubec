@@ -20,7 +20,7 @@ cubec_value_t cubec_eval_literal_numeric(cubec_context_t ctx,
   if (is_floating) {
     double val = 0;
     cubec_cstring_to_dec(s, &val);
-    return cubec_create_float64(ctx, val, true, NULL);
+    return cubec_create_f64(ctx, val, true, NULL);
   } else {
     size_t val = 0;
     if (*s == '0' && (*(s + 1) == 'x' || *(s + 1) == 'X')) {
@@ -32,6 +32,6 @@ cubec_value_t cubec_eval_literal_numeric(cubec_context_t ctx,
     } else {
       cubec_cstring_to_int(s, &val, 10);
     }
-    return cubec_create_int32(ctx, val, true, NULL);
+    return cubec_create_i32(ctx, val, true, NULL);
   }
 }

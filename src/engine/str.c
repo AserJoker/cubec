@@ -14,12 +14,12 @@ static char *cubec_str_type_to_string(cubec_type_t self,
 static cubec_value_t cubec_str_get_length(cubec_value_t self,
                                           cubec_context_t ctx) {
   const char *data = *(const char **)cubec_value_get_data(self);
-  return cubec_create_uint64(ctx, strlen(data), false, NULL);
+  return cubec_create_u64(ctx, strlen(data), false, NULL);
 }
 static cubec_value_t cubec_str_get_index(cubec_value_t self,
                                          cubec_context_t ctx, size_t idx) {
   const char *data = *(const char **)cubec_value_get_data(self);
-  return cubec_create_int8(ctx, data[idx], false, NULL);
+  return cubec_create_i8(ctx, data[idx], false, NULL);
 }
 static cubec_value_t cubec_str_to_string(cubec_value_t self,
                                          cubec_context_t ctx) {

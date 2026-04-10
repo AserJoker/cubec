@@ -120,8 +120,7 @@ static cubec_value_t cubec_struct_get_length(cubec_value_t self,
                                              cubec_context_t ctx) {
   cubec_type_t type = cubec_value_get_type(self);
   cubec_struct_meta_t meta = cubec_type_get_meta(type);
-  return cubec_create_uint64(ctx, cubec_array_get_size(meta->fields), false,
-                             NULL);
+  return cubec_create_u64(ctx, cubec_array_get_size(meta->fields), false, NULL);
 }
 static cubec_value_t cubec_struct_get_field(cubec_value_t self,
                                             cubec_context_t ctx,
@@ -129,11 +128,15 @@ static cubec_value_t cubec_struct_get_field(cubec_value_t self,
   cubec_type_t type = cubec_value_get_type(self);
   cubec_struct_meta_t meta = cubec_type_get_meta(type);
   size_t num_fields = cubec_array_get_size(meta->fields);
-  uint8_t *data = cubec_value_get_data(self);
   bool mutable = cubec_value_is_mutable(self);
+  uint8_t *data = cubec_value_get_data(self);
   for (size_t idx = 0; idx < num_fields; idx++) {
     cubec_struct_field_t field = cubec_array_get(meta->fields, idx);
     if (strcmp(field->name, name) == 0) {
+      if (!data) {
+        return cubec_context_create_value(ctx, field->type, mutable, NULL,
+                                          NULL);
+      }
       return cubec_context_create_value(ctx, field->type, mutable,
                                         data + field->offset, NULL);
     }
@@ -165,6 +168,9 @@ static cubec_value_t cubec_struct_set_field(cubec_value_t self,
         cubec_allocator_free(allocator, dst_type);
         cubec_allocator_free(allocator, src_type);
         return error;
+      }
+      if (!data) {
+        return cubec_context_get_undefined(ctx);
       }
       memcpy(data + field->offset, cubec_value_get_data(value),
              cubec_type_get_size(field->type));

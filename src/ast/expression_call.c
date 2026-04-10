@@ -16,7 +16,7 @@ cubec_ast_node_t cubec_read_ast_expression_call(cubec_allocator_t allocator,
   cubec_position_t current = *position;
   cubec_ast_node_t args =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "args", args);
+  cubec_ast_add_child(allocator, node, "arguments", args);
   if (*current.offset != '(') {
     goto onerror;
   }

@@ -46,7 +46,7 @@ static cubec_value_t cubec_array_get_length(cubec_value_t self,
                                             cubec_context_t ctx) {
   cubec_type_t type = cubec_value_get_type(self);
   cubec_array_meta_t meta = cubec_type_get_meta(type);
-  return cubec_create_uint64(ctx, meta->length, false, NULL);
+  return cubec_create_u64(ctx, meta->length, false, NULL);
 }
 static cubec_value_t cubec_array_to_string(cubec_value_t self,
                                            cubec_context_t ctx) {
@@ -83,9 +83,12 @@ static cubec_value_t cubec_array_get_index(cubec_value_t self,
     return cubec_create_error(
         ctx, "Array index %" PRIuPTR " is past the end of the array", idx);
   }
-  size_t offset = idx * cubec_type_get_size(meta->type);
   uint8_t *data = cubec_value_get_data(self);
   bool mutable = cubec_value_is_mutable(self);
+  if (!data) {
+    return cubec_context_create_value(ctx, meta->type, mutable, NULL, NULL);
+  }
+  size_t offset = idx * cubec_type_get_size(meta->type);
   return cubec_context_create_value(ctx, meta->type, mutable, data + offset,
                                     NULL);
 }
@@ -112,8 +115,11 @@ static cubec_value_t cubec_array_set_index(cubec_value_t self,
   if (!cubec_value_is_mutable(self)) {
     return cubec_create_error(ctx, "Cannot assign to const variable");
   }
-  size_t offset = idx * cubec_type_get_size(meta->type);
   uint8_t *data = cubec_value_get_data(self);
+  if (!data) {
+    return cubec_context_get_undefined(ctx);
+  }
+  size_t offset = idx * cubec_type_get_size(meta->type);
   memcpy(data, cubec_value_get_data(value), cubec_type_get_size(meta->type));
   return cubec_context_get_undefined(ctx);
 }

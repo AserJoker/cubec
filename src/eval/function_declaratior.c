@@ -29,8 +29,8 @@ cubec_value_t cubec_eval_function_declaratior(cubec_context_t ctx,
     if (cubec_value_is_error(vtype)) {
       return vtype;
     }
-    cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
-    arg_types[idx] = type;
+    cubec_type_t arg_type = *(cubec_type_t *)cubec_value_get_data(vtype);
+    arg_types[idx] = arg_type;
     if (arg_node->type == CUBEC_NODE_TYPE_FUNCTION_ARGUMENT_REST) {
       variadic = true;
     }
@@ -42,7 +42,8 @@ cubec_value_t cubec_eval_function_declaratior(cubec_context_t ctx,
   cubec_type_t return_type = *(cubec_type_t *)cubec_value_get_data(vtype);
   cubec_value_t vfunction_type =
       cubec_create_function_type(ctx, return_type, argc, arg_types, variadic);
-  cubec_type_t function_type = *(cubec_type_t *)cubec_value_get_data(vtype);
+  cubec_type_t function_type =
+      *(cubec_type_t *)cubec_value_get_data(vfunction_type);
   char *name = NULL;
   cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
   if (identifier) {

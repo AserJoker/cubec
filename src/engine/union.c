@@ -106,6 +106,9 @@ static cubec_value_t cubec_union_set_field(cubec_value_t self,
         cubec_allocator_free(allocator, src_type);
         return error;
       }
+      if (!data) {
+        return cubec_context_get_undefined(ctx);
+      }
       memcpy(data, cubec_value_get_data(value),
              cubec_type_get_size(field->type));
       return cubec_context_get_undefined(ctx);
