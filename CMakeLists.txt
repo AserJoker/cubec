@@ -39,3 +39,13 @@ target_link_libraries(cubec_test PRIVATE
     GTest::gmock_main)
 include(GoogleTest)
 gtest_discover_tests(cubec_test)
+
+if(CMAKE_SYSTEM_NAME MATCHES "Windows")
+    message(STATUS "Target platform is Windows")
+    if("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" OR
+        "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        message(STATUS "Compiler is Clang")
+        target_link_libraries(cubec_test PRIVATE clang_rt.builtins-x86_64)
+        target_link_libraries(cubec PRIVATE clang_rt.builtins-x86_64)
+    endif()
+endif()

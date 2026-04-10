@@ -33,7 +33,6 @@ cubec_value_t print(cubec_context_t ctx, size_t argc, cubec_value_t argv[]) {
 int main(int argc, char *argv[]) {
   cubec_allocator_t allocator = cubec_create_allocator(NULL);
   cubec_context_t ctx = cubec_create_context(allocator);
-
   cubec_create_builtin(ctx, print, "print");
 
   char *filename = absolute(allocator, "./main.cubec");

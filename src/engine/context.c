@@ -118,6 +118,7 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
   self->allocator = allocator;
   self->root = cubec_create_scope(allocator, NULL);
   self->scope = self->root;
+  self->eval_context = NULL;
   cubec_array_initialize_t types_initialize = {
       .autofree = true,
   };
@@ -134,7 +135,6 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
   self->modules = cubec_create_map(allocator, &module_initialize);
   cubec_context_init_type(self);
   cubec_context_init_value(self);
-  self->eval_context = NULL;
   return self;
 }
 
