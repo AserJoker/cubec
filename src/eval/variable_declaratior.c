@@ -9,6 +9,7 @@
 #include "engine/type.h"
 #include "engine/value.h"
 #include "eval/expression.h"
+#include <stdbool.h>
 
 cubec_value_t cubec_eval_variable_declaratior(cubec_context_t ctx,
                                               cubec_ast_node_t node) {
@@ -56,9 +57,12 @@ cubec_value_t cubec_eval_variable_declaratior(cubec_context_t ctx,
         return cubec_convert_compile_error(ctx, node, value);
       }
     }
+  } else {
+    value_type = cubec_value_get_type(value);
   }
   char *c_id = cubec_location_get(identifier->loc, allocator);
-  value = cubec_context_declar(ctx, c_id, value);
+  void *data = cubec_value_get_data(value);
+  value = cubec_context_create_value(ctx, value_type, true, data, c_id);
   cubec_allocator_free(allocator, c_id);
   if (cubec_value_is_error(value)) {
     return cubec_convert_compile_error(ctx, node, value);

@@ -150,7 +150,8 @@ cubec_value_t cubec_value_convert(cubec_value_t self,
   cubec_type_t ltype = cubec_value_get_type(self);
   cubec_type_operator_t opt = cubec_type_get_operator(ltype);
   cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
-  if (!opt->convert) {
+  cubec_value_t res = opt->convert ? opt->convert(self, ctx, type) : NULL;
+  if (!res) {
     char *dst_name = cubec_type_to_string(ltype, allocator);
     char *src_name = cubec_type_to_string(type, allocator);
     cubec_value_t err = cubec_create_error(ctx, "Cannot convert '%s' to '%s'",
@@ -159,7 +160,7 @@ cubec_value_t cubec_value_convert(cubec_value_t self,
     cubec_allocator_free(allocator, dst_name);
     return err;
   }
-  return opt->convert(self, ctx, type);
+  return res;
 }
 cubec_value_t cubec_value_safe_convert(cubec_value_t self,
                                        struct _cubec_context_t *ctx,

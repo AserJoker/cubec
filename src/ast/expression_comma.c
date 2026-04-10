@@ -15,7 +15,7 @@ cubec_ast_node_t cubec_read_ast_expression_comma(cubec_allocator_t allocator,
   cubec_ast_node_t err = NULL;
   node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_COMMON);
   cubec_ast_node_t curr =
-      cubec_read_ast_expression3(allocator, &current, end, filename);
+      cubec_read_ast_expression2(allocator, &current, end, filename);
   if (!curr) {
     goto onerror;
   }

@@ -1,1 +1,4 @@
-const test:i64 = 123.0;
+func main(argc:i32,argv:[*]str):void {
+    let a:i64 = 0;
+    a += 1;
+}

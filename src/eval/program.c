@@ -5,6 +5,7 @@
 #include "engine/struct.h"
 #include "engine/value.h"
 #include "eval/statement_declaration.h"
+#include "eval/statement_function.h"
 #include "eval/statement_import.h"
 #include <stdalign.h>
 
@@ -27,6 +28,10 @@ cubec_value_t cubec_eval_program(cubec_context_t ctx, cubec_ast_node_t node) {
     } else if (sts->type == CUBEC_NODE_TYPE_STATEMENT_ENUM) {
     } else if (sts->type == CUBEC_NODE_TYPE_STATEMENT_STRUCT) {
     } else if (sts->type == CUBEC_NODE_TYPE_STATEMENT_FUNCTION) {
+      cubec_value_t err = cubec_eval_statement_function(ctx, sts);
+      if (cubec_value_is_error(err)) {
+        return err;
+      }
     } else {
       return cubec_create_compile_error(ctx, sts, "Unsupport top statement");
     }

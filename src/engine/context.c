@@ -6,6 +6,7 @@
 #include "core/compare.h"
 #include "core/map.h"
 #include "core/string.h"
+#include "engine/boolean.h"
 #include "engine/builtin.h"
 #include "engine/error.h"
 #include "engine/module.h"
@@ -46,6 +47,9 @@ struct _cubec_context_t {
 
 static void cubec_context_dispose(cubec_context_t self,
                                   cubec_allocator_t allocator) {
+  while (self->scope != self->root) {
+    cubec_context_pop_scope(self);
+  }
   cubec_allocator_free(allocator, self->types);
   cubec_allocator_free(allocator, self->modules);
   cubec_allocator_free(allocator, self->root);
@@ -79,6 +83,7 @@ static void cubec_context_init_type(cubec_context_t self) {
   cubec_init_any_type(self);
   cubec_init_void_type(self);
   cubec_init_numeric_type(self);
+  cubec_init_boolean_type(self);
   cubec_init_error_type(self);
   cubec_init_builtin_type(self);
   cubec_init_opaque_type(self);
@@ -262,11 +267,6 @@ cubec_value_t cubec_context_declar(cubec_context_t self, const char *name,
         cubec_union_type_add_attribute(type, self->allocator, name, value);
       }
     }
-  }
-  if (self->eval_context) {
-    cubec_type_t stru =
-        *(cubec_type_t *)cubec_value_get_data(self->eval_context);
-    cubec_struct_type_add_attribute(stru, self->allocator, name, value);
   }
   cubec_scope_store(self->scope, self->allocator, value, name);
   return value;

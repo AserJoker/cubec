@@ -27,7 +27,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   cubec_ast_add_child(allocator, node, "closure", closure);
   cubec_ast_node_t args =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "args", args);
+  cubec_ast_add_child(allocator, node, "arguments", args);
   for (;;) {
     cubec_ast_node_t decorator =
         cubec_read_ast_decorator(allocator, &current, end, filename);

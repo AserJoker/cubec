@@ -1,8 +1,8 @@
 #include "engine/numeric.h"
 #include "core/allocator.h"
 #include "core/string.h"
+#include "engine/boolean.h"
 #include "engine/context.h"
-#include "engine/error.h"
 #include "engine/str.h"
 #include "engine/type.h"
 #include "engine/value.h"
@@ -95,104 +95,180 @@ static cubec_value_t cubec_numeric_to_string(cubec_value_t self,
   return cubec_create_str(ctx, str, NULL);
 }
 
-#define DECLAR_BINARY_OPT(type, name, opt)                                     \
+#define DECLAR_BINARY_OPT(type, rtype, name, opt)                              \
   static cubec_value_t cubec_##type##_##name(                                  \
       cubec_value_t self, cubec_context_t ctx, cubec_value_t another) {        \
     type##_t left = *(type##_t *)cubec_value_get_data(self);                   \
     type##_t right = *(type##_t *)cubec_value_get_data(another);               \
-    return cubec_create_##type(ctx, left opt right, true, NULL);               \
+    return cubec_create_##rtype(ctx, left opt right, true, NULL);              \
   }
-DECLAR_BINARY_OPT(int8, add, +);
-DECLAR_BINARY_OPT(int8, sub, -);
-DECLAR_BINARY_OPT(int8, div, /);
-DECLAR_BINARY_OPT(int8, mul, *);
-DECLAR_BINARY_OPT(int8, mod, %);
-DECLAR_BINARY_OPT(int8, and, &);
-DECLAR_BINARY_OPT(int8, or, |);
-DECLAR_BINARY_OPT(int8, xor, ^);
-DECLAR_BINARY_OPT(int8, shl, <<);
-DECLAR_BINARY_OPT(int8, shr, >>);
-DECLAR_BINARY_OPT(int16, add, +);
-DECLAR_BINARY_OPT(int16, sub, -);
-DECLAR_BINARY_OPT(int16, div, /);
-DECLAR_BINARY_OPT(int16, mul, *);
-DECLAR_BINARY_OPT(int16, mod, %);
-DECLAR_BINARY_OPT(int16, and, &);
-DECLAR_BINARY_OPT(int16, or, |);
-DECLAR_BINARY_OPT(int16, xor, ^);
-DECLAR_BINARY_OPT(int16, shl, <<);
-DECLAR_BINARY_OPT(int16, shr, >>);
-DECLAR_BINARY_OPT(int32, add, +);
-DECLAR_BINARY_OPT(int32, sub, -);
-DECLAR_BINARY_OPT(int32, div, /);
-DECLAR_BINARY_OPT(int32, mul, *);
-DECLAR_BINARY_OPT(int32, mod, %);
-DECLAR_BINARY_OPT(int32, and, &);
-DECLAR_BINARY_OPT(int32, or, |);
-DECLAR_BINARY_OPT(int32, xor, ^);
-DECLAR_BINARY_OPT(int32, shl, <<);
-DECLAR_BINARY_OPT(int32, shr, >>);
-DECLAR_BINARY_OPT(int64, add, +);
-DECLAR_BINARY_OPT(int64, sub, -);
-DECLAR_BINARY_OPT(int64, div, /);
-DECLAR_BINARY_OPT(int64, mul, *);
-DECLAR_BINARY_OPT(int64, mod, %);
-DECLAR_BINARY_OPT(int64, and, &);
-DECLAR_BINARY_OPT(int64, or, |);
-DECLAR_BINARY_OPT(int64, xor, ^);
-DECLAR_BINARY_OPT(int64, shl, <<);
-DECLAR_BINARY_OPT(int64, shr, >>);
+DECLAR_BINARY_OPT(int8, int8, add, +);
+DECLAR_BINARY_OPT(int8, int8, sub, -);
+DECLAR_BINARY_OPT(int8, int8, div, /);
+DECLAR_BINARY_OPT(int8, int8, mul, *);
+DECLAR_BINARY_OPT(int8, int8, mod, %);
+DECLAR_BINARY_OPT(int8, int8, and, &);
+DECLAR_BINARY_OPT(int8, int8, or, |);
+DECLAR_BINARY_OPT(int8, int8, xor, ^);
+DECLAR_BINARY_OPT(int8, int8, shl, <<);
+DECLAR_BINARY_OPT(int8, int8, shr, >>);
 
-DECLAR_BINARY_OPT(uint8, add, +);
-DECLAR_BINARY_OPT(uint8, sub, -);
-DECLAR_BINARY_OPT(uint8, div, /);
-DECLAR_BINARY_OPT(uint8, mul, *);
-DECLAR_BINARY_OPT(uint8, mod, %);
-DECLAR_BINARY_OPT(uint8, and, &);
-DECLAR_BINARY_OPT(uint8, or, |);
-DECLAR_BINARY_OPT(uint8, xor, ^);
-DECLAR_BINARY_OPT(uint8, shl, <<);
-DECLAR_BINARY_OPT(uint8, shr, >>);
-DECLAR_BINARY_OPT(uint16, add, +);
-DECLAR_BINARY_OPT(uint16, sub, -);
-DECLAR_BINARY_OPT(uint16, div, /);
-DECLAR_BINARY_OPT(uint16, mul, *);
-DECLAR_BINARY_OPT(uint16, mod, %);
-DECLAR_BINARY_OPT(uint16, and, &);
-DECLAR_BINARY_OPT(uint16, or, |);
-DECLAR_BINARY_OPT(uint16, xor, ^);
-DECLAR_BINARY_OPT(uint16, shl, <<);
-DECLAR_BINARY_OPT(uint16, shr, >>);
-DECLAR_BINARY_OPT(uint32, add, +);
-DECLAR_BINARY_OPT(uint32, sub, -);
-DECLAR_BINARY_OPT(uint32, div, /);
-DECLAR_BINARY_OPT(uint32, mul, *);
-DECLAR_BINARY_OPT(uint32, mod, %);
-DECLAR_BINARY_OPT(uint32, and, &);
-DECLAR_BINARY_OPT(uint32, or, |);
-DECLAR_BINARY_OPT(uint32, xor, ^);
-DECLAR_BINARY_OPT(uint32, shl, <<);
-DECLAR_BINARY_OPT(uint32, shr, >>);
-DECLAR_BINARY_OPT(uint64, add, +);
-DECLAR_BINARY_OPT(uint64, sub, -);
-DECLAR_BINARY_OPT(uint64, div, /);
-DECLAR_BINARY_OPT(uint64, mul, *);
-DECLAR_BINARY_OPT(uint64, mod, %);
-DECLAR_BINARY_OPT(uint64, and, &);
-DECLAR_BINARY_OPT(uint64, or, |);
-DECLAR_BINARY_OPT(uint64, xor, ^);
-DECLAR_BINARY_OPT(uint64, shl, <<);
-DECLAR_BINARY_OPT(uint64, shr, >>);
+DECLAR_BINARY_OPT(int8, boolean, eq, ==);
+DECLAR_BINARY_OPT(int8, boolean, ne, !=);
+DECLAR_BINARY_OPT(int8, boolean, gt, >);
+DECLAR_BINARY_OPT(int8, boolean, lt, <);
+DECLAR_BINARY_OPT(int8, boolean, ge, >=);
+DECLAR_BINARY_OPT(int8, boolean, le, <=);
 
-DECLAR_BINARY_OPT(float32, add, +);
-DECLAR_BINARY_OPT(float32, sub, -);
-DECLAR_BINARY_OPT(float32, div, /);
-DECLAR_BINARY_OPT(float32, mul, *);
+DECLAR_BINARY_OPT(int16, int16, add, +);
+DECLAR_BINARY_OPT(int16, int16, sub, -);
+DECLAR_BINARY_OPT(int16, int16, div, /);
+DECLAR_BINARY_OPT(int16, int16, mul, *);
+DECLAR_BINARY_OPT(int16, int16, mod, %);
+DECLAR_BINARY_OPT(int16, int16, and, &);
+DECLAR_BINARY_OPT(int16, int16, or, |);
+DECLAR_BINARY_OPT(int16, int16, xor, ^);
+DECLAR_BINARY_OPT(int16, int16, shl, <<);
+DECLAR_BINARY_OPT(int16, int16, shr, >>);
 
-DECLAR_BINARY_OPT(float64, add, +);
-DECLAR_BINARY_OPT(float64, sub, -);
-DECLAR_BINARY_OPT(float64, div, /);
-DECLAR_BINARY_OPT(float64, mul, *);
+DECLAR_BINARY_OPT(int16, boolean, eq, ==);
+DECLAR_BINARY_OPT(int16, boolean, ne, !=);
+DECLAR_BINARY_OPT(int16, boolean, gt, >);
+DECLAR_BINARY_OPT(int16, boolean, lt, <);
+DECLAR_BINARY_OPT(int16, boolean, ge, >=);
+DECLAR_BINARY_OPT(int16, boolean, le, <=);
+
+DECLAR_BINARY_OPT(int32, int32, add, +);
+DECLAR_BINARY_OPT(int32, int32, sub, -);
+DECLAR_BINARY_OPT(int32, int32, div, /);
+DECLAR_BINARY_OPT(int32, int32, mul, *);
+DECLAR_BINARY_OPT(int32, int32, mod, %);
+DECLAR_BINARY_OPT(int32, int32, and, &);
+DECLAR_BINARY_OPT(int32, int32, or, |);
+DECLAR_BINARY_OPT(int32, int32, xor, ^);
+DECLAR_BINARY_OPT(int32, int32, shl, <<);
+DECLAR_BINARY_OPT(int32, int32, shr, >>);
+
+DECLAR_BINARY_OPT(int32, boolean, eq, ==);
+DECLAR_BINARY_OPT(int32, boolean, ne, !=);
+DECLAR_BINARY_OPT(int32, boolean, gt, >);
+DECLAR_BINARY_OPT(int32, boolean, lt, <);
+DECLAR_BINARY_OPT(int32, boolean, ge, >=);
+DECLAR_BINARY_OPT(int32, boolean, le, <=);
+
+DECLAR_BINARY_OPT(int64, int64, add, +);
+DECLAR_BINARY_OPT(int64, int64, sub, -);
+DECLAR_BINARY_OPT(int64, int64, div, /);
+DECLAR_BINARY_OPT(int64, int64, mul, *);
+DECLAR_BINARY_OPT(int64, int64, mod, %);
+DECLAR_BINARY_OPT(int64, int64, and, &);
+DECLAR_BINARY_OPT(int64, int64, or, |);
+DECLAR_BINARY_OPT(int64, int64, xor, ^);
+DECLAR_BINARY_OPT(int64, int64, shl, <<);
+DECLAR_BINARY_OPT(int64, int64, shr, >>);
+
+DECLAR_BINARY_OPT(int64, boolean, eq, ==);
+DECLAR_BINARY_OPT(int64, boolean, ne, !=);
+DECLAR_BINARY_OPT(int64, boolean, gt, >);
+DECLAR_BINARY_OPT(int64, boolean, lt, <);
+DECLAR_BINARY_OPT(int64, boolean, ge, >=);
+DECLAR_BINARY_OPT(int64, boolean, le, <=);
+
+DECLAR_BINARY_OPT(uint8, uint8, add, +);
+DECLAR_BINARY_OPT(uint8, uint8, sub, -);
+DECLAR_BINARY_OPT(uint8, uint8, div, /);
+DECLAR_BINARY_OPT(uint8, uint8, mul, *);
+DECLAR_BINARY_OPT(uint8, uint8, mod, %);
+DECLAR_BINARY_OPT(uint8, uint8, and, &);
+DECLAR_BINARY_OPT(uint8, uint8, or, |);
+DECLAR_BINARY_OPT(uint8, uint8, xor, ^);
+DECLAR_BINARY_OPT(uint8, uint8, shl, <<);
+DECLAR_BINARY_OPT(uint8, uint8, shr, >>);
+
+DECLAR_BINARY_OPT(uint8, boolean, eq, ==);
+DECLAR_BINARY_OPT(uint8, boolean, ne, !=);
+DECLAR_BINARY_OPT(uint8, boolean, gt, >);
+DECLAR_BINARY_OPT(uint8, boolean, lt, <);
+DECLAR_BINARY_OPT(uint8, boolean, ge, >=);
+DECLAR_BINARY_OPT(uint8, boolean, le, <=);
+
+DECLAR_BINARY_OPT(uint16, uint16, add, +);
+DECLAR_BINARY_OPT(uint16, uint16, sub, -);
+DECLAR_BINARY_OPT(uint16, uint16, div, /);
+DECLAR_BINARY_OPT(uint16, uint16, mul, *);
+DECLAR_BINARY_OPT(uint16, uint16, mod, %);
+DECLAR_BINARY_OPT(uint16, uint16, and, &);
+DECLAR_BINARY_OPT(uint16, uint16, or, |);
+DECLAR_BINARY_OPT(uint16, uint16, xor, ^);
+DECLAR_BINARY_OPT(uint16, uint16, shl, <<);
+DECLAR_BINARY_OPT(uint16, uint16, shr, >>);
+
+DECLAR_BINARY_OPT(uint16, boolean, eq, ==);
+DECLAR_BINARY_OPT(uint16, boolean, ne, !=);
+DECLAR_BINARY_OPT(uint16, boolean, gt, >);
+DECLAR_BINARY_OPT(uint16, boolean, lt, <);
+DECLAR_BINARY_OPT(uint16, boolean, ge, >=);
+DECLAR_BINARY_OPT(uint16, boolean, le, <=);
+
+DECLAR_BINARY_OPT(uint32, uint32, add, +);
+DECLAR_BINARY_OPT(uint32, uint32, sub, -);
+DECLAR_BINARY_OPT(uint32, uint32, div, /);
+DECLAR_BINARY_OPT(uint32, uint32, mul, *);
+DECLAR_BINARY_OPT(uint32, uint32, mod, %);
+DECLAR_BINARY_OPT(uint32, uint32, and, &);
+DECLAR_BINARY_OPT(uint32, uint32, or, |);
+DECLAR_BINARY_OPT(uint32, uint32, xor, ^);
+DECLAR_BINARY_OPT(uint32, uint32, shl, <<);
+DECLAR_BINARY_OPT(uint32, uint32, shr, >>);
+
+DECLAR_BINARY_OPT(uint32, boolean, eq, ==);
+DECLAR_BINARY_OPT(uint32, boolean, ne, !=);
+DECLAR_BINARY_OPT(uint32, boolean, gt, >);
+DECLAR_BINARY_OPT(uint32, boolean, lt, <);
+DECLAR_BINARY_OPT(uint32, boolean, ge, >=);
+DECLAR_BINARY_OPT(uint32, boolean, le, <=);
+
+DECLAR_BINARY_OPT(uint64, uint64, add, +);
+DECLAR_BINARY_OPT(uint64, uint64, sub, -);
+DECLAR_BINARY_OPT(uint64, uint64, div, /);
+DECLAR_BINARY_OPT(uint64, uint64, mul, *);
+DECLAR_BINARY_OPT(uint64, uint64, mod, %);
+DECLAR_BINARY_OPT(uint64, uint64, and, &);
+DECLAR_BINARY_OPT(uint64, uint64, or, |);
+DECLAR_BINARY_OPT(uint64, uint64, xor, ^);
+DECLAR_BINARY_OPT(uint64, uint64, shl, <<);
+DECLAR_BINARY_OPT(uint64, uint64, shr, >>);
+
+DECLAR_BINARY_OPT(uint64, boolean, eq, ==);
+DECLAR_BINARY_OPT(uint64, boolean, ne, !=);
+DECLAR_BINARY_OPT(uint64, boolean, gt, >);
+DECLAR_BINARY_OPT(uint64, boolean, lt, <);
+DECLAR_BINARY_OPT(uint64, boolean, ge, >=);
+DECLAR_BINARY_OPT(uint64, boolean, le, <=);
+
+DECLAR_BINARY_OPT(float32, float32, add, +);
+DECLAR_BINARY_OPT(float32, float32, sub, -);
+DECLAR_BINARY_OPT(float32, float32, div, /);
+DECLAR_BINARY_OPT(float32, float32, mul, *);
+
+DECLAR_BINARY_OPT(float32, boolean, eq, ==);
+DECLAR_BINARY_OPT(float32, boolean, ne, !=);
+DECLAR_BINARY_OPT(float32, boolean, gt, >);
+DECLAR_BINARY_OPT(float32, boolean, lt, <);
+DECLAR_BINARY_OPT(float32, boolean, ge, >=);
+DECLAR_BINARY_OPT(float32, boolean, le, <=);
+
+DECLAR_BINARY_OPT(float64, float64, add, +);
+DECLAR_BINARY_OPT(float64, float64, sub, -);
+DECLAR_BINARY_OPT(float64, float64, div, /);
+DECLAR_BINARY_OPT(float64, float64, mul, *);
+
+DECLAR_BINARY_OPT(float64, boolean, eq, ==);
+DECLAR_BINARY_OPT(float64, boolean, ne, !=);
+DECLAR_BINARY_OPT(float64, boolean, gt, >);
+DECLAR_BINARY_OPT(float64, boolean, lt, <);
+DECLAR_BINARY_OPT(float64, boolean, ge, >=);
+DECLAR_BINARY_OPT(float64, boolean, le, <=);
 
 #define DECLAR_CONVERT(type)                                                   \
   static cubec_value_t cubec_##type##_convert(                                 \
@@ -200,6 +276,8 @@ DECLAR_BINARY_OPT(float64, mul, *);
     type##_t value = *(type##_t *)cubec_value_get_data(self);                  \
     cubec_type_kind_t kind = cubec_type_get_kind(type);                        \
     switch (kind) {                                                            \
+    case CUBEC_VALUE_TYPE_BOOL:                                                \
+      return cubec_create_boolean(ctx, value, false, NULL);                    \
     case CUBEC_VALUE_TYPE_INT8:                                                \
       return cubec_create_int8(ctx, value, false, NULL);                       \
     case CUBEC_VALUE_TYPE_INT16:                                               \
@@ -223,15 +301,7 @@ DECLAR_BINARY_OPT(float64, mul, *);
     default:                                                                   \
       break;                                                                   \
     }                                                                          \
-    cubec_allocator_t allocator = cubec_context_get_allocator(ctx);            \
-    char *dst_name =                                                           \
-        cubec_type_to_string(cubec_value_get_type(self), allocator);           \
-    char *src_name = cubec_type_to_string(type, allocator);                    \
-    cubec_value_t err = cubec_create_error(ctx, "Cannot convert '%s' to '%s'", \
-                                           src_name, dst_name);                \
-    cubec_allocator_free(allocator, src_name);                                 \
-    cubec_allocator_free(allocator, dst_name);                                 \
-    return err;                                                                \
+    return NULL;                                                               \
   }
 
 DECLAR_CONVERT(int8);
@@ -249,15 +319,23 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .type_to_string = &cubec_numeric_type_to_string,
       .to_string = &cubec_numeric_to_string,
       .add_opt = cubec_int8_add,
-      .sub_opt = cubec_int8_add,
-      .div_opt = cubec_int8_add,
-      .mul_opt = cubec_int8_add,
-      .mod_opt = cubec_int8_add,
-      .and_opt = cubec_int8_add,
-      .or_opt = cubec_int8_add,
-      .xor_opt = cubec_int8_add,
-      .shl_opt = cubec_int8_add,
-      .shr_opt = cubec_int8_add,
+      .sub_opt = cubec_int8_sub,
+      .div_opt = cubec_int8_div,
+      .mul_opt = cubec_int8_mul,
+      .mod_opt = cubec_int8_mod,
+      .and_opt = cubec_int8_and,
+      .or_opt = cubec_int8_or,
+      .xor_opt = cubec_int8_xor,
+      .shl_opt = cubec_int8_shl,
+      .shr_opt = cubec_int8_shr,
+
+      .eq_opt = cubec_int8_eq,
+      .ne_opt = cubec_int8_ne,
+      .gt_opt = cubec_int8_gt,
+      .lt_opt = cubec_int8_lt,
+      .ge_opt = cubec_int8_ge,
+      .le_opt = cubec_int8_le,
+
       .convert = cubec_int8_convert,
   };
   DECLAR_INTEGER(8, &i8_opt);
@@ -265,15 +343,23 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .type_to_string = &cubec_numeric_type_to_string,
       .to_string = &cubec_numeric_to_string,
       .add_opt = cubec_int16_add,
-      .sub_opt = cubec_int16_add,
-      .div_opt = cubec_int16_add,
-      .mul_opt = cubec_int16_add,
-      .mod_opt = cubec_int16_add,
-      .and_opt = cubec_int16_add,
-      .or_opt = cubec_int16_add,
-      .xor_opt = cubec_int16_add,
-      .shl_opt = cubec_int16_add,
-      .shr_opt = cubec_int16_add,
+      .sub_opt = cubec_int16_sub,
+      .div_opt = cubec_int16_div,
+      .mul_opt = cubec_int16_mul,
+      .mod_opt = cubec_int16_mod,
+      .and_opt = cubec_int16_and,
+      .or_opt = cubec_int16_or,
+      .xor_opt = cubec_int16_xor,
+      .shl_opt = cubec_int16_shl,
+      .shr_opt = cubec_int16_shr,
+
+      .eq_opt = cubec_int16_eq,
+      .ne_opt = cubec_int16_ne,
+      .gt_opt = cubec_int16_gt,
+      .lt_opt = cubec_int16_lt,
+      .ge_opt = cubec_int16_ge,
+      .le_opt = cubec_int16_le,
+
       .convert = cubec_int16_convert,
   };
   DECLAR_INTEGER(16, &i16_opt);
@@ -281,15 +367,23 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .type_to_string = &cubec_numeric_type_to_string,
       .to_string = &cubec_numeric_to_string,
       .add_opt = cubec_int32_add,
-      .sub_opt = cubec_int32_add,
-      .div_opt = cubec_int32_add,
-      .mul_opt = cubec_int32_add,
-      .mod_opt = cubec_int32_add,
-      .and_opt = cubec_int32_add,
-      .or_opt = cubec_int32_add,
-      .xor_opt = cubec_int32_add,
-      .shl_opt = cubec_int32_add,
-      .shr_opt = cubec_int32_add,
+      .sub_opt = cubec_int32_sub,
+      .div_opt = cubec_int32_div,
+      .mul_opt = cubec_int32_mul,
+      .mod_opt = cubec_int32_mod,
+      .and_opt = cubec_int32_and,
+      .or_opt = cubec_int32_or,
+      .xor_opt = cubec_int32_xor,
+      .shl_opt = cubec_int32_shl,
+      .shr_opt = cubec_int32_shr,
+
+      .eq_opt = cubec_int32_eq,
+      .ne_opt = cubec_int32_ne,
+      .gt_opt = cubec_int32_gt,
+      .lt_opt = cubec_int32_lt,
+      .ge_opt = cubec_int32_ge,
+      .le_opt = cubec_int32_le,
+
       .convert = cubec_int32_convert,
   };
   DECLAR_INTEGER(32, &i32_opt);
@@ -297,15 +391,23 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .type_to_string = &cubec_numeric_type_to_string,
       .to_string = &cubec_numeric_to_string,
       .add_opt = cubec_int64_add,
-      .sub_opt = cubec_int64_add,
-      .div_opt = cubec_int64_add,
-      .mul_opt = cubec_int64_add,
-      .mod_opt = cubec_int64_add,
-      .and_opt = cubec_int64_add,
-      .or_opt = cubec_int64_add,
-      .xor_opt = cubec_int64_add,
-      .shl_opt = cubec_int64_add,
-      .shr_opt = cubec_int64_add,
+      .sub_opt = cubec_int64_sub,
+      .div_opt = cubec_int64_div,
+      .mul_opt = cubec_int64_mul,
+      .mod_opt = cubec_int64_mod,
+      .and_opt = cubec_int64_and,
+      .or_opt = cubec_int64_or,
+      .xor_opt = cubec_int64_xor,
+      .shl_opt = cubec_int64_shl,
+      .shr_opt = cubec_int64_shr,
+
+      .eq_opt = cubec_int64_eq,
+      .ne_opt = cubec_int64_ne,
+      .gt_opt = cubec_int64_gt,
+      .lt_opt = cubec_int64_lt,
+      .ge_opt = cubec_int64_ge,
+      .le_opt = cubec_int64_le,
+
       .convert = cubec_int64_convert,
   };
   DECLAR_INTEGER(64, &i64_opt);
@@ -313,15 +415,23 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .type_to_string = &cubec_numeric_type_to_string,
       .to_string = &cubec_numeric_to_string,
       .add_opt = cubec_uint8_add,
-      .sub_opt = cubec_uint8_add,
-      .div_opt = cubec_uint8_add,
-      .mul_opt = cubec_uint8_add,
-      .mod_opt = cubec_uint8_add,
-      .and_opt = cubec_uint8_add,
-      .or_opt = cubec_uint8_add,
-      .xor_opt = cubec_uint8_add,
-      .shl_opt = cubec_uint8_add,
-      .shr_opt = cubec_uint8_add,
+      .sub_opt = cubec_uint8_sub,
+      .div_opt = cubec_uint8_div,
+      .mul_opt = cubec_uint8_mul,
+      .mod_opt = cubec_uint8_mod,
+      .and_opt = cubec_uint8_and,
+      .or_opt = cubec_uint8_or,
+      .xor_opt = cubec_uint8_xor,
+      .shl_opt = cubec_uint8_shl,
+      .shr_opt = cubec_uint8_shr,
+
+      .eq_opt = cubec_uint8_eq,
+      .ne_opt = cubec_uint8_ne,
+      .gt_opt = cubec_uint8_gt,
+      .lt_opt = cubec_uint8_lt,
+      .ge_opt = cubec_uint8_ge,
+      .le_opt = cubec_uint8_le,
+
       .convert = cubec_uint8_convert,
   };
   DECLAR_UNSIGNED(8, &u8_opt);
@@ -329,15 +439,23 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .type_to_string = &cubec_numeric_type_to_string,
       .to_string = &cubec_numeric_to_string,
       .add_opt = cubec_uint16_add,
-      .sub_opt = cubec_uint16_add,
-      .div_opt = cubec_uint16_add,
-      .mul_opt = cubec_uint16_add,
-      .mod_opt = cubec_uint16_add,
-      .and_opt = cubec_uint16_add,
-      .or_opt = cubec_uint16_add,
-      .xor_opt = cubec_uint16_add,
-      .shl_opt = cubec_uint16_add,
-      .shr_opt = cubec_uint16_add,
+      .sub_opt = cubec_uint16_sub,
+      .div_opt = cubec_uint16_div,
+      .mul_opt = cubec_uint16_mul,
+      .mod_opt = cubec_uint16_mod,
+      .and_opt = cubec_uint16_and,
+      .or_opt = cubec_uint16_or,
+      .xor_opt = cubec_uint16_xor,
+      .shl_opt = cubec_uint16_shl,
+      .shr_opt = cubec_uint16_shr,
+
+      .eq_opt = cubec_uint16_eq,
+      .ne_opt = cubec_uint16_ne,
+      .gt_opt = cubec_uint16_gt,
+      .lt_opt = cubec_uint16_lt,
+      .ge_opt = cubec_uint16_ge,
+      .le_opt = cubec_uint16_le,
+
       .convert = cubec_uint16_convert,
   };
   DECLAR_UNSIGNED(16, &u16_opt);
@@ -345,15 +463,23 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .type_to_string = &cubec_numeric_type_to_string,
       .to_string = &cubec_numeric_to_string,
       .add_opt = cubec_uint32_add,
-      .sub_opt = cubec_uint32_add,
-      .div_opt = cubec_uint32_add,
-      .mul_opt = cubec_uint32_add,
-      .mod_opt = cubec_uint32_add,
-      .and_opt = cubec_uint32_add,
-      .or_opt = cubec_uint32_add,
-      .xor_opt = cubec_uint32_add,
-      .shl_opt = cubec_uint32_add,
-      .shr_opt = cubec_uint32_add,
+      .sub_opt = cubec_uint32_sub,
+      .div_opt = cubec_uint32_div,
+      .mul_opt = cubec_uint32_mul,
+      .mod_opt = cubec_uint32_mod,
+      .and_opt = cubec_uint32_and,
+      .or_opt = cubec_uint32_or,
+      .xor_opt = cubec_uint32_xor,
+      .shl_opt = cubec_uint32_shl,
+      .shr_opt = cubec_uint32_shr,
+
+      .eq_opt = cubec_uint32_eq,
+      .ne_opt = cubec_uint32_ne,
+      .gt_opt = cubec_uint32_gt,
+      .lt_opt = cubec_uint32_lt,
+      .ge_opt = cubec_uint32_ge,
+      .le_opt = cubec_uint32_le,
+
       .convert = cubec_uint32_convert,
   };
   DECLAR_UNSIGNED(32, &u32_opt);
@@ -361,15 +487,23 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .type_to_string = &cubec_numeric_type_to_string,
       .to_string = &cubec_numeric_to_string,
       .add_opt = cubec_uint64_add,
-      .sub_opt = cubec_uint64_add,
-      .div_opt = cubec_uint64_add,
-      .mul_opt = cubec_uint64_add,
-      .mod_opt = cubec_uint64_add,
-      .and_opt = cubec_uint64_add,
-      .or_opt = cubec_uint64_add,
-      .xor_opt = cubec_uint64_add,
-      .shl_opt = cubec_uint64_add,
-      .shr_opt = cubec_uint64_add,
+      .sub_opt = cubec_uint64_sub,
+      .div_opt = cubec_uint64_div,
+      .mul_opt = cubec_uint64_mul,
+      .mod_opt = cubec_uint64_mod,
+      .and_opt = cubec_uint64_and,
+      .or_opt = cubec_uint64_or,
+      .xor_opt = cubec_uint64_xor,
+      .shl_opt = cubec_uint64_shl,
+      .shr_opt = cubec_uint64_shr,
+
+      .eq_opt = cubec_uint64_eq,
+      .ne_opt = cubec_uint64_ne,
+      .gt_opt = cubec_uint64_gt,
+      .lt_opt = cubec_uint64_lt,
+      .ge_opt = cubec_uint64_ge,
+      .le_opt = cubec_uint64_le,
+
       .convert = cubec_uint64_convert,
   };
   DECLAR_UNSIGNED(64, &u64_opt);
@@ -380,6 +514,14 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .sub_opt = cubec_float32_sub,
       .mul_opt = cubec_float32_mul,
       .div_opt = cubec_float32_div,
+
+      .eq_opt = cubec_float32_eq,
+      .ne_opt = cubec_float32_ne,
+      .gt_opt = cubec_float32_gt,
+      .lt_opt = cubec_float32_lt,
+      .ge_opt = cubec_float32_ge,
+      .le_opt = cubec_float32_le,
+
       .convert = cubec_float32_convert,
   };
   DECLAR_FLOAT(32, &f32_opt);
@@ -390,6 +532,14 @@ void cubec_init_numeric_type(cubec_context_t ctx) {
       .sub_opt = cubec_float64_sub,
       .mul_opt = cubec_float64_mul,
       .div_opt = cubec_float64_div,
+
+      .eq_opt = cubec_float64_eq,
+      .ne_opt = cubec_float64_ne,
+      .gt_opt = cubec_float64_gt,
+      .lt_opt = cubec_float64_lt,
+      .ge_opt = cubec_float64_ge,
+      .le_opt = cubec_float64_le,
+
       .convert = cubec_float64_convert,
   };
   DECLAR_FLOAT(64, &f64_opt);

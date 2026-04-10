@@ -3,6 +3,7 @@
 #include "engine/error.h"
 #include "eval/statement_block.h"
 #include "eval/statement_declaration.h"
+#include "eval/statement_expression.h"
 #include "eval/statement_function.h"
 
 cubec_value_t cubec_eval_statement(cubec_context_t ctx, cubec_ast_node_t node) {
@@ -12,6 +13,8 @@ cubec_value_t cubec_eval_statement(cubec_context_t ctx, cubec_ast_node_t node) {
     return cubec_eval_statement_function(ctx, node);
   } else if (node->type == CUBEC_NODE_TYPE_STATEMENT_BLOCK) {
     return cubec_eval_statement_block(ctx, node);
+  } else if (node->type == CUBEC_NODE_TYPE_STATEMENT_EXPRESSION) {
+    return cubec_eval_statement_expression(ctx, node);
   }
   return cubec_create_compile_error(ctx, node, "unsupport statement");
 }
