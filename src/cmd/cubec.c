@@ -2,8 +2,6 @@
 #include "core/path.h"
 #include "engine/builtin.h"
 #include "engine/context.h"
-#include "engine/error.h"
-#include "engine/type.h"
 #include "engine/value.h"
 #include <inttypes.h>
 #include <stdbool.h>
@@ -31,20 +29,11 @@ cubec_value_t print(cubec_context_t ctx, size_t argc, cubec_value_t argv[]) {
   printf("\n");
   return cubec_context_get_undefined(ctx);
 }
-cubec_value_t _typeof(cubec_context_t ctx, size_t argc, cubec_value_t argv[]) {
-  if (argc != 1) {
-    return cubec_create_error(
-        ctx, "typeof requires 1 arguments, received %" PRIuPTR, argc);
-  }
-  cubec_type_t type = cubec_value_get_type(argv[0]);
-  return cubec_create_type_value(ctx, type, false, NULL);
-}
 
 int main(int argc, char *argv[]) {
   cubec_allocator_t allocator = cubec_create_allocator(NULL);
   cubec_context_t ctx = cubec_create_context(allocator);
   cubec_create_builtin(ctx, print, "print");
-  cubec_create_builtin(ctx, _typeof, "typeof");
 
   char *filename = absolute(allocator, "./main.cubec");
   cubec_value_t err = cubec_context_load_module(ctx, filename);
