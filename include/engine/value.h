@@ -94,14 +94,6 @@ cubec_value_t cubec_value_logical_and(cubec_value_t self,
 cubec_value_t cubec_value_logical_or(cubec_value_t self,
                                      struct _cubec_context_t *ctx,
                                      cubec_value_t another);
-cubec_value_t cubec_value_prefix_inc(cubec_value_t self,
-                                     struct _cubec_context_t *ctx);
-cubec_value_t cubec_value_prefix_dec(cubec_value_t self,
-                                     struct _cubec_context_t *ctx);
-cubec_value_t cubec_value_postfix_inc(cubec_value_t self,
-                                      struct _cubec_context_t *ctx);
-cubec_value_t cubec_value_postfix_dec(cubec_value_t self,
-                                      struct _cubec_context_t *ctx);
 cubec_value_t cubec_value_unref(cubec_value_t self,
                                       struct _cubec_context_t *ctx);
 cubec_value_t cubec_value_ref(cubec_value_t self,

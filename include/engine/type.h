@@ -110,10 +110,6 @@ typedef struct _cubec_type_operator_t {
   cubec_single_fn_t neg_opt;
   cubec_single_fn_t logical_not_opt;
   cubec_single_fn_t bitwise_not_opt;
-  cubec_single_fn_t prefix_inc;
-  cubec_single_fn_t prefix_dec;
-  cubec_single_fn_t postfix_inc;
-  cubec_single_fn_t postfix_dec;
   cubec_single_fn_t ref;
   cubec_single_fn_t unref;
 } *cubec_type_operator_t;
