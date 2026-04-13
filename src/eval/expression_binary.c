@@ -56,8 +56,7 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
     } else {
       return cubec_create_compile_error(ctx, node, "unsupport binary operator");
     }
-  }
-  if (right) {
+  } else if (right) {
     if (cubec_location_is(opt->loc, "!")) {
       value = cubec_value_logical_not(right, ctx);
     } else if (cubec_location_is(opt->loc, "~")) {

@@ -1,5 +1,5 @@
 
 func main():void {
-    const a:u8 = 1;
-    print(-a);
+    const a:i8 = 0b10;
+    print(a|1);
 }

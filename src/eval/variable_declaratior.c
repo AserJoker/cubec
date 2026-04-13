@@ -94,7 +94,7 @@ cubec_value_t cubec_eval_variable_declaratior(cubec_context_t ctx,
           str += 2;
         }
         uint64_t val = 0;
-        cubec_cstring_to_int(str, &val, 10);
+        cubec_cstring_to_int(str, &val, radix);
         cubec_allocator_free(allocator, s);
         if (cubec_type_get_kind(value_type) == CUBEC_VALUE_TYPE_INT8) {
           if (val > INT8_MAX) {
