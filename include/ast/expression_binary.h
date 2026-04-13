@@ -42,10 +42,6 @@ cubec_ast_node_t
 cubec_read_ast_expression_binary_prefix(cubec_allocator_t allocator,
                                         cubec_position_t *position,
                                         const char *end, const char *filename);
-cubec_ast_node_t
-cubec_read_ast_expression_binary_postfix(cubec_allocator_t allocator,
-                                         cubec_position_t *position,
-                                         const char *end, const char *filename);
 #ifdef __cplusplus
 }
 #endif

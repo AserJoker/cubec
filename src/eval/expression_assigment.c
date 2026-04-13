@@ -1,4 +1,5 @@
 #include "eval/expression_assigment.h"
+#include "ast/expression_group.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
@@ -15,6 +16,7 @@
 cubec_value_t cubec_eval_expression_assigment(cubec_context_t ctx,
                                               cubec_ast_node_t node) {
   cubec_ast_node_t identifier_node = cubec_ast_get_child(node, "identifier");
+  identifier_node = cubec_ast_unwrap_group(identifier_node);
   cubec_ast_node_t value_node = cubec_ast_get_child(node, "value");
   cubec_ast_node_t opt = cubec_ast_get_child(node, "opt");
   cubec_value_t value = cubec_eval_expression(ctx, value_node);

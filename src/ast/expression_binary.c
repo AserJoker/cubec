@@ -693,8 +693,7 @@ cubec_read_ast_expression_binary_prefix(cubec_allocator_t allocator,
   }
   node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "opt", opt);
-  if (!cubec_location_is(opt->loc, "!") && !cubec_location_is(opt->loc, "++") &&
-      !cubec_location_is(opt->loc, "--") && !cubec_location_is(opt->loc, "+") &&
+  if (!cubec_location_is(opt->loc, "!") && !cubec_location_is(opt->loc, "+") &&
       !cubec_location_is(opt->loc, "-") && !cubec_location_is(opt->loc, "~") &&
       !cubec_location_is(opt->loc, "&") && !cubec_location_is(opt->loc, "*") &&
       !cubec_location_is(opt->loc, "typeof") &&
@@ -720,56 +719,6 @@ cubec_read_ast_expression_binary_prefix(cubec_allocator_t allocator,
     goto onerror;
   }
   cubec_ast_add_child(allocator, node, "right", right);
-  node->loc.begin = *position;
-  node->loc.end = current;
-  node->loc.filename = filename;
-  *position = current;
-  return node;
-onerror:
-  cubec_allocator_free(allocator, node);
-  return err;
-}
-cubec_ast_node_t cubec_read_ast_expression_binary_postfix(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end,
-    const char *filename) {
-
-  cubec_ast_node_t err = NULL;
-  cubec_ast_node_t node = NULL;
-  cubec_position_t current = *position;
-  cubec_ast_node_t left =
-      cubec_read_ast_expression17(allocator, &current, end, filename);
-  if (!left) {
-    goto onerror;
-  }
-  if (left->type == CUBEC_NODE_TYPE_ERROR) {
-    err = left;
-    goto onerror;
-  }
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
-  cubec_ast_add_child(allocator, node, "left", left);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
-    return err;
-  }
-  cubec_allocator_free(allocator, err);
-  cubec_ast_node_t opt =
-      cubec_read_ast_literal_symbol(allocator, &current, end, filename);
-  if (!opt) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
-    *position = err->loc.end;
-    goto onerror;
-  }
-  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
-    err = opt;
-    goto onerror;
-  }
-  cubec_ast_add_child(allocator, node, "opt", opt);
-  if (!cubec_location_is(opt->loc, "++") &&
-      !cubec_location_is(opt->loc, "--")) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
-    *position = err->loc.end;
-    goto onerror;
-  }
   node->loc.begin = *position;
   node->loc.end = current;
   node->loc.filename = filename;

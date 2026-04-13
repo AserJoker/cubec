@@ -19,8 +19,6 @@
 #include "engine/value.h"
 #include "engine/void.h"
 #include "eval/program.h"
-#include "pass/declar_flat.h"
-#include "pass/type_fix.h"
 #include "writer/context.h"
 #include "writer/program.h"
 #include <inttypes.h>
@@ -120,20 +118,6 @@ static void cubec_context_init_value(cubec_context_t self) {
   cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
   self->value_undefined =
       cubec_context_create_value(self, type, false, NULL, NULL);
-}
-
-static cubec_ast_node_t cubec_context_visit_node(cubec_allocator_t allocator,
-                                                 cubec_ast_node_t node,
-                                                 cubec_context_t ctx) {
-  node = cubec_pass_declar_flat(allocator, node, ctx);
-  if (node->changed || node->type == CUBEC_NODE_TYPE_ERROR) {
-    return node;
-  }
-  node = cubec_pass_type_fix(allocator, node, ctx);
-  if (node->changed || node->type == CUBEC_NODE_TYPE_ERROR) {
-    return node;
-  }
-  return node;
 }
 
 cubec_context_t cubec_create_context(cubec_allocator_t allocator) {

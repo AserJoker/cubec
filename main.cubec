@@ -1,7 +1,6 @@
 
-func main(argc:i32,argv:[*]str):void {
+func main():void {
     let a = 1;
-    let p = &a;
-    *p = 2;
+    a+=1;
     print(a);
 }

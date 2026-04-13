@@ -198,11 +198,6 @@ cubec_ast_node_t cubec_read_ast_expression16(cubec_allocator_t allocator,
                                              cubec_position_t *position,
                                              const char *end,
                                              const char *filename) {
-  cubec_ast_node_t node = cubec_read_ast_expression_binary_postfix(
-      allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
   return cubec_read_ast_expression17(allocator, position, end, filename);
 }
 cubec_ast_node_t cubec_read_ast_expression17(cubec_allocator_t allocator,
