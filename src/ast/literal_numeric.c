@@ -9,6 +9,9 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
                                                 cubec_position_t *position,
                                                 const char *end,
                                                 const char *filename) {
+  if (*position->offset < '0' || *position->offset > '9') {
+    return NULL;
+  }
   cubec_ast_node_t node =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_NUMERIC);
   cubec_ast_node_t err = NULL;

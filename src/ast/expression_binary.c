@@ -11,8 +11,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_or(
     cubec_allocator_t allocator, cubec_position_t *position, const char *end,
     const char *filename) {
   cubec_ast_node_t err = NULL;
-  cubec_ast_node_t node =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
+  cubec_ast_node_t node = NULL;
   cubec_position_t current = *position;
   cubec_ast_node_t left =
       cubec_read_ast_expression5(allocator, &current, end, filename);
@@ -23,6 +22,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_or(
     err = left;
     goto onerror;
   }
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "left", left);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
@@ -78,7 +78,6 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_and(
   cubec_ast_node_t err = NULL;
   cubec_ast_node_t node = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_node_t left =
       cubec_read_ast_expression6(allocator, &current, end, filename);
   if (!left) {
@@ -88,6 +87,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_and(
     err = left;
     goto onerror;
   }
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "left", left);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
@@ -143,7 +143,6 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
   cubec_ast_node_t err = NULL;
   cubec_ast_node_t node = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_node_t left =
       cubec_read_ast_expression7(allocator, &current, end, filename);
   if (!left) {
@@ -153,6 +152,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
     err = left;
     goto onerror;
   }
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "left", left);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
@@ -207,7 +207,6 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
   cubec_ast_node_t err = NULL;
   cubec_ast_node_t node = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_node_t left =
       cubec_read_ast_expression8(allocator, &current, end, filename);
   if (!left) {
@@ -217,6 +216,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
     err = left;
     goto onerror;
   }
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "left", left);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
@@ -271,7 +271,6 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
   cubec_ast_node_t err = NULL;
   cubec_ast_node_t node = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_node_t left =
       cubec_read_ast_expression9(allocator, &current, end, filename);
   if (!left) {
@@ -281,6 +280,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
     err = left;
     goto onerror;
   }
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "left", left);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
@@ -338,7 +338,6 @@ cubec_read_ast_expression_binary_equal(cubec_allocator_t allocator,
   cubec_ast_node_t err = NULL;
   cubec_ast_node_t node = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_node_t left =
       cubec_read_ast_expression10(allocator, &current, end, filename);
   if (!left) {
@@ -348,6 +347,7 @@ cubec_read_ast_expression_binary_equal(cubec_allocator_t allocator,
     err = left;
     goto onerror;
   }
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "left", left);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
@@ -406,7 +406,6 @@ cubec_ast_node_t cubec_read_ast_expression_binary_relation(
   cubec_ast_node_t err = NULL;
   cubec_ast_node_t node = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_node_t left =
       cubec_read_ast_expression11(allocator, &current, end, filename);
   if (!left) {
@@ -416,6 +415,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_relation(
     err = left;
     goto onerror;
   }
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "left", left);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
@@ -475,7 +475,6 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
   cubec_ast_node_t err = NULL;
   cubec_ast_node_t node = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_node_t left =
       cubec_read_ast_expression12(allocator, &current, end, filename);
   if (!left) {
@@ -485,6 +484,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
     err = left;
     goto onerror;
   }
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "left", left);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
@@ -540,7 +540,6 @@ cubec_ast_node_t cubec_read_ast_expression_binary_additive(
   cubec_ast_node_t err = NULL;
   cubec_ast_node_t node = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_node_t left =
       cubec_read_ast_expression13(allocator, &current, end, filename);
   if (!left) {
@@ -550,6 +549,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_additive(
     err = left;
     goto onerror;
   }
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "left", left);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
@@ -604,7 +604,6 @@ cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
   cubec_ast_node_t err = NULL;
   cubec_ast_node_t node = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_node_t left =
       cubec_read_ast_expression14(allocator, &current, end, filename);
   if (!left) {
@@ -614,6 +613,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
     err = left;
     goto onerror;
   }
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "left", left);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
@@ -670,7 +670,6 @@ cubec_read_ast_expression_binary_prefix(cubec_allocator_t allocator,
   cubec_ast_node_t err = NULL;
   cubec_ast_node_t node = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_node_t opt = NULL;
   if (*current.offset == '&') {
     opt = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_SYMBOL);
@@ -692,6 +691,7 @@ cubec_read_ast_expression_binary_prefix(cubec_allocator_t allocator,
       goto onerror;
     }
   }
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "opt", opt);
   if (!cubec_location_is(opt->loc, "!") && !cubec_location_is(opt->loc, "++") &&
       !cubec_location_is(opt->loc, "--") && !cubec_location_is(opt->loc, "+") &&
@@ -736,7 +736,6 @@ cubec_ast_node_t cubec_read_ast_expression_binary_postfix(
   cubec_ast_node_t err = NULL;
   cubec_ast_node_t node = NULL;
   cubec_position_t current = *position;
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_node_t left =
       cubec_read_ast_expression17(allocator, &current, end, filename);
   if (!left) {
@@ -746,6 +745,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_postfix(
     err = left;
     goto onerror;
   }
+  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
   cubec_ast_add_child(allocator, node, "left", left);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {

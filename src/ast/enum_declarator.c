@@ -19,9 +19,6 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
   cubec_ast_node_t decorators =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
   cubec_ast_add_child(allocator, node, "decorators", decorators);
-  cubec_ast_node_t fields =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "fields", fields);
   for (;;) {
     cubec_ast_node_t decorator =
         cubec_read_ast_decorator(allocator, &current, end, filename);
@@ -51,6 +48,9 @@ cubec_ast_node_t cubec_read_ast_enum_declarator(cubec_allocator_t allocator,
     goto onerror;
   }
   cubec_allocator_free(allocator, token);
+  cubec_ast_node_t fields =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  cubec_ast_add_child(allocator, node, "fields", fields);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;

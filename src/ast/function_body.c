@@ -40,6 +40,9 @@ cubec_ast_node_t cubec_read_ast_function_body(cubec_allocator_t allocator,
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;
       }
+      if (*current.offset == '}') {
+        break;
+      }
     }
   }
   err = cubec_ast_skip_all(allocator, &current, end, filename);

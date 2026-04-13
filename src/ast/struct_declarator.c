@@ -22,15 +22,6 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
   cubec_ast_node_t decorators =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
   cubec_ast_add_child(allocator, node, "decorators", decorators);
-  cubec_ast_node_t fields =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "fields", fields);
-  cubec_ast_node_t methods =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "methods", methods);
-  cubec_ast_node_t attributes =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "attributes", attributes);
   for (;;) {
     cubec_ast_node_t decorator =
         cubec_read_ast_decorator(allocator, &current, end, filename);
@@ -60,6 +51,15 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
     cubec_allocator_free(allocator, token);
     goto onerror;
   }
+  cubec_ast_node_t fields =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  cubec_ast_add_child(allocator, node, "fields", fields);
+  cubec_ast_node_t methods =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  cubec_ast_add_child(allocator, node, "methods", methods);
+  cubec_ast_node_t attributes =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  cubec_ast_add_child(allocator, node, "attributes", attributes);
   cubec_allocator_free(allocator, token);
   err = cubec_ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {

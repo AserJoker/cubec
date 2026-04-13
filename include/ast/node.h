@@ -69,13 +69,9 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
                                     const char *filename);
 char *cubec_ast_write_json(cubec_allocator_t allocator, cubec_ast_node_t node);
 
-typedef cubec_ast_node_t (*cubec_visit_ast_fn_t)(cubec_allocator_t allocator,
-                                                 cubec_ast_node_t node,
-                                                 void *ctx);
-
 cubec_ast_node_t cubec_read_ast_node(cubec_allocator_t allocator,
                                      const char *filename, const char *source,
-                                     void *ctx, cubec_visit_ast_fn_t visit);
+                                     void *ctx);
 cubec_ast_node_t cubec_clone_ast_node(cubec_allocator_t allocator,
                                       cubec_ast_node_t node);
 

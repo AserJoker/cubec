@@ -8,6 +8,9 @@ cubec_ast_node_t cubec_read_ast_literal_string(cubec_allocator_t allocator,
                                                cubec_position_t *position,
                                                const char *end,
                                                const char *filename) {
+  if (*position->offset != '\"') {
+    return NULL;
+  }
   cubec_position_t current = *position;
   int32_t code = cubec_ast_read_code(&current, end, filename);
   if (code < 0) {

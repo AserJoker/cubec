@@ -22,12 +22,6 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   cubec_ast_node_t decorators =
       cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
   cubec_ast_add_child(allocator, node, "decorators", decorators);
-  cubec_ast_node_t closure =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "closure", closure);
-  cubec_ast_node_t args =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "arguments", args);
   for (;;) {
     cubec_ast_node_t decorator =
         cubec_read_ast_decorator(allocator, &current, end, filename);
@@ -80,6 +74,9 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
+  cubec_ast_node_t closure =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  cubec_ast_add_child(allocator, node, "closure", closure);
   if (*current.offset == '<') {
     current.offset++;
     current.column++;
@@ -146,11 +143,12 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
+  cubec_ast_node_t args =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  cubec_ast_add_child(allocator, node, "arguments", args);
   if (*current.offset != '(') {
-    if (!cubec_location_is(kind->loc, "comptime")) {
-      err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "Invalid function expression, missing '('");
-    }
+    err = cubec_create_ast_error(allocator, *position, current, filename,
+                                 "Invalid function expression, missing '('");
     goto onerror;
   }
   current.offset++;

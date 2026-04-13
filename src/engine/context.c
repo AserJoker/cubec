@@ -179,8 +179,7 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
     source[len] = 0;
     fclose(fp);
     cubec_ast_node_t node =
-        cubec_read_ast_node(self->allocator, filename, source, self,
-                            (cubec_visit_ast_fn_t)cubec_context_visit_node);
+        cubec_read_ast_node(self->allocator, filename, source, self);
     if (node->type == CUBEC_NODE_TYPE_ERROR) {
       cubec_ast_error_t error = (cubec_ast_error_t)node;
       cubec_value_t res =

@@ -465,60 +465,9 @@ char *cubec_ast_write_json(cubec_allocator_t allocator, cubec_ast_node_t node) {
   return s;
 }
 
-cubec_ast_node_t cubec_visit_ast_node(cubec_allocator_t allocator,
-                                      cubec_ast_node_t node, void *ctx,
-                                      cubec_visit_ast_fn_t visit) {
-  node->changed = false;
-  node = visit(allocator, node, ctx);
-  if (node->changed) {
-    return node;
-  }
-  if (node->type == CUBEC_NODE_TYPE_ERROR) {
-    return node;
-  }
-  if (node->type == CUBEC_NODE_TYPE_LIST) {
-    size_t idx = 0;
-    while (idx < cubec_array_get_size(node->items)) {
-      cubec_ast_node_t item = cubec_array_get(node->items, idx);
-      item = cubec_visit_ast_node(allocator, item, ctx, visit);
-      if (item == node && item->changed) {
-        idx = 0;
-        node->changed = false;
-        continue;
-      }
-      if (item->changed) {
-        return node;
-      }
-      if (item->type == CUBEC_NODE_TYPE_ERROR) {
-        return item;
-      }
-      idx++;
-    }
-  } else {
-    cubec_list_node_t it = cubec_hash_map_get_first(node->children);
-    while (it != cubec_hash_map_get_end(node->children)) {
-      cubec_ast_node_t item = cubec_hash_map_node_get_value(it, node->children);
-      item = cubec_visit_ast_node(allocator, item, ctx, visit);
-      if (item == node && item->changed) {
-        it = cubec_hash_map_get_first(node->children);
-        item->changed = false;
-        continue;
-      }
-      if (item->changed) {
-        return node;
-      }
-      if (item->type == CUBEC_NODE_TYPE_ERROR) {
-        return item;
-      }
-      it = cubec_list_node_next(it);
-    }
-  }
-  return node;
-}
-
 cubec_ast_node_t cubec_read_ast_node(cubec_allocator_t allocator,
                                      const char *filename, const char *source,
-                                     void *ctx, cubec_visit_ast_fn_t visit) {
+                                     void *ctx) {
   cubec_position_t pos = {
       .column = 1,
       .line = 1,
@@ -530,7 +479,7 @@ cubec_ast_node_t cubec_read_ast_node(cubec_allocator_t allocator,
   if (program->type == CUBEC_NODE_TYPE_ERROR) {
     return program;
   }
-  return cubec_visit_ast_node(allocator, program, ctx, visit);
+  return program;
 }
 cubec_ast_node_t cubec_clone_ast_node(cubec_allocator_t allocator,
                                       cubec_ast_node_t node) {
