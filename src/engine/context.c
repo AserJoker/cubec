@@ -3,8 +3,6 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/array.h"
-#include "core/compare.h"
-#include "core/map.h"
 #include "core/string.h"
 #include "engine/boolean.h"
 #include "engine/builtin.h"
@@ -12,6 +10,7 @@
 #include "engine/module.h"
 #include "engine/numeric.h"
 #include "engine/opaque.h"
+#include "engine/ptr.h"
 #include "engine/scope.h"
 #include "engine/str.h"
 #include "engine/struct.h"
@@ -32,7 +31,7 @@
 struct _cubec_context_t {
   cubec_allocator_t allocator;
 
-  cubec_map_t modules;
+  cubec_hash_map_t modules;
   cubec_array_t types;
   cubec_array_t strings;
 
@@ -61,9 +60,35 @@ static char *cubec_type_type_to_string(cubec_type_t self,
   return cubec_create_cstring(allocator, "type");
 }
 
+static cubec_value_t cubec_type_value_to_string(cubec_value_t self,
+                                                cubec_context_t ctx) {
+  cubec_type_t *type = (cubec_type_t *)cubec_value_get_data(self);
+  if (!type) {
+    return cubec_create_str(ctx, "type{<runtime>}", NULL);
+  } else {
+    cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
+    char *s = cubec_type_to_string(*type, allocator);
+    cubec_value_t res = cubec_create_str(ctx, s, NULL);
+    cubec_allocator_free(allocator, s);
+    return res;
+  }
+}
+
+static cubec_value_t cubec_type_value_unref(cubec_value_t self,
+                                            cubec_context_t ctx) {
+  cubec_type_t *type = (cubec_type_t *)cubec_value_get_data(self);
+  if (!type) {
+    return cubec_create_str(ctx, "type{<runtime>}", NULL);
+  } else {
+    return cubec_create_ptr_type(ctx, *type, true, false);
+  }
+}
+
 static void cubec_init_type_type(cubec_context_t self) {
   struct _cubec_type_operator_t opt = {
       .type_to_string = cubec_type_type_to_string,
+      .to_string = cubec_type_value_to_string,
+      .unref = cubec_type_value_unref,
   };
   cubec_type_t type_type = cubec_create_type(
       self->allocator, CUBEC_VALUE_TYPE_TYPE, sizeof(cubec_type_t *),
@@ -127,12 +152,12 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
       .autofree = true,
   };
   self->strings = cubec_create_array(allocator, &strings_initialize);
-  cubec_map_initialize_t module_initialize = {
+  cubec_hash_map_initialize_t module_initialize = {
       .autofree_value = true,
       .autofree_key = false,
-      .compare = (cubec_compare_fn_t)strcmp,
+      .hash = (cubec_hash_fn_t)cubec_cstring_sdb,
   };
-  self->modules = cubec_create_map(allocator, &module_initialize);
+  self->modules = cubec_create_hash_map(allocator, &module_initialize);
   cubec_context_init_type(self);
   cubec_context_init_value(self);
   return self;
@@ -140,7 +165,7 @@ cubec_context_t cubec_create_context(cubec_allocator_t allocator) {
 
 cubec_value_t cubec_context_load_module(cubec_context_t self,
                                         const char *filename) {
-  cubec_module_t module = cubec_map_get(self->modules, filename, NULL);
+  cubec_module_t module = cubec_hash_map_get(self->modules, filename, NULL);
   if (!module) {
     FILE *fp = fopen(filename, "rb");
     if (!fp) {
@@ -172,8 +197,8 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
     }
     module =
         cubec_create_module(self->allocator, node, filename, source, value);
-    cubec_map_set(self->modules, (void *)cubec_module_get_filename(module),
-                  module, NULL);
+    cubec_hash_map_set(self->modules, (void *)cubec_module_get_filename(module),
+                       module, NULL);
   }
   return cubec_module_get_value(module);
 }
@@ -181,7 +206,7 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
 cubec_value_t cubec_context_write_module(cubec_context_t self,
                                          const char *filename,
                                          const char *dst_filename) {
-  cubec_module_t module = cubec_map_get(self->modules, filename, NULL);
+  cubec_module_t module = cubec_hash_map_get(self->modules, filename, NULL);
   if (!module) {
     return cubec_create_error(self, "module %s is not loaded", filename);
   }
@@ -221,6 +246,12 @@ cubec_value_t cubec_context_create_value(cubec_context_t self,
 }
 
 cubec_value_t cubec_context_load(cubec_context_t self, const char *name) {
+  if (strcmp(name, "true") == 0) {
+    return cubec_create_boolean(self, true, false, NULL);
+  }
+  if (strcmp(name, "false") == 0) {
+    return cubec_create_boolean(self, false, false, NULL);
+  }
   cubec_scope_t scope = self->scope;
   while (scope) {
     cubec_value_t value = cubec_scope_load(scope, name);

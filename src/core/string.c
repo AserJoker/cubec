@@ -154,3 +154,12 @@ const char *cubec_cstring_to_dec(const char *source, double *value) {
   *value = val;
   return source;
 }
+int64_t cubec_cstring_sdb(const char *str) {
+  int64_t hash = 0;
+  int c;
+  while ((c = *str++)) {
+    hash = (hash * 65536) + c;
+  }
+
+  return hash;
+}

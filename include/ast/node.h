@@ -3,7 +3,7 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/array.h"
-#include "core/map.h"
+#include "core/hash_map.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
@@ -22,7 +22,7 @@ struct _cubec_ast_node_t {
   bool changed;
   union {
     cubec_array_t items;
-    cubec_map_t children;
+    cubec_hash_map_t children;
   };
 };
 

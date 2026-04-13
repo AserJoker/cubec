@@ -22,11 +22,8 @@ cubec_read_ast_expression_assigment(cubec_allocator_t allocator,
   cubec_position_t current = *position;
   cubec_ast_node_t identifier = NULL;
   if (*current.offset == '*') {
-    cubec_ast_node_t identifier = cubec_read_ast_expression_binary_prefix(
-        allocator, position, end, filename);
-    if (identifier) {
-      goto onerror;
-    }
+    identifier = cubec_read_ast_expression_binary_prefix(allocator, &current,
+                                                         end, filename);
   } else {
     identifier =
         cubec_read_ast_expression18(allocator, &current, end, filename);
@@ -41,7 +38,8 @@ cubec_read_ast_expression_assigment(cubec_allocator_t allocator,
   cubec_ast_add_child(allocator, node, "identifier", identifier);
   if (identifier->type != CUBEC_NODE_TYPE_LITERAL_IDENTIFIER &&
       identifier->type != CUBEC_NODE_TYPE_EXPRESSION_MEMBER &&
-      identifier->type != CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
+      identifier->type != CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER &&
+      identifier->type != CUBEC_NODE_TYPE_EXPRESSION_BINARY) {
     goto onerror;
   }
   err = cubec_ast_skip_all(allocator, &current, end, filename);

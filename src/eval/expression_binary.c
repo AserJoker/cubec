@@ -1,9 +1,14 @@
 #include "eval/expression_binary.h"
 #include "ast/node.h"
 #include "core/location.h"
+#include "engine/context.h"
 #include "engine/error.h"
+#include "engine/numeric.h"
+#include "engine/type.h"
 #include "engine/value.h"
 #include "eval/expression.h"
+#include <corecrt_search.h>
+#include <stdbool.h>
 cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
                                            cubec_ast_node_t node) {
   cubec_ast_node_t left_node = cubec_ast_get_child(node, "left");
@@ -71,9 +76,23 @@ cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
       return cubec_value_logical_not(right, ctx);
     } else if (cubec_location_is(opt->loc, "~")) {
       return cubec_value_bitwise_not(right, ctx);
+    } else if (cubec_location_is(opt->loc, "&")) {
+      return cubec_value_ref(right, ctx);
+    } else if (cubec_location_is(opt->loc, "*")) {
+      return cubec_value_unref(right, ctx);
+    } else if (cubec_location_is(opt->loc, "sizeof")) {
+      cubec_type_t type = cubec_value_get_type(right);
+      size_t size = cubec_type_get_size(type);
+      return cubec_create_u64(ctx, size, false, NULL);
+    } else if (cubec_location_is(opt->loc, "alignof")) {
+      cubec_type_t type = cubec_value_get_type(right);
+      size_t align = cubec_type_get_align(type);
+      return cubec_create_u64(ctx, align, false, NULL);
+    } else if (cubec_location_is(opt->loc, "typeof")) {
+      cubec_type_t type = cubec_value_get_type(right);
+      return cubec_create_type_value(ctx, type, false, NULL);
     } else {
-      return cubec_create_compile_error(ctx, node,
-                                        "unsupport postfix operator");
+      return cubec_create_compile_error(ctx, node, "unsupport prefix operator");
     }
   }
   return cubec_create_compile_error(ctx, node, "unsupport binary operator");

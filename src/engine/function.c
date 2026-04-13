@@ -151,6 +151,7 @@ cubec_value_t cubec_create_function_type(cubec_context_t ctx, cubec_type_t type,
       cubec_context_get_allocator(ctx), type, num_args, args, variadic);
   struct _cubec_type_operator_t opt = {
       .is_type_equal = cubec_function_is_equal,
+      .type_to_string = cubec_function_type_to_string,
       .call = cubec_function_call,
   };
   return cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_FUNCTION,

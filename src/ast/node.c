@@ -3,10 +3,10 @@
 #include "ast/program.h"
 #include "core/allocator.h"
 #include "core/array.h"
-#include "core/compare.h"
+#include "core/hash.h"
+#include "core/hash_map.h"
 #include "core/list.h"
 #include "core/location.h"
-#include "core/map.h"
 #include "core/position.h"
 #include "core/string.h"
 #include <inttypes.h>
@@ -36,46 +36,46 @@ cubec_ast_node_t cubec_create_ast_node(cubec_allocator_t allocator,
     };
     node->items = cubec_create_array(allocator, &initialize);
   } else {
-    cubec_map_initialize_t initialize = {
+    cubec_hash_map_initialize_t initialize = {
         .autofree_key = true,
         .autofree_value = true,
-        .compare = (cubec_compare_fn_t)strcmp,
+        .hash = (cubec_hash_fn_t)cubec_cstring_sdb,
     };
-    node->children = cubec_create_map(allocator, &initialize);
+    node->children = cubec_create_hash_map(allocator, &initialize);
   }
   node->changed = false;
   return node;
 }
 void cubec_ast_add_child(cubec_allocator_t allocator, cubec_ast_node_t node,
                          const char *name, cubec_ast_node_t child) {
-  cubec_map_set(node->children, cubec_create_cstring(allocator, name), child,
-                NULL);
+  cubec_hash_map_set(node->children, cubec_create_cstring(allocator, name),
+                     child, NULL);
   child->parent = node;
   node->changed = true;
 }
 void cubec_ast_remove_child(cubec_ast_node_t node, const char *name) {
-  cubec_map_delete(node->children, name, NULL);
+  cubec_hash_map_delete(node->children, name, NULL);
   node->changed = true;
 }
 cubec_ast_node_t cubec_ast_move_child(cubec_ast_node_t node, const char *name) {
   node->changed = true;
-  return cubec_map_move(node->children, name, NULL);
+  return cubec_hash_map_move(node->children, name, NULL);
 }
 cubec_ast_node_t cubec_ast_get_child(cubec_ast_node_t node, const char *name) {
-  return cubec_map_get(node->children, name, NULL);
+  return cubec_hash_map_get(node->children, name, NULL);
 }
 cubec_ast_node_t cubec_ast_get_item(cubec_ast_node_t node, size_t idx) {
   return cubec_array_get(node->items, idx);
 }
 const char *cubec_ast_get_child_name(cubec_ast_node_t node,
                                      cubec_ast_node_t child) {
-  cubec_list_node_t it = cubec_map_get_first(node->children);
-  while (it != cubec_map_get_end(node->children)) {
-    cubec_ast_node_t val = cubec_map_node_get_value(it);
+  cubec_list_node_t it = cubec_hash_map_get_first(node->children);
+  while (it != cubec_hash_map_get_end(node->children)) {
+    cubec_ast_node_t val = cubec_hash_map_node_get_value(it, node->children);
     if (val == child) {
-      return cubec_map_node_get_key(it);
+      return cubec_hash_map_node_get_key(it, node->children);
     }
-    it = cubec_map_node_get_next(it);
+    it = cubec_hash_map_node_get_next(it);
   }
   return NULL;
 }
@@ -126,8 +126,8 @@ void cubec_ast_set_item(cubec_ast_node_t node, size_t idx,
 }
 void cubec_ast_set_child(cubec_allocator_t allocator, cubec_ast_node_t node,
                          const char *name, cubec_ast_node_t child) {
-  cubec_map_set(node->children, cubec_create_cstring(allocator, name), child,
-                NULL);
+  cubec_hash_map_set(node->children, cubec_create_cstring(allocator, name),
+                     child, NULL);
   child->parent = node;
   node->changed = true;
 }
@@ -439,10 +439,11 @@ static void cubec_print_node(cubec_ast_node_t node, cubec_allocator_t allocator,
     sprintf(s, ",\"text\":\"%s\"", encoded_text);
     cubec_string_concat(out, allocator, s);
     cubec_allocator_free(allocator, encoded_text);
-    cubec_list_node_t it = cubec_map_get_first(node->children);
-    while (it != cubec_map_get_end(node->children)) {
-      const char *key = cubec_map_node_get_key(it);
-      cubec_ast_node_t value = cubec_map_node_get_value(it);
+    cubec_list_node_t it = cubec_hash_map_get_first(node->children);
+    while (it != cubec_hash_map_get_end(node->children)) {
+      const char *key = cubec_hash_map_node_get_key(it, node->children);
+      cubec_ast_node_t value =
+          cubec_hash_map_node_get_value(it, node->children);
       if (value) {
         cubec_string_concat(out, allocator, ",");
         char s[strlen(key) + 32];
@@ -450,7 +451,7 @@ static void cubec_print_node(cubec_ast_node_t node, cubec_allocator_t allocator,
         cubec_string_concat(out, allocator, s);
         cubec_print_node(value, allocator, out);
       }
-      it = cubec_map_node_get_next(it);
+      it = cubec_hash_map_node_get_next(it);
     }
     cubec_string_concat(out, allocator, "}");
   }
@@ -494,12 +495,12 @@ cubec_ast_node_t cubec_visit_ast_node(cubec_allocator_t allocator,
       idx++;
     }
   } else {
-    cubec_list_node_t it = cubec_map_get_first(node->children);
-    while (it != cubec_map_get_end(node->children)) {
-      cubec_ast_node_t item = cubec_map_node_get_value(it);
+    cubec_list_node_t it = cubec_hash_map_get_first(node->children);
+    while (it != cubec_hash_map_get_end(node->children)) {
+      cubec_ast_node_t item = cubec_hash_map_node_get_value(it, node->children);
       item = cubec_visit_ast_node(allocator, item, ctx, visit);
       if (item == node && item->changed) {
-        it = cubec_map_get_first(node->children);
+        it = cubec_hash_map_get_first(node->children);
         item->changed = false;
         continue;
       }
@@ -542,11 +543,12 @@ cubec_ast_node_t cubec_clone_ast_node(cubec_allocator_t allocator,
       cubec_ast_add_item(n, item);
     }
   } else {
-    for (cubec_list_node_t it = cubec_map_get_first(node->children);
-         it != cubec_map_get_end(node->children);
-         it = cubec_map_node_get_next(it)) {
-      const char *key = cubec_map_node_get_key(it);
-      cubec_ast_node_t child = cubec_map_node_get_value(it);
+    for (cubec_list_node_t it = cubec_hash_map_get_first(node->children);
+         it != cubec_hash_map_get_end(node->children);
+         it = cubec_hash_map_node_get_next(it)) {
+      const char *key = cubec_hash_map_node_get_key(it, node->children);
+      cubec_ast_node_t child =
+          cubec_hash_map_node_get_value(it, node->children);
       child = cubec_clone_ast_node(allocator, child);
       cubec_ast_add_child(allocator, n, key, child);
     }

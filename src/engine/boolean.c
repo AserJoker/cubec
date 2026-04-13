@@ -1,5 +1,4 @@
 #include "engine/boolean.h"
-#include "core/position.h"
 #include "core/string.h"
 #include "engine/context.h"
 #include "engine/numeric.h"

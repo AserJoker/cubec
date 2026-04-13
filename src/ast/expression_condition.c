@@ -3,7 +3,6 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
-#include "core/map.h"
 #include "core/position.h"
 
 cubec_ast_node_t
@@ -30,7 +29,7 @@ cubec_read_ast_expression_condition(cubec_allocator_t allocator,
     goto onerror;
   }
   if (*current.offset != '?') {
-    err = cubec_map_move(node->children, "condition", NULL);
+    err = cubec_hash_map_move(node->children, "condition", NULL);
     *position = err->loc.end;
     goto onerror;
   }

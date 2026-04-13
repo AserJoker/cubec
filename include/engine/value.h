@@ -21,6 +21,9 @@ cubec_value_t cubec_value_clone(cubec_allocator_t allocator,
 cubec_value_t cubec_value_assigment(cubec_value_t self,
                                     struct _cubec_context_t *ctx,
                                     cubec_value_t value);
+cubec_value_t cubec_value_unref_assigment(cubec_value_t self,
+                                    struct _cubec_context_t *ctx,
+                                    cubec_value_t value);
 bool cubec_value_is_error(cubec_value_t value);
 
 cubec_value_t cubec_value_to_string(cubec_value_t self,
@@ -98,6 +101,10 @@ cubec_value_t cubec_value_prefix_dec(cubec_value_t self,
 cubec_value_t cubec_value_postfix_inc(cubec_value_t self,
                                       struct _cubec_context_t *ctx);
 cubec_value_t cubec_value_postfix_dec(cubec_value_t self,
+                                      struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_unref(cubec_value_t self,
+                                      struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_ref(cubec_value_t self,
                                       struct _cubec_context_t *ctx);
 #ifdef __cplusplus
 }

@@ -2,6 +2,7 @@
 #include "core/allocator.h"
 #include "engine/context.h"
 #include "engine/type.h"
+#include "engine/value.h"
 #include <string.h>
 struct _cubec_ptr_meta_t {
   cubec_type_t type;
@@ -53,14 +54,13 @@ static char *cubec_ptr_type_to_string(cubec_type_t self,
     str[offset++] = '*';
   } else {
     strcpy(&str[offset], "[*]");
-    offset += 3;
   }
   if (!meta->mutable) {
-    strcpy(&str[offset], " const");
+    strcpy(&str[offset], "const ");
     offset += 6;
   }
   if (meta->volatile_) {
-    strcpy(&str[offset], " volatile");
+    strcpy(&str[offset], "volatile ");
     offset += 9;
   }
   strcpy(&str[offset], base_str);
@@ -70,6 +70,18 @@ static char *cubec_ptr_type_to_string(cubec_type_t self,
   return str;
 }
 
+static cubec_value_t cubec_ptr_unref(cubec_value_t self, cubec_context_t ctx) {
+  cubec_type_t ptr_type = cubec_value_get_type(self);
+  cubec_type_t type = cubec_ptr_type_get_type(ptr_type);
+  void **data = (void **)cubec_value_get_data(self);
+  void *dst = NULL;
+  if (data) {
+    dst = *data;
+  }
+  bool mutable = cubec_value_is_mutable(self);
+  return cubec_context_create_value(ctx, type, mutable, dst, NULL);
+}
+
 cubec_value_t cubec_create_ptr_type(cubec_context_t ctx, cubec_type_t type,
                                     bool mutable, bool volatile_) {
   cubec_ptr_meta_t meta = cubec_create_ptr_meta(
@@ -77,6 +89,7 @@ cubec_value_t cubec_create_ptr_type(cubec_context_t ctx, cubec_type_t type,
   struct _cubec_type_operator_t opt = {
       .is_type_equal = cubec_ptr_type_is_equal,
       .type_to_string = cubec_ptr_type_to_string,
+      .unref = cubec_ptr_unref,
   };
   return cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_PTR, sizeof(void *),
                                    sizeof(void *), meta, &opt, NULL);

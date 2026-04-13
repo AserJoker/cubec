@@ -2,6 +2,7 @@
 #include "core/allocator.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/ptr.h"
 #include "engine/str.h"
 #include "engine/type.h"
 #include <inttypes.h>
@@ -62,8 +63,32 @@ cubec_value_t cubec_value_assigment(cubec_value_t self, cubec_context_t ctx,
       return value;
     }
   }
-  memcpy(self->data, value->data, cubec_type_get_size(ltype));
-  return self;
+  if (self->data && value->data) {
+    memcpy(self->data, value->data, cubec_type_get_size(ltype));
+  }
+  return value;
+}
+
+cubec_value_t cubec_value_unref_assigment(cubec_value_t self,
+                                          struct _cubec_context_t *ctx,
+                                          cubec_value_t value) {
+  if (!self->mutable) {
+    return cubec_create_error(ctx, "value is not mutable");
+  }
+  cubec_type_t ptr_type = cubec_value_get_type(self);
+  cubec_type_t ltype = cubec_ptr_type_get_type(ptr_type);
+  cubec_type_t rtype = cubec_value_get_type(value);
+  if (!cubec_type_is_equal(ltype, rtype)) {
+    value = cubec_value_safe_convert(value, ctx, ltype);
+    if (cubec_value_is_error(value)) {
+      return value;
+    }
+  }
+  void *ptr = self->data;
+  if (ptr && value->data) {
+    memcpy(*(void **)ptr, value->data, cubec_type_get_size(ltype));
+  }
+  return value;
 }
 bool cubec_value_is_error(cubec_value_t value) {
   cubec_type_t type = cubec_value_get_type(value);
@@ -926,4 +951,32 @@ cubec_value_t cubec_value_postfix_dec(cubec_value_t self,
     return err;
   }
   return opt->postfix_dec(self, ctx);
+}
+cubec_value_t cubec_value_unref(cubec_value_t self,
+                                struct _cubec_context_t *ctx) {
+  cubec_type_t type = cubec_value_get_type(self);
+  cubec_type_operator_t opt = cubec_type_get_operator(type);
+  cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
+  if (!opt->unref) {
+    char *ltype_name = cubec_type_to_string(type, allocator);
+    cubec_value_t err = cubec_create_error(
+        ctx, "Invalid operands expression ('%s')", ltype_name);
+    cubec_allocator_free(allocator, ltype_name);
+    return err;
+  }
+  return opt->unref(self, ctx);
+}
+cubec_value_t cubec_value_ref(cubec_value_t self,
+                              struct _cubec_context_t *ctx) {
+  cubec_type_t type = cubec_value_get_type(self);
+  cubec_type_operator_t opt = cubec_type_get_operator(type);
+  cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
+  if (!opt->ref) {
+    char *ltype_name = cubec_type_to_string(type, allocator);
+    cubec_value_t err = cubec_create_error(
+        ctx, "Invalid operands expression ('%s')", ltype_name);
+    cubec_allocator_free(allocator, ltype_name);
+    return err;
+  }
+  return opt->ref(self, ctx);
 }

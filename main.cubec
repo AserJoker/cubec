@@ -1,5 +1,7 @@
+
 func main(argc:i32,argv:[*]str):void {
-    const a:i8 = 128;
-    const c = ~a;
-    print(c);
+    let a = 1;
+    let p = &a;
+    *p = 2;
+    print(a);
 }

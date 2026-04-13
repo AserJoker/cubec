@@ -16,7 +16,8 @@
 #include <stdint.h>
 
 cubec_value_t cubec_eval_variable_declaratior(cubec_context_t ctx,
-                                              cubec_ast_node_t node) {
+                                              cubec_ast_node_t node,
+                                              cubec_ast_node_t kind) {
   cubec_ast_node_t identifier = cubec_ast_get_child(node, "identifier");
   cubec_ast_node_t type = cubec_ast_get_child(node, "type");
   cubec_ast_node_t initialize = cubec_ast_get_child(node, "initialize");
@@ -181,9 +182,13 @@ cubec_value_t cubec_eval_variable_declaratior(cubec_context_t ctx,
   } else {
     value_type = cubec_value_get_type(value);
   }
-  char *c_id = cubec_location_get(identifier->loc, allocator);
   void *data = cubec_value_get_data(value);
-  value = cubec_context_create_value(ctx, value_type, true, data, c_id);
+  if (cubec_location_is(kind->loc, "comptime") && !data) {
+    return cubec_create_compile_error(ctx, initialize, "value is not comptime");
+  }
+  char *c_id = cubec_location_get(identifier->loc, allocator);
+  bool mutable = cubec_location_is(kind->loc, "let");
+  value = cubec_context_create_value(ctx, value_type, mutable, data, c_id);
   cubec_allocator_free(allocator, c_id);
   if (cubec_value_is_error(value)) {
     return cubec_convert_compile_error(ctx, node, value);
