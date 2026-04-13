@@ -7,7 +7,6 @@
 #include "engine/type.h"
 #include "engine/value.h"
 #include "eval/expression.h"
-#include <corecrt_search.h>
 #include <stdbool.h>
 cubec_value_t cubec_eval_expression_binary(cubec_context_t ctx,
                                            cubec_ast_node_t node) {

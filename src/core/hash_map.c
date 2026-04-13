@@ -3,7 +3,6 @@
 #include "core/hash.h"
 #include "core/list.h"
 #include <stdint.h>
-#include <xkeycheck.h>
 typedef struct _cubec_hash_map_node_t *cubec_hash_map_node_t;
 struct _cubec_hash_map_node_t {
   int64_t hash;
