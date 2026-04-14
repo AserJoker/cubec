@@ -1,4 +1,5 @@
 #include "ast/literal_numeric.h"
+#include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
@@ -132,6 +133,22 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
     }
   } else {
     goto onerror;
+  }
+
+  cubec_ast_node_t value =
+      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_NUMERIC_VALUE);
+  value->loc.begin = *position;
+  value->loc.end = current;
+  value->loc.filename = filename;
+  cubec_ast_add_child(allocator, node, "value", value);
+  if (*current.offset == '@') {
+    current.offset++;
+    current.column++;
+    cubec_ast_node_t type =
+        cubec_read_ast_literal_identifier(allocator, &current, end, filename);
+    if (type) {
+      cubec_ast_add_child(allocator, node, "type", type);
+    }
   }
   node->loc.begin = *position;
   node->loc.end = current;

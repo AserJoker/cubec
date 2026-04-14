@@ -17,6 +17,7 @@ cubec_value_t cubec_create_compile_error(cubec_context_t ctx,
 cubec_value_t cubec_convert_compile_error(cubec_context_t ctx,
                                           cubec_ast_node_t node,
                                           cubec_value_t err);
+const char *cubec_error_get_message(cubec_value_t value);
 
 #ifdef __cplusplus
 }

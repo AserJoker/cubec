@@ -40,14 +40,22 @@ cubec_value_t cubec_create_compile_error(cubec_context_t ctx,
   char *line = cubec_location_get_line(node->loc, allocator);
   size_t len = strlen(line);
   char marks[len + 1];
-  for (size_t idx = 0; idx < len; idx++) {
-    if (idx >= node->loc.begin.column - 1 && idx < node->loc.end.column - 1) {
-      marks[idx] = '^';
+  for (size_t idx = 0; idx < len + 1; idx++) {
+    if (node->loc.begin.line == node->loc.end.line) {
+      if (idx >= node->loc.begin.column - 1 && idx < node->loc.end.column - 1) {
+        marks[idx] = '^';
+      } else {
+        marks[idx] = ' ';
+      }
     } else {
-      marks[idx] = ' ';
+      if (idx >= node->loc.begin.column - 1) {
+        marks[idx] = '^';
+      } else {
+        marks[idx] = ' ';
+      }
     }
   }
-  marks[len - 1] = 0;
+  marks[len] = 0;
   va_list args;
   va_start(args, fmt);
   len = vsnprintf(NULL, 0, fmt, args);
@@ -65,8 +73,8 @@ cubec_value_t cubec_create_compile_error(cubec_context_t ctx,
                message, line_number, line, (int)len, " ", marks);
   char msg[str_len + 1];
   sprintf(msg, "%s:%" PRIuPTR ":%" PRIuPTR ": error: %s\n%s%s\n%*s%s",
-          node->loc.filename, node->loc.begin.line, node->loc.begin.column, message,
-          line_number, line, (int)len, " ", marks);
+          node->loc.filename, node->loc.begin.line, node->loc.begin.column,
+          message, line_number, line, (int)len, " ", marks);
   const char *str = cubec_context_create_cstring(ctx, msg);
   cubec_allocator_free(allocator, line);
   return cubec_context_create_value(ctx, type, false, &str, NULL);
@@ -76,4 +84,8 @@ cubec_value_t cubec_convert_compile_error(cubec_context_t ctx,
                                           cubec_value_t err) {
   const char *message = *(const char **)cubec_value_get_data(err);
   return cubec_create_compile_error(ctx, node, "%s", message);
+}
+const char *cubec_error_get_message(cubec_value_t value) {
+  const char *message = *(const char **)cubec_value_get_data(value);
+  return message;
 }

@@ -38,7 +38,9 @@ cubec_value_t cubec_create_value(cubec_allocator_t allocator, cubec_type_t type,
   self->comptime = false;
   return self;
 }
-void cubec_value_set_comptime(cubec_value_t self) { self->comptime = true; }
+void cubec_value_set_comptime(cubec_value_t self, bool comptime) {
+  self->comptime = comptime;
+}
 bool cubec_value_is_comptime(cubec_value_t self) { return self->comptime; }
 cubec_type_t cubec_value_get_type(cubec_value_t value) { return value->type; }
 bool cubec_value_type_is(cubec_value_t value, cubec_type_kind_t kind) {

@@ -18,6 +18,7 @@
 #include "engine/union.h"
 #include "engine/value.h"
 #include "engine/void.h"
+#include "resolve/program.h"
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -219,7 +220,7 @@ cubec_value_t cubec_context_load_module(cubec_context_t self,
       cubec_allocator_free(self->allocator, source);
       return res;
     }
-    cubec_value_t value = self->value_undefined;
+    cubec_value_t value = cubec_resolve_program(self,node);
     if (cubec_value_type_is(value, CUBEC_VALUE_TYPE_ERROR)) {
       cubec_allocator_free(self->allocator, node);
       cubec_allocator_free(self->allocator, source);
