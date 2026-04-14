@@ -30,7 +30,7 @@ cubec_ast_node_t cubec_read_ast_expression_compute_member(
       cubec_read_ast_expression(allocator, &current, end, filename);
   if (!field) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid or unexpected token, missing field "
+                                 "invalid or unexpected token, missing field "
                                  "for compute member expression");
     goto onerror;
   }
@@ -45,7 +45,7 @@ cubec_ast_node_t cubec_read_ast_expression_compute_member(
   }
   if (*current.offset != ']') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid or unexpected token, missing ']' for "
+                                 "invalid or unexpected token, missing ']' for "
                                  "compute member expression");
     goto onerror;
   }

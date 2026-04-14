@@ -16,7 +16,7 @@ cubec_ast_node_t cubec_read_ast_literal_char(cubec_allocator_t allocator,
   for (;;) {
     if (!*current.offset) {
       return cubec_create_ast_error(allocator, *position, current, filename,
-                                    "Invalid charactor literal, missing '\''");
+                                    "invalid charactor literal, missing '\''");
     }
     if (*current.offset == '\'') {
       break;

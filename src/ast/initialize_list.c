@@ -41,7 +41,7 @@ cubec_ast_node_t cubec_read_ast_initialize_list(cubec_allocator_t allocator,
           cubec_read_ast_initialize_field(allocator, &current, end, filename);
       if (!item) {
         err = cubec_create_ast_error(allocator, *position, current, filename,
-                                     "Invalid initialize list");
+                                     "invalid initialize list");
         goto onerror;
       }
       if (item->type == CUBEC_NODE_TYPE_ERROR) {
@@ -58,7 +58,7 @@ cubec_ast_node_t cubec_read_ast_initialize_list(cubec_allocator_t allocator,
       }
       if (*current.offset != ',') {
         err = cubec_create_ast_error(allocator, *position, current, filename,
-                                     "Invalid initialize list");
+                                     "invalid initialize list");
         goto onerror;
       }
       current.offset++;
@@ -78,7 +78,7 @@ cubec_ast_node_t cubec_read_ast_initialize_list(cubec_allocator_t allocator,
   }
   if (*current.offset != '}') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid initialize list");
+                                 "invalid initialize list");
     goto onerror;
   }
   current.offset++;

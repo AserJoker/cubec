@@ -80,7 +80,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
   }
   if (*current.offset != '{') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid struct declarator, missing '{'");
+                                 "invalid struct declarator, missing '{'");
     goto onerror;
   }
   current.offset++;
@@ -142,7 +142,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
         goto next;
       }
       err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "Invalid struct field");
+                                   "invalid struct field");
       goto onerror;
     next:
       err = cubec_ast_skip_all(allocator, &current, end, filename);
@@ -160,7 +160,7 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
   }
   if (*current.offset != '}') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid struct declarator, missing '}'");
+                                 "invalid struct declarator, missing '}'");
     goto onerror;
   }
   current.offset++;

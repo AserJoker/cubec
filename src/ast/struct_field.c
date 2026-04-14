@@ -48,7 +48,7 @@ cubec_ast_node_t cubec_read_ast_struct_field(cubec_allocator_t allocator,
   }
   if (*current.offset != ';') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid struct field");
+                                 "invalid struct field");
     goto onerror;
   }
   node->loc.begin = *position;

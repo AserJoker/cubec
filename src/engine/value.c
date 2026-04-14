@@ -204,7 +204,7 @@ cubec_value_t cubec_value_convert(cubec_value_t self,
   if (!res) {
     char *dst_name = cubec_type_to_string(ltype, allocator);
     char *src_name = cubec_type_to_string(type, allocator);
-    cubec_value_t err = cubec_create_error(ctx, "Cannot convert '%s' to '%s'",
+    cubec_value_t err = cubec_create_error(ctx, "cannot convert '%s' to '%s'",
                                            src_name, dst_name);
     cubec_allocator_free(allocator, src_name);
     cubec_allocator_free(allocator, dst_name);
@@ -235,10 +235,15 @@ cubec_value_t cubec_value_safe_convert(cubec_value_t self,
       return cubec_value_convert(self, ctx, type);
     }
   }
+  if (lkind == CUBEC_VALUE_TYPE_PTR || lkind == CUBEC_VALUE_TYPE_PARRAY) {
+    if (rkind == CUBEC_VALUE_TYPE_OPAQUE) {
+      return cubec_value_convert(self, ctx, type);
+    }
+  }
   cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
   char *dst_name = cubec_type_to_string(rtype, allocator);
   char *src_name = cubec_type_to_string(ltype, allocator);
-  cubec_value_t err = cubec_create_error(ctx, "Cannot convert '%s' to '%s'",
+  cubec_value_t err = cubec_create_error(ctx, "cannot convert '%s' to '%s'",
                                          src_name, dst_name);
   cubec_allocator_free(allocator, src_name);
   cubec_allocator_free(allocator, dst_name);
@@ -254,7 +259,7 @@ cubec_value_t cubec_value_add(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -294,7 +299,7 @@ cubec_value_t cubec_value_sub(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -334,7 +339,7 @@ cubec_value_t cubec_value_mul(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -374,7 +379,7 @@ cubec_value_t cubec_value_div(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -414,7 +419,7 @@ cubec_value_t cubec_value_mod(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -454,7 +459,7 @@ cubec_value_t cubec_value_and(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -494,7 +499,7 @@ cubec_value_t cubec_value_or(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -534,7 +539,7 @@ cubec_value_t cubec_value_xor(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -574,7 +579,7 @@ cubec_value_t cubec_value_shl(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -614,7 +619,7 @@ cubec_value_t cubec_value_shr(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -654,7 +659,7 @@ cubec_value_t cubec_value_eq(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -694,7 +699,7 @@ cubec_value_t cubec_value_ne(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -734,7 +739,7 @@ cubec_value_t cubec_value_lt(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -774,7 +779,7 @@ cubec_value_t cubec_value_gt(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -814,7 +819,7 @@ cubec_value_t cubec_value_le(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -854,7 +859,7 @@ cubec_value_t cubec_value_ge(cubec_value_t self, struct _cubec_context_t *ctx,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -892,7 +897,7 @@ cubec_value_t cubec_value_plus(cubec_value_t self,
   if (!opt->plus_opt) {
     char *ltype_name = cubec_type_to_string(type, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands expression ('%s')", ltype_name);
+        ctx, "invalid operands expression ('%s')", ltype_name);
     cubec_allocator_free(allocator, ltype_name);
     return err;
   }
@@ -906,7 +911,7 @@ cubec_value_t cubec_value_neg(cubec_value_t self,
   if (!opt->neg_opt) {
     char *ltype_name = cubec_type_to_string(type, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands expression ('%s')", ltype_name);
+        ctx, "invalid operands expression ('%s')", ltype_name);
     cubec_allocator_free(allocator, ltype_name);
     return err;
   }
@@ -920,7 +925,7 @@ cubec_value_t cubec_value_bitwise_not(cubec_value_t self,
   if (!opt->bitwise_not_opt) {
     char *ltype_name = cubec_type_to_string(type, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands expression ('%s')", ltype_name);
+        ctx, "invalid operands expression ('%s')", ltype_name);
     cubec_allocator_free(allocator, ltype_name);
     return err;
   }
@@ -934,7 +939,7 @@ cubec_value_t cubec_value_logical_not(cubec_value_t self,
   if (!opt->logical_not_opt) {
     char *ltype_name = cubec_type_to_string(type, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands expression ('%s')", ltype_name);
+        ctx, "invalid operands expression ('%s')", ltype_name);
     cubec_allocator_free(allocator, ltype_name);
     return err;
   }
@@ -951,7 +956,7 @@ cubec_value_t cubec_value_logical_and(cubec_value_t self,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -992,7 +997,7 @@ cubec_value_t cubec_value_logical_or(cubec_value_t self,
     char *ltype_name = cubec_type_to_string(ltype, allocator);
     char *rtype_name = cubec_type_to_string(rtype, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands to binary expression ('%s' and '%s')",
+        ctx, "invalid operands to binary expression ('%s' and '%s')",
         ltype_name, rtype_name);
     cubec_allocator_free(allocator, ltype_name);
     cubec_allocator_free(allocator, rtype_name);
@@ -1030,7 +1035,7 @@ cubec_value_t cubec_value_unref(cubec_value_t self,
   if (!opt->unref) {
     char *ltype_name = cubec_type_to_string(type, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands expression ('%s')", ltype_name);
+        ctx, "invalid operands expression ('%s')", ltype_name);
     cubec_allocator_free(allocator, ltype_name);
     return err;
   }
@@ -1044,7 +1049,7 @@ cubec_value_t cubec_value_ref(cubec_value_t self,
   if (!opt->ref) {
     char *ltype_name = cubec_type_to_string(type, allocator);
     cubec_value_t err = cubec_create_error(
-        ctx, "Invalid operands expression ('%s')", ltype_name);
+        ctx, "invalid operands expression ('%s')", ltype_name);
     cubec_allocator_free(allocator, ltype_name);
     return err;
   }

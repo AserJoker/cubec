@@ -35,7 +35,7 @@ cubec_ast_node_t cubec_read_ast_statement_foreach(cubec_allocator_t allocator,
   }
   if (*current.offset != '(') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement, missing '('");
+                                 "invalid statement, missing '('");
     goto onerror;
   }
   current.offset++;
@@ -48,7 +48,7 @@ cubec_ast_node_t cubec_read_ast_statement_foreach(cubec_allocator_t allocator,
       cubec_read_ast_literal_identifier(allocator, &current, end, filename);
   if (!kind) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement");
+                                 "invalid statement");
     goto onerror;
   }
   if (kind->type == CUBEC_NODE_TYPE_ERROR) {
@@ -70,7 +70,7 @@ cubec_ast_node_t cubec_read_ast_statement_foreach(cubec_allocator_t allocator,
       cubec_read_ast_literal_identifier(allocator, &current, end, filename);
   if (!identifier) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement");
+                                 "invalid statement");
     goto onerror;
   }
   if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
@@ -84,7 +84,7 @@ cubec_ast_node_t cubec_read_ast_statement_foreach(cubec_allocator_t allocator,
   }
   if (*current.offset != ':') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement, missing ':'");
+                                 "invalid statement, missing ':'");
     goto onerror;
   }
   current.offset++;
@@ -97,7 +97,7 @@ cubec_ast_node_t cubec_read_ast_statement_foreach(cubec_allocator_t allocator,
       cubec_read_ast_expression(allocator, &current, end, filename);
   if (!expression) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement");
+                                 "invalid statement");
     goto onerror;
   }
   if (expression->type == CUBEC_NODE_TYPE_ERROR) {
@@ -111,7 +111,7 @@ cubec_ast_node_t cubec_read_ast_statement_foreach(cubec_allocator_t allocator,
   }
   if (*current.offset != ')') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement, missing ')'");
+                                 "invalid statement, missing ')'");
     goto onerror;
   }
   current.offset++;
@@ -124,7 +124,7 @@ cubec_ast_node_t cubec_read_ast_statement_foreach(cubec_allocator_t allocator,
       cubec_read_ast_statement(allocator, &current, end, filename);
   if (!body) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid foreach statement, missing body");
+                                 "invalid foreach statement, missing body");
     goto onerror;
   }
   if (body->type == CUBEC_NODE_TYPE_ERROR) {

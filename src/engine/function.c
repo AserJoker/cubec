@@ -105,55 +105,7 @@ static char *cubec_function_type_to_string(cubec_type_t self,
 static cubec_value_t cubec_function_call(cubec_value_t self,
                                          cubec_context_t ctx, size_t argc,
                                          cubec_value_t argv[]) {
-  cubec_type_t type = cubec_value_get_type(self);
-  cubec_array_t arguments = cubec_function_type_get_arguments(type);
-  size_t require_argc = cubec_array_get_size(arguments);
-  bool is_varidic = cubec_function_type_is_variadic(type);
-  if (!is_varidic) {
-    if (argc != require_argc) {
-      return cubec_create_error(ctx,
-                                "function requires %" PRIuPTR
-                                " arguments, received %" PRIuPTR "",
-                                require_argc, argc);
-    }
-  } else {
-    require_argc -= 1;
-  }
-  for (size_t idx = 0; idx < require_argc; idx++) {
-    cubec_type_t arg_type = cubec_value_get_type(argv[idx]);
-    cubec_type_t type = cubec_array_get(arguments, idx);
-    if (!cubec_type_is_equal(arg_type, type)) {
-      cubec_value_t arg = cubec_value_safe_convert(argv[idx], ctx, type);
-      if (cubec_value_is_error(arg)) {
-        return arg;
-      }
-      if (cubec_value_is_interrupt(arg)) {
-        return arg;
-      }
-    }
-  }
-  if (is_varidic) {
-    cubec_type_t type = cubec_array_get(arguments, require_argc);
-    for (size_t idx = require_argc; idx < argc; idx++) {
-      cubec_type_t arg_type = cubec_value_get_type(argv[idx]);
-      if (!cubec_type_is_equal(arg_type, type)) {
-        cubec_value_t arg = cubec_value_safe_convert(argv[idx], ctx, type);
-        if (cubec_value_is_error(arg)) {
-          return arg;
-        }
-        if (cubec_value_is_interrupt(arg)) {
-          return arg;
-        }
-      }
-    }
-  }
-  cubec_type_t return_type = cubec_function_type_get_type(type);
-  // cubec_ast_node_t node = cubec_value_get_data(self);
-  // cubec_ast_node_t kind = cubec_ast_get_child(node, "kind");
-  // if (kind && cubec_location_is(kind->loc, "comptime")) {
-  //   // TODO: call comptime
-  // }
-  return cubec_context_create_value(ctx, return_type, false, NULL, NULL);
+  return cubec_create_error(ctx, "not implement");
 }
 
 cubec_value_t cubec_create_function_type(cubec_context_t ctx, cubec_type_t type,

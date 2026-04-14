@@ -30,7 +30,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
   if (!temp) {
     err = cubec_create_ast_error(
         allocator, *position, current, filename,
-        "Invalid or unexpected template generator expression");
+        "invalid or unexpected template generator expression");
     goto onerror;
   }
   if (temp->type == CUBEC_NODE_TYPE_ERROR) {
@@ -43,7 +43,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
   if (*current.offset != '<') {
     err = cubec_create_ast_error(
         allocator, *position, current, filename,
-        "Invalid or unexpected template generator expression");
+        "invalid or unexpected template generator expression");
     goto onerror;
   }
   current.offset++;
@@ -59,7 +59,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
       if (!item) {
         err = cubec_create_ast_error(
             allocator, *position, current, filename,
-            "Invalid or unexpected template generator expression");
+            "invalid or unexpected template generator expression");
         goto onerror;
       }
       if (item->type == CUBEC_NODE_TYPE_ERROR) {
@@ -77,7 +77,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
       if (*current.offset != ',') {
         err = cubec_create_ast_error(
             allocator, *position, current, filename,
-            "Invalid or unexpected template generator expression");
+            "invalid or unexpected template generator expression");
         goto onerror;
       }
       current.offset++;
@@ -95,7 +95,7 @@ cubec_ast_node_t cubec_read_ast_expression_template_generator(
   if (*current.offset != '>') {
     err = cubec_create_ast_error(
         allocator, *position, current, filename,
-        "Invalid or unexpected template generator expression");
+        "invalid or unexpected template generator expression");
     goto onerror;
   }
   node->loc.begin = *position;

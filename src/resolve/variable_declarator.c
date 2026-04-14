@@ -13,8 +13,7 @@
 #include "resolve/type.h"
 
 cubec_value_t cubec_resolve_variable_declarator(cubec_context_t ctx,
-                                                cubec_ast_node_t node,
-                                                cubec_ast_node_t kind) {
+                                                cubec_ast_node_t node) {
   cubec_ast_node_t identifier = cubec_ast_get_child(node, "identifier");
   cubec_ast_node_t initialize = cubec_ast_get_child(node, "initialize");
   cubec_ast_node_t type_node = cubec_ast_get_child(node, "type");
@@ -31,7 +30,7 @@ cubec_value_t cubec_resolve_variable_declarator(cubec_context_t ctx,
     cubec_ast_add_child(allocator, initialize, "type", type_node);
     type_node = NULL;
   }
-  if (cubec_location_is(kind->loc, "comptime")) {
+  if (cubec_context_is_comptime(ctx)) {
     value = cubec_eval_expression(ctx, initialize);
   } else {
     value = cubec_resolve_expression(ctx, initialize);
@@ -56,10 +55,9 @@ cubec_value_t cubec_resolve_variable_declarator(cubec_context_t ctx,
       return value;
     }
   }
-  bool mutable = !cubec_location_is(kind->loc, "const");
   void *data = cubec_value_get_data(value);
   char *name = cubec_location_get(identifier->loc, allocator);
-  value = cubec_context_create_value(ctx, type, mutable, data, name);
+  value = cubec_context_create_value(ctx, type, true, data, name);
   cubec_allocator_free(allocator, name);
   return value;
 }

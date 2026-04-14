@@ -2,7 +2,9 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
+#include "core/location.h"
 #include "core/position.h"
+#include <stdint.h>
 
 cubec_ast_node_t cubec_read_ast_literal_string(cubec_allocator_t allocator,
                                                cubec_position_t *position,
@@ -15,7 +17,7 @@ cubec_ast_node_t cubec_read_ast_literal_string(cubec_allocator_t allocator,
   int32_t code = cubec_ast_read_code(&current, end, filename);
   if (code < 0) {
     return cubec_create_ast_error(allocator, *position, current, filename,
-                                  "Invalid unicode code");
+                                  "invalid unicode code");
   }
   if (code != '\"') {
     return NULL;
@@ -23,28 +25,81 @@ cubec_ast_node_t cubec_read_ast_literal_string(cubec_allocator_t allocator,
   for (;;) {
     if (!*current.offset) {
       return cubec_create_ast_error(allocator, *position, current, filename,
-                                    "Invalid string literal, missing '\"'");
+                                    "invalid string literal, missing '\"'");
     }
+    cubec_position_t escape_start = current;
     code = cubec_ast_read_code(&current, end, filename);
     if (code < 0) {
       return cubec_create_ast_error(allocator, *position, current, filename,
-                                    "Invalid unicode code");
+                                    "invalid unicode code");
     }
     if (code == '\n' || code == '\r' || code == 0x2028 || code == 2029) {
       return cubec_create_ast_error(allocator, *position, current, filename,
-                                    "Invalid string literal, missing '\"'");
+                                    "invalid string literal, missing '\"'");
     }
     if (code == '\\') {
       if (!*current.offset) {
-        return cubec_create_ast_error(allocator, *position, current, filename,
-                                      "Invalid string literal, missing '\"'");
+        return cubec_create_ast_error(allocator, escape_start, current,
+                                      filename,
+                                      "invalid string literal, missing '\"'");
       }
       code = cubec_ast_read_code(&current, end, filename);
       if (code < 0) {
-        return cubec_create_ast_error(allocator, *position, current, filename,
-                                      "Invalid unicode code");
+        return cubec_create_ast_error(allocator, escape_start, current,
+                                      filename, "invalid unicode code");
       }
-      continue;
+      if (code == 'n' || code == 'r' || code == 'a' || code == 'b' ||
+          code == '\\' || code == 't' || code == 'f') {
+        continue;
+      }
+      if (code == 'x') {
+        for (size_t idx = 0; idx < 2; idx++) {
+          cubec_position_t backup = current;
+          code = cubec_ast_read_code(&current, end, filename);
+          if (code < 0) {
+            return cubec_create_ast_error(allocator, escape_start, current,
+                                          filename, "invalid unicode code");
+          }
+          if (code >= '0' && code <= '9' || code >= 'a' && code <= 'f' ||
+              code >= 'A' && code <= 'F') {
+            ;
+          } else if (idx == 0) {
+            current = backup;
+            return cubec_create_ast_error(allocator, escape_start, current,
+                                          filename, "invalid unicode code");
+          } else {
+            current = backup;
+            break;
+          }
+        }
+        continue;
+      }
+      if (code >= '0' && code <= '7') {
+        size_t c = code - '0';
+        for (size_t idx = 0; idx < 2; idx++) {
+          c *= 8;
+          cubec_position_t backup = current;
+          code = cubec_ast_read_code(&current, end, filename);
+          if (code < 0) {
+            return cubec_create_ast_error(allocator, escape_start, current,
+                                          filename, "invalid unicode code");
+          }
+          if (code >= '0' && code <= '7') {
+            c += code - '0';
+          } else {
+            c /= 8;
+            current = backup;
+            break;
+          }
+        }
+        if (c > UINT8_MAX) {
+          return cubec_create_ast_error(allocator, escape_start, current,
+                                        filename, "invalid escape code");
+        }
+        continue;
+      }
+      return cubec_create_ast_error(allocator, escape_start, current, filename,
+                                    "invalid escape code");
     }
     if (code == '\"') {
       break;

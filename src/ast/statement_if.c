@@ -37,7 +37,7 @@ cubec_ast_node_t cubec_read_ast_statement_if(cubec_allocator_t allocator,
   }
   if (*current.offset != '(') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement, missing '('");
+                                 "invalid statement, missing '('");
     goto onerror;
   }
   current.offset++;
@@ -50,7 +50,7 @@ cubec_ast_node_t cubec_read_ast_statement_if(cubec_allocator_t allocator,
       cubec_read_ast_expression(allocator, &current, end, filename);
   if (!condition) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement, missing condition");
+                                 "invalid statement, missing condition");
     goto onerror;
   }
   if (condition->type == CUBEC_NODE_TYPE_ERROR) {
@@ -64,7 +64,7 @@ cubec_ast_node_t cubec_read_ast_statement_if(cubec_allocator_t allocator,
   }
   if (*current.offset != ')') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid if statement, missing ')'");
+                                 "invalid if statement, missing ')'");
     goto onerror;
   }
   current.offset++;
@@ -77,7 +77,7 @@ cubec_ast_node_t cubec_read_ast_statement_if(cubec_allocator_t allocator,
       cubec_read_ast_statement(allocator, &current, end, filename);
   if (!consequent) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement, missing consequent");
+                                 "invalid statement, missing consequent");
     goto onerror;
   }
   if (consequent->type == CUBEC_NODE_TYPE_ERROR) {
@@ -104,7 +104,7 @@ cubec_ast_node_t cubec_read_ast_statement_if(cubec_allocator_t allocator,
         cubec_read_ast_statement(allocator, &current, end, filename);
     if (!alternate) {
       err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "Invalid statement, missing alternate");
+                                   "invalid statement, missing alternate");
       goto onerror;
     }
     if (alternate->type == CUBEC_NODE_TYPE_ERROR) {

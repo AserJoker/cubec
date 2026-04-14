@@ -38,7 +38,7 @@ cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
   }
   if (*current.offset != '(') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement, missing '('");
+                                 "invalid statement, missing '('");
     goto onerror;
   }
   current.offset++;
@@ -54,7 +54,7 @@ cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
   }
   if (!init) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid for statement, missing initialize");
+                                 "invalid for statement, missing initialize");
     goto onerror;
   }
   if (init->type == CUBEC_NODE_TYPE_ERROR) {
@@ -74,7 +74,7 @@ cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
   }
   if (!conditon) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid for statement, missing condition");
+                                 "invalid for statement, missing condition");
     goto onerror;
   }
   if (conditon->type == CUBEC_NODE_TYPE_ERROR) {
@@ -101,7 +101,7 @@ cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
   }
   if (*current.offset != ')') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement, missing ')'");
+                                 "invalid statement, missing ')'");
     goto onerror;
   }
   current.offset++;
@@ -114,7 +114,7 @@ cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
       cubec_read_ast_statement(allocator, &current, end, filename);
   if (!body) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid for statement, missing body");
+                                 "invalid for statement, missing body");
     goto onerror;
   }
   if (body->type == CUBEC_NODE_TYPE_ERROR) {

@@ -32,6 +32,31 @@ char *cubec_location_get_str(cubec_location_t self,
         *dst++ = '\t';
       } else if (*src == 'f') {
         *dst++ = '\f';
+      } else if (*src == 'x') {
+        src++;
+        char c = 0;
+        for (size_t idx = 0; idx < 2; idx++) {
+          c *= 16;
+          if (*src >= '0' && *src <= '9') {
+            c += *src - '0';
+          } else if (*src >= 'a' && *src <= 'f') {
+            c += *src - 'a' + 10;
+          } else if (*src >= 'A' && *src <= 'F') {
+            c += *src - 'A' + 10;
+          }
+          src++;
+        }
+        *dst++ = c;
+      } else if (*src >= '0' && *src <= '7') {
+        char c = 0;
+        for (size_t idx = 0; idx < 3; idx++) {
+          c *= 8;
+          if (*src >= '0' && *src <= '7') {
+            c += *src - '0';
+          }
+          src++;
+        }
+        *dst++ = c;
       }
     } else {
       *dst++ = *src++;

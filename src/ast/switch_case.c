@@ -38,7 +38,7 @@ cubec_ast_node_t cubec_read_ast_switch_case(cubec_allocator_t allocator,
         cubec_read_ast_expression(allocator, &current, end, filename);
     if (!condition) {
       err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "Invalid statement");
+                                   "invalid statement");
       goto onerror;
     }
     if (condition->type == CUBEC_NODE_TYPE_ERROR) {
@@ -58,7 +58,7 @@ cubec_ast_node_t cubec_read_ast_switch_case(cubec_allocator_t allocator,
   }
   if (*current.offset != ':') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement");
+                                 "invalid statement");
     goto onerror;
   }
   current.offset++;
@@ -96,7 +96,7 @@ cubec_ast_node_t cubec_read_ast_switch_case(cubec_allocator_t allocator,
         cubec_read_ast_statement(allocator, &current, end, filename);
     if (!statement) {
       err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "Invalid statement");
+                                   "invalid statement");
       goto onerror;
     }
     if (statement->type == CUBEC_NODE_TYPE_ERROR) {

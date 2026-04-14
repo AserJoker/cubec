@@ -44,7 +44,7 @@ cubec_ast_node_t cubec_read_ast_expression_comma(cubec_allocator_t allocator,
       cubec_read_ast_expression1(allocator, &current, end, filename);
   if (!next) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid comma expression");
+                                 "invalid comma expression");
     goto onerror;
   }
   if (next->type == CUBEC_NODE_TYPE_ERROR) {

@@ -56,7 +56,7 @@ cubec_ast_node_t cubec_read_ast_enum_field(cubec_allocator_t allocator,
         cubec_read_ast_expression3(allocator, &current, end, filename);
     if (!value) {
       err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "Invalid enum field, missing value");
+                                   "invalid enum field, missing value");
       goto onerror;
     }
     if (value->type == CUBEC_NODE_TYPE_ERROR) {

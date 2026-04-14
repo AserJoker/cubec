@@ -46,7 +46,7 @@ cubec_read_ast_statement_declaration(cubec_allocator_t allocator,
         cubec_read_ast_variable_declarator(allocator, &current, end, filename);
     if (!item) {
       err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "Invalid or unexpected token");
+                                   "invalid or unexpected token");
       goto onerror;
     }
     if (item->type == CUBEC_NODE_TYPE_ERROR) {
@@ -63,7 +63,7 @@ cubec_read_ast_statement_declaration(cubec_allocator_t allocator,
     }
     if (*current.offset != ',') {
       err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "Invalid or unexpected token");
+                                   "invalid or unexpected token");
       goto onerror;
     }
     current.offset++;
@@ -86,7 +86,7 @@ cubec_read_ast_statement_declaration(cubec_allocator_t allocator,
   if (!token || !cubec_location_is(token->loc, ";")) {
     cubec_allocator_free(allocator, token);
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid expression statement, missing ';'");
+                                 "invalid expression statement, missing ';'");
     goto onerror;
   }
   cubec_allocator_free(allocator, token);

@@ -55,7 +55,7 @@ cubec_ast_node_t cubec_read_ast_expression_slice(cubec_allocator_t allocator,
   }
   if (*current.offset != ']') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid slice expression, missing ']'");
+                                 "invalid slice expression, missing ']'");
     goto onerror;
   }
   current.offset++;

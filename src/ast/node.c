@@ -243,7 +243,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
     int32_t code = cubec_ast_read_code(&current, end, filename);
     if (code < 0) {
       return cubec_create_ast_error(allocator, *position, current, filename,
-                                    "Invalid unicode code");
+                                    "invalid unicode code");
     }
     if (u_isWhitespace(code)) {
       *position = current;
@@ -253,7 +253,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
       code = cubec_ast_read_code(&current, end, filename);
       if (code < 0) {
         return cubec_create_ast_error(allocator, *position, current, filename,
-                                      "Invalid unicode code");
+                                      "invalid unicode code");
       }
       if (code == '/') {
         while (code != '\n' && code != '\r' && code != 0x2028 &&
@@ -264,7 +264,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
           code = cubec_ast_read_code(&current, end, filename);
           if (code < 0) {
             return cubec_create_ast_error(allocator, *position, current,
-                                          filename, "Invalid unicode code");
+                                          filename, "invalid unicode code");
           }
         }
         *position = current;
@@ -280,7 +280,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
           code = cubec_ast_read_code(&current, end, filename);
           if (code < 0) {
             return cubec_create_ast_error(allocator, *position, current,
-                                          filename, "Invalid unicode code");
+                                          filename, "invalid unicode code");
           }
           if (code == '\\') {
             if (!*current.offset) {
@@ -291,7 +291,7 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
             code = cubec_ast_read_code(&current, end, filename);
             if (code < 0) {
               return cubec_create_ast_error(allocator, *position, current,
-                                            filename, "Invalid unicode code");
+                                            filename, "invalid unicode code");
             }
             continue;
           }

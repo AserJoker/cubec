@@ -36,7 +36,7 @@ cubec_ast_node_t cubec_read_ast_expression_spread(cubec_allocator_t allocator,
       cubec_read_ast_expression18(allocator, &current, end, filename);
   if (!expression) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid spread expression");
+                                 "invalid spread expression");
     goto onerror;
   }
   if (expression->type == CUBEC_NODE_TYPE_ERROR) {

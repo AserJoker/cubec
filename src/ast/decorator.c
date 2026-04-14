@@ -26,7 +26,7 @@ cubec_ast_node_t cubec_read_ast_decorator(cubec_allocator_t allocator,
       cubec_read_ast_expression3(allocator, &current, end, filename);
   if (!expression) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid or unexpected token");
+                                 "invalid or unexpected token");
     goto onerror;
   }
   if (expression->type == CUBEC_NODE_TYPE_ERROR) {
@@ -40,7 +40,7 @@ cubec_ast_node_t cubec_read_ast_decorator(cubec_allocator_t allocator,
   }
   if (*current.offset != ']' || *(current.offset + 1) != ']') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid decorator, missing ']]'");
+                                 "invalid decorator, missing ']]'");
     goto onerror;
   }
   current.offset += 2;

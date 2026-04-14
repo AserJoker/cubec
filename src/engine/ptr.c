@@ -1,8 +1,10 @@
 #include "engine/ptr.h"
 #include "core/allocator.h"
 #include "engine/context.h"
+#include "engine/error.h"
 #include "engine/type.h"
 #include "engine/value.h"
+#include <stdbool.h>
 #include <string.h>
 struct _cubec_ptr_meta_t {
   cubec_type_t type;
@@ -81,7 +83,30 @@ static cubec_value_t cubec_ptr_unref(cubec_value_t self, cubec_context_t ctx) {
   bool mutable = cubec_value_is_mutable(self);
   return cubec_context_create_value(ctx, type, mutable, dst, NULL);
 }
-
+static cubec_value_t cubec_ptr_convert(cubec_value_t self, cubec_context_t ctx,
+                                       cubec_type_t type) {
+  if (cubec_type_get_kind(type) == CUBEC_VALUE_TYPE_OPAQUE) {
+    void *data = (void *)cubec_value_get_data(self);
+    return cubec_context_create_value(ctx, type, false, data, NULL);
+  }
+  cubec_type_t ptr_type = cubec_value_get_type(self);
+  if (cubec_type_get_kind(type) == cubec_type_get_kind(ptr_type)) {
+    cubec_type_t src_type = cubec_ptr_type_get_type(ptr_type);
+    cubec_type_t dst_type = cubec_ptr_type_get_type(type);
+    if (cubec_ptr_type_is_equal(src_type, dst_type)) {
+      void *data = cubec_value_get_data(self);
+      return cubec_context_create_value(ctx, type, false, data, NULL);
+    }
+  }
+  cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
+  char *dst_type_name = cubec_type_to_string(type, allocator);
+  char *src_type_name = cubec_type_to_string(ptr_type, allocator);
+  cubec_value_t err = cubec_create_error(ctx, "cannot convert '%s' to '%s'",
+                                         src_type_name, dst_type_name);
+  cubec_allocator_free(allocator, src_type_name);
+  cubec_allocator_free(allocator, dst_type_name);
+  return err;
+}
 cubec_value_t cubec_create_ptr_type(cubec_context_t ctx, cubec_type_t type,
                                     bool mutable, bool volatile_) {
   cubec_ptr_meta_t meta = cubec_create_ptr_meta(
@@ -90,6 +115,7 @@ cubec_value_t cubec_create_ptr_type(cubec_context_t ctx, cubec_type_t type,
       .is_type_equal = cubec_ptr_type_is_equal,
       .type_to_string = cubec_ptr_type_to_string,
       .unref = cubec_ptr_unref,
+      .convert = cubec_ptr_convert,
   };
   return cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_PTR, sizeof(void *),
                                    sizeof(void *), meta, &opt, NULL);
@@ -102,6 +128,7 @@ cubec_value_t cubec_create_ptr_array_type(cubec_context_t ctx,
   struct _cubec_type_operator_t opt = {
       .is_type_equal = cubec_ptr_type_is_equal,
       .type_to_string = cubec_ptr_type_to_string,
+      .convert = cubec_ptr_convert,
   };
   return cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_PARRAY, sizeof(void *),
                                    sizeof(void *), meta, &opt, NULL);

@@ -79,7 +79,7 @@ cubec_read_ast_expression_assigment(cubec_allocator_t allocator,
   if (!value) {
     err = cubec_create_ast_error(
         allocator, *position, current, filename,
-        "Invalid or unexpected token, missing initialize expression");
+        "invalid or unexpected token, missing initialize expression");
     goto onerror;
   }
   if (value->type == CUBEC_NODE_TYPE_ERROR) {

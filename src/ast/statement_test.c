@@ -34,7 +34,7 @@ cubec_ast_node_t cubec_read_ast_statement_test(cubec_allocator_t allocator,
       cubec_read_ast_literal_string(allocator, &current, end, filename);
   if (!name) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid test statement, missing name");
+                                 "invalid test statement, missing name");
     goto onerror;
   }
   if (name->type == CUBEC_NODE_TYPE_ERROR) {
@@ -49,7 +49,7 @@ cubec_ast_node_t cubec_read_ast_statement_test(cubec_allocator_t allocator,
       cubec_read_ast_statement_block(allocator, &current, end, filename);
   if (!body) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid test statement, missing body");
+                                 "invalid test statement, missing body");
     goto onerror;
   }
   if (body->type == CUBEC_NODE_TYPE_ERROR) {

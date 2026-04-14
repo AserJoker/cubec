@@ -43,7 +43,7 @@ cubec_ast_node_t cubec_read_ast_statement_block(cubec_allocator_t allocator,
   }
   if (*current.offset != '}') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid statement, missing '}'");
+                                 "invalid statement, missing '}'");
     goto onerror;
   }
   current.offset++;

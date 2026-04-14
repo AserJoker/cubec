@@ -90,7 +90,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
             allocator, &current, end, filename);
         if (!id) {
           err = cubec_create_ast_error(allocator, *position, current, filename,
-                                       "Invalid function expression");
+                                       "invalid function expression");
           goto onerror;
         }
         if (id->type == CUBEC_NODE_TYPE_ERROR) {
@@ -107,7 +107,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
         }
         if (*current.offset != ',') {
           err = cubec_create_ast_error(allocator, *position, current, filename,
-                                       "Invalid function expression");
+                                       "invalid function expression");
           goto onerror;
         }
         current.offset++;
@@ -120,7 +120,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
     }
     if (*current.offset != '>') {
       err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "Invalid function expression");
+                                   "invalid function expression");
       goto onerror;
     }
     current.offset++;
@@ -148,7 +148,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   cubec_ast_add_child(allocator, node, "arguments", args);
   if (*current.offset != '(') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid function expression, missing '('");
+                                 "invalid function expression, missing '('");
     goto onerror;
   }
   current.offset++;
@@ -171,7 +171,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
       }
       if (!arg) {
         err = cubec_create_ast_error(allocator, *position, current, filename,
-                                     "Invalid function expression");
+                                     "invalid function expression");
         goto onerror;
       }
       if (arg->type == CUBEC_NODE_TYPE_ERROR) {
@@ -188,7 +188,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
       }
       if (*current.offset != ',') {
         err = cubec_create_ast_error(allocator, *position, current, filename,
-                                     "Invalid function expression");
+                                     "invalid function expression");
         goto onerror;
       }
       current.offset++;
@@ -205,7 +205,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   }
   if (*current.offset != ')') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid function expression, missing ')'");
+                                 "invalid function expression, missing ')'");
     goto onerror;
   }
   current.offset++;
@@ -217,7 +217,7 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   }
   if (*current.offset != ':') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid function expression, missing ':'");
+                                 "invalid function expression, missing ':'");
     goto onerror;
   }
   current.offset++;

@@ -69,7 +69,7 @@ cubec_read_ast_function_argument_rest(cubec_allocator_t allocator,
   }
   if (*current.offset != ':') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid function argument, missing ':'");
+                                 "invalid function argument, missing ':'");
     goto onerror;
   }
   current.offset++;
@@ -82,7 +82,7 @@ cubec_read_ast_function_argument_rest(cubec_allocator_t allocator,
       cubec_read_ast_expression18(allocator, &current, end, filename);
   if (!type) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid function argument, missing type");
+                                 "invalid function argument, missing type");
     goto onerror;
   }
   if (type->type == CUBEC_NODE_TYPE_ERROR) {

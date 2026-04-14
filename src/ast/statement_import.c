@@ -40,7 +40,7 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
   if (!identifier) {
     err = cubec_create_ast_error(
         allocator, *position, current, filename,
-        "Invalid import statement, missing import declarator");
+        "invalid import statement, missing import declarator");
     goto onerror;
   }
   if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
@@ -56,7 +56,7 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
       cubec_read_ast_literal_identifier(allocator, &current, end, filename);
   if (!token) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid import statement, missing 'from'");
+                                 "invalid import statement, missing 'from'");
     goto onerror;
   }
   if (token->type == CUBEC_NODE_TYPE_ERROR) {
@@ -65,7 +65,7 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
   if (!cubec_location_is(token->loc, "from")) {
     cubec_allocator_free(allocator, token);
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid import statement, missing 'from'");
+                                 "invalid import statement, missing 'from'");
     goto onerror;
   }
   cubec_allocator_free(allocator, token);
@@ -77,7 +77,7 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
   token = cubec_read_ast_literal_string(allocator, &current, end, filename);
   if (!token) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid import statement, missing source");
+                                 "invalid import statement, missing source");
     goto onerror;
   }
   if (token->type == CUBEC_NODE_TYPE_ERROR) {
@@ -98,7 +98,7 @@ cubec_ast_node_t cubec_read_ast_statement_import(cubec_allocator_t allocator,
   if (!token || !cubec_location_is(token->loc, ";")) {
     cubec_allocator_free(allocator, token);
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid import statement, missing ';'");
+                                 "invalid import statement, missing ';'");
     goto onerror;
   }
   cubec_allocator_free(allocator, token);

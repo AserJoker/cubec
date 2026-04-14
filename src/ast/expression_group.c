@@ -25,7 +25,7 @@ cubec_ast_node_t cubec_read_ast_expression_group(cubec_allocator_t allocator,
       cubec_read_ast_expression(allocator, &current, end, filename);
   if (!body) {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid group expression");
+                                 "invalid group expression");
     goto onerror;
   }
   if (body->type == CUBEC_NODE_TYPE_ERROR) {
@@ -40,7 +40,7 @@ cubec_ast_node_t cubec_read_ast_expression_group(cubec_allocator_t allocator,
 
   if (*current.offset != ')') {
     err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "Invalid group expression, missing ')'");
+                                 "invalid group expression, missing ')'");
     goto onerror;
   }
   current.offset++;
