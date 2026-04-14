@@ -11,6 +11,8 @@ typedef struct _cubec_value_t *cubec_value_t;
 struct _cubec_context_t;
 cubec_value_t cubec_create_value(cubec_allocator_t allocator, cubec_type_t type,
                                  bool mutable, const void *data);
+void cubec_value_set_comptime(cubec_value_t self);
+bool cubec_value_is_comptime(cubec_value_t self);
 cubec_type_t cubec_value_get_type(cubec_value_t value);
 bool cubec_value_type_is(cubec_value_t value, cubec_type_kind_t kind);
 bool cubec_value_is_mutable(cubec_value_t value);
@@ -22,8 +24,9 @@ cubec_value_t cubec_value_assigment(cubec_value_t self,
                                     struct _cubec_context_t *ctx,
                                     cubec_value_t value);
 cubec_value_t cubec_value_unref_assigment(cubec_value_t self,
-                                    struct _cubec_context_t *ctx,
-                                    cubec_value_t value);
+                                          struct _cubec_context_t *ctx,
+                                          cubec_value_t value);
+bool cubec_value_is_interrupt(cubec_value_t value);
 bool cubec_value_is_error(cubec_value_t value);
 
 cubec_value_t cubec_value_to_string(cubec_value_t self,
@@ -95,9 +98,9 @@ cubec_value_t cubec_value_logical_or(cubec_value_t self,
                                      struct _cubec_context_t *ctx,
                                      cubec_value_t another);
 cubec_value_t cubec_value_unref(cubec_value_t self,
-                                      struct _cubec_context_t *ctx);
-cubec_value_t cubec_value_ref(cubec_value_t self,
-                                      struct _cubec_context_t *ctx);
+                                struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_ref(cubec_value_t self, struct _cubec_context_t *ctx);
+cubec_value_t cubec_value_try(cubec_value_t self, struct _cubec_context_t *ctx);
 #ifdef __cplusplus
 }
 #endif

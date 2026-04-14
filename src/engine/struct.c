@@ -141,7 +141,7 @@ static cubec_value_t cubec_struct_get_field(cubec_value_t self,
                                         data + field->offset, NULL);
     }
   }
-  return cubec_create_error(ctx, "No member named '%s' in value", name);
+  return cubec_create_error(ctx, "no member named '%s' in value", name);
 }
 static cubec_value_t cubec_struct_set_field(cubec_value_t self,
                                             cubec_context_t ctx,

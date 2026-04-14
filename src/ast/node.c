@@ -3,6 +3,7 @@
 #include "ast/program.h"
 #include "core/allocator.h"
 #include "core/array.h"
+#include "core/compare.h"
 #include "core/hash.h"
 #include "core/hash_map.h"
 #include "core/list.h"
@@ -40,6 +41,7 @@ cubec_ast_node_t cubec_create_ast_node(cubec_allocator_t allocator,
         .autofree_key = true,
         .autofree_value = true,
         .hash = (cubec_hash_fn_t)cubec_cstring_sdb,
+        .compare = (cubec_compare_fn_t)strcmp,
     };
     node->children = cubec_create_hash_map(allocator, &initialize);
   }
@@ -49,20 +51,20 @@ cubec_ast_node_t cubec_create_ast_node(cubec_allocator_t allocator,
 void cubec_ast_add_child(cubec_allocator_t allocator, cubec_ast_node_t node,
                          const char *name, cubec_ast_node_t child) {
   cubec_hash_map_set(node->children, cubec_create_cstring(allocator, name),
-                     child, NULL);
+                     child, NULL, NULL);
   child->parent = node;
   node->changed = true;
 }
 void cubec_ast_remove_child(cubec_ast_node_t node, const char *name) {
-  cubec_hash_map_delete(node->children, name, NULL);
+  cubec_hash_map_delete(node->children, name, NULL, NULL);
   node->changed = true;
 }
 cubec_ast_node_t cubec_ast_move_child(cubec_ast_node_t node, const char *name) {
   node->changed = true;
-  return cubec_hash_map_move(node->children, name, NULL);
+  return cubec_hash_map_move(node->children, name, NULL, NULL);
 }
 cubec_ast_node_t cubec_ast_get_child(cubec_ast_node_t node, const char *name) {
-  return cubec_hash_map_get(node->children, name, NULL);
+  return cubec_hash_map_get(node->children, name, NULL, NULL);
 }
 cubec_ast_node_t cubec_ast_get_item(cubec_ast_node_t node, size_t idx) {
   return cubec_array_get(node->items, idx);
@@ -71,9 +73,9 @@ const char *cubec_ast_get_child_name(cubec_ast_node_t node,
                                      cubec_ast_node_t child) {
   cubec_list_node_t it = cubec_hash_map_get_first(node->children);
   while (it != cubec_hash_map_get_end(node->children)) {
-    cubec_ast_node_t val = cubec_hash_map_node_get_value(it, node->children);
+    cubec_ast_node_t val = cubec_hash_map_node_get_value(it);
     if (val == child) {
-      return cubec_hash_map_node_get_key(it, node->children);
+      return cubec_hash_map_node_get_key(it);
     }
     it = cubec_hash_map_node_get_next(it);
   }
@@ -127,7 +129,7 @@ void cubec_ast_set_item(cubec_ast_node_t node, size_t idx,
 void cubec_ast_set_child(cubec_allocator_t allocator, cubec_ast_node_t node,
                          const char *name, cubec_ast_node_t child) {
   cubec_hash_map_set(node->children, cubec_create_cstring(allocator, name),
-                     child, NULL);
+                     child, NULL, NULL);
   child->parent = node;
   node->changed = true;
 }
@@ -441,9 +443,8 @@ static void cubec_print_node(cubec_ast_node_t node, cubec_allocator_t allocator,
     cubec_allocator_free(allocator, encoded_text);
     cubec_list_node_t it = cubec_hash_map_get_first(node->children);
     while (it != cubec_hash_map_get_end(node->children)) {
-      const char *key = cubec_hash_map_node_get_key(it, node->children);
-      cubec_ast_node_t value =
-          cubec_hash_map_node_get_value(it, node->children);
+      const char *key = cubec_hash_map_node_get_key(it);
+      cubec_ast_node_t value = cubec_hash_map_node_get_value(it);
       if (value) {
         cubec_string_concat(out, allocator, ",");
         char s[strlen(key) + 32];
@@ -495,9 +496,8 @@ cubec_ast_node_t cubec_clone_ast_node(cubec_allocator_t allocator,
     for (cubec_list_node_t it = cubec_hash_map_get_first(node->children);
          it != cubec_hash_map_get_end(node->children);
          it = cubec_hash_map_node_get_next(it)) {
-      const char *key = cubec_hash_map_node_get_key(it, node->children);
-      cubec_ast_node_t child =
-          cubec_hash_map_node_get_value(it, node->children);
+      const char *key = cubec_hash_map_node_get_key(it);
+      cubec_ast_node_t child = cubec_hash_map_node_get_value(it);
       child = cubec_clone_ast_node(allocator, child);
       cubec_ast_add_child(allocator, n, key, child);
     }

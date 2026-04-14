@@ -250,7 +250,6 @@ cubec_ast_node_t cubec_read_ast_function_declarator(cubec_allocator_t allocator,
   node->loc.end = current;
   node->loc.filename = filename;
   *position = current;
-
   return node;
 onerror:
   cubec_allocator_free(allocator, node);

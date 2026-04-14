@@ -2,6 +2,7 @@
 #include "core/allocator.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/function.h"
 #include "engine/ptr.h"
 #include "engine/str.h"
 #include "engine/type.h"
@@ -13,6 +14,7 @@
 struct _cubec_value_t {
   cubec_type_t type;
   bool mutable;
+  bool comptime;
   void *data;
 };
 static void cubec_value_dispose(cubec_value_t self,
@@ -33,8 +35,11 @@ cubec_value_t cubec_create_value(cubec_allocator_t allocator, cubec_type_t type,
   } else {
     self->data = NULL;
   }
+  self->comptime = false;
   return self;
 }
+void cubec_value_set_comptime(cubec_value_t self) { self->comptime = true; }
+bool cubec_value_is_comptime(cubec_value_t self) { return self->comptime; }
 cubec_type_t cubec_value_get_type(cubec_value_t value) { return value->type; }
 bool cubec_value_type_is(cubec_value_t value, cubec_type_kind_t kind) {
   return cubec_type_get_kind(value->type) == kind;
@@ -62,6 +67,9 @@ cubec_value_t cubec_value_assigment(cubec_value_t self, cubec_context_t ctx,
     if (cubec_value_is_error(value)) {
       return value;
     }
+    if (cubec_value_is_interrupt(value)) {
+      return value;
+    }
   }
   if (self->data && value->data) {
     memcpy(self->data, value->data, cubec_type_get_size(ltype));
@@ -83,12 +91,20 @@ cubec_value_t cubec_value_unref_assigment(cubec_value_t self,
     if (cubec_value_is_error(value)) {
       return value;
     }
+    if (cubec_value_is_interrupt(value)) {
+      return value;
+    }
   }
   void *ptr = self->data;
   if (ptr && value->data) {
     memcpy(*(void **)ptr, value->data, cubec_type_get_size(ltype));
   }
   return value;
+}
+bool cubec_value_is_interrupt(cubec_value_t value) {
+  cubec_type_t type = cubec_value_get_type(value);
+  cubec_type_kind_t kind = cubec_type_get_kind(type);
+  return kind == CUBEC_VALUE_TYPE_INTERRUPT;
 }
 bool cubec_value_is_error(cubec_value_t value) {
   cubec_type_t type = cubec_value_get_type(value);
@@ -251,10 +267,16 @@ cubec_value_t cubec_value_add(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -285,10 +307,16 @@ cubec_value_t cubec_value_sub(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -319,10 +347,16 @@ cubec_value_t cubec_value_mul(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -353,10 +387,16 @@ cubec_value_t cubec_value_div(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -387,10 +427,16 @@ cubec_value_t cubec_value_mod(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -421,10 +467,16 @@ cubec_value_t cubec_value_and(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -455,10 +507,16 @@ cubec_value_t cubec_value_or(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -489,10 +547,16 @@ cubec_value_t cubec_value_xor(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -523,10 +587,16 @@ cubec_value_t cubec_value_shl(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -557,10 +627,16 @@ cubec_value_t cubec_value_shr(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -591,10 +667,16 @@ cubec_value_t cubec_value_eq(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -625,10 +707,16 @@ cubec_value_t cubec_value_ne(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -659,10 +747,16 @@ cubec_value_t cubec_value_lt(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -693,10 +787,16 @@ cubec_value_t cubec_value_gt(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -727,10 +827,16 @@ cubec_value_t cubec_value_le(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -761,10 +867,16 @@ cubec_value_t cubec_value_ge(cubec_value_t self, struct _cubec_context_t *ctx,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -852,10 +964,16 @@ cubec_value_t cubec_value_logical_and(cubec_value_t self,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -887,10 +1005,16 @@ cubec_value_t cubec_value_logical_or(cubec_value_t self,
     if (cubec_value_is_error(another)) {
       return another;
     }
+    if (cubec_value_is_interrupt(another)) {
+      return another;
+    }
     if (lkind < rkind) {
       self = cubec_value_safe_convert(self, ctx, rtype);
     }
     if (cubec_value_is_error(self)) {
+      return self;
+    }
+    if (cubec_value_is_interrupt(self)) {
       return self;
     }
   }
@@ -923,4 +1047,90 @@ cubec_value_t cubec_value_ref(cubec_value_t self,
     return err;
   }
   return opt->ref(self, ctx);
+}
+cubec_value_t cubec_value_member_call(cubec_value_t value, cubec_context_t ctx,
+                                      const char *name, size_t argc,
+                                      cubec_value_t *argv) {
+  cubec_value_t self = value;
+  if (cubec_value_type_is(value, CUBEC_VALUE_TYPE_PTR)) {
+    value = cubec_value_unref(value, ctx);
+    if (cubec_value_type_is(value, CUBEC_VALUE_TYPE_ERROR)) {
+      return value;
+    }
+  } else {
+    self = cubec_value_ref(value, ctx);
+    if (cubec_value_type_is(self, CUBEC_VALUE_TYPE_ERROR)) {
+      return value;
+    }
+  }
+  if (cubec_value_type_is(value, CUBEC_VALUE_TYPE_TYPE)) {
+    cubec_value_t member = cubec_value_get_field(value, ctx, name);
+    if (cubec_value_type_is(member, CUBEC_VALUE_TYPE_ERROR)) {
+      return member;
+    }
+    return cubec_value_call(member, ctx, argc, argv);
+  }
+  cubec_type_t type = cubec_value_get_type(value);
+  cubec_value_t vtype = cubec_create_type_value(ctx, type, false, NULL);
+  cubec_value_t member = cubec_value_get_field(vtype, ctx, name);
+  if (cubec_value_type_is(member, CUBEC_VALUE_TYPE_ERROR)) {
+    return member;
+  }
+  cubec_value_t args[argc + 1];
+  for (size_t idx = 0; idx < argc; idx++) {
+    args[idx + 1] = argv[idx];
+  }
+  args[0] = self;
+  return cubec_value_call(member, ctx, argc + 1, args);
+}
+cubec_value_t cubec_value_try(cubec_value_t value, cubec_context_t ctx) {
+  cubec_static_scope_t static_scope = cubec_context_get_static_scope(ctx);
+  cubec_type_t ctx_type = cubec_value_get_type(static_scope->binding);
+  if (cubec_type_get_kind(ctx_type) != CUBEC_VALUE_TYPE_FUNCTION) {
+    return cubec_create_error(ctx, "try expression only used in function");
+  }
+  cubec_value_t is_error =
+      cubec_value_member_call(value, ctx, "is_error", 0, NULL);
+  if (cubec_value_type_is(is_error, CUBEC_VALUE_TYPE_ERROR)) {
+    return is_error;
+  }
+  if (!cubec_value_type_is(is_error, CUBEC_VALUE_TYPE_BOOL)) {
+    is_error = cubec_value_safe_convert(value, ctx,
+                                        cubec_context_load_type(ctx, "bool"));
+    if (cubec_value_type_is(is_error, CUBEC_VALUE_TYPE_ERROR)) {
+      return is_error;
+    }
+  }
+  cubec_type_t result_type = cubec_function_type_get_type(ctx_type);
+  cubec_value_t vresult_type =
+      cubec_create_type_value(ctx, result_type, false, NULL);
+  if (cubec_value_is_comptime(static_scope->binding)) {
+    if (!cubec_value_get_data(is_error)) {
+      return cubec_create_error(ctx, "value is not comptime");
+    }
+    bool is_err = *(bool *)cubec_value_get_data(is_error);
+    if (is_err) {
+      cubec_value_t err = cubec_value_member_call(value, ctx, "error", 0, NULL);
+      if (cubec_value_type_is(err, CUBEC_VALUE_TYPE_ERROR)) {
+        return err;
+      }
+      err = cubec_value_member_call(vresult_type, ctx, "of_error", 1, &err);
+      if (cubec_value_type_is(err, CUBEC_VALUE_TYPE_ERROR)) {
+        return err;
+      }
+      return cubec_context_create_interrupt(ctx, err);
+    } else {
+      return cubec_value_member_call(value, ctx, "value", 0, NULL);
+    }
+  } else {
+    cubec_value_t err = cubec_value_member_call(value, ctx, "error", 0, NULL);
+    if (cubec_value_type_is(err, CUBEC_VALUE_TYPE_ERROR)) {
+      return err;
+    }
+    err = cubec_value_member_call(vresult_type, ctx, "of_error", 1, &err);
+    if (cubec_value_type_is(err, CUBEC_VALUE_TYPE_ERROR)) {
+      return err;
+    }
+    return cubec_value_member_call(value, ctx, "value", 0, NULL);
+  }
 }

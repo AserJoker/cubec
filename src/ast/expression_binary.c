@@ -31,7 +31,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_or(
   cubec_ast_node_t opt =
       cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (!opt) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -42,7 +42,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_or(
   cubec_ast_add_child(allocator, node, "opt", opt);
   if (!cubec_location_is(opt->loc, "||") &&
       !cubec_location_is(opt->loc, "??")) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -97,7 +97,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_and(
   cubec_ast_node_t opt =
       cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (!opt) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -107,7 +107,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_logical_and(
   }
   cubec_ast_add_child(allocator, node, "opt", opt);
   if (!cubec_location_is(opt->loc, "&&")) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -161,7 +161,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
   cubec_ast_node_t opt =
       cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (!opt) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -171,7 +171,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
   }
   cubec_ast_add_child(allocator, node, "opt", opt);
   if (!cubec_location_is(opt->loc, "|")) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -225,7 +225,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
   cubec_ast_node_t opt =
       cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (!opt) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -235,7 +235,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
   }
   cubec_ast_add_child(allocator, node, "opt", opt);
   if (!cubec_location_is(opt->loc, "^")) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -290,7 +290,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
   cubec_ast_node_t opt =
       cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (!opt) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -300,7 +300,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
   }
   cubec_ast_add_child(allocator, node, "opt", opt);
   if (!cubec_location_is(opt->loc, "&")) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -357,7 +357,7 @@ cubec_read_ast_expression_binary_equal(cubec_allocator_t allocator,
   cubec_ast_node_t opt =
       cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (!opt) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -368,7 +368,7 @@ cubec_read_ast_expression_binary_equal(cubec_allocator_t allocator,
   cubec_ast_add_child(allocator, node, "opt", opt);
   if (!cubec_location_is(opt->loc, "==") &&
       !cubec_location_is(opt->loc, "!=")) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -425,7 +425,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_relation(
   cubec_ast_node_t opt =
       cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (!opt) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -437,7 +437,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_relation(
   if (!cubec_location_is(opt->loc, ">") && !cubec_location_is(opt->loc, "<") &&
       !cubec_location_is(opt->loc, ">=") &&
       !cubec_location_is(opt->loc, "<=")) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -493,7 +493,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
   cubec_ast_node_t opt =
       cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (!opt) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -504,7 +504,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
   cubec_ast_add_child(allocator, node, "opt", opt);
   if (!cubec_location_is(opt->loc, ">>") &&
       !cubec_location_is(opt->loc, "<<")) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -558,7 +558,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_additive(
   cubec_ast_node_t opt =
       cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (!opt) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -568,7 +568,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_additive(
   }
   cubec_ast_add_child(allocator, node, "opt", opt);
   if (!cubec_location_is(opt->loc, "+") && !cubec_location_is(opt->loc, "-")) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -622,7 +622,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
   cubec_ast_node_t opt =
       cubec_read_ast_literal_symbol(allocator, &current, end, filename);
   if (!opt) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }
@@ -633,7 +633,7 @@ cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
   cubec_ast_add_child(allocator, node, "opt", opt);
   if (!cubec_location_is(opt->loc, "*") && !cubec_location_is(opt->loc, "/") &&
       !cubec_location_is(opt->loc, "%")) {
-    err = cubec_hash_map_move(node->children, "left", NULL);
+    err = cubec_hash_map_move(node->children, "left", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }

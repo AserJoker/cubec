@@ -29,7 +29,7 @@ cubec_read_ast_expression_condition(cubec_allocator_t allocator,
     goto onerror;
   }
   if (*current.offset != '?') {
-    err = cubec_hash_map_move(node->children, "condition", NULL);
+    err = cubec_hash_map_move(node->children, "condition", NULL, NULL);
     *position = err->loc.end;
     goto onerror;
   }

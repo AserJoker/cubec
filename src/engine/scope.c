@@ -3,6 +3,7 @@
 #include "core/array.h"
 #include "core/hash_map.h"
 #include "core/string.h"
+#include <string.h>
 struct _cubec_scope_t {
   cubec_scope_t parent;
   cubec_array_t values;
@@ -27,6 +28,7 @@ cubec_scope_t cubec_create_scope(cubec_allocator_t allocator,
       .autofree_key = true,
       .autofree_value = false,
       .hash = (cubec_hash_fn_t)cubec_cstring_sdb,
+      .compare = (cubec_compare_fn_t)strcmp,
   };
   self->variables = cubec_create_hash_map(allocator, &map_initialize);
   return self;
@@ -36,11 +38,11 @@ void cubec_scope_store(cubec_scope_t self, cubec_allocator_t allocator,
   cubec_array_push(self->values, value);
   if (name) {
     cubec_hash_map_set(self->variables, cubec_create_cstring(allocator, name),
-                       value, NULL);
+                       value, NULL, NULL);
   }
 }
 cubec_value_t cubec_scope_load(cubec_scope_t self, const char *name) {
-  return cubec_hash_map_get(self->variables, name, NULL);
+  return cubec_hash_map_get(self->variables, name, NULL, NULL);
 }
 cubec_scope_t cubec_scope_get_parent(cubec_scope_t scope) {
   return scope->parent;

@@ -9,6 +9,7 @@ extern "C" {
 typedef enum _cubec_type_kind_t {
   CUBEC_VALUE_TYPE_ERROR,
   CUBEC_VALUE_TYPE_ANY,
+  CUBEC_VALUE_TYPE_INTERRUPT,
   CUBEC_VALUE_TYPE_BUILTIN,
   CUBEC_VALUE_TYPE_VOID,
   CUBEC_VALUE_TYPE_TYPE,
@@ -34,6 +35,7 @@ typedef enum _cubec_type_kind_t {
 } cubec_type_kind_t;
 
 struct _cubec_value_t;
+
 struct _cubec_context_t;
 typedef struct _cubec_type_t *cubec_type_t;
 typedef bool (*cubec_type_is_equal_fn_t)(cubec_type_t self,

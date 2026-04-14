@@ -1,4 +1,5 @@
 #include "engine/function.h"
+#include "ast/node.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "engine/context.h"
@@ -126,6 +127,9 @@ static cubec_value_t cubec_function_call(cubec_value_t self,
       if (cubec_value_is_error(arg)) {
         return arg;
       }
+      if (cubec_value_is_interrupt(arg)) {
+        return arg;
+      }
     }
   }
   if (is_varidic) {
@@ -137,10 +141,18 @@ static cubec_value_t cubec_function_call(cubec_value_t self,
         if (cubec_value_is_error(arg)) {
           return arg;
         }
+        if (cubec_value_is_interrupt(arg)) {
+          return arg;
+        }
       }
     }
   }
   cubec_type_t return_type = cubec_function_type_get_type(type);
+  // cubec_ast_node_t node = cubec_value_get_data(self);
+  // cubec_ast_node_t kind = cubec_ast_get_child(node, "kind");
+  // if (kind && cubec_location_is(kind->loc, "comptime")) {
+  //   // TODO: call comptime
+  // }
   return cubec_context_create_value(ctx, return_type, false, NULL, NULL);
 }
 

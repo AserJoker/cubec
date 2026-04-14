@@ -2,11 +2,13 @@
 #include "core/path.h"
 #include "engine/builtin.h"
 #include "engine/context.h"
+#include "engine/type.h"
 #include "engine/value.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 char *absolute(cubec_allocator_t allocator, const char *name) {
   cubec_path_t path = cubec_create_path(allocator, name);
@@ -34,11 +36,9 @@ int main(int argc, char *argv[]) {
   cubec_allocator_t allocator = cubec_create_allocator(NULL);
   cubec_context_t ctx = cubec_create_context(allocator);
   cubec_create_builtin(ctx, print, "print");
-
   char *filename = absolute(allocator, "./main.cubec");
   cubec_value_t err = cubec_context_load_module(ctx, filename);
-  cubec_context_write_module(ctx, filename, "./main.resolved.cubec");
-  if (cubec_value_is_error(err)) {
+  if (cubec_value_type_is(err, CUBEC_VALUE_TYPE_ERROR)) {
     const char *message = *(const char **)cubec_value_get_data(err);
     fprintf(stderr, "%s\n", message);
   }
