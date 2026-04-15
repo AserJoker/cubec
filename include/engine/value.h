@@ -35,6 +35,8 @@ value_t value_set_field(value_t self, struct _context_t *ctx, const char *name,
 value_t value_get_length(value_t self, struct _context_t *ctx);
 value_t value_call(value_t self, struct _context_t *ctx, size_t argc,
                    value_t argv[]);
+value_t value_member_call(value_t value, struct _context_t *ctx,
+                          const char *name, size_t argc, value_t argv[]);
 value_t value_convert(value_t self, struct _context_t *ctx, type_t type);
 value_t value_safe_convert(value_t self, struct _context_t *ctx, type_t type);
 value_t value_add(value_t self, struct _context_t *ctx, value_t another);

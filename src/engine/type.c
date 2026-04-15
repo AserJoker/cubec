@@ -1,7 +1,11 @@
 #include "engine/type.h"
 #include "core/allocator.h"
+#include "core/array.h"
+#include "engine/array.h"
 #include "engine/context.h"
 #include "engine/ptr.h"
+#include "engine/struct.h"
+#include "engine/union.h"
 #include "engine/value.h"
 #include <inttypes.h>
 #include <stdbool.h>
@@ -62,6 +66,82 @@ bool type_is_equal(type_t self, type_t another) {
       return self->opts.is_type_equal(self, another);
     }
     return true;
+  }
+  return false;
+}
+bool type_is_safe_convert(type_t ltype, type_t rtype) {
+  type_kind_t lkind = type_get_kind(ltype);
+  type_kind_t rkind = type_get_kind(rtype);
+  if (lkind >= VALUE_TYPE_INT8 && lkind <= VALUE_TYPE_INT64) {
+    if (rkind >= VALUE_TYPE_INT8 && rkind <= VALUE_TYPE_INT64) {
+      return true;
+    }
+  }
+  if (lkind >= VALUE_TYPE_UINT8 && lkind <= VALUE_TYPE_UINT64) {
+    if (rkind >= VALUE_TYPE_UINT8 && rkind <= VALUE_TYPE_UINT64) {
+      return true;
+    }
+  }
+  if (lkind >= VALUE_TYPE_FLOAT32 && lkind <= VALUE_TYPE_FLOAT64) {
+    if (rkind >= VALUE_TYPE_FLOAT32 && rkind <= VALUE_TYPE_FLOAT64) {
+      return true;
+    }
+  }
+  if (lkind == VALUE_TYPE_PTR || lkind == VALUE_TYPE_PARRAY) {
+    if (rkind == VALUE_TYPE_OPAQUE) {
+      return true;
+    }
+  }
+  if (lkind == VALUE_TYPE_ARRAY && rkind == VALUE_TYPE_PARRAY) {
+    type_t larr_type = array_type_get_type(ltype);
+    type_t rarr_type = ptr_type_get_type(rtype);
+    return type_is_equal(larr_type, rarr_type);
+  }
+  if (lkind == VALUE_TYPE_PTR && rkind == VALUE_TYPE_PTR) {
+    type_t lptr_type = ptr_type_get_type(ltype);
+    type_t rptr_type = ptr_type_get_type(rtype);
+    if (type_get_kind(lptr_type) == VALUE_TYPE_STRUCT &&
+        type_get_kind(rptr_type) == VALUE_TYPE_STRUCT) {
+      array_t lfields = struct_type_get_fields(lptr_type);
+      array_t rfields = struct_type_get_fields(lptr_type);
+      if (array_get_size(lfields) != array_get_size(lfields)) {
+        return false;
+      }
+      for (size_t idx = 0; idx < array_get_size(lfields); idx++) {
+        struct_field_t field = array_get(lfields, idx);
+        struct_field_t rfield = array_get(rfields, idx);
+        if (field->offset != rfield->offset) {
+          return false;
+        }
+        if (strcmp(field->name, rfield->name) != 0) {
+          return false;
+        }
+        if (type_is_equal(field->type, rfield->type)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    if (type_get_kind(lptr_type) == VALUE_TYPE_UNION &&
+        type_get_kind(rptr_type) == VALUE_TYPE_UNION) {
+      array_t lfields = union_type_get_fields(lptr_type);
+      array_t rfields = union_type_get_fields(lptr_type);
+      if (array_get_size(lfields) != array_get_size(lfields)) {
+        return false;
+      }
+      for (size_t idx = 0; idx < array_get_size(lfields); idx++) {
+        union_field_t field = array_get(lfields, idx);
+        union_field_t rfield = array_get(rfields, idx);
+        if (strcmp(field->name, rfield->name) != 0) {
+          return false;
+        }
+        if (type_is_equal(field->type, rfield->type)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return type_is_equal(lptr_type, rptr_type);
   }
   return false;
 }

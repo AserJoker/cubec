@@ -9,8 +9,8 @@
 value_t eval_literal_string(context_t ctx, ast_node_t node) {
   allocator_t allocator = context_get_allocator(ctx);
   char *s = location_get_str(node->loc, allocator);
-  printf("%s\n", s);
   value_t str = create_str(ctx, s, NULL);
   allocator_free(allocator, s);
+  value_set_comptime(str, true);
   return str;
 }

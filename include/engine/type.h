@@ -123,6 +123,7 @@ void *type_get_meta(type_t self);
 size_t type_get_align(type_t self);
 void type_set_align(type_t self, size_t align);
 bool type_is_equal(type_t self, type_t another);
+bool type_is_safe_convert(type_t src, type_t dst);
 const char *type_kind_to_string(type_kind_t kind);
 char *type_to_string(type_t self, allocator_t allocator);
 struct _value_t *create_type_value(struct _context_t *ctx, type_t type,

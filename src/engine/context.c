@@ -224,7 +224,10 @@ value_t context_create_type(context_t self, type_kind_t kind, size_t size,
                             const char *name) {
   type_t type = create_type(self->allocator, kind, size, align, meta, opt);
   array_push(self->types, type);
-  return context_create_value(self, self->type_type, false, &type, name);
+  value_t value =
+      context_create_value(self, self->type_type, false, &type, name);
+  value_set_comptime(value, true);
+  return value;
 }
 value_t context_create_interrupt(context_t self, value_t value) {
   return context_create_value(self, self->interrupt_type, false, &value, NULL);
@@ -243,10 +246,14 @@ value_t context_create_value(context_t self, type_t type, bool mutable,
 
 value_t context_load(context_t self, const char *name) {
   if (strcmp(name, "true") == 0) {
-    return create_boolean(self, true, false, NULL);
+    value_t val = create_boolean(self, true, false, NULL);
+    value_set_comptime(val, true);
+    return val;
   }
   if (strcmp(name, "false") == 0) {
-    return create_boolean(self, false, false, NULL);
+    value_t val = create_boolean(self, false, false, NULL);
+    value_set_comptime(val, true);
+    return val;
   }
   if (strcmp(name, "__self__") == 0) {
     static_scope_t scope = self->static_scope;

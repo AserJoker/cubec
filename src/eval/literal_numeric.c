@@ -79,5 +79,6 @@ value_t eval_literal_numeric(context_t ctx, ast_node_t node) {
     }
   }
   allocator_free(allocator, str);
+  value_set_comptime(value, true);
   return value;
 }

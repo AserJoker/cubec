@@ -244,28 +244,18 @@ void struct_type_add_attribute(type_t self, allocator_t allocator,
   array_push(meta->attributes, attr);
 }
 
-type_t struct_type_get_field(type_t self, const char *name) {
+struct_field_t struct_type_get_field(type_t self, const char *name) {
   struct_meta_t meta = type_get_meta(self);
   size_t size = array_get_size(meta->fields);
   for (size_t idx = 0; idx < size; idx++) {
     struct_field_t field = array_get(meta->fields, idx);
     if (strcmp(field->name, name) == 0) {
-      return field->type;
+      return field;
     }
   }
   return NULL;
 }
-size_t struct_type_get_offset(type_t self, const char *name) {
-  struct_meta_t meta = type_get_meta(self);
-  size_t size = array_get_size(meta->fields);
-  for (size_t idx = 0; idx < size; idx++) {
-    struct_field_t field = array_get(meta->fields, idx);
-    if (strcmp(field->name, name) == 0) {
-      return field->offset;
-    }
-  }
-  return (size_t)-1;
-}
+
 value_t struct_type_get_attribute(type_t self, const char *name) {
   struct_meta_t meta = type_get_meta(self);
   size_t size = array_get_size(meta->attributes);

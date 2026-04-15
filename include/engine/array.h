@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_ENGINE_PTR_
-#define _H_CUBEC_ENGINE_PTR_
+#ifndef _H_CUBEC_ENGINE_ARRAY_
+#define _H_CUBEC_ENGINE_ARRAY_
 #include "engine/context.h"
 #include "engine/type.h"
 #include <stdbool.h>

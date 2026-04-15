@@ -165,11 +165,11 @@ void union_type_add_attribute(type_t self, allocator_t allocator,
   union_attribute_t attr = create_union_attribute(allocator, name, value);
   array_push(meta->attributes, attr);
 }
-array_t union_type_get_fields(type_t self, allocator_t allocator) {
+array_t union_type_get_fields(type_t self) {
   union_meta_t meta = type_get_meta(self);
   return meta->fields;
 }
-array_t union_type_get_attributes(type_t self, allocator_t allocator) {
+array_t union_type_get_attributes(type_t self) {
   union_meta_t meta = type_get_meta(self);
   return meta->attributes;
 }

@@ -3,6 +3,7 @@
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/numeric.h"
+#include "engine/value.h"
 #include <stdbool.h>
 #include <string.h>
 value_t eval_literal_char(context_t ctx, ast_node_t node) {
@@ -15,5 +16,7 @@ value_t eval_literal_char(context_t ctx, ast_node_t node) {
   }
   char c = s[0];
   allocator_free(allocator, s);
-  return create_u8(ctx, c, false, NULL);
+  value_t value = create_u8(ctx, c, false, NULL);
+  value_set_comptime(value, true);
+  return value;
 }
