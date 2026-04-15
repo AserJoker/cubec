@@ -129,6 +129,7 @@ const char *type_kind_to_string(type_kind_t kind);
 char *type_to_string(type_t self, allocator_t allocator);
 struct _value_t *create_type_value(struct _context_t *ctx, type_t type,
                                    bool mutable, const char *name);
+type_t type_get_ptr_type(type_t self, struct _context_t *ctx);
 #ifdef __cplusplus
 }
 #endif

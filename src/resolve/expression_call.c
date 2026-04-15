@@ -152,8 +152,7 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
         self_type = value_type;
         value_type = ptr_type_get_type(self_type);
       } else {
-        value_t vself_type = create_ptr_type(ctx, value_type, true, false);
-        self_type = *(type_t *)value_get_data(vself_type);
+        self_type = type_get_ptr_type(value_type, ctx);
       }
       if (type_get_kind(value_type) == VALUE_TYPE_STRUCT) {
         value_t callee = struct_type_get_attribute(value_type, field);

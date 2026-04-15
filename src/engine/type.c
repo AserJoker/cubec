@@ -17,14 +17,14 @@ struct _type_t {
   size_t align;
   void *meta;
   struct _type_operator_t opts;
+  type_t ptr;
 };
 static void type_dispose(type_t self, allocator_t allocator) {
   allocator_free(allocator, self->meta);
 }
 static value_t value_ref_default(value_t self, context_t ctx) {
   type_t type = value_get_type(self);
-  value_t vptr_type = create_ptr_type(ctx, type, true, false);
-  type_t ptr_type = *(type_t *)value_get_data(vptr_type);
+  type_t ptr_type = type_get_ptr_type(type, ctx);
   void *data = value_get_data(self);
   bool mutable = value_is_mutable(self);
   if (data) {
@@ -196,4 +196,12 @@ struct _value_t *create_type_value(struct _context_t *ctx, type_t type,
   value_t vtype = context_load(ctx, "type");
   type_t ttype = *(type_t *)value_get_data(vtype);
   return context_create_value(ctx, ttype, mutable, &type, name);
+}
+
+type_t type_get_ptr_type(type_t self, struct _context_t *ctx) {
+  if (!self->ptr) {
+    value_t vtype = create_ptr_type(ctx, self, true, false);
+    self->ptr = *(type_t *)value_get_data(vtype);
+  }
+  return self->ptr;
 }

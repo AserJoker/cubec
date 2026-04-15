@@ -10,7 +10,6 @@
 #include "engine/module.h"
 #include "engine/numeric.h"
 #include "engine/opaque.h"
-#include "engine/ptr.h"
 #include "engine/scope.h"
 #include "engine/str.h"
 #include "engine/struct.h"
@@ -78,12 +77,8 @@ static value_t type_value_to_string(value_t self, context_t ctx) {
 }
 
 static value_t type_value_unref(value_t self, context_t ctx) {
-  type_t *type = (type_t *)value_get_data(self);
-  if (!type) {
-    return create_str(ctx, "type{<runtime>}", NULL);
-  } else {
-    return create_ptr_type(ctx, *type, true, false);
-  }
+  type_t type = *(type_t *)value_get_data(self);
+  return create_type_value(ctx, type_get_ptr_type(type, ctx), false, NULL);
 }
 static value_t type_value_get_field(value_t self, context_t ctx,
                                     const char *name) {

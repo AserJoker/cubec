@@ -2,6 +2,7 @@
 #include "ast/node.h"
 #include "core/location.h"
 #include "engine/ptr.h"
+#include "engine/type.h"
 #include "engine/value.h"
 #include "eval/type.h"
 
@@ -29,7 +30,7 @@ value_t eval_ptr_declarator(context_t ctx, ast_node_t node) {
     }
   }
   if (location_is(kind->loc, "*")) {
-    return create_ptr_type(ctx, base, mutable, volatile_);
+    return create_type_value(ctx, type_get_ptr_type(base, ctx), false, NULL);
   } else {
     return create_ptr_array_type(ctx, base, mutable, volatile_);
   }
