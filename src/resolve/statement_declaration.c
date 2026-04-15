@@ -10,7 +10,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
   ast_node_t kind = ast_get_child(node, "kind");
   bool comptime = location_is(kind->loc, "comptime");
   bool mutable = !location_is(kind->loc, "const");
-  bool current = context_set_comptime(ctx, true);
+  bool current = context_set_comptime(ctx, comptime);
   ast_node_t declarations = ast_get_child(node, "declarations");
   for (size_t idx = 0; idx < ast_get_length(declarations); idx++) {
     ast_node_t declar = ast_get_item(declarations, idx);

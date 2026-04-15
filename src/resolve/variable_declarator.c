@@ -11,6 +11,7 @@
 #include "eval/expression.h"
 #include "eval/type.h"
 #include "resolve/expression.h"
+#include <stdio.h>
 
 value_t resolve_variable_declarator(context_t ctx, ast_node_t node) {
   ast_node_t identifier = ast_get_child(node, "identifier");

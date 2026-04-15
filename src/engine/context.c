@@ -295,18 +295,6 @@ value_t context_load(context_t self, const char *name) {
     }
     scope = scope_get_parent(scope);
   }
-  if (self->static_scope) {
-    value_t static_scope = self->static_scope->binding;
-    type_t ctx_type = value_get_type(static_scope);
-    if (type_get_kind(ctx_type) == VALUE_TYPE_TYPE) {
-      type_t type = *(type_t *)value_get_data(static_scope);
-      if (type_get_kind(type) == VALUE_TYPE_STRUCT) {
-        return struct_type_get_attribute(type, name);
-      } else if (type_get_kind(type) == VALUE_TYPE_UNION) {
-        return union_type_get_attribute(type, name);
-      }
-    }
-  }
   return create_error(self, "use of undeclared identifier '%s'", name);
 }
 type_t context_load_type(context_t self, const char *name) {

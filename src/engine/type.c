@@ -195,7 +195,9 @@ struct _value_t *create_type_value(struct _context_t *ctx, type_t type,
                                    bool mutable, const char *name) {
   value_t vtype = context_load(ctx, "type");
   type_t ttype = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, ttype, mutable, &type, name);
+  value_t val = context_create_value(ctx, ttype, mutable, &type, name);
+  value_set_comptime(val, true);
+  return val;
 }
 
 type_t type_get_ptr_type(type_t self, struct _context_t *ctx) {
