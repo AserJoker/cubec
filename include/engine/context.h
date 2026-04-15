@@ -23,7 +23,7 @@ allocator_t context_get_allocator(context_t self);
 
 bool context_is_comptime(context_t ctx);
 
-void context_set_comptime(context_t ctx, bool comptime);
+bool context_set_comptime(context_t ctx, bool comptime);
 
 value_t context_load_module(context_t self, const char *filename);
 

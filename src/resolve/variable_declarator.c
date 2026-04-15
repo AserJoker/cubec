@@ -9,8 +9,8 @@
 #include "engine/type.h"
 #include "engine/value.h"
 #include "eval/expression.h"
+#include "eval/type.h"
 #include "resolve/expression.h"
-#include "resolve/type.h"
 
 value_t resolve_variable_declarator(context_t ctx, ast_node_t node) {
   ast_node_t identifier = ast_get_child(node, "identifier");
@@ -39,7 +39,9 @@ value_t resolve_variable_declarator(context_t ctx, ast_node_t node) {
   }
   type_t type = NULL;
   if (type_node) {
-    value_t vtype = resolve_type(ctx, type_node);
+    bool comptime = context_set_comptime(ctx, true);
+    value_t vtype = eval_type(ctx, type_node);
+    context_set_comptime(ctx, comptime);
     if (value_is_error(vtype)) {
       return vtype;
     }

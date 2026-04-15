@@ -201,27 +201,8 @@ value_t value_convert(value_t self, struct _context_t *ctx, type_t type) {
 value_t value_safe_convert(value_t self, struct _context_t *ctx, type_t type) {
   type_t ltype = value_get_type(self);
   type_t rtype = type;
-  type_kind_t lkind = type_get_kind(ltype);
-  type_kind_t rkind = type_get_kind(rtype);
-  if (lkind >= VALUE_TYPE_INT8 && lkind <= VALUE_TYPE_INT64) {
-    if (rkind >= VALUE_TYPE_INT8 && rkind <= VALUE_TYPE_INT64) {
-      return value_convert(self, ctx, type);
-    }
-  }
-  if (lkind >= VALUE_TYPE_UINT8 && lkind <= VALUE_TYPE_UINT64) {
-    if (rkind >= VALUE_TYPE_UINT8 && rkind <= VALUE_TYPE_UINT64) {
-      return value_convert(self, ctx, type);
-    }
-  }
-  if (lkind >= VALUE_TYPE_FLOAT32 && lkind <= VALUE_TYPE_FLOAT64) {
-    if (rkind >= VALUE_TYPE_FLOAT32 && rkind <= VALUE_TYPE_FLOAT64) {
-      return value_convert(self, ctx, type);
-    }
-  }
-  if (lkind == VALUE_TYPE_PTR || lkind == VALUE_TYPE_PARRAY) {
-    if (rkind == VALUE_TYPE_OPAQUE) {
-      return value_convert(self, ctx, type);
-    }
+  if (type_is_safe_convert(ltype, rtype) && type_get_operator(ltype)->convert) {
+    return type_get_operator(ltype)->convert(self, ctx, type);
   }
   allocator_t allocator = context_get_allocator(ctx);
   char *dst_name = type_to_string(rtype, allocator);

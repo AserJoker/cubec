@@ -97,6 +97,11 @@ bool type_is_safe_convert(type_t ltype, type_t rtype) {
     type_t rarr_type = ptr_type_get_type(rtype);
     return type_is_equal(larr_type, rarr_type);
   }
+  if (lkind == VALUE_TYPE_NULL &&
+      (rkind == VALUE_TYPE_PTR || rkind == VALUE_TYPE_PARRAY ||
+       rkind == VALUE_TYPE_OPAQUE)) {
+    return true;
+  }
   if (lkind == VALUE_TYPE_PTR && rkind == VALUE_TYPE_PTR) {
     type_t lptr_type = ptr_type_get_type(ltype);
     type_t rptr_type = ptr_type_get_type(rtype);

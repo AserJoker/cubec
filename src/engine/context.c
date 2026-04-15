@@ -23,6 +23,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 struct _context_t {
@@ -34,8 +35,10 @@ struct _context_t {
 
   type_t type_type;
   type_t interrupt_type;
+  type_t null_type;
 
   value_t value_undefined;
+  value_t value_null;
 
   scope_t root;
   scope_t scope;
@@ -128,19 +131,37 @@ static void init_type_type(context_t self) {
   context_create_value(self, type_type, false, &type_type, "type");
   array_push(self->types, type_type);
   self->type_type = type_type;
-  self->interrupt_type =
-      create_type(self->allocator, VALUE_TYPE_INTERRUPT, sizeof(void *),
-                  sizeof(void *), NULL, NULL);
-  array_push(self->types, self->interrupt_type);
 }
 
-static void init_any_type(context_t self) {
-  context_create_type(self, VALUE_TYPE_ANY, 0, 0, NULL, NULL, "any");
+static value_t null_convert(value_t self, context_t ctx, type_t type) {
+  if (type_get_kind(type) == VALUE_TYPE_PTR ||
+      type_get_kind(type) == VALUE_TYPE_PARRAY ||
+      type_get_kind(type) == VALUE_TYPE_OPAQUE) {
+    void *data = NULL;
+    value_t val = context_create_value(ctx, type, false, &data, NULL);
+    value_set_comptime(val, true);
+    return val;
+  }
+  allocator_t allocator = context_get_allocator(ctx);
+  char *dst_type_name = type_to_string(type, allocator);
+  value_t err = create_error(ctx, "cannot convert null to '%s'", dst_type_name);
+  allocator_free(allocator, dst_type_name);
+  return err;
 }
 
 static void context_init_type(context_t self) {
   init_type_type(self);
-  init_any_type(self);
+  self->interrupt_type =
+      create_type(self->allocator, VALUE_TYPE_INTERRUPT, sizeof(void *),
+                  sizeof(void *), NULL, NULL);
+  array_push(self->types, self->interrupt_type);
+  context_create_type(self, VALUE_TYPE_ANY, 0, 0, NULL, NULL, "any");
+  struct _type_operator_t opt = {
+      .convert = null_convert,
+  };
+  self->null_type =
+      create_type(self->allocator, VALUE_TYPE_NULL, 0, 0, NULL, &opt);
+  array_push(self->types, self->null_type);
   init_void_type(self);
   init_numeric_type(self);
   init_boolean_type(self);
@@ -155,6 +176,9 @@ static void context_init_value(context_t self) {
   type_t type = *(type_t *)value_get_data(vtype);
   self->value_undefined = context_create_value(self, type, false, NULL, NULL);
   value_set_comptime(self->value_undefined, true);
+  self->value_null =
+      context_create_value(self, self->null_type, false, NULL, NULL);
+  value_set_comptime(self->value_null, true);
 }
 
 context_t create_context(allocator_t allocator) {
@@ -256,6 +280,9 @@ value_t context_load(context_t self, const char *name) {
     value_set_comptime(val, true);
     return val;
   }
+  if (strcmp(name, "null") == 0) {
+    return self->value_null;
+  }
   if (strcmp(name, "__self__") == 0) {
     static_scope_t scope = self->static_scope;
     while (scope) {
@@ -342,8 +369,10 @@ value_t context_get_undefined(context_t self) { return self->value_undefined; }
 allocator_t context_get_allocator(context_t self) { return self->allocator; }
 bool context_is_comptime(context_t ctx) { return ctx->comptime; }
 
-void context_set_comptime(context_t ctx, bool comptime) {
+bool context_set_comptime(context_t ctx, bool comptime) {
+  bool current = ctx->comptime;
   ctx->comptime = comptime;
+  return current;
 }
 void context_push_scope(context_t self) {
   self->scope = create_scope(self->allocator, self->scope);

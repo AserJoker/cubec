@@ -5,6 +5,7 @@
 #include "eval/literal_identifier.h"
 #include "eval/literal_numeric.h"
 #include "eval/literal_string.h"
+#include "eval/ptr_declarator.h"
 #include "resolve/expression_call.h"
 #include "resolve/expression_group.h"
 value_t resolve_expression(context_t ctx, ast_node_t node) {
@@ -20,6 +21,8 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     return resolve_expression_group(ctx, node);
   } else if (node->type == NODE_TYPE_EXPRESSION_CALL) {
     return resolve_expression_call(ctx, node);
+  } else if (node->type == NODE_TYPE_PTR_DECLARATOR) {
+    return eval_ptr_declarator(ctx, node);
   }
   return create_compile_error(ctx, node, "unsupport expression");
 }

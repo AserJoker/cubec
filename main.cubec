@@ -1,2 +1,1 @@
-comptime a = 1;
-const b = print(a);
+const a:*i8 = null;
