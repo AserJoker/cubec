@@ -139,5 +139,7 @@ value_t create_boolean(context_t ctx, bool value, bool mutable,
                        const char *name) {
   value_t vtype = context_load(ctx, "bool");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, mutable, &value, name);
+  value_t val = context_create_value(ctx, type, mutable, &value, name);
+  value_set_comptime(val, true);
+  return val;
 }

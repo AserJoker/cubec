@@ -33,5 +33,7 @@ value_t create_opaque(context_t ctx, const void *data, bool mutable,
                       const char *name) {
   value_t vtype = context_load(ctx, "opaque");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, mutable, &data, name);
+  value_t val = context_create_value(ctx, type, mutable, &data, name);
+  value_set_comptime(val, true);
+  return val;
 }

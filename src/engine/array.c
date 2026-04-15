@@ -69,7 +69,9 @@ static value_t array_to_string(value_t self, context_t ctx) {
   }
   str[offset++] = ']';
   str[offset] = 0;
-  return create_str(ctx, str, NULL);
+  value_t val = create_str(ctx, str, NULL);
+  value_set_comptime(val, true);
+  return val;
 }
 static value_t array_get_index(value_t self, context_t ctx, size_t idx) {
   type_t type = value_get_type(self);
@@ -84,7 +86,10 @@ static value_t array_get_index(value_t self, context_t ctx, size_t idx) {
     return context_create_value(ctx, meta->type, mutable, NULL, NULL);
   }
   size_t offset = idx * type_get_size(meta->type);
-  return context_create_value(ctx, meta->type, mutable, data + offset, NULL);
+  value_t val =
+      context_create_value(ctx, meta->type, mutable, data + offset, NULL);
+  value_set_comptime(val, true);
+  return val;
 }
 static value_t array_set_index(value_t self, context_t ctx, size_t idx,
                                value_t value) {

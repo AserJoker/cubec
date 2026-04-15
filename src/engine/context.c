@@ -154,6 +154,7 @@ static void context_init_value(context_t self) {
   value_t vtype = context_load(self, "void");
   type_t type = *(type_t *)value_get_data(vtype);
   self->value_undefined = context_create_value(self, type, false, NULL, NULL);
+  value_set_comptime(self->value_undefined, true);
 }
 
 context_t create_context(allocator_t allocator) {

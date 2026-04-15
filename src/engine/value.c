@@ -1033,6 +1033,9 @@ value_t value_member_call(value_t value, context_t ctx, const char *name,
     if (value_type_is(member, VALUE_TYPE_ERROR)) {
       return member;
     }
+    if (!value_is_comptime(member)) {
+      return create_error(ctx, "expression is not comptime");
+    }
     return value_call(member, ctx, argc, argv);
   }
   type_t type = value_get_type(value);
@@ -1040,6 +1043,9 @@ value_t value_member_call(value_t value, context_t ctx, const char *name,
   value_t member = value_get_field(vtype, ctx, name);
   if (value_type_is(member, VALUE_TYPE_ERROR)) {
     return member;
+  }
+  if (!value_is_comptime(member)) {
+    return create_error(ctx, "expression is not comptime");
   }
   value_t args[argc + 1];
   for (size_t idx = 0; idx < argc; idx++) {

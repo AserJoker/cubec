@@ -646,50 +646,70 @@ void init_numeric_type(context_t ctx) {
 value_t create_i8(context_t ctx, i8_t value, bool mutable, const char *name) {
   value_t vtype = context_load(ctx, "i8");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, mutable, &value, name);
+  value_t val = context_create_value(ctx, type, mutable, &value, name);
+  value_set_comptime(val, true);
+  return val;
 }
 value_t create_i16(context_t ctx, i16_t value, bool mutable, const char *name) {
   value_t vtype = context_load(ctx, "i16");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, mutable, &value, name);
+  value_t val = context_create_value(ctx, type, mutable, &value, name);
+  value_set_comptime(val, true);
+  return val;
 }
 value_t create_i32(context_t ctx, i32_t value, bool mutable, const char *name) {
   value_t vtype = context_load(ctx, "i32");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, mutable, &value, name);
+  value_t val = context_create_value(ctx, type, mutable, &value, name);
+  value_set_comptime(val, true);
+  return val;
 }
 value_t create_i64(context_t ctx, i64_t value, bool mutable, const char *name) {
   value_t vtype = context_load(ctx, "i64");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, mutable, &value, name);
+  value_t val = context_create_value(ctx, type, mutable, &value, name);
+  value_set_comptime(val, true);
+  return val;
 }
 value_t create_u8(context_t ctx, u8_t value, bool mutable, const char *name) {
   value_t vtype = context_load(ctx, "u8");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, mutable, &value, name);
+  value_t val = context_create_value(ctx, type, mutable, &value, name);
+  value_set_comptime(val, true);
+  return val;
 }
 value_t create_u16(context_t ctx, u16_t value, bool mutable, const char *name) {
   value_t vtype = context_load(ctx, "u16");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, mutable, &value, name);
+  value_t val = context_create_value(ctx, type, mutable, &value, name);
+  value_set_comptime(val, true);
+  return val;
 }
 value_t create_u32(context_t ctx, u32_t value, bool mutable, const char *name) {
   value_t vtype = context_load(ctx, "u32");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, mutable, &value, name);
+  value_t val = context_create_value(ctx, type, mutable, &value, name);
+  value_set_comptime(val, true);
+  return val;
 }
 value_t create_u64(context_t ctx, u64_t value, bool mutable, const char *name) {
   value_t vtype = context_load(ctx, "u64");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, mutable, &value, name);
+  value_t val = context_create_value(ctx, type, mutable, &value, name);
+  value_set_comptime(val, true);
+  return val;
 }
 value_t create_f32(context_t ctx, f32_t value, bool mutable, const char *name) {
   value_t vtype = context_load(ctx, "f32");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, mutable, &value, name);
+  value_t val = context_create_value(ctx, type, mutable, &value, name);
+  value_set_comptime(val, true);
+  return val;
 }
 value_t create_f64(context_t ctx, f64_t value, bool mutable, const char *name) {
   value_t vtype = context_load(ctx, "f64");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, mutable, &value, name);
+  value_t val = context_create_value(ctx, type, mutable, &value, name);
+  value_set_comptime(val, true);
+  return val;
 }

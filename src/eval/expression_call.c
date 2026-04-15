@@ -21,6 +21,9 @@ value_t eval_expression_call(context_t ctx, ast_node_t node) {
     if (value_is_interrupt(arg)) {
       return arg;
     }
+    if (!value_is_comptime(arg)) {
+      return create_compile_error(ctx, item, "expression is not comptime");
+    }
     argv[idx] = arg;
   }
   if (callee->type == NODE_TYPE_EXPRESSION_MEMBER) {
@@ -32,6 +35,9 @@ value_t eval_expression_call(context_t ctx, ast_node_t node) {
     }
     if (value_is_interrupt(obj)) {
       return obj;
+    }
+    if (!value_is_comptime(obj)) {
+      return create_compile_error(ctx, obj_node, "expression is not comptime");
     }
     allocator_t allocator = context_get_allocator(ctx);
     char *field = location_get(field_node->loc, allocator);
@@ -48,6 +54,9 @@ value_t eval_expression_call(context_t ctx, ast_node_t node) {
     }
     if (value_is_interrupt(func)) {
       return func;
+    }
+    if (!value_is_comptime(func)) {
+      return create_compile_error(ctx, callee, "expression is not comptime");
     }
     value_t res = value_call(func, ctx, argc, argv);
     if (value_is_error(res)) {

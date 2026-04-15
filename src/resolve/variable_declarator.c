@@ -57,6 +57,9 @@ value_t resolve_variable_declarator(context_t ctx, ast_node_t node) {
   void *data = value_get_data(value);
   char *name = location_get(identifier->loc, allocator);
   value = context_create_value(ctx, type, true, data, name);
+  if (context_is_comptime(ctx)) {
+    value_set_comptime(value, true);
+  }
   allocator_free(allocator, name);
   return value;
 }

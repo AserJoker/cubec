@@ -79,12 +79,16 @@ static value_t ptr_unref(value_t self, context_t ctx) {
     dst = *data;
   }
   bool mutable = value_is_mutable(self);
-  return context_create_value(ctx, type, mutable, dst, NULL);
+  value_t val = context_create_value(ctx, type, mutable, dst, NULL);
+  value_set_comptime(val, true);
+  return val;
 }
 static value_t ptr_convert(value_t self, context_t ctx, type_t type) {
   if (type_get_kind(type) == VALUE_TYPE_OPAQUE) {
     void *data = (void *)value_get_data(self);
-    return context_create_value(ctx, type, false, data, NULL);
+    value_t val = context_create_value(ctx, type, false, data, NULL);
+    value_set_comptime(val, true);
+    return val;
   }
   type_t ptr_type = value_get_type(self);
   if (type_get_kind(type) == type_get_kind(ptr_type)) {
@@ -92,7 +96,9 @@ static value_t ptr_convert(value_t self, context_t ctx, type_t type) {
     type_t dst_type = ptr_type_get_type(type);
     if (ptr_type_is_equal(src_type, dst_type)) {
       void *data = value_get_data(self);
-      return context_create_value(ctx, type, false, data, NULL);
+      value_t val = context_create_value(ctx, type, false, data, NULL);
+      value_set_comptime(val, true);
+      return val;
     }
   }
   allocator_t allocator = context_get_allocator(ctx);

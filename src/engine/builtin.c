@@ -25,5 +25,7 @@ void init_builtin_type(context_t ctx) {
 value_t create_builtin(context_t ctx, builtin_fn_t fn, const char *name) {
   value_t vtype = context_load(ctx, "builtin");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, false, &fn, name);
+  value_t val = context_create_value(ctx, type, false, &fn, name);
+  value_set_comptime(val, true);
+  return val;
 }
