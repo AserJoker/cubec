@@ -1,5 +1,6 @@
 #include "engine/ptr.h"
 #include "core/allocator.h"
+#include "engine/boolean.h"
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/type.h"
@@ -110,6 +111,18 @@ static value_t ptr_convert(value_t self, context_t ctx, type_t type) {
   allocator_free(allocator, dst_type_name);
   return err;
 }
+
+static value_t ptr_is_equal(value_t self, context_t ctx, value_t another) {
+  bool res =
+      *(void **)value_get_data(self) == *(void **)value_get_data(another);
+  return create_boolean(ctx, res, false, NULL);
+}
+static value_t ptr_is_not_equal(value_t self, context_t ctx, value_t another) {
+  bool res =
+      *(void **)value_get_data(self) != *(void **)value_get_data(another);
+  return create_boolean(ctx, res, false, NULL);
+}
+
 value_t create_ptr_type(context_t ctx, type_t type, bool mutable,
                         bool volatile_) {
   ptr_meta_t meta =
@@ -119,6 +132,8 @@ value_t create_ptr_type(context_t ctx, type_t type, bool mutable,
       .type_to_string = ptr_type_to_string,
       .unref = ptr_unref,
       .convert = ptr_convert,
+      .eq_opt = ptr_is_equal,
+      .ne_opt = ptr_is_not_equal,
   };
   return context_create_type(ctx, VALUE_TYPE_PTR, sizeof(void *),
                              sizeof(void *), meta, &opt, NULL);
@@ -131,6 +146,8 @@ value_t create_ptr_array_type(context_t ctx, type_t type, bool mutable,
       .is_type_equal = ptr_type_is_equal,
       .type_to_string = ptr_type_to_string,
       .convert = ptr_convert,
+      .eq_opt = ptr_is_equal,
+      .ne_opt = ptr_is_not_equal,
   };
   return context_create_type(ctx, VALUE_TYPE_PARRAY, sizeof(void *),
                              sizeof(void *), meta, &opt, NULL);
