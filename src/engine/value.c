@@ -1042,44 +1042,32 @@ value_t value_try(value_t value, context_t ctx) {
     return create_error(ctx, "try expression only used in function");
   }
   value_t is_error = value_member_call(value, ctx, "is_error", 0, NULL);
-  if (value_type_is(is_error, VALUE_TYPE_ERROR)) {
+  if (value_is_error(is_error)) {
     return is_error;
   }
   if (!value_type_is(is_error, VALUE_TYPE_BOOL)) {
     is_error = value_safe_convert(value, ctx, context_load_type(ctx, "bool"));
-    if (value_type_is(is_error, VALUE_TYPE_ERROR)) {
+    if (value_is_error(is_error)) {
       return is_error;
     }
   }
   type_t result_type = function_type_get_type(ctx_type);
   value_t vresult_type = create_type_value(ctx, result_type, false, NULL);
-  if (value_is_comptime(static_scope->binding)) {
-    if (!value_get_data(is_error)) {
-      return create_error(ctx, "value is not comptime");
-    }
-    bool is_err = *(bool *)value_get_data(is_error);
-    if (is_err) {
-      value_t err = value_member_call(value, ctx, "error", 0, NULL);
-      if (value_type_is(err, VALUE_TYPE_ERROR)) {
-        return err;
-      }
-      err = value_member_call(vresult_type, ctx, "of_error", 1, &err);
-      if (value_type_is(err, VALUE_TYPE_ERROR)) {
-        return err;
-      }
-      return context_create_interrupt(ctx, err);
-    } else {
-      return value_member_call(value, ctx, "value", 0, NULL);
-    }
-  } else {
+  if (!value_get_data(is_error)) {
+    return create_error(ctx, "value is not comptime");
+  }
+  bool is_err = *(bool *)value_get_data(is_error);
+  if (is_err) {
     value_t err = value_member_call(value, ctx, "error", 0, NULL);
-    if (value_type_is(err, VALUE_TYPE_ERROR)) {
+    if (value_is_error(err)) {
       return err;
     }
     err = value_member_call(vresult_type, ctx, "of_error", 1, &err);
-    if (value_type_is(err, VALUE_TYPE_ERROR)) {
+    if (value_is_error(err)) {
       return err;
     }
+    return context_create_interrupt(ctx, err);
+  } else {
     return value_member_call(value, ctx, "value", 0, NULL);
   }
 }

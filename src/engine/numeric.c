@@ -92,11 +92,6 @@ static value_t numeric_to_string(value_t self, context_t ctx) {
 
 #define DECLAR_BINARY_OPT(type, rtype, name, opt)                              \
   static value_t type##_##name(value_t self, context_t ctx, value_t another) { \
-    if (!value_get_data(self) || !value_get_data(another)) {                   \
-      value_t vtype = context_load(ctx, #rtype);                               \
-      type_t type = *(type_t *)value_get_data(vtype);                          \
-      return context_create_value(ctx, type, false, NULL, NULL);               \
-    }                                                                          \
     type##_t left = *(type##_t *)value_get_data(self);                         \
     type##_t right = *(type##_t *)value_get_data(another);                     \
     return create_##rtype(ctx, left opt right, true, NULL);                    \
@@ -104,13 +99,40 @@ static value_t numeric_to_string(value_t self, context_t ctx) {
 
 #define DECLAR_SINGLE_OPT(type, rtype, name, opt)                              \
   static value_t type##_##name(value_t self, context_t ctx) {                  \
-    if (!value_get_data(self)) {                                               \
-      value_t vtype = context_load(ctx, #rtype);                               \
-      type_t type = *(type_t *)value_get_data(vtype);                          \
-      return context_create_value(ctx, type, false, NULL, NULL);               \
-    }                                                                          \
     type##_t left = *(type##_t *)value_get_data(self);                         \
     return create_##rtype(ctx, opt left, true, NULL);                          \
+  }
+#define DECLAR_CONVERT(type)                                                   \
+  static value_t type##_convert(value_t self, context_t ctx, type_t type) {    \
+    type##_t *value = (type##_t *)value_get_data(self);                        \
+    type_kind_t kind = type_get_kind(type);                                    \
+    switch (kind) {                                                            \
+    case VALUE_TYPE_BOOL:                                                      \
+      return create_boolean(ctx, *value, false, NULL);                         \
+    case VALUE_TYPE_INT8:                                                      \
+      return create_i8(ctx, *value, false, NULL);                              \
+    case VALUE_TYPE_INT16:                                                     \
+      return create_i16(ctx, *value, false, NULL);                             \
+    case VALUE_TYPE_INT32:                                                     \
+      return create_i32(ctx, *value, false, NULL);                             \
+    case VALUE_TYPE_INT64:                                                     \
+      return create_i64(ctx, *value, false, NULL);                             \
+    case VALUE_TYPE_UINT8:                                                     \
+      return create_u8(ctx, *value, false, NULL);                              \
+    case VALUE_TYPE_UINT16:                                                    \
+      return create_u16(ctx, *value, false, NULL);                             \
+    case VALUE_TYPE_UINT32:                                                    \
+      return create_u32(ctx, *value, false, NULL);                             \
+    case VALUE_TYPE_UINT64:                                                    \
+      return create_u64(ctx, *value, false, NULL);                             \
+    case VALUE_TYPE_FLOAT32:                                                   \
+      return create_f32(ctx, *value, false, NULL);                             \
+    case VALUE_TYPE_FLOAT64:                                                   \
+      return create_f64(ctx, *value, false, NULL);                             \
+    default:                                                                   \
+      break;                                                                   \
+    }                                                                          \
+    return NULL;                                                               \
   }
 DECLAR_BINARY_OPT(i8, i8, add, +);
 DECLAR_BINARY_OPT(i8, i8, sub, -);
@@ -303,83 +325,6 @@ DECLAR_BINARY_OPT(f64, boolean, gt, >);
 DECLAR_BINARY_OPT(f64, boolean, lt, <);
 DECLAR_BINARY_OPT(f64, boolean, ge, >=);
 DECLAR_BINARY_OPT(f64, boolean, le, <=);
-
-#define DECLAR_CONVERT(type)                                                   \
-  static value_t type##_convert(value_t self, context_t ctx, type_t type) {    \
-    type##_t *value = (type##_t *)value_get_data(self);                        \
-    type_kind_t kind = type_get_kind(type);                                    \
-    switch (kind) {                                                            \
-    case VALUE_TYPE_BOOL:                                                      \
-      if (value) {                                                             \
-        return create_boolean(ctx, *value, false, NULL);                       \
-      } else {                                                                 \
-        return context_create_value(ctx, type, false, NULL, NULL);             \
-      }                                                                        \
-    case VALUE_TYPE_INT8:                                                      \
-      if (value) {                                                             \
-        return create_i8(ctx, *value, false, NULL);                            \
-      } else {                                                                 \
-        return context_create_value(ctx, type, false, NULL, NULL);             \
-      }                                                                        \
-    case VALUE_TYPE_INT16:                                                     \
-      if (value) {                                                             \
-        return create_i16(ctx, *value, false, NULL);                           \
-      } else {                                                                 \
-        return context_create_value(ctx, type, false, NULL, NULL);             \
-      }                                                                        \
-    case VALUE_TYPE_INT32:                                                     \
-      if (value) {                                                             \
-        return create_i32(ctx, *value, false, NULL);                           \
-      } else {                                                                 \
-        return context_create_value(ctx, type, false, NULL, NULL);             \
-      }                                                                        \
-    case VALUE_TYPE_INT64:                                                     \
-      if (value) {                                                             \
-        return create_i64(ctx, *value, false, NULL);                           \
-      } else {                                                                 \
-        return context_create_value(ctx, type, false, NULL, NULL);             \
-      }                                                                        \
-    case VALUE_TYPE_UINT8:                                                     \
-      if (value) {                                                             \
-        return create_u8(ctx, *value, false, NULL);                            \
-      } else {                                                                 \
-        return context_create_value(ctx, type, false, NULL, NULL);             \
-      }                                                                        \
-    case VALUE_TYPE_UINT16:                                                    \
-      if (value) {                                                             \
-        return create_u16(ctx, *value, false, NULL);                           \
-      } else {                                                                 \
-        return context_create_value(ctx, type, false, NULL, NULL);             \
-      }                                                                        \
-    case VALUE_TYPE_UINT32:                                                    \
-      if (value) {                                                             \
-        return create_u32(ctx, *value, false, NULL);                           \
-      } else {                                                                 \
-        return context_create_value(ctx, type, false, NULL, NULL);             \
-      }                                                                        \
-    case VALUE_TYPE_UINT64:                                                    \
-      if (value) {                                                             \
-        return create_u64(ctx, *value, false, NULL);                           \
-      } else {                                                                 \
-        return context_create_value(ctx, type, false, NULL, NULL);             \
-      }                                                                        \
-    case VALUE_TYPE_FLOAT32:                                                   \
-      if (value) {                                                             \
-        return create_f32(ctx, *value, false, NULL);                           \
-      } else {                                                                 \
-        return context_create_value(ctx, type, false, NULL, NULL);             \
-      }                                                                        \
-    case VALUE_TYPE_FLOAT64:                                                   \
-      if (value) {                                                             \
-        return create_f64(ctx, *value, false, NULL);                           \
-      } else {                                                                 \
-        return context_create_value(ctx, type, false, NULL, NULL);             \
-      }                                                                        \
-    default:                                                                   \
-      break;                                                                   \
-    }                                                                          \
-    return NULL;                                                               \
-  }
 
 DECLAR_CONVERT(i8);
 DECLAR_CONVERT(i16);
