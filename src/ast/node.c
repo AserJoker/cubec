@@ -16,126 +16,117 @@
 #include <unicode/uchar.h>
 #include <unicode/umachine.h>
 
-static void cubec_ast_node_dispose(cubec_ast_node_t self,
-                                   cubec_allocator_t allocator) {
+static void ast_node_dispose(ast_node_t self, allocator_t allocator) {
   if (self->type == CUBEC_NODE_TYPE_LIST) {
-    cubec_allocator_free(allocator, self->items);
+    allocator_free(allocator, self->items);
   } else {
-    cubec_allocator_free(allocator, self->children);
+    allocator_free(allocator, self->children);
   }
 }
-cubec_ast_node_t cubec_create_ast_node(cubec_allocator_t allocator,
-                                       size_t type) {
-  cubec_ast_node_t node =
-      cubec_allocator_alloc(allocator, sizeof(struct _cubec_ast_node_t),
-                            (cubec_dispose_fn_t)cubec_ast_node_dispose);
-  memset(node, 0, sizeof(struct _cubec_ast_node_t));
+ast_node_t create_ast_node(allocator_t allocator, size_t type) {
+  ast_node_t node = allocator_alloc(allocator, sizeof(struct _ast_node_t),
+                                    (dispose_fn_t)ast_node_dispose);
+  memset(node, 0, sizeof(struct _ast_node_t));
   node->type = type;
   if (type == CUBEC_NODE_TYPE_LIST) {
-    cubec_array_initialize_t initialize = {
+    array_initialize_t initialize = {
         .autofree = true,
     };
-    node->items = cubec_create_array(allocator, &initialize);
+    node->items = create_array(allocator, &initialize);
   } else {
-    cubec_hash_map_initialize_t initialize = {
+    hash_map_initialize_t initialize = {
         .autofree_key = true,
         .autofree_value = true,
-        .hash = (cubec_hash_fn_t)cubec_cstring_sdb,
-        .compare = (cubec_compare_fn_t)strcmp,
+        .hash = (hash_fn_t)cstring_sdb,
+        .compare = (compare_fn_t)strcmp,
     };
-    node->children = cubec_create_hash_map(allocator, &initialize);
+    node->children = create_hash_map(allocator, &initialize);
   }
   node->changed = false;
   return node;
 }
-void cubec_ast_add_child(cubec_allocator_t allocator, cubec_ast_node_t node,
-                         const char *name, cubec_ast_node_t child) {
-  cubec_hash_map_set(node->children, cubec_create_cstring(allocator, name),
-                     child, NULL, NULL);
+void ast_add_child(allocator_t allocator, ast_node_t node, const char *name,
+                   ast_node_t child) {
+  hash_map_set(node->children, create_cstring(allocator, name), child, NULL,
+               NULL);
   child->parent = node;
   node->changed = true;
 }
-void cubec_ast_remove_child(cubec_ast_node_t node, const char *name) {
-  cubec_hash_map_delete(node->children, name, NULL, NULL);
+void ast_remove_child(ast_node_t node, const char *name) {
+  hash_map_delete(node->children, name, NULL, NULL);
   node->changed = true;
 }
-cubec_ast_node_t cubec_ast_move_child(cubec_ast_node_t node, const char *name) {
+ast_node_t ast_move_child(ast_node_t node, const char *name) {
   node->changed = true;
-  return cubec_hash_map_move(node->children, name, NULL, NULL);
+  return hash_map_move(node->children, name, NULL, NULL);
 }
-cubec_ast_node_t cubec_ast_get_child(cubec_ast_node_t node, const char *name) {
-  return cubec_hash_map_get(node->children, name, NULL, NULL);
+ast_node_t ast_get_child(ast_node_t node, const char *name) {
+  return hash_map_get(node->children, name, NULL, NULL);
 }
-cubec_ast_node_t cubec_ast_get_item(cubec_ast_node_t node, size_t idx) {
-  return cubec_array_get(node->items, idx);
+ast_node_t ast_get_item(ast_node_t node, size_t idx) {
+  return array_get(node->items, idx);
 }
-const char *cubec_ast_get_child_name(cubec_ast_node_t node,
-                                     cubec_ast_node_t child) {
-  cubec_list_node_t it = cubec_hash_map_get_first(node->children);
-  while (it != cubec_hash_map_get_end(node->children)) {
-    cubec_ast_node_t val = cubec_hash_map_node_get_value(it);
+const char *ast_get_child_name(ast_node_t node, ast_node_t child) {
+  list_node_t it = hash_map_get_first(node->children);
+  while (it != hash_map_get_end(node->children)) {
+    ast_node_t val = hash_map_node_get_value(it);
     if (val == child) {
-      return cubec_hash_map_node_get_key(it);
+      return hash_map_node_get_key(it);
     }
-    it = cubec_hash_map_node_get_next(it);
+    it = hash_map_node_get_next(it);
   }
   return NULL;
 }
-size_t cubec_ast_get_item_index(cubec_ast_node_t node, cubec_ast_node_t child) {
+size_t ast_get_item_index(ast_node_t node, ast_node_t child) {
   size_t idx = 0;
-  while (idx < cubec_array_get_size(node->items)) {
-    if (cubec_array_get(node->items, idx) == child) {
+  while (idx < array_get_size(node->items)) {
+    if (array_get(node->items, idx) == child) {
       return idx;
     }
     idx++;
   }
   return (size_t)idx;
 }
-void cubec_ast_add_item(cubec_ast_node_t node, cubec_ast_node_t item) {
-  cubec_array_push(node->items, item);
+void ast_add_item(ast_node_t node, ast_node_t item) {
+  array_push(node->items, item);
   item->parent = node;
   node->changed = true;
 }
-void cubec_ast_remove_item(cubec_ast_node_t node, size_t idx) {
-  cubec_array_del(node->items, idx);
+void ast_remove_item(ast_node_t node, size_t idx) {
+  array_del(node->items, idx);
   node->changed = true;
 }
-cubec_ast_node_t cubec_ast_move_item(cubec_ast_node_t node, size_t idx) {
+ast_node_t ast_move_item(ast_node_t node, size_t idx) {
   node->changed = true;
-  cubec_ast_node_t current = cubec_array_move(node->items, idx);
+  ast_node_t current = array_move(node->items, idx);
   current->parent = NULL;
   return current;
 }
-cubec_ast_node_t cubec_ast_replace_item(cubec_ast_node_t node, size_t idx,
-                                        cubec_ast_node_t item) {
+ast_node_t ast_replace_item(ast_node_t node, size_t idx, ast_node_t item) {
   node->changed = true;
-  return cubec_array_replace(node->items, idx, item);
+  return array_replace(node->items, idx, item);
 }
-void cubec_ast_insert_item(cubec_ast_node_t node, size_t pos,
-                           cubec_ast_node_t item) {
+void ast_insert_item(ast_node_t node, size_t pos, ast_node_t item) {
   node->changed = true;
-  cubec_array_insert(node->items, pos, item);
+  array_insert(node->items, pos, item);
   item->parent = node;
 }
-size_t cubec_ast_get_length(cubec_ast_node_t node) {
-  return cubec_array_get_size(node->items);
-}
-void cubec_ast_set_item(cubec_ast_node_t node, size_t idx,
-                        cubec_ast_node_t item) {
-  cubec_array_set(node->items, idx, item);
+size_t ast_get_length(ast_node_t node) { return array_get_size(node->items); }
+void ast_set_item(ast_node_t node, size_t idx, ast_node_t item) {
+  array_set(node->items, idx, item);
   item->parent = node;
   node->changed = true;
 }
-void cubec_ast_set_child(cubec_allocator_t allocator, cubec_ast_node_t node,
-                         const char *name, cubec_ast_node_t child) {
-  cubec_hash_map_set(node->children, cubec_create_cstring(allocator, name),
-                     child, NULL, NULL);
+void ast_set_child(allocator_t allocator, ast_node_t node, const char *name,
+                   ast_node_t child) {
+  hash_map_set(node->children, create_cstring(allocator, name), child, NULL,
+               NULL);
   child->parent = node;
   node->changed = true;
 }
 
-int32_t cubec_ast_read_code(cubec_position_t *position, const char *end,
-                            const char *filename) {
+int32_t ast_read_code(position_t *position, const char *end,
+                      const char *filename) {
   int32_t code = 0;
   size_t offset = 0;
   size_t len = end - position->offset;
@@ -210,50 +201,45 @@ int32_t cubec_ast_read_code(cubec_position_t *position, const char *end,
   return code;
 }
 
-static void cubec_error_dispose(cubec_ast_error_t self,
-                                cubec_allocator_t allocator) {
-  cubec_allocator_free(allocator, self->message);
-  cubec_ast_node_dispose(&self->super, allocator);
+static void error_dispose(ast_error_t self, allocator_t allocator) {
+  allocator_free(allocator, self->message);
+  ast_node_dispose(&self->super, allocator);
 }
 
-cubec_ast_node_t cubec_create_ast_error(cubec_allocator_t allocator,
-                                        cubec_position_t begin,
-                                        cubec_position_t end,
-                                        const char *filename,
-                                        const char *message) {
-  cubec_ast_error_t node =
-      cubec_allocator_alloc(allocator, sizeof(struct _cubec_ast_error_t),
-                            (cubec_dispose_fn_t)cubec_error_dispose);
-  memset(node, 0, sizeof(struct _cubec_ast_error_t));
+ast_node_t create_ast_error(allocator_t allocator, position_t begin,
+                            position_t end, const char *filename,
+                            const char *message) {
+  ast_error_t node = allocator_alloc(allocator, sizeof(struct _ast_error_t),
+                                     (dispose_fn_t)error_dispose);
+  memset(node, 0, sizeof(struct _ast_error_t));
   node->super.type = CUBEC_NODE_TYPE_ERROR;
   node->super.loc.begin = begin;
   node->super.loc.end = end;
   node->super.loc.filename = filename;
   size_t len = strlen(message);
-  node->message = cubec_allocator_alloc(allocator, len + 1, NULL);
+  node->message = allocator_alloc(allocator, len + 1, NULL);
   strcpy(node->message, message);
   return &node->super;
 }
 
-cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
-                                    cubec_position_t *position, const char *end,
-                                    const char *filename) {
-  cubec_position_t current = *position;
+ast_node_t ast_skip_all(allocator_t allocator, position_t *position,
+                        const char *end, const char *filename) {
+  position_t current = *position;
   while (*current.offset) {
-    int32_t code = cubec_ast_read_code(&current, end, filename);
+    int32_t code = ast_read_code(&current, end, filename);
     if (code < 0) {
-      return cubec_create_ast_error(allocator, *position, current, filename,
-                                    "invalid unicode code");
+      return create_ast_error(allocator, *position, current, filename,
+                              "invalid unicode code");
     }
     if (u_isWhitespace(code)) {
       *position = current;
       continue;
     }
     if (code == '/') {
-      code = cubec_ast_read_code(&current, end, filename);
+      code = ast_read_code(&current, end, filename);
       if (code < 0) {
-        return cubec_create_ast_error(allocator, *position, current, filename,
-                                      "invalid unicode code");
+        return create_ast_error(allocator, *position, current, filename,
+                                "invalid unicode code");
       }
       if (code == '/') {
         while (code != '\n' && code != '\r' && code != 0x2028 &&
@@ -261,10 +247,10 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
           if (*current.offset == 0) {
             break;
           }
-          code = cubec_ast_read_code(&current, end, filename);
+          code = ast_read_code(&current, end, filename);
           if (code < 0) {
-            return cubec_create_ast_error(allocator, *position, current,
-                                          filename, "invalid unicode code");
+            return create_ast_error(allocator, *position, current, filename,
+                                    "invalid unicode code");
           }
         }
         *position = current;
@@ -273,25 +259,23 @@ cubec_ast_node_t cubec_ast_skip_all(cubec_allocator_t allocator,
       if (code == '*') {
         while (true) {
           if (*current.offset == 0) {
-            return cubec_create_ast_error(allocator, *position, current,
-                                          filename,
-                                          "Missing multiline comment end '*/'");
+            return create_ast_error(allocator, *position, current, filename,
+                                    "Missing multiline comment end '*/'");
           }
-          code = cubec_ast_read_code(&current, end, filename);
+          code = ast_read_code(&current, end, filename);
           if (code < 0) {
-            return cubec_create_ast_error(allocator, *position, current,
-                                          filename, "invalid unicode code");
+            return create_ast_error(allocator, *position, current, filename,
+                                    "invalid unicode code");
           }
           if (code == '\\') {
             if (!*current.offset) {
-              return cubec_create_ast_error(
-                  allocator, *position, current, filename,
-                  "Missing multiline comment end '*/'");
+              return create_ast_error(allocator, *position, current, filename,
+                                      "Missing multiline comment end '*/'");
             }
-            code = cubec_ast_read_code(&current, end, filename);
+            code = ast_read_code(&current, end, filename);
             if (code < 0) {
-              return cubec_create_ast_error(allocator, *position, current,
-                                            filename, "invalid unicode code");
+              return create_ast_error(allocator, *position, current, filename,
+                                      "invalid unicode code");
             }
             continue;
           }
@@ -372,8 +356,8 @@ static const char *type_names[] = {
     "CUBEC_NODE_TYPE_TYPE",
 };
 
-static char *encode_text(cubec_allocator_t allocator, const char *source) {
-  char *res = cubec_allocator_alloc(allocator, strlen(source) * 2 + 1, NULL);
+static char *encode_text(allocator_t allocator, const char *source) {
+  char *res = allocator_alloc(allocator, strlen(source) * 2 + 1, NULL);
   const char *src = source;
   char *dst = res;
   while (*src) {
@@ -410,97 +394,93 @@ static char *encode_text(cubec_allocator_t allocator, const char *source) {
   return res;
 }
 
-static void cubec_print_node(cubec_ast_node_t node, cubec_allocator_t allocator,
-                             cubec_string_t out) {
+static void print_node(ast_node_t node, allocator_t allocator, string_t out) {
   if (node->type == CUBEC_NODE_TYPE_LIST) {
 
-    cubec_string_concat(out, allocator, "[");
-    for (size_t idx = 0; idx < cubec_array_get_size(node->items); idx++) {
+    string_concat(out, allocator, "[");
+    for (size_t idx = 0; idx < array_get_size(node->items); idx++) {
       if (idx != 0) {
-        cubec_string_concat(out, allocator, ",");
+        string_concat(out, allocator, ",");
       }
-      cubec_ast_node_t item = cubec_array_get(node->items, idx);
-      cubec_print_node(item, allocator, out);
+      ast_node_t item = array_get(node->items, idx);
+      print_node(item, allocator, out);
     }
-    cubec_string_concat(out, allocator, "]");
+    string_concat(out, allocator, "]");
   } else {
-    cubec_string_concat(out, allocator, "{");
+    string_concat(out, allocator, "{");
     if (node->type < CUBEC_NODE_TYPE_MAX) {
       char s[strlen(type_names[node->type]) + 32];
       sprintf(s, "\"node_type\":\"%s\"", type_names[node->type]);
-      cubec_string_concat(out, allocator, s);
+      string_concat(out, allocator, s);
     } else {
       char s[128];
       sprintf(s, "\"node_type\":\"CUBEC_NODE_TYPE_MAX + %" PRIuPTR "\"",
               (size_t)node->type - CUBEC_NODE_TYPE_MAX);
-      cubec_string_concat(out, allocator, s);
+      string_concat(out, allocator, s);
     }
-    char *text = cubec_location_get(node->loc, allocator);
+    char *text = location_get(node->loc, allocator);
     char *encoded_text = encode_text(allocator, text);
-    cubec_allocator_free(allocator, text);
+    allocator_free(allocator, text);
     char s[strlen(encoded_text) + 32];
     sprintf(s, ",\"text\":\"%s\"", encoded_text);
-    cubec_string_concat(out, allocator, s);
-    cubec_allocator_free(allocator, encoded_text);
-    cubec_list_node_t it = cubec_hash_map_get_first(node->children);
-    while (it != cubec_hash_map_get_end(node->children)) {
-      const char *key = cubec_hash_map_node_get_key(it);
-      cubec_ast_node_t value = cubec_hash_map_node_get_value(it);
+    string_concat(out, allocator, s);
+    allocator_free(allocator, encoded_text);
+    list_node_t it = hash_map_get_first(node->children);
+    while (it != hash_map_get_end(node->children)) {
+      const char *key = hash_map_node_get_key(it);
+      ast_node_t value = hash_map_node_get_value(it);
       if (value) {
-        cubec_string_concat(out, allocator, ",");
+        string_concat(out, allocator, ",");
         char s[strlen(key) + 32];
         sprintf(s, "\"%s\":", key);
-        cubec_string_concat(out, allocator, s);
-        cubec_print_node(value, allocator, out);
+        string_concat(out, allocator, s);
+        print_node(value, allocator, out);
       }
-      it = cubec_hash_map_node_get_next(it);
+      it = hash_map_node_get_next(it);
     }
-    cubec_string_concat(out, allocator, "}");
+    string_concat(out, allocator, "}");
   }
 }
 
-char *cubec_ast_write_json(cubec_allocator_t allocator, cubec_ast_node_t node) {
-  cubec_string_t str = cubec_create_string(allocator, NULL);
-  cubec_print_node(node, allocator, str);
-  char *s = cubec_create_cstring(allocator, cubec_string_get(str));
-  cubec_allocator_free(allocator, str);
+char *ast_write_json(allocator_t allocator, ast_node_t node) {
+  string_t str = create_string(allocator, NULL);
+  print_node(node, allocator, str);
+  char *s = create_cstring(allocator, string_get(str));
+  allocator_free(allocator, str);
   return s;
 }
 
-cubec_ast_node_t cubec_read_ast_node(cubec_allocator_t allocator,
-                                     const char *filename, const char *source,
-                                     void *ctx) {
-  cubec_position_t pos = {
+ast_node_t read_ast_node(allocator_t allocator, const char *filename,
+                         const char *source, void *ctx) {
+  position_t pos = {
       .column = 1,
       .line = 1,
       .offset = source,
   };
   const char *end = strlen(source) + source;
-  cubec_ast_node_t program =
-      cubec_read_ast_program(allocator, &pos, end, filename);
+  ast_node_t program = read_ast_program(allocator, &pos, end, filename);
   if (program->type == CUBEC_NODE_TYPE_ERROR) {
     return program;
   }
   return program;
 }
-cubec_ast_node_t cubec_clone_ast_node(cubec_allocator_t allocator,
-                                      cubec_ast_node_t node) {
-  cubec_ast_node_t n = cubec_create_ast_node(allocator, node->type);
+ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
+  ast_node_t n = create_ast_node(allocator, node->type);
   n->loc = node->loc;
   if (node->type == CUBEC_NODE_TYPE_LIST) {
-    for (size_t idx = 0; idx < cubec_ast_get_length(node); idx++) {
-      cubec_ast_node_t item = cubec_ast_get_item(node, idx);
-      item = cubec_clone_ast_node(allocator, item);
-      cubec_ast_add_item(n, item);
+    for (size_t idx = 0; idx < ast_get_length(node); idx++) {
+      ast_node_t item = ast_get_item(node, idx);
+      item = clone_ast_node(allocator, item);
+      ast_add_item(n, item);
     }
   } else {
-    for (cubec_list_node_t it = cubec_hash_map_get_first(node->children);
-         it != cubec_hash_map_get_end(node->children);
-         it = cubec_hash_map_node_get_next(it)) {
-      const char *key = cubec_hash_map_node_get_key(it);
-      cubec_ast_node_t child = cubec_hash_map_node_get_value(it);
-      child = cubec_clone_ast_node(allocator, child);
-      cubec_ast_add_child(allocator, n, key, child);
+    for (list_node_t it = hash_map_get_first(node->children);
+         it != hash_map_get_end(node->children);
+         it = hash_map_node_get_next(it)) {
+      const char *key = hash_map_node_get_key(it);
+      ast_node_t child = hash_map_node_get_value(it);
+      child = clone_ast_node(allocator, child);
+      ast_add_child(allocator, n, key, child);
     }
   }
   return n;

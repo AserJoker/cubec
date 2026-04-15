@@ -7,41 +7,50 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-cubec_ast_node_t cubec_read_ast_expression_binary_logical_or(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end,
-    const char *filename);
-cubec_ast_node_t cubec_read_ast_expression_binary_logical_and(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end,
-    const char *filename);
-cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_or(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end,
-    const char *filename);
-cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_xor(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end,
-    const char *filename);
-cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_and(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end,
-    const char *filename);
-cubec_ast_node_t
-cubec_read_ast_expression_binary_equal(cubec_allocator_t allocator,
-                                       cubec_position_t *position,
-                                       const char *end, const char *filename);
-cubec_ast_node_t cubec_read_ast_expression_binary_relation(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end,
-    const char *filename);
-cubec_ast_node_t cubec_read_ast_expression_binary_bitwise_shift(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end,
-    const char *filename);
-cubec_ast_node_t cubec_read_ast_expression_binary_additive(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end,
-    const char *filename);
-cubec_ast_node_t cubec_read_ast_expression_binary_multiplicative(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end,
-    const char *filename);
-cubec_ast_node_t
-cubec_read_ast_expression_binary_prefix(cubec_allocator_t allocator,
-                                        cubec_position_t *position,
-                                        const char *end, const char *filename);
+ast_node_t read_ast_expression_binary_logical_or(allocator_t allocator,
+                                                 position_t *position,
+                                                 const char *end,
+                                                 const char *filename);
+ast_node_t read_ast_expression_binary_logical_and(allocator_t allocator,
+                                                  position_t *position,
+                                                  const char *end,
+                                                  const char *filename);
+ast_node_t read_ast_expression_binary_bitwise_or(allocator_t allocator,
+                                                 position_t *position,
+                                                 const char *end,
+                                                 const char *filename);
+ast_node_t read_ast_expression_binary_bitwise_xor(allocator_t allocator,
+                                                  position_t *position,
+                                                  const char *end,
+                                                  const char *filename);
+ast_node_t read_ast_expression_binary_bitwise_and(allocator_t allocator,
+                                                  position_t *position,
+                                                  const char *end,
+                                                  const char *filename);
+ast_node_t read_ast_expression_binary_equal(allocator_t allocator,
+                                            position_t *position,
+                                            const char *end,
+                                            const char *filename);
+ast_node_t read_ast_expression_binary_relation(allocator_t allocator,
+                                               position_t *position,
+                                               const char *end,
+                                               const char *filename);
+ast_node_t read_ast_expression_binary_bitwise_shift(allocator_t allocator,
+                                                    position_t *position,
+                                                    const char *end,
+                                                    const char *filename);
+ast_node_t read_ast_expression_binary_additive(allocator_t allocator,
+                                               position_t *position,
+                                               const char *end,
+                                               const char *filename);
+ast_node_t read_ast_expression_binary_multiplicative(allocator_t allocator,
+                                                     position_t *position,
+                                                     const char *end,
+                                                     const char *filename);
+ast_node_t read_ast_expression_binary_prefix(allocator_t allocator,
+                                             position_t *position,
+                                             const char *end,
+                                             const char *filename);
 #ifdef __cplusplus
 }
 #endif

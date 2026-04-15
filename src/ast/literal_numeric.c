@@ -6,17 +6,14 @@
 #include "core/location.h"
 #include "core/position.h"
 
-cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
-                                                cubec_position_t *position,
-                                                const char *end,
-                                                const char *filename) {
+ast_node_t read_ast_literal_numeric(allocator_t allocator, position_t *position,
+                                    const char *end, const char *filename) {
   if (*position->offset < '0' || *position->offset > '9') {
     return NULL;
   }
-  cubec_ast_node_t node =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_NUMERIC);
-  cubec_ast_node_t err = NULL;
-  cubec_position_t current = *position;
+  ast_node_t node = create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_NUMERIC);
+  ast_node_t err = NULL;
+  position_t current = *position;
   if (*current.offset == '0' &&
       (*(current.offset + 1) == 'x' || *(current.offset + 1) == 'X')) {
     current.offset += 2;
@@ -24,8 +21,8 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
     if (!(*current.offset >= '0' && *current.offset <= '9') ||
         (*current.offset >= 'a' && *current.offset <= 'f') ||
         (*current.offset >= 'A' && *current.offset <= 'F')) {
-      err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "invalid or unexpected token");
+      err = create_ast_error(allocator, *position, current, filename,
+                             "invalid or unexpected token");
       goto onerror;
     }
     while ((*current.offset >= '0' && *current.offset <= '9') ||
@@ -36,8 +33,8 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
       current.column++;
     }
     if (*(current.offset - 1) == '_') {
-      err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "invalid or unexpected token");
+      err = create_ast_error(allocator, *position, current, filename,
+                             "invalid or unexpected token");
       goto onerror;
     }
   } else if (*current.offset == '0' &&
@@ -45,8 +42,8 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
     current.offset += 2;
     current.column += 2;
     if (!(*current.offset >= '0' && *current.offset <= '7')) {
-      err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "invalid or unexpected token");
+      err = create_ast_error(allocator, *position, current, filename,
+                             "invalid or unexpected token");
       goto onerror;
     }
     while ((*current.offset >= '0' && *current.offset <= '7') ||
@@ -55,8 +52,8 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
       current.column++;
     }
     if (*(current.offset - 1) == '_') {
-      err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "invalid or unexpected token");
+      err = create_ast_error(allocator, *position, current, filename,
+                             "invalid or unexpected token");
       goto onerror;
     }
   } else if (*current.offset == '0' &&
@@ -64,8 +61,8 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
     current.offset += 2;
     current.column += 2;
     if (!(*current.offset >= '0' && *current.offset <= '1')) {
-      err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "invalid or unexpected token");
+      err = create_ast_error(allocator, *position, current, filename,
+                             "invalid or unexpected token");
       goto onerror;
     }
     while ((*current.offset >= '0' && *current.offset <= '1') ||
@@ -74,8 +71,8 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
       current.column++;
     }
     if (*(current.offset - 1) == '_') {
-      err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "invalid or unexpected token");
+      err = create_ast_error(allocator, *position, current, filename,
+                             "invalid or unexpected token");
       goto onerror;
     }
   } else if (*current.offset >= '0' && *current.offset <= '9' ||
@@ -87,8 +84,8 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
         current.column++;
       }
       if (*(current.offset - 1) == '_') {
-        err = cubec_create_ast_error(allocator, *position, current, filename,
-                                     "invalid or unexpected token");
+        err = create_ast_error(allocator, *position, current, filename,
+                               "invalid or unexpected token");
         goto onerror;
       }
     }
@@ -97,8 +94,8 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
       current.column++;
       if ((*current.offset < '0' || *current.offset > '9') &&
           *position->offset == '.') {
-        err = cubec_create_ast_error(allocator, *position, current, filename,
-                                     "invalid or unexpected token");
+        err = create_ast_error(allocator, *position, current, filename,
+                               "invalid or unexpected token");
         goto onerror;
       }
       while (*current.offset >= '0' && *current.offset <= '9' ||
@@ -107,8 +104,8 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
         current.column++;
       }
       if (*(current.offset - 1) == '_') {
-        err = cubec_create_ast_error(allocator, *position, current, filename,
-                                     "invalid or unexpected token");
+        err = create_ast_error(allocator, *position, current, filename,
+                               "invalid or unexpected token");
         goto onerror;
       }
     }
@@ -116,8 +113,8 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
       current.offset++;
       current.column++;
       if (*current.offset < '0' || *current.offset > '9') {
-        err = cubec_create_ast_error(allocator, *position, current, filename,
-                                     "invalid or unexpected token");
+        err = create_ast_error(allocator, *position, current, filename,
+                               "invalid or unexpected token");
         goto onerror;
       }
       while (*current.offset >= '0' && *current.offset <= '9' ||
@@ -126,8 +123,8 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
         current.column++;
       }
       if (*(current.offset - 1) == '_') {
-        err = cubec_create_ast_error(allocator, *position, current, filename,
-                                     "invalid or unexpected token");
+        err = create_ast_error(allocator, *position, current, filename,
+                               "invalid or unexpected token");
         goto onerror;
       }
     }
@@ -135,19 +132,19 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
     goto onerror;
   }
 
-  cubec_ast_node_t value =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_NUMERIC_VALUE);
+  ast_node_t value =
+      create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_NUMERIC_VALUE);
   value->loc.begin = *position;
   value->loc.end = current;
   value->loc.filename = filename;
-  cubec_ast_add_child(allocator, node, "value", value);
+  ast_add_child(allocator, node, "value", value);
   if (*current.offset == '@') {
     current.offset++;
     current.column++;
-    cubec_ast_node_t type =
-        cubec_read_ast_literal_identifier(allocator, &current, end, filename);
+    ast_node_t type =
+        read_ast_literal_identifier(allocator, &current, end, filename);
     if (type) {
-      cubec_ast_add_child(allocator, node, "type", type);
+      ast_add_child(allocator, node, "type", type);
     }
   }
   node->loc.begin = *position;
@@ -156,6 +153,6 @@ cubec_ast_node_t cubec_read_ast_literal_numeric(cubec_allocator_t allocator,
   *position = current;
   return node;
 onerror:
-  cubec_allocator_free(allocator, node);
+  allocator_free(allocator, node);
   return err;
 }

@@ -19,27 +19,17 @@ typedef uint16_t u16_t;
 typedef uint32_t u32_t;
 typedef uint64_t u64_t;
 
-void cubec_init_numeric_type(cubec_context_t ctx);
-cubec_value_t cubec_create_i8(cubec_context_t ctx, i8_t value, bool mutable,
-                              const char *name);
-cubec_value_t cubec_create_i16(cubec_context_t ctx, i16_t value, bool mutable,
-                               const char *name);
-cubec_value_t cubec_create_i32(cubec_context_t ctx, i32_t value, bool mutable,
-                               const char *name);
-cubec_value_t cubec_create_i64(cubec_context_t ctx, i64_t value, bool mutable,
-                               const char *name);
-cubec_value_t cubec_create_u8(cubec_context_t ctx, u8_t value, bool mutable,
-                              const char *name);
-cubec_value_t cubec_create_u16(cubec_context_t ctx, u16_t value, bool mutable,
-                               const char *name);
-cubec_value_t cubec_create_u32(cubec_context_t ctx, u32_t value, bool mutable,
-                               const char *name);
-cubec_value_t cubec_create_u64(cubec_context_t ctx, u64_t value, bool mutable,
-                               const char *name);
-cubec_value_t cubec_create_f32(cubec_context_t ctx, f32_t value, bool mutable,
-                               const char *name);
-cubec_value_t cubec_create_f64(cubec_context_t ctx, f64_t value, bool mutable,
-                               const char *name);
+void init_numeric_type(context_t ctx);
+value_t create_i8(context_t ctx, i8_t value, bool mutable, const char *name);
+value_t create_i16(context_t ctx, i16_t value, bool mutable, const char *name);
+value_t create_i32(context_t ctx, i32_t value, bool mutable, const char *name);
+value_t create_i64(context_t ctx, i64_t value, bool mutable, const char *name);
+value_t create_u8(context_t ctx, u8_t value, bool mutable, const char *name);
+value_t create_u16(context_t ctx, u16_t value, bool mutable, const char *name);
+value_t create_u32(context_t ctx, u32_t value, bool mutable, const char *name);
+value_t create_u64(context_t ctx, u64_t value, bool mutable, const char *name);
+value_t create_f32(context_t ctx, f32_t value, bool mutable, const char *name);
+value_t create_f64(context_t ctx, f64_t value, bool mutable, const char *name);
 #ifdef __cplusplus
 }
 #endif

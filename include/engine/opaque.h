@@ -7,9 +7,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void cubec_init_opaque_type(cubec_context_t ctx);
-cubec_value_t cubec_create_opaque(cubec_context_t ctx, const void *data,
-                                  bool mutable, const char *name);
+void init_opaque_type(context_t ctx);
+value_t create_opaque(context_t ctx, const void *data, bool mutable,
+                      const char *name);
 
 #ifdef __cplusplus
 }

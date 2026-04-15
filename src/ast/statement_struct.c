@@ -5,16 +5,15 @@
 #include "core/allocator.h"
 #include "core/position.h"
 
-cubec_ast_node_t cubec_read_ast_statement_struct(cubec_allocator_t allocator,
-                                                 cubec_position_t *position,
-                                                 const char *end,
-                                                 const char *filename) {
-  cubec_ast_node_t node =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_STRUCT);
-  cubec_ast_node_t err = NULL;
-  cubec_position_t current = *position;
-  cubec_ast_node_t stru =
-      cubec_read_ast_struct_declarator(allocator, &current, end, filename);
+ast_node_t read_ast_statement_struct(allocator_t allocator,
+                                     position_t *position, const char *end,
+                                     const char *filename) {
+  ast_node_t node =
+      create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_STRUCT);
+  ast_node_t err = NULL;
+  position_t current = *position;
+  ast_node_t stru =
+      read_ast_struct_declarator(allocator, &current, end, filename);
   if (!stru) {
     goto onerror;
   }
@@ -22,8 +21,8 @@ cubec_ast_node_t cubec_read_ast_statement_struct(cubec_allocator_t allocator,
     err = stru;
     goto onerror;
   }
-  cubec_ast_add_child(allocator, node, "stru", stru);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  ast_add_child(allocator, node, "stru", stru);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
@@ -40,6 +39,6 @@ cubec_ast_node_t cubec_read_ast_statement_struct(cubec_allocator_t allocator,
 
   return node;
 onerror:
-  cubec_allocator_free(allocator, node);
+  allocator_free(allocator, node);
   return err;
 }

@@ -8,15 +8,12 @@
 #include "core/location.h"
 #include "core/position.h"
 
-cubec_ast_node_t cubec_read_ast_ptr_declarator(cubec_allocator_t allocator,
-                                               cubec_position_t *position,
-                                               const char *end,
-                                               const char *filename) {
-  cubec_ast_node_t node = NULL;
-  cubec_ast_node_t err = NULL;
-  cubec_position_t current = *position;
-  cubec_ast_node_t kind =
-      cubec_read_ast_literal_symbol(allocator, &current, end, filename);
+ast_node_t read_ast_ptr_declarator(allocator_t allocator, position_t *position,
+                                   const char *end, const char *filename) {
+  ast_node_t node = NULL;
+  ast_node_t err = NULL;
+  position_t current = *position;
+  ast_node_t kind = read_ast_literal_symbol(allocator, &current, end, filename);
   if (!kind) {
     goto onerror;
   }
@@ -24,23 +21,21 @@ cubec_ast_node_t cubec_read_ast_ptr_declarator(cubec_allocator_t allocator,
     err = kind;
     goto onerror;
   }
-  if (!cubec_location_is(kind->loc, "*") &&
-      !cubec_location_is(kind->loc, "[*]")) {
-    cubec_allocator_free(allocator, kind);
+  if (!location_is(kind->loc, "*") && !location_is(kind->loc, "[*]")) {
+    allocator_free(allocator, kind);
     goto onerror;
   }
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_PTR_DECLARATOR);
-  cubec_ast_add_child(allocator, node, "kind", kind);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  node = create_ast_node(allocator, CUBEC_NODE_TYPE_PTR_DECLARATOR);
+  ast_add_child(allocator, node, "kind", kind);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  cubec_ast_node_t decorators =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "decorators", decorators);
+  ast_node_t decorators = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "decorators", decorators);
   for (;;) {
-    cubec_ast_node_t item =
-        cubec_read_ast_literal_identifier(allocator, &current, end, filename);
+    ast_node_t item =
+        read_ast_literal_identifier(allocator, &current, end, filename);
     if (!item) {
       break;
     }
@@ -48,21 +43,19 @@ cubec_ast_node_t cubec_read_ast_ptr_declarator(cubec_allocator_t allocator,
       err = item;
       goto onerror;
     }
-    if (cubec_location_is(item->loc, "volatile") ||
-        cubec_location_is(item->loc, "const")) {
-      cubec_ast_add_item(decorators, item);
+    if (location_is(item->loc, "volatile") || location_is(item->loc, "const")) {
+      ast_add_item(decorators, item);
     } else {
       current = item->loc.begin;
-      cubec_allocator_free(allocator, item);
+      allocator_free(allocator, item);
       break;
     }
-    err = cubec_ast_skip_all(allocator, &current, end, filename);
+    err = ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
     }
   }
-  cubec_ast_node_t type =
-      cubec_read_ast_expression18(allocator, &current, end, filename);
+  ast_node_t type = read_ast_expression18(allocator, &current, end, filename);
   if (!type) {
     goto onerror;
   }
@@ -70,7 +63,7 @@ cubec_ast_node_t cubec_read_ast_ptr_declarator(cubec_allocator_t allocator,
     err = type;
     goto onerror;
   }
-  cubec_ast_add_child(allocator, node, "type", type);
+  ast_add_child(allocator, node, "type", type);
   node->loc.begin = *position;
   node->loc.end = current;
   node->loc.filename = filename;
@@ -78,6 +71,6 @@ cubec_ast_node_t cubec_read_ast_ptr_declarator(cubec_allocator_t allocator,
 
   return node;
 onerror:
-  cubec_allocator_free(allocator, node);
+  allocator_free(allocator, node);
   return err;
 }

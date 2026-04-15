@@ -5,16 +5,15 @@
 #include "core/allocator.h"
 #include "core/position.h"
 
-cubec_ast_node_t cubec_read_ast_statement_function(cubec_allocator_t allocator,
-                                                   cubec_position_t *position,
-                                                   const char *end,
-                                                   const char *filename) {
-  cubec_ast_node_t node =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_FUNCTION);
-  cubec_ast_node_t err = NULL;
-  cubec_position_t current = *position;
-  cubec_ast_node_t function =
-      cubec_read_ast_function_declarator(allocator, &current, end, filename);
+ast_node_t read_ast_statement_function(allocator_t allocator,
+                                       position_t *position, const char *end,
+                                       const char *filename) {
+  ast_node_t node =
+      create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_FUNCTION);
+  ast_node_t err = NULL;
+  position_t current = *position;
+  ast_node_t function =
+      read_ast_function_declarator(allocator, &current, end, filename);
   if (!function) {
     goto onerror;
   }
@@ -22,8 +21,8 @@ cubec_ast_node_t cubec_read_ast_statement_function(cubec_allocator_t allocator,
     err = function;
     goto onerror;
   }
-  cubec_ast_add_child(allocator, node, "function", function);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  ast_add_child(allocator, node, "function", function);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
@@ -40,6 +39,6 @@ cubec_ast_node_t cubec_read_ast_statement_function(cubec_allocator_t allocator,
 
   return node;
 onerror:
-  cubec_allocator_free(allocator, node);
+  allocator_free(allocator, node);
   return err;
 }

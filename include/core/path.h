@@ -1,5 +1,5 @@
-#ifndef _H_cubec_CUBEC_PATH_
-#define _H_cubec_CUBEC_PATH_
+#ifndef _H_CUBEC_PATH_
+#define _H_CUBEC_PATH_
 
 #include "core/allocator.h"
 #include <stdbool.h>
@@ -7,33 +7,27 @@
 extern "C" {
 #endif
 
-typedef struct _cubec_path_t *cubec_path_t;
+typedef struct _path_t *path_t;
 
-cubec_path_t cubec_create_path(cubec_allocator_t allocator, const char *source);
+path_t create_path(allocator_t allocator, const char *source);
 
-cubec_path_t cubec_path_concat(cubec_path_t current,
-                               cubec_allocator_t allocator,
-                               cubec_path_t another);
+path_t path_concat(path_t current, allocator_t allocator, path_t another);
 
-bool cubec_path_append(cubec_path_t path, cubec_allocator_t allocator,
-                       const char *part);
+bool path_append(path_t path, allocator_t allocator, const char *part);
 
-cubec_path_t cubec_path_clone(cubec_path_t current,
-                              cubec_allocator_t allocator);
+path_t path_clone(path_t current, allocator_t allocator);
 
-cubec_path_t cubec_path_current(cubec_allocator_t allocator);
+path_t path_current(allocator_t allocator);
 
-cubec_path_t cubec_path_absolute(cubec_path_t current,
-                                 cubec_allocator_t allocator);
+path_t path_absolute(path_t current, allocator_t allocator);
 
-cubec_path_t cubec_path_parent(cubec_path_t current,
-                               cubec_allocator_t allocator);
+path_t path_parent(path_t current, allocator_t allocator);
 
-const char *cubec_path_filename(cubec_path_t current);
+const char *path_filename(path_t current);
 
-const char *cubec_path_extname(cubec_path_t current);
+const char *path_extname(path_t current);
 
-char *cubec_path_to_string(cubec_path_t path, cubec_allocator_t allocator);
+char *path_to_string(path_t path, allocator_t allocator);
 
 #ifdef __cplusplus
 };

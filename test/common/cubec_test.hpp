@@ -4,9 +4,9 @@
 class cubec_test : public ::testing::Test {
 protected:
   static int32_t count;
-  cubec_allocator_t allocator = NULL;
+  allocator_t allocator = NULL;
   void SetUp() override {
-    cubec_allocator_initialize_t initialize = {
+    allocator_initialize_t initialize = {
         .alloc = [](size_t size) -> void * {
           size_t *data = (size_t *)malloc(size + sizeof(size_t));
           *data = size;
@@ -19,10 +19,10 @@ protected:
           free(chunk);
         },
     };
-    allocator = cubec_create_allocator(&initialize);
+    allocator = create_allocator(&initialize);
   }
   void TearDown() override {
-    cubec_delete_allocator(allocator);
+    delete_allocator(allocator);
     EXPECT_EQ(count, 0);
   }
 };

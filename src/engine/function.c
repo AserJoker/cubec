@@ -10,78 +10,73 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-struct _cubec_function_meta_t {
-  cubec_array_t arguments;
-  cubec_type_t type;
+struct _function_meta_t {
+  array_t arguments;
+  type_t type;
   bool variadic;
 };
-typedef struct _cubec_function_meta_t *cubec_function_meta_t;
-static void cubec_function_meta_dispose(cubec_function_meta_t self,
-                                        cubec_allocator_t allocator) {
-  cubec_allocator_free(allocator, self->arguments);
+typedef struct _function_meta_t *function_meta_t;
+static void function_meta_dispose(function_meta_t self, allocator_t allocator) {
+  allocator_free(allocator, self->arguments);
 }
-static cubec_function_meta_t
-cubec_create_function_meta(cubec_allocator_t allocator, cubec_type_t type,
-                           size_t num_args, cubec_type_t args[],
-                           bool variadic) {
-  cubec_function_meta_t self =
-      cubec_allocator_alloc(allocator, sizeof(struct _cubec_function_meta_t),
-                            (cubec_dispose_fn_t)cubec_function_meta_dispose);
+static function_meta_t create_function_meta(allocator_t allocator, type_t type,
+                                            size_t num_args, type_t args[],
+                                            bool variadic) {
+  function_meta_t self =
+      allocator_alloc(allocator, sizeof(struct _function_meta_t),
+                      (dispose_fn_t)function_meta_dispose);
   self->type = type;
   self->variadic = variadic;
-  self->arguments = cubec_create_array(allocator, NULL);
-  cubec_array_resize(self->arguments, num_args);
+  self->arguments = create_array(allocator, NULL);
+  array_resize(self->arguments, num_args);
   for (size_t idx = 0; idx < num_args; idx++) {
-    cubec_array_push(self->arguments, args[idx]);
+    array_push(self->arguments, args[idx]);
   }
   return self;
 }
-static bool cubec_function_is_equal(cubec_type_t self, cubec_type_t another) {
-  cubec_function_meta_t self_meta = cubec_type_get_meta(self);
-  cubec_function_meta_t another_meta = cubec_type_get_meta(another);
+static bool function_is_equal(type_t self, type_t another) {
+  function_meta_t self_meta = type_get_meta(self);
+  function_meta_t another_meta = type_get_meta(another);
   if (self_meta->variadic != another_meta->variadic) {
     return false;
   }
-  if (cubec_array_get_size(self_meta->arguments) !=
-      cubec_array_get_size(another_meta->arguments)) {
+  if (array_get_size(self_meta->arguments) !=
+      array_get_size(another_meta->arguments)) {
     return false;
   }
-  if (!cubec_type_is_equal(self_meta->type, another_meta->type)) {
+  if (!type_is_equal(self_meta->type, another_meta->type)) {
     return false;
   }
-  for (size_t idx = 0; idx < cubec_array_get_size(self_meta->arguments);
-       idx++) {
-    cubec_type_t self_arg = cubec_array_get(self_meta->arguments, idx);
-    cubec_type_t another_arg = cubec_array_get(another_meta->arguments, idx);
-    if (!cubec_type_is_equal(self_arg, another_arg)) {
+  for (size_t idx = 0; idx < array_get_size(self_meta->arguments); idx++) {
+    type_t self_arg = array_get(self_meta->arguments, idx);
+    type_t another_arg = array_get(another_meta->arguments, idx);
+    if (!type_is_equal(self_arg, another_arg)) {
       return false;
     }
   }
   return true;
 }
-static char *cubec_function_type_to_string(cubec_type_t self,
-                                           cubec_allocator_t allocator) {
-  cubec_function_meta_t meta = cubec_type_get_meta(self);
+static char *function_type_to_string(type_t self, allocator_t allocator) {
+  function_meta_t meta = type_get_meta(self);
   size_t len = 32;
-  size_t argc = cubec_array_get_size(meta->arguments);
+  size_t argc = array_get_size(meta->arguments);
   char *argv[argc];
   for (size_t idx = 0; idx < argc; idx++) {
-    cubec_type_t arg = cubec_array_get(meta->arguments, idx);
-    char *arg_str = cubec_type_to_string(arg, allocator);
+    type_t arg = array_get(meta->arguments, idx);
+    char *arg_str = type_to_string(arg, allocator);
     if (idx == argc - 1 && meta->variadic) {
-      char *arg_str_var =
-          cubec_allocator_alloc(allocator, strlen(arg_str) + 3, NULL);
+      char *arg_str_var = allocator_alloc(allocator, strlen(arg_str) + 3, NULL);
       sprintf(arg_str_var, "...%s", arg_str);
-      cubec_allocator_free(allocator, arg_str);
+      allocator_free(allocator, arg_str);
       arg_str = arg_str_var;
     }
     argv[idx] = arg_str;
     len += strlen(arg_str) + 2;
   }
-  char *type_str = cubec_type_to_string(meta->type, allocator);
+  char *type_str = type_to_string(meta->type, allocator);
   len += strlen(type_str);
   size_t offset = 0;
-  char *str = cubec_allocator_alloc(allocator, len, NULL);
+  char *str = allocator_alloc(allocator, len, NULL);
   strcpy(&str[offset], "func(");
   offset += 5;
   for (size_t idx = 0; idx < argc; idx++) {
@@ -91,7 +86,7 @@ static char *cubec_function_type_to_string(cubec_type_t self,
     }
     strcpy(&str[offset], argv[idx]);
     offset += strlen(argv[idx]);
-    cubec_allocator_free(allocator, argv[idx]);
+    allocator_free(allocator, argv[idx]);
   }
   str[offset++] = ')';
   str[offset++] = ':';
@@ -99,44 +94,40 @@ static char *cubec_function_type_to_string(cubec_type_t self,
   strcpy(&str[offset], type_str);
   offset += strlen(type_str);
   str[offset] = 0;
-  cubec_allocator_free(allocator, type_str);
+  allocator_free(allocator, type_str);
   return str;
 }
-static cubec_value_t cubec_function_call(cubec_value_t self,
-                                         cubec_context_t ctx, size_t argc,
-                                         cubec_value_t argv[]) {
-  return cubec_create_error(ctx, "not implement");
+static value_t function_call(value_t self, context_t ctx, size_t argc,
+                             value_t argv[]) {
+  return create_error(ctx, "not implement");
 }
 
-cubec_value_t cubec_create_function_type(cubec_context_t ctx, cubec_type_t type,
-                                         size_t num_args, cubec_type_t args[],
-                                         bool variadic) {
-  cubec_function_meta_t meta = cubec_create_function_meta(
-      cubec_context_get_allocator(ctx), type, num_args, args, variadic);
-  struct _cubec_type_operator_t opt = {
-      .is_type_equal = cubec_function_is_equal,
-      .type_to_string = cubec_function_type_to_string,
-      .call = cubec_function_call,
+value_t create_function_type(context_t ctx, type_t type, size_t num_args,
+                             type_t args[], bool variadic) {
+  function_meta_t meta = create_function_meta(context_get_allocator(ctx), type,
+                                              num_args, args, variadic);
+  struct _type_operator_t opt = {
+      .is_type_equal = function_is_equal,
+      .type_to_string = function_type_to_string,
+      .call = function_call,
   };
-  return cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_FUNCTION,
-                                   sizeof(void *), sizeof(void *), meta, &opt,
-                                   NULL);
+  return context_create_type(ctx, CUBEC_VALUE_TYPE_FUNCTION, sizeof(void *),
+                             sizeof(void *), meta, &opt, NULL);
 }
-cubec_array_t cubec_function_type_get_arguments(cubec_type_t self) {
-  cubec_function_meta_t meta = cubec_type_get_meta(self);
+array_t function_type_get_arguments(type_t self) {
+  function_meta_t meta = type_get_meta(self);
   return meta->arguments;
 }
-cubec_type_t cubec_function_type_get_type(cubec_type_t self) {
-  cubec_function_meta_t meta = cubec_type_get_meta(self);
+type_t function_type_get_type(type_t self) {
+  function_meta_t meta = type_get_meta(self);
   return meta->type;
 }
-bool cubec_function_type_is_variadic(cubec_type_t self) {
-  cubec_function_meta_t meta = cubec_type_get_meta(self);
+bool function_type_is_variadic(type_t self) {
+  function_meta_t meta = type_get_meta(self);
   return meta->variadic;
 }
 
-cubec_value_t cubec_create_function(cubec_context_t ctx, cubec_type_t func_type,
-                                    cubec_ast_node_t func, bool mutable,
-                                    const char *name) {
-  return cubec_context_create_value(ctx, func_type, mutable, func, name);
+value_t create_function(context_t ctx, type_t func_type, ast_node_t func,
+                        bool mutable, const char *name) {
+  return context_create_value(ctx, func_type, mutable, func, name);
 }

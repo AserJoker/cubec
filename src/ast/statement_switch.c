@@ -8,19 +8,17 @@
 #include "core/location.h"
 #include "core/position.h"
 
-cubec_ast_node_t cubec_read_ast_statement_switch(cubec_allocator_t allocator,
-                                                 cubec_position_t *position,
-                                                 const char *end,
-                                                 const char *filename) {
-  cubec_ast_node_t node =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_SWITCH);
-  cubec_ast_node_t cases =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "cases", cases);
-  cubec_ast_node_t err = NULL;
-  cubec_position_t current = *position;
-  cubec_ast_node_t token =
-      cubec_read_ast_literal_identifier(allocator, &current, end, filename);
+ast_node_t read_ast_statement_switch(allocator_t allocator,
+                                     position_t *position, const char *end,
+                                     const char *filename) {
+  ast_node_t node =
+      create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_SWITCH);
+  ast_node_t cases = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "cases", cases);
+  ast_node_t err = NULL;
+  position_t current = *position;
+  ast_node_t token =
+      read_ast_literal_identifier(allocator, &current, end, filename);
   if (!token) {
     goto onerror;
   }
@@ -28,79 +26,78 @@ cubec_ast_node_t cubec_read_ast_statement_switch(cubec_allocator_t allocator,
     err = token;
     goto onerror;
   }
-  if (!cubec_location_is(token->loc, "switch")) {
-    cubec_allocator_free(allocator, token);
+  if (!location_is(token->loc, "switch")) {
+    allocator_free(allocator, token);
     goto onerror;
   }
-  cubec_allocator_free(allocator, token);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  allocator_free(allocator, token);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != '(') {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid switch statement, missing '('");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid switch statement, missing '('");
     goto onerror;
   }
   current.offset++;
   current.column++;
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  cubec_ast_node_t condition =
-      cubec_read_ast_expression(allocator, &current, end, filename);
+  ast_node_t condition =
+      read_ast_expression(allocator, &current, end, filename);
   if (!condition) {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid switch statement, missing condition");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid switch statement, missing condition");
     goto onerror;
   }
   if (condition->type == CUBEC_NODE_TYPE_ERROR) {
     err = condition;
     goto onerror;
   }
-  cubec_ast_add_child(allocator, node, "condition", condition);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  ast_add_child(allocator, node, "condition", condition);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != ')') {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid switch statement, missing ')'");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid switch statement, missing ')'");
     goto onerror;
   }
   current.offset++;
   current.column++;
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != '{') {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid switch statement, missing '{'");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid switch statement, missing '{'");
     goto onerror;
   }
   current.offset++;
   current.column++;
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != '}') {
     for (;;) {
-      cubec_ast_node_t cas =
-          cubec_read_ast_switch_case(allocator, &current, end, filename);
+      ast_node_t cas = read_ast_switch_case(allocator, &current, end, filename);
       if (!cas) {
-        err = cubec_create_ast_error(allocator, *position, current, filename,
-                                     "invalid switch statement");
+        err = create_ast_error(allocator, *position, current, filename,
+                               "invalid switch statement");
         goto onerror;
       }
       if (cas->type == CUBEC_NODE_TYPE_ERROR) {
         err = cas;
         goto onerror;
       }
-      cubec_ast_add_item(cases, cas);
-      err = cubec_ast_skip_all(allocator, &current, end, filename);
+      ast_add_item(cases, cas);
+      err = ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;
       }
@@ -110,7 +107,7 @@ cubec_ast_node_t cubec_read_ast_statement_switch(cubec_allocator_t allocator,
     }
   }
   if (*current.offset != '}') {
-    err = cubec_ast_skip_all(allocator, &current, end, filename);
+    err = ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
     }
@@ -125,6 +122,6 @@ cubec_ast_node_t cubec_read_ast_statement_switch(cubec_allocator_t allocator,
 
   return node;
 onerror:
-  cubec_allocator_free(allocator, node);
+  allocator_free(allocator, node);
   return err;
 }

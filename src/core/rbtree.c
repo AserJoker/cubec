@@ -5,45 +5,41 @@
 #include <stdio.h>
 #include <string.h>
 
-struct _cubec_rbtree_node_t {
+struct _rbtree_node_t {
   bool color;
   void *key;
-  cubec_rbtree_node_t left;
-  cubec_rbtree_node_t right;
-  cubec_rbtree_node_t parent;
+  rbtree_node_t left;
+  rbtree_node_t right;
+  rbtree_node_t parent;
 };
-struct _cubec_rbtree_t {
-  cubec_rbtree_node_t root;
+struct _rbtree_t {
+  rbtree_node_t root;
   bool autofree;
   size_t size;
   size_t keysize;
-  cubec_compare_fn_t compare;
-  cubec_allocator_t allocator;
+  compare_fn_t compare;
+  allocator_t allocator;
 };
 
-static void cubec_rbtree_dispose_node(cubec_rbtree_t self,
-                                      cubec_rbtree_node_t node,
-                                      cubec_allocator_t allocator) {
+static void rbtree_dispose_node(rbtree_t self, rbtree_node_t node,
+                                allocator_t allocator) {
   if (node) {
-    cubec_rbtree_dispose_node(self, node->left, allocator);
-    cubec_rbtree_dispose_node(self, node->right, allocator);
+    rbtree_dispose_node(self, node->left, allocator);
+    rbtree_dispose_node(self, node->right, allocator);
     if (self->autofree) {
-      cubec_allocator_free(allocator, node->key);
+      allocator_free(allocator, node->key);
     }
-    cubec_allocator_free(allocator, node);
+    allocator_free(allocator, node);
   }
 }
 
-static void cubec_rbtree_dispose(cubec_allocator_t allocator,
-                                 cubec_rbtree_t self) {
-  cubec_rbtree_dispose_node(self, self->root, allocator);
+static void rbtree_dispose(allocator_t allocator, rbtree_t self) {
+  rbtree_dispose_node(self, self->root, allocator);
 }
 
-cubec_rbtree_t cubec_create_rbtree(cubec_allocator_t allocator,
-                                   cubec_rbtree_initialize_t *initialize) {
-  cubec_rbtree_t tree =
-      cubec_allocator_alloc(allocator, sizeof(struct _cubec_rbtree_t),
-                            (cubec_dispose_fn_t)cubec_rbtree_dispose);
+rbtree_t create_rbtree(allocator_t allocator, rbtree_initialize_t *initialize) {
+  rbtree_t tree = allocator_alloc(allocator, sizeof(struct _rbtree_t),
+                                  (dispose_fn_t)rbtree_dispose);
   tree->root = NULL;
   tree->autofree = false;
   tree->size = 0;
@@ -56,8 +52,7 @@ cubec_rbtree_t cubec_create_rbtree(cubec_allocator_t allocator,
   return tree;
 }
 
-static void cubec_rbtree_left_rotate(cubec_rbtree_t self,
-                                     cubec_rbtree_node_t x) {
+static void rbtree_left_rotate(rbtree_t self, rbtree_node_t x) {
   /*
    *     p               p
    *     |               |
@@ -67,9 +62,9 @@ static void cubec_rbtree_left_rotate(cubec_rbtree_t self,
    *      / \         / \
    *     b   c       a   b
    */
-  cubec_rbtree_node_t y = x->right;
-  cubec_rbtree_node_t b = y->left;
-  cubec_rbtree_node_t p = x->parent;
+  rbtree_node_t y = x->right;
+  rbtree_node_t b = y->left;
+  rbtree_node_t p = x->parent;
 
   x->right = b;
   if (b) {
@@ -89,8 +84,7 @@ static void cubec_rbtree_left_rotate(cubec_rbtree_t self,
   x->parent = y;
 }
 
-static void cubec_rbtree_right_rotate(cubec_rbtree_t self,
-                                      cubec_rbtree_node_t y) {
+static void rbtree_right_rotate(rbtree_t self, rbtree_node_t y) {
   /*
    *      p            p
    *      |            |
@@ -101,9 +95,9 @@ static void cubec_rbtree_right_rotate(cubec_rbtree_t self,
    *  a   b            b   c
    */
 
-  cubec_rbtree_node_t x = y->left;
-  cubec_rbtree_node_t b = x->right;
-  cubec_rbtree_node_t p = y->parent;
+  rbtree_node_t x = y->left;
+  rbtree_node_t b = x->right;
+  rbtree_node_t p = y->parent;
 
   y->left = b;
   if (b) {
@@ -122,13 +116,12 @@ static void cubec_rbtree_right_rotate(cubec_rbtree_t self,
   x->right = y;
   y->parent = x;
 }
-static void cubec_rbtree_insert_fixup(cubec_rbtree_t self,
-                                      cubec_rbtree_node_t node) {
-  cubec_rbtree_node_t parent, gparent;
+static void rbtree_insert_fixup(rbtree_t self, rbtree_node_t node) {
+  rbtree_node_t parent, gparent;
   while ((parent = node->parent) && parent && parent->color) {
     gparent = parent->parent;
     if (parent == gparent->left) {
-      cubec_rbtree_node_t uncle = gparent->right;
+      rbtree_node_t uncle = gparent->right;
       if (uncle && uncle->color) {
         uncle->color = false;
         parent->color = false;
@@ -137,16 +130,16 @@ static void cubec_rbtree_insert_fixup(cubec_rbtree_t self,
         continue;
       }
       if (parent->right == node) {
-        cubec_rbtree_left_rotate(self, parent);
-        cubec_rbtree_node_t tmp = parent;
+        rbtree_left_rotate(self, parent);
+        rbtree_node_t tmp = parent;
         parent = node;
         node = tmp;
       }
       parent->color = false;
       gparent->color = true;
-      cubec_rbtree_right_rotate(self, gparent);
+      rbtree_right_rotate(self, gparent);
     } else {
-      cubec_rbtree_node_t uncle = gparent->left;
+      rbtree_node_t uncle = gparent->left;
       if (uncle && uncle->color) {
         uncle->color = false;
         parent->color = false;
@@ -155,26 +148,23 @@ static void cubec_rbtree_insert_fixup(cubec_rbtree_t self,
         continue;
       }
       if (parent->left == node) {
-        cubec_rbtree_right_rotate(self, parent);
-        cubec_rbtree_node_t tmp = parent;
+        rbtree_right_rotate(self, parent);
+        rbtree_node_t tmp = parent;
         parent = node;
         node = tmp;
       }
       parent->color = false;
       gparent->color = true;
-      cubec_rbtree_left_rotate(self, gparent);
+      rbtree_left_rotate(self, gparent);
     }
   }
   self->root->color = false;
 }
 
-static void cubec_rbtree_node_dispose(cubec_allocator_t allocator,
-                                      cubec_rbtree_node_t self) {}
-static cubec_rbtree_node_t
-cubec_create_rbtree_node(cubec_allocator_t allocator) {
-  cubec_rbtree_node_t node =
-      cubec_allocator_alloc(allocator, sizeof(struct _cubec_rbtree_node_t),
-                            (cubec_dispose_fn_t)cubec_rbtree_node_dispose);
+static void rbtree_node_dispose(allocator_t allocator, rbtree_node_t self) {}
+static rbtree_node_t create_rbtree_node(allocator_t allocator) {
+  rbtree_node_t node = allocator_alloc(allocator, sizeof(struct _rbtree_node_t),
+                                       (dispose_fn_t)rbtree_node_dispose);
   node->color = false;
   node->key = 0;
   node->left = NULL;
@@ -183,9 +173,9 @@ cubec_create_rbtree_node(cubec_allocator_t allocator) {
   return node;
 }
 
-void cubec_rbtree_put(cubec_rbtree_t self, void *key, void *cmp_arg) {
-  cubec_rbtree_node_t y = NULL;
-  cubec_rbtree_node_t x = self->root;
+void rbtree_put(rbtree_t self, void *key, void *cmp_arg) {
+  rbtree_node_t y = NULL;
+  rbtree_node_t x = self->root;
   while (x != NULL) {
     y = x;
     if (self->compare ? self->compare(key, x->key, cmp_arg) < 0
@@ -194,7 +184,7 @@ void cubec_rbtree_put(cubec_rbtree_t self, void *key, void *cmp_arg) {
     } else if (self->compare ? self->compare(key, x->key, cmp_arg) == 0
                              : key == x->key) {
       if (x->key != key && self->autofree) {
-        cubec_allocator_free(self->allocator, x->key);
+        allocator_free(self->allocator, x->key);
       }
       x->key = key;
       return;
@@ -202,7 +192,7 @@ void cubec_rbtree_put(cubec_rbtree_t self, void *key, void *cmp_arg) {
       x = x->right;
     }
   }
-  cubec_rbtree_node_t node = cubec_create_rbtree_node(self->allocator);
+  rbtree_node_t node = create_rbtree_node(self->allocator);
   node->key = key;
   node->parent = y;
   if (y != NULL) {
@@ -216,15 +206,15 @@ void cubec_rbtree_put(cubec_rbtree_t self, void *key, void *cmp_arg) {
     self->root = node;
   }
   node->color = true;
-  cubec_rbtree_insert_fixup(self, node);
+  rbtree_insert_fixup(self, node);
   self->size++;
 }
-bool cubec_rbtree_has(cubec_rbtree_t self, const void *key, void *cmp_arg) {
-  return cubec_rbtree_get(self, key, cmp_arg) != NULL;
+bool rbtree_has(rbtree_t self, const void *key, void *cmp_arg) {
+  return rbtree_get(self, key, cmp_arg) != NULL;
 }
-void *cubec_rbtree_get(cubec_rbtree_t self, const void *key, void *cmp_arg) {
-  cubec_rbtree_node_t y = NULL;
-  cubec_rbtree_node_t x = self->root;
+void *rbtree_get(rbtree_t self, const void *key, void *cmp_arg) {
+  rbtree_node_t y = NULL;
+  rbtree_node_t x = self->root;
   while (x != NULL) {
     y = x;
     if (self->compare ? self->compare(key, x->key, cmp_arg) < 0
@@ -240,10 +230,9 @@ void *cubec_rbtree_get(cubec_rbtree_t self, const void *key, void *cmp_arg) {
   return NULL;
 }
 
-static void cubec_rbtree_remove_fixup(cubec_rbtree_t self,
-                                      cubec_rbtree_node_t node) {
-  cubec_rbtree_node_t parent = node->parent;
-  cubec_rbtree_node_t sibling = NULL;
+static void rbtree_remove_fixup(rbtree_t self, rbtree_node_t node) {
+  rbtree_node_t parent = node->parent;
+  rbtree_node_t sibling = NULL;
   if (node == parent->left) {
     sibling = parent->right;
     if (!sibling->color) {
@@ -253,15 +242,15 @@ static void cubec_rbtree_remove_fixup(cubec_rbtree_t self,
         sibling->right->color = sibling->color;
         sibling->color = parent->color;
         parent->color = false;
-        cubec_rbtree_left_rotate(self, parent);
+        rbtree_left_rotate(self, parent);
       } else if (sibling->left && sibling->left->color) {
         // RL
         // parent->right[Black]->left[Red]
         // parent->right[Black]->right?[Black]
         sibling->left->color = parent->color;
         parent->color = false;
-        cubec_rbtree_right_rotate(self, sibling);
-        cubec_rbtree_left_rotate(self, parent);
+        rbtree_right_rotate(self, sibling);
+        rbtree_left_rotate(self, parent);
       } else if ((!sibling->left || !sibling->left->color) &&
                  (!sibling->right || !sibling->right->color)) {
         // parent->right[Black]->left?[Black]
@@ -270,15 +259,15 @@ static void cubec_rbtree_remove_fixup(cubec_rbtree_t self,
         if (parent->color) {
           parent->color = false;
         } else if (parent != self->root) {
-          cubec_rbtree_remove_fixup(self, parent);
+          rbtree_remove_fixup(self, parent);
         }
       }
     } else {
       bool color = sibling->color;
       sibling->color = parent->color;
       parent->color = color;
-      cubec_rbtree_left_rotate(self, parent);
-      cubec_rbtree_remove_fixup(self, node);
+      rbtree_left_rotate(self, parent);
+      rbtree_remove_fixup(self, node);
     }
   } else {
     sibling = parent->left;
@@ -286,34 +275,34 @@ static void cubec_rbtree_remove_fixup(cubec_rbtree_t self,
       if (sibling->right && sibling->right->color) { // LR
         sibling->right->color = parent->color;
         parent->color = false;
-        cubec_rbtree_left_rotate(self, sibling);
-        cubec_rbtree_right_rotate(self, parent);
+        rbtree_left_rotate(self, sibling);
+        rbtree_right_rotate(self, parent);
       } else if (sibling->left && sibling->left->color) { // LL
         sibling->left->color = sibling->color;
         sibling->color = parent->color;
         parent->color = false;
-        cubec_rbtree_right_rotate(self, parent);
+        rbtree_right_rotate(self, parent);
       } else if ((!sibling->left || !sibling->left->color) &&
                  (!sibling->right || !sibling->right->color)) {
         sibling->color = true;
         if (parent->color) {
           parent->color = false;
         } else if (parent != self->root) {
-          cubec_rbtree_remove_fixup(self, parent);
+          rbtree_remove_fixup(self, parent);
         }
       }
     } else {
       bool color = sibling->color;
       sibling->color = parent->color;
       parent->color = color;
-      cubec_rbtree_right_rotate(self, parent);
-      cubec_rbtree_remove_fixup(self, node);
+      rbtree_right_rotate(self, parent);
+      rbtree_remove_fixup(self, node);
     }
   }
 }
 
-void cubec_rbtree_remove(cubec_rbtree_t self, const void *key, void *cmp_arg) {
-  cubec_rbtree_node_t node = self->root;
+void rbtree_remove(rbtree_t self, const void *key, void *cmp_arg) {
+  rbtree_node_t node = self->root;
   while (node) {
     if (self->compare ? self->compare(key, node->key, cmp_arg) == 0
                       : key == node->key) {
@@ -330,17 +319,17 @@ void cubec_rbtree_remove(cubec_rbtree_t self, const void *key, void *cmp_arg) {
     return;
   }
   if (node->left && node->right) {
-    cubec_rbtree_node_t replace = node->right;
+    rbtree_node_t replace = node->right;
     while (replace->left) {
       replace = replace->left;
     }
-    cubec_rbtree_node_t tmp = node;
+    rbtree_node_t tmp = node;
     node->key = replace->key;
     replace->key = tmp->key;
     node = replace;
   }
-  cubec_rbtree_node_t parent = node->parent;
-  cubec_rbtree_node_t child = NULL;
+  rbtree_node_t parent = node->parent;
+  rbtree_node_t child = NULL;
   if (node->left) {
     child = node->left;
   } else if (node->right) {
@@ -366,7 +355,7 @@ void cubec_rbtree_remove(cubec_rbtree_t self, const void *key, void *cmp_arg) {
         parent->right = NULL;
       }
     } else {
-      cubec_rbtree_remove_fixup(self, node);
+      rbtree_remove_fixup(self, node);
       if (node == parent->left) {
         parent->left = NULL;
       } else if (node == parent->right) {
@@ -375,15 +364,15 @@ void cubec_rbtree_remove(cubec_rbtree_t self, const void *key, void *cmp_arg) {
     }
   }
   if (self->autofree) {
-    cubec_allocator_free(self->allocator, node->key);
+    allocator_free(self->allocator, node->key);
   }
-  cubec_allocator_free(self->allocator, node);
+  allocator_free(self->allocator, node);
   self->size--;
 }
-size_t cubec_rbtree_size(cubec_rbtree_t self) { return self->size; }
-cubec_rbtree_node_t cubec_rbtree_get_first(cubec_rbtree_t self) {
+size_t rbtree_size(rbtree_t self) { return self->size; }
+rbtree_node_t rbtree_get_first(rbtree_t self) {
   if (self->root) {
-    cubec_rbtree_node_t node = self->root;
+    rbtree_node_t node = self->root;
     while (node->left) {
       node = node->left;
     }
@@ -391,9 +380,9 @@ cubec_rbtree_node_t cubec_rbtree_get_first(cubec_rbtree_t self) {
   }
   return NULL;
 }
-cubec_rbtree_node_t cubec_rbtree_get_last(cubec_rbtree_t self) {
+rbtree_node_t rbtree_get_last(rbtree_t self) {
   if (self->root) {
-    cubec_rbtree_node_t node = self->root;
+    rbtree_node_t node = self->root;
     while (node->right) {
       node = node->right;
     }
@@ -401,9 +390,9 @@ cubec_rbtree_node_t cubec_rbtree_get_last(cubec_rbtree_t self) {
   }
   return NULL;
 }
-cubec_rbtree_node_t cubec_rbtree_node_next(cubec_rbtree_node_t self) {
+rbtree_node_t rbtree_node_next(rbtree_node_t self) {
   if (self->right) {
-    cubec_rbtree_node_t node = self->right;
+    rbtree_node_t node = self->right;
     while (node->left) {
       node = node->left;
     }
@@ -420,9 +409,9 @@ cubec_rbtree_node_t cubec_rbtree_node_next(cubec_rbtree_node_t self) {
   }
   return NULL;
 }
-cubec_rbtree_node_t cubec_rbtree_node_last(cubec_rbtree_node_t self) {
+rbtree_node_t rbtree_node_last(rbtree_node_t self) {
   if (self->left) {
-    cubec_rbtree_node_t node = self->left;
+    rbtree_node_t node = self->left;
     while (node->right) {
       node = node->right;
     }
@@ -439,4 +428,4 @@ cubec_rbtree_node_t cubec_rbtree_node_last(cubec_rbtree_node_t self) {
   }
   return NULL;
 }
-void *cubec_rbtree_node_get(cubec_rbtree_node_t self) { return self->key; }
+void *rbtree_node_get(rbtree_node_t self) { return self->key; }

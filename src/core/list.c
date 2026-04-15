@@ -3,26 +3,25 @@
 #include "core/compare.h"
 #include <string.h>
 
-struct _cubec_list_node_t {
-  cubec_list_node_t next;
-  cubec_list_node_t last;
+struct _list_node_t {
+  list_node_t next;
+  list_node_t last;
   void *data;
 };
-struct _cubec_list_t {
+struct _list_t {
   bool autofree;
-  struct _cubec_list_node_t begin;
-  struct _cubec_list_node_t end;
+  struct _list_node_t begin;
+  struct _list_node_t end;
   size_t size;
-  cubec_compare_fn_t compare;
-  cubec_allocator_t allocator;
+  compare_fn_t compare;
+  allocator_t allocator;
 };
 
-static void cubec_list_dispose(cubec_list_t self, cubec_allocator_t allocator) {
-  cubec_list_clear(self);
+static void list_dispose(list_t self, allocator_t allocator) {
+  list_clear(self);
 }
 
-static void cubec_list_node_dispose(cubec_list_node_t self,
-                                    cubec_allocator_t allocator) {
+static void list_node_dispose(list_node_t self, allocator_t allocator) {
   if (self->last) {
     self->last->next = self->next;
   }
@@ -30,21 +29,18 @@ static void cubec_list_node_dispose(cubec_list_node_t self,
     self->next->last = self->last;
   }
 }
-static cubec_list_node_t cubec_create_list_node(cubec_allocator_t allocator) {
-  cubec_list_node_t node =
-      cubec_allocator_alloc(allocator, sizeof(struct _cubec_list_node_t),
-                            (cubec_dispose_fn_t)cubec_list_node_dispose);
+static list_node_t create_list_node(allocator_t allocator) {
+  list_node_t node = allocator_alloc(allocator, sizeof(struct _list_node_t),
+                                     (dispose_fn_t)list_node_dispose);
   node->data = NULL;
   node->last = NULL;
   node->next = NULL;
   return node;
 }
 
-cubec_list_t cubec_create_list(cubec_allocator_t allocator,
-                               cubec_list_initialize_t *initialize) {
-  cubec_list_t list =
-      cubec_allocator_alloc(allocator, sizeof(struct _cubec_list_t),
-                            (cubec_dispose_fn_t)cubec_list_dispose);
+list_t create_list(allocator_t allocator, list_initialize_t *initialize) {
+  list_t list = allocator_alloc(allocator, sizeof(struct _list_t),
+                                (dispose_fn_t)list_dispose);
   list->autofree = false;
   list->compare = NULL;
   list->allocator = allocator;
@@ -53,60 +49,50 @@ cubec_list_t cubec_create_list(cubec_allocator_t allocator,
     list->compare = initialize->compare;
   }
   list->size = 0;
-  memset(&list->begin, 0, sizeof(struct _cubec_list_node_t));
-  memset(&list->end, 0, sizeof(struct _cubec_list_node_t));
+  memset(&list->begin, 0, sizeof(struct _list_node_t));
+  memset(&list->end, 0, sizeof(struct _list_node_t));
   list->begin.next = &list->end;
   list->end.last = &list->begin;
   return list;
 }
 
-cubec_list_node_t cubec_list_get_begin(cubec_list_t self) {
-  return &self->begin;
-}
+list_node_t list_get_begin(list_t self) { return &self->begin; }
 
-cubec_list_node_t cubec_list_get_end(cubec_list_t self) { return &self->end; }
+list_node_t list_get_end(list_t self) { return &self->end; }
 
-cubec_list_node_t cubec_list_get_first(cubec_list_t self) {
+list_node_t list_get_first(list_t self) { return self->begin.next; }
 
-  return self->begin.next;
-}
+list_node_t list_get_last(list_t self) { return self->end.last; }
 
-cubec_list_node_t cubec_list_get_last(cubec_list_t self) {
+size_t list_get_size(list_t self) { return self->size; }
 
-  return self->end.last;
-}
-
-size_t cubec_list_get_size(cubec_list_t self) { return self->size; }
-
-void cubec_list_clear(cubec_list_t self) {
+void list_clear(list_t self) {
   while (self->size) {
     if (self->autofree) {
-      cubec_allocator_free(self->allocator, self->begin.next->data);
+      allocator_free(self->allocator, self->begin.next->data);
     }
-    cubec_allocator_free(self->allocator, self->begin.next);
+    allocator_free(self->allocator, self->begin.next);
     self->size--;
   }
 }
 
-void cubec_list_set_data(cubec_list_t self, cubec_list_node_t node,
-                         void *data) {
+void list_set_data(list_t self, list_node_t node, void *data) {
   if (node->data == data) {
     return;
   }
   if (self->autofree) {
-    cubec_allocator_free(self->allocator, node->data);
+    allocator_free(self->allocator, node->data);
   }
   node->data = data;
 }
 
-void cubec_list_append(cubec_list_t self, void *data) {
-  cubec_list_node_t position = self->end.last;
-  cubec_list_insert(self, position, data);
+void list_append(list_t self, void *data) {
+  list_node_t position = self->end.last;
+  list_insert(self, position, data);
 }
 
-void cubec_list_insert(cubec_list_t self, cubec_list_node_t position,
-                       void *data) {
-  cubec_list_node_t node = cubec_create_list_node(self->allocator);
+void list_insert(list_t self, list_node_t position, void *data) {
+  list_node_t node = create_list_node(self->allocator);
   node->data = data;
   node->last = position;
   node->next = position->next;
@@ -115,17 +101,16 @@ void cubec_list_insert(cubec_list_t self, cubec_list_node_t position,
   self->size++;
 }
 
-void cubec_list_erase(cubec_list_t self, cubec_list_node_t position) {
+void list_erase(list_t self, list_node_t position) {
   if (self->autofree) {
-    cubec_allocator_free(self->allocator, position->data);
+    allocator_free(self->allocator, position->data);
   }
-  cubec_allocator_free(self->allocator, position);
+  allocator_free(self->allocator, position);
   self->size--;
 }
 
-cubec_list_node_t cubec_list_find(cubec_list_t self, const void *data,
-                                  void *cmp_arg) {
-  cubec_list_node_t it = self->begin.next;
+list_node_t list_find(list_t self, const void *data, void *cmp_arg) {
+  list_node_t it = self->begin.next;
   while (it != &self->end) {
     if (self->compare && self->compare(data, it->data, cmp_arg) == 0) {
       return it;
@@ -137,16 +122,12 @@ cubec_list_node_t cubec_list_find(cubec_list_t self, const void *data,
   return NULL;
 }
 
-cubec_list_node_t cubec_list_node_next(cubec_list_node_t self) {
-  return self->next;
-}
+list_node_t list_node_next(list_node_t self) { return self->next; }
 
-cubec_list_node_t cubec_list_node_last(cubec_list_node_t self) {
-  return self->last;
-}
+list_node_t list_node_last(list_node_t self) { return self->last; }
 
-void *cubec_list_node_get(cubec_list_node_t self) { return self->data; }
-void *cubec_list_node_move(cubec_list_node_t self) {
+void *list_node_get(list_node_t self) { return self->data; }
+void *list_node_move(list_node_t self) {
   void *data = self->data;
   self->data = NULL;
   return data;

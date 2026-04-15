@@ -10,15 +10,15 @@
 #include <stdio.h>
 #include <string.h>
 
-void cubec_init_error_type(cubec_context_t ctx) {
-  struct _cubec_type_operator_t opt = {};
-  cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_ERROR, sizeof(const char **),
-                            sizeof(const char **), NULL, &opt, "error");
+void init_error_type(context_t ctx) {
+  struct _type_operator_t opt = {};
+  context_create_type(ctx, CUBEC_VALUE_TYPE_ERROR, sizeof(const char **),
+                      sizeof(const char **), NULL, &opt, "error");
 }
-cubec_value_t cubec_create_error(cubec_context_t ctx, const char *fmt, ...) {
-  cubec_value_t vtype = cubec_context_load(ctx, "error");
-  cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
-  cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
+value_t create_error(context_t ctx, const char *fmt, ...) {
+  value_t vtype = context_load(ctx, "error");
+  type_t type = *(type_t *)value_get_data(vtype);
+  allocator_t allocator = context_get_allocator(ctx);
   va_list args;
   va_start(args, fmt);
   size_t len = vsnprintf(NULL, 0, fmt, args);
@@ -27,17 +27,16 @@ cubec_value_t cubec_create_error(cubec_context_t ctx, const char *fmt, ...) {
   va_start(args, fmt);
   vsprintf(message, fmt, args);
   va_end(args);
-  const char *str = cubec_context_create_cstring(ctx, message);
-  return cubec_context_create_value(ctx, type, false, &str, NULL);
+  const char *str = context_create_cstring(ctx, message);
+  return context_create_value(ctx, type, false, &str, NULL);
 }
 
-cubec_value_t cubec_create_compile_error(cubec_context_t ctx,
-                                         cubec_ast_node_t node, const char *fmt,
-                                         ...) {
-  cubec_value_t vtype = cubec_context_load(ctx, "error");
-  cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
-  cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
-  char *line = cubec_location_get_line(node->loc, allocator);
+value_t create_compile_error(context_t ctx, ast_node_t node, const char *fmt,
+                             ...) {
+  value_t vtype = context_load(ctx, "error");
+  type_t type = *(type_t *)value_get_data(vtype);
+  allocator_t allocator = context_get_allocator(ctx);
+  char *line = location_get_line(node->loc, allocator);
   size_t len = strlen(line);
   char marks[len + 1];
   for (size_t idx = 0; idx < len + 1; idx++) {
@@ -75,17 +74,15 @@ cubec_value_t cubec_create_compile_error(cubec_context_t ctx,
   sprintf(msg, "%s:%" PRIuPTR ":%" PRIuPTR ": error: %s\n%s%s\n%*s%s",
           node->loc.filename, node->loc.begin.line, node->loc.begin.column,
           message, line_number, line, (int)len, " ", marks);
-  const char *str = cubec_context_create_cstring(ctx, msg);
-  cubec_allocator_free(allocator, line);
-  return cubec_context_create_value(ctx, type, false, &str, NULL);
+  const char *str = context_create_cstring(ctx, msg);
+  allocator_free(allocator, line);
+  return context_create_value(ctx, type, false, &str, NULL);
 }
-cubec_value_t cubec_convert_compile_error(cubec_context_t ctx,
-                                          cubec_ast_node_t node,
-                                          cubec_value_t err) {
-  const char *message = *(const char **)cubec_value_get_data(err);
-  return cubec_create_compile_error(ctx, node, "%s", message);
+value_t convert_compile_error(context_t ctx, ast_node_t node, value_t err) {
+  const char *message = *(const char **)value_get_data(err);
+  return create_compile_error(ctx, node, "%s", message);
 }
-const char *cubec_error_get_message(cubec_value_t value) {
-  const char *message = *(const char **)cubec_value_get_data(value);
+const char *error_get_message(value_t value) {
+  const char *message = *(const char **)value_get_data(value);
   return message;
 }

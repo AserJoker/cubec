@@ -10,40 +10,40 @@
 #include <stdio.h>
 #include <string.h>
 
-char *absolute(cubec_allocator_t allocator, const char *name) {
-  cubec_path_t path = cubec_create_path(allocator, name);
-  cubec_path_t fullpath = cubec_path_absolute(path, allocator);
-  char *result = cubec_path_to_string(fullpath, allocator);
-  cubec_allocator_free(allocator, path);
-  cubec_allocator_free(allocator, fullpath);
+char *absolute(allocator_t allocator, const char *name) {
+  path_t path = create_path(allocator, name);
+  path_t fullpath = path_absolute(path, allocator);
+  char *result = path_to_string(fullpath, allocator);
+  allocator_free(allocator, path);
+  allocator_free(allocator, fullpath);
   return result;
 }
 
-cubec_value_t print(cubec_context_t ctx, size_t argc, cubec_value_t argv[]) {
+value_t print(context_t ctx, size_t argc, value_t argv[]) {
   for (size_t idx = 0; idx < argc; idx++) {
     if (idx != 0) {
       printf(", ");
     }
-    cubec_value_t str = cubec_value_to_string(argv[idx], ctx);
-    const char *cstr = *(const char **)cubec_value_get_data(str);
+    value_t str = value_to_string(argv[idx], ctx);
+    const char *cstr = *(const char **)value_get_data(str);
     printf("%s", cstr);
   }
   printf("\n");
-  return cubec_context_get_undefined(ctx);
+  return context_get_undefined(ctx);
 }
 
 int main(int argc, char *argv[]) {
-  cubec_allocator_t allocator = cubec_create_allocator(NULL);
-  cubec_context_t ctx = cubec_create_context(allocator);
-  cubec_create_builtin(ctx, print, "print");
+  allocator_t allocator = create_allocator(NULL);
+  context_t ctx = create_context(allocator);
+  create_builtin(ctx, print, "print");
   char *filename = absolute(allocator, "./main.cubec");
-  cubec_value_t err = cubec_context_load_module(ctx, filename);
-  if (cubec_value_type_is(err, CUBEC_VALUE_TYPE_ERROR)) {
-    const char *message = *(const char **)cubec_value_get_data(err);
+  value_t err = context_load_module(ctx, filename);
+  if (value_type_is(err, CUBEC_VALUE_TYPE_ERROR)) {
+    const char *message = *(const char **)value_get_data(err);
     fprintf(stderr, "%s\n", message);
   }
-  cubec_allocator_free(allocator, filename);
-  cubec_allocator_free(allocator, ctx);
-  cubec_delete_allocator(allocator);
+  allocator_free(allocator, filename);
+  allocator_free(allocator, ctx);
+  delete_allocator(allocator);
   return 0;
 }

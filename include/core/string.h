@@ -7,30 +7,26 @@
 extern "C" {
 #endif
 
-typedef struct _cubec_string_t *cubec_string_t;
+typedef struct _string_t *string_t;
 typedef struct {
   const char *source;
-} cubec_string_initialize_t;
+} string_initialize_t;
 
-cubec_string_t cubec_create_string(cubec_allocator_t allocator,
-                                   cubec_string_initialize_t *initialize);
-const char *cubec_string_get(cubec_string_t self);
+string_t create_string(allocator_t allocator, string_initialize_t *initialize);
+const char *string_get(string_t self);
 
-size_t cubec_string_len(cubec_string_t self);
+size_t string_len(string_t self);
 
-cubec_string_t cubec_string_set(cubec_string_t self,
-                                cubec_allocator_t allocator,
-                                const char *source);
-cubec_string_t cubec_string_concat(cubec_string_t self,
-                                   cubec_allocator_t allocator,
-                                   const char *source);
-int cubec_string_compare(cubec_string_t self, const char *source);
+string_t string_set(string_t self, allocator_t allocator, const char *source);
+string_t string_concat(string_t self, allocator_t allocator,
+                       const char *source);
+int string_compare(string_t self, const char *source);
 
-char *cubec_create_cstring(cubec_allocator_t allocator, const char *source);
+char *create_cstring(allocator_t allocator, const char *source);
 
-const char *cubec_cstring_to_int(const char *source, size_t *value, int radix);
-const char *cubec_cstring_to_dec(const char *source, double *value);
-int64_t cubec_cstring_sdb(const char *key);
+const char *cstring_to_int(const char *source, size_t *value, int radix);
+const char *cstring_to_dec(const char *source, double *value);
+int64_t cstring_sdb(const char *key);
 
 #ifdef __cplusplus
 }

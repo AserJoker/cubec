@@ -10,16 +10,13 @@
 #include "core/allocator.h"
 #include "core/position.h"
 
-cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
-                                              cubec_position_t *position,
-                                              const char *end,
-                                              const char *filename) {
-  cubec_ast_node_t node =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_FOR);
-  cubec_ast_node_t err = NULL;
-  cubec_position_t current = *position;
-  cubec_ast_node_t token =
-      cubec_read_ast_literal_identifier(allocator, &current, end, filename);
+ast_node_t read_ast_statement_for(allocator_t allocator, position_t *position,
+                                  const char *end, const char *filename) {
+  ast_node_t node = create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_FOR);
+  ast_node_t err = NULL;
+  position_t current = *position;
+  ast_node_t token =
+      read_ast_literal_identifier(allocator, &current, end, filename);
   if (!token) {
     goto onerror;
   }
@@ -27,101 +24,97 @@ cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
     err = token;
     goto onerror;
   }
-  if (!cubec_location_is(token->loc, "for")) {
-    cubec_allocator_free(allocator, token);
+  if (!location_is(token->loc, "for")) {
+    allocator_free(allocator, token);
     goto onerror;
   }
-  cubec_allocator_free(allocator, token);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  allocator_free(allocator, token);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != '(') {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid statement, missing '('");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid statement, missing '('");
     goto onerror;
   }
   current.offset++;
   current.column++;
-  cubec_ast_node_t init =
-      cubec_read_ast_statement_declaration(allocator, &current, end, filename);
+  ast_node_t init =
+      read_ast_statement_declaration(allocator, &current, end, filename);
   if (!init) {
-    init =
-        cubec_read_ast_statement_expression(allocator, &current, end, filename);
+    init = read_ast_statement_expression(allocator, &current, end, filename);
   }
   if (!init) {
-    init = cubec_read_ast_statement_empty(allocator, &current, end, filename);
+    init = read_ast_statement_empty(allocator, &current, end, filename);
   }
   if (!init) {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid for statement, missing initialize");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid for statement, missing initialize");
     goto onerror;
   }
   if (init->type == CUBEC_NODE_TYPE_ERROR) {
     err = init;
     goto onerror;
   }
-  cubec_ast_add_child(allocator, node, "init", init);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  ast_add_child(allocator, node, "init", init);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  cubec_ast_node_t conditon =
-      cubec_read_ast_statement_expression(allocator, &current, end, filename);
+  ast_node_t conditon =
+      read_ast_statement_expression(allocator, &current, end, filename);
   if (!conditon) {
-    conditon =
-        cubec_read_ast_statement_empty(allocator, &current, end, filename);
+    conditon = read_ast_statement_empty(allocator, &current, end, filename);
   }
   if (!conditon) {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid for statement, missing condition");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid for statement, missing condition");
     goto onerror;
   }
   if (conditon->type == CUBEC_NODE_TYPE_ERROR) {
     err = conditon;
     goto onerror;
   }
-  cubec_ast_add_child(allocator, node, "condition", conditon);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  ast_add_child(allocator, node, "condition", conditon);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  cubec_ast_node_t after =
-      cubec_read_ast_expression(allocator, &current, end, filename);
+  ast_node_t after = read_ast_expression(allocator, &current, end, filename);
   if (after) {
     if (after->type == CUBEC_NODE_TYPE_ERROR) {
       err = after;
       goto onerror;
     }
-    cubec_ast_add_child(allocator, node, "after", after);
+    ast_add_child(allocator, node, "after", after);
   }
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != ')') {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid statement, missing ')'");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid statement, missing ')'");
     goto onerror;
   }
   current.offset++;
   current.column++;
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  cubec_ast_node_t body =
-      cubec_read_ast_statement(allocator, &current, end, filename);
+  ast_node_t body = read_ast_statement(allocator, &current, end, filename);
   if (!body) {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid for statement, missing body");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid for statement, missing body");
     goto onerror;
   }
   if (body->type == CUBEC_NODE_TYPE_ERROR) {
     err = body;
     goto onerror;
   }
-  cubec_ast_add_child(allocator, node, "body", body);
+  ast_add_child(allocator, node, "body", body);
   node->loc.begin = *position;
   node->loc.end = current;
   node->loc.filename = filename;
@@ -129,6 +122,6 @@ cubec_ast_node_t cubec_read_ast_statement_for(cubec_allocator_t allocator,
 
   return node;
 onerror:
-  cubec_allocator_free(allocator, node);
+  allocator_free(allocator, node);
   return err;
 }

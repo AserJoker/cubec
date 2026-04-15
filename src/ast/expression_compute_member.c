@@ -5,15 +5,15 @@
 #include "core/allocator.h"
 #include "core/position.h"
 
-cubec_ast_node_t cubec_read_ast_expression_compute_member(
-    cubec_allocator_t allocator, cubec_position_t *position, const char *end,
-    const char *filename) {
-  cubec_ast_node_t node = NULL;
-  cubec_ast_node_t err = NULL;
-  cubec_position_t current = *position;
-  node = cubec_create_ast_node(allocator,
-                               CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+ast_node_t read_ast_expression_compute_member(allocator_t allocator,
+                                              position_t *position,
+                                              const char *end,
+                                              const char *filename) {
+  ast_node_t node = NULL;
+  ast_node_t err = NULL;
+  position_t current = *position;
+  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
@@ -22,31 +22,30 @@ cubec_ast_node_t cubec_read_ast_expression_compute_member(
   }
   current.offset++;
   current.column++;
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
-  cubec_ast_node_t field =
-      cubec_read_ast_expression(allocator, &current, end, filename);
+  ast_node_t field = read_ast_expression(allocator, &current, end, filename);
   if (!field) {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid or unexpected token, missing field "
-                                 "for compute member expression");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid or unexpected token, missing field "
+                           "for compute member expression");
     goto onerror;
   }
   if (field->type == CUBEC_NODE_TYPE_ERROR) {
     err = field;
     goto onerror;
   }
-  cubec_ast_add_child(allocator, node, "field", field);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  ast_add_child(allocator, node, "field", field);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (*current.offset != ']') {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid or unexpected token, missing ']' for "
-                                 "compute member expression");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid or unexpected token, missing ']' for "
+                           "compute member expression");
     goto onerror;
   }
   current.offset++;
@@ -58,6 +57,6 @@ cubec_ast_node_t cubec_read_ast_expression_compute_member(
 
   return node;
 onerror:
-  cubec_allocator_free(allocator, node);
+  allocator_free(allocator, node);
   return err;
 }

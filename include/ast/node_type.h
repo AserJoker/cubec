@@ -3,7 +3,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef enum _cubec_ast_node_type_t {
+typedef enum _ast_node_type_t {
   CUBEC_NODE_TYPE_LIST,
   CUBEC_NODE_TYPE_ERROR,
   CUBEC_NODE_TYPE_LITERAL_IDENTIFIER,
@@ -61,7 +61,7 @@ typedef enum _cubec_ast_node_type_t {
   CUBEC_NODE_TYPE_PTR_DECLARATOR,
   CUBEC_NODE_TYPE_TYPE,
   CUBEC_NODE_TYPE_MAX,
-} cubec_ast_node_type_t;
+} ast_node_type_t;
 #ifdef __cplusplus
 }
 #endif

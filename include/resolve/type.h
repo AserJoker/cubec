@@ -6,7 +6,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-cubec_value_t cubec_resolve_type(cubec_context_t ctx, cubec_ast_node_t node);
+value_t resolve_type(context_t ctx, ast_node_t node);
 #ifdef __cplusplus
 }
 #endif

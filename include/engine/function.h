@@ -10,17 +10,15 @@
 extern "C" {
 #endif
 
-cubec_value_t cubec_create_function_type(cubec_context_t ctx, cubec_type_t type,
-                                         size_t num_args, cubec_type_t args[],
-                                         bool variadic);
-cubec_array_t cubec_function_type_get_arguments(cubec_type_t self);
-cubec_type_t cubec_function_type_get_type(cubec_type_t self);
+value_t create_function_type(context_t ctx, type_t type, size_t num_args,
+                             type_t args[], bool variadic);
+array_t function_type_get_arguments(type_t self);
+type_t function_type_get_type(type_t self);
 
-bool cubec_function_type_is_variadic(cubec_type_t self);
+bool function_type_is_variadic(type_t self);
 
-cubec_value_t cubec_create_function(cubec_context_t ctx, cubec_type_t func_type,
-                                    cubec_ast_node_t func, bool mutable,
-                                    const char *name);
+value_t create_function(context_t ctx, type_t func_type, ast_node_t func,
+                        bool mutable, const char *name);
 
 #ifdef __cplusplus
 }

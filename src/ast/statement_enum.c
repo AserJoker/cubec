@@ -3,16 +3,12 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 
-cubec_ast_node_t cubec_read_ast_statement_enum(cubec_allocator_t allocator,
-                                               cubec_position_t *position,
-                                               const char *end,
-                                               const char *filename) {
-  cubec_ast_node_t node =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_ENUM);
-  cubec_ast_node_t err = NULL;
-  cubec_position_t current = *position;
-  cubec_ast_node_t enu =
-      cubec_read_ast_enum_declarator(allocator, &current, end, filename);
+ast_node_t read_ast_statement_enum(allocator_t allocator, position_t *position,
+                                   const char *end, const char *filename) {
+  ast_node_t node = create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_ENUM);
+  ast_node_t err = NULL;
+  position_t current = *position;
+  ast_node_t enu = read_ast_enum_declarator(allocator, &current, end, filename);
   if (!enu) {
     goto onerror;
   }
@@ -20,8 +16,8 @@ cubec_ast_node_t cubec_read_ast_statement_enum(cubec_allocator_t allocator,
     err = enu;
     goto onerror;
   }
-  cubec_ast_add_child(allocator, node, "enum", enu);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  ast_add_child(allocator, node, "enum", enu);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
@@ -38,6 +34,6 @@ cubec_ast_node_t cubec_read_ast_statement_enum(cubec_allocator_t allocator,
 
   return node;
 onerror:
-  cubec_allocator_free(allocator, node);
+  allocator_free(allocator, node);
   return err;
 }

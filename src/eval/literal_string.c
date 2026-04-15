@@ -4,12 +4,13 @@
 #include "engine/context.h"
 #include "engine/str.h"
 #include "engine/value.h"
+#include <stdio.h>
 
-cubec_value_t cubec_eval_literal_string(cubec_context_t ctx,
-                                        cubec_ast_node_t node) {
-  cubec_allocator_t allocator = cubec_context_get_allocator(ctx);
-  char *s = cubec_location_get_str(node->loc, allocator);
-  cubec_value_t str = cubec_create_str(ctx, s, NULL);
-  cubec_allocator_free(allocator, s);
+value_t eval_literal_string(context_t ctx, ast_node_t node) {
+  allocator_t allocator = context_get_allocator(ctx);
+  char *s = location_get_str(node->loc, allocator);
+  printf("%s\n", s);
+  value_t str = create_str(ctx, s, NULL);
+  allocator_free(allocator, s);
   return str;
 }

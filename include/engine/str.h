@@ -7,9 +7,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void cubec_init_str_type(cubec_context_t ctx);
-cubec_value_t cubec_create_str(cubec_context_t ctx, const char *data,
-                               const char *name);
+void init_str_type(context_t ctx);
+value_t create_str(context_t ctx, const char *data, const char *name);
 
 #ifdef __cplusplus
 }

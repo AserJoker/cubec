@@ -7,100 +7,62 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef struct _cubec_value_t *cubec_value_t;
-struct _cubec_context_t;
-cubec_value_t cubec_create_value(cubec_allocator_t allocator, cubec_type_t type,
-                                 bool mutable, const void *data);
-void cubec_value_set_comptime(cubec_value_t self, bool comptime);
-bool cubec_value_is_comptime(cubec_value_t self);
-cubec_type_t cubec_value_get_type(cubec_value_t value);
-bool cubec_value_type_is(cubec_value_t value, cubec_type_kind_t kind);
-bool cubec_value_is_mutable(cubec_value_t value);
-void cubec_value_set_mutable(cubec_value_t value, bool mutable);
-void *cubec_value_get_data(cubec_value_t value);
-cubec_value_t cubec_value_clone(cubec_allocator_t allocator,
-                                cubec_value_t value);
-cubec_value_t cubec_value_assigment(cubec_value_t self,
-                                    struct _cubec_context_t *ctx,
-                                    cubec_value_t value);
-cubec_value_t cubec_value_unref_assigment(cubec_value_t self,
-                                          struct _cubec_context_t *ctx,
-                                          cubec_value_t value);
-bool cubec_value_is_interrupt(cubec_value_t value);
-bool cubec_value_is_error(cubec_value_t value);
+typedef struct _value_t *value_t;
+struct _context_t;
+value_t create_value(allocator_t allocator, type_t type, bool mutable,
+                     const void *data);
+void value_set_comptime(value_t self, bool comptime);
+bool value_is_comptime(value_t self);
+type_t value_get_type(value_t value);
+bool value_type_is(value_t value, type_kind_t kind);
+bool value_is_mutable(value_t value);
+void value_set_mutable(value_t value, bool mutable);
+void *value_get_data(value_t value);
+value_t value_clone(allocator_t allocator, value_t value);
+value_t value_assigment(value_t self, struct _context_t *ctx, value_t value);
+value_t value_unref_assigment(value_t self, struct _context_t *ctx,
+                              value_t value);
+bool value_is_interrupt(value_t value);
+bool value_is_error(value_t value);
 
-cubec_value_t cubec_value_to_string(cubec_value_t self,
-                                    struct _cubec_context_t *ctx);
-cubec_value_t cubec_value_get_index(cubec_value_t self,
-                                    struct _cubec_context_t *ctx, size_t idx);
-cubec_value_t cubec_value_set_index(cubec_value_t self,
-                                    struct _cubec_context_t *ctx, size_t idx,
-                                    cubec_value_t item);
-cubec_value_t cubec_value_get_field(cubec_value_t self,
-                                    struct _cubec_context_t *ctx,
-                                    const char *name);
-cubec_value_t cubec_value_set_field(cubec_value_t self,
-                                    struct _cubec_context_t *ctx,
-                                    const char *name, cubec_value_t value);
-cubec_value_t cubec_value_get_length(cubec_value_t self,
-                                     struct _cubec_context_t *ctx);
-cubec_value_t cubec_value_call(cubec_value_t self, struct _cubec_context_t *ctx,
-                               size_t argc, cubec_value_t argv[]);
-cubec_value_t cubec_value_convert(cubec_value_t self,
-                                  struct _cubec_context_t *ctx,
-                                  cubec_type_t type);
-cubec_value_t cubec_value_safe_convert(cubec_value_t self,
-                                       struct _cubec_context_t *ctx,
-                                       cubec_type_t type);
-cubec_value_t cubec_value_add(cubec_value_t self, struct _cubec_context_t *ctx,
-                              cubec_value_t another);
-cubec_value_t cubec_value_sub(cubec_value_t self, struct _cubec_context_t *ctx,
-                              cubec_value_t another);
-cubec_value_t cubec_value_mul(cubec_value_t self, struct _cubec_context_t *ctx,
-                              cubec_value_t another);
-cubec_value_t cubec_value_div(cubec_value_t self, struct _cubec_context_t *ctx,
-                              cubec_value_t another);
-cubec_value_t cubec_value_mod(cubec_value_t self, struct _cubec_context_t *ctx,
-                              cubec_value_t another);
-cubec_value_t cubec_value_and(cubec_value_t self, struct _cubec_context_t *ctx,
-                              cubec_value_t another);
-cubec_value_t cubec_value_or(cubec_value_t self, struct _cubec_context_t *ctx,
-                             cubec_value_t another);
-cubec_value_t cubec_value_xor(cubec_value_t self, struct _cubec_context_t *ctx,
-                              cubec_value_t another);
-cubec_value_t cubec_value_shl(cubec_value_t self, struct _cubec_context_t *ctx,
-                              cubec_value_t another);
-cubec_value_t cubec_value_shr(cubec_value_t self, struct _cubec_context_t *ctx,
-                              cubec_value_t another);
-cubec_value_t cubec_value_eq(cubec_value_t self, struct _cubec_context_t *ctx,
-                             cubec_value_t another);
-cubec_value_t cubec_value_ne(cubec_value_t self, struct _cubec_context_t *ctx,
-                             cubec_value_t another);
-cubec_value_t cubec_value_lt(cubec_value_t self, struct _cubec_context_t *ctx,
-                             cubec_value_t another);
-cubec_value_t cubec_value_gt(cubec_value_t self, struct _cubec_context_t *ctx,
-                             cubec_value_t another);
-cubec_value_t cubec_value_le(cubec_value_t self, struct _cubec_context_t *ctx,
-                             cubec_value_t another);
-cubec_value_t cubec_value_ge(cubec_value_t self, struct _cubec_context_t *ctx,
-                             cubec_value_t another);
-cubec_value_t cubec_value_plus(cubec_value_t self,
-                               struct _cubec_context_t *ctx);
-cubec_value_t cubec_value_neg(cubec_value_t self, struct _cubec_context_t *ctx);
-cubec_value_t cubec_value_bitwise_not(cubec_value_t self,
-                                      struct _cubec_context_t *ctx);
-cubec_value_t cubec_value_logical_not(cubec_value_t self,
-                                      struct _cubec_context_t *ctx);
-cubec_value_t cubec_value_logical_and(cubec_value_t self,
-                                      struct _cubec_context_t *ctx,
-                                      cubec_value_t another);
-cubec_value_t cubec_value_logical_or(cubec_value_t self,
-                                     struct _cubec_context_t *ctx,
-                                     cubec_value_t another);
-cubec_value_t cubec_value_unref(cubec_value_t self,
-                                struct _cubec_context_t *ctx);
-cubec_value_t cubec_value_ref(cubec_value_t self, struct _cubec_context_t *ctx);
-cubec_value_t cubec_value_try(cubec_value_t self, struct _cubec_context_t *ctx);
+value_t value_to_string(value_t self, struct _context_t *ctx);
+value_t value_get_index(value_t self, struct _context_t *ctx, size_t idx);
+value_t value_set_index(value_t self, struct _context_t *ctx, size_t idx,
+                        value_t item);
+value_t value_get_field(value_t self, struct _context_t *ctx, const char *name);
+value_t value_set_field(value_t self, struct _context_t *ctx, const char *name,
+                        value_t value);
+value_t value_get_length(value_t self, struct _context_t *ctx);
+value_t value_call(value_t self, struct _context_t *ctx, size_t argc,
+                   value_t argv[]);
+value_t value_convert(value_t self, struct _context_t *ctx, type_t type);
+value_t value_safe_convert(value_t self, struct _context_t *ctx, type_t type);
+value_t value_add(value_t self, struct _context_t *ctx, value_t another);
+value_t value_sub(value_t self, struct _context_t *ctx, value_t another);
+value_t value_mul(value_t self, struct _context_t *ctx, value_t another);
+value_t value_div(value_t self, struct _context_t *ctx, value_t another);
+value_t value_mod(value_t self, struct _context_t *ctx, value_t another);
+value_t value_and(value_t self, struct _context_t *ctx, value_t another);
+value_t value_or(value_t self, struct _context_t *ctx, value_t another);
+value_t value_xor(value_t self, struct _context_t *ctx, value_t another);
+value_t value_shl(value_t self, struct _context_t *ctx, value_t another);
+value_t value_shr(value_t self, struct _context_t *ctx, value_t another);
+value_t value_eq(value_t self, struct _context_t *ctx, value_t another);
+value_t value_ne(value_t self, struct _context_t *ctx, value_t another);
+value_t value_lt(value_t self, struct _context_t *ctx, value_t another);
+value_t value_gt(value_t self, struct _context_t *ctx, value_t another);
+value_t value_le(value_t self, struct _context_t *ctx, value_t another);
+value_t value_ge(value_t self, struct _context_t *ctx, value_t another);
+value_t value_plus(value_t self, struct _context_t *ctx);
+value_t value_neg(value_t self, struct _context_t *ctx);
+value_t value_bitwise_not(value_t self, struct _context_t *ctx);
+value_t value_logical_not(value_t self, struct _context_t *ctx);
+value_t value_logical_and(value_t self, struct _context_t *ctx,
+                          value_t another);
+value_t value_logical_or(value_t self, struct _context_t *ctx, value_t another);
+value_t value_unref(value_t self, struct _context_t *ctx);
+value_t value_ref(value_t self, struct _context_t *ctx);
+value_t value_try(value_t self, struct _context_t *ctx);
 #ifdef __cplusplus
 }
 #endif

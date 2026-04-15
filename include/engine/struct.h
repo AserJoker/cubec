@@ -10,29 +10,26 @@
 extern "C" {
 #endif
 
-struct _cubec_struct_attribute_t {
+struct _struct_attribute_t {
   char *name;
-  cubec_value_t value;
+  value_t value;
 };
-typedef struct _cubec_struct_attribute_t *cubec_struct_attribute_t;
-struct _cubec_struct_field_t {
+typedef struct _struct_attribute_t *struct_attribute_t;
+struct _struct_field_t {
   char *name;
-  cubec_type_t type;
+  type_t type;
   size_t offset;
 };
-typedef struct _cubec_struct_field_t *cubec_struct_field_t;
-cubec_value_t cubec_create_struct_type(cubec_context_t ctx, size_t align,
-                                      const char *name);
-void cubec_struct_type_add_field(cubec_type_t self, cubec_allocator_t allocator,
-                                 const char *name, cubec_type_t type);
-void cubec_struct_type_add_attribute(cubec_type_t self,
-                                     cubec_allocator_t allocator,
-                                     const char *name, cubec_value_t value);
-cubec_type_t cubec_struct_type_get_field(cubec_type_t self, const char *name);
-cubec_value_t cubec_struct_type_get_attribute(cubec_type_t self,
-                                              const char *name);
-cubec_array_t cubec_struct_type_get_fields(cubec_type_t self);
-cubec_array_t cubec_struct_type_get_attributes(cubec_type_t self);
+typedef struct _struct_field_t *struct_field_t;
+value_t create_struct_type(context_t ctx, size_t align, const char *name);
+void struct_type_add_field(type_t self, allocator_t allocator, const char *name,
+                           type_t type);
+void struct_type_add_attribute(type_t self, allocator_t allocator,
+                               const char *name, value_t value);
+type_t struct_type_get_field(type_t self, const char *name);
+value_t struct_type_get_attribute(type_t self, const char *name);
+array_t struct_type_get_fields(type_t self);
+array_t struct_type_get_attributes(type_t self);
 
 #ifdef __cplusplus
 }

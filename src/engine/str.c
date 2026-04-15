@@ -7,42 +7,37 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-static char *cubec_str_type_to_string(cubec_type_t self,
-                                      cubec_allocator_t allocator) {
-  return cubec_create_cstring(allocator, "str");
+static char *str_type_to_string(type_t self, allocator_t allocator) {
+  return create_cstring(allocator, "str");
 }
-static cubec_value_t cubec_str_get_length(cubec_value_t self,
-                                          cubec_context_t ctx) {
-  const char *data = *(const char **)cubec_value_get_data(self);
-  return cubec_create_u64(ctx, strlen(data), false, NULL);
+static value_t str_get_length(value_t self, context_t ctx) {
+  const char *data = *(const char **)value_get_data(self);
+  return create_u64(ctx, strlen(data), false, NULL);
 }
-static cubec_value_t cubec_str_get_index(cubec_value_t self,
-                                         cubec_context_t ctx, size_t idx) {
-  const char *data = *(const char **)cubec_value_get_data(self);
-  return cubec_create_i8(ctx, data[idx], false, NULL);
+static value_t str_get_index(value_t self, context_t ctx, size_t idx) {
+  const char *data = *(const char **)value_get_data(self);
+  return create_i8(ctx, data[idx], false, NULL);
 }
-static cubec_value_t cubec_str_to_string(cubec_value_t self,
-                                         cubec_context_t ctx) {
-  const char *data = *(const char **)cubec_value_get_data(self);
+static value_t str_to_string(value_t self, context_t ctx) {
+  const char *data = *(const char **)value_get_data(self);
   size_t len = strlen(data) + 3;
   char str[len];
   sprintf(str, "\"%s\"", data);
-  return cubec_create_str(ctx, str, NULL);
+  return create_str(ctx, str, NULL);
 }
-void cubec_init_str_type(cubec_context_t ctx) {
-  struct _cubec_type_operator_t opt = {
-      .type_to_string = &cubec_str_type_to_string,
-      .get_length = &cubec_str_get_length,
-      .get_index = &cubec_str_get_index,
-      .to_string = &cubec_str_to_string,
+void init_str_type(context_t ctx) {
+  struct _type_operator_t opt = {
+      .type_to_string = &str_type_to_string,
+      .get_length = &str_get_length,
+      .get_index = &str_get_index,
+      .to_string = &str_to_string,
   };
-  cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_STR, sizeof(const char **),
-                            sizeof(const char **), NULL, &opt, "str");
+  context_create_type(ctx, CUBEC_VALUE_TYPE_STR, sizeof(const char **),
+                      sizeof(const char **), NULL, &opt, "str");
 }
-cubec_value_t cubec_create_str(cubec_context_t ctx, const char *data,
-                               const char *name) {
-  cubec_value_t vtype = cubec_context_load(ctx, "str");
-  cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
-  const char *str = cubec_context_create_cstring(ctx, data);
-  return cubec_context_create_value(ctx, type, false, &str, name);
+value_t create_str(context_t ctx, const char *data, const char *name) {
+  value_t vtype = context_load(ctx, "str");
+  type_t type = *(type_t *)value_get_data(vtype);
+  const char *str = context_create_cstring(ctx, data);
+  return context_create_value(ctx, type, false, &str, name);
 }

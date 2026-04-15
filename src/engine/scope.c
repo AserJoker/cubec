@@ -4,46 +4,41 @@
 #include "core/hash_map.h"
 #include "core/string.h"
 #include <string.h>
-struct _cubec_scope_t {
-  cubec_scope_t parent;
-  cubec_array_t values;
-  cubec_hash_map_t variables;
+struct _scope_t {
+  scope_t parent;
+  array_t values;
+  hash_map_t variables;
 };
-static void cubec_scope_dispose(cubec_scope_t self,
-                                cubec_allocator_t allocator) {
-  cubec_allocator_free(allocator, self->variables);
-  cubec_allocator_free(allocator, self->values);
+static void scope_dispose(scope_t self, allocator_t allocator) {
+  allocator_free(allocator, self->variables);
+  allocator_free(allocator, self->values);
 }
-cubec_scope_t cubec_create_scope(cubec_allocator_t allocator,
-                                 cubec_scope_t parent) {
-  cubec_scope_t self =
-      cubec_allocator_alloc(allocator, sizeof(struct _cubec_scope_t),
-                            (cubec_dispose_fn_t)cubec_scope_dispose);
+scope_t create_scope(allocator_t allocator, scope_t parent) {
+  scope_t self = allocator_alloc(allocator, sizeof(struct _scope_t),
+                                 (dispose_fn_t)scope_dispose);
   self->parent = parent;
-  cubec_array_initialize_t array_initialize = {
+  array_initialize_t array_initialize = {
       .autofree = true,
   };
-  self->values = cubec_create_array(allocator, &array_initialize);
-  cubec_hash_map_initialize_t map_initialize = {
+  self->values = create_array(allocator, &array_initialize);
+  hash_map_initialize_t map_initialize = {
       .autofree_key = true,
       .autofree_value = false,
-      .hash = (cubec_hash_fn_t)cubec_cstring_sdb,
-      .compare = (cubec_compare_fn_t)strcmp,
+      .hash = (hash_fn_t)cstring_sdb,
+      .compare = (compare_fn_t)strcmp,
   };
-  self->variables = cubec_create_hash_map(allocator, &map_initialize);
+  self->variables = create_hash_map(allocator, &map_initialize);
   return self;
 }
-void cubec_scope_store(cubec_scope_t self, cubec_allocator_t allocator,
-                       cubec_value_t value, const char *name) {
-  cubec_array_push(self->values, value);
+void scope_store(scope_t self, allocator_t allocator, value_t value,
+                 const char *name) {
+  array_push(self->values, value);
   if (name) {
-    cubec_hash_map_set(self->variables, cubec_create_cstring(allocator, name),
-                       value, NULL, NULL);
+    hash_map_set(self->variables, create_cstring(allocator, name), value, NULL,
+                 NULL);
   }
 }
-cubec_value_t cubec_scope_load(cubec_scope_t self, const char *name) {
-  return cubec_hash_map_get(self->variables, name, NULL, NULL);
+value_t scope_load(scope_t self, const char *name) {
+  return hash_map_get(self->variables, name, NULL, NULL);
 }
-cubec_scope_t cubec_scope_get_parent(cubec_scope_t scope) {
-  return scope->parent;
-}
+scope_t scope_get_parent(scope_t scope) { return scope->parent; }

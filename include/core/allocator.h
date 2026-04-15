@@ -4,24 +4,22 @@
 extern "C" {
 #endif
 #include <stdlib.h>
-typedef struct _cubec_allocator_t *cubec_allocator_t;
-typedef void (*cubec_dispose_fn_t)(void *self, cubec_allocator_t allocator);
+typedef struct _allocator_t *allocator_t;
+typedef void (*dispose_fn_t)(void *self, allocator_t allocator);
 
 typedef struct {
   void *(*alloc)(size_t len);
   void (*free)(void *data);
-} cubec_allocator_initialize_t;
+} allocator_initialize_t;
 
-cubec_allocator_t
-cubec_create_allocator(cubec_allocator_initialize_t *initialize);
-void cubec_delete_allocator(cubec_allocator_t allocator);
+allocator_t create_allocator(allocator_initialize_t *initialize);
+void delete_allocator(allocator_t allocator);
 
-void *cubec_allocator_alloc_debug(cubec_allocator_t self, size_t len,
-                                  cubec_dispose_fn_t dispose,
-                                  const char *filename, size_t line);
-#define cubec_allocator_alloc(self, len, dispose)                              \
-  cubec_allocator_alloc_debug(self, len, dispose, __FILE__, __LINE__)
-void cubec_allocator_free(cubec_allocator_t self, void *data);
+void *allocator_alloc_debug(allocator_t self, size_t len, dispose_fn_t dispose,
+                            const char *filename, size_t line);
+#define allocator_alloc(self, len, dispose)                                    \
+  allocator_alloc_debug(self, len, dispose, __FILE__, __LINE__)
+void allocator_free(allocator_t self, void *data);
 #ifdef __cplusplus
 }
 #endif

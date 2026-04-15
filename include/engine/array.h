@@ -7,10 +7,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-cubec_value_t cubec_create_array_type(cubec_context_t self, cubec_type_t type,
-                                     size_t length);
-cubec_type_t cubec_array_type_get_type(cubec_type_t self);
-size_t cubec_array_type_get_length(cubec_type_t self);
+value_t create_array_type(context_t self, type_t type, size_t length);
+type_t array_type_get_type(type_t self);
+size_t array_type_get_length(type_t self);
 #ifdef __cplusplus
 }
 #endif

@@ -7,122 +7,115 @@
 #include "engine/value.h"
 #include <stdbool.h>
 
-static char *cubec_boolean_type_to_string(cubec_type_t self,
-                                          cubec_allocator_t allocator) {
-  return cubec_create_cstring(allocator, "bool");
+static char *boolean_type_to_string(type_t self, allocator_t allocator) {
+  return create_cstring(allocator, "bool");
 }
 
-static cubec_value_t cubec_boolean_to_string(cubec_value_t value,
-                                             cubec_context_t ctx) {
-  bool val = *(bool *)cubec_value_get_data(value);
+static value_t boolean_to_string(value_t value, context_t ctx) {
+  bool val = *(bool *)value_get_data(value);
   const char *str = val ? "true" : "false";
-  return cubec_create_str(ctx, str, NULL);
+  return create_str(ctx, str, NULL);
 }
-static cubec_value_t cubec_boolean_logical_and(cubec_value_t self,
-                                               cubec_context_t ctx,
-                                               cubec_value_t another) {
-  bool *left = (bool *)cubec_value_get_data(self);
-  bool *right = (bool *)cubec_value_get_data(another);
+static value_t boolean_logical_and(value_t self, context_t ctx,
+                                   value_t another) {
+  bool *left = (bool *)value_get_data(self);
+  bool *right = (bool *)value_get_data(another);
   if (!left || !right) {
-    cubec_value_t vtype = cubec_context_load(ctx, "bool");
-    cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
-    return cubec_context_create_value(ctx, type, false, NULL, NULL);
+    value_t vtype = context_load(ctx, "bool");
+    type_t type = *(type_t *)value_get_data(vtype);
+    return context_create_value(ctx, type, false, NULL, NULL);
   }
-  return cubec_create_boolean(ctx, (*left) && (*right), false, NULL);
+  return create_boolean(ctx, (*left) && (*right), false, NULL);
 }
-static cubec_value_t cubec_boolean_logical_or(cubec_value_t self,
-                                              cubec_context_t ctx,
-                                              cubec_value_t another) {
-  bool *left = (bool *)cubec_value_get_data(self);
-  bool *right = (bool *)cubec_value_get_data(another);
+static value_t boolean_logical_or(value_t self, context_t ctx,
+                                  value_t another) {
+  bool *left = (bool *)value_get_data(self);
+  bool *right = (bool *)value_get_data(another);
   if (!left || !right) {
-    cubec_value_t vtype = cubec_context_load(ctx, "bool");
-    cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
-    return cubec_context_create_value(ctx, type, false, NULL, NULL);
+    value_t vtype = context_load(ctx, "bool");
+    type_t type = *(type_t *)value_get_data(vtype);
+    return context_create_value(ctx, type, false, NULL, NULL);
   }
-  return cubec_create_boolean(ctx, (*left) || (*right), false, NULL);
+  return create_boolean(ctx, (*left) || (*right), false, NULL);
 }
-static cubec_value_t cubec_boolean_logical_not(cubec_value_t self,
-                                               cubec_context_t ctx) {
-  bool *data = (bool *)cubec_value_get_data(self);
+static value_t boolean_logical_not(value_t self, context_t ctx) {
+  bool *data = (bool *)value_get_data(self);
   if (!data) {
-    cubec_value_t vtype = cubec_context_load(ctx, "bool");
-    cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
-    return cubec_context_create_value(ctx, type, false, NULL, NULL);
+    value_t vtype = context_load(ctx, "bool");
+    type_t type = *(type_t *)value_get_data(vtype);
+    return context_create_value(ctx, type, false, NULL, NULL);
   }
-  return cubec_create_boolean(ctx, !(*data), false, NULL);
+  return create_boolean(ctx, !(*data), false, NULL);
 }
-static cubec_value_t cubec_boolean_convert(cubec_value_t value,
-                                           cubec_context_t ctx,
-                                           cubec_type_t type) {
-  bool *data = cubec_value_get_data(value);
-  cubec_type_kind_t kind = cubec_type_get_kind(type);
+static value_t boolean_convert(value_t value, context_t ctx, type_t type) {
+  bool *data = value_get_data(value);
+  type_kind_t kind = type_get_kind(type);
   switch (kind) {
   case CUBEC_VALUE_TYPE_BOOL:
     if (data) {
-      return cubec_create_boolean(ctx, *data, true, NULL);
+      return create_boolean(ctx, *data, true, NULL);
     } else {
-      return cubec_context_create_value(ctx, type, false, NULL, NULL);
+      return context_create_value(ctx, type, false, NULL, NULL);
     }
   case CUBEC_VALUE_TYPE_INT8:
     if (data) {
-      return cubec_create_i8(ctx, *data, true, NULL);
+      return create_i8(ctx, *data, true, NULL);
     } else {
-      return cubec_context_create_value(ctx, type, false, NULL, NULL);
+      return context_create_value(ctx, type, false, NULL, NULL);
     }
   case CUBEC_VALUE_TYPE_INT16:
     if (data) {
-      return cubec_create_i16(ctx, *data, true, NULL);
+      return create_i16(ctx, *data, true, NULL);
     } else {
-      return cubec_context_create_value(ctx, type, false, NULL, NULL);
+      return context_create_value(ctx, type, false, NULL, NULL);
     }
   case CUBEC_VALUE_TYPE_INT32:
     if (data) {
-      return cubec_create_i32(ctx, *data, true, NULL);
+      return create_i32(ctx, *data, true, NULL);
     } else {
-      return cubec_context_create_value(ctx, type, false, NULL, NULL);
+      return context_create_value(ctx, type, false, NULL, NULL);
     }
   case CUBEC_VALUE_TYPE_INT64:
     if (data) {
-      return cubec_create_i64(ctx, *data, true, NULL);
+      return create_i64(ctx, *data, true, NULL);
     } else {
-      return cubec_context_create_value(ctx, type, false, NULL, NULL);
+      return context_create_value(ctx, type, false, NULL, NULL);
     }
   case CUBEC_VALUE_TYPE_UINT8:
     if (data) {
-      return cubec_create_u8(ctx, *data, true, NULL);
+      return create_u8(ctx, *data, true, NULL);
     } else {
-      return cubec_context_create_value(ctx, type, false, NULL, NULL);
+      return context_create_value(ctx, type, false, NULL, NULL);
     }
   case CUBEC_VALUE_TYPE_UINT16:
     if (data) {
-      return cubec_create_u16(ctx, *data, true, NULL);
+      return create_u16(ctx, *data, true, NULL);
     } else {
-      return cubec_context_create_value(ctx, type, false, NULL, NULL);
+      return context_create_value(ctx, type, false, NULL, NULL);
     }
   case CUBEC_VALUE_TYPE_UINT32:
     if (data) {
-      return cubec_create_u32(ctx, *data, true, NULL);
+      return create_u32(ctx, *data, true, NULL);
     } else {
-      return cubec_context_create_value(ctx, type, false, NULL, NULL);
+      return context_create_value(ctx, type, false, NULL, NULL);
     }
   case CUBEC_VALUE_TYPE_UINT64:
     if (data) {
-      return cubec_create_u64(ctx, *data, true, NULL);
+      return create_u64(ctx, *data, true, NULL);
     } else {
-      return cubec_context_create_value(ctx, type, false, NULL, NULL);
+      return context_create_value(ctx, type, false, NULL, NULL);
     }
   case CUBEC_VALUE_TYPE_FLOAT32:
     if (data) {
-      return cubec_create_f32(ctx, *data, true, NULL);
+      return create_f32(ctx, *data, true, NULL);
     } else {
-      return cubec_context_create_value(ctx, type, false, NULL, NULL);
+      return context_create_value(ctx, type, false, NULL, NULL);
     }
   case CUBEC_VALUE_TYPE_FLOAT64:
     if (data) {
-      return cubec_create_f64(ctx, *data, true, NULL);
+      return create_f64(ctx, *data, true, NULL);
     } else {
-      return cubec_context_create_value(ctx, type, false, NULL, NULL);
+      return context_create_value(ctx, type, false, NULL, NULL);
     }
   default:
     break;
@@ -130,21 +123,21 @@ static cubec_value_t cubec_boolean_convert(cubec_value_t value,
   return NULL;
 }
 
-void cubec_init_boolean_type(cubec_context_t ctx) {
-  struct _cubec_type_operator_t opt = {
-      .type_to_string = cubec_boolean_type_to_string,
-      .to_string = cubec_boolean_to_string,
-      .convert = cubec_boolean_convert,
-      .logical_and_opt = cubec_boolean_logical_and,
-      .logical_or_opt = cubec_boolean_logical_or,
-      .logical_not_opt = cubec_boolean_logical_not,
+void init_boolean_type(context_t ctx) {
+  struct _type_operator_t opt = {
+      .type_to_string = boolean_type_to_string,
+      .to_string = boolean_to_string,
+      .convert = boolean_convert,
+      .logical_and_opt = boolean_logical_and,
+      .logical_or_opt = boolean_logical_or,
+      .logical_not_opt = boolean_logical_not,
   };
-  cubec_context_create_type(ctx, CUBEC_VALUE_TYPE_BOOL, sizeof(bool),
-                            sizeof(bool), NULL, &opt, "bool");
+  context_create_type(ctx, CUBEC_VALUE_TYPE_BOOL, sizeof(bool), sizeof(bool),
+                      NULL, &opt, "bool");
 }
-cubec_value_t cubec_create_boolean(cubec_context_t ctx, bool value,
-                                   bool mutable, const char *name) {
-  cubec_value_t vtype = cubec_context_load(ctx, "bool");
-  cubec_type_t type = *(cubec_type_t *)cubec_value_get_data(vtype);
-  return cubec_context_create_value(ctx, type, mutable, &value, name);
+value_t create_boolean(context_t ctx, bool value, bool mutable,
+                       const char *name) {
+  value_t vtype = context_load(ctx, "bool");
+  type_t type = *(type_t *)value_get_data(vtype);
+  return context_create_value(ctx, type, mutable, &value, name);
 }

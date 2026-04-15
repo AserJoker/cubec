@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef int (*cubec_compare_fn_t)(const void *, const void *, void *);
+typedef int (*compare_fn_t)(const void *, const void *, void *);
 #ifdef __cplusplus
 }
 #endif

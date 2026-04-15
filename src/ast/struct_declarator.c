@@ -11,34 +11,32 @@
 #include "core/location.h"
 #include "core/position.h"
 
-cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
-                                                  cubec_position_t *position,
-                                                  const char *end,
-                                                  const char *filename) {
-  cubec_ast_node_t node =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_STRUCT_DECLARATOR);
-  cubec_ast_node_t err = NULL;
-  cubec_position_t current = *position;
-  cubec_ast_node_t decorators =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "decorators", decorators);
+ast_node_t read_ast_struct_declarator(allocator_t allocator,
+                                      position_t *position, const char *end,
+                                      const char *filename) {
+  ast_node_t node =
+      create_ast_node(allocator, CUBEC_NODE_TYPE_STRUCT_DECLARATOR);
+  ast_node_t err = NULL;
+  position_t current = *position;
+  ast_node_t decorators = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "decorators", decorators);
   for (;;) {
-    cubec_ast_node_t decorator =
-        cubec_read_ast_decorator(allocator, &current, end, filename);
+    ast_node_t decorator =
+        read_ast_decorator(allocator, &current, end, filename);
     if (!decorator) {
       break;
     }
     if (decorator->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;
     }
-    cubec_ast_add_item(decorators, decorator);
-    err = cubec_ast_skip_all(allocator, &current, end, filename);
+    ast_add_item(decorators, decorator);
+    err = ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       return err;
     }
   }
-  cubec_ast_node_t token =
-      cubec_read_ast_literal_identifier(allocator, &current, end, filename);
+  ast_node_t token =
+      read_ast_literal_identifier(allocator, &current, end, filename);
   if (!token) {
     goto onerror;
   }
@@ -46,106 +44,100 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
     err = token;
     goto onerror;
   }
-  if (!cubec_location_is(token->loc, "struct") &&
-      !cubec_location_is(token->loc, "union")) {
-    cubec_allocator_free(allocator, token);
+  if (!location_is(token->loc, "struct") && !location_is(token->loc, "union")) {
+    allocator_free(allocator, token);
     goto onerror;
   }
-  cubec_ast_node_t fields =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "fields", fields);
-  cubec_ast_node_t methods =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "methods", methods);
-  cubec_ast_node_t attributes =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
-  cubec_ast_add_child(allocator, node, "attributes", attributes);
-  cubec_allocator_free(allocator, token);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  ast_node_t fields = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "fields", fields);
+  ast_node_t methods = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "methods", methods);
+  ast_node_t attributes = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "attributes", attributes);
+  allocator_free(allocator, token);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
-  cubec_ast_node_t identifier =
-      cubec_read_ast_literal_identifier(allocator, &current, end, filename);
+  ast_node_t identifier =
+      read_ast_literal_identifier(allocator, &current, end, filename);
   if (identifier) {
     if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
       err = identifier;
       goto onerror;
     }
-    cubec_ast_add_child(allocator, node, "identifier", identifier);
+    ast_add_child(allocator, node, "identifier", identifier);
   }
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != '{') {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid struct declarator, missing '{'");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid struct declarator, missing '{'");
     goto onerror;
   }
   current.offset++;
   current.column++;
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != '}') {
     for (;;) {
-      cubec_ast_node_t item =
-          cubec_read_ast_struct_declarator(allocator, &current, end, filename);
+      ast_node_t item =
+          read_ast_struct_declarator(allocator, &current, end, filename);
       if (item) {
         if (item->type == CUBEC_NODE_TYPE_ERROR) {
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item(attributes, item);
+        ast_add_item(attributes, item);
         goto next;
       }
-      item = cubec_read_ast_enum_declarator(allocator, &current, end, filename);
+      item = read_ast_enum_declarator(allocator, &current, end, filename);
       if (item) {
         if (item->type == CUBEC_NODE_TYPE_ERROR) {
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item(attributes, item);
+        ast_add_item(attributes, item);
         goto next;
       }
-      item = cubec_read_ast_function_declarator(allocator, &current, end,
-                                                filename);
+      item = read_ast_function_declarator(allocator, &current, end, filename);
       if (item) {
         if (item->type == CUBEC_NODE_TYPE_ERROR) {
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item(methods, item);
+        ast_add_item(methods, item);
         goto next;
       }
-      item = cubec_read_ast_statement_declaration(allocator, &current, end,
-                                                  filename);
+      item = read_ast_statement_declaration(allocator, &current, end, filename);
       if (item) {
         if (item->type == CUBEC_NODE_TYPE_ERROR) {
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item(attributes, item);
+        ast_add_item(attributes, item);
         goto next;
       }
-      item = cubec_read_ast_struct_field(allocator, &current, end, filename);
+      item = read_ast_struct_field(allocator, &current, end, filename);
       if (item) {
         if (item->type == CUBEC_NODE_TYPE_ERROR) {
           err = item;
           goto onerror;
         }
-        cubec_ast_add_item(fields, item);
+        ast_add_item(fields, item);
         current.offset++;
         current.column++;
         goto next;
       }
-      err = cubec_create_ast_error(allocator, *position, current, filename,
-                                   "invalid struct field");
+      err = create_ast_error(allocator, *position, current, filename,
+                             "invalid struct field");
       goto onerror;
     next:
-      err = cubec_ast_skip_all(allocator, &current, end, filename);
+      err = ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
         return err;
       }
@@ -154,13 +146,13 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
       }
     }
   }
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != '}') {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid struct declarator, missing '}'");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid struct declarator, missing '}'");
     goto onerror;
   }
   current.offset++;
@@ -172,6 +164,6 @@ cubec_ast_node_t cubec_read_ast_struct_declarator(cubec_allocator_t allocator,
 
   return node;
 onerror:
-  cubec_allocator_free(allocator, node);
+  allocator_free(allocator, node);
   return err;
 }

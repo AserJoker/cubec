@@ -6,17 +6,15 @@ extern "C" {
 #endif
 #include "core/allocator.h"
 #include "core/position.h"
-typedef struct _cubec_location_t {
-  cubec_position_t begin;
-  cubec_position_t end;
+typedef struct _location_t {
+  position_t begin;
+  position_t end;
   const char *filename;
-} cubec_location_t;
-char *cubec_location_get(cubec_location_t self, cubec_allocator_t allocator);
-char *cubec_location_get_str(cubec_location_t self,
-                             cubec_allocator_t allocator);
-char *cubec_location_get_line(cubec_location_t self,
-                              cubec_allocator_t allocator);
-bool cubec_location_is(cubec_location_t self, const char *str);
+} location_t;
+char *location_get(location_t self, allocator_t allocator);
+char *location_get_str(location_t self, allocator_t allocator);
+char *location_get_line(location_t self, allocator_t allocator);
+bool location_is(location_t self, const char *str);
 #ifdef __cplusplus
 }
 #endif

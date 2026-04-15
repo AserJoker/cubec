@@ -6,7 +6,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void cubec_init_void_type(cubec_context_t ctx);
+void init_void_type(context_t ctx);
 
 #ifdef __cplusplus
 }

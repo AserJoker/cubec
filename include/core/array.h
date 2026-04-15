@@ -6,36 +6,33 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef struct _cubec_array_t *cubec_array_t;
+typedef struct _array_t *array_t;
 typedef struct {
   size_t capacity;
   bool autofree;
-  cubec_compare_fn_t compare;
-} cubec_array_initialize_t;
+  compare_fn_t compare;
+} array_initialize_t;
 
-cubec_array_t cubec_create_array(cubec_allocator_t allocator,
-                                 cubec_array_initialize_t *initialize);
-size_t cubec_array_get_size(const cubec_array_t self);
-size_t cubec_array_get_capacity(const cubec_array_t self);
-cubec_array_t cubec_array_shrink_to_fit(cubec_array_t self);
-cubec_array_t cubec_array_resize(cubec_array_t self, size_t size);
-void *cubec_array_get(const cubec_array_t self, size_t index);
-void cubec_array_del(cubec_array_t self, size_t index);
-void cubec_array_set(cubec_array_t self, size_t index, void *data);
-void cubec_array_insert(cubec_array_t self, size_t index, void *data);
-void *cubec_array_move(cubec_array_t self, size_t index);
-void *cubec_array_replace(cubec_array_t self, size_t index, void *data);
-void cubec_array_push(cubec_array_t self, void *data);
-void cubec_array_pop(cubec_array_t self);
-void *cubec_array_back(cubec_array_t self);
-void cubec_array_swap(cubec_array_t self, size_t origin, size_t target);
-void cubec_array_clear(cubec_array_t self);
-void cubec_array_sort(cubec_array_t self, void *cmp_arg);
-cubec_array_t cubec_array_clone(cubec_allocator_t allocator,
-                                const cubec_array_t src);
-size_t cubec_array_find_index(cubec_array_t self, const void *value,
-                              void *cmp_arg);
-void *cubec_array_get_data(cubec_array_t self);
+array_t create_array(allocator_t allocator, array_initialize_t *initialize);
+size_t array_get_size(const array_t self);
+size_t array_get_capacity(const array_t self);
+array_t array_shrink_to_fit(array_t self);
+array_t array_resize(array_t self, size_t size);
+void *array_get(const array_t self, size_t index);
+void array_del(array_t self, size_t index);
+void array_set(array_t self, size_t index, void *data);
+void array_insert(array_t self, size_t index, void *data);
+void *array_move(array_t self, size_t index);
+void *array_replace(array_t self, size_t index, void *data);
+void array_push(array_t self, void *data);
+void array_pop(array_t self);
+void *array_back(array_t self);
+void array_swap(array_t self, size_t origin, size_t target);
+void array_clear(array_t self);
+void array_sort(array_t self, void *cmp_arg);
+array_t array_clone(allocator_t allocator, const array_t src);
+size_t array_find_index(array_t self, const void *value, void *cmp_arg);
+void *array_get_data(array_t self);
 #ifdef __cplusplus
 }
 #endif

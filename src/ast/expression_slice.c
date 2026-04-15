@@ -5,32 +5,30 @@
 #include "core/allocator.h"
 #include "core/position.h"
 
-cubec_ast_node_t cubec_read_ast_expression_slice(cubec_allocator_t allocator,
-                                                 cubec_position_t *position,
-                                                 const char *end,
-                                                 const char *filename) {
-  cubec_ast_node_t node = NULL;
-  cubec_ast_node_t err = NULL;
-  cubec_position_t current = *position;
+ast_node_t read_ast_expression_slice(allocator_t allocator,
+                                     position_t *position, const char *end,
+                                     const char *filename) {
+  ast_node_t node = NULL;
+  ast_node_t err = NULL;
+  position_t current = *position;
   if (*current.offset != '[') {
     goto onerror;
   }
   current.offset++;
   current.column++;
-  node = cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_SLICE);
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_SLICE);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
-  cubec_ast_node_t start =
-      cubec_read_ast_expression3(allocator, &current, end, filename);
+  ast_node_t start = read_ast_expression3(allocator, &current, end, filename);
   if (start) {
     if (start->type == CUBEC_NODE_TYPE_ERROR) {
       err = start;
       goto onerror;
     }
-    cubec_ast_add_child(allocator, node, "start", start);
-    err = cubec_ast_skip_all(allocator, &current, end, filename);
+    ast_add_child(allocator, node, "start", start);
+    err = ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
       goto onerror;
     }
@@ -40,22 +38,22 @@ cubec_ast_node_t cubec_read_ast_expression_slice(cubec_allocator_t allocator,
   }
   current.offset++;
   current.column++;
-  cubec_ast_node_t end_index =
-      cubec_read_ast_expression3(allocator, &current, end, filename);
+  ast_node_t end_index =
+      read_ast_expression3(allocator, &current, end, filename);
   if (end_index) {
     if (end_index->type == CUBEC_NODE_TYPE_ERROR) {
       err = end_index;
       goto onerror;
     }
-    cubec_ast_add_child(allocator, node, "end", end_index);
+    ast_add_child(allocator, node, "end", end_index);
   }
-  err = cubec_ast_skip_all(allocator, &current, end, filename);
+  err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (*current.offset != ']') {
-    err = cubec_create_ast_error(allocator, *position, current, filename,
-                                 "invalid slice expression, missing ']'");
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid slice expression, missing ']'");
     goto onerror;
   }
   current.offset++;
@@ -67,6 +65,6 @@ cubec_ast_node_t cubec_read_ast_expression_slice(cubec_allocator_t allocator,
 
   return node;
 onerror:
-  cubec_allocator_free(allocator, node);
+  allocator_free(allocator, node);
   return err;
 }

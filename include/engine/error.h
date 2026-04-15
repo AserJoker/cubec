@@ -8,16 +8,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void cubec_init_error_type(cubec_context_t ctx);
-cubec_value_t cubec_create_error(cubec_context_t ctx, const char *fmt, ...);
+void init_error_type(context_t ctx);
+value_t create_error(context_t ctx, const char *fmt, ...);
 
-cubec_value_t cubec_create_compile_error(cubec_context_t ctx,
-                                         cubec_ast_node_t node, const char *fmt,
-                                         ...);
-cubec_value_t cubec_convert_compile_error(cubec_context_t ctx,
-                                          cubec_ast_node_t node,
-                                          cubec_value_t err);
-const char *cubec_error_get_message(cubec_value_t value);
+value_t create_compile_error(context_t ctx, ast_node_t node, const char *fmt,
+                             ...);
+value_t convert_compile_error(context_t ctx, ast_node_t node, value_t err);
+const char *error_get_message(value_t value);
 
 #ifdef __cplusplus
 }

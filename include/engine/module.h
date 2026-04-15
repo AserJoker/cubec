@@ -7,14 +7,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef struct _cubec_module_t *cubec_module_t;
-cubec_module_t cubec_create_module(cubec_allocator_t allocator,
-                                   cubec_ast_node_t node, const char *filename,
-                                   char *source, cubec_value_t value);
-const char *cubec_module_get_filename(cubec_module_t self);
-const char *cubec_module_get_dirname(cubec_module_t self);
-cubec_ast_node_t cubec_module_get_node(cubec_module_t self);
-cubec_value_t cubec_module_get_value(cubec_module_t self);
+typedef struct _module_t *module_t;
+module_t create_module(allocator_t allocator, ast_node_t node,
+                       const char *filename, char *source, value_t value);
+const char *module_get_filename(module_t self);
+const char *module_get_dirname(module_t self);
+ast_node_t module_get_node(module_t self);
+value_t module_get_value(module_t self);
 #ifdef __cplusplus
 }
 #endif

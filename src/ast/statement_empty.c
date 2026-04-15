@@ -4,14 +4,11 @@
 #include "core/allocator.h"
 #include "core/position.h"
 
-cubec_ast_node_t cubec_read_ast_statement_empty(cubec_allocator_t allocator,
-                                                cubec_position_t *position,
-                                                const char *end,
-                                                const char *filename) {
-  cubec_ast_node_t node =
-      cubec_create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_EMPTY);
-  cubec_ast_node_t err = NULL;
-  cubec_position_t current = *position;
+ast_node_t read_ast_statement_empty(allocator_t allocator, position_t *position,
+                                    const char *end, const char *filename) {
+  ast_node_t node = create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_EMPTY);
+  ast_node_t err = NULL;
+  position_t current = *position;
   if (*current.offset != ';') {
     goto onerror;
   }
@@ -23,6 +20,6 @@ cubec_ast_node_t cubec_read_ast_statement_empty(cubec_allocator_t allocator,
   *position = current;
   return node;
 onerror:
-  cubec_allocator_free(allocator, node);
+  allocator_free(allocator, node);
   return err;
 }
