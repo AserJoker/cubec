@@ -19,7 +19,7 @@ void init_builtin_type(context_t ctx) {
       .type_to_string = &builtin_type_to_string,
       .call = &builtin_call,
   };
-  context_create_type(ctx, CUBEC_VALUE_TYPE_BUILTIN, sizeof(builtin_fn_t),
+  context_create_type(ctx, VALUE_TYPE_BUILTIN, sizeof(builtin_fn_t),
                       sizeof(builtin_fn_t), NULL, &opt, "builtin");
 }
 value_t create_builtin(context_t ctx, builtin_fn_t fn, const char *name) {

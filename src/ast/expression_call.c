@@ -16,18 +16,18 @@ ast_node_t read_ast_expression_call(allocator_t allocator, position_t *position,
   }
   current.offset++;
   current.column++;
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_CALL);
-  ast_node_t args = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_CALL);
+  ast_node_t args = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "arguments", args);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (*current.offset != ')') {
     ast_node_t initialize_list =
         read_ast_initialize_list(allocator, &current, end, filename);
     if (initialize_list) {
-      if (initialize_list->type == CUBEC_NODE_TYPE_ERROR) {
+      if (initialize_list->type == NODE_TYPE_ERROR) {
         err = initialize_list;
         goto onerror;
       }
@@ -44,13 +44,13 @@ ast_node_t read_ast_expression_call(allocator_t allocator, position_t *position,
                                  "invalid or unexpected token");
           goto onerror;
         }
-        if (item->type == CUBEC_NODE_TYPE_ERROR) {
+        if (item->type == NODE_TYPE_ERROR) {
           err = item;
           goto onerror;
         }
         ast_add_item(args, item);
         err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+        if (err && err->type == NODE_TYPE_ERROR) {
           goto onerror;
         }
         if (*current.offset == ')') {
@@ -64,7 +64,7 @@ ast_node_t read_ast_expression_call(allocator_t allocator, position_t *position,
         current.column++;
         current.offset++;
         err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+        if (err && err->type == NODE_TYPE_ERROR) {
           goto onerror;
         }
       }
@@ -72,7 +72,7 @@ ast_node_t read_ast_expression_call(allocator_t allocator, position_t *position,
   }
 
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (*current.offset != ')') {

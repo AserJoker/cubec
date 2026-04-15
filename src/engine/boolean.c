@@ -51,67 +51,67 @@ static value_t boolean_convert(value_t value, context_t ctx, type_t type) {
   bool *data = value_get_data(value);
   type_kind_t kind = type_get_kind(type);
   switch (kind) {
-  case CUBEC_VALUE_TYPE_BOOL:
+  case VALUE_TYPE_BOOL:
     if (data) {
       return create_boolean(ctx, *data, true, NULL);
     } else {
       return context_create_value(ctx, type, false, NULL, NULL);
     }
-  case CUBEC_VALUE_TYPE_INT8:
+  case VALUE_TYPE_INT8:
     if (data) {
       return create_i8(ctx, *data, true, NULL);
     } else {
       return context_create_value(ctx, type, false, NULL, NULL);
     }
-  case CUBEC_VALUE_TYPE_INT16:
+  case VALUE_TYPE_INT16:
     if (data) {
       return create_i16(ctx, *data, true, NULL);
     } else {
       return context_create_value(ctx, type, false, NULL, NULL);
     }
-  case CUBEC_VALUE_TYPE_INT32:
+  case VALUE_TYPE_INT32:
     if (data) {
       return create_i32(ctx, *data, true, NULL);
     } else {
       return context_create_value(ctx, type, false, NULL, NULL);
     }
-  case CUBEC_VALUE_TYPE_INT64:
+  case VALUE_TYPE_INT64:
     if (data) {
       return create_i64(ctx, *data, true, NULL);
     } else {
       return context_create_value(ctx, type, false, NULL, NULL);
     }
-  case CUBEC_VALUE_TYPE_UINT8:
+  case VALUE_TYPE_UINT8:
     if (data) {
       return create_u8(ctx, *data, true, NULL);
     } else {
       return context_create_value(ctx, type, false, NULL, NULL);
     }
-  case CUBEC_VALUE_TYPE_UINT16:
+  case VALUE_TYPE_UINT16:
     if (data) {
       return create_u16(ctx, *data, true, NULL);
     } else {
       return context_create_value(ctx, type, false, NULL, NULL);
     }
-  case CUBEC_VALUE_TYPE_UINT32:
+  case VALUE_TYPE_UINT32:
     if (data) {
       return create_u32(ctx, *data, true, NULL);
     } else {
       return context_create_value(ctx, type, false, NULL, NULL);
     }
-  case CUBEC_VALUE_TYPE_UINT64:
+  case VALUE_TYPE_UINT64:
     if (data) {
       return create_u64(ctx, *data, true, NULL);
     } else {
       return context_create_value(ctx, type, false, NULL, NULL);
     }
-  case CUBEC_VALUE_TYPE_FLOAT32:
+  case VALUE_TYPE_FLOAT32:
     if (data) {
       return create_f32(ctx, *data, true, NULL);
     } else {
       return context_create_value(ctx, type, false, NULL, NULL);
     }
-  case CUBEC_VALUE_TYPE_FLOAT64:
+  case VALUE_TYPE_FLOAT64:
     if (data) {
       return create_f64(ctx, *data, true, NULL);
     } else {
@@ -132,8 +132,8 @@ void init_boolean_type(context_t ctx) {
       .logical_or_opt = boolean_logical_or,
       .logical_not_opt = boolean_logical_not,
   };
-  context_create_type(ctx, CUBEC_VALUE_TYPE_BOOL, sizeof(bool), sizeof(bool),
-                      NULL, &opt, "bool");
+  context_create_type(ctx, VALUE_TYPE_BOOL, sizeof(bool), sizeof(bool), NULL,
+                      &opt, "bool");
 }
 value_t create_boolean(context_t ctx, bool value, bool mutable,
                        const char *name) {

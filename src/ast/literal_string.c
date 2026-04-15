@@ -161,8 +161,7 @@ ast_node_t read_ast_literal_string(allocator_t allocator, position_t *position,
       break;
     }
   }
-  ast_node_t string =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_STRING);
+  ast_node_t string = create_ast_node(allocator, NODE_TYPE_LITERAL_STRING);
   string->loc.begin = *position;
   string->loc.end = current;
   string->loc.filename = filename;

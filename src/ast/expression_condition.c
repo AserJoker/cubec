@@ -17,14 +17,14 @@ ast_node_t read_ast_expression_condition(allocator_t allocator,
   if (!condition) {
     goto onerror;
   }
-  if (condition->type == CUBEC_NODE_TYPE_ERROR) {
+  if (condition->type == NODE_TYPE_ERROR) {
     err = condition;
     goto onerror;
   }
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_CONDITION);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_CONDITION);
   ast_add_child(allocator, node, "condition", condition);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (*current.offset != '?') {
@@ -35,7 +35,7 @@ ast_node_t read_ast_expression_condition(allocator_t allocator,
   current.column++;
   current.offset++;
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   ast_node_t consequent =
@@ -45,13 +45,13 @@ ast_node_t read_ast_expression_condition(allocator_t allocator,
                            "invalid or unexpected token");
     goto onerror;
   }
-  if (consequent->type == CUBEC_NODE_TYPE_ERROR) {
+  if (consequent->type == NODE_TYPE_ERROR) {
     err = consequent;
     goto onerror;
   }
   ast_add_child(allocator, node, "consequent", consequent);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (*current.offset != ':') {
@@ -62,7 +62,7 @@ ast_node_t read_ast_expression_condition(allocator_t allocator,
   current.offset++;
   current.column++;
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   ast_node_t alternate =
@@ -72,7 +72,7 @@ ast_node_t read_ast_expression_condition(allocator_t allocator,
                            "invalid or unexpected token");
     goto onerror;
   }
-  if (alternate->type == CUBEC_NODE_TYPE_ERROR) {
+  if (alternate->type == NODE_TYPE_ERROR) {
     err = alternate;
     goto onerror;
   }

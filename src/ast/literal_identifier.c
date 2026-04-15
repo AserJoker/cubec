@@ -32,7 +32,7 @@ ast_node_t read_ast_literal_identifier(allocator_t allocator,
     }
   }
   ast_node_t identifier =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_IDENTIFIER);
+      create_ast_node(allocator, NODE_TYPE_LITERAL_IDENTIFIER);
   identifier->loc.begin = *position;
   identifier->loc.end = current;
   identifier->loc.filename = filename;

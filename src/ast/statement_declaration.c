@@ -11,8 +11,7 @@
 ast_node_t read_ast_statement_declaration(allocator_t allocator,
                                           position_t *position, const char *end,
                                           const char *filename) {
-  ast_node_t node =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_DECLARATION);
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_STATEMENT_DECLARATION);
   ast_node_t err = NULL;
   position_t current = *position;
   ast_node_t kind =
@@ -20,7 +19,7 @@ ast_node_t read_ast_statement_declaration(allocator_t allocator,
   if (!kind) {
     goto onerror;
   }
-  if (kind->type == CUBEC_NODE_TYPE_ERROR) {
+  if (kind->type == NODE_TYPE_ERROR) {
     err = kind;
     goto onerror;
   }
@@ -32,10 +31,10 @@ ast_node_t read_ast_statement_declaration(allocator_t allocator,
   }
   ast_add_child(allocator, node, "kind", kind);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
-  ast_node_t declarations = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  ast_node_t declarations = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "declarations", declarations);
   for (;;) {
     ast_node_t item =
@@ -45,13 +44,13 @@ ast_node_t read_ast_statement_declaration(allocator_t allocator,
                              "invalid or unexpected token");
       goto onerror;
     }
-    if (item->type == CUBEC_NODE_TYPE_ERROR) {
+    if (item->type == NODE_TYPE_ERROR) {
       err = item;
       goto onerror;
     }
     ast_add_item(declarations, item);
     err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    if (err && err->type == NODE_TYPE_ERROR) {
       goto onerror;
     }
     if (*current.offset == ';') {
@@ -65,17 +64,17 @@ ast_node_t read_ast_statement_declaration(allocator_t allocator,
     current.offset++;
     current.column++;
     err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    if (err && err->type == NODE_TYPE_ERROR) {
       goto onerror;
     }
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   ast_node_t token =
       read_ast_literal_symbol(allocator, &current, end, filename);
-  if (token && token->type == CUBEC_NODE_TYPE_ERROR) {
+  if (token && token->type == NODE_TYPE_ERROR) {
     err = token;
     goto onerror;
   }

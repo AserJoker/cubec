@@ -8,8 +8,7 @@
 ast_node_t read_ast_statement_struct(allocator_t allocator,
                                      position_t *position, const char *end,
                                      const char *filename) {
-  ast_node_t node =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_STRUCT);
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_STATEMENT_STRUCT);
   ast_node_t err = NULL;
   position_t current = *position;
   ast_node_t stru =
@@ -17,13 +16,13 @@ ast_node_t read_ast_statement_struct(allocator_t allocator,
   if (!stru) {
     goto onerror;
   }
-  if (stru->type == CUBEC_NODE_TYPE_ERROR) {
+  if (stru->type == NODE_TYPE_ERROR) {
     err = stru;
     goto onerror;
   }
   ast_add_child(allocator, node, "stru", stru);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset == ';') {

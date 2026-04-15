@@ -15,9 +15,9 @@ ast_node_t read_ast_expression_group(allocator_t allocator,
   }
   current.offset++;
   current.column++;
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_GROUP);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_GROUP);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   ast_node_t body = read_ast_expression(allocator, &current, end, filename);
@@ -26,13 +26,13 @@ ast_node_t read_ast_expression_group(allocator_t allocator,
                            "invalid group expression");
     goto onerror;
   }
-  if (body->type == CUBEC_NODE_TYPE_ERROR) {
+  if (body->type == NODE_TYPE_ERROR) {
     err = body;
     goto onerror;
   }
   ast_add_child(allocator, node, "expression", body);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
 
@@ -54,7 +54,7 @@ onerror:
   return err;
 }
 ast_node_t ast_unwrap_group(ast_node_t node) {
-  while (node->type == CUBEC_NODE_TYPE_EXPRESSION_GROUP) {
+  while (node->type == NODE_TYPE_EXPRESSION_GROUP) {
     node = ast_get_child(node, "expression");
   }
   return node;

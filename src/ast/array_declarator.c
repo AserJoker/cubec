@@ -19,9 +19,9 @@ ast_node_t read_ast_array_declarator(allocator_t allocator,
   }
   current.offset++;
   current.column++;
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_ARRAY_DECLARATOR);
+  node = create_ast_node(allocator, NODE_TYPE_ARRAY_DECLARATOR);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t length =
@@ -32,18 +32,18 @@ ast_node_t read_ast_array_declarator(allocator_t allocator,
   if (!length) {
     goto onerror;
   }
-  if (length->type == CUBEC_NODE_TYPE_ERROR) {
+  if (length->type == NODE_TYPE_ERROR) {
     err = length;
     goto onerror;
   }
-  if (length->type == CUBEC_NODE_TYPE_LITERAL_IDENTIFIER &&
+  if (length->type == NODE_TYPE_LITERAL_IDENTIFIER &&
       !location_is(length->loc, "_")) {
     allocator_free(allocator, length);
     goto onerror;
   }
   ast_add_child(allocator, node, "length", length);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != ']') {
@@ -52,7 +52,7 @@ ast_node_t read_ast_array_declarator(allocator_t allocator,
   current.offset++;
   current.column++;
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t item_type =
@@ -60,7 +60,7 @@ ast_node_t read_ast_array_declarator(allocator_t allocator,
   if (!item_type) {
     goto onerror;
   }
-  if (item_type->type == CUBEC_NODE_TYPE_ERROR) {
+  if (item_type->type == NODE_TYPE_ERROR) {
     err = item_type;
     goto onerror;
   }

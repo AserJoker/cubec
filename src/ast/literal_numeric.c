@@ -11,7 +11,7 @@ ast_node_t read_ast_literal_numeric(allocator_t allocator, position_t *position,
   if (*position->offset < '0' || *position->offset > '9') {
     return NULL;
   }
-  ast_node_t node = create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_NUMERIC);
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_LITERAL_NUMERIC);
   ast_node_t err = NULL;
   position_t current = *position;
   if (*current.offset == '0' &&
@@ -133,7 +133,7 @@ ast_node_t read_ast_literal_numeric(allocator_t allocator, position_t *position,
   }
 
   ast_node_t value =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_NUMERIC_VALUE);
+      create_ast_node(allocator, NODE_TYPE_LITERAL_NUMERIC_VALUE);
   value->loc.begin = *position;
   value->loc.end = current;
   value->loc.filename = filename;

@@ -9,15 +9,14 @@
 ast_node_t read_ast_initialize_field(allocator_t allocator,
                                      position_t *position, const char *end,
                                      const char *filename) {
-  ast_node_t node =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_INITIALIZE_FIELD);
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_INITIALIZE_FIELD);
   ast_node_t err = NULL;
   position_t current = *position;
   if (*current.offset == '.') {
     current.offset++;
     current.column++;
     err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    if (err && err->type == NODE_TYPE_ERROR) {
       return err;
     }
     ast_node_t identifier =
@@ -27,13 +26,13 @@ ast_node_t read_ast_initialize_field(allocator_t allocator,
                              "invalid initialize list");
       goto onerror;
     }
-    if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
+    if (identifier->type == NODE_TYPE_ERROR) {
       err = identifier;
       goto onerror;
     }
     ast_add_child(allocator, node, "identifier", identifier);
     err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    if (err && err->type == NODE_TYPE_ERROR) {
       return err;
     }
     if (*current.offset != '=') {
@@ -44,7 +43,7 @@ ast_node_t read_ast_initialize_field(allocator_t allocator,
     current.offset++;
     current.column++;
     err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    if (err && err->type == NODE_TYPE_ERROR) {
       return err;
     }
   }
@@ -58,7 +57,7 @@ ast_node_t read_ast_initialize_field(allocator_t allocator,
                            "invalid initialize list");
     goto onerror;
   }
-  if (initialize->type == CUBEC_NODE_TYPE_ERROR) {
+  if (initialize->type == NODE_TYPE_ERROR) {
     err = initialize;
     goto onerror;
   }

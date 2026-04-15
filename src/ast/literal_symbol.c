@@ -38,8 +38,7 @@ ast_node_t read_ast_literal_symbol(allocator_t allocator, position_t *position,
     }
     offset++;
   }
-  ast_node_t symbol =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_SYMBOL);
+  ast_node_t symbol = create_ast_node(allocator, NODE_TYPE_LITERAL_SYMBOL);
   symbol->loc.begin = *position;
   symbol->loc.end = current;
   symbol->loc.filename = filename;

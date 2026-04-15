@@ -15,7 +15,7 @@ value_t resolve_program(context_t ctx, ast_node_t node) {
   context_push_static_scope(ctx, program);
   for (size_t idx = 0; idx < ast_get_length(statements); idx++) {
     ast_node_t sts = ast_get_item(statements, idx);
-    if (sts->type == CUBEC_NODE_TYPE_STATEMENT_DECLARATION) {
+    if (sts->type == NODE_TYPE_STATEMENT_DECLARATION) {
       resolve_statement_declaration(ctx, sts);
     } else {
       value_t err = create_compile_error(ctx, sts, "unsupport top statement");

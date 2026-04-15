@@ -87,7 +87,7 @@ static value_t type_value_get_field(value_t self, context_t ctx,
   type_t *type = (type_t *)value_get_data(self);
   if (type) {
     type_t t = *type;
-    if (type_get_kind(t) == CUBEC_VALUE_TYPE_STRUCT) {
+    if (type_get_kind(t) == VALUE_TYPE_STRUCT) {
       value_t val = struct_type_get_attribute(t, name);
       if (!val) {
         return create_error(ctx, "no member named '%s' in value", name);
@@ -103,7 +103,7 @@ static value_t type_value_set_field(value_t self, context_t ctx,
   type_t *type = (type_t *)value_get_data(self);
   if (type) {
     type_t t = *type;
-    if (type_get_kind(t) == CUBEC_VALUE_TYPE_STRUCT) {
+    if (type_get_kind(t) == VALUE_TYPE_STRUCT) {
       value_t val = struct_type_get_attribute(t, name);
       if (!val) {
         return create_error(ctx, "no member named '%s' in value", name);
@@ -123,19 +123,19 @@ static void init_type_type(context_t self) {
       .set_field = type_value_set_field,
   };
   type_t type_type =
-      create_type(self->allocator, CUBEC_VALUE_TYPE_TYPE, sizeof(type_t *),
+      create_type(self->allocator, VALUE_TYPE_TYPE, sizeof(type_t *),
                   sizeof(type_t *), NULL, &opt);
   context_create_value(self, type_type, false, &type_type, "type");
   array_push(self->types, type_type);
   self->type_type = type_type;
   self->interrupt_type =
-      create_type(self->allocator, CUBEC_VALUE_TYPE_INTERRUPT, sizeof(void *),
+      create_type(self->allocator, VALUE_TYPE_INTERRUPT, sizeof(void *),
                   sizeof(void *), NULL, NULL);
   array_push(self->types, self->interrupt_type);
 }
 
 static void init_any_type(context_t self) {
-  context_create_type(self, CUBEC_VALUE_TYPE_ANY, 0, 0, NULL, NULL, "any");
+  context_create_type(self, VALUE_TYPE_ANY, 0, 0, NULL, NULL, "any");
 }
 
 static void context_init_type(context_t self) {
@@ -199,7 +199,7 @@ value_t context_load_module(context_t self, const char *filename) {
     source[len] = 0;
     fclose(fp);
     ast_node_t node = read_ast_node(self->allocator, filename, source, self);
-    if (node->type == CUBEC_NODE_TYPE_ERROR) {
+    if (node->type == NODE_TYPE_ERROR) {
       ast_error_t error = (ast_error_t)node;
       value_t res = create_compile_error(self, node, error->message);
       allocator_free(self->allocator, node);
@@ -207,7 +207,7 @@ value_t context_load_module(context_t self, const char *filename) {
       return res;
     }
     value_t value = resolve_program(self, node);
-    if (value_type_is(value, CUBEC_VALUE_TYPE_ERROR)) {
+    if (value_type_is(value, VALUE_TYPE_ERROR)) {
       allocator_free(self->allocator, node);
       allocator_free(self->allocator, source);
       return value;
@@ -251,7 +251,7 @@ value_t context_load(context_t self, const char *name) {
   if (strcmp(name, "__self__") == 0) {
     static_scope_t scope = self->static_scope;
     while (scope) {
-      if (value_type_is(scope->binding, CUBEC_VALUE_TYPE_TYPE)) {
+      if (value_type_is(scope->binding, VALUE_TYPE_TYPE)) {
         return scope->binding;
       }
       scope = scope->parent;
@@ -268,11 +268,11 @@ value_t context_load(context_t self, const char *name) {
   if (self->static_scope) {
     value_t static_scope = self->static_scope->binding;
     type_t ctx_type = value_get_type(static_scope);
-    if (type_get_kind(ctx_type) == CUBEC_VALUE_TYPE_TYPE) {
+    if (type_get_kind(ctx_type) == VALUE_TYPE_TYPE) {
       type_t type = *(type_t *)value_get_data(static_scope);
-      if (type_get_kind(type) == CUBEC_VALUE_TYPE_STRUCT) {
+      if (type_get_kind(type) == VALUE_TYPE_STRUCT) {
         return struct_type_get_attribute(type, name);
-      } else if (type_get_kind(type) == CUBEC_VALUE_TYPE_UNION) {
+      } else if (type_get_kind(type) == VALUE_TYPE_UNION) {
         return union_type_get_attribute(type, name);
       }
     }
@@ -294,11 +294,11 @@ value_t context_declar(context_t self, const char *name, value_t value) {
   if (self->static_scope) {
     value_t static_scope = self->static_scope->binding;
     type_t ctx_type = value_get_type(static_scope);
-    if (type_get_kind(ctx_type) == CUBEC_VALUE_TYPE_TYPE) {
+    if (type_get_kind(ctx_type) == VALUE_TYPE_TYPE) {
       type_t type = *(type_t *)value_get_data(static_scope);
-      if (type_get_kind(type) == CUBEC_VALUE_TYPE_STRUCT) {
+      if (type_get_kind(type) == VALUE_TYPE_STRUCT) {
         struct_type_add_attribute(type, self->allocator, name, value);
-      } else if (type_get_kind(type) == CUBEC_VALUE_TYPE_UNION) {
+      } else if (type_get_kind(type) == VALUE_TYPE_UNION) {
         union_type_add_attribute(type, self->allocator, name, value);
       }
     }

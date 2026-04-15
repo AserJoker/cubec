@@ -100,12 +100,12 @@ value_t value_unref_assigment(value_t self, struct _context_t *ctx,
 bool value_is_interrupt(value_t value) {
   type_t type = value_get_type(value);
   type_kind_t kind = type_get_kind(type);
-  return kind == CUBEC_VALUE_TYPE_INTERRUPT;
+  return kind == VALUE_TYPE_INTERRUPT;
 }
 bool value_is_error(value_t value) {
   type_t type = value_get_type(value);
   type_kind_t kind = type_get_kind(type);
-  return kind == CUBEC_VALUE_TYPE_ERROR;
+  return kind == VALUE_TYPE_ERROR;
 }
 
 value_t value_to_string(value_t self, context_t ctx) {
@@ -203,24 +203,23 @@ value_t value_safe_convert(value_t self, struct _context_t *ctx, type_t type) {
   type_t rtype = type;
   type_kind_t lkind = type_get_kind(ltype);
   type_kind_t rkind = type_get_kind(rtype);
-  if (lkind >= CUBEC_VALUE_TYPE_INT8 && lkind <= CUBEC_VALUE_TYPE_INT64) {
-    if (rkind >= CUBEC_VALUE_TYPE_INT8 && rkind <= CUBEC_VALUE_TYPE_INT64) {
+  if (lkind >= VALUE_TYPE_INT8 && lkind <= VALUE_TYPE_INT64) {
+    if (rkind >= VALUE_TYPE_INT8 && rkind <= VALUE_TYPE_INT64) {
       return value_convert(self, ctx, type);
     }
   }
-  if (lkind >= CUBEC_VALUE_TYPE_UINT8 && lkind <= CUBEC_VALUE_TYPE_UINT64) {
-    if (rkind >= CUBEC_VALUE_TYPE_UINT8 && rkind <= CUBEC_VALUE_TYPE_UINT64) {
+  if (lkind >= VALUE_TYPE_UINT8 && lkind <= VALUE_TYPE_UINT64) {
+    if (rkind >= VALUE_TYPE_UINT8 && rkind <= VALUE_TYPE_UINT64) {
       return value_convert(self, ctx, type);
     }
   }
-  if (lkind >= CUBEC_VALUE_TYPE_FLOAT32 && lkind <= CUBEC_VALUE_TYPE_FLOAT64) {
-    if (rkind >= CUBEC_VALUE_TYPE_FLOAT32 &&
-        rkind <= CUBEC_VALUE_TYPE_FLOAT64) {
+  if (lkind >= VALUE_TYPE_FLOAT32 && lkind <= VALUE_TYPE_FLOAT64) {
+    if (rkind >= VALUE_TYPE_FLOAT32 && rkind <= VALUE_TYPE_FLOAT64) {
       return value_convert(self, ctx, type);
     }
   }
-  if (lkind == CUBEC_VALUE_TYPE_PTR || lkind == CUBEC_VALUE_TYPE_PARRAY) {
-    if (rkind == CUBEC_VALUE_TYPE_OPAQUE) {
+  if (lkind == VALUE_TYPE_PTR || lkind == VALUE_TYPE_PARRAY) {
+    if (rkind == VALUE_TYPE_OPAQUE) {
       return value_convert(self, ctx, type);
     }
   }
@@ -1018,20 +1017,20 @@ value_t value_ref(value_t self, struct _context_t *ctx) {
 value_t value_member_call(value_t value, context_t ctx, const char *name,
                           size_t argc, value_t *argv) {
   value_t self = value;
-  if (value_type_is(value, CUBEC_VALUE_TYPE_PTR)) {
+  if (value_type_is(value, VALUE_TYPE_PTR)) {
     value = value_unref(value, ctx);
-    if (value_type_is(value, CUBEC_VALUE_TYPE_ERROR)) {
+    if (value_type_is(value, VALUE_TYPE_ERROR)) {
       return value;
     }
   } else {
     self = value_ref(value, ctx);
-    if (value_type_is(self, CUBEC_VALUE_TYPE_ERROR)) {
+    if (value_type_is(self, VALUE_TYPE_ERROR)) {
       return value;
     }
   }
-  if (value_type_is(value, CUBEC_VALUE_TYPE_TYPE)) {
+  if (value_type_is(value, VALUE_TYPE_TYPE)) {
     value_t member = value_get_field(value, ctx, name);
-    if (value_type_is(member, CUBEC_VALUE_TYPE_ERROR)) {
+    if (value_type_is(member, VALUE_TYPE_ERROR)) {
       return member;
     }
     return value_call(member, ctx, argc, argv);
@@ -1039,7 +1038,7 @@ value_t value_member_call(value_t value, context_t ctx, const char *name,
   type_t type = value_get_type(value);
   value_t vtype = create_type_value(ctx, type, false, NULL);
   value_t member = value_get_field(vtype, ctx, name);
-  if (value_type_is(member, CUBEC_VALUE_TYPE_ERROR)) {
+  if (value_type_is(member, VALUE_TYPE_ERROR)) {
     return member;
   }
   value_t args[argc + 1];
@@ -1052,16 +1051,16 @@ value_t value_member_call(value_t value, context_t ctx, const char *name,
 value_t value_try(value_t value, context_t ctx) {
   static_scope_t static_scope = context_get_static_scope(ctx);
   type_t ctx_type = value_get_type(static_scope->binding);
-  if (type_get_kind(ctx_type) != CUBEC_VALUE_TYPE_FUNCTION) {
+  if (type_get_kind(ctx_type) != VALUE_TYPE_FUNCTION) {
     return create_error(ctx, "try expression only used in function");
   }
   value_t is_error = value_member_call(value, ctx, "is_error", 0, NULL);
-  if (value_type_is(is_error, CUBEC_VALUE_TYPE_ERROR)) {
+  if (value_type_is(is_error, VALUE_TYPE_ERROR)) {
     return is_error;
   }
-  if (!value_type_is(is_error, CUBEC_VALUE_TYPE_BOOL)) {
+  if (!value_type_is(is_error, VALUE_TYPE_BOOL)) {
     is_error = value_safe_convert(value, ctx, context_load_type(ctx, "bool"));
-    if (value_type_is(is_error, CUBEC_VALUE_TYPE_ERROR)) {
+    if (value_type_is(is_error, VALUE_TYPE_ERROR)) {
       return is_error;
     }
   }
@@ -1074,11 +1073,11 @@ value_t value_try(value_t value, context_t ctx) {
     bool is_err = *(bool *)value_get_data(is_error);
     if (is_err) {
       value_t err = value_member_call(value, ctx, "error", 0, NULL);
-      if (value_type_is(err, CUBEC_VALUE_TYPE_ERROR)) {
+      if (value_type_is(err, VALUE_TYPE_ERROR)) {
         return err;
       }
       err = value_member_call(vresult_type, ctx, "of_error", 1, &err);
-      if (value_type_is(err, CUBEC_VALUE_TYPE_ERROR)) {
+      if (value_type_is(err, VALUE_TYPE_ERROR)) {
         return err;
       }
       return context_create_interrupt(ctx, err);
@@ -1087,11 +1086,11 @@ value_t value_try(value_t value, context_t ctx) {
     }
   } else {
     value_t err = value_member_call(value, ctx, "error", 0, NULL);
-    if (value_type_is(err, CUBEC_VALUE_TYPE_ERROR)) {
+    if (value_type_is(err, VALUE_TYPE_ERROR)) {
       return err;
     }
     err = value_member_call(vresult_type, ctx, "of_error", 1, &err);
-    if (value_type_is(err, CUBEC_VALUE_TYPE_ERROR)) {
+    if (value_type_is(err, VALUE_TYPE_ERROR)) {
       return err;
     }
     return value_member_call(value, ctx, "value", 0, NULL);

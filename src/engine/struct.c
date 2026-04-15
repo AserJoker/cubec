@@ -177,7 +177,7 @@ value_t create_struct_type(context_t ctx, size_t align, const char *name) {
       .get_field = struct_get_field,
       .set_field = struct_set_field,
   };
-  return context_create_type(ctx, CUBEC_VALUE_TYPE_STRUCT, 1, align, meta, &opt,
+  return context_create_type(ctx, VALUE_TYPE_STRUCT, 1, align, meta, &opt,
                              name);
 }
 

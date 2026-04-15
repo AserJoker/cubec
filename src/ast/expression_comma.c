@@ -11,18 +11,18 @@ ast_node_t read_ast_expression_comma(allocator_t allocator,
   position_t current = *position;
   ast_node_t node = NULL;
   ast_node_t err = NULL;
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_COMMON);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_COMMON);
   ast_node_t curr = read_ast_expression2(allocator, &current, end, filename);
   if (!curr) {
     goto onerror;
   }
-  if (curr->type == CUBEC_NODE_TYPE_ERROR) {
+  if (curr->type == NODE_TYPE_ERROR) {
     err = curr;
     goto onerror;
   }
   ast_add_child(allocator, node, "current", curr);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   allocator_free(allocator, err);
@@ -34,7 +34,7 @@ ast_node_t read_ast_expression_comma(allocator_t allocator,
   current.offset++;
   current.column++;
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   allocator_free(allocator, err);
@@ -44,7 +44,7 @@ ast_node_t read_ast_expression_comma(allocator_t allocator,
                            "invalid comma expression");
     goto onerror;
   }
-  if (next->type == CUBEC_NODE_TYPE_ERROR) {
+  if (next->type == NODE_TYPE_ERROR) {
     err = next;
     goto onerror;
   }

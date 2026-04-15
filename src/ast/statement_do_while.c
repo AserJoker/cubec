@@ -11,8 +11,7 @@
 ast_node_t read_ast_statement_do_while(allocator_t allocator,
                                        position_t *position, const char *end,
                                        const char *filename) {
-  ast_node_t node =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_DO_WHILE);
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_STATEMENT_DO_WHILE);
   ast_node_t err = NULL;
   position_t current = *position;
 
@@ -21,7 +20,7 @@ ast_node_t read_ast_statement_do_while(allocator_t allocator,
   if (!token) {
     goto onerror;
   }
-  if (token->type == CUBEC_NODE_TYPE_ERROR) {
+  if (token->type == NODE_TYPE_ERROR) {
     err = token;
     goto onerror;
   }
@@ -31,7 +30,7 @@ ast_node_t read_ast_statement_do_while(allocator_t allocator,
   }
   allocator_free(allocator, token);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t body = read_ast_statement(allocator, &current, end, filename);
@@ -40,13 +39,13 @@ ast_node_t read_ast_statement_do_while(allocator_t allocator,
                            "invalid do-while statement");
     goto onerror;
   }
-  if (body->type == CUBEC_NODE_TYPE_ERROR) {
+  if (body->type == NODE_TYPE_ERROR) {
     err = body;
     goto onerror;
   }
   ast_add_child(allocator, node, "body", body);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   token = read_ast_literal_identifier(allocator, &current, end, filename);
@@ -55,7 +54,7 @@ ast_node_t read_ast_statement_do_while(allocator_t allocator,
                            "invalid do-while statement");
     goto onerror;
   }
-  if (token->type == CUBEC_NODE_TYPE_ERROR) {
+  if (token->type == NODE_TYPE_ERROR) {
     err = token;
     goto onerror;
   }
@@ -67,7 +66,7 @@ ast_node_t read_ast_statement_do_while(allocator_t allocator,
   }
   allocator_free(allocator, token);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != '(') {
@@ -78,7 +77,7 @@ ast_node_t read_ast_statement_do_while(allocator_t allocator,
   current.offset++;
   current.column++;
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t condition =
@@ -88,13 +87,13 @@ ast_node_t read_ast_statement_do_while(allocator_t allocator,
                            "invalid do-while statement");
     goto onerror;
   }
-  if (condition->type == CUBEC_NODE_TYPE_ERROR) {
+  if (condition->type == NODE_TYPE_ERROR) {
     err = condition;
     goto onerror;
   }
   ast_add_child(allocator, node, "condition", condition);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != ')') {
@@ -105,7 +104,7 @@ ast_node_t read_ast_statement_do_while(allocator_t allocator,
   current.offset++;
   current.column++;
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != ';') {

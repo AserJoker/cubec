@@ -19,7 +19,7 @@ value_t resolve_variable_declarator(context_t ctx, ast_node_t node) {
   value_t value = NULL;
   initialize = ast_unwrap_group(initialize);
   allocator_t allocator = context_get_allocator(ctx);
-  if (initialize->type == CUBEC_NODE_TYPE_INITIALIZE_LIST) {
+  if (initialize->type == NODE_TYPE_INITIALIZE_LIST) {
     ast_node_t itype = ast_get_child(initialize, "type");
     if (!itype && !type_node) {
       return create_compile_error(ctx, node,

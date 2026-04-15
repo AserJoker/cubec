@@ -17,7 +17,7 @@
 #include <unicode/umachine.h>
 
 static void ast_node_dispose(ast_node_t self, allocator_t allocator) {
-  if (self->type == CUBEC_NODE_TYPE_LIST) {
+  if (self->type == NODE_TYPE_LIST) {
     allocator_free(allocator, self->items);
   } else {
     allocator_free(allocator, self->children);
@@ -28,7 +28,7 @@ ast_node_t create_ast_node(allocator_t allocator, size_t type) {
                                     (dispose_fn_t)ast_node_dispose);
   memset(node, 0, sizeof(struct _ast_node_t));
   node->type = type;
-  if (type == CUBEC_NODE_TYPE_LIST) {
+  if (type == NODE_TYPE_LIST) {
     array_initialize_t initialize = {
         .autofree = true,
     };
@@ -212,7 +212,7 @@ ast_node_t create_ast_error(allocator_t allocator, position_t begin,
   ast_error_t node = allocator_alloc(allocator, sizeof(struct _ast_error_t),
                                      (dispose_fn_t)error_dispose);
   memset(node, 0, sizeof(struct _ast_error_t));
-  node->super.type = CUBEC_NODE_TYPE_ERROR;
+  node->super.type = NODE_TYPE_ERROR;
   node->super.loc.begin = begin;
   node->super.loc.end = end;
   node->super.loc.filename = filename;
@@ -298,62 +298,62 @@ ast_node_t ast_skip_all(allocator_t allocator, position_t *position,
 }
 
 static const char *type_names[] = {
-    "CUBEC_NODE_TYPE_LIST",
-    "CUBEC_NODE_TYPE_ERROR",
-    "CUBEC_NODE_TYPE_LITERAL_IDENTIFIER",
-    "CUBEC_NODE_TYPE_LITERAL_NUMERIC",
-    "CUBEC_NODE_TYPE_LITERAL_NUMERIC_VALUE",
-    "CUBEC_NODE_TYPE_LITERAL_STRING",
-    "CUBEC_NODE_TYPE_LITERAL_SYMBOL",
-    "CUBEC_NODE_TYPE_LITERAL_CHAR",
-    "CUBEC_NODE_TYPE_STATEMENT_EMPTY",
-    "CUBEC_NODE_TYPE_STATEMENT_BLOCK",
-    "CUBEC_NODE_TYPE_STATEMENT_IMPORT",
-    "CUBEC_NODE_TYPE_STATEMENT_FUNCTION",
-    "CUBEC_NODE_TYPE_STATEMENT_STRUCT",
-    "CUBEC_NODE_TYPE_STATEMENT_ENUM",
-    "CUBEC_NODE_TYPE_ENUM_FIELD",
-    "CUBEC_NODE_TYPE_STATEMENT_DECLARATION",
-    "CUBEC_NODE_TYPE_VARIABLE_DECLARATOR",
-    "CUBEC_NODE_TYPE_STATEMENT_EXPRESSION",
-    "CUBEC_NODE_TYPE_STATEMENT_IF",
-    "CUBEC_NODE_TYPE_STATEMENT_SWITCH",
-    "CUBEC_NODE_TYPE_SWITCH_CASE",
-    "CUBEC_NODE_TYPE_STATEMENT_WHILE",
-    "CUBEC_NODE_TYPE_STATEMENT_DO_WHILE",
-    "CUBEC_NODE_TYPE_STATEMENT_FOR",
-    "CUBEC_NODE_TYPE_STATEMENT_FOREACH",
-    "CUBEC_NODE_TYPE_STATEMENT_DEFER",
-    "CUBEC_NODE_TYPE_STATEMENT_BREAK",
-    "CUBEC_NODE_TYPE_STATEMENT_CONTINUE",
-    "CUBEC_NODE_TYPE_STATEMENT_RETURN",
-    "CUBEC_NODE_TYPE_STATEMENT_TEST",
-    "CUBEC_NODE_TYPE_ARRAY_DECLARATOR",
-    "CUBEC_NODE_TYPE_EXPRESSION_ASSIGMENT",
-    "CUBEC_NODE_TYPE_EXPRESSION_BINARY",
-    "CUBEC_NODE_TYPE_EXPRESSION_CALL",
-    "CUBEC_NODE_TYPE_EXPRESSION_MEMBER",
-    "CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER",
-    "CUBEC_NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR",
-    "CUBEC_NODE_TYPE_EXPRESSION_CONDITION",
-    "CUBEC_NODE_TYPE_EXPRESSION_COMMON",
-    "CUBEC_NODE_TYPE_EXPRESSION_GROUP",
-    "CUBEC_NODE_TYPE_EXPRESSION_SPREAD",
-    "CUBEC_NODE_TYPE_STRUCT_DECLARATOR",
-    "CUBEC_NODE_TYPE_STRUCT_FIELD",
-    "CUBEC_NODE_TYPE_ENUM_DECLARATOR",
-    "CUBEC_NODE_TYPE_FUNCTION_DECLARATOR",
-    "CUBEC_NODE_TYPE_FUNCTION_BODY",
-    "CUBEC_NODE_TYPE_FUNCTION_ARGUMENT",
-    "CUBEC_NODE_TYPE_FUNCTION_ARGUMENT_REST",
-    "CUBEC_NODE_TYPE_EXPRESSION_SLICE",
-    "CUBEC_NODE_TYPE_INITIALIZE_LIST",
-    "CUBEC_NODE_TYPE_INITIALIZE_FIELD",
-    "CUBEC_NODE_TYPE_PROGRAM",
-    "CUBEC_NODE_TYPE_DECORATOR",
-    "CUBEC_NODE_TYPE_INTERFACE_DECLARATOR",
-    "CUBEC_NODE_TYPE_PTR_DECLARATOR",
-    "CUBEC_NODE_TYPE_TYPE",
+    "NODE_TYPE_LIST",
+    "NODE_TYPE_ERROR",
+    "NODE_TYPE_LITERAL_IDENTIFIER",
+    "NODE_TYPE_LITERAL_NUMERIC",
+    "NODE_TYPE_LITERAL_NUMERIC_VALUE",
+    "NODE_TYPE_LITERAL_STRING",
+    "NODE_TYPE_LITERAL_SYMBOL",
+    "NODE_TYPE_LITERAL_CHAR",
+    "NODE_TYPE_STATEMENT_EMPTY",
+    "NODE_TYPE_STATEMENT_BLOCK",
+    "NODE_TYPE_STATEMENT_IMPORT",
+    "NODE_TYPE_STATEMENT_FUNCTION",
+    "NODE_TYPE_STATEMENT_STRUCT",
+    "NODE_TYPE_STATEMENT_ENUM",
+    "NODE_TYPE_ENUM_FIELD",
+    "NODE_TYPE_STATEMENT_DECLARATION",
+    "NODE_TYPE_VARIABLE_DECLARATOR",
+    "NODE_TYPE_STATEMENT_EXPRESSION",
+    "NODE_TYPE_STATEMENT_IF",
+    "NODE_TYPE_STATEMENT_SWITCH",
+    "NODE_TYPE_SWITCH_CASE",
+    "NODE_TYPE_STATEMENT_WHILE",
+    "NODE_TYPE_STATEMENT_DO_WHILE",
+    "NODE_TYPE_STATEMENT_FOR",
+    "NODE_TYPE_STATEMENT_FOREACH",
+    "NODE_TYPE_STATEMENT_DEFER",
+    "NODE_TYPE_STATEMENT_BREAK",
+    "NODE_TYPE_STATEMENT_CONTINUE",
+    "NODE_TYPE_STATEMENT_RETURN",
+    "NODE_TYPE_STATEMENT_TEST",
+    "NODE_TYPE_ARRAY_DECLARATOR",
+    "NODE_TYPE_EXPRESSION_ASSIGMENT",
+    "NODE_TYPE_EXPRESSION_BINARY",
+    "NODE_TYPE_EXPRESSION_CALL",
+    "NODE_TYPE_EXPRESSION_MEMBER",
+    "NODE_TYPE_EXPRESSION_COMPUTE_MEMBER",
+    "NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR",
+    "NODE_TYPE_EXPRESSION_CONDITION",
+    "NODE_TYPE_EXPRESSION_COMMON",
+    "NODE_TYPE_EXPRESSION_GROUP",
+    "NODE_TYPE_EXPRESSION_SPREAD",
+    "NODE_TYPE_STRUCT_DECLARATOR",
+    "NODE_TYPE_STRUCT_FIELD",
+    "NODE_TYPE_ENUM_DECLARATOR",
+    "NODE_TYPE_FUNCTION_DECLARATOR",
+    "NODE_TYPE_FUNCTION_BODY",
+    "NODE_TYPE_FUNCTION_ARGUMENT",
+    "NODE_TYPE_FUNCTION_ARGUMENT_REST",
+    "NODE_TYPE_EXPRESSION_SLICE",
+    "NODE_TYPE_INITIALIZE_LIST",
+    "NODE_TYPE_INITIALIZE_FIELD",
+    "NODE_TYPE_PROGRAM",
+    "NODE_TYPE_DECORATOR",
+    "NODE_TYPE_INTERFACE_DECLARATOR",
+    "NODE_TYPE_PTR_DECLARATOR",
+    "NODE_TYPE_TYPE",
 };
 
 static char *encode_text(allocator_t allocator, const char *source) {
@@ -395,7 +395,7 @@ static char *encode_text(allocator_t allocator, const char *source) {
 }
 
 static void print_node(ast_node_t node, allocator_t allocator, string_t out) {
-  if (node->type == CUBEC_NODE_TYPE_LIST) {
+  if (node->type == NODE_TYPE_LIST) {
 
     string_concat(out, allocator, "[");
     for (size_t idx = 0; idx < array_get_size(node->items); idx++) {
@@ -408,14 +408,14 @@ static void print_node(ast_node_t node, allocator_t allocator, string_t out) {
     string_concat(out, allocator, "]");
   } else {
     string_concat(out, allocator, "{");
-    if (node->type < CUBEC_NODE_TYPE_MAX) {
+    if (node->type < NODE_TYPE_MAX) {
       char s[strlen(type_names[node->type]) + 32];
       sprintf(s, "\"node_type\":\"%s\"", type_names[node->type]);
       string_concat(out, allocator, s);
     } else {
       char s[128];
-      sprintf(s, "\"node_type\":\"CUBEC_NODE_TYPE_MAX + %" PRIuPTR "\"",
-              (size_t)node->type - CUBEC_NODE_TYPE_MAX);
+      sprintf(s, "\"node_type\":\"NODE_TYPE_MAX + %" PRIuPTR "\"",
+              (size_t)node->type - NODE_TYPE_MAX);
       string_concat(out, allocator, s);
     }
     char *text = location_get(node->loc, allocator);
@@ -459,7 +459,7 @@ ast_node_t read_ast_node(allocator_t allocator, const char *filename,
   };
   const char *end = strlen(source) + source;
   ast_node_t program = read_ast_program(allocator, &pos, end, filename);
-  if (program->type == CUBEC_NODE_TYPE_ERROR) {
+  if (program->type == NODE_TYPE_ERROR) {
     return program;
   }
   return program;
@@ -467,7 +467,7 @@ ast_node_t read_ast_node(allocator_t allocator, const char *filename,
 ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
   ast_node_t n = create_ast_node(allocator, node->type);
   n->loc = node->loc;
-  if (node->type == CUBEC_NODE_TYPE_LIST) {
+  if (node->type == NODE_TYPE_LIST) {
     for (size_t idx = 0; idx < ast_get_length(node); idx++) {
       ast_node_t item = ast_get_item(node, idx);
       item = clone_ast_node(allocator, item);

@@ -16,9 +16,9 @@ ast_node_t read_ast_expression_member(allocator_t allocator,
   }
   current.offset++;
   current.column++;
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_MEMBER);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_MEMBER);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   ast_node_t field =
@@ -29,7 +29,7 @@ ast_node_t read_ast_expression_member(allocator_t allocator,
         "invalid or unexpected token, missing field for member expression");
     goto onerror;
   }
-  if (field->type == CUBEC_NODE_TYPE_ERROR) {
+  if (field->type == NODE_TYPE_ERROR) {
     err = field;
     goto onerror;
   }

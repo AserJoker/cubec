@@ -7,8 +7,7 @@
 ast_node_t read_ast_statement_continue(allocator_t allocator,
                                        position_t *position, const char *end,
                                        const char *filename) {
-  ast_node_t node =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_CONTINUE);
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_STATEMENT_CONTINUE);
   ast_node_t err = NULL;
   position_t current = *position;
   ast_node_t token =
@@ -16,7 +15,7 @@ ast_node_t read_ast_statement_continue(allocator_t allocator,
   if (!token) {
     goto onerror;
   }
-  if (token->type == CUBEC_NODE_TYPE_ERROR) {
+  if (token->type == NODE_TYPE_ERROR) {
     err = token;
     goto onerror;
   }
@@ -26,11 +25,11 @@ ast_node_t read_ast_statement_continue(allocator_t allocator,
   }
   allocator_free(allocator, token);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != ';') {

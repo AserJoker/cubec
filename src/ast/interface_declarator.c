@@ -20,7 +20,7 @@ ast_node_t read_ast_interface_declarator(allocator_t allocator,
   if (!token) {
     goto onerror;
   }
-  if (token->type == CUBEC_NODE_TYPE_ERROR) {
+  if (token->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (!location_is(token->loc, "func")) {
@@ -28,15 +28,15 @@ ast_node_t read_ast_interface_declarator(allocator_t allocator,
     goto onerror;
   }
   allocator_free(allocator, token);
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_INTERFACE_DECLARATOR);
+  node = create_ast_node(allocator, NODE_TYPE_INTERFACE_DECLARATOR);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset == '*') {
     token = read_ast_literal_symbol(allocator, &current, end, filename);
     if (token) {
-      if (token->type == CUBEC_NODE_TYPE_ERROR) {
+      if (token->type == NODE_TYPE_ERROR) {
         err = token;
         goto onerror;
       }
@@ -46,7 +46,7 @@ ast_node_t read_ast_interface_declarator(allocator_t allocator,
       } else {
         ast_add_child(allocator, node, "ptr", token);
         err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+        if (err && err->type == NODE_TYPE_ERROR) {
           return err;
         }
       }
@@ -60,10 +60,10 @@ ast_node_t read_ast_interface_declarator(allocator_t allocator,
   current.offset++;
   current.column++;
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  ast_node_t args = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  ast_node_t args = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "args", args);
   if (*current.offset != ')') {
     for (;;) {
@@ -85,12 +85,12 @@ ast_node_t read_ast_interface_declarator(allocator_t allocator,
       if (!arg) {
         goto onerror;
       }
-      if (arg->type == CUBEC_NODE_TYPE_ERROR) {
+      if (arg->type == NODE_TYPE_ERROR) {
         goto onerror;
       }
       ast_add_item(args, arg);
       err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      if (err && err->type == NODE_TYPE_ERROR) {
         return err;
       }
       if (*current.offset == ')') {
@@ -102,7 +102,7 @@ ast_node_t read_ast_interface_declarator(allocator_t allocator,
       current.offset++;
       current.column++;
       err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      if (err && err->type == NODE_TYPE_ERROR) {
         return err;
       }
     }
@@ -113,7 +113,7 @@ ast_node_t read_ast_interface_declarator(allocator_t allocator,
   current.offset++;
   current.column++;
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != ':') {
@@ -127,13 +127,13 @@ ast_node_t read_ast_interface_declarator(allocator_t allocator,
     err = create_ast_error(allocator, *position, current, filename,
                            "invalid interface expression");
   }
-  if (return_type->type == CUBEC_NODE_TYPE_ERROR) {
+  if (return_type->type == NODE_TYPE_ERROR) {
     err = return_type;
     goto onerror;
   }
   ast_add_child(allocator, node, "type", return_type);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset == '{') {

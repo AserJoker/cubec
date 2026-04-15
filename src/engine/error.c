@@ -12,7 +12,7 @@
 
 void init_error_type(context_t ctx) {
   struct _type_operator_t opt = {};
-  context_create_type(ctx, CUBEC_VALUE_TYPE_ERROR, sizeof(const char **),
+  context_create_type(ctx, VALUE_TYPE_ERROR, sizeof(const char **),
                       sizeof(const char **), NULL, &opt, "error");
 }
 value_t create_error(context_t ctx, const char *fmt, ...) {

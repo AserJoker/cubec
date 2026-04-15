@@ -11,37 +11,37 @@
 #include <stdint.h>
 #include <stdio.h>
 #define DECLAR_INTEGER(size, opt)                                              \
-  context_create_type(ctx, CUBEC_VALUE_TYPE_INT##size, sizeof(i##size##_t),    \
+  context_create_type(ctx, VALUE_TYPE_INT##size, sizeof(i##size##_t),          \
                       sizeof(i##size##_t), NULL, opt, "i" #size)
 #define DECLAR_UNSIGNED(size, opt)                                             \
-  context_create_type(ctx, CUBEC_VALUE_TYPE_UINT##size, sizeof(u##size##_t),   \
+  context_create_type(ctx, VALUE_TYPE_UINT##size, sizeof(u##size##_t),         \
                       sizeof(u##size##_t), NULL, opt, "u" #size)
 #define DECLAR_FLOAT(size, opt)                                                \
-  context_create_type(ctx, CUBEC_VALUE_TYPE_FLOAT##size, sizeof(f##size##_t),  \
+  context_create_type(ctx, VALUE_TYPE_FLOAT##size, sizeof(f##size##_t),        \
                       sizeof(f##size##_t), NULL, opt, "f" #size)
 
 static char *numeric_type_to_string(type_t self, allocator_t allocator) {
   type_kind_t kind = type_get_kind(self);
   switch (kind) {
-  case CUBEC_VALUE_TYPE_INT8:
+  case VALUE_TYPE_INT8:
     return create_cstring(allocator, "i8");
-  case CUBEC_VALUE_TYPE_INT16:
+  case VALUE_TYPE_INT16:
     return create_cstring(allocator, "i16");
-  case CUBEC_VALUE_TYPE_INT32:
+  case VALUE_TYPE_INT32:
     return create_cstring(allocator, "i32");
-  case CUBEC_VALUE_TYPE_INT64:
+  case VALUE_TYPE_INT64:
     return create_cstring(allocator, "i64");
-  case CUBEC_VALUE_TYPE_UINT8:
+  case VALUE_TYPE_UINT8:
     return create_cstring(allocator, "u8");
-  case CUBEC_VALUE_TYPE_UINT16:
+  case VALUE_TYPE_UINT16:
     return create_cstring(allocator, "u16");
-  case CUBEC_VALUE_TYPE_UINT32:
+  case VALUE_TYPE_UINT32:
     return create_cstring(allocator, "u32");
-  case CUBEC_VALUE_TYPE_UINT64:
+  case VALUE_TYPE_UINT64:
     return create_cstring(allocator, "u64");
-  case CUBEC_VALUE_TYPE_FLOAT32:
+  case VALUE_TYPE_FLOAT32:
     return create_cstring(allocator, "f32");
-  case CUBEC_VALUE_TYPE_FLOAT64:
+  case VALUE_TYPE_FLOAT64:
     return create_cstring(allocator, "f64");
   default:
     break;
@@ -54,34 +54,34 @@ static value_t numeric_to_string(value_t self, context_t ctx) {
   char str[32] = {0};
   void *data = value_get_data(self);
   switch (kind) {
-  case CUBEC_VALUE_TYPE_INT8:
+  case VALUE_TYPE_INT8:
     sprintf(str, "%d", *(i8_t *)data);
     break;
-  case CUBEC_VALUE_TYPE_INT16:
+  case VALUE_TYPE_INT16:
     sprintf(str, "%d", *(i16_t *)data);
     break;
-  case CUBEC_VALUE_TYPE_INT32:
+  case VALUE_TYPE_INT32:
     sprintf(str, "%d", *(i32_t *)data);
     break;
-  case CUBEC_VALUE_TYPE_INT64:
+  case VALUE_TYPE_INT64:
     sprintf(str, "%" PRIdPTR, *(i64_t *)data);
     break;
-  case CUBEC_VALUE_TYPE_UINT8:
+  case VALUE_TYPE_UINT8:
     sprintf(str, "%u", *(u8_t *)data);
     break;
-  case CUBEC_VALUE_TYPE_UINT16:
+  case VALUE_TYPE_UINT16:
     sprintf(str, "%u", *(u16_t *)data);
     break;
-  case CUBEC_VALUE_TYPE_UINT32:
+  case VALUE_TYPE_UINT32:
     sprintf(str, "%u", *(u32_t *)data);
     break;
-  case CUBEC_VALUE_TYPE_UINT64:
+  case VALUE_TYPE_UINT64:
     sprintf(str, "%" PRIuPTR, *(u64_t *)data);
     break;
-  case CUBEC_VALUE_TYPE_FLOAT32:
+  case VALUE_TYPE_FLOAT32:
     sprintf(str, "%g", *(f32_t *)data);
     break;
-  case CUBEC_VALUE_TYPE_FLOAT64:
+  case VALUE_TYPE_FLOAT64:
     sprintf(str, "%g", *(f64_t *)data);
     break;
   default:
@@ -309,67 +309,67 @@ DECLAR_BINARY_OPT(f64, boolean, le, <=);
     type##_t *value = (type##_t *)value_get_data(self);                        \
     type_kind_t kind = type_get_kind(type);                                    \
     switch (kind) {                                                            \
-    case CUBEC_VALUE_TYPE_BOOL:                                                \
+    case VALUE_TYPE_BOOL:                                                      \
       if (value) {                                                             \
         return create_boolean(ctx, *value, false, NULL);                       \
       } else {                                                                 \
         return context_create_value(ctx, type, false, NULL, NULL);             \
       }                                                                        \
-    case CUBEC_VALUE_TYPE_INT8:                                                \
+    case VALUE_TYPE_INT8:                                                      \
       if (value) {                                                             \
         return create_i8(ctx, *value, false, NULL);                            \
       } else {                                                                 \
         return context_create_value(ctx, type, false, NULL, NULL);             \
       }                                                                        \
-    case CUBEC_VALUE_TYPE_INT16:                                               \
+    case VALUE_TYPE_INT16:                                                     \
       if (value) {                                                             \
         return create_i16(ctx, *value, false, NULL);                           \
       } else {                                                                 \
         return context_create_value(ctx, type, false, NULL, NULL);             \
       }                                                                        \
-    case CUBEC_VALUE_TYPE_INT32:                                               \
+    case VALUE_TYPE_INT32:                                                     \
       if (value) {                                                             \
         return create_i32(ctx, *value, false, NULL);                           \
       } else {                                                                 \
         return context_create_value(ctx, type, false, NULL, NULL);             \
       }                                                                        \
-    case CUBEC_VALUE_TYPE_INT64:                                               \
+    case VALUE_TYPE_INT64:                                                     \
       if (value) {                                                             \
         return create_i64(ctx, *value, false, NULL);                           \
       } else {                                                                 \
         return context_create_value(ctx, type, false, NULL, NULL);             \
       }                                                                        \
-    case CUBEC_VALUE_TYPE_UINT8:                                               \
+    case VALUE_TYPE_UINT8:                                                     \
       if (value) {                                                             \
         return create_u8(ctx, *value, false, NULL);                            \
       } else {                                                                 \
         return context_create_value(ctx, type, false, NULL, NULL);             \
       }                                                                        \
-    case CUBEC_VALUE_TYPE_UINT16:                                              \
+    case VALUE_TYPE_UINT16:                                                    \
       if (value) {                                                             \
         return create_u16(ctx, *value, false, NULL);                           \
       } else {                                                                 \
         return context_create_value(ctx, type, false, NULL, NULL);             \
       }                                                                        \
-    case CUBEC_VALUE_TYPE_UINT32:                                              \
+    case VALUE_TYPE_UINT32:                                                    \
       if (value) {                                                             \
         return create_u32(ctx, *value, false, NULL);                           \
       } else {                                                                 \
         return context_create_value(ctx, type, false, NULL, NULL);             \
       }                                                                        \
-    case CUBEC_VALUE_TYPE_UINT64:                                              \
+    case VALUE_TYPE_UINT64:                                                    \
       if (value) {                                                             \
         return create_u64(ctx, *value, false, NULL);                           \
       } else {                                                                 \
         return context_create_value(ctx, type, false, NULL, NULL);             \
       }                                                                        \
-    case CUBEC_VALUE_TYPE_FLOAT32:                                             \
+    case VALUE_TYPE_FLOAT32:                                                   \
       if (value) {                                                             \
         return create_f32(ctx, *value, false, NULL);                           \
       } else {                                                                 \
         return context_create_value(ctx, type, false, NULL, NULL);             \
       }                                                                        \
-    case CUBEC_VALUE_TYPE_FLOAT64:                                             \
+    case VALUE_TYPE_FLOAT64:                                                   \
       if (value) {                                                             \
         return create_f64(ctx, *value, false, NULL);                           \
       } else {                                                                 \

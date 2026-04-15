@@ -7,7 +7,7 @@
 
 ast_node_t read_ast_statement_block(allocator_t allocator, position_t *position,
                                     const char *end, const char *filename) {
-  ast_node_t node = create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_BLOCK);
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_STATEMENT_BLOCK);
   ast_node_t err = NULL;
   position_t current = *position;
   if (*current.offset != '{') {
@@ -16,23 +16,23 @@ ast_node_t read_ast_statement_block(allocator_t allocator, position_t *position,
   current.offset++;
   current.column++;
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
-  ast_node_t statements = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  ast_node_t statements = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "statements", statements);
   for (;;) {
     ast_node_t sts = read_ast_statement(allocator, &current, end, filename);
     if (!sts) {
       break;
     }
-    if (sts->type == CUBEC_NODE_TYPE_ERROR) {
+    if (sts->type == NODE_TYPE_ERROR) {
       err = sts;
       goto onerror;
     }
     ast_add_item(statements, sts);
     err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    if (err && err->type == NODE_TYPE_ERROR) {
       goto onerror;
     }
   }

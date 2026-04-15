@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
   create_builtin(ctx, print, "print");
   char *filename = absolute(allocator, "./main.cubec");
   value_t err = context_load_module(ctx, filename);
-  if (value_type_is(err, CUBEC_VALUE_TYPE_ERROR)) {
+  if (value_type_is(err, VALUE_TYPE_ERROR)) {
     const char *message = *(const char **)value_get_data(err);
     fprintf(stderr, "%s\n", message);
   }

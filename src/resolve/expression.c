@@ -5,13 +5,13 @@
 #include "eval/literal_numeric.h"
 #include "eval/literal_string.h"
 value_t resolve_expression(context_t ctx, ast_node_t node) {
-  if (node->type == CUBEC_NODE_TYPE_LITERAL_IDENTIFIER) {
+  if (node->type == NODE_TYPE_LITERAL_IDENTIFIER) {
     return eval_literal_identifier(ctx, node);
-  } else if (node->type == CUBEC_NODE_TYPE_LITERAL_NUMERIC) {
+  } else if (node->type == NODE_TYPE_LITERAL_NUMERIC) {
     return eval_literal_numeric(ctx, node);
-  } else if (node->type == CUBEC_NODE_TYPE_LITERAL_STRING) {
+  } else if (node->type == NODE_TYPE_LITERAL_STRING) {
     return eval_literal_string(ctx, node);
-  } else if (node->type == CUBEC_NODE_TYPE_LITERAL_CHAR) {
+  } else if (node->type == NODE_TYPE_LITERAL_CHAR) {
     return eval_literal_char(ctx, node);
   }
   return create_compile_error(ctx, node, "unsupport expression");

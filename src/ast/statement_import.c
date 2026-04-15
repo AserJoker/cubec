@@ -19,7 +19,7 @@ ast_node_t read_ast_statement_import(allocator_t allocator,
   if (!identifier) {
     return NULL;
   }
-  if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
+  if (identifier->type == NODE_TYPE_ERROR) {
     err = identifier;
     goto onerror;
   }
@@ -28,9 +28,9 @@ ast_node_t read_ast_statement_import(allocator_t allocator,
     return NULL;
   }
   allocator_free(allocator, identifier);
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_IMPORT);
+  node = create_ast_node(allocator, NODE_TYPE_STATEMENT_IMPORT);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   allocator_free(allocator, err);
@@ -41,12 +41,12 @@ ast_node_t read_ast_statement_import(allocator_t allocator,
                          "invalid import statement, missing import declarator");
     goto onerror;
   }
-  if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
+  if (identifier->type == NODE_TYPE_ERROR) {
     err = identifier;
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   ast_add_child(allocator, node, "identifier", identifier);
@@ -57,7 +57,7 @@ ast_node_t read_ast_statement_import(allocator_t allocator,
                            "invalid import statement, missing 'from'");
     goto onerror;
   }
-  if (token->type == CUBEC_NODE_TYPE_ERROR) {
+  if (token->type == NODE_TYPE_ERROR) {
     return token;
   }
   if (!location_is(token->loc, "from")) {
@@ -68,7 +68,7 @@ ast_node_t read_ast_statement_import(allocator_t allocator,
   }
   allocator_free(allocator, token);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   allocator_free(allocator, err);
@@ -78,18 +78,18 @@ ast_node_t read_ast_statement_import(allocator_t allocator,
                            "invalid import statement, missing source");
     goto onerror;
   }
-  if (token->type == CUBEC_NODE_TYPE_ERROR) {
+  if (token->type == NODE_TYPE_ERROR) {
     err = token;
     goto onerror;
   }
   ast_add_child(allocator, node, "source", token);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   allocator_free(allocator, err);
   token = read_ast_literal_symbol(allocator, &current, end, filename);
-  if (token->type == CUBEC_NODE_TYPE_ERROR) {
+  if (token->type == NODE_TYPE_ERROR) {
     err = token;
     goto onerror;
   }

@@ -50,7 +50,7 @@ static char *ptr_type_to_string(type_t self, allocator_t allocator) {
   size_t len = strlen(base_str) + 32;
   size_t offset = 0;
   char *str = allocator_alloc(allocator, len, NULL);
-  if (type_get_kind(self) == CUBEC_VALUE_TYPE_PTR) {
+  if (type_get_kind(self) == VALUE_TYPE_PTR) {
     str[offset++] = '*';
   } else {
     strcpy(&str[offset], "[*]");
@@ -82,7 +82,7 @@ static value_t ptr_unref(value_t self, context_t ctx) {
   return context_create_value(ctx, type, mutable, dst, NULL);
 }
 static value_t ptr_convert(value_t self, context_t ctx, type_t type) {
-  if (type_get_kind(type) == CUBEC_VALUE_TYPE_OPAQUE) {
+  if (type_get_kind(type) == VALUE_TYPE_OPAQUE) {
     void *data = (void *)value_get_data(self);
     return context_create_value(ctx, type, false, data, NULL);
   }
@@ -114,7 +114,7 @@ value_t create_ptr_type(context_t ctx, type_t type, bool mutable,
       .unref = ptr_unref,
       .convert = ptr_convert,
   };
-  return context_create_type(ctx, CUBEC_VALUE_TYPE_PTR, sizeof(void *),
+  return context_create_type(ctx, VALUE_TYPE_PTR, sizeof(void *),
                              sizeof(void *), meta, &opt, NULL);
 }
 value_t create_ptr_array_type(context_t ctx, type_t type, bool mutable,
@@ -126,6 +126,6 @@ value_t create_ptr_array_type(context_t ctx, type_t type, bool mutable,
       .type_to_string = ptr_type_to_string,
       .convert = ptr_convert,
   };
-  return context_create_type(ctx, CUBEC_VALUE_TYPE_PARRAY, sizeof(void *),
+  return context_create_type(ctx, VALUE_TYPE_PARRAY, sizeof(void *),
                              sizeof(void *), meta, &opt, NULL);
 }

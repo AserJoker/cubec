@@ -11,5 +11,5 @@ void init_void_type(context_t ctx) {
   struct _type_operator_t opt = {
       .type_to_string = &void_type_to_string,
   };
-  context_create_type(ctx, CUBEC_VALUE_TYPE_VOID, 0, 0, NULL, &opt, "void");
+  context_create_type(ctx, VALUE_TYPE_VOID, 0, 0, NULL, &opt, "void");
 }

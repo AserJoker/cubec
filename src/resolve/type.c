@@ -8,7 +8,7 @@ value_t resolve_type(context_t ctx, ast_node_t node) {
   if (value_is_error(vtype)) {
     return vtype;
   }
-  if (!value_type_is(vtype, CUBEC_VALUE_TYPE_TYPE)) {
+  if (!value_type_is(vtype, VALUE_TYPE_TYPE)) {
     return create_compile_error(ctx, node, "value is not type");
   }
   return vtype;

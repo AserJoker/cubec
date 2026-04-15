@@ -18,14 +18,14 @@ ast_node_t read_ast_expression_binary_logical_or(allocator_t allocator,
   if (!left) {
     goto onerror;
   }
-  if (left->type == CUBEC_NODE_TYPE_ERROR) {
+  if (left->type == NODE_TYPE_ERROR) {
     err = left;
     goto onerror;
   }
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_add_child(allocator, node, "left", left);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t opt = read_ast_literal_symbol(allocator, &current, end, filename);
@@ -34,7 +34,7 @@ ast_node_t read_ast_expression_binary_logical_or(allocator_t allocator,
     *position = err->loc.end;
     goto onerror;
   }
-  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+  if (opt->type == NODE_TYPE_ERROR) {
     err = opt;
     goto onerror;
   }
@@ -45,7 +45,7 @@ ast_node_t read_ast_expression_binary_logical_or(allocator_t allocator,
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t right = read_ast_expression4(allocator, &current, end, filename);
@@ -54,7 +54,7 @@ ast_node_t read_ast_expression_binary_logical_or(allocator_t allocator,
                            "Unexpected expression");
     goto onerror;
   }
-  if (right->type == CUBEC_NODE_TYPE_ERROR) {
+  if (right->type == NODE_TYPE_ERROR) {
     err = right;
     goto onerror;
   }
@@ -80,14 +80,14 @@ ast_node_t read_ast_expression_binary_logical_and(allocator_t allocator,
   if (!left) {
     goto onerror;
   }
-  if (left->type == CUBEC_NODE_TYPE_ERROR) {
+  if (left->type == NODE_TYPE_ERROR) {
     err = left;
     goto onerror;
   }
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_add_child(allocator, node, "left", left);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   allocator_free(allocator, err);
@@ -97,7 +97,7 @@ ast_node_t read_ast_expression_binary_logical_and(allocator_t allocator,
     *position = err->loc.end;
     goto onerror;
   }
-  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+  if (opt->type == NODE_TYPE_ERROR) {
     err = opt;
     goto onerror;
   }
@@ -108,7 +108,7 @@ ast_node_t read_ast_expression_binary_logical_and(allocator_t allocator,
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t right = read_ast_expression5(allocator, &current, end, filename);
@@ -117,7 +117,7 @@ ast_node_t read_ast_expression_binary_logical_and(allocator_t allocator,
                            "Unexpected expression");
     goto onerror;
   }
-  if (right->type == CUBEC_NODE_TYPE_ERROR) {
+  if (right->type == NODE_TYPE_ERROR) {
     err = right;
     goto onerror;
   }
@@ -143,14 +143,14 @@ ast_node_t read_ast_expression_binary_bitwise_or(allocator_t allocator,
   if (!left) {
     goto onerror;
   }
-  if (left->type == CUBEC_NODE_TYPE_ERROR) {
+  if (left->type == NODE_TYPE_ERROR) {
     err = left;
     goto onerror;
   }
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_add_child(allocator, node, "left", left);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t opt = read_ast_literal_symbol(allocator, &current, end, filename);
@@ -159,7 +159,7 @@ ast_node_t read_ast_expression_binary_bitwise_or(allocator_t allocator,
     *position = err->loc.end;
     goto onerror;
   }
-  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+  if (opt->type == NODE_TYPE_ERROR) {
     err = opt;
     goto onerror;
   }
@@ -170,7 +170,7 @@ ast_node_t read_ast_expression_binary_bitwise_or(allocator_t allocator,
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t right = read_ast_expression6(allocator, &current, end, filename);
@@ -179,7 +179,7 @@ ast_node_t read_ast_expression_binary_bitwise_or(allocator_t allocator,
                            "Unexpected expression");
     goto onerror;
   }
-  if (right->type == CUBEC_NODE_TYPE_ERROR) {
+  if (right->type == NODE_TYPE_ERROR) {
     err = right;
     goto onerror;
   }
@@ -205,14 +205,14 @@ ast_node_t read_ast_expression_binary_bitwise_xor(allocator_t allocator,
   if (!left) {
     goto onerror;
   }
-  if (left->type == CUBEC_NODE_TYPE_ERROR) {
+  if (left->type == NODE_TYPE_ERROR) {
     err = left;
     goto onerror;
   }
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_add_child(allocator, node, "left", left);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t opt = read_ast_literal_symbol(allocator, &current, end, filename);
@@ -221,7 +221,7 @@ ast_node_t read_ast_expression_binary_bitwise_xor(allocator_t allocator,
     *position = err->loc.end;
     goto onerror;
   }
-  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+  if (opt->type == NODE_TYPE_ERROR) {
     err = opt;
     goto onerror;
   }
@@ -232,7 +232,7 @@ ast_node_t read_ast_expression_binary_bitwise_xor(allocator_t allocator,
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   allocator_free(allocator, err);
@@ -242,7 +242,7 @@ ast_node_t read_ast_expression_binary_bitwise_xor(allocator_t allocator,
                            "Unexpected expression");
     goto onerror;
   }
-  if (right->type == CUBEC_NODE_TYPE_ERROR) {
+  if (right->type == NODE_TYPE_ERROR) {
     err = right;
     goto onerror;
   }
@@ -267,14 +267,14 @@ ast_node_t read_ast_expression_binary_bitwise_and(allocator_t allocator,
   if (!left) {
     goto onerror;
   }
-  if (left->type == CUBEC_NODE_TYPE_ERROR) {
+  if (left->type == NODE_TYPE_ERROR) {
     err = left;
     goto onerror;
   }
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_add_child(allocator, node, "left", left);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   allocator_free(allocator, err);
@@ -284,7 +284,7 @@ ast_node_t read_ast_expression_binary_bitwise_and(allocator_t allocator,
     *position = err->loc.end;
     goto onerror;
   }
-  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+  if (opt->type == NODE_TYPE_ERROR) {
     err = opt;
     goto onerror;
   }
@@ -295,7 +295,7 @@ ast_node_t read_ast_expression_binary_bitwise_and(allocator_t allocator,
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   allocator_free(allocator, err);
@@ -305,7 +305,7 @@ ast_node_t read_ast_expression_binary_bitwise_and(allocator_t allocator,
                            "Unexpected expression");
     goto onerror;
   }
-  if (right->type == CUBEC_NODE_TYPE_ERROR) {
+  if (right->type == NODE_TYPE_ERROR) {
     err = right;
     goto onerror;
   }
@@ -331,14 +331,14 @@ ast_node_t read_ast_expression_binary_equal(allocator_t allocator,
   if (!left) {
     goto onerror;
   }
-  if (left->type == CUBEC_NODE_TYPE_ERROR) {
+  if (left->type == NODE_TYPE_ERROR) {
     err = left;
     goto onerror;
   }
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_add_child(allocator, node, "left", left);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   allocator_free(allocator, err);
@@ -348,7 +348,7 @@ ast_node_t read_ast_expression_binary_equal(allocator_t allocator,
     *position = err->loc.end;
     goto onerror;
   }
-  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+  if (opt->type == NODE_TYPE_ERROR) {
     err = opt;
     goto onerror;
   }
@@ -359,7 +359,7 @@ ast_node_t read_ast_expression_binary_equal(allocator_t allocator,
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   allocator_free(allocator, err);
@@ -369,7 +369,7 @@ ast_node_t read_ast_expression_binary_equal(allocator_t allocator,
                            "Unexpected expression");
     goto onerror;
   }
-  if (right->type == CUBEC_NODE_TYPE_ERROR) {
+  if (right->type == NODE_TYPE_ERROR) {
     err = right;
     goto onerror;
   }
@@ -396,14 +396,14 @@ ast_node_t read_ast_expression_binary_relation(allocator_t allocator,
   if (!left) {
     goto onerror;
   }
-  if (left->type == CUBEC_NODE_TYPE_ERROR) {
+  if (left->type == NODE_TYPE_ERROR) {
     err = left;
     goto onerror;
   }
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_add_child(allocator, node, "left", left);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   allocator_free(allocator, err);
@@ -413,7 +413,7 @@ ast_node_t read_ast_expression_binary_relation(allocator_t allocator,
     *position = err->loc.end;
     goto onerror;
   }
-  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+  if (opt->type == NODE_TYPE_ERROR) {
     err = opt;
     goto onerror;
   }
@@ -425,7 +425,7 @@ ast_node_t read_ast_expression_binary_relation(allocator_t allocator,
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   allocator_free(allocator, err);
@@ -435,7 +435,7 @@ ast_node_t read_ast_expression_binary_relation(allocator_t allocator,
                            "Unexpected expression");
     goto onerror;
   }
-  if (right->type == CUBEC_NODE_TYPE_ERROR) {
+  if (right->type == NODE_TYPE_ERROR) {
     err = right;
     goto onerror;
   }
@@ -462,14 +462,14 @@ ast_node_t read_ast_expression_binary_bitwise_shift(allocator_t allocator,
   if (!left) {
     goto onerror;
   }
-  if (left->type == CUBEC_NODE_TYPE_ERROR) {
+  if (left->type == NODE_TYPE_ERROR) {
     err = left;
     goto onerror;
   }
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_add_child(allocator, node, "left", left);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t opt = read_ast_literal_symbol(allocator, &current, end, filename);
@@ -478,7 +478,7 @@ ast_node_t read_ast_expression_binary_bitwise_shift(allocator_t allocator,
     *position = err->loc.end;
     goto onerror;
   }
-  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+  if (opt->type == NODE_TYPE_ERROR) {
     err = opt;
     goto onerror;
   }
@@ -489,7 +489,7 @@ ast_node_t read_ast_expression_binary_bitwise_shift(allocator_t allocator,
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t right = read_ast_expression11(allocator, &current, end, filename);
@@ -498,7 +498,7 @@ ast_node_t read_ast_expression_binary_bitwise_shift(allocator_t allocator,
                            "Unexpected expression");
     goto onerror;
   }
-  if (right->type == CUBEC_NODE_TYPE_ERROR) {
+  if (right->type == NODE_TYPE_ERROR) {
     err = right;
     goto onerror;
   }
@@ -524,14 +524,14 @@ ast_node_t read_ast_expression_binary_additive(allocator_t allocator,
   if (!left) {
     goto onerror;
   }
-  if (left->type == CUBEC_NODE_TYPE_ERROR) {
+  if (left->type == NODE_TYPE_ERROR) {
     err = left;
     goto onerror;
   }
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_add_child(allocator, node, "left", left);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t opt = read_ast_literal_symbol(allocator, &current, end, filename);
@@ -540,7 +540,7 @@ ast_node_t read_ast_expression_binary_additive(allocator_t allocator,
     *position = err->loc.end;
     goto onerror;
   }
-  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+  if (opt->type == NODE_TYPE_ERROR) {
     err = opt;
     goto onerror;
   }
@@ -551,7 +551,7 @@ ast_node_t read_ast_expression_binary_additive(allocator_t allocator,
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   allocator_free(allocator, err);
@@ -561,7 +561,7 @@ ast_node_t read_ast_expression_binary_additive(allocator_t allocator,
                            "Unexpected expression");
     goto onerror;
   }
-  if (right->type == CUBEC_NODE_TYPE_ERROR) {
+  if (right->type == NODE_TYPE_ERROR) {
     err = right;
     goto onerror;
   }
@@ -586,14 +586,14 @@ ast_node_t read_ast_expression_binary_multiplicative(allocator_t allocator,
   if (!left) {
     goto onerror;
   }
-  if (left->type == CUBEC_NODE_TYPE_ERROR) {
+  if (left->type == NODE_TYPE_ERROR) {
     err = left;
     goto onerror;
   }
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_add_child(allocator, node, "left", left);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t opt = read_ast_literal_symbol(allocator, &current, end, filename);
@@ -602,7 +602,7 @@ ast_node_t read_ast_expression_binary_multiplicative(allocator_t allocator,
     *position = err->loc.end;
     goto onerror;
   }
-  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+  if (opt->type == NODE_TYPE_ERROR) {
     err = opt;
     goto onerror;
   }
@@ -614,7 +614,7 @@ ast_node_t read_ast_expression_binary_multiplicative(allocator_t allocator,
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   allocator_free(allocator, err);
@@ -624,7 +624,7 @@ ast_node_t read_ast_expression_binary_multiplicative(allocator_t allocator,
                            "Unexpected expression");
     goto onerror;
   }
-  if (right->type == CUBEC_NODE_TYPE_ERROR) {
+  if (right->type == NODE_TYPE_ERROR) {
     err = right;
     goto onerror;
   }
@@ -647,7 +647,7 @@ ast_node_t read_ast_expression_binary_prefix(allocator_t allocator,
   position_t current = *position;
   ast_node_t opt = NULL;
   if (*current.offset == '&') {
-    opt = create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_SYMBOL);
+    opt = create_ast_node(allocator, NODE_TYPE_LITERAL_SYMBOL);
     opt->loc.begin = current;
     current.offset++;
     current.column++;
@@ -660,12 +660,12 @@ ast_node_t read_ast_expression_binary_prefix(allocator_t allocator,
     if (!opt) {
       goto onerror;
     }
-    if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+    if (opt->type == NODE_TYPE_ERROR) {
       err = opt;
       goto onerror;
     }
   }
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_BINARY);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_add_child(allocator, node, "opt", opt);
   if (!location_is(opt->loc, "!") && !location_is(opt->loc, "+") &&
       !location_is(opt->loc, "-") && !location_is(opt->loc, "~") &&
@@ -676,7 +676,7 @@ ast_node_t read_ast_expression_binary_prefix(allocator_t allocator,
   }
 
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   ast_node_t right = read_ast_expression15(allocator, &current, end, filename);
@@ -685,7 +685,7 @@ ast_node_t read_ast_expression_binary_prefix(allocator_t allocator,
                            "Unexpected expression");
     goto onerror;
   }
-  if (right->type == CUBEC_NODE_TYPE_ERROR) {
+  if (right->type == NODE_TYPE_ERROR) {
     err = right;
     goto onerror;
   }

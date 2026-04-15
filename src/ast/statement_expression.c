@@ -9,8 +9,7 @@
 ast_node_t read_ast_statement_expression(allocator_t allocator,
                                          position_t *position, const char *end,
                                          const char *filename) {
-  ast_node_t node =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_STATEMENT_EXPRESSION);
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_STATEMENT_EXPRESSION);
   ast_node_t err = NULL;
   position_t current = *position;
   ast_node_t expression =
@@ -18,18 +17,18 @@ ast_node_t read_ast_statement_expression(allocator_t allocator,
   if (!expression) {
     goto onerror;
   }
-  if (expression->type == CUBEC_NODE_TYPE_ERROR) {
+  if (expression->type == NODE_TYPE_ERROR) {
     err = expression;
     goto onerror;
   }
   ast_add_child(allocator, node, "expression", expression);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   ast_node_t token =
       read_ast_literal_symbol(allocator, &current, end, filename);
-  if (token && token->type == CUBEC_NODE_TYPE_ERROR) {
+  if (token && token->type == NODE_TYPE_ERROR) {
     err = token;
     goto onerror;
   }

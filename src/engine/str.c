@@ -32,7 +32,7 @@ void init_str_type(context_t ctx) {
       .get_index = &str_get_index,
       .to_string = &str_to_string,
   };
-  context_create_type(ctx, CUBEC_VALUE_TYPE_STR, sizeof(const char **),
+  context_create_type(ctx, VALUE_TYPE_STR, sizeof(const char **),
                       sizeof(const char **), NULL, &opt, "str");
 }
 value_t create_str(context_t ctx, const char *data, const char *name) {

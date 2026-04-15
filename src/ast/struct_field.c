@@ -8,10 +8,10 @@
 
 ast_node_t read_ast_struct_field(allocator_t allocator, position_t *position,
                                  const char *end, const char *filename) {
-  ast_node_t node = create_ast_node(allocator, CUBEC_NODE_TYPE_STRUCT_FIELD);
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_STRUCT_FIELD);
   ast_node_t err = NULL;
   position_t current = *position;
-  ast_node_t decorators = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  ast_node_t decorators = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "decorators", decorators);
   for (;;) {
     ast_node_t decorator =
@@ -19,12 +19,12 @@ ast_node_t read_ast_struct_field(allocator_t allocator, position_t *position,
     if (!decorator) {
       break;
     }
-    if (decorator->type == CUBEC_NODE_TYPE_ERROR) {
+    if (decorator->type == NODE_TYPE_ERROR) {
       goto onerror;
     }
     ast_add_item(decorators, decorator);
     err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    if (err && err->type == NODE_TYPE_ERROR) {
       return err;
     }
   }
@@ -33,13 +33,13 @@ ast_node_t read_ast_struct_field(allocator_t allocator, position_t *position,
   if (!declarator) {
     goto onerror;
   }
-  if (declarator->type == CUBEC_NODE_TYPE_ERROR) {
+  if (declarator->type == NODE_TYPE_ERROR) {
     err = declarator;
     goto onerror;
   }
   ast_add_child(allocator, node, "declarator", declarator);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != ';') {

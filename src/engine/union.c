@@ -115,8 +115,7 @@ value_t create_union_type(context_t ctx, size_t align, const char *name) {
       .get_field = union_get_field,
       .set_field = union_set_field,
   };
-  return context_create_type(ctx, CUBEC_VALUE_TYPE_UNION, 1, align, meta, &opt,
-                             name);
+  return context_create_type(ctx, VALUE_TYPE_UNION, 1, align, meta, &opt, name);
 }
 static void union_field_dispose(union_field_t self, allocator_t allocator) {
   allocator_free(allocator, self->name);

@@ -158,7 +158,7 @@ ast_node_t read_ast_literal_char(allocator_t allocator, position_t *position,
       break;
     }
   }
-  ast_node_t chr = create_ast_node(allocator, CUBEC_NODE_TYPE_LITERAL_CHAR);
+  ast_node_t chr = create_ast_node(allocator, NODE_TYPE_LITERAL_CHAR);
   chr->loc.begin = *position;
   chr->loc.end = current;
   chr->loc.filename = filename;

@@ -126,7 +126,7 @@ value_t create_array_type(context_t self, type_t type, size_t length) {
       .get_length = &array_get_length,
       .get_index = &array_get_index,
   };
-  return context_create_type(self, CUBEC_VALUE_TYPE_ARRAY,
+  return context_create_type(self, VALUE_TYPE_ARRAY,
                              length * type_get_size(type), type_get_align(type),
                              meta, &opt, NULL);
 }

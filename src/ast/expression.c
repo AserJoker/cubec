@@ -176,13 +176,13 @@ ast_node_t read_ast_expression18(allocator_t allocator, position_t *position,
   position_t current = *position;
   node = read_ast_expression19(allocator, &current, end, filename);
   if (node) {
-    if (node->type == CUBEC_NODE_TYPE_ERROR) {
+    if (node->type == NODE_TYPE_ERROR) {
       return node;
     }
     for (;;) {
       position_t curr = current;
       ast_node_t err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      if (err && err->type == NODE_TYPE_ERROR) {
         return err;
       }
       ast_node_t next = NULL;
@@ -200,26 +200,26 @@ ast_node_t read_ast_expression18(allocator_t allocator, position_t *position,
         next = read_ast_expression_call(allocator, &current, end, filename);
       }
       if (next) {
-        if (next->type == CUBEC_NODE_TYPE_ERROR) {
+        if (next->type == NODE_TYPE_ERROR) {
           allocator_free(allocator, node);
           next->loc.begin = *position;
           return next;
         }
-        if (next->type == CUBEC_NODE_TYPE_EXPRESSION_MEMBER) {
+        if (next->type == NODE_TYPE_EXPRESSION_MEMBER) {
           ast_add_child(allocator, next, "host", node);
           node = next;
           next->loc.begin = *position;
 
-        } else if (next->type == CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
+        } else if (next->type == NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
           ast_add_child(allocator, next, "host", node);
           node = next;
           next->loc.begin = *position;
-        } else if (next->type == CUBEC_NODE_TYPE_EXPRESSION_CALL) {
+        } else if (next->type == NODE_TYPE_EXPRESSION_CALL) {
           ast_add_child(allocator, next, "callee", node);
           node = next;
           next->loc.begin = *position;
 
-        } else if (next->type == CUBEC_NODE_TYPE_EXPRESSION_SLICE) {
+        } else if (next->type == NODE_TYPE_EXPRESSION_SLICE) {
           ast_add_child(allocator, next, "host", node);
           node = next;
           next->loc.begin = *position;

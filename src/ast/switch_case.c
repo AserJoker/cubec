@@ -10,24 +10,24 @@
 
 ast_node_t read_ast_switch_case(allocator_t allocator, position_t *position,
                                 const char *end, const char *filename) {
-  ast_node_t node = create_ast_node(allocator, CUBEC_NODE_TYPE_SWITCH_CASE);
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_SWITCH_CASE);
   ast_node_t err = NULL;
   position_t current = *position;
   ast_node_t token =
       read_ast_literal_identifier(allocator, &current, end, filename);
-  ast_node_t statements = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  ast_node_t statements = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "statements", statements);
   if (!token) {
     goto onerror;
   }
-  if (token->type == CUBEC_NODE_TYPE_ERROR) {
+  if (token->type == NODE_TYPE_ERROR) {
     err = token;
     goto onerror;
   }
   if (location_is(token->loc, "case")) {
     allocator_free(allocator, token);
     err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    if (err && err->type == NODE_TYPE_ERROR) {
       return err;
     }
     ast_node_t condition =
@@ -37,7 +37,7 @@ ast_node_t read_ast_switch_case(allocator_t allocator, position_t *position,
                              "invalid statement");
       goto onerror;
     }
-    if (condition->type == CUBEC_NODE_TYPE_ERROR) {
+    if (condition->type == NODE_TYPE_ERROR) {
       err = condition;
       goto onerror;
     }
@@ -49,7 +49,7 @@ ast_node_t read_ast_switch_case(allocator_t allocator, position_t *position,
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   if (*current.offset != ':') {
@@ -60,7 +60,7 @@ ast_node_t read_ast_switch_case(allocator_t allocator, position_t *position,
   current.offset++;
   current.column++;
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   for (;;) {
@@ -70,7 +70,7 @@ ast_node_t read_ast_switch_case(allocator_t allocator, position_t *position,
     ast_node_t token =
         read_ast_literal_identifier(allocator, &current, end, filename);
     if (token) {
-      if (token->type == CUBEC_NODE_TYPE_ERROR) {
+      if (token->type == NODE_TYPE_ERROR) {
         err = token;
         goto onerror;
       }
@@ -85,7 +85,7 @@ ast_node_t read_ast_switch_case(allocator_t allocator, position_t *position,
       }
     }
     err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    if (err && err->type == NODE_TYPE_ERROR) {
       return err;
     }
     ast_node_t statement =
@@ -95,13 +95,13 @@ ast_node_t read_ast_switch_case(allocator_t allocator, position_t *position,
                              "invalid statement");
       goto onerror;
     }
-    if (statement->type == CUBEC_NODE_TYPE_ERROR) {
+    if (statement->type == NODE_TYPE_ERROR) {
       err = statement;
       goto onerror;
     }
     ast_add_item(statements, statement);
     err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+    if (err && err->type == NODE_TYPE_ERROR) {
       return err;
     }
   }

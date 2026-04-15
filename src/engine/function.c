@@ -111,7 +111,7 @@ value_t create_function_type(context_t ctx, type_t type, size_t num_args,
       .type_to_string = function_type_to_string,
       .call = function_call,
   };
-  return context_create_type(ctx, CUBEC_VALUE_TYPE_FUNCTION, sizeof(void *),
+  return context_create_type(ctx, VALUE_TYPE_FUNCTION, sizeof(void *),
                              sizeof(void *), meta, &opt, NULL);
 }
 array_t function_type_get_arguments(type_t self) {

@@ -17,12 +17,11 @@ ast_node_t read_ast_expression_template_generator(allocator_t allocator,
   }
   current.column++;
   current.offset++;
-  node =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR);
-  ast_node_t args = create_ast_node(allocator, CUBEC_NODE_TYPE_LIST);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_TEMPLATE_GENERATOR);
+  ast_node_t args = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "args", args);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   ast_node_t temp = read_ast_expression18(allocator, &current, end, filename);
@@ -32,11 +31,11 @@ ast_node_t read_ast_expression_template_generator(allocator_t allocator,
                          "invalid or unexpected template generator expression");
     goto onerror;
   }
-  if (temp->type == CUBEC_NODE_TYPE_ERROR) {
+  if (temp->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (*current.offset != '<') {
@@ -48,7 +47,7 @@ ast_node_t read_ast_expression_template_generator(allocator_t allocator,
   current.offset++;
   current.column++;
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (*current.offset != '>') {
@@ -61,13 +60,13 @@ ast_node_t read_ast_expression_template_generator(allocator_t allocator,
             "invalid or unexpected template generator expression");
         goto onerror;
       }
-      if (item->type == CUBEC_NODE_TYPE_ERROR) {
+      if (item->type == NODE_TYPE_ERROR) {
         err = item;
         goto onerror;
       }
       ast_add_item(args, item);
       err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      if (err && err->type == NODE_TYPE_ERROR) {
         goto onerror;
       }
       if (*current.offset == '>') {
@@ -82,13 +81,13 @@ ast_node_t read_ast_expression_template_generator(allocator_t allocator,
       current.offset++;
       current.column++;
       err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+      if (err && err->type == NODE_TYPE_ERROR) {
         goto onerror;
       }
     }
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (*current.offset != '>') {

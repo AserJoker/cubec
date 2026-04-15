@@ -12,9 +12,9 @@ ast_node_t read_ast_expression_compute_member(allocator_t allocator,
   ast_node_t node = NULL;
   ast_node_t err = NULL;
   position_t current = *position;
-  node = create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER);
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_COMPUTE_MEMBER);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (*current.offset != '[') {
@@ -23,7 +23,7 @@ ast_node_t read_ast_expression_compute_member(allocator_t allocator,
   current.offset++;
   current.column++;
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   ast_node_t field = read_ast_expression(allocator, &current, end, filename);
@@ -33,13 +33,13 @@ ast_node_t read_ast_expression_compute_member(allocator_t allocator,
                            "for compute member expression");
     goto onerror;
   }
-  if (field->type == CUBEC_NODE_TYPE_ERROR) {
+  if (field->type == NODE_TYPE_ERROR) {
     err = field;
     goto onerror;
   }
   ast_add_child(allocator, node, "field", field);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (*current.offset != ']') {

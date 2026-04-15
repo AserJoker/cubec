@@ -10,8 +10,7 @@
 ast_node_t read_ast_expression_spread(allocator_t allocator,
                                       position_t *position, const char *end,
                                       const char *filename) {
-  ast_node_t node =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_SPREAD);
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_SPREAD);
   ast_node_t err = NULL;
   position_t current = *position;
   ast_node_t symbol =
@@ -19,7 +18,7 @@ ast_node_t read_ast_expression_spread(allocator_t allocator,
   if (!symbol) {
     goto onerror;
   }
-  if (symbol->type == CUBEC_NODE_TYPE_ERROR) {
+  if (symbol->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   if (!location_is(symbol->loc, "...")) {
@@ -28,7 +27,7 @@ ast_node_t read_ast_expression_spread(allocator_t allocator,
   }
   allocator_free(allocator, symbol);
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
   ast_node_t expression =
@@ -38,7 +37,7 @@ ast_node_t read_ast_expression_spread(allocator_t allocator,
                            "invalid spread expression");
     goto onerror;
   }
-  if (expression->type == CUBEC_NODE_TYPE_ERROR) {
+  if (expression->type == NODE_TYPE_ERROR) {
     err = expression;
     goto onerror;
   }

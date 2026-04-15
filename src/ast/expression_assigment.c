@@ -15,8 +15,7 @@ ast_node_t read_ast_expression_assigment(allocator_t allocator,
       "=",  "+=", "-=", "*=",  "/=",  "%=",  ">>=", "<<=",
       "&=", "|=", "^=", "&&=", "||=", "??=", NULL,
   };
-  ast_node_t node =
-      create_ast_node(allocator, CUBEC_NODE_TYPE_EXPRESSION_ASSIGMENT);
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_ASSIGMENT);
   ast_node_t err = NULL;
   position_t current = *position;
   ast_node_t identifier = NULL;
@@ -29,19 +28,19 @@ ast_node_t read_ast_expression_assigment(allocator_t allocator,
   if (!identifier) {
     goto onerror;
   }
-  if (identifier->type == CUBEC_NODE_TYPE_ERROR) {
+  if (identifier->type == NODE_TYPE_ERROR) {
     err = identifier;
     goto onerror;
   }
   ast_add_child(allocator, node, "identifier", identifier);
-  if (identifier->type != CUBEC_NODE_TYPE_LITERAL_IDENTIFIER &&
-      identifier->type != CUBEC_NODE_TYPE_EXPRESSION_MEMBER &&
-      identifier->type != CUBEC_NODE_TYPE_EXPRESSION_COMPUTE_MEMBER &&
-      identifier->type != CUBEC_NODE_TYPE_EXPRESSION_BINARY) {
+  if (identifier->type != NODE_TYPE_LITERAL_IDENTIFIER &&
+      identifier->type != NODE_TYPE_EXPRESSION_MEMBER &&
+      identifier->type != NODE_TYPE_EXPRESSION_COMPUTE_MEMBER &&
+      identifier->type != NODE_TYPE_EXPRESSION_BINARY) {
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
   allocator_free(allocator, err);
@@ -50,7 +49,7 @@ ast_node_t read_ast_expression_assigment(allocator_t allocator,
   if (!opt) {
     goto onerror;
   }
-  if (opt->type == CUBEC_NODE_TYPE_ERROR) {
+  if (opt->type == NODE_TYPE_ERROR) {
     err = opt;
     goto onerror;
   }
@@ -67,7 +66,7 @@ ast_node_t read_ast_expression_assigment(allocator_t allocator,
   }
 
   err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == CUBEC_NODE_TYPE_ERROR) {
+  if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
 
@@ -78,7 +77,7 @@ ast_node_t read_ast_expression_assigment(allocator_t allocator,
         "invalid or unexpected token, missing initialize expression");
     goto onerror;
   }
-  if (value->type == CUBEC_NODE_TYPE_ERROR) {
+  if (value->type == NODE_TYPE_ERROR) {
     err = value;
     goto onerror;
   }

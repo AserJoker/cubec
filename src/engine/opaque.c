@@ -10,8 +10,8 @@ static char *opaque_type_to_string(type_t self, allocator_t allocator) {
   return create_cstring(allocator, "opaque");
 }
 static value_t opaque_convert(value_t self, context_t ctx, type_t type) {
-  if (type_get_kind(type) == CUBEC_VALUE_TYPE_PTR ||
-      type_get_kind(type) == CUBEC_VALUE_TYPE_PARRAY) {
+  if (type_get_kind(type) == VALUE_TYPE_PTR ||
+      type_get_kind(type) == VALUE_TYPE_PARRAY) {
     void *data = *(void **)value_get_data(self);
     return context_create_value(ctx, type, false, &data, NULL);
   }
@@ -26,8 +26,8 @@ void init_opaque_type(context_t ctx) {
       .type_to_string = &opaque_type_to_string,
       .convert = opaque_convert,
   };
-  context_create_type(ctx, CUBEC_VALUE_TYPE_OPAQUE, sizeof(void *),
-                      sizeof(void *), NULL, &opt, "opaque");
+  context_create_type(ctx, VALUE_TYPE_OPAQUE, sizeof(void *), sizeof(void *),
+                      NULL, &opt, "opaque");
 }
 value_t create_opaque(context_t ctx, const void *data, bool mutable,
                       const char *name) {
