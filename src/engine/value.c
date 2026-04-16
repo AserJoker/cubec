@@ -56,7 +56,10 @@ void value_set_mutable(value_t value, bool mutable) {
 }
 void *value_get_data(value_t value) { return value->data; }
 value_t value_clone(allocator_t allocator, value_t value) {
-  return create_value(allocator, value->type, value->mutable, value->data);
+  value_t val =
+      create_value(allocator, value->type, value->mutable, value->data);
+  value_set_comptime(val, value_is_comptime(value));
+  return val;
 }
 value_t value_assigment(value_t self, context_t ctx, value_t value) {
 

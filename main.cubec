@@ -1,8 +1,7 @@
+comptime func print_data():void {
+    print("hello world");
+}
 comptime func main():void{
-    func add(a:i32,b:i32):i32{
-        const a = 2;
-        return a+b;
-    }
-    print(add(1,2));
+    __self__.print_data();
 }
 const a = main();
