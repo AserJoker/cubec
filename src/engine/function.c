@@ -1,15 +1,21 @@
 #include "engine/function.h"
 #include "ast/node.h"
+#include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/array.h"
+#include "core/location.h"
 #include "engine/context.h"
-#include "engine/error.h"
+#include "engine/numeric.h"
+#include "engine/ptr.h"
+#include "engine/scope.h"
 #include "engine/type.h"
 #include "engine/value.h"
+#include "eval/function_body.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/cdefs.h>
 struct _function_meta_t {
   array_t arguments;
   type_t type;
@@ -99,7 +105,86 @@ static char *function_type_to_string(type_t self, allocator_t allocator) {
 }
 static value_t function_call(value_t self, context_t ctx, size_t argc,
                              value_t argv[]) {
-  return create_error(ctx, "not implement");
+  type_t func_type = value_get_type(self);
+  array_t argument_types = function_type_get_arguments(func_type);
+  type_t return_type = function_type_get_type(func_type);
+  bool variadic = function_type_is_variadic(func_type);
+  ast_node_t node = *(ast_node_t *)value_get_data(self);
+  ast_node_t arguments = ast_get_child(node, "arguments");
+  ast_node_t body = ast_get_child(node, "body");
+  allocator_t allocator = context_get_allocator(ctx);
+  scope_t scope = context_get_scope(ctx);
+  context_push_scope(ctx);
+  for (size_t idx = 0; idx < ast_get_length(arguments); idx++) {
+    ast_node_t item = ast_get_item(arguments, idx);
+    if (item->type == NODE_TYPE_FUNCTION_ARGUMENT) {
+      ast_node_t identifier = ast_get_child(item, "identifier");
+      type_t arg_type = array_get(argument_types, idx);
+      char *name = location_get(identifier->loc, allocator);
+      value_t arg = value_safe_convert(argv[idx], ctx, arg_type);
+      if (value_is_error(arg)) {
+        allocator_free(allocator, name);
+        context_pop_scope(ctx);
+        return arg;
+      }
+      void *data = value_get_data(arg);
+      arg = context_create_value(ctx, arg_type, true, data, name);
+      if (value_is_error(arg)) {
+        allocator_free(allocator, name);
+        context_pop_scope(ctx);
+        return arg;
+      }
+      value_set_comptime(arg, true);
+      allocator_free(allocator, name);
+    } else if (item->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
+      type_t arg_type = array_get(argument_types, idx);
+      value_t vparray_type = create_ptr_array_type(ctx, arg_type, false, false);
+      type_t parray_type = *(type_t *)value_get_data(vparray_type);
+      ast_node_t identifier = ast_get_child(item, "identifier");
+      char *name = location_get(identifier->loc, allocator);
+      size_t length = argc - idx;
+      char length_name[strlen(name) + 8];
+      sprintf(length_name, "%s_length", name);
+      value_t vlength = create_u64(ctx, length, false, length_name);
+      if (value_is_error(vlength)) {
+        allocator_free(allocator, name);
+        context_pop_scope(ctx);
+        return vlength;
+      }
+      value_t args[length];
+      for (size_t i = 0; i < length; i++) {
+        value_t arg = value_safe_convert(argv[i + idx], ctx, arg_type);
+        if (value_is_error(arg)) {
+          allocator_free(allocator, name);
+          context_pop_scope(ctx);
+          return arg;
+        }
+        value_set_comptime(arg, true);
+        args[i] = arg;
+      }
+      value_t arg = context_create_value(ctx, parray_type, false, args, name);
+      value_set_comptime(arg, true);
+      if (value_is_error(arg)) {
+        allocator_free(allocator, name);
+        context_pop_scope(ctx);
+        return arg;
+      }
+      allocator_free(allocator, name);
+    }
+  }
+  bool comptime = context_set_comptime(ctx, true);
+  value_t value = eval_function_body(ctx, body);
+  context_set_comptime(ctx, comptime);
+  if (value_is_interrupt(value)) {
+    value = *(value_t *)value_get_data(value);
+  }
+  value = value_clone(allocator, value);
+  value_set_comptime(value, true);
+  scope_store(scope, allocator, value, NULL);
+  while (scope != context_get_scope(ctx)) {
+    context_pop_scope(ctx);
+  }
+  return value;
 }
 
 value_t create_function_type(context_t ctx, type_t type, size_t num_args,
@@ -129,5 +214,5 @@ bool function_type_is_variadic(type_t self) {
 
 value_t create_function(context_t ctx, type_t func_type, ast_node_t func,
                         bool mutable, const char *name) {
-  return context_create_value(ctx, func_type, mutable, func, name);
+  return context_create_value(ctx, func_type, mutable, &func, name);
 }

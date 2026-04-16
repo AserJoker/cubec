@@ -70,6 +70,9 @@ bool type_is_equal(type_t self, type_t another) {
   return false;
 }
 bool type_is_safe_convert(type_t ltype, type_t rtype) {
+  if (type_is_equal(ltype, rtype)) {
+    return true;
+  }
   type_kind_t lkind = type_get_kind(ltype);
   type_kind_t rkind = type_get_kind(rtype);
   if (lkind >= VALUE_TYPE_INT8 && lkind <= VALUE_TYPE_INT64) {

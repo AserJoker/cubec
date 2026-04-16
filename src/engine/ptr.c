@@ -55,6 +55,7 @@ static char *ptr_type_to_string(type_t self, allocator_t allocator) {
     str[offset++] = '*';
   } else {
     strcpy(&str[offset], "[*]");
+    offset += 3;
   }
   if (!meta->mutable) {
     strcpy(&str[offset], "const ");

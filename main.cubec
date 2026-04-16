@@ -1,2 +1,6 @@
-const a = 1;
-comptime test = print(alignof(1@i8));
+func add(a:i32,...data:i32):void {
+    print(a,data);
+}
+func main():void {
+    add(1,2,3,4);
+}

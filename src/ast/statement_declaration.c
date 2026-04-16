@@ -23,13 +23,32 @@ ast_node_t read_ast_statement_declaration(allocator_t allocator,
     err = kind;
     goto onerror;
   }
-  if (!location_is(kind->loc, "const") && !location_is(kind->loc, "extern") &&
-      !location_is(kind->loc, "let") && !location_is(kind->loc, "comptime") &&
+  if (!location_is(kind->loc, "extern") &&
+      !location_is(kind->loc, "comptime") &&
       !location_is(kind->loc, "register")) {
+    current = kind->loc.begin;
     allocator_free(allocator, kind);
+  } else {
+    ast_add_child(allocator, node, "kind", kind);
+  }
+  err = ast_skip_all(allocator, &current, end, filename);
+  if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
-  ast_add_child(allocator, node, "kind", kind);
+  ast_node_t type =
+      read_ast_literal_identifier(allocator, &current, end, filename);
+  if (!type) {
+    goto onerror;
+  }
+  if (type->type == NODE_TYPE_ERROR) {
+    err = type;
+    goto onerror;
+  }
+  if (!location_is(type->loc, "const") && !location_is(type->loc, "let")) {
+    allocator_free(allocator, type);
+    goto onerror;
+  }
+  ast_add_child(allocator, node, "type", type);
   err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;

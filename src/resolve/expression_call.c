@@ -29,7 +29,8 @@ static value_t resolve_function_call(context_t ctx, value_t callee,
   type_t result_type = function_type_get_type(fn_type);
   type_t variadic_type = NULL;
   if (is_variadic) {
-    array_get(func_arguments, array_get_size(func_arguments) - 1);
+    variadic_type =
+        array_get(func_arguments, array_get_size(func_arguments) - 1);
   }
   size_t offset = 0;
   if (self) {
