@@ -22,11 +22,6 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   ast_node_t body = ast_get_child(node, "body");
   ast_node_t arguments = ast_get_child(node, "arguments");
   ast_node_t closure = ast_get_child(node, "closure");
-  bool comptime = kind && location_is(kind->loc, "comptime");
-  bool current = context_is_comptime(ctx);
-  if (comptime) {
-    context_set_comptime(ctx, true);
-  }
   // TODO: resolve closure lambda
   value_t vreturn_type = eval_type(ctx, type);
   if (value_is_error(vreturn_type)) {
@@ -94,9 +89,6 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
     context_pop_static_scope(ctx);
   }
   context_pop_scope(ctx);
-  if (context_is_comptime(ctx)) {
-    value_set_comptime(function, true);
-  }
-  context_set_comptime(ctx, current);
+  value_set_comptime(function, true);
   return function;
 }

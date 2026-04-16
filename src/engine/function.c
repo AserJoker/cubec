@@ -216,3 +216,8 @@ value_t create_function(context_t ctx, type_t func_type, ast_node_t func,
                         bool mutable, const char *name) {
   return context_create_value(ctx, func_type, mutable, &func, name);
 }
+bool function_is_comptime(value_t self) {
+  ast_node_t node = *(ast_node_t *)value_get_data(self);
+  ast_node_t kind = ast_get_child(node, "kind");
+  return kind && location_is(kind->loc, "comptime");
+}

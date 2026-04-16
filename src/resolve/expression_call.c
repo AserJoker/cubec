@@ -133,7 +133,7 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     }
     allocator_t allocator = context_get_allocator(ctx);
     char *field = location_get(field_node->loc, allocator);
-    if (value_is_comptime(host)) {
+    if (function_is_comptime(host)) {
       for (size_t idx = 0; idx < argc; idx++) {
         if (!value_is_comptime(argv[idx])) {
           return create_compile_error(ctx, ast_get_item(arguments, idx),
@@ -192,7 +192,7 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
           return error;
         }
         allocator_free(allocator, field);
-        if (value_is_comptime(callee)) {
+        if (function_is_comptime(callee)) {
           return create_compile_error(ctx, host_node,
                                       "expression is not comptime");
         }
@@ -209,7 +209,7 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
   } else {
     value_t callee = resolve_expression(ctx, callee_node);
     if (value_type_is(callee, VALUE_TYPE_FUNCTION)) {
-      if (value_is_comptime(callee)) {
+      if (function_is_comptime(callee)) {
         for (size_t idx = 0; idx < argc; idx++) {
           if (!value_is_comptime(argv[idx])) {
             return create_compile_error(ctx, ast_get_item(arguments, idx),

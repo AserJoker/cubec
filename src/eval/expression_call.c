@@ -5,6 +5,7 @@
 #include "core/location.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/function.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "eval/expression.h"
@@ -64,7 +65,8 @@ value_t eval_expression_call(context_t ctx, ast_node_t node) {
     if (value_is_interrupt(func)) {
       return func;
     }
-    if (!value_is_comptime(func)) {
+    if (value_type_is(func, VALUE_TYPE_FUNCTION) &&
+        !function_is_comptime(func)) {
       return create_compile_error(ctx, callee, "expression is not comptime");
     }
     value_t res = value_call(func, ctx, argc, argv);

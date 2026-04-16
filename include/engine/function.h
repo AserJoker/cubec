@@ -19,6 +19,7 @@ bool function_type_is_variadic(type_t self);
 
 value_t create_function(context_t ctx, type_t func_type, ast_node_t func,
                         bool mutable, const char *name);
+bool function_is_comptime(value_t self);
 
 #ifdef __cplusplus
 }

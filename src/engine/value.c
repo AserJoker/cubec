@@ -1023,7 +1023,7 @@ value_t value_member_call(value_t value, context_t ctx, const char *name,
     if (value_type_is(member, VALUE_TYPE_ERROR)) {
       return member;
     }
-    if (!value_is_comptime(member)) {
+    if (!function_is_comptime(member)) {
       return create_error(ctx, "expression is not comptime");
     }
     return value_call(member, ctx, argc, argv);
