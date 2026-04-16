@@ -25,6 +25,8 @@ bool context_is_comptime(context_t ctx);
 
 bool context_set_comptime(context_t ctx, bool comptime);
 
+type_t context_get_error_type(context_t ctx);
+
 value_t context_load_module(context_t self, const char *filename);
 
 value_t context_create_value(context_t self, type_t type, bool mutable,

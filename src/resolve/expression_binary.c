@@ -78,7 +78,7 @@ value_t resolve_expression_try(context_t ctx, value_t value, ast_node_t node) {
       type_t is_error_type = value_get_type(is_error);
       value_t vfunc_type = create_function_type(
           ctx, context_load_type(ctx, "bool"), 1, &self_type, false);
-      type_t type = *(type_t *)value_get_type(vfunc_type);
+      type_t type = *(type_t *)value_get_data(vfunc_type);
       if (!type_is_safe_convert(type, is_error_type)) {
         char *dst_type_name = type_to_string(type, allocator);
         char *src_type_name = type_to_string(is_error_type, allocator);

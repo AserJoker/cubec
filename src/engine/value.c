@@ -16,6 +16,7 @@ struct _value_t {
   bool mutable;
   bool comptime;
   void *data;
+  scope_t scope;
 };
 static void value_dispose(value_t self, allocator_t allocator) {
   allocator_free(allocator, self->data);
@@ -34,10 +35,15 @@ value_t create_value(allocator_t allocator, type_t type, bool mutable,
     self->data = NULL;
   }
   self->comptime = false;
+  self->scope = NULL;
   return self;
 }
 void value_set_comptime(value_t self, bool comptime) {
   self->comptime = comptime;
+}
+struct _scope_t *value_get_scope(value_t self) { return self->scope; }
+void value_set_scope(value_t self, struct _scope_t *scope) {
+  self->scope = scope;
 }
 bool value_is_comptime(value_t self) { return self->comptime; }
 type_t value_get_type(value_t value) { return value->type; }

@@ -35,6 +35,7 @@ struct _context_t {
   type_t type_type;
   type_t interrupt_type;
   type_t null_type;
+  type_t error_type;
 
   value_t value_undefined;
   value_t value_null;
@@ -143,7 +144,13 @@ static value_t null_convert(value_t self, context_t ctx, type_t type) {
   allocator_free(allocator, dst_type_name);
   return err;
 }
+static void init_error_type(context_t self) {
 
+  self->error_type =
+      create_type(self->allocator, VALUE_TYPE_ERROR, sizeof(const char *),
+                  sizeof(const char *), NULL, NULL);
+  array_push(self->types, self->error_type);
+}
 static void context_init_type(context_t self) {
   init_type_type(self);
   self->interrupt_type =
@@ -307,7 +314,8 @@ type_t context_load_type(context_t self, const char *name) {
 }
 value_t context_declar(context_t self, const char *name, value_t value) {
   if (scope_load(self->scope, name)) {
-    return create_error(self, "Duplicate variable declaration");
+    scope_store(self->scope, self->allocator, value, NULL);
+    return create_error(self, "duplicate variable declaration");
   }
   if (self->static_scope) {
     value_t static_scope = self->static_scope->binding;
@@ -357,6 +365,7 @@ bool context_set_comptime(context_t ctx, bool comptime) {
   ctx->comptime = comptime;
   return current;
 }
+type_t context_get_error_type(context_t ctx) { return ctx->error_type; }
 void context_push_scope(context_t self) {
   self->scope = create_scope(self->allocator, self->scope);
 }

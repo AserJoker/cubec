@@ -10,6 +10,7 @@
 #include "resolve/expression_binary.h"
 #include "resolve/expression_call.h"
 #include "resolve/expression_group.h"
+#include "resolve/expression_member.h"
 value_t resolve_expression(context_t ctx, ast_node_t node) {
   if (node->type == NODE_TYPE_LITERAL_IDENTIFIER) {
     return eval_literal_identifier(ctx, node);
@@ -27,6 +28,8 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     return resolve_expression_call(ctx, node);
   } else if (node->type == NODE_TYPE_EXPRESSION_BINARY) {
     return resolve_expression_binary(ctx, node);
+  } else if (node->type == NODE_TYPE_EXPRESSION_MEMBER) {
+    return resolve_expression_member(ctx, node);
   }
   return create_compile_error(ctx, node, "unsupport expression");
 }

@@ -10,14 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 
-void init_error_type(context_t ctx) {
-  struct _type_operator_t opt = {};
-  context_create_type(ctx, VALUE_TYPE_ERROR, sizeof(const char **),
-                      sizeof(const char **), NULL, &opt, "error");
-}
 value_t create_error(context_t ctx, const char *fmt, ...) {
-  value_t vtype = context_load(ctx, "error");
-  type_t type = *(type_t *)value_get_data(vtype);
+  type_t type = context_get_error_type(ctx);
   allocator_t allocator = context_get_allocator(ctx);
   va_list args;
   va_start(args, fmt);
@@ -33,8 +27,7 @@ value_t create_error(context_t ctx, const char *fmt, ...) {
 
 value_t create_compile_error(context_t ctx, ast_node_t node, const char *fmt,
                              ...) {
-  value_t vtype = context_load(ctx, "error");
-  type_t type = *(type_t *)value_get_data(vtype);
+  type_t type = context_get_error_type(ctx);
   allocator_t allocator = context_get_allocator(ctx);
   char *line = location_get_line(node->loc, allocator);
   size_t len = strlen(line);

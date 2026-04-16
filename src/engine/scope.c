@@ -3,6 +3,8 @@
 #include "core/array.h"
 #include "core/hash_map.h"
 #include "core/string.h"
+#include "engine/value.h"
+#include <stdio.h>
 #include <string.h>
 struct _scope_t {
   scope_t parent;
@@ -32,6 +34,11 @@ scope_t create_scope(allocator_t allocator, scope_t parent) {
 }
 void scope_store(scope_t self, allocator_t allocator, value_t value,
                  const char *name) {
+  if (value_get_scope(value)) {
+    printf("reset scope");
+  } else {
+    value_set_scope(value, self);
+  }
   array_push(self->values, value);
   if (name) {
     hash_map_set(self->variables, create_cstring(allocator, name), value, NULL,

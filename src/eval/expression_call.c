@@ -5,6 +5,7 @@
 #include "core/location.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/type.h"
 #include "engine/value.h"
 #include "eval/expression.h"
 value_t eval_expression_call(context_t ctx, ast_node_t node) {
@@ -25,6 +26,14 @@ value_t eval_expression_call(context_t ctx, ast_node_t node) {
       return create_compile_error(ctx, item, "expression is not comptime");
     }
     argv[idx] = arg;
+  }
+  if (location_is(callee->loc, "compile_error")) {
+    if (argc != 1 || !value_type_is(argv[0], VALUE_TYPE_STR)) {
+      return create_compile_error(ctx, node,
+                                  "compile_error require 1 str argument");
+    }
+    const char *message = *(const char **)value_get_data(argv[0]);
+    return create_compile_error(ctx, node, message);
   }
   if (callee->type == NODE_TYPE_EXPRESSION_MEMBER) {
     ast_node_t obj_node = ast_get_child(callee, "host");

@@ -1,6 +1,8 @@
-func add(a:i32,...data:i32):void {
-    print(a,data);
+comptime func main():void{
+    func add(a:i32,b:i32):i32{
+        const a = 2;
+        return a+b;
+    }
+    print(add(1,2));
 }
-func main():void {
-    add(1,2,3,4);
-}
+const a = main();

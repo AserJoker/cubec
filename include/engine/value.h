@@ -9,9 +9,12 @@ extern "C" {
 #endif
 typedef struct _value_t *value_t;
 struct _context_t;
+struct _scope_t;
 value_t create_value(allocator_t allocator, type_t type, bool mutable,
                      const void *data);
 void value_set_comptime(value_t self, bool comptime);
+struct _scope_t *value_get_scope(value_t self);
+void value_set_scope(value_t self, struct _scope_t *scope);
 bool value_is_comptime(value_t self);
 type_t value_get_type(value_t value);
 bool value_type_is(value_t value, type_kind_t kind);

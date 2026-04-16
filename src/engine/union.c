@@ -173,12 +173,12 @@ array_t union_type_get_attributes(type_t self) {
   union_meta_t meta = type_get_meta(self);
   return meta->attributes;
 }
-type_t union_type_get_field(type_t self, const char *name) {
+union_field_t union_type_get_field(type_t self, const char *name) {
   union_meta_t meta = type_get_meta(self);
   for (size_t idx; idx < array_get_size(meta->fields); idx++) {
     union_field_t field = array_get(meta->fields, idx);
     if (strcmp(field->name, name) == 0) {
-      return field->type;
+      return field;
     }
   }
   return NULL;

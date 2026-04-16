@@ -26,7 +26,7 @@ void union_type_add_attribute(type_t self, allocator_t allocator,
                               const char *name, value_t value);
 array_t union_type_get_fields(type_t self);
 array_t union_type_get_attributes(type_t self);
-type_t union_type_get_field(type_t self, const char *name);
+union_field_t union_type_get_field(type_t self, const char *name);
 value_t union_type_get_attribute(type_t self, const char *name);
 #ifdef __cplusplus
 }
