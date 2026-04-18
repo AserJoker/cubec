@@ -91,20 +91,14 @@ static value_t type_value_get_field(value_t self, context_t ctx,
       if (!val) {
         return create_error(ctx, "no member named '%s' in value", name);
       }
-      value_t value = context_create_value(ctx, value_get_type(val), false,
-                                           value_get_data(val), NULL);
-      value_set_comptime(value, value_is_comptime(val));
-      return value;
+      return val;
     }
     if (type_get_kind(t) == VALUE_TYPE_UNION) {
       value_t val = union_type_get_attribute(t, name);
       if (!val) {
         return create_error(ctx, "no member named '%s' in value", name);
       }
-      value_t value = context_create_value(ctx, value_get_type(val), false,
-                                           value_get_data(val), NULL);
-      value_set_comptime(value, value_is_comptime(val));
-      return value;
+      return val;
     }
   }
   return create_error(ctx, "value does not support member access");

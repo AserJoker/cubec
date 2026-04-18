@@ -1,11 +1,14 @@
 #include "engine/value.h"
 #include "core/allocator.h"
+#include "engine/array.h"
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/function.h"
 #include "engine/ptr.h"
 #include "engine/str.h"
+#include "engine/struct.h"
 #include "engine/type.h"
+#include "engine/union.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -1003,6 +1006,83 @@ value_t value_ref(value_t self, struct _context_t *ctx) {
     return err;
   }
   return opt->ref(self, ctx);
+}
+value_t value_member_ref(value_t self, struct _context_t *ctx,
+                         const char *name) {
+  type_t type = value_get_type(self);
+  type_operator_t opt = type_get_operator(type);
+  if (!opt->get_field) {
+    return create_error(ctx, "value does not support member access");
+  }
+  if (type_get_kind(type) == VALUE_TYPE_STRUCT) {
+    struct_field_t field = struct_type_get_field(type, name);
+    if (!field) {
+      return create_error(ctx, "no member %s in value", name);
+    }
+    void *data = value_get_data(self);
+    data = (uint8_t *)data + field->offset;
+    type_t ptr = type_get_ptr_type(field->type, ctx);
+    value_t res = context_create_value(ctx, ptr, false, &data, NULL);
+    value_set_comptime(res, true);
+    return res;
+  } else if (type_get_kind(type) == VALUE_TYPE_UNION) {
+    union_field_t field = union_type_get_field(type, name);
+    if (!field) {
+      return create_error(ctx, "no member %s in value", name);
+    }
+    void *data = value_get_data(self);
+    data = (uint8_t *)data;
+    type_t ptr = type_get_ptr_type(field->type, ctx);
+    value_t res = context_create_value(ctx, ptr, false, &data, NULL);
+    value_set_comptime(res, true);
+    return res;
+  }
+  value_t val = value_get_field(self, ctx, name);
+  if (value_is_error(val)) {
+    return val;
+  }
+  if (value_is_interrupt(val)) {
+    return val;
+  }
+  return value_ref(val, ctx);
+}
+value_t value_index_ref(value_t self, struct _context_t *ctx, size_t idx) {
+  type_t type = value_get_type(self);
+  type_operator_t opt = type_get_operator(type);
+  if (!opt->get_index) {
+    return create_error(ctx, "value does not support member access");
+  }
+  if (type_get_kind(type) == VALUE_TYPE_ARRAY) {
+    if (idx >= array_type_get_length(type)) {
+      return create_error(
+          ctx, "array index %" PRIdPTR " is past the end of the array", idx);
+    }
+    type_t item_type = array_type_get_type(type);
+    size_t offset = type_get_size(item_type) * idx;
+    void *data = value_get_data(self);
+    data = (uint8_t *)data + offset;
+    type_t ptr = type_get_ptr_type(item_type, ctx);
+    value_t res = context_create_value(ctx, ptr, false, &data, NULL);
+    value_set_comptime(res, true);
+    return res;
+  } else if (type_get_kind(type) == VALUE_TYPE_PARRAY) {
+    type_t item_type = ptr_type_get_type(type);
+    size_t offset = type_get_size(item_type) * idx;
+    void *data = *(void **)value_get_data(self);
+    data = (uint8_t *)data + offset;
+    type_t ptr = type_get_ptr_type(item_type, ctx);
+    value_t res = context_create_value(ctx, ptr, false, &data, NULL);
+    value_set_comptime(res, true);
+    return res;
+  }
+  value_t val = value_get_index(self, ctx, idx);
+  if (value_is_error(val)) {
+    return val;
+  }
+  if (value_is_interrupt(val)) {
+    return val;
+  }
+  return value_ref(val, ctx);
 }
 value_t value_member_call(value_t value, context_t ctx, const char *name,
                           size_t argc, value_t *argv) {

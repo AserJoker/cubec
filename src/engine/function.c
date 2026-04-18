@@ -8,11 +8,13 @@
 #include "engine/numeric.h"
 #include "engine/ptr.h"
 #include "engine/scope.h"
+#include "engine/str.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "eval/function_body.h"
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 struct _function_meta_t {
@@ -185,6 +187,16 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   }
   return value;
 }
+static value_t function_to_string(value_t self, context_t ctx) {
+  type_t type = value_get_type(self);
+  allocator_t allocator = context_get_allocator(ctx);
+  char *type_name = type_to_string(type, allocator);
+  char str[strlen(type_name) + 32];
+  ast_node_t node = *(ast_node_t *)value_get_data(self);
+  sprintf(str, "%s {0x%" PRIxPTR "}", type_name, (intptr_t)node);
+  allocator_free(allocator, type_name);
+  return create_str(ctx, str, NULL);
+}
 
 value_t create_function_type(context_t ctx, type_t type, size_t num_args,
                              type_t args[], bool variadic) {
@@ -193,6 +205,7 @@ value_t create_function_type(context_t ctx, type_t type, size_t num_args,
   struct _type_operator_t opt = {
       .is_type_equal = function_is_equal,
       .type_to_string = function_type_to_string,
+      .to_string = function_to_string,
       .call = function_call,
   };
   return context_create_type(ctx, VALUE_TYPE_FUNCTION, sizeof(void *),

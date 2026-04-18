@@ -9,6 +9,7 @@
 #include "eval/ptr_declarator.h"
 #include "resolve/expression_binary.h"
 #include "resolve/expression_call.h"
+#include "resolve/expression_compute_member.h"
 #include "resolve/expression_group.h"
 #include "resolve/expression_member.h"
 value_t resolve_expression(context_t ctx, ast_node_t node) {
@@ -30,6 +31,8 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     return resolve_expression_binary(ctx, node);
   } else if (node->type == NODE_TYPE_EXPRESSION_MEMBER) {
     return resolve_expression_member(ctx, node);
+  } else if (node->type == NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
+    return resolve_expression_compute_member(ctx, node);
   }
   return create_compile_error(ctx, node, "unsupport expression");
 }

@@ -67,6 +67,9 @@ value_t value_logical_and(value_t self, struct _context_t *ctx,
 value_t value_logical_or(value_t self, struct _context_t *ctx, value_t another);
 value_t value_unref(value_t self, struct _context_t *ctx);
 value_t value_ref(value_t self, struct _context_t *ctx);
+value_t value_member_ref(value_t self, struct _context_t *ctx,
+                         const char *name);
+value_t value_index_ref(value_t self, struct _context_t *ctx, size_t idx);
 value_t value_try(value_t self, struct _context_t *ctx);
 #ifdef __cplusplus
 }

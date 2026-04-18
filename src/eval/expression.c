@@ -4,6 +4,7 @@
 #include "engine/value.h"
 #include "eval/expression_binary.h"
 #include "eval/expression_call.h"
+#include "eval/expression_compute_member.h"
 #include "eval/expression_group.h"
 #include "eval/expression_member.h"
 #include "eval/literal_char.h"
@@ -34,6 +35,8 @@ value_t eval_expression(context_t ctx, ast_node_t node) {
     return eval_expression_binary(ctx, node);
   } else if (node->type == NODE_TYPE_EXPRESSION_MEMBER) {
     return eval_expression_member(ctx, node);
+  } else if (node->type == NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
+    return eval_expression_compute_member(ctx, node);
   }
   return create_compile_error(ctx, node, "unsupport expression");
 }

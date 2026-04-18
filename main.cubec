@@ -1,7 +1,3 @@
-comptime func print_data():void {
-    print("hello world");
+func main():void{
+    print(__self__["main"], main);
 }
-comptime func main():void{
-    __self__.print_data();
-}
-const a = main();
