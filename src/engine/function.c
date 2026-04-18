@@ -15,7 +15,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/cdefs.h>
 struct _function_meta_t {
   array_t arguments;
   type_t type;

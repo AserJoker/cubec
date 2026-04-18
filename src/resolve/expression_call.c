@@ -14,7 +14,7 @@
 #include "engine/value.h"
 #include "resolve/expression.h"
 #include <inttypes.h>
-#include <linux/limits.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <string.h>
 
