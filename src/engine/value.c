@@ -124,7 +124,7 @@ value_t value_to_string(value_t self, context_t ctx) {
   type_t type = value_get_type(self);
   type_operator_t opt = type_get_operator(type);
   allocator_t allocator = context_get_allocator(ctx);
-  if (!value_get_data(self)) {
+  if (!value_is_comptime(self)) {
     char *type_name = type_to_string(type, allocator);
     size_t len = snprintf(NULL, 0, "%s{<runtime>}", type_name);
     char str[len + 1];
