@@ -1,5 +1,6 @@
 #include "ast/expression.h"
 #include "ast/array_declarator.h"
+#include "ast/callable_declarator.h"
 #include "ast/enum_declarator.h"
 #include "ast/expression_assigment.h"
 #include "ast/expression_binary.h"
@@ -12,7 +13,6 @@
 #include "ast/expression_slice.h"
 #include "ast/expression_template_generator.h"
 #include "ast/function_declarator.h"
-#include "ast/interface_declarator.h"
 #include "ast/literal_char.h"
 #include "ast/literal_identifier.h"
 #include "ast/literal_numeric.h"
@@ -20,10 +20,12 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "ast/ptr_declarator.h"
+#include "ast/ref_declarator.h"
 #include "ast/struct_declarator.h"
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
+
 
 ast_node_t read_ast_expression(allocator_t allocator, position_t *position,
                                const char *end, const char *filename) {
@@ -240,6 +242,10 @@ ast_node_t read_ast_expression19(allocator_t allocator, position_t *position,
   if (node) {
     return node;
   }
+  node = read_ast_ref_declarator(allocator, position, end, filename);
+  if (node) {
+    return node;
+  }
   node = read_ast_array_declarator(allocator, position, end, filename);
   if (node) {
     return node;
@@ -257,7 +263,7 @@ ast_node_t read_ast_expression19(allocator_t allocator, position_t *position,
   if (node) {
     return node;
   }
-  node = read_ast_interface_declarator(allocator, position, end, filename);
+  node = read_ast_callable_declarator(allocator, position, end, filename);
   if (node) {
     return node;
   }

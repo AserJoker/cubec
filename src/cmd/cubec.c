@@ -1,14 +1,13 @@
+#include "ast/node.h"
+#include "ast/node_type.h"
+#include "ast/program.h"
 #include "core/allocator.h"
 #include "core/path.h"
-#include "engine/builtin.h"
-#include "engine/context.h"
-#include "engine/type.h"
-#include "engine/value.h"
+#include "core/position.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 
 char *absolute(allocator_t allocator, const char *name) {
   path_t path = create_path(allocator, name);
@@ -19,31 +18,38 @@ char *absolute(allocator_t allocator, const char *name) {
   return result;
 }
 
-value_t print(context_t ctx, size_t argc, value_t argv[]) {
-  for (size_t idx = 0; idx < argc; idx++) {
-    if (idx != 0) {
-      printf(", ");
-    }
-    value_t str = value_to_string(argv[idx], ctx);
-    const char *cstr = *(const char **)value_get_data(str);
-    printf("%s", cstr);
-  }
-  printf("\n");
-  return context_get_undefined(ctx);
-}
-
 int main(int argc, char *argv[]) {
   allocator_t allocator = create_allocator(NULL);
-  context_t ctx = create_context(allocator);
-  create_builtin(ctx, print, "print");
+
   char *filename = absolute(allocator, "./main.cubec");
-  value_t err = context_load_module(ctx, filename);
-  if (value_type_is(err, VALUE_TYPE_ERROR)) {
-    const char *message = *(const char **)value_get_data(err);
-    fprintf(stderr, "%s\n", message);
+  FILE *fp = fopen(filename, "rb");
+  fseek(fp, 0, SEEK_END);
+  size_t len = ftell(fp);
+  char buf[len + 1];
+  fseek(fp, 0, SEEK_SET);
+  fread(buf, len, 1, fp);
+  fclose(fp);
+  buf[len] = 0;
+  position_t pos = {
+      .offset = buf,
+      .line = 0,
+      .column = 0,
+  };
+  ast_node_t program = read_ast_program(allocator, &pos, buf + len, filename);
+  if (program->type == NODE_TYPE_ERROR) {
+    ast_error_t err = (ast_error_t)program;
+    fprintf(stderr, "Failed to compile: %s, at \n  %s:%" PRIdPTR ":%" PRIdPTR,
+            err->message, filename, program->loc.end.line + 1,
+            program->loc.end.column + 1);
+  } else {
+    char *json = ast_write_json(allocator, program);
+    fp = fopen("main.json", "w");
+    fprintf(fp, "%s", json);
+    fclose(fp);
+    allocator_free(allocator, json);
   }
+  allocator_free(allocator, program);
   allocator_free(allocator, filename);
-  allocator_free(allocator, ctx);
   delete_allocator(allocator);
   return 0;
 }

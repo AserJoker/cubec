@@ -1,0 +1,98 @@
+{
+    "node_type": "NODE_TYPE_PROGRAM",
+    "text": "struct Opt<T> {\r\n    func add(a:T,b:T):T {\r\n        return a+b;\r\n    }\r\n}",
+    "statements": [
+        {
+            "node_type": "NODE_TYPE_STATEMENT_STRUCT",
+            "text": "struct Opt<T> {\r\n    func add(a:T,b:T):T {\r\n        return a+b;\r\n    }\r\n}",
+            "stru": {
+                "node_type": "NODE_TYPE_STRUCT_DECLARATOR",
+                "text": "struct Opt<T> {\r\n    func add(a:T,b:T):T {\r\n        return a+b;\r\n    }\r\n}",
+                "decorators": [],
+                "fields": [],
+                "methods": [
+                    {
+                        "node_type": "NODE_TYPE_FUNCTION_DECLARATOR",
+                        "text": "func add(a:T,b:T):T {\r\n        return a+b;\r\n    }",
+                        "decorators": [],
+                        "closure": [],
+                        "identifier": {
+                            "node_type": "NODE_TYPE_LITERAL_IDENTIFIER",
+                            "text": "add"
+                        },
+                        "generics": [],
+                        "arguments": [
+                            {
+                                "node_type": "NODE_TYPE_FUNCTION_ARGUMENT",
+                                "text": "a:T",
+                                "decorators": [],
+                                "identifier": {
+                                    "node_type": "NODE_TYPE_LITERAL_IDENTIFIER",
+                                    "text": "a"
+                                },
+                                "type": {
+                                    "node_type": "NODE_TYPE_LITERAL_IDENTIFIER",
+                                    "text": "T"
+                                }
+                            },
+                            {
+                                "node_type": "NODE_TYPE_FUNCTION_ARGUMENT",
+                                "text": "b:T",
+                                "decorators": [],
+                                "identifier": {
+                                    "node_type": "NODE_TYPE_LITERAL_IDENTIFIER",
+                                    "text": "b"
+                                },
+                                "type": {
+                                    "node_type": "NODE_TYPE_LITERAL_IDENTIFIER",
+                                    "text": "T"
+                                }
+                            }
+                        ],
+                        "type": {
+                            "node_type": "NODE_TYPE_LITERAL_IDENTIFIER",
+                            "text": "T"
+                        },
+                        "body": {
+                            "node_type": "NODE_TYPE_FUNCTION_BODY",
+                            "text": "{\r\n        return a+b;\r\n    }",
+                            "statements": [
+                                {
+                                    "node_type": "NODE_TYPE_STATEMENT_RETURN",
+                                    "text": "return a+b;",
+                                    "value": {
+                                        "node_type": "NODE_TYPE_EXPRESSION_BINARY",
+                                        "text": "a+b",
+                                        "left": {
+                                            "node_type": "NODE_TYPE_LITERAL_IDENTIFIER",
+                                            "text": "a"
+                                        },
+                                        "opt": {
+                                            "node_type": "NODE_TYPE_LITERAL_SYMBOL",
+                                            "text": "+"
+                                        },
+                                        "right": {
+                                            "node_type": "NODE_TYPE_LITERAL_IDENTIFIER",
+                                            "text": "b"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "attributes": [],
+                "identifier": {
+                    "node_type": "NODE_TYPE_LITERAL_IDENTIFIER",
+                    "text": "Opt"
+                },
+                "generics": [
+                    {
+                        "node_type": "NODE_TYPE_LITERAL_IDENTIFIER",
+                        "text": "T"
+                    }
+                ]
+            }
+        }
+    ]
+}

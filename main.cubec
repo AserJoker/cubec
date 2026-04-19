@@ -1,3 +1,5 @@
-func main():void{
-    print(__self__["main"], main);
+struct Opt<T> {
+    func add(a:T,b:T):T {
+        return a+b;
+    }
 }

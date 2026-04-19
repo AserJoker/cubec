@@ -1,0 +1,18 @@
+extern func printf(fmt:str,...);
+
+comptime func add(a:i32,b:i32):i32{
+    return a+b;
+}
+
+inline func add(a:i32,b:i32):i32{
+    return a+b;
+}
+
+func add<T> (a:T,b:T):T {
+    return a+b;
+}
+
+const a:i32 = 123;
+func[a] add(b:i32):i32 { // a:&i32
+    return a+b;
+}

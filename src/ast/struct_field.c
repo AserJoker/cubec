@@ -1,5 +1,6 @@
 #include "ast/struct_field.h"
 #include "ast/decorator.h"
+#include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "ast/variable_declarator.h"
@@ -26,6 +27,24 @@ ast_node_t read_ast_struct_field(allocator_t allocator, position_t *position,
     err = ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == NODE_TYPE_ERROR) {
       return err;
+    }
+  }
+  ast_node_t mutable =
+      read_ast_literal_identifier(allocator, &current, end, filename);
+  if (mutable) {
+    if (mutable->type == NODE_TYPE_ERROR) {
+      err = mutable;
+      goto onerror;
+    }
+    if (location_is(mutable->loc, "const")) {
+      ast_add_child(allocator, node, "mutable", mutable);
+      err = ast_skip_all(allocator, &current, end, filename);
+      if (err && err->type == NODE_TYPE_ERROR) {
+        return err;
+      }
+    } else {
+      current = mutable->loc.begin;
+      allocator_free(allocator, mutable);
     }
   }
   ast_node_t declarator =

@@ -1,0 +1,18 @@
+extern func malloc(size:u64):opaque;
+extern func free(ptr:opaque):void;
+struct Allocator{
+    func alloc(self:__self__, T:type):*T{
+        return cast(*T,malloc(sizeof T));
+    }
+    func free<T>(self:__self__, data:*T):void {
+        comptime if("__dispose__" in T){
+            data.__dispose__();
+        }
+        free(data);
+    }
+}
+const allocator = Allocator{};
+const data = allocator.alloc(i32);
+defer {
+    allocator.free(data);
+}

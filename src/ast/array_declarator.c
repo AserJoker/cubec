@@ -1,7 +1,5 @@
 #include "ast/array_declarator.h"
 #include "ast/expression.h"
-#include "ast/literal_identifier.h"
-#include "ast/literal_numeric.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
@@ -24,24 +22,22 @@ ast_node_t read_ast_array_declarator(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  ast_node_t length =
-      read_ast_literal_numeric(allocator, &current, end, filename);
-  if (!length) {
-    length = read_ast_literal_identifier(allocator, &current, end, filename);
+  if (*current.offset != ']') {
+    ast_node_t length = read_ast_expression(allocator, &current, end, filename);
+    if (!length) {
+      goto onerror;
+    }
+    if (length->type == NODE_TYPE_ERROR) {
+      err = length;
+      goto onerror;
+    }
+    if (length->type == NODE_TYPE_LITERAL_IDENTIFIER &&
+        !location_is(length->loc, "_")) {
+      allocator_free(allocator, length);
+      goto onerror;
+    }
+    ast_add_child(allocator, node, "length", length);
   }
-  if (!length) {
-    goto onerror;
-  }
-  if (length->type == NODE_TYPE_ERROR) {
-    err = length;
-    goto onerror;
-  }
-  if (length->type == NODE_TYPE_LITERAL_IDENTIFIER &&
-      !location_is(length->loc, "_")) {
-    allocator_free(allocator, length);
-    goto onerror;
-  }
-  ast_add_child(allocator, node, "length", length);
   err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
