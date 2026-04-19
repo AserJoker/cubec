@@ -1,0 +1,113 @@
+#ifndef _H_ENGINE_TYPE_
+#define _H_ENGINE_TYPE_
+#include "core/allocator.h"
+#include <stdbool.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+typedef enum _type_kind_t {
+  TYPE_KIND_ERROR,
+  TYPE_KIND_VOID,
+  TYPE_KIND_TYPE,
+  TYPE_KIND_INTEGER,
+  TYPE_KIND_UNSIGNED,
+  TYPE_KIND_FLOAT,
+  TYPE_KIND_BOOL,
+  TYPE_KIND_STR,
+  TYPE_KIND_PTR,
+  TYPE_KIND_PARRAY,
+  TYPE_KIND_OPAQUE,
+  TYPE_KIND_REF,
+  TYPE_KIND_ARRAY,
+  TYPE_KIND_STRUCT,
+  TYPE_KIND_UNION,
+  TYPE_KIND_FUNCTION,
+} type_kind_t;
+
+struct _value_t;
+struct _context_t;
+struct _type_t;
+typedef struct _value_t (*single_fn_t)(struct _value_t *self,
+                                       struct _context_t *ctx);
+typedef struct _value_t (*binary_fn_t)(struct _value_t *self,
+                                       struct _context_t *ctx,
+                                       struct _value_t *another);
+typedef struct _value_t (*convert_fn_t)(struct _value_t *self,
+                                        struct _context_t *ctx,
+                                        struct _type_t *type);
+typedef struct _value_t (*get_field_fn_t)(struct _value_t *self,
+                                          struct _context_t *ctx,
+                                          const char *name);
+typedef struct _value_t (*set_field_fn_t)(struct _value_t *self,
+                                          struct _context_t *ctx,
+                                          const char *name,
+                                          struct _value_t *value);
+typedef struct _value_t (*get_index_fn_t)(struct _value_t *self,
+                                          struct _context_t *ctx, size_t index);
+typedef struct _value_t (*set_index_fn_t)(struct _value_t *self,
+                                          struct _context_t *ctx, size_t index,
+                                          struct _value_t *value);
+typedef struct _value_t (*get_length_fn_t)(struct _value_t *self,
+                                           struct _context_t *ctx);
+typedef struct _value_t (*call_fn_t)(struct _value_t *self,
+                                     struct _context_t *ctx, size_t argc,
+                                     struct _value_t *argv[]);
+
+typedef struct _type_operator_t {
+  single_fn_t ref;
+  single_fn_t unref;
+  single_fn_t plus;
+  single_fn_t neg;
+  single_fn_t logical_not;
+  single_fn_t bitwise_not;
+
+  binary_fn_t add;
+  binary_fn_t sub;
+  binary_fn_t mul;
+  binary_fn_t div;
+  binary_fn_t mod;
+  binary_fn_t and;
+  binary_fn_t or ;
+  binary_fn_t xor ;
+  binary_fn_t shl;
+  binary_fn_t shr;
+  binary_fn_t eq;
+  binary_fn_t ne;
+  binary_fn_t gt;
+  binary_fn_t ge;
+  binary_fn_t lt;
+  binary_fn_t le;
+  binary_fn_t logical_and;
+  binary_fn_t logical_or;
+
+  get_field_fn_t get_field;
+  set_field_fn_t set_field;
+
+  get_index_fn_t get_index;
+  set_index_fn_t set_index;
+
+  get_length_fn_t get_length;
+
+  call_fn_t call;
+} type_operator_t;
+typedef struct _type_t *type_t;
+type_t create_type(allocator_t allocator, type_kind_t kind, size_t size,
+                   size_t align, const char *name, type_operator_t *opt,
+                   void *meta);
+type_kind_t type_get_kind(type_t self);
+size_t type_get_size(type_t self);
+size_t type_get_align(type_t self);
+const char *type_get_name(type_t self);
+const type_operator_t *type_get_operator(type_t self);
+void *type_get_meta(type_t self);
+type_t type_create_ref(type_t self, allocator_t allocator);
+
+void type_type_init(struct _context_t *ctx);
+
+struct _value_t *create_type_value(struct _context_t *ctx, type_t type,
+                                   bool mutable, bool comptime,
+                                   const char *name);
+#ifdef __cplusplus
+}
+#endif
+#endif

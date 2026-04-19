@@ -142,6 +142,7 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
     return err;
   }
   ast_node_t generics = create_ast_node(allocator, NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "generics", generics);
   if (*current.offset == '<') {
     current.offset++;
     current.column++;
@@ -191,7 +192,6 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
     current.offset++;
     current.column++;
   }
-  ast_add_child(allocator, node, "generics", generics);
   err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;

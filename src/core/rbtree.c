@@ -33,7 +33,7 @@ static void rbtree_dispose_node(rbtree_t self, rbtree_node_t node,
   }
 }
 
-static void rbtree_dispose(allocator_t allocator, rbtree_t self) {
+static void rbtree_dispose(rbtree_t self, allocator_t allocator) {
   rbtree_dispose_node(self, self->root, allocator);
 }
 

@@ -1,9 +1,10 @@
-#include "ast/node.h"
-#include "ast/node_type.h"
-#include "ast/program.h"
+
 #include "core/allocator.h"
 #include "core/path.h"
-#include "core/position.h"
+#include "engine/context.h"
+#include "engine/error.h"
+#include "engine/type.h"
+#include "engine/value.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -20,35 +21,13 @@ char *absolute(allocator_t allocator, const char *name) {
 
 int main(int argc, char *argv[]) {
   allocator_t allocator = create_allocator(NULL);
-
+  context_t ctx = create_context(allocator);
   char *filename = absolute(allocator, "./main.cubec");
-  FILE *fp = fopen(filename, "rb");
-  fseek(fp, 0, SEEK_END);
-  size_t len = ftell(fp);
-  char buf[len + 1];
-  fseek(fp, 0, SEEK_SET);
-  fread(buf, len, 1, fp);
-  fclose(fp);
-  buf[len] = 0;
-  position_t pos = {
-      .offset = buf,
-      .line = 0,
-      .column = 0,
-  };
-  ast_node_t program = read_ast_program(allocator, &pos, buf + len, filename);
-  if (program->type == NODE_TYPE_ERROR) {
-    ast_error_t err = (ast_error_t)program;
-    fprintf(stderr, "Failed to compile: %s, at \n  %s:%" PRIdPTR ":%" PRIdPTR,
-            err->message, filename, program->loc.end.line + 1,
-            program->loc.end.column + 1);
-  } else {
-    char *json = ast_write_json(allocator, program);
-    fp = fopen("main.json", "w");
-    fprintf(fp, "%s", json);
-    fclose(fp);
-    allocator_free(allocator, json);
+  value_t err = context_load_module(ctx, filename);
+  if (type_get_kind(value_get_type(err)) == TYPE_KIND_ERROR) {
+    fprintf(stderr, "%s\n", error_get_message(err));
   }
-  allocator_free(allocator, program);
+  allocator_free(allocator, ctx);
   allocator_free(allocator, filename);
   delete_allocator(allocator);
   return 0;

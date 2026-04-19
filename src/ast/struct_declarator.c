@@ -72,6 +72,7 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
     return err;
   }
   ast_node_t generics = create_ast_node(allocator, NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "generics", generics);
   if (*current.offset == '<') {
     current.offset++;
     current.column++;
@@ -85,7 +86,7 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
             read_ast_literal_identifier(allocator, &current, end, filename);
         if (!id) {
           err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid function expression");
+                                 "invalid struct expression");
           goto onerror;
         }
         if (id->type == NODE_TYPE_ERROR) {
@@ -102,7 +103,7 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
         }
         if (*current.offset != ',') {
           err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid function expression");
+                                 "invalid struct expression");
           goto onerror;
         }
         current.offset++;
@@ -115,13 +116,12 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
     }
     if (*current.offset != '>') {
       err = create_ast_error(allocator, *position, current, filename,
-                             "invalid function expression");
+                             "invalid struct expression");
       goto onerror;
     }
     current.offset++;
     current.column++;
   }
-  ast_add_child(allocator, node, "generics", generics);
   err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
