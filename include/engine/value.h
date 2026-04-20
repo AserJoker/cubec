@@ -59,6 +59,8 @@ value_t value_get_length(value_t self, struct _context_t *ctx);
 value_t value_call(value_t self, struct _context_t *ctx, size_t argc,
                    value_t argv[]);
 value_t value_assigment(value_t self, struct _context_t *ctx, value_t value);
+value_t value_default_assigment(value_t self, struct _context_t *ctx,
+                                value_t value);
 #ifdef __cplusplus
 }
 #endif

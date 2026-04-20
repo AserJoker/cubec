@@ -55,12 +55,50 @@ static value_t bool_convert(value_t self, context_t ctx, type_t type) {
   return create_error(ctx, "cannot convert 'bool' to '%s'",
                       type_get_name(type));
 }
+static value_t bool_eq(value_t self, context_t ctx, value_t another) {
+  type_t type = value_get_type(another);
+  type_t bool_t = value_get_type(self);
+  if (type_get_kind(type) != TYPE_KIND_BOOL) {
+    another = value_safe_convert(another, ctx, bool_t);
+    type = value_get_type(another);
+    if (type_get_kind(type) == TYPE_KIND_ERROR) {
+      return another;
+    }
+  }
+  if (value_is_comptime(self) && value_is_comptime(another)) {
+    bool left = *(bool *)value_get_data(self);
+    bool right = *(bool *)value_get_data(another);
+    return create_comptime_bool(ctx, left == right, false, NULL);
+  }
+  return create_bool(ctx, false, NULL);
+}
+static value_t bool_ne(value_t self, context_t ctx, value_t another) {
+  type_t type = value_get_type(another);
+  type_t bool_t = value_get_type(self);
+  if (type_get_kind(type) != TYPE_KIND_BOOL) {
+    another = value_safe_convert(another, ctx, bool_t);
+    type = value_get_type(another);
+    if (type_get_kind(type) == TYPE_KIND_ERROR) {
+      return another;
+    }
+  }
+  if (value_is_comptime(self) && value_is_comptime(another)) {
+    bool left = *(bool *)value_get_data(self);
+    bool right = *(bool *)value_get_data(another);
+    return create_comptime_bool(ctx, left != right, false, NULL);
+  }
+  return create_bool(ctx, false, NULL);
+}
 void bool_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
       .logical_not = bool_logical_not,
       .logical_and = bool_logical_and,
       .logical_or = bool_logical_or,
+      .assigment = value_default_assigment,
+      .convert = bool_convert,
+      .eq = bool_eq,
+      .ne = bool_ne,
   };
   type_t bool_t = create_type(allocator, TYPE_KIND_BOOL, sizeof(bool),
                               sizeof(bool), "bool", "bool", &opt, NULL);

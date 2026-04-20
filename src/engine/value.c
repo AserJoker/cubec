@@ -411,3 +411,29 @@ value_t value_assigment(value_t self, struct _context_t *ctx, value_t value) {
                       "invalid operands to binary expression ('%s' and '%s')",
                       type_get_name(type), type_get_name(right_type));
 }
+value_t value_default_assigment(value_t self, struct _context_t *ctx,
+                                value_t value) {
+  if (!value_is_mutable(self)) {
+    return create_error(ctx, "value is not mutable");
+  }
+  type_t dst_type = value_get_type(self);
+  type_t src_type = value_get_type(value);
+  if (strcmp(type_get_id(dst_type), type_get_id(src_type)) != 0) {
+    value = value_safe_convert(value, ctx, dst_type);
+    src_type = value_get_type(value);
+    if (type_get_kind(src_type) == TYPE_KIND_ERROR) {
+      return value;
+    }
+  }
+  if (value_is_comptime(value)) {
+    const void *data = value_get_data(value);
+    if (value_is_comptime(self)) {
+      memcpy(self->data, data, type_get_size(dst_type));
+    }
+  } else {
+    if (value_is_comptime(self)) {
+      return create_error(ctx, "value is not comptime");
+    }
+  }
+  return self;
+}

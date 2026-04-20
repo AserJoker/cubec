@@ -1,6 +1,7 @@
 #include "engine/type.h"
 #include "core/allocator.h"
 #include "core/string.h"
+#include "engine/bool.h"
 #include "engine/context.h"
 #include "engine/value.h"
 #include <stdbool.h>
@@ -46,9 +47,43 @@ const char *type_get_id(type_t self) { return self->id; }
 const type_operator_t *type_get_operator(type_t self) { return &self->opt; }
 void *type_get_meta(type_t self) { return self->meta; }
 
+static value_t type_eq(value_t self, context_t ctx, value_t another) {
+  type_t type = value_get_type(another);
+  type_t t = value_get_type(self);
+  if (type_get_kind(type) != TYPE_KIND_TYPE) {
+    another = value_safe_convert(another, ctx, t);
+    type = value_get_type(another);
+    if (type_get_kind(type) == TYPE_KIND_ERROR) {
+      return another;
+    }
+  }
+  type_t t1 = *(type_t *)value_get_data(self);
+  type_t t2 = *(type_t *)value_get_data(another);
+  return create_comptime_bool(ctx, strcmp(t1->id, t2->id) == 0, false, NULL);
+}
+
+static value_t type_ne(value_t self, context_t ctx, value_t another) {
+  type_t type = value_get_type(another);
+  type_t t = value_get_type(self);
+  if (type_get_kind(type) != TYPE_KIND_TYPE) {
+    another = value_safe_convert(another, ctx, t);
+    type = value_get_type(another);
+    if (type_get_kind(type) == TYPE_KIND_ERROR) {
+      return another;
+    }
+  }
+  type_t t1 = *(type_t *)value_get_data(self);
+  type_t t2 = *(type_t *)value_get_data(another);
+  return create_comptime_bool(ctx, strcmp(t1->id, t2->id) != 0, false, NULL);
+}
+
 void type_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
-  type_operator_t opt = {};
+  type_operator_t opt = {
+      .eq = type_eq,
+      .ne = type_ne,
+      .assigment = value_default_assigment,
+  };
   type_t type = create_type(allocator, TYPE_KIND_TYPE, sizeof(type_t),
                             sizeof(type_t), "type", "type", &opt, NULL);
   context_store_type(ctx, type);

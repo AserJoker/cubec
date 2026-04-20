@@ -12,6 +12,7 @@
 #include "engine/error.h"
 #include "engine/module.h"
 #include "engine/scope.h"
+#include "engine/str.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/void.h"
@@ -59,6 +60,7 @@ context_t create_context(allocator_t allocator) {
   error_init(self);
   void_init(self);
   bool_init(self);
+  str_init(self);
   return self;
 }
 void context_push_scope(context_t self) {

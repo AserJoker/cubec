@@ -162,6 +162,10 @@ static value_t ref_convert(value_t self, context_t ctx, type_t type) {
     return value_clone(self, ctx);
   }
   value_t base = ref_get_value(ctx, self);
+  value_type = value_get_type(base);
+  if (strcmp(type_get_id(value_type), type_get_id(type)) == 0) {
+    return base;
+  }
   return value_convert(base, ctx, type);
 }
 static value_t ref_safe_convert(value_t self, context_t ctx, type_t type) {
@@ -170,6 +174,10 @@ static value_t ref_safe_convert(value_t self, context_t ctx, type_t type) {
     return value_clone(self, ctx);
   }
   value_t base = ref_get_value(ctx, self);
+  value_type = value_get_type(base);
+  if (strcmp(type_get_id(value_type), type_get_id(type)) == 0) {
+    return base;
+  }
   return value_safe_convert(base, ctx, type);
 }
 
