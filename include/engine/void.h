@@ -4,7 +4,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void void_type_init(context_t ctx);
+void void_init(context_t ctx);
 #ifdef __cplusplus
 }
 #endif

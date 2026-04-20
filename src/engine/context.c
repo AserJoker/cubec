@@ -8,9 +8,11 @@
 #include "core/position.h"
 #include "core/rbtree.h"
 #include "core/string.h"
+#include "engine/bool.h"
 #include "engine/error.h"
 #include "engine/module.h"
 #include "engine/scope.h"
+#include "engine/type.h"
 #include "engine/value.h"
 #include "engine/void.h"
 #include <inttypes.h>
@@ -19,6 +21,7 @@
 
 struct _context_t {
   rbtree_t strings;
+  hash_map_t types;
   scope_t root;
   scope_t scope;
   allocator_t allocator;
@@ -30,6 +33,7 @@ static void context_dispose(context_t self, allocator_t allocator) {
   }
   allocator_free(allocator, self->modules);
   allocator_free(allocator, self->strings);
+  allocator_free(allocator, self->types);
 }
 context_t create_context(allocator_t allocator) {
   context_t self = allocator_alloc(allocator, sizeof(struct _context_t),
@@ -49,9 +53,12 @@ context_t create_context(allocator_t allocator) {
       .compare = (compare_fn_t)strcmp,
   };
   self->modules = create_hash_map(allocator, &modules_initialize);
-  type_type_init(self);
-  error_type_init(self);
-  void_type_init(self);
+  hash_map_initialize_t types_initialize = modules_initialize;
+  self->types = create_hash_map(allocator, &types_initialize);
+  type_init(self);
+  error_init(self);
+  void_init(self);
+  bool_init(self);
   return self;
 }
 void context_push_scope(context_t self) {
@@ -86,14 +93,25 @@ value_t context_load(context_t self, const char *name) {
   }
   return create_error(self, "use of undeclared identifier '%s'", name);
 }
-value_t context_create_value(context_t self, type_t type, void *data,
-                             bool mutable, bool comptime, const char *name) {
+value_t context_create_value(context_t self, type_t type, const void *data,
+                             bool mut, bool comptime, const char *name) {
   scope_t scope = context_get_scope(self);
   if (name && scope_load(scope, name)) {
     return create_error(self, "redefinition of '%s'", name);
   }
   allocator_t allocator = context_get_allocator(self);
-  value_t value = create_value(allocator, type, mutable, data, comptime);
+  value_t value = create_value(allocator, type, mut, data, comptime);
+  scope_store(scope, allocator, name, value);
+  return value;
+}
+value_t context_create_weak_value(context_t self, type_t type, void *data,
+                                  bool mut, const char *name) {
+  scope_t scope = context_get_scope(self);
+  if (name && scope_load(scope, name)) {
+    return create_error(self, "redefinition of '%s'", name);
+  }
+  allocator_t allocator = context_get_allocator(self);
+  value_t value = create_weak_value(allocator, type, mut, data);
   scope_store(scope, allocator, name, value);
   return value;
 }
@@ -131,4 +149,11 @@ value_t context_load_module(context_t self, const char *filename) {
   hash_map_set(self->modules, (void *)module_get_filename(module), module, NULL,
                NULL);
   return ctx;
+}
+void context_store_type(context_t self, type_t type) {
+  const char *id = type_get_id(type);
+  hash_map_set(self->types, (void *)id, type, NULL, NULL);
+}
+type_t context_load_type(context_t self, const char *id) {
+  return hash_map_get(self->types, id, NULL, NULL);
 }

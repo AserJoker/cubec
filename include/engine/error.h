@@ -6,7 +6,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void error_type_init(context_t ctx);
+void error_init(context_t ctx);
 value_t create_error(context_t ctx, const char *fmt, ...);
 value_t create_compile_error(context_t ctx, ast_node_t node, const char *fmt,
                              ...);

@@ -14,9 +14,13 @@ scope_t context_get_root_scope(context_t self);
 const char *context_create_cstring(context_t self, const char *src);
 allocator_t context_get_allocator(context_t self);
 value_t context_load(context_t self, const char *name);
-value_t context_create_value(context_t self, type_t type, void *data,
-                             bool mutable, bool comptime, const char *name);
+value_t context_create_value(context_t self, type_t type, const void *data,
+                             bool mut, bool comptime, const char *name);
+value_t context_create_weak_value(context_t self, type_t type, void *data,
+                                  bool mut, const char *name);
 value_t context_load_module(context_t self, const char *filename);
+void context_store_type(context_t self, type_t type);
+type_t context_load_type(context_t self, const char *id);
 #ifdef __cplusplus
 }
 #endif

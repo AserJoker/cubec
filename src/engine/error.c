@@ -10,12 +10,13 @@
 #include <stdio.h>
 #include <string.h>
 
-void error_type_init(context_t ctx) {
+void error_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
-  type_t error_type =
+  type_t error_t =
       create_type(allocator, TYPE_KIND_ERROR, sizeof(const char *),
-                  sizeof(const char *), "error", NULL, NULL);
-  create_type_value(ctx, error_type, false, true, "error");
+                  sizeof(const char *), "error", "error", NULL, NULL);
+  context_store_type(ctx, error_t);
+  create_type_value(ctx, error_t, false, true, "error");
 }
 value_t create_error(context_t ctx, const char *fmt, ...) {
   allocator_t allocator = context_get_allocator(ctx);
@@ -25,11 +26,12 @@ value_t create_error(context_t ctx, const char *fmt, ...) {
   va_start(args, fmt);
   size_t len = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
-  char *msg = allocator_alloc(allocator, len + 1, NULL);
+  char msg[len + 1];
   va_start(args, fmt);
   vsprintf(msg, fmt, args);
   va_end(args);
-  return context_create_value(ctx, type, msg, false, true, NULL);
+  const char *message = context_create_cstring(ctx, msg);
+  return context_create_value(ctx, type, &message, false, true, NULL);
 }
 value_t create_compile_error(context_t ctx, ast_node_t node, const char *fmt,
                              ...) {
@@ -53,8 +55,7 @@ value_t create_compile_error(context_t ctx, ast_node_t node, const char *fmt,
     }
   } else {
     for (size_t idx = 0; idx < len; idx++) {
-      if (idx >= node->loc.begin.column - 1 &&
-          idx < node->loc.end.column - 1) {
+      if (idx >= node->loc.begin.column - 1 && idx < node->loc.end.column - 1) {
         mask[idx + prefix_len] = '^';
       } else {
         mask[idx + prefix_len] = ' ';
@@ -77,17 +78,18 @@ value_t create_compile_error(context_t ctx, ast_node_t node, const char *fmt,
   len = snprintf(NULL, 0, "%s:%" PRIuPTR ":%" PRIuPTR " error: %s\n%s%s\n%s",
                  node->loc.filename, node->loc.end.line, node->loc.end.column,
                  msg, prefix, line, mask);
-  char *message = allocator_alloc(allocator, len + 1, NULL);
+  char message[len + 1];
   sprintf(message, "%s:%" PRIuPTR ":%" PRIuPTR " error: %s\n%s%s\n%s",
           node->loc.filename, node->loc.end.line, node->loc.end.column, msg,
           prefix, line, mask);
   allocator_free(allocator, line);
-  return context_create_value(ctx, type, message, false, true, NULL);
+  const char *str = context_create_cstring(ctx, message);
+  return context_create_value(ctx, type, &str, false, true, NULL);
 }
 value_t convert_compile_error(context_t ctx, ast_node_t node, value_t err) {
   const char *message = error_get_message(err);
   return create_compile_error(ctx, node, message);
 }
 const char *error_get_message(value_t self) {
-  return (const char *)value_get_data(self);
+  return *(const char **)value_get_data(self);
 }

@@ -50,22 +50,22 @@ ast_node_t read_ast_function_argument(allocator_t allocator,
       allocator_free(allocator, comptime);
     }
   }
-  ast_node_t mutable =
+  ast_node_t mut =
       read_ast_literal_identifier(allocator, &current, end, filename);
-  if (mutable) {
-    if (mutable->type == NODE_TYPE_ERROR) {
-      err = mutable;
+  if (mut) {
+    if (mut->type == NODE_TYPE_ERROR) {
+      err = mut;
       goto onerror;
     }
-    if (location_is(mutable->loc, "const")) {
-      ast_add_child(allocator, node, "mutable", mutable);
+    if (location_is(mut->loc, "const")) {
+      ast_add_child(allocator, node, "mut", mut);
       err = ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == NODE_TYPE_ERROR) {
         return err;
       }
     } else {
-      current = mutable->loc.begin;
-      allocator_free(allocator, mutable);
+      current = mut->loc.begin;
+      allocator_free(allocator, mut);
     }
   }
   ast_node_t identifier =

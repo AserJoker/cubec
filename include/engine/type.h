@@ -27,35 +27,38 @@ typedef enum _type_kind_t {
 struct _value_t;
 struct _context_t;
 struct _type_t;
-typedef struct _value_t (*single_fn_t)(struct _value_t *self,
-                                       struct _context_t *ctx);
-typedef struct _value_t (*binary_fn_t)(struct _value_t *self,
-                                       struct _context_t *ctx,
-                                       struct _value_t *another);
-typedef struct _value_t (*convert_fn_t)(struct _value_t *self,
+typedef struct _type_t *type_t;
+typedef struct _value_t *(*single_fn_t)(struct _value_t *self,
+                                        struct _context_t *ctx);
+typedef struct _value_t *(*binary_fn_t)(struct _value_t *self,
                                         struct _context_t *ctx,
-                                        struct _type_t *type);
-typedef struct _value_t (*get_field_fn_t)(struct _value_t *self,
-                                          struct _context_t *ctx,
-                                          const char *name);
-typedef struct _value_t (*set_field_fn_t)(struct _value_t *self,
-                                          struct _context_t *ctx,
-                                          const char *name,
-                                          struct _value_t *value);
-typedef struct _value_t (*get_index_fn_t)(struct _value_t *self,
-                                          struct _context_t *ctx, size_t index);
-typedef struct _value_t (*set_index_fn_t)(struct _value_t *self,
-                                          struct _context_t *ctx, size_t index,
-                                          struct _value_t *value);
-typedef struct _value_t (*get_length_fn_t)(struct _value_t *self,
-                                           struct _context_t *ctx);
-typedef struct _value_t (*call_fn_t)(struct _value_t *self,
-                                     struct _context_t *ctx, size_t argc,
-                                     struct _value_t *argv[]);
+                                        struct _value_t *another);
+typedef struct _value_t *(*convert_fn_t)(struct _value_t *self,
+                                         struct _context_t *ctx,
+                                         struct _type_t *type);
+typedef struct _value_t *(*get_field_fn_t)(struct _value_t *self,
+                                           struct _context_t *ctx,
+                                           const char *name);
+typedef struct _value_t *(*set_field_fn_t)(struct _value_t *self,
+                                           struct _context_t *ctx,
+                                           const char *name,
+                                           struct _value_t *value);
+typedef struct _value_t *(*get_index_fn_t)(struct _value_t *self,
+                                           struct _context_t *ctx,
+                                           size_t index);
+typedef struct _value_t *(*set_index_fn_t)(struct _value_t *self,
+                                           struct _context_t *ctx, size_t index,
+                                           struct _value_t *value);
+typedef struct _value_t *(*get_length_fn_t)(struct _value_t *self,
+                                            struct _context_t *ctx);
+typedef struct _value_t *(*call_fn_t)(struct _value_t *self,
+                                      struct _context_t *ctx, size_t argc,
+                                      struct _value_t *argv[]);
 
 typedef struct _type_operator_t {
+  single_fn_t addr_of;
   single_fn_t ref;
-  single_fn_t unref;
+  single_fn_t deref;
   single_fn_t plus;
   single_fn_t neg;
   single_fn_t logical_not;
@@ -66,9 +69,9 @@ typedef struct _type_operator_t {
   binary_fn_t mul;
   binary_fn_t div;
   binary_fn_t mod;
-  binary_fn_t and;
-  binary_fn_t or ;
-  binary_fn_t xor ;
+  binary_fn_t and_;
+  binary_fn_t or_;
+  binary_fn_t xor_;
   binary_fn_t shl;
   binary_fn_t shr;
   binary_fn_t eq;
@@ -79,6 +82,7 @@ typedef struct _type_operator_t {
   binary_fn_t le;
   binary_fn_t logical_and;
   binary_fn_t logical_or;
+  binary_fn_t assigment;
 
   get_field_fn_t get_field;
   set_field_fn_t set_field;
@@ -89,24 +93,25 @@ typedef struct _type_operator_t {
   get_length_fn_t get_length;
 
   call_fn_t call;
+
+  convert_fn_t convert;
+  convert_fn_t safe_convert;
 } type_operator_t;
-typedef struct _type_t *type_t;
 type_t create_type(allocator_t allocator, type_kind_t kind, size_t size,
-                   size_t align, const char *name, type_operator_t *opt,
-                   void *meta);
+                   size_t align, const char *name, const char *id,
+                   type_operator_t *opt, void *meta);
 type_kind_t type_get_kind(type_t self);
 size_t type_get_size(type_t self);
 size_t type_get_align(type_t self);
 const char *type_get_name(type_t self);
+const char *type_get_id(type_t self);
 const type_operator_t *type_get_operator(type_t self);
 void *type_get_meta(type_t self);
-type_t type_create_ref(type_t self, allocator_t allocator);
 
-void type_type_init(struct _context_t *ctx);
+void type_init(struct _context_t *ctx);
 
 struct _value_t *create_type_value(struct _context_t *ctx, type_t type,
-                                   bool mutable, bool comptime,
-                                   const char *name);
+                                   bool mut, bool comptime, const char *name);
 #ifdef __cplusplus
 }
 #endif
