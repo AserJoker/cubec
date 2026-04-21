@@ -44,17 +44,17 @@ bool value_is_mutable(value_t value) { return value->mut; }
 bool value_is_comptime(value_t value) { return value->comptime; }
 const void *value_get_data(value_t value) { return value->data; }
 type_t value_get_type(value_t value) { return value->type; }
-value_t value_clone(value_t self, context_t ctx) {
+value_t value_clone(value_t self, allocator_t allocator) {
   type_t type = value_get_type(self);
   const void *data = value_get_data(self);
   bool mut = value_is_mutable(self);
   bool comptime = value_is_comptime(self);
-  return context_create_value(ctx, type, data, mut, comptime, NULL);
+  return create_value(allocator, type, mut, data, comptime);
 }
 value_t value_convert(value_t self, struct _context_t *ctx, type_t type) {
   type_t value_type = value_get_type(self);
   if (strcmp(type_get_id(value_type), type_get_id(type)) == 0) {
-    return value_clone(self, ctx);
+    return context_clone_value(ctx, self);
   }
   const type_operator_t *opt = type_get_operator(value_type);
   if (opt->convert) {
@@ -66,7 +66,7 @@ value_t value_convert(value_t self, struct _context_t *ctx, type_t type) {
 value_t value_safe_convert(value_t self, struct _context_t *ctx, type_t type) {
   type_t value_type = value_get_type(self);
   if (strcmp(type_get_id(value_type), type_get_id(type)) == 0) {
-    return value_clone(self, ctx);
+    return context_clone_value(ctx, self);
   }
   const type_operator_t *opt = type_get_operator(value_type);
   if (opt->safe_convert) {
@@ -80,15 +80,6 @@ value_t value_addr_of(value_t self, struct _context_t *ctx) {
   const type_operator_t *opt = type_get_operator(type);
   if (opt->addr_of) {
     return opt->addr_of(self, ctx);
-  }
-  return create_error(ctx, "unsupport operator for type '%s'",
-                      type_get_name(type));
-}
-value_t value_ref(value_t self, struct _context_t *ctx) {
-  type_t type = value_get_type(self);
-  const type_operator_t *opt = type_get_operator(type);
-  if (opt->ref) {
-    return opt->ref(self, ctx);
   }
   return create_error(ctx, "unsupport operator for type '%s'",
                       type_get_name(type));

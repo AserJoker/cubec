@@ -17,7 +17,6 @@ typedef enum _type_kind_t {
   TYPE_KIND_PTR,
   TYPE_KIND_PARRAY,
   TYPE_KIND_OPAQUE,
-  TYPE_KIND_REF,
   TYPE_KIND_ARRAY,
   TYPE_KIND_STRUCT,
   TYPE_KIND_UNION,
@@ -57,7 +56,6 @@ typedef struct _value_t *(*call_fn_t)(struct _value_t *self,
 
 typedef struct _type_operator_t {
   single_fn_t addr_of;
-  single_fn_t ref;
   single_fn_t deref;
   single_fn_t plus;
   single_fn_t neg;
@@ -103,6 +101,8 @@ type_t create_type(allocator_t allocator, type_kind_t kind, size_t size,
 type_kind_t type_get_kind(type_t self);
 size_t type_get_size(type_t self);
 size_t type_get_align(type_t self);
+void type_set_size(type_t self, size_t size);
+void type_set_align(type_t self, size_t align);
 const char *type_get_name(type_t self);
 const char *type_get_id(type_t self);
 const type_operator_t *type_get_operator(type_t self);

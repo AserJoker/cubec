@@ -15,7 +15,7 @@ bool value_is_mutable(value_t value);
 bool value_is_comptime(value_t value);
 const void *value_get_data(value_t value);
 type_t value_get_type(value_t value);
-value_t value_clone(value_t self, struct _context_t *ctx);
+value_t value_clone(value_t self, allocator_t allocator);
 value_t value_convert(value_t self, struct _context_t *ctx, type_t type);
 value_t value_safe_convert(value_t self, struct _context_t *ctx, type_t type);
 value_t value_addr_of(value_t self, struct _context_t *ctx);

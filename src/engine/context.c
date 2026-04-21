@@ -159,3 +159,8 @@ void context_store_type(context_t self, type_t type) {
 type_t context_load_type(context_t self, const char *id) {
   return hash_map_get(self->types, id, NULL, NULL);
 }
+value_t context_clone_value(context_t self, value_t value) {
+  value_t val = value_clone(value, self->allocator);
+  scope_store(self->scope, self->allocator, NULL, val);
+  return val;
+}

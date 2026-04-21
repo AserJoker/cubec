@@ -21,6 +21,7 @@ value_t context_create_weak_value(context_t self, type_t type, void *data,
 value_t context_load_module(context_t self, const char *filename);
 void context_store_type(context_t self, type_t type);
 type_t context_load_type(context_t self, const char *id);
+value_t context_clone_value(context_t self, value_t value);
 #ifdef __cplusplus
 }
 #endif

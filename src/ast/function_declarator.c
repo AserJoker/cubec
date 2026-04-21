@@ -152,18 +152,24 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
     }
     if (*current.offset != '>') {
       for (;;) {
-        ast_node_t id =
-            read_ast_literal_identifier(allocator, &current, end, filename);
-        if (!id) {
+        ast_node_t arg = NULL;
+        if (!arg) {
+          arg = read_ast_function_argument_rest(allocator, &current, end,
+                                                filename);
+        }
+        if (!arg) {
+          arg = read_ast_function_argument(allocator, &current, end, filename);
+        }
+        if (!arg) {
           err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid function expression");
+                                 "invalid generic expression");
           goto onerror;
         }
-        if (id->type == NODE_TYPE_ERROR) {
-          err = id;
+        if (arg->type == NODE_TYPE_ERROR) {
+          err = arg;
           goto onerror;
         }
-        ast_add_item(generics, id);
+        ast_add_item(generics, arg);
         err = ast_skip_all(allocator, &current, end, filename);
         if (err && err->type == NODE_TYPE_ERROR) {
           return err;

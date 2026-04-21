@@ -42,6 +42,8 @@ type_t create_type(allocator_t allocator, type_kind_t kind, size_t size,
 type_kind_t type_get_kind(type_t self) { return self->kind; }
 size_t type_get_size(type_t self) { return self->size; }
 size_t type_get_align(type_t self) { return self->align; }
+void type_set_size(type_t self, size_t size) { self->size = size; }
+void type_set_align(type_t self, size_t align) { self->align = align; }
 const char *type_get_name(type_t self) { return self->name; }
 const char *type_get_id(type_t self) { return self->id; }
 const type_operator_t *type_get_operator(type_t self) { return &self->opt; }
