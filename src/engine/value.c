@@ -485,3 +485,11 @@ value_t value_default_assigment(value_t self, struct _context_t *ctx,
 value_t value_default_address_of(value_t self, struct _context_t *ctx) {
   return create_ptr_value(ctx, self);
 }
+bool value_is_error(value_t value) {
+  type_t type = value_get_type(value);
+  return type_get_kind(type) == TYPE_KIND_ERROR;
+}
+bool value_is_interrupt(value_t value) {
+  type_t type = value_get_type(value);
+  return type_get_kind(type) == TYPE_KIND_INTERRUPT;
+}

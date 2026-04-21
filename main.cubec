@@ -1,5 +1,2 @@
-struct Opt<T> {
-    func add(a:T,b:T):T {
-        return a+b;
-    }
-}
+const a:str = "hello world";
+comptime const b = a;

@@ -65,6 +65,8 @@ value_t value_assigment(value_t self, struct _context_t *ctx, value_t value);
 value_t value_default_assigment(value_t self, struct _context_t *ctx,
                                 value_t value);
 value_t value_default_address_of(value_t self, struct _context_t *ctx);
+bool value_is_error(value_t value);
+bool value_is_interrupt(value_t value);
 #ifdef __cplusplus
 }
 #endif

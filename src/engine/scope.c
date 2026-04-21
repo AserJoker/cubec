@@ -30,10 +30,7 @@ static void scope_dispose(scope_t self, allocator_t allocator) {
 scope_t create_scope(allocator_t allocator, scope_t parent) {
   scope_t self = allocator_alloc(allocator, sizeof(struct _scope_t),
                                  (dispose_fn_t)scope_dispose);
-  list_initialize_t children_initialize = {
-      .autofree = true,
-  };
-  self->children = create_list(allocator, &children_initialize);
+  self->children = create_list(allocator, NULL);
   array_initialize_t values_initialize = {
       .autofree = true,
   };

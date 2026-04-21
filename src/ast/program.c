@@ -44,6 +44,7 @@ ast_node_t read_ast_program(allocator_t allocator, position_t *position,
   }
   program->loc.begin = *position;
   program->loc.end = current;
+  program->loc.filename = filename;
   *position = current;
   return program;
 onerror:

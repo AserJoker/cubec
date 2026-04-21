@@ -16,7 +16,9 @@
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/void.h"
+#include "resolve/program.h"
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -27,6 +29,9 @@ struct _context_t {
   scope_t scope;
   allocator_t allocator;
   hash_map_t modules;
+  bool comptime;
+  value_t binding;
+  value_t undefined;
 };
 static void context_dispose(context_t self, allocator_t allocator) {
   while (self->scope) {
@@ -61,8 +66,24 @@ context_t create_context(allocator_t allocator) {
   void_init(self);
   bool_init(self);
   str_init(self);
+  self->undefined = context_create_value(self, context_load_type(self, "void"),
+                                         NULL, false, true, NULL);
+  self->comptime = false;
+  self->binding = NULL;
   return self;
 }
+bool context_is_comptime(context_t ctx) { return ctx->comptime; }
+bool context_set_comptime(context_t ctx, bool comptime) {
+  bool current = ctx->comptime;
+  ctx->comptime = comptime;
+  return current;
+}
+value_t context_set_binding(context_t ctx, value_t binding) {
+  value_t current = ctx->binding;
+  ctx->binding = binding;
+  return current;
+}
+value_t context_get_binding(context_t ctx) { return ctx->binding; }
 void context_push_scope(context_t self) {
   self->scope = create_scope(self->allocator, self->scope);
 }
@@ -95,6 +116,7 @@ value_t context_load(context_t self, const char *name) {
   }
   return create_error(self, "use of undeclared identifier '%s'", name);
 }
+value_t context_get_undefined(context_t self) { return self->undefined; }
 value_t context_create_value(context_t self, type_t type, const void *data,
                              bool mut, bool comptime, const char *name) {
   scope_t scope = context_get_scope(self);
@@ -146,11 +168,11 @@ value_t context_load_module(context_t self, const char *filename) {
     allocator_free(self->allocator, node);
     return err;
   }
-  value_t ctx = context_load(self, "undefined");
-  module = create_module(self->allocator, ctx, node, filename);
+  value_t value = resolve_program(self, node);
+  module = create_module(self->allocator, value, node, filename);
   hash_map_set(self->modules, (void *)module_get_filename(module), module, NULL,
                NULL);
-  return ctx;
+  return value;
 }
 void context_store_type(context_t self, type_t type) {
   const char *id = type_get_id(type);

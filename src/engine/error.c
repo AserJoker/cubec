@@ -21,7 +21,7 @@ void error_init(context_t ctx) {
 value_t create_error(context_t ctx, const char *fmt, ...) {
   allocator_t allocator = context_get_allocator(ctx);
   value_t vtype = context_load(ctx, "error");
-  type_t type = (type_t)value_get_data(vtype);
+  type_t type = *(type_t *)value_get_data(vtype);
   va_list args;
   va_start(args, fmt);
   size_t len = vsnprintf(NULL, 0, fmt, args);
@@ -37,7 +37,7 @@ value_t create_compile_error(context_t ctx, ast_node_t node, const char *fmt,
                              ...) {
   allocator_t allocator = context_get_allocator(ctx);
   value_t vtype = context_load(ctx, "error");
-  type_t type = (type_t)value_get_data(vtype);
+  type_t type = *(type_t *)value_get_data(vtype);
   size_t len = snprintf(NULL, 0, "%" PRIuPTR " |", node->loc.begin.line + 1);
   char prefix[len + 1];
   sprintf(prefix, "%" PRIuPTR " |", node->loc.begin.line + 1);
@@ -76,11 +76,11 @@ value_t create_compile_error(context_t ctx, ast_node_t node, const char *fmt,
   vsprintf(msg, fmt, args);
   va_end(args);
   len = snprintf(NULL, 0, "%s:%" PRIuPTR ":%" PRIuPTR " error: %s\n%s%s\n%s",
-                 node->loc.filename, node->loc.end.line, node->loc.end.column,
-                 msg, prefix, line, mask);
+                 node->loc.filename, node->loc.end.line + 1,
+                 node->loc.end.column, msg, prefix, line, mask);
   char message[len + 1];
   sprintf(message, "%s:%" PRIuPTR ":%" PRIuPTR " error: %s\n%s%s\n%s",
-          node->loc.filename, node->loc.end.line, node->loc.end.column, msg,
+          node->loc.filename, node->loc.end.line + 1, node->loc.end.column, msg,
           prefix, line, mask);
   allocator_free(allocator, line);
   const char *str = context_create_cstring(ctx, message);
