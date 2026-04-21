@@ -38,6 +38,7 @@ static value_t str_ne(value_t self, context_t ctx, value_t another) {
 void str_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
+      .addr_of = value_default_address_of,
       .assigment = value_default_assigment,
       .eq = str_eq,
       .ne = str_ne,

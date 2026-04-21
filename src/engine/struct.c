@@ -8,6 +8,7 @@
 #include "engine/value.h"
 #include <stdalign.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 
 typedef struct _struct_meta_t *struct_meta_t;
@@ -46,8 +47,8 @@ static value_t struct_get_field(value_t self, context_t ctx, const char *name) {
     return create_error(ctx, "no member '%s' in type '%s'", name,
                         type_get_name(type));
   }
-  bool mut = value_is_mutable(self);
-  if (!value_is_comptime(self)) {
+  bool mut = value_is_mut(self);
+  if (value_is_comptime(self)) {
     const void *data = value_get_data(self);
     value_t val = context_create_weak_value(
         ctx, field->type, (uint8_t *)data + field->offset, mut, NULL);
@@ -64,14 +65,51 @@ static value_t struct_set_field(value_t self, context_t ctx, const char *name,
     return create_error(ctx, "no member '%s' in type '%s'", name,
                         type_get_name(type));
   }
-  bool mut = value_is_mutable(self);
-  if (!value_is_comptime(self)) {
+  bool mut = value_is_mut(self);
+  if (value_is_comptime(self)) {
     const void *data = value_get_data(self);
-    value_t val = context_create_weak_value(
-        ctx, field->type, (uint8_t *)data + field->offset, mut, NULL);
-    return value_assigment(val, ctx, value);
+    if (value_is_comptime(value)) {
+      memcpy((uint8_t *)data + field->offset, value_get_data(value),
+             type_get_size(field->type));
+      return value;
+    } else {
+      return create_error(ctx, "value is not comptime");
+    }
   } else {
     return value;
+  }
+}
+static value_t struct_convert(value_t self, context_t ctx, type_t type) {
+  type_t value_type = value_get_type(self);
+  if (type_get_kind(type) != TYPE_KIND_STRUCT ||
+      type_get_size(type) != type_get_size(value_type) ||
+      type_get_align(type) != type_get_align(value_type)) {
+    return create_error(ctx, "cannot convert '%s' to '%s'",
+                        type_get_name(value_type), type_get_name(type));
+  }
+  array_t src_fields = struct_type_get_fields(value_type);
+  array_t dst_fields = struct_type_get_fields(type);
+  if (array_get_size(src_fields) != array_get_size(dst_fields)) {
+    return create_error(ctx, "cannot convert '%s' to '%s'",
+                        type_get_name(value_type), type_get_name(type));
+  }
+  for (size_t idx = 0; idx < array_get_size(src_fields); idx++) {
+    struct_field_t src_field = array_get(src_fields, idx);
+    struct_field_t dst_field = array_get(dst_fields, idx);
+    if (src_field->offset != dst_field->offset ||
+        strcmp(src_field->name, dst_field->name) != 0 ||
+        strcmp(type_get_id(src_field->type), type_get_id(dst_field->type)) !=
+            0) {
+      return create_error(ctx, "cannot convert '%s' to '%s'",
+                          type_get_name(value_type), type_get_name(type));
+    }
+  }
+  bool mut = value_is_mut(self);
+  if (value_is_comptime(self)) {
+    void *data = value_get_data(self);
+    return context_create_weak_value(ctx, type, (void *)data, mut, NULL);
+  } else {
+    return context_create_value(ctx, type, NULL, mut, false, NULL);
   }
 }
 
@@ -85,8 +123,11 @@ type_t create_struct_type(context_t ctx, const char *name, const char *id,
     }
     struct_meta_t meta = create_struct_meta(allocator, name);
     type_operator_t opt = {
+        .addr_of = value_default_address_of,
         .get_field = struct_get_field,
         .set_field = struct_set_field,
+        .convert = struct_convert,
+        .safe_convert = struct_convert,
     };
     self = create_type(allocator, TYPE_KIND_STRUCT, sizeof(int8_t), align, name,
                        id, &opt, meta);

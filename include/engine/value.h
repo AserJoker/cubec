@@ -11,9 +11,12 @@ value_t create_value(allocator_t allocator, type_t type, bool mut,
                      const void *data, bool comptime);
 value_t create_weak_value(allocator_t allocator, type_t type, bool mut,
                           void *data);
-bool value_is_mutable(value_t value);
+bool value_is_mut(value_t value);
 bool value_is_comptime(value_t value);
-const void *value_get_data(value_t value);
+void *value_get_data(value_t value);
+value_t value_member_call(value_t self, struct _context_t *ctx,
+                          const char *name, size_t argc, value_t argv[]);
+
 type_t value_get_type(value_t value);
 value_t value_clone(value_t self, allocator_t allocator);
 value_t value_convert(value_t self, struct _context_t *ctx, type_t type);
@@ -61,6 +64,7 @@ value_t value_call(value_t self, struct _context_t *ctx, size_t argc,
 value_t value_assigment(value_t self, struct _context_t *ctx, value_t value);
 value_t value_default_assigment(value_t self, struct _context_t *ctx,
                                 value_t value);
+value_t value_default_address_of(value_t self, struct _context_t *ctx);
 #ifdef __cplusplus
 }
 #endif

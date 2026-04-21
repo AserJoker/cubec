@@ -92,6 +92,7 @@ static value_t bool_ne(value_t self, context_t ctx, value_t another) {
 void bool_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
+      .addr_of = value_default_address_of,
       .logical_not = bool_logical_not,
       .logical_and = bool_logical_and,
       .logical_or = bool_logical_or,

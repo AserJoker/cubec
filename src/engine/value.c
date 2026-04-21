@@ -2,7 +2,10 @@
 #include "core/allocator.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/ptr.h"
+#include "engine/struct.h"
 #include "engine/type.h"
+#include "engine/union.h"
 #include <stdbool.h>
 #include <string.h>
 struct _value_t {
@@ -40,16 +43,67 @@ value_t create_weak_value(allocator_t allocator, type_t type, bool mut,
   self->comptime = true;
   return self;
 }
-bool value_is_mutable(value_t value) { return value->mut; }
+bool value_is_mut(value_t value) { return value->mut; }
 bool value_is_comptime(value_t value) { return value->comptime; }
-const void *value_get_data(value_t value) { return value->data; }
+void *value_get_data(value_t value) { return value->data; }
 type_t value_get_type(value_t value) { return value->type; }
 value_t value_clone(value_t self, allocator_t allocator) {
   type_t type = value_get_type(self);
   const void *data = value_get_data(self);
-  bool mut = value_is_mutable(self);
+  bool mut = value_is_mut(self);
   bool comptime = value_is_comptime(self);
   return create_value(allocator, type, mut, data, comptime);
+}
+value_t value_member_call(value_t self, struct _context_t *ctx,
+                          const char *name, size_t argc, value_t argv[]) {
+  type_t type = value_get_type(self);
+  if (type_get_kind(type) == TYPE_KIND_TYPE) {
+    type = *(type_t *)value_get_type(self);
+    if (type_get_kind(type) == TYPE_KIND_STRUCT) {
+      struct_attribute_t attr = struct_type_get_attribute(type, name);
+      if (!attr) {
+        return create_error(ctx, "no member %s in %s", name,
+                            type_get_name(type));
+      }
+      return value_call(attr->value, ctx, argc, argv);
+    } else if (type_get_kind(type) == TYPE_KIND_UNION) {
+      union_attribute_t attr = union_type_get_attribute(type, name);
+      if (!attr) {
+        return create_error(ctx, "no member %s in %s", name,
+                            type_get_name(type));
+      }
+      return value_call(attr->value, ctx, argc, argv);
+    } else {
+      return create_error(ctx, "no member %s in %s", name, type_get_name(type));
+    }
+  }
+  value_t args[argc + 1];
+  for (size_t idx = 0; idx < argc; idx++) {
+    args[idx + 1] = argv[idx];
+  }
+  if (type_get_kind(type) != TYPE_KIND_PTR) {
+    self = create_ptr_value(ctx, self);
+  } else {
+    type = ptr_type_get_type(type);
+  }
+  args[0] = self;
+  value_t function = NULL;
+  if (type_get_kind(type) == TYPE_KIND_STRUCT) {
+    struct_attribute_t attr = struct_type_get_attribute(type, name);
+    if (!attr) {
+      return create_error(ctx, "no member %s in %s", name, type_get_name(type));
+    }
+    function = attr->value;
+  } else if (type_get_kind(type) == TYPE_KIND_UNION) {
+    union_attribute_t attr = union_type_get_attribute(type, name);
+    if (!attr) {
+      return create_error(ctx, "no member %s in %s", name, type_get_name(type));
+    }
+    function = attr->value;
+  } else {
+    return create_error(ctx, "no member %s in %s", name, type_get_name(type));
+  }
+  return value_call(function, ctx, argc + 1, args);
 }
 value_t value_convert(value_t self, struct _context_t *ctx, type_t type) {
   type_t value_type = value_get_type(self);
@@ -404,7 +458,7 @@ value_t value_assigment(value_t self, struct _context_t *ctx, value_t value) {
 }
 value_t value_default_assigment(value_t self, struct _context_t *ctx,
                                 value_t value) {
-  if (!value_is_mutable(self)) {
+  if (!value_is_mut(self)) {
     return create_error(ctx, "value is not mutable");
   }
   type_t dst_type = value_get_type(self);
@@ -427,4 +481,7 @@ value_t value_default_assigment(value_t self, struct _context_t *ctx,
     }
   }
   return self;
+}
+value_t value_default_address_of(value_t self, struct _context_t *ctx) {
+  return create_ptr_value(ctx, self);
 }

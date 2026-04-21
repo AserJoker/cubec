@@ -45,7 +45,7 @@ static value_t union_get_field(value_t self, context_t ctx, const char *name) {
     return create_error(ctx, "no member '%s' in type '%s'", name,
                         type_get_name(type));
   }
-  bool mut = value_is_mutable(self);
+  bool mut = value_is_mut(self);
   if (!value_is_comptime(self)) {
     const void *data = value_get_data(self);
     value_t val =
@@ -63,14 +63,49 @@ static value_t union_set_field(value_t self, context_t ctx, const char *name,
     return create_error(ctx, "no member '%s' in type '%s'", name,
                         type_get_name(type));
   }
-  bool mut = value_is_mutable(self);
-  if (!value_is_comptime(self)) {
-    const void *data = value_get_data(self);
-    value_t val =
-        context_create_weak_value(ctx, field->type, (void *)data, mut, NULL);
-    return value_assigment(val, ctx, value);
+  bool mut = value_is_mut(self);
+  if (value_is_comptime(self)) {
+    void *data = value_get_data(self);
+    if (value_is_comptime(value)) {
+      memcpy(data, value_get_data(value), type_get_size(field->type));
+      return value;
+    } else {
+      return create_error(ctx, "value is not comptime");
+    }
   } else {
     return value;
+  }
+}
+static value_t union_convert(value_t self, context_t ctx, type_t type) {
+  type_t value_type = value_get_type(self);
+  if (type_get_kind(type) != TYPE_KIND_STRUCT ||
+      type_get_size(type) != type_get_size(value_type) ||
+      type_get_align(type) != type_get_align(value_type)) {
+    return create_error(ctx, "cannot convert '%s' to '%s'",
+                        type_get_name(value_type), type_get_name(type));
+  }
+  array_t src_fields = union_type_get_fields(value_type);
+  array_t dst_fields = union_type_get_fields(type);
+  if (array_get_size(src_fields) != array_get_size(dst_fields)) {
+    return create_error(ctx, "cannot convert '%s' to '%s'",
+                        type_get_name(value_type), type_get_name(type));
+  }
+  for (size_t idx = 0; idx < array_get_size(src_fields); idx++) {
+    union_field_t src_field = array_get(src_fields, idx);
+    union_field_t dst_field = array_get(dst_fields, idx);
+    if (strcmp(src_field->name, dst_field->name) != 0 ||
+        strcmp(type_get_id(src_field->type), type_get_id(dst_field->type)) !=
+            0) {
+      return create_error(ctx, "cannot convert '%s' to '%s'",
+                          type_get_name(value_type), type_get_name(type));
+    }
+  }
+  bool mut = value_is_mut(self);
+  if (value_is_comptime(self)) {
+    void *data = value_get_data(self);
+    return context_create_weak_value(ctx, type, (void *)data, mut, NULL);
+  } else {
+    return context_create_value(ctx, type, NULL, mut, false, NULL);
   }
 }
 
@@ -84,8 +119,11 @@ type_t create_union_type(context_t ctx, const char *name, const char *id,
     }
     union_meta_t meta = create_union_meta(allocator, name);
     type_operator_t opt = {
+        .addr_of = value_default_address_of,
         .get_field = union_get_field,
         .set_field = union_set_field,
+        .convert = union_convert,
+        .safe_convert = union_convert,
     };
     self = create_type(allocator, TYPE_KIND_STRUCT, sizeof(int8_t), align, name,
                        id, &opt, meta);

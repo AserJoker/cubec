@@ -3,6 +3,8 @@
 #include "core/string.h"
 #include "engine/bool.h"
 #include "engine/context.h"
+#include "engine/error.h"
+#include "engine/struct.h"
 #include "engine/value.h"
 #include <stdbool.h>
 #include <string.h>
@@ -79,9 +81,37 @@ static value_t type_ne(value_t self, context_t ctx, value_t another) {
   return create_comptime_bool(ctx, strcmp(t1->id, t2->id) != 0, false, NULL);
 }
 
+static value_t type_get_field(value_t self, context_t ctx, const char *name) {
+  type_t type = *(type_t *)value_get_data(self);
+  if (type_get_kind(type) == TYPE_KIND_STRUCT) {
+    struct_attribute_t attr = struct_type_get_attribute(type, name);
+    if (attr) {
+      return attr->value;
+    }
+  }
+  return create_error(ctx, "no member '%s' in type '%s'", name,
+                      type_get_name(type));
+}
+
+static value_t type_set_field(value_t self, context_t ctx, const char *name,
+                              value_t value) {
+  type_t type = *(type_t *)value_get_data(self);
+  if (type_get_kind(type) == TYPE_KIND_STRUCT) {
+    struct_attribute_t attr = struct_type_get_attribute(type, name);
+    if (attr) {
+      return value_assigment(attr->value, ctx, value);
+    }
+  }
+  return create_error(ctx, "no member '%s' in type '%s'", name,
+                      type_get_name(type));
+}
+
 void type_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
+      .addr_of = value_default_address_of,
+      .get_field = type_get_field,
+      .set_field = type_set_field,
       .eq = type_eq,
       .ne = type_ne,
       .assigment = value_default_assigment,
