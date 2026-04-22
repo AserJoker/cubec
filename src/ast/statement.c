@@ -13,7 +13,6 @@
 #include "ast/statement_foreach.h"
 #include "ast/statement_function.h"
 #include "ast/statement_if.h"
-#include "ast/statement_import.h"
 #include "ast/statement_return.h"
 #include "ast/statement_struct.h"
 #include "ast/statement_switch.h"
@@ -88,10 +87,6 @@ ast_node_t read_ast_statement(allocator_t allocator, position_t *position,
     return node;
   }
   node = read_ast_statement_declaration(allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  node = read_ast_statement_import(allocator, position, end, filename);
   if (node) {
     return node;
   }
