@@ -1,18 +1,14 @@
-extern func malloc(size:u64):opaque;
-extern func free(ptr:opaque):void;
-struct Allocator{
-    func alloc(self:__self__, T:type):*T{
-        return cast(*T,malloc(sizeof T));
+extern func write(fd:i32, string:[*]u8, len:u64): i32;
+comptime const stdout = 1;
+comptime const stderr = 2;
+comptime const stdin = 3;
+func strlen(str: [*]u8): u64 {
+    u64 len = 0;
+    while (str[len] != '\0') {
+        len++;
     }
-    func free<T>(self:__self__, data:*T):void {
-        comptime if("__dispose__" in T){
-            data.__dispose__();
-        }
-        free(data);
-    }
+    return len;
 }
-const allocator = Allocator{};
-const data = allocator.alloc(i32);
-defer {
-    allocator.free(data);
+func println(str: [*]u8): void {
+    _ = write(stdout, str, strlen(str));
 }

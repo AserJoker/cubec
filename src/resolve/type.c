@@ -10,10 +10,10 @@ value_t resolve_type(context_t ctx, ast_node_t node) {
   value_t value = resolve_expression(ctx, node);
   context_set_comptime(ctx, comptime);
   type_t type = value_get_type(value);
-  if (type_get_kind(type) == TYPE_KIND_ERROR) {
+  if (value_is_error(value)) {
     return value;
   }
-  if (type_get_kind(type) == TYPE_KIND_INTERRUPT) {
+  if (value_is_interrupt(value)) {
     return value;
   }
   if (type_get_kind(type) != TYPE_KIND_TYPE) {

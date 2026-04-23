@@ -86,7 +86,7 @@ value_t create_comptime_error(context_t ctx, ast_node_t node, const char *fmt,
   const char *str = context_create_cstring(ctx, message);
   return context_create_value(ctx, type, &str, false, true, NULL);
 }
-value_t convert_compile_error(context_t ctx, ast_node_t node, value_t err) {
+value_t convert_comptime_error(context_t ctx, ast_node_t node, value_t err) {
   const char *message = error_get_message(err);
   return create_comptime_error(ctx, node, message);
 }

@@ -1,12 +1,12 @@
-#ifndef _H_WRITER_EXPRESSION_BINARY_
-#define _H_WRITER_EXPRESSION_BINARY_
+#ifndef _H_WRITER_FUNCTION_ARGUMENT_
+#define _H_WRITER_FUNCTION_ARGUMENT_
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/stream.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-void write_expression_binary(allocator_t allocator, ast_node_t node,
+void write_function_argument(allocator_t allocator, ast_node_t node,
                              stream_t stream);
 #ifdef __cplusplus
 }

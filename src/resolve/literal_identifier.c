@@ -10,7 +10,10 @@ value_t resolve_literal_identifier(context_t ctx, ast_node_t node) {
   value_t value = context_load(ctx, name);
   allocator_free(allocator, name);
   if (value_is_error(value)) {
-    value = convert_compile_error(ctx, node, value);
+    value = convert_comptime_error(ctx, node, value);
+  }
+  if (context_is_comptime(ctx) && !value_is_comptime(value)) {
+    return create_comptime_error(ctx, node, "value is not comptime");
   }
   return value;
 }

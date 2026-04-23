@@ -32,24 +32,6 @@ ast_node_t read_ast_function_argument(allocator_t allocator,
       return err;
     }
   }
-  ast_node_t comptime =
-      read_ast_literal_identifier(allocator, &current, end, filename);
-  if (comptime) {
-    if (comptime->type == NODE_TYPE_ERROR) {
-      err = comptime;
-      goto onerror;
-    }
-    if (location_is(comptime->loc, "comptime")) {
-      ast_add_child(allocator, node, "comptime", comptime);
-      err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == NODE_TYPE_ERROR) {
-        return err;
-      }
-    } else {
-      current = comptime->loc.begin;
-      allocator_free(allocator, comptime);
-    }
-  }
   ast_node_t mut =
       read_ast_literal_identifier(allocator, &current, end, filename);
   if (mut) {

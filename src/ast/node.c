@@ -30,7 +30,7 @@ ast_node_t create_ast_node(allocator_t allocator, size_t type) {
         .autofree = true,
     };
     node->items = create_array(allocator, &initialize);
-  } else if (type != NODE_TYPE_ERROR && type != NODE_TYPE_VALUE) {
+  } else if (type > NODE_TYPE_LIST) {
     hash_map_initialize_t initialize = {
         .autofree_key = true,
         .autofree_value = true,
@@ -298,9 +298,10 @@ ast_node_t ast_skip_all(allocator_t allocator, position_t *position,
 }
 
 static const char *type_names[] = {
+    "NODE_TYPE_EMPTY",
     "NODE_TYPE_VALUE",
-    "NODE_TYPE_LIST",
     "NODE_TYPE_ERROR",
+    "NODE_TYPE_LIST",
     "NODE_TYPE_LITERAL_IDENTIFIER",
     "NODE_TYPE_LITERAL_NUMERIC",
     "NODE_TYPE_LITERAL_NUMERIC_VALUE",

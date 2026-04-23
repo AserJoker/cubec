@@ -1,2 +1,6 @@
-const a = 1+2;
-const b = &a;
+func main():void {
+    comptime const t = i32;
+    func test(a:t,b:t):i32 {
+        return a + b;
+    }
+}

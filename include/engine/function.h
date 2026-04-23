@@ -7,9 +7,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+typedef value_t (*function_handle_t)(context_t ctx, size_t argc,
+                                     value_t argv[]);
 typedef struct _argument_t argument_t;
 struct _argument_t {
-  bool comptime;
   bool mut;
   type_t type;
 };

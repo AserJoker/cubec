@@ -8,11 +8,13 @@
 #include "core/hash_map.h"
 #include "core/position.h"
 #include "core/rbtree.h"
+#include "core/stream.h"
 #include "core/string.h"
 #include "engine/bool.h"
 #include "engine/error.h"
 #include "engine/float.h"
 #include "engine/integer.h"
+#include "engine/interrupt.h"
 #include "engine/module.h"
 #include "engine/scope.h"
 #include "engine/str.h"
@@ -21,6 +23,7 @@
 #include "engine/unsigned.h"
 #include "engine/value.h"
 #include "engine/void.h"
+#include "resolve/function_declaration.h"
 #include "resolve/program.h"
 #include "writer/program.h"
 #include <inttypes.h>
@@ -35,13 +38,15 @@ struct _context_t {
   scope_t scope;
   allocator_t allocator;
   hash_map_t modules;
-  value_t global;
+  type_t global;
+  type_t self;
   bool comptime;
   value_t undefined;
   value_t true_;
   value_t false_;
   context_type_t type;
-  array_t errors;
+  module_t module;
+  value_t function;
 };
 static void context_dispose(context_t self, allocator_t allocator) {
   while (self->scope) {
@@ -79,13 +84,15 @@ context_t create_context(allocator_t allocator) {
   integer_init(self);
   unsigned_init(self);
   float_init(self);
+  interrupt_init(self);
   self->undefined = context_create_value(self, context_load_type(self, "void"),
                                          NULL, false, true, NULL);
   self->true_ = create_comptime_bool(self, true, false, NULL);
   self->false_ = create_comptime_bool(self, false, false, NULL);
   self->comptime = false;
   self->global = NULL;
-  self->errors = NULL;
+  self->module = NULL;
+  self->function = NULL;
   return self;
 }
 bool context_is_comptime(context_t ctx) { return ctx->comptime; }
@@ -94,8 +101,8 @@ bool context_set_comptime(context_t ctx, bool comptime) {
   ctx->comptime = comptime;
   return current;
 }
-value_t context_get_global(context_t ctx) { return ctx->global; }
-void context_set_global(context_t ctx, value_t global) { ctx->global = global; }
+type_t context_get_global(context_t ctx) { return ctx->global; }
+void context_set_global(context_t ctx, type_t global) { ctx->global = global; }
 
 context_type_t context_get_type(context_t ctx) { return ctx->type; }
 void context_set_type(context_t ctx, context_type_t type) { ctx->type = type; }
@@ -195,38 +202,45 @@ value_t context_load_module(context_t self, const char *filename) {
   type_t module_struct = create_struct_type(self, NULL, id, 1);
   value_t global = create_type_value(self, module_struct, false, true, NULL);
   bool current_type = self->type;
-  value_t current_global = self->global;
-  self->global = global;
-  scope_t scope = create_scope(self->allocator, self->root);
+  type_t current_global = self->global;
+  type_t current_self = self->self;
   scope_t current_scope = self->scope;
-  self->scope = scope;
+  module_t current_module = self->module;
   module = create_module(self->allocator, global, node, buf, filename);
-  array_initialize_t error_initialize = {
-      .autofree = true,
-  };
-  self->errors = create_array(self->allocator, &error_initialize);
-  resolve_program(self, node);
-
+  scope_t scope = create_scope(self->allocator, self->root);
+  self->global = module_struct;
+  self->self = module_struct;
+  self->scope = scope;
+  self->module = module;
   hash_map_set(self->modules, (void *)module_get_filename(module), module, NULL,
                NULL);
-  self->scope = current_scope;
-  self->type = current_type;
-  self->global = current_global;
-  allocator_free(self->allocator, scope);
-  if (array_get_size(self->errors)) {
-    global = create_comptime_error(
-        self, node, "failed to compile: %s, found %" PRIuPTR " errors",
-        array_get_size(self->errors));
-    for (size_t idx = 0; idx < array_get_size(self->errors); idx++) {
-      value_t err = array_get(self->errors, idx);
+  resolve_program(self, node);
+  array_t functions = module_get_functions(module);
+  for (size_t idx = 0; idx < array_get_size(functions); idx++) {
+    value_t func = array_get(functions, idx);
+    resolve_function_declaration(self, func);
+  }
+  array_t errors = module_get_errors(self->module);
+  if (array_get_size(errors)) {
+    global =
+        create_error(self, "failed to compile: %s, found %" PRIuPTR " errors",
+                     filename, array_get_size(errors));
+    for (size_t idx = 0; idx < array_get_size(errors); idx++) {
+      value_t err = array_get(errors, idx);
       fprintf(stderr, "%s\n", error_get_message(err));
     }
   }
-  allocator_free(self->allocator, self->errors);
+  allocator_free(self->allocator, scope);
+  self->scope = current_scope;
+  self->type = current_type;
+  self->self = current_self;
+  self->global = current_global;
+  self->module = current_module;
   return global;
 }
 void context_push_error(context_t self, value_t error) {
-  array_push(self->errors, value_clone(error, self->allocator));
+  array_t errors = module_get_errors(self->module);
+  array_push(errors, value_clone(error, self->allocator));
 }
 void context_store_type(context_t self, type_t type) {
   const char *id = type_get_id(type);
@@ -246,7 +260,22 @@ string_t context_write_module(context_t self, const char *module) {
     return NULL;
   }
   ast_node_t node = module_get_node(m);
-  string_t out = create_string(self->allocator, NULL);
-  write_program(self->allocator, node, out);
-  return out;
+  stream_t stream = create_stream(self->allocator);
+  write_program(self->allocator, node, stream);
+  string_t str = stream_get_string(stream);
+  allocator_free(self->allocator, stream);
+  return str;
 }
+module_t context_get_module(context_t self) { return self->module; }
+type_t context_get_self(context_t self) { return self->self; }
+type_t context_set_self(context_t ctx, type_t self) {
+  type_t current = ctx->self;
+  ctx->self = self;
+  return current;
+}
+value_t context_set_function(context_t ctx, value_t function) {
+  value_t current = ctx->function;
+  ctx->function = function;
+  return current;
+}
+value_t context_get_function(context_t ctx) { return ctx->function; }

@@ -80,7 +80,7 @@ value_t resolve_literal_numeric(context_t ctx, ast_node_t node) {
   }
   allocator_free(allocator, num);
   if (value_is_error(result)) {
-    result = convert_compile_error(ctx, node, result);
+    result = convert_comptime_error(ctx, node, result);
   }
   return result;
 }

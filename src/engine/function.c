@@ -6,6 +6,7 @@
 #include "engine/bool.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/module.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include <inttypes.h>
@@ -37,7 +38,6 @@ static function_meta_t create_function_meta(allocator_t allocator, type_t type,
   for (size_t idx = 0; idx < argc; idx++) {
     argument_t *arg =
         allocator_alloc(allocator, sizeof(struct _argument_t), NULL);
-    arg->comptime = argv[idx].comptime;
     arg->type = argv[idx].type;
     arg->mut = argv[idx].mut;
     array_push(self->arguments, arg);
@@ -80,10 +80,6 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       if (meta->variadic) {
         argument_t *arg_info =
             array_get(meta->arguments, array_get_size(meta->arguments) - 1);
-        if (arg_info->comptime && !value_is_comptime(argv[idx])) {
-          return create_error(ctx, "arguments %" PRIuPTR " is not comptime",
-                              idx);
-        }
         argv[idx] = value_safe_convert(argv[idx], ctx, arg_info->type);
         type_t type = value_get_type(argv[idx]);
         if (type_get_kind(type) == TYPE_KIND_ERROR) {
@@ -96,9 +92,6 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       }
     } else {
       argument_t *arg_info = array_get(meta->arguments, idx);
-      if (arg_info->comptime && !value_is_comptime(argv[idx])) {
-        return create_error(ctx, "arguments %" PRIuPTR " is not comptime", idx);
-      }
       argv[idx] = value_safe_convert(argv[idx], ctx, arg_info->type);
       type_t type = value_get_type(argv[idx]);
       if (type_get_kind(type) == TYPE_KIND_ERROR) {
@@ -119,9 +112,6 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
   size_t len = 16;
   len += strlen(type_get_id(type));
   for (size_t idx = 0; idx < argc; idx++) {
-    if (argv[idx].comptime) {
-      len += strlen("comptime ");
-    }
     if (!argv[idx].mut) {
       len += strlen("const ");
     }
@@ -139,10 +129,6 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
     if (idx == argc - 1 && variadic) {
       strcpy(&id[offset], "...");
       offset += 3;
-    }
-    if (argv[idx].comptime) {
-      strcpy(&id[offset], "comptime ");
-      offset += strlen("comptime ");
     }
     if (!argv[idx].mut) {
       strcpy(&id[offset], "const ");
@@ -164,9 +150,6 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
     len = 16;
     len += strlen(type_get_name(type));
     for (size_t idx = 0; idx < argc; idx++) {
-      if (argv[idx].comptime) {
-        len += strlen("comptime ");
-      }
       if (!argv[idx].mut) {
         len += strlen("const ");
       }
@@ -184,10 +167,6 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
       if (idx == argc - 1 && variadic) {
         strcpy(&name[offset], "...");
         offset += 3;
-      }
-      if (argv[idx].comptime) {
-        strcpy(&id[offset], "comptime ");
-        offset += strlen("comptime ");
       }
       if (!argv[idx].mut) {
         strcpy(&id[offset], "const ");
@@ -219,7 +198,11 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
 }
 
 value_t create_function(context_t ctx, type_t function_type, ast_node_t node) {
-  return context_create_value(ctx, function_type, &node, false, true, NULL);
+  allocator_t allocator = context_get_allocator(ctx);
+  module_t module = context_get_module(ctx);
+  value_t func = create_value(allocator, function_type, false, &node, true);
+  module_add_function(module, func);
+  return func;
 }
 
 type_t function_type_get_type(type_t self) {

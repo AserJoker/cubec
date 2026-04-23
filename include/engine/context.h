@@ -2,6 +2,7 @@
 #define _H_ENGINE_CONTEXT_
 #include "core/allocator.h"
 #include "core/string.h"
+#include "engine/module.h"
 #include "engine/scope.h"
 #ifdef __cplusplus
 extern "C" {
@@ -11,15 +12,16 @@ typedef enum _context_type_t {
   CONTEXT_TYPE_FUNCTION,
   CONTEXT_TYPE_GENERATOR,
   CONTEXT_TYPE_ASYNC,
-  CONTEXT_TYPE_GLOBAL,
+  CONTEXT_TYPE_STRUCT,
+  CONTEXT_TYPE_UNION,
 } context_type_t;
 
 typedef struct _context_t *context_t;
 context_t create_context(allocator_t allocator);
 bool context_is_comptime(context_t ctx);
 bool context_set_comptime(context_t ctx, bool comptime);
-value_t context_get_global(context_t ctx);
-void context_set_global(context_t ctx, value_t global);
+type_t context_get_global(context_t ctx);
+void context_set_global(context_t ctx, type_t global);
 context_type_t context_get_type(context_t ctx);
 void context_set_type(context_t ctx, context_type_t type);
 void context_push_scope(context_t self);
@@ -44,6 +46,11 @@ void context_store_type(context_t self, type_t type);
 type_t context_load_type(context_t self, const char *id);
 value_t context_clone_value(context_t self, value_t value);
 string_t context_write_module(context_t self, const char *module);
+module_t context_get_module(context_t self);
+type_t context_get_self(context_t self);
+type_t context_set_self(context_t ctx, type_t self);
+value_t context_set_function(context_t ctx, value_t function);
+value_t context_get_function(context_t ctx);
 #ifdef __cplusplus
 }
 #endif

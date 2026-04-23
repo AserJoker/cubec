@@ -81,7 +81,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       type_t dst_type = *(type_t *)value_get_data(vdst_type);
       value = value_safe_convert(value, ctx, dst_type);
       if (value_is_error(value)) {
-        value_t err = convert_compile_error(ctx, initialize, value);
+        value_t err = convert_comptime_error(ctx, initialize, value);
         if (context_is_comptime(ctx)) {
           return err;
         } else {
@@ -119,16 +119,26 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         continue;
       }
     }
-    if (context_get_type(ctx) == CONTEXT_TYPE_GLOBAL) {
-      value_t global = context_get_global(ctx);
-      type_t stru = *(type_t *)value_get_data(global);
-      struct_type_add_attribute(stru, allocator, name, value);
+    if (context_get_type(ctx) == CONTEXT_TYPE_STRUCT) {
+      type_t global = context_get_global(ctx);
+      struct_type_add_attribute(global, allocator, name, value);
     }
     allocator_free(allocator, name);
   }
   context_set_comptime(ctx, comptime);
   if (result) {
     return create_comptime_error(ctx, node, "declartion statement error");
+  }
+  if (location_is(kind->loc, "comptime")) {
+    if (node->parent->type == NODE_TYPE_LIST) {
+      size_t idx = ast_get_item_index(node->parent, node);
+      ast_set_item(node->parent, idx,
+                   create_ast_node(allocator, NODE_TYPE_EMPTY));
+    } else {
+      const char *key = ast_get_child_name(node->parent, node);
+      ast_set_child(allocator, node->parent, key,
+                    create_ast_node(allocator, NODE_TYPE_EMPTY));
+    }
   }
   return context_get_undefined(ctx);
 }

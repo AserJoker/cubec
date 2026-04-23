@@ -19,7 +19,7 @@ static value_t resolve_convert_expression(context_t ctx, ast_node_t node,
   }
   val = value_safe_convert(val, ctx, type);
   if (value_is_error(val)) {
-    return convert_compile_error(ctx, node, val);
+    return convert_comptime_error(ctx, node, val);
   }
   return val;
 }
@@ -213,7 +213,7 @@ value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
     return create_comptime_error(ctx, node, "invalid expression");
   }
   if (value_is_error(result)) {
-    return convert_compile_error(ctx, node, result);
+    return convert_comptime_error(ctx, node, result);
   }
   return result;
 }

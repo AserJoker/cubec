@@ -1,11 +1,11 @@
-#ifndef _H_WRITER_VARIABLE_DECLARATOR_
-#define _H_WRITER_VARIABLE_DECLARATOR_
+#ifndef _H_WRITER_FUNCTION_DECLARATOR_
+#define _H_WRITER_FUNCTION_DECLARATOR_
 #include "ast/node.h"
 #include "core/stream.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-void write_variable_declarator(allocator_t allocator, ast_node_t node,
+void write_function_delcarator(allocator_t allocator, ast_node_t node,
                                stream_t stream);
 #ifdef __cplusplus
 }

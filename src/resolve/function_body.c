@@ -1,21 +1,15 @@
-#include "resolve/program.h"
+#include "resolve/function_body.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "core/allocator.h"
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/value.h"
 #include "resolve/statement_declaration.h"
 #include "resolve/statement_function.h"
-#include <inttypes.h>
-#include <stdalign.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
+#include "resolve/statement_return.h"
 
-value_t resolve_program(context_t ctx, ast_node_t node) {
+value_t resolve_function_body(context_t ctx, ast_node_t node) {
   ast_node_t statements = ast_get_child(node, "statements");
-  allocator_t allocator = context_get_allocator(ctx);
   for (size_t idx = 0; idx < ast_get_length(statements); idx++) {
     ast_node_t sts = ast_get_item(statements, idx);
     value_t err = NULL;
@@ -23,10 +17,19 @@ value_t resolve_program(context_t ctx, ast_node_t node) {
       err = resolve_statement_declaration(ctx, sts);
     } else if (sts->type == NODE_TYPE_STATEMENT_FUNCTION) {
       err = resolve_statement_function(ctx, sts);
+    } else if (sts->type == NODE_TYPE_STATEMENT_RETURN) {
+      err = resolve_statement_return(ctx, sts);
     } else {
-      err = create_comptime_error(ctx, sts, "invalid top statement");
+      err = create_comptime_error(ctx, sts, "unsupport statement");
     }
-    if (err && value_is_error(err)) {
+    if (value_is_error(err)) {
+      if (context_is_comptime(ctx)) {
+        return err;
+      } else {
+        context_push_error(ctx, err);
+      }
+    }
+    if (value_is_interrupt(err)) {
       return err;
     }
   }
