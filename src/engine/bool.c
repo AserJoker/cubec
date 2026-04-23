@@ -1,8 +1,12 @@
 #include "engine/bool.h"
 #include "core/allocator.h"
+#include "core/string.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/float.h"
+#include "engine/integer.h"
 #include "engine/type.h"
+#include "engine/unsigned.h"
 #include "engine/value.h"
 #include <stdbool.h>
 static value_t bool_logical_not(value_t self, context_t ctx) {
@@ -46,11 +50,23 @@ static value_t bool_logical_or(value_t self, context_t ctx, value_t another) {
   }
 }
 static value_t bool_convert(value_t self, context_t ctx, type_t type) {
-  if (type_get_kind(type) == TYPE_KIND_INTEGER) {
-
-  } else if (type_get_kind(type) == TYPE_KIND_UNSIGNED) {
-
-  } else if (type_get_kind(type) == TYPE_KIND_FLOAT) {
+  if (value_is_comptime(self)) {
+    bool val = *(bool *)value_get_data(self);
+    if (type_get_kind(type) == TYPE_KIND_INTEGER) {
+      return create_comptime_integer(ctx, type, val ? 1 : 0);
+    } else if (type_get_kind(type) == TYPE_KIND_UNSIGNED) {
+      return create_comptime_unsigned(ctx, type, val ? 1 : 0);
+    } else if (type_get_kind(type) == TYPE_KIND_FLOAT) {
+      return create_comptime_float(ctx, type, val ? 1 : 0);
+    }
+  } else {
+    if (type_get_kind(type) == TYPE_KIND_INTEGER) {
+      return create_integer(ctx, type);
+    } else if (type_get_kind(type) == TYPE_KIND_UNSIGNED) {
+      return create_unsigned(ctx, type);
+    } else if (type_get_kind(type) == TYPE_KIND_FLOAT) {
+      return create_float(ctx, type);
+    }
   }
   return create_error(ctx, "cannot convert 'bool' to '%s'",
                       type_get_name(type));
@@ -89,6 +105,10 @@ static value_t bool_ne(value_t self, context_t ctx, value_t another) {
   }
   return create_bool(ctx, false, NULL);
 }
+static char *bool_write_ast(value_t self, allocator_t allocator) {
+  bool val = *(bool *)value_get_data(self);
+  return create_cstring(allocator, val ? "true" : "false");
+}
 void bool_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
@@ -100,13 +120,12 @@ void bool_init(context_t ctx) {
       .convert = bool_convert,
       .eq = bool_eq,
       .ne = bool_ne,
+      .write_ast = bool_write_ast,
   };
   type_t bool_t = create_type(allocator, TYPE_KIND_BOOL, sizeof(bool),
                               sizeof(bool), "bool", "bool", &opt, NULL);
   context_store_type(ctx, bool_t);
   create_type_value(ctx, bool_t, false, true, "bool");
-  create_comptime_bool(ctx, true, false, "true");
-  create_comptime_bool(ctx, false, false, "false");
 }
 value_t create_comptime_bool(context_t ctx, bool value, bool mut,
                              const char *name) {

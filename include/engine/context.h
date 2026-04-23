@@ -1,33 +1,49 @@
 #ifndef _H_ENGINE_CONTEXT_
 #define _H_ENGINE_CONTEXT_
 #include "core/allocator.h"
+#include "core/string.h"
 #include "engine/scope.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+typedef enum _context_type_t {
+  CONTEXT_TYPE_FUNCTION,
+  CONTEXT_TYPE_GENERATOR,
+  CONTEXT_TYPE_ASYNC,
+  CONTEXT_TYPE_GLOBAL,
+} context_type_t;
+
 typedef struct _context_t *context_t;
 context_t create_context(allocator_t allocator);
 bool context_is_comptime(context_t ctx);
 bool context_set_comptime(context_t ctx, bool comptime);
-value_t context_set_binding(context_t ctx, value_t binding);
-value_t context_get_binding(context_t ctx);
+value_t context_get_global(context_t ctx);
+void context_set_global(context_t ctx, value_t global);
+context_type_t context_get_type(context_t ctx);
+void context_set_type(context_t ctx, context_type_t type);
 void context_push_scope(context_t self);
 void context_pop_scope(context_t self);
 scope_t context_get_scope(context_t self);
+void context_set_scope(context_t self, scope_t scope);
 scope_t context_get_root_scope(context_t self);
+void context_set_root_scope(context_t self, scope_t scope);
 const char *context_create_cstring(context_t self, const char *src);
 allocator_t context_get_allocator(context_t self);
 value_t context_load(context_t self, const char *name);
 value_t context_get_undefined(context_t self);
+value_t context_get_true(context_t self);
+value_t context_get_false(context_t self);
 value_t context_create_value(context_t self, type_t type, const void *data,
                              bool mut, bool comptime, const char *name);
 value_t context_create_weak_value(context_t self, type_t type, void *data,
                                   bool mut, const char *name);
 value_t context_load_module(context_t self, const char *filename);
+void context_push_error(context_t self, value_t error);
 void context_store_type(context_t self, type_t type);
 type_t context_load_type(context_t self, const char *id);
 value_t context_clone_value(context_t self, value_t value);
+string_t context_write_module(context_t self, const char *module);
 #ifdef __cplusplus
 }
 #endif

@@ -113,6 +113,11 @@ static value_t type_deref(value_t self, context_t ctx) {
   return create_type_value(ctx, ptr_type, false, true, NULL);
 }
 
+static char *type_write_ast(value_t self, allocator_t allocator) {
+  type_t type = *(type_t *)value_get_data(self);
+  return create_cstring(allocator, type->name);
+}
+
 void type_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
@@ -123,6 +128,7 @@ void type_init(context_t ctx) {
       .eq = type_eq,
       .ne = type_ne,
       .assigment = value_default_assigment,
+      .write_ast = type_write_ast,
   };
   type_t type = create_type(allocator, TYPE_KIND_TYPE, sizeof(type_t),
                             sizeof(type_t), "type", "type", &opt, NULL);

@@ -1,6 +1,6 @@
 #include "engine/float.h"
 #include "core/allocator.h"
-#include "core/position.h"
+#include "core/string.h"
 #include "engine/bool.h"
 #include "engine/context.h"
 #include "engine/error.h"
@@ -10,6 +10,7 @@
 #include "engine/value.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 double float_get_value(value_t self) {
   double val = 0;
@@ -117,7 +118,7 @@ static value_t float_add(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     double left = float_get_value(self);
-    double right = float_get_value(self);
+    double right = float_get_value(another);
     double val = left + right;
     return create_comptime_float(ctx, left_type, val);
   } else {
@@ -149,7 +150,7 @@ static value_t float_sub(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     double left = float_get_value(self);
-    double right = float_get_value(self);
+    double right = float_get_value(another);
     double val = left - right;
     return create_comptime_float(ctx, left_type, val);
   } else {
@@ -181,7 +182,7 @@ static value_t float_mul(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     double left = float_get_value(self);
-    double right = float_get_value(self);
+    double right = float_get_value(another);
     double val = left * right;
     return create_comptime_float(ctx, left_type, val);
   } else {
@@ -213,7 +214,7 @@ static value_t float_div(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     double left = float_get_value(self);
-    double right = float_get_value(self);
+    double right = float_get_value(another);
     double val = left / right;
     return create_comptime_float(ctx, left_type, val);
   } else {
@@ -245,7 +246,7 @@ static value_t float_eq(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     double left = float_get_value(self);
-    double right = float_get_value(self);
+    double right = float_get_value(another);
     double val = left == right;
     return create_comptime_bool(ctx, val, false, NULL);
   } else {
@@ -278,7 +279,7 @@ static value_t float_ne(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     double left = float_get_value(self);
-    double right = float_get_value(self);
+    double right = float_get_value(another);
     double val = left != right;
     return create_comptime_bool(ctx, val, false, NULL);
   } else {
@@ -311,7 +312,7 @@ static value_t float_gt(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     double left = float_get_value(self);
-    double right = float_get_value(self);
+    double right = float_get_value(another);
     double val = left > right;
     return create_comptime_bool(ctx, val, false, NULL);
   } else {
@@ -344,7 +345,7 @@ static value_t float_ge(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     double left = float_get_value(self);
-    double right = float_get_value(self);
+    double right = float_get_value(another);
     double val = left >= right;
     return create_comptime_bool(ctx, val, false, NULL);
   } else {
@@ -377,7 +378,7 @@ static value_t float_lt(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     double left = float_get_value(self);
-    double right = float_get_value(self);
+    double right = float_get_value(another);
     double val = left < right;
     return create_comptime_bool(ctx, val, false, NULL);
   } else {
@@ -410,7 +411,7 @@ static value_t float_le(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     double left = float_get_value(self);
-    double right = float_get_value(self);
+    double right = float_get_value(another);
     double val = left <= right;
     return create_comptime_bool(ctx, val, false, NULL);
   } else {
@@ -436,6 +437,20 @@ static value_t float_negtive(value_t self, context_t ctx) {
   }
 }
 
+static char *float_write_ast(value_t self, allocator_t allocator) {
+  type_t type = value_get_type(self);
+  double val = float_get_value(self);
+  char s[32];
+  if (type_get_size(type) == sizeof(_Float16)) {
+    sprintf(s, "%g@f16", val);
+  } else if (type_get_size(type) == sizeof(float)) {
+    sprintf(s, "%g@f32", val);
+  } else {
+    sprintf(s, "%g@f32", val);
+  }
+  return create_cstring(allocator, s);
+}
+
 void float_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   struct _type_operator_t opt = {
@@ -455,6 +470,7 @@ void float_init(context_t ctx) {
       .neg = float_negtive,
       .addr_of = value_default_address_of,
       .assigment = value_default_assigment,
+      .write_ast = float_write_ast,
   };
   type_t f16_t = create_type(allocator, TYPE_KIND_INTEGER, sizeof(_Float16),
                              sizeof(_Float16), "f16", "f16", &opt, NULL);

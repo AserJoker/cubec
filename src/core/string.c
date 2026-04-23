@@ -69,6 +69,27 @@ string_t string_concat(string_t self, allocator_t allocator,
   self->len += len;
   return self;
 }
+
+string_t string_nconcat(string_t self, allocator_t allocator,
+                        const char *source, size_t len) {
+  if (len + self->len + 1 >= self->capacity) {
+    while (len + self->len + 1 >= self->capacity) {
+      self->capacity *= 2;
+    }
+    char *str = allocator_alloc(allocator, self->capacity, NULL);
+    memcpy(str, self->data, self->len + 1);
+    allocator_free(allocator, self->data);
+    self->data = str;
+  }
+  memcpy(&self->data[self->len], source, len + 1);
+  self->len += len;
+  return self;
+}
+string_t string_concat_location(string_t self, allocator_t allocator,
+                                location_t loc) {
+  return string_nconcat(self, allocator, loc.begin.offset,
+                        loc.end.offset - loc.begin.offset);
+}
 int string_compare(string_t self, const char *source) {
   return strcmp(self->data, source);
 }
@@ -77,6 +98,46 @@ char *create_cstring(allocator_t allocator, const char *source) {
   char *s = allocator_alloc(allocator, len + 1, NULL);
   strcpy(s, source);
   s[len] = 0;
+  return s;
+}
+char *encode_cstring(allocator_t allocator, const char *source) {
+  size_t len = strlen(source);
+  char *s = allocator_alloc(allocator, len * 2 + 1, NULL);
+  char *dst = s;
+  const char *src = source;
+  while (*src) {
+    if (*src == '\n') {
+      *dst++ = '\\';
+      *dst++ = 'n';
+    } else if (*src == '\r') {
+      *dst++ = '\\';
+      *dst++ = 'r';
+    } else if (*src == '\a') {
+      *dst++ = '\\';
+      *dst++ = 'a';
+    } else if (*src == '\b') {
+      *dst++ = '\\';
+      *dst++ = 'b';
+    } else if (*src == '\\') {
+      *dst++ = '\\';
+      *dst++ = '\\';
+    } else if (*src == '\t') {
+      *dst++ = '\\';
+      *dst++ = 't';
+    } else if (*src == '\f') {
+      *dst++ = '\\';
+      *dst++ = 'f';
+    } else if (*src == '\"') {
+      *dst++ = '\\';
+      *dst++ = '\"';
+    } else if (*src == '\'') {
+      *dst++ = '\\';
+      *dst++ = '\'';
+    } else {
+      *dst++ = *src++;
+    }
+  }
+  *dst = 0;
   return s;
 }
 const char *cstring_to_int(const char *source, size_t *value, int radix) {

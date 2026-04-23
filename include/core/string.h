@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CORE_STRING_
 #define _H_CUBEC_CORE_STRING_
 #include "core/allocator.h"
+#include "core/location.h"
 #include <stdbool.h>
 #include <stdint.h>
 #ifdef __cplusplus
@@ -20,9 +21,14 @@ size_t string_len(string_t self);
 string_t string_set(string_t self, allocator_t allocator, const char *source);
 string_t string_concat(string_t self, allocator_t allocator,
                        const char *source);
+string_t string_nconcat(string_t self, allocator_t allocator,
+                        const char *source, size_t len);
+string_t string_concat_location(string_t self, allocator_t allocator,
+                                location_t loc);
 int string_compare(string_t self, const char *source);
 
 char *create_cstring(allocator_t allocator, const char *source);
+char *encode_cstring(allocator_t allocator, const char *source);
 
 const char *cstring_to_int(const char *source, size_t *value, int radix);
 const char *cstring_to_dec(const char *source, double *value);

@@ -502,3 +502,11 @@ char *value_write_ast(value_t self, allocator_t allocator) {
   }
   return create_cstring(allocator, "unknown");
 }
+bool value_is_writer(value_t self) {
+  if (!value_is_comptime(self)) {
+    return false;
+  }
+  type_t type = value_get_type(self);
+  const type_operator_t *opt = type_get_operator(type);
+  return opt->write_ast != NULL;
+}

@@ -1,6 +1,6 @@
 #include "engine/integer.h"
 #include "core/allocator.h"
-#include "core/position.h"
+#include "core/string.h"
 #include "engine/bool.h"
 #include "engine/context.h"
 #include "engine/error.h"
@@ -8,8 +8,10 @@
 #include "engine/type.h"
 #include "engine/unsigned.h"
 #include "engine/value.h"
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 int64_t integer_get_value(value_t self) {
   int64_t val = 0;
@@ -123,7 +125,7 @@ static value_t integer_add(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left + right;
     return create_comptime_integer(ctx, left_type, val);
   } else {
@@ -155,7 +157,7 @@ static value_t integer_sub(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left - right;
     return create_comptime_integer(ctx, left_type, val);
   } else {
@@ -187,7 +189,7 @@ static value_t integer_mul(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left * right;
     return create_comptime_integer(ctx, left_type, val);
   } else {
@@ -219,7 +221,7 @@ static value_t integer_div(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left / right;
     return create_comptime_integer(ctx, left_type, val);
   } else {
@@ -251,7 +253,7 @@ static value_t integer_mod(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left % right;
     return create_comptime_integer(ctx, left_type, val);
   } else {
@@ -283,7 +285,7 @@ static value_t integer_and(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left & right;
     return create_comptime_integer(ctx, left_type, val);
   } else {
@@ -315,7 +317,7 @@ static value_t integer_or(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left | right;
     return create_comptime_integer(ctx, left_type, val);
   } else {
@@ -347,7 +349,7 @@ static value_t integer_xor(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left ^ right;
     return create_comptime_integer(ctx, left_type, val);
   } else {
@@ -379,7 +381,7 @@ static value_t integer_shl(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left << right;
     return create_comptime_integer(ctx, left_type, val);
   } else {
@@ -411,7 +413,7 @@ static value_t integer_shr(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left >> right;
     return create_comptime_integer(ctx, left_type, val);
   } else {
@@ -443,7 +445,7 @@ static value_t integer_eq(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left == right;
     return create_comptime_bool(ctx, val, false, NULL);
   } else {
@@ -476,7 +478,7 @@ static value_t integer_ne(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left != right;
     return create_comptime_bool(ctx, val, false, NULL);
   } else {
@@ -509,7 +511,7 @@ static value_t integer_gt(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left > right;
     return create_comptime_bool(ctx, val, false, NULL);
   } else {
@@ -542,7 +544,7 @@ static value_t integer_ge(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left >= right;
     return create_comptime_bool(ctx, val, false, NULL);
   } else {
@@ -575,7 +577,7 @@ static value_t integer_lt(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left < right;
     return create_comptime_bool(ctx, val, false, NULL);
   } else {
@@ -608,7 +610,7 @@ static value_t integer_le(value_t self, context_t ctx, value_t another) {
   }
   if (value_is_comptime(self) && value_is_comptime(another)) {
     int64_t left = integer_get_value(self);
-    int64_t right = integer_get_value(self);
+    int64_t right = integer_get_value(another);
     int64_t val = left <= right;
     return create_comptime_bool(ctx, val, false, NULL);
   } else {
@@ -643,6 +645,22 @@ static value_t integer_negtive(value_t self, context_t ctx) {
   }
 }
 
+static char *integer_write_ast(value_t self, allocator_t allocator) {
+  int64_t val = integer_get_value(self);
+  type_t type = value_get_type(self);
+  char s[32];
+  if (type_get_size(type) == sizeof(int8_t)) {
+    sprintf(s, "%" PRIiPTR "@i8", val);
+  } else if (type_get_size(type) == sizeof(int16_t)) {
+    sprintf(s, "%" PRIiPTR "@i16", val);
+  } else if (type_get_size(type) == sizeof(int32_t)) {
+    sprintf(s, "%" PRIiPTR "@i32", val);
+  } else {
+    sprintf(s, "%" PRIiPTR "@i64", val);
+  }
+  return create_cstring(allocator, s);
+}
+
 void integer_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   struct _type_operator_t opt = {
@@ -669,6 +687,7 @@ void integer_init(context_t ctx) {
       .neg = integer_negtive,
       .addr_of = value_default_address_of,
       .assigment = value_default_assigment,
+      .write_ast = integer_write_ast,
   };
   type_t i8_t = create_type(allocator, TYPE_KIND_INTEGER, sizeof(int8_t),
                             sizeof(int8_t), "i8", "i8", &opt, NULL);

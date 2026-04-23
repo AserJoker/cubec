@@ -101,6 +101,7 @@ static value_t resolve_expression_comptime_logical_or(context_t ctx,
 }
 
 value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
+  allocator_t allocator = context_get_allocator(ctx);
   ast_node_t left_node = ast_get_child(node, "left");
   ast_node_t right_node = ast_get_child(node, "right");
   ast_node_t opt = ast_get_child(node, "opt");
@@ -128,6 +129,15 @@ value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
     }
     if (value_is_interrupt(right)) {
       return right;
+    }
+    if (value_is_writer(left) && !value_is_writer(right)) {
+      ast_remove_child(node, "left");
+      left_node = create_ast_value_node(allocator, left);
+      ast_add_child(allocator, node, "left", left_node);
+    } else if (value_is_writer(right) && !value_is_writer(left)) {
+      ast_remove_child(node, "right");
+      right_node = create_ast_value_node(allocator, right);
+      ast_add_child(allocator, node, "right", right_node);
     }
     if (location_is(opt->loc, "+")) {
       result = value_add(left, ctx, right);
@@ -175,6 +185,11 @@ value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
     }
     if (value_is_interrupt(right)) {
       return right;
+    }
+    if (value_is_writer(right)) {
+      ast_remove_child(node, "right");
+      right_node = create_ast_value_node(allocator, right);
+      ast_add_child(allocator, node, "right", right_node);
     }
     if (location_is(opt->loc, "~")) {
       result = value_bitwise_not(right, ctx);

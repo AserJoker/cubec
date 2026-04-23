@@ -1,10 +1,12 @@
 #include "engine/str.h"
 #include "core/allocator.h"
+#include "core/string.h"
 #include "engine/bool.h"
 #include "engine/context.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 
 static value_t str_eq(value_t self, context_t ctx, value_t another) {
@@ -35,6 +37,15 @@ static value_t str_ne(value_t self, context_t ctx, value_t another) {
   const char *str2 = *(const char **)value_get_data(another);
   return create_comptime_bool(ctx, strcmp(str1, str2) != 0, false, NULL);
 }
+static char *str_write_ast(value_t self, allocator_t allocator) {
+  const char *str = *(const char **)value_get_data(self);
+  char *encode_str = encode_cstring(allocator, str);
+  size_t len = strlen(encode_str);
+  char s[len + 3];
+  sprintf(s, "\"%s\"", encode_str);
+  allocator_free(allocator, encode_str);
+  return create_cstring(allocator, s);
+}
 void str_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
@@ -42,6 +53,7 @@ void str_init(context_t ctx) {
       .assigment = value_default_assigment,
       .eq = str_eq,
       .ne = str_ne,
+      .write_ast = str_write_ast,
   };
   type_t str_t = create_type(allocator, TYPE_KIND_STR, sizeof(const char *),
                              sizeof(const char *), "str", "str", &opt, NULL);
