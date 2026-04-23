@@ -13,6 +13,7 @@ extern "C" {
 #include <unicode/urename.h>
 #include <unicode/utf8.h>
 #include <unicode/utypes.h>
+struct _value_t;
 struct _ast_node_t;
 typedef struct _ast_node_t *ast_node_t;
 struct _ast_node_t {
@@ -23,10 +24,14 @@ struct _ast_node_t {
   union {
     array_t items;
     hash_map_t children;
+    char *error;
+    struct _value_t *value;
+    void *data;
   };
 };
 
 ast_node_t create_ast_node(allocator_t allocator, size_t type);
+ast_node_t create_ast_value_node(allocator_t allocator, struct _value_t *value);
 void ast_add_child(allocator_t allocator, ast_node_t node, const char *name,
                    ast_node_t child);
 void ast_remove_child(ast_node_t node, const char *name);
@@ -47,11 +52,6 @@ size_t ast_get_length(ast_node_t node);
 
 int32_t ast_read_code(position_t *position, const char *end,
                       const char *filename);
-
-typedef struct _ast_error_t {
-  struct _ast_node_t super;
-  char *message;
-} *ast_error_t;
 
 ast_node_t create_ast_error(allocator_t allocator, position_t begin,
                             position_t end, const char *filename,

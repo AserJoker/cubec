@@ -48,6 +48,12 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
     }
     value_t value = resolve_expression(ctx, initialize);
+    if (value_is_comptime(value)) {
+      ast_remove_child(declarator, "initialize");
+      value = value_clone(value, allocator);
+      initialize = create_ast_value_node(allocator, value);
+      ast_add_child(allocator, declarator, "initialize", initialize);
+    }
     type_t value_type = value_get_type(value);
     if (type_get_kind(value_type) == TYPE_KIND_ERROR) {
       if (context_is_comptime(ctx)) {
@@ -79,7 +85,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
       type_t dst_type = *(type_t *)value_get_data(vdst_type);
       value = value_safe_convert(value, ctx, dst_type);
-      if (type_get_kind(type) == TYPE_KIND_ERROR) {
+      if (value_is_error(value)) {
         value_t err = convert_compile_error(ctx, initialize, value);
         if (context_is_comptime(ctx)) {
           return err;
@@ -88,8 +94,11 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
           continue;
         }
       }
-      value_type = dst_type;
     }
+    ast_remove_child(declarator, "type");
+    value_t vtype = create_type_value(ctx, value_type, false, true, NULL);
+    type = create_ast_value_node(allocator, vtype);
+    ast_add_child(allocator, declarator, "type", type);
     char *name = location_get(identifier->loc, allocator);
     if (context_is_comptime(ctx)) {
       void *data = value_get_data(value);

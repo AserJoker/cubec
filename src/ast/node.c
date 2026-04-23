@@ -10,6 +10,7 @@
 #include "core/location.h"
 #include "core/position.h"
 #include "core/string.h"
+#include "engine/value.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,11 +18,7 @@
 #include <unicode/umachine.h>
 
 static void ast_node_dispose(ast_node_t self, allocator_t allocator) {
-  if (self->type == NODE_TYPE_LIST) {
-    allocator_free(allocator, self->items);
-  } else {
-    allocator_free(allocator, self->children);
-  }
+  allocator_free(allocator, self->data);
 }
 ast_node_t create_ast_node(allocator_t allocator, size_t type) {
   ast_node_t node = allocator_alloc(allocator, sizeof(struct _ast_node_t),
@@ -33,7 +30,7 @@ ast_node_t create_ast_node(allocator_t allocator, size_t type) {
         .autofree = true,
     };
     node->items = create_array(allocator, &initialize);
-  } else {
+  } else if (type != NODE_TYPE_ERROR && type != NODE_TYPE_VALUE) {
     hash_map_initialize_t initialize = {
         .autofree_key = true,
         .autofree_value = true,
@@ -41,10 +38,20 @@ ast_node_t create_ast_node(allocator_t allocator, size_t type) {
         .compare = (compare_fn_t)strcmp,
     };
     node->children = create_hash_map(allocator, &initialize);
+  } else {
+    node->data = NULL;
   }
   node->changed = false;
   return node;
 }
+
+ast_node_t create_ast_value_node(allocator_t allocator,
+                                 struct _value_t *value) {
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_VALUE);
+  node->value = value_clone(value, allocator);
+  return node;
+}
+
 void ast_add_child(allocator_t allocator, ast_node_t node, const char *name,
                    ast_node_t child) {
   hash_map_set(node->children, create_cstring(allocator, name), child, NULL,
@@ -201,25 +208,18 @@ int32_t ast_read_code(position_t *position, const char *end,
   return code;
 }
 
-static void error_dispose(ast_error_t self, allocator_t allocator) {
-  allocator_free(allocator, self->message);
-  ast_node_dispose(&self->super, allocator);
-}
-
 ast_node_t create_ast_error(allocator_t allocator, position_t begin,
                             position_t end, const char *filename,
                             const char *message) {
-  ast_error_t node = allocator_alloc(allocator, sizeof(struct _ast_error_t),
-                                     (dispose_fn_t)error_dispose);
-  memset(node, 0, sizeof(struct _ast_error_t));
-  node->super.type = NODE_TYPE_ERROR;
-  node->super.loc.begin = begin;
-  node->super.loc.end = end;
-  node->super.loc.filename = filename;
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_ERROR);
+  node->type = NODE_TYPE_ERROR;
+  node->loc.begin = begin;
+  node->loc.end = end;
+  node->loc.filename = filename;
   size_t len = strlen(message);
-  node->message = allocator_alloc(allocator, len + 1, NULL);
-  strcpy(node->message, message);
-  return &node->super;
+  node->error = allocator_alloc(allocator, len + 1, NULL);
+  strcpy(node->error, message);
+  return node;
 }
 
 ast_node_t ast_skip_all(allocator_t allocator, position_t *position,
@@ -298,6 +298,7 @@ ast_node_t ast_skip_all(allocator_t allocator, position_t *position,
 }
 
 static const char *type_names[] = {
+    "NODE_TYPE_VALUE",
     "NODE_TYPE_LIST",
     "NODE_TYPE_ERROR",
     "NODE_TYPE_LITERAL_IDENTIFIER",
@@ -395,8 +396,13 @@ static char *encode_text(allocator_t allocator, const char *source) {
 }
 
 static void print_node(ast_node_t node, allocator_t allocator, string_t out) {
-  if (node->type == NODE_TYPE_LIST) {
-
+  if (node->type == NODE_TYPE_ERROR) {
+    string_concat(out, allocator, "{");
+    string_concat(out, allocator, "\"error:\":\"");
+    string_concat(out, allocator, node->error);
+    string_concat(out, allocator, "\"");
+    string_concat(out, allocator, "}");
+  } else if (node->type == NODE_TYPE_LIST) {
     string_concat(out, allocator, "[");
     for (size_t idx = 0; idx < array_get_size(node->items); idx++) {
       if (idx != 0) {

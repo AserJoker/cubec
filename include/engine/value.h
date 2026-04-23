@@ -22,7 +22,6 @@ value_t value_clone(value_t self, allocator_t allocator);
 value_t value_convert(value_t self, struct _context_t *ctx, type_t type);
 value_t value_safe_convert(value_t self, struct _context_t *ctx, type_t type);
 value_t value_addr_of(value_t self, struct _context_t *ctx);
-value_t value_ref(value_t self, struct _context_t *ctx);
 value_t value_deref(value_t self, struct _context_t *ctx);
 value_t value_plus(value_t self, struct _context_t *ctx);
 value_t value_neg(value_t self, struct _context_t *ctx);
@@ -67,6 +66,7 @@ value_t value_default_assigment(value_t self, struct _context_t *ctx,
 value_t value_default_address_of(value_t self, struct _context_t *ctx);
 bool value_is_error(value_t value);
 bool value_is_interrupt(value_t value);
+char *value_write_ast(value_t self, allocator_t allocator);
 #ifdef __cplusplus
 }
 #endif

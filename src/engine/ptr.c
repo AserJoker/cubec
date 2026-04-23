@@ -196,7 +196,7 @@ type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
     };
     self = create_type(allocator, TYPE_KIND_PTR, sizeof(void *), sizeof(void *),
                        buf, buf, &opt, meta);
-    context_store_type(ctx, type);
+    context_store_type(ctx, self);
   }
   return self;
 }
@@ -298,7 +298,7 @@ type_t create_parray_type(context_t ctx, type_t type, bool mut, bool vol) {
     };
     self = create_type(allocator, TYPE_KIND_PTR, sizeof(void *), sizeof(void *),
                        buf, buf, &opt, meta);
-    context_store_type(ctx, type);
+    context_store_type(ctx, self);
   }
   return self;
 }

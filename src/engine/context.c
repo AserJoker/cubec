@@ -10,10 +10,13 @@
 #include "core/string.h"
 #include "engine/bool.h"
 #include "engine/error.h"
+#include "engine/float.h"
+#include "engine/integer.h"
 #include "engine/module.h"
 #include "engine/scope.h"
 #include "engine/str.h"
 #include "engine/type.h"
+#include "engine/unsigned.h"
 #include "engine/value.h"
 #include "engine/void.h"
 #include "resolve/program.h"
@@ -66,6 +69,9 @@ context_t create_context(allocator_t allocator) {
   void_init(self);
   bool_init(self);
   str_init(self);
+  integer_init(self);
+  unsigned_init(self);
+  float_init(self);
   self->undefined = context_create_value(self, context_load_type(self, "void"),
                                          NULL, false, true, NULL);
   self->comptime = false;
@@ -163,8 +169,7 @@ value_t context_load_module(context_t self, const char *filename) {
   ast_node_t node =
       read_ast_program(self->allocator, &pos, buf + len, filename);
   if (node->type == NODE_TYPE_ERROR) {
-    ast_error_t error = (ast_error_t)node;
-    value_t err = create_compile_error(self, node, "%s", error->message);
+    value_t err = create_compile_error(self, node, "%s", node->error);
     allocator_free(self->allocator, node);
     return err;
   }

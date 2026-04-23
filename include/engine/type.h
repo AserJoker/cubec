@@ -1,5 +1,6 @@
 #ifndef _H_ENGINE_TYPE_
 #define _H_ENGINE_TYPE_
+#include "ast/node.h"
 #include "core/allocator.h"
 #include <stdbool.h>
 #ifdef __cplusplus
@@ -55,6 +56,8 @@ typedef struct _value_t *(*call_fn_t)(struct _value_t *self,
                                       struct _context_t *ctx, size_t argc,
                                       struct _value_t *argv[]);
 
+typedef char *(*write_ast_fn_t)(struct _value_t *self, allocator_t allocator);
+
 typedef struct _type_operator_t {
   single_fn_t addr_of;
   single_fn_t deref;
@@ -95,6 +98,8 @@ typedef struct _type_operator_t {
 
   convert_fn_t convert;
   convert_fn_t safe_convert;
+
+  write_ast_fn_t write_ast;
 } type_operator_t;
 type_t create_type(allocator_t allocator, type_kind_t kind, size_t size,
                    size_t align, const char *name, const char *id,

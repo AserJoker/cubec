@@ -4,6 +4,7 @@
 #include "engine/bool.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/ptr.h"
 #include "engine/struct.h"
 #include "engine/value.h"
 #include <stdbool.h>
@@ -106,10 +107,17 @@ static value_t type_set_field(value_t self, context_t ctx, const char *name,
                       type_get_name(type));
 }
 
+static value_t type_deref(value_t self, context_t ctx) {
+  type_t type = *(type_t *)value_get_data(self);
+  type_t ptr_type = create_ptr_type(ctx, type, true, false);
+  return create_type_value(ctx, ptr_type, false, true, NULL);
+}
+
 void type_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
       .addr_of = value_default_address_of,
+      .deref = type_deref,
       .get_field = type_get_field,
       .set_field = type_set_field,
       .eq = type_eq,

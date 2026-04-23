@@ -1,5 +1,6 @@
 #include "engine/value.h"
 #include "core/allocator.h"
+#include "core/string.h"
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/ptr.h"
@@ -492,4 +493,12 @@ bool value_is_error(value_t value) {
 bool value_is_interrupt(value_t value) {
   type_t type = value_get_type(value);
   return type_get_kind(type) == TYPE_KIND_INTERRUPT;
+}
+char *value_write_ast(value_t self, allocator_t allocator) {
+  type_t type = value_get_type(self);
+  const type_operator_t *opt = type_get_operator(type);
+  if (opt->write_ast) {
+    return opt->write_ast(self, allocator);
+  }
+  return create_cstring(allocator, "unknown");
 }

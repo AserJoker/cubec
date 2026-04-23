@@ -4,6 +4,7 @@
 extern "C" {
 #endif
 typedef enum _ast_node_type_t {
+  NODE_TYPE_VALUE,
   NODE_TYPE_LIST,
   NODE_TYPE_ERROR,
   NODE_TYPE_LITERAL_IDENTIFIER,
