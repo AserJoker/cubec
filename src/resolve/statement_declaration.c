@@ -33,8 +33,8 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     if (initialize->type == NODE_TYPE_INITIALIZE_LIST) {
       ast_node_t itype = ast_get_child(initialize, "type");
       if (!itype && !type) {
-        value_t err = create_compile_error(ctx, declarator,
-                                           "missing type for initialize list");
+        value_t err = create_comptime_error(ctx, declarator,
+                                            "missing type for initialize list");
         if (context_is_comptime(ctx)) {
           return err;
         } else {
@@ -61,7 +61,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       return value;
     }
     if (context_is_comptime(ctx) && !value_is_comptime(value)) {
-      return create_compile_error(ctx, initialize, "value is not comptime");
+      return create_comptime_error(ctx, initialize, "value is not comptime");
     }
     type_t value_type = value_get_type(value);
     if (type) {
@@ -128,7 +128,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
   }
   context_set_comptime(ctx, comptime);
   if (result) {
-    return create_compile_error(ctx, node, "declartion statement error");
+    return create_comptime_error(ctx, node, "declartion statement error");
   }
   return context_get_undefined(ctx);
 }

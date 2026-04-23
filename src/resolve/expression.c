@@ -15,5 +15,5 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
   } else if (node->type == NODE_TYPE_EXPRESSION_BINARY) {
     return resolve_expression_binary(ctx, node);
   }
-  return create_compile_error(ctx, node, "unsupport expression node");
+  return create_comptime_error(ctx, node, "unsupport expression node");
 }

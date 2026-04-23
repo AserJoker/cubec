@@ -36,7 +36,7 @@ static value_t resolve_expression_comptime_logical_and(context_t ctx,
     return left;
   }
   if (!value_is_comptime(left)) {
-    return create_compile_error(ctx, left_node, "value is not comptime");
+    return create_comptime_error(ctx, left_node, "value is not comptime");
   }
   bool left_value = *(bool *)value_get_data(left);
   if (left_value) {
@@ -74,7 +74,7 @@ static value_t resolve_expression_comptime_logical_or(context_t ctx,
     return left;
   }
   if (!value_is_comptime(left)) {
-    return create_compile_error(ctx, left_node, "value is not comptime");
+    return create_comptime_error(ctx, left_node, "value is not comptime");
   }
   bool left_value = *(bool *)value_get_data(left);
   if (!left_value) {
@@ -210,7 +210,7 @@ value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
       result = create_error(ctx, "unsupport binary operator");
     }
   } else {
-    return create_compile_error(ctx, node, "invalid expression");
+    return create_comptime_error(ctx, node, "invalid expression");
   }
   if (value_is_error(result)) {
     return convert_compile_error(ctx, node, result);

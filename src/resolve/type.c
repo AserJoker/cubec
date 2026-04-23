@@ -17,7 +17,7 @@ value_t resolve_type(context_t ctx, ast_node_t node) {
     return value;
   }
   if (type_get_kind(type) != TYPE_KIND_TYPE) {
-    return create_compile_error(ctx, node, "expression is not type");
+    return create_comptime_error(ctx, node, "expression is not type");
   }
   return value;
 }

@@ -33,8 +33,8 @@ value_t create_error(context_t ctx, const char *fmt, ...) {
   const char *message = context_create_cstring(ctx, msg);
   return context_create_value(ctx, type, &message, false, true, NULL);
 }
-value_t create_compile_error(context_t ctx, ast_node_t node, const char *fmt,
-                             ...) {
+value_t create_comptime_error(context_t ctx, ast_node_t node, const char *fmt,
+                              ...) {
   allocator_t allocator = context_get_allocator(ctx);
   value_t vtype = context_load(ctx, "error");
   type_t type = *(type_t *)value_get_data(vtype);
@@ -88,7 +88,7 @@ value_t create_compile_error(context_t ctx, ast_node_t node, const char *fmt,
 }
 value_t convert_compile_error(context_t ctx, ast_node_t node, value_t err) {
   const char *message = error_get_message(err);
-  return create_compile_error(ctx, node, message);
+  return create_comptime_error(ctx, node, message);
 }
 const char *error_get_message(value_t self) {
   return *(const char **)value_get_data(self);

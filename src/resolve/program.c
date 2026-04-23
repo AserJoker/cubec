@@ -3,6 +3,7 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "engine/context.h"
+#include "engine/error.h"
 #include "engine/value.h"
 #include "resolve/statement_declaration.h"
 #include <inttypes.h>
@@ -22,6 +23,8 @@ value_t resolve_program(context_t ctx, ast_node_t node) {
     } else if (sts->type == NODE_TYPE_STATEMENT_FUNCTION) {
     } else if (sts->type == NODE_TYPE_STATEMENT_STRUCT) {
     } else if (sts->type == NODE_TYPE_STATEMENT_ENUM) {
+    } else {
+      err = create_comptime_error(ctx, sts, "invalid top statement");
     }
     if (err && value_is_error(err)) {
       return err;

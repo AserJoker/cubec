@@ -184,7 +184,7 @@ value_t context_load_module(context_t self, const char *filename) {
   ast_node_t node =
       read_ast_program(self->allocator, &pos, buf + len, filename);
   if (node->type == NODE_TYPE_ERROR) {
-    value_t err = create_compile_error(self, node, "%s", node->error);
+    value_t err = create_comptime_error(self, node, "%s", node->error);
     allocator_free(self->allocator, node);
     allocator_free(self->allocator, buf);
     return err;
@@ -214,7 +214,7 @@ value_t context_load_module(context_t self, const char *filename) {
   self->global = current_global;
   allocator_free(self->allocator, scope);
   if (array_get_size(self->errors)) {
-    global = create_compile_error(
+    global = create_comptime_error(
         self, node, "failed to compile: %s, found %" PRIuPTR " errors",
         array_get_size(self->errors));
     for (size_t idx = 0; idx < array_get_size(self->errors); idx++) {
