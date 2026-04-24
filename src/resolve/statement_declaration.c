@@ -129,16 +129,8 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
   if (result) {
     return create_comptime_error(ctx, node, "declartion statement error");
   }
-  if (location_is(kind->loc, "comptime")) {
-    if (node->parent->type == NODE_TYPE_LIST) {
-      size_t idx = ast_get_item_index(node->parent, node);
-      ast_set_item(node->parent, idx,
-                   create_ast_node(allocator, NODE_TYPE_EMPTY));
-    } else {
-      const char *key = ast_get_child_name(node->parent, node);
-      ast_set_child(allocator, node->parent, key,
-                    create_ast_node(allocator, NODE_TYPE_EMPTY));
-    }
+  if (kind && location_is(kind->loc, "comptime")) {
+    node->visible = false;
   }
   return context_get_undefined(ctx);
 }

@@ -20,7 +20,7 @@ struct _ast_node_t {
   location_t loc;
   ast_node_type_t type;
   ast_node_t parent;
-  bool changed;
+  bool visible;
   union {
     array_t items;
     hash_map_t children;

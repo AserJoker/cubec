@@ -14,6 +14,8 @@ void interrupt_init(context_t ctx) {
 }
 value_t create_interrupt(context_t ctx, value_t value) {
   type_t type = context_load_type(ctx, "interrupt");
-  allocator_t allocator = context_get_allocator(ctx);
-  return create_value(allocator, type, false, &value, true);
+  return context_create_value(ctx, type, &value, false, true, NULL);
+}
+value_t interrupt_get_value(value_t self) {
+  return *(value_t *)value_get_data(self);
 }

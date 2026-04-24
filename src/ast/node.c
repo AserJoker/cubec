@@ -41,7 +41,7 @@ ast_node_t create_ast_node(allocator_t allocator, size_t type) {
   } else {
     node->data = NULL;
   }
-  node->changed = false;
+  node->visible = true;
   return node;
 }
 
@@ -57,14 +57,11 @@ void ast_add_child(allocator_t allocator, ast_node_t node, const char *name,
   hash_map_set(node->children, create_cstring(allocator, name), child, NULL,
                NULL);
   child->parent = node;
-  node->changed = true;
 }
 void ast_remove_child(ast_node_t node, const char *name) {
   hash_map_delete(node->children, name, NULL, NULL);
-  node->changed = true;
 }
 ast_node_t ast_move_child(ast_node_t node, const char *name) {
-  node->changed = true;
   return hash_map_move(node->children, name, NULL, NULL);
 }
 ast_node_t ast_get_child(ast_node_t node, const char *name) {
@@ -97,24 +94,19 @@ size_t ast_get_item_index(ast_node_t node, ast_node_t child) {
 void ast_add_item(ast_node_t node, ast_node_t item) {
   array_push(node->items, item);
   item->parent = node;
-  node->changed = true;
 }
 void ast_remove_item(ast_node_t node, size_t idx) {
   array_del(node->items, idx);
-  node->changed = true;
 }
 ast_node_t ast_move_item(ast_node_t node, size_t idx) {
-  node->changed = true;
   ast_node_t current = array_move(node->items, idx);
   current->parent = NULL;
   return current;
 }
 ast_node_t ast_replace_item(ast_node_t node, size_t idx, ast_node_t item) {
-  node->changed = true;
   return array_replace(node->items, idx, item);
 }
 void ast_insert_item(ast_node_t node, size_t pos, ast_node_t item) {
-  node->changed = true;
   array_insert(node->items, pos, item);
   item->parent = node;
 }
@@ -122,14 +114,12 @@ size_t ast_get_length(ast_node_t node) { return array_get_size(node->items); }
 void ast_set_item(ast_node_t node, size_t idx, ast_node_t item) {
   array_set(node->items, idx, item);
   item->parent = node;
-  node->changed = true;
 }
 void ast_set_child(allocator_t allocator, ast_node_t node, const char *name,
                    ast_node_t child) {
   hash_map_set(node->children, create_cstring(allocator, name), child, NULL,
                NULL);
   child->parent = node;
-  node->changed = true;
 }
 
 int32_t ast_read_code(position_t *position, const char *end,

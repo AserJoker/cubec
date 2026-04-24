@@ -1,6 +1,6 @@
 func main():void {
-    comptime const t = i32;
-    func test(a:t,b:t):i32 {
-        return a + b;
+    comptime func add(a:i32, b:i32):i32{
+        return a+b;
     }
+    const c = add(1,2);
 }

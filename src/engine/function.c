@@ -8,10 +8,13 @@
 #include "engine/bool.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/interrupt.h"
 #include "engine/module.h"
+#include "engine/scope.h"
 #include "engine/str.h"
 #include "engine/type.h"
 #include "engine/value.h"
+#include "resolve/function_body.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -85,8 +88,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
         argument_t *arg_info =
             array_get(meta->arguments, array_get_size(meta->arguments) - 1);
         argv[idx] = value_safe_convert(argv[idx], ctx, arg_info->type);
-        type_t type = value_get_type(argv[idx]);
-        if (type_get_kind(type) == TYPE_KIND_ERROR) {
+        if (value_is_error(argv[idx])) {
           return argv[idx];
         }
       } else {
@@ -105,7 +107,66 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   }
   ast_node_t node = *(ast_node_t *)value_get_data(self);
   ast_node_t kind = ast_get_child(node, "kind");
-  if (location_is(kind->loc, "comptime")) {
+  allocator_t allocator = context_get_allocator(ctx);
+  if (kind && location_is(kind->loc, "comptime")) {
+    ast_node_t _global_node = ast_get_child(node, "_global");
+    ast_node_t _self_node = ast_get_child(node, "_self");
+    type_t _global = *(type_t *)value_get_type(_global_node->value);
+    type_t _self = *(type_t *)value_get_type(_self_node->value);
+    context_type_t current_type = context_get_type(ctx);
+    context_set_type(ctx, CONTEXT_TYPE_FUNCTION);
+    bool is_comptime = context_is_comptime(ctx);
+    context_set_comptime(ctx, true);
+    type_t current_global = context_get_global(ctx);
+    context_set_global(ctx, _global);
+    type_t current_self = context_get_self(ctx);
+    context_set_self(ctx, _self);
+    value_t current_function = context_get_function(ctx);
+    context_set_function(ctx, self);
+    scope_t current_scope = context_get_scope(ctx);
+    scope_t scope = create_scope(allocator, context_get_root_scope(ctx));
+    context_set_scope(ctx, scope);
+    value_t result = NULL;
+    ast_node_t arguments = ast_get_child(node, "arguments");
+    ast_node_t body = ast_get_child(node, "body");
+    for (size_t idx = 0; idx < ast_get_length(arguments); idx++) {
+      if (!value_is_comptime(argv[idx])) {
+        result =
+            create_error(ctx, "argument %" PRIuPTR " is not comptime", idx);
+        break;
+      }
+      ast_node_t arg_node = ast_get_item(arguments, idx);
+      ast_node_t identifier = ast_get_child(arg_node, "identifier");
+      char *name = location_get(identifier->loc, allocator);
+      if (scope_load(scope, name)) {
+        result =
+            create_error(ctx, "duplicate identifier '%s' declaration", name);
+        allocator_free(allocator, name);
+        break;
+      }
+      if (arg_node->type == NODE_TYPE_FUNCTION_ARGUMENT) {
+        value_t val = value_clone(argv[idx], allocator);
+        scope_store(scope, allocator, name, val);
+      } else {
+        // TODO: rest
+      }
+      allocator_free(allocator, name);
+      context_push_scope(ctx);
+      result = resolve_function_body(ctx, body);
+      if (value_is_interrupt(result)) {
+        result = interrupt_get_value(result);
+      }
+      result = value_clone(result, allocator);
+      scope_store(current_scope, allocator, NULL, result);
+    }
+    context_set_scope(ctx, current_scope);
+    allocator_free(allocator, scope);
+    context_set_function(ctx, current_function);
+    context_set_comptime(ctx, is_comptime);
+    context_set_global(ctx, current_global);
+    context_set_self(ctx, current_self);
+    context_set_type(ctx, current_type);
+    return result;
   }
   return context_create_value(ctx, meta->type, NULL, false, false, NULL);
 }

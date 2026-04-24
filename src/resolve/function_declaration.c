@@ -62,10 +62,9 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   type_t global = context_get_global(ctx);
   value_t vglobal = create_type_value(ctx, global, false, true, NULL);
   ast_node_t self_node = create_ast_value_node(allocator, vself);
-  ast_add_child(allocator, node, "self", self_node);
+  ast_add_child(allocator, node, "_self", self_node);
   ast_node_t global_node = create_ast_value_node(allocator, vglobal);
-  ast_add_child(allocator, node, "global", global_node);
-
+  ast_add_child(allocator, node, "_global", global_node);
   return function;
 }
 value_t resolve_function_declaration(context_t ctx, value_t function) {
@@ -77,8 +76,8 @@ value_t resolve_function_declaration(context_t ctx, value_t function) {
   }
   type_t function_type = value_get_type(function);
   array_t arguments_type = function_type_get_arguments(function_type);
-  ast_node_t self_node = ast_get_child(node, "self");
-  ast_node_t global_node = ast_get_child(node, "global");
+  ast_node_t self_node = ast_get_child(node, "_self");
+  ast_node_t global_node = ast_get_child(node, "_global");
   ast_node_t arguments_node = ast_get_child(node, "arguments");
   type_t self = *(type_t *)value_get_data(self_node->value);
   type_t global = *(type_t *)value_get_data(global_node->value);

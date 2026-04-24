@@ -143,6 +143,14 @@ value_t context_load(context_t self, const char *name) {
   }
   return create_error(self, "use of undeclared identifier '%s'", name);
 }
+value_t context_declar(context_t self, const char *name, value_t value) {
+  scope_t scope = self->scope;
+  if (scope_load(scope, name)) {
+    return create_error(self, "redefinition of '%s'", name);
+  }
+  scope_store(self->scope, self->allocator, name, value);
+  return self->undefined;
+}
 value_t context_get_undefined(context_t self) { return self->undefined; }
 value_t context_get_true(context_t self) { return self->true_; }
 value_t context_get_false(context_t self) { return self->false_; }

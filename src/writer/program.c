@@ -14,13 +14,12 @@ void write_program(allocator_t allocator, ast_node_t node, stream_t stream) {
     if (count != 0) {
       stream_newline(stream);
     }
-    if (sts->type != NODE_TYPE_EMPTY) {
+    if (sts->visible) {
       if (sts->type == NODE_TYPE_STATEMENT_DECLARATION) {
         write_statement_declaration(allocator, sts, stream);
       } else if (sts->type == NODE_TYPE_STATEMENT_FUNCTION) {
         write_statement_function(allocator, sts, stream);
       }
-      count++;
     }
   }
 }

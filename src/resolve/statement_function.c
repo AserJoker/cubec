@@ -12,6 +12,7 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
   allocator_t allocator = context_get_allocator(ctx);
   ast_add_child(allocator, node, "_function", function_node);
   ast_node_t identifier = ast_get_child(function_node, "identifier");
+  ast_node_t kind = ast_get_child(function_node, "kind");
   if (!identifier) {
     value_t err =
         create_comptime_error(ctx, function_node, "top function missing name");
@@ -29,13 +30,31 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
     } else {
       context_push_error(ctx, function);
     }
-  } else if (context_get_type(ctx) == CONTEXT_TYPE_STRUCT) {
-    type_t global = context_get_global(ctx);
-    char *name = location_get(identifier->loc, allocator);
-    struct_type_add_attribute(global, allocator, name, function);
-    allocator_free(allocator, name);
+  } else {
+    if (context_get_type(ctx) == CONTEXT_TYPE_STRUCT) {
+      type_t global = context_get_global(ctx);
+      char *name = location_get(identifier->loc, allocator);
+      struct_type_add_attribute(global, allocator, name, function);
+      allocator_free(allocator, name);
+    } else {
+      char *name = location_get(identifier->loc, allocator);
+      value_t err = context_declar(ctx, name, value_clone(function, allocator));
+      allocator_free(allocator, name);
+      if (value_is_error(err)) {
+        if (context_is_comptime(ctx)) {
+          return err;
+        } else {
+          err = convert_comptime_error(ctx, function_node, err);
+          context_push_error(ctx, err);
+          return context_get_undefined(ctx);
+        }
+      }
+    }
   }
   function_node = create_ast_value_node(allocator, function);
   ast_add_child(allocator, node, "function", function_node);
+  if (kind && location_is(kind->loc, "comptime")) {
+    node->visible = false;
+  }
   return context_get_undefined(ctx);
 }

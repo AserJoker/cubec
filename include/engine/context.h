@@ -33,6 +33,7 @@ void context_set_root_scope(context_t self, scope_t scope);
 const char *context_create_cstring(context_t self, const char *src);
 allocator_t context_get_allocator(context_t self);
 value_t context_load(context_t self, const char *name);
+value_t context_declar(context_t self, const char *name, value_t value);
 value_t context_get_undefined(context_t self);
 value_t context_get_true(context_t self);
 value_t context_get_false(context_t self);
