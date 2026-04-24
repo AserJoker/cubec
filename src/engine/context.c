@@ -6,6 +6,7 @@
 #include "core/array.h"
 #include "core/compare.h"
 #include "core/hash_map.h"
+#include "core/list.h"
 #include "core/position.h"
 #include "core/rbtree.h"
 #include "core/stream.h"
@@ -198,7 +199,7 @@ value_t context_load_module(context_t self, const char *filename) {
   }
   len = strlen(node->loc.filename);
   char id[len + 16];
-  sprintf(id, "module(%s)", node->loc.filename);
+  sprintf(id, "module_%" PRIuPTR, hash_map_get_size(self->modules));
   type_t module_struct = create_struct_type(self, NULL, id, 1);
   value_t global = create_type_value(self, module_struct, false, true, NULL);
   bool current_type = self->type;
@@ -215,10 +216,12 @@ value_t context_load_module(context_t self, const char *filename) {
   hash_map_set(self->modules, (void *)module_get_filename(module), module, NULL,
                NULL);
   resolve_program(self, node);
-  array_t functions = module_get_functions(module);
-  for (size_t idx = 0; idx < array_get_size(functions); idx++) {
-    value_t func = array_get(functions, idx);
+  hash_map_t functions = module_get_functions(module);
+  list_node_t it = hash_map_get_first(functions);
+  while (it != hash_map_get_end(functions)) {
+    value_t func = hash_map_node_get_value(it);
     resolve_function_declaration(self, func);
+    it = hash_map_node_get_next(it);
   }
   array_t errors = module_get_errors(self->module);
   if (array_get_size(errors)) {

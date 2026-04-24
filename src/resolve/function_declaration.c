@@ -4,7 +4,6 @@
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/location.h"
-#include "core/position.h"
 #include "engine/context.h"
 #include "engine/function.h"
 #include "engine/scope.h"
@@ -12,7 +11,9 @@
 #include "engine/value.h"
 #include "resolve/function_body.h"
 #include "resolve/type.h"
+#include <inttypes.h>
 #include <stdbool.h>
+#include <stdio.h>
 value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   ast_node_t type_node = ast_get_child(node, "type");
   ast_node_t arguments_node = ast_get_child(node, "arguments");
@@ -55,12 +56,7 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   type_t return_type = *(type_t *)value_get_data(vreturn_type);
   type_t function_type =
       create_function_type(ctx, return_type, argc, argv, variadic);
-  char *name = NULL;
-  if (identifier_node) {
-    name = location_get(identifier_node->loc, allocator);
-  }
   value_t function = create_function(ctx, function_type, node);
-  allocator_free(allocator, name);
   type_t self = context_get_self(ctx);
   value_t vself = create_type_value(ctx, self, false, true, NULL);
   type_t global = context_get_global(ctx);
@@ -69,6 +65,7 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   ast_add_child(allocator, node, "self", self_node);
   ast_node_t global_node = create_ast_value_node(allocator, vglobal);
   ast_add_child(allocator, node, "global", global_node);
+
   return function;
 }
 value_t resolve_function_declaration(context_t ctx, value_t function) {

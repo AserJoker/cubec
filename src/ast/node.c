@@ -301,6 +301,7 @@ static const char *type_names[] = {
     "NODE_TYPE_EMPTY",
     "NODE_TYPE_VALUE",
     "NODE_TYPE_ERROR",
+    "NODE_TYPE_STRING",
     "NODE_TYPE_LIST",
     "NODE_TYPE_LITERAL_IDENTIFIER",
     "NODE_TYPE_LITERAL_NUMERIC",
@@ -480,7 +481,7 @@ ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
       item = clone_ast_node(allocator, item);
       ast_add_item(n, item);
     }
-  } else {
+  } else if (node->type > NODE_TYPE_LIST) {
     for (list_node_t it = hash_map_get_first(node->children);
          it != hash_map_get_end(node->children);
          it = hash_map_node_get_next(it)) {
@@ -489,6 +490,12 @@ ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
       child = clone_ast_node(allocator, child);
       ast_add_child(allocator, n, key, child);
     }
+  } else if (node->type == NODE_TYPE_ERROR) {
+    n->error = create_cstring(allocator, node->error);
+  } else if (node->type == NODE_TYPE_VALUE) {
+    n->value = value_clone(node->value, allocator);
+  } else if (node->type == NODE_TYPE_STRING) {
+    n->string = create_cstring(allocator, node->string);
   }
   return n;
 }

@@ -25,6 +25,7 @@ struct _ast_node_t {
     array_t items;
     hash_map_t children;
     char *error;
+    char *string;
     struct _value_t *value;
     void *data;
   };
@@ -63,6 +64,7 @@ char *ast_write_json(allocator_t allocator, ast_node_t node);
 
 ast_node_t read_ast_node(allocator_t allocator, const char *filename,
                          const char *source, void *ctx);
+
 ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node);
 
 #ifdef __cplusplus

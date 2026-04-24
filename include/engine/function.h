@@ -20,6 +20,7 @@ value_t create_function(context_t ctx, type_t function_type, ast_node_t node);
 type_t function_type_get_type(type_t self);
 bool function_type_is_variadic(type_t self);
 array_t function_type_get_arguments(type_t self);
+value_t function_get_id(context_t ctx, value_t self);
 #ifdef __cplusplus
 }
 #endif

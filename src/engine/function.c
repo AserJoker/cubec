@@ -1,16 +1,20 @@
 #include "engine/function.h"
 #include "ast/node.h"
+#include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/location.h"
+#include "core/string.h"
 #include "engine/bool.h"
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/module.h"
+#include "engine/str.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 
 typedef struct _function_meta_t *function_meta_t;
@@ -102,10 +106,16 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   ast_node_t node = *(ast_node_t *)value_get_data(self);
   ast_node_t kind = ast_get_child(node, "kind");
   if (location_is(kind->loc, "comptime")) {
-    // TODO: resolve
   }
   return context_create_value(ctx, meta->type, NULL, false, false, NULL);
 }
+
+static char *function_write_ast(value_t self, allocator_t allocator) {
+  ast_node_t node = *(ast_node_t *)value_get_data(self);
+  ast_node_t _id = ast_get_child(node, "_id");
+  return location_get(_id->loc, allocator);
+}
+
 type_t create_function_type(context_t ctx, type_t type, size_t argc,
                             argument_t argv[], bool variadic) {
   allocator_t allocator = context_get_allocator(ctx);
@@ -187,6 +197,7 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
         .eq = function_eq,
         .ne = function_ne,
         .call = function_call,
+        .write_ast = function_write_ast,
     };
     function_meta_t meta =
         create_function_meta(allocator, type, argc, argv, variadic);
@@ -200,6 +211,47 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
 value_t create_function(context_t ctx, type_t function_type, ast_node_t node) {
   allocator_t allocator = context_get_allocator(ctx);
   module_t module = context_get_module(ctx);
+  const char *parent_name = NULL;
+  value_t current_function = context_get_function(ctx);
+  if (current_function) {
+    value_t function_name = function_get_id(ctx, current_function);
+    parent_name = *(const char **)value_get_data(function_name);
+  } else {
+    type_t self = context_get_self(ctx);
+    parent_name = type_get_id(self);
+  }
+  ast_node_t identifier = ast_get_child(node, "identifier");
+  char *id_str = NULL;
+  if (identifier) {
+    id_str = location_get(identifier->loc, allocator);
+  }
+  const char *func_name = id_str;
+  if (!func_name) {
+    func_name = "anonymous";
+  }
+  size_t len = strlen(parent_name) + strlen(func_name) + 2;
+  char base_fullname[len + 1];
+  sprintf(base_fullname, "%s_%s", parent_name, func_name);
+  allocator_free(allocator, id_str);
+  if (module_get_function(module, base_fullname)) {
+    for (size_t idx = 0;; idx++) {
+      size_t len = snprintf(NULL, 0, "%s_%" PRIuPTR, base_fullname, idx);
+      char fullname[len + 1];
+      sprintf(fullname, "%s_%" PRIuPTR, base_fullname, idx);
+      if (!module_get_function(module, fullname)) {
+        char *id = create_cstring(allocator, fullname);
+        ast_node_t id_node = create_ast_node(allocator, NODE_TYPE_STRING);
+        id_node->string = id;
+        ast_add_child(allocator, node, "_id", id_node);
+        break;
+      }
+    }
+  } else {
+    char *id = create_cstring(allocator, base_fullname);
+    ast_node_t id_node = create_ast_node(allocator, NODE_TYPE_STRING);
+    id_node->string = id;
+    ast_add_child(allocator, node, "_id", id_node);
+  }
   value_t func = create_value(allocator, function_type, false, &node, true);
   module_add_function(module, func);
   return func;
@@ -218,4 +270,10 @@ bool function_type_is_variadic(type_t self) {
 array_t function_type_get_arguments(type_t self) {
   function_meta_t meta = type_get_meta(self);
   return meta->arguments;
+}
+value_t function_get_id(context_t ctx, value_t self) {
+  ast_node_t node = *(ast_node_t *)value_get_data(self);
+  ast_node_t id_node = ast_get_child(node, "_id");
+  allocator_t allocator = context_get_allocator(ctx);
+  return create_str(ctx, id_node->string);
 }
