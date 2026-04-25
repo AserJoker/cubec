@@ -110,7 +110,7 @@ static value_t type_set_field(value_t self, context_t ctx, const char *name,
 static value_t type_deref(value_t self, context_t ctx) {
   type_t type = *(type_t *)value_get_data(self);
   type_t ptr_type = create_ptr_type(ctx, type, true, false);
-  return create_type_value(ctx, ptr_type, false, true, NULL);
+  return create_type_value(ctx, ptr_type, false, NULL);
 }
 
 static char *type_write_ast(value_t self, allocator_t allocator) {
@@ -136,10 +136,10 @@ void type_init(context_t ctx) {
   context_create_value(ctx, type, &type, false, true, "type");
 }
 
-value_t create_type_value(context_t ctx, type_t data, bool mut, bool comptime,
+value_t create_type_value(context_t ctx, type_t data, bool mut,
                           const char *name) {
   allocator_t allocator = context_get_allocator(ctx);
   value_t vtype = context_load(ctx, "type");
   type_t type = *(type_t *)value_get_data(vtype);
-  return context_create_value(ctx, type, &data, mut, comptime, name);
+  return context_create_value(ctx, type, &data, mut, true, name);
 }

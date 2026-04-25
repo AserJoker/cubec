@@ -123,7 +123,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       initialize = create_ast_value_node(allocator, value);
       ast_add_child(allocator, declarator, "initialize", initialize);
     }
-    value_t vtype = create_type_value(ctx, value_type, false, true, NULL);
+    value_t vtype = create_type_value(ctx, value_type, false, NULL);
     if (value_is_writer(vtype)) {
       ast_remove_child(declarator, "type");
       type = create_ast_value_node(allocator, vtype);

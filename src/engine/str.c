@@ -58,7 +58,7 @@ void str_init(context_t ctx) {
   type_t str_t = create_type(allocator, TYPE_KIND_STR, sizeof(const char *),
                              sizeof(const char *), "str", "str", &opt, NULL);
   context_store_type(ctx, str_t);
-  create_type_value(ctx, str_t, false, true, "str");
+  create_type_value(ctx, str_t, false, "str");
 }
 value_t create_str(context_t ctx, const char *src) {
   type_t str_t = context_load_type(ctx, "str");

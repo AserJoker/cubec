@@ -474,15 +474,15 @@ void float_init(context_t ctx) {
   };
   type_t f16_t = create_type(allocator, TYPE_KIND_INTEGER, sizeof(_Float16),
                              sizeof(_Float16), "f16", "f16", &opt, NULL);
-  create_type_value(ctx, f16_t, false, true, "f16");
+  create_type_value(ctx, f16_t, false, "f16");
   context_store_type(ctx, f16_t);
   type_t f32_t = create_type(allocator, TYPE_KIND_INTEGER, sizeof(float),
                              sizeof(float), "f32", "f32", &opt, NULL);
-  create_type_value(ctx, f32_t, false, true, "f32");
+  create_type_value(ctx, f32_t, false, "f32");
   context_store_type(ctx, f32_t);
   type_t f64_t = create_type(allocator, TYPE_KIND_INTEGER, sizeof(double),
                              sizeof(double), "f64", "f64", &opt, NULL);
-  create_type_value(ctx, f64_t, false, true, "f64");
+  create_type_value(ctx, f64_t, false, "f64");
   context_store_type(ctx, f64_t);
 }
 value_t create_f16(context_t ctx, bool mut, const char *name) {

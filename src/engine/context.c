@@ -18,6 +18,7 @@
 #include "engine/integer.h"
 #include "engine/interrupt.h"
 #include "engine/module.h"
+#include "engine/null.h"
 #include "engine/scope.h"
 #include "engine/str.h"
 #include "engine/struct.h"
@@ -44,6 +45,7 @@ struct _context_t {
   type_t self;
   bool comptime;
   value_t undefined;
+  value_t nil;
   value_t true_;
   value_t false_;
   context_type_t type;
@@ -96,8 +98,11 @@ context_t create_context(allocator_t allocator) {
   unsigned_init(self);
   float_init(self);
   interrupt_init(self);
+  null_init(self);
   self->undefined = context_create_value(self, context_load_type(self, "void"),
                                          NULL, false, true, NULL);
+  self->nil = context_create_value(self, context_load_type(self, "null"), NULL,
+                                   false, true, "nil");
   self->true_ = create_comptime_bool(self, true, false, NULL);
   self->false_ = create_comptime_bool(self, false, false, NULL);
   self->comptime = false;
@@ -236,7 +241,7 @@ value_t context_load_module(context_t self, const char *filename) {
   char id[len + 16];
   sprintf(id, "module_%" PRIuPTR, hash_map_get_size(self->modules));
   type_t module_struct = create_struct_type(self, NULL, id, 1);
-  value_t global = create_type_value(self, module_struct, false, true, NULL);
+  value_t global = create_type_value(self, module_struct, false, NULL);
   context_type_t current_type = self->type;
   type_t current_global = self->global;
   type_t current_self = self->self;

@@ -14,5 +14,5 @@ void void_init(context_t ctx) {
   type_t void_t =
       create_type(allocator, TYPE_KIND_VOID, 0, 0, "void", "void", &opt, NULL);
   context_store_type(ctx, void_t);
-  create_type_value(ctx, void_t, false, true, "void");
+  create_type_value(ctx, void_t, false, "void");
 }

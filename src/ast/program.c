@@ -31,6 +31,9 @@ ast_node_t read_ast_program(allocator_t allocator, position_t *position,
     if (err && err->type == NODE_TYPE_ERROR) {
       goto onerror;
     }
+    if (!*current.offset) {
+      break;
+    }
   }
   err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == NODE_TYPE_ERROR) {

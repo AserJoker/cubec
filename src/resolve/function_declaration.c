@@ -58,9 +58,9 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
       create_function_type(ctx, return_type, argc, argv, variadic);
   value_t function = create_function(ctx, function_type, node);
   type_t self = context_get_self(ctx);
-  value_t vself = create_type_value(ctx, self, false, true, NULL);
+  value_t vself = create_type_value(ctx, self, false, NULL);
   type_t global = context_get_global(ctx);
-  value_t vglobal = create_type_value(ctx, global, false, true, NULL);
+  value_t vglobal = create_type_value(ctx, global, false, NULL);
   ast_node_t self_node = create_ast_value_node(allocator, vself);
   ast_add_child(allocator, node, "_self", self_node);
   ast_node_t global_node = create_ast_value_node(allocator, vglobal);

@@ -205,7 +205,7 @@ value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
       result = value_deref(right, ctx);
     } else if (location_is(opt->loc, "typeof")) {
       type_t type = value_get_type(right);
-      result = create_type_value(ctx, type, false, true, NULL);
+      result = create_type_value(ctx, type, false, NULL);
     } else {
       result = create_error(ctx, "unsupport binary operator");
     }

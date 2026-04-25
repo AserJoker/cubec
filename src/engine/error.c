@@ -16,7 +16,7 @@ void error_init(context_t ctx) {
       create_type(allocator, TYPE_KIND_ERROR, sizeof(const char *),
                   sizeof(const char *), "error", "error", NULL, NULL);
   context_store_type(ctx, error_t);
-  create_type_value(ctx, error_t, false, true, "error");
+  create_type_value(ctx, error_t, false,  "error");
 }
 value_t create_error(context_t ctx, const char *fmt, ...) {
   allocator_t allocator = context_get_allocator(ctx);

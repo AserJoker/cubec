@@ -691,19 +691,19 @@ void integer_init(context_t ctx) {
   };
   type_t i8_t = create_type(allocator, TYPE_KIND_INTEGER, sizeof(int8_t),
                             sizeof(int8_t), "i8", "i8", &opt, NULL);
-  create_type_value(ctx, i8_t, false, true, "i8");
+  create_type_value(ctx, i8_t, false, "i8");
   context_store_type(ctx, i8_t);
   type_t i16_t = create_type(allocator, TYPE_KIND_INTEGER, sizeof(int16_t),
                              sizeof(int16_t), "i16", "i16", &opt, NULL);
-  create_type_value(ctx, i16_t, false, true, "i16");
+  create_type_value(ctx, i16_t, false, "i16");
   context_store_type(ctx, i16_t);
   type_t i32_t = create_type(allocator, TYPE_KIND_INTEGER, sizeof(int32_t),
                              sizeof(int32_t), "i32", "i32", &opt, NULL);
-  create_type_value(ctx, i32_t, false, true, "i32");
+  create_type_value(ctx, i32_t, false, "i32");
   context_store_type(ctx, i32_t);
   type_t i64_t = create_type(allocator, TYPE_KIND_INTEGER, sizeof(int64_t),
                              sizeof(int64_t), "i64", "i64", &opt, NULL);
-  create_type_value(ctx, i64_t, false, true, "i64");
+  create_type_value(ctx, i64_t, false, "i64");
   context_store_type(ctx, i64_t);
 }
 value_t create_i8(context_t ctx, bool mut, const char *name) {

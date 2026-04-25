@@ -177,7 +177,7 @@ type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
   size_t len = snprintf(NULL, 0, "*%s%s%s", mut ? "const " : "",
                         vol ? "volatile " : "", base_name);
   char buf[len + 1];
-  sprintf(buf, "*%s%s%s", mut ? "const " : "", vol ? "volatile " : "",
+  sprintf(buf, "*%s%s%s", !mut ? "const " : "", vol ? "volatile " : "",
           base_name);
   type_t self = context_load_type(ctx, buf);
   if (!self) {

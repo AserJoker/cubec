@@ -680,19 +680,19 @@ void unsigned_init(context_t ctx) {
   };
   type_t u8_t = create_type(allocator, TYPE_KIND_UNSIGNED, sizeof(int8_t),
                             sizeof(int8_t), "u8", "u8", &opt, NULL);
-  create_type_value(ctx, u8_t, false, true, "u8");
+  create_type_value(ctx, u8_t, false, "u8");
   context_store_type(ctx, u8_t);
   type_t u16_t = create_type(allocator, TYPE_KIND_UNSIGNED, sizeof(int16_t),
                              sizeof(int16_t), "u16", "u16", &opt, NULL);
-  create_type_value(ctx, u16_t, false, true, "u16");
+  create_type_value(ctx, u16_t, false, "u16");
   context_store_type(ctx, u16_t);
   type_t u32_t = create_type(allocator, TYPE_KIND_UNSIGNED, sizeof(int32_t),
                              sizeof(int32_t), "u32", "u32", &opt, NULL);
-  create_type_value(ctx, u32_t, false, true, "u32");
+  create_type_value(ctx, u32_t, false, "u32");
   context_store_type(ctx, u32_t);
   type_t u64_t = create_type(allocator, TYPE_KIND_UNSIGNED, sizeof(int64_t),
                              sizeof(int64_t), "u64", "u64", &opt, NULL);
-  create_type_value(ctx, u64_t, false, true, "u64");
+  create_type_value(ctx, u64_t, false, "u64");
   context_store_type(ctx, u64_t);
 }
 value_t create_u8(context_t ctx, bool mut, const char *name) {

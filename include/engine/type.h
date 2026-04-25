@@ -10,6 +10,7 @@ typedef enum _type_kind_t {
   TYPE_KIND_INTERRUPT,
   TYPE_KIND_ERROR,
   TYPE_KIND_VOID,
+  TYPE_KIND_NULL,
   TYPE_KIND_TYPE,
   TYPE_KIND_INTEGER,
   TYPE_KIND_UNSIGNED,
@@ -117,7 +118,7 @@ void *type_get_meta(type_t self);
 void type_init(struct _context_t *ctx);
 
 struct _value_t *create_type_value(struct _context_t *ctx, type_t type,
-                                   bool mut, bool comptime, const char *name);
+                                   bool mut, const char *name);
 #ifdef __cplusplus
 }
 #endif
