@@ -179,13 +179,13 @@ int32_t ast_read_code(position_t *position, const char *end,
     }
     if (code == '\n' || code == 0x2028 || code == 0x2029) {
       position->line++;
-      position->column = 1;
+      position->column = 0;
       if (*position->offset == '\r') {
         position->offset++;
       }
     } else if (code == '\r') {
       position->line++;
-      position->column = 1;
+      position->column = 0;
       if (*position->offset == '\n') {
         position->offset++;
       }

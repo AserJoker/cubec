@@ -59,7 +59,7 @@ value_t value_member_call(value_t self, struct _context_t *ctx,
                           const char *name, size_t argc, value_t argv[]) {
   type_t type = value_get_type(self);
   if (type_get_kind(type) == TYPE_KIND_TYPE) {
-    type = *(type_t *)value_get_type(self);
+    type = *(type_t *)value_get_data(self);
     if (type_get_kind(type) == TYPE_KIND_STRUCT) {
       struct_attribute_t attr = struct_type_get_attribute(type, name);
       if (!attr) {

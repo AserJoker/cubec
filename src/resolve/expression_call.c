@@ -6,12 +6,28 @@
 #include "engine/context.h"
 #include "engine/value.h"
 #include "resolve/expression.h"
+#include <string.h>
 value_t resolve_expression_call(context_t ctx, ast_node_t node) {
+  allocator_t allocator = context_get_allocator(ctx);
   ast_node_t callee = ast_get_child(node, "callee");
   ast_node_t arguments = ast_get_child(node, "arguments");
-  allocator_t allocator = context_get_allocator(ctx);
-  ast_node_t resolved_arguments = create_ast_node(allocator, NODE_TYPE_LIST);
   size_t argc = ast_get_length(arguments);
+  if (callee->type == NODE_TYPE_LITERAL_IDENTIFIER) {
+    char *name = location_get(callee->loc, allocator);
+    if (context_has_builtin(ctx, name)) {
+      ast_node_t resolved = context_eval_builtin(ctx, name, node);
+      node->type = resolved->type;
+      allocator_free(allocator, node->data);
+      node->data = resolved->data;
+      node->visible = resolved->visible;
+      resolved->data = NULL;
+      allocator_free(allocator, resolved);
+      allocator_free(allocator, name);
+      return resolve_expression(ctx, node);
+    }
+    allocator_free(allocator, name);
+  }
+  ast_node_t resolved_arguments = create_ast_node(allocator, NODE_TYPE_LIST);
   value_t argv[argc];
   for (size_t idx = 0; idx < argc; idx++) {
     ast_node_t arg = ast_get_item(arguments, idx);

@@ -4,7 +4,6 @@
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "ast/variable_declarator.h"
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
@@ -75,9 +74,6 @@ ast_node_t read_ast_callable_declarator(allocator_t allocator,
           allocator_free(allocator, arg);
           arg = NULL;
         }
-      }
-      if (!arg) {
-        arg = read_ast_variable_declarator(allocator, &current, end, filename);
       }
       if (!arg) {
         arg = read_ast_expression18(allocator, &current, end, filename);

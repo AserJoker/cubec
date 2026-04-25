@@ -8,9 +8,8 @@
 #include "engine/value.h"
 #include "resolve/function_declaration.h"
 value_t resolve_statement_function(context_t ctx, ast_node_t node) {
-  ast_node_t function_node = ast_move_child(node, "function");
+  ast_node_t function_node = ast_get_child(node, "function");
   allocator_t allocator = context_get_allocator(ctx);
-  ast_add_child(allocator, node, "_function", function_node);
   ast_node_t identifier = ast_get_child(function_node, "identifier");
   ast_node_t kind = ast_get_child(function_node, "kind");
   if (!identifier) {
@@ -51,8 +50,6 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
       }
     }
   }
-  function_node = create_ast_value_node(allocator, function);
-  ast_add_child(allocator, node, "function", function_node);
   if (kind && location_is(kind->loc, "comptime")) {
     node->visible = false;
   }

@@ -47,7 +47,7 @@ value_t create_comptime_error(context_t ctx, ast_node_t node, const char *fmt,
   char mask[len + prefix_len + 1];
   if (node->loc.begin.line != node->loc.end.line) {
     for (size_t idx = 0; idx < len; idx++) {
-      if (idx < node->loc.begin.column - 1) {
+      if (idx < node->loc.begin.column) {
         mask[idx + prefix_len] = ' ';
       } else {
         mask[idx + prefix_len] = '^';
@@ -55,7 +55,7 @@ value_t create_comptime_error(context_t ctx, ast_node_t node, const char *fmt,
     }
   } else {
     for (size_t idx = 0; idx < len; idx++) {
-      if (idx >= node->loc.begin.column - 1 && idx < node->loc.end.column - 1) {
+      if (idx >= node->loc.begin.column && idx < node->loc.end.column) {
         mask[idx + prefix_len] = '^';
       } else {
         mask[idx + prefix_len] = ' ';

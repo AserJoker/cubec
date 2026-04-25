@@ -111,8 +111,8 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   if (kind && location_is(kind->loc, "comptime")) {
     ast_node_t _global_node = ast_get_child(node, "_global");
     ast_node_t _self_node = ast_get_child(node, "_self");
-    type_t _global = *(type_t *)value_get_type(_global_node->value);
-    type_t _self = *(type_t *)value_get_type(_self_node->value);
+    type_t _global = *(type_t *)value_get_data(_global_node->value);
+    type_t _self = *(type_t *)value_get_data(_self_node->value);
     context_type_t current_type = context_get_type(ctx);
     context_set_type(ctx, CONTEXT_TYPE_FUNCTION);
     bool is_comptime = context_is_comptime(ctx);
@@ -169,12 +169,6 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     return result;
   }
   return context_create_value(ctx, meta->type, NULL, false, false, NULL);
-}
-
-static char *function_write_ast(value_t self, allocator_t allocator) {
-  ast_node_t node = *(ast_node_t *)value_get_data(self);
-  ast_node_t _id = ast_get_child(node, "_id");
-  return location_get(_id->loc, allocator);
 }
 
 type_t create_function_type(context_t ctx, type_t type, size_t argc,
@@ -258,7 +252,6 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
         .eq = function_eq,
         .ne = function_ne,
         .call = function_call,
-        .write_ast = function_write_ast,
     };
     function_meta_t meta =
         create_function_meta(allocator, type, argc, argv, variadic);

@@ -7,6 +7,7 @@
 #include "core/compare.h"
 #include "core/hash_map.h"
 #include "core/list.h"
+#include "core/location.h"
 #include "core/position.h"
 #include "core/rbtree.h"
 #include "core/stream.h"
@@ -48,6 +49,7 @@ struct _context_t {
   context_type_t type;
   module_t module;
   value_t function;
+  hash_map_t builtins;
 };
 static void context_dispose(context_t self, allocator_t allocator) {
   while (self->scope) {
@@ -56,6 +58,7 @@ static void context_dispose(context_t self, allocator_t allocator) {
   allocator_free(allocator, self->modules);
   allocator_free(allocator, self->strings);
   allocator_free(allocator, self->types);
+  allocator_free(allocator, self->builtins);
 }
 context_t create_context(allocator_t allocator) {
   context_t self = allocator_alloc(allocator, sizeof(struct _context_t),
@@ -75,6 +78,13 @@ context_t create_context(allocator_t allocator) {
       .compare = (compare_fn_t)strcmp,
   };
   self->modules = create_hash_map(allocator, &modules_initialize);
+  hash_map_initialize_t builtin_initialize = {
+      .hash = (hash_fn_t)cstring_sdb,
+      .compare = (compare_fn_t)strcmp,
+      .autofree_key = true,
+      .autofree_value = false,
+  };
+  self->builtins = create_hash_map(allocator, &builtin_initialize);
   hash_map_initialize_t types_initialize = modules_initialize;
   self->types = create_hash_map(allocator, &types_initialize);
   type_init(self);
@@ -121,6 +131,19 @@ scope_t context_get_root_scope(context_t self) { return self->root; }
 void context_set_root_scope(context_t self, scope_t scope) {
   self->root = scope;
 }
+void context_set_builtin(context_t ctx, const char *name, builtin_fn_t fn) {
+  hash_map_set(ctx->builtins, create_cstring(ctx->allocator, name), fn, NULL,
+               NULL);
+}
+ast_node_t context_eval_builtin(context_t ctx, const char *name,
+                                ast_node_t node) {
+  builtin_fn_t fn = hash_map_get(ctx->builtins, name, NULL, NULL);
+  return fn(ctx, node);
+}
+
+bool context_has_builtin(context_t ctx, const char *name) {
+  return hash_map_has(ctx->builtins, name, NULL, NULL);
+}
 
 const char *context_create_cstring(context_t self, const char *src) {
   const char *current = rbtree_get(self->strings, src, NULL);
@@ -140,6 +163,10 @@ value_t context_load(context_t self, const char *name) {
       return value;
     }
     scope = scope_get_parent(scope);
+  }
+  struct_attribute_t attr = struct_type_get_attribute(self->global, name);
+  if (attr) {
+    return attr->value;
   }
   return create_error(self, "use of undeclared identifier '%s'", name);
 }
@@ -210,17 +237,20 @@ value_t context_load_module(context_t self, const char *filename) {
   sprintf(id, "module_%" PRIuPTR, hash_map_get_size(self->modules));
   type_t module_struct = create_struct_type(self, NULL, id, 1);
   value_t global = create_type_value(self, module_struct, false, true, NULL);
-  bool current_type = self->type;
+  context_type_t current_type = self->type;
   type_t current_global = self->global;
   type_t current_self = self->self;
   scope_t current_scope = self->scope;
   module_t current_module = self->module;
+  value_t current_function = self->function;
   module = create_module(self->allocator, global, node, buf, filename);
   scope_t scope = create_scope(self->allocator, self->root);
   self->global = module_struct;
   self->self = module_struct;
   self->scope = scope;
   self->module = module;
+  self->function = NULL;
+  self->type = CONTEXT_TYPE_STRUCT;
   hash_map_set(self->modules, (void *)module_get_filename(module), module, NULL,
                NULL);
   resolve_program(self, node);
@@ -242,6 +272,7 @@ value_t context_load_module(context_t self, const char *filename) {
     }
   }
   allocator_free(self->allocator, scope);
+  self->function = current_function;
   self->scope = current_scope;
   self->type = current_type;
   self->self = current_self;
