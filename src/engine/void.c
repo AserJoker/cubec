@@ -9,6 +9,7 @@ static char *void_write_ast(value_t self, allocator_t allocator) {
 void void_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
+      .type_eq = type_default_eq,
       .write_ast = void_write_ast,
   };
   type_t void_t =

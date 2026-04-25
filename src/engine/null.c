@@ -72,6 +72,7 @@ static value_t null_safe_convert(value_t self, context_t ctx, type_t type) {
 void null_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
+      .type_eq = type_default_eq,
       .eq = null_eq,
       .ne = null_ne,
       .safe_convert = null_safe_convert,

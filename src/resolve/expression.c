@@ -1,9 +1,11 @@
 #include "resolve/expression.h"
 #include "ast/node_type.h"
 #include "engine/error.h"
+#include "resolve/array_declarator.h"
 #include "resolve/expression_binary.h"
 #include "resolve/expression_call.h"
 #include "resolve/function_declaration.h"
+#include "resolve/initialize_list.h"
 #include "resolve/literal_identifier.h"
 #include "resolve/literal_numeric.h"
 #include "resolve/literal_string.h"
@@ -19,6 +21,10 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     return resolve_ptr_declarator(ctx, node);
   } else if (node->type == NODE_TYPE_FUNCTION_DECLARATOR) {
     return resolve_function_declarator(ctx, node);
+  } else if (node->type == NODE_TYPE_ARRAY_DECLARATOR) {
+    return resolve_array_declarator(ctx, node);
+  } else if (node->type == NODE_TYPE_INITIALIZE_LIST) {
+    return resolve_initialize_list(ctx, node);
   } else if (node->type == NODE_TYPE_EXPRESSION_BINARY) {
     return resolve_expression_binary(ctx, node);
   } else if (node->type == NODE_TYPE_EXPRESSION_CALL) {

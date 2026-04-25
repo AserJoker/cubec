@@ -79,7 +79,7 @@ static value_t struct_set_field(value_t self, context_t ctx, const char *name,
     return value;
   }
 }
-static value_t struct_convert(value_t self, context_t ctx, type_t type) {
+static value_t struct_safe_convert(value_t self, context_t ctx, type_t type) {
   type_t value_type = value_get_type(self);
   if (type_get_kind(type) != TYPE_KIND_STRUCT ||
       type_get_size(type) != type_get_size(value_type) ||
@@ -89,17 +89,16 @@ static value_t struct_convert(value_t self, context_t ctx, type_t type) {
   }
   array_t src_fields = struct_type_get_fields(value_type);
   array_t dst_fields = struct_type_get_fields(type);
-  if (array_get_size(src_fields) != array_get_size(dst_fields)) {
+  if (array_get_size(src_fields) >= array_get_size(dst_fields)) {
     return create_error(ctx, "cannot convert '%s' to '%s'",
                         type_get_name(value_type), type_get_name(type));
   }
-  for (size_t idx = 0; idx < array_get_size(src_fields); idx++) {
+  for (size_t idx = 0; idx < array_get_size(dst_fields); idx++) {
     struct_field_t src_field = array_get(src_fields, idx);
     struct_field_t dst_field = array_get(dst_fields, idx);
     if (src_field->offset != dst_field->offset ||
         strcmp(src_field->name, dst_field->name) != 0 ||
-        strcmp(type_get_id(src_field->type), type_get_id(dst_field->type)) !=
-            0) {
+        !type_is_equal(src_field->type, dst_field->type)) {
       return create_error(ctx, "cannot convert '%s' to '%s'",
                           type_get_name(value_type), type_get_name(type));
     }
@@ -111,6 +110,47 @@ static value_t struct_convert(value_t self, context_t ctx, type_t type) {
   } else {
     return context_create_value(ctx, type, NULL, mut, false, NULL);
   }
+}
+
+static value_t struct_convert(value_t self, context_t ctx, type_t type) {
+  type_t value_type = value_get_type(self);
+  if (type_get_kind(type) != TYPE_KIND_STRUCT) {
+    return create_error(ctx, "cannot convert '%s' to '%s'",
+                        type_get_name(value_type), type_get_name(type));
+  }
+  bool mut = value_is_mut(self);
+  if (value_is_comptime(self)) {
+    void *data = value_get_data(self);
+    return context_create_weak_value(ctx, type, (void *)data, mut, NULL);
+  } else {
+    return context_create_value(ctx, type, NULL, mut, false, NULL);
+  }
+}
+
+static bool struct_type_is_equal(type_t self, type_t another) {
+  if (type_get_kind(another) != type_get_kind(self)) {
+    return false;
+  }
+  struct_meta_t self_meta = type_get_meta(self);
+  struct_meta_t another_meta = type_get_meta(another);
+  if (array_get_size(self_meta->fields) !=
+      array_get_size(another_meta->fields)) {
+    return false;
+  }
+  for (size_t idx = 0; idx < array_get_size(self_meta->fields); idx++) {
+    struct_field_t self_field = array_get(self_meta->fields, idx);
+    struct_field_t another_field = array_get(another_meta->fields, idx);
+    if (self_field->offset != another_field->offset) {
+      return false;
+    }
+    if (strcmp(self_field->name, another_field->name) != 0) {
+      return false;
+    }
+    if (!type_is_equal(self_field->type, another_field->type)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 type_t create_struct_type(context_t ctx, const char *name, const char *id,
@@ -127,7 +167,8 @@ type_t create_struct_type(context_t ctx, const char *name, const char *id,
         .get_field = struct_get_field,
         .set_field = struct_set_field,
         .convert = struct_convert,
-        .safe_convert = struct_convert,
+        .safe_convert = struct_safe_convert,
+        .type_eq = struct_type_is_equal,
     };
     self = create_type(allocator, TYPE_KIND_STRUCT, sizeof(int8_t), align, name,
                        id, &opt, meta);

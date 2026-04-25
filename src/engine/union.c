@@ -94,8 +94,7 @@ static value_t union_convert(value_t self, context_t ctx, type_t type) {
     union_field_t src_field = array_get(src_fields, idx);
     union_field_t dst_field = array_get(dst_fields, idx);
     if (strcmp(src_field->name, dst_field->name) != 0 ||
-        strcmp(type_get_id(src_field->type), type_get_id(dst_field->type)) !=
-            0) {
+        !type_is_equal(src_field->type, dst_field->type)) {
       return create_error(ctx, "cannot convert '%s' to '%s'",
                           type_get_name(value_type), type_get_name(type));
     }

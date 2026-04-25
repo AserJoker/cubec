@@ -655,6 +655,7 @@ static value_t unsigned_plus(value_t self, context_t ctx) {
 void unsigned_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   struct _type_operator_t opt = {
+      .type_eq = type_default_eq,
       .convert = unsigned_convert,
       .safe_convert = unsigned_safe_convert,
       .add = unsigned_add,

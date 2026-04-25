@@ -121,6 +121,7 @@ static char *type_write_ast(value_t self, allocator_t allocator) {
 void type_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
+      .type_eq = type_default_eq,
       .addr_of = value_default_address_of,
       .deref = type_deref,
       .get_field = type_get_field,
@@ -142,4 +143,11 @@ value_t create_type_value(context_t ctx, type_t data, bool mut,
   value_t vtype = context_load(ctx, "type");
   type_t type = *(type_t *)value_get_data(vtype);
   return context_create_value(ctx, type, &data, mut, true, name);
+}
+bool type_default_eq(type_t self, type_t another) {
+  return strcmp(self->id, another->id) == 0;
+}
+bool type_is_equal(type_t self, type_t another) {
+  type_eq_fn_t fn = self->opt.type_eq;
+  return fn(self, another);
 }

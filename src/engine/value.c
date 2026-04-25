@@ -407,21 +407,21 @@ value_t value_set_field(value_t self, struct _context_t *ctx, const char *name,
                       type_get_name(type));
 }
 
-value_t value_get_index(value_t self, struct _context_t *ctx, size_t idx) {
+value_t value_get(value_t self, struct _context_t *ctx, value_t key) {
   type_t type = value_get_type(self);
   const type_operator_t *opt = type_get_operator(type);
-  if (opt->get_index) {
-    return opt->get_index(self, ctx, idx);
+  if (opt->get) {
+    return opt->get(self, ctx, key);
   }
   return create_error(ctx, "type '%s' does not support field access",
                       type_get_name(type));
 }
-value_t value_set_index(value_t self, struct _context_t *ctx, size_t idx,
-                        value_t value) {
+value_t value_set(value_t self, struct _context_t *ctx, value_t key,
+                  value_t value) {
   type_t type = value_get_type(self);
   const type_operator_t *opt = type_get_operator(type);
-  if (opt->set_index) {
-    return opt->set_index(self, ctx, idx, value);
+  if (opt->set) {
+    return opt->set(self, ctx, key, value);
   }
   return create_error(ctx, "type '%s' does not support field access",
                       type_get_name(type));
@@ -463,13 +463,9 @@ value_t value_default_assigment(value_t self, struct _context_t *ctx,
     return create_error(ctx, "value is not mutable");
   }
   type_t dst_type = value_get_type(self);
-  type_t src_type = value_get_type(value);
-  if (strcmp(type_get_id(dst_type), type_get_id(src_type)) != 0) {
-    value = value_safe_convert(value, ctx, dst_type);
-    src_type = value_get_type(value);
-    if (type_get_kind(src_type) == TYPE_KIND_ERROR) {
-      return value;
-    }
+  value = value_safe_convert(value, ctx, dst_type);
+  if (value_is_error(value)) {
+    return value;
   }
   if (value_is_comptime(value)) {
     const void *data = value_get_data(value);

@@ -664,6 +664,7 @@ static char *integer_write_ast(value_t self, allocator_t allocator) {
 void integer_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   struct _type_operator_t opt = {
+      .type_eq = type_default_eq,
       .convert = integer_convert,
       .safe_convert = integer_safe_convert,
       .add = integer_add,

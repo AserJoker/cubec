@@ -20,6 +20,7 @@ void write_program(allocator_t allocator, ast_node_t node, stream_t stream) {
       } else if (sts->type == NODE_TYPE_STATEMENT_FUNCTION) {
         write_statement_function(allocator, sts, stream);
       }
+      count++;
     }
   }
 }

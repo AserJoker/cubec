@@ -56,7 +56,7 @@ static function_meta_t create_function_meta(allocator_t allocator, type_t type,
 static value_t function_eq(value_t self, context_t ctx, value_t another) {
   type_t right_type = value_get_type(another);
   type_t left_type = value_get_type(self);
-  if (strcmp(type_get_id(left_type), type_get_id(right_type)) != 0) {
+  if (!type_is_equal(left_type, right_type)) {
     return create_error(ctx,
                         "invalid operands to binary expression ('%s' and '%s')",
                         type_get_name(left_type), type_get_name(right_type));
@@ -69,7 +69,7 @@ static value_t function_eq(value_t self, context_t ctx, value_t another) {
 static value_t function_ne(value_t self, context_t ctx, value_t another) {
   type_t right_type = value_get_type(another);
   type_t left_type = value_get_type(self);
-  if (strcmp(type_get_id(left_type), type_get_id(right_type)) != 0) {
+  if (!type_is_equal(left_type, right_type)) {
     return create_error(ctx,
                         "invalid operands to binary expression ('%s' and '%s')",
                         type_get_name(left_type), type_get_name(right_type));
@@ -171,6 +171,32 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   return context_create_value(ctx, meta->type, NULL, false, false, NULL);
 }
 
+static bool function_type_is_equal(type_t self, type_t another) {
+  function_meta_t src_meta = type_get_meta(self);
+  function_meta_t dst_meta = type_get_meta(another);
+  if (!type_is_equal(src_meta->type, dst_meta->type)) {
+    return false;
+  }
+  if (src_meta->variadic != dst_meta->variadic) {
+    return false;
+  }
+  if (array_get_size(src_meta->arguments) !=
+      array_get_size(dst_meta->arguments)) {
+    return false;
+  }
+  for (size_t idx = 0; idx < array_get_size(src_meta->arguments); idx++) {
+    argument_t *src_arg = array_get(src_meta->arguments, idx);
+    argument_t *dst_arg = array_get(dst_meta->arguments, idx);
+    if (src_arg->mut != dst_arg->mut) {
+      return false;
+    }
+    if (!type_is_equal(src_arg->type, dst_arg->type)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 type_t create_function_type(context_t ctx, type_t type, size_t argc,
                             argument_t argv[], bool variadic) {
   allocator_t allocator = context_get_allocator(ctx);
@@ -252,6 +278,8 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
         .eq = function_eq,
         .ne = function_ne,
         .call = function_call,
+        .type_eq = function_type_is_equal,
+        .assigment = value_default_assigment,
     };
     function_meta_t meta =
         create_function_meta(allocator, type, argc, argv, variadic);

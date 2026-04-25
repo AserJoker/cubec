@@ -52,9 +52,9 @@ value_t value_get_field(value_t self, struct _context_t *ctx, const char *name);
 value_t value_set_field(value_t self, struct _context_t *ctx, const char *name,
                         value_t value);
 
-value_t value_get_index(value_t self, struct _context_t *ctx, size_t idx);
-value_t value_set_index(value_t self, struct _context_t *ctx, size_t idx,
-                        value_t value);
+value_t value_get(value_t self, struct _context_t *ctx, value_t key);
+value_t value_set(value_t self, struct _context_t *ctx, value_t key,
+                  value_t value);
 
 value_t value_get_length(value_t self, struct _context_t *ctx);
 

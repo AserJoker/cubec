@@ -49,6 +49,7 @@ static char *str_write_ast(value_t self, allocator_t allocator) {
 void str_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
+      .type_eq = type_default_eq,
       .addr_of = value_default_address_of,
       .assigment = value_default_assigment,
       .eq = str_eq,

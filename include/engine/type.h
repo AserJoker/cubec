@@ -45,12 +45,13 @@ typedef struct _value_t *(*set_field_fn_t)(struct _value_t *self,
                                            struct _context_t *ctx,
                                            const char *name,
                                            struct _value_t *value);
-typedef struct _value_t *(*get_index_fn_t)(struct _value_t *self,
-                                           struct _context_t *ctx,
-                                           size_t index);
-typedef struct _value_t *(*set_index_fn_t)(struct _value_t *self,
-                                           struct _context_t *ctx, size_t index,
-                                           struct _value_t *value);
+typedef struct _value_t *(*get_fn_t)(struct _value_t *self,
+                                     struct _context_t *ctx,
+                                     struct _value_t *key);
+typedef struct _value_t *(*set_fn_t)(struct _value_t *self,
+                                     struct _context_t *ctx,
+                                     struct _value_t *key,
+                                     struct _value_t *value);
 typedef struct _value_t *(*get_length_fn_t)(struct _value_t *self,
                                             struct _context_t *ctx);
 typedef struct _value_t *(*call_fn_t)(struct _value_t *self,
@@ -59,7 +60,10 @@ typedef struct _value_t *(*call_fn_t)(struct _value_t *self,
 
 typedef char *(*write_ast_fn_t)(struct _value_t *self, allocator_t allocator);
 
+typedef bool (*type_eq_fn_t)(type_t self, type_t another);
+
 typedef struct _type_operator_t {
+  type_eq_fn_t type_eq;
   single_fn_t addr_of;
   single_fn_t deref;
   single_fn_t plus;
@@ -90,8 +94,8 @@ typedef struct _type_operator_t {
   get_field_fn_t get_field;
   set_field_fn_t set_field;
 
-  get_index_fn_t get_index;
-  set_index_fn_t set_index;
+  get_fn_t get;
+  set_fn_t set;
 
   get_length_fn_t get_length;
 
@@ -119,6 +123,8 @@ void type_init(struct _context_t *ctx);
 
 struct _value_t *create_type_value(struct _context_t *ctx, type_t type,
                                    bool mut, const char *name);
+bool type_default_eq(type_t self, type_t another);
+bool type_is_equal(type_t self, type_t another);
 #ifdef __cplusplus
 }
 #endif

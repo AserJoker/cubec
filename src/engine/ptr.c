@@ -4,9 +4,12 @@
 #include "engine/bool.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/integer.h"
 #include "engine/struct.h"
 #include "engine/type.h"
+#include "engine/unsigned.h"
 #include "engine/value.h"
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,13 +35,9 @@ static value_t ptr_assigment(value_t self, context_t ctx, value_t value) {
   if (!ptr_type_is_mut(type)) {
     return create_error(ctx, "ptr is not mutable");
   }
-  type_t src_type = value_get_type(value);
-  if (strcmp(type_get_id(type), type_get_id(src_type)) != 0) {
-    value = value_safe_convert(value, ctx, type);
-    src_type = value_get_type(value);
-    if (type_get_kind(src_type) == TYPE_KIND_ERROR) {
-      return value;
-    }
+  value = value_safe_convert(value, ctx, type);
+  if (value_is_error(value)) {
+    return value;
   }
   if (value_is_comptime(self)) {
     if (value_is_comptime(value)) {
@@ -55,13 +54,9 @@ static value_t ptr_assigment(value_t self, context_t ctx, value_t value) {
 }
 static value_t ptr_eq(value_t self, context_t ctx, value_t value) {
   type_t left_type = value_get_type(self);
-  type_t right_type = value_get_type(value);
-  if (strcmp(type_get_id(left_type), type_get_id(right_type)) != 0) {
-    value = value_safe_convert(value, ctx, left_type);
-    right_type = value_get_type(value);
-    if (type_get_kind(right_type) == TYPE_KIND_ERROR) {
-      return value;
-    }
+  value = value_safe_convert(value, ctx, left_type);
+  if (value_is_error(value)) {
+    return value;
   }
   if (value_is_comptime(self) && value_is_comptime(value)) {
     void *left = *(void **)value_get_data(self);
@@ -73,13 +68,9 @@ static value_t ptr_eq(value_t self, context_t ctx, value_t value) {
 }
 static value_t ptr_ne(value_t self, context_t ctx, value_t value) {
   type_t left_type = value_get_type(self);
-  type_t right_type = value_get_type(value);
-  if (strcmp(type_get_id(left_type), type_get_id(right_type)) != 0) {
-    value = value_safe_convert(value, ctx, left_type);
-    right_type = value_get_type(value);
-    if (type_get_kind(right_type) == TYPE_KIND_ERROR) {
-      return value;
-    }
+  value = value_safe_convert(value, ctx, left_type);
+  if (value_is_error(value)) {
+    return value;
   }
   if (value_is_comptime(self) && value_is_comptime(value)) {
     void *left = *(void **)value_get_data(self);
@@ -148,8 +139,7 @@ static value_t ptr_safe_convert(value_t self, context_t ctx, type_t type) {
       struct_field_t dst_field = array_get(dst_fields, idx);
       if (src_field->offset != dst_field->offset ||
           strcmp(src_field->name, dst_field->name) != 0 ||
-          strcmp(type_get_id(src_field->type), type_get_id(dst_field->type)) !=
-              0) {
+          !type_is_equal(src_field->type, dst_field->type)) {
         return create_error(ctx, "cannot convert %s to %s",
                             type_get_name(value_type), type_get_name(type));
       }
@@ -172,6 +162,12 @@ static value_t ptr_set_field(value_t self, context_t ctx, const char *name,
   value_t base = value_deref(self, ctx);
   return value_set_field(base, ctx, name, value);
 }
+static bool _ptr_type_is_equal(type_t self, type_t another) {
+  if (type_get_kind(self) != type_get_kind(another)) {
+    return false;
+  }
+  return type_is_equal(ptr_type_get_type(self), ptr_type_get_type(another));
+}
 type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
   const char *base_name = type_get_id(type);
   size_t len = snprintf(NULL, 0, "*%s%s%s", mut ? "const " : "",
@@ -184,6 +180,7 @@ type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
     allocator_t allocator = context_get_allocator(ctx);
     ptr_meta_t meta = create_ptr_meta(allocator, type, mut, vol);
     type_operator_t opt = {
+        .type_eq = _ptr_type_is_equal,
         .addr_of = value_default_address_of,
         .deref = ptr_deref,
         .eq = ptr_eq,
@@ -200,7 +197,22 @@ type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
   }
   return self;
 }
-static value_t parray_get_index(value_t self, context_t ctx, size_t idx) {
+static value_t parray_get(value_t self, context_t ctx, value_t key) {
+  type_t key_type = value_get_type(key);
+  uint64_t idx = 0;
+  if (type_get_kind(key_type) == TYPE_KIND_INTEGER) {
+    int64_t i = integer_get_value(key);
+    if (i < 0) {
+      return create_error(
+          ctx, "index " PRIdPTR " is before the beginning of the array", i);
+    } else {
+      idx = i;
+    }
+  } else if (type_get_kind(key_type) == TYPE_KIND_UNSIGNED) {
+    idx = unsigned_get_value(key);
+  } else {
+    return create_error(ctx, "array subscript is not an integer");
+  }
   type_t type = value_get_type(self);
   type_t base_type = ptr_type_get_type(type);
   bool mut = value_is_mut(self);
@@ -213,17 +225,28 @@ static value_t parray_get_index(value_t self, context_t ctx, size_t idx) {
     return context_create_value(ctx, base_type, NULL, mut, false, NULL);
   }
 }
-static value_t parray_set_index(value_t self, context_t ctx, size_t idx,
-                                value_t value) {
+static value_t parray_set(value_t self, context_t ctx, value_t key,
+                          value_t value) {
+  type_t key_type = value_get_type(key);
+  uint64_t idx = 0;
+  if (type_get_kind(key_type) == TYPE_KIND_INTEGER) {
+    int64_t i = integer_get_value(key);
+    if (i < 0) {
+      return create_error(
+          ctx, "index " PRIdPTR " is before the beginning of the array", i);
+    } else {
+      idx = i;
+    }
+  } else if (type_get_kind(key_type) == TYPE_KIND_UNSIGNED) {
+    idx = unsigned_get_value(key);
+  } else {
+    return create_error(ctx, "array subscript is not an integer");
+  }
   type_t type = value_get_type(self);
   type_t base_type = ptr_type_get_type(type);
-  type_t value_type = value_get_type(value);
-  if (strcmp(type_get_id(base_type), type_get_id(value_type)) != 0) {
-    value = value_safe_convert(value, ctx, base_type);
-    value_type = value_get_type(value);
-    if (type_get_kind(value_type) == TYPE_KIND_ERROR) {
-      return value;
-    }
+  value = value_safe_convert(value, ctx, base_type);
+  if (value_is_error(value)) {
+    return value;
   }
   bool mut = value_is_mut(self);
   if (value_is_comptime(self)) {
@@ -281,7 +304,7 @@ type_t create_parray_type(context_t ctx, type_t type, bool mut, bool vol) {
   size_t len = snprintf(NULL, 0, "[*]%s%s%s", mut ? "const " : "",
                         vol ? "volatile " : "", base_name);
   char buf[len + 1];
-  sprintf(buf, "[*]%s%s%s", mut ? "const " : "", vol ? "volatile " : "",
+  sprintf(buf, "[*]%s%s%s", !mut ? "const " : "", vol ? "volatile " : "",
           base_name);
   type_t self = context_load_type(ctx, buf);
   if (!self) {
@@ -291,13 +314,13 @@ type_t create_parray_type(context_t ctx, type_t type, bool mut, bool vol) {
         .addr_of = value_default_address_of,
         .eq = ptr_eq,
         .ne = ptr_ne,
-        .get_index = parray_get_index,
-        .set_index = parray_set_index,
+        .get = parray_get,
+        .set = parray_set,
         .convert = parray_convert,
         .safe_convert = parray_safe_convert,
     };
-    self = create_type(allocator, TYPE_KIND_PTR, sizeof(void *), sizeof(void *),
-                       buf, buf, &opt, meta);
+    self = create_type(allocator, TYPE_KIND_PARRAY, sizeof(void *),
+                       sizeof(void *), buf, buf, &opt, meta);
     context_store_type(ctx, self);
   }
   return self;

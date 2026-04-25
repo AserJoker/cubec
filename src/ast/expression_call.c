@@ -24,49 +24,43 @@ ast_node_t read_ast_expression_call(allocator_t allocator, position_t *position,
     goto onerror;
   }
   if (*current.offset != ')') {
-    ast_node_t initialize_list =
-        read_ast_initialize_list(allocator, &current, end, filename);
-    if (initialize_list) {
-      if (initialize_list->type == NODE_TYPE_ERROR) {
-        err = initialize_list;
+
+    for (;;) {
+      ast_node_t item =
+          read_ast_expression_spread(allocator, &current, end, filename);
+      if (!item) {
+        item = read_ast_initialize_list(allocator, &current, end, filename);
+      }
+      if (!item) {
+        item = read_ast_expression3(allocator, &current, end, filename);
+      }
+      if (!item) {
+        err = create_ast_error(allocator, *position, current, filename,
+                               "invalid or unexpected token");
         goto onerror;
       }
-      ast_add_item(args, initialize_list);
-    } else {
-      for (;;) {
-        ast_node_t item =
-            read_ast_expression_spread(allocator, &current, end, filename);
-        if (!item) {
-          item = read_ast_expression3(allocator, &current, end, filename);
-        }
-        if (!item) {
-          err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid or unexpected token");
-          goto onerror;
-        }
-        if (item->type == NODE_TYPE_ERROR) {
-          err = item;
-          goto onerror;
-        }
-        ast_add_item(args, item);
-        err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == NODE_TYPE_ERROR) {
-          goto onerror;
-        }
-        if (*current.offset == ')') {
-          break;
-        }
-        if (*current.offset != ',') {
-          err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid or unexpected token");
-          goto onerror;
-        }
-        current.column++;
-        current.offset++;
-        err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == NODE_TYPE_ERROR) {
-          goto onerror;
-        }
+      if (item->type == NODE_TYPE_ERROR) {
+        err = item;
+        goto onerror;
+      }
+      ast_add_item(args, item);
+      err = ast_skip_all(allocator, &current, end, filename);
+      if (err && err->type == NODE_TYPE_ERROR) {
+        goto onerror;
+      }
+      if (*current.offset == ')') {
+        break;
+      }
+      if (*current.offset != ',') {
+        err = create_ast_error(allocator, *position, current, filename,
+                               "invalid or unexpected token");
+        goto onerror;
+      }
+      current.column++;
+      current.offset++;
+      err = ast_skip_all(allocator, &current, end, filename);
+      if (err && err->type == NODE_TYPE_ERROR) {
+        goto onerror;
       }
     }
   }
