@@ -150,9 +150,6 @@ value_t resolve_initialize_list(context_t ctx, ast_node_t node) {
       if (value_is_error(val) || value_is_interrupt(val)) {
         return val;
       }
-      if (!value_is_comptime(val)) {
-        return create_comptime_error(ctx, initialize, "value is not comptime");
-      }
       val = value_safe_convert(val, ctx, type);
       if (value_is_error(val)) {
         return convert_comptime_error(ctx, initialize, val);

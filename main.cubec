@@ -1,3 +1,2 @@
-const data:[_]i32 = {123};
-const pdata = &data;
-const data2 = *pdata;
+const data  = 1;
+const b:i32 = {data};

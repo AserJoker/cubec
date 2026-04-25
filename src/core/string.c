@@ -38,7 +38,10 @@ string_t create_string(allocator_t allocator, string_initialize_t *initialize) {
   return string;
 }
 
-const char *string_get(string_t self) { return self->data; }
+const char *string_get(string_t self) {
+  self->data[self->len] = 0;
+  return self->data;
+}
 
 size_t string_len(string_t self) { return self->len; }
 
