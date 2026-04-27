@@ -161,6 +161,18 @@ const char *context_create_cstring(context_t self, const char *src) {
 }
 allocator_t context_get_allocator(context_t self) { return self->allocator; }
 value_t context_load(context_t self, const char *name) {
+  if (strcmp(name, "true") == 0) {
+    return self->true_;
+  }
+  if (strcmp(name, "false") == 0) {
+    return self->false_;
+  }
+  if (strcmp(name, "undefined") == 0) {
+    return self->undefined;
+  }
+  if (strcmp(name, "__self__") == 0) {
+    return create_type_value(self, self->self, false, NULL);
+  }
   scope_t scope = self->scope;
   while (scope) {
     value_t value = scope_load(scope, name);
@@ -239,8 +251,8 @@ value_t context_load_module(context_t self, const char *filename) {
   }
   len = strlen(node->loc.filename);
   char id[len + 16];
-  sprintf(id, "module_%" PRIuPTR, hash_map_get_size(self->modules));
-  type_t module_struct = create_struct_type(self, NULL, id, 1);
+  sprintf(id, "__module_%" PRIuPTR, hash_map_get_size(self->modules));
+  type_t module_struct = create_struct_type(self, id, id, 1);
   value_t global = create_type_value(self, module_struct, false, NULL);
   context_type_t current_type = self->type;
   type_t current_global = self->global;

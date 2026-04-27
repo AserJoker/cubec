@@ -1,1 +1,5 @@
-const arr:[8]i32 = {};
+func main(): void {
+    const obj:__self__ = {
+        ...__self__{},
+    };
+}
