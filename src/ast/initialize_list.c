@@ -1,5 +1,6 @@
 #include "ast/initialize_list.h"
 #include "ast/expression.h"
+#include "ast/expression_spread.h"
 #include "ast/initialize_field.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -34,6 +35,12 @@ ast_node_t read_ast_initialize_list(allocator_t allocator, position_t *position,
     for (;;) {
       ast_node_t item =
           read_ast_initialize_field(allocator, &current, end, filename);
+      if (!item) {
+        item = read_ast_expression_spread(allocator, &current, end, filename);
+      }
+      if (!item) {
+        item = read_ast_expression3(allocator, &current, end, filename);
+      }
       if (!item) {
         err = create_ast_error(allocator, *position, current, filename,
                                "invalid initialize list");

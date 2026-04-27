@@ -1,2 +1,1 @@
-const data  = 1;
-const b:i32 = {data};
+const arr:[8]i32 = {};

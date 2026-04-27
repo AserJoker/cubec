@@ -1,7 +1,9 @@
 #include "writer/initialize_list.h"
 #include "ast/node.h"
+#include "ast/node_type.h"
 #include "core/stream.h"
 #include "writer/expression.h"
+#include "writer/expression_spread.h"
 #include "writer/initialize_field.h"
 void write_initialize_list(allocator_t allocator, ast_node_t node,
                            stream_t stream) {
@@ -20,7 +22,13 @@ void write_initialize_list(allocator_t allocator, ast_node_t node,
         stream_newline(stream);
       }
       ast_node_t field = ast_get_item(fields, idx);
-      write_initialize_field(allocator, field, stream);
+      if (field->type == NODE_TYPE_INITIALIZE_FIELD) {
+        write_initialize_field(allocator, field, stream);
+      } else if (field->type == NODE_TYPE_EXPRESSION_SPREAD) {
+        write_expression_spread(allocator, field, stream);
+      } else {
+        write_expression(allocator, field, stream);
+      }
     }
     stream_dec_indent(stream);
     stream_newline(stream);

@@ -1,4 +1,1 @@
-const data: i32 = 1@i32;
-const b: i32 = i32{
-    data
-};
+const arr: [8]i32 = [8]i32{};
