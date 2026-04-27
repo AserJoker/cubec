@@ -1,7 +1,7 @@
 pub struct Test {
     id: i32;
     pub data: const u32;
-    func getId(self: *__self__): i32 {
+    pub func getId(self: *__self__): i32 {
         return self.id;
     }
 }

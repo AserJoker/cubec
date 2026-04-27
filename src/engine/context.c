@@ -109,6 +109,7 @@ context_t create_context(allocator_t allocator) {
   self->global = NULL;
   self->module = NULL;
   self->function = NULL;
+  self->self = NULL;
   return self;
 }
 bool context_is_comptime(context_t ctx) { return ctx->comptime; }
