@@ -45,6 +45,12 @@ static value_t struct_get_field(value_t self, context_t ctx, const char *name) {
     return create_error(ctx, "no member '%s' in type '%s'", name,
                         type_get_name(type));
   }
+  if (!field->pub) {
+    type_t self = context_get_self(ctx);
+    if (self != type) {
+      return create_error(ctx, "identifier '%s' is not visible", name);
+    }
+  }
   bool mut = value_is_mut(self);
   if (value_is_comptime(self)) {
     const void *data = value_get_data(self);
@@ -63,7 +69,16 @@ static value_t struct_set_field(value_t self, context_t ctx, const char *name,
     return create_error(ctx, "no member '%s' in type '%s'", name,
                         type_get_name(type));
   }
+  if (!field->pub) {
+    type_t self = context_get_self(ctx);
+    if (self != type) {
+      return create_error(ctx, "identifier '%s' is not visible", name);
+    }
+  }
   bool mut = value_is_mut(self);
+  if (!field->mut || !mut) {
+    return create_error(ctx, "value is not mutable");
+  }
   if (value_is_comptime(self)) {
     const void *data = value_get_data(self);
     if (value_is_comptime(value)) {
@@ -239,18 +254,20 @@ static void struct_field_dispose(struct_field_t self, allocator_t allocator) {
 }
 static struct_field_t create_struct_field(allocator_t allocator,
                                           const char *name, size_t offset,
-                                          type_t type) {
+                                          type_t type, bool mut, bool pub) {
   struct_field_t self =
       allocator_alloc(allocator, sizeof(struct _struct_field_t),
                       (dispose_fn_t)struct_field_dispose);
   self->name = create_cstring(allocator, name);
   self->offset = offset;
   self->type = type;
+  self->mut = mut;
+  self->pub = pub;
   return self;
 }
 
 void struct_type_add_field(type_t self, allocator_t allocator, const char *name,
-                           type_t type) {
+                           type_t type, bool mut, bool pub) {
   struct_meta_t meta = type_get_meta(self);
   size_t size = 0;
   size_t num_fields = array_get_size(meta->fields);
@@ -266,7 +283,8 @@ void struct_type_add_field(type_t self, allocator_t allocator, const char *name,
   if (size % field_align != 0) {
     size = size - size % field_align + field_align;
   }
-  struct_field_t field = create_struct_field(allocator, name, size, type);
+  struct_field_t field =
+      create_struct_field(allocator, name, size, type, mut, pub);
   array_push(meta->fields, field);
   size = field->offset + type_get_size(field->type);
   if (size % align != 0) {
@@ -298,17 +316,19 @@ static void struct_attribute_dispose(struct_attribute_t self,
 }
 static struct_attribute_t create_struct_attribute(allocator_t allocator,
                                                   const char *name,
-                                                  value_t value) {
+                                                  value_t value, bool pub) {
   struct_attribute_t self =
       allocator_alloc(allocator, sizeof(struct _struct_attribute_t),
                       (dispose_fn_t)struct_attribute_dispose);
   self->name = create_cstring(allocator, name);
   self->value = value_clone(value, allocator);
+  self->pub = pub;
   return self;
 }
 void struct_type_add_attribute(type_t self, allocator_t allocator,
-                               const char *name, value_t value) {
-  struct_attribute_t attr = create_struct_attribute(allocator, name, value);
+                               const char *name, value_t value, bool pub) {
+  struct_attribute_t attr =
+      create_struct_attribute(allocator, name, value, pub);
   struct_meta_t meta = type_get_meta(self);
   array_push(meta->attributes, attr);
 }

@@ -4,17 +4,18 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "engine/context.h"
-#include "engine/error.h"
 #include "engine/module.h"
 #include "engine/struct.h"
 #include "engine/type.h"
 #include "engine/value.h"
-#include "resolve/function_declaration.h"
 #include "resolve/statement_declaration.h"
+#include "resolve/statement_function.h"
+#include "resolve/statement_struct.h"
 #include "resolve/type.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
   allocator_t allocator = context_get_allocator(ctx);
   ast_node_t identifier = ast_get_child(node, "identifier");
@@ -40,6 +41,10 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
     if (field->type == NODE_TYPE_STRUCT_FIELD) {
       ast_node_t identifier = ast_get_child(field, "identifier");
       ast_node_t type_node = ast_get_child(field, "type");
+      ast_node_t mut_node = ast_get_child(field, "mut");
+      ast_node_t pub_node = ast_get_child(field, "pub");
+      bool mut = mut_node = NULL;
+      bool pub = pub_node != NULL;
       value_t vtype = resolve_type(ctx, type_node);
       if (value_is_error(vtype) || value_is_interrupt(vtype)) {
         return vtype;
@@ -47,34 +52,18 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
       ast_node_bind_value(allocator, type_node, vtype);
       type_t type = *(type_t *)value_get_data(vtype);
       char *field_name = location_get(identifier->loc, allocator);
-      struct_type_add_field(stru, allocator, field_name, type);
+      struct_type_add_field(stru, allocator, field_name, type, mut, pub);
       allocator_free(allocator, field_name);
-    } else if (field->type == NODE_TYPE_STRUCT_DECLARATOR) {
-      ast_node_t identifier = ast_get_child(field, "identifier");
-      if (!identifier) {
-        return create_comptime_error(ctx, field, "struct missing name");
+    } else if (field->type == NODE_TYPE_STATEMENT_STRUCT) {
+      value_t err = resolve_statement_struct(ctx, field);
+      if (value_is_error(err) || value_is_interrupt(err)) {
+        return err;
       }
-      value_t value = resolve_struct_declarator(ctx, field);
-      if (value_is_error(value) || value_is_interrupt(value)) {
-        return value;
+    } else if (field->type == NODE_TYPE_STATEMENT_FUNCTION) {
+      value_t err = resolve_statement_function(ctx, field);
+      if (value_is_error(err) || value_is_interrupt(err)) {
+        return err;
       }
-      ast_node_bind_value(allocator, field, value);
-      type_t st = *(type_t *)value_get_data(value);
-      const char *name = type_get_name(st);
-      struct_type_add_attribute(stru, allocator, name, value);
-    } else if (field->type == NODE_TYPE_FUNCTION_DECLARATOR) {
-      ast_node_t identifier = ast_get_child(field, "identifier");
-      if (!identifier) {
-        return create_comptime_error(ctx, field, "method missing name");
-      }
-      value_t value = resolve_function_declarator(ctx, field);
-      if (value_is_error(value) || value_is_interrupt(value)) {
-        return value;
-      }
-      ast_node_bind_value(allocator, field, value);
-      char *name = location_get(identifier->loc, allocator);
-      struct_type_add_attribute(stru, allocator, name, value);
-      allocator_free(allocator, name);
     } else if (field->type == NODE_TYPE_STATEMENT_DECLARATION) {
       value_t err = resolve_statement_declaration(ctx, field);
       if (value_is_error(err) || value_is_interrupt(err)) {

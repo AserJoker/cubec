@@ -1,11 +1,11 @@
-comptime func record(T: type): type {
-    return struct {
-        data: T;
-    };
+pub struct Test {
+    id: i32;
+    pub data: const u32;
+    func getId(self: *__self__): i32 {
+        return self.id;
+    }
 }
-func main(): void {
-    const item = record(i32){
-        .data = 123
-    };
+pub func main(): void {
+    const demo = Test{};
+    const id = demo.getId();
 }
- 

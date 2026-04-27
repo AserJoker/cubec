@@ -92,6 +92,12 @@ static value_t type_get_field(value_t self, context_t ctx, const char *name) {
   if (type_get_kind(type) == TYPE_KIND_STRUCT) {
     struct_attribute_t attr = struct_type_get_attribute(type, name);
     if (attr) {
+      if (!attr->pub) {
+        type_t self = context_get_self(ctx);
+        if (self != type) {
+          return create_error(ctx, "identifier '%s' is not visible", name);
+        }
+      }
       return attr->value;
     }
   }
@@ -105,6 +111,12 @@ static value_t type_set_field(value_t self, context_t ctx, const char *name,
   if (type_get_kind(type) == TYPE_KIND_STRUCT) {
     struct_attribute_t attr = struct_type_get_attribute(type, name);
     if (attr) {
+      if (!attr->pub) {
+        type_t self = context_get_self(ctx);
+        if (self != type) {
+          return create_error(ctx, "identifier '%s' is not visible", name);
+        }
+      }
       return value_assigment(attr->value, ctx, value);
     }
   }
@@ -130,7 +142,7 @@ void type_init(context_t ctx) {
       .ne = type_ne,
       .assigment = value_default_assigment,
   };
-  
+
   type_t type = create_type(allocator, TYPE_KIND_TYPE, sizeof(type_t),
                             sizeof(type_t), "type", "type", &opt, NULL);
   context_store_type(ctx, type);

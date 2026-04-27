@@ -29,6 +29,28 @@ ast_node_t read_ast_struct_field(allocator_t allocator, position_t *position,
       return err;
     }
   }
+  ast_node_t token =
+      read_ast_literal_identifier(allocator, &current, end, filename);
+  if (token) {
+    if (token->type == NODE_TYPE_ERROR) {
+      err = token;
+      goto onerror;
+    }
+    if (location_is(token->loc, "pub")) {
+      ast_add_child(allocator, node, "pub", token);
+      err = ast_skip_all(allocator, &current, end, filename);
+      if (err && err->type == NODE_TYPE_ERROR) {
+        return err;
+      }
+    } else {
+      current = token->loc.begin;
+      allocator_free(allocator, token);
+    }
+  }
+  err = ast_skip_all(allocator, &current, end, filename);
+  if (err && err->type == NODE_TYPE_ERROR) {
+    return err;
+  }
 
   ast_node_t identifier =
       read_ast_literal_identifier(allocator, &current, end, filename);
@@ -53,22 +75,21 @@ ast_node_t read_ast_struct_field(allocator_t allocator, position_t *position,
   }
   current.offset++;
   current.column++;
-  ast_node_t mut =
-      read_ast_literal_identifier(allocator, &current, end, filename);
-  if (mut) {
-    if (mut->type == NODE_TYPE_ERROR) {
-      err = mut;
+  token = read_ast_literal_identifier(allocator, &current, end, filename);
+  if (token) {
+    if (token->type == NODE_TYPE_ERROR) {
+      err = token;
       goto onerror;
     }
-    if (location_is(mut->loc, "const")) {
-      ast_add_child(allocator, node, "mut", mut);
+    if (location_is(token->loc, "const")) {
+      ast_add_child(allocator, node, "mut", token);
       err = ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == NODE_TYPE_ERROR) {
         return err;
       }
     } else {
-      current = mut->loc.begin;
-      allocator_free(allocator, mut);
+      current = token->loc.begin;
+      allocator_free(allocator, token);
     }
   }
   err = ast_skip_all(allocator, &current, end, filename);

@@ -5,5 +5,10 @@
 void write_statement_function(allocator_t allocator, ast_node_t node,
                               stream_t stream) {
   ast_node_t function = ast_get_child(node, "function");
+  ast_node_t pub = ast_get_child(node, "pub");
+  if (pub) {
+    stream_write_location(stream, pub->loc);
+    stream_write(stream, " ");
+  }
   write_function_delcarator(allocator, function, stream);
 }

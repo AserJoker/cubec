@@ -12,6 +12,10 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
   allocator_t allocator = context_get_allocator(ctx);
   ast_node_t identifier = ast_get_child(function_node, "identifier");
   ast_node_t kind = ast_get_child(function_node, "kind");
+  ast_node_t pub_node = ast_get_child(node, "pub");
+  if (pub_node && context_get_type(ctx) != CONTEXT_TYPE_STRUCT) {
+    return create_comptime_error(ctx, pub_node, "invalid pub declaration");
+  }
   if (!identifier) {
     value_t err =
         create_comptime_error(ctx, function_node, "top function missing name");
@@ -31,9 +35,21 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
     }
   } else {
     if (context_get_type(ctx) == CONTEXT_TYPE_STRUCT) {
-      type_t global = context_get_global(ctx);
+      type_t self = context_get_self(ctx);
       char *name = location_get(identifier->loc, allocator);
-      struct_type_add_attribute(global, allocator, name, function);
+      if (struct_type_get_attribute(self, name)) {
+        value_t err =
+            create_comptime_error(ctx, node, "redefinition of '%s'", name);
+        if (context_is_comptime(ctx)) {
+          allocator_free(allocator, name);
+          return err;
+        } else {
+          context_push_error(ctx, err);
+        }
+      } else {
+        struct_type_add_attribute(self, allocator, name, function,
+                                  pub_node != NULL);
+      }
       allocator_free(allocator, name);
     } else {
       char *name = location_get(identifier->loc, allocator);

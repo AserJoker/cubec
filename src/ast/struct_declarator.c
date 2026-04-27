@@ -1,11 +1,12 @@
 #include "ast/struct_declarator.h"
 #include "ast/decorator.h"
-#include "ast/enum_declarator.h"
-#include "ast/function_declarator.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "ast/statement_declaration.h"
+#include "ast/statement_enum.h"
+#include "ast/statement_function.h"
+#include "ast/statement_struct.h"
 #include "ast/struct_field.h"
 #include "core/allocator.h"
 #include "core/location.h"
@@ -81,7 +82,7 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
   if (*current.offset != '}') {
     for (;;) {
       ast_node_t item =
-          read_ast_struct_declarator(allocator, &current, end, filename);
+          read_ast_statement_struct(allocator, &current, end, filename);
       if (item) {
         if (item->type == NODE_TYPE_ERROR) {
           err = item;
@@ -90,7 +91,7 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
         ast_add_item(fields, item);
         goto next;
       }
-      item = read_ast_enum_declarator(allocator, &current, end, filename);
+      item = read_ast_statement_enum(allocator, &current, end, filename);
       if (item) {
         if (item->type == NODE_TYPE_ERROR) {
           err = item;
@@ -99,7 +100,7 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
         ast_add_item(fields, item);
         goto next;
       }
-      item = read_ast_function_declarator(allocator, &current, end, filename);
+      item = read_ast_statement_function(allocator, &current, end, filename);
       if (item) {
         if (item->type == NODE_TYPE_ERROR) {
           err = item;

@@ -65,6 +65,12 @@ value_t value_member_call(value_t self, struct _context_t *ctx,
         return create_error(ctx, "no member %s in %s", name,
                             type_get_name(type));
       }
+      if (!attr->pub) {
+        type_t self = context_get_self(ctx);
+        if (self != type) {
+          return create_error(ctx, "identifier '%s' is not visible", name);
+        }
+      }
       return value_call(attr->value, ctx, argc, argv);
     } else if (type_get_kind(type) == TYPE_KIND_UNION) {
       union_attribute_t attr = union_type_get_attribute(type, name);
@@ -92,6 +98,12 @@ value_t value_member_call(value_t self, struct _context_t *ctx,
     struct_attribute_t attr = struct_type_get_attribute(type, name);
     if (!attr) {
       return create_error(ctx, "no member %s in %s", name, type_get_name(type));
+    }
+    if (!attr->pub) {
+      type_t self = context_get_self(ctx);
+      if (self != type) {
+        return create_error(ctx, "identifier '%s' is not visible", name);
+      }
     }
     function = attr->value;
   } else if (type_get_kind(type) == TYPE_KIND_UNION) {

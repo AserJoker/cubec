@@ -9,6 +9,11 @@ void write_statement_declaration(allocator_t allocator, ast_node_t node,
   ast_node_t kind = ast_get_child(node, "kind");
   ast_node_t type = ast_get_child(node, "type");
   ast_node_t declarations = ast_get_child(node, "declarations");
+  ast_node_t pub = ast_get_child(node, "pub");
+  if (pub) {
+    stream_write_location(stream, pub->loc);
+    stream_write(stream, " ");
+  }
   if (kind) {
     stream_write_location(stream, kind->loc);
     stream_write(stream, " ");

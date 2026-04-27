@@ -18,6 +18,10 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
   ast_node_t kind = ast_get_child(node, "kind");
   ast_node_t declarations = ast_get_child(node, "declarations");
   ast_node_t declar_type = ast_get_child(node, "type");
+  ast_node_t pub_node = ast_get_child(node, "pub");
+  if (pub_node && context_get_type(ctx) != CONTEXT_TYPE_STRUCT) {
+    return create_comptime_error(ctx, pub_node, "invalid pub declaration");
+  }
   bool mut = !location_is(declar_type->loc, "const");
   bool comptime = false;
   if (kind) {
@@ -118,7 +122,6 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         }
       }
       value_type = dst_type;
-      value_t vtype = create_type_value(ctx, value_type, false, NULL);
     }
     ast_node_bind_value(allocator, initialize, value);
     char *name = location_get(identifier->loc, allocator);
@@ -134,7 +137,8 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       if (struct_type_get_attribute(self, name)) {
         value = create_error(ctx, "redefinition of '%s'", name);
       } else {
-        struct_type_add_attribute(self, allocator, name, value);
+        struct_type_add_attribute(self, allocator, name, value,
+                                  pub_node != NULL);
       }
     }
     allocator_free(allocator, name);

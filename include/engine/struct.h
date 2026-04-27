@@ -13,17 +13,20 @@ struct _struct_field_t {
   char *name;
   size_t offset;
   type_t type;
+  bool mut;
+  bool pub;
 };
 typedef struct _struct_attribute_t *struct_attribute_t;
 struct _struct_attribute_t {
   char *name;
   value_t value;
+  bool pub;
 };
 type_t create_struct_type(context_t ctx, const char *name, size_t align);
 void struct_type_add_field(type_t self, allocator_t allocator, const char *name,
-                           type_t type);
+                           type_t type, bool mut, bool pub);
 void struct_type_add_attribute(type_t self, allocator_t allocator,
-                               const char *name, value_t value);
+                               const char *name, value_t value, bool pub);
 array_t struct_type_get_fields(type_t self);
 struct_field_t struct_type_get_field(type_t self, const char *name);
 array_t struct_type_get_attributes(type_t self);
