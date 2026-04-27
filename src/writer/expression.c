@@ -5,6 +5,7 @@
 #include "writer/function_declarator.h"
 #include "writer/initialize_list.h"
 #include "writer/literal_identifier.h"
+#include "writer/struct_declarator.h"
 #include "writer/value.h"
 void write_expression(allocator_t allocator, ast_node_t node, stream_t stream) {
   if (node->type == NODE_TYPE_VALUE) {
@@ -19,5 +20,7 @@ void write_expression(allocator_t allocator, ast_node_t node, stream_t stream) {
     write_initialize_list(allocator, node, stream);
   } else if (node->type == NODE_TYPE_FUNCTION_DECLARATOR) {
     write_function_delcarator(allocator, node, stream);
+  } else if (node->type == NODE_TYPE_STRUCT_DECLARATOR) {
+    write_struct_declarator(allocator, node, stream);
   }
 }

@@ -1,5 +1,3 @@
-func main(): void {
-    const obj:__self__ = {
-        ...__self__{},
-    };
+func main():void {
+    const aa:u32 = 1@u32;
 }

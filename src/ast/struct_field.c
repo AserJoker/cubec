@@ -1,9 +1,9 @@
 #include "ast/struct_field.h"
 #include "ast/decorator.h"
+#include "ast/expression.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "ast/variable_declarator.h"
 #include "core/allocator.h"
 #include "core/position.h"
 
@@ -29,6 +29,30 @@ ast_node_t read_ast_struct_field(allocator_t allocator, position_t *position,
       return err;
     }
   }
+
+  ast_node_t identifier =
+      read_ast_literal_identifier(allocator, &current, end, filename);
+  if (!identifier) {
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid struct field");
+    goto onerror;
+  }
+  if (identifier->type == NODE_TYPE_ERROR) {
+    err = identifier;
+    goto onerror;
+  }
+  ast_add_child(allocator, node, "identifier", identifier);
+  err = ast_skip_all(allocator, &current, end, filename);
+  if (err && err->type == NODE_TYPE_ERROR) {
+    return err;
+  }
+  if (*current.offset != ':') {
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid struct field, missing ':'");
+    goto onerror;
+  }
+  current.offset++;
+  current.column++;
   ast_node_t mut =
       read_ast_literal_identifier(allocator, &current, end, filename);
   if (mut) {
@@ -47,16 +71,17 @@ ast_node_t read_ast_struct_field(allocator_t allocator, position_t *position,
       allocator_free(allocator, mut);
     }
   }
-  ast_node_t declarator =
-      read_ast_variable_declarator(allocator, &current, end, filename);
-  if (!declarator) {
+  err = ast_skip_all(allocator, &current, end, filename);
+  if (err && err->type == NODE_TYPE_ERROR) {
+    return err;
+  }
+  ast_node_t type = read_ast_expression18(allocator, &current, end, filename);
+  if (!type) {
+    err = create_ast_error(allocator, *position, current, filename,
+                           "invalid struct field, missing ':'");
     goto onerror;
   }
-  if (declarator->type == NODE_TYPE_ERROR) {
-    err = declarator;
-    goto onerror;
-  }
-  ast_add_child(allocator, node, "declarator", declarator);
+  ast_add_child(allocator, node, "type", type);
   err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;

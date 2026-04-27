@@ -144,7 +144,7 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
         if (value_is_error(value)) {
           return convert_comptime_error(ctx, initialize, value);
         }
-        if (value_is_writer(value)) {
+        if (value_is_writer(value) && initialize->type != NODE_TYPE_VALUE) {
           initialize->type = NODE_TYPE_VALUE;
           allocator_free(allocator, initialize->data);
           initialize->data = value_clone(value, allocator);
@@ -210,10 +210,10 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
         if (value_is_error(value)) {
           return convert_comptime_error(ctx, initialize, value);
         }
-        if (value_is_writer(value)) {
-          field->type = NODE_TYPE_VALUE;
-          allocator_free(allocator, field->data);
-          field->data = value_clone(value, allocator);
+        if (value_is_writer(value) && initialize->type != NODE_TYPE_VALUE) {
+          initialize->type = NODE_TYPE_VALUE;
+          allocator_free(allocator, initialize->data);
+          initialize->data = value_clone(value, allocator);
         }
       } else if (field->type == NODE_TYPE_EXPRESSION_SPREAD) {
         ast_node_t expression = ast_get_child(field, "expression");
@@ -339,12 +339,15 @@ value_t resolve_initialize_list(context_t ctx, ast_node_t node) {
   if (value_is_error(vtype) || value_is_interrupt(vtype)) {
     return vtype;
   }
-  if (type_node->type != NODE_TYPE_VALUE) {
-    allocator_free(allocator, type_node->data);
-    type_node->value = value_clone(vtype, allocator);
-    type_node->type = NODE_TYPE_VALUE;
-  }
   type_t type = *(type_t *)value_get_data(vtype);
+  if (type_get_kind(type) != TYPE_KIND_STRUCT &&
+      type_get_kind(type) != TYPE_KIND_UNION) {
+    if (value_is_writer(vtype) && type_node->type != NODE_TYPE_VALUE) {
+      allocator_free(allocator, type_node->data);
+      type_node->value = value_clone(vtype, allocator);
+      type_node->type = NODE_TYPE_VALUE;
+    }
+  }
   if (type_get_kind(type) == TYPE_KIND_STRUCT) {
     return resolve_struct_initialize(ctx, type, fields);
   } else if (type_get_kind(type) == TYPE_KIND_UNION) {

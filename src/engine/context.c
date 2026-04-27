@@ -252,7 +252,7 @@ value_t context_load_module(context_t self, const char *filename) {
   len = strlen(node->loc.filename);
   char id[len + 16];
   sprintf(id, "__module_%" PRIuPTR, hash_map_get_size(self->modules));
-  type_t module_struct = create_struct_type(self, id, id, 1);
+  type_t module_struct = create_struct_type(self, id, 1);
   value_t global = create_type_value(self, module_struct, false, NULL);
   context_type_t current_type = self->type;
   type_t current_global = self->global;

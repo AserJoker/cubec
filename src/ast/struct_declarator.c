@@ -49,10 +49,6 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
   }
   ast_node_t fields = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "fields", fields);
-  ast_node_t methods = create_ast_node(allocator, NODE_TYPE_LIST);
-  ast_add_child(allocator, node, "methods", methods);
-  ast_node_t attributes = create_ast_node(allocator, NODE_TYPE_LIST);
-  ast_add_child(allocator, node, "attributes", attributes);
   allocator_free(allocator, token);
   err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == NODE_TYPE_ERROR) {
@@ -66,61 +62,6 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
       goto onerror;
     }
     ast_add_child(allocator, node, "identifier", identifier);
-  }
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  ast_node_t generics = create_ast_node(allocator, NODE_TYPE_LIST);
-  ast_add_child(allocator, node, "generics", generics);
-  if (*current.offset == '<') {
-    current.offset++;
-    current.column++;
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
-    }
-    if (*current.offset != '>') {
-      for (;;) {
-        ast_node_t id =
-            read_ast_literal_identifier(allocator, &current, end, filename);
-        if (!id) {
-          err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid struct expression");
-          goto onerror;
-        }
-        if (id->type == NODE_TYPE_ERROR) {
-          err = id;
-          goto onerror;
-        }
-        ast_add_item(generics, id);
-        err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == NODE_TYPE_ERROR) {
-          return err;
-        }
-        if (*current.offset == '>') {
-          break;
-        }
-        if (*current.offset != ',') {
-          err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid struct expression");
-          goto onerror;
-        }
-        current.offset++;
-        current.column++;
-        err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == NODE_TYPE_ERROR) {
-          return err;
-        }
-      }
-    }
-    if (*current.offset != '>') {
-      err = create_ast_error(allocator, *position, current, filename,
-                             "invalid struct expression");
-      goto onerror;
-    }
-    current.offset++;
-    current.column++;
   }
   err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == NODE_TYPE_ERROR) {
@@ -146,7 +87,7 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
           err = item;
           goto onerror;
         }
-        ast_add_item(attributes, item);
+        ast_add_item(fields, item);
         goto next;
       }
       item = read_ast_enum_declarator(allocator, &current, end, filename);
@@ -155,7 +96,7 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
           err = item;
           goto onerror;
         }
-        ast_add_item(attributes, item);
+        ast_add_item(fields, item);
         goto next;
       }
       item = read_ast_function_declarator(allocator, &current, end, filename);
@@ -164,7 +105,7 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
           err = item;
           goto onerror;
         }
-        ast_add_item(methods, item);
+        ast_add_item(fields, item);
         goto next;
       }
       item = read_ast_statement_declaration(allocator, &current, end, filename);
@@ -173,7 +114,7 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
           err = item;
           goto onerror;
         }
-        ast_add_item(attributes, item);
+        ast_add_item(fields, item);
         goto next;
       }
       item = read_ast_struct_field(allocator, &current, end, filename);

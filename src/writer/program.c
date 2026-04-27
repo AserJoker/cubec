@@ -5,6 +5,7 @@
 #include "core/stream.h"
 #include "writer/statement_declaration.h"
 #include "writer/statement_function.h"
+#include "writer/statement_struct.h"
 
 void write_program(allocator_t allocator, ast_node_t node, stream_t stream) {
   ast_node_t statements = ast_get_child(node, "statements");
@@ -19,6 +20,8 @@ void write_program(allocator_t allocator, ast_node_t node, stream_t stream) {
         write_statement_declaration(allocator, sts, stream);
       } else if (sts->type == NODE_TYPE_STATEMENT_FUNCTION) {
         write_statement_function(allocator, sts, stream);
+      } else if (sts->type == NODE_TYPE_STATEMENT_STRUCT) {
+        write_statement_struct(allocator, sts, stream);
       }
       count++;
     }

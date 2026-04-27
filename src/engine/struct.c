@@ -4,8 +4,10 @@
 #include "core/string.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/function.h"
 #include "engine/type.h"
 #include "engine/value.h"
+#include <inttypes.h>
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -13,22 +15,18 @@
 
 typedef struct _struct_meta_t *struct_meta_t;
 struct _struct_meta_t {
-  char *name;
   array_t fields;
   array_t attributes;
 };
 
 static void struct_meta_dispose(struct_meta_t self, allocator_t allocator) {
-  allocator_free(allocator, self->name);
   allocator_free(allocator, self->fields);
   allocator_free(allocator, self->attributes);
 }
 
-static struct_meta_t create_struct_meta(allocator_t allocator,
-                                        const char *name) {
+static struct_meta_t create_struct_meta(allocator_t allocator) {
   struct_meta_t self = allocator_alloc(allocator, sizeof(struct _struct_meta_t),
                                        (dispose_fn_t)struct_meta_dispose);
-  self->name = create_cstring(allocator, name);
   array_initialize_t fields_initialize = {
       .autofree = true,
   };
@@ -89,7 +87,7 @@ static value_t struct_safe_convert(value_t self, context_t ctx, type_t type) {
   }
   array_t src_fields = struct_type_get_fields(value_type);
   array_t dst_fields = struct_type_get_fields(type);
-  if (array_get_size(src_fields) >= array_get_size(dst_fields)) {
+  if (array_get_size(src_fields) != array_get_size(dst_fields)) {
     return create_error(ctx, "cannot convert '%s' to '%s'",
                         type_get_name(value_type), type_get_name(type));
   }
@@ -114,9 +112,27 @@ static value_t struct_safe_convert(value_t self, context_t ctx, type_t type) {
 
 static value_t struct_convert(value_t self, context_t ctx, type_t type) {
   type_t value_type = value_get_type(self);
-  if (type_get_kind(type) != TYPE_KIND_STRUCT) {
+  if (type_get_kind(type) != TYPE_KIND_STRUCT ||
+      type_get_size(type) != type_get_size(value_type) ||
+      type_get_align(type) != type_get_align(value_type)) {
     return create_error(ctx, "cannot convert '%s' to '%s'",
                         type_get_name(value_type), type_get_name(type));
+  }
+  array_t src_fields = struct_type_get_fields(value_type);
+  array_t dst_fields = struct_type_get_fields(type);
+  if (array_get_size(src_fields) != array_get_size(dst_fields)) {
+    return create_error(ctx, "cannot convert '%s' to '%s'",
+                        type_get_name(value_type), type_get_name(type));
+  }
+  for (size_t idx = 0; idx < array_get_size(dst_fields); idx++) {
+    struct_field_t src_field = array_get(src_fields, idx);
+    struct_field_t dst_field = array_get(dst_fields, idx);
+    if (src_field->offset != dst_field->offset ||
+        strcmp(src_field->name, dst_field->name) != 0 ||
+        !type_is_equal(src_field->type, dst_field->type)) {
+      return create_error(ctx, "cannot convert '%s' to '%s'",
+                          type_get_name(value_type), type_get_name(type));
+    }
   }
   bool mut = value_is_mut(self);
   if (value_is_comptime(self)) {
@@ -153,15 +169,55 @@ static bool struct_type_is_equal(type_t self, type_t another) {
   return true;
 }
 
-type_t create_struct_type(context_t ctx, const char *name, const char *id,
-                          size_t align) {
+type_t create_struct_type(context_t ctx, const char *name, size_t align) {
+
+  char *id = NULL;
+  allocator_t allocator = context_get_allocator(ctx);
+  module_t module = context_get_module(ctx);
+  const char *parent_name = NULL;
+  value_t current_function = context_get_function(ctx);
+  if (current_function) {
+    value_t function_name = function_get_id(ctx, current_function);
+    parent_name = *(const char **)value_get_data(function_name);
+  } else {
+    type_t self = context_get_self(ctx);
+    if (self) {
+      parent_name = type_get_id(self);
+    } else {
+      parent_name = NULL;
+    }
+  }
+  const char *struct_name = name;
+  if (!struct_name) {
+    struct_name = "nonamed";
+  }
+  size_t len = strlen(struct_name) + 2;
+  if (parent_name) {
+    len += strlen(parent_name);
+  }
+  char base_fullname[len + 1];
+  if (parent_name) {
+    sprintf(base_fullname, "%s_%s", parent_name, struct_name);
+  } else {
+    sprintf(base_fullname, "%s", struct_name);
+  }
+  if (module && module_get_struct(module, base_fullname)) {
+    for (size_t idx = 0;; idx++) {
+      size_t len = snprintf(NULL, 0, "%s_%" PRIuPTR, base_fullname, idx);
+      char fullname[len + 1];
+      sprintf(fullname, "%s_%" PRIuPTR, base_fullname, idx);
+      if (!module_get_struct(module, fullname)) {
+        id = create_cstring(allocator, fullname);
+        break;
+      }
+    }
+  } else {
+    id = create_cstring(allocator, base_fullname);
+  }
   type_t self = context_load_type(ctx, id);
   if (!self) {
     allocator_t allocator = context_get_allocator(ctx);
-    if (!name) {
-      name = "(unnamed)";
-    }
-    struct_meta_t meta = create_struct_meta(allocator, name);
+    struct_meta_t meta = create_struct_meta(allocator);
     type_operator_t opt = {
         .addr_of = value_default_address_of,
         .get_field = struct_get_field,
@@ -174,6 +230,7 @@ type_t create_struct_type(context_t ctx, const char *name, const char *id,
                        id, &opt, meta);
     context_store_type(ctx, self);
   }
+  allocator_free(allocator, id);
   return self;
 }
 

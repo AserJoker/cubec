@@ -1,5 +1,3 @@
 func main(): void {
-    const obj: __module_0 = __module_0{
-        ...__module_0{}
-    };
+    const aa: u32 = 1@u32;
 }

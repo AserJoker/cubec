@@ -5,6 +5,7 @@
 #include "writer/statement_declaration.h"
 #include "writer/statement_function.h"
 #include "writer/statement_return.h"
+#include "writer/statement_struct.h"
 
 void write_function_body(allocator_t allocator, ast_node_t node,
                          stream_t stream) {
@@ -21,6 +22,8 @@ void write_function_body(allocator_t allocator, ast_node_t node,
         write_statement_function(allocator, sts, stream);
       } else if (sts->type == NODE_TYPE_STATEMENT_RETURN) {
         write_statement_return(allocator, sts, stream);
+      } else if (sts->type == NODE_TYPE_STATEMENT_STRUCT) {
+        write_statement_struct(allocator, sts, stream);
       }
     }
   }

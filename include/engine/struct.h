@@ -19,8 +19,7 @@ struct _struct_attribute_t {
   char *name;
   value_t value;
 };
-type_t create_struct_type(context_t ctx, const char *name, const char *id,
-                          size_t align);
+type_t create_struct_type(context_t ctx, const char *name, size_t align);
 void struct_type_add_field(type_t self, allocator_t allocator, const char *name,
                            type_t type);
 void struct_type_add_attribute(type_t self, allocator_t allocator,

@@ -309,7 +309,7 @@ value_t create_function(context_t ctx, type_t function_type, ast_node_t node) {
   }
   const char *func_name = id_str;
   if (!func_name) {
-    func_name = "anonymous";
+    func_name = "function";
   }
   size_t len = strlen(parent_name) + strlen(func_name) + 2;
   char base_fullname[len + 1];

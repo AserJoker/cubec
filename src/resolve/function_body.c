@@ -7,6 +7,7 @@
 #include "resolve/statement_declaration.h"
 #include "resolve/statement_function.h"
 #include "resolve/statement_return.h"
+#include "resolve/statement_struct.h"
 
 value_t resolve_function_body(context_t ctx, ast_node_t node) {
   ast_node_t statements = ast_get_child(node, "statements");
@@ -19,6 +20,8 @@ value_t resolve_function_body(context_t ctx, ast_node_t node) {
       err = resolve_statement_function(ctx, sts);
     } else if (sts->type == NODE_TYPE_STATEMENT_RETURN) {
       err = resolve_statement_return(ctx, sts);
+    } else if (sts->type == NODE_TYPE_STATEMENT_STRUCT) {
+      err = resolve_statement_struct(ctx, sts);
     } else {
       err = create_comptime_error(ctx, sts, "unsupport statement");
     }

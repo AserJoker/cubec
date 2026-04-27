@@ -20,7 +20,7 @@ ast_node_t read_ast_statement_struct(allocator_t allocator,
     err = stru;
     goto onerror;
   }
-  ast_add_child(allocator, node, "stru", stru);
+  ast_add_child(allocator, node, "struct", stru);
   err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;

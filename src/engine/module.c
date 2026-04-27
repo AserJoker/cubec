@@ -5,6 +5,7 @@
 #include "core/hash_map.h"
 #include "core/path.h"
 #include "core/string.h"
+#include "engine/type.h"
 #include "engine/value.h"
 #include <string.h>
 struct _module_t {
@@ -14,6 +15,7 @@ struct _module_t {
   char *dirname;
   char *source;
   hash_map_t functions;
+  hash_map_t structs;
   array_t errors;
 };
 static void module_dispose(module_t self, allocator_t allocator) {
@@ -22,6 +24,7 @@ static void module_dispose(module_t self, allocator_t allocator) {
   allocator_free(allocator, self->source);
   allocator_free(allocator, self->node);
   allocator_free(allocator, self->functions);
+  allocator_free(allocator, self->structs);
   allocator_free(allocator, self->errors);
 }
 module_t create_module(allocator_t allocator, value_t value, ast_node_t node,
@@ -44,6 +47,13 @@ module_t create_module(allocator_t allocator, value_t value, ast_node_t node,
       .hash = (hash_fn_t)cstring_sdb,
   };
   self->functions = create_hash_map(allocator, &functions_initialize);
+  hash_map_initialize_t structs_initialize = {
+      .autofree_key = false,
+      .autofree_value = true,
+      .compare = (compare_fn_t)strcmp,
+      .hash = (hash_fn_t)cstring_sdb,
+  };
+  self->structs = create_hash_map(allocator, &structs_initialize);
   array_initialize_t errors_initialize = {
       .autofree = true,
   };
@@ -59,10 +69,18 @@ void module_add_function(module_t self, struct _value_t *func) {
   ast_node_t id_node = ast_get_child(node, "_id");
   hash_map_set(self->functions, (void *)id_node->string, func, NULL, NULL);
 }
+void module_add_struct(module_t self, struct _value_t *stru) {
+  type_t type = *(type_t *)value_get_data(stru);
+  hash_map_set(self->structs, (void *)type_get_id(type), stru, NULL, NULL);
+}
 struct _value_t *module_get_function(module_t self, const char *id) {
   return hash_map_get(self->functions, id, NULL, NULL);
 }
+struct _value_t *module_get_struct(module_t self, const char *id) {
+  return hash_map_get(self->structs, id, NULL, NULL);
+}
 hash_map_t module_get_functions(module_t self) { return self->functions; }
+hash_map_t module_get_structs(module_t self) { return self->structs; }
 array_t module_get_errors(module_t self) { return self->errors; }
 void module_add_error(module_t self, value_t err) {
   array_push(self->errors, err);

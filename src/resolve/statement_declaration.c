@@ -117,18 +117,22 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         }
       }
       value_type = dst_type;
+      if (type_get_kind(value_type) != TYPE_KIND_STRUCT &&
+          type_get_kind(value_type) != TYPE_KIND_UNION) {
+        value_t vtype = create_type_value(ctx, value_type, false, NULL);
+        if (value_is_writer(vtype)) {
+          ast_remove_child(declarator, "type");
+          type = create_ast_value_node(allocator, vtype);
+          ast_add_child(allocator, declarator, "type", type);
+        }
+      }
     }
     if (value_is_writer(value)) {
       ast_remove_child(declarator, "initialize");
       initialize = create_ast_value_node(allocator, value);
       ast_add_child(allocator, declarator, "initialize", initialize);
     }
-    value_t vtype = create_type_value(ctx, value_type, false, NULL);
-    if (value_is_writer(vtype)) {
-      ast_remove_child(declarator, "type");
-      type = create_ast_value_node(allocator, vtype);
-      ast_add_child(allocator, declarator, "type", type);
-    }
+
     char *name = location_get(identifier->loc, allocator);
     if (context_is_comptime(ctx) ||
         type_get_kind(value_type) == TYPE_KIND_FUNCTION) {

@@ -678,6 +678,7 @@ void unsigned_init(context_t ctx) {
       .plus = unsigned_plus,
       .addr_of = value_default_address_of,
       .assigment = value_default_assigment,
+      .write_ast = unsigned_write_ast,
   };
   type_t u8_t = create_type(allocator, TYPE_KIND_UNSIGNED, sizeof(int8_t),
                             sizeof(int8_t), "u8", "u8", &opt, NULL);
