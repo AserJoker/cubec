@@ -169,14 +169,19 @@ static bool _ptr_type_is_equal(type_t self, type_t another) {
   return type_is_equal(ptr_type_get_type(self), ptr_type_get_type(another));
 }
 type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
-  const char *base_name = type_get_id(type);
-  size_t len = snprintf(NULL, 0, "*%s%s%s", mut ? "const " : "",
-                        vol ? "volatile " : "", base_name);
-  char buf[len + 1];
-  sprintf(buf, "*%s%s%s", !mut ? "const " : "", vol ? "volatile " : "",
-          base_name);
-  type_t self = context_load_type(ctx, buf);
+  const char *base_id = type_get_id(type);
+  size_t len = snprintf(NULL, 0, "*%s%s%s", !mut ? "const " : "",
+                        vol ? "volatile " : "", base_id);
+  char id[len + 1];
+  sprintf(id, "*%s%s%s", !mut ? "const " : "", vol ? "volatile " : "", base_id);
+  type_t self = context_load_type(ctx, id);
   if (!self) {
+    const char *base_name = type_get_name(type);
+    size_t len = snprintf(NULL, 0, "*%s%s%s", !mut ? "const " : "",
+                          vol ? "volatile " : "", base_name);
+    char name[len + 1];
+    sprintf(name, "*%s%s%s", !mut ? "const " : "", vol ? "volatile " : "",
+            base_name);
     allocator_t allocator = context_get_allocator(ctx);
     ptr_meta_t meta = create_ptr_meta(allocator, type, mut, vol);
     type_operator_t opt = {
@@ -192,7 +197,7 @@ type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
         .set_field = ptr_set_field,
     };
     self = create_type(allocator, TYPE_KIND_PTR, sizeof(void *), sizeof(void *),
-                       buf, buf, &opt, meta);
+                       name, id, &opt, meta);
     context_store_type(ctx, self);
   }
   return self;

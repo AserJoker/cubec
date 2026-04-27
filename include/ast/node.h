@@ -67,6 +67,9 @@ ast_node_t read_ast_node(allocator_t allocator, const char *filename,
 
 ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node);
 
+void ast_node_bind_value(allocator_t allocator, ast_node_t node,
+                         struct _value_t *value);
+
 #ifdef __cplusplus
 }
 #endif

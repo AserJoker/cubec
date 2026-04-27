@@ -4,6 +4,7 @@
 #include "core/stream.h"
 #include "writer/expression.h"
 #include "writer/function_declarator.h"
+#include "writer/statement_declaration.h"
 
 void write_struct_declarator(allocator_t allocator, ast_node_t node,
                              stream_t stream) {
@@ -32,10 +33,12 @@ void write_struct_declarator(allocator_t allocator, ast_node_t node,
           stream_write(stream, ": ");
           write_expression(allocator, type, stream);
           stream_write(stream, ";");
-        } else if (field->type == NODE_TYPE_STATEMENT_STRUCT) {
+        } else if (field->type == NODE_TYPE_STRUCT_DECLARATOR) {
           write_struct_declarator(allocator, field, stream);
-        } else if (field->type == NODE_TYPE_STATEMENT_FUNCTION) {
+        } else if (field->type == NODE_TYPE_FUNCTION_DECLARATOR) {
           write_function_delcarator(allocator, field, stream);
+        } else if (field->type == NODE_TYPE_STATEMENT_DECLARATION) {
+          write_statement_declaration(allocator, field, stream);
         }
         count++;
       }

@@ -24,11 +24,7 @@ value_t resolve_statement_return(context_t ctx, ast_node_t node) {
     }
   }
   allocator_t allocator = context_get_allocator(ctx);
-  if (value_is_comptime(value)) {
-    ast_remove_child(node, "value");
-    value_node = create_ast_value_node(allocator, value);
-    ast_add_child(allocator, node, "value", value_node);
-  }
+  ast_node_bind_value(allocator, value_node, value);
   if (context_is_comptime(ctx)) {
     if (!value_is_comptime(value)) {
       return create_comptime_error(ctx, value_node, "value is not comptime");

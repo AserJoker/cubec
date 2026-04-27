@@ -30,7 +30,7 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
     if (argument->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
       variadic = true;
     }
-    ast_node_t type = ast_move_child(argument, "type");
+    ast_node_t type = ast_get_child(argument, "type");
     ast_node_t const_ = ast_get_child(argument, "const");
     ast_node_t identifier = ast_get_child(argument, "identifier");
     argv[idx].mut = const_ == NULL;
@@ -41,10 +41,8 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
     if (value_is_interrupt(vtype)) {
       return vtype;
     }
+    ast_node_bind_value(allocator, type, vtype);
     argv[idx].type = *(type_t *)value_get_data(vtype);
-    allocator_free(allocator, type);
-    type = create_ast_value_node(allocator, vtype);
-    ast_add_child(allocator, argument, "type", type);
   }
   value_t vreturn_type = resolve_type(ctx, type_node);
   if (value_is_error(vreturn_type)) {
@@ -53,6 +51,7 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   if (value_is_interrupt(vreturn_type)) {
     return vreturn_type;
   }
+  ast_node_bind_value(allocator, type_node, vreturn_type);
   type_t return_type = *(type_t *)value_get_data(vreturn_type);
   type_t function_type =
       create_function_type(ctx, return_type, argc, argv, variadic);

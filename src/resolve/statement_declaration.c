@@ -105,6 +105,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       if (value_is_interrupt(vdst_type)) {
         return vdst_type;
       }
+      ast_node_bind_value(allocator, type, vdst_type);
       type_t dst_type = *(type_t *)value_get_data(vdst_type);
       value = value_safe_convert(value, ctx, dst_type);
       if (value_is_error(value)) {
@@ -117,33 +118,28 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         }
       }
       value_type = dst_type;
-      if (type_get_kind(value_type) != TYPE_KIND_STRUCT &&
-          type_get_kind(value_type) != TYPE_KIND_UNION) {
-        value_t vtype = create_type_value(ctx, value_type, false, NULL);
-        if (value_is_writer(vtype)) {
-          ast_remove_child(declarator, "type");
-          type = create_ast_value_node(allocator, vtype);
-          ast_add_child(allocator, declarator, "type", type);
-        }
+      value_t vtype = create_type_value(ctx, value_type, false, NULL);
+    }
+    ast_node_bind_value(allocator, initialize, value);
+    char *name = location_get(identifier->loc, allocator);
+    if (type_get_kind(value_type) == TYPE_KIND_FUNCTION) {
+      if (context_is_comptime(ctx)) {
+        void *data = value_get_data(value);
+        value = context_create_value(ctx, value_type, data, mut, true, name);
+      } else {
+        value = context_create_value(ctx, value_type, NULL, mut, false, name);
+      }
+    } else {
+      type_t self = context_get_self(ctx);
+      if (struct_type_get_attribute(self, name)) {
+        value = create_error(ctx, "redefinition of '%s'", name);
+      } else {
+        struct_type_add_attribute(self, allocator, name, value);
       }
     }
-    if (value_is_writer(value)) {
-      ast_remove_child(declarator, "initialize");
-      initialize = create_ast_value_node(allocator, value);
-      ast_add_child(allocator, declarator, "initialize", initialize);
-    }
-
-    char *name = location_get(identifier->loc, allocator);
-    if (context_is_comptime(ctx) ||
-        type_get_kind(value_type) == TYPE_KIND_FUNCTION) {
-      void *data = value_get_data(value);
-      value = context_create_value(ctx, value_type, data, mut, true, name);
-    } else {
-      value = context_create_value(ctx, value_type, NULL, mut, false, name);
-    }
-    value_type = value_get_type(value);
-    if (type_get_kind(value_type) == TYPE_KIND_ERROR) {
-      allocator_free(allocator, name);
+    allocator_free(allocator, name);
+    if (value_is_error(value)) {
+      value = convert_comptime_error(ctx, identifier, value);
       if (context_is_comptime(ctx)) {
         return value;
       } else {
@@ -151,18 +147,10 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         continue;
       }
     }
-    if (context_get_type(ctx) == CONTEXT_TYPE_STRUCT) {
-      type_t global = context_get_global(ctx);
-      struct_type_add_attribute(global, allocator, name, value);
-    }
-    allocator_free(allocator, name);
   }
   context_set_comptime(ctx, comptime);
   if (result) {
     return create_comptime_error(ctx, node, "declartion statement error");
-  }
-  if (kind && location_is(kind->loc, "comptime")) {
-    node->visible = false;
   }
   return context_get_undefined(ctx);
 }

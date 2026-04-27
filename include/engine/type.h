@@ -103,8 +103,6 @@ typedef struct _type_operator_t {
 
   convert_fn_t convert;
   convert_fn_t safe_convert;
-
-  write_ast_fn_t write_ast;
 } type_operator_t;
 type_t create_type(allocator_t allocator, type_kind_t kind, size_t size,
                    size_t align, const char *name, const char *id,

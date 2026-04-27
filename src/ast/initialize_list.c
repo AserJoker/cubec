@@ -19,6 +19,10 @@ ast_node_t read_ast_initialize_list(allocator_t allocator, position_t *position,
     }
     ast_add_child(allocator, node, "type", type);
   }
+  err = ast_skip_all(allocator, &current, end, filename);
+  if (err && err->type == NODE_TYPE_ERROR) {
+    return err;
+  }
   if (*current.offset != '{') {
     goto onerror;
   }

@@ -1,3 +1,10 @@
-func main():void {
-    const aa:u32 = 1@u32;
+comptime func record(T:type):type {
+    return struct {
+        data:T;
+    };
+}
+func main(): void {
+    const item:record(i32) = {
+        .data = 123,
+    };
 }

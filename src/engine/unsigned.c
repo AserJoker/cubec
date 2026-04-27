@@ -1,6 +1,5 @@
 #include "engine/unsigned.h"
 #include "core/allocator.h"
-#include "core/string.h"
 #include "engine/bool.h"
 #include "engine/context.h"
 #include "engine/error.h"
@@ -71,22 +70,6 @@ static value_t unsigned_safe_convert(value_t self, context_t ctx, type_t type) {
   }
   return create_error(ctx, "cannot convert '%s' to '%s'",
                       type_get_name(value_type), type_get_name(type));
-}
-
-static char *unsigned_write_ast(value_t self, allocator_t allocator) {
-  int64_t val = integer_get_value(self);
-  type_t type = value_get_type(self);
-  char s[32];
-  if (type_get_size(type) == sizeof(uint8_t)) {
-    sprintf(s, "%" PRIiPTR "@u8", val);
-  } else if (type_get_size(type) == sizeof(uint16_t)) {
-    sprintf(s, "%" PRIiPTR "@u16", val);
-  } else if (type_get_size(type) == sizeof(uint32_t)) {
-    sprintf(s, "%" PRIiPTR "@u32", val);
-  } else {
-    sprintf(s, "%" PRIiPTR "@u64", val);
-  }
-  return create_cstring(allocator, s);
 }
 
 static value_t unsigned_convert(value_t self, context_t ctx, type_t type) {
@@ -678,7 +661,6 @@ void unsigned_init(context_t ctx) {
       .plus = unsigned_plus,
       .addr_of = value_default_address_of,
       .assigment = value_default_assigment,
-      .write_ast = unsigned_write_ast,
   };
   type_t u8_t = create_type(allocator, TYPE_KIND_UNSIGNED, sizeof(int8_t),
                             sizeof(int8_t), "u8", "u8", &opt, NULL);

@@ -1,6 +1,5 @@
 #include "engine/bool.h"
 #include "core/allocator.h"
-#include "core/string.h"
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/float.h"
@@ -105,10 +104,6 @@ static value_t bool_ne(value_t self, context_t ctx, value_t another) {
   }
   return create_bool(ctx, false, NULL);
 }
-static char *bool_write_ast(value_t self, allocator_t allocator) {
-  bool val = *(bool *)value_get_data(self);
-  return create_cstring(allocator, val ? "true" : "false");
-}
 void bool_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
@@ -121,7 +116,6 @@ void bool_init(context_t ctx) {
       .convert = bool_convert,
       .eq = bool_eq,
       .ne = bool_ne,
-      .write_ast = bool_write_ast,
   };
   type_t bool_t = create_type(allocator, TYPE_KIND_BOOL, sizeof(bool),
                               sizeof(bool), "bool", "bool", &opt, NULL);

@@ -1,6 +1,5 @@
 #include "engine/integer.h"
 #include "core/allocator.h"
-#include "core/string.h"
 #include "engine/bool.h"
 #include "engine/context.h"
 #include "engine/error.h"
@@ -645,22 +644,6 @@ static value_t integer_negtive(value_t self, context_t ctx) {
   }
 }
 
-static char *integer_write_ast(value_t self, allocator_t allocator) {
-  int64_t val = integer_get_value(self);
-  type_t type = value_get_type(self);
-  char s[32];
-  if (type_get_size(type) == sizeof(int8_t)) {
-    sprintf(s, "%" PRIiPTR "@i8", val);
-  } else if (type_get_size(type) == sizeof(int16_t)) {
-    sprintf(s, "%" PRIiPTR "@i16", val);
-  } else if (type_get_size(type) == sizeof(int32_t)) {
-    sprintf(s, "%" PRIiPTR "@i32", val);
-  } else {
-    sprintf(s, "%" PRIiPTR "@i64", val);
-  }
-  return create_cstring(allocator, s);
-}
-
 void integer_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   struct _type_operator_t opt = {
@@ -688,7 +671,6 @@ void integer_init(context_t ctx) {
       .neg = integer_negtive,
       .addr_of = value_default_address_of,
       .assigment = value_default_assigment,
-      .write_ast = integer_write_ast,
   };
   type_t i8_t = create_type(allocator, TYPE_KIND_INTEGER, sizeof(int8_t),
                             sizeof(int8_t), "i8", "i8", &opt, NULL);

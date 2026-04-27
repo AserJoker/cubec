@@ -1,7 +1,9 @@
 #include "resolve/array_declarator.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "core/allocator.h"
 #include "engine/array.h"
+#include "engine/context.h"
 #include "engine/error.h"
 #include "engine/integer.h"
 #include "engine/type.h"
@@ -40,6 +42,9 @@ value_t resolve_array_declarator(context_t ctx, ast_node_t node) {
   if (value_is_error(vtype) || value_is_interrupt(vtype)) {
     return vtype;
   }
+  allocator_t allocator = context_get_allocator(ctx);
+  ast_node_bind_value(allocator, length, vlen);
+
   type_t base_type = *(type_t *)value_get_data(vtype);
   type_t array_type = create_array_type(ctx, base_type, len);
   return create_type_value(ctx, array_type, false, NULL);

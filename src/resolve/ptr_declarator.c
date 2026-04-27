@@ -1,6 +1,8 @@
 #include "resolve/ptr_declarator.h"
 #include "ast/node.h"
+#include "core/allocator.h"
 #include "core/location.h"
+#include "engine/context.h"
 #include "engine/ptr.h"
 #include "engine/type.h"
 #include "engine/value.h"
@@ -8,6 +10,7 @@
 #include <stdbool.h>
 
 value_t resolve_ptr_declarator(context_t ctx, ast_node_t node) {
+  allocator_t allocator = context_get_allocator(ctx);
   ast_node_t type = ast_get_child(node, "type");
   ast_node_t kind = ast_get_child(node, "kind");
   ast_node_t decorators = ast_get_child(node, "decorators");
@@ -29,6 +32,7 @@ value_t resolve_ptr_declarator(context_t ctx, ast_node_t node) {
   if (value_is_interrupt(vtype)) {
     return vtype;
   }
+  ast_node_bind_value(allocator, type, vtype);
   type_t base_type = *(type_t *)value_get_data(vtype);
   if (location_is(kind->loc, "*")) {
     type_t ptr_type = create_ptr_type(ctx, base_type, mut, vol);

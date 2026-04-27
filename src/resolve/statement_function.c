@@ -50,8 +50,6 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
       }
     }
   }
-  if (kind && location_is(kind->loc, "comptime")) {
-    node->visible = false;
-  }
+  ast_node_bind_value(allocator, function_node, function);
   return context_get_undefined(ctx);
 }

@@ -4,6 +4,7 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "engine/context.h"
+#include "engine/error.h"
 #include "engine/value.h"
 #include "resolve/expression.h"
 #include <string.h>
@@ -27,7 +28,6 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     }
     allocator_free(allocator, name);
   }
-  ast_node_t resolved_arguments = create_ast_node(allocator, NODE_TYPE_LIST);
   value_t argv[argc];
   for (size_t idx = 0; idx < argc; idx++) {
     ast_node_t arg = ast_get_item(arguments, idx);
@@ -39,11 +39,8 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
       return val;
     }
     argv[idx] = val;
-    arg = create_ast_value_node(allocator, argv[idx]);
-    ast_add_item(resolved_arguments, arg);
+    ast_node_bind_value(allocator, arg, val);
   }
-  ast_remove_child(node, "arguments");
-  ast_add_child(allocator, node, "arguments", resolved_arguments);
   if (callee->type == NODE_TYPE_EXPRESSION_MEMBER) {
     ast_node_t host = ast_get_child(callee, "host");
     ast_node_t field = ast_get_child(callee, "field");
@@ -54,10 +51,14 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     if (value_is_interrupt(obj)) {
       return obj;
     }
+    ast_node_bind_value(allocator, host, obj);
     allocator_t allocator = context_get_allocator(ctx);
     char *name = location_get(field->loc, allocator);
     value_t value = value_member_call(obj, ctx, name, argc, argv);
     allocator_free(allocator, name);
+    if (value_is_error(value)) {
+      return convert_comptime_error(ctx, node, value);
+    }
     return value;
   } else {
     value_t func = resolve_expression(ctx, callee);
@@ -67,6 +68,7 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     if (value_is_interrupt(func)) {
       return func;
     }
+    ast_node_bind_value(allocator, callee, func);
     return value_call(func, ctx, argc, argv);
   }
 }

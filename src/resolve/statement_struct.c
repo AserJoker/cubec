@@ -1,6 +1,6 @@
-#include "engine/struct.h"
-#include "engine/error.h"
 #include "resolve/statement_struct.h"
+#include "engine/error.h"
+#include "engine/struct.h"
 #include "resolve/struct_declarator.h"
 
 value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
@@ -9,7 +9,7 @@ value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
   ast_node_t identifier = ast_get_child(struct_node, "identifier");
   if (!identifier) {
     value_t err =
-        create_comptime_error(ctx, struct_node, "top struct missing name");
+        create_comptime_error(ctx, struct_node, "struct missing name");
     if (context_is_comptime(ctx)) {
       return err;
     } else {
@@ -45,5 +45,6 @@ value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
       }
     }
   }
+  ast_node_bind_value(allocator, struct_node, stru);
   return context_get_undefined(ctx);
 }
