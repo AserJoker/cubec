@@ -54,6 +54,9 @@ ast_node_t create_ast_value_node(allocator_t allocator,
 
 void ast_add_child(allocator_t allocator, ast_node_t node, const char *name,
                    ast_node_t child) {
+  if (hash_map_get(node->children, name, NULL, NULL) != child) {
+    hash_map_delete(node->children, name, NULL, NULL);
+  }
   hash_map_set(node->children, create_cstring(allocator, name), child, NULL,
                NULL);
   child->parent = node;
@@ -476,9 +479,11 @@ ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
          it != hash_map_get_end(node->children);
          it = hash_map_node_get_next(it)) {
       const char *key = hash_map_node_get_key(it);
-      ast_node_t child = hash_map_node_get_value(it);
-      child = clone_ast_node(allocator, child);
-      ast_add_child(allocator, n, key, child);
+      if (strcmp(key, "_value") != 0) {
+        ast_node_t child = hash_map_node_get_value(it);
+        child = clone_ast_node(allocator, child);
+        ast_add_child(allocator, n, key, child);
+      }
     }
   } else if (node->type == NODE_TYPE_ERROR) {
     n->error = create_cstring(allocator, node->error);

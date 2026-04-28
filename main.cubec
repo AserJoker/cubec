@@ -5,7 +5,10 @@ pub struct Test {
         return self.id;
     }
 }
+struct Test2 {
+    ...Test;
+}
 pub func main():void {
-    const demo:Test = {};
+    const demo:Test2 = {};
     const id = demo.getId();
 }

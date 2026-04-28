@@ -1,5 +1,6 @@
 #include "ast/struct_declarator.h"
 #include "ast/decorator.h"
+#include "ast/expression_spread.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -118,6 +119,30 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
         ast_add_item(fields, item);
         goto next;
       }
+      item = read_ast_expression_spread(allocator, &current, end, filename);
+      if (item) {
+        err = ast_skip_all(allocator, &current, end, filename);
+        if (err && err->type == NODE_TYPE_ERROR) {
+          return err;
+        }
+        if (item->type == NODE_TYPE_ERROR) {
+          err = item;
+          goto onerror;
+        }
+        if (*current.offset != ';') {
+          current = item->loc.begin;
+          allocator_free(allocator, item);
+          item = NULL;
+          err = create_ast_error(allocator, *position, current, filename,
+                                 "invalid struct field");
+          goto onerror;
+        } else {
+          current.offset++;
+          current.column++;
+          ast_add_item(fields, item);
+          goto next;
+        }
+      }
       item = read_ast_struct_field(allocator, &current, end, filename);
       if (item) {
         if (item->type == NODE_TYPE_ERROR) {
@@ -125,8 +150,6 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
           goto onerror;
         }
         ast_add_item(fields, item);
-        current.offset++;
-        current.column++;
         goto next;
       }
       err = create_ast_error(allocator, *position, current, filename,

@@ -309,6 +309,17 @@ struct_field_t struct_type_get_field(type_t self, const char *name) {
   }
   return NULL;
 }
+void struct_type_remove_field(type_t self, const char *name) {
+  struct_meta_t meta = type_get_meta(self);
+  array_t fields = meta->fields;
+  for (size_t idx = 0; idx < array_get_size(fields); idx++) {
+    struct_field_t attr = array_get(fields, idx);
+    if (strcmp(attr->name, name) == 0) {
+      array_del(fields, idx);
+      return;
+    }
+  }
+}
 static void struct_attribute_dispose(struct_attribute_t self,
                                      allocator_t allocator) {
   allocator_free(allocator, self->name);
@@ -346,4 +357,15 @@ struct_attribute_t struct_type_get_attribute(type_t self, const char *name) {
     }
   }
   return NULL;
+}
+void struct_type_remove_attribute(type_t self, const char *name) {
+  struct_meta_t meta = type_get_meta(self);
+  array_t attributes = meta->attributes;
+  for (size_t idx = 0; idx < array_get_size(attributes); idx++) {
+    struct_attribute_t attr = array_get(attributes, idx);
+    if (strcmp(attr->name, name) == 0) {
+      array_del(attributes, idx);
+      return;
+    }
+  }
 }

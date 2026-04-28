@@ -29,8 +29,10 @@ void struct_type_add_attribute(type_t self, allocator_t allocator,
                                const char *name, value_t value, bool pub);
 array_t struct_type_get_fields(type_t self);
 struct_field_t struct_type_get_field(type_t self, const char *name);
+void struct_type_remove_field(type_t self, const char *name);
 array_t struct_type_get_attributes(type_t self);
 struct_attribute_t struct_type_get_attribute(type_t self, const char *name);
+void struct_type_remove_attribute(type_t self, const char *name);
 #ifdef __cplusplus
 }
 #endif

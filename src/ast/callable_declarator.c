@@ -121,7 +121,7 @@ ast_node_t read_ast_callable_declarator(allocator_t allocator,
       read_ast_expression18(allocator, &current, end, filename);
   if (!return_type) {
     err = create_ast_error(allocator, *position, current, filename,
-                           "invalid interface expression");
+                           "invalid callable expression");
   }
   if (return_type->type == NODE_TYPE_ERROR) {
     err = return_type;

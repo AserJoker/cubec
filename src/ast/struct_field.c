@@ -112,6 +112,8 @@ ast_node_t read_ast_struct_field(allocator_t allocator, position_t *position,
                            "invalid struct field");
     goto onerror;
   }
+  current.offset++;
+  current.column++;
   node->loc.begin = *position;
   node->loc.end = current;
   node->loc.filename = filename;

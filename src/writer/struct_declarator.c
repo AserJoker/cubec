@@ -3,6 +3,7 @@
 #include "ast/node_type.h"
 #include "core/stream.h"
 #include "writer/expression.h"
+#include "writer/expression_spread.h"
 #include "writer/statement_declaration.h"
 #include "writer/statement_function.h"
 #include "writer/statement_struct.h"
@@ -23,10 +24,10 @@ void write_struct_declarator(allocator_t allocator, ast_node_t node,
     stream_newline(stream);
     for (size_t idx = 0; idx < ast_get_length(fields); idx++) {
       ast_node_t field = ast_get_item(fields, idx);
-      if (count != 0) {
-        stream_newline(stream);
-      }
       if (field->visible) {
+        if (count != 0) {
+          stream_newline(stream);
+        }
         if (field->type == NODE_TYPE_STRUCT_FIELD) {
           ast_node_t identifier = ast_get_child(field, "identifier");
           ast_node_t type = ast_get_child(field, "type");
@@ -50,6 +51,9 @@ void write_struct_declarator(allocator_t allocator, ast_node_t node,
           write_statement_function(allocator, field, stream);
         } else if (field->type == NODE_TYPE_STATEMENT_DECLARATION) {
           write_statement_declaration(allocator, field, stream);
+        } else if (field->type == NODE_TYPE_EXPRESSION_SPREAD) {
+          write_expression_spread(allocator, field, stream);
+          stream_write(stream, ";");
         }
         count++;
       }

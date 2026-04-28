@@ -2,8 +2,10 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
+#include "core/array.h"
 #include "core/location.h"
 #include "engine/context.h"
+#include "engine/error.h"
 #include "engine/module.h"
 #include "engine/struct.h"
 #include "engine/type.h"
@@ -19,9 +21,7 @@
 value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
   allocator_t allocator = context_get_allocator(ctx);
   ast_node_t identifier = ast_get_child(node, "identifier");
-  ast_node_t fields = ast_get_child(node, "fields");
-  ast_node_t methods = ast_get_child(node, "methods");
-  ast_node_t attributes = ast_get_child(node, "attributes");
+  ast_node_t fields_node = ast_get_child(node, "fields");
   module_t mod = context_get_module(ctx);
   char *name = NULL;
   if (identifier) {
@@ -36,8 +36,8 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
   context_set_type(ctx, CONTEXT_TYPE_STRUCT);
   context_set_function(ctx, NULL);
   context_set_self(ctx, stru);
-  for (size_t idx = 0; idx < ast_get_length(fields); idx++) {
-    ast_node_t field = ast_get_item(fields, idx);
+  for (size_t idx = 0; idx < ast_get_length(fields_node); idx++) {
+    ast_node_t field = ast_get_item(fields_node, idx);
     if (field->type == NODE_TYPE_STRUCT_FIELD) {
       ast_node_t identifier = ast_get_child(field, "identifier");
       ast_node_t type_node = ast_get_child(field, "type");
@@ -54,6 +54,56 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
       char *field_name = location_get(identifier->loc, allocator);
       struct_type_add_field(stru, allocator, field_name, type, mut, pub);
       allocator_free(allocator, field_name);
+    } else if (field->type == NODE_TYPE_EXPRESSION_SPREAD) {
+      ast_node_t expression = ast_get_child(field, "expression");
+      value_t vsub = resolve_type(ctx, expression);
+      if (value_is_error(vsub)) {
+        return vsub;
+      }
+      type_t sub = *(type_t *)value_get_data(vsub);
+      if (type_get_kind(sub) != TYPE_KIND_STRUCT) {
+        return create_comptime_error(ctx, expression, "value is not struct");
+      }
+      if (sub == stru) {
+        return create_comptime_error(ctx, expression, "cycle struct");
+      }
+      array_t fields = struct_type_get_fields(sub);
+      array_t attrs = struct_type_get_attributes(sub);
+      for (size_t idx = 0; idx < array_get_size(fields); idx++) {
+        struct_field_t field = array_get(fields, idx);
+        struct_type_remove_field(stru, field->name);
+        struct_type_add_field(stru, allocator, field->name, field->type,
+                              field->mut, field->pub);
+      }
+      for (size_t idx = 0; idx < array_get_size(attrs); idx++) {
+        struct_attribute_t attr = array_get(attrs, idx);
+        struct_type_remove_attribute(stru, attr->name);
+        value_t val = attr->value;
+        type_t type = value_get_type(val);
+        if (type_get_kind(type) == TYPE_KIND_FUNCTION) {
+          ast_node_t node = *(ast_node_t *)value_get_data(val);
+          node = clone_ast_node(allocator, node);
+          ast_remove_child(node, "_global");
+          ast_remove_child(node, "_self");
+          ast_node_t statement_function =
+              create_ast_node(allocator, NODE_TYPE_STATEMENT_FUNCTION);
+          ast_add_child(allocator, statement_function, "function", node);
+          statement_function->visible = false;
+          statement_function->loc = field->loc;
+          ast_add_item(fields_node, statement_function);
+          if (attr->pub) {
+            ast_node_t pub_node =
+                create_ast_node(allocator, NODE_TYPE_LITERAL_IDENTIFIER);
+            const char *pub_str = context_create_cstring(ctx, "pub");
+            pub_node->loc.begin.offset = pub_str;
+            pub_node->loc.end.offset = pub_str + 3;
+            ast_add_child(allocator, statement_function, "pub", pub_node);
+          }
+        } else {
+          struct_type_add_attribute(stru, allocator, attr->name, attr->value,
+                                    attr->pub);
+        }
+      }
     } else if (field->type == NODE_TYPE_STATEMENT_STRUCT) {
       value_t err = resolve_statement_struct(ctx, field);
       if (value_is_error(err) || value_is_interrupt(err)) {
