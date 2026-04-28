@@ -10,6 +10,7 @@
 #include "engine/struct.h"
 #include "engine/type.h"
 #include "engine/value.h"
+#include "resolve/expression.h"
 #include "resolve/statement_declaration.h"
 #include "resolve/statement_function.h"
 #include "resolve/statement_struct.h"
@@ -22,6 +23,7 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
   allocator_t allocator = context_get_allocator(ctx);
   ast_node_t identifier = ast_get_child(node, "identifier");
   ast_node_t fields_node = ast_get_child(node, "fields");
+  ast_node_t decorators = ast_get_child(node, "decorators");
   module_t mod = context_get_module(ctx);
   char *name = NULL;
   if (identifier) {
@@ -124,5 +126,19 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
   context_set_self(ctx, current_self);
   context_set_function(ctx, current_function);
   context_set_type(ctx, current_type);
-  return create_type_value(ctx, stru, false, NULL);
+  value_t result = create_type_value(ctx, stru, false, NULL);
+  for (size_t idx = 0; idx < ast_get_length(decorators); idx++) {
+    ast_node_t dec =
+        ast_get_item(decorators, ast_get_length(decorators) - 1 - idx);
+    ast_node_t expr = ast_get_child(dec, "expression");
+    value_t func = resolve_expression(ctx, expr);
+    if (value_is_error(func) || value_is_interrupt(func)) {
+      return func;
+    }
+    result = value_call(func, ctx, 1, &result);
+    if (value_is_error(result)) {
+      return result;
+    }
+  }
+  return result;
 }

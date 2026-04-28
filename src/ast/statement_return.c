@@ -1,5 +1,6 @@
 #include "ast/statement_return.h"
 #include "ast/expression.h"
+#include "ast/expression_group.h"
 #include "ast/expression_member.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
@@ -48,13 +49,22 @@ ast_node_t read_ast_statement_return(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  if (*current.offset != ';') {
-    err = create_ast_error(allocator, *position, current, filename,
-                           "invalid statement, missing ';'");
-    goto onerror;
+  if (value) {
+    value = ast_unwrap_group(value);
   }
-  current.offset++;
-  current.column++;
+  if (value->type != NODE_TYPE_FUNCTION_DECLARATOR &&
+      value->type != NODE_TYPE_STRUCT_DECLARATOR &&
+      value->type != NODE_TYPE_ENUM_DECLARATOR) {
+    if (*current.offset != ';') {
+      err = create_ast_error(allocator, *position, current, filename,
+                             "invalid statement, missing ';'");
+      goto onerror;
+    }
+  }
+  if (*current.offset == ';') {
+    current.offset++;
+    current.column++;
+  }
   node->loc.begin = *position;
   node->loc.end = current;
   node->loc.filename = filename;

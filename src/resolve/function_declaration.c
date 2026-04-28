@@ -5,6 +5,7 @@
 #include "core/array.h"
 #include "core/location.h"
 #include "engine/context.h"
+#include "engine/error.h"
 #include "engine/function.h"
 #include "engine/scope.h"
 #include "engine/type.h"
@@ -33,6 +34,10 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
     ast_node_t type = ast_get_child(argument, "type");
     ast_node_t const_ = ast_get_child(argument, "const");
     ast_node_t identifier = ast_get_child(argument, "identifier");
+    if (!identifier) {
+      return create_comptime_error(ctx, argument,
+                                   "missing argument identifier");
+    }
     argv[idx].mut = const_ == NULL;
     value_t vtype = resolve_type(ctx, type);
     if (value_is_error(vtype)) {

@@ -53,7 +53,7 @@ ast_node_t read_ast_expression_template_generator(allocator_t allocator,
   if (*current.offset != '>') {
     for (;;) {
       ast_node_t item =
-          read_ast_expression18(allocator, &current, end, filename);
+          read_ast_expression3(allocator, &current, end, filename);
       if (!item) {
         err = create_ast_error(
             allocator, *position, current, filename,

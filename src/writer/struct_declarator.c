@@ -12,6 +12,20 @@ void write_struct_declarator(allocator_t allocator, ast_node_t node,
                              stream_t stream) {
   ast_node_t identifier = ast_get_child(node, "identifier");
   ast_node_t fields = ast_get_child(node, "fields");
+  ast_node_t decorators = ast_get_child(node, "decorators");
+  ast_node_t pub = ast_get_child(node, "pub");
+  for (size_t idx = 0; idx < ast_get_length(decorators); idx++) {
+    ast_node_t dec = ast_get_item(decorators, idx);
+    ast_node_t expr = ast_get_child(dec, "expression");
+    stream_write(stream, "[[");
+    write_expression(allocator, expr, stream);
+    stream_write(stream, "]]");
+    stream_newline(stream);
+  }
+  if (pub) {
+    stream_write_location(stream, pub->loc);
+    stream_write(stream, " ");
+  }
   stream_write(stream, "struct ");
   if (identifier) {
     stream_write_location(stream, identifier->loc);
@@ -29,6 +43,17 @@ void write_struct_declarator(allocator_t allocator, ast_node_t node,
           stream_newline(stream);
         }
         if (field->type == NODE_TYPE_STRUCT_FIELD) {
+          ast_node_t decorators = ast_get_child(field, "decorators");
+          if (decorators) {
+            for (size_t idx = 0; idx < ast_get_length(decorators); idx++) {
+              ast_node_t dec = ast_get_item(decorators, idx);
+              ast_node_t expr = ast_get_child(dec, "expression");
+              stream_write(stream, "[[");
+              write_expression(allocator, expr, stream);
+              stream_write(stream, "]]");
+              stream_newline(stream);
+            }
+          }
           ast_node_t identifier = ast_get_child(field, "identifier");
           ast_node_t type = ast_get_child(field, "type");
           ast_node_t pub = ast_get_child(field, "pub");

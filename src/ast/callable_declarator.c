@@ -63,28 +63,60 @@ ast_node_t read_ast_callable_declarator(allocator_t allocator,
     return err;
   }
   ast_node_t args = create_ast_node(allocator, NODE_TYPE_LIST);
-  ast_add_child(allocator, node, "args", args);
+  ast_add_child(allocator, node, "arguments", args);
   if (*current.offset != ')') {
     for (;;) {
       ast_node_t arg = NULL;
-      if (!arg) {
-        arg = read_ast_literal_symbol(allocator, &current, end, filename);
-        if (arg && !location_is(arg->loc, "...")) {
-          current = arg->loc.begin;
-          allocator_free(allocator, arg);
-          arg = NULL;
+      position_t curr = current;
+      ast_node_t token =
+          read_ast_literal_symbol(allocator, &current, end, filename);
+      if (token && location_is(token->loc, "...")) {
+        err = ast_skip_all(allocator, &current, end, filename);
+        if (err && err->type == NODE_TYPE_ERROR) {
+          return err;
+        }
+        allocator_free(allocator, token);
+        arg = create_ast_node(allocator, NODE_TYPE_FUNCTION_ARGUMENT_REST);
+      } else {
+        if (token) {
+          current = token->loc.begin;
+          allocator_free(allocator, token);
+        }
+        arg = create_ast_node(allocator, NODE_TYPE_FUNCTION_ARGUMENT);
+      }
+      arg->loc.begin = curr;
+      ast_add_item(args, arg);
+      ast_node_t mut =
+          read_ast_literal_identifier(allocator, &current, end, filename);
+      if (mut) {
+        if (mut->type == NODE_TYPE_ERROR) {
+          err = mut;
+          goto onerror;
+        }
+        if (location_is(mut->loc, "const")) {
+          ast_add_child(allocator, node, "mut", mut);
+          err = ast_skip_all(allocator, &current, end, filename);
+          if (err && err->type == NODE_TYPE_ERROR) {
+            return err;
+          }
+        } else {
+          current = mut->loc.begin;
+          allocator_free(allocator, mut);
         }
       }
-      if (!arg) {
-        arg = read_ast_expression18(allocator, &current, end, filename);
-      }
-      if (!arg) {
+      ast_node_t type =
+          read_ast_expression18(allocator, &current, end, filename);
+      if (!type) {
+        err = create_ast_error(allocator, *position, current, filename,
+                               "invalid callable argument");
         goto onerror;
       }
-      if (arg->type == NODE_TYPE_ERROR) {
+      if (type->type == NODE_TYPE_ERROR) {
+        err = type;
         goto onerror;
       }
-      ast_add_item(args, arg);
+      ast_add_child(allocator, arg, "type", type);
+      arg->loc.end = current;
       err = ast_skip_all(allocator, &current, end, filename);
       if (err && err->type == NODE_TYPE_ERROR) {
         return err;
@@ -112,11 +144,11 @@ ast_node_t read_ast_callable_declarator(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  if (*current.offset != ':') {
+  if (*current.offset != '-' || *(current.offset + 1) != '>') {
     goto onerror;
   }
-  current.offset++;
-  current.column++;
+  current.offset += 2;
+  current.column += 2;
   ast_node_t return_type =
       read_ast_expression18(allocator, &current, end, filename);
   if (!return_type) {
@@ -132,15 +164,11 @@ ast_node_t read_ast_callable_declarator(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  if (*current.offset == '{') {
-    goto onerror;
-  }
   current = return_type->loc.end;
   node->loc.begin = *position;
   node->loc.end = current;
   node->loc.filename = filename;
   *position = current;
-
   return node;
 onerror:
   allocator_free(allocator, node);

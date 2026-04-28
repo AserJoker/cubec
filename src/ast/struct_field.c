@@ -75,6 +75,10 @@ ast_node_t read_ast_struct_field(allocator_t allocator, position_t *position,
   }
   current.offset++;
   current.column++;
+  err = ast_skip_all(allocator, &current, end, filename);
+  if (err && err->type == NODE_TYPE_ERROR) {
+    return err;
+  }
   token = read_ast_literal_identifier(allocator, &current, end, filename);
   if (token) {
     if (token->type == NODE_TYPE_ERROR) {

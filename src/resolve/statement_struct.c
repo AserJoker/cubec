@@ -5,7 +5,7 @@
 
 value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
   ast_node_t struct_node = ast_get_child(node, "struct");
-  ast_node_t pub_node = ast_get_child(node, "pub");
+  ast_node_t pub_node = ast_get_child(struct_node, "pub");
   if (pub_node && context_get_type(ctx) != CONTEXT_TYPE_STRUCT) {
     return create_comptime_error(ctx, pub_node, "invalid pub declaration");
   }
@@ -61,6 +61,7 @@ value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
       }
     }
   }
+
   ast_node_bind_value(allocator, struct_node, stru);
   return context_get_undefined(ctx);
 }

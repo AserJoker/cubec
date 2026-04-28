@@ -34,6 +34,24 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
       return err;
     }
   }
+  ast_node_t token =
+      read_ast_literal_identifier(allocator, &current, end, filename);
+  if (token) {
+    if (token->type == NODE_TYPE_ERROR) {
+      err = token;
+      goto onerror;
+    }
+    if (location_is(token->loc, "pub")) {
+      ast_add_child(allocator, node, "pub", token);
+      err = ast_skip_all(allocator, &current, end, filename);
+      if (err && err->type == NODE_TYPE_ERROR) {
+        return err;
+      }
+    } else {
+      current = token->loc.begin;
+      allocator_free(allocator, token);
+    }
+  }
   ast_node_t kind =
       read_ast_literal_identifier(allocator, &current, end, filename);
   if (kind) {
@@ -44,7 +62,7 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
     if (!location_is(kind->loc, "comptime") &&
         !location_is(kind->loc, "extern") &&
         !location_is(kind->loc, "inline")) {
-      current = *position;
+      current = kind->loc.begin;
       allocator_free(allocator, kind);
     } else {
       ast_add_child(allocator, node, "kind", kind);
@@ -54,8 +72,7 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
       }
     }
   }
-  ast_node_t token =
-      read_ast_literal_identifier(allocator, &current, end, filename);
+  token = read_ast_literal_identifier(allocator, &current, end, filename);
   if (!token) {
     goto onerror;
   }

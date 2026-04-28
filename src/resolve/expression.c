@@ -5,6 +5,7 @@
 #include "engine/error.h"
 #include "engine/value.h"
 #include "resolve/array_declarator.h"
+#include "resolve/callable_declarator.h"
 #include "resolve/expression_binary.h"
 #include "resolve/expression_call.h"
 #include "resolve/expression_member.h"
@@ -43,6 +44,8 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     value = resolve_expression_member(ctx, node);
   } else if (node->type == NODE_TYPE_STRUCT_DECLARATOR) {
     value = resolve_struct_declarator(ctx, node);
+  } else if (node->type == NODE_TYPE_CALLABLE_DECLARATOR) {
+    value = resolve_callable_declarator(ctx, node);
   } else if (node->type == NODE_TYPE_VALUE) {
     value = node->value;
   } else {

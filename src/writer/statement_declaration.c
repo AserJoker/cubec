@@ -2,6 +2,7 @@
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/stream.h"
+#include "writer/expression.h"
 #include "writer/variable_declarator.h"
 
 void write_statement_declaration(allocator_t allocator, ast_node_t node,
@@ -10,6 +11,17 @@ void write_statement_declaration(allocator_t allocator, ast_node_t node,
   ast_node_t type = ast_get_child(node, "type");
   ast_node_t declarations = ast_get_child(node, "declarations");
   ast_node_t pub = ast_get_child(node, "pub");
+  ast_node_t decorators = ast_get_child(node, "decorators");
+  if (decorators) {
+    for (size_t idx = 0; idx < ast_get_length(decorators); idx++) {
+      ast_node_t dec = ast_get_item(decorators, idx);
+      ast_node_t expr = ast_get_child(dec, "expression");
+      stream_write(stream, "[[");
+      write_expression(allocator, expr, stream);
+      stream_write(stream, "]]");
+      stream_newline(stream);
+    }
+  }
   if (pub) {
     stream_write_location(stream, pub->loc);
     stream_write(stream, " ");

@@ -159,6 +159,14 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       result = value_clone(result, allocator);
       scope_store(current_scope, allocator, NULL, result);
     }
+    result = resolve_function_body(ctx, body);
+    if (value_is_interrupt(result)) {
+      result = interrupt_get_value(result);
+    }
+    if (value_is_error(result)) {
+      return result;
+    }
+    result = value_clone(result, allocator);
     context_set_scope(ctx, current_scope);
     allocator_free(allocator, scope);
     context_set_function(ctx, current_function);
@@ -166,6 +174,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     context_set_global(ctx, current_global);
     context_set_self(ctx, current_self);
     context_set_type(ctx, current_type);
+    scope_store(current_scope, allocator, NULL, result);
     return result;
   }
   return context_create_value(ctx, meta->type, NULL, false, false, NULL);

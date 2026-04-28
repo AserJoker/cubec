@@ -1,14 +1,8 @@
-pub struct Test {
-    id:i32;
-    pub data:const u32;
-    pub func getId(self:*__self__):i32 {
-        return self.id;
-    }
+comptime func add():func(i32,i32)->i32{
+    return func(a:i32,b:i32):i32 {
+        return a+b;
+    };
 }
-struct Test2 {
-    ...Test;
-}
-pub func main():void {
-    const demo:Test2 = {};
-    const id = demo.getId();
+pub func main(): void {
+    const val = add()(1,2);
 }
