@@ -1,4 +1,6 @@
-
+comptime func tt():void {
+    _ = 1+2;
+}
 pub func main(): void {
-    const _ = 1;
+    tt();
 }

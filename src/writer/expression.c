@@ -2,6 +2,7 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "writer/callable_declarator.h"
+#include "writer/expression_assigment.h"
 #include "writer/expression_binary.h"
 #include "writer/expression_call.h"
 #include "writer/expression_compute_member.h"
@@ -38,5 +39,7 @@ void write_expression(allocator_t allocator, ast_node_t node, stream_t stream) {
     write_callable_declarator(allocator, node, stream);
   } else if (node->type == NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
     write_expression_compute_member(allocator, node, stream);
+  } else if (node->type == NODE_TYPE_EXPRESSION_ASSIGMENT) {
+    write_expression_assigment(allocator, node, stream);
   }
 }

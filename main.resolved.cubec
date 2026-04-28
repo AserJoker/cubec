@@ -1,9 +1,6 @@
-struct Test {
-    comptime func __call__(self: *__self__, t: type): i32 {
-        return 123;
-    }
+comptime func tt(): void {
+    _ = 1 + 2;
 }
 pub func main(): void {
-    comptime const t = Test{};
-    const id = t(u32);
+    tt();
 }

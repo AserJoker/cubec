@@ -3,6 +3,7 @@
 #include "ast/node_type.h"
 #include "core/stream.h"
 #include "writer/statement_declaration.h"
+#include "writer/statement_expression.h"
 #include "writer/statement_function.h"
 #include "writer/statement_return.h"
 #include "writer/statement_struct.h"
@@ -24,6 +25,8 @@ void write_function_body(allocator_t allocator, ast_node_t node,
         write_statement_return(allocator, sts, stream);
       } else if (sts->type == NODE_TYPE_STATEMENT_STRUCT) {
         write_statement_struct(allocator, sts, stream);
+      } else if (sts->type == NODE_TYPE_STATEMENT_EXPRESSION) {
+        write_statement_expression(allocator, sts, stream);
       }
     }
   }
