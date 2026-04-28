@@ -51,7 +51,6 @@ struct _context_t {
   context_type_t type;
   module_t module;
   value_t function;
-  hash_map_t builtins;
 };
 static void context_dispose(context_t self, allocator_t allocator) {
   while (self->scope) {
@@ -60,7 +59,6 @@ static void context_dispose(context_t self, allocator_t allocator) {
   allocator_free(allocator, self->modules);
   allocator_free(allocator, self->strings);
   allocator_free(allocator, self->types);
-  allocator_free(allocator, self->builtins);
 }
 context_t create_context(allocator_t allocator) {
   context_t self = allocator_alloc(allocator, sizeof(struct _context_t),
@@ -80,13 +78,6 @@ context_t create_context(allocator_t allocator) {
       .compare = (compare_fn_t)strcmp,
   };
   self->modules = create_hash_map(allocator, &modules_initialize);
-  hash_map_initialize_t builtin_initialize = {
-      .hash = (hash_fn_t)cstring_sdb,
-      .compare = (compare_fn_t)strcmp,
-      .autofree_key = true,
-      .autofree_value = false,
-  };
-  self->builtins = create_hash_map(allocator, &builtin_initialize);
   hash_map_initialize_t types_initialize = modules_initialize;
   self->types = create_hash_map(allocator, &types_initialize);
   type_init(self);
@@ -136,19 +127,6 @@ void context_set_scope(context_t self, scope_t scope) { self->scope = scope; }
 scope_t context_get_root_scope(context_t self) { return self->root; }
 void context_set_root_scope(context_t self, scope_t scope) {
   self->root = scope;
-}
-void context_set_builtin(context_t ctx, const char *name, builtin_fn_t fn) {
-  hash_map_set(ctx->builtins, create_cstring(ctx->allocator, name), fn, NULL,
-               NULL);
-}
-ast_node_t context_eval_builtin(context_t ctx, const char *name,
-                                ast_node_t node) {
-  builtin_fn_t fn = hash_map_get(ctx->builtins, name, NULL, NULL);
-  return fn(ctx, node);
-}
-
-bool context_has_builtin(context_t ctx, const char *name) {
-  return hash_map_has(ctx->builtins, name, NULL, NULL);
 }
 
 const char *context_create_cstring(context_t self, const char *src) {

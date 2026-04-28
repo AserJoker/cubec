@@ -4,6 +4,7 @@
 #include "writer/callable_declarator.h"
 #include "writer/expression_binary.h"
 #include "writer/expression_call.h"
+#include "writer/expression_compute_member.h"
 #include "writer/expression_member.h"
 #include "writer/function_declarator.h"
 #include "writer/initialize_list.h"
@@ -35,5 +36,7 @@ void write_expression(allocator_t allocator, ast_node_t node, stream_t stream) {
     write_literal_numeric(allocator, node, stream);
   } else if (node->type == NODE_TYPE_CALLABLE_DECLARATOR) {
     write_callable_declarator(allocator, node, stream);
+  } else if (node->type == NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
+    write_expression_compute_member(allocator, node, stream);
   }
 }

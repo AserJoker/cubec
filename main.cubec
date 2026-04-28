@@ -1,8 +1,9 @@
-comptime func add():func(i32,i32)->i32{
-    return func(a:i32,b:i32):i32 {
-        return a+b;
-    };
-}
+struct Test{
+    func __call__(self:*__self__):i32{
+        return 123;
+    }
+};
 pub func main(): void {
-    const val = add()(1,2);
+    comptime const t:Test = {};
+    comptime const id = t();
 }

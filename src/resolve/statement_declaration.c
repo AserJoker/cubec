@@ -54,7 +54,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     }
     value_t value = resolve_expression(ctx, initialize);
     if (value_is_error(value)) {
-      if (context_is_comptime(ctx)) {
+      if (comptime) {
         return value;
       } else {
         context_push_error(ctx, value);
@@ -70,7 +70,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     type_t value_type = value_get_type(value);
     if (type_get_kind(value_type) == TYPE_KIND_VOID) {
       value_t err = create_comptime_error(ctx, initialize, "value is void");
-      if (context_is_comptime(ctx)) {
+      if (comptime) {
         return err;
       } else {
         context_push_error(ctx, err);
@@ -81,8 +81,12 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         !context_is_comptime(ctx)) {
       value_t err = create_comptime_error(
           ctx, initialize, "type value is only declared with comptime");
-      context_push_error(ctx, err);
-      continue;
+      if (comptime) {
+        return err;
+      } else {
+        context_push_error(ctx, err);
+        continue;
+      }
     }
     if (type_get_kind(value_type) == TYPE_KIND_FUNCTION &&
         !context_is_comptime(ctx)) {
@@ -91,18 +95,21 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       if (kind && location_is(kind->loc, "comptime")) {
         value_t err = create_comptime_error(ctx, initialize,
                                             "value is comptime function");
-        context_push_error(ctx, err);
-        continue;
+        if (comptime) {
+          return err;
+        } else {
+          context_push_error(ctx, err);
+          continue;
+        }
       }
     }
     if (type) {
       value_t vdst_type = resolve_type(ctx, type);
       if (value_is_error(vdst_type)) {
-        if (context_is_comptime(ctx)) {
+        if (comptime) {
           return vdst_type;
         } else {
-          fprintf(stderr, "%s\n", error_get_message(vdst_type));
-          result = vdst_type;
+          context_push_error(ctx, vdst_type);
           continue;
         }
       }
@@ -114,7 +121,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       value = value_safe_convert(value, ctx, dst_type);
       if (value_is_error(value)) {
         value_t err = convert_comptime_error(ctx, initialize, value);
-        if (context_is_comptime(ctx)) {
+        if (comptime) {
           return err;
         } else {
           context_push_error(ctx, err);
@@ -144,7 +151,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     allocator_free(allocator, name);
     if (value_is_error(value)) {
       value = convert_comptime_error(ctx, identifier, value);
-      if (context_is_comptime(ctx)) {
+      if (comptime) {
         return value;
       } else {
         context_push_error(ctx, value);

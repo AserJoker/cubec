@@ -32,10 +32,6 @@ scope_t context_get_scope(context_t self);
 void context_set_scope(context_t self, scope_t scope);
 scope_t context_get_root_scope(context_t self);
 void context_set_root_scope(context_t self, scope_t scope);
-void context_set_builtin(context_t ctx, const char *name, builtin_fn_t fn);
-ast_node_t context_eval_builtin(context_t ctx, const char *name,
-                                ast_node_t node);
-bool context_has_builtin(context_t ctx, const char *name);
 const char *context_create_cstring(context_t self, const char *src);
 allocator_t context_get_allocator(context_t self);
 value_t context_load(context_t self, const char *name);

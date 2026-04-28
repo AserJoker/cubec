@@ -13,21 +13,6 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
   ast_node_t callee = ast_get_child(node, "callee");
   ast_node_t arguments = ast_get_child(node, "arguments");
   size_t argc = ast_get_length(arguments);
-  if (callee->type == NODE_TYPE_LITERAL_IDENTIFIER) {
-    char *name = location_get(callee->loc, allocator);
-    if (context_has_builtin(ctx, name)) {
-      ast_node_t resolved = context_eval_builtin(ctx, name, node);
-      node->type = resolved->type;
-      allocator_free(allocator, node->data);
-      node->data = resolved->data;
-      node->visible = resolved->visible;
-      resolved->data = NULL;
-      allocator_free(allocator, resolved);
-      allocator_free(allocator, name);
-      return resolve_expression(ctx, node);
-    }
-    allocator_free(allocator, name);
-  }
   value_t argv[argc];
   for (size_t idx = 0; idx < argc; idx++) {
     ast_node_t arg = ast_get_item(arguments, idx);
@@ -69,6 +54,10 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
       return func;
     }
     ast_node_bind_value(allocator, callee, func);
-    return value_call(func, ctx, argc, argv);
+    value_t res = value_call(func, ctx, argc, argv);
+    if (value_is_error(res)) {
+      return convert_comptime_error(ctx, node, res);
+    }
+    return res;
   }
 }

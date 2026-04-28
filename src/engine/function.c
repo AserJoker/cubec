@@ -94,7 +94,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       } else {
         return create_error(
             ctx, "value requires %" PRIuPTR " arguments, receive %" PRIuPTR,
-            array_get_size(meta->arguments), idx);
+            array_get_size(meta->arguments), argc);
       }
     } else {
       argument_t *arg_info = array_get(meta->arguments, idx);

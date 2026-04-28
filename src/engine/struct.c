@@ -5,6 +5,7 @@
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/function.h"
+#include "engine/ptr.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include <inttypes.h>
@@ -183,6 +184,45 @@ static bool struct_type_is_equal(type_t self, type_t another) {
   }
   return true;
 }
+static value_t struct_get(value_t self, context_t ctx, value_t key) {
+  type_t type = value_get_type(self);
+  struct_attribute_t attr = struct_type_get_attribute(type, "__get__");
+  if (attr) {
+    value_t ptr = create_ptr_value(ctx, self);
+    value_t args[] = {ptr, key};
+    return value_call(attr->value, ctx, 2, args);
+  }
+  return create_error(ctx, "no member __get__ found in '%s'",
+                      type_get_name(type));
+}
+static value_t struct_set(value_t self, context_t ctx, value_t key,
+                          value_t value) {
+  type_t type = value_get_type(self);
+  struct_attribute_t attr = struct_type_get_attribute(type, "__set__");
+  if (attr) {
+    value_t ptr = create_ptr_value(ctx, self);
+    value_t args[] = {ptr, key, value};
+    return value_call(attr->value, ctx, 3, args);
+  }
+  return create_error(ctx, "no member __set__ found in '%s'",
+                      type_get_name(type));
+}
+static value_t struct_call(value_t self, context_t ctx, size_t argc,
+                           value_t argv[]) {
+  type_t type = value_get_type(self);
+  struct_attribute_t attr = struct_type_get_attribute(type, "__call__");
+  if (attr) {
+    value_t ptr = create_ptr_value(ctx, self);
+    value_t args[argc + 1];
+    for (size_t idx = 0; idx < argc; idx++) {
+      args[idx + 1] = argv[idx];
+    }
+    args[0] = ptr;
+    return value_call(attr->value, ctx, argc + 1, args);
+  }
+  return create_error(ctx, "no member __call__ found in '%s'",
+                      type_get_name(type));
+}
 
 type_t create_struct_type(context_t ctx, const char *name, size_t align) {
 
@@ -240,6 +280,9 @@ type_t create_struct_type(context_t ctx, const char *name, size_t align) {
         .convert = struct_convert,
         .safe_convert = struct_safe_convert,
         .type_eq = struct_type_is_equal,
+        .get = struct_get,
+        .set = struct_set,
+        .call = struct_call,
     };
     self = create_type(allocator, TYPE_KIND_STRUCT, sizeof(int8_t), align, name,
                        id, &opt, meta);
@@ -252,6 +295,7 @@ type_t create_struct_type(context_t ctx, const char *name, size_t align) {
 static void struct_field_dispose(struct_field_t self, allocator_t allocator) {
   allocator_free(allocator, self->name);
 }
+
 static struct_field_t create_struct_field(allocator_t allocator,
                                           const char *name, size_t offset,
                                           type_t type, bool mut, bool pub) {
