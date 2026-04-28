@@ -13,6 +13,29 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
   ast_node_t callee = ast_get_child(node, "callee");
   ast_node_t arguments = ast_get_child(node, "arguments");
   size_t argc = ast_get_length(arguments);
+  if (callee->type == NODE_TYPE_LITERAL_IDENTIFIER) {
+    char *name = location_get(callee->loc, allocator);
+    if (context_has_builtin(ctx, name)) {
+      ast_node_t resolved = context_eval_builtin(
+          ctx, name, argc, array_get_data(arguments->items));
+      node->type = resolved->type;
+      allocator_free(allocator, node->data);
+      node->data = resolved->data;
+      node->visible = resolved->visible;
+      resolved->data = NULL;
+      allocator_free(allocator, resolved);
+      allocator_free(allocator, name);
+      value_t value = resolve_expression(ctx, node);
+      if (value_is_error(value)) {
+        return convert_comptime_error(ctx, node, value);
+      }
+      if (value_is_interrupt(value)) {
+        return value;
+      }
+      return value;
+    }
+    allocator_free(allocator, name);
+  }
   value_t argv[argc];
   for (size_t idx = 0; idx < argc; idx++) {
     ast_node_t arg = ast_get_item(arguments, idx);

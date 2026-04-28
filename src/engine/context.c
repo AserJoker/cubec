@@ -26,6 +26,7 @@
 #include "engine/unsigned.h"
 #include "engine/value.h"
 #include "engine/void.h"
+#include "resolve/expression.h"
 #include "resolve/function_declaration.h"
 #include "resolve/program.h"
 #include "writer/program.h"
@@ -51,7 +52,31 @@ struct _context_t {
   context_type_t type;
   module_t module;
   value_t function;
+  hash_map_t builtins;
 };
+
+static ast_node_t builtin_comptime_error(context_t ctx, size_t argc,
+                                         ast_node_t *argv) {
+  allocator_t allocator = context_get_allocator(ctx);
+  if (argc < 1) {
+    value_t err = create_error(ctx, "comptime_error require fmt argument");
+    return create_ast_value_node(allocator, err);
+  }
+  value_t fmt = resolve_expression(ctx, argv[0]);
+  if (value_is_error(fmt) || value_is_interrupt(fmt)) {
+    return create_ast_value_node(allocator, fmt);
+  }
+  type_t fmt_type = value_get_type(fmt);
+  if (type_get_kind(fmt_type) != TYPE_KIND_STR) {
+    value_t err = create_error(ctx, "cannot convert '%s' to 'str'",
+                               type_get_name(fmt_type));
+    return create_ast_value_node(allocator, err);
+  }
+  const char *format = *(const char **)value_get_data(fmt);
+  value_t err = create_error(ctx, format);
+  return create_ast_value_node(allocator, err);
+}
+
 static void context_dispose(context_t self, allocator_t allocator) {
   while (self->scope) {
     context_pop_scope(self);
@@ -59,6 +84,7 @@ static void context_dispose(context_t self, allocator_t allocator) {
   allocator_free(allocator, self->modules);
   allocator_free(allocator, self->strings);
   allocator_free(allocator, self->types);
+  allocator_free(allocator, self->builtins);
 }
 context_t create_context(allocator_t allocator) {
   context_t self = allocator_alloc(allocator, sizeof(struct _context_t),
@@ -78,6 +104,13 @@ context_t create_context(allocator_t allocator) {
       .compare = (compare_fn_t)strcmp,
   };
   self->modules = create_hash_map(allocator, &modules_initialize);
+  hash_map_initialize_t builtin_initialize = {
+      .hash = (hash_fn_t)cstring_sdb,
+      .compare = (compare_fn_t)strcmp,
+      .autofree_key = true,
+      .autofree_value = false,
+  };
+  self->builtins = create_hash_map(allocator, &builtin_initialize);
   hash_map_initialize_t types_initialize = modules_initialize;
   self->types = create_hash_map(allocator, &types_initialize);
   type_init(self);
@@ -101,6 +134,7 @@ context_t create_context(allocator_t allocator) {
   self->module = NULL;
   self->function = NULL;
   self->self = NULL;
+  context_set_builtin(self, "comptime_error", builtin_comptime_error);
   return self;
 }
 bool context_is_comptime(context_t ctx) { return ctx->comptime; }
@@ -127,6 +161,19 @@ void context_set_scope(context_t self, scope_t scope) { self->scope = scope; }
 scope_t context_get_root_scope(context_t self) { return self->root; }
 void context_set_root_scope(context_t self, scope_t scope) {
   self->root = scope;
+}
+void context_set_builtin(context_t ctx, const char *name, builtin_fn_t fn) {
+  hash_map_set(ctx->builtins, create_cstring(ctx->allocator, name), fn, NULL,
+               NULL);
+}
+ast_node_t context_eval_builtin(context_t ctx, const char *name, size_t argc,
+                                ast_node_t *argv) {
+  builtin_fn_t fn = hash_map_get(ctx->builtins, name, NULL, NULL);
+  return fn(ctx, argc, argv);
+}
+
+bool context_has_builtin(context_t ctx, const char *name) {
+  return hash_map_has(ctx->builtins, name, NULL, NULL);
 }
 
 const char *context_create_cstring(context_t self, const char *src) {

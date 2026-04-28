@@ -18,7 +18,8 @@ typedef enum _context_type_t {
 } context_type_t;
 
 typedef struct _context_t *context_t;
-typedef ast_node_t (*builtin_fn_t)(context_t ctx, ast_node_t node);
+typedef ast_node_t (*builtin_fn_t)(context_t ctx, size_t argc,
+                                   ast_node_t *argv);
 context_t create_context(allocator_t allocator);
 bool context_is_comptime(context_t ctx);
 bool context_set_comptime(context_t ctx, bool comptime);
@@ -32,6 +33,10 @@ scope_t context_get_scope(context_t self);
 void context_set_scope(context_t self, scope_t scope);
 scope_t context_get_root_scope(context_t self);
 void context_set_root_scope(context_t self, scope_t scope);
+void context_set_builtin(context_t ctx, const char *name, builtin_fn_t fn);
+ast_node_t context_eval_builtin(context_t ctx, const char *name, size_t argc,
+                                ast_node_t *argv);
+bool context_has_builtin(context_t ctx, const char *name);
 const char *context_create_cstring(context_t self, const char *src);
 allocator_t context_get_allocator(context_t self);
 value_t context_load(context_t self, const char *name);

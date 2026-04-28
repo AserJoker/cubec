@@ -18,9 +18,11 @@
 #include "resolve/ptr_declarator.h"
 #include "resolve/struct_declarator.h"
 value_t resolve_expression(context_t ctx, ast_node_t node) {
-  ast_node_t _value = ast_get_child(node, "_value");
-  if (_value) {
-    return _value->value;
+  if (node->type > NODE_TYPE_LIST) {
+    ast_node_t _value = ast_get_child(node, "_value");
+    if (_value) {
+      return _value->value;
+    }
   }
   value_t value = NULL;
   if (node->type == NODE_TYPE_LITERAL_IDENTIFIER) {

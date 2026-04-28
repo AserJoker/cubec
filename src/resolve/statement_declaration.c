@@ -34,12 +34,22 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     ast_node_t identifier = ast_get_child(declarator, "identifier");
     ast_node_t type = ast_get_child(declarator, "type");
     ast_node_t initialize = ast_get_child(declarator, "initialize");
+    if (location_is(identifier->loc, "_")) {
+      value_t err = create_comptime_error(
+          ctx, identifier, "'_' only to ignore values in expressions");
+      if (comptime) {
+        return err;
+      } else {
+        context_push_error(ctx, err);
+        continue;
+      }
+    }
     if (initialize->type == NODE_TYPE_INITIALIZE_LIST) {
       ast_node_t itype = ast_get_child(initialize, "type");
       if (!itype && !type) {
         value_t err = create_comptime_error(ctx, declarator,
                                             "missing type for initialize list");
-        if (context_is_comptime(ctx)) {
+        if (comptime) {
           return err;
         } else {
           context_push_error(ctx, err);
@@ -80,7 +90,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     if (type_get_kind(value_type) == TYPE_KIND_TYPE &&
         !context_is_comptime(ctx)) {
       value_t err = create_comptime_error(
-          ctx, initialize, "type value is only declared with comptime");
+          ctx, initialize, "type value only declared with comptime");
       if (comptime) {
         return err;
       } else {

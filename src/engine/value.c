@@ -120,7 +120,8 @@ value_t value_member_call(value_t self, struct _context_t *ctx,
 value_t value_convert(value_t self, struct _context_t *ctx, type_t type) {
   type_t value_type = value_get_type(self);
   if (strcmp(type_get_id(value_type), type_get_id(type)) == 0) {
-    return context_clone_value(ctx, self);
+    return context_create_weak_value(ctx, value_type, value_get_data(self),
+                                     false, NULL);
   }
   const type_operator_t *opt = type_get_operator(value_type);
   if (opt->convert) {
@@ -132,7 +133,8 @@ value_t value_convert(value_t self, struct _context_t *ctx, type_t type) {
 value_t value_safe_convert(value_t self, struct _context_t *ctx, type_t type) {
   type_t value_type = value_get_type(self);
   if (strcmp(type_get_id(value_type), type_get_id(type)) == 0) {
-    return context_clone_value(ctx, self);
+    return context_create_weak_value(ctx, value_type, value_get_data(self),
+                                     false, NULL);
   }
   const type_operator_t *opt = type_get_operator(value_type);
   if (opt->safe_convert) {

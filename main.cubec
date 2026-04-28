@@ -1,9 +1,4 @@
-struct Test{
-    func __call__(self:*__self__):i32{
-        return 123;
-    }
-};
+
 pub func main(): void {
-    comptime const t:Test = {};
-    comptime const id = t();
+    const _ = 1;
 }

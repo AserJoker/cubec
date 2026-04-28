@@ -140,7 +140,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       char *name = location_get(identifier->loc, allocator);
       if (scope_load(scope, name)) {
         result =
-            create_error(ctx, "duplicate identifier '%s' declaration", name);
+            create_comptime_error(ctx, arg_node, "redefinition of '%s'", name);
         allocator_free(allocator, name);
         break;
       }
@@ -151,20 +151,13 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
         // TODO: rest
       }
       allocator_free(allocator, name);
-      context_push_scope(ctx);
+    }
+    context_push_scope(ctx);
+    if (!result) {
       result = resolve_function_body(ctx, body);
       if (value_is_interrupt(result)) {
         result = interrupt_get_value(result);
       }
-      result = value_clone(result, allocator);
-      scope_store(current_scope, allocator, NULL, result);
-    }
-    result = resolve_function_body(ctx, body);
-    if (value_is_interrupt(result)) {
-      result = interrupt_get_value(result);
-    }
-    if (value_is_error(result)) {
-      return result;
     }
     result = value_clone(result, allocator);
     context_set_scope(ctx, current_scope);

@@ -19,6 +19,7 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   ast_node_t type_node = ast_get_child(node, "type");
   ast_node_t arguments_node = ast_get_child(node, "arguments");
   ast_node_t identifier_node = ast_get_child(node, "identifier_node");
+  ast_node_t kind = ast_get_child(node, "kind");
   bool variadic = false;
   size_t argc = ast_get_length(arguments_node);
   allocator_t allocator = context_get_allocator(ctx);
@@ -48,6 +49,12 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
     }
     ast_node_bind_value(allocator, type, vtype);
     argv[idx].type = *(type_t *)value_get_data(vtype);
+    if (type_get_kind(argv[idx].type) == TYPE_KIND_TYPE) {
+      if (!kind || !location_is(kind->loc, "comptime")) {
+        return create_comptime_error(ctx, argument,
+                                     "type value only declared with comptime");
+      }
+    }
   }
   value_t vreturn_type = resolve_type(ctx, type_node);
   if (value_is_error(vreturn_type)) {
