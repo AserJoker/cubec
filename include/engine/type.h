@@ -58,8 +58,6 @@ typedef struct _value_t *(*call_fn_t)(struct _value_t *self,
                                       struct _context_t *ctx, size_t argc,
                                       struct _value_t *argv[]);
 
-typedef char *(*write_ast_fn_t)(struct _value_t *self, allocator_t allocator);
-
 typedef bool (*type_eq_fn_t)(type_t self, type_t another);
 
 typedef struct _type_operator_t {

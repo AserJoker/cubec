@@ -9,6 +9,7 @@ void bool_init(context_t ctx);
 value_t create_comptime_bool(context_t ctx, bool value, bool mut,
                              const char *name);
 value_t create_bool(context_t ctx, bool mut, const char *name);
+bool bool_get_value(value_t val);
 #ifdef __cplusplus
 }
 #endif

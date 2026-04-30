@@ -142,7 +142,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     }
     ast_node_bind_value(allocator, initialize, value);
     char *name = location_get(identifier->loc, allocator);
-    if (type_get_kind(value_type) == TYPE_KIND_FUNCTION) {
+    if (context_get_type(ctx) == CONTEXT_TYPE_FUNCTION) {
       if (context_is_comptime(ctx)) {
         void *data = value_get_data(value);
         value = context_create_value(ctx, value_type, data, mut, true, name);
@@ -154,6 +154,9 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       if (struct_type_get_attribute(self, name)) {
         value = create_error(ctx, "redefinition of '%s'", name);
       } else {
+        if (!context_is_comptime(ctx)) {
+          value = context_create_value(ctx, value_type, NULL, mut, false, name);
+        }
         struct_type_add_attribute(self, allocator, name, value,
                                   pub_node != NULL);
       }

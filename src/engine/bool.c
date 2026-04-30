@@ -136,3 +136,7 @@ value_t create_bool(context_t ctx, bool mut, const char *name) {
   type_t bool_t = *(type_t *)value_get_data(bool_v);
   return context_create_value(ctx, bool_t, NULL, mut, false, name);
 }
+bool bool_get_value(value_t val) {
+  bool *data = value_get_data(val);
+  return *data;
+}

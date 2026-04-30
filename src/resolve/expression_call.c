@@ -18,14 +18,9 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     if (context_has_builtin(ctx, name)) {
       ast_node_t resolved = context_eval_builtin(
           ctx, name, argc, array_get_data(arguments->items));
-      node->type = resolved->type;
-      allocator_free(allocator, node->data);
-      node->data = resolved->data;
-      node->visible = resolved->visible;
-      resolved->data = NULL;
+      value_t value = resolve_expression(ctx, resolved);
       allocator_free(allocator, resolved);
       allocator_free(allocator, name);
-      value_t value = resolve_expression(ctx, node);
       if (value_is_error(value)) {
         return convert_comptime_error(ctx, node, value);
       }
