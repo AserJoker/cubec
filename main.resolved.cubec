@@ -1,6 +1,15 @@
-comptime func tt(): void {
-    _ = 1 + 2;
-}
 pub func main(): void {
-    tt();
+    comptime const item = struct {
+        data: ;
+        id: str;
+    }{
+        .data = {
+            1,
+            2,
+            3,
+            4
+        },
+        .id = "test"
+    };
+    __print__("%v", item);
 }

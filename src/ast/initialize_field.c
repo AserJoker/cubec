@@ -53,9 +53,9 @@ ast_node_t read_ast_initialize_field(allocator_t allocator,
     return err;
   }
   ast_node_t initialize =
-      read_ast_expression3(allocator, &current, end, filename);
+      read_ast_initialize_list(allocator, &current, end, filename);
   if (!initialize) {
-    initialize = read_ast_initialize_list(allocator, &current, end, filename);
+    initialize = read_ast_expression3(allocator, &current, end, filename);
   }
   if (!initialize) {
     err = create_ast_error(allocator, *position, current, filename,

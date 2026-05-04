@@ -52,10 +52,10 @@ void type_set_size(type_t self, size_t size) { self->size = size; }
 void type_set_align(type_t self, size_t align) { self->align = align; }
 const char *type_get_name(type_t self) {
   if (self->kind == TYPE_KIND_STRUCT) {
-    return self->name ? self->name : "struct (nonamed){...}";
+    return self->name ? self->name : "struct (nonamed)";
   }
   if (self->kind == TYPE_KIND_UNION) {
-    return self->name ? self->name : "union (nonamed){...}";
+    return self->name ? self->name : "union (nonamed)";
   }
   return self->name ? self->name : "(nonamed)";
 }

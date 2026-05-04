@@ -69,7 +69,7 @@ static value_t resolve_array_initialize(context_t ctx, ast_node_t type_node,
     if (length->type == NODE_TYPE_LITERAL_IDENTIFIER &&
         location_is(length->loc, "_")) {
       type_t u64 = context_load_type(ctx, "u64");
-      value_t vlength = create_value(allocator, u64, false, &len, true);
+      value_t vlength = create_comptime_u64(ctx, len, false, NULL);
       ast_node_bind_value(allocator, length, vlength);
     }
   }
@@ -86,7 +86,7 @@ static value_t resolve_array_initialize(context_t ctx, ast_node_t type_node,
     item = value_safe_convert(item, ctx, item_type);
     if (value_is_error(item)) {
       allocator_free(allocator, items);
-      return convert_comptime_error(ctx, fields, item);
+      return convert_comptime_error(ctx, fields->parent, item);
     }
     array_set(items, idx, item);
   }
@@ -122,6 +122,14 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
                                               "no member '%s' in struct", name);
           allocator_free(allocator, name);
           return err;
+        }
+        if (initialize->type == NODE_TYPE_INITIALIZE_LIST) {
+          ast_node_t type = ast_get_child(initialize, "type");
+          if (!type) {
+            value_t vtype = create_type_value(ctx, f->type, false, NULL);
+            type = create_ast_value_node(allocator, vtype);
+            ast_add_child(allocator, initialize, "type", type);
+          }
         }
         allocator_free(allocator, name);
         value_t value = resolve_expression(ctx, initialize);

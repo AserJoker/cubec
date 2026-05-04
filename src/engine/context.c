@@ -13,6 +13,7 @@
 #include "core/stream.h"
 #include "core/string.h"
 #include "engine/bool.h"
+#include "engine/buitin.h"
 #include "engine/error.h"
 #include "engine/float.h"
 #include "engine/integer.h"
@@ -26,7 +27,6 @@
 #include "engine/unsigned.h"
 #include "engine/value.h"
 #include "engine/void.h"
-#include "resolve/expression.h"
 #include "resolve/function_declaration.h"
 #include "resolve/program.h"
 #include "writer/program.h"
@@ -54,28 +54,6 @@ struct _context_t {
   value_t function;
   hash_map_t builtins;
 };
-
-static ast_node_t builtin_comptime_error(context_t ctx, size_t argc,
-                                         ast_node_t *argv) {
-  allocator_t allocator = context_get_allocator(ctx);
-  if (argc < 1) {
-    value_t err = create_error(ctx, "comptime_error require fmt argument");
-    return create_ast_value_node(allocator, err);
-  }
-  value_t fmt = resolve_expression(ctx, argv[0]);
-  if (value_is_error(fmt) || value_is_interrupt(fmt)) {
-    return create_ast_value_node(allocator, fmt);
-  }
-  type_t fmt_type = value_get_type(fmt);
-  if (type_get_kind(fmt_type) != TYPE_KIND_STR) {
-    value_t err = create_error(ctx, "cannot convert '%s' to 'str'",
-                               type_get_name(fmt_type));
-    return create_ast_value_node(allocator, err);
-  }
-  const char *format = *(const char **)value_get_data(fmt);
-  value_t err = create_error(ctx, format);
-  return create_ast_value_node(allocator, err);
-}
 
 static void context_dispose(context_t self, allocator_t allocator) {
   while (self->scope) {
@@ -134,7 +112,9 @@ context_t create_context(allocator_t allocator) {
   self->module = NULL;
   self->function = NULL;
   self->self = NULL;
-  context_set_builtin(self, "comptime_error", builtin_comptime_error);
+  context_set_builtin(self, "__error__", builtin_error);
+  context_set_builtin(self, "__typeof__", builtin_typeof);
+  context_set_builtin(self, "__print__", builtin_print);
   return self;
 }
 bool context_is_comptime(context_t ctx) { return ctx->comptime; }

@@ -496,6 +496,9 @@ ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
 }
 void ast_node_bind_value(allocator_t allocator, ast_node_t node,
                          struct _value_t *value) {
+  if (node->type <= NODE_TYPE_LIST) {
+    return;
+  }
   if (!value_is_comptime(value)) {
     return;
   }

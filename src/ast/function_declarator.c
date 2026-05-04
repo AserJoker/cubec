@@ -60,6 +60,7 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
       goto onerror;
     }
     if (!location_is(kind->loc, "comptime") &&
+        !location_is(kind->loc, "template") &&
         !location_is(kind->loc, "extern") &&
         !location_is(kind->loc, "inline")) {
       current = kind->loc.begin;
@@ -153,67 +154,6 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
       goto onerror;
     }
     ast_add_child(allocator, node, "identifier", identifier);
-  }
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  ast_node_t generics = create_ast_node(allocator, NODE_TYPE_LIST);
-  ast_add_child(allocator, node, "generics", generics);
-  if (*current.offset == '<') {
-    current.offset++;
-    current.column++;
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
-    }
-    if (*current.offset != '>') {
-      for (;;) {
-        ast_node_t arg = NULL;
-        if (!arg) {
-          arg = read_ast_function_argument_rest(allocator, &current, end,
-                                                filename);
-        }
-        if (!arg) {
-          arg = read_ast_function_argument(allocator, &current, end, filename);
-        }
-        if (!arg) {
-          err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid generic expression");
-          goto onerror;
-        }
-        if (arg->type == NODE_TYPE_ERROR) {
-          err = arg;
-          goto onerror;
-        }
-        ast_add_item(generics, arg);
-        err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == NODE_TYPE_ERROR) {
-          return err;
-        }
-        if (*current.offset == '>') {
-          break;
-        }
-        if (*current.offset != ',') {
-          err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid function expression");
-          goto onerror;
-        }
-        current.offset++;
-        current.column++;
-        err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == NODE_TYPE_ERROR) {
-          return err;
-        }
-      }
-    }
-    if (*current.offset != '>') {
-      err = create_ast_error(allocator, *position, current, filename,
-                             "invalid function expression");
-      goto onerror;
-    }
-    current.offset++;
-    current.column++;
   }
   err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == NODE_TYPE_ERROR) {

@@ -17,7 +17,10 @@ value_t resolve_array_declarator(context_t ctx, ast_node_t node) {
   ast_node_t type = ast_get_child(node, "type");
   if (length->type == NODE_TYPE_LITERAL_IDENTIFIER &&
       location_is(length->loc, "_")) {
-    return create_comptime_error(ctx, node, "unable to infer array size");
+    ast_node_t _value = ast_get_child(length, "_value");
+    if (!_value) {
+      return create_comptime_error(ctx, node, "unable to infer array size");
+    }
   }
   value_t vlen = resolve_expression(ctx, length);
   if (!value_is_comptime(vlen)) {
