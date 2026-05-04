@@ -67,7 +67,11 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   type_t return_type = *(type_t *)value_get_data(vreturn_type);
   type_t function_type =
       create_function_type(ctx, return_type, argc, argv, variadic);
-  return create_function(ctx, function_type, node);
+  value_t function = create_function(ctx, function_type, node);
+  if (context_get_type(ctx) == CONTEXT_TYPE_FUNCTION) {
+    resolve_function_declaration(ctx, function);
+  }
+  return function;
 }
 value_t resolve_function_declaration(context_t ctx, value_t function) {
   function_declar declar = *(function_declar *)value_get_data(function);
@@ -91,8 +95,9 @@ value_t resolve_function_declaration(context_t ctx, value_t function) {
   bool current_comptime = context_is_comptime(ctx);
   context_set_comptime(ctx, false);
   allocator_t allocator = context_get_allocator(ctx);
-  scope_t scope = create_scope(allocator, context_get_root_scope(ctx));
   scope_t current_scope = context_get_scope(ctx);
+  scope_t scope = create_scope(allocator, current_scope);
+  scope_set_is_function(scope, true);
   context_set_scope(ctx, scope);
   array_t arguments = function_type_get_arguments(function_type);
   for (size_t idx = 0; idx < array_get_size(arguments); idx++) {

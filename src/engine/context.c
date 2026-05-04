@@ -6,7 +6,6 @@
 #include "core/array.h"
 #include "core/compare.h"
 #include "core/hash_map.h"
-#include "core/list.h"
 #include "core/location.h"
 #include "core/position.h"
 #include "core/rbtree.h"
@@ -189,10 +188,18 @@ value_t context_load(context_t self, const char *name) {
     return create_type_value(self, self->self, false, NULL);
   }
   scope_t scope = self->scope;
+  bool in_function = true;
   while (scope) {
     value_t value = scope_load(scope, name);
     if (value) {
-      return value;
+      if (in_function || value_is_comptime(value)) {
+        return value;
+      }
+    }
+    if (in_function) {
+      if (scope_is_function(scope)) {
+        in_function = false;
+      }
     }
     scope = scope_get_parent(scope);
   }
@@ -286,12 +293,13 @@ value_t context_load_module(context_t self, const char *filename) {
   hash_map_set(self->modules, (void *)module_get_filename(module), module, NULL,
                NULL);
   resolve_program(self, node);
-  hash_map_t functions = module_get_functions(module);
-  list_node_t it = hash_map_get_first(functions);
-  while (it != hash_map_get_end(functions)) {
-    value_t func = hash_map_node_get_value(it);
-    resolve_function_declaration(self, func);
-    it = hash_map_node_get_next(it);
+  array_t attrs = struct_type_get_attributes(module_struct);
+  for (size_t idx = 0; idx < array_get_size(attrs); idx++) {
+    struct_attribute_t attr = array_get(attrs, idx);
+    type_t type = value_get_type(attr->value);
+    if (type_get_kind(type) == TYPE_KIND_FUNCTION) {
+      resolve_function_declaration(self, attr->value);
+    }
   }
   array_t errors = module_get_errors(self->module);
   if (array_get_size(errors)) {

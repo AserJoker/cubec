@@ -1,18 +1,13 @@
-struct Base {
+struct Test {
     id: i32;
     pub func getId(self: *__self__): i32 {
+        __print__("getId resolved");
         return self.id;
     }
 }
-struct Test {
-    ...Base;
-}
-pub comptime func tt(): void {
-    const item = Test{
+pub func main(): void {
+    const t = Test{
         .id = 123
     };
-    __print__("%v", item.getId());
-}
-pub func main(): void {
-    tt();
+    _ = t.getId();
 }
