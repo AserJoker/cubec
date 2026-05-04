@@ -3,6 +3,7 @@
 #include "core/allocator.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/function.h"
 #include "engine/interrupt.h"
 #include "engine/value.h"
 #include "resolve/expression.h"
@@ -24,7 +25,6 @@ value_t resolve_statement_return(context_t ctx, ast_node_t node) {
     }
   }
   allocator_t allocator = context_get_allocator(ctx);
-  ast_node_bind_value(allocator, value_node, value);
   if (context_is_comptime(ctx)) {
     if (!value_is_comptime(value)) {
       return create_comptime_error(ctx, value_node, "value is not comptime");
@@ -32,6 +32,14 @@ value_t resolve_statement_return(context_t ctx, ast_node_t node) {
       return create_interrupt(ctx, value);
     }
   } else {
+    value_t current_function = context_get_function(ctx);
+    type_t type = value_get_type(current_function);
+    type_t res_type = function_type_get_type(type);
+    value = value_safe_convert(value, ctx, res_type);
+    if (value_is_error(value)) {
+      value = convert_comptime_error(ctx, value_node, value);
+      context_push_error(ctx, value);
+    }
     return context_get_undefined(ctx);
   }
 }

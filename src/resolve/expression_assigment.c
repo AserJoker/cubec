@@ -14,9 +14,6 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
     return right;
   }
   allocator_t allocator = context_get_allocator(ctx);
-  if (value_is_comptime(right)) {
-    ast_node_bind_value(allocator, value, right);
-  }
   if (location_is(opt->loc, "=")) {
     if (location_is(identifier->loc, "_")) {
       return context_get_undefined(ctx);

@@ -52,7 +52,6 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
       if (value_is_error(vtype) || value_is_interrupt(vtype)) {
         return vtype;
       }
-      ast_node_bind_value(allocator, type_node, vtype);
       type_t type = *(type_t *)value_get_data(vtype);
       char *field_name = location_get(identifier->loc, allocator);
       struct_type_add_field(stru, allocator, field_name, type, mut, pub);

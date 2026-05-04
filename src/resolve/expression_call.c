@@ -23,7 +23,7 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
       allocator_free(allocator, resolved);
       allocator_free(allocator, name);
       if (value_is_error(value)) {
-        return convert_comptime_error(ctx, node, value);
+        return value;
       }
       if (value_is_interrupt(value)) {
         return value;
@@ -43,7 +43,6 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
       return val;
     }
     argv[idx] = val;
-    ast_node_bind_value(allocator, arg, val);
   }
   if (callee->type == NODE_TYPE_EXPRESSION_MEMBER) {
     ast_node_t host = ast_get_child(callee, "host");
@@ -55,7 +54,6 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     if (value_is_interrupt(obj)) {
       return obj;
     }
-    ast_node_bind_value(allocator, host, obj);
     allocator_t allocator = context_get_allocator(ctx);
     char *name = location_get(field->loc, allocator);
     value_t value = value_member_call(obj, ctx, name, argc, argv);
@@ -72,7 +70,6 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     if (value_is_interrupt(func)) {
       return func;
     }
-    ast_node_bind_value(allocator, callee, func);
     value_t res = value_call(func, ctx, argc, argv);
     if (value_is_error(res)) {
       return convert_comptime_error(ctx, node, res);

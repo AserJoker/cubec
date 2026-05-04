@@ -130,8 +130,6 @@ value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
     if (value_is_interrupt(right)) {
       return right;
     }
-    ast_node_bind_value(allocator, left_node, left);
-    ast_node_bind_value(allocator, right_node, right);
     if (location_is(opt->loc, "+")) {
       result = value_add(left, ctx, right);
     } else if (location_is(opt->loc, "-")) {
@@ -179,7 +177,6 @@ value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
     if (value_is_interrupt(right)) {
       return right;
     }
-    ast_node_bind_value(allocator, right_node, right);
     if (location_is(opt->loc, "~")) {
       result = value_bitwise_not(right, ctx);
     } else if (location_is(opt->loc, "!")) {

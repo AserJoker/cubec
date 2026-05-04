@@ -2,6 +2,7 @@
 #define _H_ENGINE_CONTEXT_
 #include "ast/node.h"
 #include "core/allocator.h"
+#include "core/hash_map.h"
 #include "core/string.h"
 #include "engine/module.h"
 #include "engine/scope.h"
@@ -24,6 +25,7 @@ typedef struct _function_declar {
   type_t global;
   type_t bind;
   const char *id;
+  hash_map_t closure;
 } *function_declar;
 
 typedef ast_node_t (*builtin_fn_t)(context_t ctx, size_t argc,

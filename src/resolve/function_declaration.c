@@ -19,13 +19,33 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   ast_node_t type_node = ast_get_child(node, "type");
   ast_node_t arguments_node = ast_get_child(node, "arguments");
   ast_node_t identifier_node = ast_get_child(node, "identifier_node");
+  ast_node_t closure = ast_get_child(node, "closure");
   ast_node_t kind = ast_get_child(node, "kind");
+  allocator_t allocator = context_get_allocator(ctx);
+  if (kind && location_is(kind->loc, "comptime")) {
+    value_t function = create_comptime_function(ctx, node);
+    for (size_t idx = 0; idx < ast_get_length(closure); idx++) {
+      ast_node_t item = ast_get_item(closure, idx);
+      char *name = location_get(item->loc, allocator);
+      value_t val = context_load(ctx, name);
+      if (value_is_error(val)) {
+        allocator_free(allocator, name);
+        context_pop_scope(ctx);
+        return convert_comptime_error(ctx, item, val);
+      }
+      val = function_add_closure(ctx, function, name, val);
+      if (value_is_error(val)) {
+        allocator_free(allocator, name);
+        context_pop_scope(ctx);
+        return convert_comptime_error(ctx, item, val);
+      }
+      allocator_free(allocator, name);
+    }
+    return function;
+  }
   bool variadic = false;
   size_t argc = ast_get_length(arguments_node);
-  allocator_t allocator = context_get_allocator(ctx);
-  array_initialize_t argv_initialize = {
-      .autofree = true,
-  };
+  context_push_scope(ctx);
   argument_t argv[argc];
   for (size_t idx = 0; idx < ast_get_length(arguments_node); idx++) {
     ast_node_t argument = ast_get_item(arguments_node, idx);
@@ -36,41 +56,72 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
     ast_node_t const_ = ast_get_child(argument, "const");
     ast_node_t identifier = ast_get_child(argument, "identifier");
     if (!identifier) {
+      context_pop_scope(ctx);
       return create_comptime_error(ctx, argument,
                                    "missing argument identifier");
     }
     argv[idx].mut = const_ == NULL;
     value_t vtype = resolve_type(ctx, type);
     if (value_is_error(vtype)) {
+      context_pop_scope(ctx);
       return vtype;
     }
     if (value_is_interrupt(vtype)) {
+      context_pop_scope(ctx);
       return vtype;
     }
-    ast_node_bind_value(allocator, type, vtype);
     argv[idx].type = *(type_t *)value_get_data(vtype);
     if (type_get_kind(argv[idx].type) == TYPE_KIND_TYPE) {
       if (!kind || !location_is(kind->loc, "comptime")) {
+        context_pop_scope(ctx);
         return create_comptime_error(ctx, argument,
                                      "type value only declared with comptime");
       }
     }
+    char *name = location_get(identifier->loc, allocator);
+    value_t err = context_create_value(ctx, argv[idx].type, NULL, argv[idx].mut,
+                                       true, name);
+    if (value_is_error(err)) {
+      allocator_free(allocator, name);
+      context_pop_scope(ctx);
+      return convert_comptime_error(ctx, argument, err);
+    }
+    allocator_free(allocator, name);
   }
   value_t vreturn_type = resolve_type(ctx, type_node);
   if (value_is_error(vreturn_type)) {
+    context_pop_scope(ctx);
     return vreturn_type;
   }
   if (value_is_interrupt(vreturn_type)) {
+    context_pop_scope(ctx);
     return vreturn_type;
   }
-  ast_node_bind_value(allocator, type_node, vreturn_type);
   type_t return_type = *(type_t *)value_get_data(vreturn_type);
   type_t function_type =
       create_function_type(ctx, return_type, argc, argv, variadic);
   value_t function = create_function(ctx, function_type, node);
+  for (size_t idx = 0; idx < ast_get_length(closure); idx++) {
+    ast_node_t item = ast_get_item(closure, idx);
+    char *name = location_get(item->loc, allocator);
+    value_t val = context_load(ctx, name);
+    if (value_is_error(val)) {
+      allocator_free(allocator, name);
+      context_pop_scope(ctx);
+      return convert_comptime_error(ctx, item, val);
+    }
+    val = function_add_closure(ctx, function, name, val);
+    if (value_is_error(val)) {
+      allocator_free(allocator, name);
+      context_pop_scope(ctx);
+      return convert_comptime_error(ctx, item, val);
+    }
+    allocator_free(allocator, name);
+  }
   if (context_get_type(ctx) == CONTEXT_TYPE_FUNCTION) {
     resolve_function_declaration(ctx, function);
   }
+  context_pop_scope(ctx);
   return function;
 }
 value_t resolve_function_declaration(context_t ctx, value_t function) {
@@ -96,9 +147,19 @@ value_t resolve_function_declaration(context_t ctx, value_t function) {
   context_set_comptime(ctx, false);
   allocator_t allocator = context_get_allocator(ctx);
   scope_t current_scope = context_get_scope(ctx);
-  scope_t scope = create_scope(allocator, current_scope);
-  scope_set_is_function(scope, true);
+  scope_t scope = create_scope(allocator, context_get_root_scope(ctx));
   context_set_scope(ctx, scope);
+  hash_map_t closure = declar->closure;
+  list_node_t it = hash_map_get_first(closure);
+  while (it != hash_map_get_end(closure)) {
+    const char *name = hash_map_node_get_key(it);
+    value_t value = hash_map_node_get_value(it);
+    value = value_clone(value, allocator);
+    scope_store(scope, allocator, name, value);
+    it = hash_map_node_get_next(it);
+  }
+  context_push_scope(ctx);
+  scope = context_get_scope(ctx);
   array_t arguments = function_type_get_arguments(function_type);
   for (size_t idx = 0; idx < array_get_size(arguments); idx++) {
     argument_t *arg = array_get(arguments, idx);

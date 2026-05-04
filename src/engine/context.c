@@ -15,6 +15,7 @@
 #include "engine/buitin.h"
 #include "engine/error.h"
 #include "engine/float.h"
+#include "engine/function.h"
 #include "engine/integer.h"
 #include "engine/interrupt.h"
 #include "engine/module.h"
@@ -109,6 +110,7 @@ context_t create_context(allocator_t allocator) {
   float_init(self);
   interrupt_init(self);
   null_init(self);
+  function_init(self);
   self->undefined = context_create_value(self, context_load_type(self, "void"),
                                          NULL, false, true, NULL);
   self->nil = context_create_value(self, context_load_type(self, "null"), NULL,
@@ -188,18 +190,10 @@ value_t context_load(context_t self, const char *name) {
     return create_type_value(self, self->self, false, NULL);
   }
   scope_t scope = self->scope;
-  bool in_function = true;
   while (scope) {
     value_t value = scope_load(scope, name);
     if (value) {
-      if (in_function || value_is_comptime(value)) {
-        return value;
-      }
-    }
-    if (in_function) {
-      if (scope_is_function(scope)) {
-        in_function = false;
-      }
+      return value;
     }
     scope = scope_get_parent(scope);
   }
@@ -364,16 +358,28 @@ value_t context_get_function(context_t ctx) { return ctx->function; }
 function_declar context_load_function_declar(context_t self, const char *id) {
   return hash_map_get(self->func_declars, id, NULL, NULL);
 }
+static void function_declar_dispose(function_declar declar,
+                                    allocator_t allocator) {
+  allocator_free(allocator, declar->closure);
+}
 function_declar context_store_function_declar(context_t self, ast_node_t node,
                                               const char *id) {
   hash_map_delete(self->func_declars, id, NULL, NULL);
   function_declar declar =
-      allocator_alloc(self->allocator, sizeof(struct _function_declar), NULL);
+      allocator_alloc(self->allocator, sizeof(struct _function_declar),
+                      (dispose_fn_t)function_declar_dispose);
   declar->bind = self->self;
   declar->global = self->global;
   declar->node = node;
   char *_id = create_cstring(self->allocator, id);
   declar->id = _id;
+  hash_map_initialize_t cloure_initialize = {
+      .autofree_key = true,
+      .autofree_value = true,
+      .hash = (hash_fn_t)cstring_sdb,
+      .compare = (compare_fn_t)strcmp,
+  };
+  declar->closure = create_hash_map(self->allocator, &cloure_initialize);
   hash_map_set(self->func_declars, _id, declar, NULL, NULL);
   return declar;
 }

@@ -61,7 +61,5 @@ value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
       }
     }
   }
-
-  ast_node_bind_value(allocator, struct_node, stru);
   return context_get_undefined(ctx);
 }

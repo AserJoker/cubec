@@ -11,8 +11,6 @@ value_t scope_load(scope_t self, const char *name);
 void scope_store(scope_t self, allocator_t allocator, const char *name,
                  value_t value);
 scope_t scope_get_parent(scope_t self);
-void scope_set_is_function(scope_t scope, bool is_function);
-bool scope_is_function(scope_t scope);
 #ifdef __cplusplus
 }
 #endif

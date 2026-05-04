@@ -100,19 +100,15 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         continue;
       }
     }
-    if (type_get_kind(value_type) == TYPE_KIND_FUNCTION &&
+    if (type_get_kind(value_type) == TYPE_KIND_COMPTIME_FUNCTION &&
         !context_is_comptime(ctx)) {
-      ast_node_t node = *(ast_node_t *)value_get_data(value);
-      ast_node_t kind = ast_get_child(node, "kind");
-      if (kind && location_is(kind->loc, "comptime")) {
-        value_t err = create_comptime_error(ctx, initialize,
-                                            "value is comptime function");
-        if (comptime) {
-          return err;
-        } else {
-          context_push_error(ctx, err);
-          continue;
-        }
+      value_t err =
+          create_comptime_error(ctx, initialize, "value is comptime function");
+      if (comptime) {
+        return err;
+      } else {
+        context_push_error(ctx, err);
+        continue;
       }
     }
     if (!context_is_comptime(ctx) &&
@@ -140,7 +136,6 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       if (value_is_interrupt(vdst_type)) {
         return vdst_type;
       }
-      ast_node_bind_value(allocator, type, vdst_type);
       type_t dst_type = *(type_t *)value_get_data(vdst_type);
       if (type_get_kind(dst_type) == TYPE_KIND_STR &&
           !context_is_comptime(ctx)) {
@@ -165,7 +160,6 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
       value_type = dst_type;
     }
-    ast_node_bind_value(allocator, initialize, value);
     char *name = location_get(identifier->loc, allocator);
     if (context_get_type(ctx) == CONTEXT_TYPE_FUNCTION) {
       if (context_is_comptime(ctx)) {

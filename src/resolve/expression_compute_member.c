@@ -13,12 +13,10 @@ value_t resolve_expression_compute_member(context_t ctx, ast_node_t node) {
   if (value_is_error(host) || value_is_interrupt(host)) {
     return host;
   }
-  ast_node_bind_value(allocator, host_node, host);
   value_t field = resolve_expression(ctx, field_node);
   if (value_is_error(field) || value_is_interrupt(field)) {
     return field;
   }
-  ast_node_bind_value(allocator, field_node, field);
   value_t res = value_get(host, ctx, field);
   if (value_is_error(res)) {
     return convert_comptime_error(ctx, node, res);

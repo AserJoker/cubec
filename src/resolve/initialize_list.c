@@ -33,7 +33,6 @@ static value_t resolve_array_initialize(context_t ctx, ast_node_t type_node,
         allocator_free(allocator, items);
         return create_comptime_error(ctx, expression, "value is not comptime");
       }
-      ast_node_bind_value(allocator, expression, arr);
       type_t arr_type = value_get_type(arr);
       if (type_get_kind(arr_type) != TYPE_KIND_ARRAY) {
         allocator_free(allocator, items);
@@ -59,7 +58,6 @@ static value_t resolve_array_initialize(context_t ctx, ast_node_t type_node,
         allocator_free(allocator, items);
         return create_comptime_error(ctx, field, "value is not comptime");
       }
-      ast_node_bind_value(allocator, field, value);
       array_push(items, value);
     }
   }
@@ -78,7 +76,6 @@ static value_t resolve_array_initialize(context_t ctx, ast_node_t type_node,
     allocator_free(allocator, items);
     return vtype;
   }
-  ast_node_bind_value(allocator, type_node, vtype);
   type_t type = *(type_t *)value_get_data(vtype);
   type_t item_type = array_type_get_type(type);
   for (size_t idx = 0; idx < array_get_size(items); idx++) {
@@ -144,7 +141,6 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
         if (value_is_error(value)) {
           return convert_comptime_error(ctx, initialize, value);
         }
-        ast_node_bind_value(allocator, initialize, value);
         memcpy(data + f->offset, value_get_data(value), type_get_size(f->type));
       } else if (field->type == NODE_TYPE_EXPRESSION_SPREAD) {
         ast_node_t expression = ast_get_child(field, "expression");
@@ -160,7 +156,6 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
         if (type_get_kind(obj_type) != TYPE_KIND_STRUCT) {
           return create_comptime_error(ctx, expression, "value is not struct");
         }
-        ast_node_bind_value(allocator, expression, obj);
         array_t obj_fields = struct_type_get_fields(obj_type);
         for (size_t idx = 0; idx < array_get_size(obj_fields); idx++) {
           struct_field_t f = array_get(obj_fields, idx);
@@ -207,7 +202,6 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
         if (value_is_error(value)) {
           return convert_comptime_error(ctx, initialize, value);
         }
-        ast_node_bind_value(allocator, initialize, value);
       } else if (field->type == NODE_TYPE_EXPRESSION_SPREAD) {
         ast_node_t expression = ast_get_child(field, "expression");
         value_t obj = resolve_expression(ctx, expression);
@@ -218,7 +212,6 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
         if (type_get_kind(obj_type) != TYPE_KIND_STRUCT) {
           return create_comptime_error(ctx, expression, "value is not struct");
         }
-        ast_node_bind_value(allocator, expression, obj);
         array_t obj_fields = struct_type_get_fields(obj_type);
         for (size_t idx = 0; idx < array_get_size(obj_fields); idx++) {
           struct_field_t f = array_get(obj_fields, idx);
@@ -269,7 +262,6 @@ static value_t resolve_union_initialize(context_t ctx, type_t type,
       return convert_comptime_error(ctx, field, init);
     }
     allocator_free(allocator, name);
-    ast_node_bind_value(allocator, initialize, init);
   }
   if (context_is_comptime(ctx)) {
     uint8_t data[type_get_size(type)];
@@ -300,7 +292,6 @@ static value_t resolve_general_initialize(context_t ctx, type_t type,
     if (value_is_error(init)) {
       return convert_comptime_error(ctx, field, init);
     }
-    ast_node_bind_value(allocator, field, init);
   }
   if (context_is_comptime(ctx)) {
     uint8_t data[type_get_size(type)];
@@ -325,7 +316,6 @@ value_t resolve_initialize_list(context_t ctx, ast_node_t node) {
   if (value_is_error(vtype) || value_is_interrupt(vtype)) {
     return vtype;
   }
-  ast_node_bind_value(allocator, type_node, vtype);
   type_t type = *(type_t *)value_get_data(vtype);
   if (type_get_kind(type) == TYPE_KIND_STRUCT) {
     return resolve_struct_initialize(ctx, type, fields);

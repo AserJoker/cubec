@@ -11,7 +11,6 @@ struct _scope_t {
   list_t children;
   hash_map_t variables;
   array_t values;
-  bool is_function;
 };
 static void scope_dispose(scope_t self, allocator_t allocator) {
   if (self->parent) {
@@ -47,7 +46,6 @@ scope_t create_scope(allocator_t allocator, scope_t parent) {
   if (parent) {
     list_append(parent->children, self);
   }
-  self->is_function = false;
   return self;
 }
 value_t scope_load(scope_t self, const char *name) {
@@ -62,7 +60,3 @@ void scope_store(scope_t self, allocator_t allocator, const char *name,
   }
 }
 scope_t scope_get_parent(scope_t self) { return self->parent; }
-void scope_set_is_function(scope_t scope, bool is_function) {
-  scope->is_function = is_function;
-}
-bool scope_is_function(scope_t scope) { return scope->is_function; }

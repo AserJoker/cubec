@@ -2,6 +2,7 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
+#include "core/location.h"
 #include "core/stream.h"
 #include "writer/expression.h"
 #include "writer/function_argument.h"
@@ -15,6 +16,7 @@ void write_function_delcarator(allocator_t allocator, ast_node_t node,
   ast_node_t type = ast_get_child(node, "type");
   ast_node_t body = ast_get_child(node, "body");
   ast_node_t decorators = ast_get_child(node, "decorators");
+  ast_node_t closure = ast_get_child(node, "closure");
   ast_node_t pub_node = ast_get_child(node, "pub");
   if (decorators) {
     for (size_t idx = 0; idx < ast_get_length(decorators); idx++) {
@@ -35,6 +37,19 @@ void write_function_delcarator(allocator_t allocator, ast_node_t node,
     stream_write(stream, " ");
   }
   stream_write(stream, "func");
+  if (ast_get_length(closure)) {
+    stream_write(stream, " [");
+    for (size_t idx = 0; idx < ast_get_length(closure); idx++) {
+      if (idx != 0) {
+        stream_write(stream, ", ");
+      }
+      ast_node_t item = ast_get_item(closure, idx);
+      char *name = location_get(item->loc, allocator);
+      stream_write(stream, name);
+      allocator_free(allocator, name);
+    }
+    stream_write(stream, "]");
+  }
   if (identifier) {
     stream_write(stream, " ");
     stream_write_location(stream, identifier->loc);

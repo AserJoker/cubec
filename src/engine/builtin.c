@@ -200,6 +200,10 @@ ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
           string_concat(str, allocator, "%v");
         } else {
           value_t val = resolve_expression(ctx, argv[offset++]);
+          if (value_is_error(val)) {
+            allocator_free(allocator, str);
+            return create_ast_value_node(allocator, val);
+          }
           string_t s = value_to_str(ctx, val);
           string_concat(str, allocator, string_get(s));
           allocator_free(allocator, s);
