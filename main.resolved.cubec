@@ -1,13 +1,4 @@
-struct Test {
-    id: i32;
-    pub func getId(self: *__self__): i32 {
-        __print__("getId resolved");
-        return self.id;
-    }
-}
 pub func main(): void {
-    const t = Test{
-        .id = 123
-    };
-    _ = t.getId();
+    const data = "hello world";
+    __print__("%v", __typeof__(data));
 }

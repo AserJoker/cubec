@@ -19,6 +19,7 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
       ast_node_t resolved = context_eval_builtin(
           ctx, name, argc, array_get_data(arguments->items));
       value_t value = resolve_expression(ctx, resolved);
+      value = context_clone_value(ctx, value);
       allocator_free(allocator, resolved);
       allocator_free(allocator, name);
       if (value_is_error(value)) {

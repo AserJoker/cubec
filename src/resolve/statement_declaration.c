@@ -3,6 +3,7 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/location.h"
+#include "engine/array.h"
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/struct.h"
@@ -12,6 +13,7 @@
 #include "resolve/type.h"
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
   value_t result = NULL;
   allocator_t allocator = context_get_allocator(ctx);
@@ -113,6 +115,18 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         }
       }
     }
+    if (!context_is_comptime(ctx) &&
+        type_get_kind(value_type) == TYPE_KIND_STR) {
+      const char *str = *(const char **)value_get_data(value);
+      size_t len = strlen(str) + 1;
+      char buf[len];
+      strcpy(buf, str);
+      buf[len - 1] = 0;
+      type_t arr_type =
+          create_array_type(ctx, context_load_type(ctx, "u8"), len);
+      value = context_create_value(ctx, arr_type, buf, false, true, NULL);
+      value_type = arr_type;
+    }
     if (type) {
       value_t vdst_type = resolve_type(ctx, type);
       if (value_is_error(vdst_type)) {
@@ -128,6 +142,17 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
       ast_node_bind_value(allocator, type, vdst_type);
       type_t dst_type = *(type_t *)value_get_data(vdst_type);
+      if (type_get_kind(dst_type) == TYPE_KIND_STR &&
+          !context_is_comptime(ctx)) {
+        value_t err = create_comptime_error(
+            ctx, initialize, "str value only declared with comptime");
+        if (comptime) {
+          return err;
+        } else {
+          context_push_error(ctx, err);
+          continue;
+        }
+      }
       value = value_safe_convert(value, ctx, dst_type);
       if (value_is_error(value)) {
         value_t err = convert_comptime_error(ctx, initialize, value);

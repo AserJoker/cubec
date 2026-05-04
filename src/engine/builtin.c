@@ -37,7 +37,8 @@ static string_t value_to_str(context_t ctx, value_t self) {
       string_concat(str, allocator, "nil");
       break;
     case TYPE_KIND_TYPE:
-      string_concat(str, allocator, "undefined");
+      string_concat(str, allocator,
+                    type_get_name(*(type_t *)value_get_data(self)));
       break;
     case TYPE_KIND_INTEGER: {
       size_t len = snprintf(NULL, 0, "%" PRIdPTR, integer_get_value(self));
