@@ -4,7 +4,7 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "engine/context.h"
-#include "engine/error.h"
+#include "engine/function.h"
 #include "engine/value.h"
 #include "resolve/expression.h"
 #include <string.h>
@@ -47,7 +47,21 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
   if (callee->type == NODE_TYPE_EXPRESSION_MEMBER) {
     ast_node_t host = ast_get_child(callee, "host");
     ast_node_t field = ast_get_child(callee, "field");
-    value_t obj = resolve_expression(ctx, host);
+    value_t obj = NULL;
+    if (host) {
+      obj = resolve_expression(ctx, host);
+    } else {
+      value_t function = context_get_function(ctx);
+      type_t type = value_get_type(function);
+      if (type_get_kind(type) == TYPE_KIND_FUNCTION) {
+        type = function_type_get_type(type);
+        obj = create_type_value(ctx, type, false, NULL);
+      } else {
+        function_declar declar = *(function_declar *)value_get_data(function);
+        ast_node_t type = ast_get_child(declar->node, "type");
+        obj = resolve_expression(ctx, type);
+      }
+    }
     if (value_is_error(obj)) {
       return obj;
     }
@@ -58,9 +72,6 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     char *name = location_get(field->loc, allocator);
     value_t value = value_member_call(obj, ctx, name, argc, argv);
     allocator_free(allocator, name);
-    if (value_is_error(value)) {
-      return convert_comptime_error(ctx, node, value);
-    }
     return value;
   } else {
     value_t func = resolve_expression(ctx, callee);
@@ -70,10 +81,6 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     if (value_is_interrupt(func)) {
       return func;
     }
-    value_t res = value_call(func, ctx, argc, argv);
-    if (value_is_error(res)) {
-      return convert_comptime_error(ctx, node, res);
-    }
-    return res;
+    return value_call(func, ctx, argc, argv);
   }
 }

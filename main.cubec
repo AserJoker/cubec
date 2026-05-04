@@ -1,8 +1,15 @@
-struct packed Test{
-    a:u8;
-    b:i32;
-    c:i8;
+struct Test{
+    id:i32;
+    pub func create(id:i32):__self__ {
+        let result = __self__{};
+        result.id = id;
+        return result;
+    }
 };
+func init(id:i32):Test {
+    return .create(id);
+}
 pub func main():void{
-    __print__("align = %v,size = %v",__alignof__(Test),__sizeof__(Test));
+    comptime const item = init(123);
+    __print__("%v",item);
 }

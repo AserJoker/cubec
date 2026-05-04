@@ -1,7 +1,6 @@
 #include "ast/statement_return.h"
 #include "ast/expression.h"
 #include "ast/expression_group.h"
-#include "ast/expression_member.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -33,11 +32,7 @@ ast_node_t read_ast_statement_return(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  ast_node_t value =
-      read_ast_expression_member(allocator, &current, end, filename);
-  if (!value) {
-    value = read_ast_expression(allocator, &current, end, filename);
-  }
+  ast_node_t value = read_ast_expression(allocator, &current, end, filename);
   if (value) {
     if (value->type == NODE_TYPE_ERROR) {
       err = value;

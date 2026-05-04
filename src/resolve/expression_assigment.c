@@ -3,6 +3,7 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "engine/context.h"
+#include "engine/error.h"
 #include "engine/value.h"
 #include "resolve/expression.h"
 value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
@@ -22,7 +23,10 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
     if (value_is_error(left) || value_is_interrupt(left)) {
       return left;
     }
-    value_assigment(left, ctx, right);
+    value_t err = value_assigment(left, ctx, right);
+    if (value_is_error(err)) {
+      return convert_comptime_error(ctx, identifier, err);
+    }
   } else {
     value_t left = resolve_expression(ctx, identifier);
     if (value_is_error(left) || value_is_interrupt(left)) {
@@ -53,7 +57,10 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
     } else if (location_is(opt->loc, ">>=")) {
       right = value_shr(left, ctx, right);
     }
-    value_assigment(left, ctx, right);
+    value_t err = value_assigment(left, ctx, right);
+    if (value_is_error(err)) {
+      return convert_comptime_error(ctx, identifier, err);
+    }
     return context_get_undefined(ctx);
   }
   return context_get_undefined(ctx);

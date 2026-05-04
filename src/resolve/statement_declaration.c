@@ -77,7 +77,14 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       return value;
     }
     if (context_is_comptime(ctx) && !value_is_comptime(value)) {
-      return create_comptime_error(ctx, initialize, "value is not comptime");
+      value_t err =
+          create_comptime_error(ctx, initialize, "value is not comptime");
+      if (comptime) {
+        return err;
+      } else {
+        context_push_error(ctx, err);
+        continue;
+      }
     }
     type_t value_type = value_get_type(value);
     if (type_get_kind(value_type) == TYPE_KIND_VOID) {

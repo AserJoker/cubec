@@ -26,7 +26,6 @@
 #include "core/location.h"
 #include "core/position.h"
 
-
 ast_node_t read_ast_expression(allocator_t allocator, position_t *position,
                                const char *end, const char *filename) {
   return read_ast_expression1(allocator, position, end, filename);
@@ -239,6 +238,10 @@ ast_node_t read_ast_expression19(allocator_t allocator, position_t *position,
                                  const char *end, const char *filename) {
   ast_node_t node = NULL;
   node = read_ast_ptr_declarator(allocator, position, end, filename);
+  if (node) {
+    return node;
+  }
+  node = read_ast_expression_member(allocator, position, end, filename);
   if (node) {
     return node;
   }

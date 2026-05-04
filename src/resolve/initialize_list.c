@@ -107,6 +107,7 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
   allocator_t allocator = context_get_allocator(ctx);
   if (context_is_comptime(ctx)) {
     uint8_t data[type_get_size(type)];
+    memset(data, 0, sizeof(data));
     for (size_t idx = 0; idx < ast_get_length(fields); idx++) {
       ast_node_t field = ast_get_item(fields, idx);
       if (field->type == NODE_TYPE_INITIALIZE_FIELD) {
