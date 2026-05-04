@@ -6,9 +6,11 @@
 #include "core/location.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/integer.h"
 #include "engine/module.h"
 #include "engine/struct.h"
 #include "engine/type.h"
+#include "engine/unsigned.h"
 #include "engine/value.h"
 #include "resolve/expression.h"
 #include "resolve/function_declaration.h"
@@ -25,12 +27,50 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
   ast_node_t identifier = ast_get_child(node, "identifier");
   ast_node_t fields_node = ast_get_child(node, "fields");
   ast_node_t decorators = ast_get_child(node, "decorators");
+  ast_node_t packed = ast_get_child(node, "packed");
+  ast_node_t aligned = ast_get_child(node, "aligned");
   module_t mod = context_get_module(ctx);
   char *name = NULL;
   if (identifier) {
     name = location_get(identifier->loc, allocator);
   }
-  type_t stru = create_struct_type(ctx, name, 4);
+  size_t align = 4;
+  if (aligned) {
+    value_t val = resolve_expression(ctx, aligned);
+    if (value_is_error(val)) {
+      return val;
+    }
+    if (!value_is_comptime(val)) {
+      return create_comptime_error(ctx, aligned, "value is not comptime");
+    }
+    type_t type = value_get_type(val);
+    if (type_get_kind(type) == TYPE_KIND_INTEGER) {
+      int64_t ival = integer_get_value(val);
+      if (ival <= 0) {
+        return create_comptime_error(ctx, aligned, "invalid align %" PRIdPTR,
+                                     ival);
+      }
+      align = ival;
+    } else if (type_get_kind(type) == TYPE_KIND_UNSIGNED) {
+      align = unsigned_get_value(val);
+    } else {
+      return create_comptime_error(ctx, aligned, "invalid align value");
+    }
+    if (align <= 0) {
+      return create_comptime_error(ctx, aligned, "invalid align %" PRIuPTR,
+                                   align);
+    }
+  } else if (packed) {
+    align = 1;
+  }
+  type_t stru = create_struct_type(ctx, name, align);
+  if (aligned) {
+    struct_type_lock_align(stru);
+  }
+  if (packed) {
+    struct_type_packed(stru);
+    struct_type_lock_align(stru);
+  }
   context_store_type(ctx, stru);
   allocator_free(allocator, name);
   context_type_t current_type = context_get_type(ctx);

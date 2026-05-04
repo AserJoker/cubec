@@ -171,6 +171,41 @@ ast_node_t builtin_typeof(context_t ctx, size_t argc, ast_node_t *argv) {
   value = create_type_value(ctx, type, false, NULL);
   return create_ast_value_node(allocator, value);
 }
+ast_node_t builtin_alignof(context_t ctx, size_t argc, ast_node_t *argv) {
+  allocator_t allocator = context_get_allocator(ctx);
+  if (argc != 1) {
+    value_t err = create_error(ctx, "__typeof__ require 1 argument");
+    return create_ast_value_node(allocator, err);
+  }
+  value_t value = resolve_expression(ctx, argv[0]);
+  if (value_is_error(value) || value_is_interrupt(value)) {
+    return create_ast_value_node(allocator, value);
+  }
+  type_t type = value_get_type(value);
+  if (type_get_kind(type) == TYPE_KIND_TYPE) {
+    type = *(type_t *)value_get_data(value);
+  }
+  value = create_comptime_u64(ctx, type_get_align(type), false, NULL);
+  return create_ast_value_node(allocator, value);
+}
+
+ast_node_t builtin_sizeof(context_t ctx, size_t argc, ast_node_t *argv) {
+  allocator_t allocator = context_get_allocator(ctx);
+  if (argc != 1) {
+    value_t err = create_error(ctx, "__typeof__ require 1 argument");
+    return create_ast_value_node(allocator, err);
+  }
+  value_t value = resolve_expression(ctx, argv[0]);
+  if (value_is_error(value) || value_is_interrupt(value)) {
+    return create_ast_value_node(allocator, value);
+  }
+  type_t type = value_get_type(value);
+  if (type_get_kind(type) == TYPE_KIND_TYPE) {
+    type = *(type_t *)value_get_data(value);
+  }
+  value = create_comptime_u64(ctx, type_get_size(type), false, NULL);
+  return create_ast_value_node(allocator, value);
+}
 
 ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
   allocator_t allocator = context_get_allocator(ctx);

@@ -23,6 +23,8 @@ struct _struct_attribute_t {
   bool pub;
 };
 type_t create_struct_type(context_t ctx, const char *name, size_t align);
+void struct_type_lock_align(type_t self);
+void struct_type_packed(type_t self);
 void struct_type_add_field(type_t self, allocator_t allocator, const char *name,
                            type_t type, bool mut, bool pub);
 void struct_type_add_attribute(type_t self, allocator_t allocator,

@@ -7,6 +7,8 @@ extern "C" {
 #endif
 ast_node_t builtin_error(context_t ctx, size_t argc, ast_node_t *argv);
 ast_node_t builtin_typeof(context_t ctx, size_t argc, ast_node_t *argv);
+ast_node_t builtin_alignof(context_t ctx, size_t argc, ast_node_t *argv);
+ast_node_t builtin_sizeof(context_t ctx, size_t argc, ast_node_t *argv);
 ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv);
 #ifdef __cplusplus
 }

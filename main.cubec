@@ -1,12 +1,8 @@
-comptime func add(T:type):func(T,T)->T{
-    return func[T](a: T, b: T): T {
-        __print__("%v",T);
-        return a+b;
-    };
-}
-pub func main(): void {
-    const u32_add = add(u32);
-    const i32_add = add(i32);
-    __print__("%v",__typeof__(i32_add));
-    __print__("%v",__typeof__(u32_add));
+struct packed Test{
+    a:u8;
+    b:i32;
+    c:i8;
+};
+pub func main():void{
+    __print__("align = %v,size = %v",__alignof__(Test),__sizeof__(Test));
 }

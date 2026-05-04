@@ -18,6 +18,8 @@ typedef struct _struct_meta_t *struct_meta_t;
 struct _struct_meta_t {
   array_t fields;
   array_t attributes;
+  bool locked_align;
+  bool packed;
 };
 
 static void struct_meta_dispose(struct_meta_t self, allocator_t allocator) {
@@ -36,6 +38,8 @@ static struct_meta_t create_struct_meta(allocator_t allocator) {
       .autofree = true,
   };
   self->attributes = create_array(allocator, &attributes_initialize);
+  self->locked_align = false;
+  self->packed = false;
   return self;
 }
 
@@ -291,7 +295,14 @@ type_t create_struct_type(context_t ctx, const char *name, size_t align) {
   allocator_free(allocator, id);
   return self;
 }
-
+void struct_type_lock_align(type_t self) {
+  struct_meta_t meta = type_get_meta(self);
+  meta->locked_align = true;
+}
+void struct_type_packed(type_t self) {
+  struct_meta_t meta = type_get_meta(self);
+  meta->packed = true;
+}
 static void struct_field_dispose(struct_field_t self, allocator_t allocator) {
   allocator_free(allocator, self->name);
 }
@@ -317,15 +328,19 @@ void struct_type_add_field(type_t self, allocator_t allocator, const char *name,
   size_t num_fields = array_get_size(meta->fields);
   size_t align = type_get_align(self);
   size_t field_align = type_get_align(type);
-  if (align < field_align) {
-    align = field_align;
+  if (!meta->locked_align) {
+    if (align < field_align) {
+      align = field_align;
+    }
   }
   if (num_fields) {
     struct_field_t field = array_get(meta->fields, num_fields - 1);
     size = field->offset + type_get_size(field->type);
   }
-  if (size % field_align != 0) {
-    size = size - size % field_align + field_align;
+  if (!meta->packed) {
+    if (size % field_align != 0) {
+      size = size - size % field_align + field_align;
+    }
   }
   struct_field_t field =
       create_struct_field(allocator, name, size, type, mut, pub);
