@@ -50,7 +50,7 @@ static value_t resolve_array_initialize(context_t ctx, ast_node_t type_node,
       }
     } else {
       value_t value = resolve_expression(ctx, field);
-      if (value_is_error(value) || value_is_interrupt(value)) {
+      if (value_is_error(value)) {
         allocator_free(allocator, items);
         return value;
       }
@@ -72,7 +72,7 @@ static value_t resolve_array_initialize(context_t ctx, ast_node_t type_node,
     }
   }
   value_t vtype = resolve_type(ctx, type_node);
-  if (value_is_error(vtype) || value_is_interrupt(vtype)) {
+  if (value_is_error(vtype)) {
     allocator_free(allocator, items);
     return vtype;
   }
@@ -131,7 +131,7 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
         }
         allocator_free(allocator, name);
         value_t value = resolve_expression(ctx, initialize);
-        if (value_is_error(value) || value_is_interrupt(value)) {
+        if (value_is_error(value)) {
           return value;
         }
         if (!value_is_comptime(value)) {
@@ -146,7 +146,7 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
       } else if (field->type == NODE_TYPE_EXPRESSION_SPREAD) {
         ast_node_t expression = ast_get_child(field, "expression");
         value_t obj = resolve_expression(ctx, expression);
-        if (value_is_error(obj) || value_is_interrupt(obj)) {
+        if (value_is_error(obj)) {
           return obj;
         }
         if (!value_is_comptime(obj)) {
@@ -161,7 +161,7 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
         for (size_t idx = 0; idx < array_get_size(obj_fields); idx++) {
           struct_field_t f = array_get(obj_fields, idx);
           value_t value = value_get_field(obj, ctx, f->name);
-          if (value_is_error(value) || value_is_interrupt(value)) {
+          if (value_is_error(value)) {
             return convert_comptime_error(ctx, expression, value);
           }
           if (!value_is_comptime(value)) {
@@ -196,7 +196,7 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
         }
         allocator_free(allocator, name);
         value_t value = resolve_expression(ctx, initialize);
-        if (value_is_error(value) || value_is_interrupt(value)) {
+        if (value_is_error(value)) {
           return value;
         }
         value = value_safe_convert(value, ctx, f->type);
@@ -206,7 +206,7 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
       } else if (field->type == NODE_TYPE_EXPRESSION_SPREAD) {
         ast_node_t expression = ast_get_child(field, "expression");
         value_t obj = resolve_expression(ctx, expression);
-        if (value_is_error(obj) || value_is_interrupt(obj)) {
+        if (value_is_error(obj)) {
           return obj;
         }
         type_t obj_type = value_get_type(obj);
@@ -246,7 +246,7 @@ static value_t resolve_union_initialize(context_t ctx, type_t type,
     ast_node_t identifier = ast_get_child(field, "identifier");
     ast_node_t initialize = ast_get_child(field, "initialize");
     init = resolve_expression(ctx, initialize);
-    if (value_is_error(init) || value_is_interrupt(init)) {
+    if (value_is_error(init)) {
       return init;
     }
     name = location_get(identifier->loc, allocator);
@@ -286,7 +286,7 @@ static value_t resolve_general_initialize(context_t ctx, type_t type,
   if (ast_get_length(fields) == 1) {
     ast_node_t field = ast_get_item(fields, 0);
     init = resolve_expression(ctx, field);
-    if (value_is_error(init) || value_is_interrupt(init)) {
+    if (value_is_error(init)) {
       return init;
     }
     init = value_safe_convert(init, ctx, type);
@@ -314,7 +314,7 @@ value_t resolve_initialize_list(context_t ctx, ast_node_t node) {
     return resolve_array_initialize(ctx, type_node, fields);
   }
   value_t vtype = resolve_type(ctx, type_node);
-  if (value_is_error(vtype) || value_is_interrupt(vtype)) {
+  if (value_is_error(vtype)) {
     return vtype;
   }
   type_t type = *(type_t *)value_get_data(vtype);

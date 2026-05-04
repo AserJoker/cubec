@@ -10,11 +10,11 @@ value_t resolve_expression_compute_member(context_t ctx, ast_node_t node) {
   ast_node_t field_node = ast_get_child(node, "field");
   allocator_t allocator = context_get_allocator(ctx);
   value_t host = resolve_expression(ctx, host_node);
-  if (value_is_error(host) || value_is_interrupt(host)) {
+  if (value_is_error(host)) {
     return host;
   }
   value_t field = resolve_expression(ctx, field_node);
-  if (value_is_error(field) || value_is_interrupt(field)) {
+  if (value_is_error(field)) {
     return field;
   }
   value_t res = value_get(host, ctx, field);

@@ -31,9 +31,6 @@ value_t resolve_expression_member(context_t ctx, ast_node_t node) {
   if (value_is_error(host)) {
     return host;
   }
-  if (value_is_interrupt(host)) {
-    return host;
-  }
   allocator_t allocaotr = context_get_allocator(ctx);
   char *name = location_get(field->loc, allocaotr);
   value_t res = value_get_field(host, ctx, name);

@@ -140,9 +140,6 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
           continue;
         }
       }
-      if (value_is_interrupt(vdst_type)) {
-        return vdst_type;
-      }
       type_t dst_type = *(type_t *)value_get_data(vdst_type);
       if (type_get_kind(dst_type) == TYPE_KIND_STR &&
           !context_is_comptime(ctx)) {

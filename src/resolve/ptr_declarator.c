@@ -29,9 +29,6 @@ value_t resolve_ptr_declarator(context_t ctx, ast_node_t node) {
   if (value_is_error(vtype)) {
     return vtype;
   }
-  if (value_is_interrupt(vtype)) {
-    return vtype;
-  }
   type_t base_type = *(type_t *)value_get_data(vtype);
   if (location_is(kind->loc, "*")) {
     type_t ptr_type = create_ptr_type(ctx, base_type, mut, vol);

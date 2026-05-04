@@ -143,7 +143,7 @@ ast_node_t builtin_error(context_t ctx, size_t argc, ast_node_t *argv) {
     return create_ast_value_node(allocator, err);
   }
   value_t fmt = resolve_expression(ctx, argv[0]);
-  if (value_is_error(fmt) || value_is_interrupt(fmt)) {
+  if (value_is_error(fmt)) {
     return create_ast_value_node(allocator, fmt);
   }
   type_t fmt_type = value_get_type(fmt);
@@ -164,7 +164,7 @@ ast_node_t builtin_typeof(context_t ctx, size_t argc, ast_node_t *argv) {
     return create_ast_value_node(allocator, err);
   }
   value_t value = resolve_expression(ctx, argv[0]);
-  if (value_is_error(value) || value_is_interrupt(value)) {
+  if (value_is_error(value)) {
     return create_ast_value_node(allocator, value);
   }
   type_t type = value_get_type(value);
@@ -178,7 +178,7 @@ ast_node_t builtin_alignof(context_t ctx, size_t argc, ast_node_t *argv) {
     return create_ast_value_node(allocator, err);
   }
   value_t value = resolve_expression(ctx, argv[0]);
-  if (value_is_error(value) || value_is_interrupt(value)) {
+  if (value_is_error(value)) {
     return create_ast_value_node(allocator, value);
   }
   type_t type = value_get_type(value);
@@ -196,7 +196,7 @@ ast_node_t builtin_sizeof(context_t ctx, size_t argc, ast_node_t *argv) {
     return create_ast_value_node(allocator, err);
   }
   value_t value = resolve_expression(ctx, argv[0]);
-  if (value_is_error(value) || value_is_interrupt(value)) {
+  if (value_is_error(value)) {
     return create_ast_value_node(allocator, value);
   }
   type_t type = value_get_type(value);
@@ -214,7 +214,7 @@ ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
     return create_ast_value_node(allocator, err);
   }
   value_t fmt = resolve_expression(ctx, argv[0]);
-  if (value_is_error(fmt) || value_is_interrupt(fmt)) {
+  if (value_is_error(fmt)) {
     return create_ast_value_node(allocator, fmt);
   }
   type_t fmt_type = value_get_type(fmt);

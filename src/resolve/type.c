@@ -13,9 +13,6 @@ value_t resolve_type(context_t ctx, ast_node_t node) {
   if (value_is_error(value)) {
     return value;
   }
-  if (value_is_interrupt(value)) {
-    return value;
-  }
   if (type_get_kind(type) != TYPE_KIND_TYPE) {
     return create_comptime_error(ctx, node, "expression is not type");
   }

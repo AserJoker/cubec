@@ -11,7 +11,7 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
   ast_node_t opt = ast_get_child(node, "opt");
   ast_node_t value = ast_get_child(node, "value");
   value_t right = resolve_expression(ctx, value);
-  if (value_is_error(right) || value_is_interrupt(right)) {
+  if (value_is_error(right)) {
     return right;
   }
   allocator_t allocator = context_get_allocator(ctx);
@@ -20,7 +20,7 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
       return context_get_undefined(ctx);
     }
     value_t left = resolve_expression(ctx, identifier);
-    if (value_is_error(left) || value_is_interrupt(left)) {
+    if (value_is_error(left)) {
       return left;
     }
     value_t err = value_assigment(left, ctx, right);
@@ -29,7 +29,7 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
     }
   } else {
     value_t left = resolve_expression(ctx, identifier);
-    if (value_is_error(left) || value_is_interrupt(left)) {
+    if (value_is_error(left)) {
       return left;
     }
     if (location_is(opt->loc, "+=")) {

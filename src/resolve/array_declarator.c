@@ -41,7 +41,7 @@ value_t resolve_array_declarator(context_t ctx, ast_node_t node) {
     return create_comptime_error(ctx, length, "invalid array size");
   }
   value_t vtype = resolve_type(ctx, type);
-  if (value_is_error(vtype) || value_is_interrupt(vtype)) {
+  if (value_is_error(vtype)) {
     return vtype;
   }
   type_t base_type = *(type_t *)value_get_data(vtype);

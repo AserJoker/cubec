@@ -14,9 +14,6 @@ static value_t resolve_convert_expression(context_t ctx, ast_node_t node,
   if (value_is_error(val)) {
     return val;
   }
-  if (value_is_interrupt(val)) {
-    return val;
-  }
   val = value_safe_convert(val, ctx, type);
   if (value_is_error(val)) {
     return convert_comptime_error(ctx, node, val);
@@ -32,9 +29,6 @@ static value_t resolve_expression_comptime_logical_and(context_t ctx,
   if (value_is_error(left)) {
     return left;
   }
-  if (value_is_interrupt(left)) {
-    return left;
-  }
   if (!value_is_comptime(left)) {
     return create_comptime_error(ctx, left_node, "value is not comptime");
   }
@@ -46,16 +40,10 @@ static value_t resolve_expression_comptime_logical_and(context_t ctx,
     if (value_is_error(right)) {
       return right;
     }
-    if (value_is_interrupt(right)) {
-      return right;
-    }
     return left;
   } else {
     value_t right = resolve_convert_expression(ctx, right_node, bool_t);
     if (value_is_error(right)) {
-      return right;
-    }
-    if (value_is_interrupt(right)) {
       return right;
     }
     return right;
@@ -70,9 +58,6 @@ static value_t resolve_expression_comptime_logical_or(context_t ctx,
   if (value_is_error(left)) {
     return left;
   }
-  if (value_is_interrupt(left)) {
-    return left;
-  }
   if (!value_is_comptime(left)) {
     return create_comptime_error(ctx, left_node, "value is not comptime");
   }
@@ -84,16 +69,10 @@ static value_t resolve_expression_comptime_logical_or(context_t ctx,
     if (value_is_error(right)) {
       return right;
     }
-    if (value_is_interrupt(right)) {
-      return right;
-    }
     return left;
   } else {
     value_t right = resolve_convert_expression(ctx, right_node, bool_t);
     if (value_is_error(right)) {
-      return right;
-    }
-    if (value_is_interrupt(right)) {
       return right;
     }
     return right;
@@ -120,14 +99,8 @@ value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
     if (value_is_error(left)) {
       return left;
     }
-    if (value_is_interrupt(left)) {
-      return left;
-    }
     value_t right = resolve_expression(ctx, right_node);
     if (value_is_error(right)) {
-      return right;
-    }
-    if (value_is_interrupt(right)) {
       return right;
     }
     if (location_is(opt->loc, "+")) {
@@ -172,9 +145,6 @@ value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
   } else if (right_node) {
     value_t right = resolve_expression(ctx, right_node);
     if (value_is_error(right)) {
-      return right;
-    }
-    if (value_is_interrupt(right)) {
       return right;
     }
     if (location_is(opt->loc, "~")) {

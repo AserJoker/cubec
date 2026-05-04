@@ -18,7 +18,7 @@ value_t resolve_callable_declarator(context_t ctx, ast_node_t node) {
     ast_node_t mut_node = ast_get_child(arg_node, "mut");
     ast_node_t type_node = ast_get_child(arg_node, "type");
     value_t vtype = resolve_type(ctx, type);
-    if (value_is_error(vtype) || value_is_interrupt(vtype)) {
+    if (value_is_error(vtype)) {
       return vtype;
     }
     type_t type = *(type_t *)value_get_data(vtype);
@@ -26,7 +26,7 @@ value_t resolve_callable_declarator(context_t ctx, ast_node_t node) {
     argv[idx].mut = mut_node == NULL || !location_is(mut_node->loc, "const");
   }
   value_t vres = resolve_type(ctx, type);
-  if (value_is_error(vres) || value_is_interrupt(vres)) {
+  if (value_is_error(vres)) {
     return vres;
   }
   type_t return_type = *(type_t *)value_get_data(vres);

@@ -7,7 +7,7 @@
 value_t resolve_statement_expression(context_t ctx, ast_node_t node) {
   ast_node_t expression = ast_get_child(node, "expression");
   value_t value = resolve_expression(ctx, expression);
-  if (value_is_error(value) || value_is_interrupt(value)) {
+  if (value_is_error(value)) {
     return value;
   }
   type_t type = value_get_type(value);

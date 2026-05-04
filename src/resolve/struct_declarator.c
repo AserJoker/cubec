@@ -89,7 +89,7 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
       bool mut = mut_node = NULL;
       bool pub = pub_node != NULL;
       value_t vtype = resolve_type(ctx, type_node);
-      if (value_is_error(vtype) || value_is_interrupt(vtype)) {
+      if (value_is_error(vtype)) {
         return vtype;
       }
       type_t type = *(type_t *)value_get_data(vtype);
@@ -146,17 +146,17 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
       }
     } else if (field->type == NODE_TYPE_STATEMENT_STRUCT) {
       value_t err = resolve_statement_struct(ctx, field);
-      if (value_is_error(err) || value_is_interrupt(err)) {
+      if (value_is_error(err)) {
         return err;
       }
     } else if (field->type == NODE_TYPE_STATEMENT_FUNCTION) {
       value_t err = resolve_statement_function(ctx, field);
-      if (value_is_error(err) || value_is_interrupt(err)) {
+      if (value_is_error(err)) {
         return err;
       }
     } else if (field->type == NODE_TYPE_STATEMENT_DECLARATION) {
       value_t err = resolve_statement_declaration(ctx, field);
-      if (value_is_error(err) || value_is_interrupt(err)) {
+      if (value_is_error(err)) {
         return err;
       }
     }
@@ -170,7 +170,7 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
         ast_get_item(decorators, ast_get_length(decorators) - 1 - idx);
     ast_node_t expr = ast_get_child(dec, "expression");
     value_t func = resolve_expression(ctx, expr);
-    if (value_is_error(func) || value_is_interrupt(func)) {
+    if (value_is_error(func)) {
       return func;
     }
     result = value_call(func, ctx, 1, &result);

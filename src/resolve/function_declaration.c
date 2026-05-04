@@ -66,10 +66,6 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
       context_pop_scope(ctx);
       return vtype;
     }
-    if (value_is_interrupt(vtype)) {
-      context_pop_scope(ctx);
-      return vtype;
-    }
     argv[idx].type = *(type_t *)value_get_data(vtype);
     if (type_get_kind(argv[idx].type) == TYPE_KIND_TYPE) {
       if (!kind || !location_is(kind->loc, "comptime")) {
@@ -90,10 +86,6 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   }
   value_t vreturn_type = resolve_type(ctx, type_node);
   if (value_is_error(vreturn_type)) {
-    context_pop_scope(ctx);
-    return vreturn_type;
-  }
-  if (value_is_interrupt(vreturn_type)) {
     context_pop_scope(ctx);
     return vreturn_type;
   }

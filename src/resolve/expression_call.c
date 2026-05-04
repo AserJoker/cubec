@@ -25,9 +25,6 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
       if (value_is_error(value)) {
         return value;
       }
-      if (value_is_interrupt(value)) {
-        return value;
-      }
       return value;
     }
     allocator_free(allocator, name);
@@ -37,9 +34,6 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     ast_node_t arg = ast_get_item(arguments, idx);
     value_t val = resolve_expression(ctx, arg);
     if (value_is_error(val)) {
-      return val;
-    }
-    if (value_is_interrupt(val)) {
       return val;
     }
     argv[idx] = val;
@@ -65,9 +59,6 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     if (value_is_error(obj)) {
       return obj;
     }
-    if (value_is_interrupt(obj)) {
-      return obj;
-    }
     allocator_t allocator = context_get_allocator(ctx);
     char *name = location_get(field->loc, allocator);
     value_t value = value_member_call(obj, ctx, name, argc, argv);
@@ -76,9 +67,6 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
   } else {
     value_t func = resolve_expression(ctx, callee);
     if (value_is_error(func)) {
-      return func;
-    }
-    if (value_is_interrupt(func)) {
       return func;
     }
     return value_call(func, ctx, argc, argv);
