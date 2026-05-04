@@ -105,14 +105,12 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       }
     }
   }
-  ast_node_t node = *(ast_node_t *)value_get_data(self);
-  ast_node_t kind = ast_get_child(node, "kind");
+  function_declar declar = *(function_declar *)value_get_data(self);
+  ast_node_t kind = ast_get_child(declar->node, "kind");
   allocator_t allocator = context_get_allocator(ctx);
   if (kind && location_is(kind->loc, "comptime")) {
-    ast_node_t _global_node = ast_get_child(node, "_global");
-    ast_node_t _self_node = ast_get_child(node, "_self");
-    type_t _global = *(type_t *)value_get_data(_global_node->value);
-    type_t _self = *(type_t *)value_get_data(_self_node->value);
+    type_t _global = declar->global;
+    type_t _self = declar->bind;
     context_type_t current_type = context_get_type(ctx);
     context_set_type(ctx, CONTEXT_TYPE_FUNCTION);
     bool is_comptime = context_is_comptime(ctx);
@@ -127,8 +125,8 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     scope_t scope = create_scope(allocator, context_get_root_scope(ctx));
     context_set_scope(ctx, scope);
     value_t result = NULL;
-    ast_node_t arguments = ast_get_child(node, "arguments");
-    ast_node_t body = ast_get_child(node, "body");
+    ast_node_t arguments = ast_get_child(declar->node, "arguments");
+    ast_node_t body = ast_get_child(declar->node, "body");
     for (size_t idx = 0; idx < ast_get_length(arguments); idx++) {
       if (!value_is_comptime(argv[idx])) {
         result =
@@ -317,26 +315,23 @@ value_t create_function(context_t ctx, type_t function_type, ast_node_t node) {
   char base_fullname[len + 1];
   sprintf(base_fullname, "%s_%s", parent_name, func_name);
   allocator_free(allocator, id_str);
+  char *id = NULL;
   if (module_get_function(module, base_fullname)) {
     for (size_t idx = 0;; idx++) {
       size_t len = snprintf(NULL, 0, "%s_%" PRIuPTR, base_fullname, idx);
       char fullname[len + 1];
       sprintf(fullname, "%s_%" PRIuPTR, base_fullname, idx);
       if (!module_get_function(module, fullname)) {
-        char *id = create_cstring(allocator, fullname);
-        ast_node_t id_node = create_ast_node(allocator, NODE_TYPE_STRING);
-        id_node->string = id;
-        ast_add_child(allocator, node, "_id", id_node);
+        id = create_cstring(allocator, fullname);
         break;
       }
     }
   } else {
-    char *id = create_cstring(allocator, base_fullname);
-    ast_node_t id_node = create_ast_node(allocator, NODE_TYPE_STRING);
-    id_node->string = id;
-    ast_add_child(allocator, node, "_id", id_node);
+    id = create_cstring(allocator, base_fullname);
   }
-  value_t func = create_value(allocator, function_type, false, &node, true);
+  function_declar declar = context_store_function_declar(ctx, node, id);
+  value_t func = create_value(allocator, function_type, false, &declar, true);
+  allocator_free(allocator, id);
   module_add_function(module, func);
   return func;
 }
@@ -356,8 +351,6 @@ array_t function_type_get_arguments(type_t self) {
   return meta->arguments;
 }
 value_t function_get_id(context_t ctx, value_t self) {
-  ast_node_t node = *(ast_node_t *)value_get_data(self);
-  ast_node_t id_node = ast_get_child(node, "_id");
-  allocator_t allocator = context_get_allocator(ctx);
-  return create_str(ctx, id_node->string);
+  function_declar declar = *(function_declar *)value_get_data(self);
+  return create_str(ctx, declar->id);
 }

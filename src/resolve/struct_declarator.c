@@ -83,10 +83,8 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
         value_t val = attr->value;
         type_t type = value_get_type(val);
         if (type_get_kind(type) == TYPE_KIND_FUNCTION) {
-          ast_node_t node = *(ast_node_t *)value_get_data(val);
-          node = clone_ast_node(allocator, node);
-          ast_remove_child(node, "_global");
-          ast_remove_child(node, "_self");
+          function_declar declar = *(function_declar *)value_get_data(val);
+          node = clone_ast_node(allocator, declar->node);
           ast_node_t statement_function =
               create_ast_node(allocator, NODE_TYPE_STATEMENT_FUNCTION);
           ast_add_child(allocator, statement_function, "function", node);

@@ -18,6 +18,14 @@ typedef enum _context_type_t {
 } context_type_t;
 
 typedef struct _context_t *context_t;
+
+typedef struct _function_declar {
+  ast_node_t node;
+  type_t global;
+  type_t bind;
+  const char *id;
+} *function_declar;
+
 typedef ast_node_t (*builtin_fn_t)(context_t ctx, size_t argc,
                                    ast_node_t *argv);
 context_t create_context(allocator_t allocator);
@@ -59,6 +67,10 @@ type_t context_get_self(context_t self);
 type_t context_set_self(context_t ctx, type_t self);
 value_t context_set_function(context_t ctx, value_t function);
 value_t context_get_function(context_t ctx);
+
+function_declar context_load_function_declar(context_t self, const char *id);
+function_declar context_store_function_declar(context_t self, ast_node_t node,
+                                              const char *id);
 #ifdef __cplusplus
 }
 #endif

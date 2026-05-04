@@ -67,19 +67,11 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   type_t return_type = *(type_t *)value_get_data(vreturn_type);
   type_t function_type =
       create_function_type(ctx, return_type, argc, argv, variadic);
-  value_t function = create_function(ctx, function_type, node);
-  type_t self = context_get_self(ctx);
-  value_t vself = create_type_value(ctx, self, false, NULL);
-  type_t global = context_get_global(ctx);
-  value_t vglobal = create_type_value(ctx, global, false, NULL);
-  ast_node_t self_node = create_ast_value_node(allocator, vself);
-  ast_add_child(allocator, node, "_self", self_node);
-  ast_node_t global_node = create_ast_value_node(allocator, vglobal);
-  ast_add_child(allocator, node, "_global", global_node);
-  return function;
+  return create_function(ctx, function_type, node);
 }
 value_t resolve_function_declaration(context_t ctx, value_t function) {
-  ast_node_t node = *(ast_node_t *)value_get_data(function);
+  function_declar declar = *(function_declar *)value_get_data(function);
+  ast_node_t node = declar->node;
   ast_node_t kind = ast_get_child(node, "kind");
   ast_node_t body = ast_get_child(node, "body");
   if (kind && location_is(kind->loc, "comptime")) {
@@ -87,11 +79,9 @@ value_t resolve_function_declaration(context_t ctx, value_t function) {
   }
   type_t function_type = value_get_type(function);
   array_t arguments_type = function_type_get_arguments(function_type);
-  ast_node_t self_node = ast_get_child(node, "_self");
-  ast_node_t global_node = ast_get_child(node, "_global");
   ast_node_t arguments_node = ast_get_child(node, "arguments");
-  type_t self = *(type_t *)value_get_data(self_node->value);
-  type_t global = *(type_t *)value_get_data(global_node->value);
+  type_t self = declar->bind;
+  type_t global = declar->global;
   type_t current_self = context_set_self(ctx, self);
   value_t current_function = context_set_function(ctx, function);
   context_type_t current_type = context_get_type(ctx);

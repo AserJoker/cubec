@@ -53,6 +53,7 @@ struct _context_t {
   module_t module;
   value_t function;
   hash_map_t builtins;
+  hash_map_t func_declars;
 };
 
 static void context_dispose(context_t self, allocator_t allocator) {
@@ -62,6 +63,7 @@ static void context_dispose(context_t self, allocator_t allocator) {
   allocator_free(allocator, self->modules);
   allocator_free(allocator, self->strings);
   allocator_free(allocator, self->types);
+  allocator_free(allocator, self->func_declars);
   allocator_free(allocator, self->builtins);
 }
 context_t create_context(allocator_t allocator) {
@@ -91,6 +93,13 @@ context_t create_context(allocator_t allocator) {
   self->builtins = create_hash_map(allocator, &builtin_initialize);
   hash_map_initialize_t types_initialize = modules_initialize;
   self->types = create_hash_map(allocator, &types_initialize);
+  hash_map_initialize_t func_declar_initialize = {
+      .autofree_key = true,
+      .autofree_value = true,
+      .hash = (hash_fn_t)cstring_sdb,
+      .compare = (compare_fn_t)strcmp,
+  };
+  self->func_declars = create_hash_map(allocator, &func_declar_initialize);
   type_init(self);
   error_init(self);
   void_init(self);
@@ -344,3 +353,19 @@ value_t context_set_function(context_t ctx, value_t function) {
   return current;
 }
 value_t context_get_function(context_t ctx) { return ctx->function; }
+function_declar context_load_function_declar(context_t self, const char *id) {
+  return hash_map_get(self->func_declars, id, NULL, NULL);
+}
+function_declar context_store_function_declar(context_t self, ast_node_t node,
+                                              const char *id) {
+  hash_map_delete(self->func_declars, id, NULL, NULL);
+  function_declar declar =
+      allocator_alloc(self->allocator, sizeof(struct _function_declar), NULL);
+  declar->bind = self->self;
+  declar->global = self->global;
+  declar->node = node;
+  char *_id = create_cstring(self->allocator, id);
+  declar->id = _id;
+  hash_map_set(self->func_declars, _id, declar, NULL, NULL);
+  return declar;
+}

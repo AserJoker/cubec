@@ -5,6 +5,7 @@
 #include "core/hash_map.h"
 #include "core/path.h"
 #include "core/string.h"
+#include "engine/context.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include <string.h>
@@ -65,9 +66,9 @@ const char *module_get_filename(module_t self) { return self->filename; }
 const char *module_get_dirname(module_t self) { return self->dirname; }
 ast_node_t module_get_node(module_t self) { return self->node; }
 void module_add_function(module_t self, struct _value_t *func) {
-  ast_node_t node = *(ast_node_t *)value_get_data(func);
-  ast_node_t id_node = ast_get_child(node, "_id");
-  hash_map_set(self->functions, (void *)id_node->string, func, NULL, NULL);
+  function_declar declar = *(function_declar *)value_get_data(func);
+  hash_map_delete(self->functions, declar->id, NULL, NULL);
+  hash_map_set(self->functions, (void *)declar->id, func, NULL, NULL);
 }
 void module_add_struct(module_t self, struct _value_t *stru) {
   type_t type = *(type_t *)value_get_data(stru);

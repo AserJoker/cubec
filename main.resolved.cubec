@@ -1,15 +1,18 @@
-pub func main(): void {
-    comptime const item = struct {
-        data: ;
-        id: str;
-    }{
-        .data = {
-            1,
-            2,
-            3,
-            4
-        },
-        .id = "test"
+struct Base {
+    id: i32;
+    pub func getId(self: *__self__): i32 {
+        return self.id;
+    }
+}
+struct Test {
+    ...Base;
+}
+pub comptime func tt(): void {
+    const item = Test{
+        .id = 123
     };
-    __print__("%v", item);
+    __print__("%v", item.getId());
+}
+pub func main(): void {
+    tt();
 }
