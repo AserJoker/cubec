@@ -5,9 +5,13 @@ struct Test{
         result.id = id;
         return result;
     }
+    pub template func add(a:auto,b:__typeof__(a)):__typeof__(a){
+        return a+b;
+    }
 };
 func init(id:i32):Test {
-    return .create(id);
+    const item =  .create(id);
+    return item;
 }
 pub func main():void{
     comptime const item = init(123);

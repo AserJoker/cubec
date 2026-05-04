@@ -27,9 +27,9 @@
 #include "engine/unsigned.h"
 #include "engine/value.h"
 #include "engine/void.h"
+#include "fmt/program.h"
 #include "resolve/function_declaration.h"
 #include "resolve/program.h"
-#include "writer/program.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -339,7 +339,7 @@ string_t context_write_module(context_t self, const char *module) {
   }
   ast_node_t node = module_get_node(m);
   stream_t stream = create_stream(self->allocator);
-  write_program(self->allocator, node, stream);
+  fmt_program(self->allocator, node, stream);
   string_t str = stream_get_string(stream);
   allocator_free(self->allocator, stream);
   return str;
