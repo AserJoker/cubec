@@ -8,7 +8,9 @@ struct Test {
     ...Base;
 };
 pub comptime func tt():void {
-    const item:Test = {.id = 123};
+    const item:Test = {
+        .id = 123,
+    };
     __print__("%v",item.getId());
 }
 pub func main():void{

@@ -108,7 +108,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   function_declar declar = *(function_declar *)value_get_data(self);
   ast_node_t kind = ast_get_child(declar->node, "kind");
   allocator_t allocator = context_get_allocator(ctx);
-  if (kind && location_is(kind->loc, "comptime")) {
+  if (kind && location_is(kind->loc, "comptime") || context_is_comptime(ctx)) {
     type_t _global = declar->global;
     type_t _self = declar->bind;
     context_type_t current_type = context_get_type(ctx);
