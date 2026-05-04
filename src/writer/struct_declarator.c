@@ -14,6 +14,8 @@ void write_struct_declarator(allocator_t allocator, ast_node_t node,
   ast_node_t fields = ast_get_child(node, "fields");
   ast_node_t decorators = ast_get_child(node, "decorators");
   ast_node_t pub = ast_get_child(node, "pub");
+  ast_node_t aligned = ast_get_child(node, "aligned");
+  ast_node_t packed = ast_get_child(node, "packed");
   for (size_t idx = 0; idx < ast_get_length(decorators); idx++) {
     ast_node_t dec = ast_get_item(decorators, idx);
     ast_node_t expr = ast_get_child(dec, "expression");
@@ -27,6 +29,14 @@ void write_struct_declarator(allocator_t allocator, ast_node_t node,
     stream_write(stream, " ");
   }
   stream_write(stream, "struct ");
+  if (packed) {
+    stream_write(stream, "packed ");
+  }
+  if (aligned) {
+    stream_write(stream, "aligned(");
+    stream_write_location(stream, aligned->loc);
+    stream_write(stream, ") ");
+  }
   if (identifier) {
     stream_write_location(stream, identifier->loc);
     stream_write(stream, " ");

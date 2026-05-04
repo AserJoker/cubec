@@ -1,4 +1,4 @@
-struct Test {
+struct packed Test {
     a: u8;
     b: i32;
     c: i8;
