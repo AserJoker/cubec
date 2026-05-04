@@ -5,9 +5,6 @@ struct Test{
         result.id = id;
         return result;
     }
-    pub template func add(a:auto,b:__typeof__(a)):__typeof__(a){
-        return a+b;
-    }
 };
 func init(id:i32):Test {
     const item =  .create(id);

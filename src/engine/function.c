@@ -87,7 +87,8 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   ast_node_t arguments = ast_get_child(declar->node, "arguments");
   ast_node_t body = ast_get_child(declar->node, "body");
   ast_node_t return_type = ast_get_child(declar->node, "type");
-  if (type_get_kind(type) == TYPE_KIND_COMPTIME_FUNCTION) {
+  if (type_get_kind(type) == TYPE_KIND_COMPTIME_FUNCTION ||
+      context_is_comptime(ctx)) {
     allocator_t allocator = context_get_allocator(ctx);
     type_t _global = declar->global;
     type_t _self = declar->bind;
@@ -169,115 +170,33 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     return result;
   }
   function_meta_t meta = type_get_meta(type);
-  for (size_t idx = 0; idx < argc; idx++) {
-    ast_node_t arg_node = ast_get_item(arguments, idx);
-    if (idx >= array_get_size(meta->arguments)) {
-      if (meta->variadic) {
-        argument_t *arg_info =
-            array_get(meta->arguments, array_get_size(meta->arguments) - 1);
+  if (type_get_kind(type) == TYPE_KIND_COMPTIME_FUNCTION) {
+    function_meta_t meta = type_get_meta(type);
+    for (size_t idx = 0; idx < argc; idx++) {
+      ast_node_t arg_node = ast_get_item(arguments, idx);
+      if (idx >= array_get_size(meta->arguments)) {
+        if (meta->variadic) {
+          argument_t *arg_info =
+              array_get(meta->arguments, array_get_size(meta->arguments) - 1);
+          argv[idx] = value_safe_convert(argv[idx], ctx, arg_info->type);
+          if (value_is_error(argv[idx])) {
+            return argv[idx];
+          }
+        } else {
+          return create_comptime_error(ctx, arg_node,
+                                       "value requires %" PRIuPTR
+                                       " arguments, receive %" PRIuPTR,
+                                       array_get_size(meta->arguments), argc);
+        }
+      } else {
+        argument_t *arg_info = array_get(meta->arguments, idx);
         argv[idx] = value_safe_convert(argv[idx], ctx, arg_info->type);
-        if (value_is_error(argv[idx])) {
+        type_t type = value_get_type(argv[idx]);
+        if (type_get_kind(type) == TYPE_KIND_ERROR) {
           return argv[idx];
         }
-      } else {
-        return create_comptime_error(ctx, arg_node,
-                                     "value requires %" PRIuPTR
-                                     " arguments, receive %" PRIuPTR,
-                                     array_get_size(meta->arguments), argc);
-      }
-    } else {
-      argument_t *arg_info = array_get(meta->arguments, idx);
-      argv[idx] = value_safe_convert(argv[idx], ctx, arg_info->type);
-      type_t type = value_get_type(argv[idx]);
-      if (type_get_kind(type) == TYPE_KIND_ERROR) {
-        return argv[idx];
       }
     }
-  }
-  if (context_is_comptime(ctx)) {
-    function_declar declar = *(function_declar *)value_get_data(self);
-    allocator_t allocator = context_get_allocator(ctx);
-    type_t _global = declar->global;
-    type_t _self = declar->bind;
-    context_type_t current_type = context_get_type(ctx);
-    context_set_type(ctx, CONTEXT_TYPE_FUNCTION);
-    bool is_comptime = context_is_comptime(ctx);
-    context_set_comptime(ctx, true);
-    type_t current_global = context_get_global(ctx);
-    context_set_global(ctx, _global);
-    type_t current_self = context_get_self(ctx);
-    context_set_self(ctx, _self);
-    value_t current_function = context_get_function(ctx);
-    context_set_function(ctx, self);
-    scope_t current_scope = context_get_scope(ctx);
-    scope_t scope = create_scope(allocator, context_get_root_scope(ctx));
-    context_set_scope(ctx, scope);
-    value_t result = NULL;
-    ast_node_t arguments = ast_get_child(declar->node, "arguments");
-    ast_node_t body = ast_get_child(declar->node, "body");
-    ast_node_t return_type = ast_get_child(declar->node, "type");
-    hash_map_t closure = declar->closure;
-    list_node_t it = hash_map_get_first(closure);
-    while (it != hash_map_get_end(closure)) {
-      const char *name = hash_map_node_get_key(it);
-      value_t value = hash_map_node_get_value(it);
-      value = value_clone(value, allocator);
-      scope_store(scope, allocator, name, value);
-      it = hash_map_node_get_next(it);
-    }
-    context_push_scope(ctx);
-    scope = context_get_scope(ctx);
-    for (size_t idx = 0; idx < ast_get_length(arguments); idx++) {
-      ast_node_t arg_node = ast_get_item(arguments, idx);
-      if (!value_is_comptime(argv[idx])) {
-        result = create_comptime_error(
-            ctx, arg_node, "argument %" PRIuPTR " is not comptime", idx);
-        break;
-      }
-      ast_node_t identifier = ast_get_child(arg_node, "identifier");
-      char *name = location_get(identifier->loc, allocator);
-      if (scope_load(scope, name)) {
-        result =
-            create_comptime_error(ctx, arg_node, "redefinition of '%s'", name);
-        allocator_free(allocator, name);
-        break;
-      }
-      if (arg_node->type == NODE_TYPE_FUNCTION_ARGUMENT) {
-        value_t val = value_clone(argv[idx], allocator);
-        scope_store(scope, allocator, name, val);
-      } else {
-        // TODO: rest
-      }
-      allocator_free(allocator, name);
-    }
-    context_push_scope(ctx);
-    if (!result) {
-      value_t vreturn_type = resolve_type(ctx, return_type);
-      type_t type = NULL;
-      if (value_is_error(vreturn_type)) {
-        result = vreturn_type;
-      } else {
-        type = *(type_t *)value_get_type(vreturn_type);
-      }
-      if (!result) {
-        result = resolve_function_body(ctx, body);
-        if (value_is_interrupt(result)) {
-          result = interrupt_get_value(result);
-        } else if (!value_is_error(result)) {
-          result = value_safe_convert(result, ctx, type);
-        }
-      }
-    }
-    result = value_clone(result, allocator);
-    context_set_scope(ctx, current_scope);
-    allocator_free(allocator, scope);
-    context_set_function(ctx, current_function);
-    context_set_comptime(ctx, is_comptime);
-    context_set_global(ctx, current_global);
-    context_set_self(ctx, current_self);
-    context_set_type(ctx, current_type);
-    scope_store(current_scope, allocator, NULL, result);
-    return result;
   }
   return context_create_value(ctx, meta->type, NULL, false, false, NULL);
 }
