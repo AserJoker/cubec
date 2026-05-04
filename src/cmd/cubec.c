@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
   if (type_get_kind(value_get_type(err)) == TYPE_KIND_ERROR) {
     fprintf(stderr, "%s\n", error_get_message(err));
   } else {
-    string_t out = context_write_module(ctx, filename);
+    string_t out = context_fmt_module(ctx, filename);
     char *dst_filename = absolute(allocator, "./main.resolved.cubec");
     const char *str = string_get(out);
     FILE *fp = fopen(dst_filename, "w");

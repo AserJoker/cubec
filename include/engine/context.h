@@ -63,7 +63,7 @@ void context_push_error(context_t self, value_t error);
 void context_store_type(context_t self, type_t type);
 type_t context_load_type(context_t self, const char *id);
 value_t context_clone_value(context_t self, value_t value);
-string_t context_write_module(context_t self, const char *module);
+string_t context_fmt_module(context_t self, const char *module);
 module_t context_get_module(context_t self);
 type_t context_get_self(context_t self);
 type_t context_set_self(context_t ctx, type_t self);

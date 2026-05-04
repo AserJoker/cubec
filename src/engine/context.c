@@ -332,7 +332,7 @@ value_t context_clone_value(context_t self, value_t value) {
   scope_store(self->scope, self->allocator, NULL, val);
   return val;
 }
-string_t context_write_module(context_t self, const char *module) {
+string_t context_fmt_module(context_t self, const char *module) {
   module_t m = hash_map_get(self->modules, module, NULL, NULL);
   if (!m) {
     return NULL;
