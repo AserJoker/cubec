@@ -22,8 +22,14 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   ast_node_t closure = ast_get_child(node, "closure");
   ast_node_t kind = ast_get_child(node, "kind");
   allocator_t allocator = context_get_allocator(ctx);
-  if (kind && location_is(kind->loc, "comptime")) {
-    value_t function = create_comptime_function(ctx, node);
+  if (kind && (location_is(kind->loc, "comptime") ||
+               location_is(kind->loc, "template"))) {
+    value_t function = NULL;
+    if (location_is(kind->loc, "template")) {
+      function = create_template_function(ctx, node);
+    } else {
+      function = create_comptime_function(ctx, node);
+    }
     for (size_t idx = 0; idx < ast_get_length(closure); idx++) {
       ast_node_t item = ast_get_item(closure, idx);
       char *name = location_get(item->loc, allocator);
@@ -121,7 +127,8 @@ value_t resolve_function_declaration(context_t ctx, value_t function) {
   ast_node_t node = declar->node;
   ast_node_t kind = ast_get_child(node, "kind");
   ast_node_t body = ast_get_child(node, "body");
-  if (kind && location_is(kind->loc, "comptime")) {
+  if (kind && (location_is(kind->loc, "comptime") ||
+               location_is(kind->loc, "template"))) {
     return context_get_undefined(ctx);
   }
   type_t function_type = value_get_type(function);

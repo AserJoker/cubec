@@ -122,11 +122,11 @@ context_t create_context(allocator_t allocator) {
   self->module = NULL;
   self->function = NULL;
   self->self = NULL;
-  context_set_builtin(self, "__error__", builtin_error);
-  context_set_builtin(self, "__typeof__", builtin_typeof);
-  context_set_builtin(self, "__alignof__", builtin_alignof);
-  context_set_builtin(self, "__sizeof__", builtin_sizeof);
-  context_set_builtin(self, "__print__", builtin_print);
+  context_set_builtin(self, "error", builtin_error);
+  context_set_builtin(self, "typeof", builtin_typeof);
+  context_set_builtin(self, "alignof", builtin_alignof);
+  context_set_builtin(self, "sizeof", builtin_sizeof);
+  context_set_builtin(self, "print", builtin_print);
   return self;
 }
 bool context_is_comptime(context_t ctx) { return ctx->comptime; }

@@ -25,6 +25,7 @@ typedef enum _type_kind_t {
   TYPE_KIND_UNION,
   TYPE_KIND_FUNCTION,
   TYPE_KIND_COMPTIME_FUNCTION,
+  TYPE_KIND_TEMPLATE,
 } type_kind_t;
 
 struct _value_t;

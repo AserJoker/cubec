@@ -86,7 +86,8 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   type_t function_type = value_get_type(self);
   value_t function = self;
   bool is_runtime = !context_is_comptime(ctx) &&
-                    type_get_kind(function_type) == TYPE_KIND_FUNCTION;
+                    (type_get_kind(function_type) == TYPE_KIND_FUNCTION ||
+                     type_get_kind(function_type) == TYPE_KIND_TEMPLATE);
   function_declar declar = *(function_declar *)value_get_data(self);
   ast_node_t arguments = ast_get_child(declar->node, "arguments");
   ast_node_t body = ast_get_child(declar->node, "body");
@@ -114,7 +115,85 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     it = hash_map_node_get_next(it);
   }
   context_push_scope(ctx);
-  if (type_get_kind(function_type) == TYPE_KIND_COMPTIME_FUNCTION) {
+  if (type_get_kind(function_type) == TYPE_KIND_TEMPLATE) {
+    size_t size = 0;
+    bool variadic = false;
+    for (size_t idx = 0; idx < ast_get_length(arguments); idx++) {
+      ast_node_t arg = ast_get_item(arguments, idx);
+      if (arg->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
+        variadic = true;
+        break;
+      }
+      size++;
+    }
+    if (argc < size || (argc > size && !variadic)) {
+      result = create_error(
+          ctx, "function requires %" PRIuPTR " arguments, received %" PRIuPTR,
+          size, argc);
+      goto onfinish;
+    }
+    size_t argument_count = ast_get_length(arguments);
+    argument_t args[argument_count];
+    for (size_t idx = 0; idx < argument_count; idx++) {
+      ast_node_t arg = ast_get_item(arguments, idx);
+      ast_node_t identifier = ast_get_child(arg, "identifier");
+      ast_node_t mut = ast_get_child(arg, "mut");
+      ast_node_t type = ast_get_child(arg, "type");
+      args[idx].mut = mut == NULL;
+      type_t t = NULL;
+      if (location_is(type->loc, "infer")) {
+        t = value_get_type(argv[idx]);
+      } else {
+        value_t vt = resolve_type(ctx, type);
+        if (value_is_error(vt)) {
+          const char *msg = *(const char **)value_get_data(vt);
+          result =
+              create_error(ctx, "function eval failed\n  caused by:\n%s", msg);
+          goto onfinish;
+        }
+        t = *(type_t *)value_get_data(vt);
+      }
+      args[idx].type = t;
+      value_t value = NULL;
+      if (arg->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
+        // TODO: rest
+      } else {
+        value = value_safe_convert(argv[idx], ctx, t);
+        if (value_is_error(value)) {
+          result = value;
+          goto onfinish;
+        }
+      }
+      char *name = location_get(identifier->loc, allocator);
+      void *data = value_get_data(value);
+      value_t err = context_create_value(ctx, args[idx].type, NULL,
+                                         args[idx].mut, false, name);
+      allocator_free(allocator, name);
+      if (value_is_error(err)) {
+        result = err;
+        goto onfinish;
+      }
+    }
+    value_t vrtype = resolve_type(ctx, return_type);
+    if (value_is_error(vrtype)) {
+      const char *msg = *(const char **)value_get_data(vrtype);
+      result = create_error(ctx, "function eval failed\n  caused by:\n%s", msg);
+      goto onfinish;
+    }
+    type_t rtype = *(type_t *)value_get_data(vrtype);
+    function_type =
+        create_function_type(ctx, rtype, argument_count, args, variadic);
+    function =
+        context_create_value(ctx, function_type, &declar, false, true, NULL);
+    context_set_function(ctx, function);
+    context_push_scope(ctx);
+    context_set_comptime(ctx, false);
+    value_t err = resolve_function_body(ctx, body);
+    if (value_is_error(err)) {
+      result = err;
+      goto onfinish;
+    }
+  } else if (type_get_kind(function_type) == TYPE_KIND_COMPTIME_FUNCTION) {
     size_t size = 0;
     bool variadic = false;
     for (size_t idx = 0; idx < ast_get_length(arguments); idx++) {
@@ -144,14 +223,19 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
             create_error(ctx, "argument %" PRIuPTR " is not comptime", idx);
         goto onfinish;
       }
-      value_t vt = resolve_type(ctx, type);
-      if (value_is_error(vt)) {
-        const char *msg = *(const char **)value_get_data(vt);
-        result =
-            create_error(ctx, "function eval failed\n  caused by:\n%s", msg);
-        goto onfinish;
+      type_t t = NULL;
+      if (location_is(type->loc, "infer")) {
+        t = value_get_type(argv[idx]);
+      } else {
+        value_t vt = resolve_type(ctx, type);
+        if (value_is_error(vt)) {
+          const char *msg = *(const char **)value_get_data(vt);
+          result =
+              create_error(ctx, "function eval failed\n  caused by:\n%s", msg);
+          goto onfinish;
+        }
+        t = *(type_t *)value_get_data(vt);
       }
-      type_t t = *(type_t *)value_get_data(vt);
       args[idx].type = t;
       value_t value = NULL;
       if (arg->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
@@ -162,9 +246,6 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
           result = value;
           goto onfinish;
         }
-      }
-      if (args[idx].mut) {
-        value_set_mut(value, true);
       }
       char *name = location_get(identifier->loc, allocator);
       void *data = value_get_data(value);
@@ -183,7 +264,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       goto onfinish;
     }
     type_t rtype = *(type_t *)value_get_data(vrtype);
-    type_t function_type =
+    function_type =
         create_function_type(ctx, rtype, argument_count, args, variadic);
     function =
         context_create_value(ctx, function_type, &declar, false, true, NULL);
@@ -392,6 +473,10 @@ void function_init(context_t ctx) {
       allocator, TYPE_KIND_COMPTIME_FUNCTION, sizeof(function_declar),
       sizeof(function_declar), "comptime_func", "comptime_func", &opt, NULL);
   context_store_type(ctx, comptime_func);
+  type_t template_func = create_type(
+      allocator, TYPE_KIND_TEMPLATE, sizeof(function_declar),
+      sizeof(function_declar), "template_func", "template_func", &opt, NULL);
+  context_store_type(ctx, template_func);
 }
 
 value_t create_function(context_t ctx, type_t function_type, ast_node_t node) {
@@ -479,6 +564,52 @@ value_t create_comptime_function(context_t ctx, ast_node_t node) {
     id = create_cstring(allocator, base_fullname);
   }
   type_t type = context_load_type(ctx, "comptime_func");
+  function_declar declar = context_store_function_declar(ctx, node, id);
+  value_t func = create_value(allocator, type, false, &declar, true);
+  allocator_free(allocator, id);
+  module_add_function(module, func);
+  return func;
+}
+value_t create_template_function(context_t ctx, ast_node_t node) {
+  allocator_t allocator = context_get_allocator(ctx);
+  module_t module = context_get_module(ctx);
+  const char *parent_name = NULL;
+  value_t current_function = context_get_function(ctx);
+  if (current_function) {
+    value_t function_name = function_get_id(ctx, current_function);
+    parent_name = *(const char **)value_get_data(function_name);
+  } else {
+    type_t self = context_get_self(ctx);
+    parent_name = type_get_id(self);
+  }
+  ast_node_t identifier = ast_get_child(node, "identifier");
+  char *id_str = NULL;
+  if (identifier) {
+    id_str = location_get(identifier->loc, allocator);
+  }
+  const char *func_name = id_str;
+  if (!func_name) {
+    func_name = "template";
+  }
+  size_t len = strlen(parent_name) + strlen(func_name) + 2;
+  char base_fullname[len + 1];
+  sprintf(base_fullname, "%s_%s", parent_name, func_name);
+  allocator_free(allocator, id_str);
+  char *id = NULL;
+  if (module_get_function(module, base_fullname)) {
+    for (size_t idx = 0;; idx++) {
+      size_t len = snprintf(NULL, 0, "%s_%" PRIuPTR, base_fullname, idx);
+      char fullname[len + 1];
+      sprintf(fullname, "%s_%" PRIuPTR, base_fullname, idx);
+      if (!module_get_function(module, fullname)) {
+        id = create_cstring(allocator, fullname);
+        break;
+      }
+    }
+  } else {
+    id = create_cstring(allocator, base_fullname);
+  }
+  type_t type = context_load_type(ctx, "template_func");
   function_declar declar = context_store_function_declar(ctx, node, id);
   value_t func = create_value(allocator, type, false, &declar, true);
   allocator_free(allocator, id);

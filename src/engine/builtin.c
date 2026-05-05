@@ -133,7 +133,9 @@ ast_node_t builtin_error(context_t ctx, size_t argc, ast_node_t *argv) {
     value_t err = create_error(ctx, "__error__ require fmt argument");
     return create_ast_value_node(allocator, err);
   }
+  bool is_comptime = context_set_comptime(ctx, false);
   value_t fmt = resolve_expression(ctx, argv[0]);
+  context_set_comptime(ctx, is_comptime);
   if (value_is_error(fmt)) {
     return create_ast_value_node(allocator, fmt);
   }
@@ -154,7 +156,9 @@ ast_node_t builtin_typeof(context_t ctx, size_t argc, ast_node_t *argv) {
     value_t err = create_error(ctx, "__typeof__ require 1 argument");
     return create_ast_value_node(allocator, err);
   }
+  bool is_comptime = context_set_comptime(ctx, false);
   value_t value = resolve_expression(ctx, argv[0]);
+  context_set_comptime(ctx, is_comptime);
   if (value_is_error(value)) {
     return create_ast_value_node(allocator, value);
   }
@@ -168,7 +172,9 @@ ast_node_t builtin_alignof(context_t ctx, size_t argc, ast_node_t *argv) {
     value_t err = create_error(ctx, "__typeof__ require 1 argument");
     return create_ast_value_node(allocator, err);
   }
+  bool is_comptime = context_set_comptime(ctx, false);
   value_t value = resolve_expression(ctx, argv[0]);
+  context_set_comptime(ctx, is_comptime);
   if (value_is_error(value)) {
     return create_ast_value_node(allocator, value);
   }
@@ -186,7 +192,9 @@ ast_node_t builtin_sizeof(context_t ctx, size_t argc, ast_node_t *argv) {
     value_t err = create_error(ctx, "__typeof__ require 1 argument");
     return create_ast_value_node(allocator, err);
   }
+  bool is_comptime = context_set_comptime(ctx, false);
   value_t value = resolve_expression(ctx, argv[0]);
+  context_set_comptime(ctx, is_comptime);
   if (value_is_error(value)) {
     return create_ast_value_node(allocator, value);
   }
@@ -204,7 +212,9 @@ ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
     value_t err = create_error(ctx, "__print__ require 1 argument");
     return create_ast_value_node(allocator, err);
   }
+  bool is_comptime = context_set_comptime(ctx, false);
   value_t fmt = resolve_expression(ctx, argv[0]);
+  context_set_comptime(ctx, is_comptime);
   if (value_is_error(fmt)) {
     return create_ast_value_node(allocator, fmt);
   }
@@ -225,7 +235,9 @@ ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
         if (offset >= argc) {
           string_concat(str, allocator, "%v");
         } else {
+          bool is_comptime = context_set_comptime(ctx, false);
           value_t val = resolve_expression(ctx, argv[offset++]);
+          context_set_comptime(ctx, is_comptime);
           if (value_is_error(val)) {
             allocator_free(allocator, str);
             return create_ast_value_node(allocator, val);

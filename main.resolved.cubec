@@ -1,16 +1,6 @@
-struct Test {
-    id: i32;
-    pub func create(id: i32): __self__ {
-        return .{
-            .id = id
-        };
-    }
+template func add(a: infer, b: typeof(a)): typeof(a) {
+    return a + b;
 }
-func init(id: i32): Test {
-    return .create(id);
-}
-pub func main(): void {
-    const id = 234;
-    const item = init(id);
-    __print__("%v", item);
+pub func main(argc: i32, argv: [*]str): void {
+    print("%v", add(1@u32, 2@u32));
 }
