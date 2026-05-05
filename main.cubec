@@ -1,4 +1,5 @@
-extern func printf(fmt:str,...):i32;
-func main(): void {
-    _ = printf("hello world,%d %d %d",1,2,3);
+extern func printf(fmt: str, ...): i32;
+func main(argc: i32, argv: [*]str): i32 {
+    _ = printf("hello world\n");
+    return 0;
 }
