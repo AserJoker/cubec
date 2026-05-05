@@ -1,7 +1,4 @@
-template func write(...args: infer): i32 {
-    print("%v", args);
-    return 0;
-}
+extern func printf(fmt:str,...):i32;
 func main(): void {
-    comptime const val = write(1,2,3,4,5);
+    _ = printf("hello world,%d %d %d",1,2,3);
 }

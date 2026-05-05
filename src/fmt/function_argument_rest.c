@@ -17,5 +17,7 @@ void fmt_function_argument_rest(allocator_t allocator, ast_node_t node,
     stream_write_location(stream, mut->loc);
     stream_write(stream, " ");
   }
-  fmt_expression(allocator, type, stream);
+  if (type) {
+    fmt_expression(allocator, type, stream);
+  }
 }

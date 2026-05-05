@@ -90,7 +90,8 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
       }
       allocator_free(allocator, name);
     } else {
-      argc--;
+      argv[idx].mut = true;
+      argv[idx].type = NULL;
       break;
     }
   }

@@ -380,6 +380,9 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       argument_t *info = array_get(meta->arguments, idx);
       ast_node_t identifier = ast_get_child(arg, "identifier");
       if (arg->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
+        if (!info->type) {
+          break;
+        }
         if (type_get_kind(info->type) != TYPE_KIND_SLICE) {
           result =
               create_error(ctx, "rest argument %" PRIuPTR " is not slice", idx);
@@ -521,7 +524,11 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
     if (!argv[idx].mut) {
       len += strlen("const ");
     }
-    len += strlen(type_get_id(argv[idx].type));
+    if (argv[idx].type) {
+      len += strlen(type_get_id(argv[idx].type));
+    } else {
+      len += 3;
+    }
   }
   char id[len + 1];
   size_t offset = 0;
@@ -540,9 +547,14 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
       strcpy(&id[offset], "const ");
       offset += strlen("const ");
     }
-    const char *type_id = type_get_id(argv[idx].type);
-    strcpy(&id[offset], type_id);
-    offset += strlen(type_id);
+    if (argv[idx].type) {
+      const char *type_id = type_get_id(argv[idx].type);
+      strcpy(&id[offset], type_id);
+      offset += strlen(type_id);
+    } else {
+      strcpy(&id[offset], "...");
+      offset += 3;
+    }
   }
   id[offset++] = ')';
   id[offset++] = ':';
@@ -559,7 +571,11 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
       if (!argv[idx].mut) {
         len += strlen("const ");
       }
-      len += strlen(type_get_id(argv[idx].type));
+      if (argv[idx].type) {
+        len += strlen(type_get_id(argv[idx].type));
+      } else {
+        len += 3;
+      }
     }
     char name[len];
     offset = 0;
@@ -578,9 +594,14 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
         strcpy(&id[offset], "const ");
         offset += strlen("const ");
       }
-      const char *type_name = type_get_name(argv[idx].type);
-      strcpy(&name[offset], type_name);
-      offset += strlen(type_name);
+      if (argv[idx].type) {
+        const char *type_name = type_get_name(argv[idx].type);
+        strcpy(&name[offset], type_name);
+        offset += strlen(type_name);
+      } else {
+        strcpy(&name[offset], "...");
+        offset += 3;
+      }
     }
     name[offset++] = ')';
     name[offset++] = ':';
