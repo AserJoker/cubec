@@ -11,6 +11,7 @@
 #include "engine/error.h"
 #include "engine/interrupt.h"
 #include "engine/module.h"
+#include "engine/ptr.h"
 #include "engine/scope.h"
 #include "engine/str.h"
 #include "engine/type.h"
@@ -157,7 +158,19 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       if (arg->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
         // TODO: rest
       } else {
-        value = value_safe_convert(argv[idx], ctx, t);
+        type_t vt = value_get_type(argv[idx]);
+        value = argv[idx];
+        if (type_get_kind(vt) == TYPE_KIND_STR) {
+          if (!args[idx].mut && type_get_kind(t) == TYPE_KIND_PARRAY) {
+            type_t base_type = ptr_type_get_type(t);
+            if (type_get_kind(base_type) == TYPE_KIND_UNSIGNED &&
+                type_get_size(base_type) == sizeof(uint8_t)) {
+              const char *src = *(const char **)value_get_data(value);
+              value = context_create_value(ctx, t, &src, false, true, NULL);
+            }
+          }
+        }
+        value = value_safe_convert(value, ctx, t);
         if (value_is_error(value)) {
           result = value;
           goto onfinish;
@@ -237,7 +250,19 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       if (arg->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
         // TODO: rest
       } else {
-        value = value_safe_convert(argv[idx], ctx, t);
+        value = argv[idx];
+        type_t vt = value_get_type(value);
+        if (type_get_kind(vt) == TYPE_KIND_STR) {
+          if (!args[idx].mut && type_get_kind(t) == TYPE_KIND_PARRAY) {
+            type_t base_type = ptr_type_get_type(t);
+            if (type_get_kind(base_type) == TYPE_KIND_UNSIGNED &&
+                type_get_size(base_type) == sizeof(uint8_t)) {
+              const char *src = *(const char **)value_get_data(value);
+              value = context_create_value(ctx, t, &src, false, true, NULL);
+            }
+          }
+        }
+        value = value_safe_convert(value, ctx, t);
         if (value_is_error(value)) {
           result = value;
           goto onfinish;
@@ -290,7 +315,21 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
               create_error(ctx, "argument %" PRIuPTR " is not comptime", idx);
           goto onfinish;
         }
-        value = value_safe_convert(argv[idx], ctx, info->type);
+        type_t vt = value_get_type(argv[idx]);
+        value = argv[idx];
+        if (type_get_kind(vt) == TYPE_KIND_STR) {
+
+          if (!info->mut && type_get_kind(info->type) == TYPE_KIND_PARRAY) {
+            type_t base_type = ptr_type_get_type(info->type);
+            if (type_get_kind(base_type) == TYPE_KIND_UNSIGNED &&
+                type_get_size(base_type) == sizeof(uint8_t)) {
+              const char *src = *(const char **)value_get_data(value);
+              value = context_create_value(ctx, info->type, &src, false, true,
+                                           NULL);
+            }
+          }
+        }
+        value = value_safe_convert(value, ctx, info->type);
         if (value_is_error(value)) {
           result = value;
           goto onfinish;
