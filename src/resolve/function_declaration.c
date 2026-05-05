@@ -15,6 +15,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <unistd.h>
 value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   ast_node_t type_node = ast_get_child(node, "type");
   ast_node_t arguments_node = ast_get_child(node, "arguments");
@@ -128,7 +129,8 @@ value_t resolve_function_declaration(context_t ctx, value_t function) {
   ast_node_t kind = ast_get_child(node, "kind");
   ast_node_t body = ast_get_child(node, "body");
   if (kind && (location_is(kind->loc, "comptime") ||
-               location_is(kind->loc, "template"))) {
+               location_is(kind->loc, "template") ||
+               location_is(kind->loc, "extern"))) {
     return context_get_undefined(ctx);
   }
   type_t function_type = value_get_type(function);

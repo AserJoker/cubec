@@ -18,6 +18,8 @@ type_t create_function_type(context_t ctx, type_t type, size_t argc,
 value_t create_function(context_t ctx, type_t function_type, ast_node_t node);
 value_t create_comptime_function(context_t ctx, ast_node_t node);
 value_t create_template_function(context_t ctx, ast_node_t node);
+value_t create_native_function(context_t ctx, function_handle_t native,
+                               const char *name);
 type_t function_type_get_type(type_t self);
 bool function_type_is_variadic(type_t self);
 array_t function_type_get_arguments(type_t self);

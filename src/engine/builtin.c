@@ -130,7 +130,7 @@ static string_t value_to_str(context_t ctx, value_t self) {
 ast_node_t builtin_error(context_t ctx, size_t argc, ast_node_t *argv) {
   allocator_t allocator = context_get_allocator(ctx);
   if (argc < 1) {
-    value_t err = create_error(ctx, "__error__ require fmt argument");
+    value_t err = create_error(ctx, "error require fmt argument");
     return create_ast_value_node(allocator, err);
   }
   bool is_comptime = context_set_comptime(ctx, false);
@@ -153,7 +153,7 @@ ast_node_t builtin_error(context_t ctx, size_t argc, ast_node_t *argv) {
 ast_node_t builtin_typeof(context_t ctx, size_t argc, ast_node_t *argv) {
   allocator_t allocator = context_get_allocator(ctx);
   if (argc != 1) {
-    value_t err = create_error(ctx, "__typeof__ require 1 argument");
+    value_t err = create_error(ctx, "typeof require 1 argument");
     return create_ast_value_node(allocator, err);
   }
   bool is_comptime = context_set_comptime(ctx, false);
@@ -169,7 +169,7 @@ ast_node_t builtin_typeof(context_t ctx, size_t argc, ast_node_t *argv) {
 ast_node_t builtin_alignof(context_t ctx, size_t argc, ast_node_t *argv) {
   allocator_t allocator = context_get_allocator(ctx);
   if (argc != 1) {
-    value_t err = create_error(ctx, "__typeof__ require 1 argument");
+    value_t err = create_error(ctx, "alignof require 1 argument");
     return create_ast_value_node(allocator, err);
   }
   bool is_comptime = context_set_comptime(ctx, false);
@@ -189,7 +189,7 @@ ast_node_t builtin_alignof(context_t ctx, size_t argc, ast_node_t *argv) {
 ast_node_t builtin_sizeof(context_t ctx, size_t argc, ast_node_t *argv) {
   allocator_t allocator = context_get_allocator(ctx);
   if (argc != 1) {
-    value_t err = create_error(ctx, "__typeof__ require 1 argument");
+    value_t err = create_error(ctx, "sizeof require 1 argument");
     return create_ast_value_node(allocator, err);
   }
   bool is_comptime = context_set_comptime(ctx, false);
@@ -209,7 +209,7 @@ ast_node_t builtin_sizeof(context_t ctx, size_t argc, ast_node_t *argv) {
 ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
   allocator_t allocator = context_get_allocator(ctx);
   if (argc < 1) {
-    value_t err = create_error(ctx, "__print__ require 1 argument");
+    value_t err = create_error(ctx, "print require 1 argument");
     return create_ast_value_node(allocator, err);
   }
   bool is_comptime = context_set_comptime(ctx, false);

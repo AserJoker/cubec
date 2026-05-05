@@ -9,6 +9,7 @@ extern "C" {
 typedef enum _type_kind_t {
   TYPE_KIND_INTERRUPT,
   TYPE_KIND_ERROR,
+  TYPE_KIND_FORMAT_ERROR,
   TYPE_KIND_VOID,
   TYPE_KIND_NULL,
   TYPE_KIND_TYPE,

@@ -68,5 +68,9 @@ void fmt_function_delcarator(allocator_t allocator, ast_node_t node,
   }
   stream_write(stream, "): ");
   fmt_expression(allocator, type, stream);
-  fmt_function_body(allocator, body, stream);
+  if (body) {
+    fmt_function_body(allocator, body, stream);
+  } else {
+    stream_write(stream, ";");
+  }
 }

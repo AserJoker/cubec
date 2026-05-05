@@ -92,6 +92,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   ast_node_t arguments = ast_get_child(declar->node, "arguments");
   ast_node_t body = ast_get_child(declar->node, "body");
   ast_node_t return_type = ast_get_child(declar->node, "type");
+  ast_node_t kind = ast_get_child(declar->node, "kind");
 
   value_t current_function = context_set_function(ctx, self);
   context_type_t current_type = context_set_type(ctx, CONTEXT_TYPE_FUNCTION);
@@ -146,9 +147,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       } else {
         value_t vt = resolve_type(ctx, type);
         if (value_is_error(vt)) {
-          const char *msg = *(const char **)value_get_data(vt);
-          result =
-              create_error(ctx, "function eval failed\n  caused by:\n%s", msg);
+          result = vt;
           goto onfinish;
         }
         t = *(type_t *)value_get_data(vt);
@@ -176,8 +175,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     }
     value_t vrtype = resolve_type(ctx, return_type);
     if (value_is_error(vrtype)) {
-      const char *msg = *(const char **)value_get_data(vrtype);
-      result = create_error(ctx, "function eval failed\n  caused by:\n%s", msg);
+      result = vrtype;
       goto onfinish;
     }
     type_t rtype = *(type_t *)value_get_data(vrtype);
@@ -229,9 +227,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       } else {
         value_t vt = resolve_type(ctx, type);
         if (value_is_error(vt)) {
-          const char *msg = *(const char **)value_get_data(vt);
-          result =
-              create_error(ctx, "function eval failed\n  caused by:\n%s", msg);
+          result = vt;
           goto onfinish;
         }
         t = *(type_t *)value_get_data(vt);
@@ -259,8 +255,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     }
     value_t vrtype = resolve_type(ctx, return_type);
     if (value_is_error(vrtype)) {
-      const char *msg = *(const char **)value_get_data(vrtype);
-      result = create_error(ctx, "function eval failed\n  caused by:\n%s", msg);
+      result = vrtype;
       goto onfinish;
     }
     type_t rtype = *(type_t *)value_get_data(vrtype);
@@ -317,12 +312,14 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     function_meta_t meta = type_get_meta(function_type);
     result = context_create_value(ctx, meta->type, NULL, false, false, NULL);
   } else {
+    if (!body) {
+      result = create_error(ctx, "cannot call extern function in comptime");
+      goto onfinish;
+    }
     context_set_comptime(ctx, true);
     result = resolve_function_body(ctx, body);
   }
   if (value_is_error(result)) {
-    const char *msg = *(const char **)value_get_data(result);
-    result = create_error(ctx, "function eval failed\n  caused by:\n%s", msg);
     goto onfinish;
   }
   if (value_is_interrupt(result)) {
@@ -611,6 +608,45 @@ value_t create_template_function(context_t ctx, ast_node_t node) {
   }
   type_t type = context_load_type(ctx, "template_func");
   function_declar declar = context_store_function_declar(ctx, node, id);
+  value_t func = create_value(allocator, type, false, &declar, true);
+  allocator_free(allocator, id);
+  module_add_function(module, func);
+  return func;
+}
+
+value_t create_native_function(context_t ctx, function_handle_t handle,
+                               const char *name) {
+  allocator_t allocator = context_get_allocator(ctx);
+  module_t module = context_get_module(ctx);
+  const char *parent_name = NULL;
+  value_t current_function = context_get_function(ctx);
+  if (current_function) {
+    value_t function_name = function_get_id(ctx, current_function);
+    parent_name = *(const char **)value_get_data(function_name);
+  } else {
+    type_t self = context_get_self(ctx);
+    parent_name = type_get_id(self);
+  }
+  const char *func_name = name;
+  size_t len = strlen(parent_name) + strlen(func_name) + 2;
+  char base_fullname[len + 1];
+  sprintf(base_fullname, "%s_%s", parent_name, func_name);
+  char *id = NULL;
+  if (module_get_function(module, base_fullname)) {
+    for (size_t idx = 0;; idx++) {
+      size_t len = snprintf(NULL, 0, "%s_%" PRIuPTR, base_fullname, idx);
+      char fullname[len + 1];
+      sprintf(fullname, "%s_%" PRIuPTR, base_fullname, idx);
+      if (!module_get_function(module, fullname)) {
+        id = create_cstring(allocator, fullname);
+        break;
+      }
+    }
+  } else {
+    id = create_cstring(allocator, base_fullname);
+  }
+  type_t type = context_load_type(ctx, "comptime_func");
+  function_declar declar = context_store_native_declar(ctx, handle, id);
   value_t func = create_value(allocator, type, false, &declar, true);
   allocator_free(allocator, id);
   module_add_function(module, func);

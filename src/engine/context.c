@@ -393,3 +393,26 @@ function_declar context_store_function_declar(context_t self, ast_node_t node,
   hash_map_set(self->func_declars, _id, declar, NULL, NULL);
   return declar;
 }
+function_declar context_store_native_declar(context_t self,
+                                            function_handle_t native,
+                                            const char *id) {
+  hash_map_delete(self->func_declars, id, NULL, NULL);
+  function_declar declar =
+      allocator_alloc(self->allocator, sizeof(struct _function_declar),
+                      (dispose_fn_t)function_declar_dispose);
+  declar->bind = self->self;
+  declar->global = self->global;
+  declar->node = NULL;
+  declar->native = native;
+  char *_id = create_cstring(self->allocator, id);
+  declar->id = _id;
+  hash_map_initialize_t cloure_initialize = {
+      .autofree_key = true,
+      .autofree_value = true,
+      .hash = (hash_fn_t)cstring_sdb,
+      .compare = (compare_fn_t)strcmp,
+  };
+  declar->closure = create_hash_map(self->allocator, &cloure_initialize);
+  hash_map_set(self->func_declars, _id, declar, NULL, NULL);
+  return declar;
+}

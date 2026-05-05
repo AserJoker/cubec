@@ -6,6 +6,7 @@
 #include "core/string.h"
 #include "engine/module.h"
 #include "engine/scope.h"
+#include "engine/value.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -19,9 +20,10 @@ typedef enum _context_type_t {
 } context_type_t;
 
 typedef struct _context_t *context_t;
-
+typedef value_t (*function_handle_t)(context_t ctx, size_t argc, value_t *argv);
 typedef struct _function_declar {
   ast_node_t node;
+  function_handle_t native;
   type_t global;
   type_t bind;
   const char *id;
@@ -73,6 +75,9 @@ value_t context_get_function(context_t ctx);
 function_declar context_load_function_declar(context_t self, const char *id);
 function_declar context_store_function_declar(context_t self, ast_node_t node,
                                               const char *id);
+function_declar context_store_native_declar(context_t self,
+                                            function_handle_t native,
+                                            const char *id);
 #ifdef __cplusplus
 }
 #endif

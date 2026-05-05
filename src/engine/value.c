@@ -498,7 +498,8 @@ value_t value_default_address_of(value_t self, struct _context_t *ctx) {
 }
 bool value_is_error(value_t value) {
   type_t type = value_get_type(value);
-  return type_get_kind(type) == TYPE_KIND_ERROR;
+  return type_get_kind(type) == TYPE_KIND_ERROR ||
+         type_get_kind(type) == TYPE_KIND_FORMAT_ERROR;
 }
 bool value_is_interrupt(value_t value) {
   type_t type = value_get_type(value);

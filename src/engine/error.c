@@ -16,12 +16,14 @@ void error_init(context_t ctx) {
       create_type(allocator, TYPE_KIND_ERROR, sizeof(const char *),
                   sizeof(const char *), "error", "error", NULL, NULL);
   context_store_type(ctx, error_t);
-  create_type_value(ctx, error_t, false,  "error");
+  type_t format_error_t = create_type(
+      allocator, TYPE_KIND_FORMAT_ERROR, sizeof(const char *),
+      sizeof(const char *), "format_error", "format_error", NULL, NULL);
+  context_store_type(ctx, format_error_t);
 }
 value_t create_error(context_t ctx, const char *fmt, ...) {
   allocator_t allocator = context_get_allocator(ctx);
-  value_t vtype = context_load(ctx, "error");
-  type_t type = *(type_t *)value_get_data(vtype);
+  type_t type = context_load_type(ctx, "error");
   va_list args;
   va_start(args, fmt);
   size_t len = vsnprintf(NULL, 0, fmt, args);
@@ -36,8 +38,7 @@ value_t create_error(context_t ctx, const char *fmt, ...) {
 value_t create_comptime_error(context_t ctx, ast_node_t node, const char *fmt,
                               ...) {
   allocator_t allocator = context_get_allocator(ctx);
-  value_t vtype = context_load(ctx, "error");
-  type_t type = *(type_t *)value_get_data(vtype);
+  type_t type = context_load_type(ctx, "format_error");
   size_t len = snprintf(NULL, 0, "%" PRIuPTR " |", node->loc.begin.line + 1);
   char prefix[len + 1];
   sprintf(prefix, "%" PRIuPTR " |", node->loc.begin.line + 1);
@@ -87,6 +88,10 @@ value_t create_comptime_error(context_t ctx, ast_node_t node, const char *fmt,
   return context_create_value(ctx, type, &str, false, true, NULL);
 }
 value_t convert_comptime_error(context_t ctx, ast_node_t node, value_t err) {
+  type_t type = value_get_type(err);
+  if (type_get_kind(type) == TYPE_KIND_FORMAT_ERROR) {
+    return context_clone_value(ctx, err);
+  }
   const char *message = error_get_message(err);
   return create_comptime_error(ctx, node, message);
 }
