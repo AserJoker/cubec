@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CORE_HASH_
-#define _H_CUBEC_CORE_HASH_
+#ifndef _H_CORE_HASH_
+#define _H_CORE_HASH_
 #include <stdbool.h>
 #include <stdint.h>
 #ifdef __cplusplus

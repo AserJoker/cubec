@@ -15,6 +15,7 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   ast_node_t type_node = ast_get_child(node, "type");
@@ -62,34 +63,36 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
     ast_node_t type = ast_get_child(argument, "type");
     ast_node_t const_ = ast_get_child(argument, "const");
     ast_node_t identifier = ast_get_child(argument, "identifier");
-    if (!identifier) {
-      context_pop_scope(ctx);
-      return create_comptime_error(ctx, argument,
-                                   "missing argument identifier");
-    }
-    argv[idx].mut = const_ == NULL;
-    value_t vtype = resolve_type(ctx, type);
-    if (value_is_error(vtype)) {
-      context_pop_scope(ctx);
-      return vtype;
-    }
-    argv[idx].type = *(type_t *)value_get_data(vtype);
-    if (type_get_kind(argv[idx].type) == TYPE_KIND_TYPE) {
-      if (!kind || !location_is(kind->loc, "comptime")) {
+    if (identifier) {
+      argv[idx].mut = const_ == NULL;
+      value_t vtype = resolve_type(ctx, type);
+      if (value_is_error(vtype)) {
         context_pop_scope(ctx);
-        return create_comptime_error(ctx, argument,
-                                     "type value only declared with comptime");
+        return vtype;
       }
-    }
-    char *name = location_get(identifier->loc, allocator);
-    value_t err = context_create_value(ctx, argv[idx].type, NULL, argv[idx].mut,
-                                       true, name);
-    if (value_is_error(err)) {
+      argv[idx].type = *(type_t *)value_get_data(vtype);
+      if (type_get_kind(argv[idx].type) == TYPE_KIND_TYPE) {
+        if (!kind || !location_is(kind->loc, "comptime")) {
+          context_pop_scope(ctx);
+          return create_comptime_error(
+              ctx, argument, "type value only declared with comptime");
+        }
+      }
+      char *name = location_get(identifier->loc, allocator);
+      if (strcmp(name, "_") != 0) {
+        value_t err = context_create_value(ctx, argv[idx].type, NULL,
+                                           argv[idx].mut, true, name);
+        if (value_is_error(err)) {
+          allocator_free(allocator, name);
+          context_pop_scope(ctx);
+          return convert_comptime_error(ctx, argument, err);
+        }
+      }
       allocator_free(allocator, name);
-      context_pop_scope(ctx);
-      return convert_comptime_error(ctx, argument, err);
+    } else {
+      argc--;
+      break;
     }
-    allocator_free(allocator, name);
   }
   value_t vreturn_type = resolve_type(ctx, type_node);
   if (value_is_error(vreturn_type)) {

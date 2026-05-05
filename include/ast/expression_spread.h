@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_AST_EXPRESSION_SPREAD_
-#define _H_CUBEC_AST_EXPRESSION_SPREAD_
+#ifndef _H_AST_EXPRESSION_SPREAD_
+#define _H_AST_EXPRESSION_SPREAD_
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/position.h"

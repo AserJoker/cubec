@@ -6,6 +6,7 @@
 #include "core/hash_map.h"
 #include "core/location.h"
 #include "core/string.h"
+#include "engine/array.h"
 #include "engine/bool.h"
 #include "engine/context.h"
 #include "engine/error.h"
@@ -13,8 +14,10 @@
 #include "engine/module.h"
 #include "engine/ptr.h"
 #include "engine/scope.h"
+#include "engine/slice.h"
 #include "engine/str.h"
 #include "engine/type.h"
+#include "engine/unsigned.h"
 #include "engine/value.h"
 #include "resolve/function_body.h"
 #include "resolve/type.h"
@@ -144,7 +147,15 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       args[idx].mut = mut == NULL;
       type_t t = NULL;
       if (location_is(type->loc, "infer")) {
-        t = value_get_type(argv[idx]);
+        if (arg->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
+          if (idx >= argc) {
+            t = create_slice_type(ctx, context_load_type(ctx, "void"));
+          } else {
+            t = create_slice_type(ctx, value_get_type(argv[idx]));
+          }
+        } else {
+          t = value_get_type(argv[idx]);
+        }
       } else {
         value_t vt = resolve_type(ctx, type);
         if (value_is_error(vt)) {
@@ -156,7 +167,43 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       args[idx].type = t;
       value_t value = NULL;
       if (arg->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
-        // TODO: rest
+        if (type_get_kind(t) != TYPE_KIND_SLICE) {
+          result =
+              create_error(ctx, "rest argument %" PRIuPTR " is not slice", idx);
+          goto onfinish;
+        }
+        type_t base_type = slice_type_get_type(t);
+        size_t len = argc - idx;
+        type_t array_type = create_array_type(ctx, base_type, len);
+        if (context_is_comptime(ctx)) {
+          uint8_t array_data[type_get_size(array_type)];
+          value_t arr = context_create_value(ctx, array_type, array_data, false,
+                                             true, NULL);
+          for (size_t i = idx; idx + i < argc; i++) {
+            value_t err =
+                value_set(arr, ctx, create_comptime_u64(ctx, i, false, NULL),
+                          argv[idx + i]);
+            if (value_is_error(err)) {
+              result = err;
+              goto onfinish;
+            }
+          }
+          void *base_data = value_get_data(arr);
+          value = create_comptime_slice(ctx, t, base_data, 0, len);
+        } else {
+          value_t arr =
+              context_create_value(ctx, array_type, NULL, true, false, NULL);
+          for (size_t i = idx; idx + i < argc; i++) {
+            value_t err =
+                value_set(arr, ctx, create_comptime_u64(ctx, i, false, NULL),
+                          argv[idx + i]);
+            if (value_is_error(err)) {
+              result = err;
+              goto onfinish;
+            }
+          }
+          value = context_create_value(ctx, t, NULL, false, false, NULL);
+        }
       } else {
         type_t vt = value_get_type(argv[idx]);
         value = argv[idx];
@@ -178,8 +225,9 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       }
       char *name = location_get(identifier->loc, allocator);
       void *data = value_get_data(value);
-      value_t err = context_create_value(ctx, args[idx].type, NULL,
-                                         args[idx].mut, false, name);
+      value_t err =
+          context_create_value(ctx, args[idx].type, data, args[idx].mut,
+                               value_is_comptime(value), name);
       allocator_free(allocator, name);
       if (value_is_error(err)) {
         result = err;
@@ -198,11 +246,13 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
         context_create_value(ctx, function_type, &declar, false, true, NULL);
     context_set_function(ctx, function);
     context_push_scope(ctx);
-    context_set_comptime(ctx, false);
-    value_t err = resolve_function_body(ctx, body);
-    if (value_is_error(err)) {
-      result = err;
-      goto onfinish;
+    if (is_runtime) {
+      context_set_comptime(ctx, false);
+      value_t err = resolve_function_body(ctx, body);
+      if (value_is_error(err)) {
+        result = err;
+        goto onfinish;
+      }
     }
   } else if (type_get_kind(function_type) == TYPE_KIND_COMPTIME_FUNCTION) {
     size_t size = 0;
@@ -229,14 +279,13 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       ast_node_t mut = ast_get_child(arg, "mut");
       ast_node_t type = ast_get_child(arg, "type");
       args[idx].mut = mut == NULL;
-      if (!value_is_comptime(argv[idx])) {
-        result =
-            create_error(ctx, "argument %" PRIuPTR " is not comptime", idx);
-        goto onfinish;
-      }
       type_t t = NULL;
       if (location_is(type->loc, "infer")) {
-        t = value_get_type(argv[idx]);
+        if (idx >= argc) {
+          t = create_slice_type(ctx, context_load_type(ctx, "void"));
+        } else {
+          t = create_slice_type(ctx, value_get_type(argv[idx]));
+        }
       } else {
         value_t vt = resolve_type(ctx, type);
         if (value_is_error(vt)) {
@@ -248,9 +297,35 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       args[idx].type = t;
       value_t value = NULL;
       if (arg->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
-        // TODO: rest
+        if (type_get_kind(t) != TYPE_KIND_SLICE) {
+          result =
+              create_error(ctx, "rest argument %" PRIuPTR " is not slice", idx);
+          goto onfinish;
+        }
+        type_t base_type = slice_type_get_type(t);
+        size_t len = argc - idx;
+        type_t array_type = create_array_type(ctx, base_type, len);
+        uint8_t array_data[type_get_size(array_type)];
+        value_t arr = context_create_value(ctx, array_type, array_data, false,
+                                           true, NULL);
+        for (size_t i = idx; idx + i < argc; i++) {
+          value_t err =
+              value_set(arr, ctx, create_comptime_u64(ctx, i, false, NULL),
+                        argv[idx + i]);
+          if (value_is_error(err)) {
+            result = err;
+            goto onfinish;
+          }
+        }
+        void *base_data = value_get_data(arr);
+        value = create_comptime_slice(ctx, t, base_data, 0, len);
       } else {
         value = argv[idx];
+        if (!value_is_comptime(value)) {
+          result =
+              create_error(ctx, "argument %" PRIuPTR " is not comptime", idx);
+          goto onfinish;
+        }
         type_t vt = value_get_type(value);
         if (type_get_kind(vt) == TYPE_KIND_STR) {
           if (!args[idx].mut && type_get_kind(t) == TYPE_KIND_PARRAY) {
@@ -293,9 +368,6 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   } else {
     function_meta_t meta = type_get_meta(function_type);
     size_t size = array_get_size(meta->arguments);
-    if (meta->variadic) {
-      size--;
-    }
     if (argc < size || (argc > size && !meta->variadic)) {
       result = create_error(
           ctx, "function requires %" PRIuPTR " arguments, received %" PRIuPTR,
@@ -304,19 +376,56 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     }
     for (size_t idx = 0; idx < array_get_size(meta->arguments); idx++) {
       ast_node_t arg = ast_get_item(arguments, idx);
+      value_t value = NULL;
       argument_t *info = array_get(meta->arguments, idx);
       ast_node_t identifier = ast_get_child(arg, "identifier");
-      value_t value = NULL;
       if (arg->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
-        // TODO: rest
+        if (type_get_kind(info->type) != TYPE_KIND_SLICE) {
+          result =
+              create_error(ctx, "rest argument %" PRIuPTR " is not slice", idx);
+          goto onfinish;
+        }
+        type_t base_type = slice_type_get_type(info->type);
+        size_t len = argc - idx;
+        type_t array_type = create_array_type(ctx, base_type, len);
+        if (context_is_comptime(ctx)) {
+          uint8_t array_data[type_get_size(array_type)];
+          value_t arr = context_create_value(ctx, array_type, array_data, false,
+                                             true, NULL);
+          for (size_t i = idx; idx + i < argc; i++) {
+            value_t err =
+                value_set(arr, ctx, create_comptime_u64(ctx, i, false, NULL),
+                          argv[idx + i]);
+            if (value_is_error(err)) {
+              result = err;
+              goto onfinish;
+            }
+          }
+          void *base_data = value_get_data(arr);
+          value = create_comptime_slice(ctx, info->type, base_data, 0, len);
+        } else {
+          value_t arr =
+              context_create_value(ctx, array_type, NULL, true, false, NULL);
+          for (size_t i = idx; idx + i < argc; i++) {
+            value_t err =
+                value_set(arr, ctx, create_comptime_u64(ctx, i, false, NULL),
+                          argv[idx + i]);
+            if (value_is_error(err)) {
+              result = err;
+              goto onfinish;
+            }
+          }
+          value =
+              context_create_value(ctx, info->type, NULL, false, false, NULL);
+        }
       } else {
+        value = argv[idx];
         if (context_is_comptime(ctx) && !value_is_comptime(argv[idx])) {
           result =
               create_error(ctx, "argument %" PRIuPTR " is not comptime", idx);
           goto onfinish;
         }
         type_t vt = value_get_type(argv[idx]);
-        value = argv[idx];
         if (type_get_kind(vt) == TYPE_KIND_STR) {
 
           if (!info->mut && type_get_kind(info->type) == TYPE_KIND_PARRAY) {
@@ -328,11 +437,11 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
                                            NULL);
             }
           }
-        }
-        value = value_safe_convert(value, ctx, info->type);
-        if (value_is_error(value)) {
-          result = value;
-          goto onfinish;
+          value = value_safe_convert(value, ctx, info->type);
+          if (value_is_error(value)) {
+            result = value;
+            goto onfinish;
+          }
         }
       }
       char *name = location_get(identifier->loc, allocator);

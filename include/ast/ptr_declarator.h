@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_AST_PTR_DECLARATOR_
-#define _H_CUBEC_AST_PTR_DECLARATOR_
+#ifndef _H_AST_PTR_DECLARATOR_
+#define _H_AST_PTR_DECLARATOR_
 #include "ast/node.h"
 #include <stdint.h>
 #ifdef __cplusplus

@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CORE_ALLOCATOR_
-#define _H_CUBEC_CORE_ALLOCATOR_
+#ifndef _H_CORE_ALLOCATOR_
+#define _H_CORE_ALLOCATOR_
 #ifdef __cplusplus
 extern "C" {
 #endif

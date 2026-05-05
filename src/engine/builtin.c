@@ -8,6 +8,7 @@
 #include "engine/error.h"
 #include "engine/float.h"
 #include "engine/integer.h"
+#include "engine/slice.h"
 #include "engine/struct.h"
 #include "engine/type.h"
 #include "engine/unsigned.h"
@@ -89,6 +90,28 @@ static string_t value_to_str(context_t ctx, value_t self) {
         const char *cstr = string_get(item_str);
         string_concat(str, allocator, cstr);
         allocator_free(allocator, item_str);
+      }
+      string_concat(str, allocator, "]");
+      break;
+    }
+    case TYPE_KIND_SLICE: {
+      string_concat(str, allocator, type_get_name(type));
+      string_concat(str, allocator, "[");
+      if (value_is_comptime(self)) {
+        size_t size = slice_get_len(self);
+        for (size_t idx = 0; idx < size; idx++) {
+          if (idx != 0) {
+            string_concat(str, allocator, ", ");
+          }
+          value_t item =
+              value_get(self, ctx, create_comptime_u64(ctx, idx, false, NULL));
+          string_t item_str = value_to_str(ctx, item);
+          const char *cstr = string_get(item_str);
+          string_concat(str, allocator, cstr);
+          allocator_free(allocator, item_str);
+        }
+      } else {
+        string_concat(str, allocator, "runtime");
       }
       string_concat(str, allocator, "]");
       break;

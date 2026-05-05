@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CORE_COMPARE_
-#define _H_CUBEC_CORE_COMPARE_
+#ifndef _H_CORE_COMPARE_
+#define _H_CORE_COMPARE_
 #include <stdbool.h>
 #ifdef __cplusplus
 extern "C" {

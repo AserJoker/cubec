@@ -75,8 +75,7 @@ static value_t bool_eq(value_t self, context_t ctx, value_t another) {
   type_t bool_t = value_get_type(self);
   if (type_get_kind(type) != TYPE_KIND_BOOL) {
     another = value_safe_convert(another, ctx, bool_t);
-    type = value_get_type(another);
-    if (type_get_kind(type) == TYPE_KIND_ERROR) {
+    if (value_is_error(another)) {
       return another;
     }
   }
@@ -92,8 +91,7 @@ static value_t bool_ne(value_t self, context_t ctx, value_t another) {
   type_t bool_t = value_get_type(self);
   if (type_get_kind(type) != TYPE_KIND_BOOL) {
     another = value_safe_convert(another, ctx, bool_t);
-    type = value_get_type(another);
-    if (type_get_kind(type) == TYPE_KIND_ERROR) {
+    if (value_is_error(another)) {
       return another;
     }
   }

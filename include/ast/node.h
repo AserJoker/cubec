@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_AST_NODE_
-#define _H_CUBEC_AST_NODE_
+#ifndef _H_AST_NODE_
+#define _H_AST_NODE_
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/array.h"

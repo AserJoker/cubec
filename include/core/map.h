@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CORE_MAP_
-#define _H_CUBEC_CORE_MAP_
+#ifndef _H_CORE_MAP_
+#define _H_CORE_MAP_
 #include "core/allocator.h"
 #include "core/compare.h"
 #include "core/list.h"

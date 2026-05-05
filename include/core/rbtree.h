@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CORE_RBTREE_
-#define _H_CUBEC_CORE_RBTREE_
+#ifndef _H_CORE_RBTREE_
+#define _H_CORE_RBTREE_
 #include <stdbool.h>
 #ifdef __cplusplus
 extern "C" {

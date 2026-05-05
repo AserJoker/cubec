@@ -58,7 +58,7 @@ static value_t _array_set(value_t self, context_t ctx, value_t key,
   } else {
     void *data = value_get_data(self);
     void *value_data = value_get_data(value);
-    memcpy((uint8_t *)data + type_get_size(meta->type) * idx, value,
+    memcpy((uint8_t *)data + type_get_size(meta->type) * idx, value_data,
            type_get_size(meta->type));
     return context_create_weak_value(
         ctx, meta->type, (uint8_t *)data + type_get_size(meta->type) * idx,
@@ -87,13 +87,14 @@ static value_t _array_get(value_t self, context_t ctx, value_t key) {
     return create_error(
         ctx, "array index %" PRIuPTR " is past the end of the array", idx);
   }
+  bool mut = value_is_mut(self);
   if (!value_is_comptime(self)) {
-    return context_create_value(ctx, meta->type, NULL, false, false, NULL);
+    return context_create_value(ctx, meta->type, NULL, mut, false, NULL);
   } else {
     void *data = value_get_data(self);
     return context_create_weak_value(
-        ctx, meta->type, (uint8_t *)data + type_get_size(meta->type) * idx,
-        false, NULL);
+        ctx, meta->type, (uint8_t *)data + type_get_size(meta->type) * idx, mut,
+        NULL);
   }
 }
 

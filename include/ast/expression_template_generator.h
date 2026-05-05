@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_AST_EXPRESSION_TEMPLATE_GENERATOR_
-#define _H_CUBEC_AST_EXPRESSION_TEMPLATE_GENERATOR_
+#ifndef _H_AST_EXPRESSION_TEMPLATE_GENERATOR_
+#define _H_AST_EXPRESSION_TEMPLATE_GENERATOR_
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/position.h"

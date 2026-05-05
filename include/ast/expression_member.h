@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_AST_EXPRESSION_MEMBER_
-#define _H_CUBEC_AST_EXPRESSION_MEMBER_
+#ifndef _H_AST_EXPRESSION_MEMBER_
+#define _H_AST_EXPRESSION_MEMBER_
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/position.h"

@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_PATH_
-#define _H_CUBEC_PATH_
+#ifndef _H_PATH_
+#define _H_PATH_
 
 #include "core/allocator.h"
 #include <stdbool.h>

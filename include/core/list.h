@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CORE_LIST_
-#define _H_CUBEC_CORE_LIST_
+#ifndef _H_CORE_LIST_
+#define _H_CORE_LIST_
 #include "core/allocator.h"
 #include "core/compare.h"
 #include <stdbool.h>

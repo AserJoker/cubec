@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CORE_STRING_
-#define _H_CUBEC_CORE_STRING_
+#ifndef _H_CORE_STRING_
+#define _H_CORE_STRING_
 #include "core/allocator.h"
 #include "core/location.h"
 #include <stdbool.h>

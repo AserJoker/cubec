@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CORE_ARRAY_
-#define _H_CUBEC_CORE_ARRAY_
+#ifndef _H_CORE_ARRAY_
+#define _H_CORE_ARRAY_
 #include "core/allocator.h"
 #include "core/compare.h"
 #include <stdbool.h>

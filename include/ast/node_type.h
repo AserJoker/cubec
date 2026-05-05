@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_AST_NODE_TYPE_
-#define _H_CUBEC_AST_NODE_TYPE_
+#ifndef _H_AST_NODE_TYPE_
+#define _H_AST_NODE_TYPE_
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -61,7 +61,7 @@ typedef enum _ast_node_type_t {
   NODE_TYPE_DECORATOR,
   NODE_TYPE_CALLABLE_DECLARATOR,
   NODE_TYPE_PTR_DECLARATOR,
-  NODE_TYPE_REF_DECLARATOR,
+  NODE_TYPE_SLICE_DECLARATOR,
   NODE_TYPE_TYPE,
   NODE_TYPE_MAX,
 } ast_node_type_t;

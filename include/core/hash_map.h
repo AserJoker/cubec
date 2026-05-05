@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CORE_HASH_MAP_
-#define _H_CUBEC_CORE_HASH_MAP_
+#ifndef _H_CORE_HASH_MAP_
+#define _H_CORE_HASH_MAP_
 #include "core/compare.h"
 #include "core/list.h"
 #include "hash.h"

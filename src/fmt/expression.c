@@ -1,18 +1,21 @@
 #include "fmt/expression.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "fmt/array_declarator.h"
 #include "fmt/callable_declarator.h"
 #include "fmt/expression_assigment.h"
 #include "fmt/expression_binary.h"
 #include "fmt/expression_call.h"
 #include "fmt/expression_compute_member.h"
 #include "fmt/expression_member.h"
+#include "fmt/expression_slice.h"
 #include "fmt/function_declarator.h"
 #include "fmt/initialize_list.h"
 #include "fmt/literal_identifier.h"
 #include "fmt/literal_numeric.h"
 #include "fmt/literal_string.h"
 #include "fmt/ptr_declarator.h"
+#include "fmt/slice_declarator.h"
 #include "fmt/struct_declarator.h"
 void fmt_expression(allocator_t allocator, ast_node_t node, stream_t stream) {
   if (node->type == NODE_TYPE_EXPRESSION_BINARY) {
@@ -41,5 +44,11 @@ void fmt_expression(allocator_t allocator, ast_node_t node, stream_t stream) {
     fmt_expression_compute_member(allocator, node, stream);
   } else if (node->type == NODE_TYPE_EXPRESSION_ASSIGMENT) {
     fmt_expression_assigment(allocator, node, stream);
+  } else if (node->type == NODE_TYPE_SLICE_DECLARATOR) {
+    fmt_slice_declarator(allocator, node, stream);
+  } else if (node->type == NODE_TYPE_ARRAY_DECLARATOR) {
+    fmt_array_declarator(allocator, node, stream);
+  } else if (node->type == NODE_TYPE_EXPRESSION_SLICE) {
+    fmt_expression_slice(allocator, node, stream);
   }
 }

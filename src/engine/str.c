@@ -12,8 +12,7 @@ static value_t str_eq(value_t self, context_t ctx, value_t another) {
   type_t type = value_get_type(another);
   if (type_get_kind(type) != TYPE_KIND_STR) {
     another = value_safe_convert(another, ctx, str_t);
-    type = value_get_type(another);
-    if (type_get_kind(type) == TYPE_KIND_ERROR) {
+    if (value_is_error(another)) {
       return another;
     }
   }
@@ -26,8 +25,7 @@ static value_t str_ne(value_t self, context_t ctx, value_t another) {
   type_t type = value_get_type(another);
   if (type_get_kind(type) != TYPE_KIND_STR) {
     another = value_safe_convert(another, ctx, str_t);
-    type = value_get_type(another);
-    if (type_get_kind(type) == TYPE_KIND_ERROR) {
+    if (value_is_error(another)) {
       return another;
     }
   }

@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_AST_ARRAY_DECLARATOR_
-#define _H_CUBEC_AST_ARRAY_DECLARATOR_
+#ifndef _H_AST_ARRAY_DECLARATOR_
+#define _H_AST_ARRAY_DECLARATOR_
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/position.h"

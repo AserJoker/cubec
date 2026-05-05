@@ -4,7 +4,6 @@
 #include "core/string.h"
 #include "engine/context.h"
 #include "engine/error.h"
-#include "engine/type.h"
 #include "engine/value.h"
 #include <inttypes.h>
 #include <stdbool.h>
@@ -25,7 +24,7 @@ int main(int argc, char *argv[]) {
   context_t ctx = create_context(allocator);
   char *filename = absolute(allocator, "./main.cubec");
   value_t err = context_load_module(ctx, filename);
-  if (type_get_kind(value_get_type(err)) == TYPE_KIND_ERROR) {
+  if (value_is_error(err)) {
     fprintf(stderr, "%s\n", error_get_message(err));
   } else {
     string_t out = context_fmt_module(ctx, filename);

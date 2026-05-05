@@ -21,7 +21,7 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "ast/ptr_declarator.h"
-#include "ast/ref_declarator.h"
+#include "ast/slice_declarator.h"
 #include "ast/struct_declarator.h"
 #include "core/allocator.h"
 #include "core/location.h"
@@ -250,7 +250,7 @@ ast_node_t read_ast_expression19(allocator_t allocator, position_t *position,
   if (node) {
     return node;
   }
-  node = read_ast_ref_declarator(allocator, position, end, filename);
+  node = read_ast_slice_declarator(allocator, position, end, filename);
   if (node) {
     return node;
   }

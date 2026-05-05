@@ -11,12 +11,14 @@
 #include "resolve/expression_call.h"
 #include "resolve/expression_compute_member.h"
 #include "resolve/expression_member.h"
+#include "resolve/expression_slice.h"
 #include "resolve/function_declaration.h"
 #include "resolve/initialize_list.h"
 #include "resolve/literal_identifier.h"
 #include "resolve/literal_numeric.h"
 #include "resolve/literal_string.h"
 #include "resolve/ptr_declarator.h"
+#include "resolve/slice_declarator.h"
 #include "resolve/struct_declarator.h"
 value_t resolve_expression(context_t ctx, ast_node_t node) {
   if (node->type > NODE_TYPE_LIST) {
@@ -54,6 +56,10 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     value = resolve_expression_compute_member(ctx, node);
   } else if (node->type == NODE_TYPE_EXPRESSION_ASSIGMENT) {
     value = resolve_expression_assigment(ctx, node);
+  } else if (node->type == NODE_TYPE_EXPRESSION_SLICE) {
+    value = resolve_expression_slice(ctx, node);
+  } else if (node->type == NODE_TYPE_SLICE_DECLARATOR) {
+    value = resolve_slice_declarator(ctx, node);
   } else if (node->type == NODE_TYPE_VALUE) {
     value = node->value;
   } else {

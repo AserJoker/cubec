@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_AST_STRUCT_FIELD_
-#define _H_CUBEC_AST_STRUCT_FIELD_
+#ifndef _H_AST_STRUCT_FIELD_
+#define _H_AST_STRUCT_FIELD_
 #include "ast/node.h"
 #include <stdint.h>
 #ifdef __cplusplus
