@@ -1,6 +1,5 @@
 #include "ast/initialize_field.h"
 #include "ast/expression.h"
-#include "ast/initialize_list.h"
 #include "ast/literal_identifier.h"
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
@@ -53,10 +52,7 @@ ast_node_t read_ast_initialize_field(allocator_t allocator,
     return err;
   }
   ast_node_t initialize =
-      read_ast_initialize_list(allocator, &current, end, filename);
-  if (!initialize) {
-    initialize = read_ast_expression3(allocator, &current, end, filename);
-  }
+      read_ast_expression3(allocator, &current, end, filename);
   if (!initialize) {
     err = create_ast_error(allocator, *position, current, filename,
                            "invalid initialize list");

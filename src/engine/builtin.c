@@ -74,16 +74,6 @@ static string_t value_to_str(context_t ctx, value_t self) {
       string_concat(str, allocator, "\"");
       break;
     }
-    case TYPE_KIND_PTR:
-    case TYPE_KIND_PARRAY:
-    case TYPE_KIND_OPAQUE: {
-      size_t len =
-          snprintf(NULL, 0, "%s{%p}", type_get_name(type), *(void **)data);
-      char s[len];
-      sprintf(s, "%s{%p}", type_get_name(type), *(void **)data);
-      string_concat(str, allocator, s);
-      break;
-    }
     case TYPE_KIND_ARRAY: {
       size_t size = array_type_get_length(type);
       string_concat(str, allocator, type_get_name(type));
@@ -112,6 +102,7 @@ static string_t value_to_str(context_t ctx, value_t self) {
           string_concat(str, allocator, ", ");
         }
         struct_field_t field = array_get(fields, idx);
+        string_concat(str, allocator, ".");
         string_concat(str, allocator, field->name);
         string_concat(str, allocator, " = ");
         value_t item = context_create_weak_value(

@@ -17,6 +17,9 @@ value_t resolve_expression_member(context_t ctx, ast_node_t node) {
   if (host_node) {
     host = resolve_expression(ctx, host_node);
   } else {
+    if (context_get_type(ctx) != CONTEXT_TYPE_FUNCTION) {
+      return create_comptime_error(ctx, node, "cannot infer member host");
+    }
     value_t function = context_get_function(ctx);
     type_t type = value_get_type(function);
     if (type_get_kind(type) == TYPE_KIND_FUNCTION) {

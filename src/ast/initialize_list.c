@@ -11,6 +11,15 @@ ast_node_t read_ast_initialize_list(allocator_t allocator, position_t *position,
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_INITIALIZE_LIST);
   ast_node_t err = NULL;
   position_t current = *position;
+  if (*current.offset != '.') {
+    goto onerror;
+  }
+  current.offset++;
+  current.column++;
+  err = ast_skip_all(allocator, &current, end, filename);
+  if (err && err->type == NODE_TYPE_ERROR) {
+    return err;
+  }
   ast_node_t type = read_ast_expression18(allocator, &current, end, filename);
   if (type) {
     if (type->type == NODE_TYPE_ERROR) {

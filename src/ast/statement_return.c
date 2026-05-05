@@ -49,7 +49,8 @@ ast_node_t read_ast_statement_return(allocator_t allocator,
   }
   if (value->type != NODE_TYPE_FUNCTION_DECLARATOR &&
       value->type != NODE_TYPE_STRUCT_DECLARATOR &&
-      value->type != NODE_TYPE_ENUM_DECLARATOR) {
+      value->type != NODE_TYPE_ENUM_DECLARATOR &&
+      value->type != NODE_TYPE_INITIALIZE_LIST) {
     if (*current.offset != ';') {
       err = create_ast_error(allocator, *position, current, filename,
                              "invalid statement, missing ';'");

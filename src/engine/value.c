@@ -33,6 +33,7 @@ value_t create_value(allocator_t allocator, type_t type, bool mut,
   self->comptime = comptime;
   return self;
 }
+void value_set_mut(value_t self, bool mut) { self->mut = mut; }
 value_t create_weak_value(allocator_t allocator, type_t type, bool mut,
                           void *data) {
   value_t self = allocator_alloc(allocator, sizeof(struct _value_t), NULL);

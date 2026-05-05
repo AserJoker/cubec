@@ -13,6 +13,7 @@
 #include "ast/expression_slice.h"
 #include "ast/expression_template_generator.h"
 #include "ast/function_declarator.h"
+#include "ast/initialize_list.h"
 #include "ast/literal_char.h"
 #include "ast/literal_identifier.h"
 #include "ast/literal_numeric.h"
@@ -237,6 +238,10 @@ ast_node_t read_ast_expression18(allocator_t allocator, position_t *position,
 ast_node_t read_ast_expression19(allocator_t allocator, position_t *position,
                                  const char *end, const char *filename) {
   ast_node_t node = NULL;
+  node = read_ast_initialize_list(allocator, position, end, filename);
+  if (node) {
+    return node;
+  }
   node = read_ast_ptr_declarator(allocator, position, end, filename);
   if (node) {
     return node;

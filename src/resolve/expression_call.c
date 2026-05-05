@@ -4,6 +4,7 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "engine/context.h"
+#include "engine/error.h"
 #include "engine/function.h"
 #include "engine/value.h"
 #include "resolve/expression.h"
@@ -45,6 +46,9 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     if (host) {
       obj = resolve_expression(ctx, host);
     } else {
+      if (context_get_type(ctx) != CONTEXT_TYPE_FUNCTION) {
+        return create_comptime_error(ctx, node, "cannot infer member host");
+      }
       value_t function = context_get_function(ctx);
       type_t type = value_get_type(function);
       if (type_get_kind(type) == TYPE_KIND_FUNCTION) {
@@ -63,12 +67,19 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     char *name = location_get(field->loc, allocator);
     value_t value = value_member_call(obj, ctx, name, argc, argv);
     allocator_free(allocator, name);
+    if (value_is_error(value)) {
+      return convert_comptime_error(ctx, node, value);
+    }
     return value;
   } else {
     value_t func = resolve_expression(ctx, callee);
     if (value_is_error(func)) {
       return func;
     }
-    return value_call(func, ctx, argc, argv);
+    value_t value = value_call(func, ctx, argc, argv);
+    if (value_is_error(value)) {
+      return convert_comptime_error(ctx, node, value);
+    }
+    return value;
   }
 }

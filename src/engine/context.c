@@ -136,10 +136,18 @@ bool context_set_comptime(context_t ctx, bool comptime) {
   return current;
 }
 type_t context_get_global(context_t ctx) { return ctx->global; }
-void context_set_global(context_t ctx, type_t global) { ctx->global = global; }
+type_t context_set_global(context_t ctx, type_t global) {
+  type_t current = ctx->global;
+  ctx->global = global;
+  return current;
+}
 
 context_type_t context_get_type(context_t ctx) { return ctx->type; }
-void context_set_type(context_t ctx, context_type_t type) { ctx->type = type; }
+context_type_t context_set_type(context_t ctx, context_type_t type) {
+  context_type_t current = ctx->type;
+  ctx->type = type;
+  return current;
+}
 void context_push_scope(context_t self) {
   self->scope = create_scope(self->allocator, self->scope);
 }

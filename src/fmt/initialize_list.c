@@ -9,6 +9,7 @@ void fmt_initialize_list(allocator_t allocator, ast_node_t node,
                          stream_t stream) {
   ast_node_t type = ast_get_child(node, "type");
   ast_node_t fields = ast_get_child(node, "fields");
+  stream_write(stream, ".");
   if (type) {
     fmt_expression(allocator, type, stream);
   }

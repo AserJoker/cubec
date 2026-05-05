@@ -1,16 +1,16 @@
-struct Test{
-    id:i32;
-    pub func create(id:i32):__self__ {
-        let result = __self__{};
-        result.id = id;
-        return result;
+struct Test {
+    id: i32;
+    pub func create(id: i32): __self__ {
+        return .{
+            .id = id
+        };
     }
-};
-func init(id:i32):Test {
-    const item =  .create(id);
-    return item;
 }
-pub func main():void{
-    comptime const item = init(123);
-    __print__("%v",item);
+func init(id: i32): Test {
+    return .create(id);
+}
+pub func main(): void {
+    const id = 234;
+    const item = init(id);
+    __print__("%v", item);
 }

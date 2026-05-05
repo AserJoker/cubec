@@ -1,7 +1,6 @@
 #include "ast/expression_call.h"
 #include "ast/expression.h"
 #include "ast/expression_spread.h"
-#include "ast/initialize_list.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
@@ -28,9 +27,6 @@ ast_node_t read_ast_expression_call(allocator_t allocator, position_t *position,
     for (;;) {
       ast_node_t item =
           read_ast_expression_spread(allocator, &current, end, filename);
-      if (!item) {
-        item = read_ast_initialize_list(allocator, &current, end, filename);
-      }
       if (!item) {
         item = read_ast_expression3(allocator, &current, end, filename);
       }

@@ -8,7 +8,8 @@ extern "C" {
 typedef struct _value_t *value_t;
 struct _context_t;
 value_t create_value(allocator_t allocator, type_t type, bool mut,
-                     const void *data, bool comptime);
+                           const void *data, bool comptime);
+void value_set_mut(value_t self, bool mut);
 value_t create_weak_value(allocator_t allocator, type_t type, bool mut,
                           void *data);
 bool value_is_mut(value_t value);
