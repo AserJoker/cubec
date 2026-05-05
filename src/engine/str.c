@@ -2,6 +2,8 @@
 #include "core/allocator.h"
 #include "engine/bool.h"
 #include "engine/context.h"
+#include "engine/error.h"
+#include "engine/ptr.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include <stdbool.h>
@@ -35,6 +37,16 @@ static value_t str_ne(value_t self, context_t ctx, value_t another) {
   const char *str2 = *(const char **)value_get_data(another);
   return create_comptime_bool(ctx, strcmp(str1, str2) != 0, false, NULL);
 }
+static value_t str_safe_convert(value_t self, context_t ctx, type_t type) {
+  if (type_get_kind(type) == TYPE_KIND_PARRAY) {
+    type_t base_type = ptr_type_get_type(type);
+    if (strcmp(type_get_id(base_type), "u8") == 0) {
+      const char *data = *(const char **)value_get_data(self);
+      return context_create_value(ctx, type, &data, false, true, NULL);
+    }
+  }
+  return create_error(ctx, "cannot convert 'str' to '%s'", type_get_name(type));
+}
 void str_init(context_t ctx) {
   allocator_t allocator = context_get_allocator(ctx);
   type_operator_t opt = {
@@ -43,6 +55,7 @@ void str_init(context_t ctx) {
       .assigment = value_default_assigment,
       .eq = str_eq,
       .ne = str_ne,
+      .safe_convert = str_safe_convert,
   };
   type_t str_t = create_type(allocator, TYPE_KIND_STR, sizeof(const char *),
                              sizeof(const char *), "str", "str", &opt, NULL);

@@ -1,8 +1,6 @@
-extern func write(fd: i32, data: [*]u8, size: u64): i64;
-comptime func add(a: infer, b: typeof(a)): typeof(a) {
-    _ = write(0, nil, 0@u64);
-    return a + b;
+comptime func write(s: [*]u8): void {
+    print("%v", s);
 }
 pub func main(argc: i32, argv: [*]str): void {
-    print("%v", add(1@u32, 2@u32));
+    write("hello world");
 }
