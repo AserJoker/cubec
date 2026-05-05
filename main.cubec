@@ -1,5 +1,5 @@
 comptime func write(s:[*]u8):void {
-    print("%v",s);
+    print("'%c'",s[0]);
 }
 pub func main(argc:i32,argv:[*]str): void {
     write("hello world");

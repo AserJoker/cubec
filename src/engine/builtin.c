@@ -15,6 +15,7 @@
 #include "resolve/expression.h"
 #include <inttypes.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -245,6 +246,135 @@ ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
           string_t s = value_to_str(ctx, val);
           string_concat(str, allocator, string_get(s));
           allocator_free(allocator, s);
+        }
+      } else if (*pfmt == 'd') {
+        if (offset >= argc) {
+          string_concat(str, allocator, "%d");
+        } else {
+          bool is_comptime = context_set_comptime(ctx, false);
+          ast_node_t arg = argv[offset++];
+          value_t val = resolve_expression(ctx, arg);
+          context_set_comptime(ctx, is_comptime);
+          if (value_is_error(val)) {
+            allocator_free(allocator, str);
+            return create_ast_value_node(allocator, val);
+          }
+          type_t type = value_get_type(val);
+          if (type_get_kind(type) == TYPE_KIND_INTEGER) {
+            int64_t value = integer_get_value(val);
+            size_t len = snprintf(NULL, 0, "%" PRIdPTR, value);
+            char buf[len];
+            sprintf(buf, "%" PRIdPTR, value);
+            string_concat(str, allocator, buf);
+          } else {
+            value_t err = create_comptime_error(
+                ctx, arg, "cannot convert '%s' to integer",
+                type_get_name(type));
+            allocator_free(allocator, str);
+            return create_ast_value_node(allocator, err);
+          }
+        }
+      } else if (*pfmt == 'u') {
+        if (offset >= argc) {
+          string_concat(str, allocator, "%u");
+        } else {
+          bool is_comptime = context_set_comptime(ctx, false);
+          ast_node_t arg = argv[offset++];
+          value_t val = resolve_expression(ctx, arg);
+          context_set_comptime(ctx, is_comptime);
+          if (value_is_error(val)) {
+            allocator_free(allocator, str);
+            return create_ast_value_node(allocator, val);
+          }
+          type_t type = value_get_type(val);
+          if (type_get_kind(type) == TYPE_KIND_UNSIGNED) {
+            uint64_t value = unsigned_get_value(val);
+            size_t len = snprintf(NULL, 0, "%" PRIuPTR, value);
+            char buf[len];
+            sprintf(buf, "%" PRIuPTR, value);
+            string_concat(str, allocator, buf);
+          } else {
+            value_t err = create_comptime_error(
+                ctx, arg, "cannot convert '%s' to unsigned",
+                type_get_name(type));
+            allocator_free(allocator, str);
+            return create_ast_value_node(allocator, err);
+          }
+        }
+      } else if (*pfmt == 'f') {
+        if (offset >= argc) {
+          string_concat(str, allocator, "%f");
+        } else {
+          bool is_comptime = context_set_comptime(ctx, false);
+          ast_node_t arg = argv[offset++];
+          value_t val = resolve_expression(ctx, arg);
+          context_set_comptime(ctx, is_comptime);
+          if (value_is_error(val)) {
+            allocator_free(allocator, str);
+            return create_ast_value_node(allocator, val);
+          }
+          type_t type = value_get_type(val);
+          if (type_get_kind(type) == TYPE_KIND_FLOAT) {
+            double value = float_get_value(val);
+            size_t len = snprintf(NULL, 0, "%g", value);
+            char buf[len];
+            sprintf(buf, "%g", value);
+            string_concat(str, allocator, buf);
+          } else {
+            value_t err = create_comptime_error(
+                ctx, arg, "cannot convert '%s' to float", type_get_name(type));
+            allocator_free(allocator, str);
+            return create_ast_value_node(allocator, err);
+          }
+        }
+      } else if (*pfmt == 'c') {
+        if (offset >= argc) {
+          string_concat(str, allocator, "%c");
+        } else {
+          bool is_comptime = context_set_comptime(ctx, false);
+          ast_node_t arg = argv[offset++];
+          value_t val = resolve_expression(ctx, arg);
+          context_set_comptime(ctx, is_comptime);
+          if (value_is_error(val)) {
+            allocator_free(allocator, str);
+            return create_ast_value_node(allocator, val);
+          }
+          type_t type = value_get_type(val);
+          if (type_get_kind(type) == TYPE_KIND_INTEGER) {
+            int64_t value = integer_get_value(val);
+            if (value >= 256 || value < 0) {
+              value_t err = create_comptime_error(
+                  ctx, arg, "cannot convert '%s' to charactor",
+                  type_get_name(type));
+              allocator_free(allocator, str);
+              return create_ast_value_node(allocator, err);
+            }
+            uint8_t val = (uint8_t)value;
+            size_t len = snprintf(NULL, 0, "%c", val);
+            char buf[len];
+            sprintf(buf, "%c", val);
+            string_concat(str, allocator, buf);
+          } else if (type_get_kind(type) == TYPE_KIND_UNSIGNED) {
+            uint64_t value = unsigned_get_value(val);
+            if (value >= 256) {
+              value_t err = create_comptime_error(
+                  ctx, arg, "cannot convert '%s' to charactor",
+                  type_get_name(type));
+              allocator_free(allocator, str);
+              return create_ast_value_node(allocator, err);
+            }
+            uint8_t val = (uint8_t)value;
+            size_t len = snprintf(NULL, 0, "%c", val);
+            char buf[len];
+            sprintf(buf, "%c", val);
+            string_concat(str, allocator, buf);
+          } else {
+            value_t err = create_comptime_error(
+                ctx, arg, "cannot convert '%s' to charator",
+                type_get_name(type));
+            allocator_free(allocator, str);
+            return create_ast_value_node(allocator, err);
+          }
         }
       }
     } else {
