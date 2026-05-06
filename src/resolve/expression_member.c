@@ -26,7 +26,7 @@ value_t resolve_expression_member(context_t ctx, ast_node_t node) {
       type = function_type_get_type(type);
       host = create_type_value(ctx, type, false, NULL);
     } else {
-      function_declar declar = *(function_declar *)value_get_data(function);
+      function_declar_t declar = *(function_declar_t *)value_get_data(function);
       ast_node_t type = ast_get_child(declar->node, "type");
       host = resolve_expression(ctx, type);
     }

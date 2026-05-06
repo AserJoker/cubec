@@ -18,10 +18,12 @@ void module_add_function(module_t self, struct _value_t *func);
 void module_add_struct(module_t self, struct _value_t *str);
 struct _value_t *module_get_function(module_t self, const char *id);
 struct _value_t *module_get_struct(module_t self, const char *id);
-hash_map_t module_get_functions(module_t self);
-hash_map_t module_get_structs(module_t self);
+array_t module_get_functions(module_t self);
+array_t module_get_structs(module_t self);
 array_t module_get_errors(module_t self);
 void module_add_error(module_t self, value_t err);
+char *module_generator_func_id(module_t self, allocator_t allocator,
+                               const char *base_id);
 #ifdef __cplusplus
 }
 #endif

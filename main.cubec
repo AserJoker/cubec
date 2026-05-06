@@ -1,5 +1,10 @@
-extern func printf(fmt: str, ...): i32;
+template func add(T:infer,aa:i32):func(T,T)->T{
+    return func[T,aa](a:T,b:T):T{
+        print("%v",aa);
+        return a+b;
+    }
+}
 func main(argc: i32, argv: [*]str): i32 {
-    _ = printf("hello world\n");
+    const add_i32 = add(i32,111);
     return 0;
 }

@@ -2,7 +2,6 @@
 #define _H_ENGINE_CONTEXT_
 #include "ast/node.h"
 #include "core/allocator.h"
-#include "core/hash_map.h"
 #include "core/string.h"
 #include "engine/module.h"
 #include "engine/scope.h"
@@ -20,18 +19,18 @@ typedef enum _context_type_t {
 } context_type_t;
 
 typedef struct _context_t *context_t;
-typedef value_t (*function_handle_t)(context_t ctx, size_t argc, value_t *argv);
-typedef struct _function_declar {
-  ast_node_t node;
-  function_handle_t native;
-  type_t global;
-  type_t bind;
-  const char *id;
-  hash_map_t closure;
-} *function_declar;
+
+typedef struct _context_frame_t {
+  value_t current_function;
+  context_type_t current_type;
+  type_t current_global;
+  type_t current_self;
+} context_frame_t;
 
 typedef ast_node_t (*builtin_fn_t)(context_t ctx, size_t argc,
                                    ast_node_t *argv);
+struct _closure_item_t;
+struct _function_declar_t;
 context_t create_context(allocator_t allocator);
 bool context_is_comptime(context_t ctx);
 bool context_set_comptime(context_t ctx, bool comptime);
@@ -72,12 +71,13 @@ type_t context_set_self(context_t ctx, type_t self);
 value_t context_set_function(context_t ctx, value_t function);
 value_t context_get_function(context_t ctx);
 
-function_declar context_load_function_declar(context_t self, const char *id);
-function_declar context_store_function_declar(context_t self, ast_node_t node,
-                                              const char *id);
-function_declar context_store_native_declar(context_t self,
-                                            function_handle_t native,
-                                            const char *id);
+struct _function_declar_t *context_load_function_declar(context_t self,
+                                                        const char *id);
+void context_store_function_declar(context_t self,
+                                   struct _function_declar_t *declar);
+context_frame_t context_push(context_t ctx, value_t func, context_type_t type,
+                             type_t global, type_t self);
+void context_pop(context_t ctx, context_frame_t frame);
 #ifdef __cplusplus
 }
 #endif

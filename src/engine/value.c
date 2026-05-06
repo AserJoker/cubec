@@ -1,12 +1,27 @@
 #include "engine/value.h"
+#include "ast/node.h"
+#include "ast/node_type.h"
 #include "core/allocator.h"
+#include "core/array.h"
+#include "core/location.h"
+#include "core/string.h"
+#include "engine/array.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/function.h"
+#include "engine/module.h"
 #include "engine/ptr.h"
+#include "engine/scope.h"
+#include "engine/slice.h"
 #include "engine/struct.h"
 #include "engine/type.h"
 #include "engine/union.h"
+#include "engine/unsigned.h"
+#include "resolve/expression.h"
+#include <inttypes.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 struct _value_t {
   type_t type;
@@ -451,15 +466,240 @@ value_t value_get_length(value_t self, struct _context_t *ctx) {
                       type_get_name(type));
 }
 
+static char *generator_func_id(context_t ctx, const char *base_name) {
+  allocator_t allocator = context_get_allocator(ctx);
+  module_t mod = context_get_module(ctx);
+  for (size_t idx = 0;; idx++) {
+    size_t len = snprintf(NULL, 0, "%s_%" PRIxPTR, base_name, idx);
+    char buf[len];
+    sprintf(buf, "%s_%" PRIxPTR, base_name, idx);
+    if (!module_get_function(mod, buf)) {
+      return create_cstring(allocator, buf);
+    }
+  }
+}
+
+static value_t infer_function(context_t ctx, value_t self, size_t argc,
+                              value_t argv[]) {
+  type_t type = value_get_type(self);
+  function_declar_t declar = *(function_declar_t *)value_get_data(self);
+  ast_node_t arguments = ast_get_child(declar->node, "arguments");
+  ast_node_t type_node = ast_get_child(declar->node, "type");
+  type_t current_global = context_set_global(ctx, declar->global);
+  type_t current_self = context_set_global(ctx, declar->bind);
+  scope_t current_scope = context_get_scope(ctx);
+  allocator_t allocator = context_get_allocator(ctx);
+  scope_t scope = create_scope(allocator, context_get_root_scope(ctx));
+  value_t result = NULL;
+  context_set_scope(ctx, scope);
+  array_initialize_t closure_init = {
+      .autofree = true,
+  };
+  array_t closure = create_array(allocator, &closure_init);
+  for (size_t idx = 0; idx < array_get_size(declar->closure); idx++) {
+    closure_item_t item = array_get(declar->closure, idx);
+    value_t value = value_clone(item->value, allocator);
+    value_t err = context_declar(ctx, item->name, value);
+    if (value_is_error(err)) {
+      return err;
+    }
+    closure_item_t new_item = create_closure_item(allocator, item->name, value);
+    array_push(closure, new_item);
+  }
+  context_push_scope(ctx);
+  array_initialize_t init = {
+      .autofree = true,
+  };
+  array_t args = create_array(allocator, &init);
+  bool variadic = false;
+  for (size_t idx = 0; idx < ast_get_length(arguments); idx++) {
+    ast_node_t arg_node = ast_get_item(arguments, idx);
+    ast_node_t type = ast_get_child(arg_node, "type");
+    ast_node_t mut = ast_get_child(arg_node, "mut");
+    ast_node_t identifier = ast_get_child(arg_node, "identifier");
+    argument_t arg =
+        allocator_alloc(allocator, sizeof(struct _argument_t), NULL);
+    array_push(args, arg);
+    arg->mut = mut == NULL;
+    arg->type = NULL;
+    if (arg_node->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
+      if (type == NULL) {
+        break;
+      }
+      variadic = true;
+      type_t base_type = NULL;
+      if (location_is(type->loc, "infer")) {
+        base_type = NULL;
+        if (idx >= argc) {
+          base_type = context_load_type(ctx, "null");
+        } else {
+          base_type = value_get_type(argv[idx]);
+        }
+        arg->type = create_slice_type(ctx, base_type);
+      } else {
+        value_t vtype = resolve_expression(ctx, type);
+        if (value_is_error(vtype)) {
+          result = vtype;
+          goto onfinish;
+        }
+        arg->type = *(type_t *)value_get_type(vtype);
+        if (type_get_kind(arg->type) != TYPE_KIND_SLICE) {
+          result = create_comptime_error(ctx, type,
+                                         "rest argument type is not slice");
+          goto onfinish;
+        }
+        base_type = slice_type_get_type(arg->type);
+      }
+      size_t len = argc - idx;
+      type_t arr_type = create_array_type(ctx, base_type, len);
+      value_t arr = NULL;
+      if (context_is_comptime(ctx)) {
+        uint8_t data[type_get_size(arr_type)];
+        memset(data, 0, type_get_size(arr_type));
+        arr = context_create_value(ctx, arr_type, data, true, true, NULL);
+      } else {
+        arr = context_create_value(ctx, arr_type, NULL, true, false, NULL);
+      }
+      for (size_t i = 0; idx + i < argc; i++) {
+        value_t val = argv[idx + i];
+        value_t key = create_comptime_u64(ctx, i, false, NULL);
+        value_t err = value_set(arr, ctx, key, val);
+        if (value_is_error(err)) {
+          result = err;
+          goto onfinish;
+        }
+      }
+      value_t err = NULL;
+      char *name = location_get(identifier->loc, allocator);
+      if (strcmp(name, "_") != 0) {
+        if (context_is_comptime(ctx)) {
+          void *data = value_get_data(arr);
+          value_t slice = create_comptime_slice(ctx, arg->type, data, 0, len);
+          slice = value_clone(slice, allocator);
+          err = context_declar(ctx, name, slice);
+        } else {
+          err =
+              context_create_value(ctx, arg->type, NULL, arg->mut, false, name);
+        }
+      }
+      allocator_free(allocator, name);
+      if (value_is_error(err)) {
+        result = err;
+        goto onfinish;
+      }
+    } else {
+      if (idx >= argc) {
+        result = create_error(ctx, "missing argument %" PRIuPTR, idx);
+        goto onfinish;
+      }
+      if (location_is(type->loc, "infer")) {
+        arg->type = value_get_type(argv[idx]);
+      } else {
+        value_t vtype = resolve_expression(ctx, type);
+        if (value_is_error(vtype)) {
+          result = vtype;
+          goto onfinish;
+        }
+        arg->type = *(type_t *)value_get_data(vtype);
+      }
+      if (type_get_kind(arg->type) == TYPE_KIND_VOID) {
+        result = create_comptime_error(ctx, arg_node,
+                                       "cannot declar value with void");
+        goto onfinish;
+      }
+      if (type_get_kind(arg->type) == TYPE_KIND_TYPE) {
+        if (!context_is_comptime(ctx)) {
+          result = create_comptime_error(
+              ctx, arg_node, "type value on used in comptime context");
+          goto onfinish;
+        }
+      }
+      value_t value = argv[idx];
+      if (context_is_comptime(ctx)) {
+        if (!value_is_comptime(value)) {
+          result = create_error(ctx, "value is not comptime");
+          goto onfinish;
+        }
+      }
+      value = value_safe_convert(value, ctx, arg->type);
+      if (value_is_error(value)) {
+        result = value;
+        goto onfinish;
+      }
+      value_t err = NULL;
+      char *name = location_get(identifier->loc, allocator);
+      if (strcmp(name, "_") != 0) {
+        value = value_clone(value, allocator);
+        err = context_declar(ctx, name, value);
+      }
+      allocator_free(allocator, name);
+      if (value_is_error(err)) {
+        result = err;
+        goto onfinish;
+      }
+    }
+  }
+  value_t vtype = resolve_expression(ctx, type_node);
+  if (value_is_error(vtype)) {
+    result = vtype;
+    goto onfinish;
+  }
+  type_t return_type = *(type_t *)value_get_data(vtype);
+  type_t function_type = create_function_type(ctx, return_type, args, variadic);
+  args = NULL;
+  char *id = generator_func_id(ctx, declar->id);
+  declar = create_function_declar(allocator, declar->global, declar->bind, id,
+                                  declar->node, closure);
+  closure = NULL;
+  allocator_free(allocator, id);
+  context_store_function_declar(ctx, declar);
+  result = context_create_value(ctx, function_type, &declar, false, true, NULL);
+onfinish:
+  allocator_free(allocator, closure);
+  allocator_free(allocator, args);
+  result = value_clone(result, allocator);
+  scope_store(current_scope, allocator, NULL, result);
+  context_set_scope(ctx, current_scope);
+  allocator_free(allocator, scope);
+  return result;
+}
+
 value_t value_call(value_t self, struct _context_t *ctx, size_t argc,
                    value_t argv[]) {
   type_t type = value_get_type(self);
+  type_t raw_type = type;
+  if (type_get_kind(type) == TYPE_KIND_COMPTIME_FUNCTION) {
+    bool is_comptime = context_set_comptime(ctx, true);
+    self = infer_function(ctx, self, argc, argv);
+    context_set_comptime(ctx, is_comptime);
+    if (value_is_error(self)) {
+      return self;
+    }
+    type = value_get_type(self);
+  } else if (type_get_kind(type) == TYPE_KIND_TEMPLATE) {
+    self = infer_function(ctx, self, argc, argv);
+    if (value_is_error(self)) {
+      return self;
+    }
+    type = value_get_type(self);
+    module_t current = context_get_module(ctx);
+    allocator_t allocator = context_get_allocator(ctx);
+    self = value_clone(self, allocator);
+    module_add_function(current, self);
+  }
   const type_operator_t *opt = type_get_operator(type);
   if (opt->call) {
-    return opt->call(self, ctx, argc, argv);
+    bool is_comptime = context_is_comptime(ctx);
+    if (type_get_kind(raw_type) == TYPE_KIND_COMPTIME_FUNCTION) {
+      context_set_comptime(ctx, true);
+    }
+    value_t res = opt->call(self, ctx, argc, argv);
+    context_set_comptime(ctx, is_comptime);
+    return res;
   }
   return create_error(ctx, "type '%s' is not callable", type_get_name(type));
 }
+
 value_t value_assigment(value_t self, struct _context_t *ctx, value_t value) {
   type_t type = value_get_type(self);
   const type_operator_t *opt = type_get_operator(type);

@@ -94,7 +94,7 @@ context_t create_context(allocator_t allocator) {
   hash_map_initialize_t types_initialize = modules_initialize;
   self->types = create_hash_map(allocator, &types_initialize);
   hash_map_initialize_t func_declar_initialize = {
-      .autofree_key = true,
+      .autofree_key = false,
       .autofree_value = true,
       .hash = (hash_fn_t)cstring_sdb,
       .compare = (compare_fn_t)strcmp,
@@ -297,13 +297,10 @@ value_t context_load_module(context_t self, const char *filename) {
   hash_map_set(self->modules, (void *)module_get_filename(module), module, NULL,
                NULL);
   resolve_program(self, node);
-  array_t attrs = struct_type_get_attributes(module_struct);
-  for (size_t idx = 0; idx < array_get_size(attrs); idx++) {
-    struct_attribute_t attr = array_get(attrs, idx);
-    type_t type = value_get_type(attr->value);
-    if (type_get_kind(type) == TYPE_KIND_FUNCTION) {
-      resolve_function_declaration(self, attr->value);
-    }
+  array_t functions = module_get_functions(module);
+  for (size_t idx = 0; idx < array_get_size(functions); idx++) {
+    value_t func = array_get(functions, idx);
+    resolve_function_declaration(self, func);
   }
   array_t errors = module_get_errors(self->module);
   if (array_get_size(errors)) {
@@ -365,54 +362,28 @@ value_t context_set_function(context_t ctx, value_t function) {
   return current;
 }
 value_t context_get_function(context_t ctx) { return ctx->function; }
-function_declar context_load_function_declar(context_t self, const char *id) {
+function_declar_t context_load_function_declar(context_t self, const char *id) {
   return hash_map_get(self->func_declars, id, NULL, NULL);
 }
-static void function_declar_dispose(function_declar declar,
-                                    allocator_t allocator) {
-  allocator_free(allocator, declar->closure);
+
+void context_store_function_declar(context_t self, function_declar_t declar) {
+  hash_map_set(self->func_declars, (void *)declar->id, declar, NULL, NULL);
 }
-function_declar context_store_function_declar(context_t self, ast_node_t node,
-                                              const char *id) {
-  hash_map_delete(self->func_declars, id, NULL, NULL);
-  function_declar declar =
-      allocator_alloc(self->allocator, sizeof(struct _function_declar),
-                      (dispose_fn_t)function_declar_dispose);
-  declar->bind = self->self;
-  declar->global = self->global;
-  declar->node = node;
-  char *_id = create_cstring(self->allocator, id);
-  declar->id = _id;
-  hash_map_initialize_t cloure_initialize = {
-      .autofree_key = true,
-      .autofree_value = true,
-      .hash = (hash_fn_t)cstring_sdb,
-      .compare = (compare_fn_t)strcmp,
-  };
-  declar->closure = create_hash_map(self->allocator, &cloure_initialize);
-  hash_map_set(self->func_declars, _id, declar, NULL, NULL);
-  return declar;
+
+context_frame_t context_push(context_t ctx, value_t func, context_type_t type,
+                             type_t global, type_t self) {
+  context_frame_t frame;
+  allocator_t allocator = context_get_allocator(ctx);
+  frame.current_function = context_set_function(ctx, func);
+  frame.current_global = context_set_global(ctx, global);
+  frame.current_self = context_set_self(ctx, self);
+  frame.current_type = context_set_type(ctx, type);
+  return frame;
 }
-function_declar context_store_native_declar(context_t self,
-                                            function_handle_t native,
-                                            const char *id) {
-  hash_map_delete(self->func_declars, id, NULL, NULL);
-  function_declar declar =
-      allocator_alloc(self->allocator, sizeof(struct _function_declar),
-                      (dispose_fn_t)function_declar_dispose);
-  declar->bind = self->self;
-  declar->global = self->global;
-  declar->node = NULL;
-  declar->native = native;
-  char *_id = create_cstring(self->allocator, id);
-  declar->id = _id;
-  hash_map_initialize_t cloure_initialize = {
-      .autofree_key = true,
-      .autofree_value = true,
-      .hash = (hash_fn_t)cstring_sdb,
-      .compare = (compare_fn_t)strcmp,
-  };
-  declar->closure = create_hash_map(self->allocator, &cloure_initialize);
-  hash_map_set(self->func_declars, _id, declar, NULL, NULL);
-  return declar;
+
+void context_pop(context_t ctx, context_frame_t frame) {
+  context_set_self(ctx, frame.current_self);
+  context_set_global(ctx, frame.current_global);
+  context_set_function(ctx, frame.current_function);
+  context_set_type(ctx, frame.current_type);
 }
