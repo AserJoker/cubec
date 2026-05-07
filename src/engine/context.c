@@ -100,6 +100,7 @@ context_t create_context(allocator_t allocator) {
       .compare = (compare_fn_t)strcmp,
   };
   self->func_declars = create_hash_map(allocator, &func_declar_initialize);
+  self->comptime = true;
   type_init(self);
   error_init(self);
   void_init(self);

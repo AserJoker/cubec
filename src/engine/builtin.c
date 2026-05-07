@@ -157,9 +157,7 @@ ast_node_t builtin_error(context_t ctx, size_t argc, ast_node_t *argv) {
     value_t err = create_error(ctx, "error require fmt argument");
     return create_ast_value_node(allocator, err);
   }
-  bool is_comptime = context_set_comptime(ctx, false);
   value_t fmt = resolve_expression(ctx, argv[0]);
-  context_set_comptime(ctx, is_comptime);
   if (value_is_error(fmt)) {
     return create_ast_value_node(allocator, fmt);
   }
@@ -187,6 +185,12 @@ ast_node_t builtin_typeof(context_t ctx, size_t argc, ast_node_t *argv) {
     return create_ast_value_node(allocator, value);
   }
   type_t type = value_get_type(value);
+  if (type_get_kind(type) == TYPE_KIND_COMPTIME_FUNCTION ||
+      type_get_kind(type) == TYPE_KIND_TEMPLATE_FUNCTION) {
+    value_t err = create_comptime_error(
+        ctx, argv[0], "typeof with comptime_func or template_func ");
+    return create_ast_value_node(allocator, err);
+  }
   value = create_type_value(ctx, type, false, NULL);
   return create_ast_value_node(allocator, value);
 }
@@ -236,9 +240,7 @@ ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
     value_t err = create_error(ctx, "print require 1 argument");
     return create_ast_value_node(allocator, err);
   }
-  bool is_comptime = context_set_comptime(ctx, false);
   value_t fmt = resolve_expression(ctx, argv[0]);
-  context_set_comptime(ctx, is_comptime);
   if (value_is_error(fmt)) {
     return create_ast_value_node(allocator, fmt);
   }
@@ -259,9 +261,7 @@ ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
         if (offset >= argc) {
           string_concat(str, allocator, "%v");
         } else {
-          bool is_comptime = context_set_comptime(ctx, false);
           value_t val = resolve_expression(ctx, argv[offset++]);
-          context_set_comptime(ctx, is_comptime);
           if (value_is_error(val)) {
             allocator_free(allocator, str);
             return create_ast_value_node(allocator, val);
@@ -274,10 +274,8 @@ ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
         if (offset >= argc) {
           string_concat(str, allocator, "%d");
         } else {
-          bool is_comptime = context_set_comptime(ctx, false);
           ast_node_t arg = argv[offset++];
           value_t val = resolve_expression(ctx, arg);
-          context_set_comptime(ctx, is_comptime);
           if (value_is_error(val)) {
             allocator_free(allocator, str);
             return create_ast_value_node(allocator, val);
@@ -301,10 +299,8 @@ ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
         if (offset >= argc) {
           string_concat(str, allocator, "%u");
         } else {
-          bool is_comptime = context_set_comptime(ctx, false);
           ast_node_t arg = argv[offset++];
           value_t val = resolve_expression(ctx, arg);
-          context_set_comptime(ctx, is_comptime);
           if (value_is_error(val)) {
             allocator_free(allocator, str);
             return create_ast_value_node(allocator, val);
@@ -328,10 +324,8 @@ ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
         if (offset >= argc) {
           string_concat(str, allocator, "%f");
         } else {
-          bool is_comptime = context_set_comptime(ctx, false);
           ast_node_t arg = argv[offset++];
           value_t val = resolve_expression(ctx, arg);
-          context_set_comptime(ctx, is_comptime);
           if (value_is_error(val)) {
             allocator_free(allocator, str);
             return create_ast_value_node(allocator, val);
@@ -354,10 +348,8 @@ ast_node_t builtin_print(context_t ctx, size_t argc, ast_node_t *argv) {
         if (offset >= argc) {
           string_concat(str, allocator, "%c");
         } else {
-          bool is_comptime = context_set_comptime(ctx, false);
           ast_node_t arg = argv[offset++];
           value_t val = resolve_expression(ctx, arg);
-          context_set_comptime(ctx, is_comptime);
           if (value_is_error(val)) {
             allocator_free(allocator, str);
             return create_ast_value_node(allocator, val);

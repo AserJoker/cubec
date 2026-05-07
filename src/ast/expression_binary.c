@@ -669,9 +669,7 @@ ast_node_t read_ast_expression_binary_prefix(allocator_t allocator,
   ast_add_child(allocator, node, "opt", opt);
   if (!location_is(opt->loc, "!") && !location_is(opt->loc, "+") &&
       !location_is(opt->loc, "-") && !location_is(opt->loc, "~") &&
-      !location_is(opt->loc, "&") && !location_is(opt->loc, "*") &&
-      !location_is(opt->loc, "typeof") && !location_is(opt->loc, "sizeof") &&
-      !location_is(opt->loc, "alignof") && !location_is(opt->loc, "try")) {
+      !location_is(opt->loc, "&") && !location_is(opt->loc, "*")) {
     goto onerror;
   }
 

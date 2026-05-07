@@ -185,13 +185,25 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
         goto onfinish;
       }
     } else {
-      if (context_is_comptime(ctx) && !value_is_comptime(argv[idx])) {
-        result =
-            create_error(ctx, "argument %" PRIuPTR " is not comptime", idx);
-        goto onfinish;
+      if (context_is_comptime(ctx)) {
+        if (!value_is_comptime(argv[idx])) {
+          result =
+              create_error(ctx, "argument %" PRIuPTR " is not comptime", idx);
+          goto onfinish;
+        }
+      } else {
+        if (type_get_kind(info->type) == TYPE_KIND_TYPE) {
+          result =
+              create_error(ctx, "type value only declared in comptime context");
+          goto onfinish;
+        }
       }
       value = argv[idx];
-      type_t vt = value_get_type(argv[idx]);
+      value = value_safe_convert(value, ctx, info->type);
+      if (value_is_error(value)) {
+        result = value;
+        goto onfinish;
+      }
     }
     char *name = location_get(identifier->loc, allocator);
     void *data = value_get_data(value);
@@ -387,7 +399,7 @@ void function_init(context_t ctx) {
                   "comptime_func", "comptime_func", &comptime_opt, NULL);
   context_store_type(ctx, comptime_func);
   type_t template_func = create_type(
-      allocator, TYPE_KIND_TEMPLATE, sizeof(function_declar_t),
+      allocator, TYPE_KIND_TEMPLATE_FUNCTION, sizeof(function_declar_t),
       sizeof(function_declar_t), "template_func", "template_func", NULL, NULL);
   context_store_type(ctx, template_func);
 }

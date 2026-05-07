@@ -481,8 +481,8 @@ static char *generator_func_id(context_t ctx, const char *base_name) {
 
 static value_t infer_function(context_t ctx, value_t self, size_t argc,
                               value_t argv[]) {
-  type_t type = value_get_type(self);
   function_declar_t declar = *(function_declar_t *)value_get_data(self);
+  type_t type = value_get_type(self);
   ast_node_t arguments = ast_get_child(declar->node, "arguments");
   ast_node_t type_node = ast_get_child(declar->node, "type");
   type_t current_global = context_set_global(ctx, declar->global);
@@ -647,7 +647,30 @@ static value_t infer_function(context_t ctx, value_t self, size_t argc,
   type_t return_type = *(type_t *)value_get_data(vtype);
   type_t function_type = create_function_type(ctx, return_type, args, variadic);
   args = NULL;
-  char *id = generator_func_id(ctx, declar->id);
+  char *id = NULL;
+  if (type_get_kind(type) == TYPE_KIND_TEMPLATE_FUNCTION) {
+    array_t args = function_type_get_arguments(function_type);
+    string_t sid = create_string(allocator, NULL);
+    string_concat(sid, allocator, declar->id);
+    string_concat(sid, allocator, "R");
+    string_concat(sid, allocator, type_get_id(return_type));
+    for (size_t idx = 0; idx < array_get_size(args); idx++) {
+      string_concat(sid, allocator, "A");
+      argument_t arg = array_get(args, idx);
+      string_concat(sid, allocator, type_get_id(arg->type));
+    }
+    const char *cid = string_get(sid);
+    id = create_cstring(allocator, cid);
+    allocator_free(allocator, sid);
+  } else {
+    id = generator_func_id(ctx, declar->id);
+  }
+  module_t mod = context_get_module(ctx);
+  result = module_get_function(mod, id);
+  if (result) {
+    allocator_free(allocator, id);
+    goto onfinish;
+  }
   declar = create_function_declar(allocator, declar->global, declar->bind, id,
                                   declar->node, closure);
   closure = NULL;
@@ -677,16 +700,21 @@ value_t value_call(value_t self, struct _context_t *ctx, size_t argc,
       return self;
     }
     type = value_get_type(self);
-  } else if (type_get_kind(type) == TYPE_KIND_TEMPLATE) {
+  } else if (type_get_kind(type) == TYPE_KIND_TEMPLATE_FUNCTION) {
     self = infer_function(ctx, self, argc, argv);
     if (value_is_error(self)) {
       return self;
     }
     type = value_get_type(self);
+  }
+  if (type_get_kind(raw_type) == TYPE_KIND_TEMPLATE_FUNCTION) {
+    function_declar_t declar = *(function_declar_t *)value_get_data(self);
     module_t current = context_get_module(ctx);
-    allocator_t allocator = context_get_allocator(ctx);
-    self = value_clone(self, allocator);
-    module_add_function(current, self);
+    if (!module_get_function(current, declar->id)) {
+      allocator_t allocator = context_get_allocator(ctx);
+      self = value_clone(self, allocator);
+      module_add_function(current, self);
+    }
   }
   const type_operator_t *opt = type_get_operator(type);
   if (opt->call) {

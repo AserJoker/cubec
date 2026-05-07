@@ -92,53 +92,55 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
     }
   }
   token = read_ast_literal_identifier(allocator, &current, end, filename);
-  if (location_is(token->loc, "aligned")) {
-    allocator_free(allocator, token);
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
+  if (token) {
+    if (location_is(token->loc, "aligned")) {
+      allocator_free(allocator, token);
+      err = ast_skip_all(allocator, &current, end, filename);
+      if (err && err->type == NODE_TYPE_ERROR) {
+        return err;
+      }
+      if (*current.offset != '(') {
+        err = create_ast_error(allocator, *position, current, filename,
+                               "aligned missing argument");
+        goto onerror;
+      }
+      current.offset++;
+      current.column++;
+      err = ast_skip_all(allocator, &current, end, filename);
+      if (err && err->type == NODE_TYPE_ERROR) {
+        return err;
+      }
+      ast_node_t aligned =
+          read_ast_expression3(allocator, &current, end, filename);
+      if (!aligned) {
+        err = create_ast_error(allocator, *position, current, filename,
+                               "aligned missing argument");
+        goto onerror;
+      }
+      if (aligned->type == NODE_TYPE_ERROR) {
+        err = aligned;
+        goto onerror;
+      }
+      ast_add_child(allocator, node, "aligned", aligned);
+      err = ast_skip_all(allocator, &current, end, filename);
+      if (err && err->type == NODE_TYPE_ERROR) {
+        return err;
+      }
+      if (*current.offset != ')') {
+        err = create_ast_error(allocator, *position, current, filename,
+                               "invalid or unexcepted token");
+        goto onerror;
+      }
+      current.offset++;
+      current.column++;
+      err = ast_skip_all(allocator, &current, end, filename);
+      if (err && err->type == NODE_TYPE_ERROR) {
+        return err;
+      }
+    } else {
+      current = token->loc.begin;
+      allocator_free(allocator, token);
     }
-    if (*current.offset != '(') {
-      err = create_ast_error(allocator, *position, current, filename,
-                             "aligned missing argument");
-      goto onerror;
-    }
-    current.offset++;
-    current.column++;
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
-    }
-    ast_node_t aligned =
-        read_ast_expression3(allocator, &current, end, filename);
-    if (!aligned) {
-      err = create_ast_error(allocator, *position, current, filename,
-                             "aligned missing argument");
-      goto onerror;
-    }
-    if (aligned->type == NODE_TYPE_ERROR) {
-      err = aligned;
-      goto onerror;
-    }
-    ast_add_child(allocator, node, "aligned", aligned);
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
-    }
-    if (*current.offset != ')') {
-      err = create_ast_error(allocator, *position, current, filename,
-                             "invalid or unexcepted token");
-      goto onerror;
-    }
-    current.offset++;
-    current.column++;
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
-    }
-  } else {
-    current = token->loc.begin;
-    allocator_free(allocator, token);
   }
   ast_node_t identifier =
       read_ast_literal_identifier(allocator, &current, end, filename);

@@ -39,20 +39,16 @@ value_t create_comptime_error(context_t ctx, ast_node_t node, const char *fmt,
                               ...) {
   allocator_t allocator = context_get_allocator(ctx);
   type_t type = context_load_type(ctx, "format_error");
-  size_t len = snprintf(NULL, 0, "%" PRIuPTR " |", node->loc.begin.line + 1);
+  size_t len = snprintf(NULL, 0, "%" PRIuPTR " |", node->loc.end.line + 1);
   char prefix[len + 1];
-  sprintf(prefix, "%" PRIuPTR " |", node->loc.begin.line + 1);
+  sprintf(prefix, "%" PRIuPTR " |", node->loc.end.line + 1);
   size_t prefix_len = strlen(prefix);
   char *line = location_get_line(node->loc, allocator);
   len = strlen(line);
   char mask[len + prefix_len + 1];
   if (node->loc.begin.line != node->loc.end.line) {
     for (size_t idx = 0; idx < len; idx++) {
-      if (idx < node->loc.begin.column) {
-        mask[idx + prefix_len] = ' ';
-      } else {
-        mask[idx + prefix_len] = '^';
-      }
+      mask[idx + prefix_len] = '^';
     }
   } else {
     for (size_t idx = 0; idx < len; idx++) {

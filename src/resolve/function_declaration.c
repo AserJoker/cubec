@@ -84,6 +84,26 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
           goto onfinish;
         }
         arg->type = *(type_t *)value_get_data(vtype);
+        if (type_get_kind(arg->type) == TYPE_KIND_TYPE) {
+          function = create_comptime_error(
+              ctx, type, "type value only declar comptime context");
+          goto onfinish;
+        }
+        if (type_get_kind(arg->type) == TYPE_KIND_VOID) {
+          function =
+              create_comptime_error(ctx, type, "cannot declar void argument");
+          goto onfinish;
+        }
+        if (type_get_kind(arg->type) == TYPE_KIND_COMPTIME_FUNCTION) {
+          function = create_comptime_error(
+              ctx, type, "cannot declar comptime_func argument");
+          goto onfinish;
+        }
+        if (type_get_kind(arg->type) == TYPE_KIND_TEMPLATE_FUNCTION) {
+          function = create_comptime_error(
+              ctx, type, "cannot declar template_func argument");
+          goto onfinish;
+        }
         char *name = location_get(identifier->loc, allocator);
         if (strcmp(name, "_") != 0) {
           value_t err =

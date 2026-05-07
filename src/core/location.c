@@ -131,8 +131,8 @@ char *location_get_str(location_t self, allocator_t allocator) {
   return result;
 }
 char *location_get_line(location_t self, allocator_t allocator) {
-  const char *begin = self.begin.offset;
-  size_t col = self.begin.column;
+  const char *begin = self.end.offset;
+  size_t col = self.end.column;
   while (col >= 1) {
     begin--;
     col--;
