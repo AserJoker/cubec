@@ -1,13 +1,17 @@
-comptime func add(T: type, aa: i32): func(T, T) -> T {
-    return func [T, aa](a: T, b: T): T {
-        print("%v", aa);
-        return a + b;
-    };
+struct Base {
+    id: i32;
+    pub func getId(self: *__self__): i32 {
+        return self.id;
+    }
+}
+struct Test {
+    ...Base;
 }
 func main(argc: i32, argv: [*]str): i32 {
-    comptime const v = 123;
-    const add_i32 = add(i32, v);
-    const add_u32 = add(u32, v);
-    print("%v", add_i32 == add_i32);
+    comptime const t = .Test{
+        .id = 123
+    };
+    comptime const id = t.getId();
+    print("%v", id);
     return 0;
 }

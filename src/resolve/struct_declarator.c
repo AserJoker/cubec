@@ -125,21 +125,12 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
         type_t type = value_get_type(val);
         if (type_get_kind(type) == TYPE_KIND_FUNCTION) {
           function_declar_t declar = *(function_declar_t *)value_get_data(val);
-          node = clone_ast_node(allocator, declar->node);
-          ast_node_t statement_function =
-              create_ast_node(allocator, NODE_TYPE_STATEMENT_FUNCTION);
-          ast_add_child(allocator, statement_function, "function", node);
-          statement_function->visible = false;
-          statement_function->loc = field->loc;
-          ast_add_item(fields_node, statement_function);
-          if (attr->pub) {
-            ast_node_t pub_node =
-                create_ast_node(allocator, NODE_TYPE_LITERAL_IDENTIFIER);
-            const char *pub_str = context_create_cstring(ctx, "pub");
-            pub_node->loc.begin.offset = pub_str;
-            pub_node->loc.end.offset = pub_str + 3;
-            ast_add_child(allocator, statement_function, "pub", pub_node);
+          value_t value = resolve_function_declarator(ctx, declar->node);
+          if (value_is_error(value)) {
+            return value;
           }
+          struct_type_add_attribute(stru, allocator, attr->name, value,
+                                    attr->pub);
         } else {
           struct_type_add_attribute(stru, allocator, attr->name, attr->value,
                                     attr->pub);

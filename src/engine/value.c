@@ -486,7 +486,7 @@ static value_t infer_function(context_t ctx, value_t self, size_t argc,
   ast_node_t arguments = ast_get_child(declar->node, "arguments");
   ast_node_t type_node = ast_get_child(declar->node, "type");
   type_t current_global = context_set_global(ctx, declar->global);
-  type_t current_self = context_set_global(ctx, declar->bind);
+  type_t current_self = context_set_self(ctx, declar->bind);
   scope_t current_scope = context_get_scope(ctx);
   allocator_t allocator = context_get_allocator(ctx);
   scope_t scope = create_scope(allocator, context_get_root_scope(ctx));
@@ -668,7 +668,8 @@ value_t value_call(value_t self, struct _context_t *ctx, size_t argc,
                    value_t argv[]) {
   type_t type = value_get_type(self);
   type_t raw_type = type;
-  if (type_get_kind(type) == TYPE_KIND_COMPTIME_FUNCTION) {
+  if (type_get_kind(type) == TYPE_KIND_COMPTIME_FUNCTION ||
+      context_is_comptime(ctx)) {
     bool is_comptime = context_set_comptime(ctx, true);
     self = infer_function(ctx, self, argc, argv);
     context_set_comptime(ctx, is_comptime);
