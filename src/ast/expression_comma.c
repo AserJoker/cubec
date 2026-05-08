@@ -1,5 +1,5 @@
 #include "ast/expression_comma.h"
-#include "ast/expression.h"
+#include "ast/expression_assigment.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
@@ -12,7 +12,8 @@ ast_node_t read_ast_expression_comma(allocator_t allocator,
   ast_node_t node = NULL;
   ast_node_t err = NULL;
   node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_COMMON);
-  ast_node_t curr = read_ast_expression2(allocator, &current, end, filename);
+  ast_node_t curr =
+      read_ast_expression_assigment(allocator, &current, end, filename);
   if (!curr) {
     goto onerror;
   }
@@ -38,7 +39,8 @@ ast_node_t read_ast_expression_comma(allocator_t allocator,
     goto onerror;
   }
   allocator_free(allocator, err);
-  ast_node_t next = read_ast_expression1(allocator, &current, end, filename);
+  ast_node_t next =
+      read_ast_expression_assigment(allocator, &current, end, filename);
   if (!next) {
     err = create_ast_error(allocator, *position, current, filename,
                            "invalid comma expression");

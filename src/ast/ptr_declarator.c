@@ -55,7 +55,8 @@ ast_node_t read_ast_ptr_declarator(allocator_t allocator, position_t *position,
       return err;
     }
   }
-  ast_node_t type = read_ast_expression18(allocator, &current, end, filename);
+  ast_node_t type =
+      read_ast_expression_value(allocator, &current, end, filename);
   if (!type) {
     goto onerror;
   }

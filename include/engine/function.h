@@ -20,8 +20,20 @@ typedef struct _closure_item_t {
   value_t value;
 } *closure_item_t;
 
+typedef value_t (*native_handle_t)(context_t ctx, size_t argc, value_t *argv);
+
+typedef enum _func_type_t {
+  FUNC_TYPE_AST,
+  FUNC_TYPE_NATIVE,
+} func_type_t;
+
 typedef struct _function_declar_t {
-  ast_node_t node;
+  union {
+    ast_node_t node;
+    native_handle_t handle;
+    void *data;
+  };
+  func_type_t type;
   type_t global;
   type_t bind;
   char *id;
@@ -43,9 +55,10 @@ array_t function_type_get_arguments(type_t self);
 value_t function_get_id(context_t ctx, value_t self);
 closure_item_t create_closure_item(allocator_t allocaotr, const char *name,
                                    value_t value);
-function_declar_t create_function_declar(allocator_t allocator, type_t global,
+function_declar_t create_function_declar(allocator_t allocator,
+                                         func_type_t type, type_t global,
                                          type_t self, const char *id,
-                                         ast_node_t node, array_t closure);
+                                         void *node, array_t closure);
 #ifdef __cplusplus
 }
 #endif

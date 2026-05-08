@@ -240,7 +240,8 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  ast_node_t type = read_ast_expression18(allocator, &current, end, filename);
+  ast_node_t type =
+      read_ast_expression_value(allocator, &current, end, filename);
   if (type->type == NODE_TYPE_ERROR) {
     err = type;
     goto onerror;

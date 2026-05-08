@@ -20,7 +20,8 @@ ast_node_t read_ast_initialize_list(allocator_t allocator, position_t *position,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  ast_node_t type = read_ast_expression18(allocator, &current, end, filename);
+  ast_node_t type =
+      read_ast_expression_value(allocator, &current, end, filename);
   if (type) {
     if (type->type == NODE_TYPE_ERROR) {
       err = type;
@@ -52,7 +53,7 @@ ast_node_t read_ast_initialize_list(allocator_t allocator, position_t *position,
         item = read_ast_expression_spread(allocator, &current, end, filename);
       }
       if (!item) {
-        item = read_ast_expression3(allocator, &current, end, filename);
+        item = read_ast_expression_single(allocator, &current, end, filename);
       }
       if (!item) {
         err = create_ast_error(allocator, *position, current, filename,

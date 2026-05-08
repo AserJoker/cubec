@@ -56,7 +56,7 @@ ast_node_t read_ast_array_declarator(allocator_t allocator,
     return err;
   }
   ast_node_t item_type =
-      read_ast_expression18(allocator, &current, end, filename);
+      read_ast_expression_value(allocator, &current, end, filename);
   if (!item_type) {
     goto onerror;
   }

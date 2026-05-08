@@ -1,6 +1,7 @@
 #include "ast/expression_assigment.h"
 #include "ast/expression.h"
 #include "ast/expression_binary.h"
+#include "ast/expression_condition.h"
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -23,9 +24,10 @@ ast_node_t read_ast_expression_assigment(allocator_t allocator,
     identifier =
         read_ast_expression_binary_prefix(allocator, &current, end, filename);
   } else {
-    identifier = read_ast_expression18(allocator, &current, end, filename);
+    identifier = read_ast_expression_value(allocator, &current, end, filename);
   }
   if (!identifier) {
+    err = read_ast_expression_single(allocator, position, end, filename);
     goto onerror;
   }
   if (identifier->type == NODE_TYPE_ERROR) {
@@ -37,6 +39,7 @@ ast_node_t read_ast_expression_assigment(allocator_t allocator,
       identifier->type != NODE_TYPE_EXPRESSION_MEMBER &&
       identifier->type != NODE_TYPE_EXPRESSION_COMPUTE_MEMBER &&
       identifier->type != NODE_TYPE_EXPRESSION_BINARY) {
+    err = read_ast_expression_single(allocator, position, end, filename);
     goto onerror;
   }
   err = ast_skip_all(allocator, &current, end, filename);
@@ -47,6 +50,7 @@ ast_node_t read_ast_expression_assigment(allocator_t allocator,
 
   ast_node_t opt = read_ast_literal_symbol(allocator, &current, end, filename);
   if (!opt) {
+    err = read_ast_expression_single(allocator, position, end, filename);
     goto onerror;
   }
   if (opt->type == NODE_TYPE_ERROR) {
@@ -62,6 +66,7 @@ ast_node_t read_ast_expression_assigment(allocator_t allocator,
     idx++;
   }
   if (opts[idx] == NULL) {
+    err = read_ast_expression_single(allocator, position, end, filename);
     goto onerror;
   }
 
@@ -70,7 +75,8 @@ ast_node_t read_ast_expression_assigment(allocator_t allocator,
     return err;
   }
 
-  ast_node_t value = read_ast_expression3(allocator, &current, end, filename);
+  ast_node_t value =
+      read_ast_expression_single(allocator, &current, end, filename);
   if (!value) {
     err = create_ast_error(
         allocator, *position, current, filename,

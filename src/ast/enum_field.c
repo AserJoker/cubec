@@ -48,7 +48,8 @@ ast_node_t read_ast_enum_field(allocator_t allocator, position_t *position,
     if (err && err->type == NODE_TYPE_ERROR) {
       return err;
     }
-    ast_node_t value = read_ast_expression3(allocator, &current, end, filename);
+    ast_node_t value =
+        read_ast_expression_single(allocator, &current, end, filename);
     if (!value) {
       err = create_ast_error(allocator, *position, current, filename,
                              "invalid enum field, missing value");

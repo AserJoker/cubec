@@ -1,9 +1,10 @@
-template func write(data:infer):void{
-    data[0] = 123;
-    print("%v",data);
-}
+struct Test{
+    template func __call__(self: *__self__,...args:infer):void {
+        print("%v",args);
+    }
+};
 test "generator.function" {
-    let arr = .[_]i32{1,2,3};
-    write(arr[:]);
-    write(arr);
+    let tt:Test = .{};
+    tt(1,2,3);
+    tt("a"[:], "b"[:], "c"[:]);
 }

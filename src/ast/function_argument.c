@@ -76,7 +76,8 @@ ast_node_t read_ast_function_argument(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
-  ast_node_t type = read_ast_expression18(allocator, &current, end, filename);
+  ast_node_t type =
+      read_ast_expression_value(allocator, &current, end, filename);
   if (!type) {
     err = create_ast_error(allocator, *position, current, filename,
                            "invalid function argument, missing type");

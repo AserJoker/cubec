@@ -1,5 +1,5 @@
 #include "ast/expression_call.h"
-#include "ast/expression.h"
+#include "ast/expression_condition.h"
 #include "ast/expression_spread.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -23,12 +23,11 @@ ast_node_t read_ast_expression_call(allocator_t allocator, position_t *position,
     goto onerror;
   }
   if (*current.offset != ')') {
-
     for (;;) {
       ast_node_t item =
           read_ast_expression_spread(allocator, &current, end, filename);
       if (!item) {
-        item = read_ast_expression3(allocator, &current, end, filename);
+        item = read_ast_expression_single(allocator, &current, end, filename);
       }
       if (!item) {
         err = create_ast_error(allocator, *position, current, filename,

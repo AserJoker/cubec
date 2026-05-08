@@ -1,6 +1,6 @@
 #include "ast/struct_declarator.h"
 #include "ast/decorator.h"
-#include "ast/expression.h"
+#include "ast/expression_condition.h"
 #include "ast/expression_spread.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
@@ -111,7 +111,7 @@ ast_node_t read_ast_struct_declarator(allocator_t allocator,
         return err;
       }
       ast_node_t aligned =
-          read_ast_expression3(allocator, &current, end, filename);
+          read_ast_expression_single(allocator, &current, end, filename);
       if (!aligned) {
         err = create_ast_error(allocator, *position, current, filename,
                                "aligned missing argument");

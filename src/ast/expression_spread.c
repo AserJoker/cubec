@@ -31,7 +31,7 @@ ast_node_t read_ast_expression_spread(allocator_t allocator,
     goto onerror;
   }
   ast_node_t expression =
-      read_ast_expression18(allocator, &current, end, filename);
+      read_ast_expression_value(allocator, &current, end, filename);
   if (!expression) {
     err = create_ast_error(allocator, *position, current, filename,
                            "invalid spread expression");

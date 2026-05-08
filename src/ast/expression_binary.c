@@ -1,6 +1,5 @@
 #include "ast/expression_binary.h"
 #include "ast/expression.h"
-#include "ast/literal_identifier.h"
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -14,7 +13,8 @@ ast_node_t read_ast_expression_binary_logical_or(allocator_t allocator,
   ast_node_t err = NULL;
   ast_node_t node = NULL;
   position_t current = *position;
-  ast_node_t left = read_ast_expression5(allocator, &current, end, filename);
+  ast_node_t left = read_ast_expression_binary_logical_and(allocator, &current,
+                                                           end, filename);
   if (!left) {
     goto onerror;
   }
@@ -48,7 +48,8 @@ ast_node_t read_ast_expression_binary_logical_or(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  ast_node_t right = read_ast_expression4(allocator, &current, end, filename);
+  ast_node_t right =
+      read_ast_expression_binary_logical_or(allocator, &current, end, filename);
   if (!right) {
     err = create_ast_error(allocator, *position, current, filename,
                            "Unexpected expression");
@@ -76,7 +77,8 @@ ast_node_t read_ast_expression_binary_logical_and(allocator_t allocator,
   ast_node_t err = NULL;
   ast_node_t node = NULL;
   position_t current = *position;
-  ast_node_t left = read_ast_expression6(allocator, &current, end, filename);
+  ast_node_t left =
+      read_ast_expression_binary_bitwise_or(allocator, &current, end, filename);
   if (!left) {
     goto onerror;
   }
@@ -111,7 +113,8 @@ ast_node_t read_ast_expression_binary_logical_and(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  ast_node_t right = read_ast_expression5(allocator, &current, end, filename);
+  ast_node_t right = read_ast_expression_binary_logical_and(allocator, &current,
+                                                            end, filename);
   if (!right) {
     err = create_ast_error(allocator, *position, current, filename,
                            "Unexpected expression");
@@ -139,7 +142,8 @@ ast_node_t read_ast_expression_binary_bitwise_or(allocator_t allocator,
   ast_node_t err = NULL;
   ast_node_t node = NULL;
   position_t current = *position;
-  ast_node_t left = read_ast_expression7(allocator, &current, end, filename);
+  ast_node_t left = read_ast_expression_binary_bitwise_xor(allocator, &current,
+                                                           end, filename);
   if (!left) {
     goto onerror;
   }
@@ -173,7 +177,8 @@ ast_node_t read_ast_expression_binary_bitwise_or(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  ast_node_t right = read_ast_expression6(allocator, &current, end, filename);
+  ast_node_t right =
+      read_ast_expression_binary_bitwise_or(allocator, &current, end, filename);
   if (!right) {
     err = create_ast_error(allocator, *position, current, filename,
                            "Unexpected expression");
@@ -201,7 +206,8 @@ ast_node_t read_ast_expression_binary_bitwise_xor(allocator_t allocator,
   ast_node_t err = NULL;
   ast_node_t node = NULL;
   position_t current = *position;
-  ast_node_t left = read_ast_expression8(allocator, &current, end, filename);
+  ast_node_t left = read_ast_expression_binary_bitwise_and(allocator, &current,
+                                                           end, filename);
   if (!left) {
     goto onerror;
   }
@@ -236,7 +242,8 @@ ast_node_t read_ast_expression_binary_bitwise_xor(allocator_t allocator,
     return err;
   }
   allocator_free(allocator, err);
-  ast_node_t right = read_ast_expression7(allocator, &current, end, filename);
+  ast_node_t right = read_ast_expression_binary_bitwise_xor(allocator, &current,
+                                                            end, filename);
   if (!right) {
     err = create_ast_error(allocator, *position, current, filename,
                            "Unexpected expression");
@@ -263,7 +270,8 @@ ast_node_t read_ast_expression_binary_bitwise_and(allocator_t allocator,
   ast_node_t err = NULL;
   ast_node_t node = NULL;
   position_t current = *position;
-  ast_node_t left = read_ast_expression9(allocator, &current, end, filename);
+  ast_node_t left =
+      read_ast_expression_binary_equal(allocator, &current, end, filename);
   if (!left) {
     goto onerror;
   }
@@ -299,7 +307,8 @@ ast_node_t read_ast_expression_binary_bitwise_and(allocator_t allocator,
     return err;
   }
   allocator_free(allocator, err);
-  ast_node_t right = read_ast_expression8(allocator, &current, end, filename);
+  ast_node_t right = read_ast_expression_binary_bitwise_and(allocator, &current,
+                                                            end, filename);
   if (!right) {
     err = create_ast_error(allocator, *position, current, filename,
                            "Unexpected expression");
@@ -327,7 +336,8 @@ ast_node_t read_ast_expression_binary_equal(allocator_t allocator,
   ast_node_t err = NULL;
   ast_node_t node = NULL;
   position_t current = *position;
-  ast_node_t left = read_ast_expression10(allocator, &current, end, filename);
+  ast_node_t left =
+      read_ast_expression_binary_relation(allocator, &current, end, filename);
   if (!left) {
     goto onerror;
   }
@@ -363,7 +373,8 @@ ast_node_t read_ast_expression_binary_equal(allocator_t allocator,
     return err;
   }
   allocator_free(allocator, err);
-  ast_node_t right = read_ast_expression9(allocator, &current, end, filename);
+  ast_node_t right =
+      read_ast_expression_binary_equal(allocator, &current, end, filename);
   if (!right) {
     err = create_ast_error(allocator, *position, current, filename,
                            "Unexpected expression");
@@ -392,7 +403,8 @@ ast_node_t read_ast_expression_binary_relation(allocator_t allocator,
   ast_node_t err = NULL;
   ast_node_t node = NULL;
   position_t current = *position;
-  ast_node_t left = read_ast_expression11(allocator, &current, end, filename);
+  ast_node_t left = read_ast_expression_binary_bitwise_shift(
+      allocator, &current, end, filename);
   if (!left) {
     goto onerror;
   }
@@ -429,7 +441,8 @@ ast_node_t read_ast_expression_binary_relation(allocator_t allocator,
     return err;
   }
   allocator_free(allocator, err);
-  ast_node_t right = read_ast_expression10(allocator, &current, end, filename);
+  ast_node_t right =
+      read_ast_expression_binary_relation(allocator, &current, end, filename);
   if (!right) {
     err = create_ast_error(allocator, *position, current, filename,
                            "Unexpected expression");
@@ -458,7 +471,8 @@ ast_node_t read_ast_expression_binary_bitwise_shift(allocator_t allocator,
   ast_node_t err = NULL;
   ast_node_t node = NULL;
   position_t current = *position;
-  ast_node_t left = read_ast_expression12(allocator, &current, end, filename);
+  ast_node_t left =
+      read_ast_expression_binary_additive(allocator, &current, end, filename);
   if (!left) {
     goto onerror;
   }
@@ -492,7 +506,8 @@ ast_node_t read_ast_expression_binary_bitwise_shift(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  ast_node_t right = read_ast_expression11(allocator, &current, end, filename);
+  ast_node_t right = read_ast_expression_binary_bitwise_shift(
+      allocator, &current, end, filename);
   if (!right) {
     err = create_ast_error(allocator, *position, current, filename,
                            "Unexpected expression");
@@ -520,7 +535,8 @@ ast_node_t read_ast_expression_binary_additive(allocator_t allocator,
   ast_node_t err = NULL;
   ast_node_t node = NULL;
   position_t current = *position;
-  ast_node_t left = read_ast_expression13(allocator, &current, end, filename);
+  ast_node_t left = read_ast_expression_binary_multiplicative(
+      allocator, &current, end, filename);
   if (!left) {
     goto onerror;
   }
@@ -555,7 +571,8 @@ ast_node_t read_ast_expression_binary_additive(allocator_t allocator,
     return err;
   }
   allocator_free(allocator, err);
-  ast_node_t right = read_ast_expression12(allocator, &current, end, filename);
+  ast_node_t right =
+      read_ast_expression_binary_additive(allocator, &current, end, filename);
   if (!right) {
     err = create_ast_error(allocator, *position, current, filename,
                            "Unexpected expression");
@@ -582,7 +599,8 @@ ast_node_t read_ast_expression_binary_multiplicative(allocator_t allocator,
   ast_node_t err = NULL;
   ast_node_t node = NULL;
   position_t current = *position;
-  ast_node_t left = read_ast_expression14(allocator, &current, end, filename);
+  ast_node_t left =
+      read_ast_expression_binary_prefix(allocator, &current, end, filename);
   if (!left) {
     goto onerror;
   }
@@ -618,7 +636,8 @@ ast_node_t read_ast_expression_binary_multiplicative(allocator_t allocator,
     return err;
   }
   allocator_free(allocator, err);
-  ast_node_t right = read_ast_expression13(allocator, &current, end, filename);
+  ast_node_t right = read_ast_expression_binary_multiplicative(
+      allocator, &current, end, filename);
   if (!right) {
     err = create_ast_error(allocator, *position, current, filename,
                            "Unexpected expression");
@@ -655,9 +674,7 @@ ast_node_t read_ast_expression_binary_prefix(allocator_t allocator,
   } else {
     opt = read_ast_literal_symbol(allocator, &current, end, filename);
     if (!opt) {
-      opt = read_ast_literal_identifier(allocator, &current, end, filename);
-    }
-    if (!opt) {
+      err = read_ast_expression_value(allocator, &current, end, filename);
       goto onerror;
     }
     if (opt->type == NODE_TYPE_ERROR) {
@@ -670,6 +687,8 @@ ast_node_t read_ast_expression_binary_prefix(allocator_t allocator,
   if (!location_is(opt->loc, "!") && !location_is(opt->loc, "+") &&
       !location_is(opt->loc, "-") && !location_is(opt->loc, "~") &&
       !location_is(opt->loc, "&") && !location_is(opt->loc, "*")) {
+    current = opt->loc.begin;
+    err = read_ast_expression_value(allocator, &current, end, filename);
     goto onerror;
   }
 
@@ -677,7 +696,8 @@ ast_node_t read_ast_expression_binary_prefix(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
-  ast_node_t right = read_ast_expression15(allocator, &current, end, filename);
+  ast_node_t right =
+      read_ast_expression_binary_prefix(allocator, &current, end, filename);
   if (!right) {
     err = create_ast_error(allocator, *position, current, filename,
                            "Unexpected expression");

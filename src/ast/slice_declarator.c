@@ -25,7 +25,8 @@ ast_node_t read_ast_slice_declarator(allocator_t allocator,
     return err;
   }
   node = create_ast_node(allocator, NODE_TYPE_SLICE_DECLARATOR);
-  ast_node_t type = read_ast_expression18(allocator, &current, end, filename);
+  ast_node_t type =
+      read_ast_expression_value(allocator, &current, end, filename);
   if (!type) {
     goto onerror;
   }

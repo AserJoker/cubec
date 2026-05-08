@@ -105,7 +105,7 @@ ast_node_t read_ast_callable_declarator(allocator_t allocator,
         }
       }
       ast_node_t type =
-          read_ast_expression18(allocator, &current, end, filename);
+          read_ast_expression_value(allocator, &current, end, filename);
       if (!type) {
         err = create_ast_error(allocator, *position, current, filename,
                                "invalid callable argument");
@@ -150,7 +150,7 @@ ast_node_t read_ast_callable_declarator(allocator_t allocator,
   current.offset += 2;
   current.column += 2;
   ast_node_t return_type =
-      read_ast_expression18(allocator, &current, end, filename);
+      read_ast_expression_value(allocator, &current, end, filename);
   if (!return_type) {
     err = create_ast_error(allocator, *position, current, filename,
                            "invalid callable expression");

@@ -684,8 +684,8 @@ static value_t infer_function(context_t ctx, value_t self, size_t argc,
     allocator_free(allocator, id);
     goto onfinish;
   }
-  declar = create_function_declar(allocator, declar->global, declar->bind, id,
-                                  declar->node, closure);
+  declar = create_function_declar(allocator, FUNC_TYPE_AST, declar->global,
+                                  declar->bind, id, declar->node, closure);
   closure = NULL;
   allocator_free(allocator, id);
   context_store_function_declar(ctx, declar);
@@ -704,21 +704,33 @@ value_t value_call(value_t self, struct _context_t *ctx, size_t argc,
                    value_t argv[]) {
   type_t type = value_get_type(self);
   type_t raw_type = type;
-  if (type_get_kind(type) == TYPE_KIND_COMPTIME_FUNCTION ||
-      context_is_comptime(ctx)) {
-    bool is_comptime = context_set_comptime(ctx, true);
-    self = infer_function(ctx, self, argc, argv);
-    context_set_comptime(ctx, is_comptime);
-    if (value_is_error(self)) {
-      return self;
+  if (value_is_comptime(self)) {
+    if (type_get_kind(type) == TYPE_KIND_COMPTIME_FUNCTION ||
+        type_get_kind(type) == TYPE_KIND_TEMPLATE_FUNCTION) {
+      bool is_comptime = context_set_comptime(ctx, true);
+      self = infer_function(ctx, self, argc, argv);
+      context_set_comptime(ctx, is_comptime);
+      if (value_is_error(self)) {
+        return self;
+      }
+      type = value_get_type(self);
     }
-    type = value_get_type(self);
-  } else if (type_get_kind(type) == TYPE_KIND_TEMPLATE_FUNCTION) {
-    self = infer_function(ctx, self, argc, argv);
-    if (value_is_error(self)) {
-      return self;
+  } else {
+    if (type_get_kind(type) == TYPE_KIND_COMPTIME_FUNCTION) {
+      bool is_comptime = context_set_comptime(ctx, true);
+      self = infer_function(ctx, self, argc, argv);
+      context_set_comptime(ctx, is_comptime);
+      if (value_is_error(self)) {
+        return self;
+      }
+      type = value_get_type(self);
+    } else if (type_get_kind(type) == TYPE_KIND_TEMPLATE_FUNCTION) {
+      self = infer_function(ctx, self, argc, argv);
+      if (value_is_error(self)) {
+        return self;
+      }
+      type = value_get_type(self);
     }
-    type = value_get_type(self);
   }
   if (type_get_kind(raw_type) == TYPE_KIND_TEMPLATE_FUNCTION) {
     function_declar_t declar = *(function_declar_t *)value_get_data(self);

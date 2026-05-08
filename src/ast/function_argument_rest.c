@@ -93,7 +93,8 @@ ast_node_t read_ast_function_argument_rest(allocator_t allocator,
         allocator_free(allocator, mut);
       }
     }
-    ast_node_t type = read_ast_expression18(allocator, &current, end, filename);
+    ast_node_t type =
+        read_ast_expression_value(allocator, &current, end, filename);
     if (!type) {
       err = create_ast_error(allocator, *position, current, filename,
                              "invalid function argument, missing type");

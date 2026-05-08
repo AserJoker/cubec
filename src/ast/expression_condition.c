@@ -1,19 +1,19 @@
 #include "ast/expression_condition.h"
-#include "ast/expression.h"
+#include "ast/expression_binary.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/position.h"
 
-ast_node_t read_ast_expression_condition(allocator_t allocator,
-                                         position_t *position, const char *end,
-                                         const char *filename) {
+ast_node_t read_ast_expression_single(allocator_t allocator,
+                                      position_t *position, const char *end,
+                                      const char *filename) {
   ast_node_t node = NULL;
   ast_node_t err = NULL;
   position_t current = *position;
 
   ast_node_t condition =
-      read_ast_expression4(allocator, &current, end, filename);
+      read_ast_expression_binary_logical_or(allocator, &current, end, filename);
   if (!condition) {
     goto onerror;
   }
@@ -39,7 +39,7 @@ ast_node_t read_ast_expression_condition(allocator_t allocator,
     goto onerror;
   }
   ast_node_t consequent =
-      read_ast_expression3(allocator, &current, end, filename);
+      read_ast_expression_single(allocator, &current, end, filename);
   if (!consequent) {
     err = create_ast_error(allocator, *position, current, filename,
                            "invalid or unexpected token");
@@ -66,7 +66,7 @@ ast_node_t read_ast_expression_condition(allocator_t allocator,
     goto onerror;
   }
   ast_node_t alternate =
-      read_ast_expression3(allocator, &current, end, filename);
+      read_ast_expression_single(allocator, &current, end, filename);
   if (!alternate) {
     err = create_ast_error(allocator, *position, current, filename,
                            "invalid or unexpected token");

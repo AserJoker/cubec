@@ -24,7 +24,8 @@ ast_node_t read_ast_expression_template_generator(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
-  ast_node_t temp = read_ast_expression18(allocator, &current, end, filename);
+  ast_node_t temp =
+      read_ast_expression_value(allocator, &current, end, filename);
   if (!temp) {
     err =
         create_ast_error(allocator, *position, current, filename,
@@ -53,7 +54,7 @@ ast_node_t read_ast_expression_template_generator(allocator_t allocator,
   if (*current.offset != '>') {
     for (;;) {
       ast_node_t item =
-          read_ast_expression3(allocator, &current, end, filename);
+          read_ast_expression_single(allocator, &current, end, filename);
       if (!item) {
         err = create_ast_error(
             allocator, *position, current, filename,

@@ -1,5 +1,6 @@
 #include "ast/variable_declarator.h"
 #include "ast/expression.h"
+#include "ast/expression_condition.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -33,7 +34,8 @@ ast_node_t read_ast_variable_declarator(allocator_t allocator,
     if (err && err->type == NODE_TYPE_ERROR) {
       goto onerror;
     }
-    ast_node_t type = read_ast_expression18(allocator, &current, end, filename);
+    ast_node_t type =
+        read_ast_expression_value(allocator, &current, end, filename);
     if (!type) {
       err = create_ast_error(allocator, *position, current, filename,
                              "invalid or unexpected token");
@@ -61,7 +63,7 @@ ast_node_t read_ast_variable_declarator(allocator_t allocator,
     goto onerror;
   }
   ast_node_t initialize =
-      read_ast_expression3(allocator, &current, end, filename);
+      read_ast_expression_single(allocator, &current, end, filename);
   if (!initialize) {
     err = create_ast_error(allocator, *position, current, filename,
                            "invalid or unexpected token");

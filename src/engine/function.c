@@ -444,8 +444,8 @@ value_t create_function(context_t ctx, type_t function_type, ast_node_t node,
   char *id = module_generator_func_id(module, allocator, base_fullname);
   type_t global = context_get_global(ctx);
   type_t self = context_get_self(ctx);
-  function_declar_t declar =
-      create_function_declar(allocator, global, self, id, node, closure);
+  function_declar_t declar = create_function_declar(
+      allocator, FUNC_TYPE_AST, global, self, id, node, closure);
   allocator_free(allocator, id);
   context_store_function_declar(ctx, declar);
   value_t func = create_value(allocator, function_type, false, &declar, true);
@@ -482,8 +482,8 @@ value_t create_comptime_function(context_t ctx, ast_node_t node,
   char *id = module_generator_func_id(module, allocator, base_fullname);
   type_t global = context_get_global(ctx);
   type_t self = context_get_self(ctx);
-  function_declar_t declar =
-      create_function_declar(allocator, global, self, id, node, closure);
+  function_declar_t declar = create_function_declar(
+      allocator, FUNC_TYPE_AST, global, self, id, node, closure);
   allocator_free(allocator, id);
   context_store_function_declar(ctx, declar);
   return context_create_value(ctx, type, &declar, false, true, NULL);
@@ -518,8 +518,8 @@ value_t create_template_function(context_t ctx, ast_node_t node,
   char *id = module_generator_func_id(module, allocator, base_fullname);
   type_t global = context_get_global(ctx);
   type_t self = context_get_self(ctx);
-  function_declar_t declar =
-      create_function_declar(allocator, global, self, id, node, closure);
+  function_declar_t declar = create_function_declar(
+      allocator, FUNC_TYPE_AST, global, self, id, node, closure);
   allocator_free(allocator, id);
   context_store_function_declar(ctx, declar);
   return context_create_value(ctx, type, &declar, false, true, NULL);
@@ -563,9 +563,10 @@ static void function_declar_dispsoe(function_declar_t self,
   allocator_free(allocator, self->closure);
 }
 
-function_declar_t create_function_declar(allocator_t allocator, type_t global,
+function_declar_t create_function_declar(allocator_t allocator,
+                                         func_type_t type, type_t global,
                                          type_t self, const char *id,
-                                         ast_node_t node, array_t closure) {
+                                         void *data, array_t closure) {
   function_declar_t declar =
       allocator_alloc(allocator, sizeof(struct _function_declar_t),
                       (dispose_fn_t)function_declar_dispsoe);
@@ -573,6 +574,7 @@ function_declar_t create_function_declar(allocator_t allocator, type_t global,
   declar->global = global;
   declar->closure = closure;
   declar->id = create_cstring(allocator, id);
-  declar->node = node;
+  declar->data = data;
+  declar->type = type;
   return declar;
 }

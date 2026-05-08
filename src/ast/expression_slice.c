@@ -1,5 +1,5 @@
 #include "ast/expression_slice.h"
-#include "ast/expression.h"
+#include "ast/expression_condition.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
@@ -21,7 +21,10 @@ ast_node_t read_ast_expression_slice(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     goto onerror;
   }
-  ast_node_t start = read_ast_expression3(allocator, &current, end, filename);
+  ast_node_t start = NULL;
+  if (*current.offset != ':') {
+    start = read_ast_expression_single(allocator, &current, end, filename);
+  }
   if (start) {
     if (start->type == NODE_TYPE_ERROR) {
       err = start;
@@ -38,8 +41,10 @@ ast_node_t read_ast_expression_slice(allocator_t allocator,
   }
   current.offset++;
   current.column++;
-  ast_node_t end_index =
-      read_ast_expression3(allocator, &current, end, filename);
+  ast_node_t end_index = NULL;
+  if (*current.offset != ']') {
+    start = read_ast_expression_single(allocator, &current, end, filename);
+  }
   if (end_index) {
     if (end_index->type == NODE_TYPE_ERROR) {
       err = end_index;

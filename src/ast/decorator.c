@@ -1,5 +1,5 @@
 #include "ast/decorator.h"
-#include "ast/expression.h"
+#include "ast/expression_condition.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
@@ -20,7 +20,7 @@ ast_node_t read_ast_decorator(allocator_t allocator, position_t *position,
     return err;
   }
   ast_node_t expression =
-      read_ast_expression3(allocator, &current, end, filename);
+      read_ast_expression_single(allocator, &current, end, filename);
   if (!expression) {
     err = create_ast_error(allocator, *position, current, filename,
                            "invalid or unexpected token");

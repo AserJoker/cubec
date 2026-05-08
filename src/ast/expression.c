@@ -2,12 +2,9 @@
 #include "ast/array_declarator.h"
 #include "ast/callable_declarator.h"
 #include "ast/enum_declarator.h"
-#include "ast/expression_assigment.h"
-#include "ast/expression_binary.h"
 #include "ast/expression_call.h"
 #include "ast/expression_comma.h"
 #include "ast/expression_compute_member.h"
-#include "ast/expression_condition.h"
 #include "ast/expression_group.h"
 #include "ast/expression_member.h"
 #include "ast/expression_slice.h"
@@ -29,154 +26,15 @@
 
 ast_node_t read_ast_expression(allocator_t allocator, position_t *position,
                                const char *end, const char *filename) {
-  return read_ast_expression1(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression1(allocator_t allocator, position_t *position,
-                                const char *end, const char *filename) {
-  ast_node_t node =
-      read_ast_expression_comma(allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression2(allocator, position, end, filename);
+  return read_ast_expression_comma(allocator, position, end, filename);
 }
 
-ast_node_t read_ast_expression2(allocator_t allocator, position_t *position,
-                                const char *end, const char *filename) {
-  ast_node_t node =
-      read_ast_expression_assigment(allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression3(allocator, position, end, filename);
-}
-
-ast_node_t read_ast_expression3(allocator_t allocator, position_t *position,
-                                const char *end, const char *filename) {
-  ast_node_t node =
-      read_ast_expression_condition(allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression4(allocator, position, end, filename);
-}
-
-ast_node_t read_ast_expression4(allocator_t allocator, position_t *position,
-                                const char *end, const char *filename) {
-  ast_node_t node =
-      read_ast_expression_binary_logical_or(allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression5(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression5(allocator_t allocator, position_t *position,
-                                const char *end, const char *filename) {
-  ast_node_t node = read_ast_expression_binary_logical_and(allocator, position,
-                                                           end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression6(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression6(allocator_t allocator, position_t *position,
-                                const char *end, const char *filename) {
-  ast_node_t node =
-      read_ast_expression_binary_bitwise_or(allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression7(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression7(allocator_t allocator, position_t *position,
-                                const char *end, const char *filename) {
-  ast_node_t node = read_ast_expression_binary_bitwise_xor(allocator, position,
-                                                           end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression8(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression8(allocator_t allocator, position_t *position,
-                                const char *end, const char *filename) {
-  ast_node_t node = read_ast_expression_binary_bitwise_and(allocator, position,
-                                                           end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression9(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression9(allocator_t allocator, position_t *position,
-                                const char *end, const char *filename) {
-  ast_node_t node =
-      read_ast_expression_binary_equal(allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression10(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression10(allocator_t allocator, position_t *position,
-                                 const char *end, const char *filename) {
-  ast_node_t node =
-      read_ast_expression_binary_relation(allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression11(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression11(allocator_t allocator, position_t *position,
-                                 const char *end, const char *filename) {
-  ast_node_t node = read_ast_expression_binary_bitwise_shift(
-      allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression12(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression12(allocator_t allocator, position_t *position,
-                                 const char *end, const char *filename) {
-  ast_node_t node =
-      read_ast_expression_binary_additive(allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression13(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression13(allocator_t allocator, position_t *position,
-                                 const char *end, const char *filename) {
-  ast_node_t node = read_ast_expression_binary_multiplicative(
-      allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression14(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression14(allocator_t allocator, position_t *position,
-                                 const char *end, const char *filename) {
-  return read_ast_expression15(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression15(allocator_t allocator, position_t *position,
-                                 const char *end, const char *filename) {
-  ast_node_t node =
-      read_ast_expression_binary_prefix(allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  return read_ast_expression16(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression16(allocator_t allocator, position_t *position,
-                                 const char *end, const char *filename) {
-  return read_ast_expression17(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression17(allocator_t allocator, position_t *position,
-                                 const char *end, const char *filename) {
-  return read_ast_expression18(allocator, position, end, filename);
-}
-ast_node_t read_ast_expression18(allocator_t allocator, position_t *position,
-                                 const char *end, const char *filename) {
+ast_node_t read_ast_expression_value(allocator_t allocator,
+                                     position_t *position, const char *end,
+                                     const char *filename) {
   ast_node_t node = NULL;
   position_t current = *position;
-  node = read_ast_expression19(allocator, &current, end, filename);
+  node = read_ast_expression_atom(allocator, &current, end, filename);
   if (node) {
     if (node->type == NODE_TYPE_ERROR) {
       return node;
@@ -235,8 +93,8 @@ ast_node_t read_ast_expression18(allocator_t allocator, position_t *position,
   *position = current;
   return node;
 }
-ast_node_t read_ast_expression19(allocator_t allocator, position_t *position,
-                                 const char *end, const char *filename) {
+ast_node_t read_ast_expression_atom(allocator_t allocator, position_t *position,
+                                    const char *end, const char *filename) {
   ast_node_t node = NULL;
   node = read_ast_initialize_list(allocator, position, end, filename);
   if (node) {
