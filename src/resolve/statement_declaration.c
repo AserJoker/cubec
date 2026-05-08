@@ -164,8 +164,24 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
       value_type = dst_type;
     }
+    if (type_get_kind(value_type) == TYPE_KIND_PTR ||
+        type_get_kind(value_type) == TYPE_KIND_PARRAY ||
+        type_get_kind(value_type) == TYPE_KIND_OPAQUE ||
+        type_get_kind(value_type) == TYPE_KIND_SLICE) {
+      if (mut && !value_is_mut(value)) {
+        value_t err = create_comptime_error(
+            ctx, initialize, "cannot initialize '%s' with 'const %s'",
+            type_get_name(value_type), type_get_name(value_type));
+        if (comptime) {
+          return err;
+        } else {
+          context_push_error(ctx, err);
+          continue;
+        }
+      }
+    }
     char *name = location_get(identifier->loc, allocator);
-    if (context_get_type(ctx) == CONTEXT_TYPE_FUNCTION) {
+    if (context_get_type(ctx) != CONTEXT_TYPE_STRUCT) {
       if (context_is_comptime(ctx)) {
         void *data = value_get_data(value);
         value = context_create_value(ctx, value_type, data, mut, true, name);

@@ -94,7 +94,7 @@ static value_t resolve_result(context_t ctx, scope_t current_scope,
 }
 
 static value_t resolve_rest(context_t ctx, type_t type, size_t offset,
-                            size_t argc, value_t argv[]) {
+                            size_t argc, value_t argv[], bool mut) {
   type_t base_type = slice_type_get_type(type);
   size_t len = argc - offset;
   type_t array_type = create_array_type(ctx, base_type, len);
@@ -115,7 +115,7 @@ static value_t resolve_rest(context_t ctx, type_t type, size_t offset,
       }
     }
     void *base_data = value_get_data(arr);
-    return create_comptime_slice(ctx, type, base_data, 0, len);
+    return create_comptime_slice(ctx, type, base_data, 0, len, mut);
   } else {
     value_t arr =
         context_create_value(ctx, array_type, NULL, true, false, NULL);
@@ -179,7 +179,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
             create_error(ctx, "rest argument %" PRIuPTR " is not slice", idx);
         goto onfinish;
       }
-      value = resolve_rest(ctx, info->type, idx, argc, argv);
+      value = resolve_rest(ctx, info->type, idx, argc, argv, info->mut);
       if (value_is_error(value)) {
         result = value;
         goto onfinish;
@@ -202,6 +202,17 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       value = value_safe_convert(value, ctx, info->type);
       if (value_is_error(value)) {
         result = value;
+        goto onfinish;
+      }
+    }
+    if (type_get_kind(info->type) == TYPE_KIND_PTR ||
+        type_get_kind(info->type) == TYPE_KIND_PARRAY ||
+        type_get_kind(info->type) == TYPE_KIND_OPAQUE ||
+        type_get_kind(info->type) == TYPE_KIND_SLICE) {
+      if (info->mut && !value_is_mut(value)) {
+        result =
+            create_error(ctx, "cannot initialize '%s' with 'const %s'",
+                         type_get_name(info->type), type_get_name(info->type));
         goto onfinish;
       }
     }
@@ -348,7 +359,7 @@ type_t create_function_type(context_t ctx, type_t type, array_t argv,
         offset += 3;
       }
       if (!arg->mut) {
-        strcpy(&id[offset], "const ");
+        strcpy(&name[offset], "const ");
         offset += strlen("const ");
       }
       if (arg->type) {

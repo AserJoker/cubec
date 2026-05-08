@@ -5,6 +5,7 @@
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/integer.h"
+#include "engine/slice.h"
 #include "engine/struct.h"
 #include "engine/type.h"
 #include "engine/unsigned.h"
@@ -33,11 +34,14 @@ static ptr_meta_t create_ptr_meta(allocator_t allocator, type_t type, bool mut,
 static value_t ptr_assigment(value_t self, context_t ctx, value_t value) {
   type_t type = value_get_type(self);
   if (!ptr_type_is_mut(type)) {
-    return create_error(ctx, "ptr is not mutable");
+    return create_error(ctx, "value is not mutable");
   }
   value = value_safe_convert(value, ctx, type);
   if (value_is_error(value)) {
     return value;
+  }
+  if (value_is_mut(self) && !value_is_mut(value)) {
+    return create_error(ctx, "cannot assigment const value to mutable value");
   }
   if (value_is_comptime(self)) {
     if (value_is_comptime(value)) {
@@ -304,6 +308,56 @@ static value_t parray_safe_convert(value_t self, context_t ctx, type_t type) {
     return context_create_value(ctx, type, NULL, mut, false, NULL);
   }
 }
+static value_t parray_slice(value_t self, context_t ctx, value_t start,
+                            value_t end) {
+  type_t type = value_get_type(self);
+  type_t base_type = ptr_type_get_type(type);
+  type_t start_type = value_get_type(start);
+  type_t end_type = value_get_type(end);
+  type_t slice_type = create_slice_type(ctx, base_type);
+  if (value_is_comptime(self)) {
+    size_t s = 0;
+    size_t e = 0;
+    if (!value_is_comptime(start)) {
+      return create_error(ctx, "slice start is not comptime");
+    }
+    if (!value_is_comptime(end)) {
+      return create_error(ctx, "slice end is not comptime");
+    }
+    if (type_get_kind(start_type) != TYPE_KIND_VOID) {
+      if (type_get_kind(start_type) == TYPE_KIND_INTEGER) {
+        int64_t val = integer_get_value(start);
+        if (val < 0) {
+          return create_error(ctx, "slice start < 0");
+        }
+        s = val;
+      } else if (type_get_kind(start_type) == TYPE_KIND_UNSIGNED) {
+        s = unsigned_get_value(start);
+      } else {
+        return create_error(ctx, "slice start is not a integer");
+      }
+    }
+    if (type_get_kind(end_type) == TYPE_KIND_INTEGER) {
+      int64_t val = integer_get_value(end);
+      if (val < 0) {
+        return create_error(ctx, "slice end < 0");
+      }
+      e = val;
+    } else if (type_get_kind(end_type) == TYPE_KIND_UNSIGNED) {
+      e = unsigned_get_value(end);
+    } else {
+      return create_error(ctx, "slice end is not a integer");
+    }
+    size_t len = 0;
+    if (s < e) {
+      len = e - s;
+    }
+    return create_comptime_slice(ctx, slice_type, value_get_data(self), s, len,
+                                 value_is_mut(self));
+  } else {
+    return context_create_value(ctx, slice_type, NULL, false, false, NULL);
+  }
+}
 type_t create_parray_type(context_t ctx, type_t type, bool mut, bool vol) {
   const char *base_name = type_get_id(type);
   size_t len = snprintf(NULL, 0, "[*]%s%s%s", mut ? "const " : "",
@@ -323,6 +377,8 @@ type_t create_parray_type(context_t ctx, type_t type, bool mut, bool vol) {
         .set = parray_set,
         .convert = parray_convert,
         .safe_convert = parray_safe_convert,
+        .slice = parray_slice,
+        .assigment = ptr_assigment,
     };
     self = create_type(allocator, TYPE_KIND_PARRAY, sizeof(void *),
                        sizeof(void *), buf, buf, &opt, meta);

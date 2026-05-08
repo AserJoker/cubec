@@ -15,6 +15,7 @@ typedef enum _context_type_t {
   CONTEXT_TYPE_GENERATOR,
   CONTEXT_TYPE_ASYNC,
   CONTEXT_TYPE_STRUCT,
+  CONTEXT_TYPE_TEST,
   CONTEXT_TYPE_UNION,
 } context_type_t;
 

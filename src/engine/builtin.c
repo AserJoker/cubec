@@ -25,6 +25,9 @@ static string_t value_to_str(context_t ctx, value_t self) {
   string_t str = create_string(allocator, NULL);
   type_t type = value_get_type(self);
   if (!value_is_comptime(self)) {
+    if (!value_is_mut(self)) {
+      string_concat(str, allocator, "const ");
+    }
     size_t len = snprintf(NULL, 0, "%s{runtime}", type_get_name(type));
     char buf[len];
     sprintf(buf, "%s{runtime}", type_get_name(type));
@@ -78,6 +81,9 @@ static string_t value_to_str(context_t ctx, value_t self) {
     }
     case TYPE_KIND_ARRAY: {
       size_t size = array_type_get_length(type);
+      if (!value_is_mut(self)) {
+        string_concat(str, allocator, "const ");
+      }
       string_concat(str, allocator, type_get_name(type));
       string_concat(str, allocator, "[");
       for (size_t idx = 0; idx < size; idx++) {
@@ -95,6 +101,9 @@ static string_t value_to_str(context_t ctx, value_t self) {
       break;
     }
     case TYPE_KIND_SLICE: {
+      if (!value_is_mut(self)) {
+        string_concat(str, allocator, "const ");
+      }
       string_concat(str, allocator, type_get_name(type));
       string_concat(str, allocator, "[");
       if (value_is_comptime(self)) {
@@ -117,6 +126,9 @@ static string_t value_to_str(context_t ctx, value_t self) {
       break;
     }
     case TYPE_KIND_STRUCT: {
+      if (!value_is_mut(self)) {
+        string_concat(str, allocator, "const ");
+      }
       array_t fields = struct_type_get_fields(type);
       string_concat(str, allocator, type_get_name(type));
       string_concat(str, allocator, "{");

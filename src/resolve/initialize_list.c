@@ -142,6 +142,16 @@ static value_t resolve_struct_initialize(context_t ctx, type_t type,
         if (value_is_error(value)) {
           return convert_comptime_error(ctx, initialize, value);
         }
+        if (type_get_kind(f->type) == TYPE_KIND_PTR ||
+            type_get_kind(f->type) == TYPE_KIND_PARRAY ||
+            type_get_kind(f->type) == TYPE_KIND_OPAQUE ||
+            type_get_kind(f->type) == TYPE_KIND_SLICE) {
+          if (f->mut && !value_is_mut(value)) {
+            return create_comptime_error(
+                ctx, initialize, "cannot initialize '%s' with 'const %s'",
+                type_get_name(f->type), type_get_name(f->type));
+          }
+        }
         memcpy(data + f->offset, value_get_data(value), type_get_size(f->type));
       } else if (field->type == NODE_TYPE_EXPRESSION_SPREAD) {
         ast_node_t expression = ast_get_child(field, "expression");

@@ -137,7 +137,7 @@ value_t value_convert(value_t self, struct _context_t *ctx, type_t type) {
   type_t value_type = value_get_type(self);
   if (strcmp(type_get_id(value_type), type_get_id(type)) == 0) {
     return context_create_weak_value(ctx, value_type, value_get_data(self),
-                                     false, NULL);
+                                     value_is_mut(self), NULL);
   }
   const type_operator_t *opt = type_get_operator(value_type);
   if (opt->convert) {
@@ -150,7 +150,7 @@ value_t value_safe_convert(value_t self, struct _context_t *ctx, type_t type) {
   type_t value_type = value_get_type(self);
   if (strcmp(type_get_id(value_type), type_get_id(type)) == 0) {
     return context_create_weak_value(ctx, value_type, value_get_data(self),
-                                     false, NULL);
+                                     value_is_mut(self), NULL);
   }
   const type_operator_t *opt = type_get_operator(value_type);
   if (opt->safe_convert) {
@@ -536,6 +536,12 @@ static value_t infer_function(context_t ctx, value_t self, size_t argc,
           base_type = value_get_type(argv[idx]);
         }
         arg->type = create_slice_type(ctx, base_type);
+        if (type_get_kind(arg->type) == TYPE_KIND_PTR ||
+            type_get_kind(arg->type) == TYPE_KIND_PARRAY ||
+            type_get_kind(arg->type) == TYPE_KIND_OPAQUE ||
+            type_get_kind(arg->type) == TYPE_KIND_SLICE) {
+          arg->mut = value_is_mut(argv[idx]);
+        }
       } else {
         value_t vtype = resolve_expression(ctx, type);
         if (value_is_error(vtype)) {
@@ -574,7 +580,8 @@ static value_t infer_function(context_t ctx, value_t self, size_t argc,
       if (strcmp(name, "_") != 0) {
         if (context_is_comptime(ctx)) {
           void *data = value_get_data(arr);
-          value_t slice = create_comptime_slice(ctx, arg->type, data, 0, len);
+          value_t slice =
+              create_comptime_slice(ctx, arg->type, data, 0, len, arg->mut);
           slice = value_clone(slice, allocator);
           err = context_declar(ctx, name, slice);
         } else {
@@ -594,6 +601,12 @@ static value_t infer_function(context_t ctx, value_t self, size_t argc,
       }
       if (location_is(type->loc, "infer")) {
         arg->type = value_get_type(argv[idx]);
+        if (type_get_kind(arg->type) == TYPE_KIND_PTR ||
+            type_get_kind(arg->type) == TYPE_KIND_PARRAY ||
+            type_get_kind(arg->type) == TYPE_KIND_OPAQUE ||
+            type_get_kind(arg->type) == TYPE_KIND_SLICE) {
+          arg->mut = value_is_mut(argv[idx]);
+        }
       } else {
         value_t vtype = resolve_expression(ctx, type);
         if (value_is_error(vtype)) {
@@ -739,6 +752,15 @@ value_t value_assigment(value_t self, struct _context_t *ctx, value_t value) {
   return create_error(ctx,
                       "invalid operands to binary expression ('%s' and '%s')",
                       type_get_name(type), type_get_name(right_type));
+}
+value_t value_slice(value_t self, struct _context_t *ctx, value_t start,
+                    value_t end) {
+  type_t type = value_get_type(self);
+  const type_operator_t *opt = type_get_operator(type);
+  if (opt->slice) {
+    return opt->slice(self, ctx, start, end);
+  }
+  return create_error(ctx, "invalid operands to %s", type_get_name(type));
 }
 value_t value_default_assigment(value_t self, struct _context_t *ctx,
                                 value_t value) {

@@ -1,9 +1,9 @@
-template func add(a:infer,b:infer):typeof(a+b) {
-    print("%v",a);
-    return a+b;
+template func write(data:infer):void{
+    data[0] = 123;
+    print("%v",data);
 }
 test "generator.function" {
-    print("%v",add(1,2));
-    print("%v",add(1,2));
-    print("%v",add(1,2));
+    let arr = .[_]i32{1,2,3};
+    write(arr[:]);
+    write(arr);
 }

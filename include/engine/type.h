@@ -58,6 +58,10 @@ typedef struct _value_t *(*set_fn_t)(struct _value_t *self,
                                      struct _value_t *value);
 typedef struct _value_t *(*get_length_fn_t)(struct _value_t *self,
                                             struct _context_t *ctx);
+typedef struct _value_t *(*slice_fn_t)(struct _value_t *self,
+                                       struct _context_t *ctx,
+                                       struct _value_t *start,
+                                       struct _value_t *end);
 typedef struct _value_t *(*call_fn_t)(struct _value_t *self,
                                       struct _context_t *ctx, size_t argc,
                                       struct _value_t *argv[]);
@@ -100,6 +104,7 @@ typedef struct _type_operator_t {
   set_fn_t set;
 
   get_length_fn_t get_length;
+  slice_fn_t slice;
 
   call_fn_t call;
 

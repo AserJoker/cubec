@@ -8,7 +8,7 @@ extern "C" {
 typedef struct _value_t *value_t;
 struct _context_t;
 value_t create_value(allocator_t allocator, type_t type, bool mut,
-                           const void *data, bool comptime);
+                     const void *data, bool comptime);
 void value_set_mut(value_t self, bool mut);
 value_t create_weak_value(allocator_t allocator, type_t type, bool mut,
                           void *data);
@@ -65,6 +65,8 @@ value_t value_assigment(value_t self, struct _context_t *ctx, value_t value);
 value_t value_default_assigment(value_t self, struct _context_t *ctx,
                                 value_t value);
 value_t value_default_address_of(value_t self, struct _context_t *ctx);
+value_t value_slice(value_t self, struct _context_t *ctx, value_t start,
+                    value_t end);
 bool value_is_error(value_t value);
 bool value_is_interrupt(value_t value);
 #ifdef __cplusplus

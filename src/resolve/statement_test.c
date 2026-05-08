@@ -16,7 +16,7 @@ value_t resolve_statement_test(context_t ctx, ast_node_t node) {
   char *name = location_get(name_node->loc, allocator);
   fprintf(stdout, "test %s start\n", name);
   bool is_comptime = context_set_comptime(ctx, true);
-
+  context_set_type(ctx, CONTEXT_TYPE_TEST);
   scope_t current = context_get_scope(ctx);
   context_push_scope(ctx);
   scope_t scope = context_get_scope(ctx);
@@ -25,7 +25,7 @@ value_t resolve_statement_test(context_t ctx, ast_node_t node) {
   scope_store(current, allocator, NULL, err);
   context_set_scope(ctx, current);
   allocator_free(allocator, scope);
-
+  context_set_type(ctx, CONTEXT_TYPE_STRUCT);
   context_set_comptime(ctx, is_comptime);
   if (value_is_error(err)) {
     fprintf(stdout, "%s\ntest %s failed\n", error_get_message(err), name);

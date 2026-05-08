@@ -87,7 +87,7 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
       ast_node_t type_node = ast_get_child(field, "type");
       ast_node_t mut_node = ast_get_child(field, "mut");
       ast_node_t pub_node = ast_get_child(field, "pub");
-      bool mut = mut_node = NULL;
+      bool mut = mut_node == NULL;
       bool pub = pub_node != NULL;
       value_t vtype = resolve_type(ctx, type_node);
       if (value_is_error(vtype)) {

@@ -25,7 +25,7 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
     }
     value_t err = value_assigment(left, ctx, right);
     if (value_is_error(err)) {
-      return convert_comptime_error(ctx, identifier, err);
+      return convert_comptime_error(ctx, value, err);
     }
   } else {
     value_t left = resolve_expression(ctx, identifier);
