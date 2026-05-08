@@ -1,5 +1,6 @@
 #include "ast/initialize_list.h"
 #include "ast/expression.h"
+#include "ast/expression_condition.h"
 #include "ast/expression_spread.h"
 #include "ast/initialize_field.h"
 #include "ast/node.h"

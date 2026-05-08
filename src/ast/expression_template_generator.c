@@ -1,5 +1,6 @@
 #include "ast/expression_template_generator.h"
 #include "ast/expression.h"
+#include "ast/expression_condition.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
