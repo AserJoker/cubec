@@ -6,6 +6,7 @@
 #include "fmt/statement_declaration.h"
 #include "fmt/statement_function.h"
 #include "fmt/statement_struct.h"
+#include "fmt/statement_test.h"
 
 void fmt_program(allocator_t allocator, ast_node_t node, stream_t stream) {
   ast_node_t statements = ast_get_child(node, "statements");
@@ -22,6 +23,8 @@ void fmt_program(allocator_t allocator, ast_node_t node, stream_t stream) {
         fmt_statement_function(allocator, sts, stream);
       } else if (sts->type == NODE_TYPE_STATEMENT_STRUCT) {
         fmt_statement_struct(allocator, sts, stream);
+      } else if (sts->type == NODE_TYPE_STATEMENT_TEST) {
+        fmt_statement_test(allocator, sts, stream);
       }
       count++;
     }

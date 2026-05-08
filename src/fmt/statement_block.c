@@ -1,22 +1,19 @@
-#include "fmt/function_body.h"
-#include "ast/node.h"
-#include "ast/node_type.h"
-#include "core/stream.h"
 #include "fmt/statement_block.h"
+#include "ast/node.h"
+#include "core/stream.h"
 #include "fmt/statement_declaration.h"
 #include "fmt/statement_expression.h"
 #include "fmt/statement_function.h"
 #include "fmt/statement_return.h"
 #include "fmt/statement_struct.h"
-
-void fmt_function_body(allocator_t allocator, ast_node_t node,
-                       stream_t stream) {
+void fmt_statement_block(allocator_t allocator, ast_node_t node,
+                         stream_t stream) {
   ast_node_t statements = ast_get_child(node, "statements");
-  stream_write(stream, " {");
-  stream_inc_indent(stream);
-  for (size_t idx = 0; idx < ast_get_length(statements); idx++) {
-    ast_node_t sts = ast_get_item(statements, idx);
-    if (sts->visible) {
+  stream_write(stream, "{");
+  if (ast_get_length(statements)) {
+    stream_inc_indent(stream);
+    for (size_t idx = 0; idx < ast_get_length(statements); idx++) {
+      ast_node_t sts = ast_get_item(statements, idx);
       stream_newline(stream);
       if (sts->type == NODE_TYPE_STATEMENT_DECLARATION) {
         fmt_statement_declaration(allocator, sts, stream);
@@ -32,8 +29,8 @@ void fmt_function_body(allocator_t allocator, ast_node_t node,
         fmt_statement_block(allocator, sts, stream);
       }
     }
+    stream_dec_indent(stream);
+    stream_newline(stream);
   }
-  stream_dec_indent(stream);
-  stream_newline(stream);
   stream_write(stream, "}");
 }

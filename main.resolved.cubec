@@ -1,5 +1,9 @@
-template func add(a: infer, b: typeof(a)): typeof(a) {
+template func add(a: infer, b: infer): typeof(a + b) {
     print("%v", a);
     return a + b;
 }
-
+test "generator.function" {
+    print("%v", add(1, 2));
+    print("%v", add(1, 2));
+    print("%v", add(1, 2));
+}

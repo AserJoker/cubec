@@ -170,13 +170,5 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
       return result;
     }
   }
-  array_t attrs = struct_type_get_attributes(stru);
-  for (size_t idx = 0; idx < array_get_size(attrs); idx++) {
-    struct_attribute_t attr = array_get(attrs, idx);
-    type_t type = value_get_type(attr->value);
-    if (type_get_kind(type) == TYPE_KIND_FUNCTION) {
-      resolve_function_declaration(ctx, attr->value);
-    }
-  }
   return result;
 }

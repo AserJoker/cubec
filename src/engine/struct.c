@@ -5,6 +5,7 @@
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/function.h"
+#include "engine/module.h"
 #include "engine/ptr.h"
 #include "engine/type.h"
 #include "engine/value.h"
@@ -291,6 +292,12 @@ type_t create_struct_type(context_t ctx, const char *name, size_t align) {
     self = create_type(allocator, TYPE_KIND_STRUCT, sizeof(int8_t), align, name,
                        id, &opt, meta);
     context_store_type(ctx, self);
+    module_t module = context_get_module(ctx);
+    if (module) {
+      value_t vtype = create_type_value(ctx, self, false, NULL);
+      vtype = value_clone(vtype, allocator);
+      module_add_struct(module, vtype);
+    }
   }
   allocator_free(allocator, id);
   return self;
