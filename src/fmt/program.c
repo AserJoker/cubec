@@ -5,6 +5,7 @@
 #include "core/stream.h"
 #include "fmt/statement_declaration.h"
 #include "fmt/statement_function.h"
+#include "fmt/statement_import.h"
 #include "fmt/statement_struct.h"
 #include "fmt/statement_test.h"
 
@@ -25,6 +26,8 @@ void fmt_program(allocator_t allocator, ast_node_t node, stream_t stream) {
         fmt_statement_struct(allocator, sts, stream);
       } else if (sts->type == NODE_TYPE_STATEMENT_TEST) {
         fmt_statement_test(allocator, sts, stream);
+      } else if (sts->type == NODE_TYPE_STATEMENT_IMPORT) {
+        fmt_statement_import(allocator, sts, stream);
       }
       count++;
     }

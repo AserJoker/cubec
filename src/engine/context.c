@@ -54,6 +54,7 @@ struct _context_t {
   value_t function;
   hash_map_t builtins;
   hash_map_t func_declars;
+  array_t dependences;
 };
 
 static void context_dispose(context_t self, allocator_t allocator) {
@@ -65,6 +66,7 @@ static void context_dispose(context_t self, allocator_t allocator) {
   allocator_free(allocator, self->types);
   allocator_free(allocator, self->func_declars);
   allocator_free(allocator, self->builtins);
+  allocator_free(allocator, self->dependences);
 }
 context_t create_context(allocator_t allocator) {
   context_t self = allocator_alloc(allocator, sizeof(struct _context_t),
@@ -100,6 +102,7 @@ context_t create_context(allocator_t allocator) {
       .compare = (compare_fn_t)strcmp,
   };
   self->func_declars = create_hash_map(allocator, &func_declar_initialize);
+  self->dependences = create_array(allocator, NULL);
   self->comptime = true;
   type_init(self);
   error_init(self);
@@ -248,6 +251,26 @@ value_t context_create_weak_value(context_t self, type_t type, void *data,
   return value;
 }
 value_t context_load_module(context_t self, const char *filename) {
+  for (size_t idx = 0; idx < array_get_size(self->dependences); idx++) {
+    const char *frame = array_get(self->dependences, idx);
+    if (strcmp(frame, filename) == 0) {
+      string_t dep = create_string(self->allocator, NULL);
+      for (size_t i = 0; i < array_get_size(self->dependences); i++) {
+        const char *frame = array_get(self->dependences, i);
+        string_concat(dep, self->allocator, "  ");
+        string_concat(dep, self->allocator, frame);
+        string_concat(dep, self->allocator, " -> \n");
+      }
+      string_concat(dep, self->allocator, "  ");
+      string_concat(dep, self->allocator, filename);
+      const char *dep_str = string_get(dep);
+      size_t len = snprintf(NULL, 0, "cycle dependence: \n%s", dep_str);
+      char buf[len];
+      sprintf(buf, "cycle dependence: \n%s", dep_str);
+      allocator_free(self->allocator, dep);
+      return create_error(self, buf);
+    }
+  }
   module_t module = hash_map_get(self->modules, filename, NULL, NULL);
   if (module) {
     return module_get_value(module);
@@ -297,7 +320,9 @@ value_t context_load_module(context_t self, const char *filename) {
   self->type = CONTEXT_TYPE_STRUCT;
   hash_map_set(self->modules, (void *)module_get_filename(module), module, NULL,
                NULL);
+  array_push(self->dependences, (void *)filename);
   resolve_program(self, node);
+  array_pop(self->dependences);
   array_t functions = module_get_functions(module);
   for (size_t idx = 0; idx < array_get_size(functions); idx++) {
     value_t func = array_get(functions, idx);

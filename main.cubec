@@ -1,11 +1,5 @@
-import io from "io";
-struct Test{
-    template func __call__(self: *__self__,...args:infer):void {
-        print("%v",args);
-    }
-};
+import m  from "./add.cubec";
 test "generator.function" {
-    let tt:Test = .{};
-    tt(1,2,3);
-    tt("a"[:], "b"[:], "c"[:]);
+    const res = m.add(1,2);
+    print("%v",res);
 }

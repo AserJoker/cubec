@@ -7,6 +7,7 @@
 #include "engine/value.h"
 #include "resolve/statement_declaration.h"
 #include "resolve/statement_function.h"
+#include "resolve/statement_import.h"
 #include "resolve/statement_struct.h"
 #include "resolve/statement_test.h"
 #include <inttypes.h>
@@ -29,6 +30,8 @@ value_t resolve_program(context_t ctx, ast_node_t node) {
       err = resolve_statement_struct(ctx, sts);
     } else if (sts->type == NODE_TYPE_STATEMENT_TEST) {
       err = resolve_statement_test(ctx, sts);
+    } else if (sts->type == NODE_TYPE_STATEMENT_IMPORT) {
+      err = resolve_statement_import(ctx, sts);
     } else {
       err = create_comptime_error(ctx, sts, "invalid top statement");
     }
