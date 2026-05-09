@@ -61,7 +61,6 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
     if (value_is_error(err)) {
       return convert_comptime_error(ctx, identifier, err);
     }
-    return context_get_undefined(ctx);
   }
   return context_get_undefined(ctx);
 }

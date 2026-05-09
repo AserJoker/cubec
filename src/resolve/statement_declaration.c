@@ -25,12 +25,6 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     return create_comptime_error(ctx, pub_node, "invalid pub declaration");
   }
   bool mut = !location_is(declar_type->loc, "const");
-  bool comptime = false;
-  if (kind) {
-    comptime = location_is(kind->loc, "comptime");
-  }
-  comptime |= context_is_comptime(ctx);
-  comptime = context_set_comptime(ctx, comptime);
   for (size_t idx = 0; idx < ast_get_length(declarations); idx++) {
     ast_node_t declarator = ast_get_item(declarations, idx);
     ast_node_t identifier = ast_get_child(declarator, "identifier");
@@ -39,7 +33,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     if (location_is(identifier->loc, "_")) {
       value_t err = create_comptime_error(
           ctx, identifier, "'_' only to ignore values in expressions");
-      if (comptime) {
+      if (context_is_comptime(ctx)) {
         return err;
       } else {
         context_push_error(ctx, err);
@@ -51,7 +45,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       if (!itype && !type) {
         value_t err = create_comptime_error(ctx, declarator,
                                             "missing type for initialize list");
-        if (comptime) {
+        if (context_is_comptime(ctx)) {
           return err;
         } else {
           context_push_error(ctx, err);
@@ -64,9 +58,16 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         type = NULL;
       }
     }
-    value_t value = resolve_expression(ctx, initialize);
+    value_t value = NULL;
+    if (kind && location_is(kind->loc, "comptime")) {
+      bool is_comptime = context_set_comptime(ctx, true);
+      value = resolve_expression(ctx, initialize);
+      context_set_comptime(ctx, is_comptime);
+    } else {
+      value = resolve_expression(ctx, initialize);
+    }
     if (value_is_error(value)) {
-      if (comptime) {
+      if (context_is_comptime(ctx)) {
         return value;
       } else {
         context_push_error(ctx, value);
@@ -79,7 +80,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     if (context_is_comptime(ctx) && !value_is_comptime(value)) {
       value_t err =
           create_comptime_error(ctx, initialize, "value is not comptime");
-      if (comptime) {
+      if (context_is_comptime(ctx)) {
         return err;
       } else {
         context_push_error(ctx, err);
@@ -89,7 +90,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     type_t value_type = value_get_type(value);
     if (type_get_kind(value_type) == TYPE_KIND_VOID) {
       value_t err = create_comptime_error(ctx, initialize, "value is void");
-      if (comptime) {
+      if (context_is_comptime(ctx)) {
         return err;
       } else {
         context_push_error(ctx, err);
@@ -100,18 +101,22 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         !context_is_comptime(ctx)) {
       value_t err = create_comptime_error(
           ctx, initialize, "type value only declared with comptime");
-      if (comptime) {
+      if (context_is_comptime(ctx)) {
         return err;
       } else {
         context_push_error(ctx, err);
         continue;
       }
     }
-    if (type_get_kind(value_type) == TYPE_KIND_COMPTIME_FUNCTION &&
+    if ((type_get_kind(value_type) == TYPE_KIND_COMPTIME_FUNCTION ||
+         type_get_kind(value_type) == TYPE_KIND_TEMPLATE_FUNCTION ||
+         type_get_kind(value_type) == TYPE_KIND_PTR ||
+         type_get_kind(value_type) == TYPE_KIND_PARRAY ||
+         type_get_kind(value_type) == TYPE_KIND_OPAQUE ||
+         type_get_kind(value_type) == TYPE_KIND_SLICE) &&
         !context_is_comptime(ctx)) {
-      value_t err =
-          create_comptime_error(ctx, initialize, "value is comptime function");
-      if (comptime) {
+      value_t err = create_comptime_error(ctx, initialize, "value is comptime");
+      if (context_is_comptime(ctx)) {
         return err;
       } else {
         context_push_error(ctx, err);
@@ -129,11 +134,13 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
           create_array_type(ctx, context_load_type(ctx, "u8"), len);
       value = context_create_value(ctx, arr_type, buf, false, true, NULL);
       value_type = arr_type;
+      allocator_free(allocator, initialize->data);
+      initialize->value = value_clone(value, allocator);
     }
     if (type) {
       value_t vdst_type = resolve_type(ctx, type);
       if (value_is_error(vdst_type)) {
-        if (comptime) {
+        if (context_is_comptime(ctx)) {
           return vdst_type;
         } else {
           context_push_error(ctx, vdst_type);
@@ -145,7 +152,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
           !context_is_comptime(ctx)) {
         value_t err = create_comptime_error(
             ctx, initialize, "str value only declared with comptime");
-        if (comptime) {
+        if (context_is_comptime(ctx)) {
           return err;
         } else {
           context_push_error(ctx, err);
@@ -155,7 +162,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       value = value_safe_convert(value, ctx, dst_type);
       if (value_is_error(value)) {
         value_t err = convert_comptime_error(ctx, initialize, value);
-        if (comptime) {
+        if (context_is_comptime(ctx)) {
           return err;
         } else {
           context_push_error(ctx, err);
@@ -172,7 +179,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         value_t err = create_comptime_error(
             ctx, initialize, "cannot initialize '%s' with 'const %s'",
             type_get_name(value_type), type_get_name(value_type));
-        if (comptime) {
+        if (context_is_comptime(ctx)) {
           return err;
         } else {
           context_push_error(ctx, err);
@@ -180,9 +187,12 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         }
       }
     }
+    value_t vtype = create_type_value(ctx, value_type, false, NULL);
+    ast_node_t _type = create_ast_value_node(allocator, vtype);
+    ast_add_child(allocator, declarator, "_type", _type);
     char *name = location_get(identifier->loc, allocator);
     if (context_get_type(ctx) != CONTEXT_TYPE_STRUCT) {
-      if (context_is_comptime(ctx)) {
+      if (kind && location_is(kind->loc, "comptime")) {
         void *data = value_get_data(value);
         value = context_create_value(ctx, value_type, data, mut, true, name);
       } else {
@@ -193,7 +203,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       if (struct_type_get_attribute(self, name)) {
         value = create_error(ctx, "redefinition of '%s'", name);
       } else {
-        if (!context_is_comptime(ctx)) {
+        if (!kind || !location_is(kind->loc, "comptime")) {
           value = context_create_value(ctx, value_type, NULL, mut, false, name);
         }
         struct_type_add_attribute(self, allocator, name, value,
@@ -203,7 +213,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     allocator_free(allocator, name);
     if (value_is_error(value)) {
       value = convert_comptime_error(ctx, identifier, value);
-      if (comptime) {
+      if (context_is_comptime(ctx)) {
         return value;
       } else {
         context_push_error(ctx, value);
@@ -211,9 +221,11 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
     }
   }
-  context_set_comptime(ctx, comptime);
   if (result) {
     return create_comptime_error(ctx, node, "declartion statement error");
+  }
+  if (kind && location_is(kind->loc, "comptime")) {
+    node->visible = false;
   }
   return context_get_undefined(ctx);
 }

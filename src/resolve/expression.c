@@ -1,6 +1,7 @@
 #include "resolve/expression.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "core/allocator.h"
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/value.h"
@@ -28,6 +29,9 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     }
   }
   value_t value = NULL;
+  if (node->type == NODE_TYPE_VALUE) {
+    return node->value;
+  }
   if (node->type == NODE_TYPE_LITERAL_IDENTIFIER) {
     value = resolve_literal_identifier(ctx, node);
   } else if (node->type == NODE_TYPE_LITERAL_STRING) {
@@ -60,10 +64,17 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     value = resolve_expression_slice(ctx, node);
   } else if (node->type == NODE_TYPE_SLICE_DECLARATOR) {
     value = resolve_slice_declarator(ctx, node);
-  } else if (node->type == NODE_TYPE_VALUE) {
-    value = node->value;
   } else {
     return create_comptime_error(ctx, node, "unsupport expression node");
+  }
+  allocator_t allocator = context_get_allocator(ctx);
+  if (value_is_comptime(value)) {
+    value = value_clone(value, allocator);
+    allocator_free(allocator, node->data);
+    node->value = value;
+    node->type = NODE_TYPE_VALUE;
+  } else {
+    ast_node_bind_value(allocator, node, value);
   }
   return value;
 }

@@ -1,5 +1,0 @@
-import m from "./add.cubec";
-test "generator.function" {
-    const res = m.add(1, 2);
-    print("%v", res);
-}

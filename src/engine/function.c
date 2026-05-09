@@ -448,7 +448,8 @@ value_t create_function(context_t ctx, type_t function_type, ast_node_t node,
       allocator, FUNC_TYPE_AST, global, self, id, node, closure);
   allocator_free(allocator, id);
   context_store_function_declar(ctx, declar);
-  value_t func = create_value(allocator, function_type, false, &declar, true);
+  value_t func =
+      create_value(allocator, function_type, false, &declar, true);
   module_add_function(module, func);
   return func;
 }

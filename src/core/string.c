@@ -97,6 +97,9 @@ int string_compare(string_t self, const char *source) {
   return strcmp(self->data, source);
 }
 char *create_cstring(allocator_t allocator, const char *source) {
+  if (!source) {
+    return NULL;
+  }
   size_t len = strlen(source);
   char *s = allocator_alloc(allocator, len + 1, NULL);
   strcpy(s, source);

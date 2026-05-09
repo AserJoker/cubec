@@ -99,7 +99,7 @@ static value_t resolve_array_initialize(context_t ctx, ast_node_t type_node,
     return context_create_value(ctx, type, data, false, true, NULL);
   } else {
     allocator_free(allocator, items);
-    return context_create_value(ctx, type, NULL, false, true, NULL);
+    return context_create_value(ctx, type, NULL, false, false, NULL);
   }
 }
 static value_t resolve_struct_initialize(context_t ctx, type_t type,

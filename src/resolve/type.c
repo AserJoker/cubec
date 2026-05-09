@@ -1,4 +1,5 @@
 #include "resolve/type.h"
+#include "ast/node.h"
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/type.h"
@@ -16,5 +17,7 @@ value_t resolve_type(context_t ctx, ast_node_t node) {
   if (type_get_kind(type) != TYPE_KIND_TYPE) {
     return create_comptime_error(ctx, node, "expression is not type");
   }
+  allocator_t allocator = context_get_allocator(ctx);
+  ast_node_bind_value(allocator, node, value);
   return value;
 }

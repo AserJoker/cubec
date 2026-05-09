@@ -2,6 +2,7 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "ast/program.h"
+#include "c/program.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/compare.h"
@@ -371,6 +372,40 @@ string_t context_fmt_module(context_t self, const char *module) {
   ast_node_t node = module_get_node(m);
   stream_t stream = create_stream(self->allocator);
   fmt_program(self->allocator, node, stream);
+  string_t str = stream_get_string(stream);
+  allocator_free(self->allocator, stream);
+  return str;
+}
+
+string_t context_write_module(context_t self, const char *module) {
+  module_t m = hash_map_get(self->modules, module, NULL, NULL);
+  if (!m) {
+    return NULL;
+  }
+  ast_node_t node = module_get_node(m);
+  stream_t stream = create_stream(self->allocator);
+  context_type_t current_type = self->type;
+  type_t current_global = self->global;
+  type_t current_self = self->self;
+  scope_t current_scope = self->scope;
+  module_t current_module = self->module;
+  scope_t scope = create_scope(self->allocator, self->root);
+  value_t global = module_get_value(m);
+  type_t module_struct = *(type_t *)value_get_data(global);
+  self->global = module_struct;
+  self->self = module_struct;
+  self->scope = scope;
+  self->module = m;
+  self->function = NULL;
+  self->type = CONTEXT_TYPE_STRUCT;
+  write_c_program(self, node, stream);
+  allocator_free(self->allocator, scope);
+  self->function = NULL;
+  self->scope = current_scope;
+  self->type = current_type;
+  self->self = current_self;
+  self->global = current_global;
+  self->module = current_module;
   string_t str = stream_get_string(stream);
   allocator_free(self->allocator, stream);
   return str;
