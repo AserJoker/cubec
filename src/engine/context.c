@@ -192,6 +192,25 @@ const char *context_create_cstring(context_t self, const char *src) {
 }
 allocator_t context_get_allocator(context_t self) { return self->allocator; }
 value_t context_load(context_t self, const char *name) {
+  value_t value = context_load_local(self, name);
+  if (!value) {
+    value = context_load_global(self, name);
+  }
+  if (!value) {
+    return create_error(self, "use of undeclared identifier '%s'", name);
+  }
+  return value;
+}
+
+value_t context_load_global(context_t self, const char *name) {
+  struct_attribute_t attr = struct_type_get_attribute(self->global, name);
+  if (attr) {
+    return attr->value;
+  }
+  return NULL;
+}
+
+value_t context_load_local(context_t self, const char *name) {
   if (strcmp(name, "true") == 0) {
     return self->true_;
   }
@@ -212,12 +231,9 @@ value_t context_load(context_t self, const char *name) {
     }
     scope = scope_get_parent(scope);
   }
-  struct_attribute_t attr = struct_type_get_attribute(self->global, name);
-  if (attr) {
-    return attr->value;
-  }
-  return create_error(self, "use of undeclared identifier '%s'", name);
+  return NULL;
 }
+
 value_t context_declar(context_t self, const char *name, value_t value) {
   scope_t scope = self->scope;
   if (scope_load(scope, name)) {

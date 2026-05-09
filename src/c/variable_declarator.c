@@ -32,6 +32,11 @@ void write_c_declar(context_t ctx, type_t type, ast_node_t identifier,
   } else {
     write_c_type(ctx, type, stream);
     stream_write(stream, " ");
+    if (context_get_type(ctx) == CONTEXT_TYPE_STRUCT) {
+      type_t self = context_get_self(ctx);
+      stream_write(stream, type_get_id(self));
+      stream_write(stream, "V");
+    }
     stream_write_location(stream, identifier->loc);
   }
 }

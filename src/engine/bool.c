@@ -123,15 +123,13 @@ void bool_init(context_t ctx) {
 value_t create_comptime_bool(context_t ctx, bool value, bool mut,
                              const char *name) {
   allocator_t allocator = context_get_allocator(ctx);
-  value_t bool_v = context_load(ctx, "bool");
-  type_t bool_t = *(type_t *)value_get_data(bool_v);
+  type_t bool_t = context_load_type(ctx, "bool");
   return context_create_value(ctx, bool_t, &value, mut, true, name);
 }
 
 value_t create_bool(context_t ctx, bool mut, const char *name) {
   allocator_t allocator = context_get_allocator(ctx);
-  value_t bool_v = context_load(ctx, "bool");
-  type_t bool_t = *(type_t *)value_get_data(bool_v);
+  type_t bool_t = context_load_type(ctx, "bool");
   return context_create_value(ctx, bool_t, NULL, mut, false, name);
 }
 bool bool_get_value(value_t val) {

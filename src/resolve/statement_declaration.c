@@ -3,7 +3,6 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/location.h"
-#include "engine/array.h"
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/struct.h"
@@ -122,20 +121,6 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         context_push_error(ctx, err);
         continue;
       }
-    }
-    if (!context_is_comptime(ctx) &&
-        type_get_kind(value_type) == TYPE_KIND_STR) {
-      const char *str = *(const char **)value_get_data(value);
-      size_t len = strlen(str) + 1;
-      char buf[len];
-      strcpy(buf, str);
-      buf[len - 1] = 0;
-      type_t arr_type =
-          create_array_type(ctx, context_load_type(ctx, "u8"), len);
-      value = context_create_value(ctx, arr_type, buf, false, true, NULL);
-      value_type = arr_type;
-      allocator_free(allocator, initialize->data);
-      initialize->value = value_clone(value, allocator);
     }
     if (type) {
       value_t vdst_type = resolve_type(ctx, type);

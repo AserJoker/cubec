@@ -156,8 +156,7 @@ void type_init(context_t ctx) {
 value_t create_type_value(context_t ctx, type_t data, bool mut,
                           const char *name) {
   allocator_t allocator = context_get_allocator(ctx);
-  value_t vtype = context_load(ctx, "type");
-  type_t type = *(type_t *)value_get_data(vtype);
+  type_t type = context_load_type(ctx, "type");
   return context_create_value(ctx, type, &data, mut, true, name);
 }
 bool type_default_eq(type_t self, type_t another) {

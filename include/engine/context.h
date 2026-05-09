@@ -52,6 +52,8 @@ bool context_has_builtin(context_t ctx, const char *name);
 const char *context_create_cstring(context_t self, const char *src);
 allocator_t context_get_allocator(context_t self);
 value_t context_load(context_t self, const char *name);
+value_t context_load_global(context_t self, const char *name);
+value_t context_load_local(context_t self, const char *name);
 value_t context_declar(context_t self, const char *name, value_t value);
 value_t context_get_undefined(context_t self);
 value_t context_get_true(context_t self);
