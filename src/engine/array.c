@@ -201,9 +201,9 @@ static value_t _array_slice(value_t self, context_t ctx, value_t start,
 
 type_t create_array_type(context_t ctx, type_t type, size_t length) {
   const char *base_id = type_get_id(type);
-  size_t len = snprintf(NULL, 0, "[%" PRIuPTR "]%s", length, base_id);
+  size_t len = snprintf(NULL, 0, "A%sL%" PRIuPTR, base_id, length);
   char id[len];
-  sprintf(id, "[%" PRIuPTR "]%s", length, base_id);
+  sprintf(id, "A%sL%" PRIuPTR, base_id, length);
   type_t self = context_load_type(ctx, id);
   if (!self) {
     const char *base_name = type_get_name(type);

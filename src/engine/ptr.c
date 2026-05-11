@@ -174,10 +174,10 @@ static bool _ptr_type_is_equal(type_t self, type_t another) {
 }
 type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
   const char *base_id = type_get_id(type);
-  size_t len = snprintf(NULL, 0, "*%s%s%s", !mut ? "const " : "",
-                        vol ? "volatile " : "", base_id);
+  size_t len =
+      snprintf(NULL, 0, "P%s%s%s", !mut ? "C" : "", vol ? "V" : "", base_id);
   char id[len + 1];
-  sprintf(id, "*%s%s%s", !mut ? "const " : "", vol ? "volatile " : "", base_id);
+  sprintf(id, "P%s%s%s", !mut ? "C" : "", vol ? "V" : "", base_id);
   type_t self = context_load_type(ctx, id);
   if (!self) {
     const char *base_name = type_get_name(type);
@@ -360,11 +360,10 @@ static value_t parray_slice(value_t self, context_t ctx, value_t start,
 }
 type_t create_parray_type(context_t ctx, type_t type, bool mut, bool vol) {
   const char *base_name = type_get_id(type);
-  size_t len = snprintf(NULL, 0, "[*]%s%s%s", mut ? "const " : "",
-                        vol ? "volatile " : "", base_name);
+  size_t len =
+      snprintf(NULL, 0, "PA%s%s%s", mut ? "C" : "", vol ? "V" : "", base_name);
   char buf[len + 1];
-  sprintf(buf, "[*]%s%s%s", !mut ? "const " : "", vol ? "volatile " : "",
-          base_name);
+  sprintf(buf, "PA%s%s%s", !mut ? "C" : "", vol ? "V" : "", base_name);
   type_t self = context_load_type(ctx, buf);
   if (!self) {
     allocator_t allocator = context_get_allocator(ctx);

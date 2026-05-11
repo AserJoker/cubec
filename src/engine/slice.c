@@ -202,11 +202,15 @@ static value_t slice_assigment(value_t self, context_t ctx, value_t value) {
 type_t create_slice_type(context_t ctx, type_t base_type) {
   allocator_t allocator = context_get_allocator(ctx);
   const char *base_id = type_get_id(base_type);
-  size_t len = snprintf(NULL, 0, "[]%s", base_id);
+  size_t len = snprintf(NULL, 0, "S%s", base_id);
   char id[len];
-  sprintf(id, "[]%s", base_id);
+  sprintf(id, "S%s", base_id);
   type_t self = context_load_type(ctx, id);
   if (!self) {
+    const char *base_name = type_get_name(base_type);
+    len = snprintf(NULL, 0, "[]%s", base_name);
+    char name[len];
+    sprintf(name, "[]%s", base_name);
     slice_meta_t meta =
         allocator_alloc(allocator, sizeof(struct _slice_meta_t), NULL);
     meta->type = base_type;
@@ -221,7 +225,7 @@ type_t create_slice_type(context_t ctx, type_t base_type) {
         .assigment = slice_assigment,
     };
     self = create_type(allocator, TYPE_KIND_SLICE, sizeof(struct _slice_data_t),
-                       sizeof(void *), id, id, &opt, meta);
+                       sizeof(void *), name, id, &opt, meta);
     context_store_type(ctx, self);
   }
   return self;

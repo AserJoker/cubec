@@ -13,6 +13,9 @@
 #include <string.h>
 
 static value_t str_eq(value_t self, context_t ctx, value_t another) {
+  if (!value_is_comptime(self) || !value_is_comptime(another)) {
+    return create_bool(ctx, false, NULL);
+  }
   type_t str_t = value_get_type(self);
   type_t type = value_get_type(another);
   if (type_get_kind(type) != TYPE_KIND_STR) {
@@ -26,6 +29,9 @@ static value_t str_eq(value_t self, context_t ctx, value_t another) {
   return create_comptime_bool(ctx, strcmp(str1, str2) == 0, false, NULL);
 }
 static value_t str_ne(value_t self, context_t ctx, value_t another) {
+  if (!value_is_comptime(self) || !value_is_comptime(another)) {
+    return create_bool(ctx, false, NULL);
+  }
   type_t str_t = value_get_type(self);
   type_t type = value_get_type(another);
   if (type_get_kind(type) != TYPE_KIND_STR) {
@@ -40,6 +46,10 @@ static value_t str_ne(value_t self, context_t ctx, value_t another) {
 }
 static value_t str_slice(value_t self, context_t ctx, value_t start,
                          value_t end) {
+  if (!value_is_comptime(self)) {
+    type_t slice_type = create_slice_type(ctx, context_load_type(ctx, "u8"));
+    return context_create_value(ctx, slice_type, NULL, false, false, NULL);
+  }
   const char *data = *(const char **)value_get_data(self);
   type_t type = value_get_type(self);
   type_t base_type = context_load_type(ctx, "u8");
