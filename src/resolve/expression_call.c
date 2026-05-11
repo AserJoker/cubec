@@ -54,8 +54,8 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
       }
       value_t function = context_get_function(ctx);
       type_t type = value_get_type(function);
-      type = function_type_get_type(type);
-      obj = create_type_value(ctx, type, false, NULL);
+      ctype_t ctype = function_type_get_type(type);
+      obj = create_type_value(ctx, ctype->type, ctype->mut, NULL);
     }
     if (value_is_error(obj)) {
       return obj;

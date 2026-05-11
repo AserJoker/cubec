@@ -189,11 +189,13 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       if (struct_type_get_attribute(self, name)) {
         value = create_error(ctx, "redefinition of '%s'", name);
       } else {
-        if (!kind || !location_is(kind->loc, "comptime")) {
-          value = context_create_value(ctx, value_type, NULL, mut, false, name);
+        if (!comptime) {
+          value = context_create_value(ctx, value_type, NULL,
+                                       value_is_mut(value), false, NULL);
         }
         struct_type_add_attribute(self, allocator, name, value,
-                                  pub_node != NULL);
+                                  pub_node != NULL,
+                                  kind && location_is(kind->loc, "comptime"));
       }
     }
     allocator_free(allocator, name);

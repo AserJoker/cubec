@@ -32,7 +32,7 @@ stream_t create_stream(allocator_t allocator) {
   stream_t self = allocator_alloc(allocator, sizeof(struct _stream_t),
                                   (dispose_fn_t)stream_dispose);
   self->allocator = allocator;
-  self->base_indent = 4;
+  self->base_indent = 2;
   self->indent = 0;
   array_initialize_t initialize = {
       .autofree = true,

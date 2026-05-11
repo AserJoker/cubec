@@ -28,6 +28,7 @@ struct _value_t {
   bool mut;
   bool comptime;
   void *data;
+  type_t self;
 };
 static void value_dispose(value_t self, allocator_t allocator) {
   allocator_free(allocator, self->data);
@@ -46,6 +47,7 @@ value_t create_value(allocator_t allocator, type_t type, bool mut,
     memset(self->data, 0, size);
   }
   self->comptime = comptime;
+  self->self = NULL;
   return self;
 }
 void value_set_mut(value_t self, bool mut) { self->mut = mut; }
@@ -68,7 +70,9 @@ value_t value_clone(value_t self, allocator_t allocator) {
   const void *data = value_get_data(self);
   bool mut = value_is_mut(self);
   bool comptime = value_is_comptime(self);
-  return create_value(allocator, type, mut, data, comptime);
+  value_t val = create_value(allocator, type, mut, data, comptime);
+  val->self = self->self;
+  return val;
 }
 value_t value_member_call(value_t self, struct _context_t *ctx,
                           const char *name, size_t argc, value_t argv[]) {
@@ -133,6 +137,10 @@ value_t value_member_call(value_t self, struct _context_t *ctx,
   }
   return value_call(function, ctx, argc + 1, args);
 }
+
+void value_set_self(value_t self, type_t bind) { self->self = bind; }
+type_t value_get_self(value_t self) { return self->self; }
+
 value_t value_convert(value_t self, struct _context_t *ctx, type_t type) {
   type_t value_type = value_get_type(self);
   if (strcmp(type_get_id(value_type), type_get_id(type)) == 0) {
@@ -485,6 +493,7 @@ static value_t infer_function(context_t ctx, value_t self, size_t argc,
   type_t type = value_get_type(self);
   ast_node_t arguments = ast_get_child(declar->node, "arguments");
   ast_node_t type_node = ast_get_child(declar->node, "type");
+  ast_node_t mut_node = ast_get_child(declar->node, "mut");
   type_t current_global = context_set_global(ctx, declar->global);
   type_t current_self = context_set_self(ctx, declar->bind);
   scope_t current_scope = context_get_scope(ctx);
@@ -517,8 +526,7 @@ static value_t infer_function(context_t ctx, value_t self, size_t argc,
     ast_node_t type = ast_get_child(arg_node, "type");
     ast_node_t mut = ast_get_child(arg_node, "mut");
     ast_node_t identifier = ast_get_child(arg_node, "identifier");
-    argument_t arg =
-        allocator_alloc(allocator, sizeof(struct _argument_t), NULL);
+    ctype_t arg = allocator_alloc(allocator, sizeof(struct _ctype_t), NULL);
     array_push(args, arg);
     arg->mut = mut == NULL;
     arg->type = NULL;
@@ -658,7 +666,10 @@ static value_t infer_function(context_t ctx, value_t self, size_t argc,
     goto onfinish;
   }
   type_t return_type = *(type_t *)value_get_data(vtype);
-  type_t function_type = create_function_type(ctx, return_type, args, variadic);
+  ctype_t ctype = allocator_alloc(allocator, sizeof(struct _ctype_t), NULL);
+  ctype->type = return_type;
+  ctype->mut = mut_node == NULL;
+  type_t function_type = create_function_type(ctx, ctype, args, variadic);
   args = NULL;
   char *id = NULL;
   if (type_get_kind(type) == TYPE_KIND_TEMPLATE_FUNCTION) {
@@ -669,7 +680,7 @@ static value_t infer_function(context_t ctx, value_t self, size_t argc,
     string_concat(sid, allocator, type_get_id(return_type));
     for (size_t idx = 0; idx < array_get_size(args); idx++) {
       string_concat(sid, allocator, "A");
-      argument_t arg = array_get(args, idx);
+      ctype_t arg = array_get(args, idx);
       string_concat(sid, allocator, type_get_id(arg->type));
     }
     const char *cid = string_get(sid);

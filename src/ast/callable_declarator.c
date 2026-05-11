@@ -149,6 +149,23 @@ ast_node_t read_ast_callable_declarator(allocator_t allocator,
   }
   current.offset += 2;
   current.column += 2;
+  ast_node_t mut =
+      read_ast_literal_identifier(allocator, &current, end, filename);
+  if (mut) {
+    if (mut->type == NODE_TYPE_ERROR) {
+      err = mut;
+      goto onerror;
+    } else if (location_is(mut->loc, "const")) {
+      ast_add_child(allocator, node, "mut", mut);
+    } else {
+      current = mut->loc.begin;
+      allocator_free(allocator, mut);
+    }
+  }
+  err = ast_skip_all(allocator, &current, end, filename);
+  if (err && err->type == NODE_TYPE_ERROR) {
+    return err;
+  }
   ast_node_t return_type =
       read_ast_expression_value(allocator, &current, end, filename);
   if (!return_type) {

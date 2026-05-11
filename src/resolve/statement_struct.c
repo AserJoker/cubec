@@ -42,8 +42,8 @@ value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
           context_push_error(ctx, err);
         }
       } else {
-        struct_type_add_attribute(self, allocator, name, stru,
-                                  pub_node != NULL);
+        struct_type_add_attribute(self, allocator, name, stru, pub_node != NULL,
+                                  true);
       }
       allocator_free(allocator, name);
     } else {

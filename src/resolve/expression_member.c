@@ -23,8 +23,8 @@ value_t resolve_expression_member(context_t ctx, ast_node_t node) {
     value_t function = context_get_function(ctx);
     type_t type = value_get_type(function);
     if (type_get_kind(type) == TYPE_KIND_FUNCTION) {
-      type = function_type_get_type(type);
-      host = create_type_value(ctx, type, false, NULL);
+      ctype_t ctype = function_type_get_type(type);
+      host = create_type_value(ctx, ctype->type, ctype->mut, NULL);
     } else {
       function_declar_t declar = *(function_declar_t *)value_get_data(function);
       ast_node_t type = ast_get_child(declar->node, "type");

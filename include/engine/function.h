@@ -9,8 +9,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-typedef struct _argument_t *argument_t;
-struct _argument_t {
+typedef struct _ctype_t *ctype_t;
+struct _ctype_t {
   bool mut;
   type_t type;
 };
@@ -41,7 +41,7 @@ typedef struct _function_declar_t {
 } *function_declar_t;
 
 void function_init(context_t ctx);
-type_t create_function_type(context_t ctx, type_t type, array_t arguments,
+type_t create_function_type(context_t ctx, ctype_t type, array_t arguments,
                             bool variadic);
 value_t create_function(context_t ctx, type_t function_type, ast_node_t node,
                         array_t closure);
@@ -49,7 +49,7 @@ value_t create_comptime_function(context_t ctx, ast_node_t node,
                                  array_t closure);
 value_t create_template_function(context_t ctx, ast_node_t node,
                                  array_t closure);
-type_t function_type_get_type(type_t self);
+ctype_t function_type_get_type(type_t self);
 bool function_type_is_variadic(type_t self);
 array_t function_type_get_arguments(type_t self);
 value_t function_get_id(context_t ctx, value_t self);

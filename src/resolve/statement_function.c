@@ -48,7 +48,7 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
         }
       } else {
         struct_type_add_attribute(self, allocator, name, function,
-                                  pub_node != NULL);
+                                  pub_node != NULL, true);
       }
       allocator_free(allocator, name);
     } else {

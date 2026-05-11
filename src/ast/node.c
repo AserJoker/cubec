@@ -500,9 +500,6 @@ void ast_node_bind_value(allocator_t allocator, ast_node_t node,
   if (node->type <= NODE_TYPE_LIST) {
     return;
   }
-  if (!value_is_comptime(value)) {
-    return;
-  }
   if (!ast_get_child(node, "_value")) {
     ast_node_t _value = create_ast_value_node(allocator, value);
     ast_add_child(allocator, node, "_value", _value);

@@ -130,10 +130,10 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
             return value;
           }
           struct_type_add_attribute(stru, allocator, attr->name, value,
-                                    attr->pub);
+                                    attr->pub, true);
         } else {
           struct_type_add_attribute(stru, allocator, attr->name, attr->value,
-                                    attr->pub);
+                                    attr->pub, attr->comptime);
         }
       }
     } else if (field->type == NODE_TYPE_STATEMENT_STRUCT) {
@@ -156,6 +156,7 @@ value_t resolve_struct_declarator(context_t ctx, ast_node_t node) {
   context_set_self(ctx, current_self);
   context_set_function(ctx, current_function);
   context_set_type(ctx, current_type);
+  struct_type_seal(ctx, stru);
   value_t result = create_type_value(ctx, stru, false, NULL);
   for (size_t idx = 0; idx < ast_get_length(decorators); idx++) {
     ast_node_t dec =

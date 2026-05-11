@@ -17,6 +17,8 @@ bool value_is_comptime(value_t value);
 void *value_get_data(value_t value);
 value_t value_member_call(value_t self, struct _context_t *ctx,
                           const char *name, size_t argc, value_t argv[]);
+void value_set_self(value_t self, type_t bind);
+type_t value_get_self(value_t self);
 
 type_t value_get_type(value_t value);
 value_t value_clone(value_t self, allocator_t allocator);

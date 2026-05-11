@@ -25,16 +25,17 @@
 
 typedef struct _function_meta_t *function_meta_t;
 struct _function_meta_t {
-  type_t type;
+  ctype_t type;
   array_t arguments;
   bool variadic;
 };
 
 static void function_meta_dispose(function_meta_t self, allocator_t allocator) {
   allocator_free(allocator, self->arguments);
+  allocator_free(allocator, self->type);
 }
 
-static function_meta_t create_function_meta(allocator_t allocator, type_t type,
+static function_meta_t create_function_meta(allocator_t allocator, ctype_t type,
                                             array_t argv, bool variadic) {
   function_meta_t self =
       allocator_alloc(allocator, sizeof(struct _function_meta_t),
@@ -167,7 +168,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   for (size_t idx = 0; idx < array_get_size(meta->arguments); idx++) {
     ast_node_t arg = ast_get_item(arguments, idx);
     value_t value = NULL;
-    argument_t info = array_get(meta->arguments, idx);
+    ctype_t info = array_get(meta->arguments, idx);
     ast_node_t identifier = ast_get_child(arg, "identifier");
 
     if (arg->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
@@ -237,7 +238,8 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     result = resolve_function_body(ctx, body);
   } else {
     function_meta_t meta = type_get_meta(function_type);
-    result = context_create_value(ctx, meta->type, NULL, false, false, NULL);
+    result = context_create_value(ctx, meta->type->type, NULL, meta->type->mut,
+                                  false, NULL);
   }
   if (value_is_error(result)) {
     goto onfinish;
@@ -255,7 +257,10 @@ onfinish:
 static bool function_type_is_equal(type_t self, type_t another) {
   function_meta_t src_meta = type_get_meta(self);
   function_meta_t dst_meta = type_get_meta(another);
-  if (!type_is_equal(src_meta->type, dst_meta->type)) {
+  if (!type_is_equal(src_meta->type->type, dst_meta->type->type)) {
+    return false;
+  }
+  if (src_meta->type->mut != dst_meta->type->mut) {
     return false;
   }
   if (src_meta->variadic != dst_meta->variadic) {
@@ -266,8 +271,8 @@ static bool function_type_is_equal(type_t self, type_t another) {
     return false;
   }
   for (size_t idx = 0; idx < array_get_size(src_meta->arguments); idx++) {
-    argument_t src_arg = array_get(src_meta->arguments, idx);
-    argument_t dst_arg = array_get(dst_meta->arguments, idx);
+    ctype_t src_arg = array_get(src_meta->arguments, idx);
+    ctype_t dst_arg = array_get(dst_meta->arguments, idx);
     if (src_arg->mut != dst_arg->mut) {
       return false;
     }
@@ -278,16 +283,19 @@ static bool function_type_is_equal(type_t self, type_t another) {
   return true;
 }
 
-type_t create_function_type(context_t ctx, type_t type, array_t argv,
+type_t create_function_type(context_t ctx, ctype_t type, array_t argv,
                             bool variadic) {
   size_t argc = array_get_size(argv);
   allocator_t allocator = context_get_allocator(ctx);
   string_t sid = create_string(allocator, NULL);
   string_concat(sid, allocator, "F");
-  const char *type_id = type_get_id(type);
+  if (!type->mut) {
+    string_concat(sid, allocator, "C");
+  }
+  const char *type_id = type_get_id(type->type);
   string_concat(sid, allocator, type_id);
   for (size_t idx = 0; idx < argc; idx++) {
-    argument_t arg = array_get(argv, idx);
+    ctype_t arg = array_get(argv, idx);
     string_concat(sid, allocator, "A");
     if (!arg->mut) {
       string_concat(sid, allocator, "C");
@@ -306,7 +314,7 @@ type_t create_function_type(context_t ctx, type_t type, array_t argv,
     string_t sname = create_string(allocator, NULL);
     string_concat(sname, allocator, "func(");
     for (size_t idx = 0; idx < argc; idx++) {
-      argument_t arg = array_get(argv, idx);
+      ctype_t arg = array_get(argv, idx);
       if (idx != 0) {
         string_concat(sname, allocator, ", ");
       }
@@ -322,7 +330,10 @@ type_t create_function_type(context_t ctx, type_t type, array_t argv,
       }
     }
     string_concat(sname, allocator, "): ");
-    const char *type_name = type_get_name(type);
+    if (!type->mut) {
+      string_concat(sname, allocator, "const ");
+    }
+    const char *type_name = type_get_name(type->type);
     string_concat(sname, allocator, type_name);
     const char *name = string_get(sname);
     type_operator_t opt = {
@@ -342,6 +353,7 @@ type_t create_function_type(context_t ctx, type_t type, array_t argv,
     module_add_type(module, self);
   } else {
     allocator_free(allocator, argv);
+    allocator_free(allocator, type);
   }
   allocator_free(allocator, sid);
   return self;
@@ -476,7 +488,7 @@ value_t create_template_function(context_t ctx, ast_node_t node,
   return context_create_value(ctx, type, &declar, false, true, NULL);
 }
 
-type_t function_type_get_type(type_t self) {
+ctype_t function_type_get_type(type_t self) {
   function_meta_t meta = type_get_meta(self);
   return meta->type;
 }

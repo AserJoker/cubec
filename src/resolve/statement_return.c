@@ -19,8 +19,9 @@ value_t resolve_statement_return(context_t ctx, ast_node_t node) {
       if (!type) {
         value_t current_function = context_get_function(ctx);
         type_t function_type = value_get_type(current_function);
-        type_t ret_type = function_type_get_type(function_type);
-        value_t vtype = create_type_value(ctx, ret_type, false, NULL);
+        ctype_t ret_type = function_type_get_type(function_type);
+        value_t vtype =
+            create_type_value(ctx, ret_type->type, ret_type->mut, NULL);
         allocator_t allocator = context_get_allocator(ctx);
         type = create_ast_value_node(allocator, vtype);
         ast_add_child(allocator, value_node, "type", type);
@@ -49,8 +50,8 @@ value_t resolve_statement_return(context_t ctx, ast_node_t node) {
   } else {
     value_t current_function = context_get_function(ctx);
     type_t type = value_get_type(current_function);
-    type_t res_type = function_type_get_type(type);
-    value = value_safe_convert(value, ctx, res_type);
+    ctype_t res_type = function_type_get_type(type);
+    value = value_safe_convert(value, ctx, res_type->type);
     if (value_is_error(value)) {
       value = convert_comptime_error(ctx, value_node, value);
       context_push_error(ctx, value);

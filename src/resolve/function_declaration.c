@@ -18,8 +18,9 @@
 #include <string.h>
 value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   ast_node_t type_node = ast_get_child(node, "type");
+  ast_node_t mut_node = ast_get_child(node, "mut");
   ast_node_t arguments_node = ast_get_child(node, "arguments");
-  ast_node_t identifier_node = ast_get_child(node, "identifier_node");
+  ast_node_t identifier_node = ast_get_child(node, "identifier");
   ast_node_t closure_node = ast_get_child(node, "closure");
   ast_node_t kind = ast_get_child(node, "kind");
   allocator_t allocator = context_get_allocator(ctx);
@@ -73,8 +74,7 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
       ast_node_t type = ast_get_child(argument, "type");
       ast_node_t mut = ast_get_child(argument, "mut");
       ast_node_t identifier = ast_get_child(argument, "identifier");
-      argument_t arg =
-          allocator_alloc(allocator, sizeof(struct _argument_t), NULL);
+      ctype_t arg = allocator_alloc(allocator, sizeof(struct _ctype_t), NULL);
       array_push(argv, arg);
       if (identifier) {
         arg->mut = mut == NULL;
@@ -127,8 +127,10 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
       goto onfinish;
     }
     type_t return_type = *(type_t *)value_get_data(vreturn_type);
-    type_t function_type =
-        create_function_type(ctx, return_type, argv, variadic);
+    ctype_t ctype = allocator_alloc(allocator, sizeof(struct _ctype_t), NULL);
+    ctype->type = return_type;
+    ctype->mut = mut_node == NULL;
+    type_t function_type = create_function_type(ctx, ctype, argv, variadic);
     argv = NULL;
     function = create_function(ctx, function_type, node, closure);
     closure = NULL;
@@ -173,7 +175,7 @@ value_t resolve_function_declaration(context_t ctx, value_t function) {
   scope = context_get_scope(ctx);
   array_t arguments = function_type_get_arguments(function_type);
   for (size_t idx = 0; idx < array_get_size(arguments); idx++) {
-    argument_t arg = array_get(arguments, idx);
+    ctype_t arg = array_get(arguments, idx);
     ast_node_t arg_node = ast_get_item(arguments_node, idx);
     ast_node_t identifier = ast_get_child(arg_node, "identifier");
     char *name = location_get(identifier->loc, allocator);
@@ -189,7 +191,10 @@ value_t resolve_function_declaration(context_t ctx, value_t function) {
     allocator_free(allocator, name);
   }
   context_push_scope(ctx);
-  resolve_function_body(ctx, body);
+  value_t err = resolve_function_body(ctx, body);
+  if (value_is_error(err)) {
+    context_push_error(ctx, err);
+  }
 onfinish:
   context_set_scope(ctx, current_scope);
   allocator_free(allocator, scope);

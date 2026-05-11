@@ -19,7 +19,7 @@ typedef struct _struct_meta_t *struct_meta_t;
 struct _struct_meta_t {
   array_t fields;
   array_t attributes;
-  bool locked_align;
+  bool aligned;
   bool packed;
 };
 
@@ -39,7 +39,7 @@ static struct_meta_t create_struct_meta(allocator_t allocator) {
       .autofree = true,
   };
   self->attributes = create_array(allocator, &attributes_initialize);
-  self->locked_align = false;
+  self->aligned = false;
   self->packed = false;
   return self;
 }
@@ -230,7 +230,6 @@ static value_t struct_call(value_t self, context_t ctx, size_t argc,
 }
 
 type_t create_struct_type(context_t ctx, const char *name, size_t align) {
-
   char *id = NULL;
   allocator_t allocator = context_get_allocator(ctx);
   module_t module = context_get_module(ctx);
@@ -257,15 +256,15 @@ type_t create_struct_type(context_t ctx, const char *name, size_t align) {
   }
   char base_fullname[len + 1];
   if (parent_name) {
-    sprintf(base_fullname, "%s_%s", parent_name, struct_name);
+    sprintf(base_fullname, "%sS%s", parent_name, struct_name);
   } else {
     sprintf(base_fullname, "%s", struct_name);
   }
   if (context_load_type(ctx, base_fullname)) {
     for (size_t idx = 0;; idx++) {
-      size_t len = snprintf(NULL, 0, "%s_%" PRIuPTR, base_fullname, idx);
+      size_t len = snprintf(NULL, 0, "%sS%" PRIuPTR, base_fullname, idx);
       char fullname[len + 1];
-      sprintf(fullname, "%s_%" PRIuPTR, base_fullname, idx);
+      sprintf(fullname, "%sS%" PRIuPTR, base_fullname, idx);
       if (!context_load_type(ctx, fullname)) {
         id = create_cstring(allocator, fullname);
         break;
@@ -292,16 +291,13 @@ type_t create_struct_type(context_t ctx, const char *name, size_t align) {
     self = create_type(allocator, TYPE_KIND_STRUCT, sizeof(int8_t), align, name,
                        id, &opt, meta);
     context_store_type(ctx, self);
-    if (module) {
-      module_add_type(module, self);
-    }
   }
   allocator_free(allocator, id);
   return self;
 }
 void struct_type_lock_align(type_t self) {
   struct_meta_t meta = type_get_meta(self);
-  meta->locked_align = true;
+  meta->aligned = true;
 }
 void struct_type_packed(type_t self) {
   struct_meta_t meta = type_get_meta(self);
@@ -332,7 +328,7 @@ void struct_type_add_field(type_t self, allocator_t allocator, const char *name,
   size_t num_fields = array_get_size(meta->fields);
   size_t align = type_get_align(self);
   size_t field_align = type_get_align(type);
-  if (!meta->locked_align) {
+  if (!meta->aligned) {
     if (align < field_align) {
       align = field_align;
     }
@@ -390,21 +386,33 @@ static void struct_attribute_dispose(struct_attribute_t self,
 }
 static struct_attribute_t create_struct_attribute(allocator_t allocator,
                                                   const char *name,
-                                                  value_t value, bool pub) {
+                                                  value_t value, bool pub,
+                                                  bool comptime) {
   struct_attribute_t self =
       allocator_alloc(allocator, sizeof(struct _struct_attribute_t),
                       (dispose_fn_t)struct_attribute_dispose);
   self->name = create_cstring(allocator, name);
   self->value = value_clone(value, allocator);
   self->pub = pub;
+  self->comptime = comptime;
   return self;
 }
 void struct_type_add_attribute(type_t self, allocator_t allocator,
-                               const char *name, value_t value, bool pub) {
+                               const char *name, value_t value, bool pub,
+                               bool comptime) {
   struct_attribute_t attr =
-      create_struct_attribute(allocator, name, value, pub);
+      create_struct_attribute(allocator, name, value, pub, comptime);
   struct_meta_t meta = type_get_meta(self);
+  value_set_self(attr->value, self);
   array_push(meta->attributes, attr);
+}
+
+void struct_type_seal(context_t ctx, type_t self) {
+  module_t module = context_get_module(ctx);
+  struct_meta_t meta = type_get_meta(self);
+  if (module) {
+    module_add_type(module, self);
+  }
 }
 array_t struct_type_get_attributes(type_t self) {
   struct_meta_t meta = type_get_meta(self);
@@ -431,4 +439,12 @@ void struct_type_remove_attribute(type_t self, const char *name) {
       return;
     }
   }
+}
+bool struct_type_is_packed(type_t self) {
+  struct_meta_t meta = type_get_meta(self);
+  return meta->packed;
+}
+bool struct_type_is_aligned(type_t self) {
+  struct_meta_t meta = type_get_meta(self);
+  return meta->aligned;
 }

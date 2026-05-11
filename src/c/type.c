@@ -1,11 +1,14 @@
 #include "c/type.h"
+#include "c/value.h"
 #include "core/array.h"
 #include "core/stream.h"
 #include "engine/array.h"
 #include "engine/function.h"
 #include "engine/ptr.h"
 #include "engine/slice.h"
+#include "engine/struct.h"
 #include "engine/type.h"
+#include "engine/value.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -130,11 +133,66 @@ void write_c_type_declaration(context_t ctx, type_t type, stream_t stream) {
     stream_newline(stream);
     stream_write(stream, "};");
   } else if (type_get_kind(type) == TYPE_KIND_STRUCT) {
-
+    stream_write(stream, "struct _");
+    stream_write(stream, type_get_id(type));
+    stream_write(stream, " {");
+    array_t fields = struct_type_get_fields(type);
+    if (array_get_size(fields)) {
+      stream_inc_indent(stream);
+      for (size_t idx = 0; idx < array_get_size(fields); idx++) {
+        struct_field_t field = array_get(fields, idx);
+        stream_newline(stream);
+        if (!field->mut) {
+          stream_write(stream, "const ");
+        }
+        write_c_type(ctx, field->type, stream);
+        stream_write(stream, " ");
+        stream_write(stream, field->name);
+        stream_write(stream, ";");
+      }
+      stream_dec_indent(stream);
+      stream_newline(stream);
+    }
+    stream_write(stream, "}");
+    if (struct_type_is_packed(type)) {
+      stream_write(stream, " __attribute__((packed))");
+    }
+    if (struct_type_is_aligned(type)) {
+      size_t len = snprintf(NULL, 0, " __attribute((aligned(%" PRIuPTR ")))",
+                            type_get_align(type));
+      char buf[len];
+      sprintf(buf, " __attribute((aligned(%" PRIuPTR ")))",
+              type_get_align(type));
+      stream_write(stream, buf);
+    }
+    stream_write(stream, ";");
+    array_t attributes = struct_type_get_attributes(type);
+    for (size_t idx = 0; idx < array_get_size(attributes); idx++) {
+      struct_attribute_t attr = array_get(attributes, idx);
+      value_t val = attr->value;
+      if (!attr->comptime) {
+        stream_newline(stream);
+        if (!value_is_mut(val)) {
+          stream_write(stream, "const ");
+        }
+        type_t atype = value_get_type(val);
+        write_c_type(ctx, atype, stream);
+        stream_write(stream, " ");
+        stream_write(stream, type_get_id(type));
+        stream_write(stream, "A");
+        stream_write(stream, attr->name);
+        stream_write(stream, " = ");
+        write_c_value(ctx, attr->value, stream);
+        stream_write(stream, ";");
+      }
+    }
   } else if (type_get_kind(type) == TYPE_KIND_FUNCTION) {
     stream_write(stream, "typedef ");
-    type_t ret = function_type_get_type(type);
-    write_c_type(ctx, ret, stream);
+    ctype_t ret = function_type_get_type(type);
+    if (!ret->mut) {
+      stream_write(stream, "const ");
+    }
+    write_c_type(ctx, ret->type, stream);
     stream_write(stream, "(*");
     stream_write(stream, type_get_id(type));
     stream_write(stream, ")(");
@@ -143,7 +201,7 @@ void write_c_type_declaration(context_t ctx, type_t type, stream_t stream) {
       if (idx != 0) {
         stream_write(stream, ", ");
       }
-      argument_t arg = array_get(arguments, idx);
+      ctype_t arg = array_get(arguments, idx);
       if (!arg->mut) {
         stream_write(stream, "const ");
       }

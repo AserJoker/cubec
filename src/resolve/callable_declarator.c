@@ -3,6 +3,7 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/array.h"
+#include "core/location.h"
 #include "engine/context.h"
 #include "engine/function.h"
 #include "engine/slice.h"
@@ -13,6 +14,7 @@
 value_t resolve_callable_declarator(context_t ctx, ast_node_t node) {
   ast_node_t type = ast_get_child(node, "type");
   ast_node_t args = ast_get_child(node, "arguments");
+  ast_node_t mut = ast_get_child(node, "mut");
   size_t argc = ast_get_length(args);
   allocator_t allocator = context_get_allocator(ctx);
   array_initialize_t init = {
@@ -24,8 +26,7 @@ value_t resolve_callable_declarator(context_t ctx, ast_node_t node) {
     ast_node_t arg_node = ast_get_item(args, idx);
     ast_node_t mut_node = ast_get_child(arg_node, "mut");
     ast_node_t type_node = ast_get_child(arg_node, "type");
-    argument_t arg =
-        allocator_alloc(allocator, sizeof(struct _argument_t), NULL);
+    ctype_t arg = allocator_alloc(allocator, sizeof(struct _ctype_t), NULL);
     arg->mut = true;
     arg->type = NULL;
     array_push(argv, arg);
@@ -52,6 +53,9 @@ value_t resolve_callable_declarator(context_t ctx, ast_node_t node) {
     return vres;
   }
   type_t return_type = *(type_t *)value_get_data(vres);
-  type_t t = create_function_type(ctx, return_type, argv, variadic);
+  ctype_t ctype = allocator_alloc(allocator, sizeof(struct _ctype_t), NULL);
+  ctype->type = return_type;
+  ctype->mut = !mut || !location_is(mut->loc, "const");
+  type_t t = create_function_type(ctx, ctype, argv, variadic);
   return create_type_value(ctx, t, false, NULL);
 }

@@ -318,8 +318,9 @@ value_t context_load_module(context_t self, const char *filename) {
   }
   len = strlen(node->loc.filename);
   char id[len + 16];
-  sprintf(id, "__module_%" PRIuPTR, hash_map_get_size(self->modules));
+  sprintf(id, "M%" PRIuPTR, hash_map_get_size(self->modules));
   type_t module_struct = create_struct_type(self, id, 1);
+  struct_type_seal(self, module_struct);
   value_t global = create_type_value(self, module_struct, false, NULL);
   context_type_t current_type = self->type;
   type_t current_global = self->global;
@@ -327,6 +328,7 @@ value_t context_load_module(context_t self, const char *filename) {
   scope_t current_scope = self->scope;
   module_t current_module = self->module;
   value_t current_function = self->function;
+  bool is_comptime = self->comptime;
   module = create_module(self->allocator, global, node, buf, filename);
   scope_t scope = create_scope(self->allocator, self->root);
   self->global = module_struct;
@@ -335,6 +337,7 @@ value_t context_load_module(context_t self, const char *filename) {
   self->module = module;
   self->function = NULL;
   self->type = CONTEXT_TYPE_STRUCT;
+  self->comptime = true;
   hash_map_set(self->modules, (void *)module_get_filename(module), module, NULL,
                NULL);
   array_push(self->dependences, (void *)filename);
@@ -356,6 +359,7 @@ value_t context_load_module(context_t self, const char *filename) {
     }
   }
   allocator_free(self->allocator, scope);
+  self->comptime = is_comptime;
   self->function = current_function;
   self->scope = current_scope;
   self->type = current_type;
