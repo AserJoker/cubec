@@ -13,6 +13,7 @@
 #include <string.h>
 typedef struct _slice_meta_t {
   type_t type;
+  bool mut;
 } *slice_meta_t;
 
 typedef struct _slice_data_t {
@@ -20,6 +21,7 @@ typedef struct _slice_data_t {
   size_t length;
   void *pdata;
 } *slice_data_t;
+
 static bool slice_type_is_eq(type_t self, type_t another) {
   if (type_get_kind(another) == TYPE_KIND_SLICE) {
     slice_meta_t src_meta = type_get_meta(self);
@@ -137,7 +139,8 @@ static value_t slice_slice(value_t self, context_t ctx, value_t start,
   size_t array_len = slice_get_len(self);
   type_t start_type = value_get_type(start);
   type_t end_type = value_get_type(end);
-  type_t slice_type = create_slice_type(ctx, base_type);
+  type_t slice_type =
+      create_slice_type(ctx, base_type, slice_type_is_mut(type));
   if (value_is_comptime(self)) {
     size_t s = 0;
     size_t e = array_len;
@@ -199,12 +202,12 @@ static value_t slice_assigment(value_t self, context_t ctx, value_t value) {
   return value_default_assigment(self, ctx, value);
 }
 
-type_t create_slice_type(context_t ctx, type_t base_type) {
+type_t create_slice_type(context_t ctx, type_t base_type, bool mut) {
   allocator_t allocator = context_get_allocator(ctx);
   const char *base_id = type_get_id(base_type);
-  size_t len = snprintf(NULL, 0, "S%s", base_id);
+  size_t len = snprintf(NULL, 0, "S%s%s", !mut ? "C" : "", base_id);
   char id[len];
-  sprintf(id, "S%s", base_id);
+  sprintf(id, "S%s%s", !mut ? "C" : "", base_id);
   type_t self = context_load_type(ctx, id);
   if (!self) {
     const char *base_name = type_get_name(base_type);
@@ -214,6 +217,7 @@ type_t create_slice_type(context_t ctx, type_t base_type) {
     slice_meta_t meta =
         allocator_alloc(allocator, sizeof(struct _slice_meta_t), NULL);
     meta->type = base_type;
+    meta->mut = mut;
     type_operator_t opt = {
         .type_eq = slice_type_is_eq,
         .addr_of = value_default_address_of,
@@ -227,6 +231,8 @@ type_t create_slice_type(context_t ctx, type_t base_type) {
     self = create_type(allocator, TYPE_KIND_SLICE, sizeof(struct _slice_data_t),
                        sizeof(void *), name, id, &opt, meta);
     context_store_type(ctx, self);
+    module_t module = context_get_module(ctx);
+    module_add_type(module, self);
   }
   return self;
 }
@@ -242,6 +248,11 @@ value_t create_comptime_slice(context_t ctx, type_t type, void *pdata,
 type_t slice_type_get_type(type_t self) {
   slice_meta_t meta = type_get_meta(self);
   return meta->type;
+}
+
+bool slice_type_is_mut(type_t self) {
+  slice_meta_t meta = type_get_meta(self);
+  return meta->mut;
 }
 size_t slice_get_len(value_t self) {
   slice_data_t data = value_get_data(self);

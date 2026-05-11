@@ -144,7 +144,7 @@ static value_t _array_slice(value_t self, context_t ctx, value_t start,
   size_t array_len = array_type_get_length(type);
   type_t start_type = value_get_type(start);
   type_t end_type = value_get_type(end);
-  type_t slice_type = create_slice_type(ctx, base_type);
+  type_t slice_type = create_slice_type(ctx, base_type, value_is_mut(self));
   if (value_is_comptime(self)) {
     size_t s = 0;
     size_t e = array_len;
@@ -224,6 +224,8 @@ type_t create_array_type(context_t ctx, type_t type, size_t length) {
     self = create_type(allocator, TYPE_KIND_ARRAY, length * type_get_size(type),
                        type_get_align(type), name, id, &opt, meta);
     context_store_type(ctx, self);
+    module_t module = context_get_module(ctx);
+    module_add_type(module, self);
   }
   return self;
 }

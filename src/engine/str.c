@@ -47,7 +47,8 @@ static value_t str_ne(value_t self, context_t ctx, value_t another) {
 static value_t str_slice(value_t self, context_t ctx, value_t start,
                          value_t end) {
   if (!value_is_comptime(self)) {
-    type_t slice_type = create_slice_type(ctx, context_load_type(ctx, "u8"));
+    type_t slice_type =
+        create_slice_type(ctx, context_load_type(ctx, "u8"), false);
     return context_create_value(ctx, slice_type, NULL, false, false, NULL);
   }
   const char *data = *(const char **)value_get_data(self);
@@ -56,7 +57,7 @@ static value_t str_slice(value_t self, context_t ctx, value_t start,
   size_t array_len = strlen(data) + 1;
   type_t start_type = value_get_type(start);
   type_t end_type = value_get_type(end);
-  type_t slice_type = create_slice_type(ctx, base_type);
+  type_t slice_type = create_slice_type(ctx, base_type, false);
   size_t s = 0;
   size_t e = array_len;
   if (!value_is_comptime(start)) {

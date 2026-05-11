@@ -535,7 +535,7 @@ static value_t infer_function(context_t ctx, value_t self, size_t argc,
         } else {
           base_type = value_get_type(argv[idx]);
         }
-        arg->type = create_slice_type(ctx, base_type);
+        arg->type = create_slice_type(ctx, base_type, value_is_mut(argv[idx]));
         if (type_get_kind(arg->type) == TYPE_KIND_PTR ||
             type_get_kind(arg->type) == TYPE_KIND_PARRAY ||
             type_get_kind(arg->type) == TYPE_KIND_OPAQUE ||

@@ -63,6 +63,9 @@ void write_c_value_sub(context_t ctx, value_t value, stream_t stream) {
   case TYPE_KIND_ARRAY: {
     size_t length = array_type_get_length(type);
     stream_write(stream, "{");
+    stream_inc_indent(stream);
+    stream_newline(stream);
+    stream_write(stream, ".items = {");
     if (length) {
       stream_inc_indent(stream);
       for (size_t idx = 0; idx < length; idx++) {
@@ -77,6 +80,9 @@ void write_c_value_sub(context_t ctx, value_t value, stream_t stream) {
     } else {
       stream_write(stream, "0");
     }
+    stream_write(stream, "},");
+    stream_dec_indent(stream);
+    stream_newline(stream);
     stream_write(stream, "}");
     break;
   }

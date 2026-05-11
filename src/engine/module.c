@@ -22,7 +22,8 @@ struct _module_t {
   char *source;
   hash_map_t indexed_functions;
   array_t functions;
-  array_t structs;
+  hash_map_t indexed_types;
+  array_t types;
   array_t errors;
 };
 static void module_dispose(module_t self, allocator_t allocator) {
@@ -30,9 +31,10 @@ static void module_dispose(module_t self, allocator_t allocator) {
   allocator_free(allocator, self->filename);
   allocator_free(allocator, self->source);
   allocator_free(allocator, self->node);
-  allocator_free(allocator, self->functions);
   allocator_free(allocator, self->indexed_functions);
-  allocator_free(allocator, self->structs);
+  allocator_free(allocator, self->functions);
+  allocator_free(allocator, self->indexed_types);
+  allocator_free(allocator, self->types);
   allocator_free(allocator, self->errors);
 }
 module_t create_module(allocator_t allocator, value_t value, ast_node_t node,
@@ -48,18 +50,6 @@ module_t create_module(allocator_t allocator, value_t value, ast_node_t node,
   allocator_free(allocator, fn);
   self->dirname = path_to_string(parent, allocator);
   allocator_free(allocator, parent);
-  array_initialize_t functions_initialize = {
-      .autofree = true,
-  };
-  self->functions = create_array(allocator, &functions_initialize);
-  array_initialize_t structs_initialize = {
-      .autofree = true,
-  };
-  self->structs = create_array(allocator, &structs_initialize);
-  array_initialize_t errors_initialize = {
-      .autofree = true,
-  };
-  self->errors = create_array(allocator, &errors_initialize);
   hash_map_initialize_t indexed_function_init = {
       .hash = (hash_fn_t)cstring_sdb,
       .compare = (compare_fn_t)strcmp,
@@ -67,6 +57,22 @@ module_t create_module(allocator_t allocator, value_t value, ast_node_t node,
       .autofree_value = false,
   };
   self->indexed_functions = create_hash_map(allocator, &indexed_function_init);
+  array_initialize_t functions_initialize = {
+      .autofree = true,
+  };
+  self->functions = create_array(allocator, &functions_initialize);
+  hash_map_initialize_t indexed_type_init = {
+      .hash = (hash_fn_t)cstring_sdb,
+      .compare = (compare_fn_t)strcmp,
+      .autofree_key = false,
+      .autofree_value = false,
+  };
+  self->indexed_types = create_hash_map(allocator, &indexed_type_init);
+  self->types = create_array(allocator, NULL);
+  array_initialize_t errors_initialize = {
+      .autofree = true,
+  };
+  self->errors = create_array(allocator, &errors_initialize);
   return self;
 }
 value_t module_get_value(module_t self) { return self->value; }
@@ -78,24 +84,20 @@ void module_add_function(module_t self, struct _value_t *func) {
   function_declar_t declar = *(function_declar_t *)value_get_data(func);
   hash_map_set(self->indexed_functions, (void *)declar->id, func, NULL, NULL);
 }
-void module_add_struct(module_t self, struct _value_t *stru) {
-  array_push(self->structs, stru);
-}
 struct _value_t *module_get_function(module_t self, const char *id) {
   return hash_map_get(self->indexed_functions, id, NULL, NULL);
 }
-struct _value_t *module_get_struct(module_t self, const char *id) {
-  for (size_t idx = 0; idx < array_get_size(self->structs); idx++) {
-    value_t stru = array_get(self->functions, idx);
-    type_t type = *(type_t *)value_get_data(stru);
-    if (strcmp(type_get_id(type), id) == 0) {
-      return stru;
-    }
-  }
-  return NULL;
+
+void module_add_type(module_t self, type_t type) {
+  array_push(self->types, type);
+  const char *id = type_get_id(type);
+  hash_map_set(self->indexed_types, (void *)id, type, NULL, NULL);
 }
+type_t module_get_type(module_t self, const char *id) {
+  return hash_map_get(self->indexed_types, id, NULL, NULL);
+}
+array_t module_get_types(module_t self) { return self->types; }
 array_t module_get_functions(module_t self) { return self->functions; }
-array_t module_get_structs(module_t self) { return self->structs; }
 array_t module_get_errors(module_t self) { return self->errors; }
 void module_add_error(module_t self, value_t err) {
   array_push(self->errors, err);

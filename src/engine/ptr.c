@@ -314,7 +314,7 @@ static value_t parray_slice(value_t self, context_t ctx, value_t start,
   type_t base_type = ptr_type_get_type(type);
   type_t start_type = value_get_type(start);
   type_t end_type = value_get_type(end);
-  type_t slice_type = create_slice_type(ctx, base_type);
+  type_t slice_type = create_slice_type(ctx, base_type, value_is_mut(self));
   if (value_is_comptime(self)) {
     size_t s = 0;
     size_t e = 0;

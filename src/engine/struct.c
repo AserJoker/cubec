@@ -261,12 +261,12 @@ type_t create_struct_type(context_t ctx, const char *name, size_t align) {
   } else {
     sprintf(base_fullname, "%s", struct_name);
   }
-  if (module && module_get_struct(module, base_fullname)) {
+  if (context_load_type(ctx, base_fullname)) {
     for (size_t idx = 0;; idx++) {
       size_t len = snprintf(NULL, 0, "%s_%" PRIuPTR, base_fullname, idx);
       char fullname[len + 1];
       sprintf(fullname, "%s_%" PRIuPTR, base_fullname, idx);
-      if (!module_get_struct(module, fullname)) {
+      if (!context_load_type(ctx, fullname)) {
         id = create_cstring(allocator, fullname);
         break;
       }
@@ -292,11 +292,8 @@ type_t create_struct_type(context_t ctx, const char *name, size_t align) {
     self = create_type(allocator, TYPE_KIND_STRUCT, sizeof(int8_t), align, name,
                        id, &opt, meta);
     context_store_type(ctx, self);
-    module_t module = context_get_module(ctx);
     if (module) {
-      value_t vtype = create_type_value(ctx, self, false, NULL);
-      vtype = value_clone(vtype, allocator);
-      module_add_struct(module, vtype);
+      module_add_type(module, self);
     }
   }
   allocator_free(allocator, id);

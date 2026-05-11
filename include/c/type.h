@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 void write_c_type(context_t ctx, type_t type, stream_t stream);
+void write_c_type_declarator(context_t ctx, type_t type, stream_t stream);
+void write_c_type_declaration(context_t ctx, type_t type, stream_t stream);
 #ifdef __cplusplus
 }
 #endif

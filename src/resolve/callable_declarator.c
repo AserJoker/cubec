@@ -5,6 +5,7 @@
 #include "core/array.h"
 #include "engine/context.h"
 #include "engine/function.h"
+#include "engine/slice.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "resolve/type.h"
@@ -32,7 +33,7 @@ value_t resolve_callable_declarator(context_t ctx, ast_node_t node) {
       variadic = true;
     }
     if (type_node) {
-      value_t vtype = resolve_type(ctx, type);
+      value_t vtype = resolve_type(ctx, type_node);
       if (value_is_error(vtype)) {
         allocator_free(allocator, argv);
         return vtype;
@@ -40,6 +41,9 @@ value_t resolve_callable_declarator(context_t ctx, ast_node_t node) {
       type_t type = *(type_t *)value_get_data(vtype);
       arg->type = type;
       arg->mut = mut_node == NULL;
+      if (arg_node->type == NODE_TYPE_FUNCTION_ARGUMENT_REST) {
+        create_slice_type(ctx, arg->type, arg->mut);
+      }
     }
   }
   value_t vres = resolve_type(ctx, type);

@@ -338,6 +338,8 @@ type_t create_function_type(context_t ctx, type_t type, array_t argv,
                        sizeof(void *), name, id, &opt, meta);
     context_store_type(ctx, self);
     allocator_free(allocator, sname);
+    module_t module = context_get_module(ctx);
+    module_add_type(module, self);
   } else {
     allocator_free(allocator, argv);
   }

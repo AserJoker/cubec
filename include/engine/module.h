@@ -15,11 +15,11 @@ const char *module_get_filename(module_t self);
 const char *module_get_dirname(module_t self);
 ast_node_t module_get_node(module_t self);
 void module_add_function(module_t self, struct _value_t *func);
-void module_add_struct(module_t self, struct _value_t *str);
 struct _value_t *module_get_function(module_t self, const char *id);
-struct _value_t *module_get_struct(module_t self, const char *id);
+void module_add_type(module_t self, type_t type);
+type_t module_get_type(module_t self, const char *id);
 array_t module_get_functions(module_t self);
-array_t module_get_structs(module_t self);
+array_t module_get_types(module_t self);
 array_t module_get_errors(module_t self);
 void module_add_error(module_t self, value_t err);
 char *module_generator_func_id(module_t self, allocator_t allocator,

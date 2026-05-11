@@ -114,7 +114,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
          type_get_kind(value_type) == TYPE_KIND_PARRAY ||
          type_get_kind(value_type) == TYPE_KIND_OPAQUE ||
          type_get_kind(value_type) == TYPE_KIND_SLICE) &&
-        !context_is_comptime(ctx) && !comptime) {
+        !context_is_comptime(ctx) && !comptime && value_is_comptime(value)) {
       value_t err = create_comptime_error(ctx, initialize, "value is comptime");
       if (context_is_comptime(ctx)) {
         return err;
