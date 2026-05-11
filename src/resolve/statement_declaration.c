@@ -23,6 +23,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
   if (pub_node && context_get_type(ctx) != CONTEXT_TYPE_STRUCT) {
     return create_comptime_error(ctx, pub_node, "invalid pub declaration");
   }
+  bool comptime = kind && location_is(kind->loc, "comptime");
   bool mut = !location_is(declar_type->loc, "const");
   for (size_t idx = 0; idx < ast_get_length(declarations); idx++) {
     ast_node_t declarator = ast_get_item(declarations, idx);
@@ -97,7 +98,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
     }
     if (type_get_kind(value_type) == TYPE_KIND_TYPE &&
-        !context_is_comptime(ctx)) {
+        !context_is_comptime(ctx) && !comptime) {
       value_t err = create_comptime_error(
           ctx, initialize, "type value only declared with comptime");
       if (context_is_comptime(ctx)) {
@@ -113,7 +114,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
          type_get_kind(value_type) == TYPE_KIND_PARRAY ||
          type_get_kind(value_type) == TYPE_KIND_OPAQUE ||
          type_get_kind(value_type) == TYPE_KIND_SLICE) &&
-        !context_is_comptime(ctx)) {
+        !context_is_comptime(ctx) && !comptime) {
       value_t err = create_comptime_error(ctx, initialize, "value is comptime");
       if (context_is_comptime(ctx)) {
         return err;

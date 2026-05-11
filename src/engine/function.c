@@ -288,9 +288,7 @@ type_t create_function_type(context_t ctx, type_t type, array_t argv,
   string_concat(sid, allocator, type_id);
   for (size_t idx = 0; idx < argc; idx++) {
     argument_t arg = array_get(argv, idx);
-    if (idx != 0) {
-      string_concat(sid, allocator, "A");
-    }
+    string_concat(sid, allocator, "A");
     if (!arg->mut) {
       string_concat(sid, allocator, "C");
     }
