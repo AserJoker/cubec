@@ -282,102 +282,51 @@ type_t create_function_type(context_t ctx, type_t type, array_t argv,
                             bool variadic) {
   size_t argc = array_get_size(argv);
   allocator_t allocator = context_get_allocator(ctx);
-  size_t len = 16;
-  len += strlen(type_get_id(type));
-  for (size_t idx = 0; idx < argc; idx++) {
-    argument_t arg = array_get(argv, idx);
-    if (!arg->mut) {
-      len += strlen("const ");
-    }
-    if (arg->type) {
-      len += strlen(type_get_id(arg->type));
-    } else {
-      len += 3;
-    }
-  }
-  char id[len + 1];
-  size_t offset = 0;
-  strcpy(&id[offset], "func(");
-  offset += strlen("func(");
+  string_t sid = create_string(allocator, NULL);
+  string_concat(sid, allocator, "F");
+  const char *type_id = type_get_id(type);
+  string_concat(sid, allocator, type_id);
   for (size_t idx = 0; idx < argc; idx++) {
     argument_t arg = array_get(argv, idx);
     if (idx != 0) {
-      strcpy(&id[offset], ", ");
-      offset += 2;
-    }
-    if (idx == argc - 1 && variadic) {
-      strcpy(&id[offset], "...");
-      offset += 3;
+      string_concat(sid, allocator, "A");
     }
     if (!arg->mut) {
-      strcpy(&id[offset], "const ");
-      offset += strlen("const ");
+      string_concat(sid, allocator, "C");
+    }
+    if (idx == argc - 1 && variadic) {
+      string_concat(sid, allocator, "V");
     }
     if (arg->type) {
       const char *type_id = type_get_id(arg->type);
-      strcpy(&id[offset], type_id);
-      offset += strlen(type_id);
-    } else {
-      strcpy(&id[offset], "...");
-      offset += 3;
+      string_concat(sid, allocator, type_id);
     }
   }
-  id[offset++] = ')';
-  id[offset++] = ':';
-  id[offset++] = ' ';
-  const char *type_id = type_get_id(type);
-  strcpy(&id[offset], type_id);
-  offset += strlen(type_id);
-  id[offset] = 0;
+  const char *id = string_get(sid);
   type_t self = context_load_type(ctx, id);
   if (!self) {
-    len = 16;
-    len += strlen(type_get_name(type));
-    for (size_t idx = 0; idx < argc; idx++) {
-      argument_t arg = array_get(argv, idx);
-      if (!arg->mut) {
-        len += strlen("const ");
-      }
-      if (arg->type) {
-        len += strlen(type_get_id(arg->type));
-      } else {
-        len += 3;
-      }
-    }
-    char name[len];
-    offset = 0;
-    strcpy(&name[offset], "func(");
-    offset += strlen("func(");
+    string_t sname = create_string(allocator, NULL);
+    string_concat(sname, allocator, "func(");
     for (size_t idx = 0; idx < argc; idx++) {
       argument_t arg = array_get(argv, idx);
       if (idx != 0) {
-        strcpy(&name[offset], ", ");
-        offset += 2;
-      }
-      if (idx == argc - 1 && variadic) {
-        strcpy(&name[offset], "...");
-        offset += 3;
+        string_concat(sname, allocator, ", ");
       }
       if (!arg->mut) {
-        strcpy(&name[offset], "const ");
-        offset += strlen("const ");
+        string_concat(sname, allocator, "const ");
+      }
+      if (variadic && idx == argc - 1) {
+        string_concat(sname, allocator, "...");
       }
       if (arg->type) {
         const char *type_name = type_get_name(arg->type);
-        strcpy(&name[offset], type_name);
-        offset += strlen(type_name);
-      } else {
-        strcpy(&name[offset], "...");
-        offset += 3;
+        string_concat(sname, allocator, type_name);
       }
     }
-    name[offset++] = ')';
-    name[offset++] = ':';
-    name[offset++] = ' ';
-    const char *type_id = type_get_id(type);
-    strcpy(&name[offset], type_id);
-    offset += strlen(type_id);
-    name[offset] = 0;
+    string_concat(sname, allocator, "): ");
+    const char *type_name = type_get_name(type);
+    string_concat(sname, allocator, type_name);
+    const char *name = string_get(sname);
     type_operator_t opt = {
         .eq = function_eq,
         .ne = function_ne,
@@ -390,9 +339,11 @@ type_t create_function_type(context_t ctx, type_t type, array_t argv,
     self = create_type(allocator, TYPE_KIND_FUNCTION, sizeof(void *),
                        sizeof(void *), name, id, &opt, meta);
     context_store_type(ctx, self);
+    allocator_free(allocator, sname);
   } else {
     allocator_free(allocator, argv);
   }
+  allocator_free(allocator, sid);
   return self;
 }
 
@@ -435,7 +386,7 @@ value_t create_function(context_t ctx, type_t function_type, ast_node_t node,
   }
   const char *func_name = id_str;
   if (!func_name) {
-    func_name = "function";
+    func_name = "func";
   }
   size_t len = strlen(parent_name) + strlen(func_name) + 2;
   char base_fullname[len + 1];
@@ -448,8 +399,7 @@ value_t create_function(context_t ctx, type_t function_type, ast_node_t node,
       allocator, FUNC_TYPE_AST, global, self, id, node, closure);
   allocator_free(allocator, id);
   context_store_function_declar(ctx, declar);
-  value_t func =
-      create_value(allocator, function_type, false, &declar, true);
+  value_t func = create_value(allocator, function_type, false, &declar, true);
   module_add_function(module, func);
   return func;
 }
