@@ -1,5 +1,0 @@
-literal_char = {
-    start : '\'',
-    end: '\'',
-    not_include:'^(\\)\'',
-}

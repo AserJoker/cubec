@@ -1,5 +1,0 @@
-literal_string = {
-    start : '"',
-    end: '"',
-    not_include:'^(\\)"',
-}

@@ -25,14 +25,11 @@ struct _ast_node_t {
     array_t items;
     hash_map_t children;
     char *error;
-    char *string;
-    struct _value_t *value;
     void *data;
   };
 };
 
 ast_node_t create_ast_node(allocator_t allocator, size_t type);
-ast_node_t create_ast_value_node(allocator_t allocator, struct _value_t *value);
 void ast_add_child(allocator_t allocator, ast_node_t node, const char *name,
                    ast_node_t child);
 void ast_remove_child(ast_node_t node, const char *name);
@@ -67,8 +64,6 @@ ast_node_t read_ast_node(allocator_t allocator, const char *filename,
 
 ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node);
 
-void ast_node_bind_value(allocator_t allocator, ast_node_t node,
-                         struct _value_t *value);
 #ifdef __cplusplus
 }
 #endif

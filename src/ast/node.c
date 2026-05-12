@@ -10,7 +10,6 @@
 #include "core/location.h"
 #include "core/position.h"
 #include "core/string.h"
-#include "engine/value.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
@@ -42,13 +41,6 @@ ast_node_t create_ast_node(allocator_t allocator, size_t type) {
     node->data = NULL;
   }
   node->visible = true;
-  return node;
-}
-
-ast_node_t create_ast_value_node(allocator_t allocator,
-                                 struct _value_t *value) {
-  ast_node_t node = create_ast_node(allocator, NODE_TYPE_VALUE);
-  node->value = value_clone(value, allocator);
   return node;
 }
 
@@ -294,7 +286,6 @@ static const char *type_names[] = {
     "NODE_TYPE_EMPTY",
     "NODE_TYPE_VALUE",
     "NODE_TYPE_ERROR",
-    "NODE_TYPE_STRING",
     "NODE_TYPE_LIST",
     "NODE_TYPE_LITERAL_IDENTIFIER",
     "NODE_TYPE_LITERAL_NUMERIC",
@@ -488,20 +479,6 @@ ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
     }
   } else if (node->type == NODE_TYPE_ERROR) {
     n->error = create_cstring(allocator, node->error);
-  } else if (node->type == NODE_TYPE_VALUE) {
-    n->value = value_clone(node->value, allocator);
-  } else if (node->type == NODE_TYPE_STRING) {
-    n->string = create_cstring(allocator, node->string);
   }
   return n;
-}
-void ast_node_bind_value(allocator_t allocator, ast_node_t node,
-                         struct _value_t *value) {
-  if (node->type <= NODE_TYPE_LIST) {
-    return;
-  }
-  if (!ast_get_child(node, "_value")) {
-    ast_node_t _value = create_ast_value_node(allocator, value);
-    ast_add_child(allocator, node, "_value", _value);
-  }
 }

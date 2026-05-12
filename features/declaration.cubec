@@ -1,4 +1,0 @@
-comptime const a:i32 = 1;
-extern const a:i32 = 1;
-register const eax:u32 = __register__("eax");
-const a:i32 = 1;
