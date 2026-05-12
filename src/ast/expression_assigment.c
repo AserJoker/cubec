@@ -37,7 +37,7 @@ ast_node_t read_ast_expression_assigment(allocator_t allocator,
   ast_add_child(allocator, node, "identifier", identifier);
   if (identifier->type != NODE_TYPE_LITERAL_IDENTIFIER &&
       identifier->type != NODE_TYPE_EXPRESSION_MEMBER &&
-      identifier->type != NODE_TYPE_EXPRESSION_COMPUTE_MEMBER &&
+      identifier->type != NODE_TYPE_EXPRESSION_GENERICS &&
       identifier->type != NODE_TYPE_EXPRESSION_BINARY) {
     err = read_ast_expression_single(allocator, position, end, filename);
     goto onerror;

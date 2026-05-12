@@ -60,7 +60,6 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
       goto onerror;
     }
     if (!location_is(kind->loc, "comptime") &&
-        !location_is(kind->loc, "template") &&
         !location_is(kind->loc, "extern") &&
         !location_is(kind->loc, "inline")) {
       current = kind->loc.begin;
@@ -93,14 +92,14 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
 
   ast_node_t closure = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "closure", closure);
-  if (*current.offset == '[') {
+  if (*current.offset == '|') {
     current.offset++;
     current.column++;
     err = ast_skip_all(allocator, &current, end, filename);
     if (err && err->type == NODE_TYPE_ERROR) {
       return err;
     }
-    if (*current.offset != ']') {
+    if (*current.offset != '|') {
       for (;;) {
         ast_node_t id =
             read_ast_literal_identifier(allocator, &current, end, filename);
@@ -118,7 +117,7 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
         if (err && err->type == NODE_TYPE_ERROR) {
           return err;
         }
-        if (*current.offset == ']') {
+        if (*current.offset == '|') {
           break;
         }
         if (*current.offset != ',') {
@@ -134,7 +133,7 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
         }
       }
     }
-    if (*current.offset != ']') {
+    if (*current.offset != '|') {
       err = create_ast_error(allocator, *position, current, filename,
                              "invalid function expression");
       goto onerror;
@@ -159,6 +158,71 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;
   }
+  ast_node_t generics = create_ast_node(allocator, NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "generaics", generics);
+  if (*current.offset == '[') {
+    current.offset++;
+    current.column++;
+    err = ast_skip_all(allocator, &current, end, filename);
+    if (err && err->type == NODE_TYPE_ERROR) {
+      return err;
+    }
+    if (*current.offset != ']') {
+      for (;;) {
+        ast_node_t arg = NULL;
+        if (!arg) {
+          arg = read_ast_function_argument_rest(allocator, &current, end,
+                                                filename);
+        }
+        if (!arg) {
+          arg = read_ast_function_argument(allocator, &current, end, filename);
+        }
+        if (!arg) {
+          err = create_ast_error(allocator, *position, current, filename,
+                                 "invalid function generics");
+          goto onerror;
+        }
+        if (arg->type == NODE_TYPE_ERROR) {
+          err = arg;
+          goto onerror;
+        }
+        ast_add_item(generics, arg);
+        err = ast_skip_all(allocator, &current, end, filename);
+        if (err && err->type == NODE_TYPE_ERROR) {
+          return err;
+        }
+        if (*current.offset == ']') {
+          break;
+        }
+        if (*current.offset != ',') {
+          err = create_ast_error(allocator, *position, current, filename,
+                                 "invalid function generics");
+          goto onerror;
+        }
+        current.offset++;
+        current.column++;
+        err = ast_skip_all(allocator, &current, end, filename);
+        if (err && err->type == NODE_TYPE_ERROR) {
+          return err;
+        }
+      }
+    }
+    err = ast_skip_all(allocator, &current, end, filename);
+    if (err && err->type == NODE_TYPE_ERROR) {
+      return err;
+    }
+    if (*current.offset != ']') {
+      err = create_ast_error(allocator, *position, current, filename,
+                             "invalid function expression, missing '>'");
+      goto onerror;
+    }
+    current.offset++;
+    current.column++;
+    err = ast_skip_all(allocator, &current, end, filename);
+    if (err && err->type == NODE_TYPE_ERROR) {
+      return err;
+    }
+  }
   ast_node_t args = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "arguments", args);
   if (*current.offset != '(') {
@@ -168,7 +232,6 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
   }
   current.offset++;
   current.column++;
-
   err = ast_skip_all(allocator, &current, end, filename);
   if (err && err->type == NODE_TYPE_ERROR) {
     return err;

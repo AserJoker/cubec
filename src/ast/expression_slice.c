@@ -43,7 +43,7 @@ ast_node_t read_ast_expression_slice(allocator_t allocator,
   current.column++;
   ast_node_t end_index = NULL;
   if (*current.offset != ']') {
-    start = read_ast_expression_single(allocator, &current, end, filename);
+    end_index = read_ast_expression_single(allocator, &current, end, filename);
   }
   if (end_index) {
     if (end_index->type == NODE_TYPE_ERROR) {

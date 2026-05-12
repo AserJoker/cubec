@@ -457,7 +457,6 @@ ast_node_t read_ast_expression_binary_relation(allocator_t allocator,
   node->loc.end = current;
   node->loc.filename = filename;
   *position = current;
-
   return node;
 onerror:
   allocator_free(allocator, node);
