@@ -179,7 +179,7 @@ void write_c_type_declaration(context_t ctx, type_t type, stream_t stream) {
         write_c_type(ctx, atype, stream);
         stream_write(stream, " ");
         stream_write(stream, type_get_id(type));
-        stream_write(stream, "A");
+        stream_write(stream, "V");
         stream_write(stream, attr->name);
         stream_write(stream, " = ");
         write_c_value(ctx, attr->value, stream);

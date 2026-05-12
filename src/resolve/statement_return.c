@@ -56,6 +56,11 @@ value_t resolve_statement_return(context_t ctx, ast_node_t node) {
       value = convert_comptime_error(ctx, value_node, value);
       context_push_error(ctx, value);
     }
+    if (!value_is_mut(value) && res_type->mut) {
+      value_t err =
+          create_comptime_error(ctx, value_node, "value is not mutable");
+      context_push_error(ctx, err);
+    }
     return context_get_undefined(ctx);
   }
 }

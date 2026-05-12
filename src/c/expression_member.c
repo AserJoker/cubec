@@ -12,6 +12,7 @@ void write_c_expression_member(context_t ctx, ast_node_t node,
   value_t vhost = resolve_expression(ctx, host);
   type_t type = value_get_type(vhost);
   if (type_get_kind(type) == TYPE_KIND_TYPE) {
+    type = *(type_t *)value_get_data(vhost);
     stream_write(stream, type_get_id(type));
     stream_write(stream, "V");
     stream_write_location(stream, field->loc);
