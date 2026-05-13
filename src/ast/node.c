@@ -125,53 +125,6 @@ int32_t ast_read_code(position_t *position, const char *end,
   U8_NEXT(position->offset, offset, len, code);
   position->offset += offset;
   if (code >= 0) {
-    if (code == '\\' && *position->offset == 'u') {
-      position->offset++;
-      position->column++;
-      if (*position->offset == '{') {
-        position->offset++;
-        position->column++;
-        code = 0;
-        while (*position->offset != '}') {
-          if (!*position->offset) {
-            return U_INVALID_FORMAT_ERROR;
-          }
-          if (*position->offset >= '0' && *position->offset <= '9') {
-            code *= 16 + (*position->offset - '0');
-          } else if (*position->offset >= 'a' && *position->offset <= 'f') {
-            code *= 16 + (*position->offset - 'a');
-          } else if (*position->offset >= 'A' && *position->offset <= 'F') {
-            code *= 16 + (*position->offset - 'F');
-          } else {
-            return U_INVALID_FORMAT_ERROR;
-          }
-          position->offset++;
-          position->column++;
-        }
-        position->offset++;
-        position->column++;
-        return code;
-      } else {
-        code = 0;
-        for (int32_t idx = 0; idx < 4; idx++) {
-          if (!*position->offset) {
-            return U_INVALID_FORMAT_ERROR;
-          }
-          if (*position->offset >= '0' && *position->offset <= '9') {
-            code *= 16 + (*position->offset - '0');
-          } else if (*position->offset >= 'a' && *position->offset <= 'f') {
-            code *= 16 + (*position->offset - 'a');
-          } else if (*position->offset >= 'A' && *position->offset <= 'F') {
-            code *= 16 + (*position->offset - 'F');
-          } else {
-            return U_INVALID_FORMAT_ERROR;
-          }
-          position->offset++;
-          position->column++;
-        }
-        return code;
-      }
-    }
     if (code == '\n' || code == 0x2028 || code == 0x2029) {
       position->line++;
       position->column = 0;

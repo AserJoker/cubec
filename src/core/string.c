@@ -115,30 +115,39 @@ char *encode_cstring(allocator_t allocator, const char *source) {
     if (*src == '\n') {
       *dst++ = '\\';
       *dst++ = 'n';
+      src++;
     } else if (*src == '\r') {
       *dst++ = '\\';
       *dst++ = 'r';
+      src++;
     } else if (*src == '\a') {
       *dst++ = '\\';
       *dst++ = 'a';
+      src++;
     } else if (*src == '\b') {
       *dst++ = '\\';
       *dst++ = 'b';
+      src++;
     } else if (*src == '\\') {
       *dst++ = '\\';
       *dst++ = '\\';
+      src++;
     } else if (*src == '\t') {
       *dst++ = '\\';
       *dst++ = 't';
+      src++;
     } else if (*src == '\f') {
       *dst++ = '\\';
       *dst++ = 'f';
+      src++;
     } else if (*src == '\"') {
       *dst++ = '\\';
       *dst++ = '\"';
+      src++;
     } else if (*src == '\'') {
       *dst++ = '\\';
       *dst++ = '\'';
+      src++;
     } else {
       *dst++ = *src++;
     }
