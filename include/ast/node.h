@@ -4,11 +4,11 @@
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/hash_map.h"
+#include "core/position.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include "core/location.h"
 #include <unicode/umachine.h>
 #include <unicode/urename.h>
 #include <unicode/utf8.h>
@@ -16,15 +16,23 @@ extern "C" {
 struct _value_t;
 struct _ast_node_t;
 typedef struct _ast_node_t *ast_node_t;
+typedef struct _ast_error_t *ast_error_t;
+struct _ast_error_t {
+  const char *filename;
+  position_t begin;
+  position_t end;
+  char *message;
+};
 struct _ast_node_t {
-  location_t loc;
+  size_t start;
+  size_t end;
   ast_node_type_t type;
   ast_node_t parent;
   bool visible;
   union {
     array_t items;
     hash_map_t children;
-    char *error;
+    ast_error_t error;
     void *data;
   };
 };
@@ -48,16 +56,9 @@ void ast_set_child(allocator_t allocator, ast_node_t node, const char *name,
                    ast_node_t child);
 size_t ast_get_length(ast_node_t node);
 
-int32_t ast_read_code(position_t *position, const char *end,
-                      const char *filename);
-
 ast_node_t create_ast_error(allocator_t allocator, position_t begin,
                             position_t end, const char *filename,
                             const char *message);
-
-ast_node_t ast_skip_all(allocator_t allocator, position_t *position,
-                        const char *end, const char *filename);
-char *ast_write_json(allocator_t allocator, ast_node_t node);
 
 ast_node_t read_ast_node(allocator_t allocator, const char *filename,
                          const char *source, void *ctx);

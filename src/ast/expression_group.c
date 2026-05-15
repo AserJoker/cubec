@@ -4,52 +4,47 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/position.h"
-ast_node_t read_ast_expression_group(allocator_t allocator,
-                                     position_t *position, const char *end,
-                                     const char *filename) {
+#include "reader/token.h"
+#include "reader/token_type.h"
+ast_node_t read_expression_group(allocator_t allocator, token_stream_t stream) {
   ast_node_t node = NULL;
   ast_node_t err = NULL;
-  position_t current = *position;
-  if (*current.offset != '(') {
+  size_t position = stream->position;
+  token_t token = token_stream_get(stream);
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, "(")) {
     goto onerror;
   }
-  current.offset++;
-  current.column++;
+  stream->position++;
   node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_GROUP);
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
+  skip_comments(stream);
+  ast_node_t expression = read_expression(allocator, stream);
+  if (!expression) {
+    token_t start = array_get(stream->tokens, position);
+    token_t end = token_stream_get(stream);
+    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                           stream->filename, "unexpected expression");
     goto onerror;
   }
-  ast_node_t body = read_ast_expression(allocator, &current, end, filename);
-  if (!body) {
-    err = create_ast_error(allocator, *position, current, filename,
-                           "invalid group expression");
+  if (expression->type == NODE_TYPE_ERROR) {
+    err = expression;
     goto onerror;
   }
-  if (body->type == NODE_TYPE_ERROR) {
-    err = body;
+  ast_add_child(allocator, node, "expression", expression);
+  skip_comments(stream);
+  token = token_stream_get(stream);
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, ")")) {
+    token_t start = array_get(stream->tokens, position);
+    token_t end = token_stream_get(stream);
+    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                           stream->filename, "missing ')'");
     goto onerror;
   }
-  ast_add_child(allocator, node, "expression", body);
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    goto onerror;
-  }
-
-  if (*current.offset != ')') {
-    err = create_ast_error(allocator, *position, current, filename,
-                           "invalid group expression, missing ')'");
-    goto onerror;
-  }
-  current.offset++;
-  current.column++;
-  node->loc.begin = *position;
-  node->loc.end = current;
-  node->loc.filename = filename;
-  *position = current;
-
+  stream->position++;
+  node->start = position;
+  node->end = stream->position;
   return node;
 onerror:
+  stream->position = position;
   allocator_free(allocator, node);
   return err;
 }

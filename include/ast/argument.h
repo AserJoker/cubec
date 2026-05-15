@@ -1,12 +1,12 @@
-#ifndef _H_AST_STRUCT_DECLARATOR_
-#define _H_AST_STRUCT_DECLARATOR_
+#ifndef _H_AST_FUNCTION_ARGUMENT_
+#define _H_AST_FUNCTION_ARGUMENT_
 #include "ast/node.h"
 #include "reader/token.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
-ast_node_t read_struct_declarator(allocator_t allocator,
+ast_node_t read_argument(allocator_t allocator,
                                       token_stream_t stream);
 #ifdef __cplusplus
 }

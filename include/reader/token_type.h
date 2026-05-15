@@ -10,8 +10,9 @@ typedef enum _token_type_t {
   TOKEN_TYPE_IDENTIFIER,
   TOKEN_TYPE_KEYWORD,
   TOKEN_TYPE_STRING,
-  TOKEN_TYPE_CHARACTOR,
+  TOKEN_TYPE_CHAR,
   TOKEN_TYPE_SYMBOL,
+  TOKEN_TYPE_EOF,
 } token_type_t;
 #ifdef __cplusplus
 }

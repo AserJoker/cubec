@@ -2,6 +2,7 @@
 #include "ast/array_declarator.h"
 #include "ast/callable_declarator.h"
 #include "ast/enum_declarator.h"
+#include "ast/expression_assigment.h"
 #include "ast/expression_call.h"
 #include "ast/expression_comma.h"
 #include "ast/expression_generics.h"
@@ -20,134 +21,124 @@
 #include "ast/slice_declarator.h"
 #include "ast/struct_declarator.h"
 #include "core/allocator.h"
-#include "core/location.h"
 #include "core/position.h"
 
-ast_node_t read_ast_expression(allocator_t allocator, position_t *position,
-                               const char *end, const char *filename) {
-  return read_ast_expression_comma(allocator, position, end, filename);
+ast_node_t read_expression(allocator_t allocator, token_stream_t stream) {
+  return read_expression_comma(allocator, stream);
+}
+ast_node_t read_expression_single(allocator_t allocator,
+                                  token_stream_t stream) {
+  return read_expression_assigment(allocator, stream);
 }
 
-ast_node_t read_ast_expression_value(allocator_t allocator,
-                                     position_t *position, const char *end,
-                                     const char *filename) {
+ast_node_t read_expression_value(allocator_t allocator, token_stream_t stream) {
   ast_node_t node = NULL;
-  position_t current = *position;
-  node = read_ast_expression_atom(allocator, &current, end, filename);
+  size_t position = stream->position;
+  node = read_expression_atom(allocator, stream);
   if (node) {
     if (node->type == NODE_TYPE_ERROR) {
       return node;
     }
     for (;;) {
-      position_t curr = current;
-      ast_node_t err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == NODE_TYPE_ERROR) {
-        return err;
-      }
+      size_t curr = stream->position;
+      skip_comments(stream);
       ast_node_t next = NULL;
       if (!next) {
-        next = read_ast_expression_slice(allocator, &current, end, filename);
+        next = read_expression_slice(allocator, stream);
       }
       if (!next) {
-        next = read_ast_expression_member(allocator, &current, end, filename);
+        next = read_expression_member(allocator, stream);
       }
       if (!next) {
-        next = read_ast_expression_call(allocator, &current, end, filename);
+        next = read_expression_call(allocator, stream);
       }
       if (!next) {
-        next = read_ast_expression_generics(allocator, &current, end, filename);
+        next = read_expression_generics(allocator, stream);
       }
       if (next) {
         if (next->type == NODE_TYPE_ERROR) {
           allocator_free(allocator, node);
-          next->loc.begin = *position;
+          next->start = position;
+          stream->position = position;
           return next;
         }
         if (next->type == NODE_TYPE_EXPRESSION_MEMBER) {
           ast_add_child(allocator, next, "host", node);
           node = next;
-          next->loc.begin = *position;
-
+          next->start = position;
         } else if (next->type == NODE_TYPE_EXPRESSION_GENERICS) {
           ast_add_child(allocator, next, "host", node);
           node = next;
-          next->loc.begin = *position;
+          next->start = position;
         } else if (next->type == NODE_TYPE_EXPRESSION_CALL) {
           ast_add_child(allocator, next, "callee", node);
           node = next;
-          next->loc.begin = *position;
+          next->start = position;
         } else if (next->type == NODE_TYPE_EXPRESSION_SLICE) {
           ast_add_child(allocator, next, "host", node);
           node = next;
-          next->loc.begin = *position;
+          next->start = position;
         }
       } else {
-        current = curr;
+        stream->position = curr;
         break;
       }
     }
   }
-  *position = current;
   return node;
 }
-ast_node_t read_ast_expression_atom(allocator_t allocator, position_t *position,
-                                    const char *end, const char *filename) {
-  ast_node_t node = NULL;
-  node = read_ast_initialize_list(allocator, position, end, filename);
+ast_node_t read_expression_atom(allocator_t allocator, token_stream_t stream) {
+  ast_node_t node = read_literal_string(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_ptr_declarator(allocator, position, end, filename);
+  node = read_expression_group(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_expression_member(allocator, position, end, filename);
+  node = read_literal_identifier(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_slice_declarator(allocator, position, end, filename);
+  node = read_literal_numeric(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_array_declarator(allocator, position, end, filename);
+  node = read_literal_char(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_struct_declarator(allocator, position, end, filename);
+  node = read_initialize_list(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_expression_group(allocator, position, end, filename);
+  node = read_function_declarator(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_callable_declarator(allocator, position, end, filename);
+  node = read_struct_declarator(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_function_declarator(allocator, position, end, filename);
+  node = read_enum_declarator(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_enum_declarator(allocator, position, end, filename);
+  node = read_ptr_declarator(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_literal_numeric(allocator, position, end, filename);
+  node = read_slice_declarator(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_literal_char(allocator, position, end, filename);
+  node = read_callable_declarator(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_literal_string(allocator, position, end, filename);
+  node = read_array_declarator(allocator, stream);
   if (node) {
     return node;
   }
-  node = read_ast_literal_identifier(allocator, position, end, filename);
-  if (node) {
-    return node;
-  }
-  return NULL;
+  return node;
 }

@@ -1,185 +1,105 @@
 #include "ast/function_declarator.h"
-#include "ast/decorator.h"
+#include "ast/argument.h"
+#include "ast/argument_rest.h"
 #include "ast/expression.h"
-#include "ast/function_argument.h"
-#include "ast/function_argument_rest.h"
-#include "ast/function_body.h"
 #include "ast/literal_identifier.h"
+#include "ast/literal_keyword.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "ast/statement_block.h"
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
+#include "reader/token.h"
+#include "reader/token_type.h"
 
-ast_node_t read_ast_function_declarator(allocator_t allocator,
-                                        position_t *position, const char *end,
-                                        const char *filename) {
+ast_node_t read_function_declarator(allocator_t allocator,
+                                    token_stream_t stream) {
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_FUNCTION_DECLARATOR);
   ast_node_t err = NULL;
-  position_t current = *position;
-  ast_node_t decorators = create_ast_node(allocator, NODE_TYPE_LIST);
-  ast_add_child(allocator, node, "decorators", decorators);
-  for (;;) {
-    ast_node_t decorator =
-        read_ast_decorator(allocator, &current, end, filename);
-    if (!decorator) {
-      break;
-    }
-    if (decorator->type == NODE_TYPE_ERROR) {
-      goto onerror;
-    }
-    ast_add_item(decorators, decorator);
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
-    }
+  size_t position = stream->position;
+  token_t token = token_stream_get(stream);
+  if (token_is(token, TOKEN_TYPE_KEYWORD, "inline") ||
+      token_is(token, TOKEN_TYPE_KEYWORD, "extern") ||
+      token_is(token, TOKEN_TYPE_KEYWORD, "comptime")) {
+    ast_node_t kind = read_literal_keyword(allocator, stream);
+    ast_add_child(allocator, node, "kind", kind);
+    skip_comments(stream);
+    token = token_stream_get(stream);
   }
-  ast_node_t token =
-      read_ast_literal_identifier(allocator, &current, end, filename);
-  if (token) {
-    if (token->type == NODE_TYPE_ERROR) {
-      err = token;
-      goto onerror;
-    }
-    if (location_is(token->loc, "pub")) {
-      ast_add_child(allocator, node, "pub", token);
-      err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == NODE_TYPE_ERROR) {
-        return err;
-      }
-    } else {
-      current = token->loc.begin;
-      allocator_free(allocator, token);
-    }
-  }
-  ast_node_t kind =
-      read_ast_literal_identifier(allocator, &current, end, filename);
-  if (kind) {
-    if (kind->type == NODE_TYPE_ERROR) {
-      err = kind;
-      goto onerror;
-    }
-    if (!location_is(kind->loc, "comptime") &&
-        !location_is(kind->loc, "extern") &&
-        !location_is(kind->loc, "inline")) {
-      current = kind->loc.begin;
-      allocator_free(allocator, kind);
-    } else {
-      ast_add_child(allocator, node, "kind", kind);
-      err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == NODE_TYPE_ERROR) {
-        return err;
-      }
-    }
-  }
-  token = read_ast_literal_identifier(allocator, &current, end, filename);
-  if (!token) {
+  if (!token_is(token, TOKEN_TYPE_KEYWORD, "func")) {
     goto onerror;
   }
-  if (token->type == NODE_TYPE_ERROR) {
-    err = token;
-    goto onerror;
-  }
-  if (!location_is(token->loc, "func")) {
-    allocator_free(allocator, token);
-    goto onerror;
-  }
-  allocator_free(allocator, token);
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-
+  stream->position++;
+  skip_comments(stream);
   ast_node_t closure = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "closure", closure);
-  if (*current.offset == '|') {
-    current.offset++;
-    current.column++;
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
-    }
-    if (*current.offset != '|') {
+  token = token_stream_get(stream);
+  if (token_is(token, TOKEN_TYPE_SYMBOL, "|")) {
+    stream->position++;
+    skip_comments(stream);
+    if (!token_is(token, TOKEN_TYPE_SYMBOL, "|")) {
       for (;;) {
-        ast_node_t id =
-            read_ast_literal_identifier(allocator, &current, end, filename);
-        if (!id) {
-          err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid function expression");
+        skip_comments(stream);
+        ast_node_t identifier = read_literal_identifier(allocator, stream);
+        if (!identifier) {
+          token_t start = array_get(stream->tokens, position);
+          token_t end = token_stream_get(stream);
+          err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                                 stream->filename, "unexpected expression");
           goto onerror;
         }
-        if (id->type == NODE_TYPE_ERROR) {
-          err = id;
+        if (identifier->type == NODE_TYPE_ERROR) {
+          err = identifier;
           goto onerror;
         }
-        ast_add_item(closure, id);
-        err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == NODE_TYPE_ERROR) {
-          return err;
-        }
-        if (*current.offset == '|') {
+        ast_add_item(closure, identifier);
+        skip_comments(stream);
+        token = token_stream_get(stream);
+        if (token_is(token, TOKEN_TYPE_SYMBOL, ",")) {
+          stream->position++;
+        } else if (token_is(token, TOKEN_TYPE_SYMBOL, "|")) {
           break;
-        }
-        if (*current.offset != ',') {
-          err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid function expression");
+        } else {
+          token_t start = array_get(stream->tokens, position);
+          token_t end = token_stream_get(stream);
+          err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                                 stream->filename, "missing ','");
           goto onerror;
-        }
-        current.offset++;
-        current.column++;
-        err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == NODE_TYPE_ERROR) {
-          return err;
         }
       }
     }
-    if (*current.offset != '|') {
-      err = create_ast_error(allocator, *position, current, filename,
-                             "invalid function expression");
-      goto onerror;
-    }
-    current.offset++;
-    current.column++;
+    stream->position++;
   }
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  ast_node_t identifier =
-      read_ast_literal_identifier(allocator, &current, end, filename);
+  skip_comments(stream);
+  ast_node_t identifier = read_literal_identifier(allocator, stream);
   if (identifier) {
     if (identifier->type == NODE_TYPE_ERROR) {
       err = identifier;
       goto onerror;
+    } else {
+      ast_add_child(allocator, node, "identifier", identifier);
     }
-    ast_add_child(allocator, node, "identifier", identifier);
   }
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
+  skip_comments(stream);
+  token = token_stream_get(stream);
   ast_node_t generics = create_ast_node(allocator, NODE_TYPE_LIST);
-  ast_add_child(allocator, node, "generaics", generics);
-  if (*current.offset == '[') {
-    current.offset++;
-    current.column++;
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
-    }
-    if (*current.offset != ']') {
+  ast_add_child(allocator, node, "generics", generics);
+  if (token_is(token, TOKEN_TYPE_SYMBOL, "[")) {
+    stream->position++;
+    skip_comments(stream);
+    if (!token_is(token, TOKEN_TYPE_SYMBOL, "]")) {
       for (;;) {
-        ast_node_t arg = NULL;
+        skip_comments(stream);
+        ast_node_t arg = read_argument_rest(allocator, stream);
         if (!arg) {
-          arg = read_ast_function_argument_rest(allocator, &current, end,
-                                                filename);
+          arg = read_argument(allocator, stream);
         }
         if (!arg) {
-          arg = read_ast_function_argument(allocator, &current, end, filename);
-        }
-        if (!arg) {
-          err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid function generics");
+          token_t start = array_get(stream->tokens, position);
+          token_t end = token_stream_get(stream);
+          err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                                 stream->filename, "unexpected expression");
           goto onerror;
         }
         if (arg->type == NODE_TYPE_ERROR) {
@@ -187,164 +107,109 @@ ast_node_t read_ast_function_declarator(allocator_t allocator,
           goto onerror;
         }
         ast_add_item(generics, arg);
-        err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == NODE_TYPE_ERROR) {
-          return err;
-        }
-        if (*current.offset == ']') {
+        skip_comments(stream);
+        token = token_stream_get(stream);
+        if (token_is(token, TOKEN_TYPE_SYMBOL, ",")) {
+          stream->position++;
+        } else if (token_is(token, TOKEN_TYPE_SYMBOL, "]")) {
           break;
-        }
-        if (*current.offset != ',') {
-          err = create_ast_error(allocator, *position, current, filename,
-                                 "invalid function generics");
+        } else {
+          token_t start = array_get(stream->tokens, position);
+          token_t end = token_stream_get(stream);
+          err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                                 stream->filename, "missing ','");
           goto onerror;
         }
-        current.offset++;
-        current.column++;
-        err = ast_skip_all(allocator, &current, end, filename);
-        if (err && err->type == NODE_TYPE_ERROR) {
-          return err;
-        }
       }
     }
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
-    }
-    if (*current.offset != ']') {
-      err = create_ast_error(allocator, *position, current, filename,
-                             "invalid function expression, missing '>'");
-      goto onerror;
-    }
-    current.offset++;
-    current.column++;
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
-    }
+    stream->position++;
   }
-  ast_node_t args = create_ast_node(allocator, NODE_TYPE_LIST);
-  ast_add_child(allocator, node, "arguments", args);
-  if (*current.offset != '(') {
-    err = create_ast_error(allocator, *position, current, filename,
-                           "invalid function expression, missing '('");
+  skip_comments(stream);
+  ast_node_t arguments = create_ast_node(allocator, NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "arguments", arguments);
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, "(")) {
+    token_t start = array_get(stream->tokens, position);
+    token_t end = token_stream_get(stream);
+    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                           stream->filename, "missing '('");
     goto onerror;
   }
-  current.offset++;
-  current.column++;
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  if (*current.offset != ')') {
+  stream->position++;
+  skip_comments(stream);
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, ")")) {
     for (;;) {
-      ast_node_t arg = NULL;
+      skip_comments(stream);
+      ast_node_t arg = read_argument_rest(allocator, stream);
       if (!arg) {
-        arg =
-            read_ast_function_argument_rest(allocator, &current, end, filename);
+        arg = read_argument(allocator, stream);
       }
       if (!arg) {
-        arg = read_ast_function_argument(allocator, &current, end, filename);
-      }
-      if (!arg) {
-        err = create_ast_error(allocator, *position, current, filename,
-                               "invalid function expression");
+        token_t start = array_get(stream->tokens, position);
+        token_t end = token_stream_get(stream);
+        err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                               stream->filename, "unexpected expression");
         goto onerror;
       }
       if (arg->type == NODE_TYPE_ERROR) {
         err = arg;
         goto onerror;
       }
-      ast_add_item(args, arg);
-      err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == NODE_TYPE_ERROR) {
-        return err;
-      }
-      if (*current.offset == ')') {
+      ast_add_item(arguments, arg);
+      skip_comments(stream);
+      token = token_stream_get(stream);
+      if (token_is(token, TOKEN_TYPE_SYMBOL, ",")) {
+        stream->position++;
+      } else if (token_is(token, TOKEN_TYPE_SYMBOL, ")")) {
         break;
-      }
-      if (*current.offset != ',') {
-        err = create_ast_error(allocator, *position, current, filename,
-                               "invalid function expression");
+      } else {
+        token_t start = array_get(stream->tokens, position);
+        token_t end = token_stream_get(stream);
+        err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                               stream->filename, "missing ','");
         goto onerror;
       }
-      current.offset++;
-      current.column++;
-      err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == NODE_TYPE_ERROR) {
-        return err;
-      }
     }
   }
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  if (*current.offset != ')') {
-    err = create_ast_error(allocator, *position, current, filename,
-                           "invalid function expression, missing ')'");
+  stream->position++;
+  skip_comments(stream);
+  token = token_stream_get(stream);
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, ":")) {
+    token_t start = array_get(stream->tokens, position);
+    token_t end = token_stream_get(stream);
+    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                           stream->filename, "missing ':'");
     goto onerror;
   }
-  current.offset++;
-  current.column++;
-
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  if (*current.offset != ':') {
-    err = create_ast_error(allocator, *position, current, filename,
-                           "invalid function expression, missing ':'");
+  stream->position++;
+  skip_comments(stream);
+  ast_node_t type = read_expression_value(allocator, stream);
+  if (!type) {
+    token_t start = array_get(stream->tokens, position);
+    token_t end = token_stream_get(stream);
+    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                           stream->filename, "missing return type");
     goto onerror;
   }
-  current.offset++;
-  current.column++;
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  ast_node_t mut =
-      read_ast_literal_identifier(allocator, &current, end, filename);
-  if (mut) {
-    if (mut->type == NODE_TYPE_ERROR) {
-      err = mut;
-      goto onerror;
-    } else if (location_is(mut->loc, "const")) {
-      ast_add_child(allocator, node, "mut", mut);
-    } else {
-      current = mut->loc.begin;
-      allocator_free(allocator, mut);
-    }
-  }
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  ast_node_t type =
-      read_ast_expression_value(allocator, &current, end, filename);
   if (type->type == NODE_TYPE_ERROR) {
     err = type;
     goto onerror;
   }
   ast_add_child(allocator, node, "type", type);
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  ast_node_t body = read_ast_function_body(allocator, &current, end, filename);
+  skip_comments(stream);
+  ast_node_t body = read_statement_block(allocator, stream);
   if (body) {
     if (body->type == NODE_TYPE_ERROR) {
       err = body;
       goto onerror;
+    } else {
+      ast_add_child(allocator, node, "body", body);
     }
-    ast_add_child(allocator, node, "body", body);
   }
-  node->loc.begin = *position;
-  node->loc.end = current;
-  node->loc.filename = filename;
-  *position = current;
+  node->start = position;
+  node->end = stream->position;
   return node;
 onerror:
   allocator_free(allocator, node);
+  stream->position = position;
   return err;
 }

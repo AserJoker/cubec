@@ -2,13 +2,12 @@
 #define _H_AST_LITERAL_CHAR_
 #include "ast/node.h"
 #include "core/allocator.h"
-#include "core/position.h"
+#include "reader/token.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-ast_node_t read_ast_literal_char(allocator_t allocator, position_t *position,
-                                 const char *end, const char *filename);
+ast_node_t read_literal_char(allocator_t allocator, token_stream_t stream);
 #ifdef __cplusplus
 }
 #endif

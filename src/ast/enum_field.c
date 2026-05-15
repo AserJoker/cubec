@@ -1,35 +1,22 @@
 #include "ast/enum_field.h"
-#include "ast/decorator.h"
-#include "ast/expression_condition.h"
+#include "ast/expression.h"
 #include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/position.h"
-ast_node_t read_ast_enum_field(allocator_t allocator, position_t *position,
-                               const char *end, const char *filename) {
+#include "reader/token.h"
+#include "reader/token_type.h"
+ast_node_t read_enum_field(allocator_t allocator, token_stream_t stream) {
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_ENUM_FIELD);
   ast_node_t err = NULL;
-  position_t current = *position;
-  ast_node_t decorators = create_ast_node(allocator, NODE_TYPE_LIST);
-  for (;;) {
-    ast_node_t decorator =
-        read_ast_decorator(allocator, &current, end, filename);
-    if (!decorator) {
-      break;
-    }
-    if (decorator->type == NODE_TYPE_ERROR) {
-      goto onerror;
-    }
-    ast_add_item(decorators, decorator);
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
-    }
-  }
-  ast_node_t identifier =
-      read_ast_literal_identifier(allocator, &current, end, filename);
+  size_t position = stream->position;
+  ast_node_t identifier = read_literal_identifier(allocator, stream);
   if (!identifier) {
+    token_t start = array_get(stream->tokens, position);
+    token_t end = token_stream_get(stream);
+    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                           stream->filename, "missing identifier");
     goto onerror;
   }
   if (identifier->type == NODE_TYPE_ERROR) {
@@ -37,22 +24,17 @@ ast_node_t read_ast_enum_field(allocator_t allocator, position_t *position,
     goto onerror;
   }
   ast_add_child(allocator, node, "identifier", identifier);
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  if (*current.offset == '=') {
-    current.offset++;
-    current.column++;
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
-      return err;
-    }
-    ast_node_t value =
-        read_ast_expression_single(allocator, &current, end, filename);
+  skip_comments(stream);
+  token_t token = token_stream_get(stream);
+  if (token_is(token, TOKEN_TYPE_SYMBOL, "=")) {
+    stream->position++;
+    skip_comments(stream);
+    ast_node_t value = read_expression_single(allocator, stream);
     if (!value) {
-      err = create_ast_error(allocator, *position, current, filename,
-                             "invalid enum field, missing value");
+      token_t start = array_get(stream->tokens, position);
+      token_t end = token_stream_get(stream);
+      err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                             stream->filename, "missing value");
       goto onerror;
     }
     if (value->type == NODE_TYPE_ERROR) {
@@ -60,15 +42,12 @@ ast_node_t read_ast_enum_field(allocator_t allocator, position_t *position,
       goto onerror;
     }
     ast_add_child(allocator, node, "value", value);
-  } else {
-    current = identifier->loc.end;
   }
-  node->loc.begin = *position;
-  node->loc.end = current;
-  node->loc.filename = filename;
-  *position = current;
+  node->start = position;
+  node->end = stream->position;
   return node;
 onerror:
   allocator_free(allocator, node);
+  stream->position = position;
   return err;
 }

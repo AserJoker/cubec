@@ -1,75 +1,59 @@
 #include "ast/expression_slice.h"
-#include "ast/expression_condition.h"
+#include "ast/expression.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/position.h"
+#include "reader/token.h"
+#include "reader/token_type.h"
 
-ast_node_t read_ast_expression_slice(allocator_t allocator,
-                                     position_t *position, const char *end,
-                                     const char *filename) {
-  ast_node_t node = NULL;
+ast_node_t read_expression_slice(allocator_t allocator, token_stream_t stream) {
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_SLICE);
   ast_node_t err = NULL;
-  position_t current = *position;
-  if (*current.offset != '[') {
+  size_t position = stream->position;
+  token_t token = token_stream_get(stream);
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, "[")) {
     goto onerror;
   }
-  current.offset++;
-  current.column++;
-  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_SLICE);
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    goto onerror;
-  }
-  ast_node_t start = NULL;
-  if (*current.offset != ':') {
-    start = read_ast_expression_single(allocator, &current, end, filename);
-  }
+  stream->position++;
+  skip_comments(stream);
+  ast_node_t start = read_expression(allocator, stream);
   if (start) {
     if (start->type == NODE_TYPE_ERROR) {
       err = start;
       goto onerror;
     }
     ast_add_child(allocator, node, "start", start);
-    err = ast_skip_all(allocator, &current, end, filename);
-    if (err && err->type == NODE_TYPE_ERROR) {
+  }
+  skip_comments(stream);
+  token = token_stream_get(stream);
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, ":")) {
+    goto onerror;
+  }
+  stream->position++;
+  skip_comments(stream);
+  ast_node_t end = read_expression(allocator, stream);
+  if (end) {
+    if (end->type == NODE_TYPE_ERROR) {
+      err = end;
       goto onerror;
     }
+    ast_add_child(allocator, node, "end", end);
   }
-  if (*current.offset != ':') {
+  skip_comments(stream);
+  token = token_stream_get(stream);
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, "]")) {
+    token_t start = array_get(stream->tokens, position);
+    token_t end = token_stream_get(stream);
+    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                           stream->filename, "missing ']'");
     goto onerror;
   }
-  current.offset++;
-  current.column++;
-  ast_node_t end_index = NULL;
-  if (*current.offset != ']') {
-    end_index = read_ast_expression_single(allocator, &current, end, filename);
-  }
-  if (end_index) {
-    if (end_index->type == NODE_TYPE_ERROR) {
-      err = end_index;
-      goto onerror;
-    }
-    ast_add_child(allocator, node, "end", end_index);
-  }
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    goto onerror;
-  }
-  if (*current.offset != ']') {
-    err = create_ast_error(allocator, *position, current, filename,
-                           "invalid slice expression, missing ']'");
-    goto onerror;
-  }
-  current.offset++;
-  current.column++;
-  node->loc.begin = *position;
-  node->loc.end = current;
-  node->loc.filename = filename;
-  *position = current;
-
+  node->start = position;
+  node->end = stream->position;
   return node;
 onerror:
   allocator_free(allocator, node);
+  stream->position = position;
   return err;
 }

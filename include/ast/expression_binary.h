@@ -2,55 +2,33 @@
 #define _H_AST_EXPRESSION_BINARY_
 #include "ast/node.h"
 #include "core/allocator.h"
-#include "core/position.h"
+#include "reader/token.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
-ast_node_t read_ast_expression_binary_logical_or(allocator_t allocator,
-                                                 position_t *position,
-                                                 const char *end,
-                                                 const char *filename);
-ast_node_t read_ast_expression_binary_logical_and(allocator_t allocator,
-                                                  position_t *position,
-                                                  const char *end,
-                                                  const char *filename);
-ast_node_t read_ast_expression_binary_bitwise_or(allocator_t allocator,
-                                                 position_t *position,
-                                                 const char *end,
-                                                 const char *filename);
-ast_node_t read_ast_expression_binary_bitwise_xor(allocator_t allocator,
-                                                  position_t *position,
-                                                  const char *end,
-                                                  const char *filename);
-ast_node_t read_ast_expression_binary_bitwise_and(allocator_t allocator,
-                                                  position_t *position,
-                                                  const char *end,
-                                                  const char *filename);
-ast_node_t read_ast_expression_binary_equal(allocator_t allocator,
-                                            position_t *position,
-                                            const char *end,
-                                            const char *filename);
-ast_node_t read_ast_expression_binary_relation(allocator_t allocator,
-                                               position_t *position,
-                                               const char *end,
-                                               const char *filename);
-ast_node_t read_ast_expression_binary_bitwise_shift(allocator_t allocator,
-                                                    position_t *position,
-                                                    const char *end,
-                                                    const char *filename);
-ast_node_t read_ast_expression_binary_additive(allocator_t allocator,
-                                               position_t *position,
-                                               const char *end,
-                                               const char *filename);
-ast_node_t read_ast_expression_binary_multiplicative(allocator_t allocator,
-                                                     position_t *position,
-                                                     const char *end,
-                                                     const char *filename);
-ast_node_t read_ast_expression_binary_prefix(allocator_t allocator,
-                                             position_t *position,
-                                             const char *end,
-                                             const char *filename);
+ast_node_t read_expression_logical_or(allocator_t allocator,
+                                                 token_stream_t stream);
+ast_node_t read_expression_logical_and(allocator_t allocator,
+                                                  token_stream_t stream);
+ast_node_t read_expression_bitwise_or(allocator_t allocator,
+                                                 token_stream_t stream);
+ast_node_t read_expression_bitwise_xor(allocator_t allocator,
+                                                  token_stream_t stream);
+ast_node_t read_expression_bitwise_and(allocator_t allocator,
+                                                  token_stream_t stream);
+ast_node_t read_expression_equal(allocator_t allocator,
+                                            token_stream_t stream);
+ast_node_t read_expression_relation(allocator_t allocator,
+                                               token_stream_t stream);
+ast_node_t read_expression_bitwise_shift(allocator_t allocator,
+                                                    token_stream_t stream);
+ast_node_t read_expression_additive(allocator_t allocator,
+                                               token_stream_t stream);
+ast_node_t read_expression_multiplicative(allocator_t allocator,
+                                                     token_stream_t stream);
+ast_node_t read_expression_prefix(allocator_t allocator,
+                                             token_stream_t stream);
 #ifdef __cplusplus
 }
 #endif

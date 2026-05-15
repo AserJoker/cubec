@@ -4,6 +4,7 @@
 #include "core/location.h"
 #include "core/position.h"
 #include "reader/token_type.h"
+#include <stdio.h>
 #include <string.h>
 #include <unicode/uchar.h>
 #include <unicode/umachine.h>
@@ -280,8 +281,8 @@ token_t read_string_token(allocator_t allocator, position_t *position,
   return token;
 }
 
-token_t read_charator_token(allocator_t allocator, position_t *position,
-                            const char *end, const char *filename) {
+token_t read_char_token(allocator_t allocator, position_t *position,
+                        const char *end, const char *filename) {
   if (*position->offset != '\'') {
     return NULL;
   }
@@ -306,17 +307,18 @@ token_t read_charator_token(allocator_t allocator, position_t *position,
       break;
     }
   }
-  token_t token = create_token(allocator, TOKEN_TYPE_STRING,
+  token_t token = create_token(allocator, TOKEN_TYPE_CHAR,
                                (location_t){*position, current, filename});
   *position = current;
   return token;
 }
 
 static const char *symbols[] = {
-    ">>=", "<<=", ">>", "<<", "&&", "||", "??", "==", "!=", "+=", "-=", "*=",
-    "/=",  "%=",  "^=", "&=", "|=", "~=", ">=", "<=", "->", "[[", "]]", "=",
-    "+",   "-",   "*",  "/",  "%",  "&",  "|",  "~",  "^",  "!",  ":",  ";",
-    ",",   "(",   ")",  "{",  "}",  "[",  "]",  "<",  ">",  ".",  0};
+    "...", ">>=", "<<=", ">>", "<<", "&&", "||", "??", "==", "!=",
+    "+=",  "-=",  "*=",  "/=", "%=", "^=", "&=", "|=", "~=", ">=",
+    "<=",  "->",  "[[",  "]]", "[]", "=",  "+",  "-",  "*",  "/",
+    "%",   "&",   "|",   "~",  "^",  "!",  ":",  ";",  ",",  "(",
+    ")",   "{",   "}",   "[",  "]",  "<",  ">",  ".",  0};
 token_t read_symbol_token(allocator_t allocator, position_t *position,
                           const char *end, const char *filename) {
   for (size_t idx = 0; symbols[idx]; idx++) {
@@ -341,10 +343,13 @@ token_t read_symbol_token(allocator_t allocator, position_t *position,
   return NULL;
 }
 static const char *keywords[] = {
-    "func",   "return",   "struct",  "enum",    "union",    "if",
-    "else",   "while",    "for",     "foreach", "break",    "continue",
-    "switch", "case",     "default", "do",      "comptime", "extern",
-    "inline", "register", "const",   "let",     "volatile", 0};
+    "defer",  "func",     "struct", "enum",   "union",   "if",
+    "import", "pub",      "else",   "while",  "for",     "foreach",
+    "break",  "continue", "return", "switch", "case",    "default",
+    "do",     "comptime", "export", "extern", "defer",   "inline",
+    "test",   "register", "const",  "let",    "mutable", "volatile",
+    "in",     "of",       0,
+};
 token_t read_identifier_token(allocator_t allocator, position_t *position,
                               const char *end, const char *filename) {
   position_t current = *position;
@@ -400,7 +405,7 @@ token_t read_token(allocator_t allocator, position_t *position, const char *end,
   if (token) {
     return token;
   }
-  token = read_charator_token(allocator, position, end, filename);
+  token = read_char_token(allocator, position, end, filename);
   if (token) {
     return token;
   }
@@ -420,6 +425,7 @@ array_t read_token_list(allocator_t allocator, position_t *position,
       .autofree = true,
   };
   array_t list = create_array(allocator, &init);
+  position_t start = *position;
   for (;;) {
     token_t token = read_token(allocator, position, end, filename);
     if (!token) {
@@ -431,6 +437,9 @@ array_t read_token_list(allocator_t allocator, position_t *position,
     allocator_free(allocator, list);
     return NULL;
   }
+  token_t token = create_token(allocator, TOKEN_TYPE_EOF,
+                               (location_t){start, *position, filename});
+  array_push(list, token);
   return list;
 }
 
@@ -449,11 +458,43 @@ token_stream_t create_token_stream(allocator_t allocator, position_t *position,
     return NULL;
   }
   stream->position = 0;
+  stream->filename = filename;
   return stream;
 }
-token_t stream_eat(token_stream_t stream) {
+token_t token_stream_eat(token_stream_t stream) {
+  token_t token = token_stream_get(stream);
+  if (token) {
+    stream->position++;
+  }
+  return token;
+}
+token_t token_stream_get(token_stream_t stream) {
   if (stream->position < array_get_size(stream->tokens)) {
-    return array_get(stream->tokens, stream->position++);
+    return array_get(stream->tokens, stream->position);
   }
   return NULL;
+}
+bool token_is(token_t token, token_type_t type, const char *s) {
+  if (!token) {
+    return false;
+  }
+  if (token->type != type) {
+    return false;
+  }
+  return location_is(token->loc, s);
+}
+void skip_comments(token_stream_t stream) {
+  for (;;) {
+    token_t token = token_stream_get(stream);
+    if (!token) {
+      return;
+    }
+    if (token->type == TOKEN_TYPE_SPACE) {
+      stream->position++;
+    } else if (token->type == TOKEN_TYPE_COMMENT) {
+      stream->position++;
+    } else {
+      return;
+    }
+  }
 }

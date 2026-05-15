@@ -2,18 +2,15 @@
 #define _H_AST_EXPRESSION_
 #include "ast/node.h"
 #include "core/allocator.h"
-#include "core/position.h"
+#include "reader/token.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
-ast_node_t read_ast_expression(allocator_t allocator, position_t *position,
-                               const char *end, const char *filename);
-ast_node_t read_ast_expression_value(allocator_t allocator,
-                                     position_t *position, const char *end,
-                                     const char *filename);
-ast_node_t read_ast_expression_atom(allocator_t allocator, position_t *position,
-                                    const char *end, const char *filename);
+ast_node_t read_expression(allocator_t allocator, token_stream_t stream);
+ast_node_t read_expression_single(allocator_t allocator, token_stream_t stream);
+ast_node_t read_expression_value(allocator_t allocator, token_stream_t stream);
+ast_node_t read_expression_atom(allocator_t allocator, token_stream_t stream);
 
 #ifdef __cplusplus
 }

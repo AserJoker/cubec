@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     } else {
       FILE *fp = fopen("./build/tokens.txt", "w");
       token_t token = NULL;
-      while ((token = stream_eat(stream)) != NULL) {
+      while ((token = token_stream_get(stream)) != NULL) {
         switch (token->type) {
         case TOKEN_TYPE_SPACE:
           fprintf(fp, "%-25s", "TOKEN_TYPE_SPACE");
@@ -65,13 +65,17 @@ int main(int argc, char *argv[]) {
         case TOKEN_TYPE_STRING:
           fprintf(fp, "%-25s", "TOKEN_TYPE_STRING");
           break;
-        case TOKEN_TYPE_CHARACTOR:
-          fprintf(fp, "%-25s", "TOKEN_TYPE_CHARACTOR");
+        case TOKEN_TYPE_CHAR:
+          fprintf(fp, "%-25s", "TOKEN_TYPE_CHAR");
           break;
         case TOKEN_TYPE_SYMBOL:
           fprintf(fp, "%-25s", "TOKEN_TYPE_SYMBOL");
           break;
+        case TOKEN_TYPE_EOF:
+          fprintf(fp, "%-25s", "TOKEN_TYPE_EOF");
+          break;
         }
+        stream->position++;
         fprintf(fp, "| ");
         char *str = location_get(token->loc, allocator);
         char *encode_str = encode_cstring(allocator, str);
@@ -88,8 +92,8 @@ int main(int argc, char *argv[]) {
     if (root->type == NODE_TYPE_ERROR) {
       fprintf(stderr,
               "failed to compile:%s at\n  %s:%" PRIuPTR ":%" PRIuPTR "\n",
-              root->error, root->loc.filename, root->loc.end.line,
-              root->loc.end.column + 1);
+              root->error->message, root->error->filename,
+              root->error->end.line + 1, root->error->end.column + 1);
     } else {
       printf("compile success\n");
     }

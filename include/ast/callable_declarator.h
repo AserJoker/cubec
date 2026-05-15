@@ -1,14 +1,14 @@
 #ifndef _H_AST_CALLABLE_DECLARATOR_
 #define _H_AST_CALLABLE_DECLARATOR_
 #include "ast/node.h"
+#include "reader/token.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-ast_node_t read_ast_callable_declarator(allocator_t allocator,
-                                        position_t *position, const char *end,
-                                        const char *filename);
+ast_node_t read_callable_declarator(allocator_t allocator,
+                                        token_stream_t stream);
 #ifdef __cplusplus
 }
 #endif

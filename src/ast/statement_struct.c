@@ -4,15 +4,13 @@
 #include "ast/struct_declarator.h"
 #include "core/allocator.h"
 #include "core/position.h"
+#include "reader/token.h"
 
-ast_node_t read_ast_statement_struct(allocator_t allocator,
-                                     position_t *position, const char *end,
-                                     const char *filename) {
+ast_node_t read_statement_struct(allocator_t allocator, token_stream_t stream) {
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_STATEMENT_STRUCT);
   ast_node_t err = NULL;
-  position_t current = *position;
-  ast_node_t stru =
-      read_ast_struct_declarator(allocator, &current, end, filename);
+  size_t position = stream->position;
+  ast_node_t stru = read_struct_declarator(allocator, stream);
   if (!stru) {
     goto onerror;
   }
@@ -21,23 +19,16 @@ ast_node_t read_ast_statement_struct(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "struct", stru);
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
+  skip_comments(stream);
+  token_t token = token_stream_get(stream);
+  if (token_is(token, TOKEN_TYPE_SYMBOL, ";")) {
+    stream->position++;
   }
-  if (*current.offset == ';') {
-    current.offset++;
-    current.column++;
-  } else {
-    current = stru->loc.end;
-  }
-  node->loc.begin = *position;
-  node->loc.end = current;
-  node->loc.filename = filename;
-  *position = current;
-
+  node->start = position;
+  node->end = stream->position;
   return node;
 onerror:
   allocator_free(allocator, node);
+  stream->position = position;
   return err;
 }

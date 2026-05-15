@@ -1,6 +1,4 @@
 #include "ast/expression_assigment.h"
-#include "ast/expression.h"
-#include "ast/expression_binary.h"
 #include "ast/expression_condition.h"
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
@@ -8,79 +6,50 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
+#include "reader/token.h"
+#include "reader/token_type.h"
 
-ast_node_t read_ast_expression_assigment(allocator_t allocator,
-                                         position_t *position, const char *end,
-                                         const char *filename) {
+ast_node_t read_expression_assigment(allocator_t allocator,
+                                     token_stream_t stream) {
   static const char *opts[] = {
       "=",  "+=", "-=", "*=",  "/=",  "%=",  ">>=", "<<=",
       "&=", "|=", "^=", "&&=", "||=", "??=", NULL,
   };
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_ASSIGMENT);
   ast_node_t err = NULL;
-  position_t current = *position;
-  ast_node_t identifier = NULL;
-  if (*current.offset == '*') {
-    identifier =
-        read_ast_expression_binary_prefix(allocator, &current, end, filename);
-  } else {
-    identifier = read_ast_expression_value(allocator, &current, end, filename);
-  }
+  size_t position = stream->position;
+  ast_node_t identifier = read_expression_condition(allocator, stream);
   if (!identifier) {
-    err = read_ast_expression_single(allocator, position, end, filename);
     goto onerror;
   }
   if (identifier->type == NODE_TYPE_ERROR) {
     err = identifier;
     goto onerror;
   }
-  ast_add_child(allocator, node, "identifier", identifier);
-  if (identifier->type != NODE_TYPE_LITERAL_IDENTIFIER &&
-      identifier->type != NODE_TYPE_EXPRESSION_MEMBER &&
-      identifier->type != NODE_TYPE_EXPRESSION_GENERICS &&
-      identifier->type != NODE_TYPE_EXPRESSION_BINARY) {
-    err = read_ast_expression_single(allocator, position, end, filename);
-    goto onerror;
-  }
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  allocator_free(allocator, err);
-
-  ast_node_t opt = read_ast_literal_symbol(allocator, &current, end, filename);
-  if (!opt) {
-    err = read_ast_expression_single(allocator, position, end, filename);
-    goto onerror;
-  }
-  if (opt->type == NODE_TYPE_ERROR) {
-    err = opt;
-    goto onerror;
-  }
-  ast_add_child(allocator, node, "opt", opt);
-  size_t idx = 0;
-  while (opts[idx] != NULL) {
-    if (location_is(opt->loc, opts[idx])) {
-      break;
+  skip_comments(stream);
+  token_t token = token_stream_get(stream);
+  ast_node_t opt = NULL;
+  if (token->type == TOKEN_TYPE_SYMBOL) {
+    for (size_t idx = 0; opts[idx] != 0; idx++) {
+      if (token_is(token, TOKEN_TYPE_SYMBOL, opts[idx])) {
+        opt = read_literal_symbol(allocator, stream);
+        break;
+      }
     }
-    idx++;
   }
-  if (opts[idx] == NULL) {
-    err = read_ast_expression_single(allocator, position, end, filename);
+  if (!opt) {
+    err = identifier;
     goto onerror;
   }
-
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-
-  ast_node_t value =
-      read_ast_expression_single(allocator, &current, end, filename);
+  ast_add_child(allocator, node, "identifier", identifier);
+  ast_add_child(allocator, node, "opt", opt);
+  skip_comments(stream);
+  ast_node_t value = read_expression_assigment(allocator, stream);
   if (!value) {
-    err = create_ast_error(
-        allocator, *position, current, filename,
-        "invalid or unexpected token, missing initialize expression");
+    token_t start = array_get(stream->tokens, position);
+    token_t end = token_stream_get(stream);
+    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                           stream->filename, "missing initialize");
     goto onerror;
   }
   if (value->type == NODE_TYPE_ERROR) {
@@ -88,10 +57,8 @@ ast_node_t read_ast_expression_assigment(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "value", value);
-  node->loc.begin = *position;
-  node->loc.end = current;
-  node->loc.filename = filename;
-  *position = current;
+  node->start = position;
+  node->end = stream->position;
   return node;
 onerror:
   allocator_free(allocator, node);

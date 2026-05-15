@@ -1,111 +1,87 @@
 #include "ast/initialize_list.h"
 #include "ast/expression.h"
-#include "ast/expression_condition.h"
 #include "ast/expression_spread.h"
 #include "ast/initialize_field.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/position.h"
-ast_node_t read_ast_initialize_list(allocator_t allocator, position_t *position,
-                                    const char *end, const char *filename) {
+#include "reader/token.h"
+#include "reader/token_type.h"
+ast_node_t read_initialize_list(allocator_t allocator, token_stream_t stream) {
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_INITIALIZE_LIST);
   ast_node_t err = NULL;
-  position_t current = *position;
-  if (*current.offset != '.') {
+  size_t position = stream->position;
+  token_t token = token_stream_get(stream);
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, ".")) {
     goto onerror;
   }
-  current.offset++;
-  current.column++;
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  ast_node_t type =
-      read_ast_expression_value(allocator, &current, end, filename);
-  if (type) {
-    if (type->type == NODE_TYPE_ERROR) {
-      err = type;
-      goto onerror;
+  stream->position++;
+  skip_comments(stream);
+  token = token_stream_get(stream);
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, "{")) {
+    ast_node_t type = read_expression_value(allocator, stream);
+    if (type) {
+      if (type->type == NODE_TYPE_ERROR) {
+        err = type;
+        goto onerror;
+      }
+      ast_add_child(allocator, node, "type", type);
     }
-    ast_add_child(allocator, node, "type", type);
   }
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  if (*current.offset != '{') {
+  skip_comments(stream);
+  token = token_stream_get(stream);
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, "{")) {
+    token_t start = array_get(stream->tokens, position);
+    token_t end = token_stream_get(stream);
+    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                           stream->filename, "missing '{'");
     goto onerror;
   }
-  current.offset++;
-  current.column++;
-
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
+  stream->position++;
+  skip_comments(stream);
+  token = token_stream_get(stream);
   ast_node_t fields = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "fields", fields);
-  if (*current.offset != '}') {
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, "}")) {
     for (;;) {
-      ast_node_t item =
-          read_ast_initialize_field(allocator, &current, end, filename);
-      if (!item) {
-        item = read_ast_expression_spread(allocator, &current, end, filename);
+      skip_comments(stream);
+      ast_node_t field = read_initialize_field(allocator, stream);
+      if (!field) {
+        field = read_expression_single(allocator, stream);
       }
-      if (!item) {
-        item = read_ast_expression_single(allocator, &current, end, filename);
+      if (!field) {
+        field = read_expression_spread(allocator, stream);
       }
-      if (!item) {
-        err = create_ast_error(allocator, *position, current, filename,
-                               "invalid initialize list");
+      if (!field) {
+        token_t start = array_get(stream->tokens, position);
+        token_t end = token_stream_get(stream);
+        err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                               stream->filename, "unexpected expression");
         goto onerror;
       }
-      if (item->type == NODE_TYPE_ERROR) {
-        err = item;
+      if (field->type == NODE_TYPE_ERROR) {
+        err = field;
         goto onerror;
       }
-      ast_add_item(fields, item);
-      err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == NODE_TYPE_ERROR) {
-        return err;
-      }
-      if (*current.offset == '}') {
+      ast_add_item(fields, field);
+      skip_comments(stream);
+      token = token_stream_get(stream);
+      if (token_is(token, TOKEN_TYPE_SYMBOL, ",")) {
+        stream->position++;
+      } else if (token_is(token, TOKEN_TYPE_SYMBOL, "}")) {
         break;
-      }
-      if (*current.offset != ',') {
-        err = create_ast_error(allocator, *position, current, filename,
-                               "invalid initialize list");
+      } else {
+        token_t start = array_get(stream->tokens, position);
+        token_t end = token_stream_get(stream);
+        err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                               stream->filename, "missing '}'");
         goto onerror;
-      }
-      current.offset++;
-      current.column++;
-      err = ast_skip_all(allocator, &current, end, filename);
-      if (err && err->type == NODE_TYPE_ERROR) {
-        return err;
-      }
-      if (*current.offset == '}') {
-        break;
       }
     }
   }
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  if (*current.offset != '}') {
-    err = create_ast_error(allocator, *position, current, filename,
-                           "invalid initialize list");
-    goto onerror;
-  }
-  current.offset++;
-  current.column++;
-  node->loc.begin = *position;
-  node->loc.end = current;
-  node->loc.filename = filename;
-  *position = current;
-  return node;
 onerror:
   allocator_free(allocator, node);
+  stream->position = position;
   return err;
 }

@@ -1,38 +1,23 @@
 #include "ast/statement_return.h"
 #include "ast/expression.h"
-#include "ast/expression_group.h"
-#include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/position.h"
+#include "reader/token.h"
+#include "reader/token_type.h"
 
-ast_node_t read_ast_statement_return(allocator_t allocator,
-                                     position_t *position, const char *end,
-                                     const char *filename) {
+ast_node_t read_statement_return(allocator_t allocator, token_stream_t stream) {
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_STATEMENT_RETURN);
   ast_node_t err = NULL;
-  position_t current = *position;
-  ast_node_t token =
-      read_ast_literal_identifier(allocator, &current, end, filename);
-  if (!token) {
+  size_t position = stream->position;
+  token_t token = token_stream_get(stream);
+  if (!token_is(token, TOKEN_TYPE_KEYWORD, "return")) {
     goto onerror;
   }
-  if (token->type == NODE_TYPE_ERROR) {
-    err = token;
-    goto onerror;
-  }
-  if (!location_is(token->loc, "return")) {
-    allocator_free(allocator, token);
-    goto onerror;
-  }
-  allocator_free(allocator, token);
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  ast_node_t value = read_ast_expression(allocator, &current, end, filename);
+  skip_comments(stream);
+  ast_node_t value = read_expression(allocator, stream);
   if (value) {
     if (value->type == NODE_TYPE_ERROR) {
       err = value;
@@ -40,34 +25,28 @@ ast_node_t read_ast_statement_return(allocator_t allocator,
     }
     ast_add_child(allocator, node, "value", value);
   }
-  err = ast_skip_all(allocator, &current, end, filename);
-  if (err && err->type == NODE_TYPE_ERROR) {
-    return err;
-  }
-  if (value) {
-    value = ast_unwrap_group(value);
-  }
-  if (value->type != NODE_TYPE_FUNCTION_DECLARATOR &&
+  skip_comments(stream);
+  token = token_stream_get(stream);
+  if (value && value->type != NODE_TYPE_FUNCTION_DECLARATOR &&
       value->type != NODE_TYPE_STRUCT_DECLARATOR &&
       value->type != NODE_TYPE_ENUM_DECLARATOR &&
       value->type != NODE_TYPE_INITIALIZE_LIST) {
-    if (*current.offset != ';') {
-      err = create_ast_error(allocator, *position, current, filename,
-                             "invalid statement, missing ';'");
+    if (!token_is(token, TOKEN_TYPE_SYMBOL, ";")) {
+      token_t start = array_get(stream->tokens, position);
+      token_t end = token_stream_get(stream);
+      err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                             stream->filename, "missing ';'");
       goto onerror;
     }
   }
-  if (*current.offset == ';') {
-    current.offset++;
-    current.column++;
+  if (token_is(token, TOKEN_TYPE_SYMBOL, ";")) {
+    stream->position++;
   }
-  node->loc.begin = *position;
-  node->loc.end = current;
-  node->loc.filename = filename;
-  *position = current;
-
+  node->start = position;
+  node->end = stream->position;
   return node;
 onerror:
   allocator_free(allocator, node);
+  stream->position = position;
   return err;
 }
