@@ -3,7 +3,6 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
-#include "core/position.h"
 #include "reader/token.h"
 #include "reader/token_type.h"
 ast_node_t read_expression_group(allocator_t allocator, token_stream_t stream) {

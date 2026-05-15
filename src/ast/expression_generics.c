@@ -4,7 +4,6 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
-#include "core/position.h"
 #include "reader/token.h"
 #include "reader/token_type.h"
 ast_node_t read_expression_generics(allocator_t allocator,

@@ -21,7 +21,6 @@
 #include "ast/slice_declarator.h"
 #include "ast/struct_declarator.h"
 #include "core/allocator.h"
-#include "core/position.h"
 
 ast_node_t read_expression(allocator_t allocator, token_stream_t stream) {
   return read_expression_comma(allocator, stream);

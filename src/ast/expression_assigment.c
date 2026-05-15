@@ -5,7 +5,6 @@
 #include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/location.h"
-#include "core/position.h"
 #include "reader/token.h"
 #include "reader/token_type.h"
 
@@ -18,7 +17,7 @@ ast_node_t read_expression_assigment(allocator_t allocator,
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_ASSIGMENT);
   ast_node_t err = NULL;
   size_t position = stream->position;
-  ast_node_t identifier = read_expression_condition(allocator, stream);
+  ast_node_t identifier = read_expression_single(allocator, stream);
   if (!identifier) {
     goto onerror;
   }

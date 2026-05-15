@@ -4,7 +4,6 @@
 #include "ast/statement_block.h"
 #include "core/allocator.h"
 #include "core/location.h"
-#include "core/position.h"
 #include "reader/token.h"
 #include "reader/token_type.h"
 

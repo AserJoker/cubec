@@ -1,7 +1,6 @@
 #include "ast/literal_char.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "core/position.h"
 #include "reader/token.h"
 
 ast_node_t read_literal_char(allocator_t allocator, token_stream_t stream) {

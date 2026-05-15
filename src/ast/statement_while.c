@@ -4,7 +4,6 @@
 #include "ast/node_type.h"
 #include "ast/statement.h"
 #include "core/allocator.h"
-#include "core/position.h"
 #include "reader/token.h"
 #include "reader/token_type.h"
 

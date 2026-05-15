@@ -6,7 +6,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-ast_node_t read_switch_case(allocator_t allocator, token_stream_t stream);
+ast_node_t read_switch_match(allocator_t allocator, token_stream_t stream);
 #ifdef __cplusplus
 }
 #endif

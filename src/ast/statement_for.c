@@ -7,7 +7,6 @@
 #include "ast/statement_empty.h"
 #include "ast/statement_expression.h"
 #include "core/allocator.h"
-#include "core/position.h"
 #include "reader/token.h"
 #include "reader/token_type.h"
 

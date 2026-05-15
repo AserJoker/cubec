@@ -3,7 +3,6 @@
 #include "ast/node_type.h"
 #include "ast/struct_declarator.h"
 #include "core/allocator.h"
-#include "core/position.h"
 #include "reader/token.h"
 
 ast_node_t read_statement_struct(allocator_t allocator, token_stream_t stream) {
