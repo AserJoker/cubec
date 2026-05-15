@@ -13,26 +13,29 @@ ast_node_t read_statement_declaration(allocator_t allocator,
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_STATEMENT_DECLARATION);
   ast_node_t err = NULL;
   size_t position = stream->position;
-  ast_node_t keyword = read_literal_keyword(allocator, stream);
-  if (!keyword) {
-    goto onerror;
+  token_t token = token_stream_get(stream);
+  if (token_is(token, TOKEN_TYPE_KEYWORD, "pub")) {
+    ast_node_t pub = read_literal_keyword(allocator, stream);
+    ast_add_child(allocator, node, "pub", pub);
+    skip_comments(stream);
   }
-  token_t token = array_get(stream->tokens, keyword->start);
+  token = token_stream_get(stream);
   if (token_is(token, TOKEN_TYPE_KEYWORD, "extern") ||
       token_is(token, TOKEN_TYPE_KEYWORD, "comptime")) {
-    ast_add_child(allocator, node, "kind", keyword);
-    skip_comments(stream);
-    keyword = read_literal_keyword(allocator, stream);
+    ast_node_t keyword = read_literal_keyword(allocator, stream);
     if (!keyword) {
       goto onerror;
     }
-    token = array_get(stream->tokens, keyword->start);
+    ast_add_child(allocator, node, "kind", keyword);
+    skip_comments(stream);
   }
+  token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_KEYWORD, "let") &&
       !token_is(token, TOKEN_TYPE_KEYWORD, "const")) {
     goto onerror;
   }
-  ast_add_child(allocator, node, "type", keyword);
+  ast_node_t type = read_literal_keyword(allocator, stream);
+  ast_add_child(allocator, node, "type", type);
   skip_comments(stream);
   ast_node_t declarations = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "declarations", declarations);
@@ -65,13 +68,7 @@ ast_node_t read_statement_declaration(allocator_t allocator,
       goto onerror;
     }
   }
-  if (!token_is(token, TOKEN_TYPE_SYMBOL, ";")) {
-    token_t start = array_get(stream->tokens, position);
-    token_t end = token_stream_get(stream);
-    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
-                           stream->filename, "missing ';'");
-    goto onerror;
-  }
+  stream->position++;
   node->start = position;
   node->end = stream->position;
   return node;

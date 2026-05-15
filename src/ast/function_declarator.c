@@ -18,6 +18,12 @@ ast_node_t read_function_declarator(allocator_t allocator,
   ast_node_t err = NULL;
   size_t position = stream->position;
   token_t token = token_stream_get(stream);
+  if (token_is(token, TOKEN_TYPE_KEYWORD, "pub")) {
+    ast_node_t pub = read_literal_keyword(allocator, stream);
+    ast_add_child(allocator, node, "pub", pub);
+    skip_comments(stream);
+  }
+  token = token_stream_get(stream);
   if (token_is(token, TOKEN_TYPE_KEYWORD, "inline") ||
       token_is(token, TOKEN_TYPE_KEYWORD, "extern") ||
       token_is(token, TOKEN_TYPE_KEYWORD, "comptime")) {

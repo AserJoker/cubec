@@ -2,6 +2,7 @@
 #include "ast/enum_field.h"
 #include "ast/expression.h"
 #include "ast/literal_identifier.h"
+#include "ast/literal_keyword.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
@@ -13,6 +14,12 @@ ast_node_t read_enum_declarator(allocator_t allocator, token_stream_t stream) {
   ast_node_t err = NULL;
   size_t position = stream->position;
   token_t token = token_stream_get(stream);
+  if (token_is(token, TOKEN_TYPE_KEYWORD, "pub")) {
+    ast_node_t pub = read_literal_keyword(allocator, stream);
+    ast_add_child(allocator, node, "pub", pub);
+    skip_comments(stream);
+  }
+  token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_KEYWORD, "enum")) {
     goto onerror;
   }
