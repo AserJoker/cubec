@@ -4,7 +4,9 @@
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/hash_map.h"
+#include "core/location.h"
 #include "core/position.h"
+#include "reader/token.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
@@ -37,8 +39,9 @@ struct _ast_node_t {
   };
 };
 
-ast_node_t create_ast_node_debug(allocator_t allocator, size_t type,const char *f,size_t l);
-#define create_ast_node(a,t) create_ast_node_debug(a,t,__FILE__,__LINE__)
+ast_node_t create_ast_node_debug(allocator_t allocator, size_t type,
+                                 const char *f, size_t l);
+#define create_ast_node(a, t) create_ast_node_debug(a, t, __FILE__, __LINE__)
 void ast_add_child(allocator_t allocator, ast_node_t node, const char *name,
                    ast_node_t child);
 void ast_remove_child(ast_node_t node, const char *name);
@@ -65,6 +68,10 @@ ast_node_t read_ast_node(allocator_t allocator, const char *filename,
                          const char *source, void *ctx);
 
 ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node);
+
+location_t node_get_location(ast_node_t node, token_stream_t stream);
+
+bool node_location_is(ast_node_t node, token_stream_t stream, const char *s);
 
 #ifdef __cplusplus
 }

@@ -7,6 +7,7 @@
 #include "core/hash.h"
 #include "core/hash_map.h"
 #include "core/list.h"
+#include "core/location.h"
 #include "core/position.h"
 #include "core/string.h"
 #include "reader/token.h"
@@ -186,4 +187,18 @@ ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
     }
   }
   return n;
+}
+
+location_t node_get_location(ast_node_t node, token_stream_t stream) {
+  token_t begin = array_get(stream->tokens, node->start);
+  token_t end = array_get(stream->tokens, node->end);
+  return (location_t){
+      .begin = begin->loc.begin,
+      .end = end->loc.begin,
+      .filename = stream->filename,
+  };
+}
+bool node_location_is(ast_node_t node, token_stream_t stream, const char *s) {
+  location_t loc = node_get_location(node, stream);
+  return location_is(loc, s);
 }

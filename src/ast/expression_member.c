@@ -1,5 +1,6 @@
 #include "ast/expression_member.h"
 #include "ast/literal_identifier.h"
+#include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
@@ -18,16 +19,19 @@ ast_node_t read_expression_member(allocator_t allocator,
   stream->position++;
   node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_MEMBER);
   skip_comments(stream);
-  ast_node_t field = read_literal_identifier(allocator, stream);
+  token = token_stream_get(stream);
+  ast_node_t field = NULL;
+  if (token_is(token, TOKEN_TYPE_SYMBOL, "*") ||
+      token_is(token, TOKEN_TYPE_SYMBOL, "&")) {
+    field = read_literal_symbol(allocator, stream);
+  } else {
+    field = read_literal_identifier(allocator, stream);
+  }
   if (!field) {
     token_t start = array_get(stream->tokens, position);
     token_t end = token_stream_get(stream);
     err = create_ast_error(allocator, start->loc.begin, end->loc.end,
                            stream->filename, "missing field");
-    goto onerror;
-  }
-  if (field->type == NODE_TYPE_ERROR) {
-    err = field;
     goto onerror;
   }
   ast_add_child(allocator, node, "field", field);

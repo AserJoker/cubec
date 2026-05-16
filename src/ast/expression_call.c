@@ -22,6 +22,7 @@ ast_node_t read_expression_call(allocator_t allocator, token_stream_t stream) {
   ast_add_child(allocator, node, "arguments", arguments);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, ")")) {
     for (;;) {
+      skip_comments(stream);
       ast_node_t argument = read_expression_single(allocator, stream);
       if (!argument) {
         argument = read_expression_spread(allocator, stream);

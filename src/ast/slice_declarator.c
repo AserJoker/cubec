@@ -11,12 +11,18 @@ ast_node_t read_slice_declarator(allocator_t allocator, token_stream_t stream) {
   ast_node_t err = NULL;
   size_t position = stream->position;
   token_t token = token_stream_get(stream);
-  if (!token_is(token, TOKEN_TYPE_SYMBOL, "[]")) {
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, "[")) {
     goto onerror;
   }
   stream->position++;
-  node = create_ast_node(allocator, NODE_TYPE_SLICE_DECLARATOR);
   skip_comments(stream);
+  token = token_stream_get(stream);
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, "]")) {
+    goto onerror;
+  }
+  stream->position++;
+  skip_comments(stream);
+  node = create_ast_node(allocator, NODE_TYPE_SLICE_DECLARATOR);
   ast_node_t type = read_expression_value(allocator, stream);
   if (!type) {
     token_t start = array_get(stream->tokens, position);

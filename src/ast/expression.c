@@ -57,7 +57,6 @@ ast_node_t read_expression_value(allocator_t allocator, token_stream_t stream) {
       }
       if (next) {
         if (next->type == NODE_TYPE_ERROR) {
-          allocator_free(allocator, node);
           next->start = position;
           err = next;
           goto onerror;

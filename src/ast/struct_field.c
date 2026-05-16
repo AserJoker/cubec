@@ -15,7 +15,7 @@ ast_node_t read_struct_field(allocator_t allocator, token_stream_t stream) {
   token_t token = token_stream_get(stream);
   if (token_is(token, TOKEN_TYPE_KEYWORD, "pub")) {
     ast_node_t pub = read_literal_keyword(allocator, stream);
-    ast_add_child(allocator, node, "pub", pub);
+    ast_add_child(allocator, node, "accessor", pub);
     skip_comments(stream);
   }
   token = token_stream_get(stream);

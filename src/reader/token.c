@@ -314,11 +314,11 @@ token_t read_char_token(allocator_t allocator, position_t *position,
 }
 
 static const char *symbols[] = {
-    "...", ">>=", "<<=", ">>", "<<", "&&", "||", "??", "==", "!=",
-    "+=",  "-=",  "*=",  "/=", "%=", "^=", "&=", "|=", "~=", ">=",
-    "<=",  "->",  "[[",  "]]", "[]", "=",  "+",  "-",  "*",  "/",
-    "%",   "&",   "|",   "~",  "^",  "!",  ":",  ";",  ",",  "(",
-    ")",   "{",   "}",   "[",  "]",  "<",  ">",  ".",  0};
+    "[*]", "...", ">>=", "<<=", ">>", "<<", "&&", "||", "??", "==",
+    "!=",  "+=",  "-=",  "*=",  "/=", "%=", "^=", "&=", "|=", "~=",
+    ">=",  "<=",  "->",  "[[",  "]]", "=",  "+",  "-",  "*",  "/",
+    "%",   "&",   "|",   "~",   "^",  "!",  ":",  ";",  ",",  "(",
+    ")",   "{",   "}",   "[",   "]",  "<",  ">",  ".",  0};
 token_t read_symbol_token(allocator_t allocator, position_t *position,
                           const char *end, const char *filename) {
   for (size_t idx = 0; symbols[idx]; idx++) {
@@ -438,7 +438,7 @@ array_t read_token_list(allocator_t allocator, position_t *position,
     return NULL;
   }
   token_t token = create_token(allocator, TOKEN_TYPE_EOF,
-                               (location_t){start, *position, filename});
+                               (location_t){*position, *position, filename});
   array_push(list, token);
   return list;
 }

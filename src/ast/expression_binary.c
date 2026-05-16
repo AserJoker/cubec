@@ -462,9 +462,7 @@ ast_node_t read_expression_prefix(allocator_t allocator,
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "+") &&
       !token_is(token, TOKEN_TYPE_SYMBOL, "-") &&
       !token_is(token, TOKEN_TYPE_SYMBOL, "!") &&
-      !token_is(token, TOKEN_TYPE_SYMBOL, "~") &&
-      !token_is(token, TOKEN_TYPE_SYMBOL, "*") &&
-      !token_is(token, TOKEN_TYPE_SYMBOL, "&")) {
+      !token_is(token, TOKEN_TYPE_SYMBOL, "~")) {
     return read_expression_value(allocator, stream);
   }
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);

@@ -25,10 +25,8 @@ token_t read_comment_token(allocator_t allocator, position_t *position,
                            const char *end, const char *filename);
 token_t read_numeric_token(allocator_t allocator, position_t *position,
                            const char *end, const char *filename);
-token_t read_charator_token(allocator_t allocator, position_t *position,
-                            const char *end, const char *filename);
-token_t read_charator_token(allocator_t allocator, position_t *position,
-                            const char *end, const char *filename);
+token_t read_char_token(allocator_t allocator, position_t *position,
+                        const char *end, const char *filename);
 token_t read_identifier_token(allocator_t allocator, position_t *position,
                               const char *end, const char *filename);
 token_t read_symbol_token(allocator_t allocator, position_t *position,

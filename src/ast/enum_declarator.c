@@ -16,7 +16,7 @@ ast_node_t read_enum_declarator(allocator_t allocator, token_stream_t stream) {
   token_t token = token_stream_get(stream);
   if (token_is(token, TOKEN_TYPE_KEYWORD, "pub")) {
     ast_node_t pub = read_literal_keyword(allocator, stream);
-    ast_add_child(allocator, node, "pub", pub);
+    ast_add_child(allocator, node, "accessor", pub);
     skip_comments(stream);
   }
   token = token_stream_get(stream);
@@ -31,6 +31,7 @@ ast_node_t read_enum_declarator(allocator_t allocator, token_stream_t stream) {
     ast_add_child(allocator, node, "identifier", identifier);
     skip_comments(stream);
   }
+  token = token_stream_get(stream);
   if (token_is(token, TOKEN_TYPE_SYMBOL, ":")) {
     stream->position++;
     skip_comments(stream);
@@ -60,7 +61,8 @@ ast_node_t read_enum_declarator(allocator_t allocator, token_stream_t stream) {
   stream->position++;
   skip_comments(stream);
   token = token_stream_get(stream);
-  ast_node_t fields = create_ast_node(allocator, NODE_TYPE_LIST);
+  ast_node_t options = create_ast_node(allocator, NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "options", options);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "}")) {
     for (;;) {
       skip_comments(stream);
@@ -76,7 +78,7 @@ ast_node_t read_enum_declarator(allocator_t allocator, token_stream_t stream) {
         err = field;
         goto onerror;
       }
-      ast_add_item(fields, field);
+      ast_add_item(options, field);
       skip_comments(stream);
       token = token_stream_get(stream);
       if (token_is(token, TOKEN_TYPE_SYMBOL, ",")) {

@@ -25,6 +25,11 @@ ast_node_t read_array_declarator(allocator_t allocator, token_stream_t stream) {
                            stream->filename, "unexpected expression");
     goto onerror;
   }
+  if (length->type == NODE_TYPE_ERROR) {
+    err = length;
+    goto onerror;
+  }
+  node = create_ast_node(allocator, NODE_TYPE_ARRAY_DECLARATOR);
   ast_add_child(allocator, node, "length", length);
   skip_comments(stream);
   token = token_stream_get(stream);
