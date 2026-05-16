@@ -5,6 +5,7 @@
 #include "ast/node_type.h"
 #include "ast/statement_declaration.h"
 #include "ast/statement_enum.h"
+#include "ast/statement_expression.h"
 #include "ast/statement_function.h"
 #include "ast/statement_struct.h"
 #include "ast/struct_field.h"
@@ -69,6 +70,12 @@ ast_node_t read_struct_declarator(allocator_t allocator,
       }
       if (!field) {
         field = read_struct_field(allocator, stream);
+      }
+      if (!field) {
+        token = token_stream_get(stream);
+        if (token_is(token, TOKEN_TYPE_SYMBOL, "...")) {
+          field = read_statement_expression(allocator, stream);
+        }
       }
       if (!field) {
         token_t start = array_get(stream->tokens, position);
