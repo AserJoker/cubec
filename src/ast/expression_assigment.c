@@ -1,5 +1,5 @@
 #include "ast/expression_assigment.h"
-#include "ast/expression_condition.h"
+#include "ast/expression_binary.h"
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -14,10 +14,10 @@ ast_node_t read_expression_assigment(allocator_t allocator,
       "=",  "+=", "-=", "*=",  "/=",  "%=",  ">>=", "<<=",
       "&=", "|=", "^=", "&&=", "||=", "??=", NULL,
   };
-  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_ASSIGMENT);
+  ast_node_t node = NULL;
   ast_node_t err = NULL;
   size_t position = stream->position;
-  ast_node_t identifier = read_expression_single(allocator, stream);
+  ast_node_t identifier = read_expression_logical_or(allocator, stream);
   if (!identifier) {
     goto onerror;
   }
@@ -37,9 +37,9 @@ ast_node_t read_expression_assigment(allocator_t allocator,
     }
   }
   if (!opt) {
-    err = identifier;
-    goto onerror;
+    return identifier;
   }
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_ASSIGMENT);
   ast_add_child(allocator, node, "identifier", identifier);
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);

@@ -19,9 +19,11 @@
 static void ast_node_dispose(ast_node_t self, allocator_t allocator) {
   allocator_free(allocator, self->data);
 }
-ast_node_t create_ast_node(allocator_t allocator, size_t type) {
-  ast_node_t node = allocator_alloc(allocator, sizeof(struct _ast_node_t),
-                                    (dispose_fn_t)ast_node_dispose);
+ast_node_t create_ast_node_debug(allocator_t allocator, size_t type,
+                                 const char *filename, size_t len) {
+  ast_node_t node =
+      allocator_alloc_debug(allocator, sizeof(struct _ast_node_t),
+                            (dispose_fn_t)ast_node_dispose, filename, len);
   memset(node, 0, sizeof(struct _ast_node_t));
   node->type = type;
   if (type == NODE_TYPE_LIST) {

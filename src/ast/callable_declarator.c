@@ -70,7 +70,7 @@ ast_node_t read_callable_declarator(allocator_t allocator,
     err = type;
     goto onerror;
   }
-  stream->position++;
+  ast_add_child(allocator, node, "type", type);
   node->start = position;
   node->end = stream->position;
   return node;

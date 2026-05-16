@@ -15,6 +15,7 @@ ast_node_t read_statement_return(allocator_t allocator, token_stream_t stream) {
   if (!token_is(token, TOKEN_TYPE_KEYWORD, "return")) {
     goto onerror;
   }
+  stream->position++;
   skip_comments(stream);
   ast_node_t value = read_expression(allocator, stream);
   if (value) {

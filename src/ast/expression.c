@@ -32,6 +32,7 @@ ast_node_t read_expression_single(allocator_t allocator,
 
 ast_node_t read_expression_value(allocator_t allocator, token_stream_t stream) {
   ast_node_t node = NULL;
+  ast_node_t err = NULL;
   size_t position = stream->position;
   node = read_expression_atom(allocator, stream);
   if (node) {
@@ -58,8 +59,8 @@ ast_node_t read_expression_value(allocator_t allocator, token_stream_t stream) {
         if (next->type == NODE_TYPE_ERROR) {
           allocator_free(allocator, node);
           next->start = position;
-          stream->position = position;
-          return next;
+          err = next;
+          goto onerror;
         }
         if (next->type == NODE_TYPE_EXPRESSION_MEMBER) {
           ast_add_child(allocator, next, "host", node);
@@ -85,6 +86,10 @@ ast_node_t read_expression_value(allocator_t allocator, token_stream_t stream) {
     }
   }
   return node;
+onerror:
+  stream->position = position;
+  allocator_free(allocator, node);
+  return err;
 }
 ast_node_t read_expression_atom(allocator_t allocator, token_stream_t stream) {
   ast_node_t node = read_literal_string(allocator, stream);
@@ -111,6 +116,10 @@ ast_node_t read_expression_atom(allocator_t allocator, token_stream_t stream) {
   if (node) {
     return node;
   }
+  node = read_callable_declarator(allocator, stream);
+  if (node) {
+    return node;
+  }
   node = read_function_declarator(allocator, stream);
   if (node) {
     return node;
@@ -128,10 +137,6 @@ ast_node_t read_expression_atom(allocator_t allocator, token_stream_t stream) {
     return node;
   }
   node = read_slice_declarator(allocator, stream);
-  if (node) {
-    return node;
-  }
-  node = read_callable_declarator(allocator, stream);
   if (node) {
     return node;
   }

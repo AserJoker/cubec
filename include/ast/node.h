@@ -37,7 +37,8 @@ struct _ast_node_t {
   };
 };
 
-ast_node_t create_ast_node(allocator_t allocator, size_t type);
+ast_node_t create_ast_node_debug(allocator_t allocator, size_t type,const char *f,size_t l);
+#define create_ast_node(a,t) create_ast_node_debug(a,t,__FILE__,__LINE__)
 void ast_add_child(allocator_t allocator, ast_node_t node, const char *name,
                    ast_node_t child);
 void ast_remove_child(ast_node_t node, const char *name);

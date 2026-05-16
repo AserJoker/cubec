@@ -10,7 +10,6 @@ ast_node_t read_expression_comma(allocator_t allocator, token_stream_t stream) {
   size_t position = stream->position;
   ast_node_t node = NULL;
   ast_node_t err = NULL;
-  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_COMMON);
   ast_node_t left = read_expression_single(allocator, stream);
   if (!left) {
     goto onerror;
@@ -22,10 +21,10 @@ ast_node_t read_expression_comma(allocator_t allocator, token_stream_t stream) {
   skip_comments(stream);
   token_t token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, ",")) {
-    err = left;
-    goto onerror;
+    return left;
   }
   stream->position++;
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_COMMON);
   ast_add_child(allocator, node, "left", left);
   skip_comments(stream);
   ast_node_t right = read_expression_comma(allocator, stream);

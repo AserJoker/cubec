@@ -10,6 +10,7 @@
 #include "core/allocator.h"
 #include "core/array.h"
 #include "reader/token.h"
+#include "reader/token_type.h"
 
 // [comment]
 // [
@@ -53,21 +54,23 @@ ast_node_t read_program(allocator_t allocator, token_stream_t stream) {
       err = sts;
       goto onerror;
     }
-    ast_add_item(node, statements);
+    ast_add_item(statements, sts);
     skip_comments(stream);
   }
   skip_comments(stream);
-  if (stream->position != array_get_size(stream->tokens)) {
+  token_t token = token_stream_get(stream);
+  if (token->type != TOKEN_TYPE_EOF) {
     token_t start = array_get(stream->tokens, position);
     token_t end = token_stream_get(stream);
-    return create_ast_error(allocator, start->loc.begin, end->loc.end,
-                            stream->filename, "unexpected token");
+    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                           stream->filename, "unexpected token");
+    goto onerror;
   }
   node->start = position;
   node->end = stream->position;
   return node;
 onerror:
-  stream->position = position;
   allocator_free(allocator, node);
+  stream->position = position;
   return err;
 }

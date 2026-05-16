@@ -10,7 +10,7 @@
 
 ast_node_t read_expression_logical_or(allocator_t allocator,
                                       token_stream_t stream) {
-  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
+  ast_node_t node = NULL;
   ast_node_t err = NULL;
   size_t position = stream->position;
   ast_node_t left = read_expression_logical_and(allocator, stream);
@@ -25,10 +25,11 @@ ast_node_t read_expression_logical_or(allocator_t allocator,
   token_t token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "||") ||
       !token_is(token, TOKEN_TYPE_SYMBOL, "??")) {
-    err = left;
-    goto onerror;
+    return left;
   }
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_node_t opt = read_literal_symbol(allocator, stream);
+  ast_add_child(allocator, node, "left", left);
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);
   ast_node_t right = read_expression_logical_or(allocator, stream);
@@ -54,7 +55,7 @@ onerror:
 }
 ast_node_t read_expression_logical_and(allocator_t allocator,
                                        token_stream_t stream) {
-  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
+  ast_node_t node = NULL;
   ast_node_t err = NULL;
   size_t position = stream->position;
   ast_node_t left = read_expression_bitwise_or(allocator, stream);
@@ -68,10 +69,11 @@ ast_node_t read_expression_logical_and(allocator_t allocator,
   skip_comments(stream);
   token_t token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "&&")) {
-    err = left;
-    goto onerror;
+    return left;
   }
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_node_t opt = read_literal_symbol(allocator, stream);
+  ast_add_child(allocator, node, "left", left);
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);
   ast_node_t right = read_expression_logical_and(allocator, stream);
@@ -97,7 +99,7 @@ onerror:
 }
 ast_node_t read_expression_bitwise_or(allocator_t allocator,
                                       token_stream_t stream) {
-  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
+  ast_node_t node = NULL;
   ast_node_t err = NULL;
   size_t position = stream->position;
   ast_node_t left = read_expression_bitwise_xor(allocator, stream);
@@ -111,10 +113,11 @@ ast_node_t read_expression_bitwise_or(allocator_t allocator,
   skip_comments(stream);
   token_t token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "|")) {
-    err = left;
-    goto onerror;
+    return left;
   }
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_node_t opt = read_literal_symbol(allocator, stream);
+  ast_add_child(allocator, node, "left", left);
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);
   ast_node_t right = read_expression_bitwise_or(allocator, stream);
@@ -140,7 +143,7 @@ onerror:
 }
 ast_node_t read_expression_bitwise_xor(allocator_t allocator,
                                        token_stream_t stream) {
-  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
+  ast_node_t node = NULL;
   ast_node_t err = NULL;
   size_t position = stream->position;
   ast_node_t left = read_expression_bitwise_and(allocator, stream);
@@ -154,10 +157,11 @@ ast_node_t read_expression_bitwise_xor(allocator_t allocator,
   skip_comments(stream);
   token_t token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "^")) {
-    err = left;
-    goto onerror;
+    return left;
   }
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_node_t opt = read_literal_symbol(allocator, stream);
+  ast_add_child(allocator, node, "left", left);
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);
   ast_node_t right = read_expression_bitwise_xor(allocator, stream);
@@ -183,7 +187,7 @@ onerror:
 }
 ast_node_t read_expression_bitwise_and(allocator_t allocator,
                                        token_stream_t stream) {
-  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
+  ast_node_t node = NULL;
   ast_node_t err = NULL;
   size_t position = stream->position;
   ast_node_t left = read_expression_equal(allocator, stream);
@@ -197,10 +201,11 @@ ast_node_t read_expression_bitwise_and(allocator_t allocator,
   skip_comments(stream);
   token_t token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "&")) {
-    err = left;
-    goto onerror;
+    return left;
   }
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_node_t opt = read_literal_symbol(allocator, stream);
+  ast_add_child(allocator, node, "left", left);
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);
   ast_node_t right = read_expression_bitwise_and(allocator, stream);
@@ -225,7 +230,7 @@ onerror:
   return err;
 }
 ast_node_t read_expression_equal(allocator_t allocator, token_stream_t stream) {
-  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
+  ast_node_t node = NULL;
   ast_node_t err = NULL;
   size_t position = stream->position;
   ast_node_t left = read_expression_relation(allocator, stream);
@@ -240,10 +245,11 @@ ast_node_t read_expression_equal(allocator_t allocator, token_stream_t stream) {
   token_t token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "!=") &&
       !token_is(token, TOKEN_TYPE_SYMBOL, "==")) {
-    err = left;
-    goto onerror;
+    return left;
   }
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_node_t opt = read_literal_symbol(allocator, stream);
+  ast_add_child(allocator, node, "left", left);
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);
   ast_node_t right = read_expression_equal(allocator, stream);
@@ -269,7 +275,7 @@ onerror:
 }
 ast_node_t read_expression_relation(allocator_t allocator,
                                     token_stream_t stream) {
-  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
+  ast_node_t node = NULL;
   ast_node_t err = NULL;
   size_t position = stream->position;
   ast_node_t left = read_expression_bitwise_shift(allocator, stream);
@@ -286,10 +292,11 @@ ast_node_t read_expression_relation(allocator_t allocator,
       !token_is(token, TOKEN_TYPE_SYMBOL, ">=") &&
       !token_is(token, TOKEN_TYPE_SYMBOL, "<") &&
       !token_is(token, TOKEN_TYPE_SYMBOL, "<=")) {
-    err = left;
-    goto onerror;
+    return left;
   }
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_node_t opt = read_literal_symbol(allocator, stream);
+  ast_add_child(allocator, node, "left", left);
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);
   ast_node_t right = read_expression_relation(allocator, stream);
@@ -315,7 +322,7 @@ onerror:
 }
 ast_node_t read_expression_bitwise_shift(allocator_t allocator,
                                          token_stream_t stream) {
-  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
+  ast_node_t node = NULL;
   ast_node_t err = NULL;
   size_t position = stream->position;
   ast_node_t left = read_expression_additive(allocator, stream);
@@ -330,10 +337,11 @@ ast_node_t read_expression_bitwise_shift(allocator_t allocator,
   token_t token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, ">>") &&
       !token_is(token, TOKEN_TYPE_SYMBOL, "<<")) {
-    err = left;
-    goto onerror;
+    return left;
   }
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_node_t opt = read_literal_symbol(allocator, stream);
+  ast_add_child(allocator, node, "left", left);
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);
   ast_node_t right = read_expression_bitwise_shift(allocator, stream);
@@ -359,7 +367,7 @@ onerror:
 }
 ast_node_t read_expression_additive(allocator_t allocator,
                                     token_stream_t stream) {
-  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
+  ast_node_t node = NULL;
   ast_node_t err = NULL;
   size_t position = stream->position;
   ast_node_t left = read_expression_multiplicative(allocator, stream);
@@ -374,10 +382,11 @@ ast_node_t read_expression_additive(allocator_t allocator,
   token_t token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "+") &&
       !token_is(token, TOKEN_TYPE_SYMBOL, "-")) {
-    err = left;
-    goto onerror;
+    return left;
   }
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_node_t opt = read_literal_symbol(allocator, stream);
+  ast_add_child(allocator, node, "left", left);
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);
   ast_node_t right = read_expression_additive(allocator, stream);
@@ -403,7 +412,7 @@ onerror:
 }
 ast_node_t read_expression_multiplicative(allocator_t allocator,
                                           token_stream_t stream) {
-  ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
+  ast_node_t node = NULL;
   ast_node_t err = NULL;
   size_t position = stream->position;
   ast_node_t left = read_expression_prefix(allocator, stream);
@@ -419,10 +428,11 @@ ast_node_t read_expression_multiplicative(allocator_t allocator,
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "*") &&
       !token_is(token, TOKEN_TYPE_SYMBOL, "/") &&
       !token_is(token, TOKEN_TYPE_SYMBOL, "%")) {
-    err = left;
-    goto onerror;
+    return left;
   }
+  node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_node_t opt = read_literal_symbol(allocator, stream);
+  ast_add_child(allocator, node, "left", left);
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);
   ast_node_t right = read_expression_multiplicative(allocator, stream);
