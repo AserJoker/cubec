@@ -38,6 +38,12 @@ struct _ast_node_t {
     void *data;
   };
 };
+typedef struct _ast_doc_t *ast_doc_t;
+struct _ast_doc_t {
+  ast_node_t node;
+  token_stream_t stream;
+  char *source;
+};
 
 ast_node_t create_ast_node_debug(allocator_t allocator, size_t type,
                                  const char *f, size_t l);
@@ -64,8 +70,7 @@ ast_node_t create_ast_error(allocator_t allocator, position_t begin,
                             position_t end, const char *filename,
                             const char *message);
 
-ast_node_t read_ast_node(allocator_t allocator, const char *filename,
-                         const char *source, void *ctx);
+ast_doc_t read_ast_node(allocator_t allocator, const char *filename, void *ctx);
 
 ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node);
 

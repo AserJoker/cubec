@@ -273,6 +273,9 @@ token_t read_string_token(allocator_t allocator, position_t *position,
       current.offset++;
       current.column++;
       break;
+    } else {
+      current.offset++;
+      current.column++;
     }
   }
   token_t token = create_token(allocator, TOKEN_TYPE_STRING,

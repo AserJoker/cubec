@@ -138,27 +138,96 @@ ast_node_t create_ast_error(allocator_t allocator, position_t begin,
   return node;
 }
 
-ast_node_t read_ast_node(allocator_t allocator, const char *filename,
-                         const char *source, void *ctx) {
+static void ast_doc_dispose(ast_doc_t self, allocator_t allocator) {
+  allocator_free(allocator, self->node);
+  allocator_free(allocator, self->stream);
+  allocator_free(allocator, self->source);
+}
+static ast_doc_t create_ast_doc(allocator_t allocator, ast_node_t node,
+                                token_stream_t stream, char *source) {
+  ast_doc_t self = allocator_alloc(allocator, sizeof(struct _ast_doc_t),
+                                   (dispose_fn_t)ast_doc_dispose);
+  self->node = node;
+  self->stream = stream;
+  self->source = source;
+  return self;
+}
+
+ast_doc_t read_ast_node(allocator_t allocator, const char *filename,
+                        void *ctx) {
+  FILE *fp = fopen(filename, "r");
+  if (!fp) {
+    ast_node_t err = create_ast_error(allocator, (position_t){}, (position_t){},
+                                      filename, "cannot open file");
+    return create_ast_doc(allocator, err, NULL, NULL);
+  }
+  fseek(fp, 0, SEEK_END);
+  size_t len = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+  char *source = allocator_alloc(allocator, len + 1, NULL);
+  fread(source, len, 1, fp);
+  source[len] = 0;
+  fclose(fp);
   position_t position = {
+      .offset = source,
       .column = 0,
       .line = 0,
-      .offset = source,
   };
   position_t current = position;
-  const char *end = strlen(source) + source;
+  const char *end = source + len;
   token_stream_t stream =
       create_token_stream(allocator, &position, end, filename);
   if (!stream) {
-    return create_ast_error(allocator, position, current, filename,
-                            "unexpected token");
+    ast_node_t err = create_ast_error(allocator, position, current, filename,
+                                      "unexpected token");
+    return create_ast_doc(allocator, err, NULL, NULL);
+  } else {
+    FILE *fp = fopen("./build/tokens.txt", "w");
+    token_t token = NULL;
+    while ((token = token_stream_get(stream)) != NULL) {
+      switch (token->type) {
+      case TOKEN_TYPE_SPACE:
+        fprintf(fp, "%-25s", "TOKEN_TYPE_SPACE");
+        break;
+      case TOKEN_TYPE_COMMENT:
+        fprintf(fp, "%-25s", "TOKEN_TYPE_COMMENT");
+        break;
+      case TOKEN_TYPE_NUMERIC:
+        fprintf(fp, "%-25s", "TOKEN_TYPE_NUMERIC");
+        break;
+      case TOKEN_TYPE_IDENTIFIER:
+        fprintf(fp, "%-25s", "TOKEN_TYPE_IDENTIFIER");
+        break;
+      case TOKEN_TYPE_KEYWORD:
+        fprintf(fp, "%-25s", "TOKEN_TYPE_KEYWORD");
+        break;
+      case TOKEN_TYPE_STRING:
+        fprintf(fp, "%-25s", "TOKEN_TYPE_STRING");
+        break;
+      case TOKEN_TYPE_CHAR:
+        fprintf(fp, "%-25s", "TOKEN_TYPE_CHAR");
+        break;
+      case TOKEN_TYPE_SYMBOL:
+        fprintf(fp, "%-25s", "TOKEN_TYPE_SYMBOL");
+        break;
+      case TOKEN_TYPE_EOF:
+        fprintf(fp, "%-25s", "TOKEN_TYPE_EOF");
+        break;
+      }
+      stream->position++;
+      fprintf(fp, "| ");
+      char *str = location_get(token->loc, allocator);
+      char *encode_str = encode_cstring(allocator, str);
+      fprintf(fp, "%s", encode_str);
+      allocator_free(allocator, encode_str);
+      allocator_free(allocator, str);
+      fprintf(fp, " |");
+      fprintf(fp, "\n");
+    }
+    fclose(fp);
   }
   ast_node_t program = read_program(allocator, stream);
-  allocator_free(allocator, stream);
-  if (program->type == NODE_TYPE_ERROR) {
-    return program;
-  }
-  return program;
+  return create_ast_doc(allocator, program, stream, source);
 }
 ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
   if (node->type == NODE_TYPE_ERROR) {
