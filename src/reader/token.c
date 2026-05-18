@@ -243,6 +243,45 @@ token_t read_numeric_token(allocator_t allocator, position_t *position,
       current.offset++;
     }
   }
+  if (*current.offset == 'u') {
+    if (*(current.offset + 1) == '8') {
+      current.offset += 2;
+      current.column += 2;
+    } else if (*(current.offset + 1) == '1' && *(current.offset + 2) == '6') {
+      current.offset += 3;
+      current.column += 3;
+    } else if (*(current.offset + 1) == '3' && *(current.offset + 2) == '2') {
+      current.offset += 3;
+      current.column += 3;
+    } else if (*(current.offset + 1) == '6' && *(current.offset + 2) == '4') {
+      current.offset += 3;
+      current.column += 3;
+    }
+  } else if (*current.offset == 'i') {
+    if (*(current.offset + 1) == '8') {
+      current.offset += 2;
+      current.column += 2;
+    } else if (*(current.offset + 1) == '1' && *(current.offset + 2) == '6') {
+      current.offset += 3;
+      current.column += 3;
+    } else if (*(current.offset + 1) == '3' && *(current.offset + 2) == '2') {
+      current.offset += 3;
+      current.column += 3;
+    } else if (*(current.offset + 1) == '6' && *(current.offset + 2) == '4') {
+      current.offset += 3;
+      current.column += 3;
+    }
+  } else if (*current.offset == 'f') {
+    if (*current.offset == 'u') {
+      if (*(current.offset + 1) == '3' && *(current.offset + 2) == '2') {
+        current.offset += 3;
+        current.column += 3;
+      } else if (*(current.offset + 1) == '6' && *(current.offset + 2) == '4') {
+        current.offset += 3;
+        current.column += 3;
+      }
+    }
+  }
   token_t token = create_token(allocator, TOKEN_TYPE_NUMERIC,
                                (location_t){*position, current, filename});
   *position = current;

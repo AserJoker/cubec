@@ -233,3 +233,11 @@ int64_t cstring_sdb(const char *str) {
 
   return hash;
 }
+bool cstring_endswith(const char *source, const char *flag) {
+  size_t slen = strlen(source);
+  size_t flen = strlen(flag);
+  if (slen >= flen) {
+    return strcmp(&source[slen - flen], flag) == 0;
+  }
+  return false;
+}
