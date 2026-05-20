@@ -112,6 +112,11 @@ type_t create_type(allocator_t allocator, type_kind_t kind, const char *name,
                    type_operator_t opt, void *meta);
 
 bool type_is_equal(type_t self, type_t another);
+
+void init_type_type(struct _context_t *ctx);
+
+struct _value_t *create_type_value(struct _context_t *ctx, type_t type,
+                                   bool mut, const char *name);
 #ifdef __cplusplus
 }
 #endif

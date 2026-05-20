@@ -21,15 +21,15 @@
 
 ast_node_t read_program(allocator_t allocator, token_stream_t stream) {
   size_t position = stream->position;
-  token_t start = token_stream_get(stream);
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_PROGRAM);
+  ast_node_t statements = create_ast_node(allocator, NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "statements", statements);
   ast_node_t err = NULL;
+  token_t start = token_stream_get(stream);
   if (!start) {
     return node;
   }
   skip_comments(stream);
-  ast_node_t statements = create_ast_node(allocator, NODE_TYPE_LIST);
-  ast_add_child(allocator, node, "statements", statements);
   for (;;) {
     ast_node_t sts = read_statement_import(allocator, stream);
     if (!sts) {
@@ -66,8 +66,10 @@ ast_node_t read_program(allocator_t allocator, token_stream_t stream) {
                            stream->filename, "unexpected token");
     goto onerror;
   }
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);

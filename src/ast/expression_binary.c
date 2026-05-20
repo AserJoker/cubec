@@ -45,8 +45,10 @@ ast_node_t read_expression_logical_or(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "right", right);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);
@@ -89,8 +91,10 @@ ast_node_t read_expression_logical_and(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "right", right);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);
@@ -133,8 +137,10 @@ ast_node_t read_expression_bitwise_or(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "right", right);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);
@@ -177,8 +183,10 @@ ast_node_t read_expression_bitwise_xor(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "right", right);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);
@@ -221,8 +229,10 @@ ast_node_t read_expression_bitwise_and(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "right", right);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);
@@ -265,8 +275,10 @@ ast_node_t read_expression_equal(allocator_t allocator, token_stream_t stream) {
     goto onerror;
   }
   ast_add_child(allocator, node, "right", right);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);
@@ -312,8 +324,10 @@ ast_node_t read_expression_relation(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "right", right);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);
@@ -357,8 +371,10 @@ ast_node_t read_expression_bitwise_shift(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "right", right);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);
@@ -402,8 +418,10 @@ ast_node_t read_expression_additive(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "right", right);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);
@@ -448,8 +466,10 @@ ast_node_t read_expression_multiplicative(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "right", right);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);
@@ -484,8 +504,10 @@ ast_node_t read_expression_prefix(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "right", right);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);

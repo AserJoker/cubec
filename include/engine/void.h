@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 void init_void_type(context_t ctx);
+value_t create_comptime_void(context_t ctx);
 #ifdef __cplusplus
 }
 #endif

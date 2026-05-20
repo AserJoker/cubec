@@ -9,7 +9,9 @@ ast_node_t read_literal_keyword(allocator_t allocator, token_stream_t stream) {
   }
   stream->position++;
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_LITERAL_KEYWORD);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 }

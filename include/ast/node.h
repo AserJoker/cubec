@@ -6,6 +6,7 @@
 #include "core/hash_map.h"
 #include "core/location.h"
 #include "core/position.h"
+#include "engine/value.h"
 #include "reader/token.h"
 #include <stdint.h>
 #ifdef __cplusplus
@@ -26,8 +27,9 @@ struct _ast_error_t {
   char *message;
 };
 struct _ast_node_t {
-  size_t start;
-  size_t end;
+  const char *filename;
+  token_t start;
+  token_t end;
   ast_node_type_t type;
   ast_node_t parent;
   bool visible;
@@ -35,6 +37,7 @@ struct _ast_node_t {
     array_t items;
     hash_map_t children;
     ast_error_t error;
+    value_t value;
     void *data;
   };
 };
@@ -45,9 +48,7 @@ struct _ast_doc_t {
   char *source;
 };
 
-ast_node_t create_ast_node_debug(allocator_t allocator, size_t type,
-                                 const char *f, size_t l);
-#define create_ast_node(a, t) create_ast_node_debug(a, t, __FILE__, __LINE__)
+ast_node_t create_ast_node(allocator_t allocator, size_t type);
 void ast_add_child(allocator_t allocator, ast_node_t node, const char *name,
                    ast_node_t child);
 void ast_remove_child(ast_node_t node, const char *name);
@@ -74,9 +75,11 @@ ast_doc_t read_ast_node(allocator_t allocator, const char *filename, void *ctx);
 
 ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node);
 
-location_t node_get_location(ast_node_t node, token_stream_t stream);
+ast_node_t create_ast_value(allocator_t allocator, value_t value);
 
-bool node_location_is(ast_node_t node, token_stream_t stream, const char *s);
+location_t node_get_location(ast_node_t node);
+
+bool node_location_is(ast_node_t node, const char *src);
 
 #ifdef __cplusplus
 }

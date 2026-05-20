@@ -1,5 +1,6 @@
 #include "ast/variable_declarator.h"
 #include "ast/expression.h"
+#include "ast/literal_identifier.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
@@ -11,7 +12,7 @@ ast_node_t read_variable_declarator(allocator_t allocator,
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_VARIABLE_DECLARATOR);
   ast_node_t err = NULL;
   size_t position = stream->position;
-  ast_node_t identifier = read_variable_declarator(allocator, stream);
+  ast_node_t identifier = read_literal_identifier(allocator, stream);
   if (!identifier) {
     goto onerror;
   }
@@ -39,8 +40,10 @@ ast_node_t read_variable_declarator(allocator_t allocator,
     }
     ast_add_child(allocator, node, "initialize", initialize);
   }
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);

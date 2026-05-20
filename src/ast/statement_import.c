@@ -66,15 +66,17 @@ ast_node_t read_statement_import(allocator_t allocator, token_stream_t stream) {
   ast_add_child(allocator, node, "source", source);
   skip_comments(stream);
   token = token_stream_get(stream);
-  if (token_is(token, TOKEN_TYPE_SYMBOL, ";")) {
+  if (!token_is(token, TOKEN_TYPE_SYMBOL, ";")) {
     token_t start = array_get(stream->tokens, position);
     token_t end = token_stream_get(stream);
     err = create_ast_error(allocator, start->loc.begin, end->loc.end,
                            stream->filename, "missing ';'");
     goto onerror;
   }
-  node->start = position;
-  node->end = stream->position;
+  stream->position++;
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);

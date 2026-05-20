@@ -15,7 +15,7 @@ struct _token_t {
 };
 typedef struct _token_stream_t *token_stream_t;
 struct _token_stream_t {
-  const char *filename;
+  char *filename;
   array_t tokens;
   size_t position;
 };

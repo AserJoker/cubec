@@ -3,6 +3,7 @@
 #include "core/array.h"
 #include "core/location.h"
 #include "core/position.h"
+#include "core/string.h"
 #include "reader/token_type.h"
 #include <stdio.h>
 #include <string.h>
@@ -487,6 +488,7 @@ array_t read_token_list(allocator_t allocator, position_t *position,
 
 static void token_stream_dispose(token_stream_t self, allocator_t allocator) {
   allocator_free(allocator, self->tokens);
+  allocator_free(allocator, self->filename);
 }
 
 token_stream_t create_token_stream(allocator_t allocator, position_t *position,
@@ -494,13 +496,13 @@ token_stream_t create_token_stream(allocator_t allocator, position_t *position,
   token_stream_t stream =
       allocator_alloc(allocator, sizeof(struct _token_stream_t),
                       (dispose_fn_t)token_stream_dispose);
-  stream->tokens = read_token_list(allocator, position, end, filename);
+  stream->filename = create_cstring(allocator, filename);
+  stream->tokens = read_token_list(allocator, position, end, stream->filename);
   if (!stream->tokens) {
     allocator_free(allocator, stream);
     return NULL;
   }
   stream->position = 0;
-  stream->filename = filename;
   return stream;
 }
 token_t token_stream_eat(token_stream_t stream) {

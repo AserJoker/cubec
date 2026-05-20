@@ -35,8 +35,10 @@ ast_node_t read_expression_member(allocator_t allocator,
     goto onerror;
   }
   ast_add_child(allocator, node, "field", field);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);

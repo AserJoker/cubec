@@ -39,7 +39,7 @@ char *location_get_str(location_t self, allocator_t allocator) {
   char *result = allocator_alloc(allocator, len, NULL);
   char *dst = result;
   const char *src = self.begin.offset + 1;
-  while (src != self.end.offset - 1) {
+  while (src != self.end.offset - 2) {
     if (*src == '\\') {
       src++;
       if (*src == 'n') {
@@ -130,7 +130,7 @@ char *location_get_str(location_t self, allocator_t allocator) {
   *dst = 0;
   return result;
 }
-char *location_get_line(location_t self, allocator_t allocator) {
+char *location_get_line(const location_t self, allocator_t allocator) {
   const char *begin = self.end.offset;
   size_t col = self.end.column;
   while (col >= 1) {

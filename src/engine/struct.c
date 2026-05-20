@@ -8,6 +8,8 @@
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/type.h"
+#include "engine/value.h"
+#include "engine/void.h"
 #include <stdalign.h>
 #include <string.h>
 static void struct_meta_dispose(struct_meta_t self, allocator_t allocator) {
@@ -38,11 +40,96 @@ static struct_meta_t create_struct_meta(allocator_t allocator) {
   self->packed = false;
   return self;
 }
+
+static bool struct_type_equal(type_t self, type_t another) {
+  if (another->kind == TYPE_KIND_STRUCT) {
+    struct_meta_t self_meta = self->meta;
+    struct_meta_t another_meta = another->meta;
+    array_t self_fields = self_meta->fields;
+    array_t another_fields = another_meta->fields;
+    if (array_get_size(self_fields) != array_get_size(another_fields)) {
+      return false;
+    }
+    for (size_t idx = 0; idx < array_get_size(self_fields); idx++) {
+      struct_field_t self_field = array_get(self_fields, idx);
+      struct_field_t another_field = array_get(another_fields, idx);
+      if (self_field->offset != another_field->offset) {
+        return false;
+      }
+      if (strcmp(self_field->name, another_field->name) != 0) {
+        return false;
+      }
+      if (!type_is_equal(self_field->type, another_field->type)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+static value_t struct_get_field(value_t self, context_t ctx,
+                                const char *field) {
+  type_t type = self->type;
+  struct_field_t f = struct_type_get_field(type, field);
+  if (!f) {
+    return create_error(ctx, "no member '%s' in '%s'", field, type->name);
+  }
+  if (self->comptime) {
+    return context_create_weak_value(
+        ctx, f->type, (uint8_t *)self->data + f->offset, self->mut, NULL);
+  }
+  return context_create_value(ctx, f->type, self->mut, NULL);
+}
+
+static value_t struct_set_field(value_t self, context_t ctx, const char *field,
+                                value_t value) {
+  value_t item = struct_get_field(self, ctx, field);
+  if (item->type->kind == TYPE_KIND_ERROR) {
+    return item;
+  }
+  return value_assigment(item, ctx, value);
+}
+static value_t struct_get(value_t self, context_t ctx, value_t field) {
+  value_t __get__ = struct_get_field(self, ctx, "__get__");
+  value_t args[] = {self, field};
+  return value_call(__get__, ctx, 2, args);
+}
+static value_t struct_set(value_t self, context_t ctx, value_t field,
+                          value_t value) {
+  value_t __set__ = struct_get_field(self, ctx, "__set__");
+  value_t args[] = {self, field, value};
+  return value_call(__set__, ctx, 3, args);
+}
+static value_t struct_len(value_t self, context_t ctx) {
+  value_t __len__ = struct_get_field(self, ctx, "__len__");
+  return value_call(__len__, ctx, 1, &self);
+}
+static value_t struct_call(value_t self, context_t ctx, size_t argc,
+                           value_t argv[]) {
+  value_t __call__ = struct_get_field(self, ctx, "__call__");
+  value_t args[argc + 1];
+  args[0] = self;
+  for (size_t idx = 0; idx < argc; idx++) {
+    args[idx + 1] = argv[idx];
+  }
+  return value_call(__call__, ctx, argc + 1, args);
+}
+
 type_t create_struct_type(context_t ctx, const char *id, const char *name) {
   struct_meta_t meta = create_struct_meta(ctx->allocator);
-  struct _type_operator_t opt = {};
+  struct _type_operator_t opt = {
+      .type_equal = struct_type_equal,
+      .get_field = struct_get_field,
+      .set_field = struct_set_field,
+      .get = struct_get,
+      .set = struct_set,
+      .len = struct_len,
+      .call = struct_call,
+  };
   type_t type = create_type(ctx->allocator, TYPE_KIND_STRUCT, name, id,
                             sizeof(char), alignof(struct {}), &opt, meta);
+  context_store_type(ctx, type);
   return type;
 }
 
@@ -86,7 +173,7 @@ value_t struct_type_add_field(context_t ctx, type_t stru, const char *name,
   }
   array_push(meta->fields, field);
   stru->size = size;
-  return context_get_undefined(ctx);
+  return create_comptime_void(ctx);
 }
 array_t struct_type_get_fields(type_t stru) {
   struct_meta_t meta = stru->meta;
@@ -117,7 +204,7 @@ value_t struct_type_add_method(context_t ctx, type_t stru, const char *name,
   }
   hash_map_set(meta->methods, create_cstring(ctx->allocator, name), value, NULL,
                NULL);
-  return context_get_undefined(ctx);
+  return create_comptime_void(ctx);
 }
 hash_map_t struct_type_get_methods(type_t stru) {
   struct_meta_t meta = stru->meta;
@@ -135,7 +222,7 @@ value_t struct_type_add_attribute(context_t ctx, type_t stru, const char *name,
   }
   hash_map_set(meta->attributes, create_cstring(ctx->allocator, name), value,
                NULL, NULL);
-  return context_get_undefined(ctx);
+  return create_comptime_void(ctx);
 }
 hash_map_t struct_type_get_attributes(type_t stru) {
   struct_meta_t meta = stru->meta;

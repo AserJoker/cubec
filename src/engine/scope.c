@@ -19,11 +19,12 @@ static void scope_dispose(scope_t scope, allocator_t allocator) {
       it = list_node_next(it);
     }
   }
-  while (scope->children) {
+  while (list_get_size(scope->children)) {
     list_node_t it = list_get_first(scope->children);
     scope_t child = list_node_get(it);
     allocator_free(allocator, child);
   }
+  allocator_free(allocator, scope->children);
   allocator_free(allocator, scope->values);
   allocator_free(allocator, scope->variables);
 }
@@ -31,22 +32,20 @@ scope_t create_scope(allocator_t allocator, scope_t parent) {
   scope_t self = allocator_alloc(allocator, sizeof(struct _scope_t),
                                  (dispose_fn_t)scope_dispose);
   self->parent = parent;
-  list_initialize_t children_init = {
-      .autofree = true,
-  };
-  self->children = create_list(allocator, &children_init);
-  list_append(parent->children, self);
-  array_initialize_t values_init = {
-      .autofree = true,
-  };
-  self->values = create_array(allocator, &values_init);
-  hash_map_initialize_t variables_init = {
-      .hash = (hash_fn_t)cstring_sdb,
-      .compare = (compare_fn_t)strcmp,
-      .autofree_key = true,
-      .autofree_value = false,
-  };
-  self->variables = create_hash_map(allocator, &variables_init);
+  self->children = create_list(allocator, NULL);
+  if (parent) {
+    list_append(parent->children, self);
+  }
+  self->values = create_array(allocator, &(array_initialize_t){
+                                             .autofree = true,
+                                         });
+  self->variables =
+      create_hash_map(allocator, &(hash_map_initialize_t){
+                                     .hash = (hash_fn_t)cstring_sdb,
+                                     .compare = (compare_fn_t)strcmp,
+                                     .autofree_key = true,
+                                     .autofree_value = false,
+                                 });
   return self;
 }
 value_t scope_load(scope_t scope, const char *name) {

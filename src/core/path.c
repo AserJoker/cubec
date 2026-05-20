@@ -162,7 +162,7 @@ const char *path_extname(path_t current) {
 }
 
 char *path_to_string(path_t path, allocator_t allocator) {
-  size_t len = 0;
+  size_t len = 1;
   for (list_node_t it = list_get_first(path->parts);
        it != list_get_end(path->parts); it = list_node_next(it)) {
     const char *part = list_node_get(it);

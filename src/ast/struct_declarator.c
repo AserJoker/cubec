@@ -55,6 +55,7 @@ ast_node_t read_struct_declarator(allocator_t allocator,
   skip_comments(stream);
   token = token_stream_get(stream);
   ast_node_t fields = create_ast_node(allocator, NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "fields", fields);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "}")) {
     for (;;) {
       skip_comments(stream);
@@ -97,8 +98,10 @@ ast_node_t read_struct_declarator(allocator_t allocator,
     }
   }
   stream->position++;
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);

@@ -31,9 +31,9 @@ struct _context_t {
   context_type_t type;
   value_t function;
   list_t trace;
-  value_t undefined;
   list_t errors;
   list_t dependences;
+  bool comptime;
 };
 typedef struct _trace_t *trace_t;
 struct _trace_t {
@@ -58,7 +58,9 @@ void context_pop_scope(context_t ctx);
 void context_push_trace(context_t ctx, const char *filename,
                         const char *funcname, size_t column, size_t line);
 void context_pop_trace(context_t ctx);
-value_t context_get_undefined(context_t ctx);
+value_t context_load_module(context_t ctx, const char *filename);
+value_t context_declar(context_t ctx, const char *name, value_t value);
+void context_push_error(context_t ctx, value_t err);
 #ifdef __cplusplus
 }
 #endif

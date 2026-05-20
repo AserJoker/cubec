@@ -80,8 +80,10 @@ ast_node_t read_switch_match(allocator_t allocator, token_stream_t stream) {
     goto onerror;
   }
   ast_add_child(allocator, node, "body", body);
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);

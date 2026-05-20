@@ -20,11 +20,9 @@
 static void ast_node_dispose(ast_node_t self, allocator_t allocator) {
   allocator_free(allocator, self->data);
 }
-ast_node_t create_ast_node_debug(allocator_t allocator, size_t type,
-                                 const char *filename, size_t len) {
-  ast_node_t node =
-      allocator_alloc_debug(allocator, sizeof(struct _ast_node_t),
-                            (dispose_fn_t)ast_node_dispose, filename, len);
+ast_node_t create_ast_node(allocator_t allocator, size_t type) {
+  ast_node_t node = allocator_alloc(allocator, sizeof(struct _ast_node_t),
+                                    (dispose_fn_t)ast_node_dispose);
   memset(node, 0, sizeof(struct _ast_node_t));
   node->type = type;
   if (type == NODE_TYPE_LIST) {
@@ -157,8 +155,11 @@ ast_doc_t read_ast_node(allocator_t allocator, const char *filename,
                         void *ctx) {
   FILE *fp = fopen(filename, "r");
   if (!fp) {
+    size_t len = snprintf(NULL, 0, "failed to open file: %s", filename);
+    char buf[len];
+    sprintf(buf, "failed to open file:%s", filename);
     ast_node_t err = create_ast_error(allocator, (position_t){}, (position_t){},
-                                      filename, "cannot open file");
+                                      filename, buf);
     return create_ast_doc(allocator, err, NULL, NULL);
   }
   fseek(fp, 0, SEEK_END);
@@ -226,6 +227,7 @@ ast_doc_t read_ast_node(allocator_t allocator, const char *filename,
     }
     fclose(fp);
   }
+  stream->position = 0;
   ast_node_t program = read_program(allocator, stream);
   return create_ast_doc(allocator, program, stream, source);
 }
@@ -237,6 +239,7 @@ ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
   ast_node_t n = create_ast_node(allocator, node->type);
   n->start = node->start;
   n->end = node->end;
+  n->filename = node->filename;
   if (node->type == NODE_TYPE_LIST) {
     for (size_t idx = 0; idx < ast_get_length(node); idx++) {
       ast_node_t item = ast_get_item(node, idx);
@@ -248,26 +251,29 @@ ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
          it != hash_map_get_end(node->children);
          it = hash_map_node_get_next(it)) {
       const char *key = hash_map_node_get_key(it);
-      if (strcmp(key, "_value") != 0) {
-        ast_node_t child = hash_map_node_get_value(it);
-        child = clone_ast_node(allocator, child);
-        ast_add_child(allocator, n, key, child);
-      }
+      ast_node_t child = hash_map_node_get_value(it);
+      child = clone_ast_node(allocator, child);
+      ast_add_child(allocator, n, key, child);
     }
+  } else if (node->type == NODE_TYPE_VALUE) {
+    n->value = value_clone(node->value, allocator);
   }
   return n;
 }
 
-location_t node_get_location(ast_node_t node, token_stream_t stream) {
-  token_t begin = array_get(stream->tokens, node->start);
-  token_t end = array_get(stream->tokens, node->end);
+ast_node_t create_ast_value(allocator_t allocator, value_t value) {
+  ast_node_t node = create_ast_node(allocator, NODE_TYPE_VALUE);
+  node->value = value;
+  return node;
+}
+location_t node_get_location(ast_node_t node) {
   return (location_t){
-      .begin = begin->loc.begin,
-      .end = end->loc.begin,
-      .filename = stream->filename,
+      .begin = node->start->loc.begin,
+      .end = node->end->loc.end,
+      .filename = node->filename,
   };
 }
-bool node_location_is(ast_node_t node, token_stream_t stream, const char *s) {
-  location_t loc = node_get_location(node, stream);
-  return location_is(loc, s);
+bool node_location_is(ast_node_t node, const char *src) {
+  location_t loc = node_get_location(node);
+  return location_is(loc, src);
 }

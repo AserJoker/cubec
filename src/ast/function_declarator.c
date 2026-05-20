@@ -212,8 +212,10 @@ ast_node_t read_function_declarator(allocator_t allocator,
       ast_add_child(allocator, node, "body", body);
     }
   }
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   allocator_free(allocator, node);

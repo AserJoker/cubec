@@ -13,7 +13,7 @@ typedef struct _location_t {
 } location_t;
 char *location_get(location_t self, allocator_t allocator);
 char *location_get_str(location_t self, allocator_t allocator);
-char *location_get_line(location_t self, allocator_t allocator);
+char *location_get_line(const location_t self, allocator_t allocator);
 bool location_is(location_t self, const char *str);
 #ifdef __cplusplus
 }

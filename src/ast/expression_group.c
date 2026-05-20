@@ -39,8 +39,10 @@ ast_node_t read_expression_group(allocator_t allocator, token_stream_t stream) {
     goto onerror;
   }
   stream->position++;
-  node->start = position;
-  node->end = stream->position;
+
+  node->start = array_get(stream->tokens, position);
+  node->end = token_stream_get(stream);
+  node->filename = stream->filename;
   return node;
 onerror:
   stream->position = position;
