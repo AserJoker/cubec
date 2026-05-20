@@ -7,11 +7,13 @@ extern "C" {
 #endif
 typedef struct _module_t *module_t;
 struct _module_t {
-  const char *filename;
-  const char *dirname;
-  type_t self;
+  char *filename;
+  char *dirname;
+  type_t stru;
+  bool master;
 };
-module_t create_module(allocator_t allocator, type_t self);
+module_t create_module(allocator_t allocator, type_t stru,
+                       const char *filename);
 #ifdef __cplusplus
 }
 #endif

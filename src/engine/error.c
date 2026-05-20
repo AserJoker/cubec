@@ -10,7 +10,6 @@ void init_error_type(context_t ctx) {
       create_type(ctx->allocator, TYPE_KIND_ERROR, "error", "error",
                   sizeof(const char *), sizeof(const char *), NULL, NULL);
   context_store_type(ctx, error_type);
-
   type_t format_error_type = create_type(
       ctx->allocator, TYPE_KIND_ERROR, "format_error", "format_error",
       sizeof(const char *), sizeof(const char *), NULL, NULL);

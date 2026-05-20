@@ -24,3 +24,9 @@ type_t create_type(allocator_t allocator, type_kind_t kind, const char *name,
   self->meta = meta;
   return self;
 }
+bool type_is_equal(type_t self, type_t another) {
+  if (self->opt.type_equal) {
+    return self->opt.type_equal(self, another);
+  }
+  return self->kind == another->kind;
+}

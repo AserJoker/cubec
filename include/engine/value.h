@@ -59,6 +59,7 @@ value_t value_opt_plu(value_t self, struct _context_t *ctx);
 value_t value_opt_neg(value_t self, struct _context_t *ctx);
 value_t value_opt_lnot(value_t self, struct _context_t *ctx);
 value_t value_opt_not(value_t self, struct _context_t *ctx);
+value_t value_assigment(value_t self, struct _context_t *ctx, value_t value);
 #ifdef __cplusplus
 }
 #endif

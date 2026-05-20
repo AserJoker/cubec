@@ -1,8 +1,13 @@
 #include "engine/str.h"
 #include "engine/bool.h"
 #include "engine/context.h"
+#include "engine/error.h"
+#include "engine/integer.h"
+#include "engine/slice.h"
 #include "engine/type.h"
+#include "engine/unsigned.h"
 #include "engine/value.h"
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -33,10 +38,80 @@ static value_t str_ne(value_t self, context_t ctx, value_t another) {
   }
   return NULL;
 }
+static value_t str_slice(value_t self, context_t ctx, value_t start,
+                         value_t end) {
+  type_t base_type = context_load_type(ctx, "u8");
+  type_t slice_type = create_slice_type(ctx, base_type);
+  if (!start->comptime || !end->comptime) {
+    if (self->comptime) {
+      return create_error(ctx, "value is not comptime");
+    }
+    return context_create_value(ctx, slice_type, false, NULL);
+  }
+  const char *data = *(const char **)self->data;
+  size_t length = strlen(data);
+
+  size_t s = 0;
+  size_t e = length;
+  if (start->type->kind >= TYPE_KIND_I8 && start->type->kind <= TYPE_KIND_I64) {
+    int64_t val = integer_get_value(start);
+    if (val < 0) {
+      return create_error(
+          ctx, "slice index %" PRIdPTR " is before the beginning of the slice",
+          val);
+    }
+    s = val;
+  } else if (start->type->kind >= TYPE_KIND_U8 &&
+             start->type->kind <= TYPE_KIND_U64) {
+    s = unsigned_get_value(start);
+  } else if (start->type->kind != TYPE_KIND_VOID) {
+    return create_error(ctx, "slice start is not an integer");
+  }
+  if (end->type->kind >= TYPE_KIND_I8 && end->type->kind <= TYPE_KIND_I64) {
+    int64_t val = integer_get_value(end);
+    if (val < 0) {
+      return create_error(
+          ctx, "slice index %" PRIdPTR " is before the beginning of the slice",
+          val);
+    }
+    e = val;
+  } else if (end->type->kind >= TYPE_KIND_U8 &&
+             end->type->kind <= TYPE_KIND_U64) {
+    e = unsigned_get_value(end);
+  } else if (end->type->kind != TYPE_KIND_VOID) {
+    return create_error(ctx, "slice start is not an integer");
+  }
+  if (s > e) {
+    return create_error(ctx, "slice start %" PRIuPTR " >= end %" PRIuPTR, s, e);
+  }
+  size_t len = e - s;
+  if (e > length) {
+    return create_error(
+        ctx, "slice end %" PRIuPTR " is past the end of the array", e);
+  }
+  if (self->comptime) {
+    uint8_t *data = self->data;
+    data = data + s * base_type->size;
+    return create_comptime_slice(ctx, slice_type, data, s, len, self->mut,
+                                 NULL);
+  } else {
+    return context_create_value(ctx, slice_type, self->mut, NULL);
+  }
+}
+static value_t str_length(value_t self, context_t ctx) {
+  if (self->comptime) {
+    const char *data = *(const char **)self->data;
+    size_t length = strlen(data);
+    return create_comptime_u64(ctx, length, false, NULL);
+  }
+  return create_u64(ctx, false, NULL);
+}
 void init_str_type(context_t ctx) {
   struct _type_operator_t opt = {
-    .opt_eq = str_eq,
-    .opt_ne = str_ne,
+      .opt_eq = str_eq,
+      .opt_ne = str_ne,
+      .slice = str_slice,
+      .len = str_length,
   };
   type_t type =
       create_type(ctx->allocator, TYPE_KIND_STR, "str", "str",

@@ -1,6 +1,7 @@
 #ifndef _H_ENGINE_TYPE_
 #define _H_ENGINE_TYPE_
 #include "core/allocator.h"
+#include <stdbool.h>
 #include <stddef.h>
 #ifdef __cplusplus
 extern "C" {
@@ -41,10 +42,9 @@ struct _context_t;
 typedef struct _type_t *type_t;
 typedef struct _type_operator_t *type_operator_t;
 struct _type_operator_t {
+  bool (*type_equal)(type_t self, type_t another);
   struct _value_t *(*safe_convert)(struct _value_t *, struct _context_t *,
                                    type_t);
-  struct _value_t *(*addr)(struct _value_t *, struct _context_t *);
-  struct _value_t *(*deref)(struct _value_t *, struct _context_t *);
   struct _value_t *(*len)(struct _value_t *, struct _context_t *);
   struct _value_t *(*slice)(struct _value_t *, struct _context_t *,
                             struct _value_t *, struct _value_t *);
@@ -106,9 +106,12 @@ struct _type_t {
   void *meta;
   struct _type_operator_t opt;
 };
+
 type_t create_type(allocator_t allocator, type_kind_t kind, const char *name,
                    const char *id, size_t size, size_t align,
                    type_operator_t opt, void *meta);
+
+bool type_is_equal(type_t self, type_t another);
 #ifdef __cplusplus
 }
 #endif

@@ -1,6 +1,11 @@
 #include "engine/value.h"
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "engine/error.h"
+#include "engine/ptr.h"
+#include "engine/type.h"
+#include <iso646.h>
+#include <stdbool.h>
 #include <string.h>
 
 static void value_dispose(value_t self, allocator_t allocator) {
@@ -67,21 +72,22 @@ value_t value_safe_convert(value_t self, struct _context_t *ctx, type_t type) {
                       type->name);
 }
 value_t value_addr(value_t self, struct _context_t *ctx) {
-  type_t self_type = self->type;
-  if (self_type->opt.addr) {
-    value_t value = self_type->opt.addr(self, ctx);
-    if (value) {
-      return value;
-    }
+  type_t ptr_type = create_ptr_type(ctx, self->type, true, false);
+  if (self->comptime) {
+    return context_create_comptime_value(ctx, ptr_type, &self->data, self->mut,
+                                         NULL);
   }
-  return create_error(ctx, "cannot get address of '%s'", self_type->name);
+  return context_create_value(ctx, ptr_type, self->mut, NULL);
 }
 value_t value_deref(value_t self, struct _context_t *ctx) {
   type_t self_type = self->type;
-  if (self_type->opt.deref) {
-    value_t value = self_type->opt.deref(self, ctx);
-    if (value) {
-      return value;
+  if (self_type->kind == TYPE_KIND_PTR) {
+    type_t type = ptr_type_get_type(self_type);
+    if (self->comptime) {
+      return context_create_weak_value(ctx, type, *(void **)self->data,
+                                       self->mut, NULL);
+    } else {
+      return context_create_value(ctx, type, self->mut, NULL);
     }
   }
   return create_error(ctx, "cannot deref of '%s'", self_type->name);
@@ -386,4 +392,23 @@ value_t value_opt_not(value_t self, struct _context_t *ctx) {
     }
   }
   return create_error(ctx, "invalid operator '~' with '%s'", self_type->name);
+}
+value_t value_assigment(value_t self, struct _context_t *ctx, value_t value) {
+  if (self->type->kind == TYPE_KIND_PTR) {
+    if (!ptr_type_is_mut(self->type)) {
+      return create_error(ctx, "assignment to constant variable");
+    }
+  } else if (!self->mut) {
+    return create_error(ctx, "assignment to constant variable");
+  }
+  value = value_safe_convert(value, ctx, self->type);
+  if (value->type->kind == TYPE_KIND_ERROR) {
+    return value;
+  }
+  if (self->comptime && value->comptime) {
+    memcpy(self->data, value->data, self->type->size);
+  } else if (!value->comptime) {
+    return create_error(ctx, "value is not comptime");
+  }
+  return self;
 }
