@@ -29,7 +29,6 @@ struct _context_t {
   scope_t root;
   scope_t current;
   context_type_t type;
-  value_t function;
   list_t trace;
   list_t errors;
   list_t dependences;

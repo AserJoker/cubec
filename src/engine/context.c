@@ -75,7 +75,6 @@ context_t create_context(allocator_t allocator) {
                                                  .autofree = true,
                                              });
   self->errors = NULL;
-  self->function = NULL;
   self->root = create_scope(allocator, NULL);
   self->current = self->root;
   self->global = NULL;
