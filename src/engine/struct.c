@@ -138,17 +138,19 @@ static void struct_field_dispose(struct_field_t self, allocator_t allocator) {
 }
 static struct_field_t create_struct_field(allocator_t allocator,
                                           const char *name, type_t type,
-                                          size_t offfset) {
+                                          size_t offfset, bool pub, bool mut) {
   struct_field_t self =
       allocator_alloc(allocator, sizeof(struct _struct_field_t),
                       (dispose_fn_t)struct_field_dispose);
   self->name = create_cstring(allocator, name);
   self->offset = offfset;
   self->type = type;
+  self->pub = pub;
+  self->mut = mut;
   return self;
 }
 value_t struct_type_add_field(context_t ctx, type_t stru, const char *name,
-                              type_t type) {
+                              type_t type, bool pub, bool mut) {
   struct_meta_t meta = stru->meta;
   for (size_t idx = 0; idx < array_get_size(meta->fields); idx++) {
     struct_field_t f = array_get(meta->fields, idx);
@@ -166,7 +168,7 @@ value_t struct_type_add_field(context_t ctx, type_t stru, const char *name,
     offset = offset - (offset % type->align) + type->align;
   }
   struct_field_t field =
-      create_struct_field(ctx->allocator, name, type, offset);
+      create_struct_field(ctx->allocator, name, type, offset, pub, mut);
   size_t size = field->offset + field->type->align;
   if (size % stru->align != 0) {
     size = size - (size % stru->align) + stru->align;
@@ -190,7 +192,7 @@ struct_field_t struct_type_get_field(type_t stru, const char *name) {
   return NULL;
 }
 value_t struct_type_add_method(context_t ctx, type_t stru, const char *name,
-                               value_t value) {
+                               value_t value, bool pub) {
   struct_meta_t meta = stru->meta;
   for (size_t idx = 0; idx < array_get_size(meta->fields); idx++) {
     struct_field_t f = array_get(meta->fields, idx);
@@ -198,7 +200,7 @@ value_t struct_type_add_method(context_t ctx, type_t stru, const char *name,
       return create_error(ctx, "duplicate member '%s'", name);
     }
   }
-  value_t err = struct_type_add_attribute(ctx, stru, name, value);
+  value_t err = struct_type_add_attribute(ctx, stru, name, value, pub, false);
   if (err->type->kind == TYPE_KIND_ERROR) {
     return err;
   }
@@ -210,12 +212,29 @@ hash_map_t struct_type_get_methods(type_t stru) {
   struct_meta_t meta = stru->meta;
   return meta->methods;
 }
-value_t struct_type_get_method(type_t stru, const char *name) {
+struct_attribute_t struct_type_get_method(type_t stru, const char *name) {
   struct_meta_t meta = stru->meta;
   return hash_map_get(meta->methods, name, NULL, NULL);
 }
+
+static void struct_attribute_dispose(struct_attribute_t self,
+                                     allocator_t allocator) {
+  allocator_free(allocator, self->value);
+}
+static struct_attribute_t create_struct_attribute(allocator_t allocator,
+                                                  value_t value, bool pub,
+                                                  bool mut) {
+  struct_attribute_t self =
+      allocator_alloc(allocator, sizeof(struct _struct_attribute_t),
+                      (dispose_fn_t)struct_attribute_dispose);
+  self->value = value;
+  self->pub = pub;
+  self->mut = mut;
+  return self;
+}
+
 value_t struct_type_add_attribute(context_t ctx, type_t stru, const char *name,
-                                  value_t value) {
+                                  value_t value, bool pub, bool mut) {
   struct_meta_t meta = stru->meta;
   if (hash_map_get(stru->meta, name, NULL, NULL)) {
     return create_error(ctx, "duplicate member '%s'", name);
@@ -228,7 +247,7 @@ hash_map_t struct_type_get_attributes(type_t stru) {
   struct_meta_t meta = stru->meta;
   return meta->attributes;
 }
-value_t struct_type_get_attribute(type_t stru, const char *name) {
+struct_attribute_t struct_type_get_attribute(type_t stru, const char *name) {
   struct_meta_t meta = stru->meta;
   return hash_map_get(meta->attributes, name, NULL, NULL);
 }

@@ -117,6 +117,7 @@ void init_str_type(context_t ctx) {
       create_type(ctx->allocator, TYPE_KIND_STR, "str", "str",
                   sizeof(const char *), sizeof(const char *), &opt, NULL);
   context_store_type(ctx, type);
+  create_type_value(ctx, type, false, "str");
 }
 
 value_t create_comptime_str(context_t ctx, const char *fmt, ...) {

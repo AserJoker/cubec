@@ -1,6 +1,7 @@
 #include "engine/module.h"
 #include "ast/node.h"
 #include "core/allocator.h"
+#include "core/list.h"
 #include "core/path.h"
 #include "core/string.h"
 static void module_dispsoe(module_t self, allocator_t allocator) {
@@ -8,6 +9,7 @@ static void module_dispsoe(module_t self, allocator_t allocator) {
   allocator_free(allocator, self->dirname);
   allocator_free(allocator, self->filename);
   allocator_free(allocator, self->value);
+  allocator_free(allocator, self->errors);
 }
 
 module_t create_module(allocator_t allocator, const char *filename,
@@ -23,5 +25,6 @@ module_t create_module(allocator_t allocator, const char *filename,
   mod->dirname = path_to_string(parent, allocator);
   allocator_free(allocator, parent);
   mod->doc = doc;
+  mod->errors = create_list(allocator, &(list_initialize_t){.autofree = true});
   return mod;
 }

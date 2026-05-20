@@ -30,7 +30,6 @@ struct _context_t {
   scope_t current;
   context_type_t type;
   list_t trace;
-  list_t errors;
   list_t dependences;
   bool comptime;
 };

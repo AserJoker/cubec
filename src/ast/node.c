@@ -269,7 +269,7 @@ ast_node_t create_ast_value(allocator_t allocator, value_t value) {
 location_t node_get_location(ast_node_t node) {
   return (location_t){
       .begin = node->start->loc.begin,
-      .end = node->end->loc.end,
+      .end = node->end->loc.begin,
       .filename = node->filename,
   };
 }

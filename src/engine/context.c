@@ -74,7 +74,6 @@ context_t create_context(allocator_t allocator) {
   self->dependences = create_list(allocator, &(list_initialize_t){
                                                  .autofree = true,
                                              });
-  self->errors = NULL;
   self->root = create_scope(allocator, NULL);
   self->current = self->root;
   self->global = NULL;
@@ -82,14 +81,13 @@ context_t create_context(allocator_t allocator) {
   self->mod = NULL;
   self->comptime = false;
   self->type = CONTEXT_TYPE_GLOBAL;
+  init_type_type(self);
   init_void_type(self);
-  type_t void_t = context_load_type(self, "void");
   init_error_type(self);
   init_bool_type(self);
   init_str_type(self);
   init_integer_type(self);
   init_unsigned_type(self);
-  init_type_type(self);
   return self;
 }
 void context_store_type(context_t ctx, type_t type) {
@@ -195,9 +193,6 @@ value_t context_load_module(context_t ctx, const char *filename) {
     if (ctx->mod == NULL) {
       mod->master = true;
     }
-    ctx->errors = create_list(ctx->allocator, &(list_initialize_t){
-                                                  .autofree = true,
-                                              });
     context_type_t current_type = ctx->type;
     ctx->type = CONTEXT_TYPE_STRUCT;
     type_t current_global = ctx->global;
@@ -211,15 +206,14 @@ value_t context_load_module(context_t ctx, const char *filename) {
     ctx->self = current_self;
     ctx->global = current_global;
     ctx->type = current_type;
-    list_node_t it = list_get_first(ctx->errors);
-    while (it != list_get_end(ctx->errors)) {
+    list_node_t it = list_get_first(mod->errors);
+    while (it != list_get_end(mod->errors)) {
       value_t err = list_node_get(it);
       char *msg = error_format(ctx->allocator, err);
       fprintf(stderr, "%s\n", msg);
       allocator_free(ctx->allocator, msg);
       it = list_node_next(it);
     }
-    allocator_free(ctx->allocator, ctx->errors);
   }
   hash_map_set(ctx->modules, (void *)mod->filename, mod, NULL, NULL);
   value_t value = value_clone(mod->value, ctx->allocator);
@@ -228,25 +222,13 @@ value_t context_load_module(context_t ctx, const char *filename) {
 }
 
 value_t context_declar(context_t ctx, const char *name, value_t value) {
-  if (ctx->type == CONTEXT_TYPE_FUNCTION || ctx->type == CONTEXT_TYPE_GLOBAL) {
-    if (name && scope_load(ctx->current, name)) {
-      allocator_free(ctx->allocator, value);
-      return create_error(ctx, "redefinition of '%s'", name);
-    }
-    scope_store(ctx->current, create_cstring(ctx->allocator, name), value);
-  } else if (ctx->type == CONTEXT_TYPE_STRUCT) {
-    if (name) {
-      if (struct_type_get_attribute(ctx->self, name)) {
-        allocator_free(ctx->allocator, value);
-        return create_error(ctx, "redefinition of '%s'", name);
-      }
-      struct_type_add_attribute(ctx, ctx->self, name, value);
-    } else {
-      scope_store(ctx->current, NULL, value);
-    }
+  if (name && scope_load(ctx->current, name)) {
+    allocator_free(ctx->allocator, value);
+    return create_error(ctx, "redefinition of '%s'", name);
   }
+  scope_store(ctx->current, create_cstring(ctx->allocator, name), value);
   return value;
 }
 void context_push_error(context_t ctx, value_t err) {
-  list_append(ctx->errors, value_clone(err, ctx->allocator));
+  list_append(ctx->mod->errors, value_clone(err, ctx->allocator));
 }

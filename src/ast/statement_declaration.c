@@ -35,7 +35,7 @@ ast_node_t read_statement_declaration(allocator_t allocator,
     goto onerror;
   }
   ast_node_t type = read_literal_keyword(allocator, stream);
-  ast_add_child(allocator, node, "type", type);
+  ast_add_child(allocator, node, "mut", type);
   skip_comments(stream);
   ast_node_t declarations = create_ast_node(allocator, NODE_TYPE_LIST);
   ast_add_child(allocator, node, "declarations", declarations);

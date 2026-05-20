@@ -11,7 +11,6 @@ ast_node_t read_literal_numeric(allocator_t allocator, token_stream_t stream) {
   }
   stream->position++;
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_LITERAL_NUMERIC);
-
   node->start = array_get(stream->tokens, position);
   node->end = token_stream_get(stream);
   node->filename = stream->filename;

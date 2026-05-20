@@ -21,6 +21,7 @@
 #include "ast/slice_declarator.h"
 #include "ast/struct_declarator.h"
 #include "core/allocator.h"
+#include "reader/token.h"
 
 ast_node_t read_expression(allocator_t allocator, token_stream_t stream) {
   return read_expression_comma(allocator, stream);
@@ -57,26 +58,26 @@ ast_node_t read_expression_value(allocator_t allocator, token_stream_t stream) {
       }
       if (next) {
         if (next->type == NODE_TYPE_ERROR) {
-          next->start = position;
+          next->start = array_get(stream->tokens, position);
           err = next;
           goto onerror;
         }
         if (next->type == NODE_TYPE_EXPRESSION_MEMBER) {
           ast_add_child(allocator, next, "host", node);
           node = next;
-          next->start = position;
+          next->start = array_get(stream->tokens, position);
         } else if (next->type == NODE_TYPE_EXPRESSION_GENERICS) {
           ast_add_child(allocator, next, "host", node);
           node = next;
-          next->start = position;
+          next->start = array_get(stream->tokens, position);
         } else if (next->type == NODE_TYPE_EXPRESSION_CALL) {
           ast_add_child(allocator, next, "callee", node);
           node = next;
-          next->start = position;
+          next->start = array_get(stream->tokens, position);
         } else if (next->type == NODE_TYPE_EXPRESSION_SLICE) {
           ast_add_child(allocator, next, "host", node);
           node = next;
-          next->start = position;
+          next->start = array_get(stream->tokens, position);
         }
       } else {
         stream->position = curr;

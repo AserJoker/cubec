@@ -1,6 +1,6 @@
+#include "engine/unsigned.h"
 #include "engine/bool.h"
 #include "engine/context.h"
-#include "engine/unsigned.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include <stdbool.h>
@@ -316,6 +316,11 @@ void init_unsigned_type(context_t ctx) {
   type_t u64_type = create_type(ctx->allocator, TYPE_KIND_U64, "u64", "u64",
                                 sizeof(uint64_t), sizeof(uint64_t), &opt, NULL);
   context_store_type(ctx, u64_type);
+
+  create_type_value(ctx, u8_type, false, "u8");
+  create_type_value(ctx, u16_type, false, "u16");
+  create_type_value(ctx, u32_type, false, "u32");
+  create_type_value(ctx, u64_type, false, "u64");
 }
 value_t create_comptime_u8(context_t ctx, uint8_t value, bool mut,
                            const char *name) {

@@ -6,6 +6,7 @@
 #include "engine/error.h"
 #include "engine/struct.h"
 #include "engine/value.h"
+#include <stdbool.h>
 static void type_dispose(type_t self, allocator_t allocator) {
   allocator_free(allocator, self->id);
   allocator_free(allocator, self->name);
@@ -55,10 +56,11 @@ static value_t type_ne(value_t self, context_t ctx, value_t another) {
 static value_t type_get_field(value_t self, context_t ctx, const char *field) {
   type_t type = *(type_t *)self->data;
   if (type->kind == TYPE_KIND_STRUCT) {
-    value_t value = struct_type_get_attribute(type, field);
-    if (!value) {
+    struct_attribute_t attr = struct_type_get_attribute(type, field);
+    if (!attr) {
       return create_error(ctx, "no member '%s' in '%s'", field, type->name);
     }
+    return attr->value;
   }
   return NULL;
 }
@@ -66,11 +68,11 @@ static value_t type_set_field(value_t self, context_t ctx, const char *field,
                               value_t value) {
   type_t type = *(type_t *)self->data;
   if (type->kind == TYPE_KIND_STRUCT) {
-    value_t attr = struct_type_get_attribute(type, field);
+    struct_attribute_t attr = struct_type_get_attribute(type, field);
     if (!attr) {
       return create_error(ctx, "no member '%s' in '%s'", field, type->name);
     }
-    return value_assigment(attr, ctx, value);
+    return value_assigment(attr->value, ctx, value);
   }
   return NULL;
 }
@@ -84,6 +86,7 @@ void init_type_type(context_t ctx) {
   type_t type = create_type(ctx->allocator, TYPE_KIND_TYPE, "type", "type",
                             sizeof(type_t), sizeof(type_t), &opt, NULL);
   context_store_type(ctx, type);
+  create_type_value(ctx, type, false, "type");
 }
 struct _value_t *create_type_value(struct _context_t *ctx, type_t type,
                                    bool mut, const char *name) {

@@ -316,6 +316,11 @@ void init_integer_type(context_t ctx) {
   type_t i64_type = create_type(ctx->allocator, TYPE_KIND_I64, "i64", "i64",
                                 sizeof(int64_t), sizeof(int64_t), &opt, NULL);
   context_store_type(ctx, i64_type);
+
+  create_type_value(ctx, i8_type, false, "i8");
+  create_type_value(ctx, i16_type, false, "i16");
+  create_type_value(ctx, i32_type, false, "i32");
+  create_type_value(ctx, i64_type, false, "i64");
 }
 value_t create_comptime_i8(context_t ctx, int8_t value, bool mut,
                            const char *name) {

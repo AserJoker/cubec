@@ -74,6 +74,7 @@ void init_bool_type(context_t ctx) {
   type_t type = create_type(ctx->allocator, TYPE_KIND_BOOL, "bool", "bool",
                             sizeof(bool), sizeof(bool), &opt, NULL);
   context_store_type(ctx, type);
+  create_type_value(ctx, type, false, "bool");
 }
 value_t create_comptime_bool(context_t ctx, bool value, bool mut,
                              const char *name) {
