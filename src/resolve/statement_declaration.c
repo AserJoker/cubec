@@ -55,6 +55,13 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     }
     value_t value = resolve_expression(ctx, initialize);
     ctx->comptime = is_comptime;
+    if (ctx->comptime || ctx->type != CONTEXT_TYPE_FUNCTION) {
+      if (!value->comptime) {
+        value_t err = create_comptime_error(ctx, node_get_location(initialize),
+                                            "value is not comptime");
+        CHECK_ERROR(ctx, err);
+      }
+    }
     CHECK_ERROR(ctx, value);
     if (type) {
       type_t t = *(type_t *)type->data;
@@ -65,6 +72,13 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     type_node = create_ast_value(ctx->allocator, type);
     ast_remove_child(declar, "type");
     ast_add_child(ctx->allocator, declar, "type", type_node);
+    if (ctx->comptime || kind && node_location_is(kind, "comptime")) {
+      value = create_comptime_value(ctx->allocator, value->type, value->data,
+                                    node_location_is(mut, "let"));
+    } else {
+      value = create_value(ctx->allocator, value->type,
+                           node_location_is(mut, "let"));
+    }
     if (ctx->type == CONTEXT_TYPE_FUNCTION) {
       if (pub) {
         value_t err = create_comptime_error(
@@ -72,18 +86,11 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         CHECK_ERROR(ctx, err);
       }
       char *id = location_get(node_get_location(identifier), ctx->allocator);
-      if (ctx->comptime || kind && node_location_is(kind, "comptime")) {
-        value = context_create_comptime_value(ctx, value->type, value->data,
-                                              node_location_is(mut, "let"), id);
-      } else {
-        value = context_create_value(ctx, value->type,
-                                     node_location_is(mut, "let"), id);
-      }
+      value_t err = context_declar(ctx, id, value);
       allocator_free(ctx->allocator, id);
+      CHECK_ERROR(ctx, err);
     } else {
       char *id = location_get(node_get_location(identifier), ctx->allocator);
-      value = value_clone(value, ctx->allocator);
-      value->mut = node_location_is(mut, "let");
       value_t err =
           struct_type_add_attribute(ctx, ctx->self, id, value, pub != NULL);
       allocator_free(ctx->allocator, id);
