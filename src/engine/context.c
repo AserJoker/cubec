@@ -12,6 +12,7 @@
 #include "core/string.h"
 #include "engine/bool.h"
 #include "engine/error.h"
+#include "engine/float.h"
 #include "engine/integer.h"
 #include "engine/module.h"
 #include "engine/scope.h"
@@ -88,6 +89,7 @@ context_t create_context(allocator_t allocator) {
   init_str_type(self);
   init_integer_type(self);
   init_unsigned_type(self);
+  init_float_type(self);
   return self;
 }
 void context_store_type(context_t ctx, type_t type) {
@@ -126,7 +128,11 @@ value_t context_load(context_t ctx, const char *name) {
     }
     scope = scope->parent;
   }
-  return NULL;
+  struct_attribute_t attr = struct_type_get_attribute(ctx->global, name);
+  if (attr) {
+    return attr->value;
+  }
+  return create_error(ctx, "use of undeclared identifier '%s'", name);
 }
 
 void context_push_scope(context_t ctx) {

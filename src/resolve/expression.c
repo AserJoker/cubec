@@ -1,8 +1,30 @@
 #include "resolve/expression.h"
 #include "ast/node.h"
+#include "ast/node_type.h"
+#include "core/allocator.h"
 #include "engine/error.h"
+#include "engine/type.h"
+#include "engine/value.h"
+#include "resolve/literal_identifier.h"
+#include "resolve/literal_numeric.h"
 
 value_t resolve_expression(context_t ctx, ast_node_t node) {
-  return create_comptime_error(ctx, node_get_location(node),
-                               "unsupport expression");
+  value_t val = NULL;
+  if (node->type == NODE_TYPE_LITERAL_NUMERIC) {
+    val = resolve_literal_numeric(ctx, node);
+  } else if (node->type == NODE_TYPE_LITERAL_IDENTIFIER) {
+    val = resolve_literal_identifier(ctx, node);
+  } else {
+    val = create_comptime_error(ctx, node_get_location(node),
+                                "unsupport expression");
+  }
+  if (val->type->kind == TYPE_KIND_ERROR) {
+    return val;
+  }
+  if (val->comptime) {
+    allocator_free(ctx->allocator, node->data);
+    node->value = value_clone(val, ctx->allocator);
+    node->type = NODE_TYPE_VALUE;
+  }
+  return val;
 }

@@ -23,6 +23,25 @@ ast_node_t read_variable_declarator(allocator_t allocator,
   ast_add_child(allocator, node, "identifier", identifier);
   skip_comments(stream);
   token_t token = token_stream_get(stream);
+  if (token_is(token, TOKEN_TYPE_SYMBOL, ":")) {
+    stream->position++;
+    skip_comments(stream);
+    ast_node_t type = read_expression_value(allocator, stream);
+    if (!type) {
+      token_t start = array_get(stream->tokens, position);
+      token_t end = token_stream_get(stream);
+      err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                             stream->filename, "missing type");
+      goto onerror;
+    }
+    if (type->type == NODE_TYPE_ERROR) {
+      err = type;
+      goto onerror;
+    }
+    ast_add_child(allocator, node, "type", type);
+  }
+  skip_comments(stream);
+  token = token_stream_get(stream);
   if (token_is(token, TOKEN_TYPE_SYMBOL, "=")) {
     stream->position++;
     skip_comments(stream);

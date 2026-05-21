@@ -26,7 +26,6 @@ struct _struct_meta_t {
 typedef struct _struct_attribute_t *struct_attribute_t;
 struct _struct_attribute_t {
   bool pub;
-  bool mut;
   value_t value;
 };
 type_t create_struct_type(context_t ctx, const char *id, const char *name);
@@ -39,7 +38,7 @@ value_t struct_type_add_method(context_t ctx, type_t stru, const char *name,
 hash_map_t struct_type_get_methods(type_t stru);
 struct_attribute_t struct_type_get_method(type_t stru, const char *name);
 value_t struct_type_add_attribute(context_t ctx, type_t stru, const char *name,
-                                  value_t value, bool pub, bool mut);
+                                  value_t value, bool pub);
 hash_map_t struct_type_get_attributes(type_t stru);
 struct_attribute_t struct_type_get_attribute(type_t stru, const char *name);
 void struct_type_set_packed(type_t stru);

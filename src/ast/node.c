@@ -263,7 +263,7 @@ ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
 
 ast_node_t create_ast_value(allocator_t allocator, value_t value) {
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_VALUE);
-  node->value = value;
+  node->value = value_clone(value, allocator);
   return node;
 }
 location_t node_get_location(ast_node_t node) {

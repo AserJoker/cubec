@@ -1,8 +1,11 @@
 #include "resolve/statement_declaration.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "core/allocator.h"
+#include "core/location.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/struct.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/void.h"
@@ -62,6 +65,30 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     type_node = create_ast_value(ctx->allocator, type);
     ast_remove_child(declar, "type");
     ast_add_child(ctx->allocator, declar, "type", type_node);
+    if (ctx->type == CONTEXT_TYPE_FUNCTION) {
+      if (pub) {
+        value_t err = create_comptime_error(
+            ctx, node_get_location(pub), "pub only used in struct or global");
+        CHECK_ERROR(ctx, err);
+      }
+      char *id = location_get(node_get_location(identifier), ctx->allocator);
+      if (ctx->comptime || kind && node_location_is(kind, "comptime")) {
+        value = context_create_comptime_value(ctx, value->type, value->data,
+                                              node_location_is(mut, "let"), id);
+      } else {
+        value = context_create_value(ctx, value->type,
+                                     node_location_is(mut, "let"), id);
+      }
+      allocator_free(ctx->allocator, id);
+    } else {
+      char *id = location_get(node_get_location(identifier), ctx->allocator);
+      value = value_clone(value, ctx->allocator);
+      value->mut = node_location_is(mut, "let");
+      value_t err =
+          struct_type_add_attribute(ctx, ctx->self, id, value, pub != NULL);
+      allocator_free(ctx->allocator, id);
+      CHECK_ERROR(ctx, err);
+    }
   }
   return create_comptime_void(ctx);
 }

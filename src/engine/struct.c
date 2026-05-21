@@ -200,7 +200,7 @@ value_t struct_type_add_method(context_t ctx, type_t stru, const char *name,
       return create_error(ctx, "duplicate member '%s'", name);
     }
   }
-  value_t err = struct_type_add_attribute(ctx, stru, name, value, pub, false);
+  value_t err = struct_type_add_attribute(ctx, stru, name, value, pub);
   if (err->type->kind == TYPE_KIND_ERROR) {
     return err;
   }
@@ -222,24 +222,23 @@ static void struct_attribute_dispose(struct_attribute_t self,
   allocator_free(allocator, self->value);
 }
 static struct_attribute_t create_struct_attribute(allocator_t allocator,
-                                                  value_t value, bool pub,
-                                                  bool mut) {
+                                                  value_t value, bool pub) {
   struct_attribute_t self =
       allocator_alloc(allocator, sizeof(struct _struct_attribute_t),
                       (dispose_fn_t)struct_attribute_dispose);
   self->value = value;
   self->pub = pub;
-  self->mut = mut;
   return self;
 }
 
 value_t struct_type_add_attribute(context_t ctx, type_t stru, const char *name,
-                                  value_t value, bool pub, bool mut) {
+                                  value_t value, bool pub) {
   struct_meta_t meta = stru->meta;
-  if (hash_map_get(stru->meta, name, NULL, NULL)) {
+  if (hash_map_get(meta->attributes, name, NULL, NULL)) {
     return create_error(ctx, "duplicate member '%s'", name);
   }
-  hash_map_set(meta->attributes, create_cstring(ctx->allocator, name), value,
+  struct_attribute_t attr = create_struct_attribute(ctx->allocator, value, pub);
+  hash_map_set(meta->attributes, create_cstring(ctx->allocator, name), attr,
                NULL, NULL);
   return create_comptime_void(ctx);
 }

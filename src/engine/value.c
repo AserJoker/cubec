@@ -68,6 +68,11 @@ value_t value_safe_convert(value_t self, struct _context_t *ctx, type_t type) {
       return value;
     }
   }
+  if (type_is_equal(self_type, type)) {
+    value_t value = value_clone(self, ctx->allocator);
+    context_declar(ctx, NULL, value);
+    return value;
+  }
   return create_error(ctx, "cannot convert '%s' to '%s'", self_type->name,
                       type->name);
 }
