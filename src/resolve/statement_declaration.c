@@ -62,6 +62,14 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         CHECK_ERROR(ctx, err);
       }
     }
+    if (!kind || !node_location_is(kind, "comptime")) {
+      if (value->type->kind == TYPE_KIND_PTR) {
+        value_t err = create_comptime_error(
+            ctx, node_get_location(initialize),
+            "initialize non-comptime ptr from comptime value");
+        CHECK_ERROR(ctx, err);
+      }
+    }
     CHECK_ERROR(ctx, value);
     if (type) {
       type_t t = *(type_t *)type->data;

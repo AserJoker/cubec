@@ -5,8 +5,11 @@
 #include "engine/error.h"
 #include "engine/type.h"
 #include "engine/value.h"
+#include "resolve/expression_binary.h"
+#include "resolve/expression_member.h"
 #include "resolve/literal_identifier.h"
 #include "resolve/literal_numeric.h"
+#include "resolve/ptr_declarator.h"
 
 value_t resolve_expression(context_t ctx, ast_node_t node) {
   value_t val = NULL;
@@ -14,6 +17,12 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     val = resolve_literal_numeric(ctx, node);
   } else if (node->type == NODE_TYPE_LITERAL_IDENTIFIER) {
     val = resolve_literal_identifier(ctx, node);
+  } else if (node->type == NODE_TYPE_EXPRESSION_BINARY) {
+    val = resolve_expression_binary(ctx, node);
+  } else if (node->type == NODE_TYPE_PTR_DECLARATOR) {
+    val = resolve_ptr_declarator(ctx, node);
+  } else if (node->type == NODE_TYPE_EXPRESSION_MEMBER) {
+    val = resolve_expression_member(ctx, node);
   } else {
     val = create_comptime_error(ctx, node_get_location(node),
                                 "unsupport expression");
