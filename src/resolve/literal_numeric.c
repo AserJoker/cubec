@@ -7,6 +7,7 @@
 #include "engine/unsigned.h"
 #include <math.h>
 #include <stdbool.h>
+#include <string.h>
 
 value_t resolve_literal_numeric(context_t ctx, ast_node_t node) {
   location_t loc = node_get_location(node);
@@ -51,12 +52,22 @@ value_t resolve_literal_numeric(context_t ctx, ast_node_t node) {
         begin++;
       }
     }
-    if (*begin == 'l') {
+    if (strncmp(begin, "i8", 2) == 0) {
+      return create_comptime_i8(ctx, val, false, NULL);
+    } else if (strncmp(begin, "i16", 3) == 0) {
+      return create_comptime_i16(ctx, val, false, NULL);
+    } else if (strncmp(begin, "i32", 3) == 0) {
+      return create_comptime_i32(ctx, val, false, NULL);
+    } else if (strncmp(begin, "i64", 3) == 0) {
       return create_comptime_i64(ctx, val, false, NULL);
-    } else if (*begin == 'u' && *(begin + 1) == 'l') {
-      return create_comptime_u64(ctx, val, false, NULL);
-    } else if (*begin == 'u') {
+    } else if (strncmp(begin, "u8", 2) == 0) {
+      return create_comptime_u8(ctx, val, false, NULL);
+    } else if (strncmp(begin, "u16", 3) == 0) {
+      return create_comptime_u16(ctx, val, false, NULL);
+    } else if (strncmp(begin, "u32", 3) == 0) {
       return create_comptime_u32(ctx, val, false, NULL);
+    } else if (strncmp(begin, "u64", 3) == 0) {
+      return create_comptime_u64(ctx, val, false, NULL);
     } else {
       return create_comptime_i32(ctx, val, false, NULL);
     }
@@ -86,24 +97,38 @@ value_t resolve_literal_numeric(context_t ctx, ast_node_t node) {
         }
         fval = pow(fval, exp);
       }
-      if (*begin == 'l' && *(begin + 1) == 'f') {
-        return create_comptime_f64(ctx, ival, false, NULL);
-      } else if (*begin == 'f') {
+      if (strncmp(begin, "f16", 3) == 0) {
+        return create_comptime_f16(ctx, ival, false, NULL);
+      } else if (strncmp(begin, "f32", 3) == 0) {
         return create_comptime_f32(ctx, ival, false, NULL);
+      } else if (strncmp(begin, "f64", 3) == 0) {
+        return create_comptime_f64(ctx, ival, false, NULL);
       } else {
         return create_comptime_f32(ctx, ival, false, NULL);
       }
     } else {
-      if (*begin == 'l' && *(begin + 1) == 'f') {
-        return create_comptime_f64(ctx, ival, false, NULL);
-      } else if (*begin == 'l') {
+      if (strncmp(begin, "i8", 2) == 0) {
+        return create_comptime_i8(ctx, ival, false, NULL);
+      } else if (strncmp(begin, "i16", 3) == 0) {
+        return create_comptime_i16(ctx, ival, false, NULL);
+      } else if (strncmp(begin, "i32", 3) == 0) {
+        return create_comptime_i32(ctx, ival, false, NULL);
+      } else if (strncmp(begin, "i64", 3) == 0) {
         return create_comptime_i64(ctx, ival, false, NULL);
-      } else if (*begin == 'u' && *(begin + 1) == 'l') {
-        return create_comptime_u64(ctx, ival, false, NULL);
-      } else if (*begin == 'u') {
+      } else if (strncmp(begin, "u8", 2) == 0) {
+        return create_comptime_u8(ctx, ival, false, NULL);
+      } else if (strncmp(begin, "u16", 3) == 0) {
+        return create_comptime_u16(ctx, ival, false, NULL);
+      } else if (strncmp(begin, "u32", 3) == 0) {
         return create_comptime_u32(ctx, ival, false, NULL);
-      } else if (*begin == 'f') {
+      } else if (strncmp(begin, "u64", 3) == 0) {
+        return create_comptime_u64(ctx, ival, false, NULL);
+      } else if (strncmp(begin, "f16", 3) == 0) {
+        return create_comptime_f16(ctx, ival, false, NULL);
+      } else if (strncmp(begin, "f32", 3) == 0) {
         return create_comptime_f32(ctx, ival, false, NULL);
+      } else if (strncmp(begin, "f64", 3) == 0) {
+        return create_comptime_f64(ctx, ival, false, NULL);
       } else {
         return create_comptime_i32(ctx, ival, false, NULL);
       }
