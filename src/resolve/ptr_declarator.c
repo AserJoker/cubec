@@ -29,7 +29,7 @@ value_t resolve_ptr_declarator(context_t ctx, ast_node_t node) {
   if (node_location_is(kind, "*")) {
     ptr_type = create_ptr_type(ctx, t, mut, vol);
   } else {
-    // TODO: [*]
+    ptr_type = create_parray_type(ctx, t, mut, vol);
   }
   return create_type_value(ctx, ptr_type, false, NULL);
 }
