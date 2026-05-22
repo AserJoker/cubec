@@ -124,7 +124,7 @@ value_t create_comptime_str(context_t ctx, const char *fmt, ...) {
   va_start(args, fmt);
   size_t len = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
-  char msg[len];
+  char msg[len + 1];
   va_start(args, fmt);
   vsprintf(msg, fmt, args);
   va_end(args);

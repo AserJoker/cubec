@@ -156,7 +156,7 @@ ast_doc_t read_ast_node(allocator_t allocator, const char *filename,
   FILE *fp = fopen(filename, "r");
   if (!fp) {
     size_t len = snprintf(NULL, 0, "failed to open file: %s", filename);
-    char buf[len];
+    char buf[len+1];
     sprintf(buf, "failed to open file:%s", filename);
     ast_node_t err = create_ast_error(allocator, (position_t){}, (position_t){},
                                       filename, buf);

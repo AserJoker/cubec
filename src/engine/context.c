@@ -2,6 +2,7 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "core/allocator.h"
+#include "core/array.h"
 #include "core/compare.h"
 #include "core/hash.h"
 #include "core/hash_map.h"
@@ -46,6 +47,7 @@ static void context_dispose(context_t self, allocator_t allocator) {
   allocator_free(allocator, self->types);
   allocator_free(allocator, self->modules);
   allocator_free(allocator, self->dependences);
+  allocator_free(allocator, self->functions);
 }
 context_t create_context(allocator_t allocator) {
   context_t self = allocator_alloc(allocator, sizeof(struct _context_t),
@@ -75,11 +77,15 @@ context_t create_context(allocator_t allocator) {
   self->dependences = create_list(allocator, &(list_initialize_t){
                                                  .autofree = true,
                                              });
+  self->functions = create_array(allocator, &(array_initialize_t){
+                                                .autofree = true,
+                                            });
   self->root = create_scope(allocator, NULL);
   self->current = self->root;
   self->global = NULL;
   self->self = NULL;
   self->mod = NULL;
+  self->function = NULL;
   self->comptime = false;
   self->type = CONTEXT_TYPE_GLOBAL;
   init_type_type(self);
@@ -190,9 +196,9 @@ value_t context_load_module(context_t ctx, const char *filename) {
     allocator_free(ctx->allocator, fullname);
     size_t module_count = hash_map_get_size(ctx->modules);
     size_t len = snprintf(NULL, 0, "M%" PRIuPTR, module_count);
-    char id[len];
-    sprintf(id, "M%" PRIuPTR, module_count);
-    type_t stru = create_struct_type(ctx, id, "(nonamed)");
+    char name[len + 1];
+    sprintf(name, "M%" PRIuPTR, module_count);
+    type_t stru = create_struct_type(ctx, name);
     value_t vstru = create_type_value(ctx, stru, false, NULL);
     vstru = value_clone(vstru, ctx->allocator);
     mod = create_module(ctx->allocator, filename, vstru, doc);

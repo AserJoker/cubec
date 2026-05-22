@@ -107,6 +107,14 @@ struct _type_t {
   struct _type_operator_t opt;
 };
 
+typedef struct _ctype_t *ctype_t;
+struct _ctype_t {
+  type_t type;
+  bool mut;
+};
+
+ctype_t create_ctype(allocator_t allocator, type_t type, bool mut);
+
 type_t create_type(allocator_t allocator, type_kind_t kind, const char *name,
                    const char *id, size_t size, size_t align,
                    type_operator_t opt, void *meta);

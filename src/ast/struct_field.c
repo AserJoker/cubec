@@ -42,6 +42,7 @@ ast_node_t read_struct_field(allocator_t allocator, token_stream_t stream) {
                            stream->filename, "missing ':'");
     goto onerror;
   }
+  stream->position++;
   skip_comments(stream);
   ast_node_t type = read_expression_single(allocator, stream);
   if (!type) {

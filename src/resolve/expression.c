@@ -14,6 +14,7 @@
 #include "resolve/literal_string.h"
 #include "resolve/ptr_declarator.h"
 #include "resolve/slice_declarator.h"
+#include "resolve/struct_declarator.h"
 
 value_t resolve_expression(context_t ctx, ast_node_t node) {
   value_t val = NULL;
@@ -31,6 +32,8 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     val = resolve_array_declarator(ctx, node);
   } else if (node->type == NODE_TYPE_SLICE_DECLARATOR) {
     val = resolve_slice_declarator(ctx, node);
+  } else if (node->type == NODE_TYPE_STRUCT_DECLARATOR) {
+    val = resolve_struct_declarator(ctx, node);
   } else if (node->type == NODE_TYPE_EXPRESSION_MEMBER) {
     val = resolve_expression_member(ctx, node);
   } else if (node->type == NODE_TYPE_EXPRESSION_SLICE) {

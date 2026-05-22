@@ -7,6 +7,13 @@
 #include "engine/struct.h"
 #include "engine/value.h"
 #include <stdbool.h>
+
+ctype_t create_ctype(allocator_t allocator, type_t type, bool mut) {
+  ctype_t ctype = allocator_alloc(allocator, sizeof(struct _ctype_t), NULL);
+  ctype->type = type;
+  ctype->mut = mut;
+  return ctype;
+}
 static void type_dispose(type_t self, allocator_t allocator) {
   allocator_free(allocator, self->id);
   allocator_free(allocator, self->name);

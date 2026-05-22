@@ -28,7 +28,7 @@ struct _struct_attribute_t {
   bool pub;
   value_t value;
 };
-type_t create_struct_type(context_t ctx, const char *id, const char *name);
+type_t create_struct_type(context_t ctx, const char *name);
 value_t struct_type_add_field(context_t ctx, type_t stru, const char *name,
                               type_t type, bool pub, bool mut);
 array_t struct_type_get_fields(type_t stru);

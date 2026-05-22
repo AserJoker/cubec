@@ -74,13 +74,13 @@ static value_t ptr_set_field(value_t self, context_t ctx, const char *field,
 type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
   size_t len =
       snprintf(NULL, 0, "P%s%s%s", mut ? "" : "C", vol ? "" : "V", type->id);
-  char id[len];
+  char id[len + 1];
   sprintf(id, "P%s%s%s", mut ? "" : "C", vol ? "" : "V", type->id);
   type_t ptype = context_load_type(ctx, id);
   if (!ptype) {
     len = snprintf(NULL, 0, "*%s%s%s", mut ? "" : "const ",
                    vol ? "" : "volatile ", type->name);
-    char name[len];
+    char name[len + 1];
     sprintf(name, "*%s%s%s", mut ? "" : "const ", vol ? "" : "volatile ",
             type->name);
     ptr_meta_t meta = create_ptr_meta(ctx->allocator, type, mut, vol);
@@ -100,13 +100,13 @@ type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
 type_t create_parray_type(context_t ctx, type_t type, bool mut, bool vol) {
   size_t len =
       snprintf(NULL, 0, "PA%s%s%s", mut ? "" : "C", vol ? "" : "V", type->id);
-  char id[len];
+  char id[len + 1];
   sprintf(id, "PA%s%s%s", mut ? "" : "C", vol ? "" : "V", type->id);
   type_t ptype = context_load_type(ctx, id);
   if (!ptype) {
     len = snprintf(NULL, 0, "[*]%s%s%s", mut ? "" : "const ",
                    vol ? "" : "volatile ", type->name);
-    char name[len];
+    char name[len + 1];
     sprintf(name, "[*]%s%s%s", mut ? "" : "const ", vol ? "" : "volatile ",
             type->name);
     ptr_meta_t meta = create_ptr_meta(ctx->allocator, type, mut, vol);

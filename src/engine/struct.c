@@ -10,7 +10,10 @@
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/void.h"
+#include <inttypes.h>
 #include <stdalign.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 static void struct_meta_dispose(struct_meta_t self, allocator_t allocator) {
   allocator_free(allocator, self->attributes);
@@ -116,7 +119,7 @@ static value_t struct_call(value_t self, context_t ctx, size_t argc,
   return value_call(__call__, ctx, argc + 1, args);
 }
 
-type_t create_struct_type(context_t ctx, const char *id, const char *name) {
+type_t create_struct_type(context_t ctx, const char *name) {
   struct_meta_t meta = create_struct_meta(ctx->allocator);
   struct _type_operator_t opt = {
       .type_equal = struct_type_equal,
@@ -127,9 +130,51 @@ type_t create_struct_type(context_t ctx, const char *id, const char *name) {
       .len = struct_len,
       .call = struct_call,
   };
+  const char *id_name = name;
+  if (!id_name) {
+    id_name = "nonamed";
+  }
+  const char *parent_id = NULL;
+  if (ctx->type == CONTEXT_TYPE_STRUCT) {
+    parent_id = ctx->self->id;
+  } else if (ctx->type == CONTEXT_TYPE_FUNCTION) {
+    // TODO: function id;
+  }
+  size_t len = 0;
+  if (parent_id) {
+    len = snprintf(NULL, 0, "S%s%s", parent_id, id_name);
+  } else {
+    len = snprintf(NULL, 0, "S%s", id_name);
+  }
+  char base_id[len + 1];
+  if (parent_id) {
+    sprintf(base_id, "S%s%s", parent_id, id_name);
+  } else {
+    sprintf(base_id, "S%s", id_name);
+  }
+  module_t mod = ctx->mod;
+  char *id = NULL;
+  if (mod && hash_map_has(mod->structs, base_id, NULL, NULL)) {
+    for (size_t idx = 0;; idx++) {
+      size_t len = snprintf(NULL, 0, "%s%" PRIuPTR, base_id, idx);
+      char id_data[len + 1];
+      sprintf(id_data, "%s%" PRIuPTR, base_id, idx);
+      if (!hash_map_has(mod->structs, id_data, NULL, NULL)) {
+        id = create_cstring(ctx->allocator, id_data);
+        break;
+      }
+    }
+  } else {
+    id = create_cstring(ctx->allocator, base_id);
+  }
   type_t type = create_type(ctx->allocator, TYPE_KIND_STRUCT, name, id,
                             sizeof(char), alignof(struct {}), &opt, meta);
+  allocator_free(ctx->allocator, id);
   context_store_type(ctx, type);
+  if (mod) {
+    hash_map_set(mod->structs, type->id, type, NULL, NULL);
+    array_push(mod->indexed_structs, type->id);
+  }
   return type;
 }
 

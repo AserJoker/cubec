@@ -1,6 +1,7 @@
 #ifndef _H_ENGINE_CONTEXT_
 #define _H_ENGINE_CONTEXT_
 #include "core/allocator.h"
+#include "core/array.h"
 #include "core/hash_map.h"
 #include "core/list.h"
 #include "core/rbtree.h"
@@ -31,7 +32,9 @@ struct _context_t {
   context_type_t type;
   list_t trace;
   list_t dependences;
+  value_t function;
   bool comptime;
+  array_t functions;
 };
 typedef struct _trace_t *trace_t;
 struct _trace_t {

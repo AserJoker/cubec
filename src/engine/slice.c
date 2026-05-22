@@ -128,12 +128,12 @@ static value_t slice_set(value_t self, context_t ctx, value_t field,
 }
 type_t create_slice_type(context_t ctx, type_t type) {
   size_t len = snprintf(NULL, 0, "S%s", type->id);
-  char id[len];
+  char id[len + 1];
   sprintf(id, "S%s", type->id);
   type_t stype = context_load_type(ctx, id);
   if (!stype) {
     size_t len = snprintf(NULL, 0, "S%s", type->name);
-    char name[len];
+    char name[len + 1];
     sprintf(name, "[]%s", type->name);
     slice_meta_t meta = create_slice_meta(ctx->allocator, type);
     struct _type_operator_t opt = {

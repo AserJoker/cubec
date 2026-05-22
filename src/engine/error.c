@@ -22,7 +22,7 @@ value_t create_error(context_t ctx, const char *fmt, ...) {
   va_start(args, fmt);
   size_t len = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
-  char msg[len];
+  char msg[len + 1];
   va_start(args, fmt);
   vsprintf(msg, fmt, args);
   va_end(args);
@@ -40,7 +40,7 @@ value_t create_comptime_error(context_t ctx, location_t loc, const char *fmt,
   va_start(args, fmt);
   size_t len = vsnprintf(NULL, 0, fmt, args);
   va_end(args);
-  char msg[len];
+  char msg[len + 1];
   va_start(args, fmt);
   vsprintf(msg, fmt, args);
   va_end(args);
@@ -70,10 +70,10 @@ char *error_format(allocator_t allocator, value_t error) {
   size_t column_number = err->loc.end.column + 1;
   char *line_data = location_get_line(err->loc, allocator);
   size_t len = snprintf(NULL, 0, "%" PRIuPTR " |%s", line_number, line_data);
-  char line[len];
+  char line[len + 1];
   sprintf(line, "%" PRIuPTR " |%s", line_number, line_data);
   allocator_free(allocator, line_data);
-  char mask[len];
+  char mask[len + 1];
   size_t prefix_len = snprintf(NULL, 0, "%" PRIuPTR " |", line_number);
   size_t idx = 0;
   for (idx = 0; idx < len; idx++) {
@@ -96,7 +96,7 @@ char *error_format(allocator_t allocator, value_t error) {
   len = snprintf(NULL, 0, "%s:%" PRIuPTR ":%" PRIuPTR ":%s\n%s\n%s",
                  err->loc.filename, line_number, column_number, err->message,
                  line, mask);
-  char *message = allocator_alloc(allocator, len, NULL);
+  char *message = allocator_alloc(allocator, len + 1, NULL);
   sprintf(message, "%s:%" PRIuPTR ":%" PRIuPTR ":%s\n%s\n%s", err->loc.filename,
           line_number, column_number, err->message, line, mask);
   return message;

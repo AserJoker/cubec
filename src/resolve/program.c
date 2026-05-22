@@ -8,6 +8,7 @@
 #include "engine/void.h"
 #include "resolve/statement_declaration.h"
 #include "resolve/statement_import.h"
+#include "resolve/statement_struct.h"
 
 value_t resolve_program(context_t ctx, ast_node_t node) {
   ast_node_t statements = ast_get_child(node, "statements");
@@ -20,6 +21,7 @@ value_t resolve_program(context_t ctx, ast_node_t node) {
       err = resolve_statement_declaration(ctx, sts);
     } else if (sts->type == NODE_TYPE_STATEMENT_FUNCTION) {
     } else if (sts->type == NODE_TYPE_STATEMENT_STRUCT) {
+      err = resolve_statement_struct(ctx, sts);
     } else if (sts->type == NODE_TYPE_STATEMENT_ENUM) {
     } else {
       err = create_comptime_error(ctx, node_get_location(sts),

@@ -143,12 +143,12 @@ static value_t arr_slice(value_t self, context_t ctx, value_t start,
 }
 type_t create_arr_type(context_t ctx, type_t type, size_t length) {
   size_t len = snprintf(NULL, 0, "A%" PRIuPTR "%s", length, type->id);
-  char id[len];
+  char id[len + 1];
   sprintf(id, "A%" PRIuPTR "%s", length, type->id);
   type_t atype = context_load_type(ctx, id);
   if (!atype) {
     len = snprintf(NULL, 0, "[%" PRIuPTR "]%s", length, type->name);
-    char name[len];
+    char name[len + 1];
     sprintf(name, "[%" PRIuPTR "]%s", length, type->name);
     arr_meta_t meta = create_arr_meta(ctx->allocator, type, length);
     struct _type_operator_t opt = {

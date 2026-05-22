@@ -1,0 +1,43 @@
+#ifndef _H_ENGINE_FUNCTION_
+#define _H_ENGINE_FUNCTION_
+#include "ast/node.h"
+#include "core/allocator.h"
+#include "core/array.h"
+#include "core/hash_map.h"
+#include "engine/context.h"
+#include "engine/type.h"
+#include "engine/value.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+typedef value_t (*handle_t)(context_t ctx, size_t argc, value_t *argv);
+typedef struct _function_declar_t *function_declar_t;
+typedef enum _function_kind_t {
+  FUNCTION_KIND_NORMAL,
+  FUNCTION_KIND_NATIVE,
+  FUNCTION_KIND_EXTERN,
+} function_kind_t;
+struct _function_declar_t {
+  char *id;
+  function_kind_t kind;
+  type_t self;
+  type_t global;
+  hash_map_t closure;
+  union {
+    ast_node_t node;
+    handle_t handle;
+    void *ext;
+  };
+};
+function_declar_t create_function_declar(allocator_t allocator, const char *id,
+                                         ast_node_t node, type_t self,
+                                         type_t global);
+type_t create_function_type(context_t ctx, ctype_t type, array_t argv,
+                            bool variadic);
+value_t create_function(context_t ctx, type_t type, ast_node_t node);
+value_t function_add_closure(value_t self, context_t ctx, const char *name,
+                             value_t value);
+#ifdef __cplusplus
+}
+#endif
+#endif
