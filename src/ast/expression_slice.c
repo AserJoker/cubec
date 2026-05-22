@@ -48,7 +48,7 @@ ast_node_t read_expression_slice(allocator_t allocator, token_stream_t stream) {
                            stream->filename, "missing ']'");
     goto onerror;
   }
-
+  stream->position++;
   node->start = array_get(stream->tokens, position);
   node->end = token_stream_get(stream);
   node->filename = stream->filename;

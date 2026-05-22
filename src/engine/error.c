@@ -67,7 +67,7 @@ char *error_format(allocator_t allocator, value_t error) {
     return create_cstring(allocator, err->message);
   }
   size_t line_number = err->loc.end.line + 1;
-  size_t column_number = err->loc.end.column;
+  size_t column_number = err->loc.end.column + 1;
   char *line_data = location_get_line(err->loc, allocator);
   size_t len = snprintf(NULL, 0, "%" PRIuPTR " |%s", line_number, line_data);
   char line[len];

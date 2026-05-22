@@ -92,10 +92,9 @@ static value_t str_slice(value_t self, context_t ctx, value_t start,
   if (self->comptime) {
     uint8_t *data = self->data;
     data = data + s * base_type->size;
-    return create_comptime_slice(ctx, slice_type, data, s, len, self->mut,
-                                 NULL);
+    return create_comptime_slice(ctx, slice_type, data, s, len, false, NULL);
   } else {
-    return context_create_value(ctx, slice_type, self->mut, NULL);
+    return context_create_value(ctx, slice_type, false, NULL);
   }
 }
 static value_t str_length(value_t self, context_t ctx) {

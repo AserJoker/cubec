@@ -63,10 +63,22 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
     }
     if (!kind || !node_location_is(kind, "comptime")) {
-      if (value->type->kind == TYPE_KIND_PTR) {
+      if (value->type->kind == TYPE_KIND_PTR ||
+          value->type->kind == TYPE_KIND_SLICE ||
+          value->type->kind == TYPE_KIND_STR) {
         value_t err = create_comptime_error(
             ctx, node_get_location(initialize),
             "initialize non-comptime ptr from comptime value");
+        CHECK_ERROR(ctx, err);
+      }
+    }
+    if (value->type->kind == TYPE_KIND_PTR ||
+        value->type->kind == TYPE_KIND_SLICE ||
+        value->type->kind == TYPE_KIND_STR) {
+      if (!value->mut && node_location_is(mut, "let")) {
+        value_t err =
+            create_comptime_error(ctx, node_get_location(initialize),
+                                  "initialize non-const ptr from const value");
         CHECK_ERROR(ctx, err);
       }
     }
