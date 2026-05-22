@@ -31,7 +31,7 @@ function_declar_t create_function_declar(allocator_t allocator, const char *id,
   declar->global = global;
   declar->id = create_cstring(allocator, id);
   declar->node = node;
-  declar->kind = FUNCTION_KIND_NATIVE;
+  declar->kind = FUNCTION_KIND_NORMAL;
   declar->closure =
       create_hash_map(allocator, &(hash_map_initialize_t){
                                      .autofree_key = true,
@@ -69,6 +69,10 @@ static function_meta_t create_function_meta(allocator_t allocator, ctype_t type,
 
 static value_t function_call(value_t self, context_t ctx, size_t argc,
                              value_t *argv) {
+  function_declar_t declar = *(function_declar_t *)self->data;
+  if (declar->kind == FUNCTION_KIND_NATIVE) {
+    return declar->handle(ctx, argc, argv);
+  }
   return create_error(ctx, "not implement");
 }
 
@@ -194,10 +198,10 @@ value_t create_function(context_t ctx, type_t type, ast_node_t node) {
   char base_id[len + 1];
   if (identifier) {
     char *name = location_get(node_get_location(identifier), ctx->allocator);
-    sprintf(base_id, "%sF%s", parent_id, name);
+    sprintf(base_id, "%s_%s", parent_id, name);
     allocator_free(ctx->allocator, name);
   } else {
-    sprintf(base_id, "%sFnonamed", parent_id);
+    sprintf(base_id, "%s_nonamed", parent_id);
   }
   char *id = NULL;
   module_t mod = ctx->mod;

@@ -7,6 +7,7 @@
 #include "core/string.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/function.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/void.h"
@@ -138,17 +139,18 @@ type_t create_struct_type(context_t ctx, const char *name) {
   if (ctx->type == CONTEXT_TYPE_STRUCT) {
     parent_id = ctx->self->id;
   } else if (ctx->type == CONTEXT_TYPE_FUNCTION) {
-    // TODO: function id;
+    function_declar_t declar = *(function_declar_t *)ctx->function->data;
+    parent_id = declar->id;
   }
   size_t len = 0;
   if (parent_id) {
-    len = snprintf(NULL, 0, "S%s%s", parent_id, id_name);
+    len = snprintf(NULL, 0, "S%s_%s", parent_id, id_name);
   } else {
     len = snprintf(NULL, 0, "S%s", id_name);
   }
   char base_id[len + 1];
   if (parent_id) {
-    sprintf(base_id, "S%s%s", parent_id, id_name);
+    sprintf(base_id, "S%s_%s", parent_id, id_name);
   } else {
     sprintf(base_id, "S%s", id_name);
   }
@@ -156,9 +158,9 @@ type_t create_struct_type(context_t ctx, const char *name) {
   char *id = NULL;
   if (mod && hash_map_has(mod->structs, base_id, NULL, NULL)) {
     for (size_t idx = 0;; idx++) {
-      size_t len = snprintf(NULL, 0, "%s%" PRIuPTR, base_id, idx);
+      size_t len = snprintf(NULL, 0, "%sI%" PRIuPTR, base_id, idx);
       char id_data[len + 1];
-      sprintf(id_data, "%s%" PRIuPTR, base_id, idx);
+      sprintf(id_data, "%sI%" PRIuPTR, base_id, idx);
       if (!hash_map_has(mod->structs, id_data, NULL, NULL)) {
         id = create_cstring(ctx->allocator, id_data);
         break;

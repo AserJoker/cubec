@@ -49,6 +49,7 @@ static void context_dispose(context_t self, allocator_t allocator) {
   allocator_free(allocator, self->dependences);
   allocator_free(allocator, self->functions);
 }
+
 context_t create_context(allocator_t allocator) {
   context_t self = allocator_alloc(allocator, sizeof(struct _context_t),
                                    (dispose_fn_t)(context_dispose));
