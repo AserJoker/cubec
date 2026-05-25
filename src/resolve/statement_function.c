@@ -1,22 +1,24 @@
-#include "resolve/statement_struct.h"
+#include "resolve/statement_function.h"
 #include "ast/node.h"
+#include "core/allocator.h"
+#include "core/location.h"
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/struct.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/void.h"
-#include "resolve/struct_declarator.h"
+#include "resolve/function_declarator.h"
 
-value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
-  ast_node_t stru = ast_get_child(node, "struct");
-  ast_node_t identifier = ast_get_child(node, "identifier");
-  ast_node_t pub = ast_get_child(stru, "pub");
+value_t resolve_statement_function(context_t ctx, ast_node_t node) {
+  ast_node_t func = ast_get_child(node, "function");
+  ast_node_t identifier = ast_get_child(func, "identifier");
+  ast_node_t pub = ast_get_child(func, "pub");
   if (ctx->type == CONTEXT_TYPE_FUNCTION && pub) {
     return create_comptime_error(ctx, node_get_location(pub),
                                  "invalid pub declarator");
   }
-  value_t val = resolve_struct_declarator(ctx, stru);
+  value_t val = resolve_function_declarator(ctx, func);
   if (val->type->kind == TYPE_KIND_ERROR) {
     if (ctx->comptime) {
       return val;
@@ -25,8 +27,8 @@ value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
     }
   } else {
     if (!identifier) {
-      value_t err = create_comptime_error(ctx, node_get_location(stru),
-                                          "missing struct name");
+      value_t err = create_comptime_error(ctx, node_get_location(func),
+                                          "missing function name");
       if (ctx->comptime) {
         return err;
       } else {
@@ -44,7 +46,7 @@ value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
     }
     allocator_free(ctx->allocator, name);
     if (err->type->kind == TYPE_KIND_ERROR) {
-      value_t err = convert_comptime_error(ctx, node_get_location(node), err);
+      err = convert_comptime_error(ctx, node_get_location(node), err);
       if (ctx->comptime) {
         return err;
       } else {

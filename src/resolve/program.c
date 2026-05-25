@@ -7,6 +7,7 @@
 #include "engine/value.h"
 #include "engine/void.h"
 #include "resolve/statement_declaration.h"
+#include "resolve/statement_function.h"
 #include "resolve/statement_import.h"
 #include "resolve/statement_struct.h"
 
@@ -20,6 +21,7 @@ value_t resolve_program(context_t ctx, ast_node_t node) {
     } else if (sts->type == NODE_TYPE_STATEMENT_DECLARATION) {
       err = resolve_statement_declaration(ctx, sts);
     } else if (sts->type == NODE_TYPE_STATEMENT_FUNCTION) {
+      err = resolve_statement_function(ctx, sts);
     } else if (sts->type == NODE_TYPE_STATEMENT_STRUCT) {
       err = resolve_statement_struct(ctx, sts);
     } else if (sts->type == NODE_TYPE_STATEMENT_ENUM) {

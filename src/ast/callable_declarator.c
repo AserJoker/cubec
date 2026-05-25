@@ -1,4 +1,6 @@
 #include "ast/callable_declarator.h"
+#include "ast/callable_argument.h"
+#include "ast/callable_argument_rest.h"
 #include "ast/expression.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -31,7 +33,10 @@ ast_node_t read_callable_declarator(allocator_t allocator,
   if (!token_is(token, TOKEN_TYPE_SYMBOL, ")")) {
     for (;;) {
       skip_comments(stream);
-      ast_node_t arg = read_expression_value(allocator, stream);
+      ast_node_t arg = read_callable_argument(allocator, stream);
+      if (!arg) {
+        arg = read_callable_argument_rest(allocator, stream);
+      }
       if (!arg) {
         goto onerror;
       }

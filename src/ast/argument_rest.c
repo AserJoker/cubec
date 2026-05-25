@@ -17,7 +17,7 @@ ast_node_t read_argument_rest(allocator_t allocator, token_stream_t stream) {
   if (token_is(token, TOKEN_TYPE_KEYWORD, "const") ||
       token_is(token, TOKEN_TYPE_KEYWORD, "mut")) {
     ast_node_t mutable = read_literal_keyword(allocator, stream);
-    ast_add_child(allocator, node, "mutable", mutable);
+    ast_add_child(allocator, node, "mut", mutable);
     skip_comments(stream);
   }
   token = token_stream_get(stream);

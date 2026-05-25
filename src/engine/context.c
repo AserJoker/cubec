@@ -14,6 +14,7 @@
 #include "engine/bool.h"
 #include "engine/error.h"
 #include "engine/float.h"
+#include "engine/function.h"
 #include "engine/integer.h"
 #include "engine/module.h"
 #include "engine/scope.h"
@@ -92,6 +93,7 @@ context_t create_context(allocator_t allocator) {
   init_type_type(self);
   init_void_type(self);
   init_error_type(self);
+  init_template_type(self);
   init_bool_type(self);
   init_str_type(self);
   init_integer_type(self);

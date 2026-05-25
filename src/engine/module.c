@@ -46,7 +46,7 @@ module_t create_module(allocator_t allocator, const char *filename,
   mod->functions =
       create_hash_map(allocator, &(hash_map_initialize_t){
                                      .autofree_key = false,
-                                     .autofree_value = false,
+                                     .autofree_value = true,
                                      .compare = (compare_fn_t)strcmp,
                                      .hash = (hash_fn_t)cstring_sdb,
                                  });

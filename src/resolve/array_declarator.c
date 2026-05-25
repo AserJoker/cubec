@@ -1,6 +1,7 @@
 #include "resolve/array_declarator.h"
 #include "ast/node.h"
 #include "engine/arr.h"
+#include "engine/context.h"
 #include "engine/error.h"
 #include "engine/integer.h"
 #include "engine/type.h"
@@ -17,12 +18,15 @@ value_t resolve_array_declarator(context_t ctx, ast_node_t node) {
   if (vtype->type->kind == TYPE_KIND_ERROR) {
     return vtype;
   }
-  type_t base_type = *(type_t *)vtype->data;
   value_t vlen = resolve_expression(ctx, length);
-  if (!vlen->comptime) {
+  if (vlen->type->kind == TYPE_KIND_ERROR) {
+    return vlen;
+  }
+  if (!ctx->comptime && !vlen->comptime) {
     return create_comptime_error(ctx, node_get_location(length),
                                  "array length is not comptime");
   }
+  type_t base_type = *(type_t *)vtype->data;
   uint64_t len = 0;
   if (vlen->type->kind >= TYPE_KIND_I8 && vlen->type->kind <= TYPE_KIND_I64) {
     int64_t ival = integer_get_value(vlen);

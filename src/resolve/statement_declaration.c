@@ -5,6 +5,7 @@
 #include "core/location.h"
 #include "engine/context.h"
 #include "engine/error.h"
+#include "engine/function.h"
 #include "engine/struct.h"
 #include "engine/type.h"
 #include "engine/value.h"
@@ -32,7 +33,10 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     ast_node_t type_node = ast_get_child(declar, "type");
     value_t type = NULL;
     if (type_node) {
+      bool comptime = ctx->comptime;
+      ctx->comptime = true;
       type = resolve_type(ctx, type_node);
+      ctx->comptime = comptime;
       CHECK_ERROR(ctx, type);
     }
     if (initialize->type == NODE_TYPE_INITIALIZE_LIST) {
@@ -62,7 +66,20 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         CHECK_ERROR(ctx, err);
       }
     }
-    if (!kind || !node_location_is(kind, "comptime")) {
+    if (!ctx->comptime && (!kind || !node_location_is(kind, "comptime"))) {
+      if (value->type->kind == TYPE_KIND_TYPE) {
+        value_t err = create_comptime_error(
+            ctx, node_get_location(initialize),
+            "type kind value is only declaration in comptime context");
+        CHECK_ERROR(ctx, err);
+      }
+    }
+    if (value->type->kind == TYPE_KIND_VOID) {
+      value_t err = create_comptime_error(ctx, node_get_location(initialize),
+                                          "cannot declar void value");
+      CHECK_ERROR(ctx, err);
+    }
+    if ((!kind || !node_location_is(kind, "comptime")) && !ctx->comptime) {
       if (value->type->kind == TYPE_KIND_PTR ||
           value->type->kind == TYPE_KIND_SLICE ||
           value->type->kind == TYPE_KIND_STR) {
@@ -82,10 +99,27 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         CHECK_ERROR(ctx, err);
       }
     }
+    if (value->type->kind == TYPE_KIND_FUNCTION) {
+      function_declar_t declar = *(function_declar_t *)value->data;
+      if (declar->kind == FUNCTION_KIND_NORMAL) {
+        ast_node_t func_kind = ast_get_child(declar->node, "kind");
+        if (func_kind && node_location_is(func_kind, "comptime") &&
+            (!kind || !node_location_is(kind, "comptime")) && !ctx->comptime) {
+          value_t err = create_comptime_error(
+              ctx, node_get_location(initialize),
+              "initialize non-comptime function from comptime value");
+          CHECK_ERROR(ctx, err);
+        }
+      }
+    }
     CHECK_ERROR(ctx, value);
     if (type) {
       type_t t = *(type_t *)type->data;
       value = value_safe_convert(value, ctx, t);
+      if (value->type->kind == TYPE_KIND_ERROR) {
+        value =
+            convert_comptime_error(ctx, node_get_location(initialize), value);
+      }
       CHECK_ERROR(ctx, value);
     }
     type = create_type_value(ctx, value->type, false, NULL);

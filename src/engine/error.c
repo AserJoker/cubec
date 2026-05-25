@@ -79,7 +79,7 @@ char *error_format(allocator_t allocator, value_t error) {
   for (idx = 0; idx < len; idx++) {
     if (err->loc.end.line == err->loc.begin.line) {
       if (idx < err->loc.begin.column + prefix_len ||
-          idx >= column_number + prefix_len) {
+          idx >= column_number + prefix_len - 1) {
         mask[idx] = ' ';
       } else {
         mask[idx] = '^';
