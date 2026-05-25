@@ -121,7 +121,7 @@ static value_t slice_slice(value_t self, context_t ctx, value_t start,
 static value_t slice_set(value_t self, context_t ctx, value_t field,
                          value_t value) {
   value_t item = slice_get(self, ctx, field);
-  if (item->type == TYPE_KIND_ERROR) {
+  if (item->type->kind == TYPE_KIND_ERROR) {
     return item;
   }
   return value_assigment(item, ctx, value);

@@ -14,10 +14,11 @@ ast_node_t read_argument_rest(allocator_t allocator, token_stream_t stream) {
   ast_node_t err = NULL;
   size_t position = stream->position;
   token_t token = token_stream_get(stream);
+  ast_node_t mut = NULL;
   if (token_is(token, TOKEN_TYPE_KEYWORD, "const") ||
       token_is(token, TOKEN_TYPE_KEYWORD, "mut")) {
-    ast_node_t mutable = read_literal_keyword(allocator, stream);
-    ast_add_child(allocator, node, "mut", mutable);
+    mut = read_literal_keyword(allocator, stream);
+    ast_add_child(allocator, node, "mut", mut);
     skip_comments(stream);
   }
   token = token_stream_get(stream);
@@ -57,6 +58,13 @@ ast_node_t read_argument_rest(allocator_t allocator, token_stream_t stream) {
       goto onerror;
     }
     ast_add_child(allocator, node, "type", type);
+  } else if (mut) {
+    token_t start = array_get(stream->tokens, position);
+    token_t end = token_stream_get(stream);
+    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
+                           stream->filename,
+                           "c-like rest argument cannot be declar with const");
+    goto onerror;
   }
   node->start = array_get(stream->tokens, position);
   node->end = token_stream_get(stream);

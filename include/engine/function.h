@@ -16,24 +16,31 @@ typedef enum _function_kind_t {
   FUNCTION_KIND_NORMAL,
   FUNCTION_KIND_NATIVE,
   FUNCTION_KIND_EXTERN,
+  FUNCTION_KIND_COMPTIME,
   FUNCTION_KIND_TEMPLATE,
 } function_kind_t;
 struct _function_declar_t {
   char *id;
   function_kind_t kind;
   type_t self;
-  type_t global;
+  module_t mod;
   hash_map_t closure;
   union {
     ast_node_t node;
     handle_t handle;
-    void *ext;
+    void *data;
   };
 };
+typedef struct _function_meta_t *function_meta_t;
+struct _function_meta_t {
+  ctype_t type;
+  array_t args;
+  bool variadic;
+};
 void init_template_type(context_t ctx);
-function_declar_t create_function_declar(allocator_t allocator, const char *id,
-                                         ast_node_t node, type_t self,
-                                         type_t global);
+function_declar_t create_function_declar(allocator_t allocator,
+                                         function_kind_t kind, const char *id,
+                                         type_t self, module_t mod);
 type_t create_function_type(context_t ctx, ctype_t type, array_t argv,
                             bool variadic);
 value_t create_function(context_t ctx, type_t type, ast_node_t node,

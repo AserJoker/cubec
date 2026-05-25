@@ -15,10 +15,11 @@ ast_node_t read_callable_argument_rest(allocator_t allocator,
   ast_node_t err = NULL;
   size_t position = stream->position;
   token_t token = token_stream_get(stream);
+  ast_node_t mut = NULL;
   if (token_is(token, TOKEN_TYPE_KEYWORD, "const") ||
       token_is(token, TOKEN_TYPE_KEYWORD, "mut")) {
-    ast_node_t mutable = read_literal_keyword(allocator, stream);
-    ast_add_child(allocator, node, "mut", mutable);
+    mut = read_literal_keyword(allocator, stream);
+    ast_add_child(allocator, node, "mut", mut);
     skip_comments(stream);
   }
   token = token_stream_get(stream);

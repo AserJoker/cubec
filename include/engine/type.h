@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 typedef enum _type_kind_t {
+  TYPE_KIND_INTERRUPT,
   TYPE_KIND_ERROR,
   TYPE_KIND_NIL,
   TYPE_KIND_INFER,

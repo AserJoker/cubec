@@ -78,7 +78,7 @@ static value_t arr_get(value_t self, context_t ctx, value_t field) {
 static value_t arr_set(value_t self, context_t ctx, value_t field,
                        value_t value) {
   value_t item = arr_get(self, ctx, field);
-  if (item->type == TYPE_KIND_ERROR) {
+  if (item->type->kind == TYPE_KIND_ERROR) {
     return item;
   }
   return value_assigment(item, ctx, value);

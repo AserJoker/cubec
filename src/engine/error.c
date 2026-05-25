@@ -56,7 +56,7 @@ value_t convert_comptime_error(context_t ctx, location_t loc, value_t error) {
   error_t data = error->data;
   struct _error_t err = {
       .message = data->message,
-      .loc = loc,
+      .loc = data->loc.filename ? data->loc : loc,
   };
   type_t type = context_load_type(ctx, "error");
   return context_create_comptime_value(ctx, type, &err, false, NULL);
