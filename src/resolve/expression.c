@@ -56,7 +56,7 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
   if (val->type->kind == TYPE_KIND_ERROR) {
     return val;
   }
-  if (val->comptime && node->type != NODE_TYPE_FUNCTION_DECLARATOR) {
+  if (val->comptime) {
     allocator_free(ctx->allocator, node->data);
     node->value = value_clone(val, ctx->allocator);
     node->type = NODE_TYPE_VALUE;

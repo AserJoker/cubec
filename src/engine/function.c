@@ -47,7 +47,8 @@ void init_template_type(context_t ctx) {
 static void function_declar_dispose(function_declar_t self,
                                     allocator_t allocator) {
   if (self->kind == FUNCTION_KIND_NORMAL ||
-      self->kind == FUNCTION_KIND_COMPTIME) {
+      self->kind == FUNCTION_KIND_COMPTIME ||
+      self->kind == FUNCTION_KIND_TEMPLATE) {
     allocator_free(allocator, self->node);
   }
   allocator_free(allocator, self->id);
@@ -485,7 +486,7 @@ value_t create_template(context_t ctx, ast_node_t node) {
   }
   function_declar_t declar = create_function_declar(
       ctx->allocator, FUNCTION_KIND_TEMPLATE, id, id, ctx->self, ctx->mod);
-  declar->node = node;
+  declar->node = clone_ast_node(ctx->allocator, node);
   array_push(ctx->functions, declar);
   allocator_free(ctx->allocator, id);
   return context_create_comptime_value(ctx, type, &declar, false, NULL);

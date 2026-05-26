@@ -39,14 +39,6 @@ ast_node_t read_statement_block(allocator_t allocator, token_stream_t stream) {
       token = token_stream_get(stream);
       if (token_is(token, TOKEN_TYPE_SYMBOL, "}")) {
         break;
-      } else if (token_is(token, TOKEN_TYPE_SYMBOL, ",")) {
-        stream->position++;
-      } else {
-        token_t start = array_get(stream->tokens, position);
-        token_t end = token_stream_get(stream);
-        err = create_ast_error(allocator, start->loc.begin, end->loc.end,
-                               stream->filename, "unexpected expression");
-        goto onerror;
       }
     }
   }
