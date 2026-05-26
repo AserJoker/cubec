@@ -7,8 +7,8 @@
 extern "C" {
 #endif
 
-ast_node_t read_expression_generics(allocator_t allocator,
-                                        token_stream_t stream);
+ast_node_t read_expression_compute_member(allocator_t allocator,
+                                          token_stream_t stream);
 #ifdef __cplusplus
 }
 #endif

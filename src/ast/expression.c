@@ -5,7 +5,7 @@
 #include "ast/expression_assigment.h"
 #include "ast/expression_call.h"
 #include "ast/expression_comma.h"
-#include "ast/expression_generics.h"
+#include "ast/expression_compute_member.h"
 #include "ast/expression_group.h"
 #include "ast/expression_member.h"
 #include "ast/expression_slice.h"
@@ -54,7 +54,7 @@ ast_node_t read_expression_value(allocator_t allocator, token_stream_t stream) {
         next = read_expression_call(allocator, stream);
       }
       if (!next) {
-        next = read_expression_generics(allocator, stream);
+        next = read_expression_compute_member(allocator, stream);
       }
       if (next) {
         if (next->type == NODE_TYPE_ERROR) {
@@ -66,7 +66,7 @@ ast_node_t read_expression_value(allocator_t allocator, token_stream_t stream) {
           ast_add_child(allocator, next, "host", node);
           node = next;
           next->start = array_get(stream->tokens, position);
-        } else if (next->type == NODE_TYPE_EXPRESSION_GENERICS) {
+        } else if (next->type == NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
           ast_add_child(allocator, next, "host", node);
           node = next;
           next->start = array_get(stream->tokens, position);

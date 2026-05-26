@@ -107,7 +107,7 @@ TEST_F(test_expression, generics) {
       allocator, &position, position.offset + len, "./test.cubec");
   ASSERT_NE(stream, nullptr);
   ast_node_t node = read_expression(allocator, stream);
-  ASSERT_EQ(node->type, NODE_TYPE_EXPRESSION_GENERICS);
+  ASSERT_EQ(node->type, NODE_TYPE_EXPRESSION_COMPUTE_MEMBER);
   ast_node_t host = ast_get_child(node, "host");
   ASSERT_EQ(host->type, NODE_TYPE_LITERAL_IDENTIFIER);
   ASSERT_TRUE(node_location_is(host, "abc"));
@@ -140,7 +140,7 @@ TEST_F(test_expression, generics) {
                                "./test.cubec");
   ASSERT_NE(stream, nullptr);
   node = read_expression(allocator, stream);
-  ASSERT_EQ(node->type, NODE_TYPE_EXPRESSION_GENERICS);
+  ASSERT_EQ(node->type, NODE_TYPE_EXPRESSION_COMPUTE_MEMBER);
   host = ast_get_child(node, "host");
   ASSERT_EQ(host->type, NODE_TYPE_LITERAL_IDENTIFIER);
   ASSERT_TRUE(node_location_is(host, "abc"));

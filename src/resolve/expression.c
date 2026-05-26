@@ -9,6 +9,7 @@
 #include "resolve/callable_declarator.h"
 #include "resolve/expression_binary.h"
 #include "resolve/expression_call.h"
+#include "resolve/expression_compute_member.h"
 #include "resolve/expression_member.h"
 #include "resolve/expression_slice.h"
 #include "resolve/function_declarator.h"
@@ -47,6 +48,8 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     val = resolve_expression_slice(ctx, node);
   } else if (node->type == NODE_TYPE_EXPRESSION_CALL) {
     val = resolve_expression_call(ctx, node);
+  } else if (node->type == NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
+    val = resolve_expression_compute_member(ctx, node);
   } else if (node->type == NODE_TYPE_VALUE) {
     val = node->value;
   } else {
