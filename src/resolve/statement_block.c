@@ -5,6 +5,7 @@
 #include "engine/error.h"
 #include "engine/type.h"
 #include "engine/void.h"
+#include "resolve/statement_expression.h"
 #include "resolve/statement_function.h"
 #include "resolve/statement_return.h"
 #include "resolve/statement_struct.h"
@@ -22,6 +23,8 @@ value_t resolve_statement_block(context_t ctx, ast_node_t node) {
       err = resolve_statement_struct(ctx, sts);
     } else if (sts->type == NODE_TYPE_STATEMENT_DECLARATION) {
       err = resolve_statement_struct(ctx, sts);
+    } else if (sts->type == NODE_TYPE_STATEMENT_EXPRESSION) {
+      err = resolve_statement_expression(ctx, sts);
     } else if (sts->type == NODE_TYPE_STATEMENT_RETURN) {
       value_t value = resolve_statement_return(ctx, sts);
       if (value->type->kind == TYPE_KIND_ERROR) {

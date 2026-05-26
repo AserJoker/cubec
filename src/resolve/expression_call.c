@@ -1,7 +1,10 @@
 #include "resolve/expression_call.h"
+#include "ast/expression_group.h"
 #include "ast/node.h"
+#include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/array.h"
+#include "core/location.h"
 #include "engine/error.h"
 #include "engine/type.h"
 #include "engine/value.h"
@@ -10,11 +13,31 @@
 value_t resolve_expression_call(context_t ctx, ast_node_t node) {
   ast_node_t callee = ast_get_child(node, "callee");
   ast_node_t arguments = ast_get_child(node, "arguments");
-  value_t val = resolve_expression(ctx, callee);
+  array_t args = create_array(ctx->allocator, NULL);
+  callee = ast_unwrap_group(callee);
+  value_t val = NULL;
+  if (callee->type == NODE_TYPE_EXPRESSION_MEMBER) {
+    ast_node_t host = ast_get_child(callee, "host");
+    ast_node_t field = ast_get_child(callee, "field");
+    value_t obj = resolve_expression(ctx, host);
+    if (obj->type->kind == TYPE_KIND_ERROR) {
+      allocator_free(ctx->allocator, args);
+      return obj;
+    }
+    if (obj->type->kind == TYPE_KIND_STRUCT) {
+      obj = value_addr(obj, ctx);
+      array_push(args, obj);
+    }
+    char *f = location_get(node_get_location(field), ctx->allocator);
+    val = value_get_field(obj, ctx, f);
+    allocator_free(ctx->allocator, f);
+  } else {
+    val = resolve_expression(ctx, callee);
+  }
   if (val->type->kind == TYPE_KIND_ERROR) {
+    allocator_free(ctx->allocator, args);
     return val;
   }
-  array_t args = create_array(ctx->allocator, NULL);
   for (size_t idx = 0; idx < ast_get_length(arguments); idx++) {
     ast_node_t arg = ast_get_item(arguments, idx);
     value_t value = resolve_expression(ctx, arg);

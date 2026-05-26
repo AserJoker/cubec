@@ -21,6 +21,7 @@ typedef enum _function_kind_t {
 } function_kind_t;
 struct _function_declar_t {
   char *id;
+  char *template_id;
   function_kind_t kind;
   type_t self;
   module_t mod;
@@ -39,8 +40,10 @@ struct _function_meta_t {
 };
 void init_template_type(context_t ctx);
 function_declar_t create_function_declar(allocator_t allocator,
-                                         function_kind_t kind, const char *id,
-                                         type_t self, module_t mod);
+                                         function_kind_t kind,
+                                         const char *template_id,
+                                         const char *id, type_t self,
+                                         module_t mod);
 type_t create_function_type(context_t ctx, ctype_t type, array_t argv,
                             bool variadic);
 value_t create_function(context_t ctx, type_t type, ast_node_t node,

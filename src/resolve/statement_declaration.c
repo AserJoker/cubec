@@ -59,7 +59,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     }
     value_t value = resolve_expression(ctx, initialize);
     ctx->comptime = is_comptime;
-    if (ctx->comptime || ctx->type != CONTEXT_TYPE_FUNCTION) {
+    if (ctx->comptime && ctx->type != CONTEXT_TYPE_FUNCTION) {
       if (!value->comptime) {
         value_t err = create_comptime_error(ctx, node_get_location(initialize),
                                             "value is not comptime");

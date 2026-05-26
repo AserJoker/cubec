@@ -47,11 +47,14 @@ static void function_declar_dispose(function_declar_t self,
                                     allocator_t allocator) {
   allocator_free(allocator, self->id);
   allocator_free(allocator, self->closure);
+  allocator_free(allocator, self->template_id);
 }
 
 function_declar_t create_function_declar(allocator_t allocator,
-                                         function_kind_t kind, const char *id,
-                                         type_t self, module_t mod) {
+                                         function_kind_t kind,
+                                         const char *template_id,
+                                         const char *id, type_t self,
+                                         module_t mod) {
   function_declar_t declar =
       allocator_alloc(allocator, sizeof(struct _function_declar_t),
                       (dispose_fn_t)function_declar_dispose);
@@ -60,6 +63,7 @@ function_declar_t create_function_declar(allocator_t allocator,
   declar->id = create_cstring(allocator, id);
   declar->data = NULL;
   declar->kind = kind;
+  declar->template_id = create_cstring(allocator, template_id);
   declar->closure =
       create_hash_map(allocator, &(hash_map_initialize_t){
                                      .autofree_key = true,
@@ -91,12 +95,14 @@ static function_meta_t create_function_meta(allocator_t allocator, ctype_t type,
 
 static value_t function_call(value_t self, context_t ctx, size_t argc,
                              value_t *argv) {
-  function_declar_t declar = *(function_declar_t *)self->data;
+  function_declar_t declar =
+      self->data ? *(function_declar_t *)self->data : NULL;
   type_t func_type = self->type;
   function_meta_t meta = func_type->meta;
   size_t arg_count = array_get_size(meta->args);
   value_t args[arg_count];
-  bool is_comptime = ctx->comptime || declar->kind == FUNCTION_KIND_COMPTIME;
+  bool is_comptime =
+      ctx->comptime || (declar && declar->kind == FUNCTION_KIND_COMPTIME);
   if (meta->variadic) {
     if (argc < arg_count - 1) {
       return create_error(
@@ -149,15 +155,18 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
       args[idx] = value;
     }
   }
-  if (declar->kind == FUNCTION_KIND_NATIVE) {
-    return declar->handle(ctx, argc, argv);
-  }
-  if (declar->kind == FUNCTION_KIND_EXTERN) {
-    if (ctx->comptime) {
-      return create_error(ctx,
-                          "cannot call extern function in comptime context");
-    } else {
-      return context_create_value(ctx, meta->type->type, meta->type->mut, NULL);
+  if (declar) {
+    if (declar->kind == FUNCTION_KIND_NATIVE) {
+      return declar->handle(ctx, argc, argv);
+    }
+    if (declar->kind == FUNCTION_KIND_EXTERN) {
+      if (ctx->comptime) {
+        return create_error(ctx,
+                            "cannot call extern function in comptime context");
+      } else {
+        return context_create_value(ctx, meta->type->type, meta->type->mut,
+                                    NULL);
+      }
     }
   }
   if (is_comptime) {
@@ -401,7 +410,7 @@ value_t create_function(context_t ctx, type_t type, ast_node_t node,
   bool is_comptime = kind && node_location_is(kind, "comptime");
   function_declar_t declar = create_function_declar(
       ctx->allocator,
-      is_comptime ? FUNCTION_KIND_COMPTIME : FUNCTION_KIND_NORMAL, id,
+      is_comptime ? FUNCTION_KIND_COMPTIME : FUNCTION_KIND_NORMAL, base_id, id,
       ctx->self, ctx->mod);
   declar->node = node;
   allocator_free(ctx->allocator, id);
@@ -466,7 +475,7 @@ value_t create_template(context_t ctx, ast_node_t node) {
     id = create_cstring(ctx->allocator, base_id);
   }
   function_declar_t declar = create_function_declar(
-      ctx->allocator, FUNCTION_KIND_TEMPLATE, id, ctx->self, ctx->mod);
+      ctx->allocator, FUNCTION_KIND_TEMPLATE, id, id, ctx->self, ctx->mod);
   declar->node = node;
   array_push(ctx->functions, declar);
   allocator_free(ctx->allocator, id);
@@ -485,7 +494,9 @@ value_t template_create_instance(value_t self, context_t ctx, size_t argc,
   array_t args = create_array(ctx->allocator, &(array_initialize_t){
                                                   .autofree = true,
                                               });
-  context_push_scope(ctx);
+  scope_t current_scope = ctx->current;
+  scope_t scope = create_scope(ctx->allocator, ctx->root);
+  ctx->current = scope;
   list_node_t it = hash_map_get_first(declar->closure);
   while (it != hash_map_get_end(declar->closure)) {
     const char *key = hash_map_node_get_key(it);
@@ -567,18 +578,34 @@ value_t template_create_instance(value_t self, context_t ctx, size_t argc,
   type_t t = *(type_t *)vt->data;
   return_type = create_ctype(ctx->allocator, t, mut == NULL);
   type_t function_type = create_function_type(ctx, return_type, args, variadic);
-  context_pop_scope(ctx);
-  context_pop_scope(ctx);
-  value_t func = create_function(ctx, function_type, node, declar->id);
-  it = hash_map_get_first(declar->closure);
-  while (it != hash_map_get_end(declar->closure)) {
-    const char *key = hash_map_node_get_key(it);
-    value_t value = hash_map_node_get_value(it);
-    function_add_closure(func, ctx, key, value);
-    it = hash_map_node_get_next(it);
-  }
   allocator_free(ctx->allocator, return_type);
   allocator_free(ctx->allocator, args);
+  ctx->current = current_scope;
+  allocator_free(ctx->allocator, scope);
+  value_t func = NULL;
+  it = hash_map_get_first(ctx->mod->functions);
+  while (it != hash_map_get_end(ctx->mod->functions)) {
+    value_t value = hash_map_node_get_value(it);
+    function_declar_t dec = *(function_declar_t *)value->data;
+    if (strcmp(dec->template_id, declar->id) == 0) {
+      if (type_is_equal(function_type, value->type)) {
+        func = value_clone(value, ctx->allocator);
+        context_declar(ctx, NULL, func);
+        break;
+      }
+    }
+    it = hash_map_node_get_next(it);
+  }
+  if (!func) {
+    func = create_function(ctx, function_type, node, declar->id);
+    it = hash_map_get_first(declar->closure);
+    while (it != hash_map_get_end(declar->closure)) {
+      const char *key = hash_map_node_get_key(it);
+      value_t value = hash_map_node_get_value(it);
+      function_add_closure(func, ctx, key, value);
+      it = hash_map_node_get_next(it);
+    }
+  }
   return func;
 onerror:
   allocator_free(ctx->allocator, args);
@@ -586,8 +613,8 @@ onerror:
   if (err) {
     err = value_clone(err, ctx->allocator);
   }
-  context_pop_scope(ctx);
-  context_pop_scope(ctx);
+  ctx->current = current_scope;
+  allocator_free(ctx->allocator, scope);
   context_declar(ctx, NULL, err);
   return err;
 }
@@ -602,7 +629,9 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
   array_t args = create_array(ctx->allocator, &(array_initialize_t){
                                                   .autofree = true,
                                               });
-  context_push_scope(ctx);
+  scope_t current_scope = ctx->current;
+  scope_t scope = create_scope(ctx->allocator, ctx->root);
+  ctx->current = scope;
   list_node_t it = hash_map_get_first(declar->closure);
   while (it != hash_map_get_end(declar->closure)) {
     const char *key = hash_map_node_get_key(it);
@@ -650,8 +679,8 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
   type_t t = *(type_t *)vt->data;
   return_type = create_ctype(ctx->allocator, t, mut == NULL);
   type_t function_type = create_function_type(ctx, return_type, args, variadic);
-  context_pop_scope(ctx);
-  context_pop_scope(ctx);
+  ctx->current = current_scope;
+  allocator_free(ctx->allocator, scope);
   value_t func = create_function(ctx, function_type, node, declar->id);
   it = hash_map_get_first(declar->closure);
   while (it != hash_map_get_end(declar->closure)) {
@@ -669,8 +698,8 @@ onerror:
   if (err) {
     err = value_clone(err, ctx->allocator);
   }
-  context_pop_scope(ctx);
-  context_pop_scope(ctx);
+  ctx->current = current_scope;
+  allocator_free(ctx->allocator, scope);
   context_declar(ctx, NULL, err);
   return err;
 }
