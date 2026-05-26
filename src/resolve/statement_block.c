@@ -31,6 +31,8 @@ value_t resolve_statement_block(context_t ctx, ast_node_t node) {
         err = value;
       } else if (ctx->comptime) {
         return value;
+      } else {
+        err = create_comptime_void(ctx);
       }
     } else {
       err = create_comptime_error(ctx, node_get_location(sts),

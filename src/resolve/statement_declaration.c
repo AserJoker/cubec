@@ -141,12 +141,20 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
       char *id = location_get(node_get_location(identifier), ctx->allocator);
       value_t err = context_declar(ctx, id, value);
+      if (err->type->kind == TYPE_KIND_ERROR) {
+        allocator_free(ctx->allocator, value);
+        err = convert_comptime_error(ctx, node_get_location(node), err);
+      }
       allocator_free(ctx->allocator, id);
       CHECK_ERROR(ctx, err);
     } else {
       char *id = location_get(node_get_location(identifier), ctx->allocator);
       value_t err =
           struct_type_add_attribute(ctx, ctx->self, id, value, pub != NULL);
+      if (err->type->kind == TYPE_KIND_ERROR) {
+        allocator_free(ctx->allocator, value);
+        err = convert_comptime_error(ctx, node_get_location(node), err);
+      }
       allocator_free(ctx->allocator, id);
       CHECK_ERROR(ctx, err);
     }

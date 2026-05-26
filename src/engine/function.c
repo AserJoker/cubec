@@ -14,6 +14,7 @@
 #include "engine/error.h"
 #include "engine/module.h"
 #include "engine/scope.h"
+#include "engine/slice.h"
 #include "engine/type.h"
 #include "engine/unsigned.h"
 #include "engine/value.h"
@@ -45,6 +46,10 @@ void init_template_type(context_t ctx) {
 }
 static void function_declar_dispose(function_declar_t self,
                                     allocator_t allocator) {
+  if (self->kind == FUNCTION_KIND_NORMAL ||
+      self->kind == FUNCTION_KIND_COMPTIME) {
+    allocator_free(allocator, self->node);
+  }
   allocator_free(allocator, self->id);
   allocator_free(allocator, self->closure);
   allocator_free(allocator, self->template_id);
@@ -229,6 +234,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     ctx->mod = current_module;
     ctx->self = current_self;
     ctx->global = current_global;
+    ctx->function = current_function;
     return result;
   } else {
     return context_create_value(ctx, meta->type->type, meta->type->mut, NULL);
@@ -236,6 +242,9 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
 }
 
 static bool function_type_is_equal(type_t self, type_t another) {
+  if (another->kind != TYPE_KIND_FUNCTION) {
+    return false;
+  }
   function_meta_t self_meta = self->meta;
   function_meta_t another_meta = another->meta;
   if (self_meta->variadic != another_meta->variadic) {
@@ -412,7 +421,7 @@ value_t create_function(context_t ctx, type_t type, ast_node_t node,
       ctx->allocator,
       is_comptime ? FUNCTION_KIND_COMPTIME : FUNCTION_KIND_NORMAL, base_id, id,
       ctx->self, ctx->mod);
-  declar->node = node;
+  declar->node = clone_ast_node(ctx->allocator, node);
   allocator_free(ctx->allocator, id);
   array_push(ctx->functions, declar);
   value_t value =
@@ -481,9 +490,76 @@ value_t create_template(context_t ctx, ast_node_t node) {
   allocator_free(ctx->allocator, id);
   return context_create_comptime_value(ctx, type, &declar, false, NULL);
 }
+
+static value_t resolve_function_declaration(context_t ctx, value_t function) {
+  function_declar_t declar = *(function_declar_t *)function->data;
+  type_t func_type = function->type;
+  function_meta_t meta = func_type->meta;
+  size_t arg_count = array_get_size(meta->args);
+  ast_node_t body = ast_get_child(declar->node, "body");
+  bool current_comptime = ctx->comptime;
+  ctx->comptime = false;
+  value_t current_function = ctx->function;
+  ctx->function = function;
+  type_t current_self = ctx->self;
+  ctx->self = declar->self;
+  type_t current_global = ctx->global;
+  ctx->global = *(type_t *)declar->mod->value->data;
+  module_t current_module = ctx->mod;
+  ctx->mod = declar->mod;
+  context_type_t current_type = ctx->type;
+  ctx->type = CONTEXT_TYPE_FUNCTION;
+  scope_t current_scope = ctx->current;
+  scope_t scope = create_scope(ctx->allocator, ctx->root);
+  ctx->current = scope;
+  list_node_t it = hash_map_get_first(declar->closure);
+  value_t result = NULL;
+  while (it != hash_map_get_end(declar->closure)) {
+    const char *key = hash_map_node_get_key(it);
+    value_t value = hash_map_node_get_value(it);
+    value = value_clone(value, ctx->allocator);
+    context_declar(ctx, key, value);
+    it = hash_map_node_get_next(it);
+  }
+  context_push_scope(ctx);
+  ast_node_t arguments = ast_get_child(declar->node, "arguments");
+  for (size_t idx = 0; idx < arg_count; idx++) {
+    ast_node_t arg = ast_get_item(arguments, idx);
+    ast_node_t identifier = ast_get_child(arg, "identifier");
+    ast_node_t mut = ast_get_child(arg, "mut");
+    ctype_t ctype = array_get(meta->args, idx);
+    type_t type = ctype->type;
+    if (arg->type == NODE_TYPE_ARGUMENT_REST) {
+      type = create_slice_type(ctx, type);
+    }
+    char *name = location_get(node_get_location(identifier), ctx->allocator);
+    value_t err = context_create_value(ctx, type, ctype->mut, name);
+    if (err->type->kind == TYPE_KIND_ERROR) {
+      result = err;
+      allocator_free(ctx->allocator, name);
+      break;
+    }
+    allocator_free(ctx->allocator, name);
+  }
+  if (!result) {
+    context_push_scope(ctx);
+    result = resolve_statement_block(ctx, body);
+  }
+  result = value_clone(result, ctx->allocator);
+  scope_store(current_scope, NULL, result);
+  allocator_free(ctx->allocator, scope);
+  ctx->current = current_scope;
+  ctx->comptime = current_comptime;
+  ctx->type = current_type;
+  ctx->mod = current_module;
+  ctx->self = current_self;
+  ctx->global = current_global;
+  ctx->function = current_function;
+  return result;
+}
+
 value_t template_create_instance(value_t self, context_t ctx, size_t argc,
                                  value_t *argv) {
-
   function_declar_t declar = *(function_declar_t *)self->data;
   ast_node_t node = declar->node;
   ast_node_t arguments = ast_get_child(node, "arguments");
@@ -515,12 +591,16 @@ value_t template_create_instance(value_t self, context_t ctx, size_t argc,
     ast_node_t mut = ast_get_child(arg, "mut");
     type_t t = NULL;
     if (type) {
-      value_t vt = resolve_type(ctx, type);
-      if (vt->type->kind == TYPE_KIND_ERROR) {
-        err = vt;
-        goto onerror;
+      if (node_location_is(type, "infer")) {
+        t = argv[idx]->type;
+      } else {
+        value_t vt = resolve_type(ctx, type);
+        if (vt->type->kind == TYPE_KIND_ERROR) {
+          err = vt;
+          goto onerror;
+        }
+        t = *(type_t *)vt->data;
       }
-      t = *(type_t *)vt->data;
     }
     if (arg->type == NODE_TYPE_ARGUMENT_REST) {
       if (!t) {
@@ -605,6 +685,13 @@ value_t template_create_instance(value_t self, context_t ctx, size_t argc,
       function_add_closure(func, ctx, key, value);
       it = hash_map_node_get_next(it);
     }
+    declar = *(function_declar_t *)func->data;
+    if (declar->kind == FUNCTION_KIND_NORMAL) {
+      value_t err = resolve_function_declaration(ctx, func);
+      if (err->type->kind == TYPE_KIND_ERROR) {
+        return err;
+      }
+    }
   }
   return func;
 onerror:
@@ -648,6 +735,9 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
     ast_node_t type = ast_get_child(arg, "type");
     ast_node_t mut = ast_get_child(arg, "mut");
     type_t t = NULL;
+    if (node_location_is(type, "infer")) {
+      goto onerror;
+    }
     if (type) {
       value_t vt = resolve_type(ctx, type);
       if (vt->type->kind == TYPE_KIND_ERROR) {
@@ -679,6 +769,8 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
   type_t t = *(type_t *)vt->data;
   return_type = create_ctype(ctx->allocator, t, mut == NULL);
   type_t function_type = create_function_type(ctx, return_type, args, variadic);
+  allocator_free(ctx->allocator, args);
+  allocator_free(ctx->allocator, return_type);
   ctx->current = current_scope;
   allocator_free(ctx->allocator, scope);
   value_t func = create_function(ctx, function_type, node, declar->id);
@@ -689,8 +781,13 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
     function_add_closure(func, ctx, key, value);
     it = hash_map_node_get_next(it);
   }
-  allocator_free(ctx->allocator, args);
-  allocator_free(ctx->allocator, return_type);
+  declar = *(function_declar_t *)func->data;
+  if (declar->kind == FUNCTION_KIND_NORMAL) {
+    value_t err = resolve_function_declaration(ctx, func);
+    if (err->type->kind == TYPE_KIND_ERROR) {
+      return err;
+    }
+  }
   return func;
 onerror:
   allocator_free(ctx->allocator, args);
