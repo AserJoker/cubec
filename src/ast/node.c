@@ -42,6 +42,7 @@ ast_node_t create_ast_node(allocator_t allocator, size_t type) {
     node->data = NULL;
   }
   node->visible = true;
+  node->value_type = NULL;
   return node;
 }
 
@@ -156,7 +157,7 @@ ast_doc_t read_ast_node(allocator_t allocator, const char *filename,
   FILE *fp = fopen(filename, "r");
   if (!fp) {
     size_t len = snprintf(NULL, 0, "failed to open file: %s", filename);
-    char buf[len+1];
+    char buf[len + 1];
     sprintf(buf, "failed to open file:%s", filename);
     ast_node_t err = create_ast_error(allocator, (position_t){}, (position_t){},
                                       filename, buf);

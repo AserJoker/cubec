@@ -32,6 +32,7 @@ struct _ast_node_t {
   token_t end;
   ast_node_type_t type;
   ast_node_t parent;
+  type_t value_type;
   bool visible;
   union {
     array_t items;
