@@ -6,6 +6,7 @@
 #include "core/array.h"
 #include "core/location.h"
 #include "engine/error.h"
+#include "engine/function.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "resolve/expression.h"
@@ -38,11 +39,17 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     allocator_free(ctx->allocator, args);
     return val;
   }
+  function_declar_t declar = *(function_declar_t *)val->data;
+  bool is_comptime = ctx->comptime;
+  if (declar && declar->kind == FUNCTION_KIND_COMPTIME) {
+    ctx->comptime = true;
+  }
   for (size_t idx = 0; idx < ast_get_length(arguments); idx++) {
     ast_node_t arg = ast_get_item(arguments, idx);
     value_t value = resolve_expression(ctx, arg);
     if (value->type->kind == TYPE_KIND_ERROR) {
       allocator_free(ctx->allocator, args);
+      ctx->comptime = is_comptime;
       return value;
     }
     array_push(args, value);
@@ -53,5 +60,6 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
   if (result->type->kind == TYPE_KIND_ERROR) {
     result = convert_comptime_error(ctx, node_get_location(node), result);
   }
+  ctx->comptime = is_comptime;
   return result;
 }

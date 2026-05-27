@@ -53,8 +53,6 @@ value_t value_opt_gt(value_t self, struct _context_t *ctx, value_t another);
 value_t value_opt_ge(value_t self, struct _context_t *ctx, value_t another);
 value_t value_opt_lt(value_t self, struct _context_t *ctx, value_t another);
 value_t value_opt_le(value_t self, struct _context_t *ctx, value_t another);
-value_t value_opt_land(value_t self, struct _context_t *ctx, value_t another);
-value_t value_opt_lor(value_t self, struct _context_t *ctx, value_t another);
 value_t value_opt_plu(value_t self, struct _context_t *ctx);
 value_t value_opt_neg(value_t self, struct _context_t *ctx);
 value_t value_opt_lnot(value_t self, struct _context_t *ctx);

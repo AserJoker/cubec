@@ -40,7 +40,7 @@ ast_node_t read_expression_assigment(allocator_t allocator,
     return identifier;
   }
   node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_ASSIGMENT);
-  ast_add_child(allocator, node, "identifier", identifier);
+  ast_add_child(allocator, node, "left", identifier);
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);
   ast_node_t value = read_expression_assigment(allocator, stream);
@@ -55,7 +55,7 @@ ast_node_t read_expression_assigment(allocator_t allocator,
     err = value;
     goto onerror;
   }
-  ast_add_child(allocator, node, "value", value);
+  ast_add_child(allocator, node, "right", value);
 
   node->start = array_get(stream->tokens, position);
   node->end = token_stream_get(stream);

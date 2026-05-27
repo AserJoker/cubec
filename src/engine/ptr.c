@@ -71,17 +71,33 @@ static value_t ptr_set_field(value_t self, context_t ctx, const char *field,
   }
   return NULL;
 }
+static value_t ptr_safe_convert(value_t self, context_t ctx, type_t type) {
+  if (type->kind == TYPE_KIND_PTR) {
+    ptr_meta_t self_meta = self->type->meta;
+    ptr_meta_t dst_meta = type->meta;
+    if (!type_is_equal(self_meta->type, dst_meta->type)) {
+      return NULL;
+    }
+    if (self->comptime) {
+      return context_create_comptime_value(ctx, type, self->data, self->mut,
+                                           NULL);
+    } else {
+      return context_create_value(ctx, type, self->mut, NULL);
+    }
+  }
+  return NULL;
+}
 type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
   size_t len =
-      snprintf(NULL, 0, "P%s%s%s", mut ? "" : "C", vol ? "" : "V", type->id);
+      snprintf(NULL, 0, "P%s%s%s", mut ? "" : "C", !vol ? "" : "V", type->id);
   char id[len + 1];
-  sprintf(id, "P%s%s%s", mut ? "" : "C", vol ? "" : "V", type->id);
+  sprintf(id, "P%s%s%s", mut ? "" : "C", !vol ? "" : "V", type->id);
   type_t ptype = context_load_type(ctx, id);
   if (!ptype) {
     len = snprintf(NULL, 0, "*%s%s%s", mut ? "" : "const ",
-                   vol ? "" : "volatile ", type->name);
+                   !vol ? "" : "volatile ", type->name);
     char name[len + 1];
-    sprintf(name, "*%s%s%s", mut ? "" : "const ", vol ? "" : "volatile ",
+    sprintf(name, "*%s%s%s", mut ? "" : "const ", !vol ? "" : "volatile ",
             type->name);
     ptr_meta_t meta = create_ptr_meta(ctx->allocator, type, mut, vol);
     struct _type_operator_t opt = {
@@ -90,6 +106,7 @@ type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
         .opt_ne = ptr_ne,
         .get_field = ptr_get_field,
         .set_field = ptr_set_field,
+        .safe_convert = ptr_safe_convert,
     };
     ptype = create_type(ctx->allocator, TYPE_KIND_PTR, name, id, sizeof(void *),
                         sizeof(void *), &opt, meta);
@@ -99,15 +116,15 @@ type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
 }
 type_t create_parray_type(context_t ctx, type_t type, bool mut, bool vol) {
   size_t len =
-      snprintf(NULL, 0, "PA%s%s%s", mut ? "" : "C", vol ? "" : "V", type->id);
+      snprintf(NULL, 0, "PA%s%s%s", mut ? "" : "C", !vol ? "" : "V", type->id);
   char id[len + 1];
-  sprintf(id, "PA%s%s%s", mut ? "" : "C", vol ? "" : "V", type->id);
+  sprintf(id, "PA%s%s%s", mut ? "" : "C", !vol ? "" : "V", type->id);
   type_t ptype = context_load_type(ctx, id);
   if (!ptype) {
     len = snprintf(NULL, 0, "[*]%s%s%s", mut ? "" : "const ",
-                   vol ? "" : "volatile ", type->name);
+                   !vol ? "" : "volatile ", type->name);
     char name[len + 1];
-    sprintf(name, "[*]%s%s%s", mut ? "" : "const ", vol ? "" : "volatile ",
+    sprintf(name, "[*]%s%s%s", mut ? "" : "const ", !vol ? "" : "volatile ",
             type->name);
     ptr_meta_t meta = create_ptr_meta(ctx->allocator, type, mut, vol);
     struct _type_operator_t opt = {

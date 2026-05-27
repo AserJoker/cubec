@@ -4,6 +4,7 @@
 #include "engine/error.h"
 #include "engine/ptr.h"
 #include "engine/type.h"
+#include "engine/void.h"
 #include <iso646.h>
 #include <stdbool.h>
 #include <string.h>
@@ -401,7 +402,7 @@ value_t value_opt_not(value_t self, struct _context_t *ctx) {
 value_t value_assigment(value_t self, struct _context_t *ctx, value_t value) {
   if (self->type->kind == TYPE_KIND_PTR) {
     if (!ptr_type_is_mut(self->type)) {
-      return create_error(ctx, "assignment to constant variable");
+      return create_error(ctx, "assignment to constant ptr");
     }
   } else if (!self->mut) {
     return create_error(ctx, "assignment to constant variable");
@@ -412,8 +413,8 @@ value_t value_assigment(value_t self, struct _context_t *ctx, value_t value) {
   }
   if (self->comptime && value->comptime) {
     memcpy(self->data, value->data, self->type->size);
-  } else if (!value->comptime) {
+  } else if (self->comptime && !value->comptime) {
     return create_error(ctx, "value is not comptime");
   }
-  return self;
+  return create_comptime_void(ctx);
 }

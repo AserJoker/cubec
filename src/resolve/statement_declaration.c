@@ -79,7 +79,8 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
                                           "cannot declar void value");
       CHECK_ERROR(ctx, err);
     }
-    if ((!kind || !node_location_is(kind, "comptime")) && !ctx->comptime) {
+    if ((!kind || !node_location_is(kind, "comptime")) && !ctx->comptime &&
+        value->comptime) {
       if (value->type->kind == TYPE_KIND_PTR ||
           value->type->kind == TYPE_KIND_SLICE ||
           value->type->kind == TYPE_KIND_STR) {

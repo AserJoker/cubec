@@ -50,7 +50,6 @@ static value_t str_slice(value_t self, context_t ctx, value_t start,
   }
   const char *data = *(const char **)self->data;
   size_t length = strlen(data);
-
   size_t s = 0;
   size_t e = length;
   if (start->type->kind >= TYPE_KIND_I8 && start->type->kind <= TYPE_KIND_I64) {
