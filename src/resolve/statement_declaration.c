@@ -1,6 +1,5 @@
 #include "resolve/statement_declaration.h"
 #include "ast/node.h"
-#include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/location.h"
 #include "engine/context.h"
@@ -38,19 +37,6 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       type = resolve_type(ctx, type_node);
       ctx->comptime = comptime;
       CHECK_ERROR(ctx, type);
-    }
-    if (initialize->type == NODE_TYPE_INITIALIZE_LIST) {
-      ast_node_t type_node = ast_get_child(initialize, "type");
-      if (!type_node && !type) {
-        value_t err = create_comptime_error(ctx, node_get_location(initialize),
-                                            "missing initialize type");
-        CHECK_ERROR(ctx, err);
-      }
-      if (!type_node) {
-        type_node =
-            create_ast_value(ctx->allocator, value_clone(type, ctx->allocator));
-        ast_add_child(ctx->allocator, initialize, "type", type_node);
-      }
     }
     bool is_comptime = ctx->comptime;
     if (kind && node_location_is(kind, "comptime")) {
