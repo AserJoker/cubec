@@ -737,6 +737,7 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
     ast_node_t mut = ast_get_child(arg, "mut");
     type_t t = NULL;
     if (node_location_is(type, "infer")) {
+      err = NULL;
       goto onerror;
     }
     if (type) {
@@ -747,6 +748,7 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
       }
       t = *(type_t *)vt->data;
       if (t->kind == TYPE_KIND_TYPE) {
+        err = NULL;
         goto onerror;
       }
       char *name = location_get(node_get_location(identifier), ctx->allocator);

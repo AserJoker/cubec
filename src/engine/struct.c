@@ -169,8 +169,9 @@ type_t create_struct_type(context_t ctx, const char *name) {
   } else {
     id = create_cstring(ctx->allocator, base_id);
   }
-  type_t type = create_type(ctx->allocator, TYPE_KIND_STRUCT, name, id,
-                            sizeof(char), alignof(struct {}), &opt, meta);
+  type_t type =
+      create_type(ctx->allocator, TYPE_KIND_STRUCT, name ? name : "nonamed", id,
+                  sizeof(char), alignof(struct {}), &opt, meta);
   allocator_free(ctx->allocator, id);
   context_store_type(ctx, type);
   if (mod) {
