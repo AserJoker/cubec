@@ -4,6 +4,7 @@
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/type.h"
+#include "engine/unsigned.h"
 #include "engine/value.h"
 #include "resolve/expression.h"
 #include <stdbool.h>
@@ -106,15 +107,53 @@ value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
       return value_opt_le(lvalue, ctx, rvalue);
     }
   } else {
+    if (node_location_is(opt, "comptime")) {
+      bool is_comptime = ctx->comptime;
+      ctx->comptime = true;
+      value_t rvalue = resolve_expression(ctx, right);
+      ctx->comptime = is_comptime;
+      return rvalue;
+    } else if (node_location_is(opt, "typeof")) {
+      bool is_comptime = ctx->comptime;
+      ctx->comptime = false;
+      value_t rvalue = resolve_expression(ctx, right);
+      ctx->comptime = is_comptime;
+      if (rvalue->type->kind == TYPE_KIND_ERROR) {
+        return rvalue;
+      }
+      return create_type_value(ctx, rvalue->type, false, NULL);
+    } else if (node_location_is(opt, "sizeof")) {
+      bool is_comptime = ctx->comptime;
+      ctx->comptime = false;
+      value_t rvalue = resolve_expression(ctx, right);
+      ctx->comptime = is_comptime;
+      if (rvalue->type->kind == TYPE_KIND_ERROR) {
+        return rvalue;
+      }
+      type_t type = rvalue->type;
+      if (rvalue->type->kind == TYPE_KIND_TYPE) {
+        type = *(type_t *)rvalue->data;
+      }
+      return create_comptime_u64(ctx, type->size, false, NULL);
+    } else if (node_location_is(opt, "alignof")) {
+      bool is_comptime = ctx->comptime;
+      ctx->comptime = false;
+      value_t rvalue = resolve_expression(ctx, right);
+      ctx->comptime = is_comptime;
+      if (rvalue->type->kind == TYPE_KIND_ERROR) {
+        return rvalue;
+      }
+      type_t type = rvalue->type;
+      if (rvalue->type->kind == TYPE_KIND_TYPE) {
+        type = *(type_t *)rvalue->data;
+      }
+      return create_comptime_u64(ctx, type->align, false, NULL);
+    }
     value_t rvalue = resolve_expression(ctx, right);
     if (rvalue->type->kind == TYPE_KIND_ERROR) {
       return rvalue;
     }
-    if (node_location_is(node, "&")) {
-      return value_addr(rvalue, ctx);
-    } else if (node_location_is(node, "*")) {
-      return value_deref(rvalue, ctx);
-    } else if (node_location_is(node, "+")) {
+    if (node_location_is(node, "+")) {
       return value_opt_plu(rvalue, ctx);
     } else if (node_location_is(node, "-")) {
       return value_opt_neg(rvalue, ctx);

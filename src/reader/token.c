@@ -393,7 +393,7 @@ static const char *keywords[] = {
     "break",  "continue", "return", "switch", "case",    "default",
     "do",     "comptime", "export", "extern", "defer",   "inline",
     "test",   "register", "const",  "let",    "mutable", "volatile",
-    "in",     "of",       0,
+    "in",     "of",       "typeof", "sizeof", "alignof", 0,
 };
 token_t read_identifier_token(allocator_t allocator, position_t *position,
                               const char *end, const char *filename) {

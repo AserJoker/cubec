@@ -1,5 +1,6 @@
 #include "ast/expression_binary.h"
 #include "ast/expression.h"
+#include "ast/literal_keyword.h"
 #include "ast/literal_symbol.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -482,13 +483,22 @@ ast_node_t read_expression_prefix(allocator_t allocator,
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "+") &&
       !token_is(token, TOKEN_TYPE_SYMBOL, "-") &&
       !token_is(token, TOKEN_TYPE_SYMBOL, "!") &&
-      !token_is(token, TOKEN_TYPE_SYMBOL, "~")) {
+      !token_is(token, TOKEN_TYPE_SYMBOL, "~") &&
+      !token_is(token, TOKEN_TYPE_KEYWORD, "comptime") &&
+      !token_is(token, TOKEN_TYPE_KEYWORD, "typeof") &&
+      !token_is(token, TOKEN_TYPE_KEYWORD, "sizeof") &&
+      !token_is(token, TOKEN_TYPE_KEYWORD, "alignof")) {
     return read_expression_value(allocator, stream);
   }
   ast_node_t node = create_ast_node(allocator, NODE_TYPE_EXPRESSION_BINARY);
   ast_node_t err = NULL;
   size_t position = stream->position;
-  ast_node_t opt = read_literal_symbol(allocator, stream);
+  ast_node_t opt = NULL;
+  if (token->type == TOKEN_TYPE_KEYWORD) {
+    opt = read_literal_keyword(allocator, stream);
+  } else {
+    opt = read_literal_symbol(allocator, stream);
+  }
   ast_add_child(allocator, node, "opt", opt);
   skip_comments(stream);
   ast_node_t right = read_expression_prefix(allocator, stream);
