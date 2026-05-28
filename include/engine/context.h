@@ -5,6 +5,7 @@
 #include "core/hash_map.h"
 #include "core/list.h"
 #include "core/rbtree.h"
+#include "core/stream.h"
 #include "engine/module.h"
 #include "engine/scope.h"
 #include "engine/type.h"
@@ -59,7 +60,8 @@ void context_pop_scope(context_t ctx);
 void context_push_trace(context_t ctx, const char *filename,
                         const char *funcname, size_t column, size_t line);
 void context_pop_trace(context_t ctx);
-value_t context_load_module(context_t ctx, const char *filename);
+value_t context_load_module(context_t ctx, const char *name);
+stream_t context_write_module(context_t ctx, const char *filename);
 value_t context_declar(context_t ctx, const char *name, value_t value);
 void context_push_error(context_t ctx, value_t err);
 #ifdef __cplusplus

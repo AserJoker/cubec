@@ -1,0 +1,14 @@
+#ifndef _H_C_TYPE_
+#define _H_C_TYPE_
+#include "core/stream.h"
+#include "engine/context.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+void c_type_declarator(context_t ctx, type_t type, stream_t stream);
+void c_type_declaration(context_t ctx, type_t type, stream_t stream);
+void c_type(context_t ctx, type_t type, stream_t stream);
+#ifdef __cplusplus
+}
+#endif
+#endif
