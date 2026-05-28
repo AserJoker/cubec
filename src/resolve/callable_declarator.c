@@ -39,7 +39,7 @@ value_t resolve_callable_declarator(context_t ctx, ast_node_t node) {
   }
   type_t t = *(type_t *)vt->data;
   ctype = create_ctype(ctx->allocator, t, mut == NULL);
-  type_t function_type = create_function_type(ctx, ctype, args, variadic);
+  type_t function_type = create_function_type(ctx, ctype, args, variadic, NULL);
   allocator_free(ctx->allocator, args);
   allocator_free(ctx->allocator, ctype);
   return create_type_value(ctx, function_type, false, NULL);

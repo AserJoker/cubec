@@ -183,50 +183,6 @@ ast_doc_t read_ast_node(allocator_t allocator, const char *filename,
     ast_node_t err = create_ast_error(allocator, position, current, filename,
                                       "unexpected token");
     return create_ast_doc(allocator, err, NULL, NULL);
-  } else {
-    FILE *fp = fopen("./build/tokens.txt", "w");
-    token_t token = NULL;
-    while ((token = token_stream_get(stream)) != NULL) {
-      switch (token->type) {
-      case TOKEN_TYPE_SPACE:
-        fprintf(fp, "%-25s", "TOKEN_TYPE_SPACE");
-        break;
-      case TOKEN_TYPE_COMMENT:
-        fprintf(fp, "%-25s", "TOKEN_TYPE_COMMENT");
-        break;
-      case TOKEN_TYPE_NUMERIC:
-        fprintf(fp, "%-25s", "TOKEN_TYPE_NUMERIC");
-        break;
-      case TOKEN_TYPE_IDENTIFIER:
-        fprintf(fp, "%-25s", "TOKEN_TYPE_IDENTIFIER");
-        break;
-      case TOKEN_TYPE_KEYWORD:
-        fprintf(fp, "%-25s", "TOKEN_TYPE_KEYWORD");
-        break;
-      case TOKEN_TYPE_STRING:
-        fprintf(fp, "%-25s", "TOKEN_TYPE_STRING");
-        break;
-      case TOKEN_TYPE_CHAR:
-        fprintf(fp, "%-25s", "TOKEN_TYPE_CHAR");
-        break;
-      case TOKEN_TYPE_SYMBOL:
-        fprintf(fp, "%-25s", "TOKEN_TYPE_SYMBOL");
-        break;
-      case TOKEN_TYPE_EOF:
-        fprintf(fp, "%-25s", "TOKEN_TYPE_EOF");
-        break;
-      }
-      stream->position++;
-      fprintf(fp, "| ");
-      char *str = location_get(token->loc, allocator);
-      char *encode_str = encode_cstring(allocator, str);
-      fprintf(fp, "%s", encode_str);
-      allocator_free(allocator, encode_str);
-      allocator_free(allocator, str);
-      fprintf(fp, " |");
-      fprintf(fp, "\n");
-    }
-    fclose(fp);
   }
   stream->position = 0;
   ast_node_t program = read_program(allocator, stream);

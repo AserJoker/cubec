@@ -1,6 +1,8 @@
 
 #include "ast/node.h"
 #include "core/allocator.h"
+#include "core/stream.h"
+#include "core/string.h"
 #include "engine/context.h"
 #include "engine/error.h"
 #include "engine/type.h"
@@ -18,6 +20,15 @@ int main(int argc, char *argv[]) {
     char *msg = error_format(allocator, value);
     fprintf(stderr, "%s\n", msg);
     allocator_free(allocator, msg);
+  } else {
+    stream_t stream = context_write_module(ctx, "./build/main.cubec");
+    string_t str = stream_get_string(stream);
+    const char *src = string_get(str);
+    FILE *fp = fopen("./build/main.c", "w");
+    fprintf(fp, "%s", src);
+    fclose(fp);
+    allocator_free(ctx->allocator, str);
+    allocator_free(ctx->allocator, stream);
   }
   allocator_free(allocator, ctx);
   delete_allocator(allocator);

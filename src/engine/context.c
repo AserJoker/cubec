@@ -1,6 +1,7 @@
 #include "engine/context.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "c/program.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/compare.h"
@@ -10,6 +11,7 @@
 #include "core/location.h"
 #include "core/path.h"
 #include "core/rbtree.h"
+#include "core/stream.h"
 #include "core/string.h"
 #include "engine/bool.h"
 #include "engine/error.h"
@@ -193,10 +195,8 @@ value_t context_load_module(context_t ctx, const char *filename) {
     value_t err =
         create_comptime_error(ctx, loc, "%s", doc->node->error->message);
     err = value_clone(err, ctx->allocator);
-    allocator_free(ctx->allocator, fullname);
-    mod = create_module(ctx->allocator, filename, err, doc);
+    mod = create_module(ctx->allocator, fullname, err, doc);
   } else {
-    allocator_free(ctx->allocator, fullname);
     size_t module_count = hash_map_get_size(ctx->modules);
     size_t len = snprintf(NULL, 0, "M%" PRIuPTR, module_count);
     char name[len + 1];
@@ -204,7 +204,7 @@ value_t context_load_module(context_t ctx, const char *filename) {
     type_t stru = create_struct_type(ctx, name);
     value_t vstru = create_type_value(ctx, stru, false, NULL);
     vstru = value_clone(vstru, ctx->allocator);
-    mod = create_module(ctx->allocator, filename, vstru, doc);
+    mod = create_module(ctx->allocator, fullname, vstru, doc);
     if (ctx->mod == NULL) {
       mod->master = true;
     }
@@ -233,7 +233,29 @@ value_t context_load_module(context_t ctx, const char *filename) {
   hash_map_set(ctx->modules, (void *)mod->filename, mod, NULL, NULL);
   value_t value = value_clone(mod->value, ctx->allocator);
   context_declar(ctx, NULL, value);
+  allocator_free(ctx->allocator, fullname);
   return value;
+}
+
+stream_t context_write_module(context_t ctx, const char *filename) {
+  char *fullname = absolute(ctx->allocator, filename);
+  stream_t stream = create_stream(ctx->allocator);
+  module_t mod = hash_map_get(ctx->modules, fullname, NULL, NULL);
+  allocator_free(ctx->allocator, fullname);
+  context_type_t current_type = ctx->type;
+  ctx->type = CONTEXT_TYPE_STRUCT;
+  type_t current_global = ctx->global;
+  ctx->global = *(type_t *)mod->value->data;
+  type_t current_self = ctx->self;
+  ctx->self = *(type_t *)mod->value->data;
+  module_t current_module = ctx->mod;
+  ctx->mod = mod;
+  c_program(ctx, mod->doc->node, stream);
+  ctx->mod = current_module;
+  ctx->self = current_self;
+  ctx->global = current_global;
+  ctx->type = current_type;
+  return stream;
 }
 
 value_t context_declar(context_t ctx, const char *name, value_t value) {
