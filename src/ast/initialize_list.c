@@ -68,7 +68,10 @@ ast_node_t read_initialize_list(allocator_t allocator, token_stream_t stream) {
       token = token_stream_get(stream);
       if (token_is(token, TOKEN_TYPE_SYMBOL, ",")) {
         stream->position++;
-      } else if (token_is(token, TOKEN_TYPE_SYMBOL, "}")) {
+      }
+      skip_comments(stream);
+      token = token_stream_get(stream);
+      if (token_is(token, TOKEN_TYPE_SYMBOL, "}")) {
         break;
       } else {
         token_t start = array_get(stream->tokens, position);
