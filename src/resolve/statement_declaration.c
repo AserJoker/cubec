@@ -38,13 +38,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       ctx->comptime = comptime;
       CHECK_ERROR(ctx, type);
     }
-    bool is_comptime = ctx->comptime;
-    if (kind && node_location_is(kind, "comptime")) {
-      is_comptime = ctx->comptime;
-      ctx->comptime = true;
-    }
     value_t value = resolve_expression(ctx, initialize);
-    ctx->comptime = is_comptime;
     if (ctx->comptime && ctx->type != CONTEXT_TYPE_FUNCTION) {
       if (!value->comptime) {
         value_t err = create_comptime_error(ctx, node_get_location(initialize),
