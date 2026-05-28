@@ -48,6 +48,9 @@ static value_t str_slice(value_t self, context_t ctx, value_t start,
     }
     return context_create_value(ctx, slice_type, false, NULL);
   }
+  if (!self->comptime) {
+    return context_create_value(ctx, slice_type, false, NULL);
+  }
   const char *data = *(const char **)self->data;
   size_t length = strlen(data);
   size_t s = 0;

@@ -10,12 +10,14 @@
 #include "resolve/expression_assigment.h"
 #include "resolve/expression_binary.h"
 #include "resolve/expression_call.h"
+#include "resolve/expression_comma.h"
 #include "resolve/expression_compute_member.h"
 #include "resolve/expression_group.h"
 #include "resolve/expression_member.h"
 #include "resolve/expression_slice.h"
 #include "resolve/function_declarator.h"
 #include "resolve/initialize_list.h"
+#include "resolve/literal_char.h"
 #include "resolve/literal_identifier.h"
 #include "resolve/literal_numeric.h"
 #include "resolve/literal_string.h"
@@ -59,6 +61,10 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     val = resolve_initialize_list(ctx, node);
   } else if (node->type == NODE_TYPE_EXPRESSION_GROUP) {
     val = resolve_expression_group(ctx, node);
+  } else if (node->type == NODE_TYPE_EXPRESSION_COMMON) {
+    val = resolve_expression_comma(ctx, node);
+  } else if (node->type == NODE_TYPE_LITERAL_CHAR) {
+    val = resolve_literal_char(ctx, node);
   } else if (node->type == NODE_TYPE_VALUE) {
     val = node->value;
   } else {

@@ -62,8 +62,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     if ((!kind || !node_location_is(kind, "comptime")) && !ctx->comptime &&
         value->comptime) {
       if (value->type->kind == TYPE_KIND_PTR ||
-          value->type->kind == TYPE_KIND_SLICE ||
-          value->type->kind == TYPE_KIND_STR) {
+          value->type->kind == TYPE_KIND_SLICE) {
         value_t err = create_comptime_error(
             ctx, node_get_location(initialize),
             "initialize non-comptime ptr from comptime value");
@@ -71,8 +70,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
     }
     if (value->type->kind == TYPE_KIND_PTR ||
-        value->type->kind == TYPE_KIND_SLICE ||
-        value->type->kind == TYPE_KIND_STR) {
+        value->type->kind == TYPE_KIND_SLICE) {
       if (!value->mut && node_location_is(mut, "let")) {
         value_t err =
             create_comptime_error(ctx, node_get_location(initialize),
