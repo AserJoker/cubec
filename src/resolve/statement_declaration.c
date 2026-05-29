@@ -47,10 +47,10 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
     }
     if (!ctx->comptime && (!kind || !node_location_is(kind, "comptime"))) {
-      if (value->type->kind == TYPE_KIND_TYPE) {
+      if (value->type->comptime) {
         value_t err = create_comptime_error(
             ctx, node_get_location(initialize),
-            "type kind value is only declaration in comptime context");
+            "comptime kind value is only declaration in comptime context");
         CHECK_ERROR(ctx, err);
       }
     }

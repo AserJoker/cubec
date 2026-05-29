@@ -10,7 +10,7 @@
 
 value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
   ast_node_t stru = ast_get_child(node, "struct");
-  ast_node_t identifier = ast_get_child(node, "identifier");
+  ast_node_t identifier = ast_get_child(stru, "identifier");
   ast_node_t pub = ast_get_child(stru, "pub");
   if (ctx->type == CONTEXT_TYPE_FUNCTION && pub) {
     return create_comptime_error(ctx, node_get_location(pub),
