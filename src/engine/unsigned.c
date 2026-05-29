@@ -304,17 +304,21 @@ void init_unsigned_type(context_t ctx) {
       .opt_lt = unsigned_lt,
       .opt_le = unsigned_le,
   };
-  type_t u8_type = create_type(ctx->allocator, TYPE_KIND_U8, "u8", "u8",
-                               sizeof(uint8_t), sizeof(uint8_t), &opt, NULL);
+  type_t u8_type =
+      create_type(ctx->allocator, TYPE_KIND_U8, "u8", "u8", sizeof(uint8_t),
+                  sizeof(uint8_t), &opt, NULL, false);
   context_store_type(ctx, u8_type);
-  type_t u16_type = create_type(ctx->allocator, TYPE_KIND_U16, "u16", "u16",
-                                sizeof(uint16_t), sizeof(uint16_t), &opt, NULL);
+  type_t u16_type =
+      create_type(ctx->allocator, TYPE_KIND_U16, "u16", "u16", sizeof(uint16_t),
+                  sizeof(uint16_t), &opt, NULL, false);
   context_store_type(ctx, u16_type);
-  type_t u32_type = create_type(ctx->allocator, TYPE_KIND_U32, "u32", "u32",
-                                sizeof(uint32_t), sizeof(uint32_t), &opt, NULL);
+  type_t u32_type =
+      create_type(ctx->allocator, TYPE_KIND_U32, "u32", "u32", sizeof(uint32_t),
+                  sizeof(uint32_t), &opt, NULL, false);
   context_store_type(ctx, u32_type);
-  type_t u64_type = create_type(ctx->allocator, TYPE_KIND_U64, "u64", "u64",
-                                sizeof(uint64_t), sizeof(uint64_t), &opt, NULL);
+  type_t u64_type =
+      create_type(ctx->allocator, TYPE_KIND_U64, "u64", "u64", sizeof(uint64_t),
+                  sizeof(uint64_t), &opt, NULL, false);
   context_store_type(ctx, u64_type);
 
   create_type_value(ctx, u8_type, false, "u8");

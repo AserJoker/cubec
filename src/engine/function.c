@@ -42,7 +42,7 @@ void init_template_type(context_t ctx) {
   };
   type_t type = create_type(ctx->allocator, TYPE_KIND_TEMPLATE, "template",
                             "template", sizeof(function_declar_t),
-                            sizeof(function_declar_t), &opt, NULL);
+                            sizeof(function_declar_t), &opt, NULL, true);
   context_store_type(ctx, type);
 }
 static void function_declar_dispose(function_declar_t self,
@@ -97,22 +97,22 @@ static function_meta_t create_function_meta(allocator_t allocator, ctype_t type,
   self->args = create_array(allocator, &(array_initialize_t){.autofree = true});
   self->closure =
       create_hash_map(allocator, &(hash_map_initialize_t){
-                                     .autofree_key = false,
+                                     .autofree_key = true,
                                      .autofree_value = false,
                                      .compare = (compare_fn_t)strcmp,
                                      .hash = (hash_fn_t)cstring_sdb,
                                  });
   for (size_t idx = 0; idx < array_get_size(args); idx++) {
     ctype_t arg = array_get(args, idx);
-    array_push(self->args,
-               create_ctype(allocator, arg->type, arg->mut));
+    array_push(self->args, create_ctype(allocator, arg->type, arg->mut));
   }
   if (closure) {
     list_node_t it = hash_map_get_first(closure);
     while (it != hash_map_get_end(closure)) {
       const char *key = hash_map_node_get_key(it);
       type_t type = hash_map_node_get_value(it);
-      hash_map_set(self->closure, (void *)key, type, NULL, NULL);
+      hash_map_set(self->closure, create_cstring(allocator, key), type, NULL,
+                   NULL);
       it = hash_map_node_get_next(it);
     }
   }
@@ -372,6 +372,7 @@ type_t create_function_type(context_t ctx, ctype_t type, array_t argv,
   id[offset] = 0;
   type_t func_type = context_load_type(ctx, id);
   if (!func_type) {
+    bool is_comptime = false;
     size_t len = strlen("func(");
     if (closure && hash_map_get_size(closure)) {
       len++;
@@ -453,6 +454,7 @@ type_t create_function_type(context_t ctx, ctype_t type, array_t argv,
         strcpy(&name[offset], arg->type->name);
         offset += strlen(arg->type->name);
       }
+      is_comptime |= arg->type->comptime;
     }
     name[offset++] = ')';
     name[offset++] = '-';
@@ -464,8 +466,7 @@ type_t create_function_type(context_t ctx, ctype_t type, array_t argv,
     if (type->type) {
       strcpy(&name[offset], type->type->name);
       offset += strlen(type->type->name);
-    } else {
-      name[offset++] = '?';
+      is_comptime |= type->type->comptime;
     }
     name[offset] = 0;
     struct _type_operator_t opt = {
@@ -474,8 +475,9 @@ type_t create_function_type(context_t ctx, ctype_t type, array_t argv,
     };
     function_meta_t meta =
         create_function_meta(ctx->allocator, type, argv, variadic, closure);
-    func_type = create_type(ctx->allocator, TYPE_KIND_FUNCTION, name, id,
-                            sizeof(void *), sizeof(void *), &opt, meta);
+    func_type =
+        create_type(ctx->allocator, TYPE_KIND_FUNCTION, name, id,
+                    sizeof(void *), sizeof(void *), &opt, meta, is_comptime);
     context_store_type(ctx, func_type);
   }
   return func_type;
@@ -728,8 +730,7 @@ value_t template_create_instance(value_t self, context_t ctx, size_t argc,
         err = convert_comptime_error(ctx, node_get_location(arg), err);
         goto onerror;
       }
-      ctype_t ctype =
-          create_ctype(ctx->allocator, t, mut == NULL);
+      ctype_t ctype = create_ctype(ctx->allocator, t, mut == NULL);
       array_push(args, ctype);
     }
   }
@@ -752,7 +753,9 @@ value_t template_create_instance(value_t self, context_t ctx, size_t argc,
   while (it != hash_map_get_end(declar->closure)) {
     const char *key = hash_map_node_get_key(it);
     value_t value = hash_map_node_get_value(it);
-    hash_map_set(closure, (void *)key, value->type, NULL, NULL);
+    if (!value->comptime) {
+      hash_map_set(closure, (void *)key, value->type, NULL, NULL);
+    }
     it = hash_map_node_get_next(it);
   }
   type_t function_type =
@@ -859,8 +862,7 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
         goto onerror;
       }
     }
-    ctype_t ctype =
-        create_ctype(ctx->allocator, t, mut == NULL);
+    ctype_t ctype = create_ctype(ctx->allocator, t, mut == NULL);
     array_push(args, ctype);
     if (arg->type == NODE_TYPE_ARGUMENT_REST) {
       variadic = true;
@@ -884,7 +886,9 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
   while (it != hash_map_get_end(declar->closure)) {
     const char *key = hash_map_node_get_key(it);
     value_t value = hash_map_node_get_value(it);
-    hash_map_set(closure, (void *)key, value->type, NULL, NULL);
+    if (!value->comptime) {
+      hash_map_set(closure, (void *)key, value->type, NULL, NULL);
+    }
     it = hash_map_node_get_next(it);
   }
   type_t function_type =

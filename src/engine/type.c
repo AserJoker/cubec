@@ -21,7 +21,7 @@ static void type_dispose(type_t self, allocator_t allocator) {
 }
 type_t create_type(allocator_t allocator, type_kind_t kind, const char *name,
                    const char *id, size_t size, size_t align,
-                   type_operator_t opt, void *meta) {
+                   type_operator_t opt, void *meta, bool comptime) {
   type_t self = allocator_alloc(allocator, sizeof(struct _type_t),
                                 (dispose_fn_t)type_dispose);
   self->align = align;
@@ -35,6 +35,7 @@ type_t create_type(allocator_t allocator, type_kind_t kind, const char *name,
     self->opt = (struct _type_operator_t){};
   }
   self->meta = meta;
+  self->comptime = comptime;
   return self;
 }
 bool type_is_equal(type_t self, type_t another) {
@@ -91,7 +92,7 @@ void init_type_type(context_t ctx) {
       .set_field = type_set_field,
   };
   type_t type = create_type(ctx->allocator, TYPE_KIND_TYPE, "type", "type",
-                            sizeof(type_t), sizeof(type_t), &opt, NULL);
+                            sizeof(type_t), sizeof(type_t), &opt, NULL, true);
   context_store_type(ctx, type);
   create_type_value(ctx, type, false, "type");
 }

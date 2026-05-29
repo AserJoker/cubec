@@ -114,9 +114,9 @@ void init_str_type(context_t ctx) {
       .slice = str_slice,
       .len = str_length,
   };
-  type_t type =
-      create_type(ctx->allocator, TYPE_KIND_STR, "str", "str",
-                  sizeof(const char *), sizeof(const char *), &opt, NULL);
+  type_t type = create_type(ctx->allocator, TYPE_KIND_STR, "str", "str",
+                            sizeof(const char *), sizeof(const char *), &opt,
+                            NULL, false);
   context_store_type(ctx, type);
   create_type_value(ctx, type, false, "str");
 }

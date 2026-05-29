@@ -100,6 +100,7 @@ ast_node_t read_function_declarator(allocator_t allocator,
   }
   stream->position++;
   skip_comments(stream);
+  token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, ")")) {
     for (;;) {
       skip_comments(stream);

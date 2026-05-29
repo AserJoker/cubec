@@ -1,6 +1,7 @@
 #include "ast/callable_declarator.h"
 #include "ast/callable_argument.h"
 #include "ast/callable_argument_rest.h"
+#include "ast/callable_closure_item.h"
 #include "ast/expression.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
@@ -20,7 +21,39 @@ ast_node_t read_callable_declarator(allocator_t allocator,
   }
   stream->position++;
   skip_comments(stream);
+  token = token_stream_get(stream);
   node = create_ast_node(allocator, NODE_TYPE_CALLABLE_DECLARATOR);
+  ast_node_t closure = create_ast_node(allocator, NODE_TYPE_LIST);
+  ast_add_child(allocator, node, "closure", closure);
+  if (token_is(token, TOKEN_TYPE_SYMBOL, "[")) {
+    stream->position++;
+    skip_comments(stream);
+    if (!token_is(token, TOKEN_TYPE_SYMBOL, "]")) {
+      for (;;) {
+        skip_comments(stream);
+        ast_node_t item = read_callable_closure_item(allocator, stream);
+        if (!item) {
+          goto onerror;
+        }
+        if (item->type == NODE_TYPE_ERROR) {
+          err = item;
+          goto onerror;
+        }
+        ast_add_item(closure, item);
+        skip_comments(stream);
+        token = token_stream_get(stream);
+        if (token_is(token, TOKEN_TYPE_SYMBOL, ",")) {
+          stream->position++;
+        } else if (token_is(token, TOKEN_TYPE_SYMBOL, "]")) {
+          break;
+        } else {
+          goto onerror;
+        }
+      }
+    }
+    stream->position++;
+  }
+  skip_comments(stream);
   token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "(")) {
     goto onerror;

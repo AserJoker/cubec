@@ -159,7 +159,8 @@ type_t create_arr_type(context_t ctx, type_t type, size_t length) {
         .slice = arr_slice,
     };
     atype = create_type(ctx->allocator, TYPE_KIND_ARRAY, name, id,
-                        type->size * length, type->align, &opt, meta);
+                        type->size * length, type->align, &opt, meta,
+                        type->comptime);
     context_store_type(ctx, atype);
   }
   return atype;

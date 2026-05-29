@@ -11,9 +11,9 @@
 #include <stdio.h>
 
 void init_error_type(context_t ctx) {
-  type_t error_type =
-      create_type(ctx->allocator, TYPE_KIND_ERROR, "error", "error",
-                  sizeof(struct _error_t), sizeof(struct _error_t), NULL, NULL);
+  type_t error_type = create_type(ctx->allocator, TYPE_KIND_ERROR, "error",
+                                  "error", sizeof(struct _error_t),
+                                  sizeof(struct _error_t), NULL, NULL, true);
   context_store_type(ctx, error_type);
 }
 

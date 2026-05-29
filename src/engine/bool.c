@@ -72,7 +72,7 @@ void init_bool_type(context_t ctx) {
       .opt_or = bool_or,
   };
   type_t type = create_type(ctx->allocator, TYPE_KIND_BOOL, "bool", "bool",
-                            sizeof(bool), sizeof(bool), &opt, NULL);
+                            sizeof(bool), sizeof(bool), &opt, NULL, false);
   context_store_type(ctx, type);
   create_type_value(ctx, type, false, "bool");
 }

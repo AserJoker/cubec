@@ -14,6 +14,11 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
   ast_node_t func = ast_get_child(node, "function");
   ast_node_t identifier = ast_get_child(func, "identifier");
   ast_node_t pub = ast_get_child(func, "pub");
+  ast_node_t kind = ast_get_child(node, "kind");
+  bool is_comptime = kind && node_location_is(kind, "comptime");
+  if (is_comptime) {
+    node->visible = false;
+  }
   if (ctx->type == CONTEXT_TYPE_FUNCTION && pub) {
     return create_comptime_error(ctx, node_get_location(pub),
                                  "invalid pub declarator");

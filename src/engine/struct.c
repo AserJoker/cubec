@@ -171,7 +171,7 @@ type_t create_struct_type(context_t ctx, const char *name) {
   }
   type_t type =
       create_type(ctx->allocator, TYPE_KIND_STRUCT, name ? name : "nonamed", id,
-                  sizeof(char), alignof(struct {}), &opt, meta);
+                  sizeof(char), alignof(struct {}), &opt, meta, false);
   allocator_free(ctx->allocator, id);
   context_store_type(ctx, type);
   if (mod) {
@@ -223,6 +223,9 @@ value_t struct_type_add_field(context_t ctx, type_t stru, const char *name,
   }
   array_push(meta->fields, field);
   stru->size = size;
+  if (field->type->comptime) {
+    stru->comptime = true;
+  }
   return create_comptime_void(ctx);
 }
 array_t struct_type_get_fields(type_t stru) {

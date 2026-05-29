@@ -106,6 +106,7 @@ struct _type_t {
   size_t size;
   void *meta;
   struct _type_operator_t opt;
+  bool comptime;
 };
 
 typedef struct _ctype_t *ctype_t;
@@ -118,7 +119,7 @@ ctype_t create_ctype(allocator_t allocator, type_t type, bool mut);
 
 type_t create_type(allocator_t allocator, type_kind_t kind, const char *name,
                    const char *id, size_t size, size_t align,
-                   type_operator_t opt, void *meta);
+                   type_operator_t opt, void *meta, bool comptime);
 
 bool type_is_equal(type_t self, type_t another);
 

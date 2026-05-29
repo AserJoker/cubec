@@ -109,7 +109,7 @@ type_t create_ptr_type(context_t ctx, type_t type, bool mut, bool vol) {
         .safe_convert = ptr_safe_convert,
     };
     ptype = create_type(ctx->allocator, TYPE_KIND_PTR, name, id, sizeof(void *),
-                        sizeof(void *), &opt, meta);
+                        sizeof(void *), &opt, meta, type->comptime);
     context_store_type(ctx, ptype);
   }
   return ptype;
@@ -133,7 +133,7 @@ type_t create_parray_type(context_t ctx, type_t type, bool mut, bool vol) {
         .opt_ne = ptr_ne,
     };
     ptype = create_type(ctx->allocator, TYPE_KIND_PTR, name, id, sizeof(void *),
-                        sizeof(void *), &opt, meta);
+                        sizeof(void *), &opt, meta, false);
     context_store_type(ctx, ptype);
   }
   return ptype;

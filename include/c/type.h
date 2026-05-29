@@ -5,8 +5,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void c_type_declarator(context_t ctx, type_t type, stream_t stream);
-void c_type_declaration(context_t ctx, type_t type, stream_t stream);
 void c_type(context_t ctx, type_t type, stream_t stream);
 #ifdef __cplusplus
 }

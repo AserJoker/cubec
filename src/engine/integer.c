@@ -304,17 +304,21 @@ void init_integer_type(context_t ctx) {
       .opt_lt = integer_lt,
       .opt_le = integer_le,
   };
-  type_t i8_type = create_type(ctx->allocator, TYPE_KIND_I8, "i8", "i8",
-                               sizeof(int8_t), sizeof(int8_t), &opt, NULL);
+  type_t i8_type =
+      create_type(ctx->allocator, TYPE_KIND_I8, "i8", "i8", sizeof(int8_t),
+                  sizeof(int8_t), &opt, NULL, false);
   context_store_type(ctx, i8_type);
-  type_t i16_type = create_type(ctx->allocator, TYPE_KIND_I16, "i16", "i16",
-                                sizeof(int16_t), sizeof(int16_t), &opt, NULL);
+  type_t i16_type =
+      create_type(ctx->allocator, TYPE_KIND_I16, "i16", "i16", sizeof(int16_t),
+                  sizeof(int16_t), &opt, NULL, false);
   context_store_type(ctx, i16_type);
-  type_t i32_type = create_type(ctx->allocator, TYPE_KIND_I32, "i32", "i32",
-                                sizeof(int32_t), sizeof(int32_t), &opt, NULL);
+  type_t i32_type =
+      create_type(ctx->allocator, TYPE_KIND_I32, "i32", "i32", sizeof(int32_t),
+                  sizeof(int32_t), &opt, NULL, false);
   context_store_type(ctx, i32_type);
-  type_t i64_type = create_type(ctx->allocator, TYPE_KIND_I64, "i64", "i64",
-                                sizeof(int64_t), sizeof(int64_t), &opt, NULL);
+  type_t i64_type =
+      create_type(ctx->allocator, TYPE_KIND_I64, "i64", "i64", sizeof(int64_t),
+                  sizeof(int64_t), &opt, NULL, false);
   context_store_type(ctx, i64_type);
 
   create_type_value(ctx, i8_type, false, "i8");

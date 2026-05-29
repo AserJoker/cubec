@@ -143,9 +143,9 @@ type_t create_slice_type(context_t ctx, type_t type) {
         .set = slice_set,
         .slice = slice_slice,
     };
-    stype = create_type(ctx->allocator, TYPE_KIND_SLICE, name, id,
-                        sizeof(struct _slice_data_t),
-                        alignof(struct _slice_data_t), &opt, meta);
+    stype = create_type(
+        ctx->allocator, TYPE_KIND_SLICE, name, id, sizeof(struct _slice_data_t),
+        alignof(struct _slice_data_t), &opt, meta, type->comptime);
     context_store_type(ctx, stype);
   }
   return stype;

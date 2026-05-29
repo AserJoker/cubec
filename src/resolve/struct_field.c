@@ -24,6 +24,10 @@ value_t resolve_struct_field(context_t ctx, ast_node_t node) {
       return vtype;
     }
     type_t t = *(type_t *)vtype->data;
+    if (t->kind == TYPE_KIND_VOID) {
+      return create_comptime_error(ctx, node_get_location(type),
+                                   "cannot declar %s struct field", t->id);
+    }
     char *id = location_get(node_get_location(identifier), ctx->allocator);
     value_t err =
         struct_type_add_field(ctx, ctx->self, id, t, pub != NULL, mut == NULL);

@@ -190,15 +190,17 @@ void init_float_type(context_t ctx) {
       .opt_le = float_le,
   };
 
-  type_t f16_type = create_type(ctx->allocator, TYPE_KIND_F16, "f16", "f16",
-                                sizeof(int16_t), sizeof(int16_t), &opt, NULL);
+  type_t f16_type =
+      create_type(ctx->allocator, TYPE_KIND_F16, "f16", "f16", sizeof(int16_t),
+                  sizeof(int16_t), &opt, NULL, false);
   context_store_type(ctx, f16_type);
-  type_t f32_type = create_type(ctx->allocator, TYPE_KIND_F32, "f32", "f32",
-                                sizeof(int32_t), sizeof(int32_t), &opt, NULL);
+  type_t f32_type =
+      create_type(ctx->allocator, TYPE_KIND_F32, "f32", "f32", sizeof(int32_t),
+                  sizeof(int32_t), &opt, NULL, false);
   context_store_type(ctx, f32_type);
   type_t f64_type =
       create_type(ctx->allocator, TYPE_KIND_F64, "f64", "f64",
-                  sizeof(float64_t), sizeof(float64_t), &opt, NULL);
+                  sizeof(float64_t), sizeof(float64_t), &opt, NULL, false);
   context_store_type(ctx, f64_type);
 
   create_type_value(ctx, f16_type, false, "f16");
