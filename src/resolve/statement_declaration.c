@@ -54,6 +54,11 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         CHECK_ERROR(ctx, err);
       }
     }
+    if (ctx->type == CONTEXT_TYPE_STRUCT && !value->comptime) {
+      value_t err = create_comptime_error(ctx, node_get_location(initialize),
+                                          "value is not comptime");
+      CHECK_ERROR(ctx, err);
+    }
     if (value->type->kind == TYPE_KIND_VOID) {
       value_t err = create_comptime_error(ctx, node_get_location(initialize),
                                           "cannot declar void value");

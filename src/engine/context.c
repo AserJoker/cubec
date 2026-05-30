@@ -2,6 +2,7 @@
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "c/program.h"
+#include "c/writer.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/compare.h"
@@ -179,7 +180,18 @@ static char *absolute(allocator_t allocator, const char *name) {
 }
 
 value_t context_load_module(context_t ctx, const char *filename) {
-  char *fullname = absolute(ctx->allocator, filename);
+  char *fullname = NULL;
+  if (ctx->mod) {
+    path_t dir = create_path(ctx->allocator, ctx->mod->dirname);
+    path_t fname = create_path(ctx->allocator, filename);
+    path_t full = path_concat(dir, ctx->allocator, fname);
+    fullname = path_to_string(full, ctx->allocator);
+    allocator_free(ctx->allocator, full);
+    allocator_free(ctx->allocator, fname);
+    allocator_free(ctx->allocator, dir);
+  } else {
+    fullname = absolute(ctx->allocator, filename);
+  }
   module_t mod = hash_map_get(ctx->modules, fullname, NULL, NULL);
   if (mod) {
     allocator_free(ctx->allocator, fullname);
@@ -221,13 +233,19 @@ value_t context_load_module(context_t ctx, const char *filename) {
     ctx->self = current_self;
     ctx->global = current_global;
     ctx->type = current_type;
-    list_node_t it = list_get_first(mod->errors);
-    while (it != list_get_end(mod->errors)) {
-      value_t err = list_node_get(it);
-      char *msg = error_format(ctx->allocator, err);
-      fprintf(stderr, "%s\n", msg);
-      allocator_free(ctx->allocator, msg);
-      it = list_node_next(it);
+    if (list_get_size(mod->errors)) {
+      list_node_t it = list_get_first(mod->errors);
+      while (it != list_get_end(mod->errors)) {
+        value_t err = list_node_get(it);
+        char *msg = error_format(ctx->allocator, err);
+        fprintf(stderr, "%s\n", msg);
+        allocator_free(ctx->allocator, msg);
+        it = list_node_next(it);
+      }
+      allocator_free(ctx->allocator, mod->value);
+      value_t err = create_error(ctx, "failed to load %s", filename);
+      err = value_clone(err, ctx->allocator);
+      mod->value = err;
     }
   }
   hash_map_set(ctx->modules, (void *)mod->filename, mod, NULL, NULL);
@@ -250,7 +268,10 @@ stream_t context_write_module(context_t ctx, const char *filename) {
   ctx->self = *(type_t *)mod->value->data;
   module_t current_module = ctx->mod;
   ctx->mod = mod;
-  c_program(ctx, mod->doc->node, stream);
+  c_writer_t writer = create_c_writer(ctx, stream);
+  c_program(writer, mod->doc->node);
+  c_writer_write(writer);
+  allocator_free(ctx->allocator, writer);
   ctx->mod = current_module;
   ctx->self = current_self;
   ctx->global = current_global;

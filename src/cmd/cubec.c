@@ -4,7 +4,6 @@
 #include "core/stream.h"
 #include "core/string.h"
 #include "engine/context.h"
-#include "engine/error.h"
 #include "engine/type.h"
 #include <inttypes.h>
 #include <stdbool.h>
@@ -16,11 +15,7 @@ int main(int argc, char *argv[]) {
   allocator_t allocator = create_allocator(NULL);
   context_t ctx = create_context(allocator);
   value_t value = context_load_module(ctx, "./build/main.cubec");
-  if (value->type->kind == TYPE_KIND_ERROR) {
-    char *msg = error_format(allocator, value);
-    fprintf(stderr, "%s\n", msg);
-    allocator_free(allocator, msg);
-  } else {
+  if (value->type->kind != TYPE_KIND_ERROR) {
     stream_t stream = context_write_module(ctx, "./build/main.cubec");
     string_t str = stream_get_string(stream);
     const char *src = string_get(str);
