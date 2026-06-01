@@ -22,5 +22,9 @@ value_t resolve_expression_compute_member(context_t ctx, ast_node_t node) {
   if (result->type->kind == TYPE_KIND_ERROR) {
     return convert_comptime_error(ctx, node_get_location(node), result);
   }
+  if (ctx->comptime && !result->comptime) {
+    return create_comptime_error(ctx, node_get_location(node),
+                                 "value is not comptime");
+  }
   return result;
 }
