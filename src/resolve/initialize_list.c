@@ -180,6 +180,10 @@ value_t resolve_initialize_list(context_t ctx, ast_node_t node) {
     } else {
       type = create_struct_type(ctx, NULL);
     }
-    return context_create_comptime_value(ctx, type, NULL, false, NULL);
+    if (ctx->comptime) {
+      return context_create_comptime_value(ctx, type, NULL, false, NULL);
+    } else {
+      return context_create_value(ctx, type, false, NULL);
+    }
   }
 }

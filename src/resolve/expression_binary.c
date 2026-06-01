@@ -69,6 +69,12 @@ value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
     if (rvalue->type->kind == TYPE_KIND_ERROR) {
       return rvalue;
     }
+    if (ctx->type == CONTEXT_TYPE_STRUCT) {
+      if (!lvalue->comptime || !rvalue->comptime) {
+        return create_comptime_error(ctx, node_get_location(node),
+                                     "value is not comptime");
+      }
+    }
     if (node_location_is(opt, "&&")) {
       return create_bool(ctx, false, NULL);
     } else if (node_location_is(opt, "||")) {
@@ -152,6 +158,12 @@ value_t resolve_expression_binary(context_t ctx, ast_node_t node) {
     value_t rvalue = resolve_expression(ctx, right);
     if (rvalue->type->kind == TYPE_KIND_ERROR) {
       return rvalue;
+    }
+    if (ctx->type == CONTEXT_TYPE_STRUCT) {
+      if (!rvalue->comptime) {
+        return create_comptime_error(ctx, node_get_location(node),
+                                     "value is not comptime");
+      }
     }
     if (node_location_is(node, "+")) {
       return value_opt_plu(rvalue, ctx);

@@ -17,6 +17,7 @@ extern "C" {
 #include <unicode/utf8.h>
 #include <unicode/utypes.h>
 struct _value_t;
+struct _scope_t;
 struct _ast_node_t;
 typedef struct _ast_node_t *ast_node_t;
 typedef struct _ast_error_t *ast_error_t;
@@ -32,8 +33,7 @@ struct _ast_node_t {
   token_t end;
   ast_node_type_t type;
   ast_node_t parent;
-  type_t value_type;
-  bool visible;
+  struct _scope_t *scope;
   union {
     array_t items;
     hash_map_t children;

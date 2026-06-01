@@ -2,6 +2,7 @@
 #include "ast/node.h"
 #include "core/allocator.h"
 #include "core/location.h"
+#include "engine/context.h"
 #include "engine/error.h"
 #include "engine/type.h"
 #include "engine/value.h"
@@ -18,6 +19,10 @@ value_t resolve_expression_member(context_t ctx, ast_node_t node) {
   if (node_location_is(field, "&")) {
     value = value_addr(obj, ctx);
   } else if (node_location_is(field, "*")) {
+    if (ctx->type == CONTEXT_TYPE_STRUCT) {
+      return create_comptime_error(ctx, node_get_location(node),
+                                   "value is not comptime");
+    }
     value = value_deref(obj, ctx);
   } else {
     location_t loc = node_get_location(field);

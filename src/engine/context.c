@@ -1,8 +1,6 @@
 #include "engine/context.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "c/program.h"
-#include "c/writer.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/compare.h"
@@ -206,6 +204,10 @@ value_t context_load_module(context_t ctx, const char *filename) {
     };
     value_t err =
         create_comptime_error(ctx, loc, "%s", doc->node->error->message);
+    char *msg = error_format(ctx->allocator, err);
+    fprintf(stderr, "%s\n", msg);
+    allocator_free(ctx->allocator, msg);
+    err = create_error(ctx, "failed to load %s", filename);
     err = value_clone(err, ctx->allocator);
     mod = create_module(ctx->allocator, fullname, err, doc);
   } else {
@@ -268,10 +270,7 @@ stream_t context_write_module(context_t ctx, const char *filename) {
   ctx->self = *(type_t *)mod->value->data;
   module_t current_module = ctx->mod;
   ctx->mod = mod;
-  c_writer_t writer = create_c_writer(ctx, stream);
-  c_program(writer, mod->doc->node);
-  c_writer_write(writer);
-  allocator_free(ctx->allocator, writer);
+  // TODO: write 
   ctx->mod = current_module;
   ctx->self = current_self;
   ctx->global = current_global;

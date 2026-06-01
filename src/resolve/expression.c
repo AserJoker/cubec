@@ -75,6 +75,11 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     val = create_comptime_error(ctx, node_get_location(node),
                                 "value is not comptime");
   }
+  if (val->type->comptime && !val->comptime) {
+    val = create_comptime_error(
+        ctx, node_get_location(node),
+        "create non-comptime value with comptime type '%s'", val->type->name);
+  }
   if (val->type->kind == TYPE_KIND_ERROR) {
     return val;
   }
@@ -83,6 +88,5 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     node->value = value_clone(val, ctx->allocator);
     node->type = NODE_TYPE_VALUE;
   }
-  node->value_type = val->type;
   return val;
 }

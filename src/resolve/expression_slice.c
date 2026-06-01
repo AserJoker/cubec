@@ -1,5 +1,6 @@
 #include "resolve/expression_slice.h"
 #include "ast/node.h"
+#include "engine/context.h"
 #include "engine/error.h"
 #include "engine/type.h"
 #include "engine/value.h"
@@ -40,6 +41,12 @@ value_t resolve_expression_slice(context_t ctx, ast_node_t node) {
   value_t obj = resolve_expression(ctx, host);
   if (obj->type->kind == TYPE_KIND_ERROR) {
     return obj;
+  }
+  if (ctx->type == CONTEXT_TYPE_STRUCT) {
+    if (!vstart->comptime || !vend->comptime) {
+      return create_comptime_error(ctx, node_get_location(node),
+                                   "value is not comptime");
+    }
   }
   value_t result = value_slice(obj, ctx, vstart, vend);
   if (result->type->kind == TYPE_KIND_ERROR) {

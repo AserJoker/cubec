@@ -129,6 +129,11 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   value_t args[arg_count];
   bool is_comptime =
       ctx->comptime || (declar && declar->kind == FUNCTION_KIND_COMPTIME);
+  if (ctx->type == CONTEXT_TYPE_STRUCT) {
+    if (!declar || declar->kind != FUNCTION_KIND_COMPTIME) {
+      return create_error(ctx, "function is not comptime");
+    }
+  }
   if (meta->variadic) {
     if (argc < arg_count - 1) {
       return create_error(

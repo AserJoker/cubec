@@ -1,13 +1,9 @@
 #include "c/program.h"
 #include "ast/node.h"
-#include "ast/node_type.h"
-#include "c/statement_declaration.h"
 #include "c/writer.h"
-#include "core/allocator.h"
 #include "core/array.h"
 #include "core/hash_map.h"
 #include "core/list.h"
-#include "core/location.h"
 #include "engine/context.h"
 #include <string.h>
 
@@ -16,14 +12,6 @@ void c_program(c_writer_t writer, ast_node_t node) {
   ast_node_t statements = ast_get_child(node, "statements");
   for (size_t idx = 0; idx < ast_get_length(statements); idx++) {
     ast_node_t sts = ast_get_item(statements, idx);
-    if (sts->type == NODE_TYPE_STATEMENT_DECLARATION) {
-      c_statement_declaration(writer, sts);
-    } else if (sts->type == NODE_TYPE_STATEMENT_IMPORT) {
-      ast_node_t source = ast_get_child(sts, "source");
-      char *filename = location_get(node_get_location(source), ctx->allocator);
-      c_writer_import(writer, filename);
-      allocator_free(ctx->allocator, filename);
-    }
   }
   hash_map_t functions = ctx->mod->functions;
   list_node_t it = hash_map_get_first(functions);
