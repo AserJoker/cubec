@@ -12,7 +12,9 @@
 #include "resolve/statement_struct.h"
 value_t resolve_statement_block(context_t ctx, ast_node_t node) {
   ast_node_t statements = ast_get_child(node, "statements");
+  scope_t scope = ctx->current;
   context_push_scope(ctx);
+  node->scope = ctx->current;
   for (size_t idx = 0; idx < ast_get_length(statements); idx++) {
     ast_node_t sts = ast_get_item(statements, idx);
     value_t err = NULL;
@@ -47,6 +49,6 @@ value_t resolve_statement_block(context_t ctx, ast_node_t node) {
       }
     }
   }
-  context_pop_scope(ctx);
+  ctx->current = scope;
   return create_comptime_void(ctx);
 }

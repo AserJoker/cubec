@@ -593,6 +593,7 @@ static value_t resolve_function_declaration(context_t ctx, value_t function) {
   scope_t current_scope = ctx->current;
   scope_t scope = create_scope(ctx->allocator, ctx->root);
   ctx->current = scope;
+  declar->node->scope = scope;
   value_t result = NULL;
   ast_node_t arguments = ast_get_child(declar->node, "arguments");
   for (size_t idx = 0; idx < arg_count; idx++) {
@@ -614,12 +615,10 @@ static value_t resolve_function_declaration(context_t ctx, value_t function) {
     allocator_free(ctx->allocator, name);
   }
   if (!result) {
-    context_push_scope(ctx);
     result = resolve_statement_block(ctx, body);
   }
   result = value_clone(result, ctx->allocator);
   scope_store(current_scope, NULL, result);
-  allocator_free(ctx->allocator, scope);
   ctx->current = current_scope;
   ctx->comptime = current_comptime;
   ctx->type = current_type;
