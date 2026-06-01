@@ -19,7 +19,7 @@ value_t resolve_expression_member(context_t ctx, ast_node_t node) {
   if (node_location_is(field, "&")) {
     value = value_addr(obj, ctx);
   } else if (node_location_is(field, "*")) {
-    if (ctx->type == CONTEXT_TYPE_STRUCT) {
+    if (ctx->type == CONTEXT_TYPE_STRUCT && !obj->comptime) {
       return create_comptime_error(ctx, node_get_location(node),
                                    "value is not comptime");
     }
