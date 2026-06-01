@@ -39,10 +39,12 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     allocator_free(ctx->allocator, args);
     return val;
   }
-  function_declar_t declar = *(function_declar_t *)val->data;
   bool is_comptime = ctx->comptime;
-  if (declar && declar->kind == FUNCTION_KIND_COMPTIME) {
-    ctx->comptime = true;
+  if (val->data) {
+    function_declar_t declar = *(function_declar_t *)val->data;
+    if (declar && declar->kind == FUNCTION_KIND_COMPTIME) {
+      ctx->comptime = true;
+    }
   }
   for (size_t idx = 0; idx < ast_get_length(arguments); idx++) {
     ast_node_t arg = ast_get_item(arguments, idx);

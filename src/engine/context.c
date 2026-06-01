@@ -129,7 +129,7 @@ value_t context_create_weak_value(context_t ctx, type_t type, void *data,
   value_t value = create_weak_value(ctx->allocator, type, data, mut);
   return context_declar(ctx, name, value);
 }
-value_t context_load(context_t ctx, const char *name) {
+value_t context_load_local(context_t ctx, const char *name) {
   scope_t scope = ctx->current;
   while (scope) {
     value_t value = scope_load(scope, name);
@@ -137,6 +137,20 @@ value_t context_load(context_t ctx, const char *name) {
       return value;
     }
     scope = scope->parent;
+  }
+  return NULL;
+}
+value_t context_load(context_t ctx, const char *name) {
+  value_t value = context_load_local(ctx, name);
+  if (value) {
+    return value;
+  }
+  if (ctx->function) {
+    function_declar_t declar = *(function_declar_t *)ctx->function->data;
+    value = hash_map_get(declar->closure, name, NULL, NULL);
+    if (value) {
+      return value;
+    }
   }
   struct_attribute_t attr = struct_type_get_attribute(ctx->global, name);
   if (attr) {
@@ -270,7 +284,7 @@ stream_t context_write_module(context_t ctx, const char *filename) {
   ctx->self = *(type_t *)mod->value->data;
   module_t current_module = ctx->mod;
   ctx->mod = mod;
-  // TODO: write 
+  // TODO: write
   ctx->mod = current_module;
   ctx->self = current_self;
   ctx->global = current_global;

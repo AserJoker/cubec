@@ -88,5 +88,6 @@ value_t resolve_expression(context_t ctx, ast_node_t node) {
     node->value = value_clone(val, ctx->allocator);
     node->type = NODE_TYPE_VALUE;
   }
+  node->vtype = val->type;
   return val;
 }

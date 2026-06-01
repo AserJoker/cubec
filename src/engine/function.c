@@ -217,16 +217,7 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     scope_t current_scope = ctx->current;
     scope_t scope = create_scope(ctx->allocator, ctx->root);
     ctx->current = scope;
-    list_node_t it = hash_map_get_first(declar->closure);
     value_t result = NULL;
-    while (it != hash_map_get_end(declar->closure)) {
-      const char *key = hash_map_node_get_key(it);
-      value_t value = hash_map_node_get_value(it);
-      value = value_clone(value, ctx->allocator);
-      context_declar(ctx, key, value);
-      it = hash_map_node_get_next(it);
-    }
-    context_push_scope(ctx);
     ast_node_t arguments = ast_get_child(declar->node, "arguments");
     size_t offset = 0;
     for (size_t idx = 0; idx < arg_count; idx++) {
@@ -602,16 +593,7 @@ static value_t resolve_function_declaration(context_t ctx, value_t function) {
   scope_t current_scope = ctx->current;
   scope_t scope = create_scope(ctx->allocator, ctx->root);
   ctx->current = scope;
-  list_node_t it = hash_map_get_first(declar->closure);
   value_t result = NULL;
-  while (it != hash_map_get_end(declar->closure)) {
-    const char *key = hash_map_node_get_key(it);
-    value_t value = hash_map_node_get_value(it);
-    value = value_clone(value, ctx->allocator);
-    context_declar(ctx, key, value);
-    it = hash_map_node_get_next(it);
-  }
-  context_push_scope(ctx);
   ast_node_t arguments = ast_get_child(declar->node, "arguments");
   for (size_t idx = 0; idx < arg_count; idx++) {
     ast_node_t arg = ast_get_item(arguments, idx);
@@ -663,15 +645,8 @@ value_t template_create_instance(value_t self, context_t ctx, size_t argc,
   scope_t current_scope = ctx->current;
   scope_t scope = create_scope(ctx->allocator, ctx->root);
   ctx->current = scope;
-  list_node_t it = hash_map_get_first(declar->closure);
-  while (it != hash_map_get_end(declar->closure)) {
-    const char *key = hash_map_node_get_key(it);
-    value_t value = hash_map_node_get_value(it);
-    value = value_clone(value, ctx->allocator);
-    context_declar(ctx, key, value);
-    it = hash_map_node_get_next(it);
-  }
-  context_push_scope(ctx);
+  value_t current_function = ctx->function;
+  ctx->function = self;
   bool variadic = false;
   size_t offset = 0;
   for (size_t idx = 0; idx < ast_get_length(arguments); idx++) {
@@ -754,7 +729,7 @@ value_t template_create_instance(value_t self, context_t ctx, size_t argc,
                                           .compare = (compare_fn_t)strcmp,
                                           .hash = (hash_fn_t)cstring_sdb,
                                       });
-  it = hash_map_get_first(declar->closure);
+  list_node_t it = hash_map_get_first(declar->closure);
   while (it != hash_map_get_end(declar->closure)) {
     const char *key = hash_map_node_get_key(it);
     value_t value = hash_map_node_get_value(it);
@@ -770,6 +745,7 @@ value_t template_create_instance(value_t self, context_t ctx, size_t argc,
   allocator_free(ctx->allocator, args);
   ctx->current = current_scope;
   allocator_free(ctx->allocator, scope);
+  ctx->function = current_function;
   value_t func = NULL;
   it = hash_map_get_first(ctx->mod->functions);
   while (it != hash_map_get_end(ctx->mod->functions)) {
@@ -829,15 +805,8 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
   scope_t current_scope = ctx->current;
   scope_t scope = create_scope(ctx->allocator, ctx->root);
   ctx->current = scope;
-  list_node_t it = hash_map_get_first(declar->closure);
-  while (it != hash_map_get_end(declar->closure)) {
-    const char *key = hash_map_node_get_key(it);
-    value_t value = hash_map_node_get_value(it);
-    value = value_clone(value, ctx->allocator);
-    context_declar(ctx, key, value);
-    it = hash_map_node_get_next(it);
-  }
-  context_push_scope(ctx);
+  value_t current_function = ctx->function;
+  ctx->function = self;
   bool variadic = false;
   for (size_t idx = 0; idx < ast_get_length(arguments); idx++) {
     ast_node_t arg = ast_get_item(arguments, idx);
@@ -887,7 +856,7 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
                                           .compare = (compare_fn_t)strcmp,
                                           .hash = (hash_fn_t)cstring_sdb,
                                       });
-  it = hash_map_get_first(declar->closure);
+  list_node_t it = hash_map_get_first(declar->closure);
   while (it != hash_map_get_end(declar->closure)) {
     const char *key = hash_map_node_get_key(it);
     value_t value = hash_map_node_get_value(it);
@@ -903,6 +872,7 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
   allocator_free(ctx->allocator, return_type);
   ctx->current = current_scope;
   allocator_free(ctx->allocator, scope);
+  ctx->function = current_function;
   value_t func = create_function(ctx, function_type, node, declar->id);
   it = hash_map_get_first(declar->closure);
   while (it != hash_map_get_end(declar->closure)) {

@@ -55,6 +55,7 @@ value_t context_create_comptime_value(context_t ctx, type_t type, void *data,
 value_t context_create_weak_value(context_t ctx, type_t type, void *data,
                                   bool mut, const char *name);
 value_t context_load(context_t ctx, const char *name);
+value_t context_load_local(context_t ctx, const char *name);
 void context_push_scope(context_t ctx);
 void context_pop_scope(context_t ctx);
 void context_push_trace(context_t ctx, const char *filename,

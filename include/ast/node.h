@@ -34,6 +34,7 @@ struct _ast_node_t {
   ast_node_type_t type;
   ast_node_t parent;
   struct _scope_t *scope;
+  type_t vtype;
   union {
     array_t items;
     hash_map_t children;

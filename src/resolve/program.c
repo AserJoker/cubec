@@ -13,6 +13,8 @@
 
 value_t resolve_program(context_t ctx, ast_node_t node) {
   ast_node_t statements = ast_get_child(node, "statements");
+  scope_t scope = ctx->current;
+  context_push_scope(ctx);
   for (size_t idx = 0; idx < ast_get_length(statements); idx++) {
     ast_node_t sts = ast_get_item(statements, idx);
     value_t err = NULL;

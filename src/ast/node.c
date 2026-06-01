@@ -42,6 +42,7 @@ ast_node_t create_ast_node(allocator_t allocator, size_t type) {
     node->data = NULL;
   }
   node->scope = NULL;
+  node->vtype = NULL;
   return node;
 }
 
