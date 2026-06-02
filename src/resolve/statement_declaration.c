@@ -66,12 +66,12 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
     value_t variable = NULL;
     bool is_mut = node_location_is(mut, "let");
     char *id = location_get(node_get_location(identifier), ctx->allocator);
-    if (ctx->comptime || kind && node_location_is(kind, "comptime")) {
-      value = create_comptime_value(ctx->allocator, t, value->data, is_mut);
-    } else {
-      value = create_value(ctx->allocator, t, is_mut);
-    }
     if (ctx->type == CONTEXT_TYPE_FUNCTION) {
+      if (ctx->comptime || kind && node_location_is(kind, "comptime")) {
+        value = create_comptime_value(ctx->allocator, t, value->data, is_mut);
+      } else {
+        value = create_value(ctx->allocator, t, is_mut);
+      }
       if (pub) {
         allocator_free(ctx->allocator, value);
         value_t err = create_comptime_error(
@@ -84,8 +84,9 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
       CHECK_ERROR(ctx, err);
     } else {
-      value_t err =
-          struct_type_add_attribute(ctx, ctx->self, id, value, pub != NULL);
+      value_t err = struct_type_add_attribute(
+          ctx, ctx->self, id, pub != NULL, initialize, t, is_mut,
+          kind && node_location_is(kind, "comptime"));
       if (err->type->kind == TYPE_KIND_ERROR) {
         allocator_free(ctx->allocator, value);
         err = convert_comptime_error(ctx, node_get_location(node), err);

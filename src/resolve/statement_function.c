@@ -8,7 +8,7 @@
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/void.h"
-#include "resolve/function_declarator.h"
+#include "resolve/expression.h"
 
 value_t resolve_statement_function(context_t ctx, ast_node_t node) {
   ast_node_t func = ast_get_child(node, "function");
@@ -20,7 +20,7 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
     return create_comptime_error(ctx, node_get_location(pub),
                                  "invalid pub declarator");
   }
-  value_t val = resolve_function_declarator(ctx, func);
+  value_t val = resolve_expression(ctx, func);
   if (val->type->kind == TYPE_KIND_ERROR) {
     if (ctx->comptime) {
       return val;
@@ -39,12 +39,12 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
       }
     }
     char *name = location_get(node_get_location(identifier), ctx->allocator);
-    val = value_clone(val, ctx->allocator);
     value_t err = NULL;
     if (ctx->type == CONTEXT_TYPE_FUNCTION) {
+      val = value_clone(val, ctx->allocator);
       err = context_declar(ctx, name, val);
     } else {
-      err = struct_type_add_attribute(ctx, ctx->self, name, val, pub != NULL);
+      err = struct_type_add_method(ctx, ctx->self, name, func, pub != NULL);
     }
     allocator_free(ctx->allocator, name);
     if (err->type->kind == TYPE_KIND_ERROR) {

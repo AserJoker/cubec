@@ -20,20 +20,12 @@ ast_node_t read_initialize_field(allocator_t allocator, token_stream_t stream) {
   node = create_ast_node(allocator, NODE_TYPE_INITIALIZE_FIELD);
   ast_node_t identifier = read_literal_identifier(allocator, stream);
   if (!identifier) {
-    token_t start = array_get(stream->tokens, position);
-    token_t end = token_stream_get(stream);
-    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
-                           stream->filename, "unexpected expression");
     goto onerror;
   }
   ast_add_child(allocator, node, "identifier", identifier);
   skip_comments(stream);
   token = token_stream_get(stream);
   if (!token_is(token, TOKEN_TYPE_SYMBOL, "=")) {
-    token_t start = array_get(stream->tokens, position);
-    token_t end = token_stream_get(stream);
-    err = create_ast_error(allocator, start->loc.begin, end->loc.end,
-                           stream->filename, "missing '='");
     goto onerror;
   }
   stream->position++;

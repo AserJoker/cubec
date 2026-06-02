@@ -1,4 +1,5 @@
 #include "engine/struct.h"
+#include "ast/node.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/compare.h"
@@ -243,7 +244,7 @@ struct_field_t struct_type_get_field(type_t stru, const char *name) {
   return NULL;
 }
 value_t struct_type_add_method(context_t ctx, type_t stru, const char *name,
-                               value_t value, bool pub) {
+                               ast_node_t initialize, bool pub) {
   struct_meta_t meta = stru->meta;
   for (size_t idx = 0; idx < array_get_size(meta->fields); idx++) {
     struct_field_t f = array_get(meta->fields, idx);
@@ -251,12 +252,13 @@ value_t struct_type_add_method(context_t ctx, type_t stru, const char *name,
       return create_error(ctx, "duplicate member '%s'", name);
     }
   }
-  value_t err = struct_type_add_attribute(ctx, stru, name, value, pub);
+  value_t err = struct_type_add_attribute(ctx, stru, name, pub, initialize,
+                                          initialize->vtype, false, true);
   if (err->type->kind == TYPE_KIND_ERROR) {
     return err;
   }
-  hash_map_set(meta->methods, create_cstring(ctx->allocator, name), value, NULL,
-               NULL);
+  hash_map_set(meta->methods, create_cstring(ctx->allocator, name),
+               initialize->value, NULL, NULL);
   return create_comptime_void(ctx);
 }
 hash_map_t struct_type_get_methods(type_t stru) {
@@ -269,26 +271,30 @@ struct_attribute_t struct_type_get_method(type_t stru, const char *name) {
 }
 
 static void struct_attribute_dispose(struct_attribute_t self,
-                                     allocator_t allocator) {
-  allocator_free(allocator, self->value);
-}
-static struct_attribute_t create_struct_attribute(allocator_t allocator,
-                                                  value_t value, bool pub) {
+                                     allocator_t allocator) {}
+static struct_attribute_t
+create_struct_attribute(allocator_t allocator, bool pub, ast_node_t initialize,
+                        type_t type, bool mut, bool comptime) {
   struct_attribute_t self =
       allocator_alloc(allocator, sizeof(struct _struct_attribute_t),
                       (dispose_fn_t)struct_attribute_dispose);
-  self->value = value;
   self->pub = pub;
+  self->initialize = initialize;
+  self->type = type;
+  self->mut = mut;
+  self->comptime = comptime;
   return self;
 }
 
 value_t struct_type_add_attribute(context_t ctx, type_t stru, const char *name,
-                                  value_t value, bool pub) {
+                                  bool pub, ast_node_t initialize, type_t type,
+                                  bool mut, bool comptime) {
   struct_meta_t meta = stru->meta;
   if (hash_map_get(meta->attributes, name, NULL, NULL)) {
     return create_error(ctx, "duplicate member '%s'", name);
   }
-  struct_attribute_t attr = create_struct_attribute(ctx->allocator, value, pub);
+  struct_attribute_t attr = create_struct_attribute(
+      ctx->allocator, pub, initialize, type, mut, comptime);
   hash_map_set(meta->attributes, create_cstring(ctx->allocator, name), attr,
                NULL, NULL);
   return create_comptime_void(ctx);

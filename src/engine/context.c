@@ -1,6 +1,8 @@
 #include "engine/context.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
+#include "c/program.h"
+#include "c/writer.h"
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/compare.h"
@@ -141,6 +143,12 @@ value_t context_load_local(context_t ctx, const char *name) {
   return NULL;
 }
 value_t context_load(context_t ctx, const char *name) {
+  if (strcmp(name, "__self__") == 0) {
+    if (!ctx->self) {
+      return create_error(ctx, "__self__ only used in struct context");
+    }
+    return create_type_value(ctx, ctx->self, false, NULL);
+  }
   value_t value = context_load_local(ctx, name);
   if (value) {
     return value;
@@ -154,7 +162,13 @@ value_t context_load(context_t ctx, const char *name) {
   }
   struct_attribute_t attr = struct_type_get_attribute(ctx->global, name);
   if (attr) {
-    return attr->value;
+    if (attr->initialize->type == NODE_TYPE_VALUE) {
+      value_t val = attr->initialize->value;
+      return context_create_weak_value(ctx, attr->type, val->data, attr->mut,
+                                       NULL);
+    } else {
+      return context_create_value(ctx, attr->type, attr->mut, NULL);
+    }
   }
   return create_error(ctx, "use of undeclared identifier '%s'", name);
 }
@@ -284,7 +298,10 @@ stream_t context_write_module(context_t ctx, const char *filename) {
   ctx->self = *(type_t *)mod->value->data;
   module_t current_module = ctx->mod;
   ctx->mod = mod;
-  // TODO: write
+  c_writer_t writer = create_c_writer(ctx, stream);
+  c_program(writer, mod->doc->node);
+  c_writer_write(writer);
+  allocator_free(ctx->allocator, writer);
   ctx->mod = current_module;
   ctx->self = current_self;
   ctx->global = current_global;

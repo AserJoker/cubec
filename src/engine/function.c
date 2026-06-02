@@ -449,8 +449,8 @@ type_t create_function_type(context_t ctx, ctype_t type, array_t argv,
       if (arg->type) {
         strcpy(&name[offset], arg->type->name);
         offset += strlen(arg->type->name);
+        is_comptime |= arg->type->comptime;
       }
-      is_comptime |= arg->type->comptime;
     }
     name[offset++] = ')';
     name[offset++] = '-';
@@ -602,17 +602,19 @@ static value_t resolve_function_declaration(context_t ctx, value_t function) {
     ast_node_t mut = ast_get_child(arg, "mut");
     ctype_t ctype = array_get(meta->args, idx);
     type_t type = ctype->type;
-    if (arg->type == NODE_TYPE_ARGUMENT_REST) {
-      type = create_slice_type(ctx, type);
-    }
-    char *name = location_get(node_get_location(identifier), ctx->allocator);
-    value_t err = context_create_value(ctx, type, ctype->mut, name);
-    if (err->type->kind == TYPE_KIND_ERROR) {
-      result = err;
+    if (type) {
+      if (arg->type == NODE_TYPE_ARGUMENT_REST) {
+        type = create_slice_type(ctx, type);
+      }
+      char *name = location_get(node_get_location(identifier), ctx->allocator);
+      value_t err = context_create_value(ctx, type, ctype->mut, name);
+      if (err->type->kind == TYPE_KIND_ERROR) {
+        result = err;
+        allocator_free(ctx->allocator, name);
+        break;
+      }
       allocator_free(ctx->allocator, name);
-      break;
     }
-    allocator_free(ctx->allocator, name);
   }
   if (!result) {
     result = resolve_statement_block(ctx, body);
@@ -813,11 +815,11 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
     ast_node_t type = ast_get_child(arg, "type");
     ast_node_t mut = ast_get_child(arg, "mut");
     type_t t = NULL;
-    if (node_location_is(type, "infer")) {
-      err = NULL;
-      goto onerror;
-    }
     if (type) {
+      if (node_location_is(type, "infer")) {
+        err = NULL;
+        goto onerror;
+      }
       value_t vt = resolve_type(ctx, type);
       if (vt->type->kind == TYPE_KIND_ERROR) {
         err = vt;

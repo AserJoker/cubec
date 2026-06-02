@@ -2,6 +2,8 @@
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/string.h"
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 struct _line_t {
   size_t indent;
@@ -42,7 +44,15 @@ stream_t create_stream(allocator_t allocator) {
   array_push(self->lines, self->line);
   return self;
 }
-void stream_write(stream_t stream, const char *str) {
+void stream_write(stream_t stream, const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+  size_t len = vsnprintf(NULL, 0, fmt, args);
+  va_end(args);
+  char str[len + 1];
+  va_start(args, fmt);
+  vsprintf(str, fmt, args);
+  va_end(args);
   string_concat(stream->line->buffer, stream->allocator, str);
 }
 void stream_write_location(stream_t stream, location_t loc) {

@@ -1,4 +1,5 @@
 #include "engine/type.h"
+#include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/string.h"
 #include "engine/bool.h"
@@ -68,7 +69,12 @@ static value_t type_get_field(value_t self, context_t ctx, const char *field) {
     if (!attr) {
       return create_error(ctx, "no member '%s' in '%s'", field, type->name);
     }
-    return attr->value;
+    if (attr->initialize->type == NODE_TYPE_VALUE) {
+      return context_create_weak_value(
+          ctx, attr->type, attr->initialize->value->data, attr->mut, NULL);
+    } else {
+      return context_create_value(ctx, attr->type, attr->mut, NULL);
+    }
   }
   return NULL;
 }
@@ -80,7 +86,8 @@ static value_t type_set_field(value_t self, context_t ctx, const char *field,
     if (!attr) {
       return create_error(ctx, "no member '%s' in '%s'", field, type->name);
     }
-    return value_assigment(attr->value, ctx, value);
+    value_t val = type_get_field(self, ctx, field);
+    return value_assigment(val, ctx, value);
   }
   return NULL;
 }

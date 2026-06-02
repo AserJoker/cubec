@@ -57,8 +57,9 @@ static value_t arr_get(value_t self, context_t ctx, value_t field) {
           ctx, "array index %" PRIuPTR " is past the end of the array", idx);
     }
     if (self->comptime) {
+      arr_meta_t meta = self->type->meta;
       uint8_t *data = self->data;
-      data = data + self->type->size * idx;
+      data = data + meta->type->size * idx;
       return context_create_weak_value(ctx, arr_type_get_type(type), data,
                                        self->mut, NULL);
     } else {

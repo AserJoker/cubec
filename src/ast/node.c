@@ -186,6 +186,10 @@ ast_doc_t read_ast_node(allocator_t allocator, const char *filename,
   }
   stream->position = 0;
   ast_node_t program = read_program(allocator, stream);
+  if (program->type != NODE_TYPE_ERROR) {
+    ast_node_t internals = create_ast_node(allocator, NODE_TYPE_LIST);
+    ast_add_child(allocator, program, "internels", internals);
+  }
   return create_ast_doc(allocator, program, stream, source);
 }
 ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {

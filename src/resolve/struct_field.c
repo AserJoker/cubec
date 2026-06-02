@@ -10,6 +10,7 @@
 #include "engine/value.h"
 #include "engine/void.h"
 #include "resolve/statement_declaration.h"
+#include "resolve/statement_function.h"
 #include "resolve/statement_struct.h"
 #include "resolve/type.h"
 
@@ -37,6 +38,11 @@ value_t resolve_struct_field(context_t ctx, ast_node_t node) {
     }
   } else if (node->type == NODE_TYPE_STATEMENT_STRUCT) {
     value_t err = resolve_statement_struct(ctx, node);
+    if (err->type->kind == TYPE_KIND_ERROR) {
+      return convert_comptime_error(ctx, node_get_location(node), err);
+    }
+  } else if (node->type == NODE_TYPE_STATEMENT_FUNCTION) {
+    value_t err = resolve_statement_function(ctx, node);
     if (err->type->kind == TYPE_KIND_ERROR) {
       return convert_comptime_error(ctx, node_get_location(node), err);
     }

@@ -8,7 +8,7 @@ extern "C" {
 #endif
 typedef struct _stream_t *stream_t;
 stream_t create_stream(allocator_t allocator);
-void stream_write(stream_t stream, const char *str);
+void stream_write(stream_t stream, const char *fmt, ...);
 void stream_write_location(stream_t stream, location_t loc);
 void stream_newline(stream_t stream);
 void stream_inc_indent(stream_t stream);

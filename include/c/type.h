@@ -4,7 +4,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void c_type(c_writer_t writer, type_t value);
+void c_type_declarator(c_writer_t writer, type_t type);
+void c_type_declaration(c_writer_t writer, type_t type);
+void c_type(c_writer_t writer, type_t type);
 #ifdef __cplusplus
 }
 #endif

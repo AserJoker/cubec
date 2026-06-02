@@ -6,7 +6,7 @@
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/void.h"
-#include "resolve/struct_declarator.h"
+#include "resolve/expression.h"
 
 value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
   ast_node_t stru = ast_get_child(node, "struct");
@@ -16,7 +16,7 @@ value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
     return create_comptime_error(ctx, node_get_location(pub),
                                  "invalid pub declarator");
   }
-  value_t val = resolve_struct_declarator(ctx, stru);
+  value_t val = resolve_expression(ctx, stru);
   if (val->type->kind == TYPE_KIND_ERROR) {
     if (ctx->comptime) {
       return val;
@@ -35,12 +35,13 @@ value_t resolve_statement_struct(context_t ctx, ast_node_t node) {
       }
     }
     char *name = location_get(node_get_location(identifier), ctx->allocator);
-    val = value_clone(val, ctx->allocator);
     value_t err = NULL;
     if (ctx->type == CONTEXT_TYPE_FUNCTION) {
+      val = value_clone(val, ctx->allocator);
       err = context_declar(ctx, name, val);
     } else {
-      err = struct_type_add_attribute(ctx, ctx->self, name, val, pub != NULL);
+      err = struct_type_add_attribute(ctx, ctx->self, name, pub != NULL, stru,
+                                      val->type, false, true);
     }
     allocator_free(ctx->allocator, name);
     if (err->type->kind == TYPE_KIND_ERROR) {
