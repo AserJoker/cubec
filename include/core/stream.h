@@ -18,6 +18,7 @@ size_t stream_get_indent(stream_t stream);
 void stream_set_base_indent(stream_t stream, size_t base_indent);
 size_t stream_get_base_indent(stream_t stream);
 string_t stream_get_string(stream_t stream);
+void stream_merge(stream_t stream, stream_t another);
 #ifdef __cplusplus
 }
 #endif

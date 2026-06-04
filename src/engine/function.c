@@ -872,7 +872,6 @@ value_t template_create_default_instance(value_t self, context_t ctx) {
   allocator_free(ctx->allocator, args);
   allocator_free(ctx->allocator, return_type);
   ctx->current = current_scope;
-  allocator_free(ctx->allocator, scope);
   ctx->function = current_function;
   value_t func = create_function(ctx, function_type, node, declar->id);
   it = hash_map_get_first(declar->closure);

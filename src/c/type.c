@@ -194,6 +194,7 @@ void c_type_declaration(c_writer_t writer, type_t type) {
   }
 }
 void c_type(c_writer_t writer, type_t type) {
+  c_writer_add_type(writer, type);
   stream_t stream = writer->stream;
   switch (type->kind) {
   case TYPE_KIND_NIL:

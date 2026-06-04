@@ -88,3 +88,13 @@ string_t stream_get_string(stream_t stream) {
   }
   return str;
 }
+void stream_merge(stream_t stream, stream_t another) {
+  for (size_t idx = 0; idx < array_get_size(another->lines); idx++) {
+    line_t line = array_get(another->lines, idx);
+    line_t newline = create_line(stream->allocator, 0);
+    newline->indent = line->indent;
+    const char *str = string_get(line->buffer);
+    string_concat(newline->buffer, stream->allocator, str);
+    array_push(stream->lines, newline);
+  }
+}

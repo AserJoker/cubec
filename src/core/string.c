@@ -64,12 +64,13 @@ string_t string_concat(string_t self, allocator_t allocator,
   if (len + self->len + 1 >= self->capacity) {
     self->capacity = len + self->len + 1;
     char *str = allocator_alloc(allocator, self->capacity, NULL);
-    memcpy(str, self->data, self->len + 1);
+    memcpy(str, self->data, self->len);
     allocator_free(allocator, self->data);
     self->data = str;
   }
-  memcpy(&self->data[self->len], source, len + 1);
+  memcpy(&self->data[self->len], source, len);
   self->len += len;
+  self->data[self->len] = 0;
   return self;
 }
 

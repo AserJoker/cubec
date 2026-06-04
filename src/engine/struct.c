@@ -271,7 +271,9 @@ struct_attribute_t struct_type_get_method(type_t stru, const char *name) {
 }
 
 static void struct_attribute_dispose(struct_attribute_t self,
-                                     allocator_t allocator) {}
+                                     allocator_t allocator) {
+  allocator_free(allocator, self->initialize);
+}
 static struct_attribute_t
 create_struct_attribute(allocator_t allocator, bool pub, ast_node_t initialize,
                         type_t type, bool mut, bool comptime) {

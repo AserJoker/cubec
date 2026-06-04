@@ -42,6 +42,14 @@ value_t resolve_initialize_list(context_t ctx, ast_node_t node) {
       type_t base_type = arr_type_get_type(type);
       for (size_t idx = 0; idx < ast_get_length(fields); idx++) {
         ast_node_t field = ast_get_item(fields, idx);
+        if (field->type == NODE_TYPE_INITIALIZE_LIST) {
+          ast_node_t itype = ast_get_child(field, "type");
+          if (!itype) {
+            value_t vtype = create_type_value(ctx, base_type, false, NULL);
+            itype = create_ast_value(ctx->allocator, vtype);
+            ast_add_child(ctx->allocator, field, "type", itype);
+          }
+        }
         if (field->type == NODE_TYPE_INITIALIZE_FIELD) {
           return create_comptime_error(ctx, node_get_location(field),
                                        "invalid array item");
@@ -112,6 +120,9 @@ value_t resolve_initialize_list(context_t ctx, ast_node_t node) {
           memcpy(data + f->offset, items[idx].value->data, f->type->size);
         }
       }
+      value_t vtype = create_type_value(ctx, type, false, NULL);
+      ast_node_t vt = create_ast_value(ctx->allocator, vtype);
+      ast_add_child(ctx->allocator, node, "type", vt);
       if (ctx->comptime) {
         return context_create_comptime_value(ctx, type, data, false, NULL);
       } else {
@@ -135,6 +146,14 @@ value_t resolve_initialize_list(context_t ctx, ast_node_t node) {
           return create_comptime_error(ctx, node_get_location(field),
                                        "no member '%s' in struct '%s'", name,
                                        type->name);
+        }
+        if (value->type == NODE_TYPE_INITIALIZE_LIST) {
+          ast_node_t itype = ast_get_child(value, "type");
+          if (!itype) {
+            value_t vtype = create_type_value(ctx, f->type, false, NULL);
+            itype = create_ast_value(ctx->allocator, vtype);
+            ast_add_child(ctx->allocator, value, "type", itype);
+          }
         }
         value_t val = resolve_expression(ctx, value);
         if (val->type->kind == TYPE_KIND_ERROR) {
@@ -179,6 +198,9 @@ value_t resolve_initialize_list(context_t ctx, ast_node_t node) {
       type = *(type_t *)vtype->data;
     } else {
       type = create_struct_type(ctx, NULL);
+      value_t vtype = create_type_value(ctx, type, false, NULL);
+      ast_node_t vt = create_ast_value(ctx->allocator, vtype);
+      ast_add_child(ctx->allocator, node, "type", vt);
     }
     if (ctx->comptime) {
       return context_create_comptime_value(ctx, type, NULL, false, NULL);

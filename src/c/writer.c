@@ -1,6 +1,7 @@
 #include "c/writer.h"
 #include "ast/node.h"
 #include "c/expression.h"
+#include "c/function.h"
 #include "c/program.h"
 #include "c/type.h"
 #include "core/allocator.h"
@@ -198,6 +199,15 @@ void c_writer_write(c_writer_t writer) {
   stream_newline(stream);
   stream_write(stream, "typedef double float64_t;");
   stream_newline(stream);
+
+  stream_t func_stream = create_stream(writer->ctx->allocator);
+  writer->stream = func_stream;
+  for (size_t idx = 0; idx < array_get_size(writer->functions); idx++) {
+    value_t func = array_get(writer->functions, idx);
+    c_function_declaration(writer, func);
+  }
+  writer->stream = stream;
+
   for (size_t idx = 0; idx < array_get_size(writer->types); idx++) {
     type_t type = array_get(writer->types, idx);
     c_type_declarator(writer, type);
@@ -212,7 +222,8 @@ void c_writer_write(c_writer_t writer) {
   }
   for (size_t idx = 0; idx < array_get_size(writer->functions); idx++) {
     value_t func = array_get(writer->functions, idx);
-    function_declar_t declar = *(function_declar_t *)func->data;
-    printf("function %s %s\n", declar->id, func->type->id);
+    c_function_declar(writer, func);
   }
+  stream_merge(writer->stream, func_stream);
+  allocator_free(writer->ctx->allocator, func_stream);
 }

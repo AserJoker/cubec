@@ -13,9 +13,14 @@
 value_t resolve_statement_function(context_t ctx, ast_node_t node) {
   ast_node_t func = ast_get_child(node, "function");
   ast_node_t identifier = ast_get_child(func, "identifier");
-  ast_node_t pub = ast_get_child(func, "pub");
+  char *name = NULL;
+  if (identifier) {
+    name = location_get(node_get_location(identifier), ctx->allocator);
+  }
+  ast_node_t pub = ast_get_child(func, "accessor");
   ast_node_t kind = ast_get_child(node, "kind");
   bool is_comptime = kind && node_location_is(kind, "comptime");
+  bool is_pub = pub && node_location_is(pub, "pub");
   if (ctx->type == CONTEXT_TYPE_FUNCTION && pub) {
     return create_comptime_error(ctx, node_get_location(pub),
                                  "invalid pub declarator");
@@ -27,8 +32,9 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
     } else {
       context_push_error(ctx, val);
     }
+    allocator_free(ctx->allocator, name);
   } else {
-    if (!identifier) {
+    if (!name) {
       value_t err = create_comptime_error(ctx, node_get_location(func),
                                           "missing function name");
       if (ctx->comptime) {
@@ -38,13 +44,14 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
         return create_comptime_void(ctx);
       }
     }
-    char *name = location_get(node_get_location(identifier), ctx->allocator);
     value_t err = NULL;
     if (ctx->type == CONTEXT_TYPE_FUNCTION) {
       val = value_clone(val, ctx->allocator);
       err = context_declar(ctx, name, val);
     } else {
-      err = struct_type_add_method(ctx, ctx->self, name, func, pub != NULL);
+      func = ast_get_child(node, "function");
+      func = clone_ast_node(ctx->allocator, func);
+      err = struct_type_add_method(ctx, ctx->self, name, func, is_pub);
     }
     allocator_free(ctx->allocator, name);
     if (err->type->kind == TYPE_KIND_ERROR) {

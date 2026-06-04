@@ -84,6 +84,8 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
       }
       CHECK_ERROR(ctx, err);
     } else {
+      initialize = ast_get_child(declar, "initialize");
+      initialize = clone_ast_node(ctx->allocator, initialize);
       value_t err = struct_type_add_attribute(
           ctx, ctx->self, id, pub != NULL, initialize, t, is_mut,
           kind && node_location_is(kind, "comptime"));
