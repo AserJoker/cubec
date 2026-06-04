@@ -10,6 +10,7 @@
 #include "engine/type.h"
 #include "engine/value.h"
 #include "resolve/expression.h"
+#include <stdbool.h>
 
 value_t resolve_expression_call(context_t ctx, ast_node_t node) {
   ast_node_t callee = ast_get_child(node, "callee");
@@ -25,13 +26,19 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
       allocator_free(ctx->allocator, args);
       return obj;
     }
+    type_t type = obj->type;
     if (obj->type->kind == TYPE_KIND_STRUCT) {
       obj = value_addr(obj, ctx);
       array_push(args, obj);
     }
     char *f = location_get(node_get_location(field), ctx->allocator);
-    val = value_get_field(obj, ctx, f);
+    value_t vtype = create_type_value(ctx, type, false, NULL);
+    val = value_get_field(vtype, ctx, f);
     allocator_free(ctx->allocator, f);
+    if (val->type->kind == TYPE_KIND_ERROR) {
+      allocator_free(ctx->allocator, args);
+      return convert_comptime_error(ctx, node_get_location(callee), val);
+    }
   } else {
     val = resolve_expression(ctx, callee);
   }

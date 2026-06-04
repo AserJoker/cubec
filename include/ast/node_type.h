@@ -64,6 +64,7 @@ typedef enum _ast_node_type_t {
   NODE_TYPE_CALLABLE_CLOSURE_ITEM,
   NODE_TYPE_PROGRAM,
   NODE_TYPE_DECORATOR,
+  NODE_TYPE_BINDING,
   NODE_TYPE_MAX,
 } ast_node_type_t;
 #ifdef __cplusplus

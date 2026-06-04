@@ -78,7 +78,7 @@ void c_writer_add_type(c_writer_t self, type_t type) {
   }
   case TYPE_KIND_SLICE: {
     type_t base_type = slice_type_get_type(type);
-    base_type = create_ptr_type(self->ctx, base_type, false, false);
+    base_type = create_ptr_type(self->ctx, base_type, true, false);
     c_writer_add_type(self, base_type);
     break;
   }
@@ -149,12 +149,8 @@ void c_writer_add_function(c_writer_t self, value_t function) {
 }
 void c_writer_add_global(c_writer_t self, const char *name,
                          ast_node_t initialize, type_t type, bool mut) {
-  c_writer_add_type(self, type);
-  size_t len = snprintf(NULL, 0, "%s_%s", self->ctx->self->name, name);
-  char id[len + 1];
-  sprintf(id, "%s_%s", self->ctx->self->name, name);
   c_global_t global =
-      create_c_global(self->ctx->allocator, id, initialize, type, mut);
+      create_c_global(self->ctx->allocator, name, initialize, type, mut);
   array_push(self->globals, global);
 }
 void c_writer_import(c_writer_t writer, const char *filename) {

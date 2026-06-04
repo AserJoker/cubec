@@ -162,7 +162,7 @@ value_t context_load(context_t ctx, const char *name) {
   }
   struct_attribute_t attr = struct_type_get_attribute(ctx->global, name);
   if (attr) {
-    if (attr->initialize->type == NODE_TYPE_VALUE) {
+    if (attr->comptime) {
       value_t val = attr->initialize->value;
       return context_create_weak_value(ctx, attr->type, val->data, attr->mut,
                                        NULL);

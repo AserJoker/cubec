@@ -6,6 +6,7 @@
 #include "engine/context.h"
 #include "engine/function.h"
 #include "engine/type.h"
+#include <stdbool.h>
 
 value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   ast_node_t closure = ast_get_child(node, "closure");
@@ -29,6 +30,11 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   value_t ins = template_create_default_instance(func, ctx);
   if (ins) {
     func = ins;
+  }
+  if (ast_get_length(closure) && func->type->kind == TYPE_KIND_FUNCTION) {
+    ast_node_t bind = create_ast_value(ctx->allocator, func);
+    ast_add_child(ctx->allocator, node, "bind", bind);
+    return context_create_value(ctx, func->type, false, NULL);
   }
   return func;
 }

@@ -82,7 +82,7 @@ void c_type_declaration(c_writer_t writer, type_t type) {
     type_t base_type = ptr_type_get_type(type);
     bool mut = ptr_type_is_mut(type);
     bool vol = ptr_type_is_vol(type);
-    stream_write(stream, "typedef ");
+    stream_write(stream, "#define %s ", type->id);
     c_type(writer, base_type);
     if (!mut) {
       stream_write(stream, " const");
@@ -90,12 +90,12 @@ void c_type_declaration(c_writer_t writer, type_t type) {
     if (vol) {
       stream_write(stream, " volatile");
     }
-    stream_write(stream, " * %s;", type->id);
+    stream_write(stream, " *");
     stream_newline(stream);
   } break;
   case TYPE_KIND_SLICE: {
     type_t base_type = slice_type_get_type(type);
-    base_type = create_ptr_type(writer->ctx, base_type, false, false);
+    base_type = create_ptr_type(writer->ctx, base_type, true, false);
     stream_write(stream, "struct _%s{", type->id);
     stream_inc_indent(stream);
     stream_newline(stream);
@@ -130,7 +130,7 @@ void c_type_declaration(c_writer_t writer, type_t type) {
     }
     c_type(writer, meta->type->type);
     if (hash_map_get_size(meta->closure)) {
-      stream_write(stream, "(* %s_call)(", type->id);
+      stream_write(stream, "(* %s_callee)(", type->id);
       stream_write(stream, "%s_env *", type->id);
       if (array_get_size(meta->args)) {
         stream_write(stream, ", ");
@@ -178,7 +178,7 @@ void c_type_declaration(c_writer_t writer, type_t type) {
       stream_write(stream, "struct _%s {", type->id);
       stream_inc_indent(stream);
       stream_newline(stream);
-      stream_write(stream, "%s_call callee;", type->id);
+      stream_write(stream, "%s_callee callee;", type->id);
       if (hash_map_get_size(meta->closure)) {
         stream_newline(stream);
         stream_write(stream, "%s_env env;", type->id);
@@ -186,6 +186,41 @@ void c_type_declaration(c_writer_t writer, type_t type) {
       stream_dec_indent(stream);
       stream_newline(stream);
       stream_write(stream, "};");
+      stream_newline(stream);
+      stream_write(stream, "inline ");
+      if (!meta->type->mut) {
+        stream_write(stream, "const ");
+      }
+      c_type(writer, meta->type->type);
+      stream_write(stream, " %s_call(%s fn, ", type->id, type->id);
+      for (size_t idx = 0; idx < array_get_size(meta->args); idx++) {
+        if (idx != 0) {
+          stream_write(stream, ", ");
+        }
+        ctype_t arg = array_get(meta->args, idx);
+        if (!arg->mut) {
+          stream_write(stream, "const ");
+        }
+        if (meta->variadic && idx == array_get_size(meta->args) - 1) {
+          type_t slice_type = create_slice_type(writer->ctx, arg->type);
+          c_type(writer, slice_type);
+        } else {
+          c_type(writer, arg->type);
+        }
+        stream_write(stream, " arg%" PRIuPTR, idx);
+      }
+      stream_write(stream, "){");
+      stream_inc_indent(stream);
+      stream_newline(stream);
+      stream_write(stream, "return fn.callee(&fn.env");
+      for (size_t idx = 0; idx < array_get_size(meta->args); idx++) {
+        stream_write(stream, ", ");
+        stream_write(stream, "arg%" PRIuPTR, idx);
+      }
+      stream_write(stream, ");");
+      stream_dec_indent(stream);
+      stream_newline(stream);
+      stream_write(stream, "}");
       stream_newline(stream);
     }
   } break;

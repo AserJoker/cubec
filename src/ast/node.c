@@ -219,6 +219,8 @@ ast_node_t clone_ast_node(allocator_t allocator, ast_node_t node) {
   } else if (node->type == NODE_TYPE_VALUE) {
     n->value = value_clone(node->value, allocator);
   }
+  n->vtype = node->vtype;
+  n->scope = node->scope;
   return n;
 }
 

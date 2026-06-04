@@ -257,8 +257,9 @@ value_t struct_type_add_method(context_t ctx, type_t stru, const char *name,
   if (err->type->kind == TYPE_KIND_ERROR) {
     return err;
   }
-  hash_map_set(meta->methods, create_cstring(ctx->allocator, name),
-               initialize->value, NULL, NULL);
+  struct_attribute_t attr = struct_type_get_attribute(stru, name);
+  hash_map_set(meta->methods, create_cstring(ctx->allocator, name), attr, NULL,
+               NULL);
   return create_comptime_void(ctx);
 }
 hash_map_t struct_type_get_methods(type_t stru) {
