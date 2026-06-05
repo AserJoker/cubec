@@ -1,4 +1,5 @@
 #include "c/expression_call.h"
+#include "ast/expression_group.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
 #include "c/expression.h"
@@ -17,12 +18,15 @@ void c_expression_call(c_writer_t writer, ast_node_t node) {
   context_t ctx = writer->ctx;
   allocator_t allocator = ctx->allocator;
   ast_node_t callee = ast_get_child(node, "callee");
+  callee = ast_unwrap_group(callee);
   value_t func = NULL;
+  type_t type = NULL;
   if (callee->type == NODE_TYPE_VALUE) {
     func = callee->value;
-  } else {
+  } else if (callee->type == NODE_TYPE_FUNCTION_DECLARATOR) {
     func = ast_get_child(callee, "bind")->value;
   }
+  type = callee->vtype;
   ast_node_t arguments = ast_get_child(node, "arguments");
   ast_node_t host = NULL;
   ast_node_t field = NULL;
@@ -30,10 +34,9 @@ void c_expression_call(c_writer_t writer, ast_node_t node) {
     host = ast_get_child(callee, "host");
     field = ast_get_child(callee, "field");
   }
-  type_t type = func->type;
   function_meta_t meta = type->meta;
-  function_declar_t declar = *(function_declar_t *)func->data;
   if (host && host->vtype->kind == TYPE_KIND_STRUCT) {
+    function_declar_t declar = *(function_declar_t *)func->data;
     type_t type = host->vtype;
     if (!hash_map_get_size(meta->closure)) {
       stream_write(stream, "%s", declar->id);

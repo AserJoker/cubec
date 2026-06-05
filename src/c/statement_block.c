@@ -18,6 +18,7 @@ void c_statement_block(c_writer_t writer, ast_node_t node) {
       ast_node_t sts = ast_get_item(statements, idx);
       c_statement(writer, sts);
     }
+    stream_popline(stream);
     stream_dec_indent(stream);
     stream_newline(stream);
   }

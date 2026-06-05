@@ -8,8 +8,8 @@ extern "C" {
 #endif
 void c_function_declar(c_writer_t writer, value_t func);
 void c_function_declaration(c_writer_t writer, value_t func);
-void c_function_closure(c_writer_t writer, ast_node_t node);
-void c_template_closure(c_writer_t writer, ast_node_t node);
+void c_function_closure(c_writer_t writer, value_t function);
+void c_closure_declar(c_writer_t writer, ast_node_t node);
 #ifdef __cplusplus
 }
 #endif

@@ -35,7 +35,7 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
       struct_attribute_t attr = struct_type_get_method(type, f);
       if (!attr) {
         val = create_comptime_error(ctx, node_get_location(callee),
-                                    "no member '%s' in '%s'", f, type->id);
+                                    "no method '%s' in '%s'", f, type->id);
       } else if (attr->initialize->type == NODE_TYPE_VALUE) {
         val = attr->initialize->value;
       } else if (attr->initialize->type == NODE_TYPE_FUNCTION_DECLARATOR) {

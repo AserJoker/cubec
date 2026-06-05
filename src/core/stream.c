@@ -62,6 +62,7 @@ void stream_newline(stream_t stream) {
   stream->line = create_line(stream->allocator, stream->indent);
   array_push(stream->lines, stream->line);
 }
+void stream_popline(stream_t stream) { array_pop(stream->lines); }
 
 void stream_inc_indent(stream_t stream) { stream->indent++; }
 void stream_dec_indent(stream_t stream) { stream->indent--; }

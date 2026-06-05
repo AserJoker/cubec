@@ -52,7 +52,7 @@ void c_type_declaration(c_writer_t writer, type_t type) {
   switch (type->kind) {
   case TYPE_KIND_STRUCT: {
     struct_meta_t meta = type->meta;
-    stream_write(stream, "struct _%s{", type->id);
+    stream_write(stream, "struct _%s {", type->id);
     if (array_get_size(meta->fields)) {
       stream_inc_indent(stream);
       stream_newline(stream);
@@ -130,13 +130,13 @@ void c_type_declaration(c_writer_t writer, type_t type) {
     }
     c_type(writer, meta->type->type);
     if (hash_map_get_size(meta->closure)) {
-      stream_write(stream, "(* %s_callee)(", type->id);
+      stream_write(stream, " (*%s_callee)(", type->id);
       stream_write(stream, "%s_env *", type->id);
       if (array_get_size(meta->args)) {
         stream_write(stream, ", ");
       }
     } else {
-      stream_write(stream, "(* %s)(", type->id);
+      stream_write(stream, " (*%s)(", type->id);
     }
     for (size_t idx = 0; idx < array_get_size(meta->args); idx++) {
       if (idx != 0) {

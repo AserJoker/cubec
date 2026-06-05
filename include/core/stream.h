@@ -11,6 +11,7 @@ stream_t create_stream(allocator_t allocator);
 void stream_write(stream_t stream, const char *fmt, ...);
 void stream_write_location(stream_t stream, location_t loc);
 void stream_newline(stream_t stream);
+void stream_popline(stream_t stream);
 void stream_inc_indent(stream_t stream);
 void stream_dec_indent(stream_t stream);
 void stream_set_indent(stream_t stream, size_t indent);

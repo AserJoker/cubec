@@ -1,5 +1,6 @@
 #include "resolve/statement_function.h"
 #include "ast/node.h"
+#include "ast/node_type.h"
 #include "core/allocator.h"
 #include "core/location.h"
 #include "engine/context.h"
@@ -34,6 +35,13 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
     }
     allocator_free(ctx->allocator, name);
   } else {
+    func = ast_get_child(node, "function");
+    if (func->type == NODE_TYPE_VALUE) {
+      val = func->value;
+    } else {
+      ast_node_t bind = ast_get_child(func, "bind");
+      val = bind->value;
+    }
     if (!name) {
       value_t err = create_comptime_error(ctx, node_get_location(func),
                                           "missing function name");
@@ -49,7 +57,6 @@ value_t resolve_statement_function(context_t ctx, ast_node_t node) {
       val = value_clone(val, ctx->allocator);
       err = context_declar(ctx, name, val);
     } else {
-      func = ast_get_child(node, "function");
       func = clone_ast_node(ctx->allocator, func);
       err = struct_type_add_method(ctx, ctx->self, name, func, is_pub);
     }
