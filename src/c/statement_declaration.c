@@ -6,6 +6,7 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/stream.h"
+#include "engine/type.h"
 void c_statement_declaration(c_writer_t writer, ast_node_t node) {
   context_t ctx = writer->ctx;
   stream_t stream = writer->stream;
@@ -22,10 +23,10 @@ void c_statement_declaration(c_writer_t writer, ast_node_t node) {
     ast_node_t type = ast_get_child(declar, "type");
     ast_node_t identifier = ast_get_child(declar, "identifier");
     ast_node_t initialize = ast_get_child(declar, "initialize");
-    if (!is_mut) {
+    type_t t = *(type_t *)type->value->data;
+    if (!is_mut && t->kind != TYPE_KIND_FUNCTION) {
       stream_write(stream, "const ");
     }
-    type_t t = *(type_t *)type->value->data;
     c_type(writer, t);
     char *id = location_get(node_get_location(identifier), allocator);
     stream_write(stream, " %s = ", id);
