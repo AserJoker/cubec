@@ -7,6 +7,7 @@
 #include "core/location.h"
 #include "engine/error.h"
 #include "engine/function.h"
+#include "engine/struct.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "resolve/expression.h"
@@ -30,14 +31,27 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     if (obj->type->kind == TYPE_KIND_STRUCT) {
       obj = value_addr(obj, ctx);
       array_push(args, obj);
-    }
-    char *f = location_get(node_get_location(field), ctx->allocator);
-    value_t vtype = create_type_value(ctx, type, false, NULL);
-    val = value_get_field(vtype, ctx, f);
-    allocator_free(ctx->allocator, f);
-    if (val->type->kind == TYPE_KIND_ERROR) {
-      allocator_free(ctx->allocator, args);
-      return convert_comptime_error(ctx, node_get_location(callee), val);
+      char *f = location_get(node_get_location(field), ctx->allocator);
+      struct_attribute_t attr = struct_type_get_method(type, f);
+      if (!attr) {
+        val = create_comptime_error(ctx, node_get_location(callee),
+                                    "no member '%s' in '%s'", f, type->id);
+      } else if (attr->initialize->type == NODE_TYPE_VALUE) {
+        val = attr->initialize->value;
+      } else if (attr->initialize->type == NODE_TYPE_FUNCTION_DECLARATOR) {
+        ast_node_t bind = ast_get_child(attr->initialize, "bind");
+        val = bind->value;
+      } else {
+        val = create_comptime_error(ctx, node_get_location(callee),
+                                    "%s.%s is not callable", type->id, f);
+      }
+      allocator_free(ctx->allocator, f);
+      if (val->type->kind == TYPE_KIND_ERROR) {
+        allocator_free(ctx->allocator, args);
+        return convert_comptime_error(ctx, node_get_location(callee), val);
+      }
+    } else {
+      val = resolve_expression(ctx, callee);
     }
   } else {
     val = resolve_expression(ctx, callee);
@@ -63,12 +77,27 @@ value_t resolve_expression_call(context_t ctx, ast_node_t node) {
     }
     array_push(args, value);
   }
-  value_t result =
-      value_call(val, ctx, array_get_size(args), array_get_data(args));
+  value_t result = NULL;
+  if (val->type->kind == TYPE_KIND_TEMPLATE) {
+    val = template_create_instance(val, ctx, array_get_size(args),
+                                   array_get_data(args));
+  }
+  if (val->type->kind == TYPE_KIND_ERROR) {
+    result = val;
+  } else {
+    result = value_call(val, ctx, array_get_size(args), array_get_data(args));
+  }
   allocator_free(ctx->allocator, args);
   if (result->type->kind == TYPE_KIND_ERROR) {
     result = convert_comptime_error(ctx, node_get_location(node), result);
   }
   ctx->comptime = is_comptime;
+  if (callee->type != NODE_TYPE_VALUE) {
+    ast_node_t bind = create_ast_value(ctx->allocator, val);
+    ast_add_child(ctx->allocator, callee, "bind", bind);
+  } else if (callee->value->type->kind == TYPE_KIND_TEMPLATE) {
+    allocator_free(ctx->allocator, callee->value);
+    callee->value = value_clone(val, ctx->allocator);
+  }
   return result;
 }

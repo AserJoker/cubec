@@ -35,7 +35,9 @@ struct _context_t {
   list_t dependences;
   value_t function;
   bool comptime;
-  array_t functions;
+  array_t declars;
+  hash_map_t functions;
+  hash_map_t structs;
 };
 typedef struct _trace_t *trace_t;
 struct _trace_t {
@@ -62,7 +64,7 @@ void context_push_trace(context_t ctx, const char *filename,
                         const char *funcname, size_t column, size_t line);
 void context_pop_trace(context_t ctx);
 value_t context_load_module(context_t ctx, const char *name);
-stream_t context_write_module(context_t ctx, const char *filename);
+stream_t context_write_c(context_t ctx);
 value_t context_declar(context_t ctx, const char *name, value_t value);
 void context_push_error(context_t ctx, value_t err);
 #ifdef __cplusplus

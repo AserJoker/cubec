@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
   context_t ctx = create_context(allocator);
   value_t value = context_load_module(ctx, "./build/main.cubec");
   if (value->type->kind != TYPE_KIND_ERROR) {
-    stream_t stream = context_write_module(ctx, "./build/main.cubec");
+    stream_t stream = context_write_c(ctx);
     string_t str = stream_get_string(stream);
     const char *src = string_get(str);
     FILE *fp = fopen("./build/main.c", "w");

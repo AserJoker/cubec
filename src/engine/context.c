@@ -1,7 +1,6 @@
 #include "engine/context.h"
 #include "ast/node.h"
 #include "ast/node_type.h"
-#include "c/program.h"
 #include "c/writer.h"
 #include "core/allocator.h"
 #include "core/array.h"
@@ -52,6 +51,8 @@ static void context_dispose(context_t self, allocator_t allocator) {
   allocator_free(allocator, self->modules);
   allocator_free(allocator, self->dependences);
   allocator_free(allocator, self->functions);
+  allocator_free(allocator, self->structs);
+  allocator_free(allocator, self->declars);
 }
 
 context_t create_context(allocator_t allocator) {
@@ -82,9 +83,22 @@ context_t create_context(allocator_t allocator) {
   self->dependences = create_list(allocator, &(list_initialize_t){
                                                  .autofree = true,
                                              });
-  self->functions = create_array(allocator, &(array_initialize_t){
-                                                .autofree = true,
-                                            });
+  self->functions =
+      create_hash_map(allocator, &(hash_map_initialize_t){
+                                     .hash = (hash_fn_t)cstring_sdb,
+                                     .autofree_key = false,
+                                     .autofree_value = true,
+                                     .compare = (compare_fn_t)strcmp,
+                                 });
+  self->structs =
+      create_hash_map(allocator, &(hash_map_initialize_t){
+                                     .hash = (hash_fn_t)cstring_sdb,
+                                     .autofree_key = false,
+                                     .autofree_value = false,
+                                     .compare = (compare_fn_t)strcmp,
+                                 });
+  self->declars =
+      create_array(allocator, &(array_initialize_t){.autofree = true});
   self->root = create_scope(allocator, NULL);
   self->current = self->root;
   self->global = NULL;
@@ -285,27 +299,11 @@ value_t context_load_module(context_t ctx, const char *filename) {
   return value;
 }
 
-stream_t context_write_module(context_t ctx, const char *filename) {
-  char *fullname = absolute(ctx->allocator, filename);
+stream_t context_write_c(context_t ctx) {
   stream_t stream = create_stream(ctx->allocator);
-  module_t mod = hash_map_get(ctx->modules, fullname, NULL, NULL);
-  allocator_free(ctx->allocator, fullname);
-  context_type_t current_type = ctx->type;
-  ctx->type = CONTEXT_TYPE_STRUCT;
-  type_t current_global = ctx->global;
-  ctx->global = *(type_t *)mod->value->data;
-  type_t current_self = ctx->self;
-  ctx->self = *(type_t *)mod->value->data;
-  module_t current_module = ctx->mod;
-  ctx->mod = mod;
   c_writer_t writer = create_c_writer(ctx, stream);
-  c_program(writer, mod->doc->node);
   c_writer_write(writer);
   allocator_free(ctx->allocator, writer);
-  ctx->mod = current_module;
-  ctx->self = current_self;
-  ctx->global = current_global;
-  ctx->type = current_type;
   return stream;
 }
 

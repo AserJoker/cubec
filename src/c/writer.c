@@ -2,7 +2,6 @@
 #include "ast/node.h"
 #include "c/expression.h"
 #include "c/function.h"
-#include "c/program.h"
 #include "c/type.h"
 #include "core/allocator.h"
 #include "core/array.h"
@@ -10,7 +9,6 @@
 #include "core/hash.h"
 #include "core/hash_map.h"
 #include "core/list.h"
-#include "core/path.h"
 #include "core/stream.h"
 #include "core/string.h"
 #include "engine/arr.h"
@@ -38,6 +36,7 @@ c_global_t create_c_global(allocator_t allocator, const char *name,
   self->type = type;
   return self;
 }
+
 static void c_writer_dispose(c_writer_t self, allocator_t allocator) {
   allocator_free(allocator, self->types);
   allocator_free(allocator, self->globals);
@@ -144,33 +143,17 @@ void c_writer_add_type(c_writer_t self, type_t type) {
   }
 }
 void c_writer_add_function(c_writer_t self, value_t function) {
-  c_writer_add_type(self, function->type);
-  array_push(self->functions, function);
+  function_declar_t declar = *(function_declar_t *)function->data;
+  if (declar->kind == FUNCTION_KIND_NORMAL) {
+    c_writer_add_type(self, function->type);
+    array_push(self->functions, function);
+  }
 }
 void c_writer_add_global(c_writer_t self, const char *name,
                          ast_node_t initialize, type_t type, bool mut) {
   c_global_t global =
       create_c_global(self->ctx->allocator, name, initialize, type, mut);
   array_push(self->globals, global);
-}
-void c_writer_import(c_writer_t writer, const char *filename) {
-  context_t ctx = writer->ctx;
-  module_t current = writer->ctx->mod;
-  path_t dir = create_path(ctx->allocator, ctx->mod->dirname);
-  path_t fname = create_path(ctx->allocator, filename);
-  path_t full = path_concat(dir, ctx->allocator, fname);
-  char *fullname = path_to_string(full, ctx->allocator);
-  allocator_free(ctx->allocator, full);
-  allocator_free(ctx->allocator, fname);
-  allocator_free(ctx->allocator, dir);
-  if (!hash_map_get(writer->modules, fullname, NULL, NULL)) {
-    module_t mod = hash_map_get(ctx->modules, fullname, NULL, NULL);
-    hash_map_set(writer->modules, mod->filename, mod, NULL, NULL);
-    ctx->mod = mod;
-    c_program(writer, mod->doc->node);
-    ctx->mod = current;
-  }
-  allocator_free(ctx->allocator, fullname);
 }
 
 void c_write_global(c_writer_t writer, c_global_t global) {
@@ -183,7 +166,25 @@ void c_write_global(c_writer_t writer, c_global_t global) {
   stream_write(writer->stream, ";");
   stream_newline(writer->stream);
 }
+
 void c_writer_write(c_writer_t writer) {
+  module_t master = NULL;
+  list_node_t it = hash_map_get_first(writer->ctx->modules);
+  while (it != hash_map_get_end(writer->ctx->modules)) {
+    module_t mod = hash_map_node_get_value(it);
+    if (mod->master) {
+      master = mod;
+    }
+    c_writer_add_type(writer, *(type_t *)mod->value->data);
+    it = hash_map_node_get_next(it);
+    list_node_t fit = hash_map_get_first(writer->ctx->functions);
+    while (fit != hash_map_get_end(writer->ctx->functions)) {
+      const char *name = hash_map_node_get_key(fit);
+      value_t func = hash_map_node_get_value(fit);
+      c_writer_add_function(writer, func);
+      fit = hash_map_node_get_next(fit);
+    }
+  }
   stream_t stream = writer->stream;
   stream_write(stream, "#include <stdbool.h>");
   stream_newline(stream);
@@ -195,7 +196,6 @@ void c_writer_write(c_writer_t writer) {
   stream_newline(stream);
   stream_write(stream, "typedef double float64_t;");
   stream_newline(stream);
-
   stream_t func_stream = create_stream(writer->ctx->allocator);
   writer->stream = func_stream;
   for (size_t idx = 0; idx < array_get_size(writer->functions); idx++) {
@@ -203,7 +203,6 @@ void c_writer_write(c_writer_t writer) {
     c_function_declaration(writer, func);
   }
   writer->stream = stream;
-
   for (size_t idx = 0; idx < array_get_size(writer->types); idx++) {
     type_t type = array_get(writer->types, idx);
     c_type_declarator(writer, type);

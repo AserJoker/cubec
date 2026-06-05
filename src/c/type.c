@@ -192,7 +192,7 @@ void c_type_declaration(c_writer_t writer, type_t type) {
         stream_write(stream, "const ");
       }
       c_type(writer, meta->type->type);
-      stream_write(stream, " %s_call(%s fn, ", type->id, type->id);
+      stream_write(stream, " %s_call(%s* fn, ", type->id, type->id);
       for (size_t idx = 0; idx < array_get_size(meta->args); idx++) {
         if (idx != 0) {
           stream_write(stream, ", ");
@@ -212,7 +212,7 @@ void c_type_declaration(c_writer_t writer, type_t type) {
       stream_write(stream, "){");
       stream_inc_indent(stream);
       stream_newline(stream);
-      stream_write(stream, "return fn.callee(&fn.env");
+      stream_write(stream, "return fn->callee(&fn->env");
       for (size_t idx = 0; idx < array_get_size(meta->args); idx++) {
         stream_write(stream, ", ");
         stream_write(stream, "arg%" PRIuPTR, idx);

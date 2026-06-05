@@ -37,12 +37,9 @@ static value_t template_call(value_t self, context_t ctx, size_t argc,
 }
 
 void init_template_type(context_t ctx) {
-  struct _type_operator_t opt = {
-      .call = &template_call,
-  };
   type_t type = create_type(ctx->allocator, TYPE_KIND_TEMPLATE, "template",
                             "template", sizeof(function_declar_t),
-                            sizeof(function_declar_t), &opt, NULL, true);
+                            sizeof(function_declar_t), NULL, NULL, true);
   context_store_type(ctx, type);
 }
 static void function_declar_dispose(function_declar_t self,
@@ -482,12 +479,12 @@ value_t create_function(context_t ctx, type_t type, ast_node_t node,
                         const char *base_id) {
   char *id = NULL;
   module_t mod = ctx->mod;
-  if (hash_map_has(mod->functions, base_id, NULL, NULL)) {
+  if (hash_map_has(ctx->functions, base_id, NULL, NULL)) {
     for (size_t idx = 0;; idx++) {
       size_t len = snprintf(NULL, 0, "%sI%" PRIuPTR, base_id, idx);
       char buf[len + 1];
       sprintf(buf, "%sI%" PRIuPTR, base_id, idx);
-      if (!hash_map_has(mod->functions, buf, NULL, NULL)) {
+      if (!hash_map_has(ctx->functions, buf, NULL, NULL)) {
         id = create_cstring(ctx->allocator, buf);
         break;
       }
@@ -503,17 +500,21 @@ value_t create_function(context_t ctx, type_t type, ast_node_t node,
       ctx->self, ctx->mod);
   declar->node = clone_ast_node(ctx->allocator, node);
   allocator_free(ctx->allocator, id);
-  array_push(ctx->functions, declar);
+  array_push(ctx->declars, declar);
   value_t value =
       context_create_comptime_value(ctx, type, &declar, false, NULL);
   value_t val = value_clone(value, ctx->allocator);
-  array_push(mod->indexed_functions, val);
-  hash_map_set(mod->functions, declar->id, val, NULL, NULL);
+  hash_map_set(ctx->functions, declar->id, val, NULL, NULL);
   return value;
 }
 value_t function_add_closure(value_t self, context_t ctx, const char *name,
                              value_t value) {
   function_declar_t declar = *(function_declar_t *)self->data;
+  ast_node_t kind = ast_get_child(declar->node, "kind");
+  bool is_comptime = kind && node_location_is(kind, "comptime");
+  if (is_comptime && !value->comptime) {
+    return create_error(ctx, "binding '%s' is not comptime", name);
+  }
   if (hash_map_has(declar->closure, name, NULL, NULL)) {
     return create_error(ctx, "duplicate '%s' closure declar", name);
   }
@@ -551,12 +552,12 @@ value_t create_template(context_t ctx, ast_node_t node) {
   }
   char *id = NULL;
   module_t mod = ctx->mod;
-  if (hash_map_has(mod->functions, base_id, NULL, NULL)) {
+  if (hash_map_has(ctx->functions, base_id, NULL, NULL)) {
     for (size_t idx = 0;; idx++) {
       size_t len = snprintf(NULL, 0, "%sI%" PRIuPTR, base_id, idx);
       char buf[len + 1];
       sprintf(buf, "%sI%" PRIuPTR, base_id, idx);
-      if (!hash_map_has(mod->functions, buf, NULL, NULL)) {
+      if (!hash_map_has(ctx->functions, buf, NULL, NULL)) {
         id = create_cstring(ctx->allocator, buf);
         break;
       }
@@ -567,7 +568,7 @@ value_t create_template(context_t ctx, ast_node_t node) {
   function_declar_t declar = create_function_declar(
       ctx->allocator, FUNCTION_KIND_TEMPLATE, id, id, ctx->self, ctx->mod);
   declar->node = clone_ast_node(ctx->allocator, node);
-  array_push(ctx->functions, declar);
+  array_push(ctx->declars, declar);
   allocator_free(ctx->allocator, id);
   return context_create_comptime_value(ctx, type, &declar, false, NULL);
 }
@@ -603,6 +604,12 @@ static value_t resolve_function_declaration(context_t ctx, value_t function) {
     ctype_t ctype = array_get(meta->args, idx);
     type_t type = ctype->type;
     if (type) {
+      if (type->comptime) {
+        result = create_comptime_error(
+            ctx, node_get_location(arg),
+            "comptime argument declar in non-comptime function");
+        break;
+      }
       if (arg->type == NODE_TYPE_ARGUMENT_REST) {
         type = create_slice_type(ctx, type);
       }
@@ -656,6 +663,12 @@ value_t template_create_instance(value_t self, context_t ctx, size_t argc,
     ast_node_t type = ast_get_child(arg, "type");
     ast_node_t mut = ast_get_child(arg, "mut");
     type_t t = NULL;
+    if (arg->type == NODE_TYPE_ARGUMENT && idx >= argc) {
+      err = create_error(
+          ctx, "function requires %" PRIuPTR " arguments receive %" PRIuPTR,
+          ast_get_length(arguments), argc);
+      goto onerror;
+    }
     if (type) {
       if (node_location_is(type, "infer")) {
         t = argv[idx]->type;
@@ -748,8 +761,8 @@ value_t template_create_instance(value_t self, context_t ctx, size_t argc,
   allocator_free(ctx->allocator, scope);
   ctx->function = current_function;
   value_t func = NULL;
-  it = hash_map_get_first(ctx->mod->functions);
-  while (it != hash_map_get_end(ctx->mod->functions)) {
+  it = hash_map_get_first(ctx->functions);
+  while (it != hash_map_get_end(ctx->functions)) {
     value_t value = hash_map_node_get_value(it);
     function_declar_t dec = *(function_declar_t *)value->data;
     if (strcmp(dec->template_id, declar->id) == 0) {
@@ -773,9 +786,9 @@ value_t template_create_instance(value_t self, context_t ctx, size_t argc,
     }
     declar = *(function_declar_t *)func->data;
     if (declar->kind == FUNCTION_KIND_NORMAL) {
-      value_t err = resolve_function_declaration(ctx, func);
+      err = resolve_function_declaration(ctx, func);
       if (err->type->kind == TYPE_KIND_ERROR) {
-        goto onerror;
+        return err;
       }
     }
   }

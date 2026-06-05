@@ -32,7 +32,6 @@ void c_writer_add_type(c_writer_t writer, type_t type);
 void c_writer_add_function(c_writer_t writer, value_t function);
 void c_writer_add_global(c_writer_t writer, const char *name,
                          ast_node_t initialize, type_t type, bool mut);
-void c_writer_import(c_writer_t writer, const char *src);
 void c_writer_write(c_writer_t writer);
 #ifdef __cplusplus
 }

@@ -4,6 +4,7 @@
 #include "core/allocator.h"
 #include "core/location.h"
 #include "engine/context.h"
+#include "engine/error.h"
 #include "engine/function.h"
 #include "engine/type.h"
 #include <stdbool.h>
@@ -23,7 +24,7 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
       value_t err = function_add_closure(func, ctx, name, value);
       allocator_free(ctx->allocator, name);
       if (err->type->kind == TYPE_KIND_ERROR) {
-        return err;
+        return convert_comptime_error(ctx, node_get_location(item), err);
       }
     }
   }
@@ -31,7 +32,8 @@ value_t resolve_function_declarator(context_t ctx, ast_node_t node) {
   if (ins) {
     func = ins;
   }
-  if (ast_get_length(closure) && func->type->kind == TYPE_KIND_FUNCTION) {
+  if (ast_get_length(closure) && func->type->kind == TYPE_KIND_FUNCTION &&
+      !ctx->comptime) {
     ast_node_t bind = create_ast_value(ctx->allocator, func);
     ast_add_child(ctx->allocator, node, "bind", bind);
     return context_create_value(ctx, func->type, false, NULL);

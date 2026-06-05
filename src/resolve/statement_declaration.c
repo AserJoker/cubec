@@ -76,10 +76,12 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
         allocator_free(ctx->allocator, value);
         value_t err = create_comptime_error(
             ctx, node_get_location(pub), "pub only used in struct or global");
+        allocator_free(ctx->allocator, id);
         CHECK_ERROR(ctx, err);
       }
       value_t err = context_declar(ctx, id, value);
       if (err->type->kind == TYPE_KIND_ERROR) {
+        allocator_free(ctx->allocator, id);
         err = convert_comptime_error(ctx, node_get_location(node), err);
       }
       CHECK_ERROR(ctx, err);
@@ -91,6 +93,7 @@ value_t resolve_statement_declaration(context_t ctx, ast_node_t node) {
           kind && node_location_is(kind, "comptime"));
       if (err->type->kind == TYPE_KIND_ERROR) {
         allocator_free(ctx->allocator, value);
+        allocator_free(ctx->allocator, id);
         err = convert_comptime_error(ctx, node_get_location(node), err);
       }
       CHECK_ERROR(ctx, err);

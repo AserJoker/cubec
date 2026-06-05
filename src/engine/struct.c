@@ -157,12 +157,12 @@ type_t create_struct_type(context_t ctx, const char *name) {
   }
   module_t mod = ctx->mod;
   char *id = NULL;
-  if (mod && hash_map_has(mod->structs, base_id, NULL, NULL)) {
+  if (mod && hash_map_has(ctx->structs, base_id, NULL, NULL)) {
     for (size_t idx = 0;; idx++) {
       size_t len = snprintf(NULL, 0, "%sI%" PRIuPTR, base_id, idx);
       char id_data[len + 1];
       sprintf(id_data, "%sI%" PRIuPTR, base_id, idx);
-      if (!hash_map_has(mod->structs, id_data, NULL, NULL)) {
+      if (!hash_map_has(ctx->structs, id_data, NULL, NULL)) {
         id = create_cstring(ctx->allocator, id_data);
         break;
       }
@@ -176,8 +176,7 @@ type_t create_struct_type(context_t ctx, const char *name) {
   allocator_free(ctx->allocator, id);
   context_store_type(ctx, type);
   if (mod) {
-    hash_map_set(mod->structs, type->id, type, NULL, NULL);
-    array_push(mod->indexed_structs, type->id);
+    hash_map_set(ctx->structs, type->id, type, NULL, NULL);
   }
   return type;
 }
