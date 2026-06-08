@@ -98,4 +98,6 @@ void stream_merge(stream_t stream, stream_t another) {
     string_concat(newline->buffer, stream->allocator, str);
     array_push(stream->lines, newline);
   }
+  stream->line = create_line(stream->allocator, 0);
+  array_push(stream->lines, stream->line);
 }

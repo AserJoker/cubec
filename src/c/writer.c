@@ -221,4 +221,30 @@ void c_writer_write(c_writer_t writer) {
   }
   stream_merge(writer->stream, func_stream);
   allocator_free(writer->ctx->allocator, func_stream);
+  if (master) {
+    type_t global = *(type_t *)master->value->data;
+    struct_attribute_t attr = struct_type_get_method(global, "main");
+    if (attr) {
+      value_t func = attr->initialize->value;
+      function_declar_t declar = *(function_declar_t *)func->data;
+      stream_write(writer->stream, "int main(int argc, char *argv[]) {");
+      stream_inc_indent(writer->stream);
+      stream_newline(writer->stream);
+      stream_write(writer->stream, "return %s((Sstr){", declar->id);
+      stream_inc_indent(writer->stream);
+      stream_newline(writer->stream);
+      stream_write(writer->stream, ".data = (Pstr)argv,");
+      stream_newline(writer->stream);
+      stream_write(writer->stream, ".offset = 0,");
+      stream_newline(writer->stream);
+      stream_write(writer->stream, ".length = argc,");
+      stream_dec_indent(writer->stream);
+      stream_newline(writer->stream);
+      stream_write(writer->stream, "});");
+      stream_dec_indent(writer->stream);
+      stream_newline(writer->stream);
+      stream_write(writer->stream, "}");
+      stream_newline(writer->stream);
+    }
+  }
 }

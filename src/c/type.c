@@ -90,13 +90,13 @@ void c_type_declaration(c_writer_t writer, type_t type) {
     if (vol) {
       stream_write(stream, " volatile");
     }
-    stream_write(stream, " *");
+    stream_write(stream, "*");
     stream_newline(stream);
   } break;
   case TYPE_KIND_SLICE: {
     type_t base_type = slice_type_get_type(type);
     base_type = create_ptr_type(writer->ctx, base_type, true, false);
-    stream_write(stream, "struct _%s{", type->id);
+    stream_write(stream, "struct _%s {", type->id);
     stream_inc_indent(stream);
     stream_newline(stream);
     c_type(writer, base_type);
