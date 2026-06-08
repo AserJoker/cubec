@@ -5,6 +5,7 @@
 #include "core/allocator.h"
 #include "core/array.h"
 #include "core/compare.h"
+#include "core/fs.h"
 #include "core/hash.h"
 #include "core/hash_map.h"
 #include "core/list.h"
@@ -31,6 +32,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 static trace_t create_trace(allocator_t allocator, const char *filename,
                             size_t column, size_t line) {
   trace_t trace = allocator_alloc(allocator, sizeof(struct _trace_t), NULL);
@@ -219,6 +221,29 @@ static char *absolute(allocator_t allocator, const char *name) {
   return result;
 }
 
+static char *format_filename(allocator_t allocaotr, const char *filename) {
+  if (fs_is_exists(filename)) {
+    return create_cstring(allocaotr, filename);
+  }
+  {
+    size_t len = snprintf(NULL, 0, "%s.cubec", filename);
+    char buf[len + 1];
+    sprintf(buf, "%s.cubec", filename);
+    if (fs_is_exists(buf)) {
+      return create_cstring(allocaotr, buf);
+    }
+  }
+  {
+    size_t len = snprintf(NULL, 0, "%s/index.cubec", filename);
+    char buf[len + 1];
+    sprintf(buf, "%s/index.cubec", filename);
+    if (fs_is_exists(buf)) {
+      return create_cstring(allocaotr, buf);
+    }
+  }
+  return NULL;
+}
+
 value_t context_load_module(context_t ctx, const char *filename) {
   char *fullname = NULL;
   if (ctx->mod) {
@@ -232,6 +257,12 @@ value_t context_load_module(context_t ctx, const char *filename) {
   } else {
     fullname = absolute(ctx->allocator, filename);
   }
+  char *formatted = format_filename(ctx->allocator, fullname);
+  if (!formatted) {
+    return create_error(ctx, "Cannot open file: %s", filename);
+  }
+  allocator_free(ctx->allocator, fullname);
+  fullname = formatted;
   module_t mod = hash_map_get(ctx->modules, fullname, NULL, NULL);
   if (mod) {
     allocator_free(ctx->allocator, fullname);

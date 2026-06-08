@@ -16,3 +16,12 @@ char *fs_read_file(allocator_t allocator, const char *filename) {
   buf[len] = 0;
   return buf;
 }
+bool fs_is_exists(const char *filename) {
+  FILE *file = fopen(filename, "r");
+  if (file == NULL) {
+    return false;
+  } else {
+    fclose(file);
+    return true;
+  }
+}

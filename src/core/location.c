@@ -39,23 +39,30 @@ char *location_get_str(location_t self, allocator_t allocator) {
   char *result = allocator_alloc(allocator, len, NULL);
   char *dst = result;
   const char *src = self.begin.offset + 1;
-  while (src != self.end.offset - 2) {
+  while (src != self.end.offset - 1) {
     if (*src == '\\') {
       src++;
       if (*src == 'n') {
         *dst++ = '\n';
+        src++;
       } else if (*src == 'r') {
         *dst++ = '\r';
+        src++;
       } else if (*src == 'a') {
         *dst++ = '\a';
+        src++;
       } else if (*src == 'b') {
         *dst++ = '\b';
+        src++;
       } else if (*src == '\\') {
         *dst++ = '\\';
+        src++;
       } else if (*src == 't') {
         *dst++ = '\t';
+        src++;
       } else if (*src == 'f') {
         *dst++ = '\f';
+        src++;
       } else if (*src == 'x') {
         src++;
         char c = 0;

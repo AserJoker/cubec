@@ -1,0 +1,6 @@
+import add from "./add";
+extern func printf(fmt:str,...):i32;
+func main(args:[]str):i32 {
+    const ret = printf("hello world, %d\n",add.add(1,2));
+    return 0;
+}

@@ -121,16 +121,8 @@ void init_str_type(context_t ctx) {
   create_type_value(ctx, type, false, "str");
 }
 
-value_t create_comptime_str(context_t ctx, const char *fmt, ...) {
-  va_list args;
-  va_start(args, fmt);
-  size_t len = vsnprintf(NULL, 0, fmt, args);
-  va_end(args);
-  char msg[len + 1];
-  va_start(args, fmt);
-  vsprintf(msg, fmt, args);
-  va_end(args);
-  const char *str = context_create_string(ctx, msg);
+value_t create_comptime_str(context_t ctx, const char *fmt) {
+  const char *str = context_create_string(ctx, fmt);
   type_t type = context_load_type(ctx, "str");
   return context_create_comptime_value(ctx, type, &str, false, NULL);
 }

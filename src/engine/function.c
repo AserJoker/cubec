@@ -44,9 +44,7 @@ void init_template_type(context_t ctx) {
 }
 static void function_declar_dispose(function_declar_t self,
                                     allocator_t allocator) {
-  if (self->kind == FUNCTION_KIND_NORMAL ||
-      self->kind == FUNCTION_KIND_COMPTIME ||
-      self->kind == FUNCTION_KIND_TEMPLATE) {
+  if (self->kind != FUNCTION_KIND_NATIVE) {
     allocator_free(allocator, self->node);
   }
   allocator_free(allocator, self->id);
@@ -147,6 +145,9 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
   for (size_t idx = 0; idx < arg_count; idx++) {
     ctype_t ctype = array_get(meta->args, idx);
     if (meta->variadic && idx == arg_count - 1) {
+      if (!ctype->type) {
+        break;
+      }
       type_t arr_type = create_arr_type(ctx, ctype->type, argc - arg_count);
       value_t arr = NULL;
       if (is_comptime) {
@@ -493,11 +494,14 @@ value_t create_function(context_t ctx, type_t type, ast_node_t node,
     id = create_cstring(ctx->allocator, base_id);
   }
   ast_node_t kind = ast_get_child(node, "kind");
-  bool is_comptime = kind && node_location_is(kind, "comptime");
+  function_kind_t fkind = FUNCTION_KIND_NORMAL;
+  if (kind && node_location_is(kind, "comptime")) {
+    fkind = FUNCTION_KIND_COMPTIME;
+  } else if (kind && node_location_is(kind, "extern")) {
+    fkind = FUNCTION_KIND_EXTERN;
+  }
   function_declar_t declar = create_function_declar(
-      ctx->allocator,
-      is_comptime ? FUNCTION_KIND_COMPTIME : FUNCTION_KIND_NORMAL, base_id, id,
-      ctx->self, ctx->mod);
+      ctx->allocator, fkind, base_id, id, ctx->self, ctx->mod);
   declar->node = clone_ast_node(ctx->allocator, node);
   allocator_free(ctx->allocator, id);
   array_push(ctx->declars, declar);

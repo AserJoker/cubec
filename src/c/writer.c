@@ -144,7 +144,8 @@ void c_writer_add_type(c_writer_t self, type_t type) {
 }
 void c_writer_add_function(c_writer_t self, value_t function) {
   function_declar_t declar = *(function_declar_t *)function->data;
-  if (declar->kind == FUNCTION_KIND_NORMAL) {
+  if (declar->kind == FUNCTION_KIND_NORMAL ||
+      declar->kind == FUNCTION_KIND_EXTERN) {
     c_writer_add_type(self, function->type);
     array_push(self->functions, function);
   }
@@ -177,13 +178,13 @@ void c_writer_write(c_writer_t writer) {
     }
     c_writer_add_type(writer, *(type_t *)mod->value->data);
     it = hash_map_node_get_next(it);
-    list_node_t fit = hash_map_get_first(writer->ctx->functions);
-    while (fit != hash_map_get_end(writer->ctx->functions)) {
-      const char *name = hash_map_node_get_key(fit);
-      value_t func = hash_map_node_get_value(fit);
-      c_writer_add_function(writer, func);
-      fit = hash_map_node_get_next(fit);
-    }
+  }
+  list_node_t fit = hash_map_get_first(writer->ctx->functions);
+  while (fit != hash_map_get_end(writer->ctx->functions)) {
+    const char *name = hash_map_node_get_key(fit);
+    value_t func = hash_map_node_get_value(fit);
+    c_writer_add_function(writer, func);
+    fit = hash_map_node_get_next(fit);
   }
   stream_t stream = writer->stream;
   stream_write(stream, "#include <stdbool.h>");

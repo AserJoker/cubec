@@ -1,6 +1,8 @@
 #include "c/value.h"
+#include "core/allocator.h"
 #include "core/array.h"
 #include "core/stream.h"
+#include "core/string.h"
 #include "engine/arr.h"
 #include "engine/context.h"
 #include "engine/float.h"
@@ -25,7 +27,9 @@ void c_value(c_writer_t writer, value_t value) {
   } break;
   case TYPE_KIND_STR: {
     const char *s = *(const char **)value->data;
-    stream_write(writer->stream, s);
+    char *es = encode_cstring(writer->ctx->allocator, s);
+    stream_write(writer->stream, "\"%s\"", es);
+    allocator_free(writer->ctx->allocator, es);
   } break;
   case TYPE_KIND_I8:
   case TYPE_KIND_I16:

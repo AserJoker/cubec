@@ -43,15 +43,19 @@ void c_function_declar(c_writer_t writer, value_t func) {
     }
     ast_node_t arg = ast_get_item(arguments, idx);
     ctype_t ctype = array_get(meta->args, idx);
-    if (!ctype->mut) {
-      stream_write(writer->stream, "const ");
+    if (ctype->type) {
+      if (!ctype->mut) {
+        stream_write(writer->stream, "const ");
+      }
+      c_type(writer, ctype->type);
+      stream_write(writer->stream, " ");
+      ast_node_t identifier = ast_get_child(arg, "identifier");
+      char *name = location_get(node_get_location(identifier), allocator);
+      stream_write(stream, name);
+      allocator_free(allocator, name);
+    } else {
+      stream_write(stream, "...");
     }
-    c_type(writer, ctype->type);
-    stream_write(writer->stream, " ");
-    ast_node_t identifier = ast_get_child(arg, "identifier");
-    char *name = location_get(node_get_location(identifier), allocator);
-    stream_write(stream, name);
-    allocator_free(allocator, name);
   }
   stream_write(stream, ");");
   stream_newline(stream);
@@ -63,6 +67,9 @@ void c_function_declaration(c_writer_t writer, value_t func) {
   type_t type = func->type;
   function_meta_t meta = type->meta;
   function_declar_t declar = *(function_declar_t *)func->data;
+  if (declar->kind == FUNCTION_KIND_EXTERN) {
+    return;
+  }
   ast_node_t arguments = ast_get_child(declar->node, "arguments");
   if (!meta->type->mut) {
     stream_write(writer->stream, "const ");
