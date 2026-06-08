@@ -1,5 +1,6 @@
 #include "c/function.h"
 #include "ast/node.h"
+#include "ast/node_type.h"
 #include "c/statement_block.h"
 #include "c/type.h"
 #include "c/writer.h"
@@ -152,6 +153,9 @@ void c_function_closure(c_writer_t writer, value_t function) {
   }
 }
 void c_closure_declar(c_writer_t writer, ast_node_t node) {
+  if (node->type != NODE_TYPE_FUNCTION_DECLARATOR) {
+    return;
+  }
   stream_t stream = writer->stream;
   context_t ctx = writer->ctx;
   allocator_t allocator = ctx->allocator;

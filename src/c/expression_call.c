@@ -8,6 +8,7 @@
 #include "core/stream.h"
 #include "engine/context.h"
 #include "engine/function.h"
+#include "engine/ptr.h"
 #include "engine/type.h"
 #include <inttypes.h>
 #include <stdio.h>
@@ -23,7 +24,8 @@ void c_expression_call(c_writer_t writer, ast_node_t node) {
   type_t type = NULL;
   if (callee->type == NODE_TYPE_VALUE) {
     func = callee->value;
-  } else if (callee->type == NODE_TYPE_FUNCTION_DECLARATOR) {
+  } else if (callee->type == NODE_TYPE_FUNCTION_DECLARATOR ||
+             callee->type == NODE_TYPE_EXPRESSION_MEMBER) {
     func = ast_get_child(callee, "bind")->value;
   }
   type = callee->vtype;
@@ -47,6 +49,22 @@ void c_expression_call(c_writer_t writer, ast_node_t node) {
       stream_write(stream, ", ");
     }
     stream_write(stream, "&");
+    c_expression(writer, host);
+    if (ast_get_length(arguments)) {
+      stream_write(stream, ", ");
+    }
+  } else if (host && host->vtype->kind == TYPE_KIND_PTR &&
+             ptr_type_get_type(host->vtype)->kind == TYPE_KIND_STRUCT) {
+    function_declar_t declar = *(function_declar_t *)func->data;
+    type_t type = host->vtype;
+    if (!hash_map_get_size(meta->closure)) {
+      stream_write(stream, "%s", declar->id);
+      stream_write(stream, "(");
+    } else {
+      stream_write(stream, "%s_call(", func->type->id);
+      stream_write(stream, "&%s", declar->id);
+      stream_write(stream, ", ");
+    }
     c_expression(writer, host);
     if (ast_get_length(arguments)) {
       stream_write(stream, ", ");

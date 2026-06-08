@@ -2,6 +2,7 @@
 #include "ast/node_type.h"
 #include "c/expression_binary.h"
 #include "c/expression_call.h"
+#include "c/expression_member.h"
 #include "c/function_declarator.h"
 #include "c/initialize_list.h"
 #include "c/literal_identifier.h"
@@ -20,5 +21,7 @@ void c_expression(c_writer_t writer, ast_node_t node) {
     c_function_declarator(writer, node);
   } else if (node->type == NODE_TYPE_EXPRESSION_CALL) {
     c_expression_call(writer, node);
+  } else if (node->type == NODE_TYPE_EXPRESSION_MEMBER) {
+    c_expression_member(writer, node);
   }
 }
