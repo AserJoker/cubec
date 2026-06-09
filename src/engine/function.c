@@ -133,13 +133,13 @@ static value_t function_call(value_t self, context_t ctx, size_t argc,
     if (argc < arg_count - 1) {
       return create_error(
           ctx, "function requires %" PRIuPTR " arguments, receive %" PRIuPTR,
-          arg_count - 1, argv);
+          arg_count - 1, argc);
     }
   } else {
     if (argc < arg_count) {
       return create_error(
           ctx, "function requires %" PRIuPTR " arguments, receive %" PRIuPTR,
-          arg_count, argv);
+          arg_count, argc);
     }
   }
   for (size_t idx = 0; idx < arg_count; idx++) {

@@ -3,6 +3,7 @@
 #include "ast/node_type.h"
 #include "c/expression.h"
 #include "core/allocator.h"
+#include "core/hash_map.h"
 #include "core/stream.h"
 #include "engine/context.h"
 #include "engine/function.h"
@@ -51,25 +52,21 @@ void c_expression_assigment(c_writer_t writer, ast_node_t node) {
       ast_node_t bind = ast_get_child(node, "bind");
       value_t func = bind->value;
       function_declar_t declar = *(function_declar_t *)func->data;
-      stream_write(stream, "%s(", declar->id);
+      if (hash_map_get_size(declar->closure)) {
+        stream_write(stream, "%s_call(&%s, ", func->type->id, declar->id);
+      } else {
+        stream_write(stream, "%s(", declar->id);
+      }
       stream_write(stream, "&(");
-      c_expression(writer, left);
+      c_expression(writer, host);
       stream_write(stream, "), ");
       c_expression(writer, field);
       stream_write(stream, ", ");
-      c_expression(writer, right);
-      stream_write(stream, ")");
-      return;
-    } else if (host->vtype->kind == TYPE_KIND_PTR) {
-      ast_node_t bind = ast_get_child(node, "bind");
-      value_t func = bind->value;
-      function_declar_t declar = *(function_declar_t *)func->data;
-      stream_write(stream, "%s(", declar->id);
-      c_expression(writer, left);
-      stream_write(stream, ", ");
-      c_expression(writer, field);
-      stream_write(stream, ", ");
-      c_expression(writer, right);
+      if (node_location_is(opt, "=")) {
+        c_expression(writer, right);
+      } else {
+        // TODO:
+      }
       stream_write(stream, ")");
       return;
     }
