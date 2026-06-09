@@ -7,8 +7,8 @@
 #include "engine/error.h"
 #include "engine/type.h"
 #include "engine/value.h"
-#include "engine/void.h"
 #include "resolve/expression.h"
+#include <stdbool.h>
 
 static value_t resolve_assigment_opt(context_t ctx, value_t left, value_t right,
                                      ast_node_t opt) {
@@ -51,7 +51,7 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
   }
   if (left->type == NODE_TYPE_LITERAL_IDENTIFIER) {
     if (node_location_is(left, "_")) {
-      return create_comptime_void(ctx);
+      return rvalue;
     }
     char *name = location_get(node_get_location(left), ctx->allocator);
     value_t lvalue = context_load(ctx, name);
@@ -69,6 +69,11 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
     value_t err = value_assigment(lvalue, ctx, rvalue);
     if (err->type->kind == TYPE_KIND_ERROR) {
       return convert_comptime_error(ctx, node_get_location(node), err);
+    }
+    if (lvalue->comptime && rvalue->comptime) {
+      return rvalue;
+    } else {
+      return context_create_value(ctx, rvalue->type, rvalue->mut, NULL);
     }
   } else if (left->type == NODE_TYPE_EXPRESSION_MEMBER) {
     ast_node_t host = ast_get_child(node, "host");
@@ -92,6 +97,11 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
       if (err->type->kind == TYPE_KIND_ERROR) {
         return convert_comptime_error(ctx, node_get_location(node), err);
       }
+      if (lvalue->comptime && rvalue->comptime) {
+        return rvalue;
+      } else {
+        return context_create_value(ctx, rvalue->type, rvalue->mut, NULL);
+      }
     } else if (left->type == NODE_TYPE_LITERAL_IDENTIFIER) {
       char *name = location_get(node_get_location(field), ctx->allocator);
       if (!node_location_is(opt, "=")) {
@@ -111,13 +121,18 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
       if (err->type->kind == TYPE_KIND_ERROR) {
         return convert_comptime_error(ctx, node_get_location(node), err);
       }
+      if (obj->comptime && rvalue->comptime) {
+        return rvalue;
+      } else {
+        return context_create_value(ctx, rvalue->type, rvalue->mut, NULL);
+      }
     } else {
       return create_comptime_error(ctx, node_get_location(left),
                                    "expression is not assigment");
     }
   } else if (left->type == NODE_TYPE_EXPRESSION_COMPUTE_MEMBER) {
-    ast_node_t host = ast_get_child(node, "host");
-    ast_node_t field = ast_get_child(node, "field");
+    ast_node_t host = ast_get_child(left, "host");
+    ast_node_t field = ast_get_child(left, "field");
     value_t obj = resolve_expression(ctx, host);
     if (obj->type->kind == TYPE_KIND_ERROR) {
       return obj;
@@ -139,6 +154,11 @@ value_t resolve_expression_assigment(context_t ctx, ast_node_t node) {
     value_t err = value_set(obj, ctx, f, rvalue);
     if (err->type->kind == TYPE_KIND_ERROR) {
       return convert_comptime_error(ctx, node_get_location(node), err);
+    }
+    if (obj->comptime && f->comptime && rvalue->comptime) {
+      return rvalue;
+    } else {
+      return context_create_value(ctx, rvalue->type, rvalue->mut, NULL);
     }
   } else {
     return create_comptime_error(ctx, node_get_location(left),

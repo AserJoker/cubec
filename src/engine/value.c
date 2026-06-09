@@ -133,9 +133,9 @@ value_t value_call(value_t self, struct _context_t *ctx, size_t argc,
 value_t value_get(value_t self, struct _context_t *ctx, value_t field) {
   type_t self_type = self->type;
   if (self_type->opt.get) {
-    value_t value = self_type->opt.get(self, ctx, field);
-    if (value) {
-      return value;
+    value_t res = self_type->opt.get(self, ctx, field);
+    if (res) {
+      return res;
     }
   }
   return create_error(ctx, "cannot get field of '%s'", self_type->name);
@@ -144,9 +144,9 @@ value_t value_set(value_t self, struct _context_t *ctx, value_t field,
                   value_t value) {
   type_t self_type = self->type;
   if (self_type->opt.set) {
-    value_t value = self_type->opt.set(self, ctx, field, value);
-    if (value) {
-      return value;
+    value_t res = self_type->opt.set(self, ctx, field, value);
+    if (res) {
+      return res;
     }
   }
   return create_error(ctx, "cannot set field of '%s'", self_type->name);
@@ -155,9 +155,9 @@ value_t value_get_field(value_t self, struct _context_t *ctx,
                         const char *field) {
   type_t self_type = self->type;
   if (self_type->opt.get_field) {
-    value_t value = self_type->opt.get_field(self, ctx, field);
-    if (value) {
-      return value;
+    value_t res = self_type->opt.get_field(self, ctx, field);
+    if (res) {
+      return res;
     }
   }
   return create_error(ctx, "cannot get field of '%s'", self_type->name);
@@ -166,9 +166,9 @@ value_t value_set_field(value_t self, struct _context_t *ctx, const char *field,
                         value_t value) {
   type_t self_type = self->type;
   if (self_type->opt.set_field) {
-    value_t value = self_type->opt.set_field(self, ctx, field, value);
-    if (value) {
-      return value;
+    value_t res = self_type->opt.set_field(self, ctx, field, value);
+    if (res) {
+      return res;
     }
   }
   return create_error(ctx, "cannot set field of '%s'", self_type->name);

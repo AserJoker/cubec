@@ -95,11 +95,11 @@ void c_type_declaration(c_writer_t writer, type_t type) {
   } break;
   case TYPE_KIND_SLICE: {
     type_t base_type = slice_type_get_type(type);
-    base_type = create_ptr_type(writer->ctx, base_type, true, false);
+    type_t ptr_type = create_ptr_type(writer->ctx, base_type, true, false);
     stream_write(stream, "struct _%s {", type->id);
     stream_inc_indent(stream);
     stream_newline(stream);
-    c_type(writer, base_type);
+    c_type(writer, ptr_type);
     stream_write(stream, " data;");
     stream_newline(stream);
     stream_write(stream, "uint64_t offset;");
@@ -109,10 +109,33 @@ void c_type_declaration(c_writer_t writer, type_t type) {
     stream_newline(stream);
     stream_write(stream, "};");
     stream_newline(stream);
+    stream_write(stream, "static inline ");
+    c_type(writer, base_type);
+    stream_write(stream, " %s_get(const %s self, uint64_t idx) {", type->id,
+                 type->id);
+    stream_inc_indent(stream);
+    stream_newline(stream);
+    stream_write(stream, "return self.data[self.offset + idx];");
+    stream_dec_indent(stream);
+    stream_newline(stream);
+    stream_write(stream, "}");
+    stream_newline(stream);
+    stream_write(stream, "static inline ");
+    c_type(writer, base_type);
+    stream_write(stream, " %s_set(%s self, uint64_t idx,", type->id, type->id);
+    c_type(writer, base_type);
+    stream_write(stream, " val) {");
+    stream_inc_indent(stream);
+    stream_newline(stream);
+    stream_write(stream, "return self.data[self.offset + idx] = val;");
+    stream_dec_indent(stream);
+    stream_newline(stream);
+    stream_write(stream, "}");
+    stream_newline(stream);
   } break;
   case TYPE_KIND_ARRAY: {
     type_t base_type = arr_type_get_type(type);
-    stream_write(stream, "struct _%s{", type->id);
+    stream_write(stream, "struct _%s {", type->id);
     stream_inc_indent(stream);
     stream_newline(stream);
     c_type(writer, base_type);
@@ -187,7 +210,7 @@ void c_type_declaration(c_writer_t writer, type_t type) {
       stream_newline(stream);
       stream_write(stream, "};");
       stream_newline(stream);
-      stream_write(stream, "inline ");
+      stream_write(stream, "static inline ");
       if (!meta->type->mut) {
         stream_write(stream, "const ");
       }

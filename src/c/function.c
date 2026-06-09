@@ -21,6 +21,12 @@ void c_function_declar(c_writer_t writer, value_t func) {
   function_meta_t meta = type->meta;
   function_declar_t declar = *(function_declar_t *)func->data;
   ast_node_t arguments = ast_get_child(declar->node, "arguments");
+  ast_node_t accessor = ast_get_child(declar->node, "accessor");
+  if (declar->kind == FUNCTION_KIND_EXTERN) {
+    stream_write(stream, "extern ");
+  } else if (!accessor || !location_is(node_get_location(accessor), "pub")) {
+    stream_write(writer->stream, "static ");
+  }
   if (!meta->type->mut) {
     stream_write(writer->stream, "const ");
   }
@@ -71,6 +77,10 @@ void c_function_declaration(c_writer_t writer, value_t func) {
     return;
   }
   ast_node_t arguments = ast_get_child(declar->node, "arguments");
+  ast_node_t accessor = ast_get_child(declar->node, "accessor");
+  if (!accessor || !location_is(node_get_location(accessor), "pub")) {
+    stream_write(writer->stream, "static ");
+  }
   if (!meta->type->mut) {
     stream_write(writer->stream, "const ");
   }
