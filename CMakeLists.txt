@@ -3,7 +3,6 @@ set(CMAKE_TOOLCHAIN_FILE $ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 project(cubec)
-add_compile_options(-rdynamic -O0 -g)
 add_compile_definitions(-D_CRT_SECURE_NO_WARNINGS -D_GNU_SOURCE)
 find_package(ICU REQUIRED COMPONENTS i18n uc data io)
 find_package(GTest CONFIG REQUIRED)
@@ -21,7 +20,6 @@ target_link_libraries(cubecc PRIVATE
     ICU::uc
     ICU::data
     ICU::io
-    dl
 )
 enable_testing()
 file(GLOB_RECURSE TEST_SOURCE ${PROJECT_SOURCE_DIR}/test/*.cpp)
@@ -33,13 +31,8 @@ target_link_libraries(cubec_test PRIVATE
     ICU::data
     ICU::io
     GTest::gtest
-    GTest::gtest_main
     GTest::gmock
-    GTest::gmock_main
-    dl
 )
-include(GoogleTest)
-gtest_discover_tests(cubec_test)
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     message(STATUS "Target platform is Windows")
@@ -48,6 +41,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
         "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         message(STATUS "Compiler is Clang")
         target_link_libraries(cubec_test PRIVATE clang_rt.builtins-x86_64)
-        target_link_libraries(cubec PRIVATE clang_rt.builtins-x86_64)
+        target_link_libraries(cubecc PRIVATE clang_rt.builtins-x86_64)
     endif()
 endif()

@@ -17,12 +17,16 @@ static void _string_init(string_t self, allocator_t allocator,
   }
   self->allocator = allocator;
   self->size = str ? strlen(str) + 1 : 1;
-  self->capacity = 0;
+  self->capacity = 1;
   while (self->capacity < self->size) {
     self->capacity *= 2;
   }
   self->data = allocator_alloc(allocator, self->capacity);
-  memcpy(self->data, str, self->size);
+  if (str) {
+    memcpy(self->data, str, self->size);
+  } else {
+    self->data[0] = '\0';
+  }
 }
 static void _string_clone(string_t self, allocator_t allocator,
                           string_t another) {
@@ -66,24 +70,25 @@ size_t string_set(string_t self, const char *str) {
   }
   self->data = allocator_alloc(self->allocator, self->capacity);
   memcpy(self->data, str, size);
+  self->size = size;
   return self->size;
 }
 
-size_t string_get_length(string_t self) { return self->size - 1; }
+size_t  string_get_length(string_t self) { return self->size - 1; }
 
 size_t string_concat(string_t self, const char *another) {
   size_t another_size = strlen(another);
-  while (another_size + self->size >= self->capacity) {
+  while (another_size + self->size - 1 >= self->capacity) {
     self->capacity *= 2;
   }
   char *data = allocator_alloc(self->allocator, self->capacity);
-  memcpy(data, self->data, self->size);
+  memcpy(data, self->data, self->size - 1);
   allocator_free(self->allocator, self->data);
   self->data = data;
   for (size_t idx = 0; idx < another_size; idx++) {
-    self->data[idx + self->size] = another[idx];
+    self->data[self->size - 1 + idx] = another[idx];
   }
-  self->data[self->size + another_size] = 0;
+  self->data[self->size - 1 + another_size] = 0;
   self->size += another_size;
   return self->size;
 }

@@ -7,7 +7,6 @@
 #include "cubec/token.h"
 #include <inttypes.h>
 #include <stdio.h>
-#include <unistd.h>
 
 int _main(int argc, char *argv[]) {
   allocator_t allocator = create_allocator(NULL, NULL);

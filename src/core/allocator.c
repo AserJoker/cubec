@@ -1,16 +1,12 @@
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/type.h"
-#include <dlfcn.h>
-#include <execinfo.h>
 #include <inttypes.h>
-#include <link.h>
 #include <stdatomic.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 typedef struct _alloc_chunk_t *alloc_chunk_t;
 struct _alloc_chunk_t {
   alloc_chunk_t next;
