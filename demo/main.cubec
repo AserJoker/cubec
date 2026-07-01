@@ -1,3 +1,0 @@
-let t = .Test{};
-t["a"]+=2;
-set(t,"a",get(t,"a")+2);

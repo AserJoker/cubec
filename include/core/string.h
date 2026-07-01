@@ -1,40 +1,21 @@
-#ifndef _H_CORE_STRING_
-#define _H_CORE_STRING_
-#include "core/allocator.h"
-#include "core/location.h"
-#include <stdbool.h>
-#include <stdint.h>
+#ifndef _H_CUBEC_CORE_STRING_
+#define _H_CUBEC_CORE_STRING_
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+#include "core/type.h"
+#include <stdint.h>
+struct _string_t;
 typedef struct _string_t *string_t;
-typedef struct {
-  const char *source;
-} string_initialize_t;
-
-string_t create_string(allocator_t allocator, string_initialize_t *initialize);
+typedef struct _string_init_t string_init_t;
+struct _string_init_t {
+  const char *str;
+};
+extern type_t g_string_type;
 const char *string_get(string_t self);
-
-size_t string_len(string_t self);
-
-string_t string_set(string_t self, allocator_t allocator, const char *source);
-string_t string_concat(string_t self, allocator_t allocator,
-                       const char *source);
-string_t string_nconcat(string_t self, allocator_t allocator,
-                        const char *source, size_t len);
-string_t string_concat_location(string_t self, allocator_t allocator,
-                                location_t loc);
-int string_compare(string_t self, const char *source);
-
-char *create_cstring(allocator_t allocator, const char *source);
-char *encode_cstring(allocator_t allocator, const char *source);
-
-const char *cstring_to_int(const char *source, size_t *value, int radix);
-const char *cstring_to_dec(const char *source, double *value);
-bool cstring_endswith(const char *source, const char *flag);
-int64_t cstring_sdb(const char *key);
-
+size_t string_set(string_t self, const char *str);
+size_t string_get_length(string_t self);
+size_t string_concat(string_t self, const char *another);
 #ifdef __cplusplus
 }
 #endif
