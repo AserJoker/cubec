@@ -44,7 +44,7 @@ static token_t create_symbol_token(allocator_t allocator, location_t location) {
 static token_t create_whitespace_token(allocator_t allocator,
                                        location_t location) {
   return allocator_create(allocator, &g_token_type,
-                          &(token_init_t){CUBEC_TOKEN_SYMBOL, location});
+                          &(token_init_t){CUBEC_TOKEN_WHITESPACE, location});
 }
 static token_t create_comment_token(allocator_t allocator,
                                     location_t location) {
@@ -199,13 +199,17 @@ static token_t read_comment_token(allocator_t allocator, position_t *position,
     current.offset += 2;
     current.column += 2;
     size_t length = 0;
-    uint32_t code = read_unicode(current.offset, &length);
-    while (code != 0 && code != '\n' || code != '\r' || code != 0x2028 ||
-           code != 2029) {
+    uint32_t code = 0;
+    while (true) {
+      code = read_unicode(current.offset, &length);
+      if (code == 0 || code == '\n' || code == '\r' || code == 0x2028 ||
+          code == 2029) {
+        break;
+      }
       current.offset += length;
       current.column += length;
     }
-    token_t token = create_whitespace_token(
+    token_t token = create_comment_token(
         allocator, (location_t){filename, *position, current});
     *position = current;
     return token;
