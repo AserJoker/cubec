@@ -123,6 +123,8 @@ void *value_clone(allocator_t allocator, void *another) {
   if (type) {
     if (type->clone) {
       void *data = allocator_alloc(allocator, type->size);
+      alloc_chunk_t chunk = value_get_chunk(data);
+      chunk->type = type;
       type->clone(data, allocator, another);
       return data;
     } else {
@@ -143,6 +145,8 @@ void *value_move(allocator_t allocator, void *another) {
   if (type) {
     if (type->move) {
       void *data = allocator_alloc(allocator, type->size);
+      alloc_chunk_t chunk = value_get_chunk(data);
+      chunk->type = type;
       type->move(data, allocator, another);
       return data;
     } else {
