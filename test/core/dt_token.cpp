@@ -5,7 +5,7 @@
 
 using ::testing::Test;
 
-class DtToken : public Test {
+class dt_token : public Test {
 protected:
   TEST_ALLOCATOR;
 };
@@ -18,7 +18,7 @@ void check_token_kind(vec_t vec, size_t index, uint32_t expected_kind) {
 }
 
 // Test EOF token
-TEST_F(DtToken, EOFToken) {
+TEST_F(dt_token, eof_token) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 1);
@@ -28,7 +28,7 @@ TEST_F(DtToken, EOFToken) {
 
 // NOTE: whitespace tokens are currently returned as CUBEC_TOKEN_SYMBOL
 // This is a bug in token.c - create_whitespace_token should use CUBEC_TOKEN_WHITESPACE
-TEST_F(DtToken, WhitespaceOnly) {
+TEST_F(dt_token, whitespace_only) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "   \t\n  ");
   ASSERT_NE(vec, nullptr);
   // Whitespace tokens are currently included and marked as SYMBOL (bug)
@@ -38,7 +38,7 @@ TEST_F(DtToken, WhitespaceOnly) {
 }
 
 // Test identifier token
-TEST_F(DtToken, IdentifierToken) {
+TEST_F(dt_token, identifier_token) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "foo");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2); // identifier + EOF
@@ -48,7 +48,7 @@ TEST_F(DtToken, IdentifierToken) {
 }
 
 // Test multiple identifiers with whitespace between them
-TEST_F(DtToken, MultipleIdentifiers) {
+TEST_F(dt_token, multiple_identifiers) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "foo bar baz");
   ASSERT_NE(vec, nullptr);
   // Each identifier + whitespace tokens + EOF
@@ -60,7 +60,7 @@ TEST_F(DtToken, MultipleIdentifiers) {
 }
 
 // Test keywords
-TEST_F(DtToken, KeywordToken) {
+TEST_F(dt_token, keyword_token) {
   const char *keywords[] = {
       "break",  "case",    "comptime", "const", "continue", "defer",
       "do",     "else",    "enum",     "export", "extern",   "for",
@@ -79,7 +79,7 @@ TEST_F(DtToken, KeywordToken) {
 }
 
 // Test numeric tokens - decimal integers
-TEST_F(DtToken, NumericDecimal) {
+TEST_F(dt_token, numeric_decimal) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "12345");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -89,7 +89,7 @@ TEST_F(DtToken, NumericDecimal) {
 }
 
 // Test numeric tokens - hexadecimal
-TEST_F(DtToken, NumericHexadecimal) {
+TEST_F(dt_token, numeric_hexadecimal) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "0x1A3F");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -99,7 +99,7 @@ TEST_F(DtToken, NumericHexadecimal) {
 }
 
 // Test numeric tokens - octal
-TEST_F(DtToken, NumericOctal) {
+TEST_F(dt_token, numeric_octal) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "0o755");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -109,7 +109,7 @@ TEST_F(DtToken, NumericOctal) {
 }
 
 // Test numeric tokens - binary
-TEST_F(DtToken, NumericBinary) {
+TEST_F(dt_token, numeric_binary) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "0b1010");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -119,7 +119,7 @@ TEST_F(DtToken, NumericBinary) {
 }
 
 // Test numeric tokens - float
-TEST_F(DtToken, NumericFloat) {
+TEST_F(dt_token, numeric_float) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "3.14159");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -129,7 +129,7 @@ TEST_F(DtToken, NumericFloat) {
 }
 
 // Test numeric tokens - scientific notation
-TEST_F(DtToken, NumericScientific) {
+TEST_F(dt_token, numeric_scientific) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "1e10");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -139,7 +139,7 @@ TEST_F(DtToken, NumericScientific) {
 }
 
 // Test string token
-TEST_F(DtToken, StringToken) {
+TEST_F(dt_token, string_token) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "\"hello world\"");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -149,7 +149,7 @@ TEST_F(DtToken, StringToken) {
 }
 
 // Test empty string
-TEST_F(DtToken, EmptyString) {
+TEST_F(dt_token, empty_string) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "\"\"");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -158,7 +158,7 @@ TEST_F(DtToken, EmptyString) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtToken, SingleLineComment) {
+TEST_F(dt_token, single_line_comment) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "// this is a comment\n");
   ASSERT_NE(vec, nullptr);
   // comment token + newline whitespace + EOF
@@ -170,7 +170,7 @@ TEST_F(DtToken, SingleLineComment) {
 }
 
 // Test multi-line comment
-TEST_F(DtToken, MultiLineComment) {
+TEST_F(dt_token, multi_line_comment) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "/* this is a\nmulti-line comment */");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -180,7 +180,7 @@ TEST_F(DtToken, MultiLineComment) {
 }
 
 // Test nested multi-line comment
-TEST_F(DtToken, NestedMultiLineComment) {
+TEST_F(dt_token, nested_multi_line_comment) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "/* outer /* inner */ outer */");
   ASSERT_NE(vec, nullptr);
   // Note: lexer does not support nested comments
@@ -191,7 +191,7 @@ TEST_F(DtToken, NestedMultiLineComment) {
 }
 
 // Test whitespace tokens - spaces
-TEST_F(DtToken, WhitespaceSpaces) {
+TEST_F(dt_token, whitespace_spaces) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "   ");
   ASSERT_NE(vec, nullptr);
   // Spaces produce SYMBOL tokens (bug - should be WHITESPACE)
@@ -200,7 +200,7 @@ TEST_F(DtToken, WhitespaceSpaces) {
 }
 
 // Test basic symbols
-TEST_F(DtToken, SymbolPlus) {
+TEST_F(dt_token, symbol_plus) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "+");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -209,7 +209,7 @@ TEST_F(DtToken, SymbolPlus) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtToken, SymbolMinus) {
+TEST_F(dt_token, symbol_minus) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "-");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -218,7 +218,7 @@ TEST_F(DtToken, SymbolMinus) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtToken, SymbolMultiply) {
+TEST_F(dt_token, symbol_multiply) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "*");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -227,7 +227,7 @@ TEST_F(DtToken, SymbolMultiply) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtToken, SymbolDivide) {
+TEST_F(dt_token, symbol_divide) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "/");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -237,7 +237,7 @@ TEST_F(DtToken, SymbolDivide) {
 }
 
 // Test compound symbols
-TEST_F(DtToken, SymbolDoubleEquals) {
+TEST_F(dt_token, symbol_double_equals) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "==");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -246,7 +246,7 @@ TEST_F(DtToken, SymbolDoubleEquals) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtToken, SymbolNotEquals) {
+TEST_F(dt_token, symbol_not_equals) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "!=");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -255,7 +255,7 @@ TEST_F(DtToken, SymbolNotEquals) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtToken, SymbolLogicalAnd) {
+TEST_F(dt_token, symbol_logical_and) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "&&");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -264,7 +264,7 @@ TEST_F(DtToken, SymbolLogicalAnd) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtToken, SymbolLogicalOr) {
+TEST_F(dt_token, symbol_logical_or) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "||");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -274,7 +274,7 @@ TEST_F(DtToken, SymbolLogicalOr) {
 }
 
 // Test braces and brackets
-TEST_F(DtToken, SymbolBraces) {
+TEST_F(dt_token, symbol_braces) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "{}");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 3);
@@ -284,7 +284,7 @@ TEST_F(DtToken, SymbolBraces) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtToken, SymbolParentheses) {
+TEST_F(dt_token, symbol_parentheses) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "()");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 3);
@@ -294,7 +294,7 @@ TEST_F(DtToken, SymbolParentheses) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtToken, SymbolBrackets) {
+TEST_F(dt_token, symbol_brackets) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "[]");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 3);
@@ -305,7 +305,7 @@ TEST_F(DtToken, SymbolBrackets) {
 }
 
 // Test complex source code snippet
-TEST_F(DtToken, ComplexSnippet) {
+TEST_F(dt_token, complex_snippet) {
   const char *source = "func main() {\n"
                        "    let x: i32 = 42;\n"
                        "    return x;\n"
@@ -325,7 +325,7 @@ TEST_F(DtToken, ComplexSnippet) {
 }
 
 // Test mixed content
-TEST_F(DtToken, MixedContent) {
+TEST_F(dt_token, mixed_content) {
   const char *source = "let name: str = \"hello\"; // comment";
 
   vec_t vec = resolve_token_list(allocator, "test.cubec", source);
@@ -338,7 +338,7 @@ TEST_F(DtToken, MixedContent) {
 }
 
 // Test assignment operators
-TEST_F(DtToken, AssignmentOperators) {
+TEST_F(dt_token, assignment_operators) {
   const char *ops[] = {"=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "&&=", "||=", NULL};
 
   for (int i = 0; ops[i] != NULL; i++) {
@@ -351,7 +351,7 @@ TEST_F(DtToken, AssignmentOperators) {
 }
 
 // Test shift operators
-TEST_F(DtToken, ShiftOperators) {
+TEST_F(dt_token, shift_operators) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "<<");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
@@ -366,7 +366,7 @@ TEST_F(DtToken, ShiftOperators) {
 }
 
 // Test comparison operators
-TEST_F(DtToken, ComparisonOperators) {
+TEST_F(dt_token, comparison_operators) {
   const char *ops[] = {">=", "<=", "==", "!=", NULL};
 
   for (int i = 0; ops[i] != NULL; i++) {
@@ -379,7 +379,7 @@ TEST_F(DtToken, ComparisonOperators) {
 }
 
 // Test semicolon and colon
-TEST_F(DtToken, Punctuation) {
+TEST_F(dt_token, punctuation) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", ";:,?");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 5);
@@ -391,7 +391,7 @@ TEST_F(DtToken, Punctuation) {
 }
 
 // Test bitwise operators
-TEST_F(DtToken, BitwiseOperators) {
+TEST_F(dt_token, bitwise_operators) {
   const char *ops[] = {"&", "|", "^", "~", NULL};
 
   for (int i = 0; ops[i] != NULL; i++) {
@@ -404,7 +404,7 @@ TEST_F(DtToken, BitwiseOperators) {
 }
 
 // Test dot operator
-TEST_F(DtToken, SymbolDot) {
+TEST_F(dt_token, symbol_dot) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", ".");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);

@@ -4,16 +4,16 @@
 #include "core/allocator.h"
 #include <gtest/gtest.h>
 
-class TestAllocator {
+class test_allocator {
 public:
   allocator_t allocator;
 
-  TestAllocator() { allocator = create_allocator(NULL, NULL); }
-  ~TestAllocator() { delete_allocator(allocator); }
+  test_allocator() { allocator = create_allocator(NULL, NULL); }
+  ~test_allocator() { delete_allocator(allocator); }
 };
 
 #define TEST_ALLOCATOR                                                      \
-  TestAllocator test_allocator;                                             \
-  allocator_t allocator = test_allocator.allocator
+  test_allocator test_allocator_instance;                                   \
+  allocator_t allocator = test_allocator_instance.allocator
 
 #endif

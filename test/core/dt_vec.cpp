@@ -4,12 +4,12 @@
 
 using ::testing::Test;
 
-class DtVec : public Test {
+class dt_vec : public Test {
 protected:
   TEST_ALLOCATOR;
 };
 
-TEST_F(DtVec, CreateAndResize) {
+TEST_F(dt_vec, create_and_resize) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 0);
@@ -17,7 +17,7 @@ TEST_F(DtVec, CreateAndResize) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtVec, PushAndGet) {
+TEST_F(dt_vec, push_and_get) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   vec_push(vec, &val1);
@@ -30,7 +30,7 @@ TEST_F(DtVec, PushAndGet) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtVec, Pop) {
+TEST_F(dt_vec, Pop) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20;
   vec_push(vec, &val1);
@@ -43,7 +43,7 @@ TEST_F(DtVec, Pop) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtVec, Set) {
+TEST_F(dt_vec, Set) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20, val3 = 99;
   vec_push(vec, &val1);
@@ -53,7 +53,7 @@ TEST_F(DtVec, Set) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtVec, Insert) {
+TEST_F(dt_vec, Insert) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20, val3 = 15;
   vec_push(vec, &val1);
@@ -66,7 +66,7 @@ TEST_F(DtVec, Insert) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtVec, Remove) {
+TEST_F(dt_vec, Remove) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   vec_push(vec, &val1);
@@ -79,7 +79,7 @@ TEST_F(DtVec, Remove) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtVec, Resize) {
+TEST_F(dt_vec, Resize) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20;
   vec_push(vec, &val1);
@@ -92,7 +92,7 @@ TEST_F(DtVec, Resize) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtVec, GetData) {
+TEST_F(dt_vec, GetData) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20;
   vec_push(vec, &val1);
@@ -104,14 +104,14 @@ TEST_F(DtVec, GetData) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtVec, ResizeDownToZero) {
+TEST_F(dt_vec, resize_down_to_zero) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   vec_resize(vec, 0);
   EXPECT_EQ(vec_get_size(vec), 0);
   allocator_free(allocator, vec);
 }
 
-TEST_F(DtVec, InitialCapacity) {
+TEST_F(dt_vec, initial_capacity) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   vec_resize(vec, 1);
   EXPECT_EQ(vec_get_capacity(vec), 8);

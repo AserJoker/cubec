@@ -5,12 +5,12 @@
 
 using ::testing::Test;
 
-class DtString : public Test {
+class dt_string : public Test {
 protected:
   TEST_ALLOCATOR;
 };
 
-TEST_F(DtString, CreateAndGet) {
+TEST_F(dt_string, create_and_get) {
   string_init_t init = {.str = "Hello"};
   string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
   ASSERT_NE(str, nullptr);
@@ -19,7 +19,7 @@ TEST_F(DtString, CreateAndGet) {
   allocator_free(allocator, str);
 }
 
-TEST_F(DtString, CreateEmpty) {
+TEST_F(dt_string, create_empty) {
   string_t str = (string_t)allocator_create(allocator, &g_string_type, NULL);
   ASSERT_NE(str, nullptr);
   EXPECT_STREQ(string_get(str), "");
@@ -27,7 +27,7 @@ TEST_F(DtString, CreateEmpty) {
   allocator_free(allocator, str);
 }
 
-TEST_F(DtString, Set) {
+TEST_F(dt_string, set) {
   string_init_t init = {.str = "Hello"};
   string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
   ASSERT_NE(str, nullptr);
@@ -37,7 +37,7 @@ TEST_F(DtString, Set) {
   allocator_free(allocator, str);
 }
 
-TEST_F(DtString, SetEmpty) {
+TEST_F(dt_string, set_empty) {
   string_init_t init = {.str = "Hello"};
   string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
   ASSERT_NE(str, nullptr);
@@ -47,7 +47,7 @@ TEST_F(DtString, SetEmpty) {
   allocator_free(allocator, str);
 }
 
-TEST_F(DtString, Concat) {
+TEST_F(dt_string, concat) {
   string_init_t init = {.str = "Hello"};
   string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
   ASSERT_NE(str, nullptr);
@@ -57,7 +57,7 @@ TEST_F(DtString, Concat) {
   allocator_free(allocator, str);
 }
 
-TEST_F(DtString, ConcatMultiple) {
+TEST_F(dt_string, concat_multiple) {
   string_init_t init = {.str = "A"};
   string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
   ASSERT_NE(str, nullptr);
@@ -69,7 +69,7 @@ TEST_F(DtString, ConcatMultiple) {
   allocator_free(allocator, str);
 }
 
-TEST_F(DtString, ConcatEmpty) {
+TEST_F(dt_string, concat_empty) {
   string_init_t init = {.str = "Hello"};
   string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
   ASSERT_NE(str, nullptr);
@@ -78,7 +78,7 @@ TEST_F(DtString, ConcatEmpty) {
   allocator_free(allocator, str);
 }
 
-TEST_F(DtString, LongString) {
+TEST_F(dt_string, long_string) {
   const char *long_str = "This is a very long string that contains many characters and should still work correctly when used with the string module";
   string_init_t init = {.str = long_str};
   string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
@@ -88,7 +88,7 @@ TEST_F(DtString, LongString) {
   allocator_free(allocator, str);
 }
 
-TEST_F(DtString, SetLongString) {
+TEST_F(dt_string, set_long_string) {
   string_t str = (string_t)allocator_create(allocator, &g_string_type, NULL);
   ASSERT_NE(str, nullptr);
   const char *long_str = "This is a very long string that exceeds the initial capacity and should trigger reallocation";
@@ -98,7 +98,7 @@ TEST_F(DtString, SetLongString) {
   allocator_free(allocator, str);
 }
 
-TEST_F(DtString, UnicodeCharacters) {
+TEST_F(dt_string, unicode_characters) {
   const char* unicode_str = "你好世界";
   string_init_t init = {.str = unicode_str};
   string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
