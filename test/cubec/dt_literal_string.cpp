@@ -86,6 +86,7 @@ TEST_F(dt_literal_string, parse_string_concatenation) {
 
   cubec_literal_string_t literal = (cubec_literal_string_t)node;
   EXPECT_STREQ(string_get(literal->value), "helloworld");
+  EXPECT_EQ(node->location.end.column, 15);
 
   allocator_free(allocator, node);
   allocator_free(allocator, tokens);

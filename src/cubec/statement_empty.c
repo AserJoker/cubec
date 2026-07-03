@@ -49,13 +49,12 @@ type_t g_cubec_statement_empty_type = {
 node_t read_statement_empty(allocator_t allocator, vec_t tokens, size_t *position,
                             const char *filename) {
   size_t current = *position;
-  skip_whitespace(tokens, &current);
+  cubec_statement_empty_t node = NULL;
   token_t token = TRY_LOCAL(onerror, vec_get(tokens, current));
   if (!token_is(token, CUBEC_TOKEN_SYMBOL, ";")) {
     return NULL;
   }
-  cubec_statement_empty_t node =
-      allocator_create(allocator, &g_cubec_statement_empty_type, NULL);
+  node = allocator_create(allocator, &g_cubec_statement_empty_type, NULL);
   location_t *location = token_get_location(token);
   node->super.location = *location;
   node->super.location.filename = filename;
@@ -63,5 +62,6 @@ node_t read_statement_empty(allocator_t allocator, vec_t tokens, size_t *positio
   *position = current;
   return &node->super;
 onerror:
+  allocator_free(allocator, node);
   return NULL;
 }

@@ -575,7 +575,7 @@ static token_t read_identifier_token(allocator_t allocator,
   position_t current = *position;
   size_t length = 0;
   uint32_t code = read_unicode(current.offset, &length);
-  if (u_isIDStart(code)) {
+  if (u_isIDStart(code) || code == '_') {
     current.offset += length;
     current.column += length;
     while (true) {

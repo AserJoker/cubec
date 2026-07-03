@@ -5,13 +5,15 @@
 #include "core/string.h"
 #include "core/token.h"
 #include "core/type.h"
+#include "cubec/literal.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
+#include <stdio.h>
 
 static void _cubec_literal_string_init(cubec_literal_string_t self,
                                        allocator_t allocator,
                                        cubec_literal_string_init_t *init) {
-  node_init_t super_init = {
+  cubec_literal_init_t super_init = {
       .kind = CUBEC_NODE_LITERAL_STRING,
       .parent = NULL,
   };
@@ -62,18 +64,18 @@ type_t g_cubec_literal_string_type = {
 node_t read_literal_string(allocator_t allocator, vec_t tokens, size_t *position,
                            const char *filename) {
   size_t current = *position;
-  skip_whitespace(tokens, &current);
 
+  cubec_literal_string_t node = NULL;
   token_t first_token = TRY_LOCAL(onerror, vec_get(tokens, current));
   if (!token_is(first_token, CUBEC_TOKEN_STRING, NULL)) {
     return NULL;
   }
 
-  cubec_literal_string_t node =
-      allocator_create(allocator, &g_cubec_literal_string_type, NULL);
+  node = allocator_create(allocator, &g_cubec_literal_string_type, NULL);
   location_t *location = token_get_location(first_token);
-  node->super.super.location = *location;
-  node->super.super.location.filename = filename;
+  node_t node_base = (node_t)node;
+  node_base->location = *location;
+  node_base->location.filename = filename;
 
   const char *token_str = token_get_string(first_token);
   size_t token_len = token_get_string_length(first_token);
@@ -93,15 +95,14 @@ node_t read_literal_string(allocator_t allocator, vec_t tokens, size_t *position
     if (token_len >= 2) {
       string_nconcat(node->value, token_str + 1, token_len - 2);
     }
+    location_t *token_location = token_get_location(token);
+    node_base->location.end = token_location->end;
     current++;
   }
 
   *position = current;
-  return &node->super.super;
+  return node_base;
 onerror:
-  if (node) {
-    g_cubec_literal_string_type.dispose(node, allocator);
-    allocator_free(allocator, node);
-  }
+  allocator_free(allocator, node);
   return NULL;
 }
