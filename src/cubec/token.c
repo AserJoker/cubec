@@ -37,6 +37,11 @@ static token_t create_string_token(allocator_t allocator, location_t location) {
                           &(token_init_t){CUBEC_TOKEN_STRING, location});
 }
 
+static token_t create_char_token(allocator_t allocator, location_t location) {
+  return allocator_create(allocator, &g_token_type,
+                          &(token_init_t){CUBEC_TOKEN_CHAR, location});
+}
+
 static token_t create_symbol_token(allocator_t allocator, location_t location) {
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_SYMBOL, location});
@@ -383,14 +388,175 @@ static token_t read_string_token(allocator_t allocator, position_t *position,
       break;
     }
     if (*current.offset == '\\') {
-      current.offset += 2;
-      current.column += 2;
+      current.offset++;
+      current.column++;
+      if (*current.offset == 'x') {
+        current.offset++;
+        current.column++;
+        for (int i = 0; i < 2; i++) {
+          if ((*current.offset >= '0' && *current.offset <= '9') ||
+              (*current.offset >= 'a' && *current.offset <= 'f') ||
+              (*current.offset >= 'A' && *current.offset <= 'F')) {
+            current.offset++;
+            current.column++;
+          } else {
+            break;
+          }
+        }
+      } else if (*current.offset == 'u') {
+        current.offset++;
+        current.column++;
+        if (*current.offset != '{') {
+          THROW(NULL,
+                "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
+                filename, current.line + 1, current.column);
+        }
+        current.offset++;
+        current.column++;
+        while (*current.offset != '}') {
+          if ((*current.offset >= '0' && *current.offset <= '9') ||
+              (*current.offset >= 'a' && *current.offset <= 'f') ||
+              (*current.offset >= 'A' && *current.offset <= 'F')) {
+            current.offset++;
+            current.column++;
+          } else {
+            THROW(NULL,
+                  "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
+                  filename, current.line + 1, current.column);
+          }
+        }
+        current.offset++;
+        current.column++;
+      } else if (*current.offset == 'n' || *current.offset == 't' ||
+                 *current.offset == 'r' || *current.offset == '\\' ||
+                 *current.offset == '\'' || *current.offset == '"' ||
+                 *current.offset == '0') {
+        current.offset++;
+        current.column++;
+      } else {
+        THROW(NULL,
+              "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
+              filename, current.line + 1, current.column);
+      }
     } else {
       current.column++;
       current.offset++;
     }
   }
   token_t token = create_string_token(
+      allocator, (location_t){filename, *position, current});
+  *position = current;
+  return token;
+}
+static token_t read_char_token(allocator_t allocator, position_t *position,
+                               const char *filename) {
+  position_t current = *position;
+  if (*current.offset != '\'') {
+    return NULL;
+  }
+  current.offset++;
+  current.column++;
+  if (!*current.offset) {
+    THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
+          filename, current.line + 1, current.column);
+  }
+  unsigned char code = 0;
+  if (*current.offset == '\\') {
+    current.offset++;
+    current.column++;
+    if (!*current.offset) {
+      THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
+            filename, current.line + 1, current.column);
+    }
+    switch (*current.offset) {
+    case 'n':
+      code = '\n';
+      current.offset++;
+      current.column++;
+      break;
+    case 't':
+      code = '\t';
+      current.offset++;
+      current.column++;
+      break;
+    case 'r':
+      code = '\r';
+      current.offset++;
+      current.column++;
+      break;
+    case '\\':
+      code = '\\';
+      current.offset++;
+      current.column++;
+      break;
+    case '\'':
+      code = '\'';
+      current.offset++;
+      current.column++;
+      break;
+    case '0':
+      code = '\0';
+      current.offset++;
+      current.column++;
+      break;
+    case 'x':
+      current.offset++;
+      current.column++;
+      for (int i = 0; i < 2; i++) {
+        if ((*current.offset >= '0' && *current.offset <= '9') ||
+            (*current.offset >= 'a' && *current.offset <= 'f') ||
+            (*current.offset >= 'A' && *current.offset <= 'F')) {
+          current.offset++;
+          current.column++;
+        } else {
+          break;
+        }
+      }
+      break;
+    case 'u':
+      current.offset++;
+      current.column++;
+      if (*current.offset != '{') {
+        THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
+              filename, current.line + 1, current.column);
+      }
+      current.offset++;
+      current.column++;
+      while (*current.offset != '}') {
+        if ((*current.offset >= '0' && *current.offset <= '9') ||
+            (*current.offset >= 'a' && *current.offset <= 'f') ||
+            (*current.offset >= 'A' && *current.offset <= 'F')) {
+          current.offset++;
+          current.column++;
+        } else {
+          THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
+                filename, current.line + 1, current.column);
+        }
+      }
+      current.offset++;
+      current.column++;
+      break;
+    default:
+      THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
+            filename, current.line + 1, current.column);
+    }
+  } else {
+    code = (unsigned char)*current.offset;
+    if (code == '\0' || code == '\'' || code == '"' || code == '\\' ||
+        code == '\n' || code == '\r') {
+      THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
+            filename, current.line + 1, current.column);
+    }
+    current.offset++;
+    current.column++;
+  }
+  if (*current.offset != '\'') {
+    THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
+          filename, current.line + 1, current.column);
+  }
+  current.offset++;
+  current.column++;
+  token_t token = create_char_token(
       allocator, (location_t){filename, *position, current});
   *position = current;
   return token;
@@ -459,6 +625,9 @@ token_t read_token(allocator_t allocator, position_t *position,
   }
   if (!token) {
     token = TRY(NULL, read_string_token(allocator, position, filename));
+  }
+  if (!token) {
+    token = TRY(NULL, read_char_token(allocator, position, filename));
   }
   if (!token) {
     token = TRY(NULL, read_comment_token(allocator, position, filename));

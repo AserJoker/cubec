@@ -7,6 +7,7 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/node.h"
+#include "cubec/statement_empty.h"
 #include "cubec/token.h"
 #include <stdint.h>
 
@@ -57,19 +58,23 @@ node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
   size_t current = *position;
   TRY_VOID_LOCAL(onerror, skip_whitespace(tokens, &current));
   while (true) {
-    // TODO: read statement
-    break;
+    TRY_VOID_LOCAL(onerror, skip_whitespace(tokens, &current));
+    node_t statement = TRY_LOCAL(onerror,read_statement_empty(allocator, tokens, position, filename));
+    if(!statement) {
+      break;
+    }
+    vec_push(node->statements, statement);
   }
   TRY_VOID_LOCAL(onerror, skip_whitespace(tokens, &current));
-  token_t end = vec_get(tokens, current);
+  token_t end = TRY_LOCAL(onerror, vec_get(tokens, current));
   if (token_get_kind(end) != CUBEC_TOKEN_EOF) {
-    token_t token = vec_get(tokens, current);
+    token_t token = TRY_LOCAL(onerror, vec_get(tokens, current));
     location_t *location = token_get_location(token);
     THROW_LOCAL(onerror,
                 "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
                 filename, location->begin.line + 1, location->begin.column);
   }
-  token_t begin = vec_get(tokens, *position);
+  token_t begin = TRY_LOCAL(onerror, vec_get(tokens, *position));
   node->super.location.begin = token_get_location(begin)->begin;
   node->super.location.end = token_get_location(end)->begin;
   node->super.location.filename = filename;

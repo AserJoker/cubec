@@ -19,6 +19,7 @@ enum _cubec_token_kind_t {
   CUBEC_TOKEN_SYMBOL,
   CUBEC_TOKEN_KEYWORD,
   CUBEC_TOKEN_STRING,
+  CUBEC_TOKEN_CHAR
 };
 typedef enum _cubec_token_kind_t cubec_token_kind_t;
 token_t read_token(allocator_t allocator, position_t *position,

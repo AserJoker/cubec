@@ -1,6 +1,7 @@
 #include "cubec/token.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
+#include "core/error.h"
 #include <gtest/gtest.h>
 
 using ::testing::Test;
@@ -154,6 +155,210 @@ TEST_F(dt_token, empty_string) {
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test string with escape sequence newline
+TEST_F(dt_token, string_escape_newline) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "\"hello\\nworld\"");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test string with escape sequence tab
+TEST_F(dt_token, string_escape_tab) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "\"hello\\tworld\"");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test string with escape sequence backslash
+TEST_F(dt_token, string_escape_backslash) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "\"hello\\\\world\"");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test string with escape sequence quote
+TEST_F(dt_token, string_escape_quote) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "\"hello\\\"world\"");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test string with hex escape
+TEST_F(dt_token, string_escape_hex) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "\"hello\\xFFworld\"");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test string with unicode escape \u{}
+TEST_F(dt_token, string_escape_unicode_u_braces) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "\"hello\\u{41}world\"");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test string with unicode escape \u{} multiple digits
+TEST_F(dt_token, string_escape_unicode_u_braces_multiple) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "\"hello\\u{1F600}world\"");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test string with unicode escape \u{} single digit
+TEST_F(dt_token, string_escape_unicode_u_braces_single) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "\"hello\\u{A}world\"");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test string with multiple escapes
+TEST_F(dt_token, string_multiple_escapes) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "\"\\n\\t\\r\\\\\\\"\\xAB\\u{41}\"");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test char token - simple character
+TEST_F(dt_token, char_token_simple) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "'a'");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test char token - digit
+TEST_F(dt_token, char_token_digit) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "'5'");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test char token - escape sequence newline
+TEST_F(dt_token, char_token_escape_newline) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "'\\n'");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test char token - escape sequence tab
+TEST_F(dt_token, char_token_escape_tab) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "'\\t'");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test char token - escape sequence backslash
+TEST_F(dt_token, char_token_escape_backslash) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "'\\\\'");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test char token - escape sequence single quote
+TEST_F(dt_token, char_token_escape_single_quote) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "'\\''");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test char token - escape sequence null
+TEST_F(dt_token, char_token_escape_null) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "'\\0'");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test char token - hex escape
+TEST_F(dt_token, char_token_hex_escape) {
+  error_clear();
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "'\\xFF'");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test char token - hex escape lowercase
+TEST_F(dt_token, char_token_hex_escape_lowercase) {
+  error_clear();
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "'\\xab'");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test char token - hex escape uppercase
+TEST_F(dt_token, char_token_hex_escape_uppercase) {
+  error_clear();
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "'\\xAB'");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, vec);
+}
+
+// Test char token - space character
+TEST_F(dt_token, char_token_space) {
+  error_clear();
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "' '");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
   allocator_free(allocator, vec);
 }
