@@ -107,3 +107,56 @@ TEST_F(dt_string, unicode_characters) {
   EXPECT_EQ(string_get_length(str), 12);
   allocator_free(allocator, str);
 }
+
+TEST_F(dt_string, nconcat_basic) {
+  string_init_t init = {.str = "Hello"};
+  string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
+  ASSERT_NE(str, nullptr);
+  string_nconcat(str, " World", 6);
+  EXPECT_STREQ(string_get(str), "Hello World");
+  EXPECT_EQ(string_get_length(str), 11);
+  allocator_free(allocator, str);
+}
+
+TEST_F(dt_string, nconcat_partial) {
+  string_init_t init = {.str = "Hello"};
+  string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
+  ASSERT_NE(str, nullptr);
+  string_nconcat(str, "World!!!", 5);
+  EXPECT_STREQ(string_get(str), "HelloWorld");
+  EXPECT_EQ(string_get_length(str), 10);
+  allocator_free(allocator, str);
+}
+
+TEST_F(dt_string, nconcat_empty) {
+  string_init_t init = {.str = "Hello"};
+  string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
+  ASSERT_NE(str, nullptr);
+  string_nconcat(str, "", 0);
+  EXPECT_STREQ(string_get(str), "Hello");
+  EXPECT_EQ(string_get_length(str), 5);
+  allocator_free(allocator, str);
+}
+
+TEST_F(dt_string, nconcat_multiple) {
+  string_init_t init = {.str = "A"};
+  string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
+  ASSERT_NE(str, nullptr);
+  string_nconcat(str, "B", 1);
+  string_nconcat(str, "C", 1);
+  string_nconcat(str, "D", 1);
+  EXPECT_STREQ(string_get(str), "ABCD");
+  EXPECT_EQ(string_get_length(str), 4);
+  allocator_free(allocator, str);
+}
+
+TEST_F(dt_string, nconcat_binary_data) {
+  string_init_t init = {.str = ""};
+  string_t str = (string_t)allocator_create(allocator, &g_string_type, &init);
+  ASSERT_NE(str, nullptr);
+  const char binary[] = {'\x01', '\x02', '\x03', '\0'};
+  string_nconcat(str, binary, 4);
+  EXPECT_EQ(string_get_length(str), 4);
+  EXPECT_EQ(memcmp(string_get(str), binary, 4), 0);
+  allocator_free(allocator, str);
+}

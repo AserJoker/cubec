@@ -92,3 +92,19 @@ size_t string_concat(string_t self, const char *another) {
   self->size += another_size;
   return self->size;
 }
+
+size_t string_nconcat(string_t self, const char *another, size_t len) {
+  while (len + self->size - 1 >= self->capacity) {
+    self->capacity *= 2;
+  }
+  char *data = allocator_alloc(self->allocator, self->capacity);
+  memcpy(data, self->data, self->size - 1);
+  allocator_free(self->allocator, self->data);
+  self->data = data;
+  for (size_t idx = 0; idx < len; idx++) {
+    self->data[self->size - 1 + idx] = another[idx];
+  }
+  self->data[self->size - 1 + len] = 0;
+  self->size += len;
+  return self->size;
+}

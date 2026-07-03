@@ -37,5 +37,11 @@ uint32_t token_get_kind(token_t self) { return self->kind; }
 location_t *token_get_location(token_t self) { return &self->location; }
 
 bool token_is(token_t self, uint32_t kind, const char *text) {
-  return self->kind == kind && location_is(&self->location, text);
+  return self->kind == kind && (text == NULL || location_is(&self->location, text));
+}
+
+const char *token_get_string(token_t self) { return self->location.begin.offset; }
+
+size_t token_get_string_length(token_t self) {
+  return self->location.end.offset - self->location.begin.offset;
 }

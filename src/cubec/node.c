@@ -10,8 +10,9 @@ void skip_whitespace(vec_t tokens, size_t *position) {
     cubec_token_kind_t kind = token_get_kind(token);
     if (kind == CUBEC_TOKEN_WHITESPACE || kind == CUBEC_TOKEN_COMMENT ||
         kind == CUBEC_TOKEN_MULTILINE_COMMENT) {
-      *position = current;
+      current++;
     } else {
+      *position = current;
       return;
     }
   }

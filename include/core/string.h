@@ -16,6 +16,7 @@ const char *string_get(string_t self);
 size_t string_set(string_t self, const char *str);
 size_t string_get_length(string_t self);
 size_t string_concat(string_t self, const char *another);
+size_t string_nconcat(string_t self, const char *another, size_t len);
 #ifdef __cplusplus
 }
 #endif

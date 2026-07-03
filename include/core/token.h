@@ -19,6 +19,8 @@ typedef struct _token_init_t token_init_t;
 uint32_t token_get_kind(token_t self);
 location_t *token_get_location(token_t self);
 bool token_is(token_t self, uint32_t kind, const char *text);
+const char *token_get_string(token_t self);
+size_t token_get_string_length(token_t self);
 #ifdef __cplusplus
 }
 #endif
