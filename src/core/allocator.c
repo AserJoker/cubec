@@ -77,7 +77,6 @@ void *allocator_alloc(allocator_t self, size_t size) {
 }
 
 void *allocator_create(allocator_t self, type_t *type, void *arg) {
-
   void *data = allocator_alloc(self, type->size);
   alloc_chunk_t chunk = value_get_chunk(data);
   chunk->type = type;
@@ -155,7 +154,8 @@ void *value_move(allocator_t allocator, void *another) {
   } else {
     alloc_chunk_t chunk = value_get_chunk(another);
     void *data = allocator_alloc(allocator, chunk->size);
-    memset(data, 0, chunk->size);
+    memcpy(data, another, chunk->size);
+    memset(another,0,chunk->size);
     return data;
   }
 }

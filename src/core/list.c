@@ -4,13 +4,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-typedef struct _list_node_t list_node_t;
-struct _list_node_t {
-  list_node_t *prev;
-  list_node_t *next;
-  void *data;
-};
-
 struct _list_t {
   allocator_t allocator;
   list_node_t *head;

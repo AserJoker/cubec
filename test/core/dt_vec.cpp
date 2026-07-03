@@ -30,7 +30,7 @@ TEST_F(dt_vec, push_and_get) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(dt_vec, Pop) {
+TEST_F(dt_vec, pop) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20;
   vec_push(vec, &val1);
@@ -43,7 +43,7 @@ TEST_F(dt_vec, Pop) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(dt_vec, Set) {
+TEST_F(dt_vec, set) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20, val3 = 99;
   vec_push(vec, &val1);
@@ -53,7 +53,7 @@ TEST_F(dt_vec, Set) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(dt_vec, Insert) {
+TEST_F(dt_vec, insert) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20, val3 = 15;
   vec_push(vec, &val1);
@@ -66,7 +66,7 @@ TEST_F(dt_vec, Insert) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(dt_vec, Remove) {
+TEST_F(dt_vec, remove) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   vec_push(vec, &val1);
@@ -79,7 +79,7 @@ TEST_F(dt_vec, Remove) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(dt_vec, Resize) {
+TEST_F(dt_vec, resize) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20;
   vec_push(vec, &val1);
@@ -92,7 +92,7 @@ TEST_F(dt_vec, Resize) {
   allocator_free(allocator, vec);
 }
 
-TEST_F(dt_vec, GetData) {
+TEST_F(dt_vec, get_data) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   int val1 = 10, val2 = 20;
   vec_push(vec, &val1);

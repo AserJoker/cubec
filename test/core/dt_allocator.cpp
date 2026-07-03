@@ -87,8 +87,8 @@ TEST_F(dt_allocator, value_move) {
   *val = 42;
   int *moved = (int *)value_move(allocator, val);
   ASSERT_NE(moved, nullptr);
-  // value_move clears data for types without type info
-  EXPECT_EQ(*moved, 0);
+  // value_move copies data for types without type info
+  EXPECT_EQ(*moved, 42);
   allocator_free(allocator, val);
   allocator_free(allocator, moved);
 }

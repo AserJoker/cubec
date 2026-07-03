@@ -9,6 +9,13 @@ extern "C" {
 struct _list_t;
 typedef struct _list_t *list_t;
 
+typedef struct _list_node_t list_node_t;
+struct _list_node_t {
+  list_node_t *prev;
+  list_node_t *next;
+  void *data;
+};
+
 typedef struct _list_init_t list_init_t;
 struct _list_init_t {
   bool auto_dispose;
