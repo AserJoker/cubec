@@ -7,7 +7,6 @@
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
-#include <stdio.h>
 
 static void _cubec_expression_init(cubec_expression_t self,
                                    allocator_t allocator,
@@ -49,8 +48,8 @@ type_t g_cubec_expression_type = {
     .move = (type_move_fn_t)_cubec_expression_move,
 };
 
-node_t read_expression(allocator_t allocator, vec_t tokens, size_t *position,
-                       const char *filename) {
+node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
+                 const char *filename) {
   size_t current = *position;
   node_t result = NULL;
 
