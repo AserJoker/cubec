@@ -5,6 +5,7 @@
 #include "core/type.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_call.h"
+#include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_member.h"
 #include "cubec/literal_char.h"
@@ -118,6 +119,17 @@ node_t read_value(allocator_t allocator, vec_t tokens, size_t *position,
                                          node));
       if (call_node) {
         node = call_node;
+        *position = current;
+        continue;
+      }
+
+      /* Try postfix: generic instantiation <callee>[<args>] */
+      node_t generic_instantiation_node =
+          TRY_LOCAL(onerror,
+                    read_expression_generic_instantiation(
+                        allocator, tokens, &current, filename, node));
+      if (generic_instantiation_node) {
+        node = generic_instantiation_node;
         *position = current;
         continue;
       }
