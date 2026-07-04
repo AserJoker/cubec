@@ -8,19 +8,27 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+/**
+ * @brief Base class for all AST nodes.
+ *        Subclasses embed this struct as a `super` field for single inheritance.
+ */
 struct _node_t;
 typedef struct _node_t *node_t;
 struct _node_t {
-  allocator_t allocator;
-  uint32_t kind;
-  location_t location;
-  node_t parent;
+  allocator_t allocator;  /**< The allocator that owns this node */
+  uint32_t kind;          /**< AST node kind (see cubec/node.h for enum) */
+  location_t location;    /**< Source-code span for this node */
+  node_t parent;          /**< Parent node in the AST tree */
 };
+
+/** @brief Virtual table for node_t. */
 extern type_t g_node_type;
+
+/** @brief Initialization parameters for node_t (passed to allocator_create). */
 struct _node_init_t {
-  uint32_t kind;
-  location_t location;
-  node_t parent;
+  uint32_t kind;          /**< AST node kind */
+  location_t location;    /**< Source-code span */
+  node_t parent;          /**< Parent node (may be NULL for root) */
 };
 typedef struct _node_init_t node_init_t;
 #ifdef __cplusplus

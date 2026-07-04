@@ -16,24 +16,14 @@ TEST_F(dt_list, create_and_destroy) {
   allocator_free(allocator, list);
 }
 
-TEST_F(dt_list, push_and_get) {
+TEST_F(dt_list, push_and_pop) {
   list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   list_push(list, &val1);
   list_push(list, &val2);
   list_push(list, &val3);
   EXPECT_EQ(list_get_size(list), 3);
-  EXPECT_EQ(*(int *)list_get(list, 0), 10);
-  EXPECT_EQ(*(int *)list_get(list, 1), 20);
-  EXPECT_EQ(*(int *)list_get(list, 2), 30);
-  allocator_free(allocator, list);
-}
-
-TEST_F(dt_list, pop) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
-  int val1 = 10, val2 = 20;
-  list_push(list, &val1);
-  list_push(list, &val2);
+  EXPECT_EQ(*(int *)list_pop(list), 30);
   EXPECT_EQ(list_get_size(list), 2);
   EXPECT_EQ(*(int *)list_pop(list), 20);
   EXPECT_EQ(list_get_size(list), 1);
@@ -64,84 +54,6 @@ TEST_F(dt_list, get_first_and_last) {
   list_push(list, &val3);
   EXPECT_EQ(*(int *)list_get_first(list), 10);
   EXPECT_EQ(*(int *)list_get_last(list), 30);
-  allocator_free(allocator, list);
-}
-
-TEST_F(dt_list, set) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
-  int val1 = 10, val2 = 20, val3 = 99;
-  list_push(list, &val1);
-  list_push(list, &val2);
-  list_set(list, 1, &val3);
-  EXPECT_EQ(*(int *)list_get(list, 1), 99);
-  allocator_free(allocator, list);
-}
-
-TEST_F(dt_list, insert) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
-  int val1 = 10, val2 = 20, val3 = 15;
-  list_push(list, &val1);
-  list_push(list, &val2);
-  list_insert(list, 1, &val3);
-  EXPECT_EQ(list_get_size(list), 3);
-  EXPECT_EQ(*(int *)list_get(list, 0), 10);
-  EXPECT_EQ(*(int *)list_get(list, 1), 15);
-  EXPECT_EQ(*(int *)list_get(list, 2), 20);
-  allocator_free(allocator, list);
-}
-
-TEST_F(dt_list, insert_at_beginning) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
-  int val1 = 10, val2 = 20;
-  list_push(list, &val1);
-  list_insert(list, 0, &val2);
-  EXPECT_EQ(list_get_size(list), 2);
-  EXPECT_EQ(*(int *)list_get_first(list), 20);
-  allocator_free(allocator, list);
-}
-
-TEST_F(dt_list, insert_at_end) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
-  int val1 = 10, val2 = 20;
-  list_push(list, &val1);
-  list_insert(list, 1, &val2);
-  EXPECT_EQ(list_get_size(list), 2);
-  EXPECT_EQ(*(int *)list_get_last(list), 20);
-  allocator_free(allocator, list);
-}
-
-TEST_F(dt_list, remove) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
-  int val1 = 10, val2 = 20, val3 = 30;
-  list_push(list, &val1);
-  list_push(list, &val2);
-  list_push(list, &val3);
-  list_remove(list, 1);
-  EXPECT_EQ(list_get_size(list), 2);
-  EXPECT_EQ(*(int *)list_get(list, 0), 10);
-  EXPECT_EQ(*(int *)list_get(list, 1), 30);
-  allocator_free(allocator, list);
-}
-
-TEST_F(dt_list, remove_first) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
-  int val1 = 10, val2 = 20;
-  list_push(list, &val1);
-  list_push(list, &val2);
-  list_remove(list, 0);
-  EXPECT_EQ(list_get_size(list), 1);
-  EXPECT_EQ(*(int *)list_get_first(list), 20);
-  allocator_free(allocator, list);
-}
-
-TEST_F(dt_list, remove_last) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
-  int val1 = 10, val2 = 20;
-  list_push(list, &val1);
-  list_push(list, &val2);
-  list_remove(list, 1);
-  EXPECT_EQ(list_get_size(list), 1);
-  EXPECT_EQ(*(int *)list_get_last(list), 10);
   allocator_free(allocator, list);
 }
 
@@ -196,6 +108,152 @@ TEST_F(dt_list, iteration_empty_list) {
   allocator_free(allocator, list);
 }
 
+TEST_F(dt_list, iter_get) {
+  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  int val1 = 10, val2 = 20, val3 = 30;
+  list_push(list, &val1);
+  list_push(list, &val2);
+  list_push(list, &val3);
+
+  list_iter_t iter = list_iter_first(list);
+  /* iter points to first element (10) */
+  EXPECT_EQ(*(int *)list_iter_get(&iter), 10);
+
+  list_iter_next(&iter);
+  EXPECT_EQ(*(int *)list_iter_get(&iter), 20);
+
+  list_iter_next(&iter);
+  EXPECT_EQ(*(int *)list_iter_get(&iter), 30);
+
+  /* Exhausted */
+  list_iter_next(&iter);
+  EXPECT_EQ(list_iter_get(&iter), nullptr);
+
+  allocator_free(allocator, list);
+}
+
+TEST_F(dt_list, iter_set) {
+  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  int val1 = 10, val2 = 20, val3 = 99;
+  list_push(list, &val1);
+  list_push(list, &val2);
+
+  list_iter_t iter = list_iter_first(list);
+  list_iter_next(&iter);  /* advance to second element */
+  void *old = list_iter_set(&iter, &val3);
+  EXPECT_EQ(*(int *)old, 20);
+  EXPECT_EQ(*(int *)list_iter_get(&iter), 99);
+
+  allocator_free(allocator, list);
+}
+
+TEST_F(dt_list, iter_remove) {
+  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  int val1 = 10, val2 = 20, val3 = 30;
+  list_push(list, &val1);
+  list_push(list, &val2);
+  list_push(list, &val3);
+
+  /* Remove second element (20) */
+  list_iter_t iter = list_iter_first(list);
+  list_iter_next(&iter);  /* at second element */
+  list_iter_remove(&iter);
+  EXPECT_EQ(list_get_size(list), 2);
+
+  /* Iterator advanced to third element */
+  EXPECT_EQ(*(int *)list_iter_get(&iter), 30);
+  EXPECT_EQ(*(int *)list_get_first(list), 10);
+  EXPECT_EQ(*(int *)list_get_last(list), 30);
+
+  allocator_free(allocator, list);
+}
+
+TEST_F(dt_list, iter_remove_first) {
+  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  int val1 = 10, val2 = 20, val3 = 30;
+  list_push(list, &val1);
+  list_push(list, &val2);
+  list_push(list, &val3);
+
+  /* Remove first element */
+  list_iter_t iter = list_iter_first(list);
+  list_iter_remove(&iter);
+  EXPECT_EQ(list_get_size(list), 2);
+  EXPECT_EQ(*(int *)list_get_first(list), 20);
+  EXPECT_EQ(*(int *)list_iter_get(&iter), 20);
+
+  allocator_free(allocator, list);
+}
+
+TEST_F(dt_list, iter_remove_last) {
+  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  int val1 = 10, val2 = 20;
+  list_push(list, &val1);
+  list_push(list, &val2);
+
+  /* Navigate to last element */
+  list_iter_t iter = list_iter_first(list);
+  list_iter_next(&iter);  /* at last */
+  list_iter_remove(&iter);
+  EXPECT_EQ(list_get_size(list), 1);
+  EXPECT_EQ(*(int *)list_get_first(list), 10);
+  EXPECT_EQ(list_iter_get(&iter), nullptr);  /* exhausted */
+
+  allocator_free(allocator, list);
+}
+
+TEST_F(dt_list, iter_remove_exhausted) {
+  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  int val1 = 10;
+  list_push(list, &val1);
+
+  list_iter_t iter = list_iter_first(list);
+  list_iter_next(&iter);  /* exhaust */
+  EXPECT_EQ(list_iter_remove(&iter), nullptr);
+  EXPECT_EQ(list_get_size(list), 1);  /* unchanged */
+
+  allocator_free(allocator, list);
+}
+
+TEST_F(dt_list, insert) {
+  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  int val1 = 10, val2 = 20, val3 = 15;
+  list_push(list, &val1);
+  list_push(list, &val2);
+  list_insert(list, 1, &val3);
+  EXPECT_EQ(list_get_size(list), 3);
+
+  /* Verify via iterator */
+  list_iter_t iter = list_iter_first(list);
+  EXPECT_EQ(*(int *)list_iter_get(&iter), 10);
+  list_iter_next(&iter);
+  EXPECT_EQ(*(int *)list_iter_get(&iter), 15);
+  list_iter_next(&iter);
+  EXPECT_EQ(*(int *)list_iter_get(&iter), 20);
+
+  allocator_free(allocator, list);
+}
+
+TEST_F(dt_list, insert_at_beginning) {
+  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  int val1 = 10, val2 = 20;
+  list_push(list, &val1);
+  list_insert(list, 0, &val2);
+  EXPECT_EQ(list_get_size(list), 2);
+  EXPECT_EQ(*(int *)list_get_first(list), 20);
+  allocator_free(allocator, list);
+}
+
+TEST_F(dt_list, insert_at_end) {
+  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  int val1 = 10, val2 = 20;
+  list_push(list, &val1);
+  list_insert(list, 1, &val2);
+  EXPECT_EQ(list_get_size(list), 2);
+  EXPECT_EQ(*(int *)list_get_last(list), 20);
+  allocator_free(allocator, list);
+}
+
 TEST_F(dt_list, single_element) {
   list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
   int val1 = 42;
@@ -203,7 +261,13 @@ TEST_F(dt_list, single_element) {
   EXPECT_EQ(list_get_size(list), 1);
   EXPECT_EQ(*(int *)list_get_first(list), 42);
   EXPECT_EQ(*(int *)list_get_last(list), 42);
-  EXPECT_EQ(*(int *)list_get(list, 0), 42);
+
+  /* Verify via iterator */
+  list_iter_t iter = list_iter_first(list);
+  EXPECT_EQ(*(int *)list_iter_get(&iter), 42);
+  list_iter_next(&iter);
+  EXPECT_EQ(list_iter_get(&iter), nullptr);
+
   allocator_free(allocator, list);
 }
 
@@ -223,5 +287,23 @@ TEST_F(dt_list, mixed_operations) {
   EXPECT_EQ(list_get_size(list), 3);
   EXPECT_EQ(*(int *)list_get_first(list), 2);
   EXPECT_EQ(*(int *)list_get_last(list), 4);
+  allocator_free(allocator, list);
+}
+
+TEST_F(dt_list, iter_traverse_and_remove_all) {
+  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  int val1 = 10, val2 = 20, val3 = 30;
+  list_push(list, &val1);
+  list_push(list, &val2);
+  list_push(list, &val3);
+
+  /* Remove all elements via iterator */
+  list_iter_t iter = list_iter_first(list);
+  EXPECT_EQ(*(int *)list_iter_remove(&iter), 10);
+  EXPECT_EQ(*(int *)list_iter_remove(&iter), 20);
+  EXPECT_EQ(*(int *)list_iter_remove(&iter), 30);
+  EXPECT_EQ(list_get_size(list), 0);
+  EXPECT_EQ(list_iter_get(&iter), nullptr);
+
   allocator_free(allocator, list);
 }

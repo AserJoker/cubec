@@ -1,11 +1,22 @@
 cmake_minimum_required(VERSION 3.12)
-set(CMAKE_TOOLCHAIN_FILE $ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
+project(cubec)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
-project(cubec)
-add_compile_definitions(-D_CRT_SECURE_NO_WARNINGS -D_GNU_SOURCE)
+
+# vcpkg toolchain: only use if VCPKG_ROOT is set
+if(DEFINED ENV{VCPKG_ROOT} AND NOT CMAKE_TOOLCHAIN_FILE)
+  set(CMAKE_TOOLCHAIN_FILE $ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
+endif()
+
+# MSVC-specific: suppress CRT deprecation warnings
+if(MSVC)
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+else()
+  add_compile_definitions(_GNU_SOURCE)
+endif()
 find_package(ICU REQUIRED COMPONENTS i18n uc data io)
 find_package(GTest CONFIG REQUIRED)
+find_package(Threads REQUIRED)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/core SRC_CORE)
@@ -20,6 +31,7 @@ target_link_libraries(cubecc PRIVATE
     ICU::uc
     ICU::data
     ICU::io
+    Threads::Threads
 )
 enable_testing()
 file(GLOB_RECURSE TEST_SOURCE ${PROJECT_SOURCE_DIR}/test/*.cpp)
@@ -32,6 +44,7 @@ target_link_libraries(cubec_test PRIVATE
     ICU::io
     GTest::gtest
     GTest::gmock
+    Threads::Threads
 )
 
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")

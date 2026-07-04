@@ -214,28 +214,17 @@ size_t map_insert(map_t self, void *key, void *value) {
   return vec_get_size(self->keys);
 }
 
-static map_entry_index_t *find_entry_in_bucket(list_t bucket, uint64_t key_id) {
+static bool remove_entry_from_bucket(list_t bucket, uint64_t key_id) {
   list_iter_t iter = list_iter_first(bucket);
   map_entry_index_t *entry;
-  while ((entry = list_iter_next(&iter)) != NULL) {
+  while ((entry = (map_entry_index_t *)list_iter_get(&iter)) != NULL) {
     if (entry->key_id == key_id) {
-      return entry;
+      list_iter_remove(&iter);
+      return true;
     }
+    list_iter_next(&iter);
   }
-  return NULL;
-}
-
-static size_t find_list_entry_index(list_t bucket, uint64_t key_id) {
-  size_t idx = 0;
-  list_iter_t iter = list_iter_first(bucket);
-  map_entry_index_t *entry;
-  while ((entry = list_iter_next(&iter)) != NULL) {
-    if (entry->key_id == key_id) {
-      return idx;
-    }
-    idx++;
-  }
-  return (size_t)-1;
+  return false;
 }
 
 size_t map_remove(map_t self, void *key) {
@@ -249,10 +238,7 @@ size_t map_remove(map_t self, void *key) {
   if (self->index_type == MAP_INDEX_HASH) {
     size_t bucket_idx = hash_bucket_index(self, entry->key_id);
     list_t bucket = self->index.buckets[bucket_idx];
-    size_t list_idx = find_list_entry_index(bucket, entry->key_id);
-    if (list_idx != (size_t)-1) {
-      list_remove(bucket, list_idx);
-    }
+    remove_entry_from_bucket(bucket, entry->key_id);
   } else {
     rbtree_remove(self->index.rbtree, entry->key_id);
   }

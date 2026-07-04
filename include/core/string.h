@@ -5,17 +5,50 @@ extern "C" {
 #endif
 #include "core/type.h"
 #include <stdint.h>
+/**
+ * @brief Dynamic null-terminated string (like std::string).
+ *        Capacity grows by doubling. Supports clone and move semantics.
+ */
 struct _string_t;
 typedef struct _string_t *string_t;
+
+/** @brief Initialization parameters for string_t. */
 typedef struct _string_init_t string_init_t;
 struct _string_init_t {
-  const char *str;
+  const char *str;  /**< Initial string content (may be NULL for empty) */
 };
+
+/** @brief Virtual table for string_t. */
 extern type_t g_string_type;
+
+/**
+ * @brief Get the null-terminated C string content.
+ * @return Pointer to internal buffer (valid as long as the string_t is alive).
+ */
 const char *string_get(string_t self);
+
+/**
+ * @brief Replace the string content with a new C string.
+ * @return New size in bytes (including null terminator).
+ */
 size_t string_set(string_t self, const char *str);
+
+/**
+ * @brief Get the string length in bytes (excluding null terminator).
+ */
 size_t string_get_length(string_t self);
+
+/**
+ * @brief Append a C string to the end. Reallocates if capacity is insufficient.
+ * @return New size in bytes (including null terminator).
+ */
 size_t string_concat(string_t self, const char *another);
+
+/**
+ * @brief Append exactly len bytes from another (not necessarily null-terminated).
+ *        Appends a null terminator after the copied bytes.
+ * @return New size in bytes (including null terminator).
+ */
 size_t string_nconcat(string_t self, const char *another, size_t len);
 #ifdef __cplusplus
 }

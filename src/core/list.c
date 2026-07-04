@@ -2,7 +2,6 @@
 #include "core/allocator.h"
 #include "core/error.h"
 #include <stdbool.h>
-#include <stdint.h>
 
 struct _list_t {
   allocator_t allocator;
@@ -95,51 +94,6 @@ void *list_get_last(list_t self) {
     THROW(NULL, "RangeError: list is empty");
   }
   return self->tail->data;
-}
-
-void *list_get(list_t self, size_t idx) {
-  if (idx >= self->size) {
-    THROW(NULL, "RangeError: index %" PRIuPTR " out of list length %" PRIuPTR,
-          idx, self->size);
-  }
-  list_node_t *node;
-  if (idx < self->size / 2) {
-    node = self->head;
-    for (size_t i = 0; i < idx; i++) {
-      node = node->next;
-    }
-  } else {
-    node = self->tail;
-    for (size_t i = self->size - 1; i > idx; i--) {
-      node = node->prev;
-    }
-  }
-  return node->data;
-}
-
-size_t list_set(list_t self, size_t idx, void *data) {
-  if (idx >= self->size) {
-    THROW((size_t)-1,
-          "RangeError: index %" PRIuPTR " out of list length %" PRIuPTR, idx,
-          self->size);
-  }
-  list_node_t *node;
-  if (idx < self->size / 2) {
-    node = self->head;
-    for (size_t i = 0; i < idx; i++) {
-      node = node->next;
-    }
-  } else {
-    node = self->tail;
-    for (size_t i = self->size - 1; i > idx; i--) {
-      node = node->prev;
-    }
-  }
-  if (self->auto_dispose) {
-    allocator_free(self->allocator, node->data);
-  }
-  node->data = data;
-  return self->size;
 }
 
 size_t list_push(list_t self, void *data) {
@@ -246,44 +200,6 @@ size_t list_insert(list_t self, size_t idx, void *data) {
   return self->size;
 }
 
-size_t list_remove(list_t self, size_t idx) {
-  if (idx >= self->size) {
-    THROW((size_t)-1,
-          "RangeError: index %" PRIuPTR " out of list length %" PRIuPTR, idx,
-          self->size);
-  }
-  list_node_t *node;
-  if (idx == 0) {
-    list_shift(self);
-    return self->size;
-  }
-  if (idx == self->size - 1) {
-    list_pop(self);
-    return self->size;
-  }
-  if (idx < self->size / 2) {
-    node = self->head;
-    for (size_t i = 0; i < idx; i++) {
-      node = node->next;
-    }
-  } else {
-    node = self->tail;
-    for (size_t i = self->size - 1; i > idx; i--) {
-      node = node->prev;
-    }
-  }
-  list_node_t *prev_node = node->prev;
-  list_node_t *next_node = node->next;
-  prev_node->next = next_node;
-  next_node->prev = prev_node;
-  if (self->auto_dispose) {
-    allocator_free(self->allocator, node->data);
-  }
-  allocator_free(self->allocator, node);
-  self->size--;
-  return self->size;
-}
-
 size_t list_clear(list_t self) {
   list_node_t *node = self->head;
   while (node != NULL) {
@@ -298,6 +214,55 @@ size_t list_clear(list_t self) {
   self->tail = NULL;
   self->size = 0;
   return self->size;
+}
+
+void *list_iter_get(list_iter_t *iter) {
+  if (iter->current == NULL) {
+    return NULL;
+  }
+  list_node_t *node = (list_node_t *)iter->current;
+  return node->data;
+}
+
+void *list_iter_set(list_iter_t *iter, void *data) {
+  if (iter->current == NULL) {
+    THROW(NULL, "RangeError: iterator is exhausted");
+  }
+  list_node_t *node = (list_node_t *)iter->current;
+  void *old_data = node->data;
+  node->data = data;
+  return old_data;
+}
+
+void *list_iter_remove(list_iter_t *iter) {
+  if (iter->current == NULL) {
+    return NULL;
+  }
+  list_t self = iter->list;
+  list_node_t *node = (list_node_t *)iter->current;
+  void *data = node->data;
+
+  /* Unlink node */
+  if (node->prev) {
+    node->prev->next = node->next;
+  } else {
+    self->head = node->next;
+  }
+  if (node->next) {
+    node->next->prev = node->prev;
+  } else {
+    self->tail = node->prev;
+  }
+
+  /* Advance iterator to next */
+  iter->current = node->next;
+
+  if (self->auto_dispose) {
+    allocator_free(self->allocator, data);
+  }
+  allocator_free(self->allocator, node);
+  self->size--;
+  return data;
 }
 
 list_iter_t list_iter_first(list_t list) {

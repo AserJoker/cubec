@@ -12,8 +12,8 @@ public:
   ~test_allocator() { delete_allocator(allocator); }
 };
 
-#define TEST_ALLOCATOR                                                      \
-  test_allocator test_allocator_instance;                                   \
+#define TEST_ALLOCATOR                                                         \
+  test_allocator test_allocator_instance;                                      \
   allocator_t allocator = test_allocator_instance.allocator
 
 #endif

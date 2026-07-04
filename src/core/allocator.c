@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 typedef struct _alloc_chunk_t *alloc_chunk_t;
 struct _alloc_chunk_t {
@@ -30,6 +31,9 @@ allocator_t create_allocator(alloc_fn_t alloc_fn, free_fn_t free_fn) {
     free_fn = free;
   }
   allocator_t self = (allocator_t)alloc_fn(sizeof(struct _allocator_t));
+  if (self == NULL) {
+    abort();
+  }
   self->alloc_fn = alloc_fn;
   self->free_fn = free_fn;
   self->id = 0;
@@ -37,6 +41,9 @@ allocator_t create_allocator(alloc_fn_t alloc_fn, free_fn_t free_fn) {
   return self;
 }
 void delete_allocator(allocator_t self) {
+  if (self == NULL) {
+    return;
+  }
   while (self->chunks) {
     alloc_chunk_t chunk = self->chunks;
     fprintf(stderr, "memory leak: size = %" PRIuPTR ", pointer = %p",
@@ -63,6 +70,9 @@ void *allocator_alloc(allocator_t self, size_t size) {
     return NULL;
   }
   alloc_chunk_t chunk = self->alloc_fn(sizeof(struct _alloc_chunk_t) + size);
+  if (chunk == NULL) {
+    abort();
+  }
   chunk->size = size;
   chunk->next = self->chunks;
   chunk->type = NULL;

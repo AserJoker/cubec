@@ -3,10 +3,10 @@
 #include <string.h>
 
 char *location_get(location_t *loc, allocator_t allocator) {
-  size_t len = loc->end.offset - loc->begin.offset + 1;
-  char *str = allocator_alloc(allocator, len);
-  strncpy(str, loc->begin.offset, len);
-  str[len] = 0;
+  size_t len = loc->end.offset - loc->begin.offset;
+  char *str = allocator_alloc(allocator, len + 1);
+  memcpy(str, loc->begin.offset, len);
+  str[len] = '\0';
   return str;
 }
 bool location_is(location_t *loc, const char *str) {

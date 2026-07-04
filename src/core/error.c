@@ -4,13 +4,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-_Thread_local error_t *g_error = NULL;
+thread_local error_t *g_error = NULL;
 void throw_error(const char *filename, const char *funcname, size_t line,
                  const char *fmt, ...) {
   static error_t error;
   va_list args;
   va_start(args, fmt);
-  vsprintf(error.message, fmt, args);
+  vsnprintf(error.message, sizeof(error.message), fmt, args);
   va_end(args);
   error.stacktop = 1;
   error.stack[0].filename = filename;
@@ -19,6 +19,9 @@ void throw_error(const char *filename, const char *funcname, size_t line,
   g_error = &error;
 }
 void error_push(const char *filename, const char *funcname, size_t line) {
+  if (g_error == NULL) {
+    return;
+  }
   if (g_error->stacktop == 64) {
     return;
   }

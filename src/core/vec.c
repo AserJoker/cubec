@@ -148,3 +148,58 @@ size_t vec_insert(vec_t self, size_t idx, void *data) {
   self->data[idx] = data;
   return self->size;
 }
+
+/* ============================================================================
+ *  Iterator
+ * ============================================================================ */
+
+vec_iter_t vec_iter_first(vec_t vec) {
+  vec_iter_t iter = {
+      .vec = vec,
+      .idx = 0,
+  };
+  return iter;
+}
+
+void *vec_iter_next(vec_iter_t *iter) {
+  if (iter->idx >= iter->vec->size) {
+    return NULL;
+  }
+  return iter->vec->data[iter->idx++];
+}
+
+void *vec_iter_get(vec_iter_t *iter) {
+  if (iter->idx >= iter->vec->size) {
+    return NULL;
+  }
+  return iter->vec->data[iter->idx];
+}
+
+void *vec_iter_set(vec_iter_t *iter, void *data) {
+  if (iter->idx >= iter->vec->size) {
+    THROW(NULL, "RangeError: iterator is exhausted");
+  }
+  vec_t self = iter->vec;
+  void *old_data = self->data[iter->idx];
+  self->data[iter->idx] = data;
+  return old_data;
+}
+
+void *vec_iter_remove(vec_iter_t *iter) {
+  if (iter->idx >= iter->vec->size) {
+    return NULL;
+  }
+  vec_t self = iter->vec;
+  void *data = self->data[iter->idx];
+  /* Shift subsequent elements left */
+  for (size_t i = iter->idx; i < self->size - 1; i++) {
+    self->data[i] = self->data[i + 1];
+  }
+  self->size--;
+  self->data[self->size] = NULL;
+  if (self->auto_dispose) {
+    allocator_free(self->allocator, data);
+  }
+  /* idx stays at the same position, now pointing to the next element */
+  return data;
+}

@@ -33,6 +33,7 @@ static void _string_clone(string_t self, allocator_t allocator,
   self->size = another->size;
   self->capacity = another->capacity;
   self->allocator = another->allocator;
+  self->data = allocator_alloc(allocator, self->capacity);
   memcpy(self->data, another->data, another->size);
 }
 static void _string_move(string_t self, allocator_t allocator,
