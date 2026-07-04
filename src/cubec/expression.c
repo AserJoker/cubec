@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "cubec/expression_binary.h"
+#include "cubec/expression_call.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_member.h"
 #include "cubec/literal_char.h"
@@ -109,6 +110,17 @@ node_t read_value(allocator_t allocator, vec_t tokens, size_t *position,
     while (true) {
       /* Skip whitespace/comments before postfix operator */
       skip_whitespace(tokens, &current);
+
+      /* Try postfix: function call <callee>(<args>) */
+      node_t call_node =
+          TRY_LOCAL(onerror,
+                    read_expression_call(allocator, tokens, &current, filename,
+                                         node));
+      if (call_node) {
+        node = call_node;
+        *position = current;
+        continue;
+      }
 
       /* Try postfix: member access <host>.<field> */
       node_t member_node =

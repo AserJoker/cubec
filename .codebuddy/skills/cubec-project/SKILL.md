@@ -35,6 +35,7 @@ cubec/
 │   └── cubec/                  # Language frontend module
 │       ├── expression.h        # Expression AST node
 │       ├── expression_binary.h  # Binary/prefix-unary expression (left/right/opt)
+│       ├── expression_call.h    # Function-call expression callee(args)
 │       ├── expression_group.h   # Grouped expression ( expr )
 │       ├── expression_member.h  # Member-access expression (host.field)
 │       ├── expression_spread.h  # Spread expression (...expr)
@@ -51,7 +52,7 @@ cubec/
 │   ├── main.c                  # Entry point (placeholder)
 │   ├── core/                   # Core data structure implementations
 │   └── cubec/                  # Lexer + parser implementations
-├── test/                       # Tests (271 test cases, Google Test + C++20)
+├── test/                       # Tests (286 test cases, Google Test + C++20)
 │   ├── main.cpp                # Test entry point
 │   ├── common/test_common.h    # RAII test allocator helper
 │   ├── core/                   # Tests for core data structures
@@ -100,6 +101,7 @@ C struct nesting simulates single inheritance:
 node_t (core/node.h)
   └── cubec_expression_t (cubec/expression.h)
         ├── cubec_expression_binary_t (cubec/expression_binary.h)
+        ├── cubec_expression_call_t (cubec/expression_call.h)
         ├── cubec_expression_group_t (cubec/expression_group.h)
         ├── cubec_expression_member_t (cubec/expression_member.h)
         ├── cubec_expression_spread_t (cubec/expression_spread.h)
@@ -226,6 +228,10 @@ read_atom
   ├── read_literal_identifier
   └── read_literal_char
 
+# Postfix operators (called from read_value loop):
+read_expression_call                  # callee(args)  — tried before member
+read_expression_member                # host.field
+
 # Standalone, not on main parse tree:
 read_expression_spread                # ...expr (called by func-call/struct-init)
 ```
@@ -239,8 +245,8 @@ read_expression_spread                # ...expr (called by func-call/struct-init
 
 - `read_expression_binary` (expression_binary.c) — Full precedence-climbing binary expression parser. Supports 10 precedence levels: `\|\|` < `&&` < `\|` < `^` < `&` < `== !=` < `< > <= >=` < `<< >>` < `+ -` < `* / %`. Assignment (`=`, `+=`, etc.) and comma (`,`) are **not** treated as binary operators (reserved for future statement-level handling). Calls `read_unary` for operands, uses `read_binary_rhs` for right-recursive precedence climbing.
 - `read_expression_prefix` (expression_binary.c) — Parses prefix unary operators (`!`, `+`, `-`, `&`, `*`, `~`); right operand parsed via recursive `read_unary` (NOT `read_expression`, which prevents incorrect binding like `-42 * 3` being parsed as `-(42*3)`); supports chained `!!x`, `--n`; returns `cubec_expression_binary_t` with `left=NULL`; **does NOT call `skip_whitespace` at entry**
-- `read_value` (expression.c) — Atom + recursive postfix loop. Calls `read_atom` first, then in while loop: calls `skip_whitespace`, then tries `read_expression_member` for `.field` access. Currently only supports `.field` postfix.
-- `read_expression_member` (expression_member.c) — Parses `<host>.<field>`, where host comes from `read_value` and field from `read_literal_identifier`; `read_value` loops to chain `<a>.<b>.<c>` into nested expression_member nodes; `skip_whitespace` handled by caller (`read_value`)
+- `read_value` (expression.c) — Atom + recursive postfix loop. Calls `read_atom` first, then in while loop: calls `skip_whitespace`, then tries postfix operators in order: `read_expression_call` for `callee(args)`, then `read_expression_member` for `.field` access. Call is tried before member so `foo().field` works correctly.
+- `read_expression_call` (expression_call.c) — Parses C-style function call `callee(arg1, arg2, ...)`. Called from `read_value` as a postfix operator with `callee` already parsed. Each argument first tries `read_expression_spread` (supporting `...expr`), then falls back to `read_expression`. Returns NULL if next token is not `(`; THROW errors on malformed arguments (trailing comma, unclosed paren). Supports chained calls `foo()()` and mix with member: `obj.method()`, `foo().field`. **Ownership**: `arguments` vec created with `auto_dispose=true` in parser; `init` directly takes the pointer (no copy), ownership fully transferred to node.
 - `read_atom` (expression.c) — Parses in order: `read_expression_group` → `read_literal_string` → `read_literal_numeric` → `read_literal_identifier` → `read_literal_char`
 - `read_expression_group` (expression_group.c) — Parses parenthesized expression `( expr )`. Returns `cubec_expression_group_t` wrapping the inner expression. Tried first in `read_atom` so `(a + b)` is parsed as a group wrapping a binary expression.
 - `read_expression_spread` (expression_spread.c) — Parses spread operator `...<expr>`. Returns `cubec_expression_spread_t` wrapping the spread value. **Standalone function** — NOT called from `read_atom`/`read_value`/`read_expression`. Designed to be explicitly invoked by callers that support spread syntax (e.g., function arguments, struct initializers). Uses `read_expression` for the value so `...a + b` spreads the entire binary expression `a + b`.
@@ -252,7 +258,7 @@ read_expression_spread                # ...expr (called by func-call/struct-init
 - `read_program_node` — Top-level entry, loops parsing statements until EOF
 
 ### Not Yet Implemented
-Most statement types (if, for, while, switch, defer, etc.), expression types (assign, call, comma, etc.), and all declaration types are defined as enums but lack parser implementations. Group expression and spread expression are now implemented.
+Most statement types (if, for, while, switch, defer, etc.), expression types (assign, comma, etc.), and all declaration types are defined as enums but lack parser implementations. Group expression, spread expression, and call expression are now implemented.
 
 ## Build System
 
@@ -283,7 +289,7 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (as
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 271 test cases
+- Total: 286 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -304,6 +310,7 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (as
 - `dt_expression_group.cpp` (13 cases) — basic parenthesized expression, group with binary inner, empty group error, unclosed group error, nested groups, group with identifier, group as LHS of binary, non-group returns NULL
 - `dt_expression_member.cpp` (8 cases) — single member access, chained access, consume all tokens, member on string literal, error on missing dot, error on non-identifier field, not a member (no dot), empty source
 - `dt_expression_spread.cpp` (12 cases) — spread identifier, spread numeric, spread with spaces, spread member access, spread group, spread binary value, non-spread returns NULL, single dot returns NULL, double dot returns NULL, spread without value, dots not at start, spread with prefix unary
+- `dt_expression_call.cpp` (15 cases) — zero args, single arg, two args, numeric arg, binary-expr arg, single spread arg, mixed spread+regular, multiple spreads, chained call `foo()()`, call→member chain, member→call chain, group-as-callee, non-call not triggered, unclosed paren error, trailing comma error
 
 ## Planned Language Features (inferred from AST node types)
 
