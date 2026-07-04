@@ -1,0 +1,109 @@
+#include "cubec/expression_group.h"
+#include "core/allocator.h"
+#include "core/error.h"
+#include "core/token.h"
+#include "cubec/expression.h"
+#include "cubec/node.h"
+#include "cubec/token.h"
+
+/* --------------------------------------------------------------------------
+ *  Lifecycle: init / dispose / clone / move
+ * -------------------------------------------------------------------------- */
+
+static void _cubec_expression_group_init(cubec_expression_group_t self,
+                                         allocator_t allocator,
+                                         cubec_expression_group_init_t *init) {
+  cubec_expression_init_t super_init = {
+      .kind = CUBEC_NODE_EXPRESSION_GROUP,
+      .parent = NULL,
+  };
+  if (init) {
+    super_init.location = init->location;
+    super_init.parent = init->parent;
+  }
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  self->inner = NULL;
+  if (init) {
+    self->inner = init->inner;
+  }
+}
+
+static void _cubec_expression_group_dispose(cubec_expression_group_t self,
+                                            allocator_t allocator) {
+  allocator_free(allocator, self->inner);
+  self->inner = NULL;
+  g_cubec_expression_type.dispose(&self->super, allocator);
+}
+
+static void _cubec_expression_group_clone(cubec_expression_group_t self,
+                                          allocator_t allocator,
+                                          cubec_expression_group_t another) {
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->inner = value_clone(allocator, another->inner);
+}
+
+static void _cubec_expression_group_move(cubec_expression_group_t self,
+                                         allocator_t allocator,
+                                         cubec_expression_group_t another) {
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->inner = value_move(allocator, another->inner);
+}
+
+type_t g_cubec_expression_group_type = {
+    .name = "cubec.cubec.expression_group",
+    .size = sizeof(struct _cubec_expression_group_t),
+    .init = (type_init_fn_t)_cubec_expression_group_init,
+    .dispose = (type_dispose_fn_t)_cubec_expression_group_dispose,
+    .clone = (type_clone_fn_t)_cubec_expression_group_clone,
+    .move = (type_move_fn_t)_cubec_expression_group_move,
+};
+
+/* --------------------------------------------------------------------------
+ *  Parser: read_expression_group
+ * -------------------------------------------------------------------------- */
+
+node_t read_expression_group(allocator_t allocator, vec_t tokens,
+                             size_t *position, const char *filename) {
+  size_t current = *position;
+  cubec_expression_group_t node = NULL;
+  node_t inner = NULL;
+
+  /* Expect '(' */
+  token_t open_token = vec_get(tokens, current);
+  if (!open_token || !token_is(open_token, CUBEC_TOKEN_SYMBOL, "(")) {
+    return NULL;
+  }
+  current++;
+
+  /* Parse inner expression */
+  skip_whitespace(tokens, &current);
+  inner =
+      TRY_LOCAL(onerror, read_expression(allocator, tokens, &current, filename));
+  if (!inner) {
+    goto onerror;
+  }
+
+  /* Expect ')' */
+  skip_whitespace(tokens, &current);
+  token_t close_token = vec_get(tokens, current);
+  if (!close_token || !token_is(close_token, CUBEC_TOKEN_SYMBOL, ")")) {
+    goto onerror;
+  }
+  current++;
+
+  node = allocator_create(allocator, &g_cubec_expression_group_type,
+                          &(cubec_expression_group_init_t){
+                              .inner = inner,
+                          });
+  location_t *loc = token_get_location(open_token);
+  node->super.super.location = *loc;
+  node->super.super.location.filename = filename;
+
+  *position = current;
+  return (node_t)node;
+
+onerror:
+  allocator_free(allocator, inner);
+  allocator_free(allocator, node);
+  return NULL;
+}

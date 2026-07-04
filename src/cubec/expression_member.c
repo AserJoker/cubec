@@ -69,8 +69,7 @@ node_t read_expression_member(allocator_t allocator, vec_t tokens,
   cubec_expression_member_t node = NULL;
   cubec_literal_identifier_t field = NULL;
 
-  /* Expect '.' */
-  skip_whitespace(tokens, &current);
+  /* Expect '.' (caller ensures whitespace already skipped) */
   token_t dot_token = TRY_LOCAL(onerror, vec_get(tokens, current));
   if (!token_is(dot_token, CUBEC_TOKEN_SYMBOL, ".")) {
     return NULL;
