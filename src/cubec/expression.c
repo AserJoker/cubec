@@ -3,6 +3,7 @@
 #include "core/error.h"
 #include "core/node.h"
 #include "core/type.h"
+#include "cubec/expression_member.h"
 #include "cubec/literal_char.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
@@ -54,21 +55,24 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
   node_t result = NULL;
 
   // Try string literal
-  result = TRY(NULL, read_literal_string(allocator, tokens, &current, filename));
+  result =
+      TRY(NULL, read_literal_string(allocator, tokens, &current, filename));
   if (result) {
     *position = current;
     return result;
   }
 
   // Try numeric literal
-  result = TRY(NULL, read_literal_numeric(allocator, tokens, &current, filename));
+  result =
+      TRY(NULL, read_literal_numeric(allocator, tokens, &current, filename));
   if (result) {
     *position = current;
     return result;
   }
 
   // Try identifier
-  result = TRY(NULL, read_literal_identifier(allocator, tokens, &current, filename));
+  result =
+      TRY(NULL, read_literal_identifier(allocator, tokens, &current, filename));
   if (result) {
     *position = current;
     return result;
@@ -81,5 +85,28 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
     return result;
   }
 
+  return NULL;
+}
+
+node_t read_value(allocator_t allocator, vec_t tokens, size_t *position,
+                  const char *filename) {
+  node_t node = NULL;
+  node = TRY_LOCAL(onerror, read_atom(allocator, tokens, position, filename));
+  if (node) {
+    size_t current = *position;
+    while (true) {
+      /* Try postfix: member access <host>.<field> */
+      node_t member_node = TRY_LOCAL(onerror,
+          read_expression_member(allocator, tokens, &current, filename, node));
+      if (!member_node) {
+        break;
+      }
+      node = member_node;
+      *position = current;
+    }
+  }
+  return node;
+onerror:
+  allocator_free(allocator, node);
   return NULL;
 }

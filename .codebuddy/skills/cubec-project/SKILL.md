@@ -34,6 +34,7 @@ cubec/
 │   │   └── vec.h               # Dynamic array (vector)
 │   └── cubec/                  # Language frontend module
 │       ├── expression.h        # Expression AST node
+│       ├── expression_member.h  # Member-access expression (host.field)
 │       ├── literal.h           # Literal AST node (abstract)
 │       ├── literal_char.h      # Character literal
 │       ├── literal_identifier.h# Identifier literal
@@ -47,7 +48,7 @@ cubec/
 │   ├── main.c                  # Entry point (placeholder)
 │   ├── core/                   # Core data structure implementations
 │   └── cubec/                  # Lexer + parser implementations
-├── test/                       # Tests (~156 test cases, Google Test + C++20)
+├── test/                       # Tests (~206 test cases, Google Test + C++20)
 │   ├── main.cpp                # Test entry point
 │   ├── common/test_common.h    # RAII test allocator helper
 │   ├── core/                   # Tests for core data structures
@@ -95,6 +96,7 @@ C struct nesting simulates single inheritance:
 ```
 node_t (core/node.h)
   └── cubec_expression_t (cubec/expression.h)
+        ├── cubec_expression_member_t (cubec/expression_member.h)
         └── cubec_literal_t (cubec/literal.h)
               ├── cubec_literal_char_t
               ├── cubec_literal_identifier_t
@@ -151,7 +153,7 @@ Subclasses embed the parent via a `super` field and call parent's `type->init` d
 - `position_t`: line, column, offset pointer
 - `location_t`: filename + begin/end positions
 - `location_get`: extracts source text between begin/end offsets via `memcpy` + explicit `\0` termination
-- `location_is`: compares location text to a string via `strncmp`
+- `location_is`: compares location text to a string via `strncmp` **plus length check** (`str[length] == '\0'`) to prevent prefix-only matches (e.g., single-char `b` would previously match keyword `break`)
 
 ### token_t / node_t (Base Classes)
 - `token_t`: allocator, kind (uint32_t), location
@@ -198,6 +200,8 @@ Whitespace tokens are sometimes incorrectly marked as `SYMBOL` (documented as "b
 ## Parser (Partially Implemented)
 
 ### Implemented
+- `read_value` (expression.c) — Atom + recursive postfix (currently supports `.field` member access via `read_expression_member`)
+- `read_expression_member` (expression_member.c) — Parses `<host>.<field>`, where host comes from `read_value` and field from `read_literal_identifier`; `read_value` loops to chain `<a>.<b>.<c>` into nested expression_member nodes
 - `read_atom` (expression.c) — Parses: string > numeric > identifier > char literals
 - `read_literal_char` — Character literal AST node
 - `read_literal_identifier` — Identifier AST node
@@ -238,7 +242,7 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (bi
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: ~156 test cases
+- Total: ~206 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (11 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -247,6 +251,7 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (bi
 - `dt_rbtree.cpp` (14 cases) — insert/find, duplicates, remove, clear, iteration, auto_dispose, clone, move
 - `dt_map.cpp` (16 cases) — hash threshold (15 entries), RB-tree conversion threshold (20 entries), auto_dispose, clone, move
 - `dt_string.cpp` (15 cases) — all string operations including Unicode, nconcat, binary data
+- `dt_location.cpp` (12 cases) — `location_is` (exact match, short-vs-long keywords, prefix partial match, empty strings, case sensitivity) + `location_get` (extract text, empty span)
 - `dt_token.cpp` (42 cases) — all token types, all 29 keywords, all numeric formats, all escape sequences, comments, symbols
 
 ### Cubec Tests
@@ -254,6 +259,7 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (bi
 - `dt_literal_identifier.cpp` (5 cases)
 - `dt_literal_numeric.cpp` (12 cases)
 - `dt_literal_string.cpp` (12 cases)
+- `dt_expression_member.cpp` (8 cases) — single member access, chained access, consume all tokens, member on string literal, error on missing dot, error on non-identifier field, not a member (no dot), empty source
 
 ## Planned Language Features (inferred from AST node types)
 

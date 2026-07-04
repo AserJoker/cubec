@@ -28,6 +28,9 @@ typedef struct _cubec_expression_init_t cubec_expression_init_t;
 node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
                  const char *filename);
 
+node_t read_value(allocator_t allocator, vec_t tokens, size_t *position,
+                  const char *filename);
+
 #ifdef __cplusplus
 }
 #endif

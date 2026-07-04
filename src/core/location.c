@@ -11,5 +11,5 @@ char *location_get(location_t *loc, allocator_t allocator) {
 }
 bool location_is(location_t *loc, const char *str) {
   size_t length = loc->end.offset - loc->begin.offset;
-  return strncmp(loc->begin.offset, str, length) == 0;
+  return strncmp(loc->begin.offset, str, length) == 0 && str[length] == '\0';
 }
