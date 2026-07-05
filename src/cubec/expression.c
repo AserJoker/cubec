@@ -3,11 +3,11 @@
 #include "core/error.h"
 #include "core/node.h"
 #include "core/type.h"
-#include "cubec/expression_binary.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_member.h"
+#include "cubec/expression_ternary.h"
 #include "cubec/literal_char.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
@@ -152,5 +152,9 @@ onerror:
 }
 node_t read_expression(allocator_t allocator, vec_t tokens, size_t *position,
                        const char *filename) {
-  return read_expression_binary(allocator, tokens, position, filename);
+  /* read_expression_ternary internally:
+   * 1. Calls read_expression_binary to parse the condition
+   * 2. If no '?' follows, returns the condition directly
+   * 3. Otherwise parses consequent and alternate recursively */
+  return read_expression_ternary(allocator, tokens, position, filename);
 }

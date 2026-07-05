@@ -239,6 +239,9 @@ static node_t read_binary_rhs(allocator_t allocator, vec_t tokens,
 
   while (true) {
     skip_whitespace(tokens, &current);
+    /* Update position so caller gets correct offset when we break.
+     * After skipping whitespace, current points to the next meaningful token. */
+    *position = current;
 
     token_t op_token = vec_get(tokens, current);
     if (!op_token) {
