@@ -39,6 +39,7 @@ cubec/
 │       ├── expression_generic_instantiation.h  # Generic instantiation expr[a,b]
 │       ├── expression_group.h   # Grouped expression ( expr )
 │       ├── expression_member.h  # Member-access expression (host.field)
+│       ├── expression_slice.h   # Slice expression (host[start:length])
 │       ├── expression_spread.h  # Spread expression (...expr)
 │       ├── expression_ternary.h # Ternary/conditional expression (cond ? consequent : alternate)
 │       ├── literal.h           # Literal AST node (abstract)
@@ -107,6 +108,7 @@ node_t (core/node.h)
         ├── cubec_expression_generic_instantiation_t (cubec/expression_generic_instantiation.h)
         ├── cubec_expression_group_t (cubec/expression_group.h)
         ├── cubec_expression_member_t (cubec/expression_member.h)
+        ├── cubec_expression_slice_t (cubec/expression_slice.h)
         ├── cubec_expression_spread_t (cubec/expression_spread.h)
         └── cubec_literal_t (cubec/literal.h)
               ├── cubec_literal_char_t
@@ -277,7 +279,8 @@ read_atom
 
 # Postfix operators (called from read_value loop):
 read_expression_call                  # callee(args)
-read_expression_generic_instantiation # callee[args]  — tried between call & member
+read_expression_slice                 # host[start:length] — MUST be before generic (uses lookahead for ':')
+read_expression_generic_instantiation # callee[args]  — tried after slice to handle non-slice brackets
 read_expression_member                # host.field
 
 # Standalone, not on main parse tree:
@@ -293,9 +296,10 @@ read_expression_spread                # ...expr (called by func-call/struct-init
 
 - `read_expression_binary` (expression_binary.c) — Full precedence-climbing binary expression parser. Supports 10 precedence levels: `\|\|` < `&&` < `\|` < `^` < `&` < `== !=` < `< > <= >=` < `<< >>` < `+ -` < `* / %`. Assignment (`=`, `+=`, etc.) and comma (`,`) are **not** treated as binary operators (reserved for future statement-level handling). Calls `read_unary` for operands, uses `read_binary_rhs` for right-recursive precedence climbing.
 - `read_expression_prefix` (expression_binary.c) — Parses prefix unary operators (`!`, `+`, `-`, `&`, `*`, `~`); right operand parsed via recursive `read_unary` (NOT `read_expression`, which prevents incorrect binding like `-42 * 3` being parsed as `-(42*3)`); supports chained `!!x`, `--n`; returns `cubec_expression_binary_t` with `left=NULL`; **does NOT call `skip_whitespace` at entry**
-- `read_value` (expression.c) — Atom + recursive postfix loop. Calls `read_atom` first, then in while loop: calls `skip_whitespace`, then tries postfix operators in order: `read_expression_call` for `callee(args)`, `read_expression_generic_instantiation` for `callee[args]`, then `read_expression_member` for `.field` access. Call and generic_instantiation are tried before member so `foo().field` and `fn[a].field` work correctly.
+- `read_value` (expression.c) — Atom + recursive postfix loop. Calls `read_atom` first, then in while loop: calls `skip_whitespace`, then tries postfix operators in order: `read_expression_call` for `callee(args)`, `read_expression_slice` for `host[start:length]`, `read_expression_generic_instantiation` for `callee[args]`, then `read_expression_member` for `.field` access. Slice is tried before generic instantiation using lookahead for `:` to distinguish `arr[0:10]` (slice) from `arr[0]` (generic). Slice is tried before member so `arr[1:2].field` works correctly.
 - `read_expression_call` (expression_call.c) — Parses C-style function call `callee(arg1, arg2, ...)`. Called from `read_value` as a postfix operator with `callee` already parsed. Each argument first tries `read_expression_spread` (supporting `...expr`), then falls back to `read_expression`. Returns NULL if next token is not `(`; THROW errors on malformed arguments (trailing comma, unclosed paren). Supports chained calls `foo()()` and mix with member: `obj.method()`, `foo().field`. **Ownership**: `arguments` vec created with `auto_dispose=true` in parser; `init` directly takes the pointer (no copy), ownership fully transferred to node.
 - `read_expression_generic_instantiation` (expression_generic_instantiation.c) — Parses generic instantiation `callee[arg1, arg2, ...]`. Uses `[` and `]` as delimiters. Arguments parsed via `read_expression`, each first tries `read_expression_spread` (supporting `...expr` in generic args). Returns NULL if next token is not `[`; THROW errors on malformed arguments (trailing comma, unclosed bracket). Supports chained instantiations `fn[a][b]` and mixing with calls and member access: `fn[a]()`, `fn[a].field`, `foo()[a]`. Single-arg form `obj[0]` is syntactically ambiguous with member access — disambiguation deferred to semantic analysis.
+- `read_expression_slice` (expression_slice.c) — Parses slice expression `host[start:length]`. Called from `read_value` as a postfix operator with `host` already parsed. Format: `host[start:length]` where `start` and `length` are both optional (at least `:` must be present). If `[` doesn't follow, returns NULL gracefully. If `[]` (empty brackets), throws error. Uses `read_expression` for parsing start/length expressions. Supports chained slices `arr[1:2][0:1]` and mixing with calls and member access: `arr[0:1].field`, `getArr()[1:]`. Node fields: `host`, `start`, `length` (start/length may be NULL if omitted).
 - `read_atom` (expression.c) — Parses in order: `read_expression_group` → `read_literal_string` → `read_literal_numeric` → `read_literal_identifier` → `read_literal_char`
 - `read_expression_group` (expression_group.c) — Parses parenthesized expression `( expr )`. Returns `cubec_expression_group_t` wrapping the inner expression. Tried first in `read_atom` so `(a + b)` is parsed as a group wrapping a binary expression.
 - `read_expression_spread` (expression_spread.c) — Parses spread operator `...<expr>`. Returns `cubec_expression_spread_t` wrapping the spread value. **Standalone function** — NOT called from `read_atom`/`read_value`/`read_expression`. Designed to be explicitly invoked by callers that support spread syntax (e.g., function arguments, struct initializers). Uses `read_expression` for the value so `...a + b` spreads the entire binary expression `a + b`.

@@ -7,6 +7,7 @@
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_member.h"
+#include "cubec/expression_slice.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/literal_char.h"
 #include "cubec/literal_identifier.h"
@@ -119,6 +120,19 @@ node_t read_value(allocator_t allocator, vec_t tokens, size_t *position,
                                          node));
       if (call_node) {
         node = call_node;
+        *position = current;
+        continue;
+      }
+
+      /* Try postfix: slice expression <host>[start:length] - MUST be before
+       * generic instantiation because arr[0:10] would otherwise be incorrectly
+       * parsed as generic with argument "0" followed by ":" error */
+      node_t slice_node =
+          TRY_LOCAL(onerror,
+                    read_expression_slice(allocator, tokens, &current, filename,
+                                          node));
+      if (slice_node) {
+        node = slice_node;
         *position = current;
         continue;
       }
