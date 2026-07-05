@@ -37,9 +37,6 @@ TEST_F(dt_expression_ternary, indirect_ternary_simple) {
 
   node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  printf("node->kind = %d (expected %d for TERNARY)\n",
-         node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
-
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
   allocator_free(allocator, node);

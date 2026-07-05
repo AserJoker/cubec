@@ -31,6 +31,9 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
 node_t read_value(allocator_t allocator, vec_t tokens, size_t *position,
                   const char *filename);
 
+node_t read_expression_type(allocator_t allocator, vec_t tokens,
+                            size_t *position, const char *filename);
+
 node_t read_expression(allocator_t allocator, vec_t tokens, size_t *position,
                        const char *filename);
 

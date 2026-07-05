@@ -310,6 +310,7 @@ read_expression_spread                # ...expr (called by func-call/struct-init
 - `read_literal_string` — String AST node, supports auto-concatenation of adjacent strings
 - `read_statement_empty` — Empty statement (`;`)
 - `read_program_node` — Top-level entry, loops parsing statements until EOF
+- `read_expression_type` (expression.c) — Parses type expressions: identifier with optional member access and generic instantiation. Handles patterns like: `identifier` (e.g., `Vec`, `i32`), `member` (e.g., `std.vec.Vec`), `generic instantiation` (e.g., `Vec[i32]`, `Option[T]`). This is a simplified version of `read_value` focused on type syntax. Used for parsing type annotations and generic type arguments.
 
 ### Not Yet Implemented
 Most statement types (if, for, while, switch, defer, etc.), expression types (assign, comma, etc.), and all declaration types are defined as enums but lack parser implementations. Expression parsing is substantially complete: group, spread, call, generic instantiation, and member access are all implemented.
@@ -343,7 +344,7 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (as
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 301 test cases
+- Total: 321 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -367,6 +368,7 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (as
 - `dt_expression_call.cpp` (15 cases) — zero args, single arg, two args, numeric arg, binary-expr arg, single spread arg, mixed spread+regular, multiple spreads, chained call `foo()()`, call→member chain, member→call chain, group-as-callee, non-call not triggered, unclosed paren error, trailing comma error
 - `dt_expression_generic_instantiation.cpp` (15 cases) — basic instantiation `foo[a]`, multi-arg `foo[a,b]`, instantiation on literal, instantiation on call, instantiation→call chain `fn[a]()`, instantiation→member chain `fn[a].field`, call→instantiation chain `foo()[a]`, instantiation→instantiation chain `fn[a][b]`, spread in generic args, group as callee, nested generic groups, non-generic not triggered (no `[`), unclosed bracket error, trailing comma error, generic on `this`
 - `dt_expression_ternary.cpp` (8 cases) — simple ternary `a ? b : c`, ternary with binary condition `x + a ? b : c`, missing `?` fallback, missing `:` error, missing consequent error, missing alternate error, nested ternary `a ? b ? c : d : e`, complex alternate `a ? b : c + d`
+- `dt_expression_type.cpp` (20 cases) — simple identifier types (`i32`, `Vec`), generic instantiation with single/multiple arguments (`Vec[i32]`, `Map[string, i32]`), type parameters (`Option[T]`), single/chained member access (`std.vec`, `std.vec.Vec`), member with generic (`std.vec.Vec[i32]`), generic arguments as member access types (`Vec[std.vec.Vec]`, `Map[std.vec.Vec, std.str.String]`), mixed arguments (`Pair[i32, std.vec.Vec]`), deeply nested generics with members, non-identifier returns NULL (string/numeric literals), empty brackets handling, underscore prefix identifiers, whitespace handling, token consumption verification
 
 ## Planned Language Features (inferred from AST node types)
 

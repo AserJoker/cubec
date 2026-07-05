@@ -137,6 +137,10 @@ node_t read_expression_generic_instantiation(allocator_t allocator,
       arg = TRY_LOCAL(onerror,
                       read_expression(allocator, tokens, &current, filename));
     }
+    if(!arg){
+      arg = TRY_LOCAL(onerror,
+                      read_expression_type(allocator, tokens, &current, filename));
+    }
     if (!arg) {
       goto onerror;
     }

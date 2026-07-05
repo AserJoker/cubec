@@ -164,6 +164,59 @@ onerror:
   allocator_free(allocator, node);
   return NULL;
 }
+node_t read_expression_type(allocator_t allocator, vec_t tokens,
+                            size_t *position, const char *filename) {
+  /* Parse a type expression: identifier with optional member access and
+   * generic instantiation. Handles patterns like:
+   *   - identifier (e.g., "Vec", "i32")
+   *   - member (e.g., "std::vec::Vec")
+   *   - generic instantiation (e.g., "Vec[i32]", "Option[T]")
+   *
+   * This is a simplified version of read_value focused on type syntax. */
+
+  node_t node = NULL;
+
+  /* Try identifier as the base type */
+  node = TRY_LOCAL(onerror,
+                   read_literal_identifier(allocator, tokens, position, filename));
+  if (!node) {
+    return NULL;
+  }
+
+  /* Process postfix operators: member access and generic instantiation */
+  size_t current = *position;
+  while (true) {
+    skip_whitespace(tokens, &current);
+
+    /* Try postfix: generic instantiation <callee>[<args>] */
+    node_t generic_node = TRY_LOCAL(
+        onerror, read_expression_generic_instantiation(allocator, tokens,
+                                                       &current, filename, node));
+    if (generic_node) {
+      node = generic_node;
+      *position = current;
+      continue;
+    }
+
+    /* Try postfix: member access <host>.<field> */
+    node_t member_node = TRY_LOCAL(onerror,
+                                   read_expression_member(allocator, tokens,
+                                                          &current, filename,
+                                                          node));
+    if (!member_node) {
+      break;
+    }
+    node = member_node;
+    *position = current;
+  }
+
+  return node;
+
+onerror:
+  allocator_free(allocator, node);
+  return NULL;
+}
+
 node_t read_expression(allocator_t allocator, vec_t tokens, size_t *position,
                        const char *filename) {
   /* read_expression_ternary internally:
