@@ -1,4 +1,4 @@
-#include "cubec/expression_spread.h"
+﻿#include "cubec/expression_spread.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
@@ -30,7 +30,7 @@ static void _cubec_expression_spread_init(cubec_expression_spread_t self,
 
 static void _cubec_expression_spread_dispose(cubec_expression_spread_t self,
                                              allocator_t allocator) {
-  allocator_free(allocator, self->value);
+  allocator_free(allocator, &self->value);
   self->value = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
@@ -98,7 +98,7 @@ node_t read_expression_spread(allocator_t allocator, vec_t tokens,
   return (node_t)node;
 
 onerror:
-  allocator_free(allocator, value);
-  allocator_free(allocator, node);
+  allocator_free(allocator, &value);
+  allocator_free(allocator, &node);
   return NULL;
 }

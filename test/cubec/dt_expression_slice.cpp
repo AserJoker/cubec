@@ -1,4 +1,4 @@
-    #include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_generic_instantiation.h"
@@ -50,8 +50,8 @@ TEST_F(dt_expression_slice, simple_with_start_and_length) {
   /* arr, [, 0, :, 10, ] */
   EXPECT_EQ(position, 6);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, simple_with_start_only) {
@@ -71,8 +71,8 @@ TEST_F(dt_expression_slice, simple_with_start_only) {
   /* length is NULL when omitted */
   EXPECT_EQ(slice->length, nullptr);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, simple_with_length_only) {
@@ -92,8 +92,8 @@ TEST_F(dt_expression_slice, simple_with_length_only) {
   ASSERT_NE(slice->length, nullptr);
   EXPECT_EQ(slice->length->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, with_identifier_index) {
@@ -117,8 +117,8 @@ TEST_F(dt_expression_slice, with_identifier_index) {
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)slice->length)->value), "len");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, with_binary_expression) {
@@ -138,8 +138,8 @@ TEST_F(dt_expression_slice, with_binary_expression) {
   ASSERT_NE(slice->length, nullptr);
   EXPECT_EQ(slice->length->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -160,8 +160,8 @@ TEST_F(dt_expression_slice, slice_on_call_result) {
   cubec_expression_slice_t slice = (cubec_expression_slice_t)node;
   EXPECT_EQ(slice->host->kind, CUBEC_NODE_EXPRESSION_CALL);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, slice_on_member_access) {
@@ -178,8 +178,8 @@ TEST_F(dt_expression_slice, slice_on_member_access) {
   cubec_expression_slice_t slice = (cubec_expression_slice_t)node;
   EXPECT_EQ(slice->host->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -200,8 +200,8 @@ TEST_F(dt_expression_slice, slice_then_member) {
   cubec_expression_member_t member = (cubec_expression_member_t)node;
   EXPECT_EQ(member->host->kind, CUBEC_NODE_EXPRESSION_SLICE);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, slice_then_call) {
@@ -218,8 +218,8 @@ TEST_F(dt_expression_slice, slice_then_call) {
   cubec_expression_call_t call = (cubec_expression_call_t)node;
   EXPECT_EQ(call->callee->kind, CUBEC_NODE_EXPRESSION_SLICE);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, chained_slices) {
@@ -239,8 +239,8 @@ TEST_F(dt_expression_slice, chained_slices) {
   cubec_expression_slice_t inner = (cubec_expression_slice_t)outer->host;
   EXPECT_EQ(inner->host->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -258,8 +258,8 @@ TEST_F(dt_expression_slice, not_a_slice_no_bracket) {
   /* Should just be an identifier, not a slice */
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, empty_brackets_is_generic) {
@@ -279,8 +279,8 @@ TEST_F(dt_expression_slice, empty_brackets_is_generic) {
       (cubec_expression_generic_instantiation_t)node;
   EXPECT_EQ(vec_get_size(gi->arguments), 0);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, missing_colon_error) {
@@ -294,8 +294,8 @@ TEST_F(dt_expression_slice, missing_colon_error) {
   /* Should be generic_instantiation, not slice */
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, unclosed_bracket) {
@@ -311,7 +311,7 @@ TEST_F(dt_expression_slice, unclosed_bracket) {
       error_clear());
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, start_without_colon_error) {
@@ -327,7 +327,7 @@ TEST_F(dt_expression_slice, start_without_colon_error) {
       error_clear());
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -348,8 +348,8 @@ TEST_F(dt_expression_slice, complex_start_expression) {
   EXPECT_EQ(slice->start->kind, CUBEC_NODE_EXPRESSION_BINARY);
   EXPECT_EQ(slice->length->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, nested_ternary_in_slice) {
@@ -367,6 +367,6 @@ TEST_F(dt_expression_slice, nested_ternary_in_slice) {
   EXPECT_EQ(slice->start->kind, CUBEC_NODE_EXPRESSION_TERNARY);
   EXPECT_EQ(slice->length->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }

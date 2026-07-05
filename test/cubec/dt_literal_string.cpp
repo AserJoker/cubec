@@ -1,4 +1,4 @@
-#include "cubec/literal_string.h"
+﻿#include "cubec/literal_string.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
@@ -20,7 +20,7 @@ TEST_F(dt_literal_string, parse_non_string_returns_null) {
   node_t node = read_literal_string(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_string, parse_empty_string) {
@@ -36,8 +36,8 @@ TEST_F(dt_literal_string, parse_empty_string) {
   cubec_literal_string_t literal = (cubec_literal_string_t)node;
   EXPECT_STREQ(string_get(literal->value), "");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_string, parse_simple_string) {
@@ -53,8 +53,8 @@ TEST_F(dt_literal_string, parse_simple_string) {
   cubec_literal_string_t literal = (cubec_literal_string_t)node;
   EXPECT_STREQ(string_get(literal->value), "hello");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_string, parse_string_with_spaces) {
@@ -70,8 +70,8 @@ TEST_F(dt_literal_string, parse_string_with_spaces) {
   cubec_literal_string_t literal = (cubec_literal_string_t)node;
   EXPECT_STREQ(string_get(literal->value), "hello world");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_string, parse_string_concatenation) {
@@ -88,8 +88,8 @@ TEST_F(dt_literal_string, parse_string_concatenation) {
   EXPECT_STREQ(string_get(literal->value), "helloworld");
   EXPECT_EQ(node->location.end.column, 15);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_string, parse_multiple_string_concatenation) {
@@ -105,8 +105,8 @@ TEST_F(dt_literal_string, parse_multiple_string_concatenation) {
   cubec_literal_string_t literal = (cubec_literal_string_t)node;
   EXPECT_STREQ(string_get(literal->value), "abcd");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_string, parse_string_with_escape_chars) {
@@ -122,8 +122,8 @@ TEST_F(dt_literal_string, parse_string_with_escape_chars) {
   cubec_literal_string_t literal = (cubec_literal_string_t)node;
   EXPECT_STREQ(string_get(literal->value), "hello\\nworld");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_string, parse_string_with_tab) {
@@ -139,8 +139,8 @@ TEST_F(dt_literal_string, parse_string_with_tab) {
   cubec_literal_string_t literal = (cubec_literal_string_t)node;
   EXPECT_STREQ(string_get(literal->value), "hello\\tworld");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_string, parse_string_with_unicode) {
@@ -156,8 +156,8 @@ TEST_F(dt_literal_string, parse_string_with_unicode) {
   cubec_literal_string_t literal = (cubec_literal_string_t)node;
   EXPECT_STREQ(string_get(literal->value), "你好世界");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_string, parse_string_with_whitespace_between) {
@@ -173,8 +173,8 @@ TEST_F(dt_literal_string, parse_string_with_whitespace_between) {
   cubec_literal_string_t literal = (cubec_literal_string_t)node;
   EXPECT_STREQ(string_get(literal->value), "helloworld");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_string, parse_string_identifier_returns_null) {
@@ -186,7 +186,7 @@ TEST_F(dt_literal_string, parse_string_identifier_returns_null) {
   node_t node = read_literal_string(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_string, parse_string_numeric_returns_null) {
@@ -198,5 +198,5 @@ TEST_F(dt_literal_string, parse_string_numeric_returns_null) {
   node_t node = read_literal_string(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }

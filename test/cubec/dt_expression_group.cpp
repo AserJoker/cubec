@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_member.h"
@@ -39,8 +39,8 @@ TEST_F(dt_expression_group, simple_group) {
   /* Consumed all tokens: (, a, ) → 3 */
   EXPECT_EQ(position, 3);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_group, numeric_in_group) {
@@ -57,8 +57,8 @@ TEST_F(dt_expression_group, numeric_in_group) {
   ASSERT_NE(group->inner, nullptr);
   EXPECT_EQ(group->inner->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_group, group_with_spaces) {
@@ -77,8 +77,8 @@ TEST_F(dt_expression_group, group_with_spaces) {
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)group->inner)->value), "a");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -106,8 +106,8 @@ TEST_F(dt_expression_group, binary_inside_group) {
   ASSERT_NE(bin->right, nullptr);
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -145,8 +145,8 @@ TEST_F(dt_expression_group, group_overrides_precedence) {
   ASSERT_NE(bin->right, nullptr);
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -177,8 +177,8 @@ TEST_F(dt_expression_group, nested_groups) {
 
   EXPECT_EQ(position, 5); /* (, (, a, ), ) → 5 */
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_group, deeply_nested) {
@@ -204,8 +204,8 @@ TEST_F(dt_expression_group, deeply_nested) {
   ASSERT_NE(g3->inner, nullptr);
   EXPECT_EQ(g3->inner->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -231,8 +231,8 @@ TEST_F(dt_expression_group, group_with_member_access) {
   ASSERT_NE(member->field, nullptr);
   EXPECT_STREQ(string_get(member->field->value), "field");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_group, prefix_on_group) {
@@ -253,8 +253,8 @@ TEST_F(dt_expression_group, prefix_on_group) {
   ASSERT_NE(bin->right, nullptr);
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_group, group_inside_binary) {
@@ -281,8 +281,8 @@ TEST_F(dt_expression_group, group_inside_binary) {
   cubec_expression_binary_t inner = (cubec_expression_binary_t)group->inner;
   EXPECT_STREQ(string_get(inner->opt), "+");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -298,7 +298,7 @@ TEST_F(dt_expression_group, missing_close_paren) {
   node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_group, empty_group) {
@@ -310,7 +310,7 @@ TEST_F(dt_expression_group, empty_group) {
   node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_group, non_group_returns_null_from_standalone) {
@@ -326,5 +326,5 @@ TEST_F(dt_expression_group, non_group_returns_null_from_standalone) {
   /* position should NOT advance */
   EXPECT_EQ(position, 0);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }

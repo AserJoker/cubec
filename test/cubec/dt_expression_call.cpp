@@ -42,8 +42,8 @@ TEST_F(dt_expression_call, call_no_args) {
   /* foo, (, ) */
   EXPECT_EQ(position, 3);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -71,8 +71,8 @@ TEST_F(dt_expression_call, call_one_arg) {
 
   EXPECT_EQ(position, 4); /* foo, (, a, ) */
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_call, call_two_args) {
@@ -101,8 +101,8 @@ TEST_F(dt_expression_call, call_two_args) {
   /* foo, (, a, ,, WS, b, ) */
   EXPECT_EQ(position, 7);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -128,8 +128,8 @@ TEST_F(dt_expression_call, call_numeric_arg) {
   node_t arg1 = (node_t)vec_get(call->arguments, 1);
   EXPECT_EQ(arg1->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_call, call_binary_arg) {
@@ -155,8 +155,8 @@ TEST_F(dt_expression_call, call_binary_arg) {
   node_t arg1 = (node_t)vec_get(call->arguments, 1);
   EXPECT_EQ(arg1->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -184,8 +184,8 @@ TEST_F(dt_expression_call, call_spread_arg) {
   ASSERT_NE(spread->value, nullptr);
   EXPECT_EQ(spread->value->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_call, call_mixed_spread) {
@@ -213,8 +213,8 @@ TEST_F(dt_expression_call, call_mixed_spread) {
   EXPECT_EQ(((node_t)vec_get(call->arguments, 2))->kind,
             CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_call, call_multiple_spreads) {
@@ -234,8 +234,8 @@ TEST_F(dt_expression_call, call_multiple_spreads) {
   EXPECT_EQ(((node_t)vec_get(call->arguments, 1))->kind,
             CUBEC_NODE_EXPRESSION_SPREAD);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -257,8 +257,8 @@ TEST_F(dt_expression_call, call_then_member) {
   EXPECT_EQ(member->host->kind, CUBEC_NODE_EXPRESSION_CALL);
   EXPECT_STREQ(string_get(member->field->value), "field");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_call, member_then_call) {
@@ -276,8 +276,8 @@ TEST_F(dt_expression_call, member_then_call) {
   EXPECT_EQ(call->callee->kind, CUBEC_NODE_EXPRESSION_MEMBER);
   EXPECT_EQ(vec_get_size(call->arguments), 0);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_call, chained_call) {
@@ -299,8 +299,8 @@ TEST_F(dt_expression_call, chained_call) {
   EXPECT_EQ(inner->callee->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
   EXPECT_EQ(vec_get_size(inner->arguments), 0);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -318,8 +318,8 @@ TEST_F(dt_expression_call, not_a_call_no_paren) {
   /* Should just be an identifier, not a call */
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_call, unclosed_paren) {
@@ -335,7 +335,7 @@ TEST_F(dt_expression_call, unclosed_paren) {
       error_clear());
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_call, trailing_comma) {
@@ -351,7 +351,7 @@ TEST_F(dt_expression_call, trailing_comma) {
       error_clear());
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -373,6 +373,6 @@ TEST_F(dt_expression_call, group_callee) {
   EXPECT_EQ(call->callee->kind, CUBEC_NODE_EXPRESSION_GROUP);
   EXPECT_EQ(vec_get_size(call->arguments), 1);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }

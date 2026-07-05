@@ -1,4 +1,4 @@
-#include "core/allocator.h"
+﻿#include "core/allocator.h"
 #include "core/vec.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -20,7 +20,7 @@ TEST_F(dt_allocator, alloc_and_free) {
   void *ptr = allocator_alloc(allocator, 64);
   ASSERT_NE(ptr, nullptr);
   memset(ptr, 0xAB, 64);
-  allocator_free(allocator, ptr);
+  allocator_free(allocator, &ptr);
 }
 
 TEST_F(dt_allocator, alloc_zero_size) {
@@ -39,14 +39,14 @@ TEST_F(dt_allocator, multiple_allocations) {
     ASSERT_NE(ptrs[i], nullptr);
   }
   for (int i = 0; i < 10; i++) {
-    allocator_free(allocator, ptrs[i]);
+    allocator_free(allocator, &ptrs[i]);
   }
 }
 
 TEST_F(dt_allocator, allocator_create) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   EXPECT_NE(vec, nullptr);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_allocator, value_get_type) {
@@ -54,7 +54,7 @@ TEST_F(dt_allocator, value_get_type) {
   *val = 42;
   type_t *type = value_get_type(val);
   EXPECT_EQ(type, nullptr);
-  allocator_free(allocator, val);
+  allocator_free(allocator, &val);
 }
 
 TEST_F(dt_allocator, value_get_id) {
@@ -63,8 +63,8 @@ TEST_F(dt_allocator, value_get_id) {
   uint64_t id1 = value_get_id(val1);
   uint64_t id2 = value_get_id(val2);
   EXPECT_NE(id1, id2);
-  allocator_free(allocator, val1);
-  allocator_free(allocator, val2);
+  allocator_free(allocator, &val1);
+  allocator_free(allocator, &val2);
 }
 
 TEST_F(dt_allocator, value_clone) {
@@ -73,8 +73,8 @@ TEST_F(dt_allocator, value_clone) {
   int *cloned = (int *)value_clone(allocator, val);
   ASSERT_NE(cloned, nullptr);
   EXPECT_EQ(*cloned, 42);
-  allocator_free(allocator, val);
-  allocator_free(allocator, cloned);
+  allocator_free(allocator, &val);
+  allocator_free(allocator, &cloned);
 }
 
 TEST_F(dt_allocator, value_clone_null) {
@@ -89,8 +89,8 @@ TEST_F(dt_allocator, value_move) {
   ASSERT_NE(moved, nullptr);
   // value_move copies data for types without type info
   EXPECT_EQ(*moved, 42);
-  allocator_free(allocator, val);
-  allocator_free(allocator, moved);
+  allocator_free(allocator, &val);
+  allocator_free(allocator, &moved);
 }
 
 TEST_F(dt_allocator, value_move_null) {

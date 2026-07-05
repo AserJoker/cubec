@@ -1,4 +1,4 @@
-#include "cubec/expression_postfix_unary.h"
+﻿#include "cubec/expression_postfix_unary.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/string.h"
@@ -35,9 +35,9 @@ static void _cubec_expression_postfix_unary_init(
 
 static void _cubec_expression_postfix_unary_dispose(
     cubec_expression_postfix_unary_t self, allocator_t allocator) {
-  allocator_free(allocator, self->right);
+  allocator_free(allocator, &self->right);
   self->right = NULL;
-  allocator_free(allocator, self->opt);
+  allocator_free(allocator, &self->opt);
   self->opt = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
@@ -134,7 +134,7 @@ node_t read_expression_postfix_unary(allocator_t allocator, vec_t tokens,
   return (node_t)node;
 
 onerror:
-  allocator_free(allocator, opt);
-  allocator_free(allocator, node);
+  allocator_free(allocator, &opt);
+  allocator_free(allocator, &node);
   return NULL;
 }

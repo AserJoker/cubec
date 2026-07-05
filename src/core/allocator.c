@@ -95,13 +95,13 @@ void *allocator_create(allocator_t self, type_t *type, void *arg) {
   }
   return data;
 }
-void allocator_free(allocator_t self, void *data) {
-  if (data == NULL) {
+void _allocator_free_impl(allocator_t self, void **data) {
+  if (data == NULL || *data == NULL) {
     return;
   }
-  alloc_chunk_t chunk = value_get_chunk(data);
+  alloc_chunk_t chunk = value_get_chunk(*data);
   if (chunk->type && chunk->type->dispose) {
-    chunk->type->dispose(data, self);
+    chunk->type->dispose(*data, self);
   }
   if (chunk == self->chunks) {
     self->chunks = self->chunks->next;
@@ -113,6 +113,7 @@ void allocator_free(allocator_t self, void *data) {
     chunk->next->last = chunk->last;
   }
   self->free_fn(chunk);
+  *data = NULL;
 }
 type_t *value_get_type(void *value) {
   alloc_chunk_t chunk = value_get_chunk(value);

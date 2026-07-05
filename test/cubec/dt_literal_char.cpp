@@ -1,4 +1,4 @@
-#include "cubec/literal_char.h"
+﻿#include "cubec/literal_char.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
@@ -20,7 +20,7 @@ TEST_F(dt_literal_char, parse_non_char_returns_null) {
   node_t node = read_literal_char(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_char, parse_simple_char) {
@@ -36,8 +36,8 @@ TEST_F(dt_literal_char, parse_simple_char) {
   cubec_literal_char_t literal = (cubec_literal_char_t)node;
   EXPECT_EQ(literal->value, 'a');
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_char, parse_escape_char) {
@@ -53,8 +53,8 @@ TEST_F(dt_literal_char, parse_escape_char) {
   cubec_literal_char_t literal = (cubec_literal_char_t)node;
   EXPECT_EQ(literal->value, '\\');
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_char, parse_digit_char) {
@@ -70,8 +70,8 @@ TEST_F(dt_literal_char, parse_digit_char) {
   cubec_literal_char_t literal = (cubec_literal_char_t)node;
   EXPECT_EQ(literal->value, '5');
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_char, parse_string_returns_null) {
@@ -83,5 +83,5 @@ TEST_F(dt_literal_char, parse_string_returns_null) {
   node_t node = read_literal_char(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }

@@ -1,4 +1,4 @@
-#include "cubec/statement_empty.h"
+﻿#include "cubec/statement_empty.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -62,6 +62,6 @@ node_t read_statement_empty(allocator_t allocator, vec_t tokens, size_t *positio
   *position = current;
   return &node->super;
 onerror:
-  allocator_free(allocator, node);
+  allocator_free(allocator, &node);
   return NULL;
 }

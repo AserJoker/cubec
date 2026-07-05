@@ -1,4 +1,4 @@
-#include "cubec/program.h"
+﻿#include "cubec/program.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/location.h"
@@ -27,7 +27,7 @@ static void _cubec_program_node_init(cubec_program_node_t self,
 }
 static void _cubec_program_node_dispose(cubec_program_node_t self,
                                         allocator_t allocator) {
-  allocator_free(allocator, self->statements);
+  allocator_free(allocator, &self->statements);
   g_node_type.dispose(&self->super, allocator);
 }
 static void _cubec_program_node_clone(cubec_program_node_t self,
@@ -81,6 +81,6 @@ node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
   *position = current;
   return &node->super;
 onerror:
-  allocator_free(allocator, node);
+  allocator_free(allocator, &node);
   return NULL;
 }

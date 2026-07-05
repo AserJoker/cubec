@@ -44,10 +44,14 @@ void *allocator_alloc(allocator_t self, size_t len);
 void *allocator_create(allocator_t self, type_t *type, void *arg);
 
 /**
- * @brief Free allocated memory. NULL-safe. If the value has a type with
- *        dispose, the dispose function is called first.
+ * @brief Free allocated memory and set the pointer to NULL.
+ *        NULL-safe: passes through NULL data pointers silently.
+ *        If the value has a type with dispose, dispose is called first.
+ * @note  This is a macro that casts the pointer to void** internally.
+ *        Pass the address of your pointer: allocator_free(a, &ptr);
  */
-void allocator_free(allocator_t self, void *data);
+void _allocator_free_impl(allocator_t self, void **data);
+#define allocator_free(self, ptr) _allocator_free_impl((self), (void **)(ptr))
 
 /**
  * @brief Get the type descriptor of an allocated value.

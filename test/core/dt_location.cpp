@@ -1,4 +1,4 @@
-#include "core/location.h"
+﻿#include "core/location.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -103,12 +103,12 @@ TEST_F(dt_location, get_extracts_text) {
 
   char *text = location_get(&loc, allocator);
   EXPECT_STREQ(text, "hello");
-  allocator_free(allocator, text);
+  allocator_free(allocator, &text);
 }
 
 TEST_F(dt_location, get_empty_location) {
   location_t loc = make_location("");
   char *text = location_get(&loc, allocator);
   EXPECT_STREQ(text, "");
-  allocator_free(allocator, text);
+  allocator_free(allocator, &text);
 }

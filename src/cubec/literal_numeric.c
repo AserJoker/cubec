@@ -1,4 +1,4 @@
-#include "cubec/literal_numeric.h"
+﻿#include "cubec/literal_numeric.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -38,7 +38,7 @@ static void _cubec_literal_numeric_init(cubec_literal_numeric_t self,
 static void _cubec_literal_numeric_dispose(cubec_literal_numeric_t self,
                                            allocator_t allocator) {
   if (self->value) {
-    allocator_free(allocator, self->value);
+    allocator_free(allocator, &self->value);
     self->value = NULL;
   }
   g_cubec_literal_type.dispose(&self->super, allocator);
@@ -180,6 +180,6 @@ node_t read_literal_numeric(allocator_t allocator, vec_t tokens,
   *position = current;
   return node_base;
 onerror:
-  allocator_free(allocator, node);
+  allocator_free(allocator, &node);
   return NULL;
 }

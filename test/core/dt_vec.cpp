@@ -1,4 +1,4 @@
-#include "core/vec.h"
+﻿#include "core/vec.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -14,7 +14,7 @@ TEST_F(dt_vec, create_and_resize) {
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 0);
   EXPECT_EQ(vec_get_capacity(vec), 0);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, push_and_get) {
@@ -27,7 +27,7 @@ TEST_F(dt_vec, push_and_get) {
   EXPECT_EQ(*(int *)vec_get(vec, 0), 10);
   EXPECT_EQ(*(int *)vec_get(vec, 1), 20);
   EXPECT_EQ(*(int *)vec_get(vec, 2), 30);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, pop) {
@@ -40,7 +40,7 @@ TEST_F(dt_vec, pop) {
   EXPECT_EQ(vec_get_size(vec), 1);
   vec_pop(vec);
   EXPECT_EQ(vec_get_size(vec), 0);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, set) {
@@ -50,7 +50,7 @@ TEST_F(dt_vec, set) {
   vec_push(vec, &val2);
   vec_set(vec, 1, &val3);
   EXPECT_EQ(*(int *)vec_get(vec, 1), 99);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, insert) {
@@ -63,7 +63,7 @@ TEST_F(dt_vec, insert) {
   EXPECT_EQ(*(int *)vec_get(vec, 0), 10);
   EXPECT_EQ(*(int *)vec_get(vec, 1), 15);
   EXPECT_EQ(*(int *)vec_get(vec, 2), 20);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, remove) {
@@ -76,7 +76,7 @@ TEST_F(dt_vec, remove) {
   EXPECT_EQ(vec_get_size(vec), 2);
   EXPECT_EQ(*(int *)vec_get(vec, 0), 10);
   EXPECT_EQ(*(int *)vec_get(vec, 1), 30);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, resize) {
@@ -89,7 +89,7 @@ TEST_F(dt_vec, resize) {
   EXPECT_EQ(vec_get_capacity(vec), 8);
   vec_resize(vec, 1);
   EXPECT_EQ(vec_get_size(vec), 1);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, get_data) {
@@ -101,21 +101,21 @@ TEST_F(dt_vec, get_data) {
   ASSERT_NE(data, nullptr);
   EXPECT_EQ(*(int *)data[0], 10);
   EXPECT_EQ(*(int *)data[1], 20);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, resize_down_to_zero) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   vec_resize(vec, 0);
   EXPECT_EQ(vec_get_size(vec), 0);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, initial_capacity) {
   vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
   vec_resize(vec, 1);
   EXPECT_EQ(vec_get_capacity(vec), 8);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 /* ============================================================================
@@ -136,7 +136,7 @@ TEST_F(dt_vec, iteration) {
     EXPECT_EQ(*(int *)data, expected[count++]);
   }
   EXPECT_EQ(count, 3);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, iteration_empty_vec) {
@@ -144,7 +144,7 @@ TEST_F(dt_vec, iteration_empty_vec) {
   vec_iter_t iter = vec_iter_first(vec);
   EXPECT_EQ(vec_iter_get(&iter), nullptr);
   EXPECT_EQ(vec_iter_next(&iter), nullptr);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, iter_get) {
@@ -167,7 +167,7 @@ TEST_F(dt_vec, iter_get) {
   vec_iter_next(&iter);
   EXPECT_EQ(vec_iter_get(&iter), nullptr);
 
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, iter_set) {
@@ -183,7 +183,7 @@ TEST_F(dt_vec, iter_set) {
   EXPECT_EQ(*(int *)vec_iter_get(&iter), 99);
   EXPECT_EQ(*(int *)vec_get(vec, 1), 99);  /* verify underlying vec updated */
 
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, iter_remove) {
@@ -204,7 +204,7 @@ TEST_F(dt_vec, iter_remove) {
   EXPECT_EQ(*(int *)vec_get(vec, 0), 10);
   EXPECT_EQ(*(int *)vec_get(vec, 1), 30);
 
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, iter_remove_first) {
@@ -221,7 +221,7 @@ TEST_F(dt_vec, iter_remove_first) {
   EXPECT_EQ(*(int *)vec_iter_get(&iter), 20);
   EXPECT_EQ(*(int *)vec_get(vec, 0), 20);
 
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, iter_remove_last) {
@@ -238,7 +238,7 @@ TEST_F(dt_vec, iter_remove_last) {
   EXPECT_EQ(*(int *)vec_get(vec, 0), 10);
   EXPECT_EQ(vec_iter_get(&iter), nullptr);  /* exhausted */
 
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, iter_remove_exhausted) {
@@ -251,7 +251,7 @@ TEST_F(dt_vec, iter_remove_exhausted) {
   EXPECT_EQ(vec_iter_remove(&iter), nullptr);
   EXPECT_EQ(vec_get_size(vec), 1);  /* unchanged */
 
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, iter_traverse_and_remove_all) {
@@ -269,7 +269,7 @@ TEST_F(dt_vec, iter_traverse_and_remove_all) {
   EXPECT_EQ(vec_get_size(vec), 0);
   EXPECT_EQ(vec_iter_get(&iter), nullptr);
 
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, iter_single_element) {
@@ -282,5 +282,5 @@ TEST_F(dt_vec, iter_single_element) {
   vec_iter_next(&iter);
   EXPECT_EQ(vec_iter_get(&iter), nullptr);
 
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }

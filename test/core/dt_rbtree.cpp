@@ -1,4 +1,4 @@
-#include "core/rbtree.h"
+﻿#include "core/rbtree.h"
 #include "core/node.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -14,7 +14,7 @@ TEST_F(dt_rbtree, create_and_empty) {
   rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, NULL);
   ASSERT_NE(tree, nullptr);
   EXPECT_EQ(rbtree_get_size(tree), 0);
-  allocator_free(allocator, tree);
+  allocator_free(allocator, &tree);
 }
 
 TEST_F(dt_rbtree, insert_and_find) {
@@ -41,7 +41,7 @@ TEST_F(dt_rbtree, insert_and_find) {
   ASSERT_NE(found, nullptr);
   EXPECT_EQ(found, node3);
 
-  allocator_free(allocator, tree);
+  allocator_free(allocator, &tree);
 }
 
 TEST_F(dt_rbtree, find_nonexistent) {
@@ -52,8 +52,8 @@ TEST_F(dt_rbtree, find_nonexistent) {
   rbtree_insert(tree, value_get_id(node), node);
   void *found = rbtree_find(tree, value_get_id(nonexistent));
   EXPECT_EQ(found, nullptr);
-  allocator_free(allocator, nonexistent);
-  allocator_free(allocator, tree);
+  allocator_free(allocator, &nonexistent);
+  allocator_free(allocator, &tree);
 }
 
 TEST_F(dt_rbtree, insert_duplicate_key) {
@@ -73,8 +73,8 @@ TEST_F(dt_rbtree, insert_duplicate_key) {
   EXPECT_EQ(found, node1);
 
   (void)node2;
-  allocator_free(allocator, node2);
-  allocator_free(allocator, tree);
+  allocator_free(allocator, &node2);
+  allocator_free(allocator, &tree);
 }
 
 TEST_F(dt_rbtree, Remove) {
@@ -94,7 +94,7 @@ TEST_F(dt_rbtree, Remove) {
   EXPECT_EQ(rbtree_get_size(tree), 2);
   EXPECT_EQ(rbtree_find(tree, value_get_id(node2)), nullptr);
 
-  allocator_free(allocator, tree);
+  allocator_free(allocator, &tree);
 }
 
 TEST_F(dt_rbtree, remove_nonexistent) {
@@ -107,8 +107,8 @@ TEST_F(dt_rbtree, remove_nonexistent) {
   size_t result = rbtree_remove(tree, value_get_id(nonexistent));
   EXPECT_EQ(result, 1);
   EXPECT_EQ(rbtree_get_size(tree), 1);
-  allocator_free(allocator, nonexistent);
-  allocator_free(allocator, tree);
+  allocator_free(allocator, &nonexistent);
+  allocator_free(allocator, &tree);
 }
 
 TEST_F(dt_rbtree, Clear) {
@@ -127,7 +127,7 @@ TEST_F(dt_rbtree, Clear) {
   EXPECT_EQ(rbtree_get_size(tree), 0);
   EXPECT_EQ(rbtree_find(tree, value_get_id(node1)), nullptr);
 
-  allocator_free(allocator, tree);
+  allocator_free(allocator, &tree);
 }
 
 TEST_F(dt_rbtree, iterator_empty) {
@@ -135,7 +135,7 @@ TEST_F(dt_rbtree, iterator_empty) {
   rbtree_iter_t iter = rbtree_iter_first(tree);
   void *node = rbtree_iter_next(&iter);
   EXPECT_EQ(node, nullptr);
-  allocator_free(allocator, tree);
+  allocator_free(allocator, &tree);
 }
 
 TEST_F(dt_rbtree, iterator_single) {
@@ -152,7 +152,7 @@ TEST_F(dt_rbtree, iterator_single) {
   found = rbtree_iter_next(&iter);
   EXPECT_EQ(found, nullptr);
 
-  allocator_free(allocator, tree);
+  allocator_free(allocator, &tree);
 }
 
 TEST_F(dt_rbtree, iterator_inorder) {
@@ -180,7 +180,7 @@ TEST_F(dt_rbtree, iterator_inorder) {
   }
   EXPECT_EQ(count, 5);
 
-  allocator_free(allocator, tree);
+  allocator_free(allocator, &tree);
 }
 
 TEST_F(dt_rbtree, iterator_after_remove) {
@@ -207,7 +207,7 @@ TEST_F(dt_rbtree, iterator_after_remove) {
   }
   EXPECT_EQ(count, 2);
 
-  allocator_free(allocator, tree);
+  allocator_free(allocator, &tree);
 }
 
 TEST_F(dt_rbtree, auto_dispose) {
@@ -222,7 +222,7 @@ TEST_F(dt_rbtree, auto_dispose) {
   rbtree_insert(tree, value_get_id(node2), node2);
   EXPECT_EQ(rbtree_get_size(tree), 2);
 
-  allocator_free(allocator2, tree);
+  allocator_free(allocator2, &tree);
   delete_allocator(allocator2);
 }
 
@@ -247,8 +247,8 @@ TEST_F(dt_rbtree, clone_with_value_clone) {
   }
   EXPECT_EQ(count, 2);
 
-  allocator_free(allocator, tree);
-  allocator_free(allocator, cloned);
+  allocator_free(allocator, &tree);
+  allocator_free(allocator, &cloned);
 }
 
 TEST_F(dt_rbtree, move_with_value_move) {
@@ -274,7 +274,7 @@ TEST_F(dt_rbtree, move_with_value_move) {
   EXPECT_EQ(count, 2);
 
   // moved 获得了 tree 的所有权（包括 auto_dispose），需要释放
-  allocator_free(allocator, moved);
+  allocator_free(allocator, &moved);
   // tree 变成空壳后必须显式释放，否则内存泄漏
-  allocator_free(allocator, tree);
+  allocator_free(allocator, &tree);
 }

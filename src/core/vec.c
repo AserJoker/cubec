@@ -1,4 +1,4 @@
-#include "core/vec.h"
+﻿#include "core/vec.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/type.h"
@@ -44,10 +44,10 @@ static void _vec_move(vec_t self, allocator_t allocator, vec_t another) {
 static void _vec_dispose(vec_t self, allocator_t allocator) {
   if (self->auto_dispose) {
     for (size_t idx = 0; idx < self->size; idx++) {
-      allocator_free(allocator, self->data[idx]);
+      allocator_free(allocator, &self->data[idx]);
     }
   }
-  allocator_free(allocator, self->data);
+  allocator_free(allocator, &self->data);
   self->size = 0;
   self->capacity = 0;
 }
@@ -78,7 +78,7 @@ size_t vec_set(vec_t self, size_t idx, void *data) {
           self->size);
   }
   if (self->auto_dispose) {
-    allocator_free(self->allocator, self->data[idx]);
+    allocator_free(self->allocator, &self->data[idx]);
   }
   self->data[idx] = data;
   return self->size;
@@ -86,7 +86,7 @@ size_t vec_set(vec_t self, size_t idx, void *data) {
 size_t vec_resize(vec_t self, size_t size) {
   for (size_t idx = size; idx < self->size; idx++) {
     if (self->auto_dispose) {
-      allocator_free(self->allocator, self->data[idx]);
+      allocator_free(self->allocator, &self->data[idx]);
     }
     self->data[idx] = NULL;
   }
@@ -102,7 +102,7 @@ size_t vec_resize(vec_t self, size_t size) {
     for (size_t idx = 0; idx < self->size; idx++) {
       data[idx] = self->data[idx];
     }
-    allocator_free(self->allocator, self->data);
+    allocator_free(self->allocator, &self->data);
     self->data = data;
   }
   self->size = size;
@@ -132,7 +132,7 @@ size_t vec_remove(vec_t self, size_t idx) {
   self->size--;
   self->data[self->size] = NULL;
   if (self->auto_dispose) {
-    allocator_free(self->allocator, item);
+    allocator_free(self->allocator, &item);
   }
   return self->size;
 }
@@ -198,7 +198,7 @@ void *vec_iter_remove(vec_iter_t *iter) {
   self->size--;
   self->data[self->size] = NULL;
   if (self->auto_dispose) {
-    allocator_free(self->allocator, data);
+    allocator_free(self->allocator, &data);
   }
   /* idx stays at the same position, now pointing to the next element */
   return data;

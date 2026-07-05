@@ -1,4 +1,4 @@
-#include "cubec/literal_string.h"
+﻿#include "cubec/literal_string.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -32,7 +32,7 @@ static void _cubec_literal_string_init(cubec_literal_string_t self,
 static void _cubec_literal_string_dispose(cubec_literal_string_t self,
                                           allocator_t allocator) {
   if (self->value) {
-    allocator_free(allocator, self->value);
+    allocator_free(allocator, &self->value);
     self->value = NULL;
   }
   g_cubec_literal_type.dispose(&self->super, allocator);
@@ -103,6 +103,6 @@ node_t read_literal_string(allocator_t allocator, vec_t tokens, size_t *position
   *position = current;
   return node_base;
 onerror:
-  allocator_free(allocator, node);
+  allocator_free(allocator, &node);
   return NULL;
 }

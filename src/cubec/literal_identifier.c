@@ -1,4 +1,4 @@
-#include "cubec/literal_identifier.h"
+﻿#include "cubec/literal_identifier.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -30,7 +30,7 @@ static void _cubec_literal_identifier_init(cubec_literal_identifier_t self,
 static void _cubec_literal_identifier_dispose(cubec_literal_identifier_t self,
                                               allocator_t allocator) {
   if (self->value) {
-    allocator_free(allocator, self->value);
+    allocator_free(allocator, &self->value);
     self->value = NULL;
   }
   g_cubec_literal_type.dispose(&self->super, allocator);
@@ -83,6 +83,6 @@ node_t read_literal_identifier(allocator_t allocator, vec_t tokens,
   *position = current;
   return node_base;
 onerror:
-  allocator_free(allocator, node);
+  allocator_free(allocator, &node);
   return NULL;
 }

@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -173,7 +173,7 @@ node_t read_value(allocator_t allocator, vec_t tokens, size_t *position,
   }
   return node;
 onerror:
-  allocator_free(allocator, node);
+  allocator_free(allocator, &node);
   return NULL;
 }
 node_t read_expression_type(allocator_t allocator, vec_t tokens,
@@ -225,7 +225,7 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
   return node;
 
 onerror:
-  allocator_free(allocator, node);
+  allocator_free(allocator, &node);
   return NULL;
 }
 

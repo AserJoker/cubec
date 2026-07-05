@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/expression_member.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -32,8 +32,8 @@ TEST_F(dt_expression_member, single_member_access) {
   ASSERT_NE(member->field, nullptr);
   EXPECT_STREQ(string_get(member->field->value), "field");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_member, chained_member_access) {
@@ -64,8 +64,8 @@ TEST_F(dt_expression_member, chained_member_access) {
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)inner->host)->value), "a");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_member, triple_chain) {
@@ -93,8 +93,8 @@ TEST_F(dt_expression_member, triple_chain) {
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)m3->host)->value), "x");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_member, no_dot_returns_atom) {
@@ -108,8 +108,8 @@ TEST_F(dt_expression_member, no_dot_returns_atom) {
   /* No dot → returns the identifier atom directly */
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_member, member_with_spaces) {
@@ -127,8 +127,8 @@ TEST_F(dt_expression_member, member_with_spaces) {
       string_get(((cubec_literal_identifier_t)member->host)->value), "obj");
   EXPECT_STREQ(string_get(member->field->value), "field");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_member, consume_all_tokens) {
@@ -143,8 +143,8 @@ TEST_F(dt_expression_member, consume_all_tokens) {
   /* position should be past all tokens (a, ., b → 3) */
   EXPECT_EQ(position, 3);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_member, numeric_after_dot_returns_null) {
@@ -158,8 +158,8 @@ TEST_F(dt_expression_member, numeric_after_dot_returns_null) {
   /* Only "a" was parsed; ".123" is not a valid member access */
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_member, member_on_string) {
@@ -179,6 +179,6 @@ TEST_F(dt_expression_member, member_on_string) {
   EXPECT_EQ(member->host->kind, CUBEC_NODE_LITERAL_STRING);
   EXPECT_STREQ(string_get(member->field->value), "len");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }

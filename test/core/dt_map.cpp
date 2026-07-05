@@ -1,4 +1,4 @@
-#include "core/map.h"
+﻿#include "core/map.h"
 #include "core/node.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -14,7 +14,7 @@ TEST_F(dt_map, create_and_empty) {
   map_t map = (map_t)allocator_create(allocator, &g_map_type, NULL);
   ASSERT_NE(map, nullptr);
   EXPECT_EQ(map_get_size(map), 0);
-  allocator_free(allocator, map);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, insert_and_find) {
@@ -45,7 +45,7 @@ TEST_F(dt_map, insert_and_find) {
   ASSERT_NE(found, nullptr);
   EXPECT_EQ(found, val3);
 
-  allocator_free(allocator, map);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, find_nonexistent) {
@@ -58,8 +58,8 @@ TEST_F(dt_map, find_nonexistent) {
   map_insert(map, node, val);
   void *found = map_find(map, nonexistent);
   EXPECT_EQ(found, nullptr);
-  allocator_free(allocator, nonexistent);
-  allocator_free(allocator, map);
+  allocator_free(allocator, &nonexistent);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, insert_duplicate_key) {
@@ -80,7 +80,7 @@ TEST_F(dt_map, insert_duplicate_key) {
   ASSERT_NE(found, nullptr);
   EXPECT_EQ(found, val99);
 
-  allocator_free(allocator, map);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, remove) {
@@ -104,7 +104,7 @@ TEST_F(dt_map, remove) {
   EXPECT_EQ(map_get_size(map), 2);
   EXPECT_EQ(map_find(map, node2), nullptr);
 
-  allocator_free(allocator, map);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, remove_nonexistent) {
@@ -119,8 +119,8 @@ TEST_F(dt_map, remove_nonexistent) {
   size_t result = map_remove(map, nonexistent);
   EXPECT_EQ(result, 1);
   EXPECT_EQ(map_get_size(map), 1);
-  allocator_free(allocator, nonexistent);
-  allocator_free(allocator, map);
+  allocator_free(allocator, &nonexistent);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, clear) {
@@ -143,7 +143,7 @@ TEST_F(dt_map, clear) {
   EXPECT_EQ(map_get_size(map), 0);
   EXPECT_EQ(map_find(map, node1), nullptr);
 
-  allocator_free(allocator, map);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, iterator_empty) {
@@ -151,7 +151,7 @@ TEST_F(dt_map, iterator_empty) {
   map_iter_t iter = map_iter_first(map);
   void *value = map_iter_next(&iter);
   EXPECT_EQ(value, nullptr);
-  allocator_free(allocator, map);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, iterator_single) {
@@ -170,7 +170,7 @@ TEST_F(dt_map, iterator_single) {
   found = map_iter_next(&iter);
   EXPECT_EQ(found, nullptr);
 
-  allocator_free(allocator, map);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, iterator_multiple) {
@@ -196,7 +196,7 @@ TEST_F(dt_map, iterator_multiple) {
   }
   EXPECT_EQ(count, 5);
 
-  allocator_free(allocator, map);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, iterator_after_remove) {
@@ -224,7 +224,7 @@ TEST_F(dt_map, iterator_after_remove) {
   }
   EXPECT_EQ(count, 2);
 
-  allocator_free(allocator, map);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, auto_dispose) {
@@ -242,7 +242,7 @@ TEST_F(dt_map, auto_dispose) {
   map_insert(map, node2, val2);
   EXPECT_EQ(map_get_size(map), 2);
 
-  allocator_free(allocator2, map);
+  allocator_free(allocator2, &map);
   delete_allocator(allocator2);
 }
 
@@ -277,8 +277,8 @@ TEST_F(dt_map, clone_with_value_clone) {
   }
   EXPECT_EQ(count, 2);
 
-  allocator_free(allocator, map);
-  allocator_free(allocator, cloned);
+  allocator_free(allocator, &map);
+  allocator_free(allocator, &cloned);
 }
 
 TEST_F(dt_map, move_with_value_move) {
@@ -307,8 +307,8 @@ TEST_F(dt_map, move_with_value_move) {
   EXPECT_EQ(moved_val1, orig_val1);
   EXPECT_EQ(moved_val2, orig_val2);
 
-  allocator_free(allocator, moved);
-  allocator_free(allocator, map);
+  allocator_free(allocator, &moved);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, threshold_list_mode) {
@@ -331,7 +331,7 @@ TEST_F(dt_map, threshold_list_mode) {
     EXPECT_EQ(found, vals[i]);
   }
 
-  allocator_free(allocator, map);
+  allocator_free(allocator, &map);
 }
 
 TEST_F(dt_map, threshold_convert_to_rbtree) {
@@ -354,5 +354,5 @@ TEST_F(dt_map, threshold_convert_to_rbtree) {
     EXPECT_EQ(found, vals[i]);
   }
 
-  allocator_free(allocator, map);
+  allocator_free(allocator, &map);
 }

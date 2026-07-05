@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_member.h"
 #include "cubec/literal_identifier.h"
@@ -28,8 +28,8 @@ TEST_F(dt_expression_type, simple_identifier) {
   cubec_literal_identifier_t literal = (cubec_literal_identifier_t)node;
   EXPECT_STREQ(string_get(literal->value), "i32");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: another simple identifier */
@@ -46,8 +46,8 @@ TEST_F(dt_expression_type, another_simple_identifier) {
   cubec_literal_identifier_t literal = (cubec_literal_identifier_t)node;
   EXPECT_STREQ(string_get(literal->value), "Vec");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: generic instantiation with single argument (e.g., "Vec[i32]") */
@@ -72,8 +72,8 @@ TEST_F(dt_expression_type, generic_single_argument) {
   ASSERT_NE(generic->arguments, nullptr);
   EXPECT_EQ(vec_get_size(generic->arguments), 1);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: generic instantiation with multiple arguments (e.g., "Map[string, i32]") */
@@ -98,8 +98,8 @@ TEST_F(dt_expression_type, generic_multiple_arguments) {
   ASSERT_NE(generic->arguments, nullptr);
   EXPECT_EQ(vec_get_size(generic->arguments), 2);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: generic with type parameter (e.g., "Option[T]") */
@@ -121,8 +121,8 @@ TEST_F(dt_expression_type, generic_type_parameter) {
   cubec_literal_identifier_t callee = (cubec_literal_identifier_t)generic->callee;
   EXPECT_STREQ(string_get(callee->value), "Option");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: single member access (e.g., "std.vec") */
@@ -146,8 +146,8 @@ TEST_F(dt_expression_type, single_member_access) {
   ASSERT_NE(member->field, nullptr);
   EXPECT_STREQ(string_get(member->field->value), "vec");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: chained member access (e.g., "std.vec.Vec") */
@@ -179,8 +179,8 @@ TEST_F(dt_expression_type, chained_member_access) {
   cubec_literal_identifier_t host = (cubec_literal_identifier_t)inner->host;
   EXPECT_STREQ(string_get(host->value), "std");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: member access with generic instantiation (e.g., "std.vec.Vec[i32]") */
@@ -205,8 +205,8 @@ TEST_F(dt_expression_type, member_with_generic) {
       (cubec_expression_member_t)generic->callee;
   EXPECT_STREQ(string_get(callee_member->field->value), "Vec");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: type with spaces around dot */
@@ -225,8 +225,8 @@ TEST_F(dt_expression_type, member_with_spaces) {
       string_get(((cubec_literal_identifier_t)member->host)->value), "std");
   EXPECT_STREQ(string_get(member->field->value), "vec");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: consume all tokens */
@@ -243,8 +243,8 @@ TEST_F(dt_expression_type, consume_all_tokens) {
    * std, ., vec, ., Vec, [, i32, ] → 8 tokens */
   EXPECT_EQ(position, 8);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: non-identifier returns null */
@@ -257,7 +257,7 @@ TEST_F(dt_expression_type, non_identifier_returns_null) {
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: string literal returns null */
@@ -270,7 +270,7 @@ TEST_F(dt_expression_type, string_literal_returns_null) {
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: numeric literal returns null */
@@ -283,7 +283,7 @@ TEST_F(dt_expression_type, numeric_literal_returns_null) {
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: generic with nested generic (e.g., "Result[Ok[i32], Err[string]]") */
@@ -305,8 +305,8 @@ TEST_F(dt_expression_type, generic_with_nested_generic) {
   /* Should have 2 arguments: Ok[i32] and Err[string] */
   EXPECT_EQ(vec_get_size(generic->arguments), 2);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: generic argument is a member access type (e.g., "Vec[std.vec.Vec]") */
@@ -331,8 +331,8 @@ TEST_F(dt_expression_type, generic_with_member_argument) {
   node_t arg = (node_t)vec_get(generic->arguments, 0);
   EXPECT_EQ(arg->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: generic with multiple member access arguments (e.g., "Map[std.vec.Vec, std.str.String]") */
@@ -360,8 +360,8 @@ TEST_F(dt_expression_type, generic_with_multiple_member_arguments) {
   node_t arg1 = (node_t)vec_get(generic->arguments, 1);
   EXPECT_EQ(arg1->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: generic with mixed arguments: simple type and member type (e.g., "Pair[i32, std.vec.Vec]") */
@@ -389,8 +389,8 @@ TEST_F(dt_expression_type, generic_with_mixed_arguments) {
   node_t arg1 = (node_t)vec_get(generic->arguments, 1);
   EXPECT_EQ(arg1->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: deeply nested generic with member access (e.g., "Outer[Inner[std.a.B], std.c.D]") */
@@ -420,8 +420,8 @@ TEST_F(dt_expression_type, deeply_nested_generic_with_member) {
   node_t arg1 = (node_t)vec_get(generic->arguments, 1);
   EXPECT_EQ(arg1->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: empty brackets return null (not valid) */
@@ -436,8 +436,8 @@ TEST_F(dt_expression_type, empty_brackets_returns_null) {
   /* The behavior depends on implementation - either returns null or
    * parses Vec and stops before [] */
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Test: underscore prefix identifier */
@@ -454,6 +454,6 @@ TEST_F(dt_expression_type, underscore_identifier) {
   cubec_literal_identifier_t literal = (cubec_literal_identifier_t)node;
   EXPECT_STREQ(string_get(literal->value), "_T");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }

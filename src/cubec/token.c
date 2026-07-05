@@ -1,4 +1,4 @@
-#include "cubec/token.h"
+﻿#include "cubec/token.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/location.h"
@@ -669,6 +669,6 @@ vec_t resolve_token_list(allocator_t allocator, const char *filename,
   }
   return vec;
 onerror:
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
   return NULL;
 }

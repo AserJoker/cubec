@@ -1,4 +1,4 @@
-#include "cubec/expression_call.h"
+﻿#include "cubec/expression_call.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
@@ -45,9 +45,9 @@ static void _cubec_expression_call_init(cubec_expression_call_t self,
 
 static void _cubec_expression_call_dispose(cubec_expression_call_t self,
                                             allocator_t allocator) {
-  allocator_free(allocator, self->callee);
+  allocator_free(allocator, &self->callee);
   self->callee = NULL;
-  allocator_free(allocator, self->arguments);
+  allocator_free(allocator, &self->arguments);
   self->arguments = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
@@ -72,7 +72,7 @@ static void _cubec_expression_call_move(cubec_expression_call_t self,
   self->callee = value_move(allocator, another->callee);
 
   /* Transfer arguments vec directly */
-  allocator_free(allocator, self->arguments);
+  allocator_free(allocator, &self->arguments);
   self->arguments = another->arguments;
   another->arguments =
       allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
@@ -173,10 +173,10 @@ node_t read_expression_call(allocator_t allocator, vec_t tokens,
 
 onerror:
   /* autodispose=true: freeing arguments also frees all its elements */
-  allocator_free(allocator, arguments);
+  allocator_free(allocator, &arguments);
   /* NOTE: callee is NOT freed here — the caller (read_value) still owns the
    *       pointer and will clean it up when the error propagates via TRY_LOCAL */
-  allocator_free(allocator, node);
+  allocator_free(allocator, &node);
   {
     location_t *loc = token_get_location(open_paren);
     THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid function call arguments",

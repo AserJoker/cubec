@@ -1,4 +1,4 @@
-#include "core/rbtree.h"
+﻿#include "core/rbtree.h"
 #include "core/allocator.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -318,9 +318,9 @@ size_t rbtree_remove(rbtree_t self, uint64_t key) {
     rbtree_delete_fixup(self, x);
   }
   if (self->auto_dispose && z->value != NULL) {
-    allocator_free(self->allocator, z->value);
+    allocator_free(self->allocator, &z->value);
   }
-  allocator_free(self->allocator, z);
+  allocator_free(self->allocator, &z);
   self->size--;
   return self->size;
 }
@@ -351,9 +351,9 @@ static void clear_recursive(rbtree_t self, rbtree_node_t *node) {
   clear_recursive(self, node->left);
   clear_recursive(self, node->right);
   if (self->auto_dispose && node->value != NULL) {
-    allocator_free(self->allocator, node->value);
+    allocator_free(self->allocator, &node->value);
   }
-  allocator_free(self->allocator, node);
+  allocator_free(self->allocator, &node);
 }
 
 void rbtree_clear(rbtree_t self) {

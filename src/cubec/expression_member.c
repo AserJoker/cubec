@@ -1,4 +1,4 @@
-#include "cubec/expression_member.h"
+﻿#include "cubec/expression_member.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
@@ -28,9 +28,9 @@ static void _cubec_expression_member_init(cubec_expression_member_t self,
 
 static void _cubec_expression_member_dispose(cubec_expression_member_t self,
                                              allocator_t allocator) {
-  allocator_free(allocator, self->host);
+  allocator_free(allocator, &self->host);
   self->host = NULL;
-  allocator_free(allocator, self->field);
+  allocator_free(allocator, &self->field);
   self->field = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
@@ -99,7 +99,7 @@ node_t read_expression_member(allocator_t allocator, vec_t tokens,
   return (node_t)node;
 
 onerror:
-  allocator_free(allocator, field);
-  allocator_free(allocator, node);
+  allocator_free(allocator, &field);
+  allocator_free(allocator, &node);
   return NULL;
 }

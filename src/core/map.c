@@ -1,4 +1,4 @@
-#include "core/map.h"
+﻿#include "core/map.h"
 #include "core/allocator.h"
 #include "core/type.h"
 #include "core/vec.h"
@@ -52,13 +52,13 @@ static void _map_dispose(map_t self, allocator_t allocator) {
   map_clear(self);
   if (self->index_type == MAP_INDEX_HASH) {
     for(size_t idx=0;idx<DEFAULT_BUCKET_COUNT;idx++){
-      allocator_free(self->allocator, self->index.buckets[idx]);
+      allocator_free(self->allocator, &self->index.buckets[idx]);
     }
   } else {
-    allocator_free(self->allocator, self->index.rbtree);
+    allocator_free(self->allocator, &self->index.rbtree);
   }
-  allocator_free(allocator, self->keys);
-  allocator_free(allocator, self->values);
+  allocator_free(allocator, &self->keys);
+  allocator_free(allocator, &self->values);
 }
 
 static size_t hash_bucket_index(map_t self, uint64_t key_id) {
@@ -168,7 +168,7 @@ static void convert_to_rbtree(map_t self) {
   }
 
   for (size_t i = 0; i < DEFAULT_BUCKET_COUNT; i++) {
-    allocator_free(self->allocator, buckets[i]);
+    allocator_free(self->allocator, &buckets[i]);
   }
 
   self->index_type = MAP_INDEX_RBTREE;

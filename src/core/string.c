@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/allocator.h"
 #include "core/type.h"
 #include <string.h>
@@ -48,7 +48,7 @@ static void _string_move(string_t self, allocator_t allocator,
   another->capacity = 8;
 }
 static void _string_dispose(string_t self, allocator_t allocator) {
-  allocator_free(allocator, self->data);
+  allocator_free(allocator, &self->data);
   self->size = 0;
   self->capacity = 0;
 }
@@ -64,7 +64,7 @@ type_t g_string_type = {
 const char *string_get(string_t self) { return self->data; }
 size_t string_set(string_t self, const char *str) {
   size_t size = strlen(str) + 1;
-  allocator_free(self->allocator, self->data);
+  allocator_free(self->allocator, &self->data);
   self->capacity = 8;
   while (self->capacity < size) {
     self->capacity *= 2;
@@ -84,7 +84,7 @@ size_t string_concat(string_t self, const char *another) {
   }
   char *data = allocator_alloc(self->allocator, self->capacity);
   memcpy(data, self->data, self->size - 1);
-  allocator_free(self->allocator, self->data);
+  allocator_free(self->allocator, &self->data);
   self->data = data;
   for (size_t idx = 0; idx < another_size; idx++) {
     self->data[self->size - 1 + idx] = another[idx];
@@ -100,7 +100,7 @@ size_t string_nconcat(string_t self, const char *another, size_t len) {
   }
   char *data = allocator_alloc(self->allocator, self->capacity);
   memcpy(data, self->data, self->size - 1);
-  allocator_free(self->allocator, self->data);
+  allocator_free(self->allocator, &self->data);
   self->data = data;
   for (size_t idx = 0; idx < len; idx++) {
     self->data[self->size - 1 + idx] = another[idx];

@@ -1,4 +1,4 @@
-#include "cubec/literal_identifier.h"
+﻿#include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
@@ -20,7 +20,7 @@ TEST_F(dt_literal_identifier, parse_non_identifier_returns_null) {
   node_t node = read_literal_identifier(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_identifier, parse_simple_identifier) {
@@ -36,8 +36,8 @@ TEST_F(dt_literal_identifier, parse_simple_identifier) {
   cubec_literal_identifier_t literal = (cubec_literal_identifier_t)node;
   EXPECT_STREQ(string_get(literal->value), "hello");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_identifier, parse_underscore_identifier) {
@@ -53,8 +53,8 @@ TEST_F(dt_literal_identifier, parse_underscore_identifier) {
   cubec_literal_identifier_t literal = (cubec_literal_identifier_t)node;
   EXPECT_STREQ(string_get(literal->value), "_private");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_identifier, parse_another_identifier) {
@@ -70,8 +70,8 @@ TEST_F(dt_literal_identifier, parse_another_identifier) {
   cubec_literal_identifier_t literal = (cubec_literal_identifier_t)node;
   EXPECT_STREQ(string_get(literal->value), "foo");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_literal_identifier, parse_string_returns_null) {
@@ -83,5 +83,5 @@ TEST_F(dt_literal_identifier, parse_string_returns_null) {
   node_t node = read_literal_identifier(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }

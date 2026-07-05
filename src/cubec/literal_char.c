@@ -1,4 +1,4 @@
-#include "cubec/literal_char.h"
+﻿#include "cubec/literal_char.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -77,6 +77,6 @@ node_t read_literal_char(allocator_t allocator, vec_t tokens,
   *position = current;
   return node_base;
 onerror:
-  allocator_free(allocator, node);
+  allocator_free(allocator, &node);
   return NULL;
 }

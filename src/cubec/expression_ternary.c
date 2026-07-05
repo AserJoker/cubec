@@ -1,4 +1,4 @@
-#include "cubec/expression_ternary.h"
+﻿#include "cubec/expression_ternary.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
@@ -41,11 +41,11 @@ static void _cubec_expression_ternary_init(cubec_expression_ternary_t self,
 
 static void _cubec_expression_ternary_dispose(cubec_expression_ternary_t self,
                                               allocator_t allocator) {
-  allocator_free(allocator, self->condition);
+  allocator_free(allocator, &self->condition);
   self->condition = NULL;
-  allocator_free(allocator, self->consequent);
+  allocator_free(allocator, &self->consequent);
   self->consequent = NULL;
-  allocator_free(allocator, self->alternate);
+  allocator_free(allocator, &self->alternate);
   self->alternate = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
@@ -98,8 +98,7 @@ node_t read_expression_ternary(allocator_t allocator, vec_t tokens,
 
   /* Check if this is actually a ternary — expect '?' */
   skip_whitespace(tokens, &current);
-  token_t question = vec_get(tokens, current);
-  if (!token_is(question, CUBEC_TOKEN_SYMBOL, "?")) {
+  if (!token_is(vec_get(tokens, current), CUBEC_TOKEN_SYMBOL, "?")) {
     /* Not a ternary — return the condition as-is */
     *position = current;
     return condition;
@@ -150,13 +149,20 @@ node_t read_expression_ternary(allocator_t allocator, vec_t tokens,
   return (node_t)node;
 
 onerror:
-  allocator_free(allocator, condition);
-  allocator_free(allocator, alternate);
-  allocator_free(allocator, consequent);
-  allocator_free(allocator, node);
-  {
-    location_t *loc = token_get_location(question);
+  /* condition may be NULL if error propagated from read_expression_binary —
+   * in that case g_error is already set. Save location before freeing. */
+  if (condition) {
+    location_t loc = condition->location;
+    allocator_free(allocator, &condition);
+    allocator_free(allocator, &alternate);
+    allocator_free(allocator, &consequent);
+    allocator_free(allocator, &node);
     THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid ternary expression",
-          filename, loc->begin.line + 1, loc->begin.column + 1);
+          filename, loc.begin.line + 1, loc.begin.column + 1);
   }
+  allocator_free(allocator, &condition);
+  allocator_free(allocator, &alternate);
+  allocator_free(allocator, &consequent);
+  allocator_free(allocator, &node);
+  return NULL;
 }

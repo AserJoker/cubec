@@ -1,4 +1,4 @@
-#include "cubec/token.h"
+﻿#include "cubec/token.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
 #include "core/error.h"
@@ -24,7 +24,7 @@ TEST_F(dt_token, eof_token) {
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 1);
   check_token_kind(vec, 0, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // NOTE: whitespace tokens are currently returned as CUBEC_TOKEN_SYMBOL
@@ -35,7 +35,7 @@ TEST_F(dt_token, whitespace_only) {
   // Whitespace tokens are currently included and marked as SYMBOL (bug)
   // Final result includes all whitespace tokens + EOF
   EXPECT_GT(vec_get_size(vec), 1);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test identifier token
@@ -45,7 +45,7 @@ TEST_F(dt_token, identifier_token) {
   EXPECT_EQ(vec_get_size(vec), 2); // identifier + EOF
   check_token_kind(vec, 0, CUBEC_TOKEN_IDENTIFIER);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test multiple identifiers with whitespace between them
@@ -57,7 +57,7 @@ TEST_F(dt_token, multiple_identifiers) {
   check_token_kind(vec, 0, CUBEC_TOKEN_IDENTIFIER);
   check_token_kind(vec, 2, CUBEC_TOKEN_IDENTIFIER);
   check_token_kind(vec, 4, CUBEC_TOKEN_IDENTIFIER);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test keywords
@@ -75,7 +75,7 @@ TEST_F(dt_token, keyword_token) {
     ASSERT_NE(vec, nullptr) << "Failed for keyword: " << keywords[i];
     EXPECT_EQ(vec_get_size(vec), 2) << "Failed for keyword: " << keywords[i];
     check_token_kind(vec, 0, CUBEC_TOKEN_KEYWORD);
-    allocator_free(allocator, vec);
+    allocator_free(allocator, &vec);
   }
 }
 
@@ -86,7 +86,7 @@ TEST_F(dt_token, numeric_decimal) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_NUMERIC);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test numeric tokens - hexadecimal
@@ -96,7 +96,7 @@ TEST_F(dt_token, numeric_hexadecimal) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_NUMERIC);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test numeric tokens - octal
@@ -106,7 +106,7 @@ TEST_F(dt_token, numeric_octal) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_NUMERIC);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test numeric tokens - binary
@@ -116,7 +116,7 @@ TEST_F(dt_token, numeric_binary) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_NUMERIC);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test numeric tokens - float
@@ -126,7 +126,7 @@ TEST_F(dt_token, numeric_float) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_NUMERIC);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test numeric tokens - scientific notation
@@ -136,7 +136,7 @@ TEST_F(dt_token, numeric_scientific) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_NUMERIC);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test string token
@@ -146,7 +146,7 @@ TEST_F(dt_token, string_token) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test empty string
@@ -156,7 +156,7 @@ TEST_F(dt_token, empty_string) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test string with escape sequence newline
@@ -166,7 +166,7 @@ TEST_F(dt_token, string_escape_newline) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test string with escape sequence tab
@@ -176,7 +176,7 @@ TEST_F(dt_token, string_escape_tab) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test string with escape sequence backslash
@@ -186,7 +186,7 @@ TEST_F(dt_token, string_escape_backslash) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test string with escape sequence quote
@@ -196,7 +196,7 @@ TEST_F(dt_token, string_escape_quote) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test string with hex escape
@@ -206,7 +206,7 @@ TEST_F(dt_token, string_escape_hex) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test string with unicode escape \u{}
@@ -216,7 +216,7 @@ TEST_F(dt_token, string_escape_unicode_u_braces) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test string with unicode escape \u{} multiple digits
@@ -226,7 +226,7 @@ TEST_F(dt_token, string_escape_unicode_u_braces_multiple) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test string with unicode escape \u{} single digit
@@ -236,7 +236,7 @@ TEST_F(dt_token, string_escape_unicode_u_braces_single) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test string with multiple escapes
@@ -246,7 +246,7 @@ TEST_F(dt_token, string_multiple_escapes) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_STRING);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test char token - simple character
@@ -256,7 +256,7 @@ TEST_F(dt_token, char_token_simple) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test char token - digit
@@ -266,7 +266,7 @@ TEST_F(dt_token, char_token_digit) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test char token - escape sequence newline
@@ -276,7 +276,7 @@ TEST_F(dt_token, char_token_escape_newline) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test char token - escape sequence tab
@@ -286,7 +286,7 @@ TEST_F(dt_token, char_token_escape_tab) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test char token - escape sequence backslash
@@ -296,7 +296,7 @@ TEST_F(dt_token, char_token_escape_backslash) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test char token - escape sequence single quote
@@ -306,7 +306,7 @@ TEST_F(dt_token, char_token_escape_single_quote) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test char token - escape sequence null
@@ -316,7 +316,7 @@ TEST_F(dt_token, char_token_escape_null) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test char token - hex escape
@@ -327,7 +327,7 @@ TEST_F(dt_token, char_token_hex_escape) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test char token - hex escape lowercase
@@ -338,7 +338,7 @@ TEST_F(dt_token, char_token_hex_escape_lowercase) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test char token - hex escape uppercase
@@ -349,7 +349,7 @@ TEST_F(dt_token, char_token_hex_escape_uppercase) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test char token - space character
@@ -360,7 +360,7 @@ TEST_F(dt_token, char_token_space) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_CHAR);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_token, single_line_comment) {
@@ -371,7 +371,7 @@ TEST_F(dt_token, single_line_comment) {
   check_token_kind(vec, 0, CUBEC_TOKEN_COMMENT);
   check_token_kind(vec, 1, CUBEC_TOKEN_WHITESPACE);
   check_token_kind(vec, 2, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test multi-line comment
@@ -381,7 +381,7 @@ TEST_F(dt_token, multi_line_comment) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test nested multi-line comment
@@ -392,7 +392,7 @@ TEST_F(dt_token, nested_multi_line_comment) {
   // It ends at the first */ found
   EXPECT_GT(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test whitespace tokens - spaces
@@ -401,7 +401,7 @@ TEST_F(dt_token, whitespace_spaces) {
   ASSERT_NE(vec, nullptr);
   // Spaces produce SYMBOL tokens (bug - should be WHITESPACE)
   EXPECT_GT(vec_get_size(vec), 1);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test basic symbols
@@ -411,7 +411,7 @@ TEST_F(dt_token, symbol_plus) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_token, symbol_minus) {
@@ -420,7 +420,7 @@ TEST_F(dt_token, symbol_minus) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_token, symbol_multiply) {
@@ -429,7 +429,7 @@ TEST_F(dt_token, symbol_multiply) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_token, symbol_divide) {
@@ -438,7 +438,7 @@ TEST_F(dt_token, symbol_divide) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test compound symbols
@@ -448,7 +448,7 @@ TEST_F(dt_token, symbol_double_equals) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_token, symbol_not_equals) {
@@ -457,7 +457,7 @@ TEST_F(dt_token, symbol_not_equals) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_token, symbol_logical_and) {
@@ -466,7 +466,7 @@ TEST_F(dt_token, symbol_logical_and) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_token, symbol_logical_or) {
@@ -475,7 +475,7 @@ TEST_F(dt_token, symbol_logical_or) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test braces and brackets
@@ -486,7 +486,7 @@ TEST_F(dt_token, symbol_braces) {
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 1, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 2, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_token, symbol_parentheses) {
@@ -496,7 +496,7 @@ TEST_F(dt_token, symbol_parentheses) {
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 1, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 2, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_token, symbol_brackets) {
@@ -506,7 +506,7 @@ TEST_F(dt_token, symbol_brackets) {
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 1, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 2, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test complex source code snippet
@@ -526,7 +526,7 @@ TEST_F(dt_token, complex_snippet) {
   // First token should be keyword 'func'
   check_token_kind(vec, 0, CUBEC_TOKEN_KEYWORD);
 
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test mixed content
@@ -539,7 +539,7 @@ TEST_F(dt_token, mixed_content) {
   size_t size = vec_get_size(vec);
   EXPECT_GT(size, 3);
 
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test assignment operators
@@ -551,7 +551,7 @@ TEST_F(dt_token, assignment_operators) {
     ASSERT_NE(vec, nullptr) << "Failed for operator: " << ops[i];
     EXPECT_EQ(vec_get_size(vec), 2) << "Failed for operator: " << ops[i];
     check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
-    allocator_free(allocator, vec);
+    allocator_free(allocator, &vec);
   }
 }
 
@@ -561,13 +561,13 @@ TEST_F(dt_token, shift_operators) {
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 
   vec = resolve_token_list(allocator, "test.cubec", ">>");
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test comparison operators
@@ -579,7 +579,7 @@ TEST_F(dt_token, comparison_operators) {
     ASSERT_NE(vec, nullptr) << "Failed for operator: " << ops[i];
     EXPECT_EQ(vec_get_size(vec), 2) << "Failed for operator: " << ops[i];
     check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
-    allocator_free(allocator, vec);
+    allocator_free(allocator, &vec);
   }
 }
 
@@ -592,7 +592,7 @@ TEST_F(dt_token, punctuation) {
     check_token_kind(vec, i, CUBEC_TOKEN_SYMBOL);
   }
   check_token_kind(vec, 4, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }
 
 // Test bitwise operators
@@ -604,7 +604,7 @@ TEST_F(dt_token, bitwise_operators) {
     ASSERT_NE(vec, nullptr) << "Failed for operator: " << ops[i];
     EXPECT_EQ(vec_get_size(vec), 2) << "Failed for operator: " << ops[i];
     check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
-    allocator_free(allocator, vec);
+    allocator_free(allocator, &vec);
   }
 }
 
@@ -615,5 +615,5 @@ TEST_F(dt_token, symbol_dot) {
   EXPECT_EQ(vec_get_size(vec), 2);
   check_token_kind(vec, 0, CUBEC_TOKEN_SYMBOL);
   check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
-  allocator_free(allocator, vec);
+  allocator_free(allocator, &vec);
 }

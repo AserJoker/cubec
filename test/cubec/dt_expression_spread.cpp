@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_member.h"
@@ -41,8 +41,8 @@ TEST_F(dt_expression_spread, spread_identifier) {
 
   EXPECT_EQ(position, 2); /* ..., a */
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_spread, spread_numeric) {
@@ -62,8 +62,8 @@ TEST_F(dt_expression_spread, spread_numeric) {
 
   EXPECT_EQ(position, 2); /* ..., 42 */
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_spread, spread_with_spaces) {
@@ -83,8 +83,8 @@ TEST_F(dt_expression_spread, spread_with_spaces) {
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)spread->value)->value), "a");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -111,8 +111,8 @@ TEST_F(dt_expression_spread, spread_member_access) {
       (cubec_expression_member_t)spread->value;
   EXPECT_STREQ(string_get(member->field->value), "field");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_spread, spread_group) {
@@ -135,8 +135,8 @@ TEST_F(dt_expression_spread, spread_group) {
   ASSERT_NE(group->inner, nullptr);
   EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_spread, spread_binary_value) {
@@ -161,8 +161,8 @@ TEST_F(dt_expression_spread, spread_binary_value) {
   /* ...a + b entirely consumed: ..., a, WS, +, WS, b */
   EXPECT_EQ(position, 6);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -180,7 +180,7 @@ TEST_F(dt_expression_spread, non_spread_returns_null) {
   EXPECT_EQ(node, nullptr);
   EXPECT_EQ(position, 0); /* NOT advanced */
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_spread, single_dot_returns_null) {
@@ -194,7 +194,7 @@ TEST_F(dt_expression_spread, single_dot_returns_null) {
   EXPECT_EQ(node, nullptr);
   EXPECT_EQ(position, 0);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_spread, double_dot_returns_null) {
@@ -208,7 +208,7 @@ TEST_F(dt_expression_spread, double_dot_returns_null) {
   EXPECT_EQ(node, nullptr);
   EXPECT_EQ(position, 0);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_spread, spread_without_value) {
@@ -222,7 +222,7 @@ TEST_F(dt_expression_spread, spread_without_value) {
       read_expression_spread(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_spread, dots_not_at_start) {
@@ -238,7 +238,7 @@ TEST_F(dt_expression_spread, dots_not_at_start) {
   EXPECT_EQ(node, nullptr);
   EXPECT_EQ(position, 0);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -262,6 +262,6 @@ TEST_F(dt_expression_spread, spread_with_prefix) {
   /* ptr.* is a postfix deref node */
   EXPECT_EQ(spread->value->kind, CUBEC_NODE_EXPRESSION_DEREF);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }

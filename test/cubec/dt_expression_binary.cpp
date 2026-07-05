@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_postfix_unary.h"
 #include "cubec/literal_identifier.h"
@@ -37,8 +37,8 @@ TEST_F(dt_expression_binary, prefix_not) {
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)bin->right)->value), "flag");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, prefix_negate) {
@@ -57,8 +57,8 @@ TEST_F(dt_expression_binary, prefix_negate) {
   ASSERT_NE(bin->right, nullptr);
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, prefix_positive) {
@@ -74,8 +74,8 @@ TEST_F(dt_expression_binary, prefix_positive) {
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
   EXPECT_STREQ(string_get(bin->opt), "+");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, prefix_address) {
@@ -94,8 +94,8 @@ TEST_F(dt_expression_binary, prefix_address) {
   ASSERT_NE(bin->right, nullptr);
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, prefix_deref) {
@@ -114,8 +114,8 @@ TEST_F(dt_expression_binary, prefix_deref) {
   ASSERT_NE(bin->right, nullptr);
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, prefix_bitnot) {
@@ -131,8 +131,8 @@ TEST_F(dt_expression_binary, prefix_bitnot) {
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
   EXPECT_STREQ(string_get(bin->opt), "~");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, prefix_not_negate_chained) {
@@ -157,8 +157,8 @@ TEST_F(dt_expression_binary, prefix_not_negate_chained) {
   ASSERT_NE(inner->right, nullptr);
   EXPECT_EQ(inner->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, read_value_fallback) {
@@ -172,8 +172,8 @@ TEST_F(dt_expression_binary, read_value_fallback) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, prefix_negate_deep_chain) {
@@ -198,8 +198,8 @@ TEST_F(dt_expression_binary, prefix_negate_deep_chain) {
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)inner->right)->value), "n");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, prefix_not_member) {
@@ -219,8 +219,8 @@ TEST_F(dt_expression_binary, prefix_not_member) {
   ASSERT_NE(bin->right, nullptr);
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, non_prefix_symbol_returns_null) {
@@ -233,7 +233,7 @@ TEST_F(dt_expression_binary, non_prefix_symbol_returns_null) {
   node_t node = read_expression_prefix(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 /* ============================================================================
@@ -266,8 +266,8 @@ TEST_F(dt_expression_binary, binary_multiply) {
   expect_binary(node, "*", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, binary_divide) {
@@ -280,8 +280,8 @@ TEST_F(dt_expression_binary, binary_divide) {
   expect_binary(node, "/", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, binary_modulo) {
@@ -294,8 +294,8 @@ TEST_F(dt_expression_binary, binary_modulo) {
   expect_binary(node, "%", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* ---- additive: + - ---- */
@@ -310,8 +310,8 @@ TEST_F(dt_expression_binary, binary_add) {
   expect_binary(node, "+", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, binary_subtract) {
@@ -324,8 +324,8 @@ TEST_F(dt_expression_binary, binary_subtract) {
   expect_binary(node, "-", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* ---- shift: << >> ---- */
@@ -340,8 +340,8 @@ TEST_F(dt_expression_binary, binary_left_shift) {
   expect_binary(node, "<<", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_NUMERIC);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, binary_right_shift) {
@@ -354,8 +354,8 @@ TEST_F(dt_expression_binary, binary_right_shift) {
   expect_binary(node, ">>", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_NUMERIC);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* ---- relational: < > <= >= ---- */
@@ -370,8 +370,8 @@ TEST_F(dt_expression_binary, binary_less_than) {
   expect_binary(node, "<", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, binary_greater_than) {
@@ -384,8 +384,8 @@ TEST_F(dt_expression_binary, binary_greater_than) {
   expect_binary(node, ">", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, binary_less_equal) {
@@ -398,8 +398,8 @@ TEST_F(dt_expression_binary, binary_less_equal) {
   expect_binary(node, "<=", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, binary_greater_equal) {
@@ -412,8 +412,8 @@ TEST_F(dt_expression_binary, binary_greater_equal) {
   expect_binary(node, ">=", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* ---- equality: == != ---- */
@@ -428,8 +428,8 @@ TEST_F(dt_expression_binary, binary_equals) {
   expect_binary(node, "==", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, binary_not_equals) {
@@ -442,8 +442,8 @@ TEST_F(dt_expression_binary, binary_not_equals) {
   expect_binary(node, "!=", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* ---- bitwise binary: & ^ | (distinct from prefix &) ---- */
@@ -458,8 +458,8 @@ TEST_F(dt_expression_binary, binary_bitwise_and) {
   expect_binary(node, "&", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, binary_bitwise_xor) {
@@ -472,8 +472,8 @@ TEST_F(dt_expression_binary, binary_bitwise_xor) {
   expect_binary(node, "^", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, binary_bitwise_or) {
@@ -486,8 +486,8 @@ TEST_F(dt_expression_binary, binary_bitwise_or) {
   expect_binary(node, "|", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* ---- logical: && || ---- */
@@ -502,8 +502,8 @@ TEST_F(dt_expression_binary, binary_logical_and) {
   expect_binary(node, "&&", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, binary_logical_or) {
@@ -516,8 +516,8 @@ TEST_F(dt_expression_binary, binary_logical_or) {
   expect_binary(node, "||", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* ---- precedence tests ---- */
@@ -541,8 +541,8 @@ TEST_F(dt_expression_binary, precedence_mul_before_add) {
   cubec_expression_binary_t rhs = (cubec_expression_binary_t)bin->right;
   EXPECT_STREQ(string_get(rhs->opt), "*");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, precedence_mul_before_add_reverse) {
@@ -564,8 +564,8 @@ TEST_F(dt_expression_binary, precedence_mul_before_add_reverse) {
   cubec_expression_binary_t lhs = (cubec_expression_binary_t)bin->left;
   EXPECT_STREQ(string_get(lhs->opt), "*");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, precedence_left_assoc_add) {
@@ -587,8 +587,8 @@ TEST_F(dt_expression_binary, precedence_left_assoc_add) {
   cubec_expression_binary_t inner = (cubec_expression_binary_t)bin->left;
   EXPECT_STREQ(string_get(inner->opt), "+");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, precedence_logical_and_or) {
@@ -610,8 +610,8 @@ TEST_F(dt_expression_binary, precedence_logical_and_or) {
   cubec_expression_binary_t lhs = (cubec_expression_binary_t)bin->left;
   EXPECT_STREQ(string_get(lhs->opt), "&&");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, precedence_full_chain) {
@@ -641,8 +641,8 @@ TEST_F(dt_expression_binary, precedence_full_chain) {
   cubec_expression_binary_t bin_or = (cubec_expression_binary_t)root->right;
   EXPECT_STREQ(string_get(bin_or->opt), "|");
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* ---- prefix unary with binary: -42 * 3 => (-42) * 3 ---- */
@@ -673,8 +673,8 @@ TEST_F(dt_expression_binary, prefix_neg_then_mul) {
   ASSERT_NE(mul->right, nullptr);
   EXPECT_EQ(mul->right->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, prefix_deref_then_add) {
@@ -698,8 +698,8 @@ TEST_F(dt_expression_binary, prefix_deref_then_add) {
   EXPECT_STREQ(string_get(deref->opt), ".*");
   EXPECT_EQ(deref->left, nullptr);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, prefix_addr_then_binary_and) {
@@ -728,8 +728,8 @@ TEST_F(dt_expression_binary, prefix_addr_then_binary_and) {
   /* right: mask (identifier) */
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* ---- whitespace handling ---- */
@@ -744,8 +744,8 @@ TEST_F(dt_expression_binary, binary_no_whitespace) {
   expect_binary(node, "+", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_binary, binary_lots_of_whitespace) {
@@ -758,8 +758,8 @@ TEST_F(dt_expression_binary, binary_lots_of_whitespace) {
   expect_binary(node, "+", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* ---- member access with binary ---- */
@@ -780,6 +780,6 @@ TEST_F(dt_expression_binary, binary_with_member_access) {
   ASSERT_NE(bin->left, nullptr);
   EXPECT_EQ(bin->left->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }

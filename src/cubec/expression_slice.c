@@ -1,4 +1,4 @@
-#include "cubec/expression_slice.h"
+﻿#include "cubec/expression_slice.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
@@ -37,11 +37,11 @@ static void _cubec_expression_slice_init(cubec_expression_slice_t self,
 
 static void _cubec_expression_slice_dispose(cubec_expression_slice_t self,
                                              allocator_t allocator) {
-  allocator_free(allocator, self->host);
+  allocator_free(allocator, &self->host);
   self->host = NULL;
-  allocator_free(allocator, self->start);
+  allocator_free(allocator, &self->start);
   self->start = NULL;
-  allocator_free(allocator, self->length);
+  allocator_free(allocator, &self->length);
   self->length = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
@@ -220,10 +220,10 @@ node_t read_expression_slice(allocator_t allocator, vec_t tokens,
   return (node_t)node;
 
 onerror:
-  allocator_free(allocator, start);
-  allocator_free(allocator, length);
+  allocator_free(allocator, &start);
+  allocator_free(allocator, &length);
   /* host ownership: caller (read_value) owns it and will clean up */
-  allocator_free(allocator, node);
+  allocator_free(allocator, &node);
   {
     location_t *loc = token_get_location(open_bracket);
     THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid slice expression",

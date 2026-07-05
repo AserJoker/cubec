@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 #include <cstring>
@@ -16,7 +16,7 @@ TEST_F(dt_string, create_and_get) {
   ASSERT_NE(str, nullptr);
   EXPECT_STREQ(string_get(str), "Hello");
   EXPECT_EQ(string_get_length(str), 5);
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, create_empty) {
@@ -24,7 +24,7 @@ TEST_F(dt_string, create_empty) {
   ASSERT_NE(str, nullptr);
   EXPECT_STREQ(string_get(str), "");
   EXPECT_EQ(string_get_length(str), 0);
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, set) {
@@ -34,7 +34,7 @@ TEST_F(dt_string, set) {
   string_set(str, "World");
   EXPECT_STREQ(string_get(str), "World");
   EXPECT_EQ(string_get_length(str), 5);
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, set_empty) {
@@ -44,7 +44,7 @@ TEST_F(dt_string, set_empty) {
   string_set(str, "");
   EXPECT_STREQ(string_get(str), "");
   EXPECT_EQ(string_get_length(str), 0);
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, concat) {
@@ -54,7 +54,7 @@ TEST_F(dt_string, concat) {
   string_concat(str, " World");
   EXPECT_STREQ(string_get(str), "Hello World");
   EXPECT_EQ(string_get_length(str), 11);
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, concat_multiple) {
@@ -66,7 +66,7 @@ TEST_F(dt_string, concat_multiple) {
   string_concat(str, "D");
   EXPECT_STREQ(string_get(str), "ABCD");
   EXPECT_EQ(string_get_length(str), 4);
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, concat_empty) {
@@ -75,7 +75,7 @@ TEST_F(dt_string, concat_empty) {
   ASSERT_NE(str, nullptr);
   string_concat(str, "");
   EXPECT_STREQ(string_get(str), "Hello");
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, long_string) {
@@ -85,7 +85,7 @@ TEST_F(dt_string, long_string) {
   ASSERT_NE(str, nullptr);
   EXPECT_STREQ(string_get(str), long_str);
   EXPECT_EQ(string_get_length(str), strlen(long_str));
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, set_long_string) {
@@ -95,7 +95,7 @@ TEST_F(dt_string, set_long_string) {
   string_set(str, long_str);
   EXPECT_STREQ(string_get(str), long_str);
   EXPECT_EQ(string_get_length(str), strlen(long_str));
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, unicode_characters) {
@@ -105,7 +105,7 @@ TEST_F(dt_string, unicode_characters) {
   ASSERT_NE(str, nullptr);
   EXPECT_STREQ(string_get(str), unicode_str);
   EXPECT_EQ(string_get_length(str), 12);
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, nconcat_basic) {
@@ -115,7 +115,7 @@ TEST_F(dt_string, nconcat_basic) {
   string_nconcat(str, " World", 6);
   EXPECT_STREQ(string_get(str), "Hello World");
   EXPECT_EQ(string_get_length(str), 11);
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, nconcat_partial) {
@@ -125,7 +125,7 @@ TEST_F(dt_string, nconcat_partial) {
   string_nconcat(str, "World!!!", 5);
   EXPECT_STREQ(string_get(str), "HelloWorld");
   EXPECT_EQ(string_get_length(str), 10);
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, nconcat_empty) {
@@ -135,7 +135,7 @@ TEST_F(dt_string, nconcat_empty) {
   string_nconcat(str, "", 0);
   EXPECT_STREQ(string_get(str), "Hello");
   EXPECT_EQ(string_get_length(str), 5);
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, nconcat_multiple) {
@@ -147,7 +147,7 @@ TEST_F(dt_string, nconcat_multiple) {
   string_nconcat(str, "D", 1);
   EXPECT_STREQ(string_get(str), "ABCD");
   EXPECT_EQ(string_get_length(str), 4);
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }
 
 TEST_F(dt_string, nconcat_binary_data) {
@@ -158,5 +158,5 @@ TEST_F(dt_string, nconcat_binary_data) {
   string_nconcat(str, binary, 4);
   EXPECT_EQ(string_get_length(str), 4);
   EXPECT_EQ(memcmp(string_get(str), binary, 4), 0);
-  allocator_free(allocator, str);
+  allocator_free(allocator, &str);
 }

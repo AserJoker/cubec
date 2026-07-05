@@ -1,4 +1,4 @@
-#include "cubec/expression_group.h"
+﻿#include "cubec/expression_group.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
@@ -30,7 +30,7 @@ static void _cubec_expression_group_init(cubec_expression_group_t self,
 
 static void _cubec_expression_group_dispose(cubec_expression_group_t self,
                                             allocator_t allocator) {
-  allocator_free(allocator, self->inner);
+  allocator_free(allocator, &self->inner);
   self->inner = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
@@ -103,7 +103,7 @@ node_t read_expression_group(allocator_t allocator, vec_t tokens,
   return (node_t)node;
 
 onerror:
-  allocator_free(allocator, inner);
-  allocator_free(allocator, node);
+  allocator_free(allocator, &inner);
+  allocator_free(allocator, &node);
   return NULL;
 }

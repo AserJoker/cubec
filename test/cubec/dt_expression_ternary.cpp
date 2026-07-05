@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/literal_identifier.h"
@@ -39,8 +39,8 @@ TEST_F(dt_expression_ternary, indirect_ternary_simple) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -63,8 +63,8 @@ TEST_F(dt_expression_ternary, indirect_ternary_with_binary_condition) {
   cubec_expression_ternary_t ternary = (cubec_expression_ternary_t)node;
   EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -85,8 +85,8 @@ TEST_F(dt_expression_ternary, missing_question_mark_returns_condition) {
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
   EXPECT_EQ(g_error, nullptr);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Missing ':' after consequent → error */
@@ -102,7 +102,7 @@ TEST_F(dt_expression_ternary, missing_colon_error) {
   EXPECT_EQ(node, nullptr);
   EXPECT_NE(g_error, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 /* Missing consequent (empty between ? and :) → error */
@@ -118,7 +118,7 @@ TEST_F(dt_expression_ternary, missing_consequent_error) {
   EXPECT_EQ(node, nullptr);
   EXPECT_NE(g_error, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 /* Missing alternate (empty after :) → error */
@@ -134,7 +134,7 @@ TEST_F(dt_expression_ternary, missing_alternate_error) {
   EXPECT_EQ(node, nullptr);
   EXPECT_NE(g_error, nullptr);
 
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
@@ -159,8 +159,8 @@ TEST_F(dt_expression_ternary, nested_ternary) {
   EXPECT_EQ(outer->consequent->kind, CUBEC_NODE_EXPRESSION_TERNARY);
   EXPECT_EQ(outer->alternate->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
 
 /* Ternary with complex alternate: a ? b : c + d */
@@ -178,6 +178,6 @@ TEST_F(dt_expression_ternary, ternary_with_complex_alternate) {
   cubec_expression_ternary_t ternary = (cubec_expression_ternary_t)node;
   EXPECT_EQ(ternary->alternate->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  allocator_free(allocator, node);
-  allocator_free(allocator, tokens);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }

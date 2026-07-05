@@ -1,4 +1,4 @@
-#include "core/list.h"
+﻿#include "core/list.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include <stdbool.h>
@@ -123,9 +123,9 @@ void *list_pop(list_t self) {
     self->head = NULL;
   }
   if (self->auto_dispose) {
-    allocator_free(self->allocator, data);
+    allocator_free(self->allocator, &data);
   }
-  allocator_free(self->allocator, node);
+  allocator_free(self->allocator, &node);
   self->size--;
   return data;
 }
@@ -157,9 +157,9 @@ void *list_shift(list_t self) {
     self->tail = NULL;
   }
   if (self->auto_dispose) {
-    allocator_free(self->allocator, data);
+    allocator_free(self->allocator, &data);
   }
-  allocator_free(self->allocator, node);
+  allocator_free(self->allocator, &node);
   self->size--;
   return data;
 }
@@ -205,9 +205,9 @@ size_t list_clear(list_t self) {
   while (node != NULL) {
     list_node_t *next = node->next;
     if (self->auto_dispose) {
-      allocator_free(self->allocator, node->data);
+      allocator_free(self->allocator, &node->data);
     }
-    allocator_free(self->allocator, node);
+    allocator_free(self->allocator, &node);
     node = next;
   }
   self->head = NULL;
@@ -258,9 +258,9 @@ void *list_iter_remove(list_iter_t *iter) {
   iter->current = node->next;
 
   if (self->auto_dispose) {
-    allocator_free(self->allocator, data);
+    allocator_free(self->allocator, &data);
   }
-  allocator_free(self->allocator, node);
+  allocator_free(self->allocator, &node);
   self->size--;
   return data;
 }
