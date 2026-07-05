@@ -92,7 +92,7 @@ Each module exports `extern type_t g_xxx_type` with registered lifecycle functio
 - **Key APIs:**
   - `allocator_alloc(allocator, size)` — Allocate raw zero-initialized memory; never returns NULL (aborts on OOM). Returns NULL only when `size == 0`.
   - `allocator_create(allocator, type, arg)` — Create typed object (calls `type->init`); never returns NULL (aborts on OOM)
-  - `allocator_free(allocator, data)` — Free memory (auto-calls `type->dispose`), NULL-safe
+  - `allocator_free(allocator, &data)` — Free memory (auto-calls `type->dispose`) and **set pointer to NULL**. NULL-safe on both the wrapper and the pointed-to pointer. Implemented as a macro wrapping `_allocator_free_impl(self, (void **)(ptr))` to handle C's `T**` → `void**` type incompatibility. Pass the **address** of your pointer: `allocator_free(a, &ptr)`.
   - `value_get_type(data)` / `value_get_id(data)` — Introspection
   - `value_clone(allocator, data)` / `value_move(allocator, data)` — Clone/move
 - `create_allocator` aborts on OOM; `delete_allocator` is NULL-safe — reports all unfreed memory
@@ -345,6 +345,12 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (as
 - Windows + Clang: extra link `clang_rt.builtins-x86_64`
 - Linux + GCC: `-pthread` via `Threads::Threads`
 
+### ICU Data Handling
+- ICU common data stored as binary `third_party/icudt74l.dat` (~30MB, under Git 100MB limit)
+- At **build time**, CMake converts `.dat` → C byte array via `cmake/bin_to_c.ps1` (Windows) or `xxd` (Unix)
+- Generated file written to `build/icu_data_gen.c` (not tracked by Git, auto-regenerated only when `.dat` changes)
+- This replaces the previous ~181MB `src/icu_data_gen.c` which exceeded Git's file size limit
+
 ## Testing
 
 - Framework: Google Test + C++20
@@ -384,6 +390,7 @@ Cubec plans to support: defer statements, foreach loops, test blocks, comptime e
 - C11 for library code, C++20 for tests
 - Hand-crafted OOP via `type_t` virtual tables and struct nesting
 - All memory managed through `allocator_t` — never use raw `malloc`/`free`
+- `allocator_free(allocator, &ptr)` — always pass address of pointer; after call `ptr == NULL` (prevents use-after-free)
 - Every data structure has a corresponding `g_xxx_type` global
 - Error handling via `TRY`/`THROW`/`CATCH_ERROR` macros (Rust-like `?` pattern)
 - Subclass init calls parent's `type->init` via `super` field
