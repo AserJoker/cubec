@@ -14,7 +14,7 @@
 
 using ::testing::Test;
 
-class dt_expression_generic_instantiation : public Test {
+class dt_expression_generic_instantiation : public CubecTest {
 protected:
   TEST_ALLOCATOR;
 };

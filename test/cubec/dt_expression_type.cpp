@@ -9,7 +9,7 @@
 
 using ::testing::Test;
 
-class dt_expression_type : public Test {
+class dt_expression_type : public CubecTest {
 protected:
   TEST_ALLOCATOR;
 };

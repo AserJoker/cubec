@@ -6,7 +6,7 @@
 
 using ::testing::Test;
 
-class dt_literal_identifier : public Test {
+class dt_literal_identifier : public CubecTest {
 protected:
   TEST_ALLOCATOR;
 };

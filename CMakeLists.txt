@@ -3,18 +3,27 @@ project(cubec)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 
-# vcpkg toolchain: only use if VCPKG_ROOT is set
-if(DEFINED ENV{VCPKG_ROOT} AND NOT CMAKE_TOOLCHAIN_FILE)
-  set(CMAKE_TOOLCHAIN_FILE $ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
-endif()
+# ===========================================================================
+# Third-party dependencies via git submodules
+# ===========================================================================
 
-# MSVC-specific: suppress CRT deprecation warnings
-if(MSVC)
-  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-endif()
-find_package(ICU REQUIRED COMPONENTS i18n uc data io)
-find_package(GTest CONFIG REQUIRED)
+# Google Test (v1.15.2) - force shared CRT to match ICU/cubec build
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/googletest EXCLUDE_FROM_ALL)
+
+# ICU (release-74-2) - build from source with CMake
+include(${PROJECT_SOURCE_DIR}/cmake/icu.cmake)
+
 find_package(Threads REQUIRED)
+
+# ===========================================================================
+# Compile definitions
+# ===========================================================================
+add_compile_definitions(_CRT_SECURE_NO_WARNINGS _GNU_SOURCE)
+
+# ===========================================================================
+# Build targets
+# ===========================================================================
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/core SRC_CORE)
@@ -23,7 +32,7 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src/writer SRC_WRITE)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/reader SRC_READER)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/cubec SRC_CUBEC)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/c SRC_C)
-add_executable(cubecc ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_READER} ${SRC_WRITE} ${SRC_C} ${PROJECT_SOURCE_DIR}/src/main.c)
+add_executable(cubecc ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_READER} ${SRC_WRITE} ${SRC_C} ${PROJECT_SOURCE_DIR}/src/main.c ${PROJECT_SOURCE_DIR}/src/icu_data.c)
 target_link_libraries(cubecc PRIVATE
     ICU::i18n
     ICU::uc
@@ -33,18 +42,21 @@ target_link_libraries(cubecc PRIVATE
 )
 enable_testing()
 file(GLOB_RECURSE TEST_SOURCE ${PROJECT_SOURCE_DIR}/test/*.cpp)
-add_executable(cubec_test ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_READER} ${SRC_WRITE} ${SRC_C} ${TEST_SOURCE})
+add_executable(cubec_test ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_READER} ${SRC_WRITE} ${SRC_C} ${TEST_SOURCE} ${PROJECT_SOURCE_DIR}/src/icu_data.c)
 target_include_directories(cubec_test PUBLIC ${PROJECT_SOURCE_DIR}/test)
 target_link_libraries(cubec_test PRIVATE
     ICU::i18n
     ICU::uc
     ICU::data
     ICU::io
-    GTest::gtest
-    GTest::gmock
+    gtest
+    gmock
     Threads::Threads
 )
 
+# ===========================================================================
+# Platform-specific: Windows Clang needs clang_rt.builtins
+# ===========================================================================
 if(CMAKE_SYSTEM_NAME MATCHES "Windows")
     message(STATUS "Target platform is Windows")
 

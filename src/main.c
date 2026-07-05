@@ -1,10 +1,13 @@
 
+
 #include "core/allocator.h"
 #include "core/error.h"
+#include "core/icu_data.h"
 #include <inttypes.h>
 #include <stdio.h>
 
 int _main(int argc, char *argv[]) {
+  icu_data_init();
   allocator_t allocator = create_allocator(NULL, NULL);
   delete_allocator(allocator);
   return 0;

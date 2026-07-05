@@ -8,7 +8,7 @@
 
 using ::testing::Test;
 
-class dt_expression_member : public Test {
+class dt_expression_member : public CubecTest {
 protected:
   TEST_ALLOCATOR;
 };

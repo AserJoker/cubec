@@ -10,7 +10,7 @@
 
 using ::testing::Test;
 
-class dt_expression_binary : public Test {
+class dt_expression_binary : public CubecTest {
 protected:
   TEST_ALLOCATOR;
 };

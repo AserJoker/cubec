@@ -5,7 +5,7 @@
 
 using ::testing::Test;
 
-class dt_rbtree : public Test {
+class dt_rbtree : public CubecTest {
 protected:
   TEST_ALLOCATOR;
 };

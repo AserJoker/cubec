@@ -13,7 +13,7 @@
 
 using ::testing::Test;
 
-class dt_expression_spread : public Test {
+class dt_expression_spread : public CubecTest {
 protected:
   TEST_ALLOCATOR;
 };

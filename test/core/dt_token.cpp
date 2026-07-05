@@ -6,7 +6,7 @@
 
 using ::testing::Test;
 
-class dt_token : public Test {
+class dt_token : public CubecTest {
 protected:
   TEST_ALLOCATOR;
 };

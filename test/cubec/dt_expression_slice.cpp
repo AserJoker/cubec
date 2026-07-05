@@ -14,11 +14,11 @@
 
 using ::testing::Test;
 
-class dt_expression_slice : public Test {
+class dt_expression_slice : public CubecTest {
 protected:
   TEST_ALLOCATOR;
 
-  void SetUp() override { error_clear(); }
+  void SetUp() override { CubecTest::SetUp(); }
 };
 
 /* --------------------------------------------------------------------------

@@ -4,7 +4,7 @@
 
 using ::testing::Test;
 
-class dt_vec : public Test {
+class dt_vec : public CubecTest {
 protected:
   TEST_ALLOCATOR;
 };
