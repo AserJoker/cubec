@@ -40,6 +40,7 @@ cubec/
 │       ├── expression_group.h   # Grouped expression ( expr )
 │       ├── expression_member.h  # Member-access expression (host.field)
 │       ├── expression_spread.h  # Spread expression (...expr)
+│       ├── expression_ternary.h # Ternary/conditional expression (cond ? consequent : alternate)
 │       ├── literal.h           # Literal AST node (abstract)
 │       ├── literal_char.h      # Character literal
 │       ├── literal_identifier.h# Identifier literal
@@ -298,6 +299,7 @@ read_expression_spread                # ...expr (called by func-call/struct-init
 - `read_atom` (expression.c) — Parses in order: `read_expression_group` → `read_literal_string` → `read_literal_numeric` → `read_literal_identifier` → `read_literal_char`
 - `read_expression_group` (expression_group.c) — Parses parenthesized expression `( expr )`. Returns `cubec_expression_group_t` wrapping the inner expression. Tried first in `read_atom` so `(a + b)` is parsed as a group wrapping a binary expression.
 - `read_expression_spread` (expression_spread.c) — Parses spread operator `...<expr>`. Returns `cubec_expression_spread_t` wrapping the spread value. **Standalone function** — NOT called from `read_atom`/`read_value`/`read_expression`. Designed to be explicitly invoked by callers that support spread syntax (e.g., function arguments, struct initializers). Uses `read_expression` for the value so `...a + b` spreads the entire binary expression `a + b`.
+- `read_expression_ternary` (expression_ternary.c) — Parses ternary/conditional expression `condition ? consequent : alternate`. Uses precedence climbing via `read_expression_binary` for the condition. Falls back gracefully if `?` is not found (returns condition as-is). Recursively calls `read_expression` for consequent and alternate to handle nested ternaries naturally. Full lifecycle: init/dispose/clone/move. Node fields: `condition`, `consequent`, `alternate`.
 - `read_literal_char` — Character literal AST node
 - `read_literal_identifier` — Identifier AST node
 - `read_literal_numeric` — Numeric AST node, auto-detects int/float, supports type suffixes (`i8`-`i64`, `u8`-`u64`, `f16`-`f64`)
@@ -360,6 +362,7 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (as
 - `dt_expression_spread.cpp` (12 cases) — spread identifier, spread numeric, spread with spaces, spread member access, spread group, spread binary value, non-spread returns NULL, single dot returns NULL, double dot returns NULL, spread without value, dots not at start, spread with prefix unary
 - `dt_expression_call.cpp` (15 cases) — zero args, single arg, two args, numeric arg, binary-expr arg, single spread arg, mixed spread+regular, multiple spreads, chained call `foo()()`, call→member chain, member→call chain, group-as-callee, non-call not triggered, unclosed paren error, trailing comma error
 - `dt_expression_generic_instantiation.cpp` (15 cases) — basic instantiation `foo[a]`, multi-arg `foo[a,b]`, instantiation on literal, instantiation on call, instantiation→call chain `fn[a]()`, instantiation→member chain `fn[a].field`, call→instantiation chain `foo()[a]`, instantiation→instantiation chain `fn[a][b]`, spread in generic args, group as callee, nested generic groups, non-generic not triggered (no `[`), unclosed bracket error, trailing comma error, generic on `this`
+- `dt_expression_ternary.cpp` (8 cases) — simple ternary `a ? b : c`, ternary with binary condition `x + a ? b : c`, missing `?` fallback, missing `:` error, missing consequent error, missing alternate error, nested ternary `a ? b ? c : d : e`, complex alternate `a ? b : c + d`
 
 ## Planned Language Features (inferred from AST node types)
 
