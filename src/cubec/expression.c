@@ -7,6 +7,7 @@
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_member.h"
+#include "cubec/expression_postfix_unary.h"
 #include "cubec/expression_slice.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/literal_char.h"
@@ -144,6 +145,17 @@ node_t read_value(allocator_t allocator, vec_t tokens, size_t *position,
                         allocator, tokens, &current, filename, node));
       if (generic_instantiation_node) {
         node = generic_instantiation_node;
+        *position = current;
+        continue;
+      }
+
+      /* Try postfix: unary deref/addr <value>.+ or <value>.& (MUST be before
+       * member access since .* and .& also start with '.') */
+      node_t postfix_unary_node = TRY_LOCAL(
+          onerror, read_expression_postfix_unary(allocator, tokens, &current,
+                                                 filename, node));
+      if (postfix_unary_node) {
+        node = postfix_unary_node;
         *position = current;
         continue;
       }

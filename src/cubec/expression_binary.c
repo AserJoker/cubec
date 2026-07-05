@@ -77,7 +77,7 @@ type_t g_cubec_expression_binary_type = {
 
 /** Set of supported prefix operator strings. */
 static const char *prefix_operators[] = {
-    "!", "+", "-", "&", "*", "~",
+    "!", "+", "-", "~",
 };
 
 static bool is_prefix_operator_token(token_t tok) {

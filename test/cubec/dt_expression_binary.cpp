@@ -1,5 +1,6 @@
 #include "cubec/expression.h"
 #include "cubec/expression_binary.h"
+#include "cubec/expression_postfix_unary.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/node.h"
@@ -78,34 +79,40 @@ TEST_F(dt_expression_binary, prefix_positive) {
 }
 
 TEST_F(dt_expression_binary, prefix_address) {
-  const char *source = "&x";
+  /* Postfix addr: x.& instead of &x */
+  const char *source = "x.&";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_DEREF);
 
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
-  EXPECT_STREQ(string_get(bin->opt), "&");
+  EXPECT_STREQ(string_get(bin->opt), ".&");
+  ASSERT_NE(bin->right, nullptr);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, node);
   allocator_free(allocator, tokens);
 }
 
 TEST_F(dt_expression_binary, prefix_deref) {
-  const char *source = "*ptr";
+  /* Postfix deref: ptr.* instead of *ptr */
+  const char *source = "ptr.*";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_DEREF);
 
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
-  EXPECT_STREQ(string_get(bin->opt), "*");
+  EXPECT_STREQ(string_get(bin->opt), ".*");
+  ASSERT_NE(bin->right, nullptr);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, node);
   allocator_free(allocator, tokens);
@@ -671,8 +678,8 @@ TEST_F(dt_expression_binary, prefix_neg_then_mul) {
 }
 
 TEST_F(dt_expression_binary, prefix_deref_then_add) {
-  /* *ptr + 1  =>  (*ptr) + 1 */
-  const char *source = "*ptr + 1";
+  /* ptr.* + 1  =>  (ptr.*) + 1 */
+  const char *source = "ptr.* + 1";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -684,11 +691,11 @@ TEST_F(dt_expression_binary, prefix_deref_then_add) {
   cubec_expression_binary_t add = (cubec_expression_binary_t)node;
   EXPECT_STREQ(string_get(add->opt), "+");
 
-  /* left: *ptr (prefix deref) */
+  /* left: ptr.* (postfix deref) */
   ASSERT_NE(add->left, nullptr);
-  EXPECT_EQ(add->left->kind, CUBEC_NODE_EXPRESSION_BINARY);
+  EXPECT_EQ(add->left->kind, CUBEC_NODE_EXPRESSION_DEREF);
   cubec_expression_binary_t deref = (cubec_expression_binary_t)add->left;
-  EXPECT_STREQ(string_get(deref->opt), "*");
+  EXPECT_STREQ(string_get(deref->opt), ".*");
   EXPECT_EQ(deref->left, nullptr);
 
   allocator_free(allocator, node);
@@ -696,8 +703,8 @@ TEST_F(dt_expression_binary, prefix_deref_then_add) {
 }
 
 TEST_F(dt_expression_binary, prefix_addr_then_binary_and) {
-  /* &x & mask  =>  (&x) & mask  (first & is prefix, second is binary) */
-  const char *source = "&x & mask";
+  /* x.& & mask  =>  (x.&) & mask  (first .& is postfix addr, second & is binary) */
+  const char *source = "x.& & mask";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -712,11 +719,11 @@ TEST_F(dt_expression_binary, prefix_addr_then_binary_and) {
   ASSERT_NE(bin->left, nullptr);
   ASSERT_NE(bin->right, nullptr);
 
-  /* left: prefix &x */
-  EXPECT_EQ(bin->left->kind, CUBEC_NODE_EXPRESSION_BINARY);
-  cubec_expression_binary_t prefix = (cubec_expression_binary_t)bin->left;
-  EXPECT_STREQ(string_get(prefix->opt), "&");
-  EXPECT_EQ(prefix->left, nullptr);
+  /* left: postfix addr x.& */
+  EXPECT_EQ(bin->left->kind, CUBEC_NODE_EXPRESSION_DEREF);
+  cubec_expression_binary_t postfix = (cubec_expression_binary_t)bin->left;
+  EXPECT_STREQ(string_get(postfix->opt), ".&");
+  EXPECT_EQ(postfix->left, nullptr);
 
   /* right: mask (identifier) */
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);

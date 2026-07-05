@@ -1,0 +1,140 @@
+#include "cubec/expression_postfix_unary.h"
+#include "core/allocator.h"
+#include "core/error.h"
+#include "core/string.h"
+#include "core/token.h"
+#include "cubec/expression.h"
+#include "cubec/node.h"
+#include "cubec/token.h"
+
+/* --------------------------------------------------------------------------
+ *  Lifecycle: init / dispose / clone / move (reuses expression_binary)
+ * -------------------------------------------------------------------------- */
+
+static void _cubec_expression_postfix_unary_init(
+    cubec_expression_postfix_unary_t self, allocator_t allocator,
+    cubec_expression_postfix_unary_init_t *init) {
+  cubec_expression_init_t super_init = {
+      .kind = CUBEC_NODE_EXPRESSION_DEREF,
+      .parent = NULL,
+  };
+  if (init) {
+    super_init.location = init->location;
+    super_init.parent = init->parent;
+  }
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  self->left = NULL;
+  self->right = NULL;
+  self->opt = NULL;
+  if (init) {
+    self->left = NULL;
+    self->right = init->host;
+    self->opt = init->opt;
+  }
+}
+
+static void _cubec_expression_postfix_unary_dispose(
+    cubec_expression_postfix_unary_t self, allocator_t allocator) {
+  allocator_free(allocator, self->right);
+  self->right = NULL;
+  allocator_free(allocator, self->opt);
+  self->opt = NULL;
+  g_cubec_expression_type.dispose(&self->super, allocator);
+}
+
+static void _cubec_expression_postfix_unary_clone(
+    cubec_expression_postfix_unary_t self, allocator_t allocator,
+    cubec_expression_postfix_unary_t another) {
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->left = NULL;
+  self->right = value_clone(allocator, another->right);
+  self->opt = (string_t)value_clone(allocator, another->opt);
+}
+
+static void _cubec_expression_postfix_unary_move(
+    cubec_expression_postfix_unary_t self, allocator_t allocator,
+    cubec_expression_postfix_unary_t another) {
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->left = NULL;
+  self->right = value_move(allocator, another->right);
+  self->opt = (string_t)value_move(allocator, another->opt);
+}
+
+type_t g_cubec_expression_postfix_unary_type = {
+    .name = "cubec.cubec.expression_postfix_unary",
+    .size = sizeof(struct _cubec_expression_binary_t),
+    .init = (type_init_fn_t)_cubec_expression_postfix_unary_init,
+    .dispose = (type_dispose_fn_t)_cubec_expression_postfix_unary_dispose,
+    .clone = (type_clone_fn_t)_cubec_expression_postfix_unary_clone,
+    .move = (type_move_fn_t)_cubec_expression_postfix_unary_move,
+};
+
+/* --------------------------------------------------------------------------
+ *  Parser: read_expression_postfix_unary
+ * -------------------------------------------------------------------------- */
+
+/**
+ * Try to parse postfix unary operators:
+ *   - .*  (postfix dereference, e.g. ptr.*)
+ *   - .&  (postfix address-of, e.g. &obj)
+ *
+ * These are composed of separate '.' and '&'/'*' tokens.
+ * Returns NULL if next token is not '.' followed by '&' or '*'.
+ */
+node_t read_expression_postfix_unary(allocator_t allocator, vec_t tokens,
+                                     size_t *position, const char *filename,
+                                     node_t host) {
+  size_t current = *position;
+  cubec_expression_postfix_unary_t node = NULL;
+  string_t opt = NULL;
+
+  /* Expect '.' token first */
+  token_t dot_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  if (!token_is(dot_token, CUBEC_TOKEN_SYMBOL, ".")) {
+    return NULL;
+  }
+  current++;
+
+  /* Expect '&' or '*' after '.' */
+  skip_whitespace(tokens, &current);
+  token_t second_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  if (!second_token || token_get_kind(second_token) != CUBEC_TOKEN_SYMBOL) {
+    return NULL;
+  }
+
+  const char *second_op = token_get_string(second_token);
+  size_t second_len = token_get_string_length(second_token);
+
+  /* Determine operator: .& or .* */
+  const char *op_text = NULL;
+  size_t op_len = 0;
+  if (second_len == 1 && (*second_op == '&' || *second_op == '*')) {
+    op_text = second_op;
+    op_len = second_len;
+  } else {
+    return NULL;
+  }
+  current++;
+
+  /* Build operator string ".&" or ".*" */
+  opt = allocator_create(allocator, &g_string_type, NULL);
+  string_nconcat(opt, ".", 1);
+  string_nconcat(opt, op_text, op_len);
+
+  node = allocator_create(allocator, &g_cubec_expression_postfix_unary_type,
+                          &(cubec_expression_postfix_unary_init_t){
+                              .host = host,
+                              .opt = opt,
+                          });
+  location_t *loc = token_get_location(dot_token);
+  node->super.super.location = *loc;
+  node->super.super.location.filename = filename;
+
+  *position = current;
+  return (node_t)node;
+
+onerror:
+  allocator_free(allocator, opt);
+  allocator_free(allocator, node);
+  return NULL;
+}

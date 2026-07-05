@@ -11,8 +11,6 @@ endif()
 # MSVC-specific: suppress CRT deprecation warnings
 if(MSVC)
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-else()
-  add_compile_definitions(_GNU_SOURCE)
 endif()
 find_package(ICU REQUIRED COMPONENTS i18n uc data io)
 find_package(GTest CONFIG REQUIRED)

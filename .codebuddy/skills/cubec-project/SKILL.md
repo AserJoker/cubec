@@ -39,6 +39,7 @@ cubec/
 │       ├── expression_generic_instantiation.h  # Generic instantiation expr[a,b]
 │       ├── expression_group.h   # Grouped expression ( expr )
 │       ├── expression_member.h  # Member-access expression (host.field)
+│       ├── expression_postfix_unary.h  # Postfix unary: value.* (deref), value.& (addr)
 │       ├── expression_slice.h   # Slice expression (host[start:length])
 │       ├── expression_spread.h  # Spread expression (...expr)
 │       ├── expression_ternary.h # Ternary/conditional expression (cond ? consequent : alternate)
@@ -47,7 +48,7 @@ cubec/
 │       ├── literal_identifier.h# Identifier literal
 │       ├── literal_numeric.h   # Numeric literal (with type suffixes)
 │       ├── literal_string.h    # String literal
-│       ├── node.h              # AST node kind enum (43 types)
+│       ├── node.h              # AST node kind enum (44 types)
 │       ├── program.h           # Top-level program node
 │       ├── statement_empty.h   # Empty statement node
 │       └── token.h             # Token kind enum + lexer interface
@@ -55,7 +56,7 @@ cubec/
 │   ├── main.c                  # Entry point (placeholder)
 │   ├── core/                   # Core data structure implementations
 │   └── cubec/                  # Lexer + parser implementations
-├── test/                       # Tests (301 test cases, Google Test + C++20)
+├── test/                       # Tests (346 test cases, Google Test + C++20)
 │   ├── main.cpp                # Test entry point
 │   ├── common/test_common.h    # RAII test allocator helper
 │   ├── core/                   # Tests for core data structures
@@ -108,6 +109,7 @@ node_t (core/node.h)
         ├── cubec_expression_generic_instantiation_t (cubec/expression_generic_instantiation.h)
         ├── cubec_expression_group_t (cubec/expression_group.h)
         ├── cubec_expression_member_t (cubec/expression_member.h)
+        ├── cubec_expression_postfix_unary_t (cubec/expression_postfix_unary.h)  # value.*, value.&
         ├── cubec_expression_slice_t (cubec/expression_slice.h)
         ├── cubec_expression_spread_t (cubec/expression_spread.h)
         └── cubec_literal_t (cubec/literal.h)
@@ -237,7 +239,7 @@ read_program_node()   ──────────────────► 
   └── 表达式解析子流程 (Precedence Climbing):
       read_expression
         └── read_expression_binary()
-              ├── read_unary()              ← 前缀一元: ! + - & * ~
+              ├── read_unary()              ← 前缀一元: ! + - ~
               │     ├── read_expression_prefix()  → 递归 read_unary
               │     └── read_value()              →
               │           ├── read_atom()          基础值
@@ -250,6 +252,7 @@ read_program_node()   ──────────────────► 
               │           └── Postfix 链循环 ──────
               │               ├─ read_expression_call()                    callee(args)
               │               ├─ read_expression_generic_instantiation()   callee[a,b]
+              │               ├─ read_expression_postfix_unary()           value.* (解引用), value.& (取地址)
               │               ├─ read_expression_member()                  host.field
               │               └─ (spread 不入 postfix 链, 由调用方显式调用)
               │
@@ -281,6 +284,7 @@ read_atom
 read_expression_call                  # callee(args)
 read_expression_slice                 # host[start:length] — MUST be before generic (uses lookahead for ':')
 read_expression_generic_instantiation # callee[args]  — tried after slice to handle non-slice brackets
+read_expression_postfix_unary         # value.* (deref), value.& (addr) — MUST be before member (uses '.' token)
 read_expression_member                # host.field
 
 # Standalone, not on main parse tree:
@@ -295,8 +299,9 @@ read_expression_spread                # ...expr (called by func-call/struct-init
 ### Implemented Modules
 
 - `read_expression_binary` (expression_binary.c) — Full precedence-climbing binary expression parser. Supports 10 precedence levels: `\|\|` < `&&` < `\|` < `^` < `&` < `== !=` < `< > <= >=` < `<< >>` < `+ -` < `* / %`. Assignment (`=`, `+=`, etc.) and comma (`,`) are **not** treated as binary operators (reserved for future statement-level handling). Calls `read_unary` for operands, uses `read_binary_rhs` for right-recursive precedence climbing.
-- `read_expression_prefix` (expression_binary.c) — Parses prefix unary operators (`!`, `+`, `-`, `&`, `*`, `~`); right operand parsed via recursive `read_unary` (NOT `read_expression`, which prevents incorrect binding like `-42 * 3` being parsed as `-(42*3)`); supports chained `!!x`, `--n`; returns `cubec_expression_binary_t` with `left=NULL`; **does NOT call `skip_whitespace` at entry**
-- `read_value` (expression.c) — Atom + recursive postfix loop. Calls `read_atom` first, then in while loop: calls `skip_whitespace`, then tries postfix operators in order: `read_expression_call` for `callee(args)`, `read_expression_slice` for `host[start:length]`, `read_expression_generic_instantiation` for `callee[args]`, then `read_expression_member` for `.field` access. Slice is tried before generic instantiation using lookahead for `:` to distinguish `arr[0:10]` (slice) from `arr[0]` (generic). Slice is tried before member so `arr[1:2].field` works correctly.
+- `read_expression_prefix` (expression_binary.c) — Parses prefix unary operators (`!`, `+`, `-`, `~`); right operand parsed via recursive `read_unary` (NOT `read_expression`, which prevents incorrect binding like `-42 * 3` being parsed as `-(42*3)`); supports chained `!!x`, `--n`; returns `cubec_expression_binary_t` with `left=NULL`; **does NOT call `skip_whitespace` at entry**
+- `read_expression_postfix_unary` (expression_postfix_unary.c) — Parses postfix unary operators `value.*` (dereference) and `value.&` (address-of). Composed of separate `.` and `&`/`*` tokens combined by the parser. Uses lookahead for `:` to distinguish from slice expressions. Must be called before `read_expression_member` since both use the `.` token. Returns `cubec_expression_binary_t` with `left=NULL` and `opt` set to `".*"` or `".&"`.
+- `read_value` (expression.c) — Atom + recursive postfix loop. Calls `read_atom` first, then in while loop: calls `skip_whitespace`, then tries postfix operators in order: `read_expression_call` for `callee(args)`, `read_expression_slice` for `host[start:length]`, `read_expression_generic_instantiation` for `callee[args]`, `read_expression_postfix_unary` for `value.*` and `value.&`, then `read_expression_member` for `.field` access. Slice is tried before generic instantiation using lookahead for `:` to distinguish `arr[0:10]` (slice) from `arr[0]` (generic). Postfix unary is tried before member since both start with `.`.
 - `read_expression_call` (expression_call.c) — Parses C-style function call `callee(arg1, arg2, ...)`. Called from `read_value` as a postfix operator with `callee` already parsed. Each argument first tries `read_expression_spread` (supporting `...expr`), then falls back to `read_expression`. Returns NULL if next token is not `(`; THROW errors on malformed arguments (trailing comma, unclosed paren). Supports chained calls `foo()()` and mix with member: `obj.method()`, `foo().field`. **Ownership**: `arguments` vec created with `auto_dispose=true` in parser; `init` directly takes the pointer (no copy), ownership fully transferred to node.
 - `read_expression_generic_instantiation` (expression_generic_instantiation.c) — Parses generic instantiation `callee[arg1, arg2, ...]`. Uses `[` and `]` as delimiters. Arguments parsed via `read_expression`, each first tries `read_expression_spread` (supporting `...expr` in generic args). Returns NULL if next token is not `[`; THROW errors on malformed arguments (trailing comma, unclosed bracket). Supports chained instantiations `fn[a][b]` and mixing with calls and member access: `fn[a]()`, `fn[a].field`, `foo()[a]`. Single-arg form `obj[0]` is syntactically ambiguous with member access — disambiguation deferred to semantic analysis.
 - `read_expression_slice` (expression_slice.c) — Parses slice expression `host[start:length]`. Called from `read_value` as a postfix operator with `host` already parsed. Format: `host[start:length]` where `start` and `length` are both optional (at least `:` must be present). If `[` doesn't follow, returns NULL gracefully. If `[]` (empty brackets), throws error. Uses `read_expression` for parsing start/length expressions. Supports chained slices `arr[1:2][0:1]` and mixing with calls and member access: `arr[0:1].field`, `getArr()[1:]`. Node fields: `host`, `start`, `length` (start/length may be NULL if omitted).
@@ -344,7 +349,7 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (as
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 321 test cases
+- Total: 346 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -361,10 +366,10 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (as
 - `dt_literal_identifier.cpp` (5 cases)
 - `dt_literal_numeric.cpp` (11 cases) — integer/float parsing, base prefixes (hex/oct/bin), type suffixes (i8~u64, f32/f64), scientific notation
 - `dt_literal_string.cpp` (12 cases)
-- `dt_expression_binary.cpp` (40 cases) — 6 prefix unary operators (!/+/-/&/*/~), chained prefix (!!x, --n), prefix+member (!obj.field), 18 binary operators across 10 precedence levels, 4 precedence interaction tests, 3 prefix+binary interaction tests, 2 whitespace handling, 1 member+binary, 1 full chain
+- `dt_expression_binary.cpp` (40 cases) — 4 prefix unary operators (!/+/-/~), chained prefix (!!x, --n), prefix+member (!obj.field), 18 binary operators across 10 precedence levels, 4 precedence interaction tests, 3 postfix unary interaction tests (ptr.*, x.&, binary with postfix), 2 whitespace handling, 1 member+binary, 1 full chain
 - `dt_expression_group.cpp` (13 cases) — basic parenthesized expression, group with binary inner, empty group error, unclosed group error, nested groups, group with identifier, group as LHS of binary, non-group returns NULL
 - `dt_expression_member.cpp` (8 cases) — single member access, chained access, consume all tokens, member on string literal, error on missing dot, error on non-identifier field, not a member (no dot), empty source
-- `dt_expression_spread.cpp` (12 cases) — spread identifier, spread numeric, spread with spaces, spread member access, spread group, spread binary value, non-spread returns NULL, single dot returns NULL, double dot returns NULL, spread without value, dots not at start, spread with prefix unary
+- `dt_expression_spread.cpp` (12 cases) — spread identifier, spread numeric, spread with spaces, spread member access, spread group, spread binary value, non-spread returns NULL, single dot returns NULL, double dot returns NULL, spread without value, dots not at start, spread with postfix unary
 - `dt_expression_call.cpp` (15 cases) — zero args, single arg, two args, numeric arg, binary-expr arg, single spread arg, mixed spread+regular, multiple spreads, chained call `foo()()`, call→member chain, member→call chain, group-as-callee, non-call not triggered, unclosed paren error, trailing comma error
 - `dt_expression_generic_instantiation.cpp` (15 cases) — basic instantiation `foo[a]`, multi-arg `foo[a,b]`, instantiation on literal, instantiation on call, instantiation→call chain `fn[a]()`, instantiation→member chain `fn[a].field`, call→instantiation chain `foo()[a]`, instantiation→instantiation chain `fn[a][b]`, spread in generic args, group as callee, nested generic groups, non-generic not triggered (no `[`), unclosed bracket error, trailing comma error, generic on `this`
 - `dt_expression_ternary.cpp` (8 cases) — simple ternary `a ? b : c`, ternary with binary condition `x + a ? b : c`, missing `?` fallback, missing `:` error, missing consequent error, missing alternate error, nested ternary `a ? b ? c : d : e`, complex alternate `a ? b : c + d`
@@ -372,7 +377,7 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (as
 
 ## Planned Language Features (inferred from AST node types)
 
-Cubec plans to support: defer statements, foreach loops, test blocks, comptime evaluation, struct/union/enum declarations, func declarations, slice types, pointer types, spread operator, decorators, switch pattern matching, and more.
+Cubec plans to support: defer statements, foreach loops, test blocks, comptime evaluation, struct/union/enum declarations, func declarations, slice types, spread operator, decorators, switch pattern matching, and more. Note: pointer types use postfix syntax (`value.*` for dereference, `value.&` for address-of) instead of traditional prefix `*` and `&`.
 
 ## Coding Conventions
 

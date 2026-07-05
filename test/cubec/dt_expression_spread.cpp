@@ -2,6 +2,7 @@
 #include "cubec/expression_binary.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_member.h"
+#include "cubec/expression_postfix_unary.h"
 #include "cubec/expression_spread.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
@@ -245,8 +246,8 @@ TEST_F(dt_expression_spread, dots_not_at_start) {
  * -------------------------------------------------------------------------- */
 
 TEST_F(dt_expression_spread, spread_with_prefix) {
-  /* ...*ptr → spread wraps dereferenced ptr */
-  const char *source = "...*ptr";
+  /* ...ptr.* → spread wraps dereferenced ptr */
+  const char *source = "...ptr.*";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -258,8 +259,8 @@ TEST_F(dt_expression_spread, spread_with_prefix) {
 
   cubec_expression_spread_t spread = (cubec_expression_spread_t)node;
   ASSERT_NE(spread->value, nullptr);
-  /* *ptr is a binary node with ! opt (using prefix unary as binary with left=NULL) */
-  EXPECT_EQ(spread->value->kind, CUBEC_NODE_EXPRESSION_BINARY);
+  /* ptr.* is a postfix deref node */
+  EXPECT_EQ(spread->value->kind, CUBEC_NODE_EXPRESSION_DEREF);
 
   allocator_free(allocator, node);
   allocator_free(allocator, tokens);
