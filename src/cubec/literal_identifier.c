@@ -52,7 +52,7 @@ cleanup:
 static void _cubec_literal_identifier_move(cubec_literal_identifier_t self,
                                            allocator_t allocator,
                                            cubec_literal_identifier_t another) {
-  g_cubec_literal_type.move(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_literal_type.move(&self->super, allocator, &another->super));
   self->value = TRY_LOCAL(cleanup, value_move(allocator, another->value));
   return;
 

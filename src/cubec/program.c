@@ -46,7 +46,7 @@ cleanup:
 static void _cubec_program_node_move(cubec_program_node_t self,
                                      allocator_t allocator,
                                      cubec_program_node_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_node_type.move(&self->super, allocator, &another->super));
   self->statements = TRY_LOCAL(cleanup, value_move(allocator, another->statements));
   return;
 

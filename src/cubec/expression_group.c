@@ -48,7 +48,7 @@ cleanup:
 static void _cubec_expression_group_move(cubec_expression_group_t self,
                                          allocator_t allocator,
                                          cubec_expression_group_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
   self->inner = TRY_LOCAL(cleanup, value_move(allocator, another->inner));
   return;
 

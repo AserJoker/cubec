@@ -39,8 +39,12 @@ static void _cubec_literal_char_clone(cubec_literal_char_t self,
 static void _cubec_literal_char_move(cubec_literal_char_t self,
                                      allocator_t allocator,
                                      cubec_literal_char_t another) {
-  g_cubec_literal_type.move(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_literal_type.move(&self->super, allocator, &another->super));
   self->value = another->value;
+  return;
+
+cleanup:
+  return;
 }
 
 type_t g_cubec_literal_char_type = {

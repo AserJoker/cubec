@@ -57,7 +57,7 @@ cleanup:
 static void _cubec_expression_binary_move(cubec_expression_binary_t self,
                                           allocator_t allocator,
                                           cubec_expression_binary_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
   self->left = TRY_LOCAL(cleanup, value_move(allocator, another->left));
   self->right = TRY_LOCAL(cleanup, value_move(allocator, another->right));
   self->opt = (string_t)TRY_LOCAL(cleanup, value_move(allocator, another->opt));

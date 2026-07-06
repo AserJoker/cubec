@@ -45,7 +45,9 @@ static void _cubec_expression_clone(cubec_expression_t self,
 static void _cubec_expression_move(cubec_expression_t self,
                                    allocator_t allocator,
                                    cubec_expression_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
+onerror:
+  return;
 }
 
 type_t g_cubec_expression_type = {

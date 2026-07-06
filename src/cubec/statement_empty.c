@@ -37,7 +37,9 @@ static void _cubec_statement_empty_clone(cubec_statement_empty_t self,
 static void _cubec_statement_empty_move(cubec_statement_empty_t self,
                                         allocator_t allocator,
                                         cubec_statement_empty_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
+onerror:
+  return;
 }
 
 type_t g_cubec_statement_empty_type = {

@@ -62,7 +62,7 @@ cleanup:
 static void _cubec_expression_generic_instantiation_move(
     cubec_expression_generic_instantiation_t self, allocator_t allocator,
     cubec_expression_generic_instantiation_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
   self->callee = TRY_LOCAL(cleanup, value_move(allocator, another->callee));
 
   /* Transfer arguments vec directly */

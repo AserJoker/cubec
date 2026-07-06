@@ -58,7 +58,7 @@ cleanup:
 static void _cubec_expression_slice_move(cubec_expression_slice_t self,
                                           allocator_t allocator,
                                           cubec_expression_slice_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
   self->host = TRY_LOCAL(cleanup, value_move(allocator, another->host));
   self->start = TRY_LOCAL(cleanup, value_move(allocator, another->start));
   self->length = TRY_LOCAL(cleanup, value_move(allocator, another->length));

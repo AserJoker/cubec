@@ -48,7 +48,7 @@ cleanup:
 static void _cubec_expression_spread_move(cubec_expression_spread_t self,
                                           allocator_t allocator,
                                           cubec_expression_spread_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
   self->value = TRY_LOCAL(cleanup, value_move(allocator, another->value));
   return;
 
