@@ -18,7 +18,7 @@ static void _cubec_expression_member_init(cubec_expression_member_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
   self->host = init->host;
   self->field = init->field;
 onerror:
@@ -28,9 +28,7 @@ onerror:
 static void _cubec_expression_member_dispose(cubec_expression_member_t self,
                                              allocator_t allocator) {
   allocator_free(allocator, &self->host);
-  self->host = NULL;
   allocator_free(allocator, &self->field);
-  self->field = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
@@ -38,18 +36,28 @@ static void _cubec_expression_member_clone(cubec_expression_member_t self,
                                            allocator_t allocator,
                                            cubec_expression_member_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->host = value_clone(allocator, another->host);
-  self->field = (cubec_literal_identifier_t)value_clone(allocator,
-                                                         another->field);
+  self->host = TRY_LOCAL(cleanup, value_clone(allocator, another->host));
+  self->field = (cubec_literal_identifier_t)TRY_LOCAL(cleanup,
+      value_clone(allocator, another->field));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->field);
+  allocator_free(allocator, &self->host);
 }
 
 static void _cubec_expression_member_move(cubec_expression_member_t self,
                                           allocator_t allocator,
                                           cubec_expression_member_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->host = value_move(allocator, another->host);
+  self->host = TRY_LOCAL(cleanup, value_move(allocator, another->host));
   self->field =
-      (cubec_literal_identifier_t)value_move(allocator, another->field);
+      (cubec_literal_identifier_t)TRY_LOCAL(cleanup, value_move(allocator, another->field));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->field);
+  allocator_free(allocator, &self->host);
 }
 
 type_t g_cubec_expression_member_type = {

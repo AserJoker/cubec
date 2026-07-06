@@ -133,10 +133,16 @@ void *value_clone(allocator_t allocator, void *another) {
   if (type) {
     if (type->clone) {
       void *data = allocator_alloc(allocator, type->size);
+      if (!data) {
+        return NULL;
+      }
       alloc_chunk_t chunk = value_get_chunk(data);
       chunk->type = type;
-      TRY_VOID(NULL, type->clone(data, allocator, another));
+      TRY_VOID_LOCAL(onerror, type->clone(data, allocator, another));
       return data;
+    onerror:
+      allocator_free(allocator, &data);
+      return NULL;
     } else {
       THROW(NULL, "%s does not support cloning", type->name);
     }
@@ -155,10 +161,16 @@ void *value_move(allocator_t allocator, void *another) {
   if (type) {
     if (type->move) {
       void *data = allocator_alloc(allocator, type->size);
+      if (!data) {
+        return NULL;
+      }
       alloc_chunk_t chunk = value_get_chunk(data);
       chunk->type = type;
-      TRY_VOID(NULL, type->move(data, allocator, another));
+      TRY_VOID_LOCAL(onerror, type->move(data, allocator, another));
       return data;
+    onerror:
+      allocator_free(allocator, &data);
+      return NULL;
     } else {
       THROW(NULL, "%s is not movable", type->name);
     }

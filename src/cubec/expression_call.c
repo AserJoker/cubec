@@ -24,7 +24,7 @@ static void _cubec_expression_call_init(cubec_expression_call_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
 
   self->callee = init->callee;
   if (init->arguments) {
@@ -42,9 +42,7 @@ onerror:
 static void _cubec_expression_call_dispose(cubec_expression_call_t self,
                                             allocator_t allocator) {
   allocator_free(allocator, &self->callee);
-  self->callee = NULL;
   allocator_free(allocator, &self->arguments);
-  self->arguments = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
@@ -52,28 +50,32 @@ static void _cubec_expression_call_clone(cubec_expression_call_t self,
                                           allocator_t allocator,
                                           cubec_expression_call_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->callee = value_clone(allocator, another->callee);
+  self->callee = TRY_LOCAL(cleanup, value_clone(allocator, another->callee));
+  self->arguments = TRY_LOCAL(cleanup, value_clone(allocator, another->arguments));
+  return;
 
-  size_t count = vec_get_size(another->arguments);
-  for (size_t i = 0; i < count; i++) {
-    node_t arg = (node_t)vec_get(another->arguments, i);
-    vec_push(self->arguments, value_clone(allocator, arg));
-  }
+cleanup:
+  allocator_free(allocator, &self->callee);
+  allocator_free(allocator, &self->arguments);
 }
 
 static void _cubec_expression_call_move(cubec_expression_call_t self,
                                          allocator_t allocator,
                                          cubec_expression_call_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->callee = value_move(allocator, another->callee);
+  self->callee = TRY_LOCAL(cleanup, value_move(allocator, another->callee));
 
   /* Transfer arguments vec directly */
   allocator_free(allocator, &self->arguments);
   self->arguments = another->arguments;
   another->arguments =
-      TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
-onerror:
+      TRY_LOCAL(cleanup, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
   return;
+
+cleanup:
+  allocator_free(allocator, &self->callee);
+  /* self->arguments may be partially set, but since move failed, the callee
+   * already failed, so we just need to ensure consistency */
 }
 
 type_t g_cubec_expression_call_type = {

@@ -19,7 +19,7 @@ static void _cubec_literal_identifier_init(cubec_literal_identifier_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_cubec_literal_type.init(&self->super, allocator, &super_init);
+  TRY_VOID_LOCAL(onerror, g_cubec_literal_type.init(&self->super, allocator, &super_init));
   if (init->value) {
     self->value = allocator_create(allocator, &g_string_type,
                                    &(string_init_t){.str = init->value});
@@ -34,7 +34,6 @@ static void _cubec_literal_identifier_dispose(cubec_literal_identifier_t self,
                                               allocator_t allocator) {
   if (self->value) {
     allocator_free(allocator, &self->value);
-    self->value = NULL;
   }
   g_cubec_literal_type.dispose(&self->super, allocator);
 }
@@ -43,14 +42,22 @@ static void _cubec_literal_identifier_clone(cubec_literal_identifier_t self,
                                             allocator_t allocator,
                                             cubec_literal_identifier_t another) {
   g_cubec_literal_type.clone(&self->super, allocator, &another->super);
-  self->value = value_clone(allocator, another->value);
+  self->value = TRY_LOCAL(cleanup, value_clone(allocator, another->value));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->value);
 }
 
 static void _cubec_literal_identifier_move(cubec_literal_identifier_t self,
                                            allocator_t allocator,
                                            cubec_literal_identifier_t another) {
   g_cubec_literal_type.move(&self->super, allocator, &another->super);
-  self->value = value_move(allocator, another->value);
+  self->value = TRY_LOCAL(cleanup, value_move(allocator, another->value));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->value);
 }
 
 type_t g_cubec_literal_identifier_type = {

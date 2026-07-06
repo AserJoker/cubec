@@ -23,7 +23,7 @@ static void _cubec_expression_slice_init(cubec_expression_slice_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
 
   self->host = init->host;
   self->start = init->start;
@@ -35,11 +35,8 @@ onerror:
 static void _cubec_expression_slice_dispose(cubec_expression_slice_t self,
                                              allocator_t allocator) {
   allocator_free(allocator, &self->host);
-  self->host = NULL;
   allocator_free(allocator, &self->start);
-  self->start = NULL;
   allocator_free(allocator, &self->length);
-  self->length = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
@@ -47,18 +44,30 @@ static void _cubec_expression_slice_clone(cubec_expression_slice_t self,
                                            allocator_t allocator,
                                            cubec_expression_slice_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->host = value_clone(allocator, another->host);
-  self->start = value_clone(allocator, another->start);
-  self->length = value_clone(allocator, another->length);
+  self->host = TRY_LOCAL(cleanup, value_clone(allocator, another->host));
+  self->start = TRY_LOCAL(cleanup, value_clone(allocator, another->start));
+  self->length = TRY_LOCAL(cleanup, value_clone(allocator, another->length));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->length);
+  allocator_free(allocator, &self->start);
+  allocator_free(allocator, &self->host);
 }
 
 static void _cubec_expression_slice_move(cubec_expression_slice_t self,
                                           allocator_t allocator,
                                           cubec_expression_slice_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->host = value_move(allocator, another->host);
-  self->start = value_move(allocator, another->start);
-  self->length = value_move(allocator, another->length);
+  self->host = TRY_LOCAL(cleanup, value_move(allocator, another->host));
+  self->start = TRY_LOCAL(cleanup, value_move(allocator, another->start));
+  self->length = TRY_LOCAL(cleanup, value_move(allocator, another->length));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->length);
+  allocator_free(allocator, &self->start);
+  allocator_free(allocator, &self->host);
 }
 
 type_t g_cubec_expression_slice_type = {

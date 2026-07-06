@@ -23,7 +23,7 @@ static void _cubec_expression_binary_init(cubec_expression_binary_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
   self->left = init->left;
   self->right = init->right;
   self->opt = init->opt;
@@ -34,11 +34,8 @@ onerror:
 static void _cubec_expression_binary_dispose(cubec_expression_binary_t self,
                                              allocator_t allocator) {
   allocator_free(allocator, &self->left);
-  self->left = NULL;
   allocator_free(allocator, &self->right);
-  self->right = NULL;
   allocator_free(allocator, &self->opt);
-  self->opt = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
@@ -46,18 +43,30 @@ static void _cubec_expression_binary_clone(cubec_expression_binary_t self,
                                            allocator_t allocator,
                                            cubec_expression_binary_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->left = value_clone(allocator, another->left);
-  self->right = value_clone(allocator, another->right);
-  self->opt = (string_t)value_clone(allocator, another->opt);
+  self->left = TRY_LOCAL(cleanup, value_clone(allocator, another->left));
+  self->right = TRY_LOCAL(cleanup, value_clone(allocator, another->right));
+  self->opt = (string_t)TRY_LOCAL(cleanup, value_clone(allocator, another->opt));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->opt);
+  allocator_free(allocator, &self->right);
+  allocator_free(allocator, &self->left);
 }
 
 static void _cubec_expression_binary_move(cubec_expression_binary_t self,
                                           allocator_t allocator,
                                           cubec_expression_binary_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->left = value_move(allocator, another->left);
-  self->right = value_move(allocator, another->right);
-  self->opt = (string_t)value_move(allocator, another->opt);
+  self->left = TRY_LOCAL(cleanup, value_move(allocator, another->left));
+  self->right = TRY_LOCAL(cleanup, value_move(allocator, another->right));
+  self->opt = (string_t)TRY_LOCAL(cleanup, value_move(allocator, another->opt));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->opt);
+  allocator_free(allocator, &self->right);
+  allocator_free(allocator, &self->left);
 }
 
 type_t g_cubec_expression_binary_type = {

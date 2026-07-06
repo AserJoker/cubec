@@ -29,8 +29,17 @@ static void _vec_clone(vec_t self, allocator_t allocator, vec_t another) {
   self->size = another->size;
   self->data = allocator_alloc(allocator, sizeof(void *) * self->capacity);
   for (size_t idx = 0; idx < self->size; idx++) {
-    self->data[idx] = value_clone(allocator, another->data[idx]);
+    self->data[idx] = TRY_LOCAL(cleanup, value_clone(allocator, another->data[idx]));
   }
+  return;
+
+cleanup:
+  for (size_t i = 0; i < self->size; i++) {
+    allocator_free(allocator, &self->data[i]);
+  }
+  allocator_free(allocator, &self->data);
+  self->size = 0;
+  self->capacity = 0;
 }
 static void _vec_move(vec_t self, allocator_t allocator, vec_t another) {
   self->auto_dispose = another->auto_dispose;

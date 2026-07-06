@@ -19,7 +19,7 @@ static void _cubec_literal_char_init(cubec_literal_char_t self,
   };
   super_init.location = init->location;
   self->value = init->value;
-  g_cubec_literal_type.init(&self->super, allocator, &super_init);
+  TRY_VOID_LOCAL(onerror, g_cubec_literal_type.init(&self->super, allocator, &super_init));
 onerror:
   return;
 }

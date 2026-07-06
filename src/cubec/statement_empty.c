@@ -18,7 +18,7 @@ static void _cubec_statement_empty_init(cubec_statement_empty_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
 onerror:
   return;
 }

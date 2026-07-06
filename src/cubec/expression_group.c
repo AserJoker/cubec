@@ -22,7 +22,7 @@ static void _cubec_expression_group_init(cubec_expression_group_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
   self->inner = init->inner;
 onerror:
   return;
@@ -31,7 +31,6 @@ onerror:
 static void _cubec_expression_group_dispose(cubec_expression_group_t self,
                                             allocator_t allocator) {
   allocator_free(allocator, &self->inner);
-  self->inner = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
@@ -39,14 +38,22 @@ static void _cubec_expression_group_clone(cubec_expression_group_t self,
                                           allocator_t allocator,
                                           cubec_expression_group_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->inner = value_clone(allocator, another->inner);
+  self->inner = TRY_LOCAL(cleanup, value_clone(allocator, another->inner));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->inner);
 }
 
 static void _cubec_expression_group_move(cubec_expression_group_t self,
                                          allocator_t allocator,
                                          cubec_expression_group_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->inner = value_move(allocator, another->inner);
+  self->inner = TRY_LOCAL(cleanup, value_move(allocator, another->inner));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->inner);
 }
 
 type_t g_cubec_expression_group_type = {

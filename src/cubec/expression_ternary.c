@@ -27,7 +27,7 @@ static void _cubec_expression_ternary_init(cubec_expression_ternary_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
 
   self->condition = init->condition;
   self->consequent = init->consequent;
@@ -39,11 +39,8 @@ onerror:
 static void _cubec_expression_ternary_dispose(cubec_expression_ternary_t self,
                                               allocator_t allocator) {
   allocator_free(allocator, &self->condition);
-  self->condition = NULL;
   allocator_free(allocator, &self->consequent);
-  self->consequent = NULL;
   allocator_free(allocator, &self->alternate);
-  self->alternate = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
@@ -51,18 +48,30 @@ static void _cubec_expression_ternary_clone(cubec_expression_ternary_t self,
                                             allocator_t allocator,
                                             cubec_expression_ternary_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->condition = value_clone(allocator, another->condition);
-  self->consequent = value_clone(allocator, another->consequent);
-  self->alternate = value_clone(allocator, another->alternate);
+  self->condition = TRY_LOCAL(cleanup, value_clone(allocator, another->condition));
+  self->consequent = TRY_LOCAL(cleanup, value_clone(allocator, another->consequent));
+  self->alternate = TRY_LOCAL(cleanup, value_clone(allocator, another->alternate));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->alternate);
+  allocator_free(allocator, &self->consequent);
+  allocator_free(allocator, &self->condition);
 }
 
 static void _cubec_expression_ternary_move(cubec_expression_ternary_t self,
                                            allocator_t allocator,
                                            cubec_expression_ternary_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->condition = value_move(allocator, another->condition);
-  self->consequent = value_move(allocator, another->consequent);
-  self->alternate = value_move(allocator, another->alternate);
+  self->condition = TRY_LOCAL(cleanup, value_move(allocator, another->condition));
+  self->consequent = TRY_LOCAL(cleanup, value_move(allocator, another->consequent));
+  self->alternate = TRY_LOCAL(cleanup, value_move(allocator, another->alternate));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->alternate);
+  allocator_free(allocator, &self->consequent);
+  allocator_free(allocator, &self->condition);
 }
 
 type_t g_cubec_expression_ternary_type = {

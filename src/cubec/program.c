@@ -22,7 +22,7 @@ static void _cubec_program_node_init(cubec_program_node_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
   self->statements =
       TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
 onerror:
@@ -37,13 +37,21 @@ static void _cubec_program_node_clone(cubec_program_node_t self,
                                       allocator_t allocator,
                                       cubec_program_node_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->statements = value_clone(allocator, another->statements);
+  self->statements = TRY_LOCAL(cleanup, value_clone(allocator, another->statements));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->statements);
 }
 static void _cubec_program_node_move(cubec_program_node_t self,
                                      allocator_t allocator,
                                      cubec_program_node_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->statements = value_move(allocator, another->statements);
+  self->statements = TRY_LOCAL(cleanup, value_move(allocator, another->statements));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->statements);
 }
 type_t g_cubec_program_node_type = {
     .name = "cubec.cubec.program_node",

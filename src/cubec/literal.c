@@ -14,7 +14,7 @@ static void _cubec_literal_init(cubec_literal_t self, allocator_t allocator,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
 onerror:
   return;
 }

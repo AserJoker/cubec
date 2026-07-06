@@ -30,7 +30,7 @@ static void _cubec_expression_assignment_init(
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
 
   self->left = init->lvalue;
   self->right = init->rvalue;
@@ -42,11 +42,8 @@ onerror:
 static void _cubec_expression_assignment_dispose(
     cubec_expression_assignment_t self, allocator_t allocator) {
   allocator_free(allocator, &self->left);
-  self->left = NULL;
   allocator_free(allocator, &self->right);
-  self->right = NULL;
   allocator_free(allocator, &self->opt);
-  self->opt = NULL;
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
@@ -54,18 +51,32 @@ static void _cubec_expression_assignment_clone(
     cubec_expression_assignment_t self, allocator_t allocator,
     cubec_expression_assignment_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->left = value_clone(allocator, another->left);
-  self->right = value_clone(allocator, another->right);
-  self->opt = (string_t)value_clone(allocator, another->opt);
+  self->left = TRY_LOCAL(cleanup, value_clone(allocator, another->left));
+  self->right = TRY_LOCAL(cleanup, value_clone(allocator, another->right));
+  self->opt = (string_t)TRY_LOCAL(cleanup, value_clone(allocator, another->opt));
+  return;
+
+cleanup:
+  /* Clean up already-cloned members on failure */
+  allocator_free(allocator, &self->opt);
+  allocator_free(allocator, &self->right);
+  allocator_free(allocator, &self->left);
 }
 
 static void _cubec_expression_assignment_move(
     cubec_expression_assignment_t self, allocator_t allocator,
     cubec_expression_assignment_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->left = value_move(allocator, another->left);
-  self->right = value_move(allocator, another->right);
-  self->opt = (string_t)value_move(allocator, another->opt);
+  self->left = TRY_LOCAL(cleanup, value_move(allocator, another->left));
+  self->right = TRY_LOCAL(cleanup, value_move(allocator, another->right));
+  self->opt = (string_t)TRY_LOCAL(cleanup, value_move(allocator, another->opt));
+  return;
+
+cleanup:
+  /* Clean up already-moved members on failure */
+  allocator_free(allocator, &self->opt);
+  allocator_free(allocator, &self->right);
+  allocator_free(allocator, &self->left);
 }
 
 type_t g_cubec_expression_assignment_type = {
