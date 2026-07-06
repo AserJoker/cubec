@@ -14,25 +14,22 @@
 static void _cubec_expression_slice_init(cubec_expression_slice_t self,
                                           allocator_t allocator,
                                           cubec_expression_slice_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_SLICE,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-    super_init.parent = init->parent;
-  }
+  super_init.location = init->location;
+  super_init.parent = init->parent;
   g_cubec_expression_type.init(&self->super, allocator, &super_init);
 
-  self->host = NULL;
-  self->start = NULL;
-  self->length = NULL;
-
-  if (init) {
-    self->host = init->host;
-    self->start = init->start;
-    self->length = init->length;
-  }
+  self->host = init->host;
+  self->start = init->start;
+  self->length = init->length;
+onerror:
+  return;
 }
 
 static void _cubec_expression_slice_dispose(cubec_expression_slice_t self,
@@ -200,12 +197,12 @@ node_t read_expression_slice(allocator_t allocator, vec_t tokens,
   }
   current++;
 
-  node = allocator_create(allocator, &g_cubec_expression_slice_type,
+  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_slice_type,
                           &(cubec_expression_slice_init_t){
                               .host = host,
                               .start = start,
                               .length = length,
-                          });
+                          }));
 
   /* Location spans from '[' to ']' */
   {

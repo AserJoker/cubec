@@ -14,25 +14,25 @@
 static void _cubec_literal_numeric_init(cubec_literal_numeric_t self,
                                         allocator_t allocator,
                                         cubec_literal_numeric_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   cubec_literal_init_t super_init = {
       .kind = CUBEC_NODE_LITERAL_NUMERIC,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-    self->kind = init->kind;
-    self->numeric_type = init->numeric_type;
-  } else {
-    self->kind = CUBEC_LITERAL_NUMERIC_KIND_INTEGER;
-    self->numeric_type = CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT;
-  }
+  super_init.location = init->location;
+  self->kind = init->kind;
+  self->numeric_type = init->numeric_type;
   g_cubec_literal_type.init(&self->super, allocator, &super_init);
-  if (init && init->value) {
+  if (init->value) {
     self->value = allocator_create(allocator, &g_string_type,
                                    &(string_init_t){.str = init->value});
   } else {
     self->value = allocator_create(allocator, &g_string_type, NULL);
   }
+onerror:
+  return;
 }
 
 static void _cubec_literal_numeric_dispose(cubec_literal_numeric_t self,
@@ -145,7 +145,7 @@ node_t read_literal_numeric(allocator_t allocator, vec_t tokens,
     return NULL;
   }
 
-  node = allocator_create(allocator, &g_cubec_literal_numeric_type, NULL);
+  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_literal_numeric_type, NULL));
   location_t *location = token_get_location(first_token);
   node_t node_base = (node_t)node;
   node_base->location = *location;

@@ -91,7 +91,7 @@ void *allocator_create(allocator_t self, type_t *type, void *arg) {
   alloc_chunk_t chunk = value_get_chunk(data);
   chunk->type = type;
   if (type->init) {
-    type->init(data, self, arg);
+    TRY_VOID(NULL, type->init(data, self, arg));
   }
   return data;
 }
@@ -135,7 +135,7 @@ void *value_clone(allocator_t allocator, void *another) {
       void *data = allocator_alloc(allocator, type->size);
       alloc_chunk_t chunk = value_get_chunk(data);
       chunk->type = type;
-      type->clone(data, allocator, another);
+      TRY_VOID(NULL, type->clone(data, allocator, another));
       return data;
     } else {
       THROW(NULL, "%s does not support cloning", type->name);
@@ -157,7 +157,7 @@ void *value_move(allocator_t allocator, void *another) {
       void *data = allocator_alloc(allocator, type->size);
       alloc_chunk_t chunk = value_get_chunk(data);
       chunk->type = type;
-      type->move(data, allocator, another);
+      TRY_VOID(NULL, type->move(data, allocator, another));
       return data;
     } else {
       THROW(NULL, "%s is not movable", type->name);

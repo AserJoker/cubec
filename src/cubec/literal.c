@@ -1,19 +1,22 @@
 #include "cubec/literal.h"
 #include "core/allocator.h"
+#include "core/error.h"
 #include "core/type.h"
 #include "cubec/expression.h"
 
 static void _cubec_literal_init(cubec_literal_t self, allocator_t allocator,
                                 cubec_literal_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   cubec_expression_init_t super_init = {
-      .kind = 0,
+      .kind = init->kind,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-    super_init.kind = init->kind;
-  }
+  super_init.location = init->location;
   g_cubec_expression_type.init(&self->super, allocator, &super_init);
+onerror:
+  return;
 }
 
 static void _cubec_literal_dispose(cubec_literal_t self,

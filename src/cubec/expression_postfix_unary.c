@@ -15,23 +15,24 @@
 static void _cubec_expression_postfix_unary_init(
     cubec_expression_postfix_unary_t self, allocator_t allocator,
     cubec_expression_postfix_unary_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
+
   cubec_expression_init_t super_init = {
       .kind = init->kind,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-    super_init.parent = init->parent;
-  }
+  super_init.location = init->location;
+  super_init.parent = init->parent;
+
   g_cubec_expression_type.init(&self->super, allocator, &super_init);
   self->left = NULL;
-  self->right = NULL;
-  self->opt = NULL;
-  if (init) {
-    self->left = NULL;
-    self->right = init->host;
-    self->opt = init->opt;
-  }
+  self->right = init->host;
+  self->opt = init->opt;
+
+onerror:
+  return;
 }
 
 static void
@@ -130,16 +131,16 @@ node_t read_expression_postfix_unary(allocator_t allocator, vec_t tokens,
   current++;
 
   /* Build operator string ".&" or ".*" */
-  opt = allocator_create(allocator, &g_string_type, NULL);
+  opt = TRY_LOCAL(onerror, allocator_create(allocator, &g_string_type, NULL));
   string_nconcat(opt, ".", 1);
   string_nconcat(opt, op_text, op_len);
 
-  node = allocator_create(allocator, &g_cubec_expression_postfix_unary_type,
+  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_postfix_unary_type,
                           &(cubec_expression_postfix_unary_init_t){
                               .host = host,
                               .opt = opt,
                               .kind = kind,
-                          });
+                          }));
   location_t *loc = token_get_location(dot_token);
   node->super.super.location = *loc;
   node->super.super.location.filename = filename;

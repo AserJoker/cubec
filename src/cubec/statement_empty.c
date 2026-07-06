@@ -10,14 +10,17 @@
 static void _cubec_statement_empty_init(cubec_statement_empty_t self,
                                         allocator_t allocator,
                                         cubec_statement_empty_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_EMPTY,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-  }
+  super_init.location = init->location;
   g_node_type.init(&self->super, allocator, &super_init);
+onerror:
+  return;
 }
 
 static void _cubec_statement_empty_dispose(cubec_statement_empty_t self,
@@ -54,7 +57,7 @@ node_t read_statement_empty(allocator_t allocator, vec_t tokens, size_t *positio
   if (!token_is(token, CUBEC_TOKEN_SYMBOL, ";")) {
     return NULL;
   }
-  node = allocator_create(allocator, &g_cubec_statement_empty_type, NULL);
+  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_statement_empty_type, NULL));
   location_t *location = token_get_location(token);
   node->super.location = *location;
   node->super.location.filename = filename;

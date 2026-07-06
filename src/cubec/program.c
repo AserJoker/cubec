@@ -14,16 +14,19 @@
 static void _cubec_program_node_init(cubec_program_node_t self,
                                      allocator_t allocator,
                                      cubec_program_node_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   node_init_t super_init = {
       .kind = CUBEC_NODE_PROGRAM,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-  }
+  super_init.location = init->location;
   g_node_type.init(&self->super, allocator, &super_init);
   self->statements =
-      allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+      TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+onerror:
+  return;
 }
 static void _cubec_program_node_dispose(cubec_program_node_t self,
                                         allocator_t allocator) {
@@ -54,7 +57,7 @@ type_t g_cubec_program_node_type = {
 node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
                          const char *filename) {
   cubec_program_node_t node =
-      allocator_create(allocator, &g_cubec_program_node_type, NULL);
+      TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_program_node_type, NULL));
   size_t current = *position;
   TRY_VOID_LOCAL(onerror, skip_whitespace(tokens, &current));
   while (true) {

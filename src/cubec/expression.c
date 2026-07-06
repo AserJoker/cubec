@@ -18,15 +18,17 @@
 static void _cubec_expression_init(cubec_expression_t self,
                                    allocator_t allocator,
                                    cubec_expression_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   node_init_t super_init = {
-      .kind = 0,
+      .kind = init->kind,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-    super_init.kind = init->kind;
-  }
+  super_init.location = init->location;
   g_node_type.init(&self->super, allocator, &super_init);
+onerror:
+  return;
 }
 
 static void _cubec_expression_dispose(cubec_expression_t self,

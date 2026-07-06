@@ -10,17 +10,18 @@
 static void _cubec_literal_char_init(cubec_literal_char_t self,
                                      allocator_t allocator,
                                      cubec_literal_char_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   cubec_literal_init_t super_init = {
       .kind = CUBEC_NODE_LITERAL_CHAR,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-    self->value = init->value;
-  } else {
-    self->value = '\0';
-  }
+  super_init.location = init->location;
+  self->value = init->value;
   g_cubec_literal_type.init(&self->super, allocator, &super_init);
+onerror:
+  return;
 }
 
 static void _cubec_literal_char_dispose(cubec_literal_char_t self,
@@ -61,7 +62,7 @@ node_t read_literal_char(allocator_t allocator, vec_t tokens,
     return NULL;
   }
 
-  node = allocator_create(allocator, &g_cubec_literal_char_type, NULL);
+  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_literal_char_type, NULL));
   location_t *location = token_get_location(token);
   node_t node_base = (node_t)node;
   node_base->location = *location;

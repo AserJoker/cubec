@@ -15,32 +15,28 @@
 static void _cubec_expression_generic_instantiation_init(
     cubec_expression_generic_instantiation_t self, allocator_t allocator,
     cubec_expression_generic_instantiation_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-    super_init.parent = init->parent;
-  }
+  super_init.location = init->location;
+  super_init.parent = init->parent;
   g_cubec_expression_type.init(&self->super, allocator, &super_init);
 
-  self->callee = NULL;
-  self->arguments = NULL;
-
-  if (init) {
-    self->callee = init->callee;
-    if (init->arguments) {
-      /* Take ownership of the caller's arguments vec directly */
-      self->arguments = init->arguments;
-    }
-  }
-
-  /* If no arguments vec was provided (e.g. clone path), create an empty one */
-  if (!self->arguments) {
+  self->callee = init->callee;
+  if (init->arguments) {
+    /* Take ownership of the caller's arguments vec directly */
+    self->arguments = init->arguments;
+  } else {
+    /* If no arguments vec was provided (e.g. clone path), create an empty one */
     self->arguments =
-        allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+        TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
   }
+onerror:
+  return;
 }
 
 static void _cubec_expression_generic_instantiation_dispose(
@@ -75,7 +71,9 @@ static void _cubec_expression_generic_instantiation_move(
   allocator_free(allocator, &self->arguments);
   self->arguments = another->arguments;
   another->arguments =
-      allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+      TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+onerror:
+  return;
 }
 
 type_t g_cubec_expression_generic_instantiation_type = {
@@ -112,7 +110,7 @@ node_t read_expression_generic_instantiation(allocator_t allocator,
   current++; /* Consumed '[' — committed to parsing from here */
 
   arguments =
-      allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+      TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
 
   /* Parse comma-separated arguments */
   bool expect_comma = false;
@@ -160,12 +158,12 @@ node_t read_expression_generic_instantiation(allocator_t allocator,
     }
   }
 
-  node = allocator_create(
+  node = TRY_LOCAL(onerror, allocator_create(
       allocator, &g_cubec_expression_generic_instantiation_type,
       &(cubec_expression_generic_instantiation_init_t){
           .callee = callee,
           .arguments = arguments,
-      });
+      }));
   /* NOTE: arguments ownership has been transferred to node via init —
    *        do NOT free it here. */
 

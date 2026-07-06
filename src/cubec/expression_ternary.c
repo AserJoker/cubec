@@ -18,25 +18,22 @@ extern node_t read_expression_binary(allocator_t allocator, vec_t tokens,
 static void _cubec_expression_ternary_init(cubec_expression_ternary_t self,
                                            allocator_t allocator,
                                            cubec_expression_ternary_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_TERNARY,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-    super_init.parent = init->parent;
-  }
+  super_init.location = init->location;
+  super_init.parent = init->parent;
   g_cubec_expression_type.init(&self->super, allocator, &super_init);
 
-  self->condition = NULL;
-  self->consequent = NULL;
-  self->alternate = NULL;
-
-  if (init) {
-    self->condition = init->condition;
-    self->consequent = init->consequent;
-    self->alternate = init->alternate;
-  }
+  self->condition = init->condition;
+  self->consequent = init->consequent;
+  self->alternate = init->alternate;
+onerror:
+  return;
 }
 
 static void _cubec_expression_ternary_dispose(cubec_expression_ternary_t self,
@@ -130,12 +127,12 @@ node_t read_expression_ternary(allocator_t allocator, vec_t tokens,
     goto onerror;
   }
 
-  node = allocator_create(allocator, &g_cubec_expression_ternary_type,
+  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_ternary_type,
                           &(cubec_expression_ternary_init_t){
                               .condition = condition,
                               .consequent = consequent,
                               .alternate = alternate,
-                          });
+                          }));
 
   /* Location spans from condition start to alternate end */
   {

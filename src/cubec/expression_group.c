@@ -13,19 +13,19 @@
 static void _cubec_expression_group_init(cubec_expression_group_t self,
                                          allocator_t allocator,
                                          cubec_expression_group_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_GROUP,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-    super_init.parent = init->parent;
-  }
+  super_init.location = init->location;
+  super_init.parent = init->parent;
   g_cubec_expression_type.init(&self->super, allocator, &super_init);
-  self->inner = NULL;
-  if (init) {
-    self->inner = init->inner;
-  }
+  self->inner = init->inner;
+onerror:
+  return;
 }
 
 static void _cubec_expression_group_dispose(cubec_expression_group_t self,
@@ -91,10 +91,10 @@ node_t read_expression_group(allocator_t allocator, vec_t tokens,
   }
   current++;
 
-  node = allocator_create(allocator, &g_cubec_expression_group_type,
+  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_group_type,
                           &(cubec_expression_group_init_t){
                               .inner = inner,
-                          });
+                          }));
   location_t *loc = token_get_location(open_token);
   node->super.super.location = *loc;
   node->super.super.location.filename = filename;

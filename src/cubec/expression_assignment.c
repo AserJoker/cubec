@@ -21,25 +21,22 @@ extern node_t read_expression(allocator_t allocator, vec_t tokens,
 static void _cubec_expression_assignment_init(
     cubec_expression_assignment_t self, allocator_t allocator,
     cubec_expression_assignment_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_ASSIGNMENT,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-    super_init.parent = init->parent;
-  }
+  super_init.location = init->location;
+  super_init.parent = init->parent;
   g_cubec_expression_type.init(&self->super, allocator, &super_init);
 
-  self->left = NULL;
-  self->right = NULL;
-  self->opt = NULL;
-
-  if (init) {
-    self->left = init->lvalue;
-    self->right = init->rvalue;
-    self->opt = init->opt;
-  }
+  self->left = init->lvalue;
+  self->right = init->rvalue;
+  self->opt = init->opt;
+onerror:
+  return;
 }
 
 static void _cubec_expression_assignment_dispose(
@@ -135,7 +132,7 @@ node_t read_expression_assignment(allocator_t allocator, vec_t tokens,
   op_token = tok;
   const char *op_text = token_get_string(op_token);
   size_t op_len = token_get_string_length(op_token);
-  opt = allocator_create(allocator, &g_string_type, NULL);
+  opt = TRY_LOCAL(onerror, allocator_create(allocator, &g_string_type, NULL));
   string_nconcat(opt, op_text, op_len);
   current++; /* consume operator */
 
@@ -151,12 +148,12 @@ node_t read_expression_assignment(allocator_t allocator, vec_t tokens,
   }
 
   /* Create assignment node */
-  node = allocator_create(allocator, &g_cubec_expression_assignment_type,
+  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_assignment_type,
                           &(cubec_expression_assignment_init_t){
                               .lvalue = lvalue,
                               .rvalue = rvalue,
                               .opt = opt,
-                          });
+                          }));
 
   /* Location spans from lvalue start to rvalue end */
   {

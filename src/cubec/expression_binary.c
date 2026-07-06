@@ -14,23 +14,21 @@
 static void _cubec_expression_binary_init(cubec_expression_binary_t self,
                                           allocator_t allocator,
                                           cubec_expression_binary_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_BINARY,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-    super_init.parent = init->parent;
-  }
+  super_init.location = init->location;
+  super_init.parent = init->parent;
   g_cubec_expression_type.init(&self->super, allocator, &super_init);
-  self->left = NULL;
-  self->right = NULL;
-  self->opt = NULL;
-  if (init) {
-    self->left = init->left;
-    self->right = init->right;
-    self->opt = init->opt;
-  }
+  self->left = init->left;
+  self->right = init->right;
+  self->opt = init->opt;
+onerror:
+  return;
 }
 
 static void _cubec_expression_binary_dispose(cubec_expression_binary_t self,
@@ -118,7 +116,7 @@ node_t read_expression_prefix(allocator_t allocator, vec_t tokens,
   /* Build operator string */
   const char *op_text = token_get_string(op_token);
   size_t op_len = token_get_string_length(op_token);
-  opt = allocator_create(allocator, &g_string_type, NULL);
+  opt = TRY_LOCAL(onerror, allocator_create(allocator, &g_string_type, NULL));
   string_nconcat(opt, op_text, op_len);
 
   /* Parse operand via read_unary (prefix unary binds tighter than binary) */
@@ -128,12 +126,12 @@ node_t read_expression_prefix(allocator_t allocator, vec_t tokens,
     goto onerror;
   }
 
-  node = allocator_create(allocator, &g_cubec_expression_binary_type,
+  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_binary_type,
                           &(cubec_expression_binary_init_t){
                               .left = NULL,
                               .right = right,
                               .opt = opt,
-                          });
+                          }));
   location_t *loc = token_get_location(op_token);
   node->super.super.location = *loc;
   node->super.super.location.filename = filename;

@@ -13,19 +13,19 @@
 static void _cubec_expression_spread_init(cubec_expression_spread_t self,
                                           allocator_t allocator,
                                           cubec_expression_spread_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_SPREAD,
       .parent = NULL,
   };
-  if (init) {
-    super_init.location = init->location;
-    super_init.parent = init->parent;
-  }
+  super_init.location = init->location;
+  super_init.parent = init->parent;
   g_cubec_expression_type.init(&self->super, allocator, &super_init);
-  self->value = NULL;
-  if (init) {
-    self->value = init->value;
-  }
+  self->value = init->value;
+onerror:
+  return;
 }
 
 static void _cubec_expression_spread_dispose(cubec_expression_spread_t self,
@@ -83,10 +83,10 @@ node_t read_expression_spread(allocator_t allocator, vec_t tokens,
     goto onerror;
   }
 
-  node = allocator_create(allocator, &g_cubec_expression_spread_type,
+  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_spread_type,
                           &(cubec_expression_spread_init_t){
                               .value = value,
-                          });
+                          }));
 
   /* Location spans from first '.' to end of value */
   token_t first_dot = vec_get(tokens, *position);
