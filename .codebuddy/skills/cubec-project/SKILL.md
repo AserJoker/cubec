@@ -177,7 +177,7 @@ Subclasses embed the parent via a `super` field and call parent's `type->init` d
 ## Error Handling System
 
 - Uses `thread_local` global error pointer `g_error`
-- `error_t` contains: error message (1024 bytes, formatted via `vsnprintf`) + call stack (up to 64 frames)
+- `err_t` contains: error message (1024 bytes, formatted via `vsnprintf`) + call stack (up to 64 frames)
 - `error_push()`: NULL-safe — no-op if `g_error == NULL` (safeguard against calling before any error thrown)
 - `error_to_string()`: formats error to readable string with call stack, uses `PRIuPTR` for portability
 - Rust-style macros:

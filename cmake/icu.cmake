@@ -29,7 +29,7 @@ if(WIN32)
 else()
     add_custom_command(
         OUTPUT "${ICU_DATA_GEN_C}"
-        COMMAND sh -c "xxd -i '${ICU_DATA_DAT}' | sed 's/_len =/_size =/; s/_len\;/_size\;/g' > '${ICU_DATA_GEN_C}'"
+        COMMAND sh -c "xxd -i -n icudt74l_dat '${ICU_DATA_DAT}' | sed 's/_len =/_size =/; s/_len\;/_size\;/g' > '${ICU_DATA_GEN_C}'"
         DEPENDS "${ICU_DATA_DAT}"
         COMMENT "Converting icudt74l.dat to C byte array..."
         VERBATIM

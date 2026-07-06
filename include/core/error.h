@@ -17,7 +17,7 @@ struct _error_frame_t {
 };
 
 /** @brief Error object containing a message and a call-stack trace (up to 64 frames). */
-typedef struct _error_t error_t;
+typedef struct _error_t err_t;
 struct _error_t {
   char message[1024];          /**< Formatted error message (vsnprintf, 1024 bytes max) */
   error_frame_t stack[64];     /**< Call-stack frames (frame 0 = throw site) */
@@ -25,7 +25,7 @@ struct _error_t {
 };
 
 /** @brief Thread-local pointer to the current in-flight error (NULL if no error). */
-extern thread_local error_t *g_error;
+extern thread_local err_t *g_error;
 
 /**
  * @brief Throw a formatted error at the current location.
@@ -48,7 +48,7 @@ void error_push(const char *filename, const char *funcname, size_t line);
  * @param allocator Allocator for the result string (if NULL, uses malloc).
  * @return Formatted error string (caller must free via matching allocator or free()).
  */
-char *error_to_string(error_t *error, allocator_t allocator);
+char *error_to_string(err_t *error, allocator_t allocator);
 
 /**
  * @brief Clear the current thread-local error. After this call, g_error is NULL.
@@ -61,7 +61,7 @@ void error_clear();
  */
 #define CATCH_ERROR(expr, onerror)                                             \
   ({                                                                           \
-    __auto_type res = (expr);                                                  \
+    typeof(expr) res = (expr);                                                  \
     if (g_error) {                                                             \
       error_push(__FILE__, __func__, __LINE__);                                \
       onerror;                                                                 \

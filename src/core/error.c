@@ -4,10 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-thread_local error_t *g_error = NULL;
+thread_local err_t *g_error = NULL;
 void throw_error(const char *filename, const char *funcname, size_t line,
                  const char *fmt, ...) {
-  static error_t error;
+  static err_t error;
   va_list args;
   va_start(args, fmt);
   vsnprintf(error.message, sizeof(error.message), fmt, args);
@@ -34,7 +34,7 @@ void error_push(const char *filename, const char *funcname, size_t line) {
 
 void error_clear() { g_error = NULL; }
 
-char *error_to_string(error_t *error, allocator_t allocator) {
+char *error_to_string(err_t *error, allocator_t allocator) {
   size_t len = strlen(error->message) + 8;
   for (size_t idx = 0; idx < error->stacktop; idx++) {
     error_frame_t *frame = &error->stack[idx];
