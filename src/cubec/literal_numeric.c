@@ -139,25 +139,30 @@ node_t read_literal_numeric(allocator_t allocator, vec_t tokens,
                             size_t *position, const char *filename) {
   size_t current = *position;
 
-  cubec_literal_numeric_t node = NULL;
   token_t first_token = TRY_LOCAL(onerror, vec_get(tokens, current));
   if (!token_is(first_token, CUBEC_TOKEN_NUMERIC, NULL)) {
     return NULL;
   }
 
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_literal_numeric_type, NULL));
   location_t *location = token_get_location(first_token);
-  node_t node_base = (node_t)node;
-  node_base->location = *location;
-  node_base->location.filename = filename;
-
   const char *token_str = token_get_string(first_token);
   size_t token_len = token_get_string_length(first_token);
 
-  node->kind = is_float_token(token_str, token_len)
-                   ? CUBEC_LITERAL_NUMERIC_KIND_FLOAT
-                   : CUBEC_LITERAL_NUMERIC_KIND_INTEGER;
-  node->numeric_type = CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT;
+  cubec_literal_numeric_kind_t kind =
+      is_float_token(token_str, token_len) ? CUBEC_LITERAL_NUMERIC_KIND_FLOAT
+                                           : CUBEC_LITERAL_NUMERIC_KIND_INTEGER;
+  cubec_literal_numeric_type_t numeric_type = CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT;
+  cubec_literal_numeric_init_t init = {
+      .location = *location,
+      .parent = NULL,
+      .value = NULL,
+      .kind = kind,
+      .numeric_type = numeric_type,
+  };
+  cubec_literal_numeric_t node =
+      TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_literal_numeric_type, &init));
+  node_t node_base = (node_t)node;
+  node_base->location.filename = filename;
 
   string_nconcat(node->value, token_str, token_len);
   current++;

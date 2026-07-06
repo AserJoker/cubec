@@ -52,14 +52,17 @@ type_t g_cubec_statement_empty_type = {
 node_t read_statement_empty(allocator_t allocator, vec_t tokens, size_t *position,
                             const char *filename) {
   size_t current = *position;
-  cubec_statement_empty_t node = NULL;
   token_t token = TRY_LOCAL(onerror, vec_get(tokens, current));
   if (!token_is(token, CUBEC_TOKEN_SYMBOL, ";")) {
     return NULL;
   }
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_statement_empty_type, NULL));
   location_t *location = token_get_location(token);
-  node->super.location = *location;
+  cubec_statement_empty_init_t init = {
+      .location = *location,
+      .parent = NULL,
+  };
+  cubec_statement_empty_t node =
+      TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_statement_empty_type, &init));
   node->super.location.filename = filename;
   current++;
   *position = current;

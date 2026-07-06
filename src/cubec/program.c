@@ -56,13 +56,20 @@ type_t g_cubec_program_node_type = {
 
 node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
                          const char *filename) {
-  cubec_program_node_t node =
-      TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_program_node_type, NULL));
   size_t current = *position;
   TRY_VOID_LOCAL(onerror, skip_whitespace(tokens, &current));
+
+  token_t begin = TRY_LOCAL(onerror, vec_get(tokens, current));
+  cubec_program_node_init_t init = {
+      .location = *token_get_location(begin),
+      .parent = NULL,
+  };
+  cubec_program_node_t node =
+      TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_program_node_type, &init));
+
   while (true) {
     TRY_VOID_LOCAL(onerror, skip_whitespace(tokens, &current));
-    node_t statement = TRY_LOCAL(onerror,read_statement_empty(allocator, tokens, position, filename));
+    node_t statement = TRY_LOCAL(onerror,read_statement_empty(allocator, tokens, &current, filename));
     if(!statement) {
       break;
     }
@@ -77,7 +84,6 @@ node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
                 "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
                 filename, location->begin.line + 1, location->begin.column);
   }
-  token_t begin = TRY_LOCAL(onerror, vec_get(tokens, *position));
   node->super.location.begin = token_get_location(begin)->begin;
   node->super.location.end = token_get_location(end)->begin;
   node->super.location.filename = filename;

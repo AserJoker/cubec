@@ -68,16 +68,20 @@ node_t read_literal_string(allocator_t allocator, vec_t tokens, size_t *position
                            const char *filename) {
   size_t current = *position;
 
-  cubec_literal_string_t node = NULL;
   token_t first_token = TRY_LOCAL(onerror, vec_get(tokens, current));
   if (!token_is(first_token, CUBEC_TOKEN_STRING, NULL)) {
     return NULL;
   }
 
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_literal_string_type, NULL));
   location_t *location = token_get_location(first_token);
+  cubec_literal_string_init_t init = {
+      .location = *location,
+      .parent = NULL,
+      .value = NULL,
+  };
+  cubec_literal_string_t node =
+      TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_literal_string_type, &init));
   node_t node_base = (node_t)node;
-  node_base->location = *location;
   node_base->location.filename = filename;
 
   const char *token_str = token_get_string(first_token);
