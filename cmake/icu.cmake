@@ -22,6 +22,7 @@ if(WIN32)
             -InputFile "${ICU_DATA_DAT}"
             -OutputFile "${ICU_DATA_GEN_C}"
             -VarName "icudt74l_dat"
+            -Quiet
         DEPENDS "${ICU_DATA_DAT}" "${BIN2C_SCRIPT}"
         COMMENT "Converting icudt74l.dat to C byte array..."
         VERBATIM
