@@ -42,7 +42,7 @@ static void _cubec_expression_binary_dispose(cubec_expression_binary_t self,
 static void _cubec_expression_binary_clone(cubec_expression_binary_t self,
                                            allocator_t allocator,
                                            cubec_expression_binary_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
   self->left = TRY_LOCAL(cleanup, value_clone(allocator, another->left));
   self->right = TRY_LOCAL(cleanup, value_clone(allocator, another->right));
   self->opt = (string_t)TRY_LOCAL(cleanup, value_clone(allocator, another->opt));

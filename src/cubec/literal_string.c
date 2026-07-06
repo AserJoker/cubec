@@ -43,7 +43,7 @@ static void _cubec_literal_string_dispose(cubec_literal_string_t self,
 static void _cubec_literal_string_clone(cubec_literal_string_t self,
                                         allocator_t allocator,
                                         cubec_literal_string_t another) {
-  g_cubec_literal_type.clone(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_literal_type.clone(&self->super, allocator, &another->super));
   self->value = TRY_LOCAL(cleanup, value_clone(allocator, another->value));
   return;
 

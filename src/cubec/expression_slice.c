@@ -43,7 +43,7 @@ static void _cubec_expression_slice_dispose(cubec_expression_slice_t self,
 static void _cubec_expression_slice_clone(cubec_expression_slice_t self,
                                            allocator_t allocator,
                                            cubec_expression_slice_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
   self->host = TRY_LOCAL(cleanup, value_clone(allocator, another->host));
   self->start = TRY_LOCAL(cleanup, value_clone(allocator, another->start));
   self->length = TRY_LOCAL(cleanup, value_clone(allocator, another->length));

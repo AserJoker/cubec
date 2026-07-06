@@ -39,7 +39,9 @@ static void _cubec_expression_dispose(cubec_expression_t self,
 static void _cubec_expression_clone(cubec_expression_t self,
                                     allocator_t allocator,
                                     cubec_expression_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
+onerror:
+  return;
 }
 
 static void _cubec_expression_move(cubec_expression_t self,

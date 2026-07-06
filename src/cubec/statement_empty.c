@@ -31,7 +31,9 @@ static void _cubec_statement_empty_dispose(cubec_statement_empty_t self,
 static void _cubec_statement_empty_clone(cubec_statement_empty_t self,
                                          allocator_t allocator,
                                          cubec_statement_empty_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
+onerror:
+  return;
 }
 
 static void _cubec_statement_empty_move(cubec_statement_empty_t self,

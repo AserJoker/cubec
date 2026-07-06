@@ -26,7 +26,9 @@ static void _cubec_literal_dispose(cubec_literal_t self,
 
 static void _cubec_literal_clone(cubec_literal_t self, allocator_t allocator,
                                  cubec_literal_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
+onerror:
+  return;
 }
 
 static void _cubec_literal_move(cubec_literal_t self, allocator_t allocator,

@@ -49,7 +49,7 @@ static void _cubec_expression_call_dispose(cubec_expression_call_t self,
 static void _cubec_expression_call_clone(cubec_expression_call_t self,
                                           allocator_t allocator,
                                           cubec_expression_call_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
   self->callee = TRY_LOCAL(cleanup, value_clone(allocator, another->callee));
   self->arguments = TRY_LOCAL(cleanup, value_clone(allocator, another->arguments));
   return;

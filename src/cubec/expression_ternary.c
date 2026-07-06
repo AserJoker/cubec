@@ -47,7 +47,7 @@ static void _cubec_expression_ternary_dispose(cubec_expression_ternary_t self,
 static void _cubec_expression_ternary_clone(cubec_expression_ternary_t self,
                                             allocator_t allocator,
                                             cubec_expression_ternary_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
   self->condition = TRY_LOCAL(cleanup, value_clone(allocator, another->condition));
   self->consequent = TRY_LOCAL(cleanup, value_clone(allocator, another->consequent));
   self->alternate = TRY_LOCAL(cleanup, value_clone(allocator, another->alternate));

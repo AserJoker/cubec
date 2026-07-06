@@ -37,7 +37,7 @@ static void _cubec_expression_spread_dispose(cubec_expression_spread_t self,
 static void _cubec_expression_spread_clone(cubec_expression_spread_t self,
                                            allocator_t allocator,
                                            cubec_expression_spread_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
   self->value = TRY_LOCAL(cleanup, value_clone(allocator, another->value));
   return;
 
