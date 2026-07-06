@@ -237,19 +237,22 @@ static token_t read_multiline_comment_token(allocator_t allocator,
         THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
               filename, current.line + 1, current.column);
       }
-      if (*current.offset == '*' && *(current.offset + 1) == '/') {
-        current.offset += 2;
-        current.column += 2;
-        break;
+      if (*current.offset == '*') {
+        if (*(current.offset + 1) == '/') {
+          /* End of comment: star-slash found */
+          current.offset += 2;
+          current.column += 2;
+          break;
+        }
+        /* Skip the asterisk, it could be part of star-slash */
+        current.offset++;
+        current.column++;
+        continue;
       }
       uint32_t code = read_unicode(current.offset, &length);
       current.offset += length;
       current.column += length;
-      if (code == '\\') {
-        code = read_unicode(current.offset, &length);
-        current.offset += length;
-        current.column += length;
-      } else if (code == '\n' || code == 0x2028 || code == 0x2029) {
+      if (code == '\n' || code == 0x2028 || code == 0x2029) {
         current.column = 0;
         current.line++;
       } else if (code == '\r') {

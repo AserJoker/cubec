@@ -395,6 +395,133 @@ TEST_F(dt_token, nested_multi_line_comment) {
   allocator_free(allocator, &vec);
 }
 
+// Test empty multi-line comment
+TEST_F(dt_token, multiline_comment_empty) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "/**/");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, &vec);
+}
+
+// Test multiline comment with single asterisk
+TEST_F(dt_token, multiline_comment_single_asterisk) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "/* * */");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, &vec);
+}
+
+// Test multiline comment with double asterisk
+TEST_F(dt_token, multiline_comment_double_asterisk) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "/* ** */");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, &vec);
+}
+
+// Test multiline comment ending with asterisk then slash
+TEST_F(dt_token, multiline_comment_ends_with_asterisk) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "/* hello * */");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, &vec);
+}
+
+// Test multiline comment with double asterisk at end
+TEST_F(dt_token, multiline_comment_double_asterisk_at_end) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "/* hello **/");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, &vec);
+}
+
+// Test multiline comment spanning multiple lines
+TEST_F(dt_token, multiline_comment_multi_line) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "/* line1\nline2\nline3 */");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, &vec);
+}
+
+// Test multiline comment with many asterisks
+TEST_F(dt_token, multiline_comment_many_asterisks) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "/***\n****\n*****/");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, &vec);
+}
+
+// Test multiline comment followed by code
+TEST_F(dt_token, multiline_comment_followed_by_code) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "/* comment */ func");
+  ASSERT_NE(vec, nullptr);
+  // Tokens: MULTILINE_COMMENT, WHITESPACE, KEYWORD, EOF
+  EXPECT_EQ(vec_get_size(vec), 4);
+  check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
+  check_token_kind(vec, 1, CUBEC_TOKEN_WHITESPACE);
+  check_token_kind(vec, 2, CUBEC_TOKEN_KEYWORD); // func is keyword
+  check_token_kind(vec, 3, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, &vec);
+}
+
+// Test multiline comment before single line comment
+TEST_F(dt_token, multiline_comment_before_single_line_comment) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "/* multi */ // single\n");
+  ASSERT_NE(vec, nullptr);
+  // Tokens: MULTILINE_COMMENT, WHITESPACE, COMMENT, WHITESPACE, EOF
+  EXPECT_EQ(vec_get_size(vec), 5);
+  check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
+  check_token_kind(vec, 1, CUBEC_TOKEN_WHITESPACE);
+  check_token_kind(vec, 2, CUBEC_TOKEN_COMMENT);
+  check_token_kind(vec, 3, CUBEC_TOKEN_WHITESPACE);
+  check_token_kind(vec, 4, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, &vec);
+}
+
+// Test unterminated multiline comment (should error)
+TEST_F(dt_token, unterminated_multiline_comment) {
+  error_clear();
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "/* unterminated");
+  EXPECT_TRUE(g_error != NULL);
+  if (vec) {
+    allocator_free(allocator, &vec);
+  }
+}
+
+// Test multiline comment with only asterisks
+TEST_F(dt_token, multiline_comment_only_asterisks) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "/***/");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, &vec);
+}
+
+// Test multiline comment containing slashes
+TEST_F(dt_token, multiline_comment_containing_slashes) {
+  vec_t vec = resolve_token_list(allocator, "test.cubec", "/* a//b */");
+  ASSERT_NE(vec, nullptr);
+  EXPECT_EQ(vec_get_size(vec), 2);
+  check_token_kind(vec, 0, CUBEC_TOKEN_MULTILINE_COMMENT);
+  check_token_kind(vec, 1, CUBEC_TOKEN_EOF);
+  allocator_free(allocator, &vec);
+}
+
 // Test whitespace tokens - spaces
 TEST_F(dt_token, whitespace_spaces) {
   vec_t vec = resolve_token_list(allocator, "test.cubec", "   ");
