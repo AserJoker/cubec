@@ -390,9 +390,16 @@ Cubec plans to support: defer statements, foreach loops, test blocks, comptime e
 - C11 for library code, C++20 for tests
 - Hand-crafted OOP via `type_t` virtual tables and struct nesting
 - All memory managed through `allocator_t` — never use raw `malloc`/`free`
-- `allocator_free(allocator, &ptr)` — always pass address of pointer; after call `ptr == NULL` (prevents use-after-free)
+- `allocator_free(allocator, &ptr)` — always pass address of pointer; after call `ptr == NULL` (prevents use-after-free). **Do NOT manually set `ptr = NULL` after `allocator_free`** — the macro already handles this.
+- **Error propagation in init functions**: When a subclass calls its parent's `type->init`, always wrap with `TRY_VOID_LOCAL(onerror, parent_type.init(&self->super, allocator, &super_init))`. This ensures that if the parent's init fails (sets `g_error`), the subclass's init jumps to `onerror:` for proper cleanup instead of continuing execution with partially-initialized state.
+- **Dispose functions**: Do NOT assign `= NULL` after `allocator_free` calls — the macro already nullifies the pointer. Simply call `allocator_free` followed by the parent's `dispose`.
 - Every data structure has a corresponding `g_xxx_type` global
 - Error handling via `TRY`/`THROW`/`CATCH_ERROR` macros (Rust-like `?` pattern)
+  - `TRY(ret, expr)` — Execute expr, return err if it throws (uses `return err` for propagation)
+  - `TRY_LOCAL(label, expr)` — Execute expr, goto label on error (for cleanup paths with `goto onerror`)
+  - `TRY_VOID_LOCAL(label, expr)` — Like `TRY_LOCAL` but for void expressions (init/dispose functions)
+  - `THROW_LOCAL(label, fmt, ...)` — Throw error and goto label (used with `TRY_LOCAL` for cleanup)
+  - `THROW(err, fmt, ...)` — Throw error and return err (used with `TRY` for direct return)
 - Subclass init calls parent's `type->init` via `super` field
 - Tests follow pattern: create allocator → test operations → destroy allocator (auto leak check)
 - **Iterator-first for `list_t`**: Always use `list_iter_get`/`list_iter_set`/`list_iter_remove` for O(1) element access. Indexed `list_insert` is the only remaining O(n) index-based operation — used only for insertion position specification
