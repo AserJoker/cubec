@@ -87,7 +87,7 @@ TEST_F(dt_expression_binary, prefix_address) {
   size_t position = 0;
   node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_DEREF);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ADDR);
 
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
   EXPECT_STREQ(string_get(bin->opt), ".&");
@@ -113,6 +113,66 @@ TEST_F(dt_expression_binary, prefix_deref) {
   EXPECT_STREQ(string_get(bin->opt), ".*");
   ASSERT_NE(bin->right, nullptr);
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_binary, postfix_try) {
+  /* Postfix try: result.? (like Rust's ? operator) */
+  const char *source = "result.?";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TRY);
+
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
+  EXPECT_STREQ(string_get(bin->opt), ".?");
+  ASSERT_NE(bin->right, nullptr);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_binary, postfix_try_with_member_access) {
+  /* obj.field.? - try on member expression */
+  const char *source = "obj.field.?";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TRY);
+
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
+  EXPECT_STREQ(string_get(bin->opt), ".?");
+  ASSERT_NE(bin->right, nullptr);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_binary, postfix_try_with_call) {
+  /* foo().? - try on call result */
+  const char *source = "foo().?";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TRY);
+
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
+  EXPECT_STREQ(string_get(bin->opt), ".?");
+  ASSERT_NE(bin->right, nullptr);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_CALL);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -720,7 +780,7 @@ TEST_F(dt_expression_binary, prefix_addr_then_binary_and) {
   ASSERT_NE(bin->right, nullptr);
 
   /* left: postfix addr x.& */
-  EXPECT_EQ(bin->left->kind, CUBEC_NODE_EXPRESSION_DEREF);
+  EXPECT_EQ(bin->left->kind, CUBEC_NODE_EXPRESSION_ADDR);
   cubec_expression_binary_t postfix = (cubec_expression_binary_t)bin->left;
   EXPECT_STREQ(string_get(postfix->opt), ".&");
   EXPECT_EQ(postfix->left, nullptr);

@@ -6,6 +6,7 @@
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
+#include <string.h>
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move (reuses expression_binary)
@@ -15,7 +16,7 @@ static void _cubec_expression_postfix_unary_init(
     cubec_expression_postfix_unary_t self, allocator_t allocator,
     cubec_expression_postfix_unary_init_t *init) {
   cubec_expression_init_t super_init = {
-      .kind = CUBEC_NODE_EXPRESSION_DEREF,
+      .kind = init->kind,
       .parent = NULL,
   };
   if (init) {
@@ -33,8 +34,9 @@ static void _cubec_expression_postfix_unary_init(
   }
 }
 
-static void _cubec_expression_postfix_unary_dispose(
-    cubec_expression_postfix_unary_t self, allocator_t allocator) {
+static void
+_cubec_expression_postfix_unary_dispose(cubec_expression_postfix_unary_t self,
+                                        allocator_t allocator) {
   allocator_free(allocator, &self->right);
   self->right = NULL;
   allocator_free(allocator, &self->opt);
@@ -51,9 +53,10 @@ static void _cubec_expression_postfix_unary_clone(
   self->opt = (string_t)value_clone(allocator, another->opt);
 }
 
-static void _cubec_expression_postfix_unary_move(
-    cubec_expression_postfix_unary_t self, allocator_t allocator,
-    cubec_expression_postfix_unary_t another) {
+static void
+_cubec_expression_postfix_unary_move(cubec_expression_postfix_unary_t self,
+                                     allocator_t allocator,
+                                     cubec_expression_postfix_unary_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->left = NULL;
   self->right = value_move(allocator, another->right);
@@ -77,9 +80,10 @@ type_t g_cubec_expression_postfix_unary_type = {
  * Try to parse postfix unary operators:
  *   - .*  (postfix dereference, e.g. ptr.*)
  *   - .&  (postfix address-of, e.g. &obj)
+ *   - .?  (postfix try/unwrap, e.g. result.?)
  *
- * These are composed of separate '.' and '&'/'*' tokens.
- * Returns NULL if next token is not '.' followed by '&' or '*'.
+ * These are composed of separate '.' and '&'/'*'/'?' tokens.
+ * Returns NULL if next token is not '.' followed by '&', '*', or '?'.
  */
 node_t read_expression_postfix_unary(allocator_t allocator, vec_t tokens,
                                      size_t *position, const char *filename,
@@ -108,11 +112,20 @@ node_t read_expression_postfix_unary(allocator_t allocator, vec_t tokens,
   /* Determine operator: .& or .* */
   const char *op_text = NULL;
   size_t op_len = 0;
-  if (second_len == 1 && (*second_op == '&' || *second_op == '*')) {
+  cubec_node_kind_t kind = CUBEC_NODE_EXPRESSION_TRY;
+  if (second_len == 1 &&
+      (*second_op == '&' || *second_op == '*' || *second_op == '?')) {
     op_text = second_op;
     op_len = second_len;
   } else {
     return NULL;
+  }
+  if (*second_op == '&') {
+    kind = CUBEC_NODE_EXPRESSION_ADDR;
+  } else if (*second_op == '*') {
+    kind = CUBEC_NODE_EXPRESSION_DEREF;
+  } else if (*second_op == '?') {
+    kind = CUBEC_NODE_EXPRESSION_TRY;
   }
   current++;
 
@@ -125,6 +138,7 @@ node_t read_expression_postfix_unary(allocator_t allocator, vec_t tokens,
                           &(cubec_expression_postfix_unary_init_t){
                               .host = host,
                               .opt = opt,
+                              .kind = kind,
                           });
   location_t *loc = token_get_location(dot_token);
   node->super.super.location = *loc;
