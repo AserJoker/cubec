@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "cubec/declaration_pointer.h"
+#include "cubec/declaration_slice.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_comma.h"
 #include "cubec/expression_generic_instantiation.h"
@@ -187,11 +188,12 @@ onerror:
 node_t read_expression_type(allocator_t allocator, vec_t tokens,
                             size_t *position, const char *filename) {
   /* Parse a type expression: identifier with optional member access,
-   * generic instantiation, and pointer declaration. Handles patterns like:
+   * generic instantiation, pointer declaration, and slice declaration. Handles patterns like:
    *   - identifier (e.g., "Vec", "i32")
-   *   - member (e.g., "std::vec::Vec")
+   *   - member (e.g., "std.vec.Vec")
    *   - generic instantiation (e.g., "Vec[i32]", "Option[T]")
    *   - pointer declaration (e.g., "* i32", "* const i32", "* volatile i32")
+   *   - slice declaration (e.g., "[] i32", "[] const i32", "[] volatile i32")
    *
    * This is a simplified version of read_value focused on type syntax. */
 
@@ -204,6 +206,16 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
    * generic instantiation, and nested pointers (e.g., ** i32). */
   node = TRY_LOCAL(onerror,
                    read_declaration_pointer(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try slice declaration (prefix form: [] [const] [volatile] <type>)
+   * Note: read_declaration_slice recursively calls read_expression_type
+   * to handle the underlying type. */
+  node = TRY_LOCAL(onerror,
+                   read_declaration_slice(allocator, tokens, &current, filename));
   if (node) {
     *position = current;
     return node;

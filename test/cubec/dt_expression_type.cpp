@@ -1,5 +1,6 @@
 ﻿#include "cubec/expression.h"
 #include "cubec/declaration_pointer.h"
+#include "cubec/declaration_slice.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_member.h"
 #include "cubec/literal_identifier.h"
@@ -673,6 +674,283 @@ TEST_F(dt_expression_type, pointer_on_complex_type) {
   cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
   ASSERT_NE(ptr->type, nullptr);
   EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: pointer with reversed qualifier order (e.g., "* volatile const i32") */
+TEST_F(dt_expression_type, pointer_reversed_qualifier_order) {
+  const char *source = "* volatile const i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  EXPECT_TRUE(ptr->is_const);
+  EXPECT_TRUE(ptr->is_volatile);
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: pointer with repeated qualifiers (e.g., "* const const i32") */
+TEST_F(dt_expression_type, pointer_repeated_qualifiers) {
+  const char *source = "* const const i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  EXPECT_TRUE(ptr->is_const);
+  EXPECT_FALSE(ptr->is_volatile);
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: pointer with mixed repeated qualifiers (e.g., "* const volatile const i32") */
+TEST_F(dt_expression_type, pointer_mixed_repeated_qualifiers) {
+  const char *source = "* const volatile const i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  EXPECT_TRUE(ptr->is_const);
+  EXPECT_TRUE(ptr->is_volatile);
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ==========================================================================
+ * Slice Declaration Tests
+ * ========================================================================== */
+
+/* Test: simple slice declaration (e.g., "[] i32") */
+TEST_F(dt_expression_type, simple_slice_declaration) {
+  const char *source = "[] i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
+  EXPECT_FALSE(slice->is_const);
+  EXPECT_FALSE(slice->is_volatile);
+  ASSERT_NE(slice->type, nullptr);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  cubec_literal_identifier_t underlying = (cubec_literal_identifier_t)slice->type;
+  EXPECT_STREQ(string_get(underlying->value), "i32");
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: slice with const qualifier (e.g., "[] const i32") */
+TEST_F(dt_expression_type, slice_with_const) {
+  const char *source = "[] const i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
+  EXPECT_TRUE(slice->is_const);
+  EXPECT_FALSE(slice->is_volatile);
+  ASSERT_NE(slice->type, nullptr);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: slice with volatile qualifier (e.g., "[] volatile i32") */
+TEST_F(dt_expression_type, slice_with_volatile) {
+  const char *source = "[] volatile i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
+  EXPECT_FALSE(slice->is_const);
+  EXPECT_TRUE(slice->is_volatile);
+  ASSERT_NE(slice->type, nullptr);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: slice with const and volatile (e.g., "[] const volatile i32") */
+TEST_F(dt_expression_type, slice_with_const_volatile) {
+  const char *source = "[] const volatile i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
+  EXPECT_TRUE(slice->is_const);
+  EXPECT_TRUE(slice->is_volatile);
+  ASSERT_NE(slice->type, nullptr);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: slice to generic type (e.g., "[] Vec[i32]") */
+TEST_F(dt_expression_type, slice_to_generic_type) {
+  const char *source = "[] Vec[i32]";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
+  ASSERT_NE(slice->type, nullptr);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: slice to member type (e.g., "[] std.vec.Vec") */
+TEST_F(dt_expression_type, slice_to_member_type) {
+  const char *source = "[] std.vec.Vec";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
+  ASSERT_NE(slice->type, nullptr);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: generic with slice element type (e.g., "Vec[[] i32]") */
+TEST_F(dt_expression_type, generic_with_slice_argument) {
+  const char *source = "Vec[[] i32]";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+
+  cubec_expression_generic_instantiation_t generic =
+      (cubec_expression_generic_instantiation_t)node;
+  ASSERT_EQ(vec_get_size(generic->arguments), 1);
+
+  node_t arg = (node_t)vec_get(generic->arguments, 0);
+  EXPECT_EQ(arg->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: slice with reversed qualifier order (e.g., "[] volatile const i32") */
+TEST_F(dt_expression_type, slice_reversed_qualifier_order) {
+  const char *source = "[] volatile const i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
+  EXPECT_TRUE(slice->is_const);
+  EXPECT_TRUE(slice->is_volatile);
+  ASSERT_NE(slice->type, nullptr);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: slice with repeated qualifiers (e.g., "[] volatile volatile i32") */
+TEST_F(dt_expression_type, slice_repeated_qualifiers) {
+  const char *source = "[] volatile volatile i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
+  EXPECT_FALSE(slice->is_const);
+  EXPECT_TRUE(slice->is_volatile);
+  ASSERT_NE(slice->type, nullptr);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: slice with mixed repeated qualifiers (e.g., "[] const volatile const i32") */
+TEST_F(dt_expression_type, slice_mixed_repeated_qualifiers) {
+  const char *source = "[] const volatile const i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
+  EXPECT_TRUE(slice->is_const);
+  EXPECT_TRUE(slice->is_volatile);
+  ASSERT_NE(slice->type, nullptr);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

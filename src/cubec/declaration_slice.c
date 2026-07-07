@@ -1,4 +1,4 @@
-#include "cubec/declaration_pointer.h"
+#include "cubec/declaration_slice.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
@@ -6,14 +6,14 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 
-static void _cubec_declaration_pointer_init(cubec_declaration_pointer_t self,
-                                            allocator_t allocator,
-                                            cubec_declaration_pointer_init_t *init) {
+static void _cubec_declaration_slice_init(cubec_declaration_slice_t self,
+                                          allocator_t allocator,
+                                          cubec_declaration_slice_init_t *init) {
   if (!init) {
     THROW_LOCAL(onerror, "init cannot be NULL");
   }
   cubec_declaration_init_t super_init = {
-      .kind = CUBEC_NODE_DECLARATION_POINTER,
+      .kind = CUBEC_NODE_DECLARATION_SLICE,
       .parent = NULL,
   };
   super_init.location = init->location;
@@ -25,15 +25,15 @@ onerror:
   return;
 }
 
-static void _cubec_declaration_pointer_dispose(cubec_declaration_pointer_t self,
-                                               allocator_t allocator) {
+static void _cubec_declaration_slice_dispose(cubec_declaration_slice_t self,
+                                             allocator_t allocator) {
   allocator_free(allocator, &self->type);
   g_cubec_declaration_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_declaration_pointer_clone(cubec_declaration_pointer_t self,
-                                             allocator_t allocator,
-                                             cubec_declaration_pointer_t another) {
+static void _cubec_declaration_slice_clone(cubec_declaration_slice_t self,
+                                           allocator_t allocator,
+                                           cubec_declaration_slice_t another) {
   TRY_VOID_LOCAL(cleanup, g_cubec_declaration_type.clone(&self->super, allocator, &another->super));
   self->type = TRY_LOCAL(cleanup, value_clone(allocator, another->type));
   self->is_const = another->is_const;
@@ -44,9 +44,9 @@ cleanup:
   allocator_free(allocator, &self->type);
 }
 
-static void _cubec_declaration_pointer_move(cubec_declaration_pointer_t self,
-                                            allocator_t allocator,
-                                            cubec_declaration_pointer_t another) {
+static void _cubec_declaration_slice_move(cubec_declaration_slice_t self,
+                                          allocator_t allocator,
+                                          cubec_declaration_slice_t another) {
   TRY_VOID_LOCAL(cleanup, g_cubec_declaration_type.move(&self->super, allocator, &another->super));
   self->type = TRY_LOCAL(cleanup, value_move(allocator, another->type));
   self->is_const = another->is_const;
@@ -57,13 +57,13 @@ cleanup:
   allocator_free(allocator, &self->type);
 }
 
-type_t g_cubec_declaration_pointer_type = {
-    .name = "cubec.cubec.declaration_pointer",
-    .size = sizeof(struct _cubec_declaration_pointer_t),
-    .init = (type_init_fn_t)_cubec_declaration_pointer_init,
-    .dispose = (type_dispose_fn_t)_cubec_declaration_pointer_dispose,
-    .clone = (type_clone_fn_t)_cubec_declaration_pointer_clone,
-    .move = (type_move_fn_t)_cubec_declaration_pointer_move,
+type_t g_cubec_declaration_slice_type = {
+    .name = "cubec.cubec.declaration_slice",
+    .size = sizeof(struct _cubec_declaration_slice_t),
+    .init = (type_init_fn_t)_cubec_declaration_slice_init,
+    .dispose = (type_dispose_fn_t)_cubec_declaration_slice_dispose,
+    .clone = (type_clone_fn_t)_cubec_declaration_slice_clone,
+    .move = (type_move_fn_t)_cubec_declaration_slice_move,
 };
 
 /**
@@ -76,25 +76,33 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   return location_is(token_get_location(token), keyword);
 }
 
-node_t read_declaration_pointer(allocator_t allocator, vec_t tokens,
-                                size_t *position, const char *filename) {
+node_t read_declaration_slice(allocator_t allocator, vec_t tokens,
+                              size_t *position, const char *filename) {
   size_t current = *position;
-  cubec_declaration_pointer_t node = NULL;
+  cubec_declaration_slice_t node = NULL;
   node_t type = NULL;
   location_t start_location = {0};
   bool is_const = false;
   bool is_volatile = false;
 
-  /* Expect '*' (pointer indicator) */
-  token_t star_token = TRY_LOCAL(onerror, vec_get(tokens, current));
-  if (!token_is(star_token, CUBEC_TOKEN_SYMBOL, "*")) {
+  /* Expect '[' (slice indicator - must be immediately followed by ']') */
+  token_t open_bracket = TRY_LOCAL(onerror, vec_get(tokens, current));
+  if (!token_is(open_bracket, CUBEC_TOKEN_SYMBOL, "[")) {
     return NULL;
   }
   current++;
-  start_location = *token_get_location(star_token);
+
+  /* Expect ']' immediately after '[' - no whitespace, comments, or newlines allowed */
+  token_t close_bracket = TRY_LOCAL(onerror, vec_get(tokens, current));
+  if (!token_is(close_bracket, CUBEC_TOKEN_SYMBOL, "]")) {
+    return NULL;
+  }
+  current++;
+
+  start_location = *token_get_location(open_bracket);
   start_location.filename = filename;
 
-  /* Skip whitespace after '*' */
+  /* Skip whitespace before parsing qualifiers */
   skip_whitespace(tokens, &current);
 
   /* Check for optional 'const' and 'volatile' qualifiers (any order, may repeat) */
@@ -114,14 +122,17 @@ node_t read_declaration_pointer(allocator_t allocator, vec_t tokens,
     break;
   }
 
+  /* Skip whitespace before parsing the underlying type */
+  skip_whitespace(tokens, &current);
+
   /* Parse the underlying type using read_expression_type */
   type = TRY_LOCAL(onerror, read_expression_type(allocator, tokens, &current, filename));
   if (!type) {
-    THROW_LOCAL(onerror, "expected type after pointer declaration");
+    THROW_LOCAL(onerror, "expected type after slice declaration");
   }
 
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_declaration_pointer_type,
-                          &(cubec_declaration_pointer_init_t){
+  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_declaration_slice_type,
+                          &(cubec_declaration_slice_init_t){
                               .type = type,
                               .is_const = is_const,
                               .is_volatile = is_volatile,

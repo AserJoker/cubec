@@ -35,6 +35,7 @@ cubec/
 │   └── cubec/                  # Language frontend module
 │       ├── declaration.h       # Declaration base class (abstract)
 │       ├── declaration_pointer.h # Pointer declaration (* [const] [volatile] <type>)
+│       ├── declaration_slice.h  # Slice declaration ([] [const] [volatile] <type>)
 │       ├── expression.h        # Expression AST node
 │       ├── expression_assignment.h  # Assignment expression (a = b, a += b, etc.)
 │       ├── expression_binary.h  # Binary/prefix-unary expression (left/right/opt)
@@ -109,7 +110,8 @@ C struct nesting simulates single inheritance:
 node_t (core/node.h)
   └── cubec_expression_t (cubec/expression.h)
         ├── cubec_declaration_t (cubec/declaration.h)  # Declaration base class (abstract)
-        │     └── cubec_declaration_pointer_t (cubec/declaration_pointer.h)  # * [const] [volatile] <type>
+        │     ├── cubec_declaration_pointer_t (cubec/declaration_pointer.h)  # * [const] [volatile] <type>
+        │     └── cubec_declaration_slice_t (cubec/declaration_slice.h)  # [] [const] [volatile] <type>
         ├── cubec_expression_binary_t (cubec/expression_binary.h)
         ├── cubec_expression_call_t (cubec/expression_call.h)
         ├── cubec_expression_generic_instantiation_t (cubec/expression_generic_instantiation.h)
@@ -133,7 +135,8 @@ Subclasses embed the parent via a `super` field and call parent's `type->init` d
 node_t (core/node.h)
   └── cubec_expression_t (cubec/expression.h)
         ├── cubec_declaration_t (cubec/declaration.h)  # Declaration base class (abstract)
-        │     └── cubec_declaration_pointer_t (cubec/declaration_pointer.h)  # * [const] [volatile] <type>
+        │     ├── cubec_declaration_pointer_t (cubec/declaration_pointer.h)  # * [const] [volatile] <type>
+        │     └── cubec_declaration_slice_t (cubec/declaration_slice.h)  # [] [const] [volatile] <type>
         ├── cubec_expression_assignment_t (cubec/expression_assignment.h)
         ├── cubec_expression_binary_t (cubec/expression_binary.h)
         ├── cubec_expression_call_t (cubec/expression_call.h)
@@ -351,7 +354,7 @@ read_expression_member                # host.field
 - `read_literal_string` — String AST node, supports auto-concatenation of adjacent strings
 - `read_statement_empty` — Empty statement (`;`)
 - `read_program_node` — Top-level entry, loops parsing statements until EOF
-- `read_expression_type` (expression.c) — Parses type expressions: identifier with optional member access, generic instantiation, and pointer declaration. Handles patterns like: `identifier` (e.g., `Vec`, `i32`), `member` (e.g., `std.vec.Vec`), `generic instantiation` (e.g., `Vec[i32]`, `Option[T]`), `pointer declaration` (e.g., `* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`). This is a simplified version of `read_value` focused on type syntax. Used for parsing type annotations and generic type arguments. Pointer declarations are recursively parsed via `read_declaration_pointer`.
+- `read_expression_type` (expression.c) — Parses type expressions: identifier with optional member access, generic instantiation, pointer declaration, and slice declaration. Handles patterns like: `identifier` (e.g., `Vec`, `i32`), `member` (e.g., `std.vec.Vec`), `generic instantiation` (e.g., `Vec[i32]`, `Option[T]`), `pointer declaration` (e.g., `* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`), `slice declaration` (e.g., `[] i32`, `[] const i32`, `[] volatile i32`, `[] const volatile i32`). This is a simplified version of `read_value` focused on type syntax. Used for parsing type annotations and generic type arguments. Pointer and slice declarations are recursively parsed via `read_declaration_pointer` and `read_declaration_slice` respectively.
 
 ### Not Yet Implemented
 Most statement types (if, for, while, switch, defer, etc.) and all declaration types are defined as enums but lack parser implementations. Expression parsing is substantially complete: assignment, comma, group, spread, call, generic instantiation, ternary, and member access are all implemented.
@@ -391,7 +394,7 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 412 test cases
+- Total: 425 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -416,7 +419,7 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 - `dt_expression_generic_instantiation.cpp` (15 cases) — basic instantiation `foo[a]`, multi-arg `foo[a,b]`, instantiation on literal, instantiation on call, instantiation→call chain `fn[a]()`, instantiation→member chain `fn[a].field`, call→instantiation chain `foo()[a]`, instantiation→instantiation chain `fn[a][b]`, spread in generic args, group as callee, nested generic groups, non-generic not triggered (no `[`), unclosed bracket error, trailing comma error, generic on `this`
 - `dt_expression_ternary.cpp` (8 cases) — simple ternary `a ? b : c`, ternary with binary condition `x + a ? b : c`, missing `?` fallback, missing `:` error, missing consequent error, missing alternate error, nested ternary `a ? b ? c : d : e`, complex alternate `a ? b : c + d`
 - `dt_expression_comma.cpp` (12 cases) — basic comma `a, b`, numeric literals, right-associative chaining (`a, b, c` → `comma(a, comma(b, c))`), assignment in left/right position, comma with binary/call expressions, non-comma fallback (returns operand directly)
-- `dt_expression_type.cpp` (30 cases) — simple identifier types (`i32`, `Vec`), generic instantiation with single/multiple arguments (`Vec[i32]`, `Map[string, i32]`), type parameters (`Option[T]`), single/chained member access (`std.vec`, `std.vec.Vec`), member with generic (`std.vec.Vec[i32]`), generic arguments as member access types (`Vec[std.vec.Vec]`, `Map[std.vec.Vec, std.str.String]`), mixed arguments (`Pair[i32, std.vec.Vec]`), deeply nested generics with members, non-identifier returns NULL (string/numeric literals), empty brackets handling, underscore prefix identifiers, whitespace handling, token consumption verification + pointer declaration tests (`* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`, `** i32`, `* Vec[i32]`, `* std.vec.Vec`, `Vec[* i32]`, `* * i32`, `* std.vec.Vec[i32]`)
+- `dt_expression_type.cpp` (43 cases) — simple identifier types (`i32`, `Vec`), generic instantiation with single/multiple arguments (`Vec[i32]`, `Map[string, i32]`), type parameters (`Option[T]`), single/chained member access (`std.vec`, `std.vec.Vec`), member with generic (`std.vec.Vec[i32]`), generic arguments as member access types (`Vec[std.vec.Vec]`, `Map[std.vec.Vec, std.str.String]`), mixed arguments (`Pair[i32, std.vec.Vec]`), deeply nested generics with members, non-identifier returns NULL (string/numeric literals), empty brackets handling, underscore prefix identifiers, whitespace handling, token consumption verification + pointer declaration tests (`* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`, `** i32`, `* Vec[i32]`, `* std.vec.Vec`, `Vec[* i32]`, `* * i32`, `* std.vec.Vec[i32]`) + slice declaration tests (`[] i32`, `[] const i32`, `[] volatile i32`, `[] const volatile i32`, `[] Vec[i32]`, `[] std.vec.Vec`, `Vec[[] i32]`) + reordered/repeated qualifier tests (`* volatile const`, `* const const`, `* const volatile const`, `[] volatile const`, `[] volatile volatile`, `[] const volatile const`)
 
 ## Planned Language Features (inferred from AST node types)
 
