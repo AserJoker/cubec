@@ -3,6 +3,7 @@
 #include "core/error.h"
 #include "core/node.h"
 #include "core/type.h"
+#include "cubec/declaration_pointer.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_comma.h"
 #include "cubec/expression_generic_instantiation.h"
@@ -185,15 +186,61 @@ onerror:
 }
 node_t read_expression_type(allocator_t allocator, vec_t tokens,
                             size_t *position, const char *filename) {
-  /* Parse a type expression: identifier with optional member access and
-   * generic instantiation. Handles patterns like:
+  /* Parse a type expression: identifier with optional member access,
+   * generic instantiation, and pointer declaration. Handles patterns like:
    *   - identifier (e.g., "Vec", "i32")
    *   - member (e.g., "std::vec::Vec")
    *   - generic instantiation (e.g., "Vec[i32]", "Option[T]")
+   *   - pointer declaration (e.g., "* i32", "* const i32", "* volatile i32")
    *
    * This is a simplified version of read_value focused on type syntax. */
 
   node_t node = NULL;
+  size_t current = *position;
+
+  /* Try pointer declaration first (prefix form: * [const] [volatile] <type>) */
+  node = TRY_LOCAL(onerror,
+                   read_declaration_pointer(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    /* Continue processing postfix operators on the pointer type */
+    while (true) {
+      skip_whitespace(tokens, &current);
+
+      /* Try postfix: generic instantiation <callee>[<args>] */
+      node_t generic_node = TRY_LOCAL(
+          onerror, read_expression_generic_instantiation(allocator, tokens,
+                                                         &current, filename, node));
+      if (generic_node) {
+        node = generic_node;
+        *position = current;
+        continue;
+      }
+
+      /* Try postfix: member access <host>.<field> */
+      node_t member_node = TRY_LOCAL(onerror,
+                                     read_expression_member(allocator, tokens,
+                                                            &current, filename,
+                                                            node));
+      if (member_node) {
+        node = member_node;
+        *position = current;
+        continue;
+      }
+
+      /* Try postfix: pointer declaration (chained, e.g., ** i32) */
+      node_t pointer_node = TRY_LOCAL(
+          onerror, read_declaration_pointer(allocator, tokens, &current, filename));
+      if (pointer_node) {
+        node = pointer_node;
+        *position = current;
+        continue;
+      }
+
+      break;
+    }
+    return node;
+  }
 
   /* Try identifier as the base type */
   node = TRY_LOCAL(onerror,
@@ -202,8 +249,8 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
     return NULL;
   }
 
-  /* Process postfix operators: member access and generic instantiation */
-  size_t current = *position;
+  current = *position;
+  /* Process postfix operators: member access, generic instantiation, and pointer */
   while (true) {
     skip_whitespace(tokens, &current);
 
@@ -222,11 +269,22 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
                                    read_expression_member(allocator, tokens,
                                                           &current, filename,
                                                           node));
-    if (!member_node) {
-      break;
+    if (member_node) {
+      node = member_node;
+      *position = current;
+      continue;
     }
-    node = member_node;
-    *position = current;
+
+    /* Try postfix: pointer declaration (chained, e.g., i32 *) */
+    node_t pointer_node = TRY_LOCAL(
+        onerror, read_declaration_pointer(allocator, tokens, &current, filename));
+    if (pointer_node) {
+      node = pointer_node;
+      *position = current;
+      continue;
+    }
+
+    break;
   }
 
   return node;

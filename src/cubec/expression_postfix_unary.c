@@ -88,7 +88,7 @@ type_t g_cubec_expression_postfix_unary_type = {
 /**
  * Try to parse postfix unary operators:
  *   - .*  (postfix dereference, e.g. ptr.*)
- *   - .&  (postfix address-of, e.g. &obj)
+ *   - .&  (postfix address-of, e.g. obj.&)
  *   - .?  (postfix try/unwrap, e.g. result.?)
  *
  * These are composed of separate '.' and '&'/'*'/'?' tokens.

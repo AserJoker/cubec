@@ -1,4 +1,5 @@
 ﻿#include "cubec/expression.h"
+#include "cubec/declaration_pointer.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_member.h"
 #include "cubec/literal_identifier.h"
@@ -453,6 +454,225 @@ TEST_F(dt_expression_type, underscore_identifier) {
 
   cubec_literal_identifier_t literal = (cubec_literal_identifier_t)node;
   EXPECT_STREQ(string_get(literal->value), "_T");
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ==========================================================================
+ * Pointer Declaration Tests
+ * ========================================================================== */
+
+/* Test: simple pointer declaration (e.g., "* i32") */
+TEST_F(dt_expression_type, simple_pointer_declaration) {
+  const char *source = "* i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  EXPECT_FALSE(ptr->is_const);
+  EXPECT_FALSE(ptr->is_volatile);
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  cubec_literal_identifier_t underlying = (cubec_literal_identifier_t)ptr->type;
+  EXPECT_STREQ(string_get(underlying->value), "i32");
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: pointer with const qualifier (e.g., "* const i32") */
+TEST_F(dt_expression_type, pointer_with_const) {
+  const char *source = "* const i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  EXPECT_TRUE(ptr->is_const);
+  EXPECT_FALSE(ptr->is_volatile);
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: pointer with volatile qualifier (e.g., "* volatile i32") */
+TEST_F(dt_expression_type, pointer_with_volatile) {
+  const char *source = "* volatile i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  EXPECT_FALSE(ptr->is_const);
+  EXPECT_TRUE(ptr->is_volatile);
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: pointer with const and volatile (e.g., "* const volatile i32") */
+TEST_F(dt_expression_type, pointer_with_const_volatile) {
+  const char *source = "* const volatile i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  EXPECT_TRUE(ptr->is_const);
+  EXPECT_TRUE(ptr->is_volatile);
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: chained pointer declaration (e.g., "** i32") */
+TEST_F(dt_expression_type, chained_pointer_declaration) {
+  const char *source = "** i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  EXPECT_FALSE(ptr->is_const);
+  EXPECT_FALSE(ptr->is_volatile);
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  /* Inner pointer should point to i32 */
+  cubec_declaration_pointer_t inner_ptr = (cubec_declaration_pointer_t)ptr->type;
+  ASSERT_NE(inner_ptr->type, nullptr);
+  EXPECT_EQ(inner_ptr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: pointer to generic type (e.g., "* Vec[i32]") */
+TEST_F(dt_expression_type, pointer_to_generic_type) {
+  const char *source = "* Vec[i32]";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: pointer to member type (e.g., "* std.vec.Vec") */
+TEST_F(dt_expression_type, pointer_to_member_type) {
+  const char *source = "* std.vec.Vec";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: generic with pointer element type (e.g., "Vec[* i32]") */
+TEST_F(dt_expression_type, generic_with_pointer_argument) {
+  const char *source = "Vec[* i32]";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+
+  cubec_expression_generic_instantiation_t generic =
+      (cubec_expression_generic_instantiation_t)node;
+  ASSERT_EQ(vec_get_size(generic->arguments), 1);
+
+  node_t arg = (node_t)vec_get(generic->arguments, 0);
+  EXPECT_EQ(arg->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: pointer declaration with pointer to pointer (e.g., "* * i32") */
+TEST_F(dt_expression_type, pointer_to_pointer) {
+  const char *source = "* * i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t outer = (cubec_declaration_pointer_t)node;
+  ASSERT_NE(outer->type, nullptr);
+  EXPECT_EQ(outer->type->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t inner = (cubec_declaration_pointer_t)outer->type;
+  ASSERT_NE(inner->type, nullptr);
+  EXPECT_EQ(inner->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: pointer declaration on complex member type (e.g., "* std.vec.Vec[i32]") */
+TEST_F(dt_expression_type, pointer_on_complex_type) {
+  const char *source = "* std.vec.Vec[i32]";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
