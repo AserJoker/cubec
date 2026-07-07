@@ -142,11 +142,10 @@ static uint32_t read_unicode(const char *source, size_t *length) {
 }
 
 static const char *symbols[] = {
-    "&&=", "||=", "...", "==", "!=", ">>=", "<<=", ">>", "<<", "+=", "-=",
-    "*=",  "/=",  "%=",  "&=",  "|=",  "^=",  "~=",  "&&",  "||",  ">=",
-    "<=",  "=",   "!",   "+",   "-",   "*",   "/",   "&",   "|",   "^",
-    "?",   ",",   ".",   "<",   ">",   ";",   ":",   "%",   "[",   "]",
-    "{",   "}",   "(",   ")",   "~",   0,
+    "&&=", "||=", "...", "==", "!=", ">>=", "<<=", ">>", "<<", "+=", "-=", "*=",
+    "/=",  "%=",  "&=",  "|=", "^=", "~=",  "&&",  "||", ">=", "<=", "=",  "!",
+    "+",   "-",   "*",   "/",  "&",  "|",   "^",   "?",  ",",  ".",  "<",  ">",
+    ";",   ":",   "%",   "[",  "]",  "{",   "}",   "(",  ")",  "~",  0,
 };
 
 static token_t read_symbol_token(allocator_t allocator, position_t *position,
@@ -438,8 +437,7 @@ static token_t read_string_token(allocator_t allocator, position_t *position,
         current.offset++;
         current.column++;
       } else {
-        THROW(NULL,
-              "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
+        THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
               filename, current.line + 1, current.column);
       }
     } else {
@@ -533,7 +531,8 @@ static token_t read_char_token(allocator_t allocator, position_t *position,
           current.offset++;
           current.column++;
         } else {
-          THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
+          THROW(NULL,
+                "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
                 filename, current.line + 1, current.column);
         }
       }
@@ -560,18 +559,18 @@ static token_t read_char_token(allocator_t allocator, position_t *position,
   }
   current.offset++;
   current.column++;
-  token_t token = create_char_token(
-      allocator, (location_t){filename, *position, current});
+  token_t token =
+      create_char_token(allocator, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
 static const char *keywords[] = {
-    "break",  "case",    "comptime", "const", "continue", "defer",
-    "defer",  "do",      "else",     "enum",  "export",   "extern",
-    "for",    "foreach", "func",     "if",    "import",   "in",
-    "inline", "mutable", "of",       "pub",   "register", "return",
-    "struct", "switch",  "test",     "union", "volatile", "while",
-    0,
+    "break",   "case",    "comptime", "const", "continue", "defer",
+    "defer",   "do",      "else",     "enum",  "export",   "extern",
+    "for",     "foreach", "func",     "if",    "import",   "in",
+    "inline",  "mutable", "of",       "pub",   "register", "return",
+    "struct",  "switch",  "test",     "union", "volatile", "while",
+    "extends", "as",      "is",       0,
 };
 static token_t read_identifier_token(allocator_t allocator,
                                      position_t *position,
