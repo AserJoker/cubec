@@ -198,47 +198,14 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
   node_t node = NULL;
   size_t current = *position;
 
-  /* Try pointer declaration first (prefix form: * [const] [volatile] <type>) */
+  /* Try pointer declaration first (prefix form: * [const] [volatile] <type>)
+   * Note: read_declaration_pointer recursively calls read_expression_type
+   * to handle the underlying type, which already supports member access,
+   * generic instantiation, and nested pointers (e.g., ** i32). */
   node = TRY_LOCAL(onerror,
                    read_declaration_pointer(allocator, tokens, &current, filename));
   if (node) {
     *position = current;
-    /* Continue processing postfix operators on the pointer type */
-    while (true) {
-      skip_whitespace(tokens, &current);
-
-      /* Try postfix: generic instantiation <callee>[<args>] */
-      node_t generic_node = TRY_LOCAL(
-          onerror, read_expression_generic_instantiation(allocator, tokens,
-                                                         &current, filename, node));
-      if (generic_node) {
-        node = generic_node;
-        *position = current;
-        continue;
-      }
-
-      /* Try postfix: member access <host>.<field> */
-      node_t member_node = TRY_LOCAL(onerror,
-                                     read_expression_member(allocator, tokens,
-                                                            &current, filename,
-                                                            node));
-      if (member_node) {
-        node = member_node;
-        *position = current;
-        continue;
-      }
-
-      /* Try postfix: pointer declaration (chained, e.g., ** i32) */
-      node_t pointer_node = TRY_LOCAL(
-          onerror, read_declaration_pointer(allocator, tokens, &current, filename));
-      if (pointer_node) {
-        node = pointer_node;
-        *position = current;
-        continue;
-      }
-
-      break;
-    }
     return node;
   }
 
