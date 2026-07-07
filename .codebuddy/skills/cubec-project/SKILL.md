@@ -34,8 +34,10 @@ cubec/
 │   │   └── vec.h               # Dynamic array (vector)
 │   └── cubec/                  # Language frontend module
 │       ├── expression.h        # Expression AST node
+│       ├── expression_assignment.h  # Assignment expression (a = b, a += b, etc.)
 │       ├── expression_binary.h  # Binary/prefix-unary expression (left/right/opt)
 │       ├── expression_call.h    # Function-call expression callee(args)
+│       ├── expression_comma.h  # Comma expression (a, b, c) — right-associative
 │       ├── expression_generic_instantiation.h  # Generic instantiation expr[a,b]
 │       ├── expression_group.h   # Grouped expression ( expr )
 │       ├── expression_member.h  # Member-access expression (host.field)
@@ -122,6 +124,29 @@ node_t (core/node.h)
 ```
 
 Subclasses embed the parent via a `super` field and call parent's `type->init` during initialization.
+
+```
+node_t (core/node.h)
+  └── cubec_expression_t (cubec/expression.h)
+        ├── cubec_expression_assignment_t (cubec/expression_assignment.h)
+        ├── cubec_expression_binary_t (cubec/expression_binary.h)
+        ├── cubec_expression_call_t (cubec/expression_call.h)
+        ├── cubec_expression_comma_t (cubec/expression_comma.h)
+        ├── cubec_expression_generic_instantiation_t (cubec/expression_generic_instantiation.h)
+        ├── cubec_expression_group_t (cubec/expression_group.h)
+        ├── cubec_expression_member_t (cubec/expression_member.h)
+        ├── cubec_expression_postfix_unary_t (cubec/expression_postfix_unary.h)  # value.*, value.&
+        ├── cubec_expression_slice_t (cubec/expression_slice.h)
+        ├── cubec_expression_spread_t (cubec/expression_spread.h)
+        ├── cubec_expression_ternary_t (cubec/expression_ternary.h)
+        └── cubec_literal_t (cubec/literal.h)
+              ├── cubec_literal_char_t
+              ├── cubec_literal_identifier_t
+              ├── cubec_literal_numeric_t
+              └── cubec_literal_string_t
+  └── cubec_statement_empty_t
+  └── cubec_program_node_t
+```
 
 ## Core Data Structures
 
@@ -266,8 +291,8 @@ read_program_node()   ──────────────────► 
 Expression parsing follows a precedence-climbing architecture:
 
 ```
-read_expression
-  └── read_expression_binary          # Top-level: binary precedence climbing
+read_expression                       # Entry point (currently delegates to binary)
+  └── read_expression_binary          # Binary precedence climbing
         ├── read_unary (static helper) # Prefix unary chain OR value
         │     ├── read_expression_prefix → recursive read_unary
         │     └── read_value → read_atom → postfix loop
@@ -280,15 +305,18 @@ read_atom
   ├── read_literal_identifier
   └── read_literal_char
 
+# Standalone expression parsers (not part of main precedence chain):
+read_expression_assignment            # Assignment (=, +=, -=, etc.)
+read_expression_comma                 # Comma (a, b, c) — right-associative
+read_expression_ternary               # Ternary (a ? b : c)
+read_expression_spread                # Spread (...expr)
+
 # Postfix operators (called from read_value loop):
 read_expression_call                  # callee(args)
 read_expression_slice                 # host[start:length] — MUST be before generic (uses lookahead for ':')
 read_expression_generic_instantiation # callee[args]  — tried after slice to handle non-slice brackets
 read_expression_postfix_unary         # value.* (deref), value.& (addr) — MUST be before member (uses '.' token)
 read_expression_member                # host.field
-
-# Standalone, not on main parse tree:
-read_expression_spread                # ...expr (called by func-call/struct-init)
 ```
 
 - **read_expression** → delegates entirely to `read_expression_binary`
@@ -298,7 +326,9 @@ read_expression_spread                # ...expr (called by func-call/struct-init
 
 ### Implemented Modules
 
-- `read_expression_binary` (expression_binary.c) — Full precedence-climbing binary expression parser. Supports 10 precedence levels: `\|\|` < `&&` < `\|` < `^` < `&` < `== !=` < `< > <= >=` < `<< >>` < `+ -` < `* / %`. Assignment (`=`, `+=`, etc.) and comma (`,`) are **not** treated as binary operators (reserved for future statement-level handling). Calls `read_unary` for operands, uses `read_binary_rhs` for right-recursive precedence climbing.
+- `read_expression_assignment` (expression_assignment.c) — Parses assignment expressions: simple assignment (`a = b`) and compound assignment (`+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `<<=`, `>>=`). Left operand must be an lvalue (identifier, member access, dereference, or subscript). Right operand parsed via `read_expression_ternary`. Returns `cubec_expression_assignment_t` wrapping the target and value. When no assignment operator is found, returns NULL gracefully.
+- `read_expression_comma` (expression_comma.c) — Parses comma expressions (`a, b, c`). Right-associative: `a, b, c` parses as `comma(a, comma(b, c))`. Left operand tries `read_expression_assignment` first, then falls back to `read_expression_ternary`. After consuming a comma, recursively calls itself for the right operand; if that returns NULL, falls back to `read_expression_ternary`. When no comma is found after the left operand, returns the left operand directly (passthrough behavior).
+- `read_expression_binary` (expression_binary.c) — Full precedence-climbing binary expression parser. Supports 10 precedence levels: `\|\|` < `&&` < `\|` < `^` < `&` < `== !=` < `< > <= >=` < `<< >>` < `+ -` < `* / %`. Note: assignment (`=`, `+=`, etc.) and comma (`,`) are NOT part of this binary precedence table — they are parsed as separate expression types. Calls `read_unary` for operands, uses `read_binary_rhs` for right-recursive precedence climbing.
 - `read_expression_prefix` (expression_binary.c) — Parses prefix unary operators (`!`, `+`, `-`, `~`); right operand parsed via recursive `read_unary` (NOT `read_expression`, which prevents incorrect binding like `-42 * 3` being parsed as `-(42*3)`); supports chained `!!x`, `--n`; returns `cubec_expression_binary_t` with `left=NULL`; **does NOT call `skip_whitespace` at entry**
 - `read_expression_postfix_unary` (expression_postfix_unary.c) — Parses postfix unary operators `value.*` (dereference) and `value.&` (address-of). Composed of separate `.` and `&`/`*` tokens combined by the parser. Uses lookahead for `:` to distinguish from slice expressions. Must be called before `read_expression_member` since both use the `.` token. Returns `cubec_expression_binary_t` with `left=NULL` and `opt` set to `".*"` or `".&"`.
 - `read_value` (expression.c) — Atom + recursive postfix loop. Calls `read_atom` first, then in while loop: calls `skip_whitespace`, then tries postfix operators in order: `read_expression_call` for `callee(args)`, `read_expression_slice` for `host[start:length]`, `read_expression_generic_instantiation` for `callee[args]`, `read_expression_postfix_unary` for `value.*` and `value.&`, then `read_expression_member` for `.field` access. Slice is tried before generic instantiation using lookahead for `:` to distinguish `arr[0:10]` (slice) from `arr[0]` (generic). Postfix unary is tried before member since both start with `.`.
@@ -318,7 +348,7 @@ read_expression_spread                # ...expr (called by func-call/struct-init
 - `read_expression_type` (expression.c) — Parses type expressions: identifier with optional member access and generic instantiation. Handles patterns like: `identifier` (e.g., `Vec`, `i32`), `member` (e.g., `std.vec.Vec`), `generic instantiation` (e.g., `Vec[i32]`, `Option[T]`). This is a simplified version of `read_value` focused on type syntax. Used for parsing type annotations and generic type arguments.
 
 ### Not Yet Implemented
-Most statement types (if, for, while, switch, defer, etc.), expression types (assign, comma, etc.), and all declaration types are defined as enums but lack parser implementations. Expression parsing is substantially complete: group, spread, call, generic instantiation, and member access are all implemented.
+Most statement types (if, for, while, switch, defer, etc.) and all declaration types are defined as enums but lack parser implementations. Expression parsing is substantially complete: assignment, comma, group, spread, call, generic instantiation, ternary, and member access are all implemented.
 
 ## Build System
 
@@ -355,7 +385,7 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (as
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 346 test cases
+- Total: 402 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -379,6 +409,7 @@ Most statement types (if, for, while, switch, defer, etc.), expression types (as
 - `dt_expression_call.cpp` (15 cases) — zero args, single arg, two args, numeric arg, binary-expr arg, single spread arg, mixed spread+regular, multiple spreads, chained call `foo()()`, call→member chain, member→call chain, group-as-callee, non-call not triggered, unclosed paren error, trailing comma error
 - `dt_expression_generic_instantiation.cpp` (15 cases) — basic instantiation `foo[a]`, multi-arg `foo[a,b]`, instantiation on literal, instantiation on call, instantiation→call chain `fn[a]()`, instantiation→member chain `fn[a].field`, call→instantiation chain `foo()[a]`, instantiation→instantiation chain `fn[a][b]`, spread in generic args, group as callee, nested generic groups, non-generic not triggered (no `[`), unclosed bracket error, trailing comma error, generic on `this`
 - `dt_expression_ternary.cpp` (8 cases) — simple ternary `a ? b : c`, ternary with binary condition `x + a ? b : c`, missing `?` fallback, missing `:` error, missing consequent error, missing alternate error, nested ternary `a ? b ? c : d : e`, complex alternate `a ? b : c + d`
+- `dt_expression_comma.cpp` (12 cases) — basic comma `a, b`, numeric literals, right-associative chaining (`a, b, c` → `comma(a, comma(b, c))`), assignment in left/right position, comma with binary/call expressions, non-comma fallback (returns operand directly)
 - `dt_expression_type.cpp` (20 cases) — simple identifier types (`i32`, `Vec`), generic instantiation with single/multiple arguments (`Vec[i32]`, `Map[string, i32]`), type parameters (`Option[T]`), single/chained member access (`std.vec`, `std.vec.Vec`), member with generic (`std.vec.Vec[i32]`), generic arguments as member access types (`Vec[std.vec.Vec]`, `Map[std.vec.Vec, std.str.String]`), mixed arguments (`Pair[i32, std.vec.Vec]`), deeply nested generics with members, non-identifier returns NULL (string/numeric literals), empty brackets handling, underscore prefix identifiers, whitespace handling, token consumption verification
 
 ## Planned Language Features (inferred from AST node types)
