@@ -523,10 +523,19 @@ struct Vec[T] {
     func[U](self: Vec[T], other: Vec[U]) -> Vec[T] { ... }
 }
 
-// === interface 关联类型 ===
+// === interface 泛型 + 关联类型 ===
 interface Iterator {
     type Item
     next(self): Item
+}
+
+interface Container[T] {
+    len(self): u64
+    get(self, idx: u64): T
+}
+
+interface Mapper[K, V] {
+    map(self, key: K): V
 }
 ```
 

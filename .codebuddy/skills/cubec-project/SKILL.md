@@ -615,16 +615,27 @@ struct Vec[T] {
 
 方法可带独立于 struct 的额外泛型参数。
 
-#### 16. interface 支持 `type` 关联类型
+#### 16. interface 支持泛型 + `type` 关联类型
 
 ```c
+// 无泛型参数
 interface Iterator {
     type Item
     next(self): Item
 }
+
+// 带泛型参数的 interface
+interface Container[T] {
+    len(self): u64
+    get(self, idx: u64): T
+}
+
+interface Mapper[K, V] {
+    map(self, key: K): V
+}
 ```
 
-interface 内部可定义方法签名和关联类型，关联类型在 implements 时被具体类型填充。
+interface 支持泛型参数（在 `interface Name[T, ...]` 中声明），内部可定义方法签名和关联类型，关联类型在 implements 时被具体类型填充。与 struct/func 一致，泛型参数也在 `[]` 中声明。
 
 ## Coding Conventions
 
