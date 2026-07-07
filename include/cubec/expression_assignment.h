@@ -25,6 +25,8 @@ extern "C" {
  *        - <lvalue> ^= <rvalue>
  *        - <lvalue> <<= <rvalue>
  *        - <lvalue> >>= <rvalue>
+ *        - <lvalue> &&= <rvalue>
+ *        - <lvalue> ||= <rvalue>
  *
  *        This reuses cubec_expression_binary_t struct with left=lvalue
  *        and right=rvalue, and opt containing the operator string.
@@ -45,7 +47,7 @@ typedef struct _cubec_expression_assignment_init_t
 
 /**
  * @brief Try to parse an assignment expression: <lvalue> <op> <rvalue>
- *        where <op> is =, +=, -=, *=, /=, %=, &=, |=, ^=, <<=, or >>=.
+ *        where <op> is =, +=, -=, *=, /=, %=, &=, |=, ^=, <<=, >>=, &&=, or ||=
  *
  *        This function first reads a value as the potential lvalue, then
  *        checks if an assignment operator follows. If yes, it parses the

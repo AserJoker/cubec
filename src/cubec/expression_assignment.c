@@ -94,7 +94,7 @@ type_t g_cubec_expression_assignment_type = {
 
 /** Set of supported assignment operator strings (sorted by length descending) */
 static const char *assignment_operators[] = {
-    "<<=", ">>=",  // 3-char operators first
+    "<<=", ">>=", "&&=", "||=",  // 3-char operators first
     "+=",  "-=",  "*=",  "/=",  "%=",  "&=",  "|=",  "^=",  "=",
 };
 

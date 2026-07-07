@@ -249,6 +249,38 @@ TEST_F(dt_expression_assignment, compound_right_shift_assignment) {
   allocator_free(allocator, &tokens);
 }
 
+TEST_F(dt_expression_assignment, compound_logical_and_assignment) {
+  const char *source = "x &&= y";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_assignment(allocator, tokens, &position,
+                                           "test.cubec");
+  ASSERT_NE(node, nullptr);
+  expect_assignment(node, "&&=", CUBEC_NODE_LITERAL_IDENTIFIER,
+                    CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_assignment, compound_logical_or_assignment) {
+  const char *source = "x ||= true";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_assignment(allocator, tokens, &position,
+                                           "test.cubec");
+  ASSERT_NE(node, nullptr);
+  expect_assignment(node, "||=", CUBEC_NODE_LITERAL_IDENTIFIER,
+                    CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
 /* ============================================================================
  *  Non-assignment: value without assignment operator returns NULL
  * ============================================================================ */
