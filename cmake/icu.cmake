@@ -8,33 +8,54 @@
 set(ICU_ROOT ${PROJECT_SOURCE_DIR}/third_party/icu/icu4c/source)
 
 # ---------------------------------------------------------------------------
-# Generate icu_data_gen.c from icudt74l.dat at build time
+# Generate icu_data_gen.c from icudt74l.dat at configure time
+# (only if source .dat changed, to avoid recompiling on every clean build)
 # ---------------------------------------------------------------------------
 set(ICU_DATA_DAT   "${PROJECT_SOURCE_DIR}/third_party/icudt74l.dat")
 set(ICU_DATA_GEN_C "${CMAKE_BINARY_DIR}/icu_data_gen.c")
 set(BIN2C_SCRIPT   "${PROJECT_SOURCE_DIR}/cmake/bin_to_c.ps1")
 
-if(WIN32)
-    add_custom_command(
-        OUTPUT "${ICU_DATA_GEN_C}"
-        COMMAND powershell -NoProfile -ExecutionPolicy Bypass
-            -File "${BIN2C_SCRIPT}"
-            -InputFile "${ICU_DATA_DAT}"
-            -OutputFile "${ICU_DATA_GEN_C}"
-            -VarName "icudt74l_dat"
-            -Quiet
-        DEPENDS "${ICU_DATA_DAT}" "${BIN2C_SCRIPT}"
-        COMMENT "Converting icudt74l.dat to C byte array..."
-        VERBATIM
-    )
+# Determine if regeneration is needed
+set(NEED_ICU_DATA_REGEN OFF)
+if(NOT EXISTS "${ICU_DATA_GEN_C}")
+    set(NEED_ICU_DATA_REGEN ON)
 else()
-    add_custom_command(
-        OUTPUT "${ICU_DATA_GEN_C}"
-        COMMAND sh -c "xxd -i -n icudt74l_dat '${ICU_DATA_DAT}' | sed 's/_len =/_size =/; s/_len\;/_size\;/g' > '${ICU_DATA_GEN_C}'"
-        DEPENDS "${ICU_DATA_DAT}"
-        COMMENT "Converting icudt74l.dat to C byte array..."
-        VERBATIM
-    )
+    file(TIMESTAMP "${ICU_DATA_DAT}" DAT_TS "%s")
+    file(TIMESTAMP "${ICU_DATA_GEN_C}" GEN_TS "%s")
+    if(DAT_TS GREATER GEN_TS)
+        set(NEED_ICU_DATA_REGEN ON)
+    endif()
+    # Also check if bin2c script changed (Windows only)
+    if(WIN32 AND EXISTS "${BIN2C_SCRIPT}")
+        file(TIMESTAMP "${BIN2C_SCRIPT}" SCRIPT_TS "%s")
+        if(SCRIPT_TS GREATER GEN_TS)
+            set(NEED_ICU_DATA_REGEN ON)
+        endif()
+    endif()
+endif()
+
+if(NEED_ICU_DATA_REGEN)
+    message(STATUS "Converting icudt74l.dat to C byte array...")
+    if(WIN32)
+        execute_process(
+            COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+                -File "${BIN2C_SCRIPT}"
+                -InputFile "${ICU_DATA_DAT}"
+                -OutputFile "${ICU_DATA_GEN_C}"
+                -VarName "icudt74l_dat"
+                -Quiet
+            RESULT_VARIABLE _ret
+        )
+    else()
+        execute_process(
+            COMMAND sh -c "xxd -i -n icudt74l_dat '${ICU_DATA_DAT}' | sed 's/_len =/_size =/; s/_len\;/_size\;/g' > '${ICU_DATA_GEN_C}'"
+            RESULT_VARIABLE _ret
+        )
+    endif()
+    if(NOT _ret EQUAL 0)
+        message(FATAL_ERROR "Failed to generate ${ICU_DATA_GEN_C} from ${ICU_DATA_DAT}")
+    endif()
+    message(STATUS "ICU data file generated: ${ICU_DATA_GEN_C}")
 endif()
 
 # ---------------------------------------------------------------------------
@@ -102,6 +123,7 @@ add_library(icudata STATIC
     ${ICU_ROOT}/stubdata/stubdata.cpp
     ${ICU_ROOT}/common/icudataver.cpp
 )
+set_source_files_properties("${ICU_DATA_GEN_C}" PROPERTIES GENERATED TRUE)
 target_include_directories(icudata PUBLIC ${ICU_ROOT}/common)
 target_compile_definitions(icudata
     PUBLIC  ${ICU_PUBLIC_DEFS}
