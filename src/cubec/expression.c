@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "cubec/expression_call.h"
+#include "cubec/expression_comma.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_member.h"
