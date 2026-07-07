@@ -3,6 +3,7 @@
 #include "core/error.h"
 #include "core/node.h"
 #include "core/type.h"
+#include "cubec/declaration_array.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
 #include "cubec/expression_call.h"
@@ -188,17 +189,22 @@ onerror:
 node_t read_expression_type(allocator_t allocator, vec_t tokens,
                             size_t *position, const char *filename) {
   /* Parse a type expression: identifier with optional member access,
-   * generic instantiation, pointer declaration, and slice declaration. Handles patterns like:
+   * generic instantiation, pointer declaration, slice declaration, and array
+   * declaration. Handles patterns like:
    *   - identifier (e.g., "Vec", "i32")
    *   - member (e.g., "std.vec.Vec")
    *   - generic instantiation (e.g., "Vec[i32]", "Option[T]")
    *   - pointer declaration (e.g., "* i32", "* const i32", "* volatile i32")
    *   - slice declaration (e.g., "[] i32", "[] const i32", "[] volatile i32")
+   *   - array declaration (e.g., "[10] i32", "[N] i32", "[size] T")
    *
    * This is a simplified version of read_value focused on type syntax. */
 
   node_t node = NULL;
   size_t current = *position;
+
+  /* Skip whitespace/comments before parsing */
+  skip_whitespace(tokens, &current);
 
   /* Try pointer declaration first (prefix form: * [const] [volatile] <type>)
    * Note: read_declaration_pointer recursively calls read_expression_type
@@ -206,6 +212,16 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
    * generic instantiation, and nested pointers (e.g., ** i32). */
   node = TRY_LOCAL(onerror,
                    read_declaration_pointer(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try array declaration (prefix form: [ <expr> ] [const] [volatile] <type>)
+   * Note: read_declaration_array recursively calls read_expression for size
+   * and read_expression_type for the underlying type. */
+  node = TRY_LOCAL(onerror,
+                   read_declaration_array(allocator, tokens, &current, filename));
   if (node) {
     *position = current;
     return node;
@@ -222,14 +238,13 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
   }
 
   /* Try identifier as the base type */
-  node = TRY_LOCAL(onerror,
-                   read_literal_identifier(allocator, tokens, position, filename));
+  node = read_literal_identifier(allocator, tokens, &current, filename);
   if (!node) {
     return NULL;
   }
 
-  current = *position;
-  /* Process postfix operators: member access, generic instantiation, and pointer */
+  *position = current;
+  /* Process postfix operators: member access, generic instantiation, pointer, and array */
   while (true) {
     skip_whitespace(tokens, &current);
 

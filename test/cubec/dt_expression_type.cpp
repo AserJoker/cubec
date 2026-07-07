@@ -1,4 +1,5 @@
 ﻿#include "cubec/expression.h"
+#include "cubec/declaration_array.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
 #include "cubec/expression_generic_instantiation.h"
@@ -954,4 +955,254 @@ TEST_F(dt_expression_type, slice_mixed_repeated_qualifiers) {
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
+}
+
+/* ==========================================================================
+ * Array Declaration Tests
+ * ========================================================================== */
+
+/* Test: simple array declaration (e.g., "[10] i32") */
+TEST_F(dt_expression_type, simple_array_declaration) {
+  const char *source = "[10] i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
+
+  cubec_declaration_array_t arr = (cubec_declaration_array_t)node;
+  ASSERT_NE(arr->size, nullptr);
+  EXPECT_EQ(arr->size->kind, CUBEC_NODE_LITERAL_NUMERIC);
+  ASSERT_NE(arr->type, nullptr);
+  EXPECT_EQ(arr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  cubec_literal_identifier_t underlying = (cubec_literal_identifier_t)arr->type;
+  EXPECT_STREQ(string_get(underlying->value), "i32");
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: array with identifier size (e.g., "[N] i32") */
+TEST_F(dt_expression_type, array_with_identifier_size) {
+  const char *source = "[N] i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
+
+  cubec_declaration_array_t arr = (cubec_declaration_array_t)node;
+  ASSERT_NE(arr->size, nullptr);
+  EXPECT_EQ(arr->size->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: array with expression size (e.g., "[a + b] i32") */
+TEST_F(dt_expression_type, array_with_expression_size) {
+  const char *source = "[a + b] i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
+
+  cubec_declaration_array_t arr = (cubec_declaration_array_t)node;
+  ASSERT_NE(arr->size, nullptr);
+  EXPECT_EQ(arr->size->kind, CUBEC_NODE_EXPRESSION_BINARY);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: array with whitespace in size expression (e.g., "[ 10 ] i32") */
+TEST_F(dt_expression_type, array_with_whitespace_in_size) {
+  const char *source = "[ 10 ] i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
+
+  cubec_declaration_array_t arr = (cubec_declaration_array_t)node;
+  ASSERT_NE(arr->size, nullptr);
+  EXPECT_EQ(arr->size->kind, CUBEC_NODE_LITERAL_NUMERIC);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: array to generic type (e.g., "[10] Vec[i32]") */
+TEST_F(dt_expression_type, array_to_generic_type) {
+  const char *source = "[10] Vec[i32]";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
+
+  cubec_declaration_array_t arr = (cubec_declaration_array_t)node;
+  ASSERT_NE(arr->type, nullptr);
+  EXPECT_EQ(arr->type->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: array to member type (e.g., "[10] std.vec.Vec") */
+TEST_F(dt_expression_type, array_to_member_type) {
+  const char *source = "[10] std.vec.Vec";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
+
+  cubec_declaration_array_t arr = (cubec_declaration_array_t)node;
+  ASSERT_NE(arr->type, nullptr);
+  EXPECT_EQ(arr->type->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: chained array declaration (e.g., "[10][20] i32") */
+TEST_F(dt_expression_type, chained_array_declaration) {
+  const char *source = "[10][20] i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
+
+  cubec_declaration_array_t outer = (cubec_declaration_array_t)node;
+  ASSERT_NE(outer->type, nullptr);
+  EXPECT_EQ(outer->type->kind, CUBEC_NODE_DECLARATION_ARRAY);
+
+  cubec_declaration_array_t inner = (cubec_declaration_array_t)outer->type;
+  ASSERT_NE(inner->type, nullptr);
+  EXPECT_EQ(inner->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: array with pointer (e.g., "[10] * i32") */
+TEST_F(dt_expression_type, array_with_pointer) {
+  const char *source = "[10] * i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
+
+  cubec_declaration_array_t arr = (cubec_declaration_array_t)node;
+  ASSERT_NE(arr->type, nullptr);
+  EXPECT_EQ(arr->type->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: pointer to array (e.g., "* [10] i32") */
+TEST_F(dt_expression_type, pointer_to_array) {
+  const char *source = "* [10] i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_DECLARATION_ARRAY);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: generic with array argument (e.g., "Vec[[10] i32]") */
+TEST_F(dt_expression_type, generic_with_array_argument) {
+  const char *source = "Vec[[10] i32]";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+
+  cubec_expression_generic_instantiation_t generic =
+      (cubec_expression_generic_instantiation_t)node;
+  ASSERT_EQ(vec_get_size(generic->arguments), 1);
+
+  node_t arg = (node_t)vec_get(generic->arguments, 0);
+  EXPECT_EQ(arg->kind, CUBEC_NODE_DECLARATION_ARRAY);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: empty brackets is slice, not array (e.g., "[] i32") */
+TEST_F(dt_expression_type, empty_brackets_is_slice) {
+  const char *source = "[] i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  /* Empty brackets should be parsed as slice, not array */
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: slice and array are distinct (e.g., "[] i32" vs "[10] i32") */
+TEST_F(dt_expression_type, slice_and_array_are_distinct) {
+  /* Empty brackets = slice */
+  const char *slice_source = "[] i32";
+  vec_t slice_tokens = resolve_token_list(allocator, "test.cubec", slice_source);
+  ASSERT_NE(slice_tokens, nullptr);
+
+  size_t slice_pos = 0;
+  node_t slice_node = read_expression_type(allocator, slice_tokens, &slice_pos, "test.cubec");
+  ASSERT_NE(slice_node, nullptr);
+  EXPECT_EQ(slice_node->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  /* Non-empty brackets = array */
+  const char *array_source = "[10] i32";
+  vec_t array_tokens = resolve_token_list(allocator, "test.cubec", array_source);
+  ASSERT_NE(array_tokens, nullptr);
+
+  size_t array_pos = 0;
+  node_t array_node = read_expression_type(allocator, array_tokens, &array_pos, "test.cubec");
+  ASSERT_NE(array_node, nullptr);
+  EXPECT_EQ(array_node->kind, CUBEC_NODE_DECLARATION_ARRAY);
+
+  allocator_free(allocator, &slice_node);
+  allocator_free(allocator, &slice_tokens);
+  allocator_free(allocator, &array_node);
+  allocator_free(allocator, &array_tokens);
 }
