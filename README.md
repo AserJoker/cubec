@@ -32,6 +32,7 @@
 - [语句](#语句)
 - [声明](#声明)
 - [模块系统](#模块系统)
+- [泛型机制](#泛型机制)
 - [特殊特性](#特殊特性)
 - [构建与开发](#构建与开发)
 - [实现进度](#实现进度)
@@ -451,6 +452,116 @@ union Data {
 import std.io;              // 导入模块
 pub func exported() { }     // 公开导出
 export func global() { }    // 另一种导出方式
+```
+
+---
+
+## 泛型机制
+
+Cubec 的泛型基于**"推导 + 鸭子类型"**范式，采用编译期模板实现。无函数重载，`extends` 校验基于结构兼容性，大幅降低复杂度。
+
+### 设计原则
+
+| 原则 | 说明 |
+|------|------|
+| 推导优先 | 从实参类型推导泛型参数，失败则编译报错（支持显式指定 `parse[i32]("42")`） |
+| 鸭子类型 | `T extends IWriter` 判定 T 是否具备 IWriter 的操作，非继承链 |
+| 无重载 | 每函数名唯一实现，无 SFINAE |
+| `[]` 语法 | 泛型统一使用方括号，避免与 `<>` 比较运算符歧义 |
+| 编译期模板 | 实例化在编译期完成，无运行时开销 |
+
+### 各类型泛型支持
+
+| 类型 | 泛型 | 推导 | 语义 |
+|------|------|------|------|
+| `struct` | ✅ | ❌ 无构造函数，显式 `Vec[i32]{}` | 模板实例化 |
+| `enum` | ❌ | — | 所有成员同类型（TS 风格） |
+| `union` | ✅ | — | tagged union（Rust 风格） |
+| `interface` | ✅ | — | 仅方法签名（Go 风格结构型） |
+| `func` | ✅ | ✅ | 自动推导 + 显式标注双模 |
+
+### 语法速览
+
+```c
+// === 泛型参数定义 ===
+func[T](x: T) -> T                           // 推导
+func[T extends Numeric](x: T) -> T           // 带约束
+func[N: u64, T](arr: [N]T) -> T             // 值泛型 + 类型泛型
+
+// === 类型级运算 ===
+func[T](x: T) -> T extends Numeric ? i64 : string   // 类型三元
+func[T](x: T) -> T == i32 ? f64 : string            // 类型相等
+func[T](x: T) -> T != void ? T : i32                // 类型不等
+
+// === 嵌套解包推导 ===
+func[T](x: Vec[T])       // Vec[i32] → T = i32
+func[K, V](x: Map[K, V]) // Map[string, i32] → K = string, V = i32
+
+// === 通配符 ?（仅 extends 约束中） ===
+func[T extends Array[?]](arr: T)             // 任意元素类型的 Array
+
+// === type 别名 ===
+type Vec3[T] = Vec[Vec[Vec[T]]]
+type Pair[A, B] = struct { first: A, second: B }
+
+// === comptime if ===
+func[T](x: T) {
+    comptime if (T extends Numeric) {
+        print("numeric: ", x)
+    } else {
+        print("other")
+    }
+}
+
+// === 递归泛型 ===
+struct List[T] { head: T; tail: List[T] }
+
+// === struct 关联类型 + 独立泛型方法 ===
+struct Vec[T] {
+    data: *T; len: u64
+    type Element = T
+    func[U](self: Vec[T], other: Vec[U]) -> Vec[T] { ... }
+}
+
+// === interface 关联类型 ===
+interface Iterator {
+    type Item
+    next(self): Item
+}
+```
+
+### builtin 编译器指令
+
+语言级类型变换使用 `builtin` 指令声明：
+
+```c
+builtin RemoveConst[T extends const?]       // → 剥离 const
+builtin RemoveVolatile[T extends volatile?] // → 剥离 volatile
+builtin Pointer[T]                          // → *T
+builtin Slice[T]                            // → []T
+builtin RemovePointer[T extends *?]         // → 解指针
+builtin RemoveSlice[T extends []?]          // → 解切片
+builtin ReturnType[F extends func]          // → 返回类型
+builtin SizeOf[T]                           // → u64（编译期值）
+```
+
+直接作为类型表达式使用：
+
+```c
+type Mutable[T] = RemoveConst[T]
+type Ptr[T] = Pointer[T]
+type SlicePtr[T] = Slice[Pointer[T]]
+```
+
+> **注意**：容器元素类型（如 `Vec[i32].Element`）由容器自身通过 struct 内 `type` 定义暴露，非编译器内置。
+
+### 类型谓词体系
+
+```
+判定层：extends（鸭子约束）、==（双向等价 → 结构等价）、!=（取反）
+变换层：builtin 编译器指令
+分支层：类型级三元（? :）、comptime if
+推导层：嵌套解包、多位置统一、全类型编译期计算
 ```
 
 ---

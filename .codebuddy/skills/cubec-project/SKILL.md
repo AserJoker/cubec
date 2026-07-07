@@ -425,6 +425,207 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 
 Cubec plans to support: defer statements, foreach loops, test blocks, comptime evaluation, struct/union/enum declarations, func declarations, slice types, spread operator, decorators, switch pattern matching, and more. Note: pointer types use postfix syntax (`value.*` for dereference, `value.&` for address-of) instead of traditional prefix `*` and `&`.
 
+## Generics System (泛型系统)
+
+Cubec 的泛型机制基于**"推导 + 鸭子类型"**范式，采用编译期模板实现。所有泛型参数使用方括号 `[]` 语法，支持类型泛型、值泛型、约束校验、类型级运算和编译期分支。
+
+### 设计原则
+
+| 原则 | 说明 |
+|------|------|
+| 推导优先 | 泛型参数从函数实参类型自动推导，推导失败则编译报错（除非显式指定） |
+| 鸭子类型 | 约束校验基于结构兼容性（A 是否具备 B 的操作），非继承链检查 |
+| 无重载 | 函数名对应唯一实现，无重载决议，降低复杂度 |
+| `[]` 语法 | 统一使用方括号，解析阶段即可区分泛型与比较运算符 |
+| 显式传递 | 推导失败时支持显式类型实参：`parse[i32]("42")` |
+
+### 各类型泛型支持总览
+
+| 类型 | 泛型支持 | 推导 | 语义 |
+|------|----------|------|------|
+| struct | ✅ 支持 `struct Vec[T] { ... }` | ❌ 不支持推导（无构造函数，显式写 `Vec[i32]{}`） | 编译期模板实例化 |
+| enum | ❌ 不支持泛型 | — | TypeScript 风格：所有成员同类型 |
+| union | ✅ 支持 `union Option[T] { Some(T) \| None }` | — | Rust 风格：tagged union / sum type |
+| interface | ✅ 支持 | — | Go/TypeScript 风格：仅存方法签名，结构型 / duck typing |
+| func | ✅ 支持 | ✅ 支持从实参推导 | 泛型函数 |
+
+### 泛型规则总览（16 条）
+
+#### 1. 泛型参数定义
+
+```c
+// 简单形式：裸标识符，类型从实参推导
+func[T](x: T) -> T
+
+// 约束形式：通过 extends 限制
+func[T extends Numeric](x: T) -> T
+```
+
+#### 2. 无重载 + 鸭子类型 = 低复杂度
+
+无函数重载（每函数名唯一实现），`extends` 基于"被约束方是否具备约束方要求的操作"判定，杜绝 SFINAE、偏特化等复杂性。
+
+#### 3. 多位置同一泛型参数的统一（Unification）
+
+```c
+func[T](a: T, b: T)  // T 同时出现在 a 和 b
+```
+
+逐位置独立推导 → 鸭子类型等价判定统一。若 `T` 有 `extends` 约束，各位置均需各自满足且互相兼容。
+
+#### 4. 嵌套解包推导
+
+```c
+func[T](x: Vec[T])       // 实参 Vec[i32] → 推断 T = i32
+func[K, V](x: Map[K, V]) // 实参 Map[string, i32] → K = string, V = i32
+```
+
+递归解开外层容器的壳，匹配内层泛型参数槽位。
+
+#### 5. 通配符 `?`
+
+```c
+func[T extends Array[?]](arr: T)  // 接受任意元素类型的 Array
+
+// ✗ 错误：? 不能作为具体参数类型
+func(x: Array[?]): bool
+```
+
+`?` 仅存于 `extends` 约束子句，校验阶段无条件通过，不作为可实例化类型。泛型是编译期模板，`?` 不会出现在生成代码中。
+
+#### 6. 类型级三元运算符
+
+```c
+func[T](x: T) -> T extends Numeric ? i64 : string
+```
+
+编译期判定 `A extends B`，满足取 `X`，否则取 `Y`。复用 `extends` 语义。
+
+#### 7. 类型相等/不等判断
+
+```c
+func[T](x: T) -> T == i32 ? f64 : string
+func[T](x: T) -> T != void ? T : i32
+```
+
+- `A == B` = `A extends B && B extends A`（双向鸭子等价）
+- `A != B` = `!(A == B)`
+
+#### 8. 编译期值泛型
+
+```c
+func[N: u64](arr: [N]i32) -> i32
+func[N: u64, T extends Array[?]](arr: [N]T) -> T
+```
+
+`[]` 内天然是 compile-time 上下文，无需 `comptime` 或 `var` 修饰。
+
+#### 9. 泛型一律使用 `[]`
+
+```c
+// ✓ 正确
+func[N: u64, T](arr: [N]T) -> T
+
+// ✗ 错误：不存在 <> 语法
+func<N: u64>(...)
+```
+
+与项目中已有的 `read_expression_generic_instantiation`（`callee[args]`）统一，避免 `<` `>` 与比较运算符歧义。
+
+#### 10. `type` 别名支持泛型 + 类型变换
+
+```c
+// 简单别名
+type MyInt = i32
+
+// 泛型别名
+type Vec3[T] = Vec[Vec[Vec[T]]]
+type Pair[A, B] = struct { first: A, second: B }
+```
+
+右侧类型表达式可使用泛型参数、`extends`/`==`、三元运算符等。
+
+#### 11. `comptime if` 编译期分支
+
+```c
+func[T](x: T) -> void {
+    comptime if (T extends Numeric) {
+        print("numeric: ", x)
+    } else {
+        print("non-numeric")
+    }
+}
+```
+
+不满足条件的分支不参与代码生成，类似 C++17 `if constexpr` 或 Zig `comptime if`。
+
+#### 12. 全类型编译期计算
+
+编译期支持所有基本类型（整数、浮点、bool、字符串）以及 struct 和 array。编译期指针通过安全的"虚拟指针"（map + id）实现，不暴露真实内存地址。允许调用 `extern` 声明的外部函数。
+
+```c
+extern func read_file(path: [*:0]u8): []u8
+
+comptime var data = read_file("config.json")  // 编译期 IO
+```
+
+#### 13. `builtin` 编译器指令
+
+内置类型变换指令，声明语法 `builtin Name[T extends constraint?]`：
+
+| builtin | 约束 | 结果 |
+|---------|------|------|
+| `RemoveConst[T extends const?]` | 带 const | 剥离 const |
+| `RemoveVolatile[T extends volatile?]` | 带 volatile | 剥离 volatile |
+| `Pointer[T]` | 任意类型 | `*T` |
+| `Slice[T]` | 任意类型 | `[]T` |
+| `RemovePointer[T extends *?]` | 指针 | 解引用 |
+| `RemoveSlice[T extends []?]` | 切片 | 解切片 |
+| `ReturnType[F extends func]` | 函数类型 | 返回类型 |
+| `SizeOf[T]` | 任意类型 | `u64`（编译期值） |
+
+指令直接作为类型表达式使用：
+
+```c
+type Mutable[T] = RemoveConst[T]
+type Ptr[T] = Pointer[T]
+type SlicePtr[T] = Slice[Pointer[T]]
+```
+
+容器相关的"元素类型"由容器自身通过 `type` 暴露（如 `Vec[i32].Element`），而非编译器内置。
+
+#### 14. 泛型类型支持递归
+
+```c
+struct List[T] { head: T; tail: List[T] }
+```
+
+编译期模板展开，每次实例化时 T 已确定。
+
+#### 15. struct 方法支持独立泛型参数
+
+```c
+struct Vec[T] {
+    data: *T; len: u64
+    type Element = T
+
+    func[U](self: Vec[T], other: Vec[U]) -> Vec[T] { ... }
+}
+```
+
+方法可带独立于 struct 的额外泛型参数。
+
+#### 16. interface 支持 `type` 关联类型
+
+```c
+interface Iterator {
+    type Item
+    next(self): Item
+}
+```
+
+interface 内部可定义方法签名和关联类型，关联类型在 implements 时被具体类型填充。
+
 ## Coding Conventions
 
 - C11 for library code, C++20 for tests
