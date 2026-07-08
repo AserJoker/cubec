@@ -27,9 +27,11 @@ struct _cubec_expression_type_group_init_t {
 typedef struct _cubec_expression_type_group_init_t cubec_expression_type_group_init_t;
 
 /**
- * @brief Try to parse a grouped type expression: \c ( type_expression )
+ * @brief Try to parse a grouped type expression: \\c ( type_expression )
+ * The inner type expression is parsed by read_expression_type,
+ * which supports full type syntax including ternary.
  * @return A new cubec_expression_type_group_t node, or NULL if the current
- *         token is not \c '('.
+ *         token is not \\c '('.
  */
 node_t read_expression_type_group(allocator_t allocator, vec_t tokens,
                                   size_t *position, const char *filename);

@@ -15,6 +15,7 @@
 #include "cubec/expression_postfix_unary.h"
 #include "cubec/expression_slice.h"
 #include "cubec/expression_ternary.h"
+#include "cubec/expression_type_ternary.h"
 #include "cubec/literal_char.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
@@ -187,8 +188,8 @@ onerror:
   allocator_free(allocator, &node);
   return NULL;
 }
-node_t read_expression_type(allocator_t allocator, vec_t tokens,
-                            size_t *position, const char *filename) {
+node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
+                                    size_t *position, const char *filename) {
   /* Parse a type expression: identifier with optional member access,
    * generic instantiation, pointer declaration, slice declaration, and array
    * declaration. Handles patterns like:
@@ -216,7 +217,7 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
   /* Try pointer declaration first (prefix form: * [const] [volatile] <type>)
    * Note: read_declaration_pointer recursively calls read_expression_type
    * to handle the underlying type, which already supports member access,
-   * generic instantiation, and nested pointers (e.g., ** i32). */
+   * generic instantiation, nested pointers, and ternary type. */
   node = TRY_LOCAL(onerror,
                    read_declaration_pointer(allocator, tokens, &current, filename));
   if (node) {
@@ -293,6 +294,21 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
 onerror:
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t read_expression_type(allocator_t allocator, vec_t tokens,
+                            size_t *position, const char *filename) {
+  /* Try ternary type expression first: cond ? type_a : type_b.
+   * If read_ternary_type_expression returns NULL (no type expression at all),
+   * fall back to read_type_expression_primary. */
+  size_t current = *position;
+  node_t node =
+      read_ternary_type_expression(allocator, tokens, &current, filename);
+  if (node) {
+    *position = current;
+    return node;
+  }
+  return read_type_expression_primary(allocator, tokens, position, filename);
 }
 
 node_t read_expression(allocator_t allocator, vec_t tokens, size_t *position,
