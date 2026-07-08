@@ -97,7 +97,7 @@ node_t read_expression_ternary(allocator_t allocator, vec_t tokens,
 
   /* Parse condition using read_expression_binary.
    * Caller ensures whitespace is already skipped. */
-  condition = TRY_LOCAL(onerror,read_expression_binary(allocator, tokens, &current, filename));
+  condition = TRY_LOCAL(onerror, read_expression_binary(allocator, tokens, &current, filename));
   if (!condition) {
     return NULL;
   }

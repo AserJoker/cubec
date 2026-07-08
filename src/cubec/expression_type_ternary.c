@@ -4,7 +4,7 @@
 #include "core/token.h"
 #include "cubec/expression.h"
 #include "cubec/expression_group.h"
-#include "cubec/expression_type_group.h"
+#include "cubec/expression_type_constraint.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -102,13 +102,14 @@ node_t read_ternary_type_expression(allocator_t allocator, vec_t tokens,
   node_t consequent = NULL;
   node_t alternate = NULL;
 
-  /* Try condition expressions in order:
-   * 1. type_group: ( type_expression ) — groups a nested type, avoids infinite
-   *    recursion by using parentheses as explicit syntactic boundary
-   * 2. expression_group: ( expression ) — supports compile-time expressions
-   * 3. primary type expression: identifier, pointer, slice, array */
+  /* Parse condition:
+   * 1. Type constraint: T extends U, T == U, T != U — structured type
+   *    constraint for compile-time type branching
+   * 2. Expression group: ( expression ) — supports compile-time expressions
+   *    (type_group is handled internally by read_type_expression_primary)
+   * 3. Primary type expression: identifier, pointer, slice, array */
   condition =
-      read_expression_type_group(allocator, tokens, &current, filename);
+      read_expression_type_constraint(allocator, tokens, &current, filename);
   if (!condition) {
     condition =
         read_expression_group(allocator, tokens, &current, filename);
@@ -124,7 +125,16 @@ node_t read_ternary_type_expression(allocator_t allocator, vec_t tokens,
   /* Check if this is actually a ternary type — expect '?' */
   skip_whitespace(tokens, &current);
   if (!token_is(vec_get(tokens, current), CUBEC_TOKEN_SYMBOL, "?")) {
-    /* Not a ternary type — return the condition as-is */
+    /* Not a ternary type. Bare type constraints (A extends B without '?')
+     * are only valid in generic definition context — error here. */
+    if (condition->kind == CUBEC_NODE_EXPRESSION_TYPE_CONSTRAINT) {
+      location_t loc = condition->location;
+      allocator_free(allocator, &condition);
+      THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR
+            " bare type constraint requires ternary form: "
+            "'constraint ? consequent : alternate'",
+            filename, loc.begin.line + 1, loc.begin.column + 1);
+    }
     *position = current;
     return condition;
   }

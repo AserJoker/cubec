@@ -51,6 +51,8 @@ cubec/
 │       ├── expression_spread.h  # Spread expression (...expr)
 │       ├── expression_ternary.h # Ternary/conditional expression (cond ? consequent : alternate)
 │       ├── expression_type_group.h # Grouped type expression ( ( type_expression ) )
+│       ├── expression_type_constraint.h # Type constraint expression (T extends U, T == U, T != U)
+│       ├── expression_type_ternary.h # Type-level ternary expression (cond ? type : type)
 │       ├── literal.h           # Literal AST node (abstract)
 │       ├── literal_char.h      # Character literal
 │       ├── literal_identifier.h# Identifier literal
@@ -66,7 +68,7 @@ cubec/
 │   ├── core/                   # Core data structure implementations
 │   └── cubec/                  # Lexer + parser implementations
 │       # Planned (not yet created): engine/, reader/, writer/, c/
-├── test/                       # Tests (425+ test cases, Google Test + C++20)
+├── test/                       # Tests (487 test cases, Google Test + C++20)
 │   ├── main.cpp                # Test entry point
 │   ├── common/test_common.h    # RAII test allocator helper
 │   ├── core/                   # Tests for core data structures
@@ -126,6 +128,8 @@ node_t (core/node.h)
         ├── cubec_expression_postfix_unary_t (cubec/expression_postfix_unary.h)  # value.*, value.&
         ├── cubec_expression_slice_t (cubec/expression_slice.h)
         ├── cubec_expression_spread_t (cubec/expression_spread.h)
+        ├── cubec_expression_type_constraint_t (cubec/expression_type_constraint.h)
+        ├── cubec_expression_type_ternary_t (cubec/expression_type_ternary.h)
         └── cubec_literal_t (cubec/literal.h)
               ├── cubec_literal_char_t
               ├── cubec_literal_identifier_t
@@ -155,6 +159,8 @@ node_t (core/node.h)
         ├── cubec_expression_slice_t (cubec/expression_slice.h)
         ├── cubec_expression_spread_t (cubec/expression_spread.h)
         ├── cubec_expression_ternary_t (cubec/expression_ternary.h)
+        ├── cubec_expression_type_constraint_t (cubec/expression_type_constraint.h)
+        ├── cubec_expression_type_ternary_t (cubec/expression_type_ternary.h)
         └── cubec_literal_t (cubec/literal.h)
               ├── cubec_literal_char_t
               ├── cubec_literal_identifier_t
@@ -361,9 +367,10 @@ read_expression_member                # host.field
 - `read_literal_string` — String AST node, supports auto-concatenation of adjacent strings
 - `read_statement_empty` — Empty statement (`;`)
 - `read_program_node` — Top-level entry, loops parsing statements until EOF
-- `read_expression_type` (expression.c) — Parses type expressions: identifier with optional member access, generic instantiation, pointer declaration, and slice declaration. Handles patterns like: `identifier` (e.g., `Vec`, `i32`), `member` (e.g., `std.vec.Vec`), `generic instantiation` (e.g., `Vec[i32]`, `Option[T]`), `pointer declaration` (e.g., `* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`), `slice declaration` (e.g., `[] i32`, `[] const i32`, `[] volatile i32`, `[] const volatile i32`). This is a simplified version of `read_value` focused on type syntax. Used for parsing type annotations and generic type arguments. Pointer and slice declarations are recursively parsed via `read_declaration_pointer` and `read_declaration_slice` respectively.
+- `read_expression_type` (expression.c) — Parses type expressions: identifier with optional member access, generic instantiation, pointer declaration, slice declaration, array declaration, and type constraint. Handles patterns like: `identifier` (e.g., `Vec`, `i32`), `member` (e.g., `std.vec.Vec`), `generic instantiation` (e.g., `Vec[i32]`, `Option[T]`), `pointer declaration` (e.g., `* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`), `slice declaration` (e.g., `[] i32`, `[] const i32`, `[] volatile i32`, `[] const volatile i32`), `array declaration` (e.g., `[10] i32`), `ternary type` (e.g., `a ? i32 : f64`, `T extends U ? X : Y`). This is a simplified version of `read_value` focused on type syntax. Used for parsing type annotations and generic type arguments. Pointer, slice, and array declarations are recursively parsed via `read_declaration_pointer`, `read_declaration_slice`, and `read_declaration_array` respectively. Ternary types are parsed via `read_ternary_type_expression`, with type constraints parsed via `read_expression_type_constraint`.
+- `read_expression_type_constraint` (expression_type_constraint.c) — Parses type constraint expressions: `left_type extends right_type`, `left_type == right_type`, `left_type != right_type`. The left operand is parsed via `read_type_expression_primary`, the right operand via `read_type_expression_primary` (to avoid consuming `?` for ternary). Returns `cubec_expression_type_constraint_t` with `op`, `left`, `right` fields. If no constraint operator follows the left operand, returns left-as-is (graceful fallback — caller handles ternary detection). Bare constraints without `?` (e.g. standalone `T extends U`) are rejected with an error in `read_expression_type` — they are only valid as ternary conditions or in generic definition context. Operators: `extends` (subtype check, tokenized as KEYWORD), `==` (type equality, SYMBOL), `!=` (type inequality, SYMBOL).
 - `read_expression_type_group` (expression_type_group.c) — Parses grouped type expressions `( type_expression )`. Wraps the inner type expression in parentheses, useful for clarifying precedence in complex type annotations or when a type expression needs to be grouped. Returns `cubec_expression_type_group_t` wrapping the inner type node. Returns NULL if the current token is not `(`.
-- `read_declaration_array` (declaration_array.c) — Parses array type declaration `[ <expr> ] <type>`. The size expression is evaluated at compile time for fixed-size arrays. Returns `cubec_declaration_array_t` with `size` and `type` fields. Returns NULL if the current token is not `[` followed by a non-`]` token.
+- `read_expression_type_ternary` (expression_type_ternary.c) — Parses type-level ternary expressions `cond_type ? consequent_type : alternate_type`. The condition is first tried as `read_expression_type_constraint` (for `T extends U`, `T == U`, `T != U`), then `read_expression_type_group`, then `read_expression_group`, then `read_type_expression_primary`. Supports nested ternaries by wrapping inner ternary in groups to avoid infinite recursion: `(a ? b : c) ? d : e`. Works with pointer/slice/array declarations: `* a ? b : c` parses as `*(a ? b : c)`. Returns `cubec_expression_type_ternary_t` with `condition`, `consequent`, `alternate` fields. Returns condition-as-is if `?` is not found — except when condition is a bare `type_constraint` (e.g. `T extends U` without `?`), which THROWs an error since constraints are only valid as ternary conditions or in generic definitions. THROW errors on missing `consequent`/`alternate`/`:`. Type constraints (`extends`/`==`/`!=`) in the condition are parsed as first-class AST nodes rather than raw expressions.
 
 ### Not Yet Implemented
 Most statement types (if, for, while, switch, defer, etc.) and all declaration types are defined as enums but lack parser implementations. Expression parsing is substantially complete: assignment, comma, group, spread, call, generic instantiation, ternary, member access, and type group expression are all implemented.
@@ -403,7 +410,7 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 425 test cases
+- Total: 487 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -428,7 +435,9 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 - `dt_expression_generic_instantiation.cpp` (15 cases) — basic instantiation `foo[a]`, multi-arg `foo[a,b]`, instantiation on literal, instantiation on call, instantiation→call chain `fn[a]()`, instantiation→member chain `fn[a].field`, call→instantiation chain `foo()[a]`, instantiation→instantiation chain `fn[a][b]`, spread in generic args, group as callee, nested generic groups, non-generic not triggered (no `[`), unclosed bracket error, trailing comma error, generic on `this`
 - `dt_expression_ternary.cpp` (8 cases) — simple ternary `a ? b : c`, ternary with binary condition `x + a ? b : c`, missing `?` fallback, missing `:` error, missing consequent error, missing alternate error, nested ternary `a ? b ? c : d : e`, complex alternate `a ? b : c + d`
 - `dt_expression_comma.cpp` (12 cases) — basic comma `a, b`, numeric literals, right-associative chaining (`a, b, c` → `comma(a, comma(b, c))`), assignment in left/right position, comma with binary/call expressions, non-comma fallback (returns operand directly)
-- `dt_expression_type.cpp` (43 cases) — simple identifier types (`i32`, `Vec`), generic instantiation with single/multiple arguments (`Vec[i32]`, `Map[string, i32]`), type parameters (`Option[T]`), single/chained member access (`std.vec`, `std.vec.Vec`), member with generic (`std.vec.Vec[i32]`), generic arguments as member access types (`Vec[std.vec.Vec]`, `Map[std.vec.Vec, std.str.String]`), mixed arguments (`Pair[i32, std.vec.Vec]`), deeply nested generics with members, non-identifier returns NULL (string/numeric literals), empty brackets handling, underscore prefix identifiers, whitespace handling, token consumption verification + pointer declaration tests (`* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`, `** i32`, `* Vec[i32]`, `* std.vec.Vec`, `Vec[* i32]`, `* * i32`, `* std.vec.Vec[i32]`) + slice declaration tests (`[] i32`, `[] const i32`, `[] volatile i32`, `[] const volatile i32`, `[] Vec[i32]`, `[] std.vec.Vec`, `Vec[[] i32]`) + reordered/repeated qualifier tests (`* volatile const`, `* const const`, `* const volatile const`, `[] volatile const`, `[] volatile volatile`, `[] const volatile const`)
+- `dt_expression_type.cpp` (63 cases) — simple identifier types (`i32`, `Vec`), generic instantiation with single/multiple arguments (`Vec[i32]`, `Map[string, i32]`), type parameters (`Option[T]`), single/chained member access (`std.vec`, `std.vec.Vec`), member with generic (`std.vec.Vec[i32]`), generic arguments as member access types (`Vec[std.vec.Vec]`, `Map[std.vec.Vec, std.str.String]`), mixed arguments (`Pair[i32, std.vec.Vec]`), deeply nested generics with members, non-identifier returns NULL (string/numeric literals), empty brackets handling, underscore prefix identifiers, whitespace handling, token consumption verification + pointer declaration tests (`* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`, `** i32`, `* Vec[i32]`, `* std.vec.Vec`, `Vec[* i32]`, `* * i32`, `* std.vec.Vec[i32]`) + slice declaration tests (`[] i32`, `[] const i32`, `[] volatile i32`, `[] const volatile i32`, `[] Vec[i32]`, `[] std.vec.Vec`, `Vec[[] i32]`) + array declaration tests + reordered/repeated qualifier tests + nested type group test
+- `dt_expression_type_ternary.cpp` (28 cases) — type-level ternary expressions: simple `a ? b : c`, type_group condition `(a) ? b : c`, expr_group condition `(1) ? a : b`, nested with group `(a ? b : c) ? d : e`, deeply nested, pointer to ternary `* a ? b : c`, pointer condition in group, slice to ternary `[] a ? b : c`, array to ternary `[10] a ? b : c`, missing `?` fallback, missing `:` error, missing consequent error, missing alternate error, generic consequent `a ? Vec[i32] : f32` + 7 type-constraint-as-condition tests: `extends` constraint (`T extends U ? X : Y`), `==` constraint (`T == U ? X : Y`), `!=` constraint (`T != U ? X : Y`), pointer right in group (`T extends (* U) ? X : Y`), enable_if pattern with generic consequent (`T extends K ? Vec[T] : f32`), bare constraint without `?` is error (`T extends U` → THROW), nested constraint ternary in group (`(a extends b ? c : d) ? e : f`)
+- `dt_expression_type_constraint.cpp` (11 cases) — type constraint expressions: simple `extends` (`T extends U`), `==` (`T == U`), `!=` (`T != U`), fallback identifier, generic right operand (`T extends Vec[i32]`), member access right (`T == std.vec.Vec`), pointer right (`T != * const i32`), `extends` as ternary condition (`T extends U ? X : Y`), `==` as ternary condition (`T == i32 ? Vec[T] : T`), `!=` as ternary condition (`T != f64 ? f32 : T`), pointer to constraint-ternary (`* T extends U ? X : Y`). Note: bare constraint without `?` is not tested here — it's rejected as an error in `read_expression_type` (see `dt_expression_type_ternary.bare_constraint_is_error`)
 
 ## Planned Language Features (inferred from AST node types)
 
