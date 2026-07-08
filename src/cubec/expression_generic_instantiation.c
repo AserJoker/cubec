@@ -4,6 +4,7 @@
 #include "core/token.h"
 #include "cubec/expression.h"
 #include "cubec/expression_spread.h"
+#include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -142,7 +143,22 @@ node_t read_expression_generic_instantiation(allocator_t allocator,
                       read_expression_type(allocator, tokens, &current, filename));
     }
     if (!arg) {
-      goto onerror;
+      /* Try wildcard '?' as a generic argument */
+      skip_whitespace(tokens, &current);
+      token_t question_tok = vec_get(tokens, current);
+      if (token_is(question_tok, CUBEC_TOKEN_SYMBOL, "?")) {
+        /* Create a wildcard placeholder node */
+        arg = TRY_LOCAL(onerror, allocator_create(
+            allocator, &g_cubec_literal_identifier_type,
+            &(cubec_literal_identifier_init_t){
+                .location = *token_get_location(question_tok),
+                .parent = NULL,
+                .value = "?",
+            }));
+        current++;
+      } else {
+        goto onerror;
+      }
     }
     vec_push(arguments, arg);
 

@@ -223,6 +223,97 @@ TEST_F(dt_expression_generic_instantiation, mixed_spread) {
 }
 
 /* --------------------------------------------------------------------------
+ *  Wildcard arguments
+ * -------------------------------------------------------------------------- */
+
+TEST_F(dt_expression_generic_instantiation, wildcard_arg) {
+  /* foo[?]  →  generic instantiation with wildcard argument */
+  const char *source = "foo[?]";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+
+  cubec_expression_generic_instantiation_t gi =
+      (cubec_expression_generic_instantiation_t)node;
+  EXPECT_EQ(vec_get_size(gi->arguments), 1);
+
+  /* Wildcard '?' is parsed as an identifier with value "?" */
+  node_t arg0 = (node_t)vec_get(gi->arguments, 0);
+  ASSERT_NE(arg0, nullptr);
+  EXPECT_EQ(arg0->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  EXPECT_STREQ(string_get(((cubec_literal_identifier_t)arg0)->value), "?");
+
+  /* foo, [, ?, ] */
+  EXPECT_EQ(position, 4);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_generic_instantiation, wildcard_mixed) {
+  /* foo[a, ?, b]  →  generic instantiation with wildcard among other args */
+  const char *source = "foo[a, ?, b]";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+
+  cubec_expression_generic_instantiation_t gi =
+      (cubec_expression_generic_instantiation_t)node;
+  EXPECT_EQ(vec_get_size(gi->arguments), 3);
+
+  /* arg0: identifier a */
+  node_t arg0 = (node_t)vec_get(gi->arguments, 0);
+  EXPECT_EQ(arg0->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  EXPECT_STREQ(string_get(((cubec_literal_identifier_t)arg0)->value), "a");
+
+  /* arg1: wildcard '?' */
+  node_t arg1 = (node_t)vec_get(gi->arguments, 1);
+  EXPECT_EQ(arg1->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  EXPECT_STREQ(string_get(((cubec_literal_identifier_t)arg1)->value), "?");
+
+  /* arg2: identifier b */
+  node_t arg2 = (node_t)vec_get(gi->arguments, 2);
+  EXPECT_EQ(arg2->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  EXPECT_STREQ(string_get(((cubec_literal_identifier_t)arg2)->value), "b");
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_generic_instantiation, multiple_wildcards) {
+  /* foo[?, ?, ?]  →  generic instantiation with multiple wildcards */
+  const char *source = "foo[?, ?, ?]";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+
+  cubec_expression_generic_instantiation_t gi =
+      (cubec_expression_generic_instantiation_t)node;
+  EXPECT_EQ(vec_get_size(gi->arguments), 3);
+
+  for (size_t i = 0; i < 3; i++) {
+    node_t arg = (node_t)vec_get(gi->arguments, i);
+    EXPECT_EQ(arg->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+    EXPECT_STREQ(string_get(((cubec_literal_identifier_t)arg)->value), "?");
+  }
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* --------------------------------------------------------------------------
  *  Chaining: generic instantiation with call and member
  * -------------------------------------------------------------------------- */
 
