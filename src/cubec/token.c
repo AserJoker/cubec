@@ -568,6 +568,7 @@ static const char *keywords[] = {
     "break",   "case",    "comptime", "const", "continue", "defer",
     "defer",   "do",      "else",     "enum",  "export",   "extern",
     "for",     "foreach", "func",     "if",    "import",   "in",
+    "interface",
     "inline",  "mutable", "of",       "pub",   "register", "return",
     "struct",  "switch",  "test",     "union", "volatile", "while",
     "extends", "as",      "is",       0,
