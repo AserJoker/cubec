@@ -22,6 +22,7 @@ cubec/
 │   ├── core/                   # Core data structure library
 │   │   ├── allocator.h         # Memory allocator
 │   │   ├── error.h             # Error handling (TRY/THROW/CATCH macros)
+│   │   ├── icu_data.h          # ICU common data initialization
 │   │   ├── list.h              # Doubly-linked list
 │   │   ├── location.h          # Source location info
 │   │   ├── map.h               # Hash map (switches to red-black tree at >=16 entries)
@@ -34,6 +35,7 @@ cubec/
 │   │   └── vec.h               # Dynamic array (vector)
 │   └── cubec/                  # Language frontend module
 │       ├── declaration.h       # Declaration base class (abstract)
+│       ├── declaration_array.h # Array declaration ([ <expr> ] <type>)
 │       ├── declaration_pointer.h # Pointer declaration (* [const] [volatile] <type>)
 │       ├── declaration_slice.h  # Slice declaration ([] [const] [volatile] <type>)
 │       ├── expression.h        # Expression AST node
@@ -48,20 +50,23 @@ cubec/
 │       ├── expression_slice.h   # Slice expression (host[start:length])
 │       ├── expression_spread.h  # Spread expression (...expr)
 │       ├── expression_ternary.h # Ternary/conditional expression (cond ? consequent : alternate)
+│       ├── expression_type_group.h # Grouped type expression ( ( type_expression ) )
 │       ├── literal.h           # Literal AST node (abstract)
 │       ├── literal_char.h      # Character literal
 │       ├── literal_identifier.h# Identifier literal
 │       ├── literal_numeric.h   # Numeric literal (with type suffixes)
 │       ├── literal_string.h    # String literal
-│       ├── node.h              # AST node kind enum (44 types)
+│       ├── node.h              # AST node kind enum (58 types)
 │       ├── program.h           # Top-level program node
 │       ├── statement_empty.h   # Empty statement node
 │       └── token.h             # Token kind enum + lexer interface
 ├── src/                        # Source files (mirrors include/ structure)
-│   ├── main.c                  # Entry point (placeholder)
+│   ├── main.c                  # Entry point (stub - initializes ICU + allocator)
+│   ├── icu_data.c              # ICU common data (generated at build time)
 │   ├── core/                   # Core data structure implementations
 │   └── cubec/                  # Lexer + parser implementations
-├── test/                       # Tests (346 test cases, Google Test + C++20)
+│       # Planned (not yet created): engine/, reader/, writer/, c/
+├── test/                       # Tests (425+ test cases, Google Test + C++20)
 │   ├── main.cpp                # Test entry point
 │   ├── common/test_common.h    # RAII test allocator helper
 │   ├── core/                   # Tests for core data structures
@@ -110,6 +115,7 @@ C struct nesting simulates single inheritance:
 node_t (core/node.h)
   └── cubec_expression_t (cubec/expression.h)
         ├── cubec_declaration_t (cubec/declaration.h)  # Declaration base class (abstract)
+        │     ├── cubec_declaration_array_t (cubec/declaration_array.h)  # [ <expr> ] <type>
         │     ├── cubec_declaration_pointer_t (cubec/declaration_pointer.h)  # * [const] [volatile] <type>
         │     └── cubec_declaration_slice_t (cubec/declaration_slice.h)  # [] [const] [volatile] <type>
         ├── cubec_expression_binary_t (cubec/expression_binary.h)
@@ -135,6 +141,7 @@ Subclasses embed the parent via a `super` field and call parent's `type->init` d
 node_t (core/node.h)
   └── cubec_expression_t (cubec/expression.h)
         ├── cubec_declaration_t (cubec/declaration.h)  # Declaration base class (abstract)
+        │     ├── cubec_declaration_array_t (cubec/declaration_array.h)  # [ <expr> ] <type>
         │     ├── cubec_declaration_pointer_t (cubec/declaration_pointer.h)  # * [const] [volatile] <type>
         │     └── cubec_declaration_slice_t (cubec/declaration_slice.h)  # [] [const] [volatile] <type>
         ├── cubec_expression_assignment_t (cubec/expression_assignment.h)
@@ -356,6 +363,7 @@ read_expression_member                # host.field
 - `read_program_node` — Top-level entry, loops parsing statements until EOF
 - `read_expression_type` (expression.c) — Parses type expressions: identifier with optional member access, generic instantiation, pointer declaration, and slice declaration. Handles patterns like: `identifier` (e.g., `Vec`, `i32`), `member` (e.g., `std.vec.Vec`), `generic instantiation` (e.g., `Vec[i32]`, `Option[T]`), `pointer declaration` (e.g., `* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`), `slice declaration` (e.g., `[] i32`, `[] const i32`, `[] volatile i32`, `[] const volatile i32`). This is a simplified version of `read_value` focused on type syntax. Used for parsing type annotations and generic type arguments. Pointer and slice declarations are recursively parsed via `read_declaration_pointer` and `read_declaration_slice` respectively.
 - `read_expression_type_group` (expression_type_group.c) — Parses grouped type expressions `( type_expression )`. Wraps the inner type expression in parentheses, useful for clarifying precedence in complex type annotations or when a type expression needs to be grouped. Returns `cubec_expression_type_group_t` wrapping the inner type node. Returns NULL if the current token is not `(`.
+- `read_declaration_array` (declaration_array.c) — Parses array type declaration `[ <expr> ] <type>`. The size expression is evaluated at compile time for fixed-size arrays. Returns `cubec_declaration_array_t` with `size` and `type` fields. Returns NULL if the current token is not `[` followed by a non-`]` token.
 
 ### Not Yet Implemented
 Most statement types (if, for, while, switch, defer, etc.) and all declaration types are defined as enums but lack parser implementations. Expression parsing is substantially complete: assignment, comma, group, spread, call, generic instantiation, ternary, member access, and type group expression are all implemented.
