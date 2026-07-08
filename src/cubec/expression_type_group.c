@@ -1,0 +1,123 @@
+#include "cubec/expression_type_group.h"
+#include "core/allocator.h"
+#include "core/error.h"
+#include "core/token.h"
+#include "cubec/expression.h"
+#include "cubec/node.h"
+#include "cubec/token.h"
+
+/* --------------------------------------------------------------------------
+ *  Lifecycle: init / dispose / clone / move
+ * -------------------------------------------------------------------------- */
+
+static void _cubec_expression_type_group_init(
+    cubec_expression_type_group_t self, allocator_t allocator,
+    cubec_expression_type_group_init_t *init) {
+  if (!init) {
+    THROW_LOCAL(onerror, "init cannot be NULL");
+  }
+  cubec_expression_init_t super_init = {
+      .kind = CUBEC_NODE_EXPRESSION_TYPE_GROUP,
+      .parent = NULL,
+  };
+  super_init.location = init->location;
+  super_init.parent = init->parent;
+  TRY_VOID_LOCAL(onerror,
+                 g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  self->inner = init->inner;
+onerror:
+  return;
+}
+
+static void _cubec_expression_type_group_dispose(
+    cubec_expression_type_group_t self, allocator_t allocator) {
+  allocator_free(allocator, &self->inner);
+  g_cubec_expression_type.dispose(&self->super, allocator);
+}
+
+static void _cubec_expression_type_group_clone(
+    cubec_expression_type_group_t self, allocator_t allocator,
+    cubec_expression_type_group_t another) {
+  TRY_VOID_LOCAL(
+      cleanup,
+      g_cubec_expression_type.clone(&self->super, allocator, &another->super));
+  self->inner = TRY_LOCAL(cleanup, value_clone(allocator, another->inner));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->inner);
+}
+
+static void _cubec_expression_type_group_move(
+    cubec_expression_type_group_t self, allocator_t allocator,
+    cubec_expression_type_group_t another) {
+  TRY_VOID_LOCAL(
+      cleanup,
+      g_cubec_expression_type.move(&self->super, allocator, &another->super));
+  self->inner = TRY_LOCAL(cleanup, value_move(allocator, another->inner));
+  return;
+
+cleanup:
+  allocator_free(allocator, &self->inner);
+}
+
+type_t g_cubec_expression_type_group_type = {
+    .name = "cubec.cubec.expression_type_group",
+    .size = sizeof(struct _cubec_expression_type_group_t),
+    .init = (type_init_fn_t)_cubec_expression_type_group_init,
+    .dispose = (type_dispose_fn_t)_cubec_expression_type_group_dispose,
+    .clone = (type_clone_fn_t)_cubec_expression_type_group_clone,
+    .move = (type_move_fn_t)_cubec_expression_type_group_move,
+};
+
+/* --------------------------------------------------------------------------
+ *  Parser: read_expression_type_group
+ * -------------------------------------------------------------------------- */
+
+node_t read_expression_type_group(allocator_t allocator, vec_t tokens,
+                                  size_t *position, const char *filename) {
+  size_t current = *position;
+  cubec_expression_type_group_t node = NULL;
+  node_t inner = NULL;
+
+  /* Expect '(' */
+  token_t open_token = vec_get(tokens, current);
+  if (!open_token || !token_is(open_token, CUBEC_TOKEN_SYMBOL, "(")) {
+    return NULL;
+  }
+  current++;
+
+  /* Parse inner type expression */
+  skip_whitespace(tokens, &current);
+  inner = TRY_LOCAL(onerror,
+                    read_expression_type(allocator, tokens, &current, filename));
+  if (!inner) {
+    goto onerror;
+  }
+
+  /* Expect ')' */
+  skip_whitespace(tokens, &current);
+  token_t close_token = vec_get(tokens, current);
+  if (!close_token || !token_is(close_token, CUBEC_TOKEN_SYMBOL, ")")) {
+    goto onerror;
+  }
+  current++;
+
+  node = TRY_LOCAL(
+      onerror,
+      allocator_create(allocator, &g_cubec_expression_type_group_type,
+                       &(cubec_expression_type_group_init_t){
+                           .inner = inner,
+                       }));
+  location_t *loc = token_get_location(open_token);
+  node->super.super.location = *loc;
+  node->super.super.location.filename = filename;
+
+  *position = current;
+  return (node_t)node;
+
+onerror:
+  allocator_free(allocator, &inner);
+  allocator_free(allocator, &node);
+  return NULL;
+}

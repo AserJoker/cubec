@@ -10,6 +10,7 @@
 #include "cubec/expression_comma.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
+#include "cubec/expression_type_group.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_postfix_unary.h"
 #include "cubec/expression_slice.h"
@@ -197,14 +198,20 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
    *   - pointer declaration (e.g., "* i32", "* const i32", "* volatile i32")
    *   - slice declaration (e.g., "[] i32", "[] const i32", "[] volatile i32")
    *   - array declaration (e.g., "[10] i32", "[N] i32", "[size] T")
+   *   - grouped type expression (e.g., "( i32 )", "( Vec[i32] )")
    *
    * This is a simplified version of read_value focused on type syntax. */
 
   node_t node = NULL;
   size_t current = *position;
 
-  /* Skip whitespace/comments before parsing */
-  skip_whitespace(tokens, &current);
+  /* Try grouped type expression: ( type_expression ) */
+  node = TRY_LOCAL(onerror,
+                   read_expression_type_group(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
 
   /* Try pointer declaration first (prefix form: * [const] [volatile] <type>)
    * Note: read_declaration_pointer recursively calls read_expression_type

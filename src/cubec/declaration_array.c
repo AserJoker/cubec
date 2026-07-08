@@ -1,6 +1,7 @@
 #include "cubec/declaration_array.h"
 #include "core/allocator.h"
 #include "core/error.h"
+#include "core/location.h"
 #include "core/token.h"
 #include "cubec/expression.h"
 #include "cubec/literal_numeric.h"
@@ -112,6 +113,7 @@ node_t read_declaration_array(allocator_t allocator, vec_t tokens,
   current++;
 
   /* Parse the underlying type using read_expression_type */
+  skip_whitespace(tokens, &current);
   type = read_expression_type(allocator, tokens, &current, filename);
   if (!type) {
     THROW_LOCAL(onerror, "expected type after array declaration");

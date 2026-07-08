@@ -355,9 +355,10 @@ read_expression_member                # host.field
 - `read_statement_empty` — Empty statement (`;`)
 - `read_program_node` — Top-level entry, loops parsing statements until EOF
 - `read_expression_type` (expression.c) — Parses type expressions: identifier with optional member access, generic instantiation, pointer declaration, and slice declaration. Handles patterns like: `identifier` (e.g., `Vec`, `i32`), `member` (e.g., `std.vec.Vec`), `generic instantiation` (e.g., `Vec[i32]`, `Option[T]`), `pointer declaration` (e.g., `* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`), `slice declaration` (e.g., `[] i32`, `[] const i32`, `[] volatile i32`, `[] const volatile i32`). This is a simplified version of `read_value` focused on type syntax. Used for parsing type annotations and generic type arguments. Pointer and slice declarations are recursively parsed via `read_declaration_pointer` and `read_declaration_slice` respectively.
+- `read_expression_type_group` (expression_type_group.c) — Parses grouped type expressions `( type_expression )`. Wraps the inner type expression in parentheses, useful for clarifying precedence in complex type annotations or when a type expression needs to be grouped. Returns `cubec_expression_type_group_t` wrapping the inner type node. Returns NULL if the current token is not `(`.
 
 ### Not Yet Implemented
-Most statement types (if, for, while, switch, defer, etc.) and all declaration types are defined as enums but lack parser implementations. Expression parsing is substantially complete: assignment, comma, group, spread, call, generic instantiation, ternary, and member access are all implemented.
+Most statement types (if, for, while, switch, defer, etc.) and all declaration types are defined as enums but lack parser implementations. Expression parsing is substantially complete: assignment, comma, group, spread, call, generic instantiation, ternary, member access, and type group expression are all implemented.
 
 ## Build System
 

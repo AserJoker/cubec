@@ -4,6 +4,7 @@
 #include "cubec/declaration_slice.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_member.h"
+#include "cubec/expression_type_group.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -1205,4 +1206,162 @@ TEST_F(dt_expression_type, slice_and_array_are_distinct) {
   allocator_free(allocator, &slice_tokens);
   allocator_free(allocator, &array_node);
   allocator_free(allocator, &array_tokens);
+}
+
+/* ==========================================================================
+ * Type Group Expression Tests
+ * ========================================================================== */
+
+/* Test: simple grouped type (e.g., "( i32 )") */
+TEST_F(dt_expression_type, simple_type_group) {
+  const char *source = "( i32 )";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+
+  cubec_expression_type_group_t group = (cubec_expression_type_group_t)node;
+  ASSERT_NE(group->inner, nullptr);
+  EXPECT_EQ(group->inner->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  cubec_literal_identifier_t inner = (cubec_literal_identifier_t)group->inner;
+  EXPECT_STREQ(string_get(inner->value), "i32");
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: grouped generic type (e.g., "( Vec[i32] )") */
+TEST_F(dt_expression_type, type_group_with_generic) {
+  const char *source = "( Vec[i32] )";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+
+  cubec_expression_type_group_t group = (cubec_expression_type_group_t)node;
+  ASSERT_NE(group->inner, nullptr);
+  EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: grouped member type (e.g., "( std.vec.Vec )") */
+TEST_F(dt_expression_type, type_group_with_member) {
+  const char *source = "( std.vec.Vec )";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+
+  cubec_expression_type_group_t group = (cubec_expression_type_group_t)node;
+  ASSERT_NE(group->inner, nullptr);
+  EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: grouped pointer type (e.g., "( * i32 )") */
+TEST_F(dt_expression_type, type_group_with_pointer) {
+  const char *source = "( * i32 )";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+
+  cubec_expression_type_group_t group = (cubec_expression_type_group_t)node;
+  ASSERT_NE(group->inner, nullptr);
+  EXPECT_EQ(group->inner->kind, CUBEC_NODE_DECLARATION_POINTER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: grouped slice type (e.g., "( [] i32 )") */
+TEST_F(dt_expression_type, type_group_with_slice) {
+  const char *source = "( [] i32 )";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+
+  cubec_expression_type_group_t group = (cubec_expression_type_group_t)node;
+  ASSERT_NE(group->inner, nullptr);
+  EXPECT_EQ(group->inner->kind, CUBEC_NODE_DECLARATION_SLICE);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: non-group returns null */
+TEST_F(dt_expression_type, non_group_returns_null) {
+  const char *source = "i32";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  /* Should return the identifier, not a group */
+  EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: type group consume all tokens */
+TEST_F(dt_expression_type, type_group_consume_all_tokens) {
+  const char *source = "( i32 )";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  /* All tokens should be consumed: (, whitespace, i32, whitespace, ) → 5 tokens */
+  EXPECT_EQ(position, 5);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* Test: nested type group (e.g., "( ( i32 ) )") */
+TEST_F(dt_expression_type, nested_type_group) {
+  const char *source = "( ( i32 ) )";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+
+  cubec_expression_type_group_t outer = (cubec_expression_type_group_t)node;
+  ASSERT_NE(outer->inner, nullptr);
+  EXPECT_EQ(outer->inner->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+
+  cubec_expression_type_group_t inner = (cubec_expression_type_group_t)outer->inner;
+  ASSERT_NE(inner->inner, nullptr);
+  EXPECT_EQ(inner->inner->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }
