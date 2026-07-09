@@ -17,6 +17,7 @@
   - [基本类型](#基本类型)
   - [类型后缀](#类型后缀)
   - [指针声明](#指针声明)
+  - [const 类型表达式](#const-类型表达式)
   - [切片声明](#切片声明)
   - [数组声明](#数组声明)
 - [运算符](#运算符)
@@ -151,6 +152,28 @@ Cubec 支持前缀指针声明语法（区别于 C 的前缀 `*`）：
 
 ```c
 Vec[* i32]        // Vec 的元素类型是指向 i32 的指针
+```
+
+### const 类型表达式
+
+`const` 可作为独立的前缀类型修饰符，与指针、切片地位相当：
+
+```c
+const i32              // const 修饰的 i32 类型
+const * i32            // const 修饰的指针类型（指向 i32 的 const 指针）
+const [] i32           // const 修饰的切片类型
+const [10] i32         // const 修饰的数组类型
+const Vec[i32]         // const 修饰的泛型类型
+const std.vec.Vec      // const 修饰的成员类型
+const const i32        // 嵌套 const
+```
+
+> **注意**：`const * i32` 与 `* const i32` 语义不同。`const * i32` 是 const 修饰整个指针类型，而 `* const i32` 是指针声明中 const 限定符修饰指针本身。
+
+const 类型表达式的 base_type 不直接消费三元表达式，需要通过分组类型表达式包裹：
+
+```c
+const (a ? b : c)      // const 修饰的三元类型（需分组）
 ```
 
 ### 切片声明
@@ -756,7 +779,7 @@ cubec/
 │   ├── core/         # 核心数据结构（vec, list, rbtree, map, string 等）
 │   └── cubec/        # 前端模块（词法/语法分析）
 ├── src/              # 源文件（与 include/ 对应）
-├── test/             # 测试文件（Google Test, 490 测试用例）
+├── test/             # 测试文件（Google Test, 503 测试用例）
 ├── demo/             # 示例 .cubec 文件
 └── third_party/      # 第三方依赖
 ```
@@ -784,9 +807,10 @@ cubec/
   - 分组类型表达式（`( type_expression )`）
   - 类型级三元条件表达式（`condition ? type : type`，编译期类型分支，condition 支持类型约束/编译期表达式/简单标识符）
   - 类型约束表达式（`T extends U`, `T == U`, `T != U`，作为类型三元条件使用，bare 形式报错）
+  - const 类型表达式（`const <type>`，独立前缀类型修饰符，与指针/切片地位相当）
   - 数组声明表达式（`[ <expr> ] <type>`）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：490 测试用例覆盖所有核心模块
+- **测试体系**：503 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 

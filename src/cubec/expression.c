@@ -10,6 +10,7 @@
 #include "cubec/expression_comma.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
+#include "cubec/expression_type_const.h"
 #include "cubec/expression_type_group.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_postfix_unary.h"
@@ -191,11 +192,12 @@ onerror:
 node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
                                     size_t *position, const char *filename) {
   /* Parse a type expression: identifier with optional member access,
-   * generic instantiation, pointer declaration, slice declaration, and array
-   * declaration. Handles patterns like:
+   * generic instantiation, pointer declaration, slice declaration, array
+   * declaration, and const type expression. Handles patterns like:
    *   - identifier (e.g., "Vec", "i32")
    *   - member (e.g., "std.vec.Vec")
    *   - generic instantiation (e.g., "Vec[i32]", "Option[T]")
+   *   - const type (e.g., "const i32", "const * i32")
    *   - pointer declaration (e.g., "* i32", "* const i32", "* volatile i32")
    *   - slice declaration (e.g., "[] i32", "[] const i32", "[] volatile i32")
    *   - array declaration (e.g., "[10] i32", "[N] i32", "[size] T")
@@ -209,6 +211,19 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
   /* Try grouped type expression: ( type_expression ) */
   node = TRY_LOCAL(onerror,
                    read_expression_type_group(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try const type expression (prefix form: const <type>)
+   * Must be before pointer so that "const * i32" parses as const(pointer)
+   * rather than pointer consuming * then const as qualifier.
+   * Note: read_expression_type_const recursively calls read_type_expression_primary
+   * for the underlying type. Ternary base types must be wrapped in
+   * type_group: const (a ? b : c). */
+  node = TRY_LOCAL(onerror,
+                   read_expression_type_const(allocator, tokens, &current, filename));
   if (node) {
     *position = current;
     return node;
