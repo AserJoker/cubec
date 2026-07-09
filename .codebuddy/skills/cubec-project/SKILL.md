@@ -38,6 +38,12 @@ cubec/
 │       ├── declaration_array.h # Array declaration ([ <expr> ] <type>)
 │       ├── declaration_pointer.h # Pointer declaration (* [const] [volatile] <type>)
 │       ├── declaration_slice.h  # Slice declaration ([] [const] [volatile] <type>)
+│       ├── declaration_variable.h # Variable declarator (<identifier> [: <type>] = <expression>)
+│       ├── statement.h         # Statement dispatcher (read_statement)
+│       ├── statement_block.h   # Block statement node ({ <statements> })
+│       ├── statement_declaration.h # Declaration statement (var <declarator> [, <declarator>]* ;)
+│       ├── statement_empty.h   # Empty statement node
+│       ├── statement_expression.h # Expression statement node (<expression>;)
 │       ├── expression.h        # Expression AST node
 │       ├── expression_assignment.h  # Assignment expression (a = b, a += b, etc.)
 │       ├── expression_binary.h  # Binary/prefix-unary expression (left/right/opt)
@@ -273,8 +279,8 @@ Note: `...` (ellipsis/spread) is tokenized as a `SYMBOL` with text `"..."`, rely
 - `read_token` — Tries all token types in priority order
 - `resolve_token_list` — Complete lexer entry point, returns token vector
 
-### Keywords (30 total)
-`break`, `case`, `comptime`, `const`, `continue`, `defer`, `do`, `else`, `enum`, `export`, `extern`, `for`, `foreach`, `func`, `if`, `import`, `in`, `inline`, `mutable`, `of`, `pub`, `register`, `return`, `struct`, `switch`, `test`, `typeof`, `union`, `volatile`, `while`
+### Keywords (31 total)
+`break`, `case`, `comptime`, `const`, `continue`, `defer`, `do`, `else`, `enum`, `export`, `extern`, `for`, `foreach`, `func`, `if`, `import`, `in`, `inline`, `mutable`, `of`, `pub`, `register`, `return`, `struct`, `switch`, `test`, `typeof`, `union`, `var`, `volatile`, `while`
 
 ### Known Issue
 Whitespace tokens are sometimes incorrectly marked as `SYMBOL` (documented as "bug" in tests).
@@ -390,8 +396,10 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_statement_empty` — Empty statement (`;`)
 - `read_statement_block` (statement_block.c) — Block statement (`{ <statements> }`). Parses a sequence of statements enclosed in curly braces, creating a new scope. The block may be empty (`{}`). Returns `cubec_statement_block_t` with a `statements` vec field. Returns NULL if current token is not `{`. THROW errors on unclosed brace or unexpected token in block.
 - `read_statement_expression` (statement_expression.c) — Expression statement (`<expression>;`). Parses an expression via `read_expression`, then expects a mandatory trailing semicolon. Missing semicolon is a parse error. Returns `cubec_statement_expression_t` with `expression` field. Returns NULL if `read_expression` returns NULL (no expression to form a statement).
-- `read_statement` (statement.c) — Statement dispatcher. Tries each statement parser in order: `read_statement_block` first (has distinguishing prefix `{`), then `read_statement_empty` (has distinguishing prefix `;`), then `read_statement_expression` as the fallback (no distinguishing prefix — any expression can start it, so it must be tried last). Returns the first successful parse, or NULL if no statement matches.
-- `read_program_node` — Top-level entry, loops parsing statements until EOF
+- `read_statement` (statement.c) — Statement dispatcher. Tries each statement parser in order: `read_statement_block` first (has distinguishing prefix `{`), then `read_statement_declaration` (has distinguishing prefix `var`), then `read_statement_empty` (has distinguishing prefix `;`), then `read_statement_expression` as the fallback (no distinguishing prefix — any expression can start it, so it must be tried last). Returns the first successful parse, or NULL if no statement matches.
+- `read_statement_declaration` (statement_declaration.c) — Declaration statement (`var <declarator> [, <declarator>]* ;`). Parses one or more variable declarators separated by commas, each `<identifier> [: <type>] = <expression>`. The type annotation is optional and parsed via `read_expression_type`. Requires semicolon at end. THROW errors on missing semicolon or malformed declarator. Returns `cubec_statement_declaration_t` with `declarators` vec field.
+- `read_declaration_variable` (declaration_variable.c) — Variable declarator (`<identifier> [: <type>] = <expression>`). Parses a single variable declarator with optional type annotation and required initializer expression. The type is parsed via `read_expression_type`. Returns `cubec_declaration_variable_t` with `identifier`, `type` (nullable), and `expression` fields.
+- `read_program_node` — Top-level entry, parses statements using a whitelist approach: `statement_declaration` (`var`), `statement_empty` (`;`). `statement_expression` is NOT supported at program level (only within blocks).
 - `read_expression_type` (expression.c) — Parses type expressions: identifier with optional namespace access (`::`), generic instantiation, const type, pointer declaration, slice declaration, array declaration, and type constraint. **`::` is used for namespace navigation in type expressions** (e.g., `std::vec::Vec`), while `.` is used for member access in normal expressions only. Handles patterns like: `identifier` (e.g., `Vec`, `i32`), `namespace access` (e.g., `std::vec::Vec`), `generic instantiation` (e.g., `Vec[i32]`, `Option[T]`), `const type` (e.g., `const i32`, `const * i32`), `pointer declaration` (e.g., `* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`), `slice declaration` (e.g., `[] i32`, `[] const i32`, `[] volatile i32`, `[] const volatile i32`), `array declaration` (e.g., `[10] i32`), `ternary type` (e.g., `a ? i32 : f64`, `T extends U ? X : Y`), `typeof expression` (e.g., `typeof(x)`, `typeof(File)::open`, `*typeof(x)`). This is a simplified version of `read_value` focused on type syntax. Used for parsing type annotations and generic type arguments. Const type expressions are parsed via `read_expression_type_const`, placed before pointer so `const * i32` parses as `const(pointer)` rather than pointer consuming const as qualifier. Pointer, slice, array, and const base_type all use `read_type_expression_primary` (no ternary), so `* a ? b : c` parses as `(*a) ? b : c`. Namespace access (`::`) binds tighter than type constructors: `*std::vec::Vec` → `*(std::vec::Vec)`. To use ternary as base_type, wrap in type_group: `* (a ? b : c)`. Ternary types are parsed via `read_expression_type_ternary`, with type constraints parsed via `read_expression_type_constraint`. `typeof` is a type expression parsed in `read_type_expression_primary` alongside `literal_identifier` — it enters the postfix loop supporting `::`, `[]`, `*`, so `typeof(File)::open` and `*typeof(x)` work naturally.
 - `read_expression_type_constraint` (expression_type_constraint.c) — Parses type constraint expressions: `left_type extends right_type`, `left_type == right_type`, `left_type != right_type`. The left operand is parsed via `read_type_expression_primary`, the right operand via `read_type_expression_primary` (to avoid consuming `?` for ternary). Returns `cubec_expression_type_constraint_t` with `op`, `left`, `right` fields. If no constraint operator follows the left operand, returns left-as-is (graceful fallback — caller handles ternary detection). Bare constraints without `?` (e.g. standalone `T extends U`) are rejected with an error in `read_expression_type` — they are only valid as ternary conditions or in generic definition context. Operators: `extends` (subtype check, tokenized as KEYWORD), `==` (type equality, SYMBOL), `!=` (type inequality, SYMBOL).
 - `read_expression_type_group` (expression_type_group.c) — Parses grouped type expressions `( type_expression )`. Wraps the inner type expression in parentheses, useful for clarifying precedence in complex type annotations or when a type expression needs to be grouped. Returns `cubec_expression_type_group_t` wrapping the inner type node. Returns NULL if the current token is not `(`.
@@ -438,7 +446,7 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 589 test cases
+- Total: 612 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -474,6 +482,7 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 - `dt_expression_typeof.cpp` (14 cases) — typeof expressions: typeof with identifier `typeof(x)`, typeof with binary expression `typeof(a+b)`, typeof with function call `typeof(foo())`, typeof as type expression, typeof with namespace access `typeof(File)::open`, typeof as pointer base `*typeof(x)`, typeof as slice base `[]typeof(x)`, typeof with generic instantiation `typeof(Vec)[i32]`, consume all tokens, missing `(` error, missing `)` error, not typeof returns NULL, clone, move
 - `dt_statement_expression.cpp` (10 cases) — expression statements: simple identifier `foo;`, numeric literal `42;`, binary expression `a + b;`, function call `foo();`, namespace access call `std::Vec::create();`, consume all tokens, missing semicolon error, semicolon only returns NULL, clone, move
 - `dt_statement_block.cpp` (11 cases) — empty block `{}`, single empty statement `{;}`, single expression statement `{ foo(); }`, multiple statements `{ foo(); bar; ; }`, nested blocks `{ { ; } }`, via read_statement dispatcher, no brace returns NULL, unclosed brace is error, unexpected token in block is error, clone, move
+- `dt_statement_declaration.cpp` (12 cases) — single declarator without/with type, multiple declarators, complex expression, pointer type, initialize list (anonymous/typed/field items/nested), consume all tokens, clone, move
 
 ## Planned Language Features (inferred from AST node types)
 

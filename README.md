@@ -110,7 +110,7 @@ func main() {
 
 标识符遵循 Unicode 标准（通过 ICU `u_isIDStart`/`u_isIDPart` 识别），支持非 ASCII 字符。
 
-**关键字（30个）**：
+**关键字（31个）**：
 
 | | | | | |
 |---|---|---|---|---|
@@ -119,7 +119,7 @@ func main() {
 | `extern` | `for` | `foreach` | `func` | `if` |
 | `import` | `in` | `inline` | `mutable` | `of` |
 | `pub` | `register` | `return` | `struct` | `switch` |
-| `test` | `typeof` | `union` | `volatile` | `while` |
+| `test` | `typeof` | `union` | `var` | `volatile` | `while` |
 
 ---
 
@@ -523,10 +523,11 @@ T != f64 ? f32 : T                // != 约束
 ### 变量声明
 
 ```c
-// TODO
-let x: i32 = 42;
-const PI: f64 = 3.14159;
-mutable counter: u64 = 0;
+var x = 42;                    // 自动类型推导
+var x: i32 = 42;               // 显式类型注解
+var a = 1, b = 2, c = 3;       // 多变量声明
+var vec = .Vec{1, 2, 3};       // 初始化列表作为值
+var point = .Point{.x = 1, .y = 2};  // 带字段的初始化列表
 ```
 
 ### 条件语句
@@ -939,9 +940,10 @@ cubec/
   - 块语句（`{ <statements> }`，引入新作用域，支持空块和嵌套）
   - 表达式语句（`<expression>;`，缺少分号为语法错误）
   - 空语句（`;`）
-  - `read_statement` 语句分派器（按优先级尝试各语句类型，`statement_expression` 作为无标志的退化方案排在最后）
+  - 变量声明语句（`var <identifier> [: <type>] = <expression> [, ...];`，支持多变量逗号分隔）
+  - `read_statement` 语句分派器（按优先级尝试各语句类型）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：600 测试用例覆盖所有核心模块
+- **测试体系**：612 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 
@@ -956,7 +958,7 @@ cubec/
   - `struct` 结构体声明
   - `enum` 枚举声明
   - `union` 联合体声明
-  - 变量声明（`let`/`const`/`mutable`）
+  - 变量声明（`var`，已实现 basic 形式）
 - **模块系统**：
   - `import` 导入
   - `pub`/`export` 导出
