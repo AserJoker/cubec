@@ -20,6 +20,7 @@
 #include "cubec/expression_slice.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/expression_type_ternary.h"
+#include "cubec/expression_typeof.h"
 #include "cubec/literal_char.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
@@ -276,8 +277,15 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
     return node;
   }
 
+  /* Try typeof expression: typeof(<expression>) — compile-time type computation */
+  node = TRY_LOCAL(onerror,
+                   read_expression_typeof(allocator, tokens, &current, filename));
+
   /* Try identifier as the base type */
-  node = read_literal_identifier(allocator, tokens, &current, filename);
+  if (!node) {
+    node = read_literal_identifier(allocator, tokens, &current, filename);
+  }
+
   if (!node) {
     return NULL;
   }
