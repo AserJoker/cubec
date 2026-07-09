@@ -18,6 +18,7 @@
   - [类型后缀](#类型后缀)
   - [指针声明](#指针声明)
   - [const 类型表达式](#const-类型表达式)
+  - [volatile 类型表达式](#volatile-类型表达式)
   - [切片声明](#切片声明)
   - [数组声明](#数组声明)
 - [运算符](#运算符)
@@ -174,6 +175,33 @@ const 类型表达式的 base_type 不直接消费三元表达式，需要通过
 
 ```c
 const (a ? b : c)      // const 修饰的三元类型（需分组）
+```
+
+### volatile 类型表达式
+
+`volatile` 与 `const` 地位相当，同样可作为独立的前缀类型修饰符：
+
+```c
+volatile i32            // volatile 修饰的 i32 类型
+volatile * i32          // volatile 修饰的指针类型
+volatile [] i32         // volatile 修饰的切片类型
+volatile [10] i32       // volatile 修饰的数组类型
+volatile Vec[i32]       // volatile 修饰的泛型类型
+volatile std.vec.Vec    // volatile 修饰的成员类型
+volatile volatile i32   // 嵌套 volatile
+```
+
+`volatile` 与 `const` 可自由组合，顺序决定嵌套关系：
+
+```c
+const volatile i32      // const 修饰 volatile i32（const 在外层）
+volatile const i32      // volatile 修饰 const i32（volatile 在外层）
+```
+
+与 const 相同，volatile 的 base_type 不直接消费三元表达式：
+
+```c
+volatile (a ? b : c)   // volatile 修饰的三元类型（需分组）
 ```
 
 ### 切片声明
@@ -779,7 +807,7 @@ cubec/
 │   ├── core/         # 核心数据结构（vec, list, rbtree, map, string 等）
 │   └── cubec/        # 前端模块（词法/语法分析）
 ├── src/              # 源文件（与 include/ 对应）
-├── test/             # 测试文件（Google Test, 503 测试用例）
+├── test/             # 测试文件（Google Test, 518 测试用例）
 ├── demo/             # 示例 .cubec 文件
 └── third_party/      # 第三方依赖
 ```
@@ -808,9 +836,10 @@ cubec/
   - 类型级三元条件表达式（`condition ? type : type`，编译期类型分支，condition 支持类型约束/编译期表达式/简单标识符）
   - 类型约束表达式（`T extends U`, `T == U`, `T != U`，作为类型三元条件使用，bare 形式报错）
   - const 类型表达式（`const <type>`，独立前缀类型修饰符，与指针/切片地位相当）
+  - volatile 类型表达式（`volatile <type>`，独立前缀类型修饰符，与 const/指针/切片地位相当）
   - 数组声明表达式（`[ <expr> ] <type>`）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：503 测试用例覆盖所有核心模块
+- **测试体系**：518 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 

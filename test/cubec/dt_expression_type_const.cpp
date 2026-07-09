@@ -342,6 +342,10 @@ TEST_F(dt_expression_type_const, move) {
   ASSERT_NE(moved, nullptr);
   EXPECT_EQ(moved->kind, CUBEC_NODE_EXPRESSION_TYPE_CONST);
 
+  /* value_move transfers data but does NOT free the source pointer.
+   * The source must be freed explicitly. */
+  allocator_free(allocator, &node);
+
   cubec_expression_type_const_t result = (cubec_expression_type_const_t)moved;
   ASSERT_NE(result->type, nullptr);
   EXPECT_EQ(result->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);

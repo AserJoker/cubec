@@ -12,6 +12,7 @@
 #include "cubec/expression_group.h"
 #include "cubec/expression_type_const.h"
 #include "cubec/expression_type_group.h"
+#include "cubec/expression_type_volatile.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_postfix_unary.h"
 #include "cubec/expression_slice.h"
@@ -224,6 +225,19 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
    * type_group: const (a ? b : c). */
   node = TRY_LOCAL(onerror,
                    read_expression_type_const(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try volatile type expression (prefix form: volatile <type>)
+   * Must be before pointer so that "volatile * i32" parses as volatile(pointer)
+   * rather than pointer consuming * then volatile as qualifier.
+   * Note: read_expression_type_volatile recursively calls read_type_expression_primary
+   * for the underlying type. Ternary base types must be wrapped in
+   * type_group: volatile (a ? b : c). */
+  node = TRY_LOCAL(onerror,
+                   read_expression_type_volatile(allocator, tokens, &current, filename));
   if (node) {
     *position = current;
     return node;
