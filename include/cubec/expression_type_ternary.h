@@ -39,7 +39,7 @@ typedef struct _cubec_expression_type_ternary_init_t cubec_expression_type_terna
  * @return A new cubec_expression_type_ternary_t node, or the condition-only
  *         base type expression if no '?' follows
  */
-node_t read_ternary_type_expression(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_ternary(allocator_t allocator, vec_t tokens,
                                     size_t *position, const char *filename);
 
 #ifdef __cplusplus

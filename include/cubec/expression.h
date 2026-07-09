@@ -40,7 +40,7 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
  *  optional member access, generic instantiation, pointer/slice/array
  *  declaration, and grouping.
  *  @note Internal helper: should only be called by read_expression_type
- *        and read_ternary_type_expression. External callers should use
+ *        and read_expression_type_ternary. External callers should use
  *        read_expression_type. */
 node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
                                     size_t *position, const char *filename);

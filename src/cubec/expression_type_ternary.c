@@ -91,10 +91,10 @@ type_t g_cubec_expression_type_ternary_type = {
 };
 
 /* --------------------------------------------------------------------------
- *  Parser: read_ternary_type_expression
+ *  Parser: read_expression_type_ternary
  * -------------------------------------------------------------------------- */
 
-node_t read_ternary_type_expression(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_ternary(allocator_t allocator, vec_t tokens,
                                     size_t *position, const char *filename) {
   size_t current = *position;
   node_t condition = NULL;

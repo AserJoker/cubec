@@ -302,11 +302,11 @@ onerror:
 node_t read_expression_type(allocator_t allocator, vec_t tokens,
                             size_t *position, const char *filename) {
   /* Try ternary type expression first: cond ? type_a : type_b.
-   * If read_ternary_type_expression returns NULL (no type expression at all),
+   * If read_expression_type_ternary returns NULL (no type expression at all),
    * fall back to read_type_expression_primary. */
   size_t current = *position;
   node_t node =
-      read_ternary_type_expression(allocator, tokens, &current, filename);
+      read_expression_type_ternary(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
