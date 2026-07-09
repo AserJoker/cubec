@@ -1,4 +1,4 @@
-﻿#include "cubec/program.h"
+#include "cubec/program.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/location.h"
