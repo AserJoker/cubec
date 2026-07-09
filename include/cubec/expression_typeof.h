@@ -31,9 +31,10 @@ typedef struct _cubec_expression_typeof_init_t
  * @brief Try to parse a typeof expression: \c typeof(<expression>)
  *
  * typeof is a compile-time construct that computes the type of an expression
- * without evaluating it. It is a type expression and can be used wherever a
- * type is expected, including as a base type in pointer/slice declarations
- * and with namespace access (e.g. typeof(File)::open).
+ * without evaluating it. It is a top-level type expression (like ternary
+ * type conditionals) and cannot be used as a base type in pointer/slice/array
+ * declarations. Postfix namespace access (e.g. typeof(File)::open) and
+ * generic instantiation (e.g. typeof(Vec)[i32]) are still supported.
  *
  * @return A new cubec_expression_typeof_t node, or NULL if the current token
  *         is not the \c typeof keyword.

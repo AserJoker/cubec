@@ -277,10 +277,6 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
     return node;
   }
 
-  /* Try typeof expression: typeof(<expression>) — compile-time type computation */
-  node = TRY_LOCAL(onerror,
-                   read_expression_typeof(allocator, tokens, &current, filename));
-
   /* Try identifier as the base type */
   if (!node) {
     node = read_literal_identifier(allocator, tokens, &current, filename);
@@ -337,17 +333,61 @@ onerror:
 
 node_t read_expression_type(allocator_t allocator, vec_t tokens,
                             size_t *position, const char *filename) {
-  /* Try ternary type expression first: cond ? type_a : type_b.
+  /* Try top-level type expressions first: typeof, ternary.
+   * typeof is NOT a sub-type of pointer/slice/array declarations —
+   * it is a top-level type expression like ternary conditionals. */
+  node_t node = NULL;
+  size_t current = *position;
+
+  /* Try typeof type expression: typeof(<expression>) */
+  node = TRY_LOCAL(onerror,
+                   read_expression_typeof(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    /* Process postfix operators for typeof: namespace access, generic
+     * instantiation. Pointer/slice/array cannot wrap typeof. */
+    while (true) {
+      skip_whitespace(tokens, &current);
+
+      /* Try postfix: namespace access <host>::<field> */
+      node_t namespace_node = TRY_LOCAL(
+          onerror, read_expression_namespace_access(allocator, tokens,
+                                                     &current, filename, node));
+      if (namespace_node) {
+        node = namespace_node;
+        *position = current;
+        continue;
+      }
+
+      /* Try postfix: generic instantiation <callee>[<args>] */
+      node_t generic_node = TRY_LOCAL(
+          onerror, read_expression_generic_instantiation(allocator, tokens,
+                                                         &current, filename, node));
+      if (generic_node) {
+        node = generic_node;
+        *position = current;
+        continue;
+      }
+
+      break;
+    }
+    return node;
+  }
+
+  /* Try ternary type expression: cond ? type_a : type_b.
    * If read_expression_type_ternary returns NULL (no type expression at all),
    * fall back to read_type_expression_primary. */
-  size_t current = *position;
-  node_t node =
-      read_expression_type_ternary(allocator, tokens, &current, filename);
+  current = *position;
+  node = read_expression_type_ternary(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
   }
   return read_type_expression_primary(allocator, tokens, position, filename);
+
+onerror:
+  allocator_free(allocator, &node);
+  return NULL;
 }
 
 node_t read_expression(allocator_t allocator, vec_t tokens, size_t *position,
