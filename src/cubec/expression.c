@@ -10,6 +10,7 @@
 #include "cubec/expression_comma.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
+#include "cubec/expression_initialize_list.h"
 #include "cubec/expression_type_const.h"
 #include "cubec/expression_type_group.h"
 #include "cubec/expression_type_volatile.h"
@@ -73,6 +74,14 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
                  const char *filename) {
   size_t current = *position;
   node_t result = NULL;
+
+  // Try initialize list: .<type>{<items>} or .{<items>}
+  result = TRY(NULL,
+               read_expression_initialize_list(allocator, tokens, &current, filename));
+  if (result) {
+    *position = current;
+    return result;
+  }
 
   // Try grouped expression: ( expr )
   result = TRY(NULL,
