@@ -1,4 +1,5 @@
 #include "cubec/statement.h"
+#include "cubec/statement_block.h"
 #include "cubec/statement_empty.h"
 #include "cubec/statement_expression.h"
 
@@ -8,8 +9,16 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try specific statement types first (they have distinguishing prefixes) */
 
+  /* Try block statement ({...}) */
+  node_t node = read_statement_block(allocator, tokens, &current, filename);
+  if (node) {
+    *position = current;
+    return node;
+  }
+
   /* Try empty statement (;) */
-  node_t node = read_statement_empty(allocator, tokens, &current, filename);
+  current = *position;
+  node = read_statement_empty(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
