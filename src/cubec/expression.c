@@ -1,4 +1,4 @@
-﻿#include "cubec/expression.h"
+#include "cubec/expression.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -215,9 +215,10 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
   }
 
   /* Try pointer declaration first (prefix form: * [const] [volatile] <type>)
-   * Note: read_declaration_pointer recursively calls read_expression_type
-   * to handle the underlying type, which already supports member access,
-   * generic instantiation, nested pointers, and ternary type. */
+   * Note: read_declaration_pointer recursively calls read_type_expression_primary
+   * to handle the underlying type, which supports member access,
+   * generic instantiation, nested pointers, but NOT ternary type directly.
+   * Ternary base types must be wrapped in type_group: *(a ? b : c). */
   node = TRY_LOCAL(onerror,
                    read_declaration_pointer(allocator, tokens, &current, filename));
   if (node) {
@@ -227,7 +228,8 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
 
   /* Try array declaration (prefix form: [ <expr> ] [const] [volatile] <type>)
    * Note: read_declaration_array recursively calls read_expression for size
-   * and read_expression_type for the underlying type. */
+   * and read_type_expression_primary for the underlying type. Ternary base
+   * types must be wrapped in type_group: [10](a ? b : c). */
   node = TRY_LOCAL(onerror,
                    read_declaration_array(allocator, tokens, &current, filename));
   if (node) {
@@ -236,8 +238,9 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
   }
 
   /* Try slice declaration (prefix form: [] [const] [volatile] <type>)
-   * Note: read_declaration_slice recursively calls read_expression_type
-   * to handle the underlying type. */
+   * Note: read_declaration_slice recursively calls read_type_expression_primary
+   * to handle the underlying type. Ternary base types must be wrapped in
+   * type_group: [](a ? b : c). */
   node = TRY_LOCAL(onerror,
                    read_declaration_slice(allocator, tokens, &current, filename));
   if (node) {

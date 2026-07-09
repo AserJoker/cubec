@@ -112,9 +112,11 @@ node_t read_declaration_array(allocator_t allocator, vec_t tokens,
   }
   current++;
 
-  /* Parse the underlying type using read_expression_type */
+  /* Parse the underlying type using read_type_expression_primary.
+   * Ternary type expressions are not allowed directly as array base type;
+   * use type_group to wrap them: [10](a ? b : c) instead of [10] a ? b : c. */
   skip_whitespace(tokens, &current);
-  type = read_expression_type(allocator, tokens, &current, filename);
+  type = read_type_expression_primary(allocator, tokens, &current, filename);
   if (!type) {
     THROW_LOCAL(onerror, "expected type after array declaration");
   }

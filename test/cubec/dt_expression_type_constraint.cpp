@@ -1,6 +1,7 @@
 #include "cubec/expression.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/expression_type_constraint.h"
+#include "cubec/expression_type_group.h"
 #include "cubec/expression_type_ternary.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/literal_identifier.h"
@@ -262,12 +263,15 @@ TEST_F(dt_expression_type_constraint, ne_ternary) {
 }
 
 /* --------------------------------------------------------------------------
- *  Pointer / array to constraint-ternary: * T extends U ? X : Y
+ *  Pointer to constraint-ternary via type_group: * ( T extends U ? X : Y )
  * -------------------------------------------------------------------------- */
 
-/* Pointer to constraint-ternary: * T extends U ? X : Y  →  *(T extends U ? X : Y) */
-TEST_F(dt_expression_type_constraint, pointer_to_extends_ternary) {
-  const char *source = "* T extends U ? X : Y";
+/* Pointer to constraint-ternary requires type_group wrapping:
+ * * ( T extends U ? X : Y )  →  pointer(type_group(ternary(constraint, X, Y)))
+ * Without type_group, * T extends U ? X : Y would only parse as *T
+ * because pointer base_type uses read_type_expression_primary (no ternary). */
+TEST_F(dt_expression_type_constraint, pointer_to_extends_ternary_via_group) {
+  const char *source = "* ( T extends U ? X : Y )";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -278,10 +282,15 @@ TEST_F(dt_expression_type_constraint, pointer_to_extends_ternary) {
 
   cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
   ASSERT_NE(ptr->type, nullptr);
-  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_TYPE_TERNARY);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+
+  cubec_expression_type_group_t group =
+      (cubec_expression_type_group_t)ptr->type;
+  ASSERT_NE(group->inner, nullptr);
+  EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_TYPE_TERNARY);
 
   cubec_expression_type_ternary_t ternary =
-      (cubec_expression_type_ternary_t)ptr->type;
+      (cubec_expression_type_ternary_t)group->inner;
   EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_TYPE_CONSTRAINT);
 
   allocator_free(allocator, &node);

@@ -125,8 +125,10 @@ node_t read_declaration_slice(allocator_t allocator, vec_t tokens,
   /* Skip whitespace before parsing the underlying type */
   skip_whitespace(tokens, &current);
 
-  /* Parse the underlying type using read_expression_type */
-  type = TRY_LOCAL(onerror, read_expression_type(allocator, tokens, &current, filename));
+  /* Parse the underlying type using read_type_expression_primary.
+   * Ternary type expressions are not allowed directly as slice base type;
+   * use type_group to wrap them: [](a ? b : c) instead of [] a ? b : c. */
+  type = TRY_LOCAL(onerror, read_type_expression_primary(allocator, tokens, &current, filename));
   if (!type) {
     THROW_LOCAL(onerror, "expected type after slice declaration");
   }
