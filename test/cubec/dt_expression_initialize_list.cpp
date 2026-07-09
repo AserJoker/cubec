@@ -423,8 +423,8 @@ TEST_F(dt_expression_initialize_list, nested_typed_with_fields) {
 }
 
 /* ---- Typed with member access type: .std.vec.Vec{1, 2} ---- */
-TEST_F(dt_expression_initialize_list, typed_member_access_type) {
-  const char *source = ".std.vec.Vec{1, 2}";
+TEST_F(dt_expression_initialize_list, typed_namespace_access_type) {
+  const char *source = ".std::vec::Vec{1, 2}";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -435,8 +435,8 @@ TEST_F(dt_expression_initialize_list, typed_member_access_type) {
 
   cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
   ASSERT_NE(list->type, nullptr);
-  /* Type should be a member access expression */
-  EXPECT_EQ(list->type->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  /* Type should be a namespace access expression */
+  EXPECT_EQ(list->type->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
   EXPECT_EQ(list->is_field, false);
   EXPECT_EQ(vec_get_size(list->items), 2);
 

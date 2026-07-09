@@ -15,6 +15,7 @@
 #include "cubec/expression_type_group.h"
 #include "cubec/expression_type_volatile.h"
 #include "cubec/expression_member.h"
+#include "cubec/expression_namespace_access.h"
 #include "cubec/expression_postfix_unary.h"
 #include "cubec/expression_slice.h"
 #include "cubec/expression_ternary.h"
@@ -187,10 +188,23 @@ node_t read_value(allocator_t allocator, vec_t tokens, size_t *position,
       node_t member_node =
           TRY_LOCAL(onerror, read_expression_member(allocator, tokens, &current,
                                                     filename, node));
-      if (!member_node) {
-        break;
+      if (member_node) {
+        node = member_node;
+        *position = current;
+        continue;
       }
-      node = member_node;
+
+      /* Try postfix: namespace access <host>::<field> */
+      node_t namespace_node = TRY_LOCAL(
+          onerror, read_expression_namespace_access(allocator, tokens, &current,
+                                                    filename, node));
+      if (namespace_node) {
+        node = namespace_node;
+        *position = current;
+        continue;
+      }
+
+      break;
       *position = current;
     }
   }
@@ -201,19 +215,15 @@ onerror:
 }
 node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
                                     size_t *position, const char *filename) {
-  /* Parse a type expression: identifier with optional member access,
-   * generic instantiation, pointer declaration, slice declaration, array
-   * declaration, and const type expression. Handles patterns like:
-   *   - identifier (e.g., "Vec", "i32")
-   *   - member (e.g., "std.vec.Vec")
-   *   - generic instantiation (e.g., "Vec[i32]", "Option[T]")
-   *   - const type (e.g., "const i32", "const * i32")
-   *   - pointer declaration (e.g., "* i32", "* const i32", "* volatile i32")
-   *   - slice declaration (e.g., "[] i32", "[] const i32", "[] volatile i32")
-   *   - array declaration (e.g., "[10] i32", "[N] i32", "[size] T")
-   *   - grouped type expression (e.g., "( i32 )", "( Vec[i32] )")
-   *
-   * This is a simplified version of read_value focused on type syntax. */
+  /* Parse a primary type expression: identifier with optional namespace
+   * access (::), generic instantiation, pointer/slice/array declaration,
+   * and grouping. Uses :: for namespace navigation (e.g. std::vec::Vec)
+   * and . is NOT used in type expressions (only in normal expressions for
+   * member access). This ensures:
+   *   *std::vec::Vec → *(std::vec::Vec) — pointer to namespaced type
+   *   []i32 → slice of i32
+   *   Vec[i32]::Element → nested type in generic instantiation
+   */
 
   node_t node = NULL;
   size_t current = *position;
@@ -226,12 +236,7 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
     return node;
   }
 
-  /* Try const type expression (prefix form: const <type>)
-   * Must be before pointer so that "const * i32" parses as const(pointer)
-   * rather than pointer consuming * then const as qualifier.
-   * Note: read_expression_type_const recursively calls read_type_expression_primary
-   * for the underlying type. Ternary base types must be wrapped in
-   * type_group: const (a ? b : c). */
+  /* Try const type expression (prefix form: const <type>) */
   node = TRY_LOCAL(onerror,
                    read_expression_type_const(allocator, tokens, &current, filename));
   if (node) {
@@ -239,12 +244,7 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
     return node;
   }
 
-  /* Try volatile type expression (prefix form: volatile <type>)
-   * Must be before pointer so that "volatile * i32" parses as volatile(pointer)
-   * rather than pointer consuming * then volatile as qualifier.
-   * Note: read_expression_type_volatile recursively calls read_type_expression_primary
-   * for the underlying type. Ternary base types must be wrapped in
-   * type_group: volatile (a ? b : c). */
+  /* Try volatile type expression (prefix form: volatile <type>) */
   node = TRY_LOCAL(onerror,
                    read_expression_type_volatile(allocator, tokens, &current, filename));
   if (node) {
@@ -252,11 +252,7 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
     return node;
   }
 
-  /* Try pointer declaration first (prefix form: * [const] [volatile] <type>)
-   * Note: read_declaration_pointer recursively calls read_type_expression_primary
-   * to handle the underlying type, which supports member access,
-   * generic instantiation, nested pointers, but NOT ternary type directly.
-   * Ternary base types must be wrapped in type_group: *(a ? b : c). */
+  /* Try pointer declaration (prefix form: * [const] [volatile] <type>) */
   node = TRY_LOCAL(onerror,
                    read_declaration_pointer(allocator, tokens, &current, filename));
   if (node) {
@@ -264,10 +260,7 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
     return node;
   }
 
-  /* Try array declaration (prefix form: [ <expr> ] [const] [volatile] <type>)
-   * Note: read_declaration_array recursively calls read_expression for size
-   * and read_type_expression_primary for the underlying type. Ternary base
-   * types must be wrapped in type_group: [10](a ? b : c). */
+  /* Try array declaration (prefix form: [ <expr> ] [const] [volatile] <type>) */
   node = TRY_LOCAL(onerror,
                    read_declaration_array(allocator, tokens, &current, filename));
   if (node) {
@@ -275,10 +268,7 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
     return node;
   }
 
-  /* Try slice declaration (prefix form: [] [const] [volatile] <type>)
-   * Note: read_declaration_slice recursively calls read_type_expression_primary
-   * to handle the underlying type. Ternary base types must be wrapped in
-   * type_group: [](a ? b : c). */
+  /* Try slice declaration (prefix form: [] [const] [volatile] <type>) */
   node = TRY_LOCAL(onerror,
                    read_declaration_slice(allocator, tokens, &current, filename));
   if (node) {
@@ -293,9 +283,20 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
   }
 
   *position = current;
-  /* Process postfix operators: member access, generic instantiation, pointer, and array */
+  /* Process postfix operators: namespace access (::), generic instantiation,
+   * and pointer declaration */
   while (true) {
     skip_whitespace(tokens, &current);
+
+    /* Try postfix: namespace access <host>::<field> */
+    node_t namespace_node = TRY_LOCAL(
+        onerror, read_expression_namespace_access(allocator, tokens,
+                                                   &current, filename, node));
+    if (namespace_node) {
+      node = namespace_node;
+      *position = current;
+      continue;
+    }
 
     /* Try postfix: generic instantiation <callee>[<args>] */
     node_t generic_node = TRY_LOCAL(
@@ -303,17 +304,6 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
                                                        &current, filename, node));
     if (generic_node) {
       node = generic_node;
-      *position = current;
-      continue;
-    }
-
-    /* Try postfix: member access <host>.<field> */
-    node_t member_node = TRY_LOCAL(onerror,
-                                   read_expression_member(allocator, tokens,
-                                                          &current, filename,
-                                                          node));
-    if (member_node) {
-      node = member_node;
       *position = current;
       continue;
     }

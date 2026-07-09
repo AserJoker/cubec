@@ -4,6 +4,7 @@
 #include "cubec/declaration_slice.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_member.h"
+#include "cubec/expression_namespace_access.h"
 #include "cubec/expression_type_const.h"
 #include "cubec/expression_type_group.h"
 #include "cubec/expression_type_ternary.h"
@@ -217,9 +218,9 @@ TEST_F(dt_expression_type_const, const_generic) {
   allocator_free(allocator, &tokens);
 }
 
-/* const std.vec.Vec → type_const(member(std.vec.Vec)) */
+/* const std::vec::Vec → type_const(namespace_access(std::vec::Vec)) */
 TEST_F(dt_expression_type_const, const_member) {
-  const char *source = "const std.vec.Vec";
+  const char *source = "const std::vec::Vec";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -231,7 +232,7 @@ TEST_F(dt_expression_type_const, const_member) {
   cubec_expression_type_const_t const_node =
       (cubec_expression_type_const_t)node;
   ASSERT_NE(const_node->type, nullptr);
-  EXPECT_EQ(const_node->type->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(const_node->type->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

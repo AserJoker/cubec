@@ -91,6 +91,8 @@ node_t read_expression_type_const(allocator_t allocator, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* Parse the underlying type using read_type_expression_primary.
+   * Namespace access (::) binds tighter than type constructors:
+   * const std::vec::Vec → const(std::vec::Vec).
    * Ternary type expressions are not allowed directly as const base type;
    * use type_group to wrap them: const (a ? b : c). */
   type = TRY_LOCAL(onerror,

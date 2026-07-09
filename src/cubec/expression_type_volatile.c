@@ -92,6 +92,8 @@ node_t read_expression_type_volatile(allocator_t allocator, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* Parse the underlying type using read_type_expression_primary.
+   * Namespace access (::) binds tighter than type constructors:
+   * volatile std::vec::Vec → volatile(std::vec::Vec).
    * Ternary type expressions are not allowed directly as volatile base type;
    * use type_group to wrap them: volatile (a ? b : c). */
   type = TRY_LOCAL(onerror,

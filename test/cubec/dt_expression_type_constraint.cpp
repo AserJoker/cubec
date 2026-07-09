@@ -4,6 +4,7 @@
 #include "cubec/expression_type_group.h"
 #include "cubec/expression_type_ternary.h"
 #include "cubec/expression_generic_instantiation.h"
+#include "cubec/expression_namespace_access.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -133,9 +134,9 @@ TEST_F(dt_expression_type_constraint, extends_generic_right) {
   allocator_free(allocator, &tokens);
 }
 
-/* == with member access right operand: T == std.vec.Vec */
+/* == with namespace access right operand: T == std::vec::Vec */
 TEST_F(dt_expression_type_constraint, eq_member_right) {
-  const char *source = "T == std.vec.Vec";
+  const char *source = "T == std::vec::Vec";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -149,7 +150,7 @@ TEST_F(dt_expression_type_constraint, eq_member_right) {
       (cubec_expression_type_constraint_t)node;
   EXPECT_EQ(c->op, CUBEC_TYPE_CONSTRAINT_EQ);
   EXPECT_EQ(c->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_EQ(c->right->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(c->right->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

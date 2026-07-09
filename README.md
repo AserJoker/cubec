@@ -147,7 +147,7 @@ Cubec 支持前缀指针声明语法（区别于 C 的前缀 `*`）：
 * const volatile i32  // const volatile 指针
 ** i32            // 指向指针的指针
 * Vec[i32]        // 指向泛型类型的指针
-* std.vec.Vec     // 指向成员类型的指针
+* std::vec::Vec     // 指向命名空间类型的指针
 ```
 
 在泛型参数中可以使用指针类型：
@@ -166,7 +166,7 @@ const * i32            // const 修饰的指针类型（指向 i32 的 const 指
 const [] i32           // const 修饰的切片类型
 const [10] i32         // const 修饰的数组类型
 const Vec[i32]         // const 修饰的泛型类型
-const std.vec.Vec      // const 修饰的成员类型
+const std::vec::Vec      // const 修饰的命名空间类型
 const const i32        // 嵌套 const
 ```
 
@@ -188,7 +188,7 @@ volatile * i32          // volatile 修饰的指针类型
 volatile [] i32         // volatile 修饰的切片类型
 volatile [10] i32       // volatile 修饰的数组类型
 volatile Vec[i32]       // volatile 修饰的泛型类型
-volatile std.vec.Vec    // volatile 修饰的成员类型
+volatile std::vec::Vec    // volatile 修饰的命名空间类型
 volatile volatile i32   // 嵌套 volatile
 ```
 
@@ -215,7 +215,7 @@ Cubec 支持前缀切片声明语法：
 [] volatile i32     // volatile 切片
 [] const volatile i32  // const volatile 切片
 [] Vec[i32]         // 指向泛型类型的切片
-[] std.vec.Vec      // 指向成员类型的切片
+[] std::vec::Vec      // 指向命名空间类型的切片
 ```
 
 > **注意**：`[]` 之间不允许有空白、注释或换行。
@@ -336,14 +336,28 @@ callee(arg1, arg2, ...)
 - 支持零参数：`foo()`
 - 支持展开参数：`fn(...args)`
 - 支持链式调用：`foo()()`
-- 支持混合成员访问：`obj.method()`, `foo().field`
+- 支持混合命名空间/类型成员访问：`obj.method()`, `foo().field`, `Vec::create()`
 
 ### 成员访问
 
 ```c
 host.field
-host.nested.field       // 链式成员访问
+host.nested.field       // 链式实例成员访问
 ```
+
+- `.` 仅用于对象/变量的**实例成员**访问（字段和方法）
+
+### 命名空间/类型成员访问
+
+```c
+std::vec::Vec           // 命名空间导航
+File::open("a.txt","r") // 类型静态方法调用
+Vec::new()              // 类型静态方法调用
+```
+
+- `::` 仅用于**类型级**访问：命名空间导航和类型静态成员/方法
+- 类型表达式中使用 `::`：`*std::vec::Vec` → 指向 `std::vec::Vec` 的指针
+- 混合使用：`std::Vec::new().field` → `::` 访问静态方法，`.` 访问实例字段
 
 ### 泛型实例化
 
@@ -390,10 +404,10 @@ Cubec 使用 `.<type>{<items>}` 语法创建初始化列表（结构体/容器�
 .{.Test{}}                 // 位置模式：.Test{} 是一个嵌套的初始化列表表达式
 ```
 
-类型支持复杂类型表达式（成员访问、泛型实例化、指针等）：
+类型支持复杂类型表达式（命名空间访问、泛型实例化、指针等）：
 
 ```c
-.std.vec.Vec{1, 2, 3}     // 成员访问类型
+.std::vec::Vec{1, 2, 3}    // 命名空间访问类型
 .Vec[i32]{1, 2, 3}         // 泛型实例化类型
 .* i32{1, 2}               // 指针类型
 ```
@@ -848,7 +862,7 @@ cubec/
 │   ├── core/         # 核心数据结构（vec, list, rbtree, map, string 等）
 │   └── cubec/        # 前端模块（词法/语法分析）
 ├── src/              # 源文件（与 include/ 对应）
-├── test/             # 测试文件（Google Test, 518 测试用例）
+├── test/             # 测试文件（Google Test, 565 测试用例）
 ├── demo/             # 示例 .cubec 文件
 └── third_party/      # 第三方依赖
 ```
@@ -868,7 +882,8 @@ cubec/
   - 三元条件表达式（`? :`）
   - 分组表达式（`(expr)`）
   - 函数调用表达式（`callee(args)`）
-  - 成员访问表达式（`host.field`）
+  - 成员访问表达式（`host.field`，实例成员）
+  - 命名空间/类型成员访问表达式（`host::field`，命名空间导航 + 静态成员/方法）
   - 泛型实例化表达式（`callee[args]`）
   - 切片表达式（`host[start:length]`）
   - 展开表达式（`...expr`）
@@ -882,7 +897,7 @@ cubec/
   - volatile 类型表达式（`volatile <type>`，独立前缀类型修饰符，与 const/指针/切片地位相当）
   - 数组声明表达式（`[ <expr> ] <type>`）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：554 测试用例覆盖所有核心模块
+- **测试体系**：565 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 

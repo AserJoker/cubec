@@ -1,9 +1,10 @@
-﻿#include "cubec/expression.h"
+#include "cubec/expression.h"
 #include "cubec/declaration_array.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_member.h"
+#include "cubec/expression_namespace_access.h"
 #include "cubec/expression_type_group.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
@@ -131,18 +132,18 @@ TEST_F(dt_expression_type, generic_type_parameter) {
   allocator_free(allocator, &tokens);
 }
 
-/* Test: single member access (e.g., "std.vec") */
+/* Test: single namespace access (e.g., "std::vec") */
 TEST_F(dt_expression_type, single_member_access) {
-  const char *source = "std.vec";
+  const char *source = "std::vec";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
-  cubec_expression_member_t member = (cubec_expression_member_t)node;
+  cubec_expression_namespace_access_t member = (cubec_expression_namespace_access_t)node;
   ASSERT_NE(member->host, nullptr);
   EXPECT_EQ(member->host->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -156,26 +157,26 @@ TEST_F(dt_expression_type, single_member_access) {
   allocator_free(allocator, &tokens);
 }
 
-/* Test: chained member access (e.g., "std.vec.Vec") */
+/* Test: chained namespace access (e.g., "std::vec::Vec") */
 TEST_F(dt_expression_type, chained_member_access) {
-  const char *source = "std.vec.Vec";
+  const char *source = "std::vec::Vec";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
-  /* Outer: (std.vec).Vec */
-  cubec_expression_member_t outer = (cubec_expression_member_t)node;
+  /* Outer: (std::vec)::Vec */
+  cubec_expression_namespace_access_t outer = (cubec_expression_namespace_access_t)node;
   ASSERT_NE(outer->field, nullptr);
   EXPECT_STREQ(string_get(outer->field->value), "Vec");
 
-  /* Inner host: std.vec */
+  /* Inner host: std::vec */
   ASSERT_NE(outer->host, nullptr);
-  EXPECT_EQ(outer->host->kind, CUBEC_NODE_EXPRESSION_MEMBER);
-  cubec_expression_member_t inner = (cubec_expression_member_t)outer->host;
+  EXPECT_EQ(outer->host->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
+  cubec_expression_namespace_access_t inner = (cubec_expression_namespace_access_t)outer->host;
   ASSERT_NE(inner->field, nullptr);
   EXPECT_STREQ(string_get(inner->field->value), "vec");
 
@@ -189,9 +190,9 @@ TEST_F(dt_expression_type, chained_member_access) {
   allocator_free(allocator, &tokens);
 }
 
-/* Test: member access with generic instantiation (e.g., "std.vec.Vec[i32]") */
+/* Test: namespace access with generic instantiation (e.g., "std::vec::Vec[i32]") */
 TEST_F(dt_expression_type, member_with_generic) {
-  const char *source = "std.vec.Vec[i32]";
+  const char *source = "std::vec::Vec[i32]";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -203,30 +204,30 @@ TEST_F(dt_expression_type, member_with_generic) {
   cubec_expression_generic_instantiation_t generic =
       (cubec_expression_generic_instantiation_t)node;
 
-  /* Callee should be member expression: std.vec.Vec */
+  /* Callee should be namespace access expression: std::vec::Vec */
   ASSERT_NE(generic->callee, nullptr);
-  EXPECT_EQ(generic->callee->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(generic->callee->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
-  cubec_expression_member_t callee_member =
-      (cubec_expression_member_t)generic->callee;
+  cubec_expression_namespace_access_t callee_member =
+      (cubec_expression_namespace_access_t)generic->callee;
   EXPECT_STREQ(string_get(callee_member->field->value), "Vec");
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-/* Test: type with spaces around dot */
+/* Test: type with spaces around :: */
 TEST_F(dt_expression_type, member_with_spaces) {
-  const char *source = "std . vec";
+  const char *source = "std :: vec";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
-  cubec_expression_member_t member = (cubec_expression_member_t)node;
+  cubec_expression_namespace_access_t member = (cubec_expression_namespace_access_t)node;
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)member->host)->value), "std");
   EXPECT_STREQ(string_get(member->field->value), "vec");
@@ -237,7 +238,7 @@ TEST_F(dt_expression_type, member_with_spaces) {
 
 /* Test: consume all tokens */
 TEST_F(dt_expression_type, consume_all_tokens) {
-  const char *source = "std.vec.Vec[i32]";
+  const char *source = "std::vec::Vec[i32]";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -246,7 +247,7 @@ TEST_F(dt_expression_type, consume_all_tokens) {
   ASSERT_NE(node, nullptr);
 
   /* All tokens should be consumed:
-   * std, ., vec, ., Vec, [, i32, ] → 8 tokens */
+   * std, ::, vec, ::, Vec, [, i32, ] → 8 tokens */
   EXPECT_EQ(position, 8);
 
   allocator_free(allocator, &node);
@@ -315,9 +316,9 @@ TEST_F(dt_expression_type, generic_with_nested_generic) {
   allocator_free(allocator, &tokens);
 }
 
-/* Test: generic argument is a member access type (e.g., "Vec[std.vec.Vec]") */
+/* Test: generic argument is a namespace access type (e.g., "Vec[std::vec::Vec]") */
 TEST_F(dt_expression_type, generic_with_member_argument) {
-  const char *source = "Vec[std.vec.Vec]";
+  const char *source = "Vec[std::vec::Vec]";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -331,19 +332,19 @@ TEST_F(dt_expression_type, generic_with_member_argument) {
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)generic->callee)->value), "Vec");
 
-  /* Should have 1 argument: std.vec.Vec (member access) */
+  /* Should have 1 argument: std::vec::Vec (namespace access) */
   EXPECT_EQ(vec_get_size(generic->arguments), 1);
 
   node_t arg = (node_t)vec_get(generic->arguments, 0);
-  EXPECT_EQ(arg->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(arg->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-/* Test: generic with multiple member access arguments (e.g., "Map[std.vec.Vec, std.str.String]") */
+/* Test: generic with multiple namespace access arguments (e.g., "Map[std::vec::Vec, std::str::String]") */
 TEST_F(dt_expression_type, generic_with_multiple_member_arguments) {
-  const char *source = "Map[std.vec.Vec, std.str.String]";
+  const char *source = "Map[std::vec::Vec, std::str::String]";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -357,22 +358,22 @@ TEST_F(dt_expression_type, generic_with_multiple_member_arguments) {
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)generic->callee)->value), "Map");
 
-  /* Should have 2 arguments: std.vec.Vec and std.str.String */
+  /* Should have 2 arguments: std::vec::Vec and std::str::String */
   EXPECT_EQ(vec_get_size(generic->arguments), 2);
 
   node_t arg0 = (node_t)vec_get(generic->arguments, 0);
-  EXPECT_EQ(arg0->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(arg0->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   node_t arg1 = (node_t)vec_get(generic->arguments, 1);
-  EXPECT_EQ(arg1->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(arg1->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-/* Test: generic with mixed arguments: simple type and member type (e.g., "Pair[i32, std.vec.Vec]") */
+/* Test: generic with mixed arguments: simple type and namespace type (e.g., "Pair[i32, std::vec::Vec]") */
 TEST_F(dt_expression_type, generic_with_mixed_arguments) {
-  const char *source = "Pair[i32, std.vec.Vec]";
+  const char *source = "Pair[i32, std::vec::Vec]";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -386,22 +387,22 @@ TEST_F(dt_expression_type, generic_with_mixed_arguments) {
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)generic->callee)->value), "Pair");
 
-  /* Should have 2 arguments: i32 (identifier) and std.vec.Vec (member) */
+  /* Should have 2 arguments: i32 (identifier) and std::vec::Vec (namespace access) */
   EXPECT_EQ(vec_get_size(generic->arguments), 2);
 
   node_t arg0 = (node_t)vec_get(generic->arguments, 0);
   EXPECT_EQ(arg0->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   node_t arg1 = (node_t)vec_get(generic->arguments, 1);
-  EXPECT_EQ(arg1->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(arg1->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-/* Test: deeply nested generic with member access (e.g., "Outer[Inner[std.a.B], std.c.D]") */
+/* Test: deeply nested generic with namespace access (e.g., "Outer[Inner[std::a::B], std::c::D]") */
 TEST_F(dt_expression_type, deeply_nested_generic_with_member) {
-  const char *source = "Outer[Inner[std.a.B], std.c.D]";
+  const char *source = "Outer[Inner[std::a::B], std::c::D]";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -418,13 +419,13 @@ TEST_F(dt_expression_type, deeply_nested_generic_with_member) {
   /* Should have 2 arguments */
   EXPECT_EQ(vec_get_size(generic->arguments), 2);
 
-  /* First argument: Inner[std.a.B] - a generic instantiation */
+  /* First argument: Inner[std::a::B] - a generic instantiation */
   node_t arg0 = (node_t)vec_get(generic->arguments, 0);
   EXPECT_EQ(arg0->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
-  /* Second argument: std.c.D - a member access */
+  /* Second argument: std::c::D - a namespace access */
   node_t arg1 = (node_t)vec_get(generic->arguments, 1);
-  EXPECT_EQ(arg1->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(arg1->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -600,9 +601,9 @@ TEST_F(dt_expression_type, pointer_to_generic_type) {
   allocator_free(allocator, &tokens);
 }
 
-/* Test: pointer to member type (e.g., "* std.vec.Vec") */
+/* Test: pointer to namespace type (e.g., "* std::vec::Vec") */
 TEST_F(dt_expression_type, pointer_to_member_type) {
-  const char *source = "* std.vec.Vec";
+  const char *source = "* std::vec::Vec";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -613,7 +614,7 @@ TEST_F(dt_expression_type, pointer_to_member_type) {
 
   cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
   ASSERT_NE(ptr->type, nullptr);
-  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -664,9 +665,9 @@ TEST_F(dt_expression_type, pointer_to_pointer) {
   allocator_free(allocator, &tokens);
 }
 
-/* Test: pointer declaration on complex member type (e.g., "* std.vec.Vec[i32]") */
+/* Test: pointer declaration on complex namespace type (e.g., "* std::vec::Vec[i32]") */
 TEST_F(dt_expression_type, pointer_on_complex_type) {
-  const char *source = "* std.vec.Vec[i32]";
+  const char *source = "* std::vec::Vec[i32]";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -856,9 +857,9 @@ TEST_F(dt_expression_type, slice_to_generic_type) {
   allocator_free(allocator, &tokens);
 }
 
-/* Test: slice to member type (e.g., "[] std.vec.Vec") */
+/* Test: slice to namespace type (e.g., "[] std::vec::Vec") */
 TEST_F(dt_expression_type, slice_to_member_type) {
-  const char *source = "[] std.vec.Vec";
+  const char *source = "[] std::vec::Vec";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -869,7 +870,7 @@ TEST_F(dt_expression_type, slice_to_member_type) {
 
   cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
   ASSERT_NE(slice->type, nullptr);
-  EXPECT_EQ(slice->type->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -1064,9 +1065,9 @@ TEST_F(dt_expression_type, array_to_generic_type) {
   allocator_free(allocator, &tokens);
 }
 
-/* Test: array to member type (e.g., "[10] std.vec.Vec") */
+/* Test: array to namespace type (e.g., "[10] std::vec::Vec") */
 TEST_F(dt_expression_type, array_to_member_type) {
-  const char *source = "[10] std.vec.Vec";
+  const char *source = "[10] std::vec::Vec";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -1077,7 +1078,7 @@ TEST_F(dt_expression_type, array_to_member_type) {
 
   cubec_declaration_array_t arr = (cubec_declaration_array_t)node;
   ASSERT_NE(arr->type, nullptr);
-  EXPECT_EQ(arr->type->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(arr->type->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -1255,9 +1256,9 @@ TEST_F(dt_expression_type, type_group_with_generic) {
   allocator_free(allocator, &tokens);
 }
 
-/* Test: grouped member type (e.g., "( std.vec.Vec )") */
+/* Test: grouped namespace type (e.g., "( std::vec::Vec )") */
 TEST_F(dt_expression_type, type_group_with_member) {
-  const char *source = "( std.vec.Vec )";
+  const char *source = "( std::vec::Vec )";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -1268,7 +1269,7 @@ TEST_F(dt_expression_type, type_group_with_member) {
 
   cubec_expression_type_group_t group = (cubec_expression_type_group_t)node;
   ASSERT_NE(group->inner, nullptr);
-  EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

@@ -37,7 +37,7 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
                             size_t *position, const char *filename);
 
 /** @brief Parse a primary (non-ternary) type expression: identifier with
- *  optional member access, generic instantiation, pointer/slice/array
+ *  optional namespace access (::), generic instantiation, pointer/slice/array
  *  declaration, and grouping.
  *  @note Internal helper: should only be called by read_expression_type
  *        and read_expression_type_ternary. External callers should use

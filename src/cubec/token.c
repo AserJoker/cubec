@@ -1,4 +1,4 @@
-﻿#include "cubec/token.h"
+#include "cubec/token.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/location.h"
@@ -145,7 +145,7 @@ static const char *symbols[] = {
     "&&=", "||=", "...", "==", "!=", ">>=", "<<=", ">>", "<<", "+=", "-=", "*=",
     "/=",  "%=",  "&=",  "|=", "^=", "~=",  "&&",  "||", ">=", "<=", "=",  "!",
     "+",   "-",   "*",   "/",  "&",  "|",   "^",   "?",  ",",  ".",  "<",  ">",
-    ";",   ":",   "%",   "[",  "]",  "{",   "}",   "(",  ")",  "~",  0,
+    ";",   "::",  ":",   "%",   "[",  "]",  "{",   "}",   "(",  ")",  "~",  0,
 };
 
 static token_t read_symbol_token(allocator_t allocator, position_t *position,

@@ -126,6 +126,8 @@ node_t read_declaration_slice(allocator_t allocator, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* Parse the underlying type using read_type_expression_primary.
+   * Namespace access (::) binds tighter than type constructors:
+   * []std::vec::Vec → [](std::vec::Vec).
    * Ternary type expressions are not allowed directly as slice base type;
    * use type_group to wrap them: [](a ? b : c) instead of [] a ? b : c. */
   type = TRY_LOCAL(onerror, read_type_expression_primary(allocator, tokens, &current, filename));
