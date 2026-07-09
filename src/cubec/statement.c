@@ -1,6 +1,7 @@
 #include "cubec/statement.h"
 #include "cubec/statement_block.h"
 #include "cubec/statement_declaration.h"
+#include "cubec/statement_declaration_type.h"
 #include "cubec/statement_empty.h"
 #include "cubec/statement_expression.h"
 
@@ -20,6 +21,14 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
   /* Try declaration statement (var ...) */
   current = *position;
   node = read_statement_declaration(allocator, tokens, &current, filename);
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try type declaration statement (type ...) */
+  current = *position;
+  node = read_statement_declaration_type(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;

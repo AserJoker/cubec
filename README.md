@@ -724,6 +724,7 @@ Cubec 的泛型基于**"推导 + 鸭子类型"**范式，采用编译期模板�
 func[T](x: T) -> T                           // 推导
 func[T extends Numeric](x: T) -> T           // 带约束
 func[N: u64, T](arr: [N]T) -> T             // 值泛型 + 类型泛型
+func[T, ...Rest](first: T, rest: Rest) -> T  // rest 参数
 
 // === 类型级运算 ===
 func[T](x: T) -> T extends Numeric ? i64 : string   // 类型三元
@@ -740,6 +741,7 @@ func[T extends Array[?]](arr: T)             // 任意元素类型的 Array
 // === type 别名 ===
 type Vec3[T] = Vec[Vec[Vec[T]]]
 type Pair[A, B] = struct { first: A, second: B }
+type Variadic[...Args] = i32                 // rest 参数别名
 
 // === comptime if ===
 func[T](x: T) {
@@ -941,9 +943,11 @@ cubec/
   - 表达式语句（`<expression>;`，缺少分号为语法错误）
   - 空语句（`;`）
   - 变量声明语句（`var <identifier> [: <type>] = <expression> [, ...];`，支持多变量逗号分隔）
+  - `type` 别名声明语句（`type Name[<generic_params>] = <type_expression>;`，支持简单别名、泛型别名、rest 参数）
+  - 泛型参数解析（支持简单 `T`、约束 `T extends U`、值泛型 `N: u64`、rest 参数 `...Args` 四种形式）
   - `read_statement` 语句分派器（按优先级尝试各语句类型）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：612 测试用例覆盖所有核心模块
+- **测试体系**：627 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 

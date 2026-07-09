@@ -29,7 +29,7 @@ TEST_F(dt_statement_declaration, single_declarator_no_type) {
   EXPECT_EQ(vec_get_size(decl->declarators), 1);
 
   node_t declarator = (node_t)vec_get(decl->declarators, 0);
-  EXPECT_EQ(declarator->kind, CUBEC_NODE_VARIABLE_DECLARATOR);
+  EXPECT_EQ(declarator->kind, CUBEC_NODE_DECLARATION_VARIABLE);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

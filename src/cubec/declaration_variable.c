@@ -14,7 +14,7 @@ static void _cubec_declaration_variable_init(cubec_declaration_variable_t self,
     THROW_LOCAL(onerror, "init cannot be NULL");
   }
   cubec_declaration_init_t super_init = {
-      .kind = CUBEC_NODE_VARIABLE_DECLARATOR,
+      .kind = CUBEC_NODE_DECLARATION_VARIABLE,
       .parent = NULL,
   };
   super_init.location = init->location;

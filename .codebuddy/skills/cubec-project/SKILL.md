@@ -70,7 +70,9 @@ cubec/
 │       ├── literal_string.h    # String literal
 │       ├── node.h              # AST node kind enum (67 types)
 │       ├── program.h           # Top-level program node
+│       ├── generic_param.h      # Generic parameter node (T, T extends U, N: u64, ...T)
 │       ├── statement_block.h   # Block statement node ({ <statements> })
+│       ├── statement_declaration_type.h # Type alias declaration node
 │       ├── statement_empty.h   # Empty statement node
 │       ├── statement_expression.h # Expression statement node (<expression>;)
 │       ├── statement.h         # Statement dispatcher (read_statement)
@@ -387,6 +389,7 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_expression_group` (expression_group.c) — Parses parenthesized expression `( expr )`. Returns `cubec_expression_group_t` wrapping the inner expression. Tried first in `read_atom` so `(a + b)` is parsed as a group wrapping a binary expression.
 - `read_expression_initialize_list` (expression_initialize_list.c) — Parses initialize list expression `.<type>{<items>}` or `.{<items>}`. Called from `read_atom` as a primary expression (tried before `read_expression_group`). Checks for `.` at current position, then looks ahead: `.` + `{` → anonymous (type=NULL), `.` + type expression + `{` → typed. Type is parsed via `read_expression_type` (supports member access, generic instantiation, pointer, etc.). Items are comma-separated and must be homogeneous: either all `initialize_field` (`.name = value`) or all positional expressions — mixing is an error. First item determines mode: tries `read_expression_initialize_field` first; if that fails, falls back to `read_expression`. In field mode, non-field items cause error; in positional mode, field-like items cause error. Disambiguation: `.{.Test{}}` is positional (`.Test{}` is a nested initialize_list expression), `.{.Test=123}` is field mode (`.Test=123` has `=`). THROW errors on: trailing comma, unclosed `}`, mixed field/positional items. Returns `cubec_expression_initialize_list_t` with `type` (nullable node_t), `items` (vec_t with auto_dispose=true), `is_field` (bool). Supports postfix chaining: `.Vec{1,2}.field`, and binary context: `1 + .Vec{1,2}`.
 - `read_expression_initialize_field` (expression_initialize_field.c) — Parses initialize field expression `.identifier = expression`. Used inside `read_expression_initialize_list` to parse individual field items. Checks for `.` followed by identifier followed by `=`. Returns NULL if the `.` + identifier + `=` pattern is not matched (not an error — allows caller to try positional expression parsing). Returns `cubec_expression_initialize_field_t` with `field` (cubec_literal_identifier_t) and `value` (node_t).
+- `read_generic_params` (generic_param.c) — Parses generic parameter list `[param1, param2, ...]`. Supports four forms: simple (`T`), constrained (`T extends Numeric`), value generic (`N: u64`), and rest param (`...Args`). Rest param is detected by checking for `...` symbol before reading identifier; if detected, `is_rest` is set to `true`. Parameters are comma-separated within `[]`. Returns a vec of `cubec_generic_param_t`. Ownership: params vec is created with `auto_dispose=true`; caller takes ownership.
 - `read_expression_spread` (expression_spread.c) — Parses spread operator `...<expr>`. Returns `cubec_expression_spread_t` wrapping the spread value. **Standalone function** — NOT called from `read_atom`/`read_value`/`read_expression`. Designed to be explicitly invoked by callers that support spread syntax (e.g., function arguments, struct initializers). Uses `read_expression` for the value so `...a + b` spreads the entire binary expression `a + b`.
 - `read_expression_ternary` (expression_ternary.c) — Parses ternary/conditional expression `condition ? consequent : alternate`. Uses precedence climbing via `read_expression_binary` for the condition. Falls back gracefully if `?` is not found (returns condition as-is). Recursively calls `read_expression` for consequent and alternate to handle nested ternaries naturally. Full lifecycle: init/dispose/clone/move. Node fields: `condition`, `consequent`, `alternate`.
 - `read_literal_char` — Character literal AST node
@@ -398,6 +401,7 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_statement_expression` (statement_expression.c) — Expression statement (`<expression>;`). Parses an expression via `read_expression`, then expects a mandatory trailing semicolon. Missing semicolon is a parse error. Returns `cubec_statement_expression_t` with `expression` field. Returns NULL if `read_expression` returns NULL (no expression to form a statement).
 - `read_statement` (statement.c) — Statement dispatcher. Tries each statement parser in order: `read_statement_block` first (has distinguishing prefix `{`), then `read_statement_declaration` (has distinguishing prefix `var`), then `read_statement_empty` (has distinguishing prefix `;`), then `read_statement_expression` as the fallback (no distinguishing prefix — any expression can start it, so it must be tried last). Returns the first successful parse, or NULL if no statement matches.
 - `read_statement_declaration` (statement_declaration.c) — Declaration statement (`var <declarator> [, <declarator>]* ;`). Parses one or more variable declarators separated by commas, each `<identifier> [: <type>] = <expression>`. The type annotation is optional and parsed via `read_expression_type`. Requires semicolon at end. THROW errors on missing semicolon or malformed declarator. Returns `cubec_statement_declaration_t` with `declarators` vec field.
+- `read_statement_declaration_type` (statement_declaration_type.c) — Type alias declaration (`type Name[<generic_params>] = <type_expression>;`). Parses a type alias with optional generic parameters (parsed via `read_generic_params`). Returns `cubec_statement_declaration_type_t` with `name` (identifier), `params` (vec of `cubec_generic_param_t`, may be NULL), and `type_value` (type expression) fields. Supports simple aliases (`type MyInt = i32`), generic aliases (`type Vec3[T] = Vec[Vec[Vec[T]]]`), and rest params (`type Variadic[...Args] = i32`).
 - `read_declaration_variable` (declaration_variable.c) — Variable declarator (`<identifier> [: <type>] = <expression>`). Parses a single variable declarator with optional type annotation and required initializer expression. The type is parsed via `read_expression_type`. Returns `cubec_declaration_variable_t` with `identifier`, `type` (nullable), and `expression` fields.
 - `read_program_node` — Top-level entry, parses statements using a whitelist approach: `statement_declaration` (`var`), `statement_empty` (`;`). `statement_expression` is NOT supported at program level (only within blocks).
 - `read_expression_type` (expression.c) — Parses type expressions: identifier with optional namespace access (`::`), generic instantiation, const type, pointer declaration, slice declaration, array declaration, and type constraint. **`::` is used for namespace navigation in type expressions** (e.g., `std::vec::Vec`), while `.` is used for member access in normal expressions only. Handles patterns like: `identifier` (e.g., `Vec`, `i32`), `namespace access` (e.g., `std::vec::Vec`), `generic instantiation` (e.g., `Vec[i32]`, `Option[T]`), `const type` (e.g., `const i32`, `const * i32`), `pointer declaration` (e.g., `* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`), `slice declaration` (e.g., `[] i32`, `[] const i32`, `[] volatile i32`, `[] const volatile i32`), `array declaration` (e.g., `[10] i32`), `ternary type` (e.g., `a ? i32 : f64`, `T extends U ? X : Y`), `typeof expression` (e.g., `typeof(x)`, `typeof(File)::open`, `*typeof(x)`). This is a simplified version of `read_value` focused on type syntax. Used for parsing type annotations and generic type arguments. Const type expressions are parsed via `read_expression_type_const`, placed before pointer so `const * i32` parses as `const(pointer)` rather than pointer consuming const as qualifier. Pointer, slice, array, and const base_type all use `read_type_expression_primary` (no ternary), so `* a ? b : c` parses as `(*a) ? b : c`. Namespace access (`::`) binds tighter than type constructors: `*std::vec::Vec` → `*(std::vec::Vec)`. To use ternary as base_type, wrap in type_group: `* (a ? b : c)`. Ternary types are parsed via `read_expression_type_ternary`, with type constraints parsed via `read_expression_type_constraint`. `typeof` is a type expression parsed in `read_type_expression_primary` alongside `literal_identifier` — it enters the postfix loop supporting `::`, `[]`, `*`, so `typeof(File)::open` and `*typeof(x)` work naturally.
@@ -446,7 +450,7 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 612 test cases
+- Total: 627 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -483,6 +487,7 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 - `dt_statement_expression.cpp` (10 cases) — expression statements: simple identifier `foo;`, numeric literal `42;`, binary expression `a + b;`, function call `foo();`, namespace access call `std::Vec::create();`, consume all tokens, missing semicolon error, semicolon only returns NULL, clone, move
 - `dt_statement_block.cpp` (11 cases) — empty block `{}`, single empty statement `{;}`, single expression statement `{ foo(); }`, multiple statements `{ foo(); bar; ; }`, nested blocks `{ { ; } }`, via read_statement dispatcher, no brace returns NULL, unclosed brace is error, unexpected token in block is error, clone, move
 - `dt_statement_declaration.cpp` (12 cases) — single declarator without/with type, multiple declarators, complex expression, pointer type, initialize list (anonymous/typed/field items/nested), consume all tokens, clone, move
+- `dt_statement_declaration_type.cpp` (15 cases) — type alias declarations: simple alias (`type MyInt = i32`), generic alias (`type Vec3[T] = ...`), multi-param (`type Pair[A, B] = ...`), complex nested type, consume all tokens, namespace access (`type V = std::vec::Vec`), generic type right-hand side, clone, move, rest param single (`type Variadic[...Args] = ...`), rest after regular (`type Tuple[T, ...Rest] = ...`), rest with constraint (`type Filter[T, ...Rest extends Numeric] = ...`), clone with rest param, regular param is not rest
 
 ## Planned Language Features (inferred from AST node types)
 
@@ -522,7 +527,12 @@ func[T](x: T) -> T
 
 // 约束形式：通过 extends 限制
 func[T extends Numeric](x: T) -> T
+
+// Rest 参数：以 ... 为前缀，收集零个或多个类型实参
+type Variadic[...Args] = i32
+func[T extends Numeric, ...Rest](first: T, rest: Rest) -> T
 ```
+
 
 #### 2. 无重载 + 鸭子类型 = 低复杂度
 
@@ -582,6 +592,19 @@ func[N: u64, T extends Array[?]](arr: [N]T) -> T
 ```
 
 `[]` 内天然是 compile-time 上下文，无需 `comptime` 或 `var` 修饰。
+
+#### 8a. Rest 参数 (`...identifier`)
+
+```c
+type Variadic[...Args] = i32
+type Tuple[T, ...Rest] = struct { first: T; rest: Rest }
+type Filter[T, ...Rest extends Numeric] = ...
+
+// 语法：可选 ... 前缀 + identifier + 可选 extends/value 注解
+// is_rest = true 表示该参数可接受零个或多个类型实参
+```
+
+Rest 参数以 `...` 作为前缀，后跟标识符。解析器在读取 identifier 之前先检测 `...` 符号，检测到则设置 `is_rest = true`。Rest 参数支持与普通参数混用，也支持 `extends` 约束和 `: <type>` 值泛型注解。
 
 #### 9. 泛型一律使用 `[]`
 
