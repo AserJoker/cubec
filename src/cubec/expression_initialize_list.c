@@ -233,14 +233,12 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
     tok = TRY_LOCAL(onerror, vec_get(tokens, current));
     if (token_is(tok, CUBEC_TOKEN_SYMBOL, ",")) {
       current++;
-      /* Check for trailing comma: next should not be '}' */
       skip_whitespace(tokens, &current);
+      /* Trailing comma: if next is '}', just close the list */
       token_t after_comma = TRY_LOCAL(onerror, vec_get(tokens, current));
       if (token_is(after_comma, CUBEC_TOKEN_SYMBOL, "}")) {
-        THROW_LOCAL(onerror,
-                    "%s:%" PRIuPTR ":%" PRIuPTR " trailing comma in initialize list",
-                    filename, dot_location.begin.line + 1,
-                    dot_location.begin.column + 1);
+        current++;
+        break;
       }
     } else if (token_is(tok, CUBEC_TOKEN_SYMBOL, "}")) {
       current++;

@@ -237,19 +237,21 @@ TEST_F(dt_expression_initialize_list, in_binary_expression) {
   allocator_free(allocator, &tokens);
 }
 
-/* ---- Error: trailing comma ---- */
-TEST_F(dt_expression_initialize_list, trailing_comma_is_error) {
+/* ---- Trailing comma is allowed ---- */
+TEST_F(dt_expression_initialize_list, trailing_comma_is_allowed) {
   const char *source = ".Vec{1, }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = NULL;
-  CATCH_ERROR(
-      node = read_expression(allocator, tokens, &position, "test.cubec"),
-      error_clear());
-  EXPECT_EQ(node, nullptr);
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
+  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  EXPECT_EQ(vec_get_size(list->items), 1);
+
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
