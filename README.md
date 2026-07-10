@@ -975,7 +975,7 @@ cubec/
 │   ├── core/         # 核心数据结构（vec, list, rbtree, map, string 等）
 │   └── cubec/        # 前端模块（词法/语法分析）
 ├── src/              # 源文件（与 include/ 对应）
-├── test/             # 测试文件（Google Test, 639 测试用例）
+├── test/             # 测试文件（Google Test, 710 测试用例）
 ├── demo/             # 示例 .cubec 文件
 └── third_party/      # 第三方依赖
 ```
@@ -1000,6 +1000,7 @@ cubec/
   - 泛型实例化表达式（`callee[args]`）
   - 切片表达式（`host[start:length]`）
   - 展开表达式（`...expr`）
+  - 函数表达式（`func |<captures>| [<generic_params>] (<params>) [-> <return_type>] { <body> }`，捕获列表可选；命名形式 `func <name> ...` 支持可选 body `;`，支持 C-style variadic `...`）
   - 初始化列表表达式（`.<type>{<items>}` 或 `.{<items>}`，支持字段/位置模式，类型支持复杂类型表达式）
   - 初始化字段表达式（`.field = value`，初始化列表的字段项）
   - typeof 表达式（`typeof(<expression>)`，编译期类型计算，顶层类型表达式，支持后缀 `::`/`[]`，不能作为指针/切片的 base_type）
@@ -1016,10 +1017,13 @@ cubec/
   - 空语句（`;`）
   - 变量声明语句（`var <identifier> [: <type>] = <expression> [, ...];`，支持多变量逗号分隔）
   - `type` 别名声明语句（`type Name[<generic_params>] = <type_expression>;`，支持简单别名、泛型别名、rest 参数）
+  - `func` 函数声明语句（`[export] [inline] func <name> [<generic_params>] (<params>) [-> <return_type>] { <body> } | ;`，`extern` 函数以 `;` 结尾无 body，C-style variadic `...` 仅限 extern 函数）
+  - `import` 导入语句（`import <module_name> [as <alias>] from "<path>";`）
+  - `return` 返回语句（`return [<expression>];`）
   - 泛型参数解析（支持简单 `T`、约束 `T extends U`、值泛型 `N: u64`、rest 参数 `...Args` 四种形式）
   - `read_statement` 语句分派器（按优先级尝试各语句类型）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：639 测试用例覆盖所有核心模块
+- **测试体系**：710 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 
@@ -1028,21 +1032,14 @@ cubec/
   - `for`/`foreach`/`while`/`do-while` 循环语句
   - `switch`/`case` 分支语句
   - `defer` 延迟执行
-  - `break`/`continue`/`return` 跳转语句
+  - `break`/`continue` 跳转语句
 - **声明解析**：
-  - `func` 函数声明（含泛型）
   - `struct` 结构体声明
   - `enum` 枚举声明
   - `union` 联合体声明
-- **模块系统**：
-  - `import` 导入
-  - `export` 变量声明（`export var`，已实现）
-  - `export` 类型别名（`export type`，已实现）
 - **高级特性**：
   - `comptime` 编译时求值
   - `test` 测试块
   - `decorator` 装饰器 / 属性
-  - `extern` 外部链接
-  - `inline` 内联
 - **语义分析**（`src/engine/` — 目录尚未创建）
 - **代码生成**（后端 — 待定）

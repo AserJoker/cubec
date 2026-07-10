@@ -27,11 +27,13 @@ extern "C" {
 struct _cubec_expression_function_t;
 struct _cubec_expression_function_t {
   struct _cubec_expression_t super;
+  node_t name;            /**< Identifier node for named function (nullable, NULL for anonymous) */
   vec_t captures;         /**< Vector of cubec_function_capture_t (nullable, auto_dispose) */
   vec_t generic_params;   /**< Vector of cubec_generic_param_t (nullable, auto_dispose) */
   vec_t arguments;        /**< Vector of cubec_function_argument_t (auto_dispose) */
   node_t return_type;     /**< Return type expression (may be NULL = void) */
-  node_t body;            /**< Block statement node (required for anonymous funcs) */
+  node_t body;            /**< Block statement node (nullable for interface-style named funcs) */
+  bool is_c_variadic;     /**< Whether this function has C-style variadic '...' */
 };
 typedef struct _cubec_expression_function_t *cubec_expression_function_t;
 
@@ -40,11 +42,13 @@ extern type_t g_cubec_expression_function_type;
 struct _cubec_expression_function_init_t {
   location_t location;
   node_t parent;
+  node_t name;
   vec_t captures;
   vec_t generic_params;
   vec_t arguments;
   node_t return_type;
   node_t body;
+  bool is_c_variadic;
 };
 typedef struct _cubec_expression_function_init_t cubec_expression_function_init_t;
 
