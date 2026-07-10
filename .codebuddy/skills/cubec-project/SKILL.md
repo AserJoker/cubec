@@ -489,6 +489,105 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 - `dt_statement_declaration.cpp` (12 cases) — single declarator without/with type, multiple declarators, complex expression, pointer type, initialize list (anonymous/typed/field items/nested), consume all tokens, clone, move
 - `dt_statement_declaration_type.cpp` (15 cases) — type alias declarations: simple alias (`type MyInt = i32`), generic alias (`type Vec3[T] = ...`), multi-param (`type Pair[A, B] = ...`), complex nested type, consume all tokens, namespace access (`type V = std::vec::Vec`), generic type right-hand side, clone, move, rest param single (`type Variadic[...Args] = ...`), rest after regular (`type Tuple[T, ...Rest] = ...`), rest with constraint (`type Filter[T, ...Rest extends Numeric] = ...`), clone with rest param, regular param is not rest
 
+## Module System (模块系统)
+
+### Import Syntax
+
+Use `import` keyword for module imports, with namespace-style access:
+
+```c
+import <module_name> from "<module_path>";
+import <module_name> as <alias> from "<module_path>";
+```
+
+- `<module_name>`: The name used to access the module in current file
+- `<module_path>`: Module path (see path resolution rules below)
+- `as <alias>`: Optional renaming
+
+**Examples**:
+
+```c
+import std from "std";                 // Import std module
+import io from "./io";                 // Import io.cubec in current directory
+import vec as v from "std/vec";        // Rename import
+std::println("hello");                  // Access via namespace (::)
+```
+
+### Export Syntax
+
+Use `export` keyword prefixed to declarations:
+
+```c
+export func add(a: i32, b: i32) -> i32 { ... }
+export struct Point { x: f64, y: f64 }
+export type Array[T, N] = [N]T;
+export const PI: f64 = 3.14159;
+export var global_mutable: i32 = 42;
+```
+
+### Default Private Principle
+
+All declarations within a module are **not exported by default**. Only declarations marked with `export` are accessible to other modules.
+
+### Path Resolution Rules (Node.js ES Module Style)
+
+| Path Format | Rule |
+|-------------|------|
+| `./xxx` | Relative path (relative to current file's directory) |
+| `../xxx` | Relative path (parent directory) |
+| `xxx` | Logical path (resolved from project root or module base path) |
+
+**Examples**:
+
+```c
+import std from "std";          // Logical path → std.cubec
+import io from "./io";          // Relative path → io.cubec
+import parent from "../parent"; // Relative path → ../parent.cubec
+import vec from "std/vec";      // Logical path → std/vec.cubec
+```
+
+### Module Entry Point
+
+`import xxx from "path";` looks for `path.cubec` as the module entry.
+
+| import statement | Lookup file |
+|------------------|-------------|
+| `import x from "foo";` | `foo.cubec` |
+| `import x from "./bar";` | `./bar.cubec` |
+| `import x from "foo/bar";` | `foo/bar.cubec` |
+
+### Import Renaming
+
+Use `as` keyword to rename imported modules:
+
+```c
+import std as s from "std";
+import very_long_module_name as m from "some/module";
+
+s::println("hello");  // Use renamed name
+```
+
+### Cyclic Dependencies
+
+- **Allowed**: Modules can import each other
+- **Compile-time constants only**: Global variables must be compile-time constants (no function calls)
+- **Safe by design**: Circular references only occur in type declarations and compile-time constants, impossible to cause runtime uninitialized issues
+
+```c
+// a.cubec
+import b from "b";
+export const PI = 3.14;                          // ✅ OK
+export type MyType = b.OtherType;                // ✅ OK: type reference
+export var illegal = b.create();                 // ❌ ERROR: non-compile-time constant
+
+// b.cubec
+import a from "a";
+export type OtherType = a.YetAnotherType;        // ✅ OK: circular type reference
+export struct SomeType { ref: *a.SomeType }     // ✅ OK: struct definition
+```
+
+---
+
 ## Planned Language Features (inferred from AST node types)
 
 Cubec plans to support: defer statements, foreach loops, test blocks, comptime evaluation, struct/union/enum declarations, func declarations, slice types, spread operator, decorators, switch pattern matching, and more. Note: pointer types use postfix syntax (`value.*` for dereference, `value.&` for address-of) instead of traditional prefix `*` and `&`.

@@ -682,11 +682,84 @@ union Data {
 
 ## 模块系统
 
+### 导入语法
+
+使用 `import` 关键字导入模块，整体命名空间导入：
+
 ```c
-// TODO
-import std.io;              // 导入模块
-pub func exported() { }     // 公开导出
-export func global() { }    // 另一种导出方式
+import <module_name> from "<module_path>";
+import <module_name> as <alias> from "<module_path>";
+```
+
+- `<module_name>`：导入后在当前文件中使用的名称
+- `<module_path>`：模块路径（见下文路径规则）
+- `as <alias>`：可选的重命名
+
+**示例**：
+
+```c
+import std from "std";                 // 导入 std 模块
+import io from "./io";                 // 导入当前目录的 io.cubec
+import vec as v from "std/vec";        // 重命名导入
+std::println("hello");                  // 通过命名空间访问
+```
+
+### 导出语法
+
+使用 `export` 关键字前置在声明前导出：
+
+```c
+export func add(a: i32, b: i32) -> i32 { ... }
+export struct Point { x: f64, y: f64 }
+export type Array[T, N] = [N]T;
+export const PI: f64 = 3.14159;
+export var global_mutable: i32 = 42;
+```
+
+### 默认私有原则
+
+模块内所有声明**默认不导出**，必须使用 `export` 显式标记要导出的内容。未导出的声明只能在定义它的模块内访问。
+
+### 路径解析规则
+
+路径解析规则类比 **Node.js ES Module**：
+
+| 路径格式 | 规则 |
+|----------|------|
+| `./xxx` | 相对路径（相对于当前文件所在目录） |
+| `../xxx` | 相对路径（上级目录） |
+| `xxx` | 逻辑路径（从项目根或模块基础路径解析） |
+
+**示例**：
+
+```c
+import std from "std";          // 逻辑路径 → std.cubec
+import io from "./io";          // 相对路径 → io.cubec
+import parent from "../parent"; // 相对路径 → ../parent.cubec
+import vec from "std/vec";      // 逻辑路径 → std/vec.cubec
+```
+
+### 模块入口定位
+
+`import xxx from "path";` 查找 `path.cubec` 文件作为模块入口。
+
+**示例**：
+
+| import 语句 | 查找文件 |
+|------------|----------|
+| `import x from "foo";` | `foo.cubec` |
+| `import x from "./bar";` | `./bar.cubec` |
+| `import x from "foo/bar";` | `foo/bar.cubec` |
+
+### 导入重命名
+
+支持使用 `as` 关键字对导入的模块进行重命名：
+
+```c
+import std as s from "std";
+import very_long_module_name as m from "some/module";
+
+s.println("hello");  // 使用重命名后的名称
 ```
 
 ---
