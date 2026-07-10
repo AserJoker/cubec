@@ -5,7 +5,9 @@
 #include "cubec/statement_declaration_type.h"
 #include "cubec/statement_empty.h"
 #include "cubec/statement_expression.h"
+#include "cubec/statement_function.h"
 #include "cubec/statement_import.h"
+#include "cubec/statement_return.h"
 
 node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
                       const char *filename) {
@@ -36,9 +38,25 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
     return node;
   }
 
+  /* Try function statement (func ... / export func ... / inline func ... / extern func ...) */
+  current = *position;
+  node = TRY_LOCAL(onerror, read_statement_function(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
+
   /* Try import statement (import ...) */
   current = *position;
   node = TRY_LOCAL(onerror, read_statement_import(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try return statement (return ...;) */
+  current = *position;
+  node = TRY_LOCAL(onerror, read_statement_return(allocator, tokens, &current, filename));
   if (node) {
     *position = current;
     return node;

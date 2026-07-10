@@ -10,6 +10,7 @@
 #include "cubec/statement_declaration.h"
 #include "cubec/statement_declaration_type.h"
 #include "cubec/statement_empty.h"
+#include "cubec/statement_function.h"
 #include "cubec/statement_import.h"
 #include "cubec/token.h"
 #include <stdint.h>
@@ -90,6 +91,10 @@ node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
     if (!statement) {
       /* Try statement_declaration_type (type ...) */
       statement = TRY_LOCAL(onerror, read_statement_declaration_type(allocator, tokens, &current, filename));
+    }
+    if (!statement) {
+      /* Try statement_function (func ... / export func ... / inline func ... / extern func ...) */
+      statement = TRY_LOCAL(onerror, read_statement_function(allocator, tokens, &current, filename));
     }
     if (!statement) {
       /* Try statement_empty (;) */

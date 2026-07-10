@@ -39,17 +39,22 @@ cubec/
 │       ├── declaration_pointer.h # Pointer declaration (* [const] [volatile] <type>)
 │       ├── declaration_slice.h  # Slice declaration ([] [const] [volatile] <type>)
 │       ├── declaration_variable.h # Variable declarator (<identifier> [: <type>] = <expression>)
+│       ├── function_argument.h # Function parameter node (<identifier> [: <type>])
+│       ├── function_capture.h  # Function capture node (<identifier>)
 │       ├── statement.h         # Statement dispatcher (read_statement)
 │       ├── statement_block.h   # Block statement node ({ <statements> })
 │       ├── statement_declaration.h # Declaration statement (var <declarator> [, <declarator>]* ;)
 │       ├── statement_empty.h   # Empty statement node
 │       ├── statement_expression.h # Expression statement node (<expression>;)
+│       ├── statement_function.h # Function declaration ([export] [inline] func | [extern] func name[params](args) [-> type] { body } | ;)
 │       ├── statement_import.h   # Import statement node (import <name> [as <alias>] from "<path>";)
+│       ├── statement_return.h   # Return statement (return [expr];)
 │       ├── expression.h        # Expression AST node
 │       ├── expression_assignment.h  # Assignment expression (a = b, a += b, etc.)
 │       ├── expression_binary.h  # Binary/prefix-unary expression (left/right/opt)
 │       ├── expression_call.h    # Function-call expression callee(args)
 │       ├── expression_comma.h  # Comma expression (a, b, c) — right-associative
+│       ├── expression_function.h  # Anonymous function expression (func |captures| [generic](params) -> type { body })
 │       ├── expression_generic_instantiation.h  # Generic instantiation expr[a,b]
 │       ├── expression_group.h   # Grouped expression ( expr )
 │       ├── expression_initialize_field.h # Initialize field (.field = value)
@@ -69,13 +74,14 @@ cubec/
 │       ├── literal_identifier.h# Identifier literal
 │       ├── literal_numeric.h   # Numeric literal (with type suffixes)
 │       ├── literal_string.h    # String literal
-│       ├── node.h              # AST node kind enum (67 types)
+│       ├── node.h              # AST node kind enum (78 types)
 │       ├── program.h           # Top-level program node
 │       ├── generic_param.h      # Generic parameter node (T, T extends U, N: u64, ...T)
 │       ├── statement_block.h   # Block statement node ({ <statements> })
 │       ├── statement_declaration_type.h # Type alias declaration node
 │       ├── statement_empty.h   # Empty statement node
 │       ├── statement_expression.h # Expression statement node (<expression>;)
+│       ├── statement_function.h # Function declaration ([export] [inline] func | [extern] func name[params](args) [-> type] { body } | ;)
 │       ├── statement_import.h   # Import statement node (import <name> [as <alias>] from "<path>";)
 │       ├── statement.h         # Statement dispatcher (read_statement)
 │       └── token.h             # Token kind enum + lexer interface
@@ -85,11 +91,11 @@ cubec/
 │   ├── core/                   # Core data structure implementations
 │   └── cubec/                  # Lexer + parser implementations
 │       # Planned (not yet created): engine/, reader/, writer/, c/
-├── test/                       # Tests (600 test cases, Google Test + C++20)
+├── test/                       # Tests (712 test cases, Google Test + C++20)
 │   ├── main.cpp                # Test entry point
 │   ├── common/test_common.h    # RAII test allocator helper
 │   ├── core/                   # Tests for core data structures
-│   └── cubec/                  # Tests for lexer/parser (600 test cases)
+│   └── cubec/                  # Tests for lexer/parser (712 test cases)
 └── demo/
     └── index.cubec             # Sample source file
 ```
@@ -139,6 +145,7 @@ node_t (core/node.h)
         │     └── cubec_declaration_slice_t (cubec/declaration_slice.h)  # [] [const] [volatile] <type>
         ├── cubec_expression_binary_t (cubec/expression_binary.h)
         ├── cubec_expression_call_t (cubec/expression_call.h)
+        ├── cubec_expression_function_t (cubec/expression_function.h)  # func |captures| [generic](params) -> type { body }
         ├── cubec_expression_generic_instantiation_t (cubec/expression_generic_instantiation.h)
         ├── cubec_expression_group_t (cubec/expression_group.h)
         ├── cubec_expression_initialize_field_t (cubec/expression_initialize_field.h)  # .field = value
@@ -156,9 +163,13 @@ node_t (core/node.h)
               ├── cubec_literal_identifier_t
               ├── cubec_literal_numeric_t
               └── cubec_literal_string_t
+  └── cubec_function_argument_t (cubec/function_argument.h)  # func param (identifier [: type])
+  └── cubec_function_capture_t (cubec/function_capture.h)  # func capture (identifier)
   └── cubec_statement_block_t
   └── cubec_statement_empty_t
   └── cubec_statement_expression_t
+  └── cubec_statement_function_t (cubec/statement_function.h)  # func declaration
+  └── cubec_statement_return_t (cubec/statement_return.h)  # return [expr];
   └── cubec_program_node_t
 ```
 
@@ -175,6 +186,7 @@ node_t (core/node.h)
         ├── cubec_expression_binary_t (cubec/expression_binary.h)
         ├── cubec_expression_call_t (cubec/expression_call.h)
         ├── cubec_expression_comma_t (cubec/expression_comma.h)
+        ├── cubec_expression_function_t (cubec/expression_function.h)  # func |captures| [generic](params) -> type { body }
         ├── cubec_expression_generic_instantiation_t (cubec/expression_generic_instantiation.h)
         ├── cubec_expression_group_t (cubec/expression_group.h)
         ├── cubec_expression_initialize_field_t (cubec/expression_initialize_field.h)  # .field = value
@@ -193,8 +205,12 @@ node_t (core/node.h)
               ├── cubec_literal_identifier_t
               ├── cubec_literal_numeric_t
               └── cubec_literal_string_t
+  └── cubec_function_argument_t (cubec/function_argument.h)  # func param (identifier [: type])
+  └── cubec_function_capture_t (cubec/function_capture.h)  # func capture (identifier)
   └── cubec_statement_empty_t
   └── cubec_statement_expression_t
+  └── cubec_statement_function_t (cubec/statement_function.h)  # func declaration
+  └── cubec_statement_return_t (cubec/statement_return.h)  # return [expr];
   └── cubec_program_node_t
 ```
 
@@ -387,7 +403,7 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_expression_call` (expression_call.c) — Parses C-style function call `callee(arg1, arg2, ...)`. Called from `read_value` as a postfix operator with `callee` already parsed. Each argument first tries `read_expression_spread` (supporting `...expr`), then falls back to `read_expression`. Returns NULL if next token is not `(`; THROW errors on malformed arguments (trailing comma, unclosed paren). Supports chained calls `foo()()` and mix with member: `obj.method()`, `foo().field`. **Ownership**: `arguments` vec created with `auto_dispose=true` in parser; `init` directly takes the pointer (no copy), ownership fully transferred to node.
 - `read_expression_generic_instantiation` (expression_generic_instantiation.c) — Parses generic instantiation `callee[arg1, arg2, ...]`. Uses `[` and `]` as delimiters. Arguments parsed via `read_expression`, each first tries `read_expression_spread` (supporting `...expr` in generic args). Returns NULL if next token is not `[`; THROW errors on malformed arguments (trailing comma, unclosed bracket). Supports chained instantiations `fn[a][b]` and mixing with calls and member access: `fn[a]()`, `fn[a].field`, `foo()[a]`. Single-arg form `obj[0]` is syntactically ambiguous with member access — disambiguation deferred to semantic analysis.
 - `read_expression_slice` (expression_slice.c) — Parses slice expression `host[start:length]`. Called from `read_value` as a postfix operator with `host` already parsed. Format: `host[start:length]` where `start` and `length` are both optional (at least `:` must be present). If `[` doesn't follow, returns NULL gracefully. If `[]` (empty brackets), throws error. Uses `read_expression` for parsing start/length expressions. Supports chained slices `arr[1:2][0:1]` and mixing with calls and member access: `arr[0:1].field`, `getArr()[1:]`. Node fields: `host`, `start`, `length` (start/length may be NULL if omitted).
-- `read_atom` (expression.c) — Parses in order: `read_expression_initialize_list` → `read_expression_group` → `read_literal_string` → `read_literal_numeric` → `read_literal_identifier` → `read_literal_char`
+- `read_atom` (expression.c) — Parses in order: `read_expression_initialize_list` → `read_expression_function` → `read_expression_group` → `read_literal_string` → `read_literal_numeric` → `read_literal_identifier` → `read_literal_char`
 - `read_expression_group` (expression_group.c) — Parses parenthesized expression `( expr )`. Returns `cubec_expression_group_t` wrapping the inner expression. Tried first in `read_atom` so `(a + b)` is parsed as a group wrapping a binary expression.
 - `read_expression_initialize_list` (expression_initialize_list.c) — Parses initialize list expression `.<type>{<items>}` or `.{<items>}`. Called from `read_atom` as a primary expression (tried before `read_expression_group`). Checks for `.` at current position, then looks ahead: `.` + `{` → anonymous (type=NULL), `.` + type expression + `{` → typed. Type is parsed via `read_expression_type` (supports member access, generic instantiation, pointer, etc.). Items are comma-separated and must be homogeneous: either all `initialize_field` (`.name = value`) or all positional expressions — mixing is an error. First item determines mode: tries `read_expression_initialize_field` first; if that fails, falls back to `read_expression`. In field mode, non-field items cause error; in positional mode, field-like items cause error. Disambiguation: `.{.Test{}}` is positional (`.Test{}` is a nested initialize_list expression), `.{.Test=123}` is field mode (`.Test=123` has `=`). THROW errors on: trailing comma, unclosed `}`, mixed field/positional items. Returns `cubec_expression_initialize_list_t` with `type` (nullable node_t), `items` (vec_t with auto_dispose=true), `is_field` (bool). Supports postfix chaining: `.Vec{1,2}.field`, and binary context: `1 + .Vec{1,2}`.
 - `read_expression_initialize_field` (expression_initialize_field.c) — Parses initialize field expression `.identifier = expression`. Used inside `read_expression_initialize_list` to parse individual field items. Checks for `.` followed by identifier followed by `=`. Returns NULL if the `.` + identifier + `=` pattern is not matched (not an error — allows caller to try positional expression parsing). Returns `cubec_expression_initialize_field_t` with `field` (cubec_literal_identifier_t) and `value` (node_t).
@@ -401,12 +417,17 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_statement_empty` — Empty statement (`;`)
 - `read_statement_block` (statement_block.c) — Block statement (`{ <statements> }`). Parses a sequence of statements enclosed in curly braces, creating a new scope. The block may be empty (`{}`). Returns `cubec_statement_block_t` with a `statements` vec field. Returns NULL if current token is not `{`. THROW errors on unclosed brace or unexpected token in block.
 - `read_statement_expression` (statement_expression.c) — Expression statement (`<expression>;`). Parses an expression via `read_expression`, then expects a mandatory trailing semicolon. Missing semicolon is a parse error. Returns `cubec_statement_expression_t` with `expression` field. Returns NULL if `read_expression` returns NULL (no expression to form a statement).
-- `read_statement` (statement.c) — Statement dispatcher. Tries each statement parser in order: `read_statement_block` first (has distinguishing prefix `{`), then `read_statement_declaration` (has distinguishing prefix `var`), then `read_statement_declaration_type` (has distinguishing prefix `type`), then `read_statement_import` (has distinguishing prefix `import`), then `read_statement_empty` (has distinguishing prefix `;`), then `read_statement_expression` as the fallback (no distinguishing prefix — any expression can start it, so it must be tried last). Uses `TRY_LOCAL(onerror, ...)` to catch errors from sub-parsers; on error, returns NULL. Returns the first successful parse, or NULL if no statement matches.
+- `read_statement` (statement.c) — Statement dispatcher. Tries each statement parser in order: `read_statement_block` first (has distinguishing prefix `{`), then `read_statement_declaration` (has distinguishing prefix `var`), then `read_statement_declaration_type` (has distinguishing prefix `type`), then `read_statement_function` (has distinguishing prefix `func`/`export`/`inline`/`extern`), then `read_statement_import` (has distinguishing prefix `import`), then `read_statement_return` (has distinguishing prefix `return`), then `read_statement_empty` (has distinguishing prefix `;`), then `read_statement_expression` as the fallback (no distinguishing prefix — any expression can start it, so it must be tried last). Uses `TRY_LOCAL(onerror, ...)` to catch errors from sub-parsers; on error, returns NULL. Returns the first successful parse, or NULL if no statement matches.
 - `read_statement_declaration` (statement_declaration.c) — Declaration statement (`[export] var <declarator> [, <declarator>]* ;`). Parses one or more variable declarators separated by commas, each `<identifier> [: <type>] = <expression>`. The optional `export` keyword before `var` sets `is_export = true` on the node. The type annotation is optional and parsed via `read_expression_type`. Requires semicolon at end. THROW errors on missing semicolon or malformed declarator. Returns `cubec_statement_declaration_t` with `is_export` (bool) and `declarators` (vec) fields.
 - `read_statement_declaration_type` (statement_declaration_type.c) — Type alias declaration (`[export] type Name[<generic_params>] = <type_expression>;`). Parses a type alias with optional `export` keyword (sets `is_export = true`) and optional generic parameters (parsed via `read_generic_params`). Returns `cubec_statement_declaration_type_t` with `is_export` (bool), `name` (identifier), `params` (vec of `cubec_generic_param_t`, may be NULL), and `type_value` (type expression) fields. Supports simple aliases (`type MyInt = i32`), generic aliases (`type Vec3[T] = Vec[Vec[Vec[T]]]`), and rest params (`type Variadic[...Args] = i32`).
 - `read_statement_import` (statement_import.c) — Import statement (`import <module_name> [as <alias>] from "<path>";`). Parses module import with optional `as` alias. Returns `cubec_statement_import_t` with `module_name` (identifier node), `alias` (optional identifier node, NULL if no `as`), and `path` (string literal node) fields. Returns NULL if current token is not `import`. THROW errors on missing module name, missing `from` keyword, missing path, or missing semicolon.
+- `read_function_argument` (function_argument.c) — Parses a single function parameter: `<identifier> [: <type>]`. The identifier is parsed via `read_literal_identifier`. The optional type annotation is parsed via `read_expression_type`. Returns `cubec_function_argument_t` with `identifier` and `type` (nullable) fields. Returns NULL if current token is not an identifier.
+- `read_statement_function` (statement_function.c) — Parses function declaration: `[export] [inline] func <name> [<generic_params>] (<params>) [-> <return_type>] { <body> } | ;` or `[extern] func <name> [<generic_params>] (<params>) [-> <return_type>] ;`. `export` and `inline` can be combined (export is source-level, does not affect inline semantics). `extern` is mutually exclusive with `export` and `inline`. `extern` functions have no body (end with `;`). Return type is optional (omitted = void, `return_type = NULL`). C-style variadic `...` is only allowed in extern functions. Generic params parsed via `read_generic_params`. Parameters parsed via `read_function_argument`. The `->` return type arrow is two separate SYMBOL tokens (`-` and `>`). Returns `cubec_statement_function_t` with `is_export`, `is_inline`, `is_extern`, `is_c_variadic` (bools), `name`, `generic_params` (nullable vec), `arguments` (vec with auto_dispose=true), `return_type` (nullable), `body` (nullable) fields. Returns NULL if current token is not a function declaration prefix.
+- `read_expression_function` (expression_function.c) — Parses anonymous function (zero-time function) expression: `func |<captures>| [<generic_params>] (<params>) [-> <return_type>] { <body> }`. Inherits from `cubec_expression_t` (is an expression, not a statement). Capture list is optional: `||` (empty, tokenized as single `||` by lexer), `|x, y|` (non-empty), or omitted entirely. Each capture is identifier-only (e.g., `x`). Generic params, function params, and return type follow the same rules as `read_statement_function`. Body is mandatory (unlike statement functions which can end with `;`). Returns `cubec_expression_function_t` with `captures` (nullable vec of `cubec_function_capture_t`), `generic_params` (nullable vec), `arguments` (vec with auto_dispose=true), `return_type` (nullable), `body` (required) fields. Returns NULL if current token is not `func` keyword. Supports postfix: immediate call `func |x| (a: i32) -> i32 { return x + a; }(42)`, member access `func || () -> Vec[i32] { }.field`, assignment `var f = func |x| () { };`.
+- `read_function_capture` (function_capture.c) — Parses a single capture item: `<identifier>`. Captures are identifier-only. Returns `cubec_function_capture_t` with `identifier` field. Returns NULL if current token is not an identifier.
+- `read_statement_return` (statement_return.c) — Parses return statement: `return [<expression>] ;`. Expression is optional (bare `return;` has `expression = NULL`). Expression parsed via `read_expression`. Returns `cubec_statement_return_t` with `expression` (nullable) field. Returns NULL if current token is not `return` keyword.
 - `read_declaration_variable` (declaration_variable.c) — Variable declarator (`<identifier> [: <type>] = <expression>`). Parses a single variable declarator with optional type annotation and required initializer expression. The type is parsed via `read_expression_type`. Returns `cubec_declaration_variable_t` with `identifier`, `type` (nullable), and `expression` fields.
-- `read_program_node` — Top-level entry, parses statements using a whitelist approach: `statement_import` (`import`), `statement_declaration` (`[export] var`), `statement_declaration_type` (`[export] type`), `statement_empty` (`;`). `statement_expression` is NOT supported at program level (only within blocks). Uses `TRY_LOCAL(onerror, ...)` to catch errors from sub-parsers.
+- `read_program_node` — Top-level entry, parses statements using a whitelist approach: `statement_import` (`import`), `statement_declaration` (`[export] var`), `statement_declaration_type` (`[export] type`), `statement_function` (`[export] [inline] func` | `[extern] func`), `statement_empty` (`;`). `statement_expression` is NOT supported at program level (only within blocks). Uses `TRY_LOCAL(onerror, ...)` to catch errors from sub-parsers.
 - `read_expression_type` (expression.c) — Parses type expressions: typeof, ternary type, identifier with optional namespace access (`::`), generic instantiation, const type, pointer declaration, slice declaration, array declaration, and type constraint. **`::` is used for namespace navigation in type expressions** (e.g., `std::vec::Vec`), while `.` is used for member access in normal expressions only. Handles patterns like: `typeof expression` (e.g., `typeof(x)`, `typeof(File)::open`, `typeof(Vec)[i32]`), `ternary type` (e.g., `a ? i32 : f64`, `T extends U ? X : Y`), `identifier` (e.g., `Vec`, `i32`), `namespace access` (e.g., `std::vec::Vec`), `generic instantiation` (e.g., `Vec[i32]`, `Option[T]`), `const type` (e.g., `const i32`, `const * i32`), `pointer declaration` (e.g., `* i32`, `* const i32`, `* volatile i32`, `* const volatile i32`), `slice declaration` (e.g., `[] i32`, `[] const i32`, `[] volatile i32`, `[] const volatile i32`), `array declaration` (e.g., `[10] i32`). This is a simplified version of `read_value` focused on type syntax. Used for parsing type annotations and generic type arguments. `typeof` is a top-level type expression (like ternary), tried first in `read_expression_type` — it supports postfix `::` (namespace access) and `[]` (generic instantiation), but cannot be wrapped by pointer/slice/array declarations. Const type expressions are parsed via `read_expression_type_const`, placed before pointer so `const * i32` parses as `const(pointer)` rather than pointer consuming const as qualifier. Pointer, slice, array, and const base_type all use `read_type_expression_primary` (no ternary, no typeof), so `* a ? b : c` parses as `(*a) ? b : c`. Namespace access (`::`) binds tighter than type constructors: `*std::vec::Vec` → `*(std::vec::Vec)`. To use ternary as base_type, wrap in type_group: `* (a ? b : c)`. Ternary types are parsed via `read_expression_type_ternary`, with type constraints parsed via `read_expression_type_constraint`.
 - `read_expression_type_constraint` (expression_type_constraint.c) — Parses type constraint expressions: `left_type extends right_type`, `left_type == right_type`, `left_type != right_type`. The left operand is parsed via `read_type_expression_primary`, the right operand via `read_type_expression_primary` (to avoid consuming `?` for ternary). Returns `cubec_expression_type_constraint_t` with `op`, `left`, `right` fields. If no constraint operator follows the left operand, returns left-as-is (graceful fallback — caller handles ternary detection). Bare constraints without `?` (e.g. standalone `T extends U`) are rejected with an error in `read_expression_type` — they are only valid as ternary conditions or in generic definition context. Operators: `extends` (subtype check, tokenized as KEYWORD), `==` (type equality, SYMBOL), `!=` (type inequality, SYMBOL).
 - `read_expression_type_group` (expression_type_group.c) — Parses grouped type expressions `( type_expression )`. Wraps the inner type expression in parentheses, useful for clarifying precedence in complex type annotations or when a type expression needs to be grouped. Returns `cubec_expression_type_group_t` wrapping the inner type node. Returns NULL if the current token is not `(`.
@@ -416,7 +437,7 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_expression_typeof` (expression_typeof.c) — Parses compile-time type computation expression `typeof(<expression>)`. A top-level type expression (like ternary) that computes the type of an inner expression at compile time without evaluating it. Parsed at the top of `read_expression_type` before ternary — NOT inside `read_type_expression_primary`, so `typeof(x)` cannot be wrapped by pointer/slice/array declarations (`*typeof(x)` is invalid). Postfix `::` (namespace access, e.g., `typeof(File)::open`) and `[]` (generic instantiation, e.g., `typeof(Vec)[i32]`) are still supported via the postfix loop in `read_expression_type`. The inner expression is parsed via `read_expression`. Returns `cubec_expression_typeof_t` with `expression` field. Returns NULL if the current token is not the `typeof` keyword. THROW errors on missing `(`, missing `)`, or missing inner expression.
 
 ### Not Yet Implemented
-Most statement types (if, for, while, switch, defer, etc.) and all declaration types are defined as enums but lack parser implementations. Expression parsing is substantially complete: assignment, comma, group, spread, call, generic instantiation, ternary, member access, namespace access, initialize list, initialize field, and type group expression are all implemented. Block statement (`{}`) and import statement are now implemented.
+Most statement types (if, for, while, switch, defer, etc.) and all declaration types are defined as enums but lack parser implementations. Expression parsing is substantially complete. Statement parsing: block, empty, expression, declaration (var), declaration_type (type alias), import, function declaration, and return are implemented.
 
 ## Build System
 
@@ -453,7 +474,7 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 654 test cases
+- Total: 712 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -492,6 +513,7 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 - `dt_statement_declaration.cpp` (12 cases) — single declarator without/with type, multiple declarators, complex expression, pointer type, initialize list (anonymous/typed/field items/nested), consume all tokens, clone, move
 - `dt_statement_declaration_type.cpp` (15 cases) — type alias declarations: simple alias (`type MyInt = i32`), generic alias (`type Vec3[T] = ...`), multi-param (`type Pair[A, B] = ...`), complex nested type, consume all tokens, namespace access (`type V = std::vec::Vec`), generic type right-hand side, clone, move, rest param single (`type Variadic[...Args] = ...`), rest after regular (`type Tuple[T, ...Rest] = ...`), rest with constraint (`type Filter[T, ...Rest extends Numeric] = ...`), clone with rest param, regular param is not rest
 - `dt_statement_import.cpp` (15 cases) — import statements: simple import (`import std from "std"`), import with alias (`import vec as v from "std/vec"`), relative path (`import io from "./io"`), parent path (`import parent from "../parent"`), multi-segment path (`import vec from "std/vec"`), consume all tokens, missing `from` keyword error, missing semicolon error, non-import returns NULL, missing module name error, missing path error, clone, move, via `read_statement` dispatcher, via `read_program_node`
+- `dt_statement_function.cpp` (35 cases) — function declarations: basic function, no params, no return type (void), single/multiple params, generic single/multiple/rest params, export/inline/extern modifiers, export+inline combined, extern C-style variadic (`...`), pointer/slice/generic/no-type params, empty body, body with statements, no body semicolon (interface style), missing name/open paren/close paren errors, export+extern/extern+inline conflict errors, C variadic in non-extern error, clone, clone generic, move, clone extern, via read_statement, via read_program_node, consume all tokens
 
 ## Module System (模块系统)
 
@@ -753,7 +775,7 @@ func[T](x: T) -> void {
 编译期支持所有基本类型（整数、浮点、bool、字符串）以及 struct 和 array。编译期指针通过安全的"虚拟指针"（map + id）实现，不暴露真实内存地址。允许调用 `extern` 声明的外部函数。
 
 ```c
-extern func read_file(path: [*:0]u8): []u8
+extern func read_file(path: [*:0]u8) -> []u8
 
 comptime var data = read_file("config.json")  // 编译期 IO
 ```
@@ -810,17 +832,17 @@ struct Vec[T] {
 // 无泛型参数
 interface Iterator {
     type Item
-    next(self): Item
+    func next(self: *Iterator) -> Item;
 }
 
 // 带泛型参数的 interface
 interface Container[T] {
-    len(self): u64
-    get(self, idx: u64): T
+    func len(self: *Container[T]) -> u64;
+    func get(self: *Container[T], idx: u64) -> T;
 }
 
 interface Mapper[K, V] {
-    map(self, key: K): V
+    func map(self: *Mapper[K, V], key: K) -> V;
 }
 ```
 

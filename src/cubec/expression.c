@@ -8,6 +8,7 @@
 #include "cubec/declaration_slice.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_comma.h"
+#include "cubec/expression_function.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_initialize_list.h"
@@ -80,6 +81,14 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
   // Try initialize list: .<type>{<items>} or .{<items>}
   result = TRY(NULL,
                read_expression_initialize_list(allocator, tokens, &current, filename));
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try anonymous function: func |captures| [generic_params] (params) -> type { body }
+  result = TRY(NULL,
+               read_expression_function(allocator, tokens, &current, filename));
   if (result) {
     *position = current;
     return result;

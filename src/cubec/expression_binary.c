@@ -1,4 +1,4 @@
-﻿#include "cubec/expression_binary.h"
+#include "cubec/expression_binary.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/string.h"
