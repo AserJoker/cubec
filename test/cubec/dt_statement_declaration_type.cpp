@@ -410,3 +410,135 @@ TEST_F(dt_statement_declaration_type, regular_param_is_not_rest) {
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
+
+/* ---- Export simple type alias ---- */
+
+TEST_F(dt_statement_declaration_type, export_simple_alias) {
+  const char *source = "export type MyInt = i32;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;
+  EXPECT_TRUE(decl->is_export);
+  EXPECT_NE(decl->name, nullptr);
+  EXPECT_EQ(decl->params, nullptr);
+  EXPECT_NE(decl->type_value, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Export generic type alias ---- */
+
+TEST_F(dt_statement_declaration_type, export_generic_alias) {
+  const char *source = "export type Vec3[T] = Vec[Vec[Vec[T]]];";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;
+  EXPECT_TRUE(decl->is_export);
+  EXPECT_NE(decl->params, nullptr);
+  EXPECT_EQ(vec_get_size(decl->params), 1);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Non-export type alias ---- */
+
+TEST_F(dt_statement_declaration_type, non_export_alias) {
+  const char *source = "type MyInt = i32;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;
+  EXPECT_FALSE(decl->is_export);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Export with pointer type expression ---- */
+
+TEST_F(dt_statement_declaration_type, export_pointer_type) {
+  const char *source = "export type MyPtr = *i32;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;
+  EXPECT_TRUE(decl->is_export);
+  EXPECT_NE(decl->type_value, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Export clone ---- */
+
+TEST_F(dt_statement_declaration_type, export_clone) {
+  const char *source = "export type MyInt = i32;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  node_t cloned = (node_t)value_clone(allocator, node);
+  ASSERT_NE(cloned, nullptr);
+  EXPECT_EQ(cloned->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)cloned;
+  EXPECT_TRUE(decl->is_export);
+  EXPECT_NE(decl->name, nullptr);
+  EXPECT_NE(decl->type_value, nullptr);
+
+  allocator_free(allocator, &cloned);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Export move ---- */
+
+TEST_F(dt_statement_declaration_type, export_move) {
+  const char *source = "export type Vec3[T] = Vec[Vec[Vec[T]]];";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  node_t moved = (node_t)value_move(allocator, node);
+  ASSERT_NE(moved, nullptr);
+  EXPECT_EQ(moved->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)moved;
+  EXPECT_TRUE(decl->is_export);
+  EXPECT_NE(decl->params, nullptr);
+  EXPECT_EQ(vec_get_size(decl->params), 1);
+
+  allocator_free(allocator, &moved);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}

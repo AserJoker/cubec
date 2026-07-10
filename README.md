@@ -116,10 +116,11 @@ func main() {
 |---|---|---|---|---|
 | `break` | `case` | `comptime` | `const` | `continue` |
 | `defer` | `do` | `else` | `enum` | `export` |
-| `extern` | `for` | `foreach` | `func` | `if` |
-| `import` | `in` | `inline` | `mutable` | `of` |
-| `pub` | `register` | `return` | `struct` | `switch` |
-| `test` | `typeof` | `union` | `var` | `volatile` | `while` |
+| `extends` | `extern` | `for` | `foreach` | `from` |
+| `func` | `if` | `import` | `in` | `inline` |
+| `is` | `mutable` | `of` | `pub` | `register` |
+| `return` | `struct` | `switch` | `test` | `type` |
+| `typeof` | `union` | `var` | `volatile` | `while` |
 
 ---
 
@@ -759,7 +760,7 @@ import vec from "std/vec";      // 逻辑路径 → std/vec.cubec
 import std as s from "std";
 import very_long_module_name as m from "some/module";
 
-s.println("hello");  // 使用重命名后的名称
+s::println("hello");  // 使用重命名后的名称
 ```
 
 ---
@@ -974,7 +975,7 @@ cubec/
 │   ├── core/         # 核心数据结构（vec, list, rbtree, map, string 等）
 │   └── cubec/        # 前端模块（词法/语法分析）
 ├── src/              # 源文件（与 include/ 对应）
-├── test/             # 测试文件（Google Test, 600 测试用例）
+├── test/             # 测试文件（Google Test, 639 测试用例）
 ├── demo/             # 示例 .cubec 文件
 └── third_party/      # 第三方依赖
 ```
@@ -1018,7 +1019,7 @@ cubec/
   - 泛型参数解析（支持简单 `T`、约束 `T extends U`、值泛型 `N: u64`、rest 参数 `...Args` 四种形式）
   - `read_statement` 语句分派器（按优先级尝试各语句类型）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：627 测试用例覆盖所有核心模块
+- **测试体系**：639 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 
@@ -1033,10 +1034,10 @@ cubec/
   - `struct` 结构体声明
   - `enum` 枚举声明
   - `union` 联合体声明
-  - 变量声明（`var`，已实现 basic 形式）
 - **模块系统**：
   - `import` 导入
-  - `pub`/`export` 导出
+  - `export` 变量声明（`export var`，已实现）
+  - `export` 类型别名（`export type`，已实现）
 - **高级特性**：
   - `comptime` 编译时求值
   - `test` 测试块

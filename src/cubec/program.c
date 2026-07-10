@@ -8,7 +8,9 @@
 #include "core/vec.h"
 #include "cubec/node.h"
 #include "cubec/statement_declaration.h"
+#include "cubec/statement_declaration_type.h"
 #include "cubec/statement_empty.h"
+#include "cubec/statement_import.h"
 #include "cubec/token.h"
 #include <stdint.h>
 
@@ -79,11 +81,19 @@ node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
   while (true) {
     TRY_VOID_LOCAL(onerror, skip_whitespace(tokens, &current));
 
-    /* Try statement_declaration (var ...) */
-    node_t statement = read_statement_declaration(allocator, tokens, &current, filename);
+    /* Try statement_import (import ...) */
+    node_t statement = TRY_LOCAL(onerror, read_statement_import(allocator, tokens, &current, filename));
+    if (!statement) {
+      /* Try statement_declaration (var ...) */
+      statement = TRY_LOCAL(onerror, read_statement_declaration(allocator, tokens, &current, filename));
+    }
+    if (!statement) {
+      /* Try statement_declaration_type (type ...) */
+      statement = TRY_LOCAL(onerror, read_statement_declaration_type(allocator, tokens, &current, filename));
+    }
     if (!statement) {
       /* Try statement_empty (;) */
-      statement = read_statement_empty(allocator, tokens, &current, filename);
+      statement = TRY_LOCAL(onerror, read_statement_empty(allocator, tokens, &current, filename));
     }
     if (!statement) {
       break;

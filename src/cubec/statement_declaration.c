@@ -21,6 +21,7 @@ static void _cubec_statement_declaration_init(
   };
   super_init.location = init->location;
   TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
+  self->is_export = init->is_export;
   self->declarators = init->declarators;
 onerror:
   return;
@@ -36,6 +37,7 @@ static void _cubec_statement_declaration_clone(
     cubec_statement_declaration_t self, allocator_t allocator,
     cubec_statement_declaration_t another) {
   TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
+  self->is_export = another->is_export;
   self->declarators = TRY_LOCAL(onerror, value_clone(allocator, another->declarators));
   return;
 onerror:
@@ -46,6 +48,7 @@ static void _cubec_statement_declaration_move(
     cubec_statement_declaration_t self, allocator_t allocator,
     cubec_statement_declaration_t another) {
   TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
+  self->is_export = another->is_export;
   self->declarators = TRY_LOCAL(onerror, value_move(allocator, another->declarators));
   return;
 onerror:
@@ -77,14 +80,27 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
   cubec_statement_declaration_t node = NULL;
   vec_t declarators = NULL;
   location_t start_location = {0};
+  bool is_export = false;
+
+  /* Check for optional 'export' keyword */
+  if (_is_keyword(tokens, current, "export")) {
+    is_export = true;
+    token_t export_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+    start_location = *token_get_location(export_token);
+    start_location.filename = filename;
+    current++;
+    skip_whitespace(tokens, &current);
+  }
 
   /* Expect 'var' keyword */
   if (!_is_keyword(tokens, current, "var")) {
     return NULL;
   }
   token_t var_token = TRY_LOCAL(onerror, vec_get(tokens, current));
-  start_location = *token_get_location(var_token);
-  start_location.filename = filename;
+  if (start_location.begin.offset == 0) {
+    start_location = *token_get_location(var_token);
+    start_location.filename = filename;
+  }
   current++;
 
   skip_whitespace(tokens, &current);
@@ -128,7 +144,7 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
   }
   current++;
 
-  /* Build location spanning from 'var' to semicolon */
+  /* Build location spanning from 'export var' or 'var' to semicolon */
   location_t *end_loc = token_get_location(semi);
   location_t loc = {
       .begin = start_location.begin,
@@ -139,6 +155,7 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
   cubec_statement_declaration_init_t init = {
       .location = loc,
       .parent = NULL,
+      .is_export = is_export,
       .declarators = declarators,
   };
   node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_declaration_type, &init));

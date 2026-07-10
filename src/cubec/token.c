@@ -567,7 +567,7 @@ static token_t read_char_token(allocator_t allocator, position_t *position,
 static const char *keywords[] = {
     "break",   "case",    "comptime", "const", "continue", "defer",
     "do",      "else",     "enum",  "export",   "extern",
-    "for",     "foreach", "func",     "if",    "import",   "in",
+    "for",     "foreach", "from",     "func",     "if",    "import",   "in",
     "interface",
     "inline",  "mutable", "of",       "pub",   "register", "return",
     "struct",  "switch",  "test",     "union", "volatile", "while",

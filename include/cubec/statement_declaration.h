@@ -12,6 +12,7 @@ extern "C" {
 struct _cubec_statement_declaration_t;
 struct _cubec_statement_declaration_t {
   struct _node_t super;
+  bool is_export;     /**< Whether this declaration is exported */
   vec_t declarators;  /**< Vector of cubec_declaration_variable_t */
 };
 typedef struct _cubec_statement_declaration_t *cubec_statement_declaration_t;
@@ -21,6 +22,7 @@ extern type_t g_cubec_statement_declaration_type;
 struct _cubec_statement_declaration_init_t {
   location_t location;
   node_t parent;
+  bool is_export;
   vec_t declarators;
 };
 typedef struct _cubec_statement_declaration_init_t cubec_statement_declaration_init_t;

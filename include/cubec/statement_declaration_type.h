@@ -24,6 +24,7 @@ extern "C" {
 struct _cubec_statement_declaration_type_t;
 struct _cubec_statement_declaration_type_t {
   struct _node_t super;
+  bool is_export;    /**< Whether this declaration is exported */
   node_t name;       /**< Identifier node for the type alias name */
   vec_t params;      /**< Vector of identifier nodes for optional generic parameters (may be NULL) */
   node_t type_value; /**< Type expression parsed by read_expression_type */
@@ -35,6 +36,7 @@ extern type_t g_cubec_statement_decltype;
 struct _cubec_statement_declaration_type_init_t {
   location_t location;
   node_t parent;
+  bool is_export;
   node_t name;
   vec_t params;
   node_t type_value;
