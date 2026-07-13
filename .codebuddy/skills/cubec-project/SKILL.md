@@ -92,7 +92,7 @@ cubec/
 │   ├── core/                   # Core data structure implementations
 │   └── cubec/                  # Lexer + parser implementations
 │       # Planned (not yet created): engine/, reader/, writer/, c/
-├── test/                       # Tests (805 test cases, Google Test + C++20)
+├── test/                       # Tests (837 test cases, Google Test + C++20)
 │   ├── main.cpp                # Test entry point
 │   ├── common/test_common.h    # RAII test allocator helper
 │   ├── core/                   # Tests for core data structures
@@ -501,7 +501,7 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 805 test cases
+- Total: 837 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -546,6 +546,8 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 - `dt_statement_declaration_type.cpp` (20 cases) — type alias declarations: simple alias (`type MyInt = i32`), generic alias (`type Vec3[T] = ...`), multi-param (`type Pair[A, B] = ...`), complex nested type, consume all tokens, clone, clone with generic params, move, rest param single/after regular/with constraint/clone, regular param is not rest, export simple/generic/pointer type, non-export, export clone/move, builtin type no body, export builtin type, builtin type no params, builtin type clone/move
 - `dt_statement_import.cpp` (15 cases) — import statements: simple import (`import std from "std"`), import with alias (`import vec as v from "std/vec"`), relative path (`import io from "./io"`), parent path (`import parent from "../parent"`), multi-segment path (`import vec from "std/vec"`), consume all tokens, missing `from` keyword error, missing semicolon error, non-import returns NULL, missing module name error, missing path error, clone, move, via `read_statement` dispatcher, via `read_program_node`
 - `dt_statement_function.cpp` (44 cases) — function declarations: basic function, no params, no return type (void), single/multiple params, generic single/multiple/rest params, export/inline/extern/builtin/comptime modifiers, export+inline combined, extern C-style variadic (`...`), pointer/slice/generic/no-type params, empty body, body with statements, no body semicolon (interface style), missing name/open paren/close paren errors, export+extern/extern+inline conflict errors, C variadic in non-extern error, builtin func, export+builtin func, builtin+extern mutual exclusion error, comptime func, comptime func without body error, export+comptime func, inline+comptime func, builtin+comptime mutual exclusion error, extern+comptime mutual exclusion error, clone, clone generic, move, clone extern, via read_statement, via read_program_node, consume all tokens
+- `dt_statement_interface.cpp` (18 cases) — interface declarations: basic interface, interface with method, interface with type member, generic single/multi params, method no return type, method generic, method pointer/slice return type, export/non-export interface, export with method, clone, move, consume all tokens, via read_statement, via read_program_node, type member with generic
+- `dt_expression_type_interface.cpp` (14 cases) — anonymous interface type expressions: simple empty, with method, with type and method, generic single/multi, pointer/slice/const wrapped, consume all tokens, non-interface returns NULL, clone, move, via read_atom, via read_expression
 
 ## Module System (模块系统)
 
@@ -908,6 +910,8 @@ interface Mapper[K, V] {
 ```
 
 interface 支持泛型参数（在 `interface Name[T, ...]` 中声明），内部可定义方法签名和关联类型，关联类型在 implements 时被具体类型填充。与 struct/func 一致，泛型参数也在 `[]` 中声明。
+
+匿名 interface 类型表达式（`interface [<generic_params>] { <members> }`）可作为类型表达式出现在泛型约束和类型位置，但不可作为真正的类型使用（无编译产物）。
 
 ## Coding Conventions
 

@@ -15,6 +15,7 @@
 #include "cubec/expression_initialize_list.h"
 #include "cubec/expression_type_qualifier.h"
 #include "cubec/expression_type_function.h"
+#include "cubec/expression_type_interface.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_postfix_unary.h"
@@ -119,6 +120,13 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
   // type_function returns NULL (without THROW) when it detects the expression
   // form (named params or ':' instead of '->').
   result = read_expression_type_function(allocator, tokens, &current, filename);
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try interface type: interface[generic_params] { members }
+  result = read_expression_type_interface(allocator, tokens, &current, filename);
   if (result) {
     *position = current;
     return result;
@@ -343,6 +351,12 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
     return node;
   }
 
+  /* Try interface type expression: interface[generic_params] { members } */
+  node = read_expression_type_interface(allocator, tokens, &current, filename);
+  if (node) {
+    *position = current;
+    return node;
+  }
   /* Try type qualifier expression (prefix form: const/volatile <type>) */
   node = read_expression_type_qualifier(allocator, tokens, &current, filename);
   if (node) {
