@@ -2,7 +2,7 @@
 
 **Cubec** 是一门类 C 的静态类型编程语言，设计目标是提供现代语法特性（泛型、defer、comptime、模式匹配等），同时保持简洁和可预测的语义。
 
-> **状态**：前端编译器开发中。词法分析器和表达式解析器已完整实现，语句和声明解析器部分完成。
+> **状态**：前端编译器开发中。词法分析器和表达式解析器已完整实现，语句和声明解析器大部分完成。
 
 ---
 
@@ -531,7 +531,7 @@ T != f64 ? f32 : T                // != 约束
 
 ## 语句
 
-> **TODO**: 以下语句语法设计已完成，变量声明、return、import 解析器已实现，其余待实现。
+> **TODO**: 以下语句语法设计已完成，大部分解析器已实现。
 
 ### 变量声明
 
@@ -1020,7 +1020,7 @@ cubec/
 │   ├── core/         # 核心数据结构（vec, list, rbtree, map, string 等）
 │   └── cubec/        # 前端模块（词法/语法分析）
 ├── src/              # 源文件（与 include/ 对应）
-├── test/             # 测试文件（Google Test, 941 测试用例）
+├── test/             # 测试文件（Google Test, 997 测试用例）
 ├── demo/             # 示例 .cubec 文件
 └── third_party/      # 第三方依赖
 ```
@@ -1076,26 +1076,25 @@ cubec/
   - 匿名 union 类型表达式（`union [<generic_params>] { <fields> }`，用于类型别名等类型位置）
   - `import` 导入语句（`import <module_name> [as <alias>] from "<path>";`）
   - `return` 返回语句（`return [<expression>];`）
+  - `if`/`else` 条件语句（`if(condition) { } else if(condition) { } else { }`，else-if 链为嵌套 if 节点）
+  - `for` 循环（C 风格 `for(init; cond; incr) { }`，三部分均可为空，init 支持 var 声明和赋值表达式）
+  - `foreach` 迭代器循环（`foreach([const] item: iterator) { }`，支持 const 修饰符）
+  - `while` 循环（`while(condition) { }`）
+  - `do-while` 循环（`do { } while(condition);`）
+  - `switch`/`case` 分支语句（`switch(value) { case(a, b) -> { }, else -> { } }`，case 间无分隔符，逗号仅在 case() 内，支持空 switch）
+  - `defer` 延迟执行（`defer expr();` 和 `defer { }` 块形式均支持）
+  - `break`/`continue` 跳转语句（仅简单形式，不支持标签）
+  - `test` 测试块（`test "name" { }`，仅顶层，名称必须）
+  - `decorator` 装饰器（`[[expr]]` C++11 attribute 风格，关键字作为标识符，支持调用语法 `[[deprecated("reason")]]`）
   - 泛型参数解析（支持简单 `T`、约束 `T extends U`、值泛型 `N: u64`、rest 参数 `...Args` 四种形式）
   - `read_statement` 语句分派器（按优先级尝试各语句类型）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：941 测试用例覆盖所有核心模块
+- **测试体系**：997 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 
-- **声明解析**（语法设计已确认）：
-- **语句解析**（语法设计已确认）：
-  - `if`/`else` 条件语句（`if(condition) { } else if(condition) { } else { }`）
-  - `for` 循环（C 风格 `for(init; cond; incr) { }`）
-  - `foreach` 迭代器循环（`foreach(const item: iterator) { }`）
-  - `while` 循环（`while(condition) { }`）
-  - `do-while` 循环（`do { } while(condition);`）
-  - `switch`/`case` 分支语句（`switch(value) { case(a, b) -> { }, else -> { } }`，支持表达式形式）
-  - `defer` 延迟执行（`defer expr();` 和 `defer { }` 均支持）
-  - `break`/`continue` 跳转语句（仅简单形式，不支持标签）
 - **高级特性**（语法设计已确认）：
   - `comptime` 编译时求值（`comptime { }` 块、`comptime if()`、`comptime for()`）
-  - `test` 测试块（`test "name" { }`，仅顶层，名称必须）
-  - `decorator` 装饰器（`[[expr]]` C++11 attribute 风格，编译期表达式）
+  - switch 表达式形式（`switch(v) { case(1) -> "one" else -> "many" }` 作为表达式）
 - **语义分析**（`src/engine/` — 目录尚未创建）
 - **代码生成**（后端 — 待定）
