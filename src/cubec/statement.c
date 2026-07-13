@@ -19,6 +19,8 @@
 #include "cubec/statement_import.h"
 #include "cubec/statement_return.h"
 #include "cubec/statement_switch.h"
+#include "cubec/statement_break.h"
+#include "cubec/statement_continue.h"
 
 node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
                       const char *filename) {
@@ -156,6 +158,22 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
   /* Try return statement (return ...;) */
   current = *position;
   node = TRY_LOCAL(onerror, read_statement_return(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try break statement (break;) */
+  current = *position;
+  node = TRY_LOCAL(onerror, read_statement_break(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try continue statement (continue;) */
+  current = *position;
+  node = TRY_LOCAL(onerror, read_statement_continue(allocator, tokens, &current, filename));
   if (node) {
     *position = current;
     return node;
