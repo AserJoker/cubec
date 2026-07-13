@@ -2,7 +2,7 @@
 
 **Cubec** 是一门类 C 的静态类型编程语言，设计目标是提供现代语法特性（泛型、defer、comptime、模式匹配等），同时保持简洁和可预测的语义。
 
-> **状态**：前端编译器开发中。词法分析器已完整实现，表达式解析器基本完成，语句和声明部分待实现。
+> **状态**：前端编译器开发中。词法分析器和表达式解析器已完整实现，语句和声明解析器部分完成。
 
 ---
 
@@ -53,12 +53,12 @@
 ```c
 import std.io;
 
-func main() {
-    let greeting = "Hello, Cubec!";
+func main(): void {
+    var greeting = "Hello, Cubec!";
     io.println(greeting);
 
-    let numbers = Vec[i32]{1, 2, 3, 4, 5};
-    for n in numbers {
+    var numbers = Vec[i32]{1, 2, 3, 4, 5};
+    foreach(const n: numbers) {
         io.println(n);
     }
 }
@@ -135,9 +135,7 @@ Cubec 提供标准整数和浮点类型：
 |------|------|
 | `i8`, `i16`, `i32`, `i64` | 有符号整数 |
 | `u8`, `u16`, `u32`, `u64` | 无符号整数 |
-| `f16`, `f32`, `f64` | 浮点数 |
-
-> **TODO**: `f16` 语义待确认（是否使用 IEEE 754 binary16，或映射到 `f32`）。
+| `f16`, `f32`, `f64` | 浮点数（`f16` 为 IEEE 754 binary16 半精度浮点） |
 
 ### 指针声明
 
@@ -531,7 +529,7 @@ T != f64 ? f32 : T                // != 约束
 
 ## 语句
 
-> **TODO**: 以下语句语法设计已完成，部分解析器待实现。
+> **TODO**: 以下语句语法设计已完成，变量声明、return、import 解析器已实现，其余待实现。
 
 ### 变量声明
 
@@ -546,10 +544,9 @@ var point = .Point{.x = 1, .y = 2};  // 带字段的初始化列表
 ### 条件语句
 
 ```c
-// TODO
-if condition {
+if(condition) {
     // ...
-} else if other {
+} else if(other) {
     // ...
 } else {
     // ...
@@ -559,42 +556,47 @@ if condition {
 ### 循环语句
 
 ```c
-// TODO
-for i in 0..10 {
-    // 范围循环
+// for 循环 — C 风格三段式
+for(var i = 0; i < 10; i = i + 1) {
+    // ...
 }
 
-// foreach 循环
-foreach item in collection {
+// foreach 循环 — 迭代器遍历
+foreach(const item: collection) {
     // ...
 }
 
 // while 循环
-while condition {
+while(condition) {
     // ...
 }
 
 // do-while 循环
 do {
     // ...
-} while condition;
+} while(condition);
 ```
 
 ### 分支语句
 
 ```c
-// TODO
-switch value {
-    case 1 => { /* ... */ }
-    case 2 | 3 => { /* ... */ }
-    else => { /* ... */ }
+switch(value) {
+    case(1) -> { /* ... */ }
+    case(2, 3) -> { /* ... */ }
+    else -> { /* ... */ }
+}
+
+// switch 也可以作为表达式使用
+var x = switch(v) {
+    case(1) -> "one"
+    case(2, 3) -> "few"
+    else -> "many"
 }
 ```
 
 ### 跳转语句
 
 ```c
-// TODO
 break;
 continue;
 return value;
@@ -603,15 +605,17 @@ return value;
 ### defer 语句
 
 ```c
-// TODO
-defer cleanup();    // 在当前作用域退出时执行
+defer cleanup();        // 表达式形式：在当前作用域退出时执行
+defer {                 // 块形式：在当前作用域退出时执行
+    file.close();
+}
 ```
 
 ### 块语句
 
 ```c
 {                   // 块语句：引入新作用域
-    let x: i32 = 1;
+    var x: i32 = 1;
     foo();
 }
 
@@ -635,18 +639,17 @@ std::Vec::create();    // 命名空间静态方法调用语句
 
 ## 声明
 
-> **TODO**: 以下声明语法设计已完成，解析器待实现。
+> **TODO**: 以下声明语法设计已完成，func、struct、interface、type、var 解析器已实现，其余待实现。
 
 ### 函数声明
 
 ```c
-// TODO
-func add(a: i32, b: i32) -> i32 {
+func add(a: i32, b: i32): i32 {
     return a + b;
 }
 
 // 泛型函数
-func identity[T](value: T) -> T {
+func identity[T](value: T): T {
     return value;
 }
 ```
@@ -654,43 +657,63 @@ func identity[T](value: T) -> T {
 ### 结构体声明
 
 ```c
-// TODO
 struct Point {
-    x: f64,
-    y: f64,
+    x: f64;
+    y: f64;
 }
 
 // 泛型结构体
 struct Vec[T] {
-    data: *T,
-    len: usize,
+    data: *T;
+    len: u64;
 }
 ```
 
 ### 枚举声明
 
-```c
-// TODO
-enum Color {
-    Red,
-    Green,
-    Blue,
-}
+TypeScript 风格枚举，编译期常量。成员可指定类型和值，均可省略。不支持泛型（泛型需求由 union 承担）。
 
-enum Option[T] {
-    Some(T),
-    None,
-}
+```c
+// 简单枚举（类型和值均省略，默认自增）
+enum Color { Red, Green, Blue }
+
+// 带类型注解
+enum Status { Ok: u8, Error: u8 }
+
+// 带类型和值
+enum Color { Red: u8 = 0, Green: u8 = 1, Blue: u8 = 2 }
+
+// 仅带值
+enum Color { Red = 0, Green = 1, Blue = 2 }
+
+// 导出
+export enum Color { Red, Green, Blue }
+
+// 匿名 enum 类型表达式
+type Flags = enum { A: u8 = 1, B: u8 = 2 }
 ```
 
 ### 联合体声明
 
+Rust 风格 tagged union，支持泛型。字段用逗号分隔。
+
 ```c
-// TODO
-union Data {
-    int_val: i32,
-    float_val: f64,
-}
+// 简单联合体
+union Option[T] { value: T, tag: u64 }
+
+// 导出
+export union Result[T, E] { value: T, err: E }
+
+// 匿名 union 类型表达式
+type Res = union { ok: i32, err: *u8 }
+```
+
+### cunion 声明
+
+C 风格联合体，兼容 C 语言。字段用分号分隔，无 tag 字节。不支持泛型、export、匿名类型表达式。
+
+```c
+cunion Data { int_val: i32; float_val: f64; }
 ```
 
 ---
@@ -724,8 +747,8 @@ std::println("hello");                  // 通过命名空间访问
 使用 `export` 关键字前置在声明前导出：
 
 ```c
-export func add(a: i32, b: i32) -> i32 { ... }
-export struct Point { x: f64, y: f64 }
+export func add(a: i32, b: i32): i32 { ... }
+export struct Point { x: f64; y: f64 }
 export type Array[T, N] = [N]T;
 export const PI: f64 = 3.14159;
 export var global_mutable: i32 = 42;
@@ -807,15 +830,15 @@ Cubec 的泛型基于**"推导 + 鸭子类型"**范式，采用编译期模板�
 
 ```c
 // === 泛型参数定义 ===
-func[T](x: T) -> T                           // 推导
-func[T extends Numeric](x: T) -> T           // 带约束
-func[N: u64, T](arr: [N]T) -> T             // 值泛型 + 类型泛型
-func[T, ...Rest](first: T, rest: Rest) -> T  // rest 参数
+func[T](x: T): T                           // 推导
+func[T extends Numeric](x: T): T           // 带约束
+func[N: u64, T](arr: [N]T): T             // 值泛型 + 类型泛型
+func[T, ...Rest](first: T, rest: Rest): T  // rest 参数
 
 // === 类型级运算 ===
-func[T](x: T) -> T extends Numeric ? i64 : string   // 类型三元
-func[T](x: T) -> T == i32 ? f64 : string            // 类型相等
-func[T](x: T) -> T != void ? T : i32                // 类型不等
+func[T](x: T): T extends Numeric ? i64 : string   // 类型三元
+func[T](x: T): T == i32 ? f64 : string            // 类型相等
+func[T](x: T): T != void ? T : i32                // 类型不等
 
 // === 嵌套解包推导 ===
 func[T](x: Vec[T])       // Vec[i32] → T = i32
@@ -845,7 +868,7 @@ struct List[T] { head: T; tail: List[T] }
 struct Vec[T] {
     data: *T; len: u64
     type Element = T
-    func[U](self: Vec[T], other: Vec[U]) -> Vec[T] { ... }
+    func[U](self: Vec[T], other: Vec[U]): Vec[T] { ... }
 }
 
 // === interface 泛型 + 关联类型 ===
@@ -864,28 +887,21 @@ interface Mapper[K, V] {
 }
 ```
 
-### builtin 编译器指令
+### builtin 内建修饰符
 
-语言级类型变换使用 `builtin` 指令声明：
-
-```c
-builtin RemoveConst[T extends const?]       // → 剥离 const
-builtin RemoveVolatile[T extends volatile?] // → 剥离 volatile
-builtin Pointer[T]                          // → *T
-builtin Slice[T]                            // → []T
-builtin RemovePointer[T extends *?]         // → 解指针
-builtin RemoveSlice[T extends []?]          // → 解切片
-builtin ReturnType[F extends func]          // → 返回类型
-builtin SizeOf[T]                           // → u64（编译期值）
-```
-
-直接作为类型表达式使用：
+`builtin` 是声明修饰符，标记声明由编译器提供实现，用户不可提供定义：
 
 ```c
-type Mutable[T] = RemoveConst[T]
-type Ptr[T] = Pointer[T]
-type SlicePtr[T] = Slice[Pointer[T]]
+builtin type RemoveConst[T]    // 内建类型变换，编译器提供实现
+builtin var VERSION: const str // 内建编译期常量，值由编译器提供
+builtin func panic(): void     // 内建函数，编译器内联处理
 ```
+
+**规则**：
+- `builtin` 与 `extern` 互斥（不能同时使用）
+- `builtin` 与 `export` 正交（可组合使用）
+- `builtin` 声明无 body/初始值：`builtin type` 无 `= type_expr`，`builtin var` 无 `= expr`，`builtin func` 无 `{ body }`
+- `builtin` 可修饰 `type`、`var`、`func` 三种声明
 
 > **注意**：容器元素类型（如 `Vec[i32].Element`）由容器自身通过 struct 内 `type` 定义暴露，非编译器内置。
 
@@ -893,7 +909,7 @@ type SlicePtr[T] = Slice[Pointer[T]]
 
 ```
 判定层：extends（鸭子约束）、==（双向等价 → 结构等价）、!=（取反）
-变换层：builtin 编译器指令
+变换层：builtin 内建修饰符
 分支层：类型级三元（? :）、comptime if
 推导层：嵌套解包、多位置统一、全类型编译期计算
 ```
@@ -905,9 +921,21 @@ type SlicePtr[T] = Slice[Pointer[T]]
 ### comptime 编译时求值
 
 ```c
-// TODO
+// comptime 块 — 编译时执行的代码
 comptime {
-    // 在编译时执行的代码块
+    // 在编译时执行
+}
+
+// comptime if — 编译期条件分支
+comptime if(T extends Numeric) {
+    print("numeric: ", x)
+} else {
+    print("other")
+}
+
+// comptime for — 编译期循环展开
+comptime for(var i = 0; i < 4; i = i + 1) {
+    // 循环在编译期展开
 }
 
 const computed: i32 = comptime expensive_calc();
@@ -916,7 +944,7 @@ const computed: i32 = comptime expensive_calc();
 ### test 块
 
 ```c
-// TODO
+// 仅限顶层使用，名称必须
 test "feature X works" {
     assert(add(1, 2) == 3);
 }
@@ -924,29 +952,30 @@ test "feature X works" {
 
 ### decorator 装饰器
 
-```c
-// TODO
-@inline
-func hot_function() { }
+C++11 attribute 风格，`[[...]]` 内部是编译期表达式，求值后必须是符合要求的函数。可修饰 func、struct/enum/union、type、var。
 
-@deprecated
-func old_api() { }
+```c
+[[inline]] func hot_function(): void { }
+[[deprecated]] func old_api(): void { }
+
+// 多个 decorator 叠加
+[[inline]] [[export]] func fast_add(a: i32, b: i32): i32 { }
+
+// 带参数的 decorator
+[[deprecated("use new_api instead")]] func old_api(): void { }
 ```
 
 ### extern 外部函数
 
 ```c
-// TODO
-extern "C" {
-    func printf(format: *u8, ...) -> i32;
-}
+extern func printf(format: *u8, ...): i32;
+extern func read_file(path: *u8): []u8;
 ```
 
 ### inline 内联
 
 ```c
-// TODO
-inline func fast_add(a: i32, b: i32) -> i32 {
+inline func fast_add(a: i32, b: i32): i32 {
     return a + b;
 }
 ```
@@ -989,7 +1018,7 @@ cubec/
 │   ├── core/         # 核心数据结构（vec, list, rbtree, map, string 等）
 │   └── cubec/        # 前端模块（词法/语法分析）
 ├── src/              # 源文件（与 include/ 对应）
-├── test/             # 测试文件（Google Test, 823 测试用例）
+├── test/             # 测试文件（Google Test, 867 测试用例）
 ├── demo/             # 示例 .cubec 文件
 └── third_party/      # 第三方依赖
 ```
@@ -1033,7 +1062,7 @@ cubec/
   - 空语句（`;`）
   - 变量声明语句（`[export|extern|builtin|comptime] var <identifier> [: <type>] = <expression> [, ...];`，支持多变量逗号分隔，comptime 要求初始值，与 extern/builtin 互斥）
   - `type` 别名声明语句（`type Name[<generic_params>] = <type_expression>;`，支持简单别名、泛型别名、rest 参数）
-  - `func` 函数声明语句（`[export] [inline] func <name> [<generic_params>] (<params>) [-> <return_type>] { <body> } | ;`，`extern` 函数以 `;` 结尾无 body，C-style variadic `...` 仅限 extern 函数，`builtin` 编译器内建函数无 body，`comptime` 编译时求值函数必须有 body，comptime 与 extern/builtin 互斥）
+  - `func` 函数声明语句（`[export] [inline] func <name> [<generic_params>] (<params>) [: <return_type>] { <body> } | ;`，`extern` 函数以 `;` 结尾无 body，C-style variadic `...` 仅限 extern 函数，`builtin` 编译器内建函数无 body，`comptime` 编译时求值函数必须有 body，comptime 与 extern/builtin 互斥）
   - `interface` 接口声明语句（`[export] interface <name> [<generic_params>] { <members> }`，成员包含关联类型 `type <name> [<params>] ;` 和方法签名 `func <name> [<params>] (<args>) [: <return_type>] ;`，Go 风格结构型接口）
   - 匿名 interface 类型表达式（`interface [<generic_params>] { <members> }`，可用于泛型约束和类型位置，无编译产物）
   - `struct` 结构体声明语句（`[export] struct <name> [<generic_params>] { <members> }`，成员包含实例字段 `[pub] <name> : <type> ;`、静态字段 `var`、关联类型 `type`、方法 `func`、spread `...<expr> ;` 等，body 为语句序列）
@@ -1047,20 +1076,22 @@ cubec/
 
 ### 待实现 📋
 
-- **语句解析**（AST 节点已定义）：
-  - `if`/`else` 条件语句
-  - `for`/`foreach`/`while`/`do-while` 循环语句
-  - `switch`/`case` 分支语句
-  - `defer` 延迟执行
-  - `break`/`continue` 跳转语句
-- **声明解析**：
-  - `struct` 结构体声明（已实现，支持实例字段、静态字段、泛型、方法、spread）
-  - `enum` 枚举声明
-  - `union` 联合体声明
-- **高级特性**：
-  - `comptime` 编译时求值（var/func 修饰符已实现，comptime 块待实现）
-  - `interface` 接口声明（已实现，Go 风格结构型，支持泛型、关联类型和匿名类型表达式）
-  - `test` 测试块
-  - `decorator` 装饰器 / 属性
+- **声明解析**（语法设计已确认）：
+  - `enum` 枚举声明（TypeScript 风格，`[export] enum <name> { <item> [: <type>] [= <value>], ... }`，支持匿名类型表达式）
+  - `union` 联合体声明（Rust tagged union 风格，`[export] union <name> [<generic_params>] { <field>: <type>, ... }`，支持泛型和匿名类型表达式）
+  - `cunion` C 风格联合体（`cunion <name> { <field>: <type>; ... }`，分号分隔，无泛型/export/匿名）
+- **语句解析**（语法设计已确认）：
+  - `if`/`else` 条件语句（`if(condition) { } else if(condition) { } else { }`）
+  - `for` 循环（C 风格 `for(init; cond; incr) { }`）
+  - `foreach` 迭代器循环（`foreach(const item: iterator) { }`）
+  - `while` 循环（`while(condition) { }`）
+  - `do-while` 循环（`do { } while(condition);`）
+  - `switch`/`case` 分支语句（`switch(value) { case(a, b) -> { }, else -> { } }`，支持表达式形式）
+  - `defer` 延迟执行（`defer expr();` 和 `defer { }` 均支持）
+  - `break`/`continue` 跳转语句（仅简单形式，不支持标签）
+- **高级特性**（语法设计已确认）：
+  - `comptime` 编译时求值（`comptime { }` 块、`comptime if()`、`comptime for()`）
+  - `test` 测试块（`test "name" { }`，仅顶层，名称必须）
+  - `decorator` 装饰器（`[[expr]]` C++11 attribute 风格，编译期表达式）
 - **语义分析**（`src/engine/` — 目录尚未创建）
 - **代码生成**（后端 — 待定）

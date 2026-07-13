@@ -46,7 +46,7 @@ cubec/
 │       ├── statement_declaration.h # Declaration statement ([export|extern|builtin|comptime] var <declarator> ;)
 │       ├── statement_empty.h   # Empty statement node
 │       ├── statement_expression.h # Expression statement node (<expression>;)
-│       ├── statement_function.h # Function declaration ([export] [inline] func | [extern] func | [builtin] func | [comptime] func name[params](args) [-> type] { body } | ;)
+│       ├── statement_function.h # Function declaration ([export] [inline] func | [extern] func | [builtin] func | [comptime] func name[params](args) [: type] { body } | ;)
 │       ├── statement_import.h   # Import statement node (import <name> [as <alias>] from "<path>";)
 │       ├── statement_return.h   # Return statement (return [expr];)
 │       ├── expression.h        # Expression AST node
@@ -82,7 +82,7 @@ cubec/
 │       ├── statement_declaration_type.h # Type alias declaration node
 │       ├── statement_empty.h   # Empty statement node
 │       ├── statement_expression.h # Expression statement node (<expression>;)
-│       ├── statement_function.h # Function declaration ([export] [inline] func | [extern] func | [builtin] func | [comptime] func name[params](args) [-> type] { body } | ;)
+│       ├── statement_function.h # Function declaration ([export] [inline] func | [extern] func | [builtin] func | [comptime] func name[params](args) [: type] { body } | ;)
 │       ├── statement_import.h   # Import statement node (import <name> [as <alias>] from "<path>";)
 │       ├── statement.h         # Statement dispatcher (read_statement)
 │       └── token.h             # Token kind enum + lexer interface
@@ -650,9 +650,63 @@ export struct SomeType { ref: *a.SomeType }     // ✅ OK: struct definition
 
 ---
 
-## Planned Language Features (inferred from AST node types)
+## Planned Language Features (syntax design confirmed, implementation pending)
 
-Cubec plans to support: defer statements, foreach loops, test blocks, comptime evaluation, struct/union/enum declarations, func declarations, slice types, spread operator, decorators, switch pattern matching, and more. Note: pointer types use postfix syntax (`value.*` for dereference, `value.&` for address-of) instead of traditional prefix `*` and `&`.
+实现顺序：enum → union → cunion → if → while → for → foreach → switch → break/continue → defer → test → decorator → comptime
+
+### enum 枚举声明
+- TypeScript 风格，编译期常量，不支持泛型
+- `[export] enum <name> { <item> [: <type>] [= <value>], ... }` — 类型和值均可省略
+- 匿名 enum 类型表达式：`enum { A: u8 = 1 }`
+- 节点：CUBEC_NODE_STATEMENT_ENUM, CUBEC_NODE_DECLARATION_ENUM, CUBEC_NODE_ENUM_ITEM
+
+### union 联合体声明
+- Rust 风格 tagged union，字段用逗号分隔，支持泛型
+- `[export] union <name> [<generic_params>] { <field>: <type>, ... }`
+- 匿名 union 类型表达式：`union { ok: i32, err: *u8 }`
+- 节点：需新增 CUBEC_NODE_STATEMENT_UNION 等
+
+### cunion C 风格联合体
+- C 兼容，字段用分号分隔，无 tag 字节
+- `cunion <name> { <field>: <type>; ... }`
+- 不支持泛型、export、匿名类型表达式
+
+### if 条件语句
+- `if(condition) { } else if(condition) { } else { }` — 条件必须括号
+
+### for 循环
+- C 风格三段式：`for(init; condition; increment) { }`
+
+### foreach 迭代器循环
+- `foreach(const item: iterator) { }` — 迭代器遍历
+
+### while / do-while 循环
+- `while(condition) { }` — 条件必须括号
+- `do { } while(condition);` — 括号+分号结尾
+
+### switch 分支语句
+- `switch(value) { case(a, b) -> { }, else -> { } }` — 括号+逗号分隔多值
+- `->` 连接 case 和 body（需新增词法 token）
+- 支持表达式形式（有返回值，类似 Rust match）
+
+### defer 延迟执行
+- `defer expr();` 和 `defer { }` 两种形式
+
+### break / continue
+- 仅简单形式 `break;` / `continue;`，不支持标签
+
+### test 测试块
+- `test "name" { }` — 仅顶层使用，名称必须
+
+### decorator 装饰器
+- `[[expr]]` C++11 attribute 风格，内部是编译期表达式，求值后必须是符合要求的函数
+- 多个叠加：`[[inline]] [[export]] func foo() { }`
+- 可修饰：func、struct/enum/union、type、var
+
+### comptime 编译时求值
+- `comptime { }` — 独立 AST 节点
+- `comptime if(condition) { } else { }` — 独立 AST 节点
+- `comptime for(init; cond; incr) { }` — 编译期循环展开
 
 ## Generics System (泛型系统)
 
@@ -673,8 +727,9 @@ Cubec 的泛型机制基于**"推导 + 鸭子类型"**范式，采用编译期�
 | 类型 | 泛型支持 | 推导 | 语义 |
 |------|----------|------|------|
 | struct | ✅ 支持 `struct Vec[T] { ... }` | ❌ 不支持推导（无构造函数，显式写 `Vec[i32]{}`） | 编译期模板实例化 |
-| enum | ❌ 不支持泛型 | — | TypeScript 风格：所有成员同类型 |
-| union | ✅ 支持 `union Option[T] { Some(T) \| None }` | — | Rust 风格：tagged union / sum type |
+| enum | ❌ 不支持泛型 | — | TypeScript 风格：编译期常量，成员可指定类型和值 |
+| union | ✅ 支持 `union Option[T] { value: T, tag: u64 }` | — | Rust 风格：tagged union，字段+逗号分隔 |
+| cunion | ❌ 不支持泛型 | — | C 风格：字段重叠存储，分号分隔，无 tag |
 | interface | ✅ 支持 | — | Go/TypeScript 风格：仅存方法签名，结构型 / duck typing |
 | func | ✅ 支持 | ✅ 支持从实参推导 | 泛型函数 |
 
