@@ -110,16 +110,17 @@ func main() {
 
 标识符遵循 Unicode 标准（通过 ICU `u_isIDStart`/`u_isIDPart` 识别），支持非 ASCII 字符。
 
-**关键字（31个）**：
+**关键字（40个）**：
 
 | | | | | |
 |---|---|---|---|---|
-| `break` | `case` | `comptime` | `const` | `continue` |
-| `defer` | `do` | `else` | `enum` | `export` |
-| `extends` | `extern` | `for` | `foreach` | `from` |
-| `func` | `if` | `import` | `in` | `inline` |
-| `is` | `mutable` | `of` | `pub` | `register` |
-| `return` | `struct` | `switch` | `test` | `type` |
+| `alignof` | `as` | `break` | `builtin` | `case` |
+| `comptime` | `const` | `continue` | `defer` | `do` |
+| `else` | `enum` | `export` | `extends` | `extern` |
+| `for` | `foreach` | `from` | `func` | `if` |
+| `import` | `in` | `inline` | `interface` | `is` |
+| `mutable` | `of` | `pub` | `register` | `return` |
+| `sizeof` | `struct` | `switch` | `test` | `type` |
 | `typeof` | `union` | `var` | `volatile` | `while` |
 
 ---
@@ -520,11 +521,11 @@ T != f64 ? f32 : T                // != 约束
 * (T extends U ? X : Y)          // 指针指向约束三元（需分组）
 ```
 
-`extends` 是关键词，`==` 和 `!=` 是运算符。右操作数仅接受基础类型表达式，确保 `T extends U ? X : Y` 被正确解析为 `(T extends U) ? X : Y`。
+`extends`、`==` 和 `!=` 都是二元运算符（优先级 6，同级左结合），在 `read_expression_binary` 中统一解析。`T extends U ? X : Y` 被正确解析为 `(T extends U) ? X : Y`，因为 `extends` 优先级高于 `? :`。
 
 除了类型约束，condition 还可以是括号包裹的编译期表达式（如 `(a + b) ? X : Y`）或简单类型标识符（见 [类型级三元条件表达式](#类型级三元条件表达式)）。
 
-> **注意**：独立的类型约束表达式（如 `T extends U` 不带 `?`）在类型表达式中不合法——它们只在类型三元条件或泛型定义上下文中有效。
+> **注意**：独立的类型约束表达式（如 `T extends U` 不带 `?`）在类型表达式中不合法——它们只在类型三元条件或泛型定义上下文中有效。在值上下文中，`(typeof(a) extends i32) ? 1 : 2` 是合法的——typeof+extends 作为分组条件。
 
 ---
 
@@ -988,7 +989,7 @@ cubec/
 │   ├── core/         # 核心数据结构（vec, list, rbtree, map, string 等）
 │   └── cubec/        # 前端模块（词法/语法分析）
 ├── src/              # 源文件（与 include/ 对应）
-├── test/             # 测试文件（Google Test, 789 测试用例）
+├── test/             # 测试文件（Google Test, 790 测试用例）
 ├── demo/             # 示例 .cubec 文件
 └── third_party/      # 第三方依赖
 ```
@@ -999,7 +1000,7 @@ cubec/
 
 ### 已实现 ✅
 
-- **词法分析器**：完整的 tokenizer，支持所有字面量类型、30 个关键字、符号最长匹配
+- **词法分析器**：完整的 tokenizer，支持所有字面量类型、40 个关键字、符号最长匹配
 - **表达式解析器**：
   - 前缀一元表达式（`!`, `+`, `-`, `~`）
   - 后缀一元表达式（`.*` 解引用, `&` 取地址, `.?` try/unwrap）
@@ -1017,11 +1018,14 @@ cubec/
   - 初始化列表表达式（`.<type>{<items>}` 或 `.{<items>}`，支持字段/位置模式，类型支持复杂类型表达式）
   - 初始化字段表达式（`.field = value`，初始化列表的字段项）
   - typeof 表达式（`typeof(<expression>)`，编译期类型计算，顶层类型表达式，支持后缀 `::`/`[]`，可作为指针/切片的 base_type）
-  - 类型表达式（用于类型标注，含指针声明 `* [const] [volatile] <type>`，复合类型贪婪消费三元）
+  - sizeof 表达式（`sizeof(<expression>)`，编译期大小计算，支持后缀链和二元表达式）
+  - alignof 表达式（`alignof(<expression>)`，编译期对齐计算，支持后缀链和二元表达式）
+  - 类型表达式（统一解析路径：`read_expression_type` = `read_expression`，含指针声明 `* [const] [volatile] <type>`，复合类型贪婪消费三元）
   - 分组类型表达式（`( type_expression )`，阻止复合类型贪婪消费）
   - 类型级三元条件表达式（`condition ? type : type`，编译期类型分支，condition 支持类型约束/编译期表达式/简单标识符）
-  - 类型约束表达式（`T extends U`, `T == U`, `T != U`，作为类型三元条件使用，bare 形式报错）
+  - 类型约束表达式（`T extends U`, `T == U`, `T != U`，二元运算符（优先级 6），作为类型三元条件使用，bare 形式报错；值上下文中 `(typeof(a) extends i32) ? 1 : 2` 合法）
   - const/volatile 类型限定符（`const <type>` / `volatile <type>`，合并为 `expression_type_qualifier`，独立前缀类型修饰符，贪婪消费内部类型）
+  - 函数类型表达式（`func(<type_list>) -> <return_type>`，参数和返回类型贪婪消费三元；`func(i32) -> A ? B : C` → 返回类型消费三元）
   - 数组声明表达式（`[ <expr> ] <type>`）
 - **语句解析器**：
   - 块语句（`{ <statements> }`，引入新作用域，支持空块和嵌套）
@@ -1035,7 +1039,7 @@ cubec/
   - 泛型参数解析（支持简单 `T`、约束 `T extends U`、值泛型 `N: u64`、rest 参数 `...Args` 四种形式）
   - `read_statement` 语句分派器（按优先级尝试各语句类型）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：789 测试用例覆盖所有核心模块
+- **测试体系**：790 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 
