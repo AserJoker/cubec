@@ -1020,7 +1020,7 @@ cubec/
 │   ├── core/         # 核心数据结构（vec, list, rbtree, map, string 等）
 │   └── cubec/        # 前端模块（词法/语法分析）
 ├── src/              # 源文件（与 include/ 对应）
-├── test/             # 测试文件（Google Test, 997 测试用例）
+├── test/             # 测试文件（Google Test, 1018 测试用例）
 ├── demo/             # 示例 .cubec 文件
 └── third_party/      # 第三方依赖
 ```
@@ -1086,15 +1086,15 @@ cubec/
   - `break`/`continue` 跳转语句（仅简单形式，不支持标签）
   - `test` 测试块（`test "name" { }`，仅顶层，名称必须）
   - `decorator` 装饰器（`[[expr]]` C++11 attribute 风格，关键字作为标识符，支持调用语法 `[[deprecated("reason")]]`）
+  - `comptime` 编译时求值（`comptime { }` 块、`comptime if()` 条件分支、`comptime for()` 循环展开）
   - 泛型参数解析（支持简单 `T`、约束 `T extends U`、值泛型 `N: u64`、rest 参数 `...Args` 四种形式）
   - `read_statement` 语句分派器（按优先级尝试各语句类型）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：997 测试用例覆盖所有核心模块
+- **测试体系**：1018 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 
 - **高级特性**（语法设计已确认）：
-  - `comptime` 编译时求值（`comptime { }` 块、`comptime if()`、`comptime for()`）
   - switch 表达式形式（`switch(v) { case(1) -> "one" else -> "many" }` 作为表达式）
 - **语义分析**（`src/engine/` — 目录尚未创建）
 - **代码生成**（后端 — 待定）

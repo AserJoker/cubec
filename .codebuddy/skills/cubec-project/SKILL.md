@@ -464,7 +464,7 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_expression_typeof` (expression_typeof.c) — Parses compile-time type computation expression `typeof(<expression>)`. Available in both type expression context (via `read_type_expression_primary`) and value expression context (via `read_atom`). In type expressions, `typeof(x)` can be used as pointer/slice/array base type: `*typeof(x)`, `[]typeof(x)`. In value expressions, `typeof(x)` is an atom that supports full postfix chaining: `.field` (member access), `::method` (namespace access), `[i32]` (generic instantiation), `()` (call). The inner expression is parsed via `read_expression`. Returns `cubec_expression_typeof_t` with `expression` field. Returns NULL if the current token is not the `typeof` keyword. THROW errors on missing `(`, missing `)`, or missing inner expression.
 
 ### Not Yet Implemented
-Switch expression form (using switch as an expression, not just statement). `comptime` blocks/if/for are not yet implemented. All other statement and declaration types have parser implementations.
+Switch expression form (using switch as an expression, not just statement). All other statement and declaration types have parser implementations, including `comptime` blocks/if/for.
 
 ## Build System
 
