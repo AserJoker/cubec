@@ -14,12 +14,14 @@ extern "C" {
  * @brief AST node for anonymous function expression (zero-time function).
  *
  * Syntax:
- *   func |<captures>| [<generic_params>] (<params>) [: <return_type>] { <body> }
+ *   func [|<captures>|] [<generic_params>] (<params>) [: <return_type>] { <body> }
  *
  * Captures use |...| delimiters. Each capture is a simple identifier.
+ * Empty || can be omitted — no capture list means no captures.
  *
  * Examples:
- *   func || () { }
+ *   func () { }                    // no captures, no name
+ *   func || () { }                 // explicit empty captures
  *   func |x, y| (a: i32): i32 { return x + y + a; }
  *   func |ctx| [T](x: T): T { return x; }
  *   func |x| (a: i32): i32 { return x + a; }(42)   // immediate call

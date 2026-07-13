@@ -13,20 +13,22 @@ extern "C" {
  * @brief AST node for defer statement.
  *
  * Syntax:
- *   defer <expression>;
- *   defer { <body> }
+ *   defer [|<captures>|] { <body> }
  *
  * The defer statement schedules execution at the end of the current scope.
- * Two forms: expression (followed by semicolon) or block.
+ * Captures are always by value (like closures). Empty || can be omitted.
+ * Only block form is supported.
  *
  * Examples:
- *   defer cleanup();
  *   defer { file.close(); }
+ *   defer |file| { close(file); }
+ *   defer |x, y| { print(x + y); }
  */
 struct _cubec_statement_defer_t;
 struct _cubec_statement_defer_t {
   struct _node_t super;
-  node_t body;       /**< Expression statement or block (required) */
+  vec_t captures;    /**< Vector of cubec_function_capture_t (nullable, auto_dispose) */
+  node_t body;       /**< Block statement (required) */
 };
 typedef struct _cubec_statement_defer_t *cubec_statement_defer_t;
 
@@ -35,6 +37,7 @@ extern type_t g_cubec_statement_defer_type;
 struct _cubec_statement_defer_init_t {
   location_t location;
   node_t parent;
+  vec_t captures;
   node_t body;
 };
 typedef struct _cubec_statement_defer_init_t cubec_statement_defer_init_t;

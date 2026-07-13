@@ -12,24 +12,6 @@ protected:
   TEST_ALLOCATOR;
 };
 
-TEST_F(dt_statement_defer, defer_expression) {
-  const char *source = "defer cleanup();";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
-  ASSERT_NE(tokens, nullptr);
-
-  size_t position = 0;
-  node_t node = read_statement_defer(allocator, tokens, &position, "test.cubec");
-  ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DEFER);
-
-  cubec_statement_defer_t defer_node = (cubec_statement_defer_t)node;
-  ASSERT_NE(defer_node->body, nullptr);
-  EXPECT_EQ(defer_node->body->kind, CUBEC_NODE_STATEMENT_EXPRESSION);
-
-  allocator_free(allocator, &node);
-  allocator_free(allocator, &tokens);
-}
-
 TEST_F(dt_statement_defer, defer_block) {
   const char *source = "defer { file.close(); }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
@@ -43,6 +25,7 @@ TEST_F(dt_statement_defer, defer_block) {
   cubec_statement_defer_t defer_node = (cubec_statement_defer_t)node;
   ASSERT_NE(defer_node->body, nullptr);
   EXPECT_EQ(defer_node->body->kind, CUBEC_NODE_STATEMENT_BLOCK);
+  EXPECT_EQ(defer_node->captures, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -59,13 +42,69 @@ TEST_F(dt_statement_defer, defer_empty_block) {
 
   cubec_statement_defer_t defer_node = (cubec_statement_defer_t)node;
   EXPECT_EQ(defer_node->body->kind, CUBEC_NODE_STATEMENT_BLOCK);
+  EXPECT_EQ(defer_node->captures, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_statement_defer, defer_with_capture) {
+  const char *source = "defer |file| { close(file); }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_defer(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DEFER);
+
+  cubec_statement_defer_t defer_node = (cubec_statement_defer_t)node;
+  ASSERT_NE(defer_node->body, nullptr);
+  EXPECT_EQ(defer_node->body->kind, CUBEC_NODE_STATEMENT_BLOCK);
+  ASSERT_NE(defer_node->captures, nullptr);
+  EXPECT_EQ(vec_get_size(defer_node->captures), 1);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_statement_defer, defer_with_multiple_captures) {
+  const char *source = "defer |x, y| { print(x + y); }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_defer(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DEFER);
+
+  cubec_statement_defer_t defer_node = (cubec_statement_defer_t)node;
+  ASSERT_NE(defer_node->captures, nullptr);
+  EXPECT_EQ(vec_get_size(defer_node->captures), 2);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_statement_defer, defer_empty_captures) {
+  const char *source = "defer || { no_capture(); }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_defer(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DEFER);
+
+  cubec_statement_defer_t defer_node = (cubec_statement_defer_t)node;
+  EXPECT_EQ(defer_node->captures, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_statement_defer, clone) {
-  const char *source = "defer cleanup();";
+  const char *source = "defer |x| { print(x); }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -83,7 +122,7 @@ TEST_F(dt_statement_defer, clone) {
 }
 
 TEST_F(dt_statement_defer, move) {
-  const char *source = "defer cleanup();";
+  const char *source = "defer |x| { print(x); }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -101,7 +140,7 @@ TEST_F(dt_statement_defer, move) {
 }
 
 TEST_F(dt_statement_defer, via_read_statement) {
-  const char *source = "defer cleanup();";
+  const char *source = "defer { cleanup(); }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
