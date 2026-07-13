@@ -12,6 +12,8 @@
 #include "cubec/statement_cunion.h"
 #include "cubec/statement_union.h"
 #include "cubec/statement_if.h"
+#include "cubec/statement_while.h"
+#include "cubec/statement_do_while.h"
 #include "cubec/statement_import.h"
 #include "cubec/statement_return.h"
 
@@ -95,6 +97,22 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
   /* Try if statement (if(...) { } else ...) */
   current = *position;
   node = TRY_LOCAL(onerror, read_statement_if(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try while statement (while(...) { }) */
+  current = *position;
+  node = TRY_LOCAL(onerror, read_statement_while(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try do-while statement (do { } while(...);) */
+  current = *position;
+  node = TRY_LOCAL(onerror, read_statement_do_while(allocator, tokens, &current, filename));
   if (node) {
     *position = current;
     return node;
