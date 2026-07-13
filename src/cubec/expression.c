@@ -22,6 +22,8 @@
 #include "cubec/expression_ternary.h"
 #include "cubec/expression_type_ternary.h"
 #include "cubec/expression_typeof.h"
+#include "cubec/expression_sizeof.h"
+#include "cubec/expression_alignof.h"
 #include "cubec/literal_char.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
@@ -89,6 +91,22 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
   // Try typeof: typeof(<expression>) — compile-time type computation
   result = TRY(NULL,
                read_expression_typeof(allocator, tokens, &current, filename));
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try sizeof: sizeof(<expression>) — compile-time size computation
+  result = TRY(NULL,
+               read_expression_sizeof(allocator, tokens, &current, filename));
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try alignof: alignof(<expression>) — compile-time alignment computation
+  result = TRY(NULL,
+               read_expression_alignof(allocator, tokens, &current, filename));
   if (result) {
     *position = current;
     return result;

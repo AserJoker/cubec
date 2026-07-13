@@ -63,6 +63,8 @@ cubec/
 │       ├── expression_namespace_access.h  # Namespace access (host::field)
 │       ├── expression_postfix_unary.h  # Postfix unary: value.* (deref), value.& (addr)
 │       ├── expression_typeof.h    # Typeof expression (typeof(<expression>), compile-time type computation)
+│       ├── expression_sizeof.h    # Sizeof expression (sizeof(<expression>), compile-time size computation)
+│       ├── expression_alignof.h   # Alignof expression (alignof(<expression>), compile-time alignment computation)
 │       ├── expression_slice.h   # Slice expression (host[start:length])
 │       ├── expression_spread.h  # Spread expression (...expr)
 │       ├── expression_ternary.h # Ternary/conditional expression (cond ? consequent : alternate)
@@ -158,6 +160,8 @@ node_t (core/node.h)
         ├── cubec_expression_type_constraint_t (cubec/expression_type_constraint.h)
         ├── cubec_expression_type_ternary_t (cubec/expression_type_ternary.h)
         ├── cubec_expression_typeof_t (cubec/expression_typeof.h)  # typeof(<expression>)
+        ├── cubec_expression_sizeof_t (cubec/expression_sizeof.h)  # sizeof(<expression>)
+        ├── cubec_expression_alignof_t (cubec/expression_alignof.h)  # alignof(<expression>)
         └── cubec_literal_t (cubec/literal.h)
               ├── cubec_literal_char_t
               ├── cubec_literal_identifier_t
@@ -200,6 +204,8 @@ node_t (core/node.h)
         ├── cubec_expression_type_constraint_t (cubec/expression_type_constraint.h)
         ├── cubec_expression_type_ternary_t (cubec/expression_type_ternary.h)
         ├── cubec_expression_typeof_t (cubec/expression_typeof.h)  # typeof(<expression>)
+        ├── cubec_expression_sizeof_t (cubec/expression_sizeof.h)  # sizeof(<expression>)
+        ├── cubec_expression_alignof_t (cubec/expression_alignof.h)  # alignof(<expression>)
         └── cubec_literal_t (cubec/literal.h)
               ├── cubec_literal_char_t
               ├── cubec_literal_identifier_t
@@ -300,7 +306,7 @@ Note: `...` (ellipsis/spread) is tokenized as a `SYMBOL` with text `"..."`, rely
 - `resolve_token_list` — Complete lexer entry point, returns token vector
 
 ### Keywords (36 total)
-`break`, `case`, `comptime`, `const`, `continue`, `defer`, `do`, `else`, `enum`, `export`, `extends`, `extern`, `for`, `foreach`, `from`, `func`, `if`, `import`, `in`, `inline`, `is`, `mutable`, `of`, `pub`, `register`, `return`, `struct`, `switch`, `test`, `type`, `typeof`, `union`, `var`, `volatile`, `while`
+`break`, `case`, `comptime`, `const`, `continue`, `defer`, `do`, `else`, `enum`, `export`, `extends`, `extern`, `for`, `foreach`, `from`, `func`, `if`, `import`, `in`, `inline`, `is`, `mutable`, `of`, `pub`, `register`, `return`, `struct`, `switch`, `test`, `type`, `typeof`, `sizeof`, `alignof`, `union`, `var`, `volatile`, `while`
 
 ### Known Issue
 Whitespace tokens are sometimes incorrectly marked as `SYMBOL` (documented as "bug" in tests).
@@ -335,6 +341,8 @@ read_program_node()   ──────────────────► 
               │     └── read_value()              →
               │           ├── read_atom()          基础值
               │           │   ├─ read_expression_typeof()    typeof(expr) 编译期类型计算
+              │           │   ├─ read_expression_sizeof()    sizeof(expr) 编译期大小计算
+              │           │   ├─ read_expression_alignof()   alignof(expr) 编译期对齐计算
               │           │   ├─ read_expression_group()    (...)
               │           │   ├─ read_literal_string()      "..."
               │           │   ├─ read_literal_numeric()     42, 0xFF, 3.14e5
@@ -404,7 +412,7 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_expression_call` (expression_call.c) — Parses C-style function call `callee(arg1, arg2, ...)`. Called from `read_value` as a postfix operator with `callee` already parsed. Each argument first tries `read_expression_spread` (supporting `...expr`), then falls back to `read_expression`. Returns NULL if next token is not `(`; THROW errors on malformed arguments (trailing comma, unclosed paren). Supports chained calls `foo()()` and mix with member: `obj.method()`, `foo().field`. **Ownership**: `arguments` vec created with `auto_dispose=true` in parser; `init` directly takes the pointer (no copy), ownership fully transferred to node.
 - `read_expression_generic_instantiation` (expression_generic_instantiation.c) — Parses generic instantiation `callee[arg1, arg2, ...]`. Uses `[` and `]` as delimiters. Arguments parsed via `read_expression`, each first tries `read_expression_spread` (supporting `...expr` in generic args). Returns NULL if next token is not `[`; THROW errors on malformed arguments (trailing comma, unclosed bracket). Supports chained instantiations `fn[a][b]` and mixing with calls and member access: `fn[a]()`, `fn[a].field`, `foo()[a]`. Single-arg form `obj[0]` is syntactically ambiguous with member access — disambiguation deferred to semantic analysis.
 - `read_expression_slice` (expression_slice.c) — Parses slice expression `host[start:length]`. Called from `read_value` as a postfix operator with `host` already parsed. Format: `host[start:length]` where `start` and `length` are both optional (at least `:` must be present). If `[` doesn't follow, returns NULL gracefully. If `[]` (empty brackets), throws error. Uses `read_expression` for parsing start/length expressions. Supports chained slices `arr[1:2][0:1]` and mixing with calls and member access: `arr[0:1].field`, `getArr()[1:]`. Node fields: `host`, `start`, `length` (start/length may be NULL if omitted).
-- `read_atom` (expression.c) — Parses in order: `read_expression_initialize_list` → `read_expression_typeof` → `read_expression_function` → `read_expression_group` → `read_literal_string` → `read_literal_numeric` → `read_literal_identifier` → `read_literal_char`
+- `read_atom` (expression.c) — Parses in order: `read_expression_initialize_list` → `read_expression_typeof` → `read_expression_sizeof` → `read_expression_alignof` → `read_expression_function` → `read_expression_group` → `read_literal_string` → `read_literal_numeric` → `read_literal_identifier` → `read_literal_char`
 - `read_expression_group` (expression_group.c) — Parses parenthesized expression `( expr )`. Returns `cubec_expression_group_t` wrapping the inner expression. Tried first in `read_atom` so `(a + b)` is parsed as a group wrapping a binary expression.
 - `read_expression_initialize_list` (expression_initialize_list.c) — Parses initialize list expression `.<type>{<items>}` or `.{<items>}`. Called from `read_atom` as a primary expression (tried before `read_expression_group`). Checks for `.` at current position, then looks ahead: `.` + `{` → anonymous (type=NULL), `.` + type expression + `{` → typed. Type is parsed via `read_expression_type` (supports member access, generic instantiation, pointer, etc.). Items are comma-separated and must be homogeneous: either all `initialize_field` (`.name = value`) or all positional expressions — mixing is an error. First item determines mode: tries `read_expression_initialize_field` first; if that fails, falls back to `read_expression`. In field mode, non-field items cause error; in positional mode, field-like items cause error. Disambiguation: `.{.Test{}}` is positional (`.Test{}` is a nested initialize_list expression), `.{.Test=123}` is field mode (`.Test=123` has `=`). THROW errors on: trailing comma, unclosed `}`, mixed field/positional items. Returns `cubec_expression_initialize_list_t` with `type` (nullable node_t), `items` (vec_t with auto_dispose=true), `is_field` (bool). Supports postfix chaining: `.Vec{1,2}.field`, and binary context: `1 + .Vec{1,2}`.
 - `read_expression_initialize_field` (expression_initialize_field.c) — Parses initialize field expression `.identifier = expression`. Used inside `read_expression_initialize_list` to parse individual field items. Checks for `.` followed by identifier followed by `=`. Returns NULL if the `.` + identifier + `=` pattern is not matched (not an error — allows caller to try positional expression parsing). Returns `cubec_expression_initialize_field_t` with `field` (cubec_literal_identifier_t) and `value` (node_t).
@@ -509,6 +517,8 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 - `dt_expression_initialize_field.cpp` (12 cases) — initialize field expressions: basic `.name = 42`, string/identifier/binary expression values, spaces, no-dot returns NULL, no-equals returns NULL, missing identifier after dot, numeric after dot, clone, move, nested expression in value, consume all tokens
 - `dt_expression_initialize_list.cpp` (23 cases) — initialize list expressions: anonymous empty `.{}`, typed empty `.Vec{}`, typed field items `.Vec{.x=1, .y=2}`, typed positional items `.Vec{1, 2, 3}`, anonymous field/positional items, nested initialize_list as expression `.{.Test{}}`, field vs expression disambiguation `.{.Test=123}`, postfix member chain `.Vec{1,2}.field`, in binary expression `1 + .Vec{1,2}`, trailing comma allowed `.Vec{1, }`, unclosed brace error, mixed items error, clone, move, single positional/field item, no-dot returns NULL, dot+identifier without brace returns NULL, nested typed with fields `.{.Inner{.a=1}}`, typed namespace access type `.std::vec::Vec{1,2}`, typed generic instantiation `.Vec[i32]{1,2}`, typed pointer type `.*i32{1,2}`
 - `dt_expression_typeof.cpp` (14 cases) — typeof expressions: typeof with identifier `typeof(x)`, typeof with binary expression `typeof(a+b)`, typeof with function call `typeof(foo())`, typeof as type expression, typeof with namespace access `typeof(File)::open`, typeof as pointer base `*typeof(x)`, typeof as slice base `[]typeof(x)`, typeof with generic instantiation `typeof(Vec)[i32]`, consume all tokens, missing `(` error, missing `)` error, not typeof returns NULL, clone, move
+- `dt_expression_sizeof.cpp` (13 cases) — sizeof expressions: sizeof with identifier `sizeof(x)`, sizeof with binary expression `sizeof(a+b)`, sizeof with function call `sizeof(foo())`, via read_expression, sizeof with member access `sizeof(x).field`, sizeof in binary `sizeof(x) + sizeof(y)`, consume all tokens, missing `(` error, missing `)` error, not sizeof returns NULL, clone, move
+- `dt_expression_alignof.cpp` (13 cases) — alignof expressions: alignof with identifier `alignof(x)`, alignof with binary expression `alignof(a+b)`, alignof with function call `alignof(foo())`, via read_expression, alignof with member access `alignof(x).field`, alignof in binary `alignof(x) + alignof(y)`, consume all tokens, missing `(` error, missing `)` error, not alignof returns NULL, clone, move
 - `dt_expression_function.cpp` (21 cases) — function expressions: no captures no params `func || () { }`, simple captures `func |x, y| () { }`, empty captures with params, generic with/no captures, with params, no return type, complex return type, no params, immediate call `func |x| (...)(42)`, chained member, assign to var, clone, clone with captures, move, missing pipe error, missing close pipe error, missing body error, not func returns NULL, via read_expression, consume all tokens
 - `dt_statement_expression.cpp` (10 cases) — expression statements: simple identifier `foo;`, numeric literal `42;`, binary expression `a + b;`, function call `foo();`, namespace access call `std::Vec::create();`, consume all tokens, missing semicolon error, semicolon only returns NULL, clone, move
 - `dt_statement_block.cpp` (11 cases) — empty block `{}`, single empty statement `{;}`, single expression statement `{ foo(); }`, multiple statements `{ foo(); bar; ; }`, nested blocks `{ { ; } }`, via read_statement dispatcher, no brace returns NULL, unclosed brace is error, unexpected token in block is error, clone, move
