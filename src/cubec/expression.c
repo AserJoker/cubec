@@ -17,6 +17,7 @@
 #include "cubec/expression_type_function.h"
 #include "cubec/expression_type_interface.h"
 #include "cubec/expression_type_struct.h"
+#include "cubec/expression_type_enum.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_postfix_unary.h"
@@ -135,6 +136,13 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
 
   // Try struct type: struct[generic_params] { members }
   result = read_expression_type_struct(allocator, tokens, &current, filename);
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try enum type: enum { items }
+  result = read_expression_type_enum(allocator, tokens, &current, filename);
   if (result) {
     *position = current;
     return result;
@@ -367,6 +375,12 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
   }
   /* Try struct type expression: struct[generic_params] { members } */
   node = read_expression_type_struct(allocator, tokens, &current, filename);
+  if (node) {
+    *position = current;
+    return node;
+  }
+  /* Try enum type expression: enum { items } */
+  node = read_expression_type_enum(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;

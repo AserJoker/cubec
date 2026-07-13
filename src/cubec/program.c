@@ -13,6 +13,8 @@
 #include "cubec/statement_function.h"
 #include "cubec/statement_interface.h"
 #include "cubec/statement_struct.h"
+#include "cubec/statement_enum.h"
+#include "cubec/statement_cunion.h"
 #include "cubec/statement_import.h"
 #include "cubec/token.h"
 #include <stdint.h>
@@ -105,6 +107,14 @@ node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
     if (!statement) {
       /* Try statement_struct (struct ... / export struct ...) */
       statement = TRY_LOCAL(onerror, read_statement_struct(allocator, tokens, &current, filename));
+    }
+    if (!statement) {
+      /* Try statement_enum (enum ... / export enum ...) */
+      statement = TRY_LOCAL(onerror, read_statement_enum(allocator, tokens, &current, filename));
+    }
+    if (!statement) {
+      /* Try statement_cunion (cunion ...) */
+      statement = TRY_LOCAL(onerror, read_statement_cunion(allocator, tokens, &current, filename));
     }
     if (!statement) {
       /* Try statement_empty (;) */

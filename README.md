@@ -110,18 +110,19 @@ func main(): void {
 
 标识符遵循 Unicode 标准（通过 ICU `u_isIDStart`/`u_isIDPart` 识别），支持非 ASCII 字符。
 
-**关键字（40个）**：
+**关键字（41个）**：
 
 | | | | | |
 |---|---|---|---|---|
 | `alignof` | `as` | `break` | `builtin` | `case` |
-| `comptime` | `const` | `continue` | `defer` | `do` |
-| `else` | `enum` | `export` | `extends` | `extern` |
-| `for` | `foreach` | `from` | `func` | `if` |
-| `import` | `in` | `inline` | `interface` | `is` |
-| `mutable` | `of` | `pub` | `register` | `return` |
-| `sizeof` | `struct` | `switch` | `test` | `type` |
-| `typeof` | `union` | `var` | `volatile` | `while` |
+| `comptime` | `const` | `continue` | `cunion` | `defer` |
+| `do` | `else` | `enum` | `export` | `extends` |
+| `extern` | `for` | `foreach` | `from` | `func` |
+| `if` | `import` | `in` | `inline` | `interface` |
+| `is` | `mutable` | `of` | `pub` | `register` |
+| `return` | `sizeof` | `struct` | `switch` | `test` |
+| `type` | `typeof` | `union` | `var` | `volatile` |
+| `while` | | | | |
 
 ---
 
@@ -133,6 +134,7 @@ Cubec 提供标准整数和浮点类型：
 
 | 类型 | 描述 |
 |------|------|
+| `void` | 空类型（预定义标识符，非关键字） |
 | `i8`, `i16`, `i32`, `i64` | 有符号整数 |
 | `u8`, `u16`, `u32`, `u64` | 无符号整数 |
 | `f16`, `f32`, `f64` | 浮点数（`f16` 为 IEEE 754 binary16 半精度浮点） |
@@ -1018,7 +1020,7 @@ cubec/
 │   ├── core/         # 核心数据结构（vec, list, rbtree, map, string 等）
 │   └── cubec/        # 前端模块（词法/语法分析）
 ├── src/              # 源文件（与 include/ 对应）
-├── test/             # 测试文件（Google Test, 867 测试用例）
+├── test/             # 测试文件（Google Test, 900 测试用例）
 ├── demo/             # 示例 .cubec 文件
 └── third_party/      # 第三方依赖
 ```
@@ -1067,19 +1069,20 @@ cubec/
   - 匿名 interface 类型表达式（`interface [<generic_params>] { <members> }`，可用于泛型约束和类型位置，无编译产物）
   - `struct` 结构体声明语句（`[export] struct <name> [<generic_params>] { <members> }`，成员包含实例字段 `[pub] <name> : <type> ;`、静态字段 `var`、关联类型 `type`、方法 `func`、spread `...<expr> ;` 等，body 为语句序列）
   - 匿名 struct 类型表达式（`struct [<generic_params>] { <members> }`，用于类型别名等类型位置）
+  - `enum` 枚举声明语句（`[export] enum <name> { <items> }`，成员 `<name> [: <type>] [= <value>]`，逗号分隔，不支持泛型，支持匿名类型表达式）
+  - 匿名 enum 类型表达式（`enum { <items> }`，用于类型别名等类型位置）
+  - `cunion` C 风格联合体声明语句（`cunion <name> { <fields> }`，字段 `<identifier> : <type> ;` 分号分隔，无泛型/export/匿名）
   - `import` 导入语句（`import <module_name> [as <alias>] from "<path>";`）
   - `return` 返回语句（`return [<expression>];`）
   - 泛型参数解析（支持简单 `T`、约束 `T extends U`、值泛型 `N: u64`、rest 参数 `...Args` 四种形式）
   - `read_statement` 语句分派器（按优先级尝试各语句类型）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：867 测试用例覆盖所有核心模块
+- **测试体系**：900 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 
 - **声明解析**（语法设计已确认）：
-  - `enum` 枚举声明（TypeScript 风格，`[export] enum <name> { <item> [: <type>] [= <value>], ... }`，支持匿名类型表达式）
   - `union` 联合体声明（Rust tagged union 风格，`[export] union <name> [<generic_params>] { <field>: <type>, ... }`，支持泛型和匿名类型表达式）
-  - `cunion` C 风格联合体（`cunion <name> { <field>: <type>; ... }`，分号分隔，无泛型/export/匿名）
 - **语句解析**（语法设计已确认）：
   - `if`/`else` 条件语句（`if(condition) { } else if(condition) { } else { }`）
   - `for` 循环（C 风格 `for(init; cond; incr) { }`）

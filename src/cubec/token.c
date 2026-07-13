@@ -570,7 +570,7 @@ static const char *keywords[] = {
     "for",     "foreach", "from",     "func",     "if",    "import",   "in",
     "interface",
     "inline",  "mutable", "of",       "pub",   "register", "return",
-    "struct",  "switch",  "test",     "union", "volatile", "while",
+    "struct",  "switch",  "test",     "cunion", "union", "volatile", "while",
     "extends", "as",      "is",       "typeof", "sizeof", "alignof", "builtin", "type", "var", 0,
 };
 static token_t read_identifier_token(allocator_t allocator,
