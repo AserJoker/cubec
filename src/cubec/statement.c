@@ -1,6 +1,7 @@
 #include "cubec/statement.h"
 #include "core/error.h"
 #include "cubec/statement_block.h"
+#include "cubec/statement_comptime.h"
 #include "cubec/statement_declaration.h"
 #include "cubec/statement_declaration_type.h"
 #include "cubec/statement_empty.h"
@@ -31,6 +32,15 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try block statement ({...}) */
   node_t node = TRY_LOCAL(onerror, read_statement_block(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try comptime statement (comptime { } / comptime if / comptime for) —
+     must be before declaration/function since 'comptime' is also a modifier */
+  current = *position;
+  node = TRY_LOCAL(onerror, read_statement_comptime(allocator, tokens, &current, filename));
   if (node) {
     *position = current;
     return node;
