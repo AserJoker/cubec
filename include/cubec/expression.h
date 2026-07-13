@@ -31,17 +31,20 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
 node_t read_value(allocator_t allocator, vec_t tokens, size_t *position,
                   const char *filename);
 
-/** @brief Parse a full type expression, trying ternary type first and
- *  falling back to primary (non-ternary) type expression */
+/** @brief Parse a type expression. Now identical to read_expression —
+ *  type and value expressions share a unified parsing path.
+ *  Composite types (pointer/slice/array/qualifier/function type) greedily
+ *  consume their inner type, including ternary: const a ? b : c → const(ternary).
+ *  Use grouping to prevent greedy consumption: (const a) ? b : c. */
 node_t read_expression_type(allocator_t allocator, vec_t tokens,
                             size_t *position, const char *filename);
 
-/** @brief Parse a primary (non-ternary) type expression: identifier with
- *  optional namespace access (::), generic instantiation, pointer/slice/array
- *  declaration, and grouping.
- *  @note Internal helper: should only be called by read_expression_type
- *        and read_expression_type_ternary. External callers should use
- *        read_expression_type. */
+/** @brief Parse a primary (non-ternary, non-binary) type expression:
+ *  identifier with optional namespace access (::), generic instantiation,
+ *  pointer/slice/array declaration, const/volatile qualifier, typeof/sizeof/alignof,
+ *  function type, and grouping.
+ *  @note Internal helper for read_atom and type_constraint parsing.
+ *        External callers should use read_expression_type. */
 node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
                                     size_t *position, const char *filename);
 

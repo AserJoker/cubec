@@ -1,4 +1,4 @@
-﻿#include "cubec/expression_generic_instantiation.h"
+#include "cubec/expression_generic_instantiation.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
@@ -137,10 +137,6 @@ node_t read_expression_generic_instantiation(allocator_t allocator,
     if (!arg) {
       arg = TRY_LOCAL(onerror,
                       read_expression(allocator, tokens, &current, filename));
-    }
-    if(!arg){
-      arg = TRY_LOCAL(onerror,
-                      read_expression_type(allocator, tokens, &current, filename));
     }
     if (!arg) {
       /* Try wildcard '?' as a generic argument */

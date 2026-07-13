@@ -35,7 +35,7 @@
   - [切片表达式](#切片表达式)
   - [typeof 表达式](#typeof-表达式)
   - [初始化列表](#初始化列表)
-  - [分组类型表达式](#分组类型表达式)
+  - [分组类型表达式](#分组类型表达式)（阻止复合类型贪婪消费）
 - [类型级三元条件表达式](#类型级三元条件表达式)
 - [类型约束表达式](#类型约束表达式)
 - [语句](#语句)
@@ -174,10 +174,11 @@ const const i32        // 嵌套 const
 
 > **注意**：`const * i32` 与 `* const i32` 语义不同。`const * i32` 是 const 修饰整个指针类型，而 `* const i32` 是指针声明中 const 限定符修饰指针本身。
 
-const 类型表达式的 base_type 不直接消费三元表达式，需要通过分组类型表达式包裹：
+const 类型表达式贪婪消费内部类型，包括三元：
 
 ```c
-const (a ? b : c)      // const 修饰的三元类型（需分组）
+const a ? b : c    // → const(ternary(a, b, c))
+const (a) ? b : c  // → ternary(const(a), b, c)（需分组消歧）
 ```
 
 ### volatile 类型表达式
@@ -201,10 +202,11 @@ const volatile i32      // const 修饰 volatile i32（const 在外层）
 volatile const i32      // volatile 修饰 const i32（volatile 在外层）
 ```
 
-与 const 相同，volatile 的 base_type 不直接消费三元表达式：
+与 const 相同，volatile 贪婪消费内部类型，包括三元：
 
 ```c
-volatile (a ? b : c)   // volatile 修饰的三元类型（需分组）
+volatile a ? b : c    // → volatile(ternary(a, b, c))
+volatile (a) ? b : c  // → ternary(volatile(a), b, c)（需分组消歧）
 ```
 
 ### 切片声明
@@ -393,14 +395,16 @@ typeof(a + b)          // 获取表达式 a + b 的结果类型
 typeof(foo())          // 获取函数返回类型
 ```
 
-`typeof` 在语法上被视为**顶层类型表达式**（与三元类型同级），可以用于任何需要类型的地方。支持后缀命名空间访问和泛型实例化，但不能被指针/切片声明包裹：
+`typeof` 在语法上被视为**顶层类型表达式**（与三元类型同级），可以用于任何需要类型的地方。支持后缀命名空间访问和泛型实例化，也可以作为指针/切片/数组的基础类型：
 
 ```c
 typeof(File)::open     // typeof 结果 + 命名空间访问（类型静态方法）
 typeof(Vec)[i32]       // typeof 结果的泛型实例化
+* typeof(x)            // 指向 typeof(x) 结果类型的指针
+[] typeof(x)           // typeof(x) 结果类型的切片
 ```
 
-> **注意**：`typeof` 仅在编译期计算类型，内部表达式不会在运行时求值。`typeof` 是顶层类型表达式，与三元类型平级，不能作为指针/切片的 base_type。
+> **注意**：`typeof` 仅在编译期计算类型，内部表达式不会在运行时求值。
 
 ### 初始化列表
 
@@ -444,16 +448,19 @@ Cubec 使用 `.<type>{<items>}` 语法创建初始化列表（结构体/容器�
 
 ### 分组类型表达式
 
-用于在类型注解中明确分组复杂类型：
+用于在类型注解中明确分组复杂类型，阻止复合类型的贪婪消费行为：
 
 ```c
 ([]i32)              // 分组切片类型
 (*i32)               // 分组指针类型
 (Vec[i32])           // 分组泛型类型
 (Ptr[T])             // 分组泛型指针类型
+(const a) ? b : c    // 阻止 const 贪婪消费三元
+(*a) ? b : c         // 阻止指针贪婪消费三元
+(func(i32) -> i32) ? Vec[i32] : f32  // 阻止函数类型贪婪消费三元
 ```
 
-分组类型表达式使用括号将类型表达式包装，用于澄清复杂类型注解的优先级，或者在需要明确分组的地方使用。例如 `Vec[[]i32]` 中的内层 `[]i32` 需要分组来表示切片类型作为泛型参数。
+分组类型表达式使用括号将类型表达式包装，与值级分组表达式共用 `( expr )` 语法。类型和值表达式已统一解析路径，括号内使用 `read_expression()` 解析。
 
 ### 类型级三元条件表达式
 
@@ -474,16 +481,22 @@ T == i32 ? Vec[T] : T           // 类型等值约束作为 condition
 ( 1 ) ? a : b                   // 编译期字面量条件
 ```
 
-类型级三元与值级三元共用 `? :` 语法，但语义不同：类型级三元在编译期类型推导时求值，用于泛型约束中的类型分支选择。指针/切片/数组的 base_type 使用基础类型表达式解析（不含三元），因此三元表达式不能直接作为 base_type。如果需要将三元类型作为 base_type，必须通过分组类型表达式包裹：
+类型级三元与值级三元共用 `? :` 语法，但语义不同：类型级三元在编译期类型推导时求值，用于泛型约束中的类型分支选择。复合类型（指针/切片/数组/const/volatile/函数类型）贪婪消费内部类型表达式，包括三元：
 
 ```c
-* a ? b : c      // → (*a) ? b : c   指针作为三元条件
-[] a ? b : c     // → ([]a) ? b : c   切片作为三元条件
-[10] a ? b : c   // → ([10]a) ? b : c 数组作为三元条件
+* a ? b : c           // → *(a ? b : c)   指针贪婪消费三元
+[] a ? b : c          // → [](a ? b : c)  切片贪婪消费三元
+[10] a ? b : c        // → [10](a ? b : c) 数组贪婪消费三元
+const a ? b : c       // → const(a ? b : c) const 贪婪消费三元
+func(i32) -> A ? B : C  // → func(i32) -> (A ? B : C) 返回类型贪婪消费三元
+```
 
-* (a ? b : c)    // → *(a ? b : c)   指针指向三元类型（需分组）
-[] (a ? b : c)   // → [](a ? b : c)  切片指向三元类型（需分组）
-[10] (a ? b : c) // → [10](a ? b : c) 数组指向三元类型（需分组）
+需要消歧时用分组阻止贪婪：
+
+```c
+(*a) ? b : c          // → ternary(pointer(a), b, c)
+(const a) ? b : c     // → ternary(const(a), b, c)
+(func(i32) -> i32) ? Vec[i32] : f32  // → ternary(func(i32) -> i32, Vec[i32], f32)
 ```
 
 条件表达式 `a ? : b`（缺少 consequent）和 `a ? b :`（缺少 alternate）会触发解析错误。
@@ -975,7 +988,7 @@ cubec/
 │   ├── core/         # 核心数据结构（vec, list, rbtree, map, string 等）
 │   └── cubec/        # 前端模块（词法/语法分析）
 ├── src/              # 源文件（与 include/ 对应）
-├── test/             # 测试文件（Google Test, 710 测试用例）
+├── test/             # 测试文件（Google Test, 789 测试用例）
 ├── demo/             # 示例 .cubec 文件
 └── third_party/      # 第三方依赖
 ```
@@ -1003,13 +1016,12 @@ cubec/
   - 函数表达式（`func |<captures>| [<generic_params>] (<params>) [-> <return_type>] { <body> }`，捕获列表可选；命名形式 `func <name> ...` 支持可选 body `;`，支持 C-style variadic `...`）
   - 初始化列表表达式（`.<type>{<items>}` 或 `.{<items>}`，支持字段/位置模式，类型支持复杂类型表达式）
   - 初始化字段表达式（`.field = value`，初始化列表的字段项）
-  - typeof 表达式（`typeof(<expression>)`，编译期类型计算，顶层类型表达式，支持后缀 `::`/`[]`，不能作为指针/切片的 base_type）
-  - 类型表达式（用于类型标注，含指针声明 `* [const] [volatile] <type>`）
-  - 分组类型表达式（`( type_expression )`）
+  - typeof 表达式（`typeof(<expression>)`，编译期类型计算，顶层类型表达式，支持后缀 `::`/`[]`，可作为指针/切片的 base_type）
+  - 类型表达式（用于类型标注，含指针声明 `* [const] [volatile] <type>`，复合类型贪婪消费三元）
+  - 分组类型表达式（`( type_expression )`，阻止复合类型贪婪消费）
   - 类型级三元条件表达式（`condition ? type : type`，编译期类型分支，condition 支持类型约束/编译期表达式/简单标识符）
   - 类型约束表达式（`T extends U`, `T == U`, `T != U`，作为类型三元条件使用，bare 形式报错）
-  - const 类型表达式（`const <type>`，独立前缀类型修饰符，与指针/切片地位相当）
-  - volatile 类型表达式（`volatile <type>`，独立前缀类型修饰符，与 const/指针/切片地位相当）
+  - const/volatile 类型限定符（`const <type>` / `volatile <type>`，合并为 `expression_type_qualifier`，独立前缀类型修饰符，贪婪消费内部类型）
   - 数组声明表达式（`[ <expr> ] <type>`）
 - **语句解析器**：
   - 块语句（`{ <statements> }`，引入新作用域，支持空块和嵌套）
@@ -1023,7 +1035,7 @@ cubec/
   - 泛型参数解析（支持简单 `T`、约束 `T extends U`、值泛型 `N: u64`、rest 参数 `...Args` 四种形式）
   - `read_statement` 语句分派器（按优先级尝试各语句类型）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：710 测试用例覆盖所有核心模块
+- **测试体系**：789 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 

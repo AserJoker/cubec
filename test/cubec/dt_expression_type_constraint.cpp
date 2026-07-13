@@ -1,10 +1,11 @@
 #include "cubec/expression.h"
-#include "cubec/declaration_pointer.h"
-#include "cubec/expression_type_constraint.h"
-#include "cubec/expression_type_group.h"
-#include "cubec/expression_type_ternary.h"
+#include "cubec/expression_binary.h"
+#include "cubec/expression_ternary.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_namespace_access.h"
+#include "cubec/expression_type_qualifier.h"
+#include "cubec/declaration_pointer.h"
+#include "cubec/expression_group.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -21,68 +22,62 @@ protected:
 };
 
 /* --------------------------------------------------------------------------
- *  Basic constraint operators
+ *  Basic constraint operators (now binary ops)
  * -------------------------------------------------------------------------- */
 
-/* extends: T extends U */
+/* extends: T extends U → EXPRESSION_BINARY with opt "extends" */
 TEST_F(dt_expression_type_constraint, simple_extends) {
   const char *source = "T extends U";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node =
-      read_expression_type_constraint(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_CONSTRAINT);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  cubec_expression_type_constraint_t c =
-      (cubec_expression_type_constraint_t)node;
-  EXPECT_EQ(c->op, CUBEC_TYPE_CONSTRAINT_EXTENDS);
-  ASSERT_NE(c->left, nullptr);
-  EXPECT_EQ(c->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  ASSERT_NE(c->right, nullptr);
-  EXPECT_EQ(c->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
+  EXPECT_STREQ(string_get(bin->opt), "extends");
+  ASSERT_NE(bin->left, nullptr);
+  EXPECT_EQ(bin->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  ASSERT_NE(bin->right, nullptr);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-/* ==: T == U */
+/* ==: T == U → EXPRESSION_BINARY with opt "==" */
 TEST_F(dt_expression_type_constraint, simple_eq) {
   const char *source = "T == U";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node =
-      read_expression_type_constraint(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_CONSTRAINT);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  cubec_expression_type_constraint_t c =
-      (cubec_expression_type_constraint_t)node;
-  EXPECT_EQ(c->op, CUBEC_TYPE_CONSTRAINT_EQ);
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
+  EXPECT_STREQ(string_get(bin->opt), "==");
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-/* !=: T != U */
+/* !=: T != U → EXPRESSION_BINARY with opt "!=" */
 TEST_F(dt_expression_type_constraint, simple_ne) {
   const char *source = "T != U";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node =
-      read_expression_type_constraint(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_CONSTRAINT);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  cubec_expression_type_constraint_t c =
-      (cubec_expression_type_constraint_t)node;
-  EXPECT_EQ(c->op, CUBEC_TYPE_CONSTRAINT_NE);
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
+  EXPECT_STREQ(string_get(bin->opt), "!=");
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -99,8 +94,7 @@ TEST_F(dt_expression_type_constraint, fallback_simple_identifier) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node =
-      read_expression_type_constraint(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -119,16 +113,14 @@ TEST_F(dt_expression_type_constraint, extends_generic_right) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node =
-      read_expression_type_constraint(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_CONSTRAINT);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  cubec_expression_type_constraint_t c =
-      (cubec_expression_type_constraint_t)node;
-  EXPECT_EQ(c->op, CUBEC_TYPE_CONSTRAINT_EXTENDS);
-  EXPECT_EQ(c->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_EQ(c->right->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
+  EXPECT_STREQ(string_get(bin->opt), "extends");
+  EXPECT_EQ(bin->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -141,38 +133,36 @@ TEST_F(dt_expression_type_constraint, eq_member_right) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node =
-      read_expression_type_constraint(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_CONSTRAINT);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  cubec_expression_type_constraint_t c =
-      (cubec_expression_type_constraint_t)node;
-  EXPECT_EQ(c->op, CUBEC_TYPE_CONSTRAINT_EQ);
-  EXPECT_EQ(c->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_EQ(c->right->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
+  EXPECT_STREQ(string_get(bin->opt), "==");
+  EXPECT_EQ(bin->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-/* != with pointer right operand: T != * const i32 */
+/* != with pointer right operand: T != * const i32
+ * Note: This requires read_expression_type() because the value expression
+ * parser cannot handle *-prefixed type expressions yet. */
 TEST_F(dt_expression_type_constraint, ne_pointer_right) {
   const char *source = "T != * const i32";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node =
-      read_expression_type_constraint(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_CONSTRAINT);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  cubec_expression_type_constraint_t c =
-      (cubec_expression_type_constraint_t)node;
-  EXPECT_EQ(c->op, CUBEC_TYPE_CONSTRAINT_NE);
-  EXPECT_EQ(c->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_EQ(c->right->kind, CUBEC_NODE_DECLARATION_POINTER);
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
+  EXPECT_STREQ(string_get(bin->opt), "!=");
+  EXPECT_EQ(bin->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_DECLARATION_POINTER);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -182,7 +172,7 @@ TEST_F(dt_expression_type_constraint, ne_pointer_right) {
  *  Constraint as ternary condition (via read_expression_type)
  * -------------------------------------------------------------------------- */
 
-/* T extends U ? X : Y — constraint as ternary condition */
+/* T extends U ? X : Y — binary extends as ternary condition */
 TEST_F(dt_expression_type_constraint, extends_ternary) {
   const char *source = "T extends U ? X : Y";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
@@ -191,16 +181,14 @@ TEST_F(dt_expression_type_constraint, extends_ternary) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_TERNARY);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
-  cubec_expression_type_ternary_t ternary =
-      (cubec_expression_type_ternary_t)node;
+  cubec_expression_ternary_t ternary = (cubec_expression_ternary_t)node;
   ASSERT_NE(ternary->condition, nullptr);
-  EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_TYPE_CONSTRAINT);
+  EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  cubec_expression_type_constraint_t c =
-      (cubec_expression_type_constraint_t)ternary->condition;
-  EXPECT_EQ(c->op, CUBEC_TYPE_CONSTRAINT_EXTENDS);
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)ternary->condition;
+  EXPECT_STREQ(string_get(bin->opt), "extends");
 
   EXPECT_EQ(ternary->consequent->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
   EXPECT_EQ(ternary->alternate->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
@@ -209,7 +197,7 @@ TEST_F(dt_expression_type_constraint, extends_ternary) {
   allocator_free(allocator, &tokens);
 }
 
-/* T == U ? X : Y — equality constraint as ternary condition */
+/* T == U ? X : Y — equality binary as ternary condition */
 TEST_F(dt_expression_type_constraint, eq_ternary) {
   const char *source = "T == i32 ? Vec[ T ] : T";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
@@ -218,18 +206,16 @@ TEST_F(dt_expression_type_constraint, eq_ternary) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_TERNARY);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
-  cubec_expression_type_ternary_t ternary =
-      (cubec_expression_type_ternary_t)node;
+  cubec_expression_ternary_t ternary = (cubec_expression_ternary_t)node;
   ASSERT_NE(ternary->condition, nullptr);
-  EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_TYPE_CONSTRAINT);
+  EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  cubec_expression_type_constraint_t c =
-      (cubec_expression_type_constraint_t)ternary->condition;
-  EXPECT_EQ(c->op, CUBEC_TYPE_CONSTRAINT_EQ);
-  EXPECT_EQ(c->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_EQ(c->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)ternary->condition;
+  EXPECT_STREQ(string_get(bin->opt), "==");
+  EXPECT_EQ(bin->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   EXPECT_EQ(ternary->consequent->kind,
             CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
@@ -239,7 +225,7 @@ TEST_F(dt_expression_type_constraint, eq_ternary) {
   allocator_free(allocator, &tokens);
 }
 
-/* T != U ? X : Y — inequality constraint as ternary condition */
+/* T != U ? X : Y — inequality binary as ternary condition */
 TEST_F(dt_expression_type_constraint, ne_ternary) {
   const char *source = "T != f64 ? f32 : T";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
@@ -248,29 +234,57 @@ TEST_F(dt_expression_type_constraint, ne_ternary) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_TERNARY);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
-  cubec_expression_type_ternary_t ternary =
-      (cubec_expression_type_ternary_t)node;
+  cubec_expression_ternary_t ternary = (cubec_expression_ternary_t)node;
   ASSERT_NE(ternary->condition, nullptr);
-  EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_TYPE_CONSTRAINT);
+  EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  cubec_expression_type_constraint_t c =
-      (cubec_expression_type_constraint_t)ternary->condition;
-  EXPECT_EQ(c->op, CUBEC_TYPE_CONSTRAINT_NE);
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)ternary->condition;
+  EXPECT_STREQ(string_get(bin->opt), "!=");
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
 /* --------------------------------------------------------------------------
- *  Pointer to constraint-ternary via type_group: * ( T extends U ? X : Y )
+ *  typeof + extends in value context
  * -------------------------------------------------------------------------- */
 
-/* Pointer to constraint-ternary requires type_group wrapping:
- * * ( T extends U ? X : Y )  →  pointer(type_group(ternary(constraint, X, Y)))
- * Without type_group, * T extends U ? X : Y would only parse as *T
- * because pointer base_type uses read_type_expression_primary (no ternary). */
+/* (typeof(a) extends i32) ? 1 : 2 — value ternary with typeof+extends condition */
+TEST_F(dt_expression_type_constraint, typeof_extends_ternary_value) {
+  const char *source = "(typeof(a) extends i32) ? 1 : 2";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
+
+  cubec_expression_ternary_t ternary = (cubec_expression_ternary_t)node;
+  /* Condition is a group wrapping binary(typeof, extends, i32) */
+  ASSERT_NE(ternary->condition, nullptr);
+  EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_GROUP);
+
+  cubec_expression_group_t group =
+      (cubec_expression_group_t)ternary->condition;
+  ASSERT_NE(group->inner, nullptr);
+  EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_BINARY);
+
+  cubec_expression_binary_t bin = (cubec_expression_binary_t)group->inner;
+  EXPECT_STREQ(string_get(bin->opt), "extends");
+  EXPECT_EQ(bin->left->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  /* Consequent and alternate are numeric literals */
+  EXPECT_EQ(ternary->consequent->kind, CUBEC_NODE_LITERAL_NUMERIC);
+  EXPECT_EQ(ternary->alternate->kind, CUBEC_NODE_LITERAL_NUMERIC);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
 TEST_F(dt_expression_type_constraint, pointer_to_extends_ternary_via_group) {
   const char *source = "* ( T extends U ? X : Y )";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
@@ -283,16 +297,16 @@ TEST_F(dt_expression_type_constraint, pointer_to_extends_ternary_via_group) {
 
   cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
   ASSERT_NE(ptr->type, nullptr);
-  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
-  cubec_expression_type_group_t group =
-      (cubec_expression_type_group_t)ptr->type;
+  cubec_expression_group_t group =
+      (cubec_expression_group_t)ptr->type;
   ASSERT_NE(group->inner, nullptr);
-  EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_TYPE_TERNARY);
+  EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
-  cubec_expression_type_ternary_t ternary =
-      (cubec_expression_type_ternary_t)group->inner;
-  EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_TYPE_CONSTRAINT);
+  cubec_expression_ternary_t ternary =
+      (cubec_expression_ternary_t)group->inner;
+  EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

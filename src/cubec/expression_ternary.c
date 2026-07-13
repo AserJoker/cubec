@@ -1,4 +1,4 @@
-﻿#include "cubec/expression_ternary.h"
+#include "cubec/expression_ternary.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
@@ -96,7 +96,8 @@ node_t read_expression_ternary(allocator_t allocator, vec_t tokens,
   node_t alternate = NULL;
 
   /* Parse condition using read_expression_binary.
-   * Caller ensures whitespace is already skipped. */
+   * This handles all binary ops including ==, !=, extends.
+   * If no '?' follows, returns the condition as-is. */
   condition = TRY_LOCAL(onerror, read_expression_binary(allocator, tokens, &current, filename));
   if (!condition) {
     return NULL;
@@ -155,8 +156,7 @@ node_t read_expression_ternary(allocator_t allocator, vec_t tokens,
   return (node_t)node;
 
 onerror:
-  /* condition may be NULL if error propagated from read_expression_binary —
-   * in that case g_error is already set. Save location before freeing. */
+  /* condition may be NULL if error propagated — save location before freeing */
   if (condition) {
     location_t loc = condition->location;
     allocator_free(allocator, &condition);

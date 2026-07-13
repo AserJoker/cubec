@@ -848,12 +848,12 @@ TEST_F(dt_expression_binary, binary_with_member_access) {
 }
 
 /* ==========================================================================
- *  extends as binary operator (compile-time type constraint)
+ *  extends IS a binary operator (same precedence as ==, !=).
+ *  It is used for type constraints: T extends U, typeof(x) extends i32, etc.
  * ========================================================================== */
 
-/* ---- T extends U as binary expression ---- */
-
-TEST_F(dt_expression_binary, binary_extends) {
+/* ---- T extends U: binary expression ---- */
+TEST_F(dt_expression_binary, extends_binary) {
   const char *source = "T extends U";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -865,18 +865,15 @@ TEST_F(dt_expression_binary, binary_extends) {
 
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
   EXPECT_STREQ(string_get(bin->opt), "extends");
-  ASSERT_NE(bin->left, nullptr);
   EXPECT_EQ(bin->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  ASSERT_NE(bin->right, nullptr);
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-/* ---- extends same precedence as ==: T extends U == true ---- */
-
-TEST_F(dt_expression_binary, extends_same_precedence_as_eq) {
+/* ---- T extends U == true: extends and == same precedence, left-associative ---- */
+TEST_F(dt_expression_binary, extends_with_eq) {
   const char *source = "T extends U == true";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -884,23 +881,22 @@ TEST_F(dt_expression_binary, extends_same_precedence_as_eq) {
   size_t position = 0;
   node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
+  /* extends and == have same precedence (6), left-associative:
+   * (T extends U) == true */
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  /* Left-associative at level 6: (T extends U) == true */
-  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
-  EXPECT_STREQ(string_get(bin->opt), "==");
-  ASSERT_NE(bin->left, nullptr);
-  EXPECT_EQ(bin->left->kind, CUBEC_NODE_EXPRESSION_BINARY);
+  cubec_expression_binary_t outer = (cubec_expression_binary_t)node;
+  EXPECT_STREQ(string_get(outer->opt), "==");
+  EXPECT_EQ(outer->left->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
-  cubec_expression_binary_t left_bin = (cubec_expression_binary_t)bin->left;
-  EXPECT_STREQ(string_get(left_bin->opt), "extends");
+  cubec_expression_binary_t inner = (cubec_expression_binary_t)outer->left;
+  EXPECT_STREQ(string_get(inner->opt), "extends");
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-/* ---- extends in ternary: T extends U ? a : b ---- */
-
+/* ---- T extends U ? a : b: extends as ternary condition ---- */
 TEST_F(dt_expression_binary, extends_in_ternary) {
   const char *source = "T extends U ? a : b";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
@@ -909,10 +905,10 @@ TEST_F(dt_expression_binary, extends_in_ternary) {
   size_t position = 0;
   node_t node = read_expression(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
+  /* T extends U is the condition, ? a : b forms the ternary */
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
   cubec_expression_ternary_t ternary = (cubec_expression_ternary_t)node;
-  ASSERT_NE(ternary->condition, nullptr);
   EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
   cubec_expression_binary_t cond = (cubec_expression_binary_t)ternary->condition;
@@ -922,9 +918,8 @@ TEST_F(dt_expression_binary, extends_in_ternary) {
   allocator_free(allocator, &tokens);
 }
 
-/* ---- extends with typeof: typeof(x) extends i32 ---- */
-
-TEST_F(dt_expression_binary, typeof_extends) {
+/* ---- typeof(x) extends i32: typeof as left operand of extends ---- */
+TEST_F(dt_expression_binary, typeof_extends_binary) {
   const char *source = "typeof(x) extends i32";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -936,18 +931,15 @@ TEST_F(dt_expression_binary, typeof_extends) {
 
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
   EXPECT_STREQ(string_get(bin->opt), "extends");
-  ASSERT_NE(bin->left, nullptr);
   EXPECT_EQ(bin->left->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
-  ASSERT_NE(bin->right, nullptr);
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-/* ---- extends with namespace access: T extends std::Vec ---- */
-
-TEST_F(dt_expression_binary, extends_namespace_right) {
+/* ---- T extends std::Vec: namespace access as right operand ---- */
+TEST_F(dt_expression_binary, extends_namespace) {
   const char *source = "T extends std::Vec";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -959,7 +951,7 @@ TEST_F(dt_expression_binary, extends_namespace_right) {
 
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
   EXPECT_STREQ(string_get(bin->opt), "extends");
-  ASSERT_NE(bin->right, nullptr);
+  EXPECT_EQ(bin->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);

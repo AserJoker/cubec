@@ -5,7 +5,7 @@
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
-#include "cubec/expression_type_group.h"
+#include "cubec/expression_group.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/node.h"
@@ -255,41 +255,49 @@ TEST_F(dt_expression_type, consume_all_tokens) {
 }
 
 /* Test: non-identifier returns null */
-TEST_F(dt_expression_type, non_identifier_returns_null) {
+/* Test: non-identifier value expressions are parsed by unified expression parser.
+ * Semantic analysis will validate type-specific usage later. */
+TEST_F(dt_expression_type, non_identifier_parsed_as_expression) {
   const char *source = "123";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-/* Test: string literal returns null */
-TEST_F(dt_expression_type, string_literal_returns_null) {
+/* Test: string literal parsed as expression */
+TEST_F(dt_expression_type, string_literal_parsed_as_expression) {
   const char *source = "\"hello\"";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_STRING);
 
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-/* Test: numeric literal returns null */
-TEST_F(dt_expression_type, numeric_literal_returns_null) {
+/* Test: numeric literal parsed as expression */
+TEST_F(dt_expression_type, numeric_literal_parsed_as_expression) {
   const char *source = "42";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
@@ -1224,9 +1232,9 @@ TEST_F(dt_expression_type, simple_type_group) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
-  cubec_expression_type_group_t group = (cubec_expression_type_group_t)node;
+  cubec_expression_group_t group = (cubec_expression_group_t)node;
   ASSERT_NE(group->inner, nullptr);
   EXPECT_EQ(group->inner->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -1246,9 +1254,9 @@ TEST_F(dt_expression_type, type_group_with_generic) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
-  cubec_expression_type_group_t group = (cubec_expression_type_group_t)node;
+  cubec_expression_group_t group = (cubec_expression_group_t)node;
   ASSERT_NE(group->inner, nullptr);
   EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -1265,9 +1273,9 @@ TEST_F(dt_expression_type, type_group_with_member) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
-  cubec_expression_type_group_t group = (cubec_expression_type_group_t)node;
+  cubec_expression_group_t group = (cubec_expression_group_t)node;
   ASSERT_NE(group->inner, nullptr);
   EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
@@ -1284,9 +1292,9 @@ TEST_F(dt_expression_type, type_group_with_pointer) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
-  cubec_expression_type_group_t group = (cubec_expression_type_group_t)node;
+  cubec_expression_group_t group = (cubec_expression_group_t)node;
   ASSERT_NE(group->inner, nullptr);
   EXPECT_EQ(group->inner->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -1303,9 +1311,9 @@ TEST_F(dt_expression_type, type_group_with_slice) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
-  cubec_expression_type_group_t group = (cubec_expression_type_group_t)node;
+  cubec_expression_group_t group = (cubec_expression_group_t)node;
   ASSERT_NE(group->inner, nullptr);
   EXPECT_EQ(group->inner->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -1355,13 +1363,13 @@ TEST_F(dt_expression_type, nested_type_group) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
-  cubec_expression_type_group_t outer = (cubec_expression_type_group_t)node;
+  cubec_expression_group_t outer = (cubec_expression_group_t)node;
   ASSERT_NE(outer->inner, nullptr);
-  EXPECT_EQ(outer->inner->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+  EXPECT_EQ(outer->inner->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
-  cubec_expression_type_group_t inner = (cubec_expression_type_group_t)outer->inner;
+  cubec_expression_group_t inner = (cubec_expression_group_t)outer->inner;
   ASSERT_NE(inner->inner, nullptr);
   EXPECT_EQ(inner->inner->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 

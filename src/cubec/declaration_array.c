@@ -112,13 +112,13 @@ node_t read_declaration_array(allocator_t allocator, vec_t tokens,
   }
   current++;
 
-  /* Parse the underlying type using read_type_expression_primary.
-   * Namespace access (::) binds tighter than type constructors:
-   * [10]std::vec::Vec → [10](std::vec::Vec).
-   * Ternary type expressions are not allowed directly as array base type;
-   * use type_group to wrap them: [10](a ? b : c) instead of [10] a ? b : c. */
+  /* Parse the underlying type using read_expression_type (greedy).
+   * The array declaration greedily consumes the full type expression,
+   * including ternary: [N]a ? b : c → array(ternary(a, b, c)).
+   * Use grouping for the alternative: ([N] a) ? b : c → ternary(array(a), b, c).
+   * Namespace access binds tighter: [N]std::vec::Vec → [N](std::vec::Vec). */
   skip_whitespace(tokens, &current);
-  type = read_type_expression_primary(allocator, tokens, &current, filename);
+  type = read_expression_type(allocator, tokens, &current, filename);
   if (!type) {
     THROW_LOCAL(onerror, "expected type after array declaration");
   }

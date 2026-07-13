@@ -132,7 +132,7 @@ static cubec_generic_param_t _parse_one_generic_param(
   if (_is_keyword(tokens, *current, "extends")) {
     (*current)++;
     skip_whitespace(tokens, current);
-    constraint = TRY_LOCAL(fail, read_type_expression_primary(allocator, tokens, current, filename));
+    constraint = TRY_LOCAL(fail, read_expression_type(allocator, tokens, current, filename));
     if (!constraint) {
       THROW_LOCAL(fail, "expected type after 'extends'");
     }
@@ -142,7 +142,7 @@ static cubec_generic_param_t _parse_one_generic_param(
   else if (_is_symbol(tokens, *current, ":")) {
     (*current)++;
     skip_whitespace(tokens, current);
-    value_type = TRY_LOCAL(fail, read_type_expression_primary(allocator, tokens, current, filename));
+    value_type = TRY_LOCAL(fail, read_expression_type(allocator, tokens, current, filename));
     if (!value_type) {
       THROW_LOCAL(fail, "expected type after ':'");
     }

@@ -168,7 +168,9 @@ typedef struct {
   int precedence;      /**< Precedence level (1=loosest for ||, 10=tightest for * / %) */
 } binary_op_entry_t;
 
-/** Sorted by descending precedence (tightest first) for readability. */
+/** Sorted by descending precedence (tightest first) for readability.
+ *  Note: "extends" is a keyword binary operator (same precedence as ==, !=)
+ *  handled separately in get_binary_precedence(). */
 static const binary_op_entry_t binary_operators[] = {
     {"*", 10},  {"/", 10},  {"%", 10},
     {"+", 9},   {"-", 9},
@@ -184,13 +186,13 @@ static const binary_op_entry_t binary_operators[] = {
 
 /**
  * @brief Get precedence of a token if it's a binary operator, or 0.
- *        Handles both symbol operators and keyword operators (e.g. 'extends').
+ *        "extends" is a keyword binary operator at the same level as ==, !=.
  */
 static int get_binary_precedence(token_t tok) {
-  /* Check keyword operators: 'extends' binds at level 6 (same as ==, !=) */
+  /* Check for 'extends' keyword binary operator */
   if (token_get_kind(tok) == CUBEC_TOKEN_KEYWORD) {
     if (token_is(tok, CUBEC_TOKEN_KEYWORD, "extends")) {
-      return 6;
+      return 6;  /* Same precedence as ==, != */
     }
     return 0;
   }

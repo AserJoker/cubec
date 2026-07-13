@@ -4,6 +4,8 @@
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
+#include "cubec/declaration_slice.h"
+#include "cubec/declaration_pointer.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/node.h"
@@ -117,43 +119,41 @@ TEST_F(dt_expression_typeof, typeof_with_namespace_access) {
 
 /* ---- typeof is NOT a pointer base: * typeof(x) fails to parse as type expr ---- */
 
-TEST_F(dt_expression_typeof, typeof_not_pointer_base) {
+TEST_F(dt_expression_typeof, typeof_as_pointer_base) {
   const char *source = "* typeof(x)";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = NULL;
-  /* Since typeof is a top-level type expression (not in primary), the pointer
-   * parser in read_type_expression_primary consumes '*' but cannot find a
-   * valid inner type ('typeof' is a keyword, not an identifier). The parse
-   * fails — typeof(x) cannot be wrapped by a pointer declaration. */
-  CATCH_ERROR(
-      node = read_expression_type(allocator, tokens, &position, "test.cubec"),
-      error_clear());
-  EXPECT_EQ(node, nullptr);
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
+  cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
+  ASSERT_NE(ptr->type, nullptr);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
+
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
 /* ---- typeof is NOT a slice base: [] typeof(x) fails to parse as type expr ---- */
 
-TEST_F(dt_expression_typeof, typeof_not_slice_base) {
+TEST_F(dt_expression_typeof, typeof_as_slice_base) {
   const char *source = "[] typeof(x)";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = NULL;
-  /* Since typeof is a top-level type expression (not in primary), the slice
-   * parser in read_type_expression_primary consumes '[]' but cannot find a
-   * valid inner type. The parse fails — typeof(x) cannot be wrapped by a
-   * slice declaration. */
-  CATCH_ERROR(
-      node = read_expression_type(allocator, tokens, &position, "test.cubec"),
-      error_clear());
-  EXPECT_EQ(node, nullptr);
+  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
+  cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
+  ASSERT_NE(slice->type, nullptr);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
+
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 

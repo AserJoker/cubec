@@ -3,6 +3,7 @@
 #include "core/error.h"
 #include "core/node.h"
 #include "core/type.h"
+#include "cubec/token.h"
 #include "cubec/declaration_array.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
@@ -12,15 +13,13 @@
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_initialize_list.h"
-#include "cubec/expression_type_const.h"
-#include "cubec/expression_type_group.h"
-#include "cubec/expression_type_volatile.h"
+#include "cubec/expression_type_qualifier.h"
+#include "cubec/expression_type_function.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_postfix_unary.h"
 #include "cubec/expression_slice.h"
 #include "cubec/expression_ternary.h"
-#include "cubec/expression_type_ternary.h"
 #include "cubec/expression_typeof.h"
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression_alignof.h"
@@ -28,6 +27,7 @@
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
+#include <inttypes.h>
 
 static void _cubec_expression_init(cubec_expression_t self,
                                    allocator_t allocator,
@@ -112,9 +112,20 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
     return result;
   }
 
+  // Try function type: func(type_list) -> type — must be before function
+  // expression because func(i32) -> i32 (type) and func(x: i32): i32 { ... }
+  // (expression) both start with 'func('. The type form uses '->' for return
+  // type and has no body; the expression form uses ':' and has a body.
+  // type_function returns NULL (without THROW) when it detects the expression
+  // form (named params or ':' instead of '->').
+  result = read_expression_type_function(allocator, tokens, &current, filename);
+  if (result) {
+    *position = current;
+    return result;
+  }
+
   // Try anonymous function: func |captures| [generic_params] (params) -> type { body }
-  result = TRY(NULL,
-               read_expression_function(allocator, tokens, &current, filename));
+  result = read_expression_function(allocator, tokens, &current, filename);
   if (result) {
     *position = current;
     return result;
@@ -123,6 +134,35 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
   // Try grouped expression: ( expr )
   result = TRY(NULL,
                read_expression_group(allocator, tokens, &current, filename));
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try type qualifier: const/volatile <type> — prefix type modifiers
+  result = read_expression_type_qualifier(allocator, tokens, &current, filename);
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try pointer declaration: * [const] [volatile] <type>
+  // Note: * in atom position is always a pointer (not deref — deref uses .*)
+  result = read_declaration_pointer(allocator, tokens, &current, filename);
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try slice declaration: [] [const] [volatile] <type>
+  result = read_declaration_slice(allocator, tokens, &current, filename);
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try array declaration: [ <expr> ] [const] [volatile] <type>
+  result = read_declaration_array(allocator, tokens, &current, filename);
   if (result) {
     *position = current;
     return result;
@@ -259,54 +299,73 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
    *   *std::vec::Vec → *(std::vec::Vec) — pointer to namespaced type
    *   []i32 → slice of i32
    *   Vec[i32]::Element → nested type in generic instantiation
+   *
+   * Each sub-parser returns NULL without setting g_error when it doesn't
+   * match (e.g. no '*' for pointer, no 'const'/'volatile' for qualifier).
+   * This allows sequential trying without needing error_clear().
    */
 
   node_t node = NULL;
   size_t current = *position;
 
-  /* Try grouped type expression: ( type_expression ) */
-  node = TRY_LOCAL(onerror,
-                   read_expression_type_group(allocator, tokens, &current, filename));
+  /* Try grouped expression: ( expression ) */
+  node = read_expression_group(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
   }
 
-  /* Try const type expression (prefix form: const <type>) */
-  node = TRY_LOCAL(onerror,
-                   read_expression_type_const(allocator, tokens, &current, filename));
+  /* Try typeof: typeof(<expression>) — compile-time type computation */
+  node = read_expression_typeof(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
   }
 
-  /* Try volatile type expression (prefix form: volatile <type>) */
-  node = TRY_LOCAL(onerror,
-                   read_expression_type_volatile(allocator, tokens, &current, filename));
+  /* Try sizeof: sizeof(<expression>) — compile-time size computation */
+  node = read_expression_sizeof(allocator, tokens, &current, filename);
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try alignof: alignof(<expression>) — compile-time alignment computation */
+  node = read_expression_alignof(allocator, tokens, &current, filename);
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try function type expression: func(type_list) -> type */
+  node = read_expression_type_function(allocator, tokens, &current, filename);
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try type qualifier expression (prefix form: const/volatile <type>) */
+  node = read_expression_type_qualifier(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
   }
 
   /* Try pointer declaration (prefix form: * [const] [volatile] <type>) */
-  node = TRY_LOCAL(onerror,
-                   read_declaration_pointer(allocator, tokens, &current, filename));
+  node = read_declaration_pointer(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
   }
 
   /* Try array declaration (prefix form: [ <expr> ] [const] [volatile] <type>) */
-  node = TRY_LOCAL(onerror,
-                   read_declaration_array(allocator, tokens, &current, filename));
+  node = read_declaration_array(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
   }
 
   /* Try slice declaration (prefix form: [] [const] [volatile] <type>) */
-  node = TRY_LOCAL(onerror,
-                   read_declaration_slice(allocator, tokens, &current, filename));
+  node = read_declaration_slice(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -328,9 +387,9 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
     skip_whitespace(tokens, &current);
 
     /* Try postfix: namespace access <host>::<field> */
-    node_t namespace_node = TRY_LOCAL(
-        onerror, read_expression_namespace_access(allocator, tokens,
-                                                   &current, filename, node));
+    node_t namespace_node =
+        read_expression_namespace_access(allocator, tokens,
+                                         &current, filename, node);
     if (namespace_node) {
       node = namespace_node;
       *position = current;
@@ -338,9 +397,9 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
     }
 
     /* Try postfix: generic instantiation <callee>[<args>] */
-    node_t generic_node = TRY_LOCAL(
-        onerror, read_expression_generic_instantiation(allocator, tokens,
-                                                       &current, filename, node));
+    node_t generic_node =
+        read_expression_generic_instantiation(allocator, tokens,
+                                              &current, filename, node);
     if (generic_node) {
       node = generic_node;
       *position = current;
@@ -348,8 +407,8 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
     }
 
     /* Try postfix: pointer declaration (chained, e.g., i32 *) */
-    node_t pointer_node = TRY_LOCAL(
-        onerror, read_declaration_pointer(allocator, tokens, &current, filename));
+    node_t pointer_node =
+        read_declaration_pointer(allocator, tokens, &current, filename);
     if (pointer_node) {
       node = pointer_node;
       *position = current;
@@ -360,69 +419,19 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
   }
 
   return node;
-
-onerror:
-  allocator_free(allocator, &node);
-  return NULL;
 }
+
 
 node_t read_expression_type(allocator_t allocator, vec_t tokens,
                             size_t *position, const char *filename) {
-  /* Try top-level type expressions first: typeof, ternary.
-   * typeof is NOT a sub-type of pointer/slice/array declarations —
-   * it is a top-level type expression like ternary conditionals. */
-  node_t node = NULL;
-  size_t current = *position;
-
-  /* Try typeof type expression: typeof(<expression>) */
-  node = TRY_LOCAL(onerror,
-                   read_expression_typeof(allocator, tokens, &current, filename));
-  if (node) {
-    *position = current;
-    /* Process postfix operators for typeof: namespace access, generic
-     * instantiation. Pointer/slice/array cannot wrap typeof. */
-    while (true) {
-      skip_whitespace(tokens, &current);
-
-      /* Try postfix: namespace access <host>::<field> */
-      node_t namespace_node = TRY_LOCAL(
-          onerror, read_expression_namespace_access(allocator, tokens,
-                                                     &current, filename, node));
-      if (namespace_node) {
-        node = namespace_node;
-        *position = current;
-        continue;
-      }
-
-      /* Try postfix: generic instantiation <callee>[<args>] */
-      node_t generic_node = TRY_LOCAL(
-          onerror, read_expression_generic_instantiation(allocator, tokens,
-                                                         &current, filename, node));
-      if (generic_node) {
-        node = generic_node;
-        *position = current;
-        continue;
-      }
-
-      break;
-    }
-    return node;
-  }
-
-  /* Try ternary type expression: cond ? type_a : type_b.
-   * If read_expression_type_ternary returns NULL (no type expression at all),
-   * fall back to read_type_expression_primary. */
-  current = *position;
-  node = read_expression_type_ternary(allocator, tokens, &current, filename);
-  if (node) {
-    *position = current;
-    return node;
-  }
-  return read_type_expression_primary(allocator, tokens, position, filename);
-
-onerror:
-  allocator_free(allocator, &node);
-  return NULL;
+  /* Unified type expression parser. Now delegates to read_expression() which
+   * handles all type and value constructs since read_atom() includes:
+   * - Type-only: pointer/slice/array/const/volatile/func type
+   * - Value: typeof/sizeof/alignof/identifiers/literals/groups/functions
+   * - Binary ops: extends/==/!= (in expression_binary)
+   * - Ternary: condition ? type_a : type_b (in expression_ternary)
+   */
+  return read_expression(allocator, tokens, position, filename);
 }
 
 node_t read_expression(allocator_t allocator, vec_t tokens, size_t *position,

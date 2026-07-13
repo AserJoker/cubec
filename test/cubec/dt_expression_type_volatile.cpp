@@ -5,10 +5,9 @@
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
-#include "cubec/expression_type_const.h"
-#include "cubec/expression_type_group.h"
-#include "cubec/expression_type_ternary.h"
-#include "cubec/expression_type_volatile.h"
+#include "cubec/expression_type_qualifier.h"
+#include "cubec/expression_group.h"
+#include "cubec/expression_ternary.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -37,10 +36,11 @@ TEST_F(dt_expression_type_volatile, simple) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t volatile_node =
-      (cubec_expression_type_volatile_t)node;
+  cubec_expression_type_qualifier_t volatile_node =
+      (cubec_expression_type_qualifier_t)node;
+  EXPECT_TRUE(volatile_node->is_volatile);
   ASSERT_NE(volatile_node->type, nullptr);
   EXPECT_EQ(volatile_node->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -57,15 +57,15 @@ TEST_F(dt_expression_type_volatile, nested_volatile) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t outer =
-      (cubec_expression_type_volatile_t)node;
+  cubec_expression_type_qualifier_t outer =
+      (cubec_expression_type_qualifier_t)node;
   ASSERT_NE(outer->type, nullptr);
-  EXPECT_EQ(outer->type->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(outer->type->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t inner =
-      (cubec_expression_type_volatile_t)outer->type;
+  cubec_expression_type_qualifier_t inner =
+      (cubec_expression_type_qualifier_t)outer->type;
   ASSERT_NE(inner->type, nullptr);
   EXPECT_EQ(inner->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -80,7 +80,7 @@ TEST_F(dt_expression_type_volatile, non_volatile_returns_null) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type_volatile(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type_qualifier(allocator, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -99,10 +99,10 @@ TEST_F(dt_expression_type_volatile, volatile_pointer) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t volatile_node =
-      (cubec_expression_type_volatile_t)node;
+  cubec_expression_type_qualifier_t volatile_node =
+      (cubec_expression_type_qualifier_t)node;
   ASSERT_NE(volatile_node->type, nullptr);
   EXPECT_EQ(volatile_node->type->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -126,10 +126,10 @@ TEST_F(dt_expression_type_volatile, volatile_slice) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t volatile_node =
-      (cubec_expression_type_volatile_t)node;
+  cubec_expression_type_qualifier_t volatile_node =
+      (cubec_expression_type_qualifier_t)node;
   ASSERT_NE(volatile_node->type, nullptr);
   EXPECT_EQ(volatile_node->type->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -146,10 +146,10 @@ TEST_F(dt_expression_type_volatile, volatile_array) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t volatile_node =
-      (cubec_expression_type_volatile_t)node;
+  cubec_expression_type_qualifier_t volatile_node =
+      (cubec_expression_type_qualifier_t)node;
   ASSERT_NE(volatile_node->type, nullptr);
   EXPECT_EQ(volatile_node->type->kind, CUBEC_NODE_DECLARATION_ARRAY);
 
@@ -166,10 +166,10 @@ TEST_F(dt_expression_type_volatile, volatile_pointer_volatile) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t volatile_node =
-      (cubec_expression_type_volatile_t)node;
+  cubec_expression_type_qualifier_t volatile_node =
+      (cubec_expression_type_qualifier_t)node;
   ASSERT_NE(volatile_node->type, nullptr);
   EXPECT_EQ(volatile_node->type->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -197,10 +197,10 @@ TEST_F(dt_expression_type_volatile, volatile_generic) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t volatile_node =
-      (cubec_expression_type_volatile_t)node;
+  cubec_expression_type_qualifier_t volatile_node =
+      (cubec_expression_type_qualifier_t)node;
   ASSERT_NE(volatile_node->type, nullptr);
   EXPECT_EQ(volatile_node->type->kind,
             CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
@@ -218,10 +218,10 @@ TEST_F(dt_expression_type_volatile, volatile_member) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t volatile_node =
-      (cubec_expression_type_volatile_t)node;
+  cubec_expression_type_qualifier_t volatile_node =
+      (cubec_expression_type_qualifier_t)node;
   ASSERT_NE(volatile_node->type, nullptr);
   EXPECT_EQ(volatile_node->type->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
@@ -242,17 +242,17 @@ TEST_F(dt_expression_type_volatile, volatile_with_type_group_ternary) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t volatile_node =
-      (cubec_expression_type_volatile_t)node;
+  cubec_expression_type_qualifier_t volatile_node =
+      (cubec_expression_type_qualifier_t)node;
   ASSERT_NE(volatile_node->type, nullptr);
-  EXPECT_EQ(volatile_node->type->kind, CUBEC_NODE_EXPRESSION_TYPE_GROUP);
+  EXPECT_EQ(volatile_node->type->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
-  cubec_expression_type_group_t group =
-      (cubec_expression_type_group_t)volatile_node->type;
+  cubec_expression_group_t group =
+      (cubec_expression_group_t)volatile_node->type;
   ASSERT_NE(group->inner, nullptr);
-  EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_TYPE_TERNARY);
+  EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -262,8 +262,8 @@ TEST_F(dt_expression_type_volatile, volatile_with_type_group_ternary) {
  *  Volatile as ternary condition
  * -------------------------------------------------------------------------- */
 
-/* volatile a ? b : c → ternary(condition=type_volatile(volatile a), ...) */
-TEST_F(dt_expression_type_volatile, volatile_as_ternary_condition) {
+/* volatile greedily consumes ternary: volatile a ? b : c → volatile(a ? b : c) */
+TEST_F(dt_expression_type_volatile, volatile_greedy_ternary) {
   const char *source = "volatile a ? b : c";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -271,18 +271,17 @@ TEST_F(dt_expression_type_volatile, volatile_as_ternary_condition) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_TERNARY);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_ternary_t ternary =
-      (cubec_expression_type_ternary_t)node;
+  cubec_expression_type_qualifier_t volatile_node =
+      (cubec_expression_type_qualifier_t)node;
+  ASSERT_NE(volatile_node->type, nullptr);
+  EXPECT_EQ(volatile_node->type->kind, CUBEC_NODE_EXPRESSION_TERNARY);
+
+  cubec_expression_ternary_t ternary =
+      (cubec_expression_ternary_t)volatile_node->type;
   ASSERT_NE(ternary->condition, nullptr);
-  EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
-
-  cubec_expression_type_volatile_t cond =
-      (cubec_expression_type_volatile_t)ternary->condition;
-  ASSERT_NE(cond->type, nullptr);
-  EXPECT_EQ(cond->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-
+  EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
   ASSERT_NE(ternary->consequent, nullptr);
   EXPECT_EQ(ternary->consequent->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
   ASSERT_NE(ternary->alternate, nullptr);
@@ -305,15 +304,15 @@ TEST_F(dt_expression_type_volatile, const_volatile) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_CONST);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_const_t const_node =
-      (cubec_expression_type_const_t)node;
+  cubec_expression_type_qualifier_t const_node =
+      (cubec_expression_type_qualifier_t)node;
   ASSERT_NE(const_node->type, nullptr);
-  EXPECT_EQ(const_node->type->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(const_node->type->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t volatile_node =
-      (cubec_expression_type_volatile_t)const_node->type;
+  cubec_expression_type_qualifier_t volatile_node =
+      (cubec_expression_type_qualifier_t)const_node->type;
   ASSERT_NE(volatile_node->type, nullptr);
   EXPECT_EQ(volatile_node->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -330,15 +329,15 @@ TEST_F(dt_expression_type_volatile, volatile_const) {
   size_t position = 0;
   node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t volatile_node =
-      (cubec_expression_type_volatile_t)node;
+  cubec_expression_type_qualifier_t volatile_node =
+      (cubec_expression_type_qualifier_t)node;
   ASSERT_NE(volatile_node->type, nullptr);
-  EXPECT_EQ(volatile_node->type->kind, CUBEC_NODE_EXPRESSION_TYPE_CONST);
+  EXPECT_EQ(volatile_node->type->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_const_t const_node =
-      (cubec_expression_type_const_t)volatile_node->type;
+  cubec_expression_type_qualifier_t const_node =
+      (cubec_expression_type_qualifier_t)volatile_node->type;
   ASSERT_NE(const_node->type, nullptr);
   EXPECT_EQ(const_node->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -362,10 +361,10 @@ TEST_F(dt_expression_type_volatile, clone) {
 
   node_t cloned = (node_t)value_clone(allocator, node);
   ASSERT_NE(cloned, nullptr);
-  EXPECT_EQ(cloned->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(cloned->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_volatile_t orig = (cubec_expression_type_volatile_t)node;
-  cubec_expression_type_volatile_t copy = (cubec_expression_type_volatile_t)cloned;
+  cubec_expression_type_qualifier_t orig = (cubec_expression_type_qualifier_t)node;
+  cubec_expression_type_qualifier_t copy = (cubec_expression_type_qualifier_t)cloned;
   EXPECT_NE(orig->type, copy->type);
   EXPECT_EQ(copy->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -386,13 +385,13 @@ TEST_F(dt_expression_type_volatile, move) {
 
   node_t moved = (node_t)value_move(allocator, node);
   ASSERT_NE(moved, nullptr);
-  EXPECT_EQ(moved->kind, CUBEC_NODE_EXPRESSION_TYPE_VOLATILE);
+  EXPECT_EQ(moved->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
   /* value_move transfers data but does NOT free the source pointer.
    * The source must be freed explicitly. */
   allocator_free(allocator, &node);
 
-  cubec_expression_type_volatile_t result = (cubec_expression_type_volatile_t)moved;
+  cubec_expression_type_qualifier_t result = (cubec_expression_type_qualifier_t)moved;
   ASSERT_NE(result->type, nullptr);
   EXPECT_EQ(result->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
