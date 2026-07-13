@@ -92,7 +92,7 @@ cubec/
 │   ├── core/                   # Core data structure implementations
 │   └── cubec/                  # Lexer + parser implementations
 │       # Planned (not yet created): engine/, reader/, writer/, c/
-├── test/                       # Tests (837 test cases, Google Test + C++20)
+├── test/                       # Tests (867 test cases, Google Test + C++20)
 │   ├── main.cpp                # Test entry point
 │   ├── common/test_common.h    # RAII test allocator helper
 │   ├── core/                   # Tests for core data structures
@@ -501,7 +501,7 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 837 test cases
+- Total: 867 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -548,6 +548,8 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 - `dt_statement_function.cpp` (44 cases) — function declarations: basic function, no params, no return type (void), single/multiple params, generic single/multiple/rest params, export/inline/extern/builtin/comptime modifiers, export+inline combined, extern C-style variadic (`...`), pointer/slice/generic/no-type params, empty body, body with statements, no body semicolon (interface style), missing name/open paren/close paren errors, export+extern/extern+inline conflict errors, C variadic in non-extern error, builtin func, export+builtin func, builtin+extern mutual exclusion error, comptime func, comptime func without body error, export+comptime func, inline+comptime func, builtin+comptime mutual exclusion error, extern+comptime mutual exclusion error, clone, clone generic, move, clone extern, via read_statement, via read_program_node, consume all tokens
 - `dt_statement_interface.cpp` (18 cases) — interface declarations: basic interface, interface with method, interface with type member, generic single/multi params, method no return type, method generic, method pointer/slice return type, export/non-export interface, export with method, clone, move, consume all tokens, via read_statement, via read_program_node, type member with generic
 - `dt_expression_type_interface.cpp` (14 cases) — anonymous interface type expressions: simple empty, with method, with type and method, generic single/multi, pointer/slice/const wrapped, consume all tokens, non-interface returns NULL, clone, move, via read_atom, via read_expression
+- `dt_statement_struct.cpp` (16 cases) — struct declarations: basic struct, empty, instance fields, pub field, generic single/multi, static var field, type member, method, export/non-export, clone, move, consume all tokens, via read_statement, via read_program
+- `dt_expression_type_struct.cpp` (14 cases) — anonymous struct type expressions: simple empty, instance field, pub field, static var + instance field, generic, pointer/slice/const wrapped, consume all tokens, non-struct returns NULL, clone, move, via read_atom, via read_expression
 
 ## Module System (模块系统)
 

@@ -1036,12 +1036,14 @@ cubec/
   - `func` 函数声明语句（`[export] [inline] func <name> [<generic_params>] (<params>) [-> <return_type>] { <body> } | ;`，`extern` 函数以 `;` 结尾无 body，C-style variadic `...` 仅限 extern 函数，`builtin` 编译器内建函数无 body，`comptime` 编译时求值函数必须有 body，comptime 与 extern/builtin 互斥）
   - `interface` 接口声明语句（`[export] interface <name> [<generic_params>] { <members> }`，成员包含关联类型 `type <name> [<params>] ;` 和方法签名 `func <name> [<params>] (<args>) [: <return_type>] ;`，Go 风格结构型接口）
   - 匿名 interface 类型表达式（`interface [<generic_params>] { <members> }`，可用于泛型约束和类型位置，无编译产物）
+  - `struct` 结构体声明语句（`[export] struct <name> [<generic_params>] { <members> }`，成员包含实例字段 `[pub] <name> : <type> ;`、静态字段 `var`、关联类型 `type`、方法 `func`、spread `...<expr> ;` 等，body 为语句序列）
+  - 匿名 struct 类型表达式（`struct [<generic_params>] { <members> }`，用于类型别名等类型位置）
   - `import` 导入语句（`import <module_name> [as <alias>] from "<path>";`）
   - `return` 返回语句（`return [<expression>];`）
   - 泛型参数解析（支持简单 `T`、约束 `T extends U`、值泛型 `N: u64`、rest 参数 `...Args` 四种形式）
   - `read_statement` 语句分派器（按优先级尝试各语句类型）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：837 测试用例覆盖所有核心模块
+- **测试体系**：867 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 
@@ -1052,7 +1054,7 @@ cubec/
   - `defer` 延迟执行
   - `break`/`continue` 跳转语句
 - **声明解析**：
-  - `struct` 结构体声明
+  - `struct` 结构体声明（已实现，支持实例字段、静态字段、泛型、方法、spread）
   - `enum` 枚举声明
   - `union` 联合体声明
 - **高级特性**：

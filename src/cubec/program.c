@@ -12,6 +12,7 @@
 #include "cubec/statement_empty.h"
 #include "cubec/statement_function.h"
 #include "cubec/statement_interface.h"
+#include "cubec/statement_struct.h"
 #include "cubec/statement_import.h"
 #include "cubec/token.h"
 #include <stdint.h>
@@ -100,6 +101,10 @@ node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
     if (!statement) {
       /* Try statement_interface (interface ... / export interface ...) */
       statement = TRY_LOCAL(onerror, read_statement_interface(allocator, tokens, &current, filename));
+    }
+    if (!statement) {
+      /* Try statement_struct (struct ... / export struct ...) */
+      statement = TRY_LOCAL(onerror, read_statement_struct(allocator, tokens, &current, filename));
     }
     if (!statement) {
       /* Try statement_empty (;) */
