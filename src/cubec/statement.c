@@ -18,6 +18,7 @@
 #include "cubec/statement_foreach.h"
 #include "cubec/statement_import.h"
 #include "cubec/statement_return.h"
+#include "cubec/statement_switch.h"
 
 node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
                       const char *filename) {
@@ -131,6 +132,14 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
   /* Try foreach statement (foreach(name : iter) { }) */
   current = *position;
   node = TRY_LOCAL(onerror, read_statement_foreach(allocator, tokens, &current, filename));
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try switch statement (switch(value) { case(...) -> { } else -> { } }) */
+  current = *position;
+  node = TRY_LOCAL(onerror, read_statement_switch(allocator, tokens, &current, filename));
   if (node) {
     *position = current;
     return node;
