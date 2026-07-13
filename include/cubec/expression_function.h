@@ -14,15 +14,15 @@ extern "C" {
  * @brief AST node for anonymous function expression (zero-time function).
  *
  * Syntax:
- *   func |<captures>| [<generic_params>] (<params>) [-> <return_type>] { <body> }
+ *   func |<captures>| [<generic_params>] (<params>) [: <return_type>] { <body> }
  *
  * Captures use |...| delimiters. Each capture is a simple identifier.
  *
  * Examples:
  *   func || () { }
- *   func |x, y| (a: i32) -> i32 { return x + y + a; }
- *   func |ctx| [T](x: T) -> T { return x; }
- *   func |x| (a: i32) -> i32 { return x + a; }(42)   // immediate call
+ *   func |x, y| (a: i32): i32 { return x + y + a; }
+ *   func |ctx| [T](x: T): T { return x; }
+ *   func |x| (a: i32): i32 { return x + a; }(42)   // immediate call
  */
 struct _cubec_expression_function_t;
 struct _cubec_expression_function_t {

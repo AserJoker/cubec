@@ -54,7 +54,7 @@ cubec/
 │       ├── expression_binary.h  # Binary/prefix-unary expression (left/right/opt)
 │       ├── expression_call.h    # Function-call expression callee(args)
 │       ├── expression_comma.h  # Comma expression (a, b, c) — right-associative
-│       ├── expression_function.h  # Function expression (func [name] |captures| [generic](params) -> type { body } | ;)
+│       ├── expression_function.h  # Function expression (func [name] |captures| [generic](params): type { body } | ;)
 │       ├── expression_generic_instantiation.h  # Generic instantiation expr[a,b]
 │       ├── expression_group.h   # Grouped expression ( expr )
 │       ├── expression_initialize_field.h # Initialize field (.field = value)
@@ -145,7 +145,7 @@ node_t (core/node.h)
         │     └── cubec_declaration_slice_t (cubec/declaration_slice.h)  # [] [const] [volatile] <type>
         ├── cubec_expression_binary_t (cubec/expression_binary.h)
         ├── cubec_expression_call_t (cubec/expression_call.h)
-        ├── cubec_expression_function_t (cubec/expression_function.h)  # func [name] |captures| [generic](params) -> type { body } | ;
+        ├── cubec_expression_function_t (cubec/expression_function.h)  # func [name] |captures| [generic](params): type { body } | ;
         ├── cubec_expression_generic_instantiation_t (cubec/expression_generic_instantiation.h)
         ├── cubec_expression_group_t (cubec/expression_group.h)
         ├── cubec_expression_initialize_field_t (cubec/expression_initialize_field.h)  # .field = value
@@ -186,7 +186,7 @@ node_t (core/node.h)
         ├── cubec_expression_binary_t (cubec/expression_binary.h)
         ├── cubec_expression_call_t (cubec/expression_call.h)
         ├── cubec_expression_comma_t (cubec/expression_comma.h)
-        ├── cubec_expression_function_t (cubec/expression_function.h)  # func [name] |captures| [generic](params) -> type { body } | ;
+        ├── cubec_expression_function_t (cubec/expression_function.h)  # func [name] |captures| [generic](params): type { body } | ;
         ├── cubec_expression_generic_instantiation_t (cubec/expression_generic_instantiation.h)
         ├── cubec_expression_group_t (cubec/expression_group.h)
         ├── cubec_expression_initialize_field_t (cubec/expression_initialize_field.h)  # .field = value
@@ -423,7 +423,7 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_statement_import` (statement_import.c) — Import statement (`import <module_name> [as <alias>] from "<path>";`). Parses module import with optional `as` alias. Returns `cubec_statement_import_t` with `module_name` (identifier node), `alias` (optional identifier node, NULL if no `as`), and `path` (string literal node) fields. Returns NULL if current token is not `import`. THROW errors on missing module name, missing `from` keyword, missing path, or missing semicolon.
 - `read_function_argument` (function_argument.c) — Parses a single function parameter: `<identifier> [: <type>]`. The identifier is parsed via `read_literal_identifier`. The optional type annotation is parsed via `read_expression_type`. Returns `cubec_function_argument_t` with `identifier` and `type` (nullable) fields. Returns NULL if current token is not an identifier.
 - `read_statement_function` (statement_function.c) — Parses function declaration statement. Delegates to `read_expression_function` for the actual `func` parsing, then validates the result: statement functions must have a name, cannot have captures, and C-style variadic `...` is only allowed in extern functions. Handles modifier parsing (`export`/`inline`/`extern`) and mutual exclusion checks before delegation. After `read_expression_function` returns, extracts fields from the expression function node (transferring ownership) and creates a `cubec_statement_function_t` node. Returns `cubec_statement_function_t` with `is_export`, `is_inline`, `is_extern`, `is_c_variadic` (bools), `name`, `generic_params` (nullable vec), `arguments` (vec with auto_dispose=true), `return_type` (nullable), `body` (nullable) fields. Returns NULL if current token is not a function declaration prefix.
-- `read_expression_function` (expression_function.c) — Universal func parser that handles both anonymous and named function expressions: `func [|<captures>| | <name>] [<generic_params>] (<params>) [-> <return_type>] { <body> } | ;`. After `func` keyword, detects `|`/`||` (capture list) or identifier (function name) or falls through to `[`/`(` (anonymous, no captures, no name). Name is nullable (present for named functions, NULL for anonymous). Capture list is optional: `||` (empty, tokenized as single `||` by lexer, captures remains NULL), `|x, y|` (non-empty), or omitted entirely. Each capture is identifier-only. Generic params, function params, and return type follow standard rules. Parameter list supports C-style variadic `...` (stored in `is_c_variadic`, validity checked by caller). Body: named functions allow `;` (body=NULL), anonymous functions require `{ body }`. Returns `cubec_expression_function_t` with `name` (nullable), `captures` (nullable vec of `cubec_function_capture_t`), `generic_params` (nullable vec), `arguments` (vec with auto_dispose=true), `return_type` (nullable), `body` (nullable), `is_c_variadic` (bool) fields. Returns NULL if current token is not `func` keyword. Supports postfix: immediate call `func |x| (a: i32) -> i32 { return x + a; }(42)`, member access `func || () -> Vec[i32] { }.field`, assignment `var f = func |x| () { };`.
+- `read_expression_function` (expression_function.c) — Universal func parser that handles both anonymous and named function expressions: `func [|<captures>| | <name>] [<generic_params>] (<params>) [-> <return_type>] { <body> } | ;`. After `func` keyword, detects `|`/`||` (capture list) or identifier (function name) or falls through to `[`/`(` (anonymous, no captures, no name). Name is nullable (present for named functions, NULL for anonymous). Capture list is optional: `||` (empty, tokenized as single `||` by lexer, captures remains NULL), `|x, y|` (non-empty), or omitted entirely. Each capture is identifier-only. Generic params, function params, and return type follow standard rules. Parameter list supports C-style variadic `...` (stored in `is_c_variadic`, validity checked by caller). Body: named functions allow `;` (body=NULL), anonymous functions require `{ body }`. Returns `cubec_expression_function_t` with `name` (nullable), `captures` (nullable vec of `cubec_function_capture_t`), `generic_params` (nullable vec), `arguments` (vec with auto_dispose=true), `return_type` (nullable), `body` (nullable), `is_c_variadic` (bool) fields. Returns NULL if current token is not `func` keyword. Supports postfix: immediate call `func |x| (a: i32): i32 { return x + a; }(42)`, member access `func || ():Vec[i32] { }.field`, assignment `var f = func |x| () { };`.
 - `read_function_capture` (function_capture.c) — Parses a single capture item: `<identifier>`. Captures are identifier-only. Returns `cubec_function_capture_t` with `identifier` field. Returns NULL if current token is not an identifier.
 - `read_statement_return` (statement_return.c) — Parses return statement: `return [<expression>] ;`. Expression is optional (bare `return;` has `expression = NULL`). Expression parsed via `read_expression`. Returns `cubec_statement_return_t` with `expression` (nullable) field. Returns NULL if current token is not `return` keyword.
 - `read_declaration_variable` (declaration_variable.c) — Variable declarator (`<identifier> [: <type>] = <expression>`). Parses a single variable declarator with optional type annotation and required initializer expression. The type is parsed via `read_expression_type`. Returns `cubec_declaration_variable_t` with `identifier`, `type` (nullable), and `expression` fields.
@@ -545,7 +545,7 @@ std::println("hello");                  // Access via namespace (::)
 Use `export` keyword prefixed to declarations:
 
 ```c
-export func add(a: i32, b: i32) -> i32 { ... }
+export func add(a: i32, b: i32): i32 { ... }
 export struct Point { x: f64, y: f64 }
 export type Array[T, N] = [N]T;
 export const PI: f64 = 3.14159;
@@ -649,14 +649,14 @@ Cubec 的泛型机制基于**"推导 + 鸭子类型"**范式，采用编译期�
 
 ```c
 // 简单形式：裸标识符，类型从实参推导
-func[T](x: T) -> T
+func[T](x: T): T
 
 // 约束形式：通过 extends 限制
-func[T extends Numeric](x: T) -> T
+func[T extends Numeric](x: T): T
 
 // Rest 参数：以 ... 为前缀，收集零个或多个类型实参
 type Variadic[...Args] = i32
-func[T extends Numeric, ...Rest](first: T, rest: Rest) -> T
+func[T extends Numeric, ...Rest](first: T, rest: Rest): T
 ```
 
 
@@ -695,7 +695,7 @@ func(x: Array[?]): bool
 #### 6. 类型级三元运算符
 
 ```c
-func[T](x: T) -> T extends Numeric ? i64 : string
+func[T](x: T): T extends Numeric ? i64 : string
 ```
 
 编译期判定 `A extends B`，满足取 `X`，否则取 `Y`。复用 `extends` 语义。
@@ -703,8 +703,8 @@ func[T](x: T) -> T extends Numeric ? i64 : string
 #### 7. 类型相等/不等判断
 
 ```c
-func[T](x: T) -> T == i32 ? f64 : string
-func[T](x: T) -> T != void ? T : i32
+func[T](x: T): T == i32 ? f64 : string
+func[T](x: T): T != void ? T : i32
 ```
 
 - `A == B` = `A extends B && B extends A`（双向鸭子等价）
@@ -713,8 +713,8 @@ func[T](x: T) -> T != void ? T : i32
 #### 8. 编译期值泛型
 
 ```c
-func[N: u64](arr: [N]i32) -> i32
-func[N: u64, T extends Array[?]](arr: [N]T) -> T
+func[N: u64](arr: [N]i32): i32
+func[N: u64, T extends Array[?]](arr: [N]T): T
 ```
 
 `[]` 内天然是 compile-time 上下文，无需 `comptime` 或 `var` 修饰。
@@ -736,7 +736,7 @@ Rest 参数以 `...` 作为前缀，后跟标识符。解析器在读取 identif
 
 ```c
 // ✓ 正确
-func[N: u64, T](arr: [N]T) -> T
+func[N: u64, T](arr: [N]T): T
 
 // ✗ 错误：不存在 <> 语法
 func<N: u64>(...)
@@ -760,7 +760,7 @@ type Pair[A, B] = struct { first: A, second: B }
 #### 11. `comptime if` 编译期分支
 
 ```c
-func[T](x: T) -> void {
+func[T](x: T): void {
     comptime if (T extends Numeric) {
         print("numeric: ", x)
     } else {
@@ -776,7 +776,7 @@ func[T](x: T) -> void {
 编译期支持所有基本类型（整数、浮点、bool、字符串）以及 struct 和 array。编译期指针通过安全的"虚拟指针"（map + id）实现，不暴露真实内存地址。允许调用 `extern` 声明的外部函数。
 
 ```c
-extern func read_file(path: [*:0]u8) -> []u8
+extern func read_file(path: [*:0]u8): []u8
 
 comptime var data = read_file("config.json")  // 编译期 IO
 ```
@@ -821,7 +821,7 @@ struct Vec[T] {
     data: *T; len: u64
     type Element = T
 
-    func[U](self: Vec[T], other: Vec[U]) -> Vec[T] { ... }
+    func[U](self: Vec[T], other: Vec[U]): Vec[T] { ... }
 }
 ```
 
@@ -833,17 +833,17 @@ struct Vec[T] {
 // 无泛型参数
 interface Iterator {
     type Item
-    func next(self: *Iterator) -> Item;
+    func next(self: *Iterator): Item;
 }
 
 // 带泛型参数的 interface
 interface Container[T] {
-    func len(self: *Container[T]) -> u64;
-    func get(self: *Container[T], idx: u64) -> T;
+    func len(self: *Container[T]): u64;
+    func get(self: *Container[T], idx: u64): T;
 }
 
 interface Mapper[K, V] {
-    func map(self: *Mapper[K, V], key: K) -> V;
+    func map(self: *Mapper[K, V], key: K): V;
 }
 ```
 

@@ -13,8 +13,8 @@ extern "C" {
  * @brief AST node for function declaration statement.
  *
  * Syntax:
- *   [export] [inline] func <name> [<generic_params>] (<params>) [-> <return_type>] { <body> } | ;
- *   [extern] func <name> [<generic_params>] (<params>) [-> <return_type>] ;
+ *   [export] [inline] func <name> [<generic_params>] (<params>) [: <return_type>] { <body> } | ;
+ *   [extern] func <name> [<generic_params>] (<params>) [: <return_type>] ;
  *
  * Modifiers:
  * - export: function is exported from the module (source-level, compatible with inline)
@@ -26,14 +26,14 @@ extern "C" {
  * C-style variadic '...' is only allowed in extern functions.
  *
  * Examples:
- *   func add(a: i32, b: i32) -> i32 { return a + b; }
+ *   func add(a: i32, b: i32): i32 { return a + b; }
  *   func greet(name: *u8) { }
- *   export func create() -> Vec[i32] { }
- *   inline func helper(x: i32) -> i32 { return x * 2; }
- *   extern func read_file(path: *u8) -> []u8;
- *   extern func printf(fmt: *u8, ...) -> i32;
- *   func[T](x: T) -> T { return x; }
- *   func next(self: *Iterator) -> Item;
+ *   export func create(): Vec[i32] { }
+ *   inline func helper(x: i32): i32 { return x * 2; }
+ *   extern func read_file(path: *u8): []u8;
+ *   extern func printf(fmt: *u8, ...): i32;
+ *   func[T](x: T): T { return x; }
+ *   func next(self: *Iterator): Item;
  */
 struct _cubec_statement_function_t;
 struct _cubec_statement_function_t {

@@ -68,7 +68,7 @@ TEST_F(dt_expression_function, simple_captures) {
 }
 
 TEST_F(dt_expression_function, empty_captures_with_params) {
-  const char *source = "func || (a: i32) -> i32 { return a; }";
+  const char *source = "func || (a: i32): i32 { return a; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -90,7 +90,7 @@ TEST_F(dt_expression_function, empty_captures_with_params) {
  * ========================================================================== */
 
 TEST_F(dt_expression_function, generic_with_captures) {
-  const char *source = "func |ctx| [T](x: T) -> T { return x; }";
+  const char *source = "func |ctx| [T](x: T): T { return x; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -108,7 +108,7 @@ TEST_F(dt_expression_function, generic_with_captures) {
 }
 
 TEST_F(dt_expression_function, generic_no_captures) {
-  const char *source = "func || [T](x: T) -> T { return x; }";
+  const char *source = "func || [T](x: T): T { return x; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -129,7 +129,7 @@ TEST_F(dt_expression_function, generic_no_captures) {
  * ========================================================================== */
 
 TEST_F(dt_expression_function, with_params) {
-  const char *source = "func |x| (a: i32, b: i32) -> i32 { return a + b; }";
+  const char *source = "func |x| (a: i32, b: i32): i32 { return a + b; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -161,7 +161,7 @@ TEST_F(dt_expression_function, no_return_type) {
 }
 
 TEST_F(dt_expression_function, complex_return_type) {
-  const char *source = "func || () -> *i32 { }";
+  const char *source = "func || (): *i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -177,7 +177,7 @@ TEST_F(dt_expression_function, complex_return_type) {
 }
 
 TEST_F(dt_expression_function, no_params) {
-  const char *source = "func |x| () -> i32 { return x; }";
+  const char *source = "func |x| (): i32 { return x; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -198,7 +198,7 @@ TEST_F(dt_expression_function, no_params) {
  * ========================================================================== */
 
 TEST_F(dt_expression_function, immediate_call) {
-  const char *source = "func |x| (a: i32) -> i32 { return x + a; }(42)";
+  const char *source = "func |x| (a: i32): i32 { return x + a; }(42)";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -212,7 +212,7 @@ TEST_F(dt_expression_function, immediate_call) {
 }
 
 TEST_F(dt_expression_function, chained_member) {
-  const char *source = "func || () -> Vec[i32] { }.field";
+  const char *source = "func || (): Vec[i32] { }.field";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -226,7 +226,7 @@ TEST_F(dt_expression_function, chained_member) {
 }
 
 TEST_F(dt_expression_function, assign_to_var) {
-  const char *source = "var f = func |x| (a: i32) -> i32 { return a; };";
+  const char *source = "var f = func |x| (a: i32): i32 { return a; };";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -244,7 +244,7 @@ TEST_F(dt_expression_function, assign_to_var) {
  * ========================================================================== */
 
 TEST_F(dt_expression_function, clone) {
-  const char *source = "func || (a: i32) -> i32 { return a; }";
+  const char *source = "func || (a: i32): i32 { return a; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -267,7 +267,7 @@ TEST_F(dt_expression_function, clone) {
 }
 
 TEST_F(dt_expression_function, clone_with_captures) {
-  const char *source = "func |x, y| () -> i32 { return x + y; }";
+  const char *source = "func |x, y| (): i32 { return x + y; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -288,7 +288,7 @@ TEST_F(dt_expression_function, clone_with_captures) {
 }
 
 TEST_F(dt_expression_function, move) {
-  const char *source = "func |x| (a: i32) -> i32 { return x + a; }";
+  const char *source = "func |x| (a: i32): i32 { return x + a; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -339,7 +339,7 @@ TEST_F(dt_expression_function, missing_close_pipe) {
 }
 
 TEST_F(dt_expression_function, missing_body) {
-  const char *source = "func || () -> i32;";
+  const char *source = "func || (): i32;";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -367,7 +367,7 @@ TEST_F(dt_expression_function, not_func_returns_null) {
  * ========================================================================== */
 
 TEST_F(dt_expression_function, via_read_expression) {
-  const char *source = "func |x| (a: i32) -> i32 { return x + a; }";
+  const char *source = "func |x| (a: i32): i32 { return x + a; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 

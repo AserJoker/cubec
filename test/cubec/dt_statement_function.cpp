@@ -19,10 +19,10 @@ protected:
  *  Basic parsing
  * ========================================================================== */
 
-/* ---- Basic function: func add(a: i32, b: i32) -> i32 { } ---- */
+/* ---- Basic function: func add(a: i32, b: i32): i32 { } ---- */
 
 TEST_F(dt_statement_function, basic_function) {
-  const char *source = "func add(a: i32, b: i32) -> i32 { }";
+  const char *source = "func add(a: i32, b: i32): i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -89,10 +89,10 @@ TEST_F(dt_statement_function, no_return_type) {
   allocator_free(allocator, &tokens);
 }
 
-/* ---- Single param: func square(x: i32) -> i32 { } ---- */
+/* ---- Single param: func square(x: i32): i32 { } ---- */
 
 TEST_F(dt_statement_function, single_param) {
-  const char *source = "func square(x: i32) -> i32 { }";
+  const char *source = "func square(x: i32): i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -112,10 +112,10 @@ TEST_F(dt_statement_function, single_param) {
   allocator_free(allocator, &tokens);
 }
 
-/* ---- Multiple params: func sum(a: i32, b: i32, c: i32) -> i32 { } ---- */
+/* ---- Multiple params: func sum(a: i32, b: i32, c: i32): i32 { } ---- */
 
 TEST_F(dt_statement_function, multiple_params) {
-  const char *source = "func sum(a: i32, b: i32, c: i32) -> i32 { }";
+  const char *source = "func sum(a: i32, b: i32, c: i32): i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -134,10 +134,10 @@ TEST_F(dt_statement_function, multiple_params) {
  *  Generic functions
  * ========================================================================== */
 
-/* ---- Generic single param: func identity[T](x: T) -> T { } ---- */
+/* ---- Generic single param: func identity[T](x: T): T{ } ---- */
 
 TEST_F(dt_statement_function, generic_single_param) {
-  const char *source = "func identity[T](x: T) -> T { }";
+  const char *source = "func identity[T](x: T): T{ }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -157,10 +157,10 @@ TEST_F(dt_statement_function, generic_single_param) {
   allocator_free(allocator, &tokens);
 }
 
-/* ---- Generic multiple params: func[T extends Numeric, N: u64](arr: [N]T) -> T { } ---- */
+/* ---- Generic multiple params: func[T extends Numeric, N: u64](arr: [N]T): T{ } ---- */
 
 TEST_F(dt_statement_function, generic_multiple_params) {
-  const char *source = "func foo[T extends Numeric, N: u64](arr: [N]T) -> T { }";
+  const char *source = "func foo[T extends Numeric, N: u64](arr: [N]T): T{ }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -212,10 +212,10 @@ TEST_F(dt_statement_function, generic_rest_param) {
  *  Modifiers
  * ========================================================================== */
 
-/* ---- Export function: export func create() -> Vec[i32] { } ---- */
+/* ---- Export function: export func create(): Vec[i32] { } ---- */
 
 TEST_F(dt_statement_function, export_function) {
-  const char *source = "export func create() -> Vec[i32] { }";
+  const char *source = "export func create(): Vec[i32] { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -232,10 +232,10 @@ TEST_F(dt_statement_function, export_function) {
   allocator_free(allocator, &tokens);
 }
 
-/* ---- Inline function: inline func helper(x: i32) -> i32 { } ---- */
+/* ---- Inline function: inline func helper(x: i32): i32 { } ---- */
 
 TEST_F(dt_statement_function, inline_function) {
-  const char *source = "inline func helper(x: i32) -> i32 { }";
+  const char *source = "inline func helper(x: i32): i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -277,10 +277,10 @@ TEST_F(dt_statement_function, no_modifier) {
  *  Extern functions
  * ========================================================================== */
 
-/* ---- Extern function: extern func read_file(path: *u8) -> []u8; ---- */
+/* ---- Extern function: extern func read_file(path: *u8): []u8; ---- */
 
 TEST_F(dt_statement_function, extern_function) {
-  const char *source = "extern func read_file(path: *u8) -> []u8;";
+  const char *source = "extern func read_file(path: *u8): []u8;";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -298,10 +298,10 @@ TEST_F(dt_statement_function, extern_function) {
   allocator_free(allocator, &tokens);
 }
 
-/* ---- Extern C-style variadic: extern func printf(fmt: *u8, ...) -> i32; ---- */
+/* ---- Extern C-style variadic: extern func printf(fmt: *u8, ...): i32; ---- */
 
 TEST_F(dt_statement_function, extern_c_variadic) {
-  const char *source = "extern func printf(fmt: *u8, ...) -> i32;";
+  const char *source = "extern func printf(fmt: *u8, ...): i32;";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -473,7 +473,7 @@ TEST_F(dt_statement_function, body_with_statements) {
 /* ---- No body semicolon (interface style) ---- */
 
 TEST_F(dt_statement_function, no_body_semicolon) {
-  const char *source = "func next(self: *Self) -> Item;";
+  const char *source = "func next(self: *Self): Item;";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -496,7 +496,7 @@ TEST_F(dt_statement_function, no_body_semicolon) {
 /* ---- Missing function name ---- */
 
 TEST_F(dt_statement_function, missing_name) {
-  const char *source = "func (a: i32) -> i32 { }";
+  const char *source = "func (a: i32): i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -510,7 +510,7 @@ TEST_F(dt_statement_function, missing_name) {
 /* ---- Missing open paren ---- */
 
 TEST_F(dt_statement_function, missing_open_paren) {
-  const char *source = "func add a: i32) -> i32 { }";
+  const char *source = "func add a: i32): i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -586,7 +586,7 @@ TEST_F(dt_statement_function, inline_extern_conflict) {
 /* ---- C-style variadic in non-extern function ---- */
 
 TEST_F(dt_statement_function, c_variadic_non_extern) {
-  const char *source = "func foo(x: i32, ...) -> i32 { }";
+  const char *source = "func foo(x: i32, ...): i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -604,7 +604,7 @@ TEST_F(dt_statement_function, c_variadic_non_extern) {
 /* ---- Clone basic function ---- */
 
 TEST_F(dt_statement_function, clone) {
-  const char *source = "func add(a: i32, b: i32) -> i32 { }";
+  const char *source = "func add(a: i32, b: i32): i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -631,7 +631,7 @@ TEST_F(dt_statement_function, clone) {
 /* ---- Clone generic function ---- */
 
 TEST_F(dt_statement_function, clone_generic) {
-  const char *source = "func identity[T](x: T) -> T { }";
+  const char *source = "func identity[T](x: T): T{ }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -654,7 +654,7 @@ TEST_F(dt_statement_function, clone_generic) {
 /* ---- Move ---- */
 
 TEST_F(dt_statement_function, move) {
-  const char *source = "func add(a: i32, b: i32) -> i32 { }";
+  const char *source = "func add(a: i32, b: i32): i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -680,7 +680,7 @@ TEST_F(dt_statement_function, move) {
 /* ---- Clone extern function ---- */
 
 TEST_F(dt_statement_function, clone_extern) {
-  const char *source = "extern func read_file(path: *u8) -> []u8;";
+  const char *source = "extern func read_file(path: *u8): []u8;";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -707,7 +707,7 @@ TEST_F(dt_statement_function, clone_extern) {
 /* ---- Via read_statement dispatcher ---- */
 
 TEST_F(dt_statement_function, via_read_statement) {
-  const char *source = "func add(a: i32, b: i32) -> i32 { }";
+  const char *source = "func add(a: i32, b: i32): i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -723,7 +723,7 @@ TEST_F(dt_statement_function, via_read_statement) {
 /* ---- Via read_program_node ---- */
 
 TEST_F(dt_statement_function, via_read_program) {
-  const char *source = "func add(a: i32, b: i32) -> i32 { }";
+  const char *source = "func add(a: i32, b: i32): i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -743,7 +743,7 @@ TEST_F(dt_statement_function, via_read_program) {
 /* ---- Consume all tokens ---- */
 
 TEST_F(dt_statement_function, consume_all_tokens) {
-  const char *source = "func add(a: i32, b: i32) -> i32 { }";
+  const char *source = "func add(a: i32, b: i32): i32 { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 

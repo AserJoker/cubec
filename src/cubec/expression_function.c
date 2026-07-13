@@ -274,23 +274,14 @@ node_t read_expression_function(allocator_t allocator, vec_t tokens,
   current++;
   skip_whitespace(tokens, &current);
 
-  /* 7. Parse optional return type: -> type */
-  if (_is_symbol(tokens, current, "-")) {
-    current++;
-    skip_whitespace(tokens, &current);
-    token_t gt = TRY_LOCAL(onerror, vec_get(tokens, current));
-    if (!gt || !token_is(gt, CUBEC_TOKEN_SYMBOL, ">")) {
-      location_t *loc = token_get_location(gt);
-      THROW_LOCAL(onerror,
-                  "%s:%" PRIuPTR ":%" PRIuPTR " expected '>' after '-' in return type annotation",
-                  filename, loc->begin.line + 1, loc->begin.column);
-    }
+  /* 7. Parse optional return type: : type */
+  if (_is_symbol(tokens, current, ":")) {
     current++;
     skip_whitespace(tokens, &current);
 
     return_type = TRY_LOCAL(onerror, read_expression_type(allocator, tokens, &current, filename));
     if (!return_type) {
-      THROW_LOCAL(onerror, "expected return type after '->'");
+      THROW_LOCAL(onerror, "expected return type after ':'");
     }
     skip_whitespace(tokens, &current);
   }
