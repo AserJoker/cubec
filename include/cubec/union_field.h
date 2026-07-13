@@ -1,0 +1,60 @@
+#ifndef _H_CUBEC_CUBEC_UNION_FIELD_
+#define _H_CUBEC_CUBEC_UNION_FIELD_
+#include "core/allocator.h"
+#include "core/location.h"
+#include "core/node.h"
+#include "core/type.h"
+#include "core/vec.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * @brief AST node for a union field.
+ *
+ * Syntax:
+ *   <identifier> : <type>
+ *
+ * Union fields define the variants of a tagged union.
+ * Fields are comma-separated (unlike struct fields which use semicolons).
+ * No 'pub' modifier (union fields are always visible).
+ *
+ * Examples:
+ *   value: T
+ *   tag: u64
+ *   err: E
+ */
+struct _cubec_union_field_t;
+struct _cubec_union_field_t {
+  struct _node_t super;
+  node_t name;   /**< Identifier node for the field name */
+  node_t type;   /**< Type expression for the field type */
+};
+typedef struct _cubec_union_field_t *cubec_union_field_t;
+
+extern type_t g_cubec_union_field_type;
+
+struct _cubec_union_field_init_t {
+  location_t location;
+  node_t parent;
+  node_t name;
+  node_t type;
+};
+typedef struct _cubec_union_field_init_t cubec_union_field_init_t;
+
+/**
+ * @brief Try to parse a union field: <identifier> : <type>
+ * @param allocator The allocator to use.
+ * @param tokens The token list.
+ * @param position Current position in token list (updated on success).
+ * @param filename The source filename for error reporting.
+ * @return A new cubec_union_field_t node, or NULL if current tokens
+ *         don't match the field pattern.
+ */
+node_t read_union_field(allocator_t allocator, vec_t tokens,
+                          size_t *position, const char *filename);
+
+#ifdef __cplusplus
+}
+#endif
+#endif

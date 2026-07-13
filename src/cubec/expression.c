@@ -18,6 +18,7 @@
 #include "cubec/expression_type_interface.h"
 #include "cubec/expression_type_struct.h"
 #include "cubec/expression_type_enum.h"
+#include "cubec/expression_type_union.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_postfix_unary.h"
@@ -143,6 +144,13 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
 
   // Try enum type: enum { items }
   result = read_expression_type_enum(allocator, tokens, &current, filename);
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try union type: union[generic_params] { fields }
+  result = read_expression_type_union(allocator, tokens, &current, filename);
   if (result) {
     *position = current;
     return result;
@@ -381,6 +389,12 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
   }
   /* Try enum type expression: enum { items } */
   node = read_expression_type_enum(allocator, tokens, &current, filename);
+  if (node) {
+    *position = current;
+    return node;
+  }
+  /* Try union type expression: union[generic_params] { fields } */
+  node = read_expression_type_union(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
