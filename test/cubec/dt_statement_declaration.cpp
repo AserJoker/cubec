@@ -549,3 +549,192 @@ TEST_F(dt_statement_declaration, builtin_var_move) {
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
+
+/* ==========================================================================
+ *  Comptime declarations
+ * ========================================================================== */
+
+/* ---- Comptime var: comptime var x: i32 = 42; ---- */
+
+TEST_F(dt_statement_declaration, comptime_var) {
+  const char *source = "comptime var x: i32 = 42;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION);
+
+  cubec_statement_declaration_t decl = (cubec_statement_declaration_t)node;
+  EXPECT_TRUE(decl->is_comptime);
+  EXPECT_FALSE(decl->is_export);
+  EXPECT_FALSE(decl->is_extern);
+  EXPECT_FALSE(decl->is_builtin);
+  ASSERT_NE(decl->declarator, nullptr);
+
+  cubec_declaration_variable_t dv = (cubec_declaration_variable_t)decl->declarator;
+  ASSERT_NE(dv->expression, nullptr);
+  ASSERT_NE(dv->type, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Error: comptime var without initializer ---- */
+
+TEST_F(dt_statement_declaration, comptime_var_without_initializer_is_error) {
+  const char *source = "comptime var x: i32;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = NULL;
+  CATCH_ERROR(
+      node = read_statement(allocator, tokens, &position, "test.cubec"),
+      error_clear());
+  EXPECT_EQ(node, nullptr);
+
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Export comptime var (orthogonal combination) ---- */
+
+TEST_F(dt_statement_declaration, export_comptime_var) {
+  const char *source = "export comptime var PI: f64 = 3.14;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION);
+
+  cubec_statement_declaration_t decl = (cubec_statement_declaration_t)node;
+  EXPECT_TRUE(decl->is_export);
+  EXPECT_TRUE(decl->is_comptime);
+  EXPECT_FALSE(decl->is_extern);
+  EXPECT_FALSE(decl->is_builtin);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Comptime export var (order-independent) ---- */
+
+TEST_F(dt_statement_declaration, comptime_export_var) {
+  const char *source = "comptime export var PI: f64 = 3.14;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION);
+
+  cubec_statement_declaration_t decl = (cubec_statement_declaration_t)node;
+  EXPECT_TRUE(decl->is_export);
+  EXPECT_TRUE(decl->is_comptime);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Error: builtin and comptime are mutually exclusive ---- */
+
+TEST_F(dt_statement_declaration, builtin_comptime_var_mutual_exclusion) {
+  const char *source = "builtin comptime var X: i32;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = NULL;
+  CATCH_ERROR(
+      node = read_statement(allocator, tokens, &position, "test.cubec"),
+      error_clear());
+  EXPECT_EQ(node, nullptr);
+
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Error: comptime and builtin are mutually exclusive ---- */
+
+TEST_F(dt_statement_declaration, comptime_builtin_var_mutual_exclusion) {
+  const char *source = "comptime builtin var X: i32;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = NULL;
+  CATCH_ERROR(
+      node = read_statement(allocator, tokens, &position, "test.cubec"),
+      error_clear());
+  EXPECT_EQ(node, nullptr);
+
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Error: extern and comptime are mutually exclusive ---- */
+
+TEST_F(dt_statement_declaration, extern_comptime_var_mutual_exclusion) {
+  const char *source = "extern comptime var x: i32;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = NULL;
+  CATCH_ERROR(
+      node = read_statement(allocator, tokens, &position, "test.cubec"),
+      error_clear());
+  EXPECT_EQ(node, nullptr);
+
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Comptime var clone ---- */
+
+TEST_F(dt_statement_declaration, comptime_var_clone) {
+  const char *source = "comptime var x: i32 = 42;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  node_t cloned = (node_t)value_clone(allocator, node);
+  ASSERT_NE(cloned, nullptr);
+  EXPECT_EQ(cloned->kind, CUBEC_NODE_STATEMENT_DECLARATION);
+
+  cubec_statement_declaration_t decl = (cubec_statement_declaration_t)cloned;
+  EXPECT_TRUE(decl->is_comptime);
+  ASSERT_NE(decl->declarator, nullptr);
+
+  allocator_free(allocator, &cloned);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Comptime var move ---- */
+
+TEST_F(dt_statement_declaration, comptime_var_move) {
+  const char *source = "comptime var x: i32 = 42;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  node_t moved = (node_t)value_move(allocator, node);
+  ASSERT_NE(moved, nullptr);
+  EXPECT_EQ(moved->kind, CUBEC_NODE_STATEMENT_DECLARATION);
+
+  cubec_statement_declaration_t decl = (cubec_statement_declaration_t)moved;
+  EXPECT_TRUE(decl->is_comptime);
+  ASSERT_NE(decl->declarator, nullptr);
+
+  allocator_free(allocator, &moved);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}

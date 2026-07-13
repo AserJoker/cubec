@@ -23,6 +23,7 @@ static void _cubec_statement_declaration_init(
   self->is_export = init->is_export;
   self->is_extern = init->is_extern;
   self->is_builtin = init->is_builtin;
+  self->is_comptime = init->is_comptime;
   self->declarator = init->declarator;
 onerror:
   return;
@@ -41,6 +42,7 @@ static void _cubec_statement_declaration_clone(
   self->is_export = another->is_export;
   self->is_extern = another->is_extern;
   self->is_builtin = another->is_builtin;
+  self->is_comptime = another->is_comptime;
   self->declarator = TRY_LOCAL(onerror, value_clone(allocator, another->declarator));
   return;
 onerror:
@@ -54,6 +56,7 @@ static void _cubec_statement_declaration_move(
   self->is_export = another->is_export;
   self->is_extern = another->is_extern;
   self->is_builtin = another->is_builtin;
+  self->is_comptime = another->is_comptime;
   self->declarator = TRY_LOCAL(onerror, value_move(allocator, another->declarator));
   return;
 onerror:
@@ -88,8 +91,9 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
   bool is_export = false;
   bool is_extern = false;
   bool is_builtin = false;
+  bool is_comptime = false;
 
-  /* 1. Parse optional modifiers: export / extern / builtin */
+  /* 1. Parse optional modifiers: export / extern / builtin / comptime */
   while (true) {
     if (_is_keyword(tokens, current, "export")) {
       if (is_export) THROW_LOCAL(onerror, "duplicate 'export' modifier");
@@ -121,6 +125,16 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
       }
       current++;
       skip_whitespace(tokens, &current);
+    } else if (_is_keyword(tokens, current, "comptime")) {
+      if (is_comptime) THROW_LOCAL(onerror, "duplicate 'comptime' modifier");
+      is_comptime = true;
+      if (start_location.begin.offset == 0) {
+        token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+        start_location = *token_get_location(tok);
+        start_location.filename = filename;
+      }
+      current++;
+      skip_whitespace(tokens, &current);
     } else {
       break;
     }
@@ -131,6 +145,10 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
     THROW_LOCAL(onerror, "'extern' and 'export' are mutually exclusive");
   if (is_extern && is_builtin)
     THROW_LOCAL(onerror, "'extern' and 'builtin' are mutually exclusive");
+  if (is_extern && is_comptime)
+    THROW_LOCAL(onerror, "'extern' and 'comptime' are mutually exclusive");
+  if (is_builtin && is_comptime)
+    THROW_LOCAL(onerror, "'builtin' and 'comptime' are mutually exclusive");
 
   /* 3. Expect 'var' keyword */
   if (!_is_keyword(tokens, current, "var")) {
@@ -164,6 +182,14 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
     }
   }
 
+  /* 5b. Validate: comptime declarations must have an initializer */
+  if (is_comptime) {
+    cubec_declaration_variable_t dv = (cubec_declaration_variable_t)declarator;
+    if (!dv->expression) {
+      THROW_LOCAL(cleanup, "comptime var declaration requires an initializer");
+    }
+  }
+
   skip_whitespace(tokens, &current);
 
   /* 6. Expect semicolon */
@@ -190,6 +216,7 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
       .is_export = is_export,
       .is_extern = is_extern,
       .is_builtin = is_builtin,
+      .is_comptime = is_comptime,
       .declarator = declarator,
   };
   node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_declaration_type, &init));

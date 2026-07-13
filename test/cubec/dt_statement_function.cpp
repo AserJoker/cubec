@@ -820,3 +820,124 @@ TEST_F(dt_statement_function, builtin_extern_mutual_exclusion) {
 
   allocator_free(allocator, &tokens);
 }
+
+/* ==========================================================================
+ *  Comptime functions
+ * ========================================================================== */
+
+/* ---- Comptime func: comptime func fib(n: u64): u64 { } ---- */
+
+TEST_F(dt_statement_function, comptime_func) {
+  const char *source = "comptime func fib(n: u64): u64 { }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_function(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FUNCTION);
+
+  cubec_statement_function_t fn = (cubec_statement_function_t)node;
+  EXPECT_TRUE(fn->is_comptime);
+  EXPECT_FALSE(fn->is_export);
+  EXPECT_FALSE(fn->is_extern);
+  EXPECT_FALSE(fn->is_builtin);
+  EXPECT_FALSE(fn->is_inline);
+  EXPECT_NE(fn->body, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Error: comptime func without body ---- */
+
+TEST_F(dt_statement_function, comptime_func_without_body_is_error) {
+  const char *source = "comptime func foo(): void;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = NULL;
+  CATCH_ERROR(
+      node = read_statement_function(allocator, tokens, &position, "test.cubec"),
+      error_clear());
+  EXPECT_EQ(node, nullptr);
+
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Export comptime func (orthogonal combination) ---- */
+
+TEST_F(dt_statement_function, export_comptime_func) {
+  const char *source = "export comptime func MAX(a: i32, b: i32): i32 { }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_function(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  cubec_statement_function_t fn = (cubec_statement_function_t)node;
+  EXPECT_TRUE(fn->is_export);
+  EXPECT_TRUE(fn->is_comptime);
+  EXPECT_FALSE(fn->is_extern);
+  EXPECT_FALSE(fn->is_builtin);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Inline comptime func (orthogonal combination) ---- */
+
+TEST_F(dt_statement_function, inline_comptime_func) {
+  const char *source = "inline comptime func fib(n: u64): u64 { }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_function(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  cubec_statement_function_t fn = (cubec_statement_function_t)node;
+  EXPECT_TRUE(fn->is_inline);
+  EXPECT_TRUE(fn->is_comptime);
+  EXPECT_FALSE(fn->is_extern);
+  EXPECT_FALSE(fn->is_builtin);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Error: builtin and comptime are mutually exclusive ---- */
+
+TEST_F(dt_statement_function, builtin_comptime_func_mutual_exclusion) {
+  const char *source = "builtin comptime func foo(): void;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = NULL;
+  CATCH_ERROR(
+      node = read_statement_function(allocator, tokens, &position, "test.cubec"),
+      error_clear());
+  EXPECT_EQ(node, nullptr);
+
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Error: extern and comptime are mutually exclusive ---- */
+
+TEST_F(dt_statement_function, extern_comptime_func_mutual_exclusion) {
+  const char *source = "extern comptime func foo(): void;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = NULL;
+  CATCH_ERROR(
+      node = read_statement_function(allocator, tokens, &position, "test.cubec"),
+      error_clear());
+  EXPECT_EQ(node, nullptr);
+
+  allocator_free(allocator, &tokens);
+}

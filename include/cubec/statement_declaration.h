@@ -16,11 +16,13 @@ extern "C" {
  *   [export] var <name> [: <type>] = <expression> ;
  *   [extern] var <name> [: <type>] ;
  *   [builtin] var <name> [: <type>] ;
+ *   [comptime] var <name> [: <type>] = <expression> ;
  *
  * Modifiers:
- * - export: variable is exported from the module (orthogonal with builtin)
- * - extern: variable has external linkage, no initializer (mutually exclusive with export/builtin)
- * - builtin: variable is compiler-provided, no initializer (mutually exclusive with extern)
+ * - export: variable is exported from the module (orthogonal with builtin/comptime)
+ * - extern: variable has external linkage, no initializer (mutually exclusive with export/builtin/comptime)
+ * - builtin: variable is compiler-provided, no initializer (mutually exclusive with extern/comptime)
+ * - comptime: variable is compile-time evaluated, requires initializer (mutually exclusive with extern/builtin)
  *
  * Exactly one variable per statement. The declarator is a declaration_variable node
  * whose expression field is NULL for extern/builtin declarations.
@@ -31,6 +33,8 @@ extern "C" {
  *   export var name: str = "hello";
  *   extern var errno: i32;
  *   builtin var VERSION: const str;
+ *   comptime var PI: f64 = 3.14;
+ *   export comptime var MAX: i32 = 1024;
  */
 struct _cubec_statement_declaration_t;
 struct _cubec_statement_declaration_t {
@@ -38,6 +42,7 @@ struct _cubec_statement_declaration_t {
   bool is_export;     /**< Whether this declaration is exported */
   bool is_extern;     /**< Whether this is an extern variable (no initializer) */
   bool is_builtin;    /**< Whether this is a builtin variable (no initializer) */
+  bool is_comptime;   /**< Whether this is a comptime variable (requires initializer) */
   node_t declarator;  /**< Single declaration_variable node */
 };
 typedef struct _cubec_statement_declaration_t *cubec_statement_declaration_t;
@@ -50,18 +55,19 @@ struct _cubec_statement_declaration_init_t {
   bool is_export;
   bool is_extern;
   bool is_builtin;
+  bool is_comptime;
   node_t declarator;
 };
 typedef struct _cubec_statement_declaration_init_t cubec_statement_declaration_init_t;
 
 /**
- * @brief Try to parse a declaration statement: [export|extern|builtin] var <declarator> ;
+ * @brief Try to parse a declaration statement: [export|extern|builtin|comptime] var <declarator> ;
  * @param allocator The allocator to use
  * @param tokens The token list
  * @param position Current position in token list (updated on success)
  * @param filename The source filename for error reporting
  * @return A new cubec_statement_declaration_t node, or NULL if current token
- *         is not a declaration prefix (export/extern/builtin/var).
+ *         is not a declaration prefix (export/extern/builtin/comptime/var).
  */
 node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
                                   size_t *position, const char *filename);

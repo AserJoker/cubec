@@ -989,7 +989,7 @@ cubec/
 │   ├── core/         # 核心数据结构（vec, list, rbtree, map, string 等）
 │   └── cubec/        # 前端模块（词法/语法分析）
 ├── src/              # 源文件（与 include/ 对应）
-├── test/             # 测试文件（Google Test, 790 测试用例）
+├── test/             # 测试文件（Google Test, 805 测试用例）
 ├── demo/             # 示例 .cubec 文件
 └── third_party/      # 第三方依赖
 ```
@@ -1031,15 +1031,15 @@ cubec/
   - 块语句（`{ <statements> }`，引入新作用域，支持空块和嵌套）
   - 表达式语句（`<expression>;`，缺少分号为语法错误）
   - 空语句（`;`）
-  - 变量声明语句（`var <identifier> [: <type>] = <expression> [, ...];`，支持多变量逗号分隔）
+  - 变量声明语句（`[export|extern|builtin|comptime] var <identifier> [: <type>] = <expression> [, ...];`，支持多变量逗号分隔，comptime 要求初始值，与 extern/builtin 互斥）
   - `type` 别名声明语句（`type Name[<generic_params>] = <type_expression>;`，支持简单别名、泛型别名、rest 参数）
-  - `func` 函数声明语句（`[export] [inline] func <name> [<generic_params>] (<params>) [-> <return_type>] { <body> } | ;`，`extern` 函数以 `;` 结尾无 body，C-style variadic `...` 仅限 extern 函数）
+  - `func` 函数声明语句（`[export] [inline] func <name> [<generic_params>] (<params>) [-> <return_type>] { <body> } | ;`，`extern` 函数以 `;` 结尾无 body，C-style variadic `...` 仅限 extern 函数，`builtin` 编译器内建函数无 body，`comptime` 编译时求值函数必须有 body，comptime 与 extern/builtin 互斥）
   - `import` 导入语句（`import <module_name> [as <alias>] from "<path>";`）
   - `return` 返回语句（`return [<expression>];`）
   - 泛型参数解析（支持简单 `T`、约束 `T extends U`、值泛型 `N: u64`、rest 参数 `...Args` 四种形式）
   - `read_statement` 语句分派器（按优先级尝试各语句类型）
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：790 测试用例覆盖所有核心模块
+- **测试体系**：805 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 
@@ -1054,7 +1054,7 @@ cubec/
   - `enum` 枚举声明
   - `union` 联合体声明
 - **高级特性**：
-  - `comptime` 编译时求值
+  - `comptime` 编译时求值（var/func 修饰符已实现，comptime 块待实现）
   - `test` 测试块
   - `decorator` 装饰器 / 属性
 - **语义分析**（`src/engine/` — 目录尚未创建）
