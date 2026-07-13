@@ -1,7 +1,9 @@
 #include "cubec/expression_typeof.h"
 #include "cubec/expression.h"
-#include "cubec/expression_namespace_access.h"
+#include "cubec/expression_call.h"
 #include "cubec/expression_generic_instantiation.h"
+#include "cubec/expression_member.h"
+#include "cubec/expression_namespace_access.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/node.h"
@@ -285,6 +287,106 @@ TEST_F(dt_expression_typeof, move) {
   EXPECT_EQ(t->expression->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &moved);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ==========================================================================
+ *  typeof in expression context (via read_expression)
+ * ========================================================================== */
+
+/* ---- typeof via read_expression ---- */
+
+TEST_F(dt_expression_typeof, via_read_expression) {
+  const char *source = "typeof(x)";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
+
+  cubec_expression_typeof_t t = (cubec_expression_typeof_t)node;
+  ASSERT_NE(t->expression, nullptr);
+  EXPECT_EQ(t->expression->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- typeof with member access in expression: typeof(x).field ---- */
+
+TEST_F(dt_expression_typeof, typeof_member_access_in_expression) {
+  const char *source = "typeof(x).field";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+
+  cubec_expression_member_t mem = (cubec_expression_member_t)node;
+  ASSERT_NE(mem->host, nullptr);
+  EXPECT_EQ(mem->host->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- typeof with call in expression: typeof(x)() ---- */
+
+TEST_F(dt_expression_typeof, typeof_call_in_expression) {
+  const char *source = "typeof(x)()";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
+
+  cubec_expression_call_t call = (cubec_expression_call_t)node;
+  ASSERT_NE(call->callee, nullptr);
+  EXPECT_EQ(call->callee->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- typeof with namespace access in expression: typeof(x)::method ---- */
+
+TEST_F(dt_expression_typeof, typeof_namespace_access_in_expression) {
+  const char *source = "typeof(x)::method";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
+
+  cubec_expression_namespace_access_t ns = (cubec_expression_namespace_access_t)node;
+  ASSERT_NE(ns->host, nullptr);
+  EXPECT_EQ(ns->host->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- typeof in ternary: typeof(x) == i32 ? a : b ---- */
+
+TEST_F(dt_expression_typeof, typeof_in_ternary) {
+  const char *source = "typeof(x) == i32 ? a : b";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
+
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

@@ -184,8 +184,16 @@ static const binary_op_entry_t binary_operators[] = {
 
 /**
  * @brief Get precedence of a token if it's a binary operator, or 0.
+ *        Handles both symbol operators and keyword operators (e.g. 'extends').
  */
 static int get_binary_precedence(token_t tok) {
+  /* Check keyword operators: 'extends' binds at level 6 (same as ==, !=) */
+  if (token_get_kind(tok) == CUBEC_TOKEN_KEYWORD) {
+    if (token_is(tok, CUBEC_TOKEN_KEYWORD, "extends")) {
+      return 6;
+    }
+    return 0;
+  }
   if (token_get_kind(tok) != CUBEC_TOKEN_SYMBOL) {
     return 0;
   }

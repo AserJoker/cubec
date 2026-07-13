@@ -86,6 +86,14 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
     return result;
   }
 
+  // Try typeof: typeof(<expression>) — compile-time type computation
+  result = TRY(NULL,
+               read_expression_typeof(allocator, tokens, &current, filename));
+  if (result) {
+    *position = current;
+    return result;
+  }
+
   // Try anonymous function: func |captures| [generic_params] (params) -> type { body }
   result = TRY(NULL,
                read_expression_function(allocator, tokens, &current, filename));
