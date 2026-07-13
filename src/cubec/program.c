@@ -17,6 +17,7 @@
 #include "cubec/statement_cunion.h"
 #include "cubec/statement_union.h"
 #include "cubec/statement_import.h"
+#include "cubec/statement_test.h"
 #include "cubec/token.h"
 #include <stdint.h>
 
@@ -120,6 +121,10 @@ node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
     if (!statement) {
       /* Try statement_union (union ... / export union ...) */
       statement = TRY_LOCAL(onerror, read_statement_union(allocator, tokens, &current, filename));
+    }
+    if (!statement) {
+      /* Try statement_test (test "name" { }) */
+      statement = TRY_LOCAL(onerror, read_statement_test(allocator, tokens, &current, filename));
     }
     if (!statement) {
       /* Try statement_empty (;) */
