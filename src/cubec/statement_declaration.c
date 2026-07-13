@@ -4,7 +4,6 @@
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
-#include "core/vec.h"
 #include "cubec/declaration_variable.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -22,14 +21,16 @@ static void _cubec_statement_declaration_init(
   super_init.location = init->location;
   TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
   self->is_export = init->is_export;
-  self->declarators = init->declarators;
+  self->is_extern = init->is_extern;
+  self->is_builtin = init->is_builtin;
+  self->declarator = init->declarator;
 onerror:
   return;
 }
 
 static void _cubec_statement_declaration_dispose(
     cubec_statement_declaration_t self, allocator_t allocator) {
-  allocator_free(allocator, &self->declarators);
+  allocator_free(allocator, &self->declarator);
   g_node_type.dispose(&self->super, allocator);
 }
 
@@ -38,7 +39,9 @@ static void _cubec_statement_declaration_clone(
     cubec_statement_declaration_t another) {
   TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
   self->is_export = another->is_export;
-  self->declarators = TRY_LOCAL(onerror, value_clone(allocator, another->declarators));
+  self->is_extern = another->is_extern;
+  self->is_builtin = another->is_builtin;
+  self->declarator = TRY_LOCAL(onerror, value_clone(allocator, another->declarator));
   return;
 onerror:
   return;
@@ -49,7 +52,9 @@ static void _cubec_statement_declaration_move(
     cubec_statement_declaration_t another) {
   TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
   self->is_export = another->is_export;
-  self->declarators = TRY_LOCAL(onerror, value_move(allocator, another->declarators));
+  self->is_extern = another->is_extern;
+  self->is_builtin = another->is_builtin;
+  self->declarator = TRY_LOCAL(onerror, value_move(allocator, another->declarator));
   return;
 onerror:
   return;
@@ -78,21 +83,56 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
                                   size_t *position, const char *filename) {
   size_t current = *position;
   cubec_statement_declaration_t node = NULL;
-  vec_t declarators = NULL;
+  node_t declarator = NULL;
   location_t start_location = {0};
   bool is_export = false;
+  bool is_extern = false;
+  bool is_builtin = false;
 
-  /* Check for optional 'export' keyword */
-  if (_is_keyword(tokens, current, "export")) {
-    is_export = true;
-    token_t export_token = TRY_LOCAL(onerror, vec_get(tokens, current));
-    start_location = *token_get_location(export_token);
-    start_location.filename = filename;
-    current++;
-    skip_whitespace(tokens, &current);
+  /* 1. Parse optional modifiers: export / extern / builtin */
+  while (true) {
+    if (_is_keyword(tokens, current, "export")) {
+      if (is_export) THROW_LOCAL(onerror, "duplicate 'export' modifier");
+      is_export = true;
+      if (start_location.begin.offset == 0) {
+        token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+        start_location = *token_get_location(tok);
+        start_location.filename = filename;
+      }
+      current++;
+      skip_whitespace(tokens, &current);
+    } else if (_is_keyword(tokens, current, "extern")) {
+      if (is_extern) THROW_LOCAL(onerror, "duplicate 'extern' modifier");
+      is_extern = true;
+      if (start_location.begin.offset == 0) {
+        token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+        start_location = *token_get_location(tok);
+        start_location.filename = filename;
+      }
+      current++;
+      skip_whitespace(tokens, &current);
+    } else if (_is_keyword(tokens, current, "builtin")) {
+      if (is_builtin) THROW_LOCAL(onerror, "duplicate 'builtin' modifier");
+      is_builtin = true;
+      if (start_location.begin.offset == 0) {
+        token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+        start_location = *token_get_location(tok);
+        start_location.filename = filename;
+      }
+      current++;
+      skip_whitespace(tokens, &current);
+    } else {
+      break;
+    }
   }
 
-  /* Expect 'var' keyword */
+  /* 2. Mutually exclusive check */
+  if (is_extern && is_export)
+    THROW_LOCAL(onerror, "'extern' and 'export' are mutually exclusive");
+  if (is_extern && is_builtin)
+    THROW_LOCAL(onerror, "'extern' and 'builtin' are mutually exclusive");
+
+  /* 3. Expect 'var' keyword */
   if (!_is_keyword(tokens, current, "var")) {
     return NULL;
   }
@@ -105,36 +145,28 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
 
   skip_whitespace(tokens, &current);
 
-  /* Create declarators vec with auto_dispose */
-  declarators = TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
-
-  /* Parse first declarator (required) */
-  node_t first_declarator = TRY_LOCAL(cleanup, read_declaration_variable(allocator, tokens, &current, filename));
-  if (!first_declarator) {
+  /* 4. Parse single declarator */
+  declarator = TRY_LOCAL(cleanup, read_declaration_variable(allocator, tokens, &current, filename));
+  if (!declarator) {
     THROW_LOCAL(cleanup, "expected variable declarator after 'var'");
   }
-  vec_push(declarators, first_declarator);
+
+  /* 5. Validate: extern/builtin declarations must not have initializer */
+  if (is_extern || is_builtin) {
+    cubec_declaration_variable_t dv = (cubec_declaration_variable_t)declarator;
+    if (dv->expression) {
+      THROW_LOCAL(cleanup, "%s var declaration cannot have an initializer",
+                  is_extern ? "extern" : "builtin");
+    }
+    if (!dv->type) {
+      THROW_LOCAL(cleanup, "%s var declaration requires a type annotation",
+                  is_extern ? "extern" : "builtin");
+    }
+  }
 
   skip_whitespace(tokens, &current);
 
-  /* Parse additional declarators (optional, comma-separated) */
-  while (true) {
-    token_t comma = TRY_LOCAL(cleanup, vec_get(tokens, current));
-    if (!token_is(comma, CUBEC_TOKEN_SYMBOL, ",")) {
-      break;
-    }
-    current++;
-    skip_whitespace(tokens, &current);
-
-    node_t declarator = TRY_LOCAL(cleanup, read_declaration_variable(allocator, tokens, &current, filename));
-    if (!declarator) {
-      THROW_LOCAL(cleanup, "expected variable declarator after ','");
-    }
-    vec_push(declarators, declarator);
-    skip_whitespace(tokens, &current);
-  }
-
-  /* Expect semicolon */
+  /* 6. Expect semicolon */
   token_t semi = TRY_LOCAL(cleanup, vec_get(tokens, current));
   if (!token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
     location_t *loc = token_get_location(semi);
@@ -144,7 +176,7 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
   }
   current++;
 
-  /* Build location spanning from 'export var' or 'var' to semicolon */
+  /* 7. Build location spanning from first modifier or 'var' to semicolon */
   location_t *end_loc = token_get_location(semi);
   location_t loc = {
       .begin = start_location.begin,
@@ -156,17 +188,19 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
       .location = loc,
       .parent = NULL,
       .is_export = is_export,
-      .declarators = declarators,
+      .is_extern = is_extern,
+      .is_builtin = is_builtin,
+      .declarator = declarator,
   };
   node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_declaration_type, &init));
   *position = current;
   return &node->super;
 
 cleanup:
-  allocator_free(allocator, &declarators);
+  allocator_free(allocator, &declarator);
   allocator_free(allocator, &node);
 onerror:
-  allocator_free(allocator, &declarators);
+  allocator_free(allocator, &declarator);
   allocator_free(allocator, &node);
   return NULL;
 }

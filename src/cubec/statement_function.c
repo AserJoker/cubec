@@ -34,6 +34,7 @@ static void _cubec_statement_function_init(
   self->is_export = init->is_export;
   self->is_inline = init->is_inline;
   self->is_extern = init->is_extern;
+  self->is_builtin = init->is_builtin;
   self->is_c_variadic = init->is_c_variadic;
   self->name = init->name;
   self->generic_params = init->generic_params;
@@ -61,6 +62,7 @@ static void _cubec_statement_function_clone(
   self->is_export = another->is_export;
   self->is_inline = another->is_inline;
   self->is_extern = another->is_extern;
+  self->is_builtin = another->is_builtin;
   self->is_c_variadic = another->is_c_variadic;
   self->name = TRY_LOCAL(onerror, value_clone(allocator, another->name));
   self->generic_params = another->generic_params
@@ -85,6 +87,7 @@ static void _cubec_statement_function_move(
   self->is_export = another->is_export;
   self->is_inline = another->is_inline;
   self->is_extern = another->is_extern;
+  self->is_builtin = another->is_builtin;
   self->is_c_variadic = another->is_c_variadic;
   self->name = TRY_LOCAL(onerror, value_move(allocator, another->name));
   self->generic_params = another->generic_params
@@ -138,6 +141,7 @@ node_t read_statement_function(allocator_t allocator, vec_t tokens,
   bool is_export = false;
   bool is_inline = false;
   bool is_extern = false;
+  bool is_builtin = false;
   location_t start_location = {0};
   node_t expr_node = NULL;
   cubec_statement_function_t node = NULL;
@@ -174,6 +178,16 @@ node_t read_statement_function(allocator_t allocator, vec_t tokens,
       }
       current++;
       skip_whitespace(tokens, &current);
+    } else if (_is_keyword(tokens, current, "builtin")) {
+      if (is_builtin) THROW_LOCAL(onerror, "duplicate 'builtin' modifier");
+      is_builtin = true;
+      if (start_location.begin.offset == 0) {
+        token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+        start_location = *token_get_location(tok);
+        start_location.filename = filename;
+      }
+      current++;
+      skip_whitespace(tokens, &current);
     } else {
       break;
     }
@@ -184,6 +198,8 @@ node_t read_statement_function(allocator_t allocator, vec_t tokens,
     THROW_LOCAL(onerror, "'export' and 'extern' are mutually exclusive");
   if (is_inline && is_extern)
     THROW_LOCAL(onerror, "'inline' and 'extern' are mutually exclusive");
+  if (is_builtin && is_extern)
+    THROW_LOCAL(onerror, "'builtin' and 'extern' are mutually exclusive");
 
   /* 3. Expect 'func' keyword */
   if (!_is_keyword(tokens, current, "func")) {
@@ -222,6 +238,7 @@ node_t read_statement_function(allocator_t allocator, vec_t tokens,
       .is_export = is_export,
       .is_inline = is_inline,
       .is_extern = is_extern,
+      .is_builtin = is_builtin,
       .is_c_variadic = func->is_c_variadic,
       .name = func->name,
       .generic_params = func->generic_params,

@@ -755,3 +755,68 @@ TEST_F(dt_statement_function, consume_all_tokens) {
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
+
+/* ==========================================================================
+ *  Builtin function
+ * ========================================================================== */
+
+/* ---- Builtin func: builtin func panic(msg: []u8): void; ---- */
+
+TEST_F(dt_statement_function, builtin_func) {
+  const char *source = "builtin func panic(msg: []u8): void;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_function(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FUNCTION);
+
+  cubec_statement_function_t fn = (cubec_statement_function_t)node;
+  EXPECT_TRUE(fn->is_builtin);
+  EXPECT_FALSE(fn->is_export);
+  EXPECT_FALSE(fn->is_extern);
+  EXPECT_FALSE(fn->is_inline);
+  EXPECT_EQ(fn->body, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Export builtin func (orthogonal) ---- */
+
+TEST_F(dt_statement_function, export_builtin_func) {
+  const char *source = "export builtin func foo(): void;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_function(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FUNCTION);
+
+  cubec_statement_function_t fn = (cubec_statement_function_t)node;
+  EXPECT_TRUE(fn->is_export);
+  EXPECT_TRUE(fn->is_builtin);
+  EXPECT_FALSE(fn->is_extern);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Error: builtin and extern are mutually exclusive ---- */
+
+TEST_F(dt_statement_function, builtin_extern_mutual_exclusion) {
+  const char *source = "builtin extern func foo(): void;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = NULL;
+  CATCH_ERROR(
+      node = read_statement_function(allocator, tokens, &position, "test.cubec"),
+      error_clear());
+  EXPECT_EQ(node, nullptr);
+
+  allocator_free(allocator, &tokens);
+}

@@ -542,3 +542,121 @@ TEST_F(dt_statement_declaration_type, export_move) {
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
+
+/* ==========================================================================
+ *  Builtin type
+ * ========================================================================== */
+
+/* ---- Builtin type: builtin type RemoveConst[T]; ---- */
+
+TEST_F(dt_statement_declaration_type, builtin_type_no_body) {
+  const char *source = "builtin type RemoveConst[T];";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;
+  EXPECT_TRUE(decl->is_builtin);
+  EXPECT_FALSE(decl->is_export);
+  EXPECT_NE(decl->name, nullptr);
+  EXPECT_NE(decl->params, nullptr);
+  EXPECT_EQ(decl->type_value, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Export builtin type (orthogonal) ---- */
+
+TEST_F(dt_statement_declaration_type, export_builtin_type) {
+  const char *source = "export builtin type Ptr[T];";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;
+  EXPECT_TRUE(decl->is_export);
+  EXPECT_TRUE(decl->is_builtin);
+  EXPECT_EQ(decl->type_value, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Builtin type without generic params ---- */
+
+TEST_F(dt_statement_declaration_type, builtin_type_no_params) {
+  const char *source = "builtin type Void;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;
+  EXPECT_TRUE(decl->is_builtin);
+  EXPECT_NE(decl->name, nullptr);
+  EXPECT_EQ(decl->params, nullptr);
+  EXPECT_EQ(decl->type_value, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Builtin type clone ---- */
+
+TEST_F(dt_statement_declaration_type, builtin_type_clone) {
+  const char *source = "builtin type RemoveConst[T];";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  node_t cloned = (node_t)value_clone(allocator, node);
+  ASSERT_NE(cloned, nullptr);
+  EXPECT_EQ(cloned->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)cloned;
+  EXPECT_TRUE(decl->is_builtin);
+  EXPECT_EQ(decl->type_value, nullptr);
+
+  allocator_free(allocator, &cloned);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- Builtin type move ---- */
+
+TEST_F(dt_statement_declaration_type, builtin_type_move) {
+  const char *source = "builtin type RemoveConst[T];";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  node_t moved = (node_t)value_move(allocator, node);
+  ASSERT_NE(moved, nullptr);
+  EXPECT_EQ(moved->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)moved;
+  EXPECT_TRUE(decl->is_builtin);
+  EXPECT_EQ(decl->type_value, nullptr);
+
+  allocator_free(allocator, &moved);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}

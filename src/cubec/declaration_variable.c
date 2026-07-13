@@ -113,19 +113,18 @@ node_t read_declaration_variable(allocator_t allocator, vec_t tokens,
     skip_whitespace(tokens, &current);
   }
 
-  /* Expect '=' */
+  /* Expect '=' (optional — absent for extern/builtin declarations) */
   token_t eq_token = TRY_LOCAL(cleanup_node, vec_get(tokens, current));
-  if (!token_is(eq_token, CUBEC_TOKEN_SYMBOL, "=")) {
-    THROW_LOCAL(cleanup_node, "expected '=' in variable declarator");
-  }
-  current++;
+  if (token_is(eq_token, CUBEC_TOKEN_SYMBOL, "=")) {
+    current++;
 
-  skip_whitespace(tokens, &current);
+    skip_whitespace(tokens, &current);
 
-  /* Parse the initializer expression using read_expression */
-  expression = TRY_LOCAL(cleanup_node, read_expression(allocator, tokens, &current, filename));
-  if (!expression) {
-    THROW_LOCAL(cleanup_node, "expected expression after '='");
+    /* Parse the initializer expression using read_expression */
+    expression = TRY_LOCAL(cleanup_node, read_expression(allocator, tokens, &current, filename));
+    if (!expression) {
+      THROW_LOCAL(cleanup_node, "expected expression after '='");
+    }
   }
 
   /* Create the variable declarator node */
@@ -136,9 +135,15 @@ node_t read_declaration_variable(allocator_t allocator, vec_t tokens,
                               .expression = expression,
                           }));
 
-  /* Set location from start to end of expression */
+  /* Set location from start to end of expression (or type/identifier if no expression) */
   node->super.super.super.location = start_location;
-  node->super.super.super.location.end = expression->location.end;
+  if (expression) {
+    node->super.super.super.location.end = expression->location.end;
+  } else if (type) {
+    node->super.super.super.location.end = type->location.end;
+  } else {
+    node->super.super.super.location.end = identifier->location.end;
+  }
 
   *position = current;
   return (node_t)node;

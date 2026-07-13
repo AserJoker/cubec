@@ -16,7 +16,7 @@ struct _cubec_declaration_variable_t {
   struct _cubec_declaration_t super;
   node_t identifier;       /**< The variable identifier */
   node_t type;             /**< Optional type annotation (NULL if omitted) */
-  node_t expression;       /**< The initializer expression */
+  node_t expression;       /**< The initializer expression (NULL for extern/builtin declarations) */
 };
 typedef struct _cubec_declaration_variable_t *cubec_declaration_variable_t;
 
@@ -32,7 +32,7 @@ struct _cubec_declaration_variable_init_t {
 typedef struct _cubec_declaration_variable_init_t cubec_declaration_variable_init_t;
 
 /**
- * @brief Try to parse a variable declarator: <identifier> [: <type>] = <expression>
+ * @brief Try to parse a variable declarator: <identifier> [: <type>] [= <expression>]
  * @param allocator The allocator to use
  * @param tokens The token list
  * @param position Current position in token list (updated on success)

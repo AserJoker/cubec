@@ -43,7 +43,7 @@ cubec/
 │       ├── function_capture.h  # Function capture node (<identifier>)
 │       ├── statement.h         # Statement dispatcher (read_statement)
 │       ├── statement_block.h   # Block statement node ({ <statements> })
-│       ├── statement_declaration.h # Declaration statement (var <declarator> [, <declarator>]* ;)
+│       ├── statement_declaration.h # Declaration statement ([export|extern|builtin] var <declarator> ;)
 │       ├── statement_empty.h   # Empty statement node
 │       ├── statement_expression.h # Expression statement node (<expression>;)
 │       ├── statement_function.h # Function declaration ([export] [inline] func | [extern] func name[params](args) [-> type] { body } | ;)
@@ -305,8 +305,8 @@ Note: `...` (ellipsis/spread) is tokenized as a `SYMBOL` with text `"..."`, rely
 - `read_token` — Tries all token types in priority order
 - `resolve_token_list` — Complete lexer entry point, returns token vector
 
-### Keywords (36 total)
-`break`, `case`, `comptime`, `const`, `continue`, `defer`, `do`, `else`, `enum`, `export`, `extends`, `extern`, `for`, `foreach`, `from`, `func`, `if`, `import`, `in`, `inline`, `is`, `mutable`, `of`, `pub`, `register`, `return`, `struct`, `switch`, `test`, `type`, `typeof`, `sizeof`, `alignof`, `union`, `var`, `volatile`, `while`
+### Keywords (37 total)
+`break`, `builtin`, `case`, `comptime`, `const`, `continue`, `defer`, `do`, `else`, `enum`, `export`, `extends`, `extern`, `for`, `foreach`, `from`, `func`, `if`, `import`, `in`, `inline`, `is`, `mutable`, `of`, `pub`, `register`, `return`, `struct`, `switch`, `test`, `type`, `typeof`, `sizeof`, `alignof`, `union`, `var`, `volatile`, `while`
 
 ### Known Issue
 Whitespace tokens are sometimes incorrectly marked as `SYMBOL` (documented as "bug" in tests).
@@ -427,11 +427,11 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_statement_block` (statement_block.c) — Block statement (`{ <statements> }`). Parses a sequence of statements enclosed in curly braces, creating a new scope. The block may be empty (`{}`). Returns `cubec_statement_block_t` with a `statements` vec field. Returns NULL if current token is not `{`. THROW errors on unclosed brace or unexpected token in block.
 - `read_statement_expression` (statement_expression.c) — Expression statement (`<expression>;`). Parses an expression via `read_expression`, then expects a mandatory trailing semicolon. Missing semicolon is a parse error. Returns `cubec_statement_expression_t` with `expression` field. Returns NULL if `read_expression` returns NULL (no expression to form a statement).
 - `read_statement` (statement.c) — Statement dispatcher. Tries each statement parser in order: `read_statement_block` first (has distinguishing prefix `{`), then `read_statement_declaration` (has distinguishing prefix `var`), then `read_statement_declaration_type` (has distinguishing prefix `type`), then `read_statement_function` (has distinguishing prefix `func`/`export`/`inline`/`extern`), then `read_statement_import` (has distinguishing prefix `import`), then `read_statement_return` (has distinguishing prefix `return`), then `read_statement_empty` (has distinguishing prefix `;`), then `read_statement_expression` as the fallback (no distinguishing prefix — any expression can start it, so it must be tried last). Uses `TRY_LOCAL(onerror, ...)` to catch errors from sub-parsers; on error, returns NULL. Returns the first successful parse, or NULL if no statement matches.
-- `read_statement_declaration` (statement_declaration.c) — Declaration statement (`[export] var <declarator> [, <declarator>]* ;`). Parses one or more variable declarators separated by commas, each `<identifier> [: <type>] = <expression>`. The optional `export` keyword before `var` sets `is_export = true` on the node. The type annotation is optional and parsed via `read_expression_type`. Requires semicolon at end. THROW errors on missing semicolon or malformed declarator. Returns `cubec_statement_declaration_t` with `is_export` (bool) and `declarators` (vec) fields.
-- `read_statement_declaration_type` (statement_declaration_type.c) — Type alias declaration (`[export] type Name[<generic_params>] = <type_expression>;`). Parses a type alias with optional `export` keyword (sets `is_export = true`) and optional generic parameters (parsed via `read_generic_params`). Returns `cubec_statement_declaration_type_t` with `is_export` (bool), `name` (identifier), `params` (vec of `cubec_generic_param_t`, may be NULL), and `type_value` (type expression) fields. Supports simple aliases (`type MyInt = i32`), generic aliases (`type Vec3[T] = Vec[Vec[Vec[T]]]`), and rest params (`type Variadic[...Args] = i32`).
+- `read_statement_declaration` (statement_declaration.c) — Declaration statement (`[export|extern|builtin] var <declarator> ;`). Parses a single variable declarator: `<identifier> [: <type>] [= <expression>]`. Modifiers: `export` (exported from module), `extern` (external linkage, no initializer, requires type annotation), `builtin` (compiler-provided, no initializer, requires type annotation). `export` and `builtin` are orthogonal (can combine). `extern` is mutually exclusive with `export` and `builtin`. Extern/builtin declarations must not have `= expression`. Returns `cubec_statement_declaration_t` with `is_export`, `is_extern`, `is_builtin` (bools) and `declarator` (single `declaration_variable_t` node) fields.
+- `read_statement_declaration_type` (statement_declaration_type.c) — Type alias declaration (`[export|builtin] type Name[<generic_params>] [= <type_expression>];`). Modifiers: `export` (exported from module, orthogonal with builtin), `builtin` (compiler-provided, no `= type_expression` body). For builtin types, `type_value` is NULL. Returns `cubec_statement_declaration_type_t` with `is_export`, `is_builtin` (bools), `name` (identifier), `params` (vec of `cubec_generic_param_t`, may be NULL), and `type_value` (type expression, NULL for builtin) fields.
 - `read_statement_import` (statement_import.c) — Import statement (`import <module_name> [as <alias>] from "<path>";`). Parses module import with optional `as` alias. Returns `cubec_statement_import_t` with `module_name` (identifier node), `alias` (optional identifier node, NULL if no `as`), and `path` (string literal node) fields. Returns NULL if current token is not `import`. THROW errors on missing module name, missing `from` keyword, missing path, or missing semicolon.
 - `read_function_argument` (function_argument.c) — Parses a single function parameter: `<identifier> [: <type>]`. The identifier is parsed via `read_literal_identifier`. The optional type annotation is parsed via `read_expression_type`. Returns `cubec_function_argument_t` with `identifier` and `type` (nullable) fields. Returns NULL if current token is not an identifier.
-- `read_statement_function` (statement_function.c) — Parses function declaration statement. Delegates to `read_expression_function` for the actual `func` parsing, then validates the result: statement functions must have a name, cannot have captures, and C-style variadic `...` is only allowed in extern functions. Handles modifier parsing (`export`/`inline`/`extern`) and mutual exclusion checks before delegation. After `read_expression_function` returns, extracts fields from the expression function node (transferring ownership) and creates a `cubec_statement_function_t` node. Returns `cubec_statement_function_t` with `is_export`, `is_inline`, `is_extern`, `is_c_variadic` (bools), `name`, `generic_params` (nullable vec), `arguments` (vec with auto_dispose=true), `return_type` (nullable), `body` (nullable) fields. Returns NULL if current token is not a function declaration prefix.
+- `read_statement_function` (statement_function.c) — Parses function declaration statement. Delegates to `read_expression_function` for the actual `func` parsing, then validates the result: statement functions must have a name, cannot have captures, and C-style variadic `...` is only allowed in extern functions. Handles modifier parsing (`export`/`inline`/`extern`/`builtin`) and mutual exclusion checks (`export`+`extern`, `inline`+`extern`, `builtin`+`extern`) before delegation. After `read_expression_function` returns, extracts fields from the expression function node (transferring ownership) and creates a `cubec_statement_function_t` node. Returns `cubec_statement_function_t` with `is_export`, `is_inline`, `is_extern`, `is_builtin`, `is_c_variadic` (bools), `name`, `generic_params` (nullable vec), `arguments` (vec with auto_dispose=true), `return_type` (nullable), `body` (nullable) fields. Returns NULL if current token is not a function declaration prefix.
 - `read_expression_function` (expression_function.c) — Universal func parser that handles both anonymous and named function expressions: `func [|<captures>| | <name>] [<generic_params>] (<params>) [-> <return_type>] { <body> } | ;`. After `func` keyword, detects `|`/`||` (capture list) or identifier (function name) or falls through to `[`/`(` (anonymous, no captures, no name). Name is nullable (present for named functions, NULL for anonymous). Capture list is optional: `||` (empty, tokenized as single `||` by lexer, captures remains NULL), `|x, y|` (non-empty), or omitted entirely. Each capture is identifier-only. Generic params, function params, and return type follow standard rules. Parameter list supports C-style variadic `...` (stored in `is_c_variadic`, validity checked by caller). Body: named functions allow `;` (body=NULL), anonymous functions require `{ body }`. Returns `cubec_expression_function_t` with `name` (nullable), `captures` (nullable vec of `cubec_function_capture_t`), `generic_params` (nullable vec), `arguments` (vec with auto_dispose=true), `return_type` (nullable), `body` (nullable), `is_c_variadic` (bool) fields. Returns NULL if current token is not `func` keyword. Supports postfix: immediate call `func |x| (a: i32): i32 { return x + a; }(42)`, member access `func || ():Vec[i32] { }.field`, assignment `var f = func |x| () { };`.
 - `read_function_capture` (function_capture.c) — Parses a single capture item: `<identifier>`. Captures are identifier-only. Returns `cubec_function_capture_t` with `identifier` field. Returns NULL if current token is not an identifier.
 - `read_statement_return` (statement_return.c) — Parses return statement: `return [<expression>] ;`. Expression is optional (bare `return;` has `expression = NULL`). Expression parsed via `read_expression`. Returns `cubec_statement_return_t` with `expression` (nullable) field. Returns NULL if current token is not `return` keyword.
@@ -522,10 +522,10 @@ Most statement types (if, for, while, switch, defer, etc.) and all declaration t
 - `dt_expression_function.cpp` (21 cases) — function expressions: no captures no params `func || () { }`, simple captures `func |x, y| () { }`, empty captures with params, generic with/no captures, with params, no return type, complex return type, no params, immediate call `func |x| (...)(42)`, chained member, assign to var, clone, clone with captures, move, missing pipe error, missing close pipe error, missing body error, not func returns NULL, via read_expression, consume all tokens
 - `dt_statement_expression.cpp` (10 cases) — expression statements: simple identifier `foo;`, numeric literal `42;`, binary expression `a + b;`, function call `foo();`, namespace access call `std::Vec::create();`, consume all tokens, missing semicolon error, semicolon only returns NULL, clone, move
 - `dt_statement_block.cpp` (11 cases) — empty block `{}`, single empty statement `{;}`, single expression statement `{ foo(); }`, multiple statements `{ foo(); bar; ; }`, nested blocks `{ { ; } }`, via read_statement dispatcher, no brace returns NULL, unclosed brace is error, unexpected token in block is error, clone, move
-- `dt_statement_declaration.cpp` (12 cases) — single declarator without/with type, multiple declarators, complex expression, pointer type, initialize list (anonymous/typed/field items/nested), consume all tokens, clone, move
-- `dt_statement_declaration_type.cpp` (15 cases) — type alias declarations: simple alias (`type MyInt = i32`), generic alias (`type Vec3[T] = ...`), multi-param (`type Pair[A, B] = ...`), complex nested type, consume all tokens, namespace access (`type V = std::vec::Vec`), generic type right-hand side, clone, move, rest param single (`type Variadic[...Args] = ...`), rest after regular (`type Tuple[T, ...Rest] = ...`), rest with constraint (`type Filter[T, ...Rest extends Numeric] = ...`), clone with rest param, regular param is not rest
+- `dt_statement_declaration.cpp` (22 cases) — single declarator without/with type, complex expression, pointer type, initialize list (anonymous/typed/field items/nested), consume all tokens, clone, move, export single/type, non-export, export clone/move, extern var, builtin var, export+builtin var, builtin+export var (order-independent), extern+export mutual exclusion error, extern+builtin mutual exclusion error, extern var with initializer error, builtin var with initializer error, extern var without type error, extern var clone, builtin var move
+- `dt_statement_declaration_type.cpp` (20 cases) — type alias declarations: simple alias (`type MyInt = i32`), generic alias (`type Vec3[T] = ...`), multi-param (`type Pair[A, B] = ...`), complex nested type, consume all tokens, clone, clone with generic params, move, rest param single/after regular/with constraint/clone, regular param is not rest, export simple/generic/pointer type, non-export, export clone/move, builtin type no body, export builtin type, builtin type no params, builtin type clone/move
 - `dt_statement_import.cpp` (15 cases) — import statements: simple import (`import std from "std"`), import with alias (`import vec as v from "std/vec"`), relative path (`import io from "./io"`), parent path (`import parent from "../parent"`), multi-segment path (`import vec from "std/vec"`), consume all tokens, missing `from` keyword error, missing semicolon error, non-import returns NULL, missing module name error, missing path error, clone, move, via `read_statement` dispatcher, via `read_program_node`
-- `dt_statement_function.cpp` (35 cases) — function declarations: basic function, no params, no return type (void), single/multiple params, generic single/multiple/rest params, export/inline/extern modifiers, export+inline combined, extern C-style variadic (`...`), pointer/slice/generic/no-type params, empty body, body with statements, no body semicolon (interface style), missing name/open paren/close paren errors, export+extern/extern+inline conflict errors, C variadic in non-extern error, clone, clone generic, move, clone extern, via read_statement, via read_program_node, consume all tokens
+- `dt_statement_function.cpp` (38 cases) — function declarations: basic function, no params, no return type (void), single/multiple params, generic single/multiple/rest params, export/inline/extern/builtin modifiers, export+inline combined, extern C-style variadic (`...`), pointer/slice/generic/no-type params, empty body, body with statements, no body semicolon (interface style), missing name/open paren/close paren errors, export+extern/extern+inline conflict errors, C variadic in non-extern error, builtin func, export+builtin func, builtin+extern mutual exclusion error, clone, clone generic, move, clone extern, via read_statement, via read_program_node, consume all tokens
 
 ## Module System (模块系统)
 
@@ -794,7 +794,21 @@ comptime var data = read_file("config.json")  // 编译期 IO
 
 #### 13. `builtin` 编译器指令
 
-内置类型变换指令，声明语法 `builtin Name[T extends constraint?]`：
+`builtin` 是声明前缀修饰符，表示实现由编译器提供。支持三种声明类别：
+
+**语法**：
+```c
+builtin type Name[T extends constraint?];    // 编译器内建类型变换，无 body
+builtin var Name: Type;                       // 编译期内建常量，无初始化
+builtin func Name(params): Type;             // 编译器内联函数，无函数体
+```
+
+**组合规则**：
+- `export builtin` — 正交组合，内建且导出
+- `extern builtin` — 互斥，语义冲突
+- 无 body — builtin 声明全部无实现体
+
+**内置类型变换指令**：
 
 | builtin | 约束 | 结果 |
 |---------|------|------|
@@ -807,7 +821,22 @@ comptime var data = read_file("config.json")  // 编译期 IO
 | `ReturnType[F extends func]` | 函数类型 | 返回类型 |
 | `SizeOf[T]` | 任意类型 | `u64`（编译期值） |
 
-指令直接作为类型表达式使用：
+**内置变量**：
+
+```c
+builtin var VERSION: const str;     // 编译期常量
+builtin var MAX_SIZE: u64;          // 编译期常量
+```
+
+**内置函数**：
+
+```c
+builtin func panic(msg: []u8): void;     // 编译器内联处理
+builtin func sizeof(expr): u64;           // 编译期大小计算
+builtin func alignof(expr): u64;          // 编译期对齐计算
+```
+
+类型变换指令直接作为类型表达式使用：
 
 ```c
 type Mutable[T] = RemoveConst[T]
