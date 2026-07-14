@@ -435,9 +435,27 @@ static semantic_type_t _infer_type_from_expression(checker_t ctx,
   if (!expr) return NULL;
 
   switch (expr->kind) {
-  case CUBEC_NODE_LITERAL_NUMERIC:
-    /* TODO: check suffix for specific types (i8, u16, f64, etc.) */
-    return ctx->builtin_i32;
+  case CUBEC_NODE_LITERAL_NUMERIC: {
+    cubec_literal_numeric_t num = (cubec_literal_numeric_t)expr;
+    switch (num->numeric_type) {
+    case CUBEC_LITERAL_NUMERIC_TYPE_I8:  return ctx->builtin_i8;
+    case CUBEC_LITERAL_NUMERIC_TYPE_I16: return ctx->builtin_i16;
+    case CUBEC_LITERAL_NUMERIC_TYPE_I32: return ctx->builtin_i32;
+    case CUBEC_LITERAL_NUMERIC_TYPE_I64: return ctx->builtin_i64;
+    case CUBEC_LITERAL_NUMERIC_TYPE_U8:  return ctx->builtin_u8;
+    case CUBEC_LITERAL_NUMERIC_TYPE_U16: return ctx->builtin_u16;
+    case CUBEC_LITERAL_NUMERIC_TYPE_U32: return ctx->builtin_u32;
+    case CUBEC_LITERAL_NUMERIC_TYPE_U64: return ctx->builtin_u64;
+    case CUBEC_LITERAL_NUMERIC_TYPE_F16: return ctx->builtin_f16;
+    case CUBEC_LITERAL_NUMERIC_TYPE_F32: return ctx->builtin_f32;
+    case CUBEC_LITERAL_NUMERIC_TYPE_F64: return ctx->builtin_f64;
+    default:
+      /* DEFAULT integer → i32, DEFAULT float → f64 */
+      return num->kind == CUBEC_LITERAL_NUMERIC_KIND_FLOAT
+                 ? ctx->builtin_f64
+                 : ctx->builtin_i32;
+    }
+  }
   case CUBEC_NODE_LITERAL_STRING:
     return ctx->builtin_string;
   case CUBEC_NODE_LITERAL_CHAR:

@@ -631,3 +631,106 @@ TEST_F(dt_checker, pass2_function_with_custom_types) {
   EXPECT_EQ(checker_get_error_count(ctx), 0);
   checker_dispose(ctx);
 }
+
+/* ===== numeric suffix inference tests ===== */
+
+static node_t make_numeric_typed(allocator_t alloc, const char *value,
+                                  cubec_literal_numeric_kind_t kind,
+                                  cubec_literal_numeric_type_t ntype) {
+  cubec_literal_numeric_init_t init = {.location = test_loc(),
+                                        .parent = NULL,
+                                        .value = value,
+                                        .kind = kind,
+                                        .numeric_type = ntype};
+  return (node_t)allocator_create(alloc, &g_cubec_literal_numeric_type, &init);
+}
+
+TEST_F(dt_checker, pass2_numeric_suffix_i64) {
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_var_decl(allocator, "x", NULL,
+                                 make_numeric_typed(allocator, "42",
+                                   CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                                   CUBEC_LITERAL_NUMERIC_TYPE_I64)));
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  struct symbol *sym = scope_lookup(ctx->global_scope, "x");
+  ASSERT_NE(sym, nullptr);
+  ASSERT_NE(sym->variable.type, nullptr);
+  EXPECT_EQ(sym->variable.type->impl->kind, TYPE_I64);
+
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_checker, pass2_numeric_suffix_f32) {
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_var_decl(allocator, "pi", NULL,
+                                 make_numeric_typed(allocator, "3.14",
+                                   CUBEC_LITERAL_NUMERIC_KIND_FLOAT,
+                                   CUBEC_LITERAL_NUMERIC_TYPE_F32)));
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  struct symbol *sym = scope_lookup(ctx->global_scope, "pi");
+  ASSERT_NE(sym, nullptr);
+  ASSERT_NE(sym->variable.type, nullptr);
+  EXPECT_EQ(sym->variable.type->impl->kind, TYPE_F32);
+
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_checker, pass2_numeric_default_float) {
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_var_decl(allocator, "d", NULL,
+                                 make_numeric_typed(allocator, "2.0",
+                                   CUBEC_LITERAL_NUMERIC_KIND_FLOAT,
+                                   CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT)));
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  struct symbol *sym = scope_lookup(ctx->global_scope, "d");
+  ASSERT_NE(sym, nullptr);
+  ASSERT_NE(sym->variable.type, nullptr);
+  EXPECT_EQ(sym->variable.type->impl->kind, TYPE_F64);
+
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_checker, pass2_numeric_default_int) {
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_var_decl(allocator, "n", NULL,
+                                 make_numeric_typed(allocator, "7",
+                                   CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                                   CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT)));
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  struct symbol *sym = scope_lookup(ctx->global_scope, "n");
+  ASSERT_NE(sym, nullptr);
+  ASSERT_NE(sym->variable.type, nullptr);
+  EXPECT_EQ(sym->variable.type->impl->kind, TYPE_I32);
+
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_checker, pass2_numeric_suffix_u8) {
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_var_decl(allocator, "byte", NULL,
+                                 make_numeric_typed(allocator, "255",
+                                   CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                                   CUBEC_LITERAL_NUMERIC_TYPE_U8)));
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  struct symbol *sym = scope_lookup(ctx->global_scope, "byte");
+  ASSERT_NE(sym, nullptr);
+  ASSERT_NE(sym->variable.type, nullptr);
+  EXPECT_EQ(sym->variable.type->impl->kind, TYPE_U8);
+
+  checker_dispose(ctx);
+}
