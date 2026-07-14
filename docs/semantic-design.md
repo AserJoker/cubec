@@ -310,28 +310,29 @@ Cubec 仅允许以下隐式转换：
 
 | 魔法方法 | 触发场景 | 签名模式 |
 |---------|---------|---------|
-| `__get__` | `obj.field` member get | `func __get__(self: *T, name: []u8): U` |
-| `__set__` | `obj.field = value` member set | `func __set__(self: *T, name: []u8, value: U): void` |
+| `__get__` | `obj[key]` 索引读取 | `func __get__(self: *T, key: K): V` |
+| `__set__` | `obj[key] = value` 索引写入 | `func __set__(self: *T, key: K, value: V): void` |
 | `__value__` | 值上下文解包 | `func __value__(self: *T): U` |
 | `__call__` | `obj(args)` 可调用 | `func __call__(self: *T, ...args): R` |
 
 ```c
-type Proxy = struct {
-    target: *i32
-    func __get__(self: *Proxy, name: []u8): i32 { return *self.target; }
-    func __set__(self: *Proxy, name: []u8, value: i32): void { *self.target = value; }
-    func __value__(self: *Proxy): i32 { return *self.target; }
-    func __call__(self: *Proxy, x: i32): i32 { return *self.target + x; }
+type Map = struct {
+    data: *Entry
+    func __get__(self: *Map, key: string): i32 { return lookup(self.data, key); }
+    func __set__(self: *Map, key: string, value: i32): void { insert(self.data, key, value); }
+    func __value__(self: *Map): i32 { return size(self.data); }
+    func __call__(self: *Map, key: string): i32 { return lookup(self.data, key); }
 }
 
-var p = Proxy{ target: &val };
-var x = p.field;       // → __get__(&p, "field")
-p.field = 42;          // → __set__(&p, "field", 42)
-var v: i32 = p;        // → __value__(&p)  解包
-var r = p(10);         // → __call__(&p, 10)
+var m = Map{ data: &entries };
+var x = m["hello"];       // → __get__(&m, "hello")
+m["hello"] = 42;          // → __set__(&m, "hello", 42)
+var v: i32 = m;           // → __value__(&m)  解包
+var r = m("hello");       // → __call__(&m, "hello")
 ```
 
-- `__get__` / `__set__` 拦截所有字段读写，name 参数为字段名
+- `__get__` / `__set__` 拦截 `[]` 索引读写，key 参数为索引值，**不拦截 `.` 属性访问**
+- `.` 属性访问始终按字段名直接访问，不做拦截
 - `__value__` 在隐式类型转换/解包时调用
 - `__call__` 使结构体实例可像函数一样调用
 - **不支持运算符重载**，运算符行为固定，`__` 前缀保留给编译器
@@ -1577,8 +1578,8 @@ int32_t v = ({
 
 | Cubec | C |
 |-------|---|
-| `__get__(self, name)` | 拦截字段读 → 生成函数调用 |
-| `__set__(self, name, value)` | 拦截字段写 → 生成函数调用 |
+| `__get__(self, key)` | 拦截 `[]` 索引读 → 生成函数调用 |
+| `__set__(self, key, value)` | 拦截 `[]` 索引写 → 生成函数调用 |
 | `__value__(self)` | 隐式转换 → 生成函数调用 |
 | `__call__(self, args)` | 可调用对象 → 生成函数调用 |
 | `__slice__(self, start, len)` | 拦截切片操作 → 生成函数调用 |
