@@ -336,7 +336,24 @@ var r = p(10);         // → __call__(&p, 10)
 - `__call__` 使结构体实例可像函数一样调用
 - **不支持运算符重载**，运算符行为固定，`__` 前缀保留给编译器
 
-### 5.7 typeof
+### 5.7 自动解引用
+
+Cubec 统一 `.` 和 `->`，指针对象自动解引用：
+
+```c
+var p: *Point = &Point{ x: 1, y: 2 };
+var x = p.x;         // 自动解引用：等价于 (*p).x，无需 p->x
+p.x = 10;            // 自动解引用：等价于 (*p).x = 10
+var s = p.to_string(); // 自动解引用：self 接收 *Point
+```
+
+- **字段访问**：`ptr.field` 自动插入解引用，无需 `->` 语法
+- **成员调用**：`ptr.method(args)` 自动解引用后调用，`self` 接收指针
+- **赋值**：`ptr.field = value` 自动解引用后写入
+- **多级指针**：`**pp.field` 逐级解引用至结构体
+- **不存在 `->` 运算符**，统一用 `.`
+
+### 5.8 typeof
 
 `typeof(expr)` 创建新名字指向同一实现 hash，**保留原类型的所有方法和静态字段**：
 
@@ -346,7 +363,7 @@ type T = typeof(p);     // 新名字，同一实现，保留方法集
 T::to_string(&p)        // 等价于 p.to_string()
 ```
 
-### 5.8 类型布局
+### 5.9 类型布局
 
 - **struct** — C 内存布局，字段按声明顺序排列，alignment 对齐，padding 填充
 - **union** — 所有字段 offset=0，size=max(fields.size)
@@ -354,7 +371,7 @@ T::to_string(&p)        // 等价于 p.to_string()
 - **enum** — 支持显式指定底层类型（`enum Color: u8`），未指定时从第一个 item 推导，后续 item 类型必须一致否则报错
 - **packed/align** — 通过 `builtin func packed[T](): T` 和 `builtin func align[N, T](): T` 实现
 
-### 5.9 检查结果
+### 5.10 检查结果
 
 表达式检查返回 `check_result`，包含左值性：
 
