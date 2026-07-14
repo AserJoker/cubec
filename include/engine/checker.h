@@ -36,6 +36,9 @@ struct checker {
   /* error tracking */
   int error_count;
 
+  /* loop tracking (for break/continue validation) */
+  int loop_depth;
+
   /* sentinel error type */
   semantic_type_t error_type;
 
