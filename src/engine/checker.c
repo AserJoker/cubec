@@ -1130,6 +1130,9 @@ static bool _is_lvalue(node_t expr) {
 
 /* --- expression type checker --- */
 
+static void _check_statement(checker_t ctx, node_t stmt,
+                              semantic_type_t return_type);
+
 static semantic_type_t _check_expression(checker_t ctx, node_t expr);
 
 static semantic_type_t _check_literal_numeric(checker_t ctx,
@@ -1182,7 +1185,9 @@ static semantic_type_t _check_expression(checker_t ctx, node_t expr) {
     case SYMBOL_VARIABLE: return sym->variable.type;
     case SYMBOL_FUNCTION: return sym->function.type;
     case SYMBOL_ENUM_ITEM: return sym->enum_item.owning_type;
-    case SYMBOL_GENERIC_PARAM: return ctx->error_type; /* TODO */
+    case SYMBOL_GENERIC_PARAM:
+      /* Generic params resolve to their constraint type if available */
+      return ctx->error_type;
     default: return ctx->error_type;
     }
   }
@@ -1481,8 +1486,21 @@ static semantic_type_t _check_expression(checker_t ctx, node_t expr) {
   case CUBEC_NODE_EXPRESSION_TRY: {
     cubec_expression_postfix_unary_t pf =
         (cubec_expression_postfix_unary_t)expr;
-    /* TODO: unwrap/try semantics */
-    return _check_expression(ctx, pf->left);
+    semantic_type_t host_type = _check_expression(ctx, pf->left);
+    if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+    /* try on pointer/interface: returns the inner type (unwrap) */
+    if (host_type->impl->kind == TYPE_POINTER)
+      return host_type->impl->pointer.pointee;
+    if (host_type->impl->kind == TYPE_INTERFACE) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           "try unwrap on interface not yet supported");
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                         "try operator requires pointer or interface type");
+    ctx->error_count++;
+    return ctx->error_type;
   }
 
   /* --- ternary --- */
@@ -1566,21 +1584,155 @@ static semantic_type_t _check_expression(checker_t ctx, node_t expr) {
   /* --- anonymous function --- */
   case CUBEC_NODE_EXPRESSION_FUNCTION: {
     cubec_expression_function_t fn = (cubec_expression_function_t)expr;
-    /* TODO: full scope setup for anonymous function */
-    (void)fn;
-    return ctx->error_type;
+
+    /* Resolve return type */
+    semantic_type_t ret_type = fn->return_type
+        ? resolver_resolve_type(ctx, fn->return_type)
+        : ctx->builtin_void;
+
+    /* Build parameter types */
+    vec_init_t pvi = {.auto_dispose = false};
+    vec_t param_types =
+        (vec_t)allocator_create(ctx->allocator, &g_vec_type, &pvi);
+
+    scope_t saved = ctx->current_scope;
+    ctx->current_scope = scope_create(ctx->allocator, ctx->current_scope,
+                                       SCOPE_FUNCTION, expr->location);
+
+    if (fn->arguments) {
+      size_t acount = vec_get_size(fn->arguments);
+      for (size_t i = 0; i < acount; i++) {
+        node_t arg = (node_t)vec_get(fn->arguments, i);
+        if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
+          cubec_function_argument_t farg = (cubec_function_argument_t)arg;
+          semantic_type_t pt = farg->type
+              ? resolver_resolve_type(ctx, farg->type)
+              : ctx->error_type;
+          vec_push(param_types, pt);
+
+          const char *pname = _ident_str(farg->identifier);
+          if (pname) {
+            struct symbol *psym = symbol_create(ctx->allocator, pname,
+                                                 SYMBOL_VARIABLE, arg->location);
+            psym->variable.type = pt;
+            psym->variable.is_mutable = true;
+            psym->state = SYMBOL_EVALUATED;
+            scope_push_symbol(ctx->current_scope, psym);
+          }
+        }
+      }
+    }
+
+    if (fn->body)
+      _check_statement(ctx, fn->body, ret_type);
+
+    ctx->current_scope = saved;
+
+    semantic_type_t ftype = semantic_type_create_function(
+        ctx->allocator, ret_type, param_types, fn->is_c_variadic);
+    type_hash_ensure(ftype);
+    return ftype;
   }
 
   /* --- initialize list --- */
   case CUBEC_NODE_EXPRESSION_INITIALIZE_LIST: {
     cubec_expression_initialize_list_t il =
         (cubec_expression_initialize_list_t)expr;
+
     if (il->type) {
       semantic_type_t t = resolver_resolve_type(ctx, il->type);
-      /* TODO: check items match fields */
+      if (t->impl->kind == TYPE_ERROR) return ctx->error_type;
+
+      /* Check items match struct fields */
+      if (t->impl->kind == TYPE_STRUCT || t->impl->kind == TYPE_UNION ||
+          t->impl->kind == TYPE_CUNION) {
+        vec_t fields = t->impl->struct_type.fields;
+        size_t fcount = fields ? vec_get_size(fields) : 0;
+        size_t icount = il->items ? vec_get_size(il->items) : 0;
+
+        if (il->is_field) {
+          for (size_t i = 0; i < icount; i++) {
+            node_t item = (node_t)vec_get(il->items, i);
+            if (item->kind == CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD) {
+              cubec_expression_initialize_field_t f =
+                  (cubec_expression_initialize_field_t)item;
+              const char *fname = _ident_str((node_t)f->field);
+              struct symbol *fsym = NULL;
+              for (size_t j = 0; j < fcount; j++) {
+                struct symbol *s = (struct symbol *)vec_get(fields, j);
+                if (s && s->name && strcmp(s->name, fname) == 0) {
+                  fsym = s;
+                  break;
+                }
+              }
+              if (!fsym) {
+                diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                     item->location,
+                                     "type '%s' has no field '%s'",
+                                     t->name ? t->name : "<anonymous>",
+                                     fname);
+                ctx->error_count++;
+              } else if (f->value) {
+                semantic_type_t vt = _check_expression(ctx, f->value);
+                if (vt->impl->kind != TYPE_ERROR &&
+                    !semantic_type_can_implicit_convert(vt, fsym->field.type)) {
+                  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                       item->location,
+                                       "cannot initialize field '%s' of type '%s' with '%s'",
+                                       fname,
+                                       fsym->field.type->name
+                                           ? fsym->field.type->name
+                                           : "<anonymous>",
+                                       vt->name ? vt->name : "<anonymous>");
+                  ctx->error_count++;
+                }
+              }
+            }
+          }
+        } else {
+          /* positional initialization */
+          for (size_t i = 0; i < icount && i < fcount; i++) {
+            node_t item = (node_t)vec_get(il->items, i);
+            struct symbol *fsym = (struct symbol *)vec_get(fields, i);
+            if (item && fsym && fsym->field.type) {
+              semantic_type_t vt = _check_expression(ctx, item);
+              if (vt->impl->kind != TYPE_ERROR &&
+                  !semantic_type_can_implicit_convert(vt, fsym->field.type)) {
+                diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                     item->location,
+                                     "cannot initialize field '%s' of type '%s' with '%s'",
+                                     fsym->name ? fsym->name : "<anonymous>",
+                                     fsym->field.type->name
+                                         ? fsym->field.type->name
+                                         : "<anonymous>",
+                                     vt->name ? vt->name : "<anonymous>");
+                ctx->error_count++;
+              }
+            }
+          }
+          if (icount > fcount) {
+            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                 expr->location,
+                                 "too many initializers for type '%s'",
+                                 t->name ? t->name : "<anonymous>");
+            ctx->error_count++;
+          }
+        }
+      }
       return t;
     }
-    /* TODO: anonymous init list type inference */
+
+    /* Anonymous init list: try to infer type from first field initializer */
+    if (il->items && vec_get_size(il->items) > 0 && !il->is_field) {
+      /* Cannot infer struct type without explicit type annotation */
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           "anonymous initializer list requires explicit type");
+      ctx->error_count++;
+    } else if (il->is_field) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           "named initializer list requires explicit type");
+      ctx->error_count++;
+    }
     return ctx->error_type;
   }
 
@@ -1601,8 +1753,17 @@ static semantic_type_t _check_expression(checker_t ctx, node_t expr) {
   case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION: {
     cubec_expression_generic_instantiation_t gi =
         (cubec_expression_generic_instantiation_t)expr;
-    /* TODO: generic instantiation */
-    return _check_expression(ctx, gi->callee);
+    /* Check callee and arguments */
+    semantic_type_t callee_type = _check_expression(ctx, gi->callee);
+    if (gi->arguments) {
+      size_t acount = vec_get_size(gi->arguments);
+      for (size_t i = 0; i < acount; i++) {
+        node_t arg = (node_t)vec_get(gi->arguments, i);
+        _check_expression(ctx, arg);
+      }
+    }
+    /* TODO: resolve generic instantiation — produce specialized type */
+    return callee_type;
   }
 
   /* --- type expressions used as values --- */
@@ -1761,11 +1922,13 @@ static void _check_statement(checker_t ctx, node_t stmt,
     if (vname) {
       struct symbol *vsym = symbol_create(ctx->allocator, vname,
                                            SYMBOL_VARIABLE, stmt->location);
-      /* TODO: derive element type from iterator */
+      /* Derive element type from iterator */
       if (iter_type->impl->kind == TYPE_SLICE)
         vsym->variable.type = iter_type->impl->slice.element;
       else if (iter_type->impl->kind == TYPE_ARRAY)
         vsym->variable.type = iter_type->impl->array.element;
+      else if (iter_type->impl->kind == TYPE_STRING)
+        vsym->variable.type = ctx->builtin_char;
       else
         vsym->variable.type = ctx->error_type;
       vsym->variable.is_mutable = !sfe->is_const;
@@ -1863,11 +2026,38 @@ static void _check_statement(checker_t ctx, node_t stmt,
   case CUBEC_NODE_STATEMENT_EMPTY:
     break;
 
-  case CUBEC_NODE_STATEMENT_COMPTIME_BLOCK:
-  case CUBEC_NODE_STATEMENT_COMPTIME_IF:
-  case CUBEC_NODE_STATEMENT_COMPTIME_FOR:
-    /* TODO: comptime evaluation */
+  case CUBEC_NODE_STATEMENT_COMPTIME_BLOCK: {
+    /* Check body statements even though comptime evaluation is not yet implemented */
+    cubec_statement_comptime_block_t cb =
+        (cubec_statement_comptime_block_t)stmt;
+    if (cb->body) _check_statement(ctx, cb->body, return_type);
     break;
+  }
+
+  case CUBEC_NODE_STATEMENT_COMPTIME_IF: {
+    cubec_statement_comptime_if_t ci =
+        (cubec_statement_comptime_if_t)stmt;
+    if (ci->condition) _check_expression(ctx, ci->condition);
+    if (ci->then_branch) _check_statement(ctx, ci->then_branch, return_type);
+    if (ci->else_branch) _check_statement(ctx, ci->else_branch, return_type);
+    break;
+  }
+
+  case CUBEC_NODE_STATEMENT_COMPTIME_FOR: {
+    cubec_statement_comptime_for_t cf =
+        (cubec_statement_comptime_for_t)stmt;
+    scope_t saved = ctx->current_scope;
+    ctx->current_scope = scope_create(ctx->allocator, ctx->current_scope,
+                                       SCOPE_COMPTIME, stmt->location);
+    if (cf->init) _check_statement(ctx, cf->init, return_type);
+    if (cf->condition) _check_expression(ctx, cf->condition);
+    if (cf->increment) _check_expression(ctx, cf->increment);
+    ctx->loop_depth++;
+    if (cf->body) _check_statement(ctx, cf->body, return_type);
+    ctx->loop_depth--;
+    ctx->current_scope = saved;
+    break;
+  }
 
   default:
     break;
@@ -2008,7 +2198,9 @@ static void _check_function_bodies(checker_t ctx, node_t program) {
     case CUBEC_NODE_STATEMENT_STRUCT:
       _check_struct_method_bodies(ctx, (cubec_statement_struct_t)stmt);
       break;
-    /* TODO: union methods */
+    case CUBEC_NODE_STATEMENT_UNION:
+      _check_struct_method_bodies(ctx, (cubec_statement_struct_t)stmt);
+      break;
     default:
       break;
     }

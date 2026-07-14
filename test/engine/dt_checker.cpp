@@ -37,6 +37,10 @@
 #include "cubec/expression_postfix_unary.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/expression_group.h"
+#include "cubec/expression_initialize_field.h"
+#include "cubec/expression_initialize_list.h"
+#include "cubec/expression_function.h"
+#include "cubec/declaration_pointer.h"
 #include "cubec/declaration_variable.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -1315,5 +1319,213 @@ TEST_F(dt_checker, pass3_break_outside_loop) {
   checker_check_program(ctx, make_program(allocator, stmts));
 
   EXPECT_GT(checker_get_error_count(ctx), 0);
+  checker_dispose(ctx);
+}
+
+/* ===== Pass 3 extended feature tests ===== */
+
+TEST_F(dt_checker, pass3_anonymous_function) {
+  /* func f(): i32 { var fn = func(): i32 { return 1; }; return fn(); } */
+  vec_t args = make_vec(allocator);
+
+  /* anonymous function body */
+  vec_t anon_body = make_vec(allocator);
+  vec_push(anon_body, make_return(allocator, make_numeric(allocator, "1")));
+
+  /* create anonymous function expression */
+  cubec_expression_function_init_t afn_init = {
+    .location = test_loc(), .parent = NULL,
+    .name = NULL,
+    .captures = make_vec(allocator),
+    .generic_params = make_vec(allocator),
+    .arguments = make_vec(allocator),
+    .return_type = make_ident(allocator, "i32"),
+    .body = make_block(allocator, anon_body),
+    .is_c_variadic = false
+  };
+  node_t anon_fn = (node_t)allocator_create(allocator, &g_cubec_expression_function_type, &afn_init);
+
+  vec_t body_stmts = make_vec(allocator);
+  vec_push(body_stmts, make_var_decl(allocator, "fn", NULL, anon_fn));
+  vec_push(body_stmts, make_return(allocator,
+    make_call(allocator, make_ident(allocator, "fn"), make_vec(allocator))));
+
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_func_stmt(allocator, "f",
+                                  make_ident(allocator, "i32"), args));
+  cubec_statement_function_t fn =
+      (cubec_statement_function_t)vec_get(stmts, 0);
+  fn->body = make_block(allocator, body_stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  /* Should not crash; anonymous function checked */
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_checker, pass3_init_list_field) {
+  /* struct Point { x: f64; y: f64; }
+     func f(): Point { return Point { x: 1.0, y: 2.0 }; } */
+  vec_t fields = make_vec(allocator);
+  vec_push(fields, make_struct_field(allocator, "x", make_ident(allocator, "f64")));
+  vec_push(fields, make_struct_field(allocator, "y", make_ident(allocator, "f64")));
+
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_struct_stmt(allocator, "Point", fields));
+
+  /* initialize list with named fields */
+  vec_t init_items = make_vec(allocator);
+  cubec_literal_identifier_init_t id_x = {.location = test_loc(), .parent = NULL, .value = "x"};
+  cubec_literal_identifier_init_t id_y = {.location = test_loc(), .parent = NULL, .value = "y"};
+  cubec_expression_initialize_field_init_t f1 = {
+    .location = test_loc(), .parent = NULL,
+    .field = (cubec_literal_identifier_t)allocator_create(allocator, &g_cubec_literal_identifier_type, &id_x),
+    .value = make_numeric(allocator, "1.0")
+  };
+  cubec_expression_initialize_field_init_t f2 = {
+    .location = test_loc(), .parent = NULL,
+    .field = (cubec_literal_identifier_t)allocator_create(allocator, &g_cubec_literal_identifier_type, &id_y),
+    .value = make_numeric(allocator, "2.0")
+  };
+  vec_push(init_items, (node_t)allocator_create(allocator, &g_cubec_expression_initialize_field_type, &f1));
+  vec_push(init_items, (node_t)allocator_create(allocator, &g_cubec_expression_initialize_field_type, &f2));
+
+  cubec_expression_initialize_list_init_t il_init = {
+    .location = test_loc(), .parent = NULL,
+    .type = make_ident(allocator, "Point"),
+    .items = init_items,
+    .is_field = true
+  };
+  node_t init_list = (node_t)allocator_create(allocator, &g_cubec_expression_initialize_list_type, &il_init);
+
+  vec_t body_stmts = make_vec(allocator);
+  vec_push(body_stmts, make_return(allocator, init_list));
+
+  vec_push(stmts, make_func_stmt(allocator, "f",
+                                  make_ident(allocator, "Point"), make_vec(allocator)));
+  cubec_statement_function_t fn =
+      (cubec_statement_function_t)vec_get(stmts, 1);
+  fn->body = make_block(allocator, body_stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  EXPECT_EQ(checker_get_error_count(ctx), 0);
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_checker, pass3_init_list_field_mismatch) {
+  /* struct Point { x: f64; } func f(): Point { return Point { x: "bad" }; } */
+  vec_t fields = make_vec(allocator);
+  vec_push(fields, make_struct_field(allocator, "x", make_ident(allocator, "f64")));
+
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_struct_stmt(allocator, "Point", fields));
+
+  vec_t init_items = make_vec(allocator);
+  cubec_literal_string_init_t sl_init = {.location = test_loc(), .parent = NULL, .value = "bad"};
+  node_t str_val = (node_t)allocator_create(allocator, &g_cubec_literal_string_type, &sl_init);
+  cubec_literal_identifier_init_t id_x2 = {.location = test_loc(), .parent = NULL, .value = "x"};
+  cubec_expression_initialize_field_init_t f1 = {
+    .location = test_loc(), .parent = NULL,
+    .field = (cubec_literal_identifier_t)allocator_create(allocator, &g_cubec_literal_identifier_type, &id_x2),
+    .value = str_val
+  };
+  vec_push(init_items, (node_t)allocator_create(allocator, &g_cubec_expression_initialize_field_type, &f1));
+
+  cubec_expression_initialize_list_init_t il_init = {
+    .location = test_loc(), .parent = NULL,
+    .type = make_ident(allocator, "Point"),
+    .items = init_items,
+    .is_field = true
+  };
+  node_t init_list = (node_t)allocator_create(allocator, &g_cubec_expression_initialize_list_type, &il_init);
+
+  vec_t body_stmts = make_vec(allocator);
+  vec_push(body_stmts, make_return(allocator, init_list));
+
+  vec_push(stmts, make_func_stmt(allocator, "f",
+                                  make_ident(allocator, "Point"), make_vec(allocator)));
+  cubec_statement_function_t fn =
+      (cubec_statement_function_t)vec_get(stmts, 1);
+  fn->body = make_block(allocator, body_stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  EXPECT_GT(checker_get_error_count(ctx), 0);
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_checker, pass3_init_list_positional) {
+  /* struct Pair { first: i32; second: i32; }
+     func f(): Pair { return Pair { 1, 2 }; } */
+  vec_t fields = make_vec(allocator);
+  vec_push(fields, make_struct_field(allocator, "first", make_ident(allocator, "i32")));
+  vec_push(fields, make_struct_field(allocator, "second", make_ident(allocator, "i32")));
+
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_struct_stmt(allocator, "Pair", fields));
+
+  vec_t init_items = make_vec(allocator);
+  vec_push(init_items, make_numeric(allocator, "1"));
+  vec_push(init_items, make_numeric(allocator, "2"));
+
+  cubec_expression_initialize_list_init_t il_init = {
+    .location = test_loc(), .parent = NULL,
+    .type = make_ident(allocator, "Pair"),
+    .items = init_items,
+    .is_field = false
+  };
+  node_t init_list = (node_t)allocator_create(allocator, &g_cubec_expression_initialize_list_type, &il_init);
+
+  vec_t body_stmts = make_vec(allocator);
+  vec_push(body_stmts, make_return(allocator, init_list));
+
+  vec_push(stmts, make_func_stmt(allocator, "f",
+                                  make_ident(allocator, "Pair"), make_vec(allocator)));
+  cubec_statement_function_t fn =
+      (cubec_statement_function_t)vec_get(stmts, 1);
+  fn->body = make_block(allocator, body_stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  EXPECT_EQ(checker_get_error_count(ctx), 0);
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_checker, pass3_deref_pointer) {
+  /* func f(): i32 { var x: i32 = 42; var p: *i32 = &x; return *p; } */
+  vec_t args = make_vec(allocator);
+  vec_t body_stmts = make_vec(allocator);
+
+  /* var x: i32 — no initializer, will need to handle */
+  vec_push(body_stmts, make_var_decl_stmt(allocator, "x", make_ident(allocator, "i32")));
+
+  /* var p: *i32 — pointer type */
+  cubec_declaration_pointer_init_t ptr_init = {
+    .location = test_loc(), .parent = NULL,
+    .type = make_ident(allocator, "i32"),
+    .is_const = false, .is_volatile = false
+  };
+  node_t ptr_type = (node_t)allocator_create(allocator, &g_cubec_declaration_pointer_type, &ptr_init);
+  vec_push(body_stmts, make_var_decl_stmt(allocator, "p", ptr_type));
+
+  vec_push(body_stmts, make_return(allocator,
+    make_deref(allocator, make_ident(allocator, "p"))));
+
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_func_stmt(allocator, "f",
+                                  make_ident(allocator, "i32"), args));
+  cubec_statement_function_t fn =
+      (cubec_statement_function_t)vec_get(stmts, 0);
+  fn->body = make_block(allocator, body_stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  /* x has no initializer so it'll error, but deref of pointer should not crash */
   checker_dispose(ctx);
 }
