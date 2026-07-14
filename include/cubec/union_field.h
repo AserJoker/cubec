@@ -13,10 +13,10 @@ extern "C" {
  * @brief AST node for a union field.
  *
  * Syntax:
- *   <identifier> : <type>
+ *   <identifier> : <type> ;
  *
  * Union fields define the variants of a tagged union.
- * Fields are comma-separated (unlike struct fields which use semicolons).
+ * Fields are semicolon-separated (consistent with struct fields).
  * No 'pub' modifier (union fields are always visible).
  *
  * Examples:
@@ -43,7 +43,7 @@ struct _cubec_union_field_init_t {
 typedef struct _cubec_union_field_init_t cubec_union_field_init_t;
 
 /**
- * @brief Try to parse a union field: <identifier> : <type>
+ * @brief Try to parse a union field: <identifier> : <type> ;
  * @param allocator The allocator to use.
  * @param tokens The token list.
  * @param position Current position in token list (updated on success).

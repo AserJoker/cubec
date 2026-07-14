@@ -13,14 +13,19 @@ extern "C" {
  * @brief AST node for union declaration statement.
  *
  * Syntax:
- *   [export] union <name> [<generic_params>] { <fields> }
+ *   [export] union <name> [<generic_params>] { <members> }
  *
- * Fields are union_field nodes with syntax: <name> : <type>
- * Fields are comma-separated.
+ * Members can be:
+ * - Fields: <name> : <type>
+ * - Static fields: var <name> [: <type>] = <expr> ;
+ * - Associated types: type <name> [<params>] [= <type>] ;
+ * - Methods: func <name> [<params>] (<args>) [: <return>] { <body> }
+ * - Spread: ...<expr> ;
+ * - Nested declarations
  *
  * Examples:
- *   union Option[T] { value: T, tag: u64 }
- *   export union Result[T, E] { value: T, err: E }
+ *   union Result[E, T] { value: T, error: E }
+ *   export union Option[T] { value: T, empty: void }
  */
 struct _cubec_statement_union_t;
 struct _cubec_statement_union_t {
@@ -28,7 +33,7 @@ struct _cubec_statement_union_t {
   bool is_export;       /**< Whether this union is exported */
   node_t name;          /**< Identifier node for the union name */
   vec_t generic_params; /**< Vector of cubec_generic_param_t (may be NULL) */
-  vec_t fields;         /**< Vector of cubec_union_field_t (auto_dispose=true) */
+  vec_t members;        /**< Vector of member nodes (auto_dispose=true) */
 };
 typedef struct _cubec_statement_union_t *cubec_statement_union_t;
 
@@ -40,7 +45,7 @@ struct _cubec_statement_union_init_t {
   bool is_export;
   node_t name;
   vec_t generic_params;
-  vec_t fields;
+  vec_t members;
 };
 typedef struct _cubec_statement_union_init_t cubec_statement_union_init_t;
 

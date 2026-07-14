@@ -71,7 +71,7 @@ type_t g_cubec_union_field_type = {
 };
 
 /* --------------------------------------------------------------------------
- *  Parser: read_union_field — <identifier> : <type>
+ *  Parser: read_union_field — <identifier> : <type> ;
  * -------------------------------------------------------------------------- */
 
 node_t read_union_field(allocator_t allocator, vec_t tokens,
@@ -104,10 +104,25 @@ node_t read_union_field(allocator_t allocator, vec_t tokens,
                 filename, colon_loc.begin.line + 1, colon_loc.begin.column);
   }
 
-  /* Build location from name start to type end */
+  /* Expect ';' */
+  skip_whitespace(tokens, &current);
+  token_t semi = TRY_LOCAL(cleanup, vec_get(tokens, current));
+  if (!token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
+    location_t *loc = token_get_location(semi);
+    THROW_LOCAL(cleanup,
+                "%s:%" PRIuPTR ":%" PRIuPTR " expected ';' after union field",
+                filename, loc->begin.line + 1, loc->begin.column);
+  }
+  current++;
+
+  /* Build location from name start to ';' end */
   location_t start_loc = name->location;
-  location_t loc = start_loc;
-  loc.end = type_expr->location.end;
+  location_t *end_loc = token_get_location(semi);
+  location_t loc = {
+      .begin = start_loc.begin,
+      .end = end_loc->end,
+      .filename = filename,
+  };
 
   cubec_union_field_init_t init = {
       .location = loc,

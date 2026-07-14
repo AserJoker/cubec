@@ -14,11 +14,15 @@ extern "C" {
  * @brief AST node for anonymous union type expression.
  *
  * Syntax:
- *   union [<generic_params>] { <fields> }
+ *   union [<generic_params>] { <members> }
  *
- * Used as a type expression in type aliases, parameter types, etc.
- * Fields are union_field nodes with syntax: <name> : <type>
- * Fields are comma-separated.
+ * Members can be:
+ * - Fields: <name> : <type>
+ * - Static fields: var <name> [: <type>] = <expr> ;
+ * - Associated types: type <name> [<params>] [= <type>] ;
+ * - Methods: func <name> [<params>] (<args>) [: <return>] { <body> }
+ * - Spread: ...<expr> ;
+ * - Nested declarations
  *
  * This is the expression form — it has no name and no is_export flag.
  * It inherits from expression_t so it participates in the
@@ -33,7 +37,7 @@ struct _cubec_expression_type_union_t;
 struct _cubec_expression_type_union_t {
   struct _cubec_expression_t super;
   vec_t generic_params; /**< Vector of cubec_generic_param_t (may be NULL) */
-  vec_t fields;         /**< Vector of cubec_union_field_t (auto_dispose=true) */
+  vec_t members;        /**< Vector of member nodes (auto_dispose=true) */
 };
 typedef struct _cubec_expression_type_union_t *cubec_expression_type_union_t;
 
@@ -43,7 +47,7 @@ struct _cubec_expression_type_union_init_t {
   location_t location;
   node_t parent;
   vec_t generic_params;
-  vec_t fields;
+  vec_t members;
 };
 typedef struct _cubec_expression_type_union_init_t cubec_expression_type_union_init_t;
 

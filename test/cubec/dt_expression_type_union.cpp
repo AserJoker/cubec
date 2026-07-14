@@ -31,15 +31,15 @@ TEST_F(dt_expression_type_union, simple_empty) {
   cubec_expression_type_union_t union_node =
       (cubec_expression_type_union_t)node;
   EXPECT_EQ(union_node->generic_params, nullptr);
-  ASSERT_NE(union_node->fields, nullptr);
-  EXPECT_EQ(vec_get_size(union_node->fields), 0);
+  ASSERT_NE(union_node->members, nullptr);
+  EXPECT_EQ(vec_get_size(union_node->members), 0);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-TEST_F(dt_expression_type_union, with_fields) {
-  const char *source = "union { value: i32, tag: u64 }";
+TEST_F(dt_expression_type_union, with_members) {
+  const char *source = "union { value: i32; tag: u64; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -50,15 +50,15 @@ TEST_F(dt_expression_type_union, with_fields) {
 
   cubec_expression_type_union_t union_node =
       (cubec_expression_type_union_t)node;
-  ASSERT_NE(union_node->fields, nullptr);
-  EXPECT_EQ(vec_get_size(union_node->fields), 2);
+  ASSERT_NE(union_node->members, nullptr);
+  EXPECT_EQ(vec_get_size(union_node->members), 2);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_type_union, generic) {
-  const char *source = "union[T] { value: T, tag: u64 }";
+  const char *source = "union[T] { value: T; tag: u64; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -77,7 +77,7 @@ TEST_F(dt_expression_type_union, generic) {
 }
 
 TEST_F(dt_expression_type_union, pointer_to_union) {
-  const char *source = "*union { value: i32 }";
+  const char *source = "*union { value: i32; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -95,7 +95,7 @@ TEST_F(dt_expression_type_union, pointer_to_union) {
 }
 
 TEST_F(dt_expression_type_union, consume_all_tokens) {
-  const char *source = "union { value: i32 }";
+  const char *source = "union { value: i32; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -125,7 +125,7 @@ TEST_F(dt_expression_type_union, non_union_returns_null) {
 }
 
 TEST_F(dt_expression_type_union, clone) {
-  const char *source = "union { value: i32, tag: u64 }";
+  const char *source = "union { value: i32; tag: u64; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -139,8 +139,8 @@ TEST_F(dt_expression_type_union, clone) {
 
   cubec_expression_type_union_t copy =
       (cubec_expression_type_union_t)cloned;
-  ASSERT_NE(copy->fields, nullptr);
-  EXPECT_EQ(vec_get_size(copy->fields), 2);
+  ASSERT_NE(copy->members, nullptr);
+  EXPECT_EQ(vec_get_size(copy->members), 2);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &cloned);
@@ -148,7 +148,7 @@ TEST_F(dt_expression_type_union, clone) {
 }
 
 TEST_F(dt_expression_type_union, move) {
-  const char *source = "union { value: i32 }";
+  const char *source = "union { value: i32; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -162,7 +162,7 @@ TEST_F(dt_expression_type_union, move) {
 
   cubec_expression_type_union_t result =
       (cubec_expression_type_union_t)moved;
-  ASSERT_NE(result->fields, nullptr);
+  ASSERT_NE(result->members, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &moved);
@@ -170,7 +170,7 @@ TEST_F(dt_expression_type_union, move) {
 }
 
 TEST_F(dt_expression_type_union, via_read_atom) {
-  const char *source = "union { value: i32 }";
+  const char *source = "union { value: i32; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 

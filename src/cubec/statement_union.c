@@ -30,14 +30,14 @@ static void _cubec_statement_union_init(
   self->is_export = init->is_export;
   self->name = init->name;
   self->generic_params = init->generic_params;
-  self->fields = init->fields;
+  self->members = init->members;
 onerror:
   return;
 }
 
 static void _cubec_statement_union_dispose(
     cubec_statement_union_t self, allocator_t allocator) {
-  allocator_free(allocator, &self->fields);
+  allocator_free(allocator, &self->members);
   allocator_free(allocator, &self->generic_params);
   allocator_free(allocator, &self->name);
   g_node_type.dispose(&self->super, allocator);
@@ -52,7 +52,7 @@ static void _cubec_statement_union_clone(
   self->generic_params = another->generic_params
                              ? TRY_LOCAL(onerror, value_clone(allocator, another->generic_params))
                              : NULL;
-  self->fields = TRY_LOCAL(onerror, value_clone(allocator, another->fields));
+  self->members = TRY_LOCAL(onerror, value_clone(allocator, another->members));
   return;
 onerror:
   return;
@@ -67,7 +67,7 @@ static void _cubec_statement_union_move(
   self->generic_params = another->generic_params
                              ? TRY_LOCAL(onerror, value_move(allocator, another->generic_params))
                              : NULL;
-  self->fields = TRY_LOCAL(onerror, value_move(allocator, another->fields));
+  self->members = TRY_LOCAL(onerror, value_move(allocator, another->members));
   return;
 onerror:
   return;
@@ -136,7 +136,7 @@ node_t read_statement_union(allocator_t allocator, vec_t tokens,
 
   skip_whitespace(tokens, &current);
 
-  /* 4. Delegate to read_expression_type_union_body for [generic_params] { fields } */
+  /* 4. Delegate to read_expression_type_union_body for [generic_params] { members } */
   expr_node = TRY_LOCAL(cleanup, read_expression_type_union_body(allocator, tokens, &current, filename, start_location));
   if (!expr_node) {
     THROW_LOCAL(cleanup, "expected '{' after union name");
@@ -156,12 +156,12 @@ node_t read_statement_union(allocator_t allocator, vec_t tokens,
       .is_export = is_export,
       .name = name,
       .generic_params = expr_union->generic_params,
-      .fields = expr_union->fields,
+      .members = expr_union->members,
   };
 
   /* Nullify fields to prevent double-free */
   expr_union->generic_params = NULL;
-  expr_union->fields = NULL;
+  expr_union->members = NULL;
 
   allocator_free(allocator, &expr_node);
 

@@ -21,7 +21,7 @@ protected:
  * ========================================================================== */
 
 TEST_F(dt_statement_union, basic_union) {
-  const char *source = "union Option { value: i32, tag: u64 }";
+  const char *source = "union Option { value: i32; tag: u64; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -35,8 +35,8 @@ TEST_F(dt_statement_union, basic_union) {
   ASSERT_NE(union_node->name, nullptr);
   EXPECT_EQ(union_node->name->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
   EXPECT_EQ(union_node->generic_params, nullptr);
-  ASSERT_NE(union_node->fields, nullptr);
-  EXPECT_EQ(vec_get_size(union_node->fields), 2);
+  ASSERT_NE(union_node->members, nullptr);
+  EXPECT_EQ(vec_get_size(union_node->members), 2);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -52,15 +52,15 @@ TEST_F(dt_statement_union, union_empty) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_union_t union_node = (cubec_statement_union_t)node;
-  ASSERT_NE(union_node->fields, nullptr);
-  EXPECT_EQ(vec_get_size(union_node->fields), 0);
+  ASSERT_NE(union_node->members, nullptr);
+  EXPECT_EQ(vec_get_size(union_node->members), 0);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_statement_union, union_field_details) {
-  const char *source = "union Data { value: i32, tag: u64 }";
+  const char *source = "union Data { value: i32; tag: u64; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -69,10 +69,10 @@ TEST_F(dt_statement_union, union_field_details) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_union_t union_node = (cubec_statement_union_t)node;
-  ASSERT_NE(union_node->fields, nullptr);
-  EXPECT_EQ(vec_get_size(union_node->fields), 2);
+  ASSERT_NE(union_node->members, nullptr);
+  EXPECT_EQ(vec_get_size(union_node->members), 2);
 
-  node_t field0 = (node_t)vec_get(union_node->fields, 0);
+  node_t field0 = (node_t)vec_get(union_node->members, 0);
   EXPECT_EQ(field0->kind, CUBEC_NODE_UNION_FIELD);
   cubec_union_field_t field = (cubec_union_field_t)field0;
   ASSERT_NE(field->name, nullptr);
@@ -87,7 +87,7 @@ TEST_F(dt_statement_union, union_field_details) {
  * ========================================================================== */
 
 TEST_F(dt_statement_union, union_generic) {
-  const char *source = "union Option[T] { value: T, tag: u64 }";
+  const char *source = "union Option[T] { value: T; tag: u64; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -98,15 +98,15 @@ TEST_F(dt_statement_union, union_generic) {
   cubec_statement_union_t union_node = (cubec_statement_union_t)node;
   ASSERT_NE(union_node->generic_params, nullptr);
   EXPECT_EQ(vec_get_size(union_node->generic_params), 1);
-  ASSERT_NE(union_node->fields, nullptr);
-  EXPECT_EQ(vec_get_size(union_node->fields), 2);
+  ASSERT_NE(union_node->members, nullptr);
+  EXPECT_EQ(vec_get_size(union_node->members), 2);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_statement_union, union_generic_multi) {
-  const char *source = "union Result[T, E] { value: T, err: E }";
+  const char *source = "union Result[T, E] { value: T; err: E; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -127,7 +127,7 @@ TEST_F(dt_statement_union, union_generic_multi) {
  * ========================================================================== */
 
 TEST_F(dt_statement_union, export_union) {
-  const char *source = "export union Option { value: i32, tag: u64 }";
+  const char *source = "export union Option { value: i32; tag: u64; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -143,7 +143,7 @@ TEST_F(dt_statement_union, export_union) {
 }
 
 TEST_F(dt_statement_union, non_export_union) {
-  const char *source = "union Option { value: i32 }";
+  const char *source = "union Option { value: i32; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -159,32 +159,11 @@ TEST_F(dt_statement_union, non_export_union) {
 }
 
 /* ==========================================================================
- *  Trailing comma
- * ========================================================================== */
-
-TEST_F(dt_statement_union, union_trailing_comma) {
-  const char *source = "union Data { value: i32, tag: u64, }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
-  ASSERT_NE(tokens, nullptr);
-
-  size_t position = 0;
-  node_t node = read_statement_union(allocator, tokens, &position, "test.cubec");
-  ASSERT_NE(node, nullptr);
-
-  cubec_statement_union_t union_node = (cubec_statement_union_t)node;
-  ASSERT_NE(union_node->fields, nullptr);
-  EXPECT_EQ(vec_get_size(union_node->fields), 2);
-
-  allocator_free(allocator, &node);
-  allocator_free(allocator, &tokens);
-}
-
-/* ==========================================================================
  *  Lifecycle: clone / move
  * ========================================================================== */
 
 TEST_F(dt_statement_union, clone) {
-  const char *source = "union Option[T] { value: T, tag: u64 }";
+  const char *source = "union Option[T] { value: T; tag: u64; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -198,8 +177,8 @@ TEST_F(dt_statement_union, clone) {
 
   cubec_statement_union_t union_node = (cubec_statement_union_t)cloned;
   ASSERT_NE(union_node->name, nullptr);
-  ASSERT_NE(union_node->fields, nullptr);
-  EXPECT_EQ(vec_get_size(union_node->fields), 2);
+  ASSERT_NE(union_node->members, nullptr);
+  EXPECT_EQ(vec_get_size(union_node->members), 2);
 
   allocator_free(allocator, &cloned);
   allocator_free(allocator, &node);
@@ -207,7 +186,7 @@ TEST_F(dt_statement_union, clone) {
 }
 
 TEST_F(dt_statement_union, move) {
-  const char *source = "union Data { value: i32 }";
+  const char *source = "union Data { value: i32; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -221,7 +200,7 @@ TEST_F(dt_statement_union, move) {
 
   cubec_statement_union_t union_node = (cubec_statement_union_t)moved;
   ASSERT_NE(union_node->name, nullptr);
-  ASSERT_NE(union_node->fields, nullptr);
+  ASSERT_NE(union_node->members, nullptr);
 
   allocator_free(allocator, &moved);
   allocator_free(allocator, &node);
@@ -233,7 +212,7 @@ TEST_F(dt_statement_union, move) {
  * ========================================================================== */
 
 TEST_F(dt_statement_union, consume_all_tokens) {
-  const char *source = "union Option { value: i32, tag: u64 }";
+  const char *source = "union Option { value: i32; tag: u64; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -251,7 +230,7 @@ TEST_F(dt_statement_union, consume_all_tokens) {
  * ========================================================================== */
 
 TEST_F(dt_statement_union, via_read_statement) {
-  const char *source = "union Option { value: i32 }";
+  const char *source = "union Option { value: i32; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -265,7 +244,7 @@ TEST_F(dt_statement_union, via_read_statement) {
 }
 
 TEST_F(dt_statement_union, via_read_program) {
-  const char *source = "union Option { value: i32 }";
+  const char *source = "union Option { value: i32; }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
