@@ -70,10 +70,12 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
     if (base->impl->kind == TYPE_ERROR) return ctx->error_type;
 
     semantic_type_t result = semantic_type_create_pointer(ctx->allocator, base);
+    vec_push(ctx->all_types, result);
     if (ptr->is_const || ptr->is_volatile) {
       semantic_type_t qualified = semantic_type_create_qualifier(
           ctx->allocator, result, ptr->is_volatile);
       type_hash_ensure(qualified);
+      vec_push(ctx->all_types, qualified);
       return qualified;
     }
     type_hash_ensure(result);
@@ -87,10 +89,12 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
     if (elem->impl->kind == TYPE_ERROR) return ctx->error_type;
 
     semantic_type_t result = semantic_type_create_slice(ctx->allocator, elem);
+    vec_push(ctx->all_types, result);
     if (sl->is_const || sl->is_volatile) {
       semantic_type_t qualified = semantic_type_create_qualifier(
           ctx->allocator, result, sl->is_volatile);
       type_hash_ensure(qualified);
+      vec_push(ctx->all_types, qualified);
       return qualified;
     }
     type_hash_ensure(result);
@@ -108,6 +112,7 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
     semantic_type_t result =
         semantic_type_create_array(ctx->allocator, elem, length);
     type_hash_ensure(result);
+    vec_push(ctx->all_types, result);
     return result;
   }
 
@@ -121,6 +126,7 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
     semantic_type_t result = semantic_type_create_qualifier(
         ctx->allocator, base, q->is_volatile);
     type_hash_ensure(result);
+    vec_push(ctx->all_types, result);
     return result;
   }
 
@@ -130,8 +136,9 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
         (cubec_expression_type_struct_t)node;
     semantic_type_t t =
         semantic_type_create_named(ctx->allocator, NULL, TYPE_STRUCT);
+    vec_push(ctx->all_types, t);
 
-    vec_init_t vi = {.auto_dispose = false};
+    vec_init_t vi = {.auto_dispose = true};
     t->impl->struct_type.fields =
         (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
 
@@ -167,8 +174,9 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
         (cubec_expression_type_enum_t)node;
     semantic_type_t t =
         semantic_type_create_named(ctx->allocator, NULL, TYPE_ENUM);
+    vec_push(ctx->all_types, t);
 
-    vec_init_t vi = {.auto_dispose = false};
+    vec_init_t vi = {.auto_dispose = true};
     t->impl->enum_type.items =
         (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
     t->impl->enum_type.backing_type = ctx->builtin_i32;
@@ -203,8 +211,9 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
         (cubec_expression_type_union_t)node;
     semantic_type_t t =
         semantic_type_create_named(ctx->allocator, NULL, TYPE_UNION);
+    vec_push(ctx->all_types, t);
 
-    vec_init_t vi = {.auto_dispose = false};
+    vec_init_t vi = {.auto_dispose = true};
     t->impl->struct_type.fields =
         (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
 
@@ -241,8 +250,9 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
     semantic_type_t t =
         semantic_type_create_named(ctx->allocator, NULL, TYPE_INTERFACE);
     t->is_interface = true;
+    vec_push(ctx->all_types, t);
 
-    vec_init_t vi = {.auto_dispose = false};
+    vec_init_t vi = {.auto_dispose = true};
     t->impl->interface_type.methods =
         (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
 
@@ -292,6 +302,7 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
     semantic_type_t result = semantic_type_create_function(
         ctx->allocator, ret_type, params, ft->is_c_variadic);
     type_hash_ensure(result);
+    vec_push(ctx->all_types, result);
     return result;
   }
 

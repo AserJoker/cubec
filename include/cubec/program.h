@@ -18,6 +18,7 @@ extern type_t g_cubec_program_node_type;
 struct _cubec_program_node_init_t {
   location_t location;
   node_t parent;
+  vec_t statements; /**< If non-NULL, ownership is transferred; if NULL, an empty vec is created */
 };
 typedef struct _cubec_program_node_init_t cubec_program_node_init_t;
 node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,

@@ -33,8 +33,12 @@ static void _cubec_program_node_init(cubec_program_node_t self,
   };
   super_init.location = init->location;
   TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
-  self->statements =
-      TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+  if (init->statements) {
+    self->statements = init->statements;
+  } else {
+    self->statements =
+        TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+  }
 onerror:
   return;
 }

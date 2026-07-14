@@ -23,11 +23,15 @@ struct checker {
   /* scopes */
   scope_t global_scope;
   scope_t current_scope;
+  vec_t all_scopes;           /**< all child scopes for cleanup */
 
   /* caches */
   strmap_t module_cache;      /**< module name -> scope_t */
   strmap_t type_name_table;   /**< type name -> semantic_type_t */
   strmap_t type_impl_cache;   /**< hash string -> type_impl_t (dedup) */
+
+  /* all semantic types for cleanup */
+  vec_t all_types;            /**< vec of semantic_type_t (auto_dispose) */
 
   /* diagnostics */
   diagnostic_list_t diagnostics;

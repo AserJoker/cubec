@@ -14,7 +14,7 @@ static void _type_name_entry_init(void *self, allocator_t allocator, void *arg) 
   t->name = name;
   t->is_incomplete = true;
 
-  vec_init_t vec_init = {.auto_dispose = false};
+  vec_init_t vec_init = {.auto_dispose = true};
   t->instance_methods = (vec_t)allocator_create(allocator, &g_vec_type, &vec_init);
   t->static_methods = (vec_t)allocator_create(allocator, &g_vec_type, &vec_init);
   t->static_fields = (vec_t)allocator_create(allocator, &g_vec_type, &vec_init);

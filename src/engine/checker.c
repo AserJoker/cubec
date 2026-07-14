@@ -83,6 +83,9 @@ static semantic_type_t _register_builtin(checker_t ctx, const char *name,
   /* Register in type_name_table */
   strmap_insert(ctx->type_name_table, name, t);
 
+  /* Track for cleanup */
+  vec_push(ctx->all_types, t);
+
   /* Register in global scope */
   location_t builtin_loc = {.filename = "<builtin>",
                              .begin = {0, 0, NULL},
@@ -132,6 +135,10 @@ static void _checker_init(void *self, allocator_t allocator, void *arg) {
       scope_create(allocator, NULL, SCOPE_GLOBAL, global_loc);
   ctx->current_scope = ctx->global_scope;
 
+  /* Track all child scopes for cleanup */
+  vec_init_t scopes_init = {.auto_dispose = true};
+  ctx->all_scopes = allocator_create(allocator, &g_vec_type, &scopes_init);
+
   /* Create caches */
   strmap_init_t si = {.value_auto_dispose = false};
   ctx->module_cache =
@@ -140,6 +147,10 @@ static void _checker_init(void *self, allocator_t allocator, void *arg) {
       (strmap_t)allocator_create(allocator, &g_strmap_type, &si);
   ctx->type_impl_cache =
       (strmap_t)allocator_create(allocator, &g_strmap_type, &si);
+
+  /* Track all semantic types for cleanup */
+  vec_init_t types_init = {.auto_dispose = true};
+  ctx->all_types = allocator_create(allocator, &g_vec_type, &types_init);
 
   /* Init diagnostics */
   diagnostic_list_init_t dl_init = {.output = NULL};
@@ -158,31 +169,21 @@ static void _checker_dispose(void *self, allocator_t allocator) {
   checker_t ctx = (checker_t)self;
   (void)allocator;
 
-  /* Free builtin types (they are referenced by type_name_table but owned here) */
-  allocator_free(allocator, &ctx->error_type);
-  allocator_free(allocator, &ctx->builtin_nil);
-  allocator_free(allocator, &ctx->builtin_string);
-  allocator_free(allocator, &ctx->builtin_char);
-  allocator_free(allocator, &ctx->builtin_f64);
-  allocator_free(allocator, &ctx->builtin_f32);
-  allocator_free(allocator, &ctx->builtin_f16);
-  allocator_free(allocator, &ctx->builtin_u64);
-  allocator_free(allocator, &ctx->builtin_u32);
-  allocator_free(allocator, &ctx->builtin_u16);
-  allocator_free(allocator, &ctx->builtin_u8);
-  allocator_free(allocator, &ctx->builtin_i64);
-  allocator_free(allocator, &ctx->builtin_i32);
-  allocator_free(allocator, &ctx->builtin_i16);
-  allocator_free(allocator, &ctx->builtin_i8);
-  allocator_free(allocator, &ctx->builtin_bool);
-  allocator_free(allocator, &ctx->builtin_void);
+  /* Free all semantic types (includes builtin + user-defined types).
+     This cascades: semantic_type dispose frees its type_impl and
+     internal vecs (instance_methods, static_fields, etc.) with
+     auto_dispose, which frees symbol objects inside them. */
+  allocator_free(allocator, &ctx->all_types);
+
+  /* Free child scopes (global_scope symbols already freed via all_types) */
+  allocator_free(allocator, &ctx->all_scopes);
+  allocator_free(allocator, &ctx->global_scope);
 
   allocator_free(allocator, &ctx->sources);
   allocator_free(allocator, &ctx->diagnostics);
   allocator_free(allocator, &ctx->type_impl_cache);
   allocator_free(allocator, &ctx->type_name_table);
   allocator_free(allocator, &ctx->module_cache);
-  allocator_free(allocator, &ctx->global_scope);
 }
 
 type_t g_checker_type = {
@@ -222,6 +223,7 @@ static void _collect_struct(checker_t ctx, cubec_statement_struct_t node) {
 
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, name, TYPE_STRUCT);
+  vec_push(ctx->all_types, t);
 
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
@@ -246,6 +248,7 @@ static void _collect_enum(checker_t ctx, cubec_statement_enum_t node) {
 
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, name, TYPE_ENUM);
+  vec_push(ctx->all_types, t);
 
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
@@ -270,6 +273,7 @@ static void _collect_union(checker_t ctx, cubec_statement_union_t node) {
 
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, name, TYPE_UNION);
+  vec_push(ctx->all_types, t);
 
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
@@ -294,6 +298,7 @@ static void _collect_cunion(checker_t ctx, cubec_statement_cunion_t node) {
 
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, name, TYPE_CUNION);
+  vec_push(ctx->all_types, t);
 
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
@@ -320,6 +325,7 @@ static void _collect_interface(checker_t ctx,
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, name, TYPE_INTERFACE);
   t->is_interface = true;
+  vec_push(ctx->all_types, t);
 
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
@@ -522,7 +528,7 @@ static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
   }
 
   /* Create fields vec */
-  vec_init_t vi = {.auto_dispose = false};
+  vec_init_t vi = {.auto_dispose = true};
   t->impl->struct_type.fields =
       (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
 
@@ -571,6 +577,7 @@ static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
         semantic_type_t mtype = semantic_type_create_function(
             ctx->allocator, ret_type, params, mfn->is_c_variadic);
         type_hash_ensure(mtype);
+        vec_push(ctx->all_types, mtype);
         msym->function.type = mtype;
         msym->function.is_comptime = mfn->is_comptime;
         msym->state = SYMBOL_NAME_KNOWN; /* body checked in Pass 3 */
@@ -611,7 +618,7 @@ static void _evaluate_enum(checker_t ctx, cubec_statement_enum_t node) {
 
   semantic_type_t t = sym->type.type;
 
-  vec_init_t vi = {.auto_dispose = false};
+  vec_init_t vi = {.auto_dispose = true};
   t->impl->enum_type.items =
       (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
   t->impl->enum_type.backing_type = ctx->builtin_i32;
@@ -656,7 +663,7 @@ static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
     return;
   }
 
-  vec_init_t vi = {.auto_dispose = false};
+  vec_init_t vi = {.auto_dispose = true};
   t->impl->struct_type.fields =
       (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
 
@@ -703,6 +710,7 @@ static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
         semantic_type_t mtype = semantic_type_create_function(
             ctx->allocator, ret_type, params, mfn->is_c_variadic);
         type_hash_ensure(mtype);
+        vec_push(ctx->all_types, mtype);
         msym->function.type = mtype;
         msym->function.is_comptime = mfn->is_comptime;
         msym->state = SYMBOL_NAME_KNOWN;
@@ -743,7 +751,7 @@ static void _evaluate_cunion(checker_t ctx, cubec_statement_cunion_t node) {
 
   semantic_type_t t = sym->type.type;
 
-  vec_init_t vi = {.auto_dispose = false};
+  vec_init_t vi = {.auto_dispose = true};
   t->impl->struct_type.fields =
       (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
 
@@ -787,7 +795,7 @@ static void _evaluate_interface(checker_t ctx,
     return;
   }
 
-  vec_init_t vi = {.auto_dispose = false};
+  vec_init_t vi = {.auto_dispose = true};
   t->impl->interface_type.methods =
       (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
 
@@ -831,6 +839,7 @@ static void _evaluate_interface(checker_t ctx,
         semantic_type_t mtype = semantic_type_create_function(
             ctx->allocator, ret_type, params, false);
         type_hash_ensure(mtype);
+        vec_push(ctx->all_types, mtype);
 
         msym->function.type = mtype;
         msym->state = SYMBOL_EVALUATED;
@@ -896,6 +905,7 @@ static void _evaluate_function(checker_t ctx,
   semantic_type_t ftype = semantic_type_create_function(
       ctx->allocator, ret_type, params, node->is_c_variadic);
   type_hash_ensure(ftype);
+  vec_push(ctx->all_types, ftype);
 
   sym->function.type = ftype;
   sym->function.is_comptime = node->is_comptime;
@@ -1479,7 +1489,10 @@ static semantic_type_t _check_expression(checker_t ctx, node_t expr) {
                            "cannot take address of non-lvalue");
       ctx->error_count++;
     }
-    return semantic_type_create_pointer(ctx->allocator, host_type);
+    { semantic_type_t pt = semantic_type_create_pointer(ctx->allocator, host_type);
+      vec_push(ctx->all_types, pt);
+      return pt;
+    }
   }
 
   /* --- try (.?) --- */
@@ -1555,6 +1568,7 @@ static semantic_type_t _check_expression(checker_t ctx, node_t expr) {
         semantic_type_create_named(ctx->allocator, NULL, TYPE_TYPE);
     t->impl->type_of.inner = inner;
     t->is_incomplete = false;
+    vec_push(ctx->all_types, t);
     return t;
   }
 
@@ -1568,9 +1582,12 @@ static semantic_type_t _check_expression(checker_t ctx, node_t expr) {
     if (sl->length) _check_expression(ctx, sl->length);
 
     /* array/slice -> slice of element type */
-    if (ht->impl->kind == TYPE_ARRAY)
-      return semantic_type_create_slice(ctx->allocator,
+    if (ht->impl->kind == TYPE_ARRAY) {
+      semantic_type_t st = semantic_type_create_slice(ctx->allocator,
                                          ht->impl->array.element);
+      vec_push(ctx->all_types, st);
+      return st;
+    }
     if (ht->impl->kind == TYPE_SLICE)
       return ht;
 
@@ -1598,6 +1615,7 @@ static semantic_type_t _check_expression(checker_t ctx, node_t expr) {
     scope_t saved = ctx->current_scope;
     ctx->current_scope = scope_create(ctx->allocator, ctx->current_scope,
                                        SCOPE_FUNCTION, expr->location);
+    vec_push(ctx->all_scopes, ctx->current_scope);
 
     if (fn->arguments) {
       size_t acount = vec_get_size(fn->arguments);
@@ -1631,6 +1649,7 @@ static semantic_type_t _check_expression(checker_t ctx, node_t expr) {
     semantic_type_t ftype = semantic_type_create_function(
         ctx->allocator, ret_type, param_types, fn->is_c_variadic);
     type_hash_ensure(ftype);
+    vec_push(ctx->all_types, ftype);
     return ftype;
   }
 
@@ -1791,6 +1810,7 @@ static void _check_block(checker_t ctx, cubec_statement_block_t block,
   scope_t saved = ctx->current_scope;
   ctx->current_scope = scope_create(ctx->allocator, ctx->current_scope,
                                      SCOPE_BLOCK, block->super.location);
+  vec_push(ctx->all_scopes, ctx->current_scope);
   size_t count = vec_get_size(block->statements);
   for (size_t i = 0; i < count; i++) {
     node_t s = (node_t)vec_get(block->statements, i);
@@ -1894,6 +1914,7 @@ static void _check_statement(checker_t ctx, node_t stmt,
     scope_t saved = ctx->current_scope;
     ctx->current_scope = scope_create(ctx->allocator, ctx->current_scope,
                                        SCOPE_FOR, stmt->location);
+    vec_push(ctx->all_scopes, ctx->current_scope);
     if (sf->init) _check_statement(ctx, sf->init, return_type);
     if (sf->condition) {
       semantic_type_t ct = _check_expression(ctx, sf->condition);
@@ -1918,6 +1939,7 @@ static void _check_statement(checker_t ctx, node_t stmt,
     scope_t saved = ctx->current_scope;
     ctx->current_scope = scope_create(ctx->allocator, ctx->current_scope,
                                        SCOPE_FOREACH, stmt->location);
+    vec_push(ctx->all_scopes, ctx->current_scope);
     const char *vname = _ident_str(sfe->name);
     if (vname) {
       struct symbol *vsym = symbol_create(ctx->allocator, vname,
@@ -2049,6 +2071,7 @@ static void _check_statement(checker_t ctx, node_t stmt,
     scope_t saved = ctx->current_scope;
     ctx->current_scope = scope_create(ctx->allocator, ctx->current_scope,
                                        SCOPE_COMPTIME, stmt->location);
+    vec_push(ctx->all_scopes, ctx->current_scope);
     if (cf->init) _check_statement(ctx, cf->init, return_type);
     if (cf->condition) _check_expression(ctx, cf->condition);
     if (cf->increment) _check_expression(ctx, cf->increment);
@@ -2080,6 +2103,7 @@ static void _check_function_body(checker_t ctx,
   scope_t saved = ctx->current_scope;
   ctx->current_scope = scope_create(ctx->allocator, ctx->global_scope,
                                      SCOPE_FUNCTION, node->super.location);
+  vec_push(ctx->all_scopes, ctx->current_scope);
 
   /* register parameters */
   if (node->arguments) {
@@ -2150,6 +2174,7 @@ static void _check_struct_method_bodies(checker_t ctx,
       scope_t saved = ctx->current_scope;
       ctx->current_scope = scope_create(ctx->allocator, ctx->global_scope,
                                          SCOPE_FUNCTION, mfn->super.location);
+      vec_push(ctx->all_scopes, ctx->current_scope);
 
       /* register method parameters */
       if (mfn->arguments) {
