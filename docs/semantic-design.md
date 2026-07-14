@@ -807,6 +807,25 @@ test "string concat" {
 
 build 脚本通过 comptime 引擎在构建期执行，具体语法和 API 待设计。
 
+当前示例形式（`demo/build.cubec`，仅供参考，非最终方案）：
+
+```c
+import build from "build";
+import error from "error";
+export func build_main(builder: *build::Builder): error::Result[build::BuildError, void] {
+  var main_target = builder::new("main", build::Execute);
+  main_target.addFlag("-O2");
+  main_target.setOutputDirectory(builder.workspace);
+  _ = main_target.build().?;
+}
+```
+
+关键特征：
+- 构建功能由**标准库**实现（`build` 模块），不是编译器内置
+- build 脚本是普通的 Cubec 源文件，通过 `export func build_main` 作为入口
+- 编译器识别 `build.cubec` 文件并在构建期执行
+- 可使用完整的 Cubec 语法（import、泛型、.? 错误传播等）
+
 ---
 
 ## 16. 泛型实例化
