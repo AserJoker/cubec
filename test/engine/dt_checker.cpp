@@ -20,6 +20,8 @@
 #include "cubec/statement_function.h"
 #include "cubec/statement_declaration.h"
 #include "cubec/statement_declaration_type.h"
+#include "cubec/statement_interface.h"
+#include "cubec/interface_method.h"
 #include "cubec/declaration_variable.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -198,6 +200,53 @@ static node_t make_var_decl(allocator_t alloc, const char *name, node_t type,
                                                  .declarator = decl_node};
   return (node_t)allocator_create(alloc, &g_cubec_statement_declaration_type,
                                    &sd_init);
+}
+
+/* Variant: var declaration as a struct member (uses cubec_statement_declaration_t) */
+static node_t make_var_decl_stmt(allocator_t alloc, const char *name, node_t type) {
+  node_t name_node = make_ident(alloc, name);
+  cubec_declaration_variable_init_t dv_init = {.location = test_loc(),
+                                                .parent = NULL,
+                                                .identifier = name_node,
+                                                .type = type,
+                                                .expression = NULL};
+  node_t decl_node = (node_t)allocator_create(
+      alloc, &g_cubec_declaration_variable_type, &dv_init);
+
+  cubec_statement_declaration_init_t sd_init = {.location = test_loc(),
+                                                 .parent = NULL,
+                                                 .is_export = false,
+                                                 .is_extern = false,
+                                                 .is_builtin = false,
+                                                 .is_comptime = false,
+                                                 .declarator = decl_node};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_declaration_type,
+                                   &sd_init);
+}
+
+static node_t make_iface_stmt(allocator_t alloc, const char *name,
+                              vec_t members) {
+  node_t name_node = make_ident(alloc, name);
+  cubec_statement_interface_init_t init = {.location = test_loc(),
+                                            .parent = NULL,
+                                            .is_export = false,
+                                            .name = name_node,
+                                            .generic_params = NULL,
+                                            .members = members};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_interface_type,
+                                   &init);
+}
+
+static node_t make_interface_method(allocator_t alloc, const char *name,
+                                    node_t ret_type, vec_t args) {
+  node_t name_node = make_ident(alloc, name);
+  cubec_interface_method_init_t init = {.location = test_loc(),
+                                         .name = name_node,
+                                         .generic_params = NULL,
+                                         .arguments = args,
+                                         .return_type = ret_type};
+  return (node_t)allocator_create(alloc, &g_cubec_interface_method_type,
+                                   &init);
 }
 
 static node_t make_type_alias(allocator_t alloc, const char *name,
@@ -731,6 +780,100 @@ TEST_F(dt_checker, pass2_numeric_suffix_u8) {
   ASSERT_NE(sym, nullptr);
   ASSERT_NE(sym->variable.type, nullptr);
   EXPECT_EQ(sym->variable.type->impl->kind, TYPE_U8);
+
+  checker_dispose(ctx);
+}
+
+/* ===== struct method and static field tests ===== */
+
+TEST_F(dt_checker, pass2_struct_method) {
+  /* struct Counter { val: i32; func get(): i32 {} } */
+  vec_t members = make_vec(allocator);
+  vec_push(members, make_struct_field(allocator, "val", make_ident(allocator, "i32")));
+  vec_t args = make_vec(allocator);
+  vec_push(members, make_func_stmt(allocator, "get",
+                                    make_ident(allocator, "i32"), args));
+
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_struct_stmt(allocator, "Counter", members));
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  struct symbol *sym = scope_lookup(ctx->global_scope, "Counter");
+  ASSERT_NE(sym, nullptr);
+  EXPECT_EQ(sym->state, SYMBOL_EVALUATED);
+
+  semantic_type_t t = sym->type.type;
+  ASSERT_NE(t, nullptr);
+  EXPECT_EQ(vec_get_size(t->instance_methods), 1);
+
+  struct symbol *m = (struct symbol *)vec_get(t->instance_methods, 0);
+  ASSERT_NE(m, nullptr);
+  EXPECT_EQ(m->kind, SYMBOL_FUNCTION);
+  EXPECT_STREQ(m->name, "get");
+  ASSERT_NE(m->function.type, nullptr);
+  EXPECT_EQ(m->function.type->impl->kind, TYPE_FUNCTION);
+  EXPECT_EQ(m->function.type->impl->function.return_type->impl->kind, TYPE_I32);
+
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_checker, pass2_struct_static_field) {
+  /* struct Config { var count: i32; } */
+  vec_t members = make_vec(allocator);
+  vec_push(members, make_var_decl_stmt(allocator, "count", make_ident(allocator, "i32")));
+
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_struct_stmt(allocator, "Config", members));
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  struct symbol *sym = scope_lookup(ctx->global_scope, "Config");
+  ASSERT_NE(sym, nullptr);
+  semantic_type_t t = sym->type.type;
+  ASSERT_NE(t, nullptr);
+  EXPECT_EQ(vec_get_size(t->static_fields), 1);
+
+  struct symbol *sf = (struct symbol *)vec_get(t->static_fields, 0);
+  ASSERT_NE(sf, nullptr);
+  EXPECT_EQ(sf->kind, SYMBOL_VARIABLE);
+  EXPECT_STREQ(sf->name, "count");
+  ASSERT_NE(sf->variable.type, nullptr);
+  EXPECT_EQ(sf->variable.type->impl->kind, TYPE_I32);
+
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_checker, pass2_interface_associated_type) {
+  /* interface Hashable { type Key; func hash(key: Key): u64; } */
+  vec_t members = make_vec(allocator);
+  vec_push(members, make_type_alias(allocator, "Key", NULL));
+  vec_t args = make_vec(allocator);
+  vec_push(args, make_func_arg(allocator, "key", make_ident(allocator, "Key")));
+  vec_push(members, make_interface_method(allocator, "hash",
+                                           make_ident(allocator, "u64"), args));
+
+  vec_t stmts = make_vec(allocator);
+  vec_push(stmts, make_iface_stmt(allocator, "Hashable", members));
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, make_program(allocator, stmts));
+
+  struct symbol *sym = scope_lookup(ctx->global_scope, "Hashable");
+  ASSERT_NE(sym, nullptr);
+  semantic_type_t t = sym->type.type;
+  ASSERT_NE(t, nullptr);
+
+  /* 1 associated type */
+  EXPECT_EQ(vec_get_size(t->associated_types), 1);
+  struct symbol *at = (struct symbol *)vec_get(t->associated_types, 0);
+  EXPECT_EQ(at->kind, SYMBOL_TYPE);
+  EXPECT_STREQ(at->name, "Key");
+
+  /* 1 method */
+  EXPECT_EQ(vec_get_size(t->impl->interface_type.methods), 1);
 
   checker_dispose(ctx);
 }

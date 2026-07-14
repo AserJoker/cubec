@@ -510,9 +510,56 @@ static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
         fsym->field.index = i;
         fsym->field.is_pub = field->is_pub;
         vec_push(t->impl->struct_type.fields, fsym);
+      } else if (member->kind == CUBEC_NODE_STATEMENT_FUNCTION) {
+        cubec_statement_function_t mfn = (cubec_statement_function_t)member;
+        const char *mname = _ident_str(mfn->name);
+        struct symbol *msym = symbol_create(ctx->allocator, mname,
+                                            SYMBOL_FUNCTION, mfn->super.location);
+        semantic_type_t ret_type = mfn->return_type
+            ? resolver_resolve_type(ctx, mfn->return_type)
+            : ctx->builtin_void;
+        vec_init_t pvi = {.auto_dispose = false};
+        vec_t params =
+            (vec_t)allocator_create(ctx->allocator, &g_vec_type, &pvi);
+        if (mfn->arguments) {
+          size_t acount = vec_get_size(mfn->arguments);
+          for (size_t j = 0; j < acount; j++) {
+            node_t arg = (node_t)vec_get(mfn->arguments, j);
+            if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
+              cubec_function_argument_t farg =
+                  (cubec_function_argument_t)arg;
+              if (farg->type) {
+                semantic_type_t pt = resolver_resolve_type(ctx, farg->type);
+                vec_push(params, pt);
+              }
+            }
+          }
+        }
+        semantic_type_t mtype = semantic_type_create_function(
+            ctx->allocator, ret_type, params, mfn->is_c_variadic);
+        type_hash_ensure(mtype);
+        msym->function.type = mtype;
+        msym->function.is_comptime = mfn->is_comptime;
+        msym->state = SYMBOL_NAME_KNOWN; /* body checked in Pass 3 */
+        vec_push(t->instance_methods, msym);
+      } else if (member->kind == CUBEC_NODE_STATEMENT_DECLARATION) {
+        cubec_statement_declaration_t sdecl =
+            (cubec_statement_declaration_t)member;
+        cubec_declaration_variable_t vdecl =
+            (cubec_declaration_variable_t)sdecl->declarator;
+        if (vdecl) {
+          const char *vname = _ident_str(vdecl->identifier);
+          struct symbol *vsym = symbol_create(ctx->allocator, vname,
+                                              SYMBOL_VARIABLE,
+                                              sdecl->super.location);
+          if (vdecl->type)
+            vsym->variable.type = resolver_resolve_type(ctx, vdecl->type);
+          vsym->variable.is_comptime = sdecl->is_comptime;
+          vsym->variable.is_mutable = true;
+          vsym->state = SYMBOL_NAME_KNOWN; /* initializer in Pass 3 */
+          vec_push(t->static_fields, vsym);
+        }
       }
-      /* TODO: CUBEC_NODE_STATEMENT_DECLARATION (static fields) */
-      /* TODO: CUBEC_NODE_STATEMENT_FUNCTION (methods) */
     }
   }
 
@@ -595,8 +642,56 @@ static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
           fsym->field.type = resolver_resolve_type(ctx, field->type);
         fsym->field.index = i;
         vec_push(t->impl->struct_type.fields, fsym);
+      } else if (member->kind == CUBEC_NODE_STATEMENT_FUNCTION) {
+        cubec_statement_function_t mfn = (cubec_statement_function_t)member;
+        const char *mname = _ident_str(mfn->name);
+        struct symbol *msym = symbol_create(ctx->allocator, mname,
+                                            SYMBOL_FUNCTION, mfn->super.location);
+        semantic_type_t ret_type = mfn->return_type
+            ? resolver_resolve_type(ctx, mfn->return_type)
+            : ctx->builtin_void;
+        vec_init_t pvi = {.auto_dispose = false};
+        vec_t params =
+            (vec_t)allocator_create(ctx->allocator, &g_vec_type, &pvi);
+        if (mfn->arguments) {
+          size_t acount = vec_get_size(mfn->arguments);
+          for (size_t j = 0; j < acount; j++) {
+            node_t arg = (node_t)vec_get(mfn->arguments, j);
+            if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
+              cubec_function_argument_t farg =
+                  (cubec_function_argument_t)arg;
+              if (farg->type) {
+                semantic_type_t pt = resolver_resolve_type(ctx, farg->type);
+                vec_push(params, pt);
+              }
+            }
+          }
+        }
+        semantic_type_t mtype = semantic_type_create_function(
+            ctx->allocator, ret_type, params, mfn->is_c_variadic);
+        type_hash_ensure(mtype);
+        msym->function.type = mtype;
+        msym->function.is_comptime = mfn->is_comptime;
+        msym->state = SYMBOL_NAME_KNOWN;
+        vec_push(t->instance_methods, msym);
+      } else if (member->kind == CUBEC_NODE_STATEMENT_DECLARATION) {
+        cubec_statement_declaration_t sdecl =
+            (cubec_statement_declaration_t)member;
+        cubec_declaration_variable_t vdecl =
+            (cubec_declaration_variable_t)sdecl->declarator;
+        if (vdecl) {
+          const char *vname = _ident_str(vdecl->identifier);
+          struct symbol *vsym = symbol_create(ctx->allocator, vname,
+                                              SYMBOL_VARIABLE,
+                                              sdecl->super.location);
+          if (vdecl->type)
+            vsym->variable.type = resolver_resolve_type(ctx, vdecl->type);
+          vsym->variable.is_comptime = sdecl->is_comptime;
+          vsym->variable.is_mutable = true;
+          vsym->state = SYMBOL_NAME_KNOWN;
+          vec_push(t->static_fields, vsym);
+        }
       }
-      /* TODO: methods, static fields, associated types, spread */
     }
   }
 
@@ -707,8 +802,19 @@ static void _evaluate_interface(checker_t ctx,
         msym->function.type = mtype;
         msym->state = SYMBOL_EVALUATED;
         vec_push(t->impl->interface_type.methods, msym);
+      } else if (member->kind == CUBEC_NODE_STATEMENT_DECLARATION_TYPE) {
+        cubec_statement_declaration_type_t tdecl =
+            (cubec_statement_declaration_type_t)member;
+        const char *tname = _ident_str(tdecl->name);
+        struct symbol *tsym = symbol_create(ctx->allocator, tname,
+                                            SYMBOL_TYPE, tdecl->super.location);
+        if (tdecl->type_value) {
+          tsym->type.type = resolver_resolve_type(ctx, tdecl->type_value);
+        }
+        /* Generic associated type: skip resolution for now */
+        tsym->state = SYMBOL_NAME_KNOWN;
+        vec_push(t->associated_types, tsym);
       }
-      /* TODO: CUBEC_NODE_STATEMENT_DECLARATION_TYPE (associated types) */
     }
   }
 
