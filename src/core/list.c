@@ -1,4 +1,4 @@
-﻿#include "core/list.h"
+#include "core/list.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include <stdbool.h>
