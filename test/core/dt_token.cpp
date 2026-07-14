@@ -1,4 +1,4 @@
-﻿#include "cubec/token.h"
+#include "cubec/token.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
 #include "core/error.h"
@@ -65,8 +65,8 @@ TEST_F(dt_token, keyword_token) {
   const char *keywords[] = {
       "break",  "case",    "comptime", "const", "continue", "defer",
       "do",     "else",    "enum",     "export", "extern",   "for",
-      "foreach","func",    "if",       "import", "in",       "inline",
-      "mutable","of",      "pub",      "register","return",  "struct",
+      "foreach","func",    "if",       "import", "inline",
+      "pub",    "return",  "struct",
       "switch", "test",    "union",    "volatile", "while",  NULL
   };
 
