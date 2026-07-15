@@ -9,3 +9,4 @@ cubec_test
 *.resolved.cubec
 build-asan
 build-linux
+build_wsl

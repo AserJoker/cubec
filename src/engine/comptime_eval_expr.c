@@ -111,7 +111,7 @@ static comptime_value_t _eval_literal_identifier(comptime_eval_t eval,
   if (!name) return _eval_error_val(eval);
 
   comptime_value_t val = comptime_env_lookup(eval->current_env, name);
-  if (val) return val;
+  if (val) return comptime_value_clone(eval->allocator, val);
 
   struct symbol *sym = scope_lookup(ctx->current_scope, name);
   if (!sym) return _eval_error_val(eval);
@@ -167,7 +167,10 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
     comptime_value_t host = _comptime_eval_expr(eval, ctx, mem->host);
     if (!host) return _eval_error_val(eval);
     const char *fname = _eval_ident_str((node_t)mem->field);
-    if (!fname) return _eval_error_val(eval);
+    if (!fname) {
+      allocator_free(eval->allocator, &host);
+      return _eval_error_val(eval);
+    }
 
     /* host is a composite — update field in-place */
     if (host->kind == COMPTIME_VALUE_COMPOSITE) {
@@ -175,12 +178,14 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
         if (host->composite.field_names &&
             strcmp(host->composite.field_names[i], fname) == 0) {
           vec_set(host->composite.fields, i, rv);
+          allocator_free(eval->allocator, &host);
           return rv;
         }
       }
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
                            "no field '%s' in composite", fname);
       ctx->error_count++;
+      allocator_free(eval->allocator, &host);
       return _eval_error_val(eval);
     }
 
@@ -192,6 +197,7 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
                              "dereference of dangling/non-composite pointer");
         ctx->error_count++;
+        allocator_free(eval->allocator, &host);
         return _eval_error_val(eval);
       }
       for (size_t i = 0; i < pointed->composite.field_count; i++) {
@@ -200,15 +206,18 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
           comptime_value_t updated = comptime_value_clone(eval->allocator, pointed);
           vec_set(updated->composite.fields, i, rv);
           comptime_alloc_write(eval->valloc, host->pointer.addr, updated);
+          allocator_free(eval->allocator, &host);
           return rv;
         }
       }
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
                            "no field '%s' in composite", fname);
       ctx->error_count++;
+      allocator_free(eval->allocator, &host);
       return _eval_error_val(eval);
     }
 
+    allocator_free(eval->allocator, &host);
     return _eval_error_val(eval);
   }
 
@@ -292,14 +301,22 @@ static comptime_value_t _eval_member(comptime_eval_t eval, checker_t ctx,
   comptime_value_t host = _comptime_eval_expr(eval, ctx, mem->host);
   if (!host) return _eval_error_val(eval);
   const char *fname = _eval_ident_str((node_t)mem->field);
-  if (!fname) return _eval_error_val(eval);
+  if (!fname) {
+    allocator_free(eval->allocator, &host);
+    return _eval_error_val(eval);
+  }
 
   if (host->kind == COMPTIME_VALUE_COMPOSITE) {
     for (size_t i = 0; i < host->composite.field_count; i++) {
       if (host->composite.field_names &&
-          strcmp(host->composite.field_names[i], fname) == 0)
-        return (comptime_value_t)vec_get(host->composite.fields, i);
+          strcmp(host->composite.field_names[i], fname) == 0) {
+        comptime_value_t field = (comptime_value_t)vec_get(host->composite.fields, i);
+        comptime_value_t result = comptime_value_clone(eval->allocator, field);
+        allocator_free(eval->allocator, &host);
+        return result;
+      }
     }
+    allocator_free(eval->allocator, &host);
     return _eval_error_val(eval);
   }
 
@@ -309,8 +326,11 @@ static comptime_value_t _eval_member(comptime_eval_t eval, checker_t ctx,
       size_t fc = vec_get_size(t->static_fields);
       for (size_t i = 0; i < fc; i++) {
         struct symbol *s = (struct symbol *)vec_get(t->static_fields, i);
-        if (s && s->name && strcmp(s->name, fname) == 0 && s->kind == SYMBOL_VARIABLE)
-          return comptime_env_lookup(eval->current_env, s->name);
+        if (s && s->name && strcmp(s->name, fname) == 0 && s->kind == SYMBOL_VARIABLE) {
+          comptime_value_t v = comptime_env_lookup(eval->current_env, s->name);
+          allocator_free(eval->allocator, &host);
+          return v ? comptime_value_clone(eval->allocator, v) : NULL;
+        }
       }
     }
   }
@@ -322,17 +342,23 @@ static comptime_value_t _eval_member(comptime_eval_t eval, checker_t ctx,
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
                            "dereference of dangling pointer");
       ctx->error_count++;
+      allocator_free(eval->allocator, &host);
       return _eval_error_val(eval);
     }
     if (pointed->kind == COMPTIME_VALUE_COMPOSITE) {
       for (size_t i = 0; i < pointed->composite.field_count; i++) {
         if (pointed->composite.field_names &&
-            strcmp(pointed->composite.field_names[i], fname) == 0)
-          return (comptime_value_t)vec_get(pointed->composite.fields, i);
+            strcmp(pointed->composite.field_names[i], fname) == 0) {
+          comptime_value_t field = (comptime_value_t)vec_get(pointed->composite.fields, i);
+          comptime_value_t result = comptime_value_clone(eval->allocator, field);
+          allocator_free(eval->allocator, &host);
+          return result;
+        }
       }
     }
   }
 
+  allocator_free(eval->allocator, &host);
   return _eval_error_val(eval);
 }
 

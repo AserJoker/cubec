@@ -9,7 +9,8 @@ comptime_env_t comptime_env_create(allocator_t allocator, comptime_env_t parent)
   if (!env) return NULL;
   env->allocator = allocator;
   env->parent = parent;
-  strmap_init_t si = {.value_auto_dispose = false};
+  /* value_auto_dispose = true: env owns bound values, frees on dispose */
+  strmap_init_t si = {.value_auto_dispose = true};
   env->bindings = (strmap_t)allocator_create(allocator, &g_strmap_type, &si);
   return env;
 }

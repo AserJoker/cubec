@@ -96,12 +96,19 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
   case CUBEC_NODE_STATEMENT_IF: {
     cubec_statement_if_t si = (cubec_statement_if_t)stmt;
     comptime_value_t cond = _comptime_eval_expr(eval, ctx, si->condition);
-    if (!cond || cond->kind == COMPTIME_VALUE_ERROR) return _eval_signal_error();
+    if (!cond || cond->kind == COMPTIME_VALUE_ERROR) {
+      allocator_free(eval->allocator, &cond);
+      return _eval_signal_error();
+    }
+    comptime_signal_t result;
     if (comptime_value_is_truthy(cond))
-      return _comptime_exec_block(eval, ctx, si->then_branch);
-    if (si->else_branch)
-      return _comptime_exec_block(eval, ctx, si->else_branch);
-    return _eval_signal_none();
+      result = _comptime_exec_block(eval, ctx, si->then_branch);
+    else if (si->else_branch)
+      result = _comptime_exec_block(eval, ctx, si->else_branch);
+    else
+      result = _eval_signal_none();
+    allocator_free(eval->allocator, &cond);
+    return result;
   }
 
   case CUBEC_NODE_STATEMENT_WHILE: {
@@ -112,19 +119,25 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     while (true) {
       comptime_value_t cond = _comptime_eval_expr(eval, ctx, sw->condition);
       if (!cond || cond->kind == COMPTIME_VALUE_ERROR) {
+        allocator_free(eval->allocator, &cond);
         sig = _eval_signal_error();
         break;
       }
-      if (!comptime_value_is_truthy(cond)) break;
+      if (!comptime_value_is_truthy(cond)) {
+        allocator_free(eval->allocator, &cond);
+        break;
+      }
       if (++iterations > COMPTIME_MAX_LOOP_ITERATIONS) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, stmt->location,
                              "comptime loop exceeded %d iterations",
                              COMPTIME_MAX_LOOP_ITERATIONS);
         ctx->error_count++;
+        allocator_free(eval->allocator, &cond);
         sig = _eval_signal_error();
         break;
       }
       sig = _comptime_exec_block(eval, ctx, sw->body);
+      allocator_free(eval->allocator, &cond);
       if (sig.kind == COMPTIME_SIGNAL_BREAK) {
         sig = _eval_signal_none();
         break;
@@ -150,10 +163,15 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
       if (sf->condition) {
         comptime_value_t cond = _comptime_eval_expr(eval, ctx, sf->condition);
         if (!cond || cond->kind == COMPTIME_VALUE_ERROR) {
+          allocator_free(eval->allocator, &cond);
           sig = _eval_signal_error();
           break;
         }
-        if (!comptime_value_is_truthy(cond)) break;
+        if (!comptime_value_is_truthy(cond)) {
+          allocator_free(eval->allocator, &cond);
+          break;
+        }
+        allocator_free(eval->allocator, &cond);
       }
       if (++iterations > COMPTIME_MAX_LOOP_ITERATIONS) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, stmt->location,
@@ -173,7 +191,10 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
       } else if (sig.kind != COMPTIME_SIGNAL_NONE) {
         break;
       }
-      if (sf->increment) _comptime_eval_expr(eval, ctx, sf->increment);
+      if (sf->increment) {
+        comptime_value_t incr = _comptime_eval_expr(eval, ctx, sf->increment);
+        allocator_free(eval->allocator, &incr);
+      }
     }
     eval->loop_depth--;
     comptime_alloc_leave_scope(eval->valloc);
@@ -198,18 +219,24 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
       }
       comptime_value_t cond = _comptime_eval_expr(eval, ctx, sdw->condition);
       if (!cond || cond->kind == COMPTIME_VALUE_ERROR) {
+        allocator_free(eval->allocator, &cond);
         sig = _eval_signal_error();
         break;
       }
-      if (!comptime_value_is_truthy(cond)) break;
+      if (!comptime_value_is_truthy(cond)) {
+        allocator_free(eval->allocator, &cond);
+        break;
+      }
       if (++iterations > COMPTIME_MAX_LOOP_ITERATIONS) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, stmt->location,
                              "comptime loop exceeded %d iterations",
                              COMPTIME_MAX_LOOP_ITERATIONS);
         ctx->error_count++;
+        allocator_free(eval->allocator, &cond);
         sig = _eval_signal_error();
         break;
       }
+      allocator_free(eval->allocator, &cond);
     }
     eval->loop_depth--;
     return sig;
@@ -220,11 +247,16 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     const char *var_name = _eval_ident_str(sfe->name);
     if (!var_name) return _eval_signal_none();
     comptime_value_t iter = _comptime_eval_expr(eval, ctx, sfe->iterator);
-    if (!iter || iter->kind == COMPTIME_VALUE_ERROR) return _eval_signal_error();
+    if (!iter || iter->kind == COMPTIME_VALUE_ERROR) {
+      allocator_free(eval->allocator, &iter);
+      return _eval_signal_error();
+    }
 
     /* only composite (array) iteration supported */
-    if (iter->kind != COMPTIME_VALUE_COMPOSITE || !iter->composite.fields)
+    if (iter->kind != COMPTIME_VALUE_COMPOSITE || !iter->composite.fields) {
+      allocator_free(eval->allocator, &iter);
       return _eval_signal_error();
+    }
 
     size_t total = vec_get_size(iter->composite.fields);
     eval->loop_depth++;
@@ -255,6 +287,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
       if (sig.kind != COMPTIME_SIGNAL_NONE) break;
     }
     eval->loop_depth--;
+    allocator_free(eval->allocator, &iter);
     return sig;
   }
 

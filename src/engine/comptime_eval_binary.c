@@ -1,6 +1,7 @@
 #include "engine/comptime_eval_binary.h"
 #include "engine/resolver.h"
 #include "core/string.h"
+#include "core/allocator.h"
 #include "cubec/expression_binary.h"
 #include <string.h>
 
@@ -12,211 +13,203 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
   /* Prefix unary */
   if (!bin->left) {
     comptime_value_t rv = _comptime_eval_expr(eval, ctx, bin->right);
-    if (!rv || rv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    if (!rv || rv->kind == COMPTIME_VALUE_ERROR) {
+      allocator_free(eval->allocator, &rv);
+      return _eval_error_val(eval);
+    }
 
+    comptime_value_t result = NULL;
     if (strcmp(op, "!") == 0)
-      return comptime_value_create_bool(eval->allocator,
-                                         !comptime_value_is_truthy(rv),
-                                         rv->type);
-    if (strcmp(op, "-") == 0) {
+      result = comptime_value_create_bool(eval->allocator,
+                                          !comptime_value_is_truthy(rv),
+                                          rv->type);
+    else if (strcmp(op, "-") == 0) {
       if (rv->kind == COMPTIME_VALUE_INT)
-        return comptime_value_create_int(eval->allocator, -rv->int_val.s,
-                                          (uint64_t)(-rv->int_val.s),
-                                          rv->int_val.width,
-                                          rv->int_val.is_signed, rv->type);
-      if (rv->kind == COMPTIME_VALUE_FLOAT)
-        return comptime_value_create_float(eval->allocator, -rv->float_val.value,
-                                            rv->float_val.width, rv->type);
-      return _eval_error_val(eval);
-    }
-    if (strcmp(op, "~") == 0) {
+        result = comptime_value_create_int(eval->allocator, -rv->int_val.s,
+                                           (uint64_t)(-rv->int_val.s),
+                                           rv->int_val.width,
+                                           rv->int_val.is_signed, rv->type);
+      else if (rv->kind == COMPTIME_VALUE_FLOAT)
+        result = comptime_value_create_float(eval->allocator, -rv->float_val.value,
+                                             rv->float_val.width, rv->type);
+    } else if (strcmp(op, "~") == 0) {
       if (rv->kind == COMPTIME_VALUE_INT)
-        return comptime_value_create_int(eval->allocator,
-                                          (int64_t)(~rv->int_val.u),
-                                          ~rv->int_val.u,
-                                          rv->int_val.width,
-                                          rv->int_val.is_signed, rv->type);
-      return _eval_error_val(eval);
+        result = comptime_value_create_int(eval->allocator,
+                                           (int64_t)(~rv->int_val.u),
+                                           ~rv->int_val.u,
+                                           rv->int_val.width,
+                                           rv->int_val.is_signed, rv->type);
     }
-    return _eval_error_val(eval);
+    allocator_free(eval->allocator, &rv);
+    return result ? result : _eval_error_val(eval);
   }
 
   /* Binary */
   comptime_value_t lv = _comptime_eval_expr(eval, ctx, bin->left);
   comptime_value_t rv = _comptime_eval_expr(eval, ctx, bin->right);
   if (!lv || lv->kind == COMPTIME_VALUE_ERROR || !rv ||
-      rv->kind == COMPTIME_VALUE_ERROR)
+      rv->kind == COMPTIME_VALUE_ERROR) {
+    allocator_free(eval->allocator, &lv);
+    allocator_free(eval->allocator, &rv);
     return _eval_error_val(eval);
+  }
+
+  comptime_value_t result = NULL;
 
   /* Arithmetic */
   if (strcmp(op, "+") == 0) {
     if (lv->kind == COMPTIME_VALUE_INT && rv->kind == COMPTIME_VALUE_INT) {
       int64_t s = lv->int_val.s + rv->int_val.s;
-      return comptime_value_create_int(eval->allocator, s, (uint64_t)s,
-                                        lv->int_val.width,
-                                        lv->int_val.is_signed, lv->type);
-    }
-    if (lv->kind == COMPTIME_VALUE_FLOAT || rv->kind == COMPTIME_VALUE_FLOAT)
-      return comptime_value_create_float(eval->allocator,
-                                          comptime_value_as_f64(lv) +
-                                              comptime_value_as_f64(rv),
-                                          64, ctx->builtin_f64);
-    return _eval_error_val(eval);
-  }
-  if (strcmp(op, "-") == 0) {
+      result = comptime_value_create_int(eval->allocator, s, (uint64_t)s,
+                                         lv->int_val.width,
+                                         lv->int_val.is_signed, lv->type);
+    } else if (lv->kind == COMPTIME_VALUE_FLOAT || rv->kind == COMPTIME_VALUE_FLOAT)
+      result = comptime_value_create_float(eval->allocator,
+                                           comptime_value_as_f64(lv) +
+                                               comptime_value_as_f64(rv),
+                                           64, ctx->builtin_f64);
+  } else if (strcmp(op, "-") == 0) {
     if (lv->kind == COMPTIME_VALUE_INT && rv->kind == COMPTIME_VALUE_INT) {
       int64_t s = lv->int_val.s - rv->int_val.s;
-      return comptime_value_create_int(eval->allocator, s, (uint64_t)s,
-                                        lv->int_val.width,
-                                        lv->int_val.is_signed, lv->type);
-    }
-    if (lv->kind == COMPTIME_VALUE_FLOAT || rv->kind == COMPTIME_VALUE_FLOAT)
-      return comptime_value_create_float(eval->allocator,
-                                          comptime_value_as_f64(lv) -
-                                              comptime_value_as_f64(rv),
-                                          64, ctx->builtin_f64);
-    return _eval_error_val(eval);
-  }
-  if (strcmp(op, "*") == 0) {
+      result = comptime_value_create_int(eval->allocator, s, (uint64_t)s,
+                                         lv->int_val.width,
+                                         lv->int_val.is_signed, lv->type);
+    } else if (lv->kind == COMPTIME_VALUE_FLOAT || rv->kind == COMPTIME_VALUE_FLOAT)
+      result = comptime_value_create_float(eval->allocator,
+                                           comptime_value_as_f64(lv) -
+                                               comptime_value_as_f64(rv),
+                                           64, ctx->builtin_f64);
+  } else if (strcmp(op, "*") == 0) {
     if (lv->kind == COMPTIME_VALUE_INT && rv->kind == COMPTIME_VALUE_INT) {
       int64_t s = lv->int_val.s * rv->int_val.s;
-      return comptime_value_create_int(eval->allocator, s, (uint64_t)s,
-                                        lv->int_val.width,
-                                        lv->int_val.is_signed, lv->type);
-    }
-    if (lv->kind == COMPTIME_VALUE_FLOAT || rv->kind == COMPTIME_VALUE_FLOAT)
-      return comptime_value_create_float(eval->allocator,
-                                          comptime_value_as_f64(lv) *
-                                              comptime_value_as_f64(rv),
-                                          64, ctx->builtin_f64);
-    return _eval_error_val(eval);
-  }
-  if (strcmp(op, "/") == 0) {
+      result = comptime_value_create_int(eval->allocator, s, (uint64_t)s,
+                                         lv->int_val.width,
+                                         lv->int_val.is_signed, lv->type);
+    } else if (lv->kind == COMPTIME_VALUE_FLOAT || rv->kind == COMPTIME_VALUE_FLOAT)
+      result = comptime_value_create_float(eval->allocator,
+                                           comptime_value_as_f64(lv) *
+                                               comptime_value_as_f64(rv),
+                                           64, ctx->builtin_f64);
+  } else if (strcmp(op, "/") == 0) {
     if (rv->kind == COMPTIME_VALUE_INT &&
         ((rv->int_val.is_signed && rv->int_val.s == 0) ||
          (!rv->int_val.is_signed && rv->int_val.u == 0))) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
                            "division by zero");
       ctx->error_count++;
-      return _eval_error_val(eval);
-    }
-    if (lv->kind == COMPTIME_VALUE_INT && rv->kind == COMPTIME_VALUE_INT) {
+    } else if (lv->kind == COMPTIME_VALUE_INT && rv->kind == COMPTIME_VALUE_INT) {
       int64_t s = lv->int_val.is_signed ? lv->int_val.s / rv->int_val.s
                                          : (int64_t)(lv->int_val.u / rv->int_val.u);
-      return comptime_value_create_int(eval->allocator, s, (uint64_t)s,
-                                        lv->int_val.width,
-                                        lv->int_val.is_signed, lv->type);
-    }
-    if (lv->kind == COMPTIME_VALUE_FLOAT || rv->kind == COMPTIME_VALUE_FLOAT)
-      return comptime_value_create_float(eval->allocator,
-                                          comptime_value_as_f64(lv) /
-                                              comptime_value_as_f64(rv),
-                                          64, ctx->builtin_f64);
-    return _eval_error_val(eval);
-  }
-  if (strcmp(op, "%") == 0) {
+      result = comptime_value_create_int(eval->allocator, s, (uint64_t)s,
+                                         lv->int_val.width,
+                                         lv->int_val.is_signed, lv->type);
+    } else if (lv->kind == COMPTIME_VALUE_FLOAT || rv->kind == COMPTIME_VALUE_FLOAT)
+      result = comptime_value_create_float(eval->allocator,
+                                           comptime_value_as_f64(lv) /
+                                               comptime_value_as_f64(rv),
+                                           64, ctx->builtin_f64);
+  } else if (strcmp(op, "%") == 0) {
     if (rv->kind == COMPTIME_VALUE_INT &&
         ((rv->int_val.is_signed && rv->int_val.s == 0) ||
          (!rv->int_val.is_signed && rv->int_val.u == 0))) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
                            "modulo by zero");
       ctx->error_count++;
-      return _eval_error_val(eval);
-    }
-    if (lv->kind == COMPTIME_VALUE_INT && rv->kind == COMPTIME_VALUE_INT) {
+    } else if (lv->kind == COMPTIME_VALUE_INT && rv->kind == COMPTIME_VALUE_INT) {
       int64_t s = lv->int_val.is_signed ? lv->int_val.s % rv->int_val.s
                                          : (int64_t)(lv->int_val.u % rv->int_val.u);
-      return comptime_value_create_int(eval->allocator, s, (uint64_t)s,
-                                        lv->int_val.width,
-                                        lv->int_val.is_signed, lv->type);
+      result = comptime_value_create_int(eval->allocator, s, (uint64_t)s,
+                                         lv->int_val.width,
+                                         lv->int_val.is_signed, lv->type);
     }
-    return _eval_error_val(eval);
   }
 
   /* Comparison */
-  if (strcmp(op, "==") == 0)
-    return comptime_value_create_bool(eval->allocator,
-                                       comptime_value_equals(lv, rv), lv->type);
-  if (strcmp(op, "!=") == 0)
-    return comptime_value_create_bool(eval->allocator,
-                                       !comptime_value_equals(lv, rv), lv->type);
+  else if (strcmp(op, "==") == 0)
+    result = comptime_value_create_bool(eval->allocator,
+                                        comptime_value_equals(lv, rv), lv->type);
+  else if (strcmp(op, "!=") == 0)
+    result = comptime_value_create_bool(eval->allocator,
+                                        !comptime_value_equals(lv, rv), lv->type);
 
   /* Relational */
-  if (strcmp(op, "<") == 0 || strcmp(op, "<=") == 0 ||
-      strcmp(op, ">") == 0 || strcmp(op, ">=") == 0) {
-    bool result = false;
+  else if (strcmp(op, "<") == 0 || strcmp(op, "<=") == 0 ||
+           strcmp(op, ">") == 0 || strcmp(op, ">=") == 0) {
+    bool bresult = false;
     if (lv->kind == COMPTIME_VALUE_INT && rv->kind == COMPTIME_VALUE_INT) {
       if (lv->int_val.is_signed && rv->int_val.is_signed) {
-        if (strcmp(op, "<") == 0)  result = lv->int_val.s < rv->int_val.s;
-        if (strcmp(op, "<=") == 0) result = lv->int_val.s <= rv->int_val.s;
-        if (strcmp(op, ">") == 0)  result = lv->int_val.s > rv->int_val.s;
-        if (strcmp(op, ">=") == 0) result = lv->int_val.s >= rv->int_val.s;
+        if (strcmp(op, "<") == 0)  bresult = lv->int_val.s < rv->int_val.s;
+        if (strcmp(op, "<=") == 0) bresult = lv->int_val.s <= rv->int_val.s;
+        if (strcmp(op, ">") == 0)  bresult = lv->int_val.s > rv->int_val.s;
+        if (strcmp(op, ">=") == 0) bresult = lv->int_val.s >= rv->int_val.s;
       } else {
-        if (strcmp(op, "<") == 0)  result = lv->int_val.u < rv->int_val.u;
-        if (strcmp(op, "<=") == 0) result = lv->int_val.u <= rv->int_val.u;
-        if (strcmp(op, ">") == 0)  result = lv->int_val.u > rv->int_val.u;
-        if (strcmp(op, ">=") == 0) result = lv->int_val.u >= rv->int_val.u;
+        if (strcmp(op, "<") == 0)  bresult = lv->int_val.u < rv->int_val.u;
+        if (strcmp(op, "<=") == 0) bresult = lv->int_val.u <= rv->int_val.u;
+        if (strcmp(op, ">") == 0)  bresult = lv->int_val.u > rv->int_val.u;
+        if (strcmp(op, ">=") == 0) bresult = lv->int_val.u >= rv->int_val.u;
       }
     } else {
       double lf = comptime_value_as_f64(lv), rf = comptime_value_as_f64(rv);
-      if (strcmp(op, "<") == 0)  result = lf < rf;
-      if (strcmp(op, "<=") == 0) result = lf <= rf;
-      if (strcmp(op, ">") == 0)  result = lf > rf;
-      if (strcmp(op, ">=") == 0) result = lf >= rf;
+      if (strcmp(op, "<") == 0)  bresult = lf < rf;
+      if (strcmp(op, "<=") == 0) bresult = lf <= rf;
+      if (strcmp(op, ">") == 0)  bresult = lf > rf;
+      if (strcmp(op, ">=") == 0) bresult = lf >= rf;
     }
-    return comptime_value_create_bool(eval->allocator, result, ctx->builtin_bool);
+    result = comptime_value_create_bool(eval->allocator, bresult, ctx->builtin_bool);
   }
 
   /* Logical */
-  if (strcmp(op, "&&") == 0)
-    return comptime_value_create_bool(eval->allocator,
-                                       comptime_value_is_truthy(lv) &&
-                                           comptime_value_is_truthy(rv),
-                                       ctx->builtin_bool);
-  if (strcmp(op, "||") == 0)
-    return comptime_value_create_bool(eval->allocator,
-                                       comptime_value_is_truthy(lv) ||
-                                           comptime_value_is_truthy(rv),
-                                       ctx->builtin_bool);
+  else if (strcmp(op, "&&") == 0)
+    result = comptime_value_create_bool(eval->allocator,
+                                        comptime_value_is_truthy(lv) &&
+                                            comptime_value_is_truthy(rv),
+                                        ctx->builtin_bool);
+  else if (strcmp(op, "||") == 0)
+    result = comptime_value_create_bool(eval->allocator,
+                                        comptime_value_is_truthy(lv) ||
+                                            comptime_value_is_truthy(rv),
+                                        ctx->builtin_bool);
 
   /* Bitwise */
-  if (strcmp(op, "&") == 0 && lv->kind == COMPTIME_VALUE_INT &&
-      rv->kind == COMPTIME_VALUE_INT)
-    return comptime_value_create_int(eval->allocator,
-                                      (int64_t)(lv->int_val.u & rv->int_val.u),
-                                      lv->int_val.u & rv->int_val.u,
-                                      lv->int_val.width,
-                                      lv->int_val.is_signed, lv->type);
-  if (strcmp(op, "|") == 0 && lv->kind == COMPTIME_VALUE_INT &&
-      rv->kind == COMPTIME_VALUE_INT)
-    return comptime_value_create_int(eval->allocator,
-                                      (int64_t)(lv->int_val.u | rv->int_val.u),
-                                      lv->int_val.u | rv->int_val.u,
-                                      lv->int_val.width,
-                                      lv->int_val.is_signed, lv->type);
-  if (strcmp(op, "^") == 0 && lv->kind == COMPTIME_VALUE_INT &&
-      rv->kind == COMPTIME_VALUE_INT)
-    return comptime_value_create_int(eval->allocator,
-                                      (int64_t)(lv->int_val.u ^ rv->int_val.u),
-                                      lv->int_val.u ^ rv->int_val.u,
-                                      lv->int_val.width,
-                                      lv->int_val.is_signed, lv->type);
-  if (strcmp(op, "<<") == 0 && lv->kind == COMPTIME_VALUE_INT &&
-      rv->kind == COMPTIME_VALUE_INT)
-    return comptime_value_create_int(eval->allocator,
-                                      (int64_t)(lv->int_val.u << rv->int_val.u),
-                                      lv->int_val.u << rv->int_val.u,
-                                      lv->int_val.width,
-                                      lv->int_val.is_signed, lv->type);
-  if (strcmp(op, ">>") == 0 && lv->kind == COMPTIME_VALUE_INT &&
-      rv->kind == COMPTIME_VALUE_INT) {
+  else if (strcmp(op, "&") == 0 && lv->kind == COMPTIME_VALUE_INT &&
+           rv->kind == COMPTIME_VALUE_INT)
+    result = comptime_value_create_int(eval->allocator,
+                                       (int64_t)(lv->int_val.u & rv->int_val.u),
+                                       lv->int_val.u & rv->int_val.u,
+                                       lv->int_val.width,
+                                       lv->int_val.is_signed, lv->type);
+  else if (strcmp(op, "|") == 0 && lv->kind == COMPTIME_VALUE_INT &&
+           rv->kind == COMPTIME_VALUE_INT)
+    result = comptime_value_create_int(eval->allocator,
+                                       (int64_t)(lv->int_val.u | rv->int_val.u),
+                                       lv->int_val.u | rv->int_val.u,
+                                       lv->int_val.width,
+                                       lv->int_val.is_signed, lv->type);
+  else if (strcmp(op, "^") == 0 && lv->kind == COMPTIME_VALUE_INT &&
+           rv->kind == COMPTIME_VALUE_INT)
+    result = comptime_value_create_int(eval->allocator,
+                                       (int64_t)(lv->int_val.u ^ rv->int_val.u),
+                                       lv->int_val.u ^ rv->int_val.u,
+                                       lv->int_val.width,
+                                       lv->int_val.is_signed, lv->type);
+  else if (strcmp(op, "<<") == 0 && lv->kind == COMPTIME_VALUE_INT &&
+           rv->kind == COMPTIME_VALUE_INT)
+    result = comptime_value_create_int(eval->allocator,
+                                       (int64_t)(lv->int_val.u << rv->int_val.u),
+                                       lv->int_val.u << rv->int_val.u,
+                                       lv->int_val.width,
+                                       lv->int_val.is_signed, lv->type);
+  else if (strcmp(op, ">>") == 0 && lv->kind == COMPTIME_VALUE_INT &&
+           rv->kind == COMPTIME_VALUE_INT) {
     uint64_t shifted = lv->int_val.is_signed
                            ? (uint64_t)(lv->int_val.s >> rv->int_val.u)
                            : lv->int_val.u >> rv->int_val.u;
-    return comptime_value_create_int(eval->allocator, (int64_t)shifted, shifted,
-                                      lv->int_val.width,
-                                      lv->int_val.is_signed, lv->type);
+    result = comptime_value_create_int(eval->allocator, (int64_t)shifted, shifted,
+                                       lv->int_val.width,
+                                       lv->int_val.is_signed, lv->type);
   }
 
-  return _eval_error_val(eval);
+  allocator_free(eval->allocator, &lv);
+  allocator_free(eval->allocator, &rv);
+  return result ? result : _eval_error_val(eval);
 }
