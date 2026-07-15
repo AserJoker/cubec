@@ -7,3 +7,5 @@ build
 cubecc
 cubec_test
 *.resolved.cubec
+build-asan
+build-linux
