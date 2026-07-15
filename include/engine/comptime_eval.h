@@ -1,0 +1,84 @@
+#ifndef _H_CUBEC_ENGINE_COMPTIME_EVAL_
+#define _H_CUBEC_ENGINE_COMPTIME_EVAL_
+#include "core/allocator.h"
+#include "engine/checker.h"
+#include "engine/comptime_alloc.h"
+#include "engine/comptime_value.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* ===== comptime environment (variable bindings) ===== */
+
+struct comptime_env {
+  allocator_t allocator;
+  comptime_env_t parent;
+  strmap_t bindings; /**< name -> comptime_value_t (not auto-disposed) */
+};
+
+comptime_env_t comptime_env_create(allocator_t allocator, comptime_env_t parent);
+void comptime_env_dispose(comptime_env_t self);
+void comptime_env_bind(comptime_env_t self, const char *name, comptime_value_t value);
+comptime_value_t comptime_env_lookup(comptime_env_t self, const char *name);
+bool comptime_env_update(comptime_env_t self, const char *name,
+                          comptime_value_t value);
+
+/* ===== control flow signals ===== */
+
+enum comptime_signal_kind {
+  COMPTIME_SIGNAL_NONE,
+  COMPTIME_SIGNAL_RETURN,
+  COMPTIME_SIGNAL_BREAK,
+  COMPTIME_SIGNAL_CONTINUE,
+  COMPTIME_SIGNAL_ERROR,
+};
+
+struct comptime_signal {
+  enum comptime_signal_kind kind;
+  comptime_value_t return_value;
+};
+
+typedef struct comptime_signal comptime_signal_t;
+
+/* ===== comptime evaluator ===== */
+
+#define COMPTIME_MAX_LOOP_ITERATIONS 1024
+#define COMPTIME_MAX_CALL_STACK_DEPTH 256
+
+struct comptime_eval {
+  allocator_t allocator;
+  comptime_allocator_t valloc;
+  comptime_env_t global_env;
+  comptime_env_t current_env;
+  int call_depth;
+  int loop_depth;
+  vec_t defer_stack; /**< stack of defer body nodes to execute on scope exit */
+};
+
+typedef struct comptime_eval *comptime_eval_t;
+
+comptime_eval_t comptime_eval_create(allocator_t allocator);
+void comptime_eval_dispose(comptime_eval_t self);
+
+/* ===== expression evaluation ===== */
+
+comptime_value_t comptime_eval_expr(comptime_eval_t eval, checker_t ctx,
+                                     node_t expr);
+
+/* ===== statement execution ===== */
+
+struct comptime_signal comptime_eval_exec_block(comptime_eval_t eval,
+                                                 checker_t ctx, node_t block);
+struct comptime_signal comptime_eval_exec_stmt(comptime_eval_t eval,
+                                                checker_t ctx, node_t stmt);
+struct comptime_signal comptime_eval_exec_comptime_if(comptime_eval_t eval,
+                                                       checker_t ctx,
+                                                       node_t node);
+struct comptime_signal comptime_eval_exec_comptime_for(comptime_eval_t eval,
+                                                        checker_t ctx,
+                                                        node_t node);
+
+#ifdef __cplusplus
+}
+#endif
+#endif
