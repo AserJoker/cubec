@@ -22,6 +22,8 @@
 #include "cubec/statement_switch.h"
 #include "cubec/statement_expression.h"
 #include "cubec/statement_comptime.h"
+#include "cubec/statement_do_while.h"
+#include "cubec/statement_foreach.h"
 #include "cubec/switch_match.h"
 #include <string.h>
 
@@ -175,6 +177,84 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     }
     eval->loop_depth--;
     comptime_alloc_leave_scope(eval->valloc);
+    return sig;
+  }
+
+  case CUBEC_NODE_STATEMENT_DO_WHILE: {
+    cubec_statement_do_while_t sdw = (cubec_statement_do_while_t)stmt;
+    eval->loop_depth++;
+    int iterations = 0;
+    comptime_signal_t sig = _eval_signal_none();
+    while (true) {
+      sig = _comptime_exec_block(eval, ctx, sdw->body);
+      if (sig.kind == COMPTIME_SIGNAL_BREAK) {
+        sig = _eval_signal_none();
+        break;
+      }
+      if (sig.kind == COMPTIME_SIGNAL_CONTINUE) {
+        sig = _eval_signal_none();
+      } else if (sig.kind != COMPTIME_SIGNAL_NONE) {
+        break;
+      }
+      comptime_value_t cond = _comptime_eval_expr(eval, ctx, sdw->condition);
+      if (!cond || cond->kind == COMPTIME_VALUE_ERROR) {
+        sig = _eval_signal_error();
+        break;
+      }
+      if (!comptime_value_is_truthy(cond)) break;
+      if (++iterations > COMPTIME_MAX_LOOP_ITERATIONS) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, stmt->location,
+                             "comptime loop exceeded %d iterations",
+                             COMPTIME_MAX_LOOP_ITERATIONS);
+        ctx->error_count++;
+        sig = _eval_signal_error();
+        break;
+      }
+    }
+    eval->loop_depth--;
+    return sig;
+  }
+
+  case CUBEC_NODE_STATEMENT_FOREACH: {
+    cubec_statement_foreach_t sfe = (cubec_statement_foreach_t)stmt;
+    const char *var_name = _eval_ident_str(sfe->name);
+    if (!var_name) return _eval_signal_none();
+    comptime_value_t iter = _comptime_eval_expr(eval, ctx, sfe->iterator);
+    if (!iter || iter->kind == COMPTIME_VALUE_ERROR) return _eval_signal_error();
+
+    /* only composite (array) iteration supported */
+    if (iter->kind != COMPTIME_VALUE_COMPOSITE || !iter->composite.fields)
+      return _eval_signal_error();
+
+    size_t total = vec_get_size(iter->composite.fields);
+    eval->loop_depth++;
+    int iterations = 0;
+    comptime_signal_t sig = _eval_signal_none();
+    for (size_t i = 0; i < total; i++) {
+      if (++iterations > COMPTIME_MAX_LOOP_ITERATIONS) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, stmt->location,
+                             "comptime loop exceeded %d iterations",
+                             COMPTIME_MAX_LOOP_ITERATIONS);
+        ctx->error_count++;
+        sig = _eval_signal_error();
+        break;
+      }
+      comptime_value_t elem = (comptime_value_t)vec_get(iter->composite.fields, i);
+      comptime_env_bind(eval->current_env, var_name,
+                        sfe->is_const ? comptime_value_clone(eval->allocator, elem)
+                                      : elem);
+      sig = _comptime_exec_block(eval, ctx, sfe->body);
+      if (sig.kind == COMPTIME_SIGNAL_BREAK) {
+        sig = _eval_signal_none();
+        break;
+      }
+      if (sig.kind == COMPTIME_SIGNAL_CONTINUE) {
+        sig = _eval_signal_none();
+        continue;
+      }
+      if (sig.kind != COMPTIME_SIGNAL_NONE) break;
+    }
+    eval->loop_depth--;
     return sig;
   }
 

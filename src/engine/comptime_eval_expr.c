@@ -165,19 +165,50 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
   if (asgn->left->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
     cubec_expression_member_t mem = (cubec_expression_member_t)asgn->left;
     comptime_value_t host = _comptime_eval_expr(eval, ctx, mem->host);
-    if (!host || host->kind != COMPTIME_VALUE_COMPOSITE) return _eval_error_val(eval);
+    if (!host) return _eval_error_val(eval);
     const char *fname = _eval_ident_str((node_t)mem->field);
     if (!fname) return _eval_error_val(eval);
-    for (size_t i = 0; i < host->composite.field_count; i++) {
-      if (host->composite.field_names &&
-          strcmp(host->composite.field_names[i], fname) == 0) {
-        vec_set(host->composite.fields, i, rv);
-        return rv;
+
+    /* host is a composite — update field in-place */
+    if (host->kind == COMPTIME_VALUE_COMPOSITE) {
+      for (size_t i = 0; i < host->composite.field_count; i++) {
+        if (host->composite.field_names &&
+            strcmp(host->composite.field_names[i], fname) == 0) {
+          vec_set(host->composite.fields, i, rv);
+          return rv;
+        }
       }
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                           "no field '%s' in composite", fname);
+      ctx->error_count++;
+      return _eval_error_val(eval);
     }
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
-                         "no field '%s' in composite", fname);
-    ctx->error_count++;
+
+    /* host is a pointer to composite — read, update field, write back */
+    if (host->kind == COMPTIME_VALUE_POINTER) {
+      comptime_value_t pointed = comptime_alloc_read(eval->valloc,
+                                                       host->pointer.addr);
+      if (!pointed || pointed->kind != COMPTIME_VALUE_COMPOSITE) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                             "dereference of dangling/non-composite pointer");
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
+      for (size_t i = 0; i < pointed->composite.field_count; i++) {
+        if (pointed->composite.field_names &&
+            strcmp(pointed->composite.field_names[i], fname) == 0) {
+          comptime_value_t updated = comptime_value_clone(eval->allocator, pointed);
+          vec_set(updated->composite.fields, i, rv);
+          comptime_alloc_write(eval->valloc, host->pointer.addr, updated);
+          return rv;
+        }
+      }
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                           "no field '%s' in composite", fname);
+      ctx->error_count++;
+      return _eval_error_val(eval);
+    }
+
     return _eval_error_val(eval);
   }
 
@@ -543,8 +574,57 @@ static comptime_value_t _eval_addr(comptime_eval_t eval, checker_t ctx,
 
 static comptime_value_t _eval_slice(comptime_eval_t eval, checker_t ctx,
                                      node_t node) {
-  /* TODO: implement with array support */
-  (void)eval; (void)ctx; (void)node;
+  cubec_expression_slice_t sl = (cubec_expression_slice_t)node;
+  comptime_value_t host = _comptime_eval_expr(eval, ctx, sl->host);
+  if (!host || host->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+
+  /* resolve start/length indices */
+  size_t start = 0;
+  size_t len = 0;
+  if (sl->start) {
+    comptime_value_t sv = _comptime_eval_expr(eval, ctx, sl->start);
+    if (!sv || sv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    start = (size_t)comptime_value_as_u64(sv);
+  }
+  if (sl->length) {
+    comptime_value_t lv = _comptime_eval_expr(eval, ctx, sl->length);
+    if (!lv || lv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    len = (size_t)comptime_value_as_u64(lv);
+  }
+
+  /* string slice */
+  if (host->kind == COMPTIME_VALUE_STRING) {
+    const char *s = comptime_value_get_string(host);
+    if (!s) return _eval_error_val(eval);
+    size_t slen = strlen(s);
+    if (start > slen) start = slen;
+    if (len > slen - start) len = slen - start;
+    char *buf = (char *)allocator_alloc(eval->allocator, len + 1);
+    memcpy(buf, s + start, len);
+    buf[len] = '\0';
+    string_t ns = (string_t)allocator_create(eval->allocator, &g_string_type, NULL);
+    string_set(ns, buf);
+    allocator_free(eval->allocator, &buf);
+    return comptime_value_create_string(eval->allocator,
+                                        string_get(ns), ctx->builtin_string);
+  }
+
+  /* composite (array) slice */
+  if (host->kind == COMPTIME_VALUE_COMPOSITE && host->composite.fields) {
+    size_t total = vec_get_size(host->composite.fields);
+    if (start > total) start = total;
+    if (len > total - start) len = total - start;
+    vec_t fields = NULL;
+    vec_init_t vi = {.auto_dispose = true};
+    fields = (vec_t)allocator_create(eval->allocator, &g_vec_type, &vi);
+    for (size_t i = start; i < start + len; i++) {
+      comptime_value_t f = (comptime_value_t)vec_get(host->composite.fields, i);
+      vec_push(fields, comptime_value_clone(eval->allocator, f));
+    }
+    return comptime_value_create_composite(eval->allocator, NULL, fields,
+                                           NULL, len);
+  }
+
   return _eval_error_val(eval);
 }
 

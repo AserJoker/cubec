@@ -473,7 +473,7 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_expression_typeof` (expression_typeof.c) — Parses compile-time type computation expression `typeof(<expression>)`. Available in both type expression context (via `read_type_expression_primary`) and value expression context (via `read_atom`). In type expressions, `typeof(x)` can be used as pointer/slice/array base type: `*typeof(x)`, `[]typeof(x)`. In value expressions, `typeof(x)` is an atom that supports full postfix chaining: `.field` (member access), `::method` (namespace access), `[i32]` (generic instantiation), `()` (call). The inner expression is parsed via `read_expression`. Returns `cubec_expression_typeof_t` with `expression` field. Returns NULL if the current token is not the `typeof` keyword. THROW errors on missing `(`, missing `)`, or missing inner expression.
 
 ### Not Yet Implemented
-Switch expression form (using switch as an expression, not just statement). All other statement and declaration types have parser implementations, including `comptime` blocks/if/for.
+All statement and declaration types have parser implementations, including `comptime` blocks/if/for.
 
 ## Semantic Analysis Engine (src/engine/)
 
@@ -520,11 +520,11 @@ Chain-of-responsibility scope model with `strmap_t` bindings (value_auto_dispose
 
 ### Expression Evaluation (_eval_expr)
 
-Covers: literal numeric/string/char/identifier, binary ops (10 precedence levels), prefix unary (!/-/~), assignment, function call, member access, namespace access, ternary, group, sizeof/alignof/typeof, function closure, initialize list, comma, slice, deref (`*`), addr (`&`), type nodes.
+Covers: literal numeric/string/char/identifier, binary ops (10 precedence levels), prefix unary (!/-/~), assignment (incl. composite field writeback), function call, member access, namespace access, ternary, group, sizeof/alignof/typeof, function closure, initialize list, comma, slice (string + array), deref (`*`), addr (`&`), type nodes.
 
 ### Statement Execution (_exec_stmt)
 
-Covers: block (with scope), expression, return, if, while, for, declaration, function, break, continue, empty, defer, switch, comptime block/if/for. Type declaration nodes are skipped (handled by checker_evaluate).
+Covers: block (with scope), expression, return, if, while, do-while, for, foreach, declaration, function, break, continue, empty, defer, switch, comptime block/if/for. Type declaration nodes are skipped (handled by checker_evaluate).
 
 ### Safety Limits
 
@@ -619,7 +619,7 @@ Covers: block (with scope), expression, return, if, while, for, declaration, fun
 ### Engine Tests
 - `dt_comptime_value.cpp` (23 cases) — value creation/disposal for all 11 kinds, truthiness, equals, clone deep copy, numeric conversions (as_i64/as_u64/as_f64)
 - `dt_comptime_alloc.cpp` (10 cases) — virtual memory lifecycle, allocate+read, write overwrite, read/write null/unknown addr, free makes addr invalid, scope enter/leave frees allocations, nested scopes, free null addr noop
-- `dt_comptime_eval.cpp` (32 cases) — evaluator: literal numeric/string/char/bool/nil, arithmetic ops, comparison ops, logical ops, bitwise ops, ternary, variable declaration+access, if/else, for loop, function call, break/continue, typeof/sizeof/alignof, group expression, comma expression
+- `dt_comptime_eval.cpp` (38 cases) — evaluator: literal numeric/string/char/bool/nil, arithmetic ops, comparison ops, logical ops, bitwise ops, ternary, variable declaration+access, if/else, for loop, function call, break/continue, typeof/sizeof/alignof, group expression, comma expression, string/composite slice, do-while, foreach, composite field assignment
 - `dt_statement_interface.cpp` (18 cases) — interface declarations: basic interface, interface with method, interface with type member, generic single/multi params, method no return type, method generic, method pointer/slice return type, export/non-export interface, export with method, clone, move, consume all tokens, via read_statement, via read_program_node, type member with generic
 - `dt_expression_type_interface.cpp` (14 cases) — anonymous interface type expressions: simple empty, with method, with type and method, generic single/multi, pointer/slice/const wrapped, consume all tokens, non-interface returns NULL, clone, move, via read_atom, via read_expression
 - `dt_statement_struct.cpp` (16 cases) — struct declarations: basic struct, empty, instance fields, pub field, generic single/multi, static var field, type member, method, export/non-export, clone, move, consume all tokens, via read_statement, via read_program

@@ -120,7 +120,7 @@ TEST_F(dt_comptime_value, create_string) {
                                                       ctx->builtin_string);
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_STRING);
-  EXPECT_STREQ(v->string_val, "hello");
+  EXPECT_STREQ(comptime_value_get_string(v), "hello");
   EXPECT_TRUE(comptime_value_is_truthy(v));
   checker_dispose(ctx);
 }
@@ -217,7 +217,7 @@ TEST_F(dt_comptime_value, clone_string) {
   comptime_value_t c = comptime_value_clone(allocator, v);
   ASSERT_NE(c, nullptr);
   EXPECT_EQ(c->kind, COMPTIME_VALUE_STRING);
-  EXPECT_STREQ(c->string_val, "abc");
+  EXPECT_STREQ(comptime_value_get_string(c), "abc");
   checker_dispose(ctx);
 }
 

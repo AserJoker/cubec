@@ -2,6 +2,7 @@
 #define _H_CUBEC_ENGINE_COMPTIME_VALUE_
 #include "core/allocator.h"
 #include "core/node.h"
+#include "core/string.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "engine/semantic_type.h"
@@ -48,7 +49,7 @@ struct comptime_value {
     struct { int64_t s; uint64_t u; uint8_t width; bool is_signed; } int_val;
     struct { double value; uint8_t width; } float_val;
     char char_val;
-    const char *string_val;
+    string_t string_val;
     semantic_type_t type_val;
     struct { uint64_t addr; } pointer;
     struct { vec_t fields; const char **field_names; size_t field_count; } composite;
@@ -102,6 +103,9 @@ bool comptime_value_is_truthy(comptime_value_t val);
 bool comptime_value_equals(comptime_value_t a, comptime_value_t b);
 comptime_value_t comptime_value_clone(allocator_t allocator,
                                       comptime_value_t src);
+
+/** @brief Get the C string from a STRING value. Returns NULL for non-string kinds. */
+const char *comptime_value_get_string(comptime_value_t val);
 
 /* ===== conversions ===== */
 

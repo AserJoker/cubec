@@ -15,6 +15,9 @@ static void _comptime_value_init(void *self, allocator_t allocator, void *arg) {
 static void _comptime_value_dispose(void *self, allocator_t allocator) {
   comptime_value_t v = (comptime_value_t)self;
   switch (v->kind) {
+  case COMPTIME_VALUE_STRING:
+    allocator_free(allocator, &v->string_val);
+    break;
   case COMPTIME_VALUE_COMPOSITE:
     allocator_free(allocator, &v->composite.fields);
     if (v->composite.field_names) {
@@ -39,6 +42,12 @@ static void _comptime_value_clone(void *self, allocator_t allocator,
   *dst = *src;
 
   switch (dst->kind) {
+  case COMPTIME_VALUE_STRING:
+    if (src->string_val) {
+      dst->string_val = (string_t)allocator_create(allocator, &g_string_type, NULL);
+      string_set(dst->string_val, string_get(src->string_val));
+    }
+    break;
   case COMPTIME_VALUE_COMPOSITE:
     if (src->composite.fields) {
       vec_init_t vi = {.auto_dispose = true};
@@ -135,8 +144,10 @@ comptime_value_t comptime_value_create_char(allocator_t allocator, char val,
 comptime_value_t comptime_value_create_string(allocator_t allocator,
                                               const char *val,
                                               semantic_type_t type) {
+  string_t s = (string_t)allocator_create(allocator, &g_string_type, NULL);
+  if (val) string_set(s, val);
   struct comptime_value init = {
-      .kind = COMPTIME_VALUE_STRING, .type = type, .string_val = val};
+      .kind = COMPTIME_VALUE_STRING, .type = type, .string_val = s};
   return (comptime_value_t)allocator_create(allocator, &g_comptime_value_type,
                                              &init);
 }
@@ -206,7 +217,10 @@ bool comptime_value_is_truthy(comptime_value_t val) {
                                      : val->int_val.u != 0;
   case COMPTIME_VALUE_FLOAT:  return val->float_val.value != 0.0;
   case COMPTIME_VALUE_CHAR:   return val->char_val != 0;
-  case COMPTIME_VALUE_STRING: return val->string_val && val->string_val[0] != '\0';
+  case COMPTIME_VALUE_STRING: {
+    const char *s = val->string_val ? string_get(val->string_val) : NULL;
+    return s && s[0] != '\0';
+  }
   case COMPTIME_VALUE_POINTER: return val->pointer.addr != 0;
   default:                    return true;
   }
@@ -227,12 +241,31 @@ bool comptime_value_equals(comptime_value_t a, comptime_value_t b) {
     return false;
   case COMPTIME_VALUE_FLOAT:  return a->float_val.value == b->float_val.value;
   case COMPTIME_VALUE_CHAR:   return a->char_val == b->char_val;
-  case COMPTIME_VALUE_STRING:
-    if (!a->string_val && !b->string_val) return true;
-    if (!a->string_val || !b->string_val) return false;
-    return strcmp(a->string_val, b->string_val) == 0;
+  case COMPTIME_VALUE_STRING: {
+    const char *sa = a->string_val ? string_get(a->string_val) : NULL;
+    const char *sb = b->string_val ? string_get(b->string_val) : NULL;
+    if (!sa && !sb) return true;
+    if (!sa || !sb) return false;
+    return strcmp(sa, sb) == 0;
+  }
   case COMPTIME_VALUE_TYPE:   return a->type_val == b->type_val;
   case COMPTIME_VALUE_POINTER: return a->pointer.addr == b->pointer.addr;
+  case COMPTIME_VALUE_COMPOSITE: {
+    if (a->composite.field_count != b->composite.field_count) return false;
+    if (!a->composite.fields && !b->composite.fields) return true;
+    if (!a->composite.fields || !b->composite.fields) return false;
+    size_t fc = vec_get_size(a->composite.fields);
+    if (fc != vec_get_size(b->composite.fields)) return false;
+    for (size_t i = 0; i < fc; i++) {
+      comptime_value_t fa = (comptime_value_t)vec_get(a->composite.fields, i);
+      comptime_value_t fb = (comptime_value_t)vec_get(b->composite.fields, i);
+      if (!comptime_value_equals(fa, fb)) return false;
+    }
+    return true;
+  }
+  case COMPTIME_VALUE_FUNCTION:
+    return a->function.body == b->function.body &&
+           a->function.captured_env == b->function.captured_env;
   case COMPTIME_VALUE_ERROR:  return true;
   default:                    return false;
   }
@@ -281,4 +314,10 @@ double comptime_value_as_f64(comptime_value_t val) {
   case COMPTIME_VALUE_BOOL:  return val->bool_val ? 1.0 : 0.0;
   default:                   return 0.0;
   }
+}
+
+const char *comptime_value_get_string(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_STRING || !val->string_val)
+    return NULL;
+  return string_get(val->string_val);
 }
