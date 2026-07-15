@@ -11,7 +11,7 @@ description: >
 
 ## Overview
 
-**Cubec** is a C-like programming language compiler frontend, written in C11. It implements a complete lexer (tokenizer) and a partially complete parser. The project uses a hand-crafted "C-style OOP" pattern with virtual tables (`type_t`) for lifecycle management, unified memory management via `allocator_t`, and built-in memory leak detection.
+**Cubec** is a C-like programming language compiler frontend, written in C11. It implements a complete lexer (tokenizer), parser, semantic analysis engine, and comptime compile-time evaluator. The project uses a hand-crafted "C-style OOP" pattern with virtual tables (`type_t`) for lifecycle management, unified memory management via `allocator_t`, and built-in memory leak detection.
 
 ## Directory Structure
 
@@ -90,13 +90,22 @@ cubec/
 │   ├── main.c                  # Entry point (stub - initializes ICU + allocator)
 │   ├── icu_data.c              # ICU common data (generated at build time)
 │   ├── core/                   # Core data structure implementations
-│   └── cubec/                  # Lexer + parser implementations
-│       # Planned (not yet created): engine/, reader/, writer/, c/
+│   ├── cubec/                  # Lexer + parser implementations
+│   └── engine/                 # Semantic analysis + comptime evaluator
+│       ├── checker.c           # Checker lifecycle (create/dispose + pass orchestration)
+│       ├── checker_collect.c   # Pass 1: symbol collection
+│       ├── checker_check_stmt.c # Pass 2: type checking
+│       ├── checker_evaluate.c  # Pass 2: comptime evaluation + type resolution
+│       ├── comptime_eval.c     # Evaluator lifecycle (create/dispose)
+│       ├── comptime_eval_expr.c # Expression evaluation
+│       ├── comptime_eval_stmt.c # Statement execution
+│       └── comptime_alloc.c    # Virtual memory (comptime allocator)
 ├── test/                       # Tests (890 test cases, Google Test + C++20)
 │   ├── main.cpp                # Test entry point
 │   ├── common/test_common.h    # RAII test allocator helper
 │   ├── core/                   # Tests for core data structures
-│   └── cubec/                  # Tests for lexer/parser
+│   ├── cubec/                  # Tests for lexer/parser
+│   └── engine/                 # Tests for semantic analysis + comptime evaluator
 └── demo/
     └── index.cubec             # Sample source file
 ```
@@ -466,6 +475,66 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 ### Not Yet Implemented
 Switch expression form (using switch as an expression, not just statement). All other statement and declaration types have parser implementations, including `comptime` blocks/if/for.
 
+## Semantic Analysis Engine (src/engine/)
+
+### Architecture
+
+8-file split: `checker.c` (lifecycle + pass orchestration), `checker_collect.c` (Pass 1: symbol collection), `checker_check_stmt.c` (Pass 2: type checking), `checker_evaluate.c` (Pass 2: comptime evaluation + type resolution), `comptime_eval.c` (evaluator lifecycle), `comptime_eval_expr.c` (expression evaluation), `comptime_eval_stmt.c` (statement execution), `comptime_alloc.c` (virtual memory). All functions ≤ 50 lines. Design doc: `docs/semantic-design.md`.
+
+### Type System (semantic_type_t)
+
+Two-layer representation: `semantic_type_t` wraps AST type nodes with semantic info. Structural equivalence for type comparison. Pointer decay rules. Built-in types: `builtin_i8`~`builtin_u64`, `builtin_f16`~`builtin_f64`, `builtin_bool`, `builtin_void`, etc. Type layout computation via `type_layout_compute`.
+
+### Symbol Table (scope_t)
+
+Chain-of-responsibility scope model. `scope_lookup` returns `SYMBOL_NAME_KNOWN` for imported values (cannot be used at compile time). TDZ (temporal dead zone) multi-pass checking.
+
+### Checker Passes
+
+1. **Pass 1 (collect)**: `checker_collect` — symbol collection, scope building
+2. **Pass 2 (check + evaluate)**: `checker_check_stmt` (type checking) + `checker_evaluate` (comptime evaluation, type resolution)
+
+### Diagnostics
+
+Rustc-style error messages: source line + `^` caret span annotations via `diagnostic_list_push`.
+
+## Comptime Evaluator (AST Interpreter)
+
+### Value Representation (comptime_value_t)
+
+11 value kinds: `NIL`, `BOOL`, `INT` (i8..i64, u8..u64 with width+signedness), `FLOAT` (f16/f32/f64 with width), `CHAR`, `STRING`, `TYPE` (typeof result), `POINTER` (virtual address), `COMPOSITE` (struct/union instance), `FUNCTION` (closure: env + AST body + param names), `ERROR`.
+
+API: `comptime_value_create_*` constructors, `comptime_value_is_truthy`, `comptime_value_equals`, `comptime_value_clone`, `comptime_value_as_i64/as_u64/as_f64`.
+
+### Virtual Memory (comptime_allocator_t)
+
+uint64_t address space (0 = null). `strmap_t` for allocations + lifetimes. Scope-based lifetime management: `enter_scope`/`leave_scope` frees allocations at depth ≥ current. Dangling pointer detection: `comptime_alloc_read` returns NULL for freed/invalid addresses. `comptime_alloc_write` returns false for invalid addresses.
+
+### Variable Environment (comptime_env_t)
+
+Chain-of-responsibility scope model with `strmap_t` bindings (value_auto_dispose=false). `bind(name, value)`, `lookup(name)`, `update(name, value)`. Global env pre-binds `true`, `false`, `nil`.
+
+### Control Flow Signals
+
+`COMPTIME_SIGNAL_NONE/RETURN/BREAK/CONTINUE/ERROR`. Signal propagates through statement execution, handled by caller (e.g., function call extracts return value, loop handles break/continue).
+
+### Expression Evaluation (_eval_expr)
+
+Covers: literal numeric/string/char/identifier, binary ops (10 precedence levels), prefix unary (!/-/~), assignment, function call, member access, namespace access, ternary, group, sizeof/alignof/typeof, function closure, initialize list, comma, slice, deref (`*`), addr (`&`), type nodes.
+
+### Statement Execution (_exec_stmt)
+
+Covers: block (with scope), expression, return, if, while, for, declaration, function, break, continue, empty, defer, switch, comptime block/if/for. Type declaration nodes are skipped (handled by checker_evaluate).
+
+### Safety Limits
+
+- `COMPTIME_MAX_LOOP_ITERATIONS = 1024`
+- `COMPTIME_MAX_CALL_STACK_DEPTH = 256`
+
+### Checker Integration
+
+`checker_t` owns `comptime_eval_t`. `_evaluate_comptime_block/if/for` delegate to evaluator. `_evaluate_variable` binds comptime var values to env. `_evaluate_function` binds comptime functions with body to env (param names as C strings, not string_t objects).
+
 ## Build System
 
 | Setting | Value |
@@ -484,7 +553,7 @@ Switch expression form (using switch as an expression, not just statement). All 
 - `Threads::Threads` linked on all platforms (provides `-pthread` on Linux)
 
 ### Build Targets
-1. **cubecc** — Compiler executable (links `src/core/`, `src/engine/`, `src/cubec/`, `src/reader/`, `src/writer/`, `src/c/` + `src/main.c`). Note: `engine/`, `reader/`, `writer/`, `c/` directories don't exist yet — future modules for semantic analysis, source reading, code generation, and C backend.
+1. **cubecc** — Compiler executable (links `src/core/`, `src/engine/`, `src/cubec/`, `src/reader/`, `src/writer/`, `src/c/` + `src/main.c`). Note: `reader/`, `writer/`, `c/` directories don't exist yet — future modules for source reading, code generation, and C backend.
 2. **cubec_test** — Test executable (links all source files + test/*.cpp, depends on GTest)
 
 ### Platform-Specific Linking
@@ -501,7 +570,7 @@ Switch expression form (using switch as an expression, not just statement). All 
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 890 test cases
+- Total: 1187 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -546,6 +615,11 @@ Switch expression form (using switch as an expression, not just statement). All 
 - `dt_statement_declaration_type.cpp` (20 cases) — type alias declarations: simple alias (`type MyInt = i32`), generic alias (`type Vec3[T] = ...`), multi-param (`type Pair[A, B] = ...`), complex nested type, consume all tokens, clone, clone with generic params, move, rest param single/after regular/with constraint/clone, regular param is not rest, export simple/generic/pointer type, non-export, export clone/move, builtin type no body, export builtin type, builtin type no params, builtin type clone/move
 - `dt_statement_import.cpp` (15 cases) — import statements: simple import (`import std from "std"`), import with alias (`import vec as v from "std/vec"`), relative path (`import io from "./io"`), parent path (`import parent from "../parent"`), multi-segment path (`import vec from "std/vec"`), consume all tokens, missing `from` keyword error, missing semicolon error, non-import returns NULL, missing module name error, missing path error, clone, move, via `read_statement` dispatcher, via `read_program_node`
 - `dt_statement_function.cpp` (44 cases) — function declarations: basic function, no params, no return type (void), single/multiple params, generic single/multiple/rest params, export/inline/extern/builtin/comptime modifiers, export+inline combined, extern C-style variadic (`...`), pointer/slice/generic/no-type params, empty body, body with statements, no body semicolon (interface style), missing name/open paren/close paren errors, export+extern/extern+inline conflict errors, C variadic in non-extern error, builtin func, export+builtin func, builtin+extern mutual exclusion error, comptime func, comptime func without body error, export+comptime func, inline+comptime func, builtin+comptime mutual exclusion error, extern+comptime mutual exclusion error, clone, clone generic, move, clone extern, via read_statement, via read_program_node, consume all tokens
+
+### Engine Tests
+- `dt_comptime_value.cpp` (23 cases) — value creation/disposal for all 11 kinds, truthiness, equals, clone deep copy, numeric conversions (as_i64/as_u64/as_f64)
+- `dt_comptime_alloc.cpp` (10 cases) — virtual memory lifecycle, allocate+read, write overwrite, read/write null/unknown addr, free makes addr invalid, scope enter/leave frees allocations, nested scopes, free null addr noop
+- `dt_comptime_eval.cpp` (32 cases) — evaluator: literal numeric/string/char/bool/nil, arithmetic ops, comparison ops, logical ops, bitwise ops, ternary, variable declaration+access, if/else, for loop, function call, break/continue, typeof/sizeof/alignof, group expression, comma expression
 - `dt_statement_interface.cpp` (18 cases) — interface declarations: basic interface, interface with method, interface with type member, generic single/multi params, method no return type, method generic, method pointer/slice return type, export/non-export interface, export with method, clone, move, consume all tokens, via read_statement, via read_program_node, type member with generic
 - `dt_expression_type_interface.cpp` (14 cases) — anonymous interface type expressions: simple empty, with method, with type and method, generic single/multi, pointer/slice/const wrapped, consume all tokens, non-interface returns NULL, clone, move, via read_atom, via read_expression
 - `dt_statement_struct.cpp` (16 cases) — struct declarations: basic struct, empty, instance fields, pub field, generic single/multi, static var field, type member, method, export/non-export, clone, move, consume all tokens, via read_statement, via read_program

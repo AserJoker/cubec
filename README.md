@@ -2,7 +2,7 @@
 
 **Cubec** 是一门类 C 的静态类型编程语言，设计目标是提供现代语法特性（泛型、defer、comptime、模式匹配等），同时保持简洁和可预测的语义。
 
-> **状态**：前端编译器开发中。词法分析器和表达式解析器已完整实现，语句和声明解析器大部分完成。
+> **状态**：前端编译器开发中。词法分析器、语法分析器和语义分析引擎已实现，comptime 编译期求值器已完成。
 
 ---
 
@@ -1089,12 +1089,25 @@ cubec/
   - `comptime` 编译时求值（`comptime { }` 块、`comptime if()` 条件分支、`comptime for()` 循环展开）
   - 泛型参数解析（支持简单 `T`、约束 `T extends U`、值泛型 `N: u64`、rest 参数 `...Args` 四种形式）
   - `read_statement` 语句分派器（按优先级尝试各语句类型）
+- **语义分析引擎**（`src/engine/`，8 文件拆分）：
+  - 类型系统：双层类型表示（`semantic_type_t`），结构等价，指针退化，TDZ 多遍检查
+  - 符号表：`scope_t` 链式作用域，`SYMBOL_NAME_KNOWN` 导入值标记
+  - 类型解析：`resolver_resolve_type` 统一类型解析，类型布局计算（`type_layout_compute`）
+  - 声明/语句检查：`checker_check_stmt` + `checker_collect` 两遍扫描
+  - Rustc 风格诊断：源码行 + `^` 范围标注
+  - 内建类型：`builtin_i8`~`builtin_u64`、`builtin_f16`~`builtin_f64`、`builtin_bool`、`builtin_void` 等
+- **comptime 编译期求值器**（AST 解释器）：
+  - 值表示：`comptime_value_t`（NIL/BOOL/INT/FLOAT/CHAR/STRING/TYPE/POINTER/COMPOSITE/FUNCTION/ERROR）
+  - 虚拟内存：`comptime_allocator_t`（uint64_t 地址空间，作用域生命周期，悬垂指针检测）
+  - 变量环境：`comptime_env_t`（链式作用域，闭包捕获）
+  - 表达式求值：字面量、算术/逻辑/比较/位运算、赋值、函数调用、成员访问、指针操作（`&`/`*`）、sizeof/alignof/typeof
+  - 语句执行：block/if/for/while/return/break/continue/defer/switch/comptime block/comptime if/comptime for
+  - 安全限制：最大循环迭代 1024，最大调用深度 256
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：1018 测试用例覆盖所有核心模块
+- **测试体系**：1187 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 
 - **高级特性**（语法设计已确认）：
   - switch 表达式形式（`switch(v) { case(1) -> "one" else -> "many" }` 作为表达式）
-- **语义分析**（`src/engine/` — 目录尚未创建）
 - **代码生成**（后端 — 待定）
