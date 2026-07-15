@@ -46,6 +46,7 @@ struct _cubec_statement_interface_t {
   node_t name;          /**< Identifier node for the interface name */
   vec_t generic_params; /**< Vector of cubec_generic_param_t (may be NULL) */
   vec_t members;        /**< Vector of member nodes (auto_dispose=true) */
+  vec_t decorators;     /**< Vector of cubec_decorator_t (may be NULL) */
 };
 typedef struct _cubec_statement_interface_t *cubec_statement_interface_t;
 
@@ -58,6 +59,7 @@ struct _cubec_statement_interface_init_t {
   node_t name;
   vec_t generic_params;
   vec_t members;
+  vec_t decorators;
 };
 typedef struct _cubec_statement_interface_init_t cubec_statement_interface_init_t;
 

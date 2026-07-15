@@ -1,10 +1,13 @@
 #include "cubec/statement_union.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "cubec/decorator.h"
 #include "cubec/expression_type_union.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -31,12 +34,14 @@ static void _cubec_statement_union_init(
   self->name = init->name;
   self->generic_params = init->generic_params;
   self->members = init->members;
+  self->decorators = init->decorators;
 onerror:
   return;
 }
 
 static void _cubec_statement_union_dispose(
     cubec_statement_union_t self, allocator_t allocator) {
+  allocator_free(allocator, &self->decorators);
   allocator_free(allocator, &self->members);
   allocator_free(allocator, &self->generic_params);
   allocator_free(allocator, &self->name);
@@ -105,6 +110,20 @@ node_t read_statement_union(allocator_t allocator, vec_t tokens,
   node_t expr_node = NULL;
   cubec_statement_union_t node = NULL;
   location_t start_location = {0};
+  vec_t decorators = NULL;
+
+  /* Collect decorators [[...]] */
+  {
+    while (true) {
+      skip_whitespace(tokens, &current);
+      node_t dec = read_decorator(allocator, tokens, &current, filename);
+      if (!dec) break;
+      if (!decorators) {
+        decorators = TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+      }
+      vec_push(decorators, dec);
+    }
+  }
 
   /* 1. Parse optional 'export' modifier */
   if (_is_keyword(tokens, current, "export")) {
@@ -157,6 +176,7 @@ node_t read_statement_union(allocator_t allocator, vec_t tokens,
       .name = name,
       .generic_params = expr_union->generic_params,
       .members = expr_union->members,
+      .decorators = decorators,
   };
 
   /* Nullify fields to prevent double-free */
@@ -170,12 +190,25 @@ node_t read_statement_union(allocator_t allocator, vec_t tokens,
   return &node->super;
 
 cleanup:
+  allocator_free(allocator, &decorators);
   allocator_free(allocator, &name);
   allocator_free(allocator, &expr_node);
   allocator_free(allocator, &node);
 onerror:
+  allocator_free(allocator, &decorators);
   allocator_free(allocator, &name);
   allocator_free(allocator, &expr_node);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_union_stmt(allocator_t alloc, location_t loc,
+                                   const char *name, vec_t members,
+                                   bool is_export) {
+  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  cubec_statement_union_init_t init = {
+      .location = loc, .parent = NULL, .is_export = is_export,
+      .name = name_node, .generic_params = NULL, .members = members};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_union_type,
+                                  &init);
 }

@@ -1,4 +1,6 @@
 #include "cubec/statement_expression.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -106,4 +108,12 @@ cleanup:
   allocator_free(allocator, &expr);
 onerror:
   return NULL;
+}
+
+node_t cubec_ast_create_expr_stmt(allocator_t alloc, location_t loc,
+                                  node_t expr) {
+  cubec_statement_expression_init_t init = {.location = loc, .parent = NULL,
+                                            .expression = expr};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_expression_type,
+                                  &init);
 }

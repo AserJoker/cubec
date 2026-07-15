@@ -1,4 +1,6 @@
 #include "cubec/statement_import.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -182,4 +184,22 @@ onerror:
   allocator_free(allocator, &module_name);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_import_stmt(allocator_t alloc, location_t loc,
+                                    const char *module_name,
+                                    const char *alias, const char *path) {
+  node_t mod_node = (module_name)
+                        ? (node_t)_make_ident_node(alloc, loc, module_name)
+                        : NULL;
+  node_t alias_node =
+      (alias) ? (node_t)_make_ident_node(alloc, loc, alias) : NULL;
+  node_t path_node = (path) ? (node_t)_make_ident_node(alloc, loc, path)
+                            : NULL;
+  cubec_statement_import_init_t init = {.location = loc, .parent = NULL,
+                                        .module_name = mod_node,
+                                        .alias = alias_node,
+                                        .path = path_node};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_import_type,
+                                  &init);
 }

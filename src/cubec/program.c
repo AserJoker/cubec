@@ -1,4 +1,6 @@
 #include "cubec/program.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/location.h"
@@ -156,4 +158,11 @@ node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
 onerror:
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_program(allocator_t alloc, location_t loc,
+                                vec_t statements) {
+  cubec_program_node_init_t init = {.location = loc, .parent = NULL,
+                                    .statements = statements};
+  return (node_t)allocator_create(alloc, &g_cubec_program_node_type, &init);
 }

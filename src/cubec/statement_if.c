@@ -1,4 +1,6 @@
 #include "cubec/statement_if.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -194,4 +196,13 @@ onerror:
   allocator_free(allocator, &condition);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_if_stmt(allocator_t alloc, location_t loc,
+                                node_t cond, node_t then_branch,
+                                node_t else_branch) {
+  cubec_statement_if_init_t init = {
+      .location = loc, .parent = NULL, .condition = cond,
+      .then_branch = then_branch, .else_branch = else_branch};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_if_type, &init);
 }

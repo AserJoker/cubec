@@ -110,6 +110,11 @@ static size_t _hash_type(semantic_type_t type) {
   case TYPE_TYPE:
     hash = _hash_combine(hash, _hash_type(impl->type_of.inner));
     break;
+
+  case TYPE_GENERIC_INSTANCE:
+    hash = _hash_combine(hash, _hash_type(impl->generic_instance.generic_template));
+    hash = _hash_combine(hash, _hash_type_vec(impl->generic_instance.type_args));
+    break;
   }
 
   return hash;

@@ -1,8 +1,10 @@
-﻿#include "cubec/expression_postfix_unary.h"
+#include "cubec/expression_postfix_unary.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/string.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -160,4 +162,36 @@ onerror:
   allocator_free(allocator, &opt);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_deref / addr / try
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_deref(allocator_t alloc, location_t loc,
+                              node_t host) {
+  string_t op_str = _make_string(alloc, ".*");
+  cubec_expression_postfix_unary_init_t init = {
+      .location = loc, .parent = NULL, .host = host, .opt = op_str,
+      .kind = CUBEC_NODE_EXPRESSION_DEREF};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
+                                  &init);
+}
+
+node_t cubec_ast_create_addr(allocator_t alloc, location_t loc, node_t host) {
+  string_t op_str = _make_string(alloc, ".&");
+  cubec_expression_postfix_unary_init_t init = {
+      .location = loc, .parent = NULL, .host = host, .opt = op_str,
+      .kind = CUBEC_NODE_EXPRESSION_ADDR};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
+                                  &init);
+}
+
+node_t cubec_ast_create_try(allocator_t alloc, location_t loc, node_t host) {
+  string_t op_str = _make_string(alloc, ".?");
+  cubec_expression_postfix_unary_init_t init = {
+      .location = loc, .parent = NULL, .host = host, .opt = op_str,
+      .kind = CUBEC_NODE_EXPRESSION_TRY};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
+                                  &init);
 }

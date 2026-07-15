@@ -3,6 +3,8 @@
 #include "core/error.h"
 #include "core/string.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -183,4 +185,20 @@ onerror:
   allocator_free(allocator, &lvalue);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_assignment
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_assignment(allocator_t alloc, location_t loc,
+                                   const char *op, node_t lvalue,
+                                   node_t rvalue) {
+  string_t op_str = _make_string(alloc, op);
+  cubec_expression_assignment_init_t init = {.location = loc, .parent = NULL,
+                                              .lvalue = lvalue,
+                                              .rvalue = rvalue,
+                                              .opt = op_str};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_assignment_type,
+                                  &init);
 }

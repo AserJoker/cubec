@@ -1,4 +1,6 @@
 #include "cubec/statement_switch.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -187,4 +189,13 @@ onerror:
   allocator_free(allocator, &condition);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_switch_stmt(allocator_t alloc, location_t loc,
+                                    node_t cond, vec_t matches) {
+  cubec_statement_switch_init_t init = {.location = loc, .parent = NULL,
+                                        .condition = cond,
+                                        .matches = matches};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_switch_type,
+                                  &init);
 }

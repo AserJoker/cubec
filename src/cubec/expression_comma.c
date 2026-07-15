@@ -2,6 +2,8 @@
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/expression_ternary.h"
@@ -137,4 +139,16 @@ onerror:
   allocator_free(allocator, &left);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_comma
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_comma(allocator_t alloc, location_t loc,
+                              node_t left, node_t right) {
+  cubec_expression_comma_init_t init = {.location = loc, .parent = NULL,
+                                        .left = left, .right = right};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_comma_type,
+                                  &init);
 }

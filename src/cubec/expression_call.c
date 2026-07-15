@@ -1,7 +1,9 @@
-﻿#include "cubec/expression_call.h"
+#include "cubec/expression_call.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/expression_spread.h"
 #include "cubec/node.h"
@@ -182,4 +184,17 @@ onerror:
     THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid function call arguments",
           filename, loc->begin.line + 1, loc->begin.column + 1);
   }
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_call
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_call(allocator_t alloc, location_t loc,
+                             node_t callee, vec_t args) {
+  cubec_expression_call_init_t init = {.location = loc, .parent = NULL,
+                                       .callee = callee,
+                                       .arguments = args};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_call_type,
+                                  &init);
 }

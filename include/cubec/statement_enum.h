@@ -31,6 +31,7 @@ struct _cubec_statement_enum_t {
   bool is_export;  /**< Whether this enum is exported */
   node_t name;     /**< Identifier node for the enum name */
   vec_t items;     /**< Vector of cubec_enum_item_t (auto_dispose=true) */
+  vec_t decorators; /**< Vector of cubec_decorator_t (may be NULL) */
 };
 typedef struct _cubec_statement_enum_t *cubec_statement_enum_t;
 
@@ -42,6 +43,7 @@ struct _cubec_statement_enum_init_t {
   bool is_export;
   node_t name;
   vec_t items;
+  vec_t decorators;
 };
 typedef struct _cubec_statement_enum_init_t cubec_statement_enum_init_t;
 

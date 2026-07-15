@@ -37,6 +37,7 @@ struct _cubec_statement_declaration_type_t {
   node_t name;       /**< Identifier node for the type alias name */
   vec_t params;      /**< Vector of identifier nodes for optional generic parameters (may be NULL) */
   node_t type_value; /**< Type expression parsed by read_expression_type (NULL for builtin) */
+  vec_t decorators;  /**< Vector of cubec_decorator_t (may be NULL) */
 };
 typedef struct _cubec_statement_declaration_type_t *cubec_statement_declaration_type_t;
 
@@ -50,6 +51,7 @@ struct _cubec_statement_declaration_type_init_t {
   node_t name;
   vec_t params;
   node_t type_value;
+  vec_t decorators;
 };
 typedef struct _cubec_statement_declaration_type_init_t cubec_statement_declaration_type_init_t;
 

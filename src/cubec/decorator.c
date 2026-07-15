@@ -1,10 +1,12 @@
 #include "cubec/decorator.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/string.h"
 #include "core/token.h"
 #include "core/type.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/expression_call.h"
 #include "cubec/literal_identifier.h"
@@ -195,4 +197,15 @@ onerror:
   allocator_free(allocator, &expression);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_decorator
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_decorator(allocator_t alloc, location_t loc,
+                                  node_t expr) {
+  cubec_decorator_init_t init = {.location = loc, .parent = NULL,
+                                 .expression = expr};
+  return (node_t)allocator_create(alloc, &g_cubec_decorator_type, &init);
 }

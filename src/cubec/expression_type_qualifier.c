@@ -2,6 +2,8 @@
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -135,4 +137,17 @@ onerror:
   allocator_free(allocator, &type);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_type_qualifier
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_type_qualifier(allocator_t alloc, location_t loc,
+                                       node_t base, bool is_volatile) {
+  cubec_expression_type_qualifier_init_t init = {
+      .location = loc, .parent = NULL, .type = base,
+      .is_volatile = is_volatile};
+  return (node_t)allocator_create(
+      alloc, &g_cubec_expression_type_qualifier_type, &init);
 }

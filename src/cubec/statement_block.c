@@ -1,4 +1,6 @@
 #include "cubec/statement_block.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -121,4 +123,12 @@ cleanup:
   allocator_free(allocator, &statements);
 onerror:
   return NULL;
+}
+
+node_t cubec_ast_create_block(allocator_t alloc, location_t loc,
+                              vec_t statements) {
+  cubec_statement_block_init_t init = {.location = loc, .parent = NULL,
+                                       .statements = statements};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_block_type,
+                                  &init);
 }

@@ -1,9 +1,11 @@
 #include "cubec/struct_field.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -170,4 +172,18 @@ cleanup:
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_struct_field
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_struct_field(allocator_t alloc, location_t loc,
+                                     const char *name, node_t type,
+                                     bool is_pub) {
+  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  cubec_struct_field_init_t init = {.location = loc, .parent = NULL,
+                                    .is_pub = is_pub, .name = name_node,
+                                    .type = type};
+  return (node_t)allocator_create(alloc, &g_cubec_struct_field_type, &init);
 }

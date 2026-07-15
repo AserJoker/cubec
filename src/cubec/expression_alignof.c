@@ -4,6 +4,8 @@
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -125,4 +127,16 @@ cleanup:
   allocator_free(allocator, &expr);
 onerror:
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_alignof
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_alignof(allocator_t alloc, location_t loc,
+                                node_t expr) {
+  cubec_expression_alignof_init_t init = {.location = loc, .parent = NULL,
+                                          .expression = expr};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_alignof_type,
+                                  &init);
 }

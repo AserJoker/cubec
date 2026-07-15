@@ -3,6 +3,8 @@
 #include "core/error.h"
 #include "core/string.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -311,4 +313,18 @@ node_t read_expression_binary(allocator_t allocator, vec_t tokens,
   /* Continue with binary infix operators */
   return read_binary_rhs(allocator, tokens, position, filename, left,
                          1 /* lowest precedence */);
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_binary
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_binary(allocator_t alloc, location_t loc,
+                               const char *op, node_t left, node_t right) {
+  string_t op_str = _make_string(alloc, op);
+  cubec_expression_binary_init_t init = {.location = loc, .parent = NULL,
+                                         .left = left, .right = right,
+                                         .opt = op_str};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_binary_type,
+                                  &init);
 }

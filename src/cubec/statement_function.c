@@ -1,10 +1,13 @@
 #include "cubec/statement_function.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "cubec/decorator.h"
 #include "cubec/expression.h"
 #include "cubec/expression_function.h"
 #include "cubec/function_argument.h"
@@ -42,12 +45,14 @@ static void _cubec_statement_function_init(
   self->arguments = init->arguments;
   self->return_type = init->return_type;
   self->body = init->body;
+  self->decorators = init->decorators;
 onerror:
   return;
 }
 
 static void _cubec_statement_function_dispose(
     cubec_statement_function_t self, allocator_t allocator) {
+  allocator_free(allocator, &self->decorators);
   allocator_free(allocator, &self->body);
   allocator_free(allocator, &self->return_type);
   allocator_free(allocator, &self->arguments);
@@ -149,6 +154,20 @@ node_t read_statement_function(allocator_t allocator, vec_t tokens,
   location_t start_location = {0};
   node_t expr_node = NULL;
   cubec_statement_function_t node = NULL;
+  vec_t decorators = NULL;
+
+  /* Collect decorators [[...]] */
+  {
+    while (true) {
+      skip_whitespace(tokens, &current);
+      node_t dec = read_decorator(allocator, tokens, &current, filename);
+      if (!dec) break;
+      if (!decorators) {
+        decorators = TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+      }
+      vec_push(decorators, dec);
+    }
+  }
 
   /* 1. Parse optional modifiers: export / inline / extern / builtin / comptime */
   while (true) {
@@ -269,6 +288,7 @@ node_t read_statement_function(allocator_t allocator, vec_t tokens,
       .arguments = func->arguments,
       .return_type = func->return_type,
       .body = func->body,
+      .decorators = decorators,
   };
 
   /* Nullify fields in expression_function to prevent double-free during dispose */
@@ -285,7 +305,26 @@ node_t read_statement_function(allocator_t allocator, vec_t tokens,
   return (node_t)&node->super;
 
 onerror:
+  allocator_free(allocator, &decorators);
   allocator_free(allocator, &expr_node);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_func_stmt(allocator_t alloc, location_t loc,
+                                  const char *name, vec_t args,
+                                  node_t return_type, node_t body,
+                                  bool is_export, bool is_inline,
+                                  bool is_extern, bool is_builtin,
+                                  bool is_comptime, bool is_c_variadic) {
+  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  cubec_statement_function_init_t init = {
+      .location = loc, .parent = NULL, .is_export = is_export,
+      .is_inline = is_inline, .is_extern = is_extern,
+      .is_builtin = is_builtin, .is_comptime = is_comptime,
+      .is_c_variadic = is_c_variadic, .name = name_node,
+      .generic_params = NULL, .arguments = args,
+      .return_type = return_type, .body = body};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_function_type,
+                                  &init);
 }

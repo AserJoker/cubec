@@ -72,6 +72,11 @@ static void _type_impl_dispose(void *self, allocator_t allocator) {
       allocator_free(allocator, &impl->function.params);
     }
     break;
+  case TYPE_GENERIC_INSTANCE:
+    if (impl->generic_instance.type_args) {
+      allocator_free(allocator, &impl->generic_instance.type_args);
+    }
+    break;
   default:
     break;
   }
@@ -176,6 +181,12 @@ static bool _type_impl_equals(type_impl_t a, type_impl_t b) {
 
   case TYPE_TYPE:
     return semantic_type_equals(a->type_of.inner, b->type_of.inner);
+
+  case TYPE_GENERIC_INSTANCE:
+    return semantic_type_equals(a->generic_instance.generic_template,
+                                b->generic_instance.generic_template) &&
+           _type_vec_equals(a->generic_instance.type_args,
+                            b->generic_instance.type_args);
 
   default:
     return false;
@@ -324,6 +335,18 @@ semantic_type_t semantic_type_create_function(allocator_t allocator,
   t->impl->function.return_type = return_type;
   t->impl->function.params = params;
   t->impl->function.is_variadic = is_variadic;
+  t->is_incomplete = false;
+  return t;
+}
+
+semantic_type_t semantic_type_create_generic_instance(allocator_t allocator,
+                                                       semantic_type_t template_type,
+                                                       vec_t type_args) {
+  semantic_type_t t = (semantic_type_t)allocator_create(
+      allocator, &g_semantic_type_type, NULL);
+  t->impl = _create_impl(allocator, TYPE_GENERIC_INSTANCE);
+  t->impl->generic_instance.generic_template = template_type;
+  t->impl->generic_instance.type_args = type_args;
   t->is_incomplete = false;
   return t;
 }

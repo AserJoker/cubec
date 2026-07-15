@@ -1,9 +1,12 @@
 #include "cubec/statement_declaration.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
+#include "cubec/decorator.h"
 #include "cubec/declaration_variable.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -25,12 +28,14 @@ static void _cubec_statement_declaration_init(
   self->is_builtin = init->is_builtin;
   self->is_comptime = init->is_comptime;
   self->declarator = init->declarator;
+  self->decorators = init->decorators;
 onerror:
   return;
 }
 
 static void _cubec_statement_declaration_dispose(
     cubec_statement_declaration_t self, allocator_t allocator) {
+  allocator_free(allocator, &self->decorators);
   allocator_free(allocator, &self->declarator);
   g_node_type.dispose(&self->super, allocator);
 }
@@ -92,6 +97,20 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
   bool is_extern = false;
   bool is_builtin = false;
   bool is_comptime = false;
+  vec_t decorators = NULL;
+
+  /* Collect decorators [[...]] */
+  {
+    while (true) {
+      skip_whitespace(tokens, &current);
+      node_t dec = read_decorator(allocator, tokens, &current, filename);
+      if (!dec) break;
+      if (!decorators) {
+        decorators = TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+      }
+      vec_push(decorators, dec);
+    }
+  }
 
   /* 1. Parse optional modifiers: export / extern / builtin / comptime */
   while (true) {
@@ -218,16 +237,38 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
       .is_builtin = is_builtin,
       .is_comptime = is_comptime,
       .declarator = declarator,
+      .decorators = decorators,
   };
   node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_declaration_type, &init));
   *position = current;
   return &node->super;
 
 cleanup:
+  allocator_free(allocator, &decorators);
   allocator_free(allocator, &declarator);
   allocator_free(allocator, &node);
 onerror:
+  allocator_free(allocator, &decorators);
   allocator_free(allocator, &declarator);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_var_decl_stmt(allocator_t alloc, location_t loc,
+                                      const char *name, node_t type,
+                                      node_t expr, bool is_export,
+                                      bool is_extern, bool is_builtin,
+                                      bool is_comptime) {
+  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  cubec_declaration_variable_init_t dv_init = {
+      .location = loc, .parent = NULL, .identifier = name_node,
+      .type = type, .expression = expr};
+  node_t decl_node = (node_t)allocator_create(
+      alloc, &g_cubec_declaration_variable_type, &dv_init);
+  cubec_statement_declaration_init_t sd_init = {
+      .location = loc, .parent = NULL, .is_export = is_export,
+      .is_extern = is_extern, .is_builtin = is_builtin,
+      .is_comptime = is_comptime, .declarator = decl_node};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_declaration_type,
+                                  &sd_init);
 }

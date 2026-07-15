@@ -1,10 +1,12 @@
 #include "cubec/interface_method.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/function_argument.h"
 #include "cubec/generic_param.h"
@@ -223,4 +225,19 @@ onerror:
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_iface_method
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_iface_method(allocator_t alloc, location_t loc,
+                                     const char *name, vec_t args,
+                                     node_t return_type) {
+  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  cubec_interface_method_init_t init = {
+      .location = loc, .name = name_node, .generic_params = NULL,
+      .arguments = args, .return_type = return_type};
+  return (node_t)allocator_create(alloc, &g_cubec_interface_method_type,
+                                  &init);
 }

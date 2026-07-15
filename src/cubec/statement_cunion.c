@@ -1,10 +1,13 @@
 #include "cubec/statement_cunion.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "cubec/decorator.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/struct_field.h"
@@ -29,12 +32,14 @@ static void _cubec_statement_cunion_init(
   TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
   self->name = init->name;
   self->fields = init->fields;
+  self->decorators = init->decorators;
 onerror:
   return;
 }
 
 static void _cubec_statement_cunion_dispose(
     cubec_statement_cunion_t self, allocator_t allocator) {
+  allocator_free(allocator, &self->decorators);
   allocator_free(allocator, &self->fields);
   allocator_free(allocator, &self->name);
   g_node_type.dispose(&self->super, allocator);
@@ -98,6 +103,20 @@ node_t read_statement_cunion(allocator_t allocator, vec_t tokens,
   node_t name = NULL;
   vec_t fields = NULL;
   cubec_statement_cunion_t node = NULL;
+  vec_t decorators = NULL;
+
+  /* Collect decorators [[...]] */
+  {
+    while (true) {
+      skip_whitespace(tokens, &current);
+      node_t dec = read_decorator(allocator, tokens, &current, filename);
+      if (!dec) break;
+      if (!decorators) {
+        decorators = TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+      }
+      vec_push(decorators, dec);
+    }
+  }
 
   /* 1. Expect 'cunion' keyword */
   if (!_is_keyword(tokens, current, "cunion")) {
@@ -159,18 +178,30 @@ node_t read_statement_cunion(allocator_t allocator, vec_t tokens,
       .parent = NULL,
       .name = name,
       .fields = fields,
+      .decorators = decorators,
   };
   node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_cunion_type, &init));
   *position = current;
   return &node->super;
 
 cleanup:
+  allocator_free(allocator, &decorators);
   allocator_free(allocator, &fields);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
 onerror:
+  allocator_free(allocator, &decorators);
   allocator_free(allocator, &fields);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_cunion_stmt(allocator_t alloc, location_t loc,
+                                    const char *name, vec_t fields) {
+  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  cubec_statement_cunion_init_t init = {
+      .location = loc, .parent = NULL, .name = name_node, .fields = fields};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_cunion_type,
+                                  &init);
 }

@@ -1,9 +1,11 @@
 #include "cubec/generic_param.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -221,4 +223,19 @@ cleanup_params:
   allocator_free(allocator, &params);
 onerror:
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_generic_param
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_generic_param(allocator_t alloc, location_t loc,
+                                      const char *name, node_t constraint,
+                                      node_t value_type, bool is_rest) {
+  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  cubec_generic_param_init_t init = {.name = name_node,
+                                     .constraint = constraint,
+                                     .value_type = value_type,
+                                     .is_rest = is_rest};
+  return (node_t)allocator_create(alloc, &g_cubec_generic_param_type, &init);
 }

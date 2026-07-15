@@ -1,4 +1,6 @@
 #include "cubec/statement_foreach.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -196,4 +198,14 @@ onerror:
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_foreach_stmt(allocator_t alloc, location_t loc,
+                                     bool is_const, node_t name,
+                                     node_t iterator, node_t body) {
+  cubec_statement_foreach_init_t init = {
+      .location = loc, .parent = NULL, .is_const = is_const,
+      .name = name, .iterator = iterator, .body = body};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_foreach_type,
+                                  &init);
 }

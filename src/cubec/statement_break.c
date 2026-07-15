@@ -1,4 +1,6 @@
 #include "cubec/statement_break.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -120,4 +122,10 @@ node_t read_statement_break(allocator_t allocator, vec_t tokens,
 
 onerror:
   return NULL;
+}
+
+node_t cubec_ast_create_break_stmt(allocator_t alloc, location_t loc) {
+  cubec_statement_break_init_t init = {.location = loc, .parent = NULL};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_break_type,
+                                  &init);
 }

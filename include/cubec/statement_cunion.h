@@ -30,6 +30,7 @@ struct _cubec_statement_cunion_t {
   struct _node_t super;
   node_t name;   /**< Identifier node for the cunion name */
   vec_t fields;  /**< Vector of cubec_struct_field_t (auto_dispose=true) */
+  vec_t decorators; /**< Vector of cubec_decorator_t (may be NULL) */
 };
 typedef struct _cubec_statement_cunion_t *cubec_statement_cunion_t;
 
@@ -40,6 +41,7 @@ struct _cubec_statement_cunion_init_t {
   node_t parent;
   node_t name;
   vec_t fields;
+  vec_t decorators;
 };
 typedef struct _cubec_statement_cunion_init_t cubec_statement_cunion_init_t;
 

@@ -1,7 +1,9 @@
 #include "cubec/declaration_pointer.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -142,4 +144,19 @@ onerror:
   allocator_free(allocator, &type);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_pointer_type
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_pointer_type(allocator_t alloc, location_t loc,
+                                     node_t base, bool is_const,
+                                     bool is_volatile) {
+  cubec_declaration_pointer_init_t init = {.location = loc, .parent = NULL,
+                                           .type = base,
+                                           .is_const = is_const,
+                                           .is_volatile = is_volatile};
+  return (node_t)allocator_create(alloc, &g_cubec_declaration_pointer_type,
+                                  &init);
 }

@@ -1,10 +1,13 @@
 #include "cubec/statement_enum.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "cubec/decorator.h"
 #include "cubec/expression_type_enum.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -30,12 +33,14 @@ static void _cubec_statement_enum_init(
   self->is_export = init->is_export;
   self->name = init->name;
   self->items = init->items;
+  self->decorators = init->decorators;
 onerror:
   return;
 }
 
 static void _cubec_statement_enum_dispose(
     cubec_statement_enum_t self, allocator_t allocator) {
+  allocator_free(allocator, &self->decorators);
   allocator_free(allocator, &self->items);
   allocator_free(allocator, &self->name);
   g_node_type.dispose(&self->super, allocator);
@@ -97,6 +102,20 @@ node_t read_statement_enum(allocator_t allocator, vec_t tokens,
   node_t expr_node = NULL;
   cubec_statement_enum_t node = NULL;
   location_t start_location = {0};
+  vec_t decorators = NULL;
+
+  /* Collect decorators [[...]] */
+  {
+    while (true) {
+      skip_whitespace(tokens, &current);
+      node_t dec = read_decorator(allocator, tokens, &current, filename);
+      if (!dec) break;
+      if (!decorators) {
+        decorators = TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+      }
+      vec_push(decorators, dec);
+    }
+  }
 
   /* 1. Parse optional 'export' modifier */
   if (_is_keyword(tokens, current, "export")) {
@@ -149,6 +168,7 @@ node_t read_statement_enum(allocator_t allocator, vec_t tokens,
       .is_export = is_export,
       .name = name,
       .items = expr_enum->items,
+      .decorators = decorators,
   };
 
   /* Nullify fields in expression node to prevent double-free during dispose */
@@ -161,12 +181,25 @@ node_t read_statement_enum(allocator_t allocator, vec_t tokens,
   return &node->super;
 
 cleanup:
+  allocator_free(allocator, &decorators);
   allocator_free(allocator, &name);
   allocator_free(allocator, &expr_node);
   allocator_free(allocator, &node);
 onerror:
+  allocator_free(allocator, &decorators);
   allocator_free(allocator, &name);
   allocator_free(allocator, &expr_node);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_enum_stmt(allocator_t alloc, location_t loc,
+                                  const char *name, vec_t items,
+                                  bool is_export) {
+  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  cubec_statement_enum_init_t init = {.location = loc, .parent = NULL,
+                                      .is_export = is_export,
+                                      .name = name_node, .items = items};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_enum_type,
+                                  &init);
 }

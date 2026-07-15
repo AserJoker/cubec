@@ -1,10 +1,12 @@
-﻿#include "cubec/literal_string.h"
+#include "cubec/literal_string.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/string.h"
 #include "core/token.h"
 #include "core/type.h"
+#include "cubec/ast_factory.h"
 #include "cubec/literal.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -119,4 +121,11 @@ node_t read_literal_string(allocator_t allocator, vec_t tokens, size_t *position
 onerror:
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_string(allocator_t alloc, location_t loc,
+                               const char *value) {
+  cubec_literal_string_init_t init = {.location = loc, .parent = NULL,
+                                       .value = value};
+  return (node_t)allocator_create(alloc, &g_cubec_literal_string_type, &init);
 }

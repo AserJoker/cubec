@@ -1,7 +1,9 @@
 #include "cubec/declaration_variable.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -159,4 +161,18 @@ onerror:
   allocator_free(allocator, &identifier);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_variable_decl
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_variable_decl(allocator_t alloc, location_t loc,
+                                      node_t identifier, node_t type,
+                                      node_t expression) {
+  cubec_declaration_variable_init_t init = {
+      .location = loc, .parent = NULL, .identifier = identifier,
+      .type = type, .expression = expression};
+  return (node_t)allocator_create(alloc, &g_cubec_declaration_variable_type,
+                                  &init);
 }

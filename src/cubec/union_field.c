@@ -1,9 +1,11 @@
 #include "cubec/union_field.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -139,4 +141,16 @@ cleanup:
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_union_field
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_union_field(allocator_t alloc, location_t loc,
+                                    const char *name, node_t type) {
+  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  cubec_union_field_init_t init = {.location = loc, .parent = NULL,
+                                   .name = name_node, .type = type};
+  return (node_t)allocator_create(alloc, &g_cubec_union_field_type, &init);
 }

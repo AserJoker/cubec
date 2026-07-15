@@ -2,6 +2,8 @@
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -128,4 +130,17 @@ onerror:
   allocator_free(allocator, &field);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_initialize_field
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_initialize_field(allocator_t alloc, location_t loc,
+                                         const char *name, node_t value) {
+  cubec_expression_initialize_field_init_t init = {
+      .location = loc, .parent = NULL,
+      .field = _make_ident_node(alloc, loc, name), .value = value};
+  return (node_t)allocator_create(
+      alloc, &g_cubec_expression_initialize_field_type, &init);
 }

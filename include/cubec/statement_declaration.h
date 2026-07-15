@@ -44,6 +44,7 @@ struct _cubec_statement_declaration_t {
   bool is_builtin;    /**< Whether this is a builtin variable (no initializer) */
   bool is_comptime;   /**< Whether this is a comptime variable (requires initializer) */
   node_t declarator;  /**< Single declaration_variable node */
+  vec_t decorators;   /**< Vector of cubec_decorator_t (may be NULL) */
 };
 typedef struct _cubec_statement_declaration_t *cubec_statement_declaration_t;
 
@@ -57,6 +58,7 @@ struct _cubec_statement_declaration_init_t {
   bool is_builtin;
   bool is_comptime;
   node_t declarator;
+  vec_t decorators;
 };
 typedef struct _cubec_statement_declaration_init_t cubec_statement_declaration_init_t;
 

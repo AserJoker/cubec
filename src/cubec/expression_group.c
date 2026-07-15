@@ -1,7 +1,9 @@
-﻿#include "cubec/expression_group.h"
+#include "cubec/expression_group.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -113,4 +115,16 @@ onerror:
   allocator_free(allocator, &inner);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_group
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_group(allocator_t alloc, location_t loc,
+                              node_t inner) {
+  cubec_expression_group_init_t init = {.location = loc, .parent = NULL,
+                                        .inner = inner};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_group_type,
+                                  &init);
 }

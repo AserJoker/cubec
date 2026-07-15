@@ -1,9 +1,11 @@
 #include "cubec/function_capture.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
+#include "cubec/ast_factory.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -106,4 +108,17 @@ node_t read_function_capture(allocator_t allocator, vec_t tokens,
 fail:
   allocator_free(allocator, &identifier);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_func_capture
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_func_capture(allocator_t alloc, location_t loc,
+                                     const char *name) {
+  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  cubec_function_capture_init_t init = {.location = loc,
+                                        .identifier = name_node};
+  return (node_t)allocator_create(alloc, &g_cubec_function_capture_type,
+                                  &init);
 }

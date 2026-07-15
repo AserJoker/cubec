@@ -1,4 +1,6 @@
 #include "cubec/statement_while.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -161,4 +163,12 @@ onerror:
   allocator_free(allocator, &condition);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_while_stmt(allocator_t alloc, location_t loc,
+                                   node_t cond, node_t body) {
+  cubec_statement_while_init_t init = {.location = loc, .parent = NULL,
+                                       .condition = cond, .body = body};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_while_type,
+                                  &init);
 }

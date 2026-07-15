@@ -1,7 +1,9 @@
-﻿#include "cubec/expression_member.h"
+#include "cubec/expression_member.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -109,4 +111,17 @@ onerror:
   allocator_free(allocator, &field);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_member
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_member(allocator_t alloc, location_t loc,
+                               node_t host, const char *field) {
+  cubec_expression_member_init_t init = {
+      .location = loc, .parent = NULL, .host = host,
+      .field = _make_ident_node(alloc, loc, field)};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_member_type,
+                                  &init);
 }

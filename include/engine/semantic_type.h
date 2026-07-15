@@ -21,6 +21,7 @@ enum type_kind {
   TYPE_POINTER, TYPE_SLICE, TYPE_ARRAY,
   TYPE_STRUCT, TYPE_UNION, TYPE_CUNION, TYPE_ENUM,
   TYPE_INTERFACE, TYPE_FUNCTION, TYPE_TYPE, TYPE_QUALIFIER,
+  TYPE_GENERIC_INSTANCE,
   TYPE_NIL, TYPE_ERROR
 };
 
@@ -74,6 +75,11 @@ struct _type_impl {
     struct { semantic_type_t return_type; vec_t params; bool is_variadic; } function;
     /* TYPE_TYPE (type-of-type) */
     struct { semantic_type_t inner; } type_of;
+    /* TYPE_GENERIC_INSTANCE */
+    struct {
+      semantic_type_t generic_template;  /**< Generic template type */
+      vec_t type_args;                   /**< Concrete type arguments (semantic_type_t), auto_dispose=false */
+    } generic_instance;
   };
 };
 
@@ -124,6 +130,9 @@ semantic_type_t semantic_type_create_function(allocator_t allocator,
                                               semantic_type_t return_type,
                                               vec_t params,
                                               bool is_variadic);
+semantic_type_t semantic_type_create_generic_instance(allocator_t allocator,
+                                                       semantic_type_t template_type,
+                                                       vec_t type_args);
 
 #ifdef __cplusplus
 }

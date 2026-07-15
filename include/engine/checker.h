@@ -85,6 +85,12 @@ void checker_dispose(checker_t ctx);
 void checker_check_program(checker_t ctx, node_t program);
 
 /**
+ * @brief Check an expression and return its semantic type.
+ *        Public wrapper for internal _check_expression, used by resolver.
+ */
+semantic_type_t checker_check_expression(checker_t ctx, node_t expr);
+
+/**
  * @brief Get the number of errors recorded.
  */
 int checker_get_error_count(checker_t ctx);

@@ -1,7 +1,9 @@
-﻿#include "cubec/expression_slice.h"
+#include "cubec/expression_slice.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -235,4 +237,18 @@ onerror:
     THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid slice expression",
           filename, loc->begin.line + 1, loc->begin.column + 1);
   }
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_slice_expr
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_slice_expr(allocator_t alloc, location_t loc,
+                                   node_t host, node_t start,
+                                   node_t length) {
+  cubec_expression_slice_init_t init = {.location = loc, .parent = NULL,
+                                        .host = host, .start = start,
+                                        .length = length};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_slice_type,
+                                  &init);
 }

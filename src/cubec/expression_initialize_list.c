@@ -2,6 +2,8 @@
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/expression_initialize_field.h"
 #include "cubec/node.h"
@@ -284,4 +286,18 @@ onerror:
           filename, loc->begin.line + 1, loc->begin.column + 1);
   }
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_initialize_list
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_initialize_list(allocator_t alloc, location_t loc,
+                                        node_t type, vec_t items,
+                                        bool is_field) {
+  cubec_expression_initialize_list_init_t init = {
+      .location = loc, .parent = NULL, .type = type, .items = items,
+      .is_field = is_field};
+  return (node_t)allocator_create(
+      alloc, &g_cubec_expression_initialize_list_type, &init);
 }

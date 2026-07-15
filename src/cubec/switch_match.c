@@ -1,9 +1,11 @@
 #include "cubec/switch_match.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/statement_block.h"
@@ -193,4 +195,17 @@ onerror:
   allocator_free(allocator, &values);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_switch_match
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_switch_match(allocator_t alloc, location_t loc,
+                                     bool is_else, vec_t values,
+                                     node_t body) {
+  cubec_switch_match_init_t init = {.location = loc, .parent = NULL,
+                                    .is_else = is_else, .values = values,
+                                    .body = body};
+  return (node_t)allocator_create(alloc, &g_cubec_switch_match_type, &init);
 }

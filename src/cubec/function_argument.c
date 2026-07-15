@@ -1,9 +1,11 @@
 #include "cubec/function_argument.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -142,4 +144,17 @@ fail:
   allocator_free(allocator, &type);
   allocator_free(allocator, &identifier);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_func_arg
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_func_arg(allocator_t alloc, location_t loc,
+                                 const char *name, node_t type) {
+  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  cubec_function_argument_init_t init = {.identifier = name_node,
+                                         .type = type};
+  return (node_t)allocator_create(alloc, &g_cubec_function_argument_type,
+                                  &init);
 }

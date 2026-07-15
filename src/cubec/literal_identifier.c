@@ -1,10 +1,12 @@
-﻿#include "cubec/literal_identifier.h"
+#include "cubec/literal_identifier.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
 #include "core/string.h"
 #include "core/token.h"
 #include "core/type.h"
+#include "cubec/ast_factory.h"
 #include "cubec/literal.h"
 #include "cubec/token.h"
 
@@ -99,4 +101,9 @@ node_t read_literal_identifier(allocator_t allocator, vec_t tokens,
 onerror:
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_identifier(allocator_t alloc, location_t loc,
+                                   const char *name) {
+  return (node_t)_make_ident_node(alloc, loc, name);
 }

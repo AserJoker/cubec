@@ -1,4 +1,6 @@
 #include "cubec/statement_for.h"
+#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/node.h"
@@ -232,4 +234,13 @@ onerror:
   allocator_free(allocator, &init);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+node_t cubec_ast_create_for_stmt(allocator_t alloc, location_t loc,
+                                 node_t init_node, node_t cond,
+                                 node_t incr, node_t body) {
+  cubec_statement_for_init_t init = {
+      .location = loc, .parent = NULL, .init = init_node,
+      .condition = cond, .increment = incr, .body = body};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_for_type, &init);
 }

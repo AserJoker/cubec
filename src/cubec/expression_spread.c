@@ -1,7 +1,9 @@
-﻿#include "cubec/expression_spread.h"
+#include "cubec/expression_spread.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -108,4 +110,16 @@ onerror:
   allocator_free(allocator, &value);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_spread
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_spread(allocator_t alloc, location_t loc,
+                               node_t value) {
+  cubec_expression_spread_init_t init = {.location = loc, .parent = NULL,
+                                         .value = value};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_spread_type,
+                                  &init);
 }

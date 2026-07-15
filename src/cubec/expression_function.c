@@ -5,6 +5,8 @@
 #include "core/token.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "cubec/ast_factory.h"
+#include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/function_argument.h"
 #include "cubec/function_capture.h"
@@ -349,4 +351,22 @@ onerror:
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_function_expr
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_function_expr(allocator_t alloc, location_t loc,
+                                      node_t name, vec_t captures,
+                                      vec_t generic_params, vec_t args,
+                                      node_t return_type, node_t body,
+                                      bool is_c_variadic) {
+  cubec_expression_function_init_t init = {
+      .location = loc, .parent = NULL, .name = name,
+      .captures = captures, .generic_params = generic_params,
+      .arguments = args, .return_type = return_type, .body = body,
+      .is_c_variadic = is_c_variadic};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_function_type,
+                                  &init);
 }

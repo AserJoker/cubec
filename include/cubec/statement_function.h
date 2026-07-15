@@ -56,6 +56,7 @@ struct _cubec_statement_function_t {
   vec_t arguments;      /**< Vector of cubec_function_argument_t */
   node_t return_type;   /**< Return type expression (may be NULL = void) */
   node_t body;          /**< Block statement node (may be NULL for extern/interface) */
+  vec_t decorators;     /**< Vector of cubec_decorator_t (may be NULL) */
 };
 typedef struct _cubec_statement_function_t *cubec_statement_function_t;
 
@@ -75,6 +76,7 @@ struct _cubec_statement_function_init_t {
   vec_t arguments;
   node_t return_type;
   node_t body;
+  vec_t decorators;
 };
 typedef struct _cubec_statement_function_init_t cubec_statement_function_init_t;
 

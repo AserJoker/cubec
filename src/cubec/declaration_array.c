@@ -1,8 +1,10 @@
 #include "cubec/declaration_array.h"
+#include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
 #include "core/error.h"
 #include "core/location.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/node.h"
@@ -141,4 +143,16 @@ onerror:
   allocator_free(allocator, &type);
   allocator_free(allocator, &node);
   return NULL;
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: cubec_ast_create_array_type
+ * -------------------------------------------------------------------------- */
+
+node_t cubec_ast_create_array_type(allocator_t alloc, location_t loc,
+                                   node_t size, node_t base) {
+  cubec_declaration_array_init_t init = {.location = loc, .parent = NULL,
+                                         .size = size, .type = base};
+  return (node_t)allocator_create(alloc, &g_cubec_declaration_array_type,
+                                  &init);
 }
