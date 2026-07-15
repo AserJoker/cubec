@@ -33,7 +33,7 @@ comptime_allocator_t comptime_allocator_create(allocator_t allocator) {
   self->allocator = allocator;
   self->next_addr = 1;
   self->scope_depth = 0;
-  strmap_init_t si = {.value_auto_dispose = true};
+  strmap_init_t si = {.value_auto_dispose = false};
   self->allocations = (strmap_t)allocator_create(allocator, &g_strmap_type, &si);
   strmap_init_t li = {.value_auto_dispose = false};
   self->lifetimes = (strmap_t)allocator_create(allocator, &g_strmap_type, &li);

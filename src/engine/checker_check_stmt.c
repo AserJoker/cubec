@@ -42,8 +42,8 @@
 
 /* ===== Pass 3: Statement Checking ===== */
 
-static void _check_statement(checker_t ctx, node_t stmt,
-                              semantic_type_t return_type);
+void _check_statement(checker_t ctx, node_t stmt,
+                       semantic_type_t return_type);
 static void _register_func_params(checker_t ctx,
                                     cubec_statement_function_t fn,
                                     vec_t params);

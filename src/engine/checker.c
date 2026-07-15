@@ -4,6 +4,7 @@
 #include "engine/checker_evaluate.h"
 #include "engine/checker_check_expr.h"
 #include "engine/checker_check_stmt.h"
+#include "engine/comptime_eval.h"
 #include "engine/resolver.h"
 #include "engine/symbol.h"
 #include "engine/type_hash.h"
@@ -162,11 +163,18 @@ static void _checker_init(void *self, allocator_t allocator, void *arg) {
 
   /* Register builtin types */
   _register_builtins(ctx);
+
+  /* Init comptime evaluator */
+  ctx->comptime_eval = comptime_eval_create(allocator);
 }
 
 static void _checker_dispose(void *self, allocator_t allocator) {
   checker_t ctx = (checker_t)self;
   (void)allocator;
+
+  /* Dispose comptime evaluator first (values reference semantic types) */
+  comptime_eval_dispose(ctx->comptime_eval);
+  allocator_free(allocator, &ctx->comptime_eval);
 
   /* Free all semantic types (includes builtin + user-defined types).
      This cascades: semantic_type dispose frees its type_impl and

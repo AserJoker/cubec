@@ -54,6 +54,9 @@ struct checker {
   semantic_type_t builtin_f16, builtin_f32, builtin_f64;
   semantic_type_t builtin_char, builtin_string;
   semantic_type_t builtin_nil;
+
+  /* comptime evaluator */
+  struct comptime_eval *comptime_eval;
 };
 
 typedef struct checker *checker_t;

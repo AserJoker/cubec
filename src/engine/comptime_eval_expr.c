@@ -65,8 +65,13 @@ static comptime_value_t _eval_literal_numeric(comptime_eval_t eval,
     if (type) width = (uint8_t)(type->impl->size * 8);
     int64_t sval = 0;
     uint64_t uval = 0;
-    if (is_signed) sval = strtoll(text, NULL, 10);
-    else uval = strtoull(text, NULL, 10);
+    if (is_signed) {
+      sval = strtoll(text, NULL, 10);
+      uval = (uint64_t)sval;
+    } else {
+      uval = strtoull(text, NULL, 10);
+      sval = (int64_t)uval;
+    }
     if (!type) type = is_signed ? ctx->builtin_i64 : ctx->builtin_u64;
     return comptime_value_create_int(eval->allocator, sval, uval, width,
                                       is_signed, type);

@@ -2,6 +2,7 @@
 #include "engine/checker_evaluate.h"
 #include "engine/checker_type_util.h"
 #include "engine/checker_check_expr.h"
+#include "engine/comptime_eval.h"
 #include "engine/resolver.h"
 #include "engine/symbol.h"
 #include "engine/type_hash.h"
@@ -35,7 +36,7 @@
 
 /* ===== Pass 2: Declaration Evaluation ===== */
 
-static semantic_type_t _check_expression(checker_t ctx, node_t expr);
+semantic_type_t _check_expression(checker_t ctx, node_t expr);
 
 static void _evaluate_member_method(checker_t ctx, semantic_type_t t,
                                      cubec_statement_function_t mfn) {
@@ -423,6 +424,29 @@ static void _evaluate_function(checker_t ctx,
   sym->function.is_comptime = node->is_comptime;
   /* Body NOT checked in Pass 2 — deferred to Pass 3 */
   sym->state = SYMBOL_EVALUATED;
+
+  /* Bind function in comptime env so it can be called at compile time */
+  if (node->body) {
+    vec_t param_names = NULL;
+    if (node->arguments) {
+      vec_init_t pvi = {.auto_dispose = false};
+      param_names = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &pvi);
+      size_t acount = vec_get_size(node->arguments);
+      for (size_t i = 0; i < acount; i++) {
+        node_t arg = (node_t)vec_get(node->arguments, i);
+        if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
+          cubec_function_argument_t farg = (cubec_function_argument_t)arg;
+          const char *pname = _checker_ident_str(farg->identifier);
+          if (pname) vec_push(param_names, (void *)pname);
+        }
+      }
+    }
+    comptime_value_t fn_val = comptime_value_create_function(
+        ctx->allocator,
+        ctx->comptime_eval->global_env,
+        node->body, param_names, ftype);
+    comptime_env_bind(ctx->comptime_eval->global_env, name, fn_val);
+  }
 }
 
 static void _check_var_type_completeness(checker_t ctx, node_t loc_node,
@@ -488,6 +512,22 @@ static void _evaluate_variable(checker_t ctx,
   sym->variable.is_comptime = node->is_comptime;
   sym->variable.is_mutable = true;
   sym->state = SYMBOL_EVALUATED;
+
+  if (node->is_comptime && node->declarator &&
+      node->declarator->kind == CUBEC_NODE_DECLARATION_VARIABLE) {
+    cubec_declaration_variable_t dv =
+        (cubec_declaration_variable_t)node->declarator;
+    if (dv->expression) {
+      comptime_value_t val =
+          comptime_eval_expr(ctx->comptime_eval, ctx, dv->expression);
+      if (val && val->kind != COMPTIME_VALUE_ERROR) {
+        comptime_env_bind(ctx->comptime_eval->current_env
+                              ? ctx->comptime_eval->current_env
+                              : ctx->comptime_eval->global_env,
+                          name, val);
+      }
+    }
+  }
 }
 
 static void _evaluate_type_alias(checker_t ctx,
@@ -530,23 +570,26 @@ static void _evaluate_import(checker_t ctx,
 
 static void _evaluate_comptime_block(checker_t ctx,
                                      cubec_statement_comptime_block_t node) {
-  /* TODO: comptime evaluator — execute block at compile time */
-  (void)ctx;
-  (void)node;
+  if (!ctx->comptime_eval) return;
+  comptime_signal_t sig =
+      comptime_eval_exec_block(ctx->comptime_eval, ctx, node->body);
+  if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
 }
 
 static void _evaluate_comptime_if(checker_t ctx,
                                   cubec_statement_comptime_if_t node) {
-  /* TODO: evaluate condition at compile time, process branches */
-  (void)ctx;
-  (void)node;
+  if (!ctx->comptime_eval) return;
+  comptime_signal_t sig =
+      comptime_eval_exec_comptime_if(ctx->comptime_eval, ctx, (node_t)node);
+  if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
 }
 
 static void _evaluate_comptime_for(checker_t ctx,
                                    cubec_statement_comptime_for_t node) {
-  /* TODO: unroll loop at compile time, process body declarations */
-  (void)ctx;
-  (void)node;
+  if (!ctx->comptime_eval) return;
+  comptime_signal_t sig =
+      comptime_eval_exec_comptime_for(ctx->comptime_eval, ctx, (node_t)node);
+  if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
 }
 
 void checker_evaluate_declarations(checker_t ctx, node_t program) {
