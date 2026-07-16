@@ -152,20 +152,51 @@ static void _check_stmt_foreach(checker_t ctx, node_t stmt,
   ctx->current_scope = scope_create(ctx->allocator, ctx->current_scope,
                                      SCOPE_FOREACH, stmt->location);
   vec_push(ctx->all_scopes, ctx->current_scope);
-  const char *vname = _checker_ident_str(sfe->name);
+  const char *vname = _checker_ident_str(sfe->variable);
   if (vname) {
     struct symbol *vsym = symbol_create(ctx->allocator, vname,
                                          SYMBOL_VARIABLE, stmt->location);
-    /* Derive element type from iterator */
-    if (iter_type->impl->kind == TYPE_SLICE)
+    /* Derive element type from iterator or use explicit type */
+    if (sfe->var_type) {
+      vsym->variable.type = resolver_resolve_type(ctx, sfe->var_type);
+      if (!vsym->variable.type) vsym->variable.type = ctx->error_type;
+    } else if (iter_type->impl->kind == TYPE_SLICE)
       vsym->variable.type = iter_type->impl->slice.element;
     else if (iter_type->impl->kind == TYPE_ARRAY)
       vsym->variable.type = iter_type->impl->array.element;
     else if (iter_type->impl->kind == TYPE_STRING)
       vsym->variable.type = ctx->builtin_char;
-    else
-      vsym->variable.type = ctx->error_type;
-    vsym->variable.is_mutable = !sfe->is_const;
+    else {
+      /* Iterator protocol: look for next() in instance_methods.
+       * The element type is the return type's "value" field type. */
+      semantic_type_t elem_type = NULL;
+      if (iter_type->instance_methods) {
+        size_t mc = vec_get_size(iter_type->instance_methods);
+        for (size_t i = 0; i < mc; i++) {
+          struct symbol *s = (struct symbol *)vec_get(iter_type->instance_methods, i);
+          if (s && s->name && strcmp(s->name, "next") == 0 &&
+              s->kind == SYMBOL_FUNCTION && s->function.type) {
+            /* next() return type should be a struct with "value" field */
+            semantic_type_t next_ret =
+                s->function.type->impl->function.return_type;
+            if (next_ret && next_ret->impl->kind == TYPE_STRUCT && next_ret->static_fields) {
+              size_t fc = vec_get_size(next_ret->static_fields);
+              for (size_t j = 0; j < fc; j++) {
+                struct symbol *fs = (struct symbol *)vec_get(next_ret->static_fields, j);
+                if (fs && fs->name && strcmp(fs->name, "value") == 0 &&
+                    fs->kind == SYMBOL_FIELD) {
+                  elem_type = fs->field.type;
+                  break;
+                }
+              }
+            }
+            break;
+          }
+        }
+      }
+      vsym->variable.type = elem_type ? elem_type : ctx->error_type;
+    }
+    vsym->variable.is_mutable = true;
     vsym->state = SYMBOL_EVALUATED;
     scope_push_symbol(ctx->current_scope, vsym);
   }

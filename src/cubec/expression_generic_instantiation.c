@@ -138,7 +138,7 @@ node_t read_expression_generic_instantiation(allocator_t allocator,
         read_expression_spread(allocator, tokens, &current, filename);
     if (!arg) {
       arg = TRY_LOCAL(onerror,
-                      read_expression(allocator, tokens, &current, filename));
+                      read_expression_base(allocator, tokens, &current, filename));
     }
     if (!arg) {
       /* Try wildcard '?' as a generic argument */

@@ -265,7 +265,8 @@ bool cubec_node_replace(node_t old_node, node_t new_node) {
   }
   case CUBEC_NODE_STATEMENT_FOREACH: {
     cubec_statement_foreach_t sfe = (cubec_statement_foreach_t)parent;
-    return _replace_ptr(&sfe->name, old_node, new_node) ||
+    return _replace_ptr(&sfe->variable, old_node, new_node) ||
+           _replace_ptr(&sfe->var_type, old_node, new_node) ||
            _replace_ptr(&sfe->iterator, old_node, new_node) ||
            _replace_ptr(&sfe->body, old_node, new_node);
   }

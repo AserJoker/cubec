@@ -87,7 +87,7 @@ node_t read_expression_spread(allocator_t allocator, vec_t tokens,
   /* Expect a value expression after the spread operator */
   skip_whitespace(tokens, &current);
   value =
-      TRY_LOCAL(onerror, read_expression(allocator, tokens, &current, filename));
+      TRY_LOCAL(onerror, read_expression_base(allocator, tokens, &current, filename));
   if (!value) {
     goto onerror;
   }

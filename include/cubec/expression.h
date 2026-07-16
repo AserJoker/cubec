@@ -48,6 +48,14 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
 node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
                                     size_t *position, const char *filename);
 
+/** @brief Parse a base expression (ternary and below — no comma/assignment).
+ *  Used as the inner parser for rvalue in assignments and in type contexts
+ *  where assignment/comma are not meaningful. */
+node_t read_expression_base(allocator_t allocator, vec_t tokens,
+                            size_t *position, const char *filename);
+
+/** @brief Parse a full expression: comma → assignment → ternary → binary →
+ *  unary → value. This is the top-level entry point for expression parsing. */
 node_t read_expression(allocator_t allocator, vec_t tokens, size_t *position,
                        const char *filename);
 

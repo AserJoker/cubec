@@ -189,8 +189,8 @@ node_t read_statement_declaration_type(allocator_t allocator, vec_t tokens,
 
     skip_whitespace(tokens, &current);
 
-    /* Parse type expression */
-    type_value = TRY_LOCAL(cleanup, read_expression_type(allocator, tokens, &current, filename));
+    /* Parse type expression (no comma/assignment — terminated by ';') */
+    type_value = TRY_LOCAL(cleanup, read_expression_base(allocator, tokens, &current, filename));
     if (!type_value) {
       THROW_LOCAL(cleanup, "expected type expression after '='");
     }

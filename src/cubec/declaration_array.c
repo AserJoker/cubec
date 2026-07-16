@@ -120,7 +120,7 @@ node_t read_declaration_array(allocator_t allocator, vec_t tokens,
    * Use grouping for the alternative: ([N] a) ? b : c → ternary(array(a), b, c).
    * Namespace access binds tighter: [N]std::vec::Vec → [N](std::vec::Vec). */
   skip_whitespace(tokens, &current);
-  type = read_expression_type(allocator, tokens, &current, filename);
+  type = read_expression_base(allocator, tokens, &current, filename);
   if (!type) {
     THROW_LOCAL(onerror, "expected type after array declaration");
   }

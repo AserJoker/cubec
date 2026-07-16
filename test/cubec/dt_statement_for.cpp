@@ -184,7 +184,7 @@ protected:
 };
 
 TEST_F(dt_statement_foreach, simple_foreach) {
-  const char *source = "foreach(item: items) { }";
+  const char *source = "foreach(item of items) { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -194,8 +194,8 @@ TEST_F(dt_statement_foreach, simple_foreach) {
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FOREACH);
 
   cubec_statement_foreach_t fe_node = (cubec_statement_foreach_t)node;
-  EXPECT_FALSE(fe_node->is_const);
-  ASSERT_NE(fe_node->name, nullptr);
+  EXPECT_FALSE(fe_node->is_var_decl);
+  ASSERT_NE(fe_node->variable, nullptr);
   ASSERT_NE(fe_node->iterator, nullptr);
   ASSERT_NE(fe_node->body, nullptr);
   EXPECT_EQ(fe_node->body->kind, CUBEC_NODE_STATEMENT_BLOCK);
@@ -204,8 +204,8 @@ TEST_F(dt_statement_foreach, simple_foreach) {
   allocator_free(allocator, &tokens);
 }
 
-TEST_F(dt_statement_foreach, const_foreach) {
-  const char *source = "foreach(const item: items) { }";
+TEST_F(dt_statement_foreach, var_foreach) {
+  const char *source = "foreach(var item of items) { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -215,14 +215,33 @@ TEST_F(dt_statement_foreach, const_foreach) {
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FOREACH);
 
   cubec_statement_foreach_t fe_node = (cubec_statement_foreach_t)node;
-  EXPECT_TRUE(fe_node->is_const);
+  EXPECT_TRUE(fe_node->is_var_decl);
+  EXPECT_EQ(fe_node->var_type, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_statement_foreach, var_foreach_with_type) {
+  const char *source = "foreach(var item: i32 of items) { }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_foreach(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FOREACH);
+
+  cubec_statement_foreach_t fe_node = (cubec_statement_foreach_t)node;
+  EXPECT_TRUE(fe_node->is_var_decl);
+  ASSERT_NE(fe_node->var_type, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_statement_foreach, foreach_with_expression_iterator) {
-  const char *source = "foreach(x: getItems()) { }";
+  const char *source = "foreach(x of getItems()) { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -238,7 +257,7 @@ TEST_F(dt_statement_foreach, foreach_with_expression_iterator) {
 }
 
 TEST_F(dt_statement_foreach, clone) {
-  const char *source = "foreach(item: items) { }";
+  const char *source = "foreach(var item of items) { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -256,7 +275,7 @@ TEST_F(dt_statement_foreach, clone) {
 }
 
 TEST_F(dt_statement_foreach, move) {
-  const char *source = "foreach(item: items) { }";
+  const char *source = "foreach(var item of items) { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -274,7 +293,7 @@ TEST_F(dt_statement_foreach, move) {
 }
 
 TEST_F(dt_statement_foreach, via_read_statement) {
-  const char *source = "foreach(const item: items) { }";
+  const char *source = "foreach(var item of items) { }";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 

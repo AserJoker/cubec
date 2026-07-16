@@ -6,7 +6,6 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/expression_assignment.h"
-#include "cubec/expression_ternary.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
 
@@ -86,15 +85,12 @@ node_t read_expression_comma(allocator_t allocator, vec_t tokens,
   node_t right = NULL;
   cubec_expression_comma_t node = NULL;
 
-  /* Try to parse a comma expression: left, right
-   * The left side can be an expression, assignment, or another comma.
-   * The right side is a non-comma expression. */
-
-  /* Parse left operand: first try assignment expression, then fall back to ternary.
-   * This allows comma expressions like "a = b, c" to work correctly. */
+  /* Try assignment first (value = expression). If no assignment operator
+   * follows the value, read_expression_assignment returns NULL and we
+   * fall through to read_expression_base which handles ternary/binary. */
   left = read_expression_assignment(allocator, tokens, &current, filename);
   if (!left) {
-    left = read_expression_ternary(allocator, tokens, &current, filename);
+    left = read_expression_base(allocator, tokens, &current, filename);
   }
   if (!left) {
     return NULL;
@@ -115,12 +111,8 @@ node_t read_expression_comma(allocator_t allocator, vec_t tokens,
    * This allows comma expressions like a, b, c to parse as comma(a, comma(b, c)) */
   right = read_expression_comma(allocator, tokens, &current, filename);
   if (!right) {
-    /* No more commas, parse as ternary expression (which includes assignment, binary, etc.) */
-    right = read_expression_ternary(allocator, tokens, &current, filename);
-    if (!right) {
-      allocator_free(allocator, &left);
-      THROW_LOCAL(onerror, "expected expression after comma");
-    }
+    allocator_free(allocator, &left);
+    THROW_LOCAL(onerror, "expected expression after comma");
   }
 
   /* Create comma node */

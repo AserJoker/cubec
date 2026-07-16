@@ -490,11 +490,18 @@ node_t read_expression_type(allocator_t allocator, vec_t tokens,
   return read_expression(allocator, tokens, position, filename);
 }
 
+node_t read_expression_base(allocator_t allocator, vec_t tokens,
+                            size_t *position, const char *filename) {
+  /* Base expression: ternary and below (no comma, no assignment).
+   * Used as the "inner" parser by read_expression_assignment for rvalue
+   * and by read_expression_type for type contexts. */
+  return read_expression_ternary(allocator, tokens, position, filename);
+}
+
 node_t read_expression(allocator_t allocator, vec_t tokens, size_t *position,
                        const char *filename) {
-  /* read_expression_ternary internally:
-   * 1. Calls read_expression_binary to parse the condition
-   * 2. If no '?' follows, returns the condition directly
-   * 3. Otherwise parses consequent and alternate recursively */
-  return read_expression_ternary(allocator, tokens, position, filename);
+  /* Full expression: comma → assignment → ternary → binary → unary → value.
+   * read_expression_comma internally tries assignment then ternary,
+   * so this single call covers the entire expression grammar. */
+  return read_expression_comma(allocator, tokens, position, filename);
 }

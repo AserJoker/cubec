@@ -752,7 +752,14 @@ export struct SomeType { ref: *a.SomeType }     // ✅ OK: struct definition
 - C 风格三段式：`for(init; condition; increment) { }`
 
 ### foreach 迭代器循环
-- `foreach(const item: iterator) { }` — 迭代器遍历
+- `foreach(<lvalue>|var <identifier>[:<type>] of <expression>) <statement>` — 迭代器遍历
+- 使用 `of` 关键字（非 `:`）分隔迭代变量与迭代器，避免与类型注解歧义
+- 两种模式：
+  - lvalue 模式：`foreach(i of items)` — 使用已有变量
+  - var 模式：`foreach(var i of items)` — 声明新的可变循环变量
+  - var 带类型：`foreach(var i: i32 of items)` — 声明并标注类型
+- body 为单条 statement（与 if/while/for/do-while 一致），非必须 block
+- 仅支持迭代器协议（对象含 `next()` 方法返回 `{value, done}`），不直接支持数组/切片/字符串
 
 ### while / do-while 循环
 - `while(condition) { }` — 条件必须括号

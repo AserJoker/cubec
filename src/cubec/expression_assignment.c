@@ -10,12 +10,6 @@
 #include "cubec/token.h"
 #include <inttypes.h>
 
-/* Forward declarations */
-extern node_t read_value(allocator_t allocator, vec_t tokens, size_t *position,
-                         const char *filename);
-extern node_t read_expression(allocator_t allocator, vec_t tokens,
-                              size_t *position, const char *filename);
-
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
@@ -134,9 +128,9 @@ node_t read_expression_assignment(allocator_t allocator, vec_t tokens,
   token_t tok = vec_get(tokens, current);
 
   if (!is_assignment_operator_token(tok)) {
-    /* Not an assignment expression — discard lvalue and return NULL.
-     * The lvalue may be part of a larger expression (e.g., "a + b")
-     * that should be parsed by read_expression_binary. */
+    /* Not an assignment expression — free the lvalue and return NULL.
+     * The caller (read_expression_comma) will fall through to try
+     * read_expression_base which handles binary/ternary chains. */
     allocator_free(allocator, &lvalue);
     return NULL;
   }
@@ -152,7 +146,7 @@ node_t read_expression_assignment(allocator_t allocator, vec_t tokens,
   /* Parse rvalue expression */
   skip_whitespace(tokens, &current);
   rvalue = TRY_LOCAL(onerror,
-                     read_expression(allocator, tokens, &current, filename));
+                     read_expression_base(allocator, tokens, &current, filename));
   if (!rvalue) {
     /* No rvalue expression found — this is an error */
     THROW_LOCAL(onerror, "%s:%" PRIuPTR ":%" PRIuPTR " expected expression after assignment operator",

@@ -169,7 +169,7 @@ node_t read_expression_type_function(allocator_t allocator, vec_t tokens,
 
     while (true) {
       node_t param = TRY_LOCAL(onerror,
-                               read_expression_type(allocator, tokens, &current, filename));
+                               read_expression_base(allocator, tokens, &current, filename));
       if (!param) {
         THROW_LOCAL(onerror, "expected type in function type parameter list");
       }
@@ -239,11 +239,11 @@ node_t read_expression_type_function(allocator_t allocator, vec_t tokens,
   current++;
   skip_whitespace(tokens, &current);
 
-  /* 6. Parse return type (greedy — consumes ternary/constraint).
+  /* 6. Parse return type (greedy — consumes ternary/constraint, but not comma).
    * func(i32) -> A ? B : C → func(i32) -> ternary(A, B, C).
    * Use grouping for the alternative: (func(i32) -> A) ? B : C. */
   return_type = TRY_LOCAL(onerror,
-                          read_expression_type(allocator, tokens, &current, filename));
+                          read_expression_base(allocator, tokens, &current, filename));
   if (!return_type) {
     THROW_LOCAL(onerror, "expected return type after '->' in function type");
   }

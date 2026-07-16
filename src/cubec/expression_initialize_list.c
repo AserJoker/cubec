@@ -183,7 +183,7 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
         is_field_mode = false;
         mode_determined = true;
         node_t expr_item = TRY_LOCAL(onerror,
-                                     read_expression(allocator, tokens, &current, filename));
+                                     read_expression_base(allocator, tokens, &current, filename));
         if (!expr_item) {
           THROW_LOCAL(onerror, "expected expression in initialize list");
         }
@@ -222,7 +222,7 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
           }
         }
         node_t expr_item = TRY_LOCAL(onerror,
-                                     read_expression(allocator, tokens, &current, filename));
+                                     read_expression_base(allocator, tokens, &current, filename));
         if (!expr_item) {
           THROW_LOCAL(onerror, "expected expression in initialize list");
         }

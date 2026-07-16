@@ -109,7 +109,7 @@ node_t read_expression_type_qualifier(allocator_t allocator, vec_t tokens,
    * Use grouping for the alternative: (const a) ? b : c → ternary(const(a), b, c).
    * Namespace access binds tighter: const std::vec::Vec → const(std::vec::Vec). */
   type = TRY_LOCAL(onerror,
-                   read_expression_type(allocator, tokens, &current, filename));
+                   read_expression_base(allocator, tokens, &current, filename));
   if (!type) {
     THROW_LOCAL(onerror, "expected type after const/volatile");
   }

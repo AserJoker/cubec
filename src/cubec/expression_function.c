@@ -282,7 +282,7 @@ node_t read_expression_function(allocator_t allocator, vec_t tokens,
     current++;
     skip_whitespace(tokens, &current);
 
-    return_type = TRY_LOCAL(onerror, read_expression_type(allocator, tokens, &current, filename));
+    return_type = TRY_LOCAL(onerror, read_expression_base(allocator, tokens, &current, filename));
     if (!return_type) {
       THROW_LOCAL(onerror, "expected return type after ':'");
     }

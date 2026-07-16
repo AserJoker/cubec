@@ -132,7 +132,7 @@ node_t read_declaration_slice(allocator_t allocator, vec_t tokens,
    * including ternary: []a ? b : c → slice(ternary(a, b, c)).
    * Use grouping for the alternative: ([] a) ? b : c → ternary(slice(a), b, c).
    * Namespace access binds tighter: []std::vec::Vec → [](std::vec::Vec). */
-  type = TRY_LOCAL(onerror, read_expression_type(allocator, tokens, &current, filename));
+  type = TRY_LOCAL(onerror, read_expression_base(allocator, tokens, &current, filename));
   if (!type) {
     THROW_LOCAL(onerror, "expected type after slice declaration");
   }

@@ -116,8 +116,9 @@ node_t cubec_ast_create_for_stmt(allocator_t alloc, location_t loc,
                                  node_t init, node_t cond, node_t incr,
                                  node_t body);
 node_t cubec_ast_create_foreach_stmt(allocator_t alloc, location_t loc,
-                                     bool is_const, node_t name,
-                                     node_t iterator, node_t body);
+                                     bool is_var_decl, node_t variable,
+                                     node_t var_type, node_t iterator,
+                                     node_t body);
 node_t cubec_ast_create_return_stmt(allocator_t alloc, location_t loc,
                                     node_t expr);
 node_t cubec_ast_create_expr_stmt(allocator_t alloc, location_t loc,

@@ -2,6 +2,7 @@
 #define _H_CUBEC_ENGINE_SYMBOL_
 #include "core/location.h"
 #include "core/type.h"
+#include "core/node.h"
 #include <stdbool.h>
 #include <stddef.h>
 #ifdef __cplusplus
@@ -56,6 +57,7 @@ struct symbol {
       semantic_type_t type;      /**< Function type (NULL until resolved) */
       bool is_comptime;          /**< comptime func */
       struct symbol *self_param; /**< Method self parameter (NULL for free functions) */
+      node_t ast_node;           /**< AST node (cubec_statement_function_t) for comptime dispatch */
     } function;
 
     /* SYMBOL_TYPE */

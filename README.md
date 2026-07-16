@@ -58,7 +58,7 @@ func main(): void {
     io.println(greeting);
 
     var numbers = Vec[i32]{1, 2, 3, 4, 5};
-    foreach(const n: numbers) {
+    foreach(var n of numbers) {
         io.println(n);
     }
 }
@@ -564,7 +564,16 @@ for(var i = 0; i < 10; i = i + 1) {
 }
 
 // foreach 循环 — 迭代器遍历
-foreach(const item: collection) {
+// lvalue 模式：使用已有变量
+foreach(item of collection) {
+    // ...
+}
+// var 模式：声明新的可变循环变量
+foreach(var item of collection) {
+    // ...
+}
+// var + 类型注解
+foreach(var item: i32 of collection) {
     // ...
 }
 
@@ -1078,7 +1087,7 @@ cubec/
   - `return` 返回语句（`return [<expression>];`）
   - `if`/`else` 条件语句（`if(condition) { } else if(condition) { } else { }`，else-if 链为嵌套 if 节点）
   - `for` 循环（C 风格 `for(init; cond; incr) { }`，三部分均可为空，init 支持 var 声明和赋值表达式）
-  - `foreach` 迭代器循环（`foreach([const] item: iterator) { }`，支持 const 修饰符）
+  - `foreach` 迭代器循环（`foreach(<lvalue>|var <identifier>[:<type>] of <expression>) <statement>`，支持 lvalue/var 两种模式，`of` 分隔迭代器，仅支持迭代器协议对象）
   - `while` 循环（`while(condition) { }`）
   - `do-while` 循环（`do { } while(condition);`）
   - `switch`/`case` 分支语句（`switch(value) { case(a, b) -> { }, else -> { } }`，case 间无分隔符，逗号仅在 case() 内，支持空 switch）

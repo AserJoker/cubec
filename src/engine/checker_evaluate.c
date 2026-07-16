@@ -67,6 +67,7 @@ static void _evaluate_member_method(checker_t ctx, semantic_type_t t,
   vec_push(ctx->all_types, mtype);
   msym->function.type = mtype;
   msym->function.is_comptime = mfn->is_comptime;
+  msym->function.ast_node = (node_t)mfn;
   msym->state = SYMBOL_NAME_KNOWN; /* body checked in Pass 3 */
   vec_push(t->instance_methods, msym);
 }
@@ -422,6 +423,7 @@ static void _evaluate_function(checker_t ctx,
 
   sym->function.type = ftype;
   sym->function.is_comptime = node->is_comptime;
+  sym->function.ast_node = (node_t)node;
   /* Body NOT checked in Pass 2 — deferred to Pass 3 */
   sym->state = SYMBOL_EVALUATED;
 

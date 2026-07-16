@@ -103,7 +103,7 @@ node_t read_enum_item(allocator_t allocator, vec_t tokens,
     current++;
     skip_whitespace(tokens, &current);
 
-    type_expr = TRY_LOCAL(cleanup, read_expression_type(allocator, tokens, &current, filename));
+    type_expr = TRY_LOCAL(cleanup, read_type_expression_primary(allocator, tokens, &current, filename));
     if (!type_expr) {
       THROW_LOCAL(cleanup, "%s:%" PRIuPTR ":%" PRIuPTR " expected type after ':'",
                   filename, colon_loc.begin.line + 1, colon_loc.begin.column);
@@ -118,7 +118,7 @@ node_t read_enum_item(allocator_t allocator, vec_t tokens,
     current++;
     skip_whitespace(tokens, &current);
 
-    value_expr = TRY_LOCAL(cleanup, read_expression(allocator, tokens, &current, filename));
+    value_expr = TRY_LOCAL(cleanup, read_expression_base(allocator, tokens, &current, filename));
     if (!value_expr) {
       THROW_LOCAL(cleanup, "%s:%" PRIuPTR ":%" PRIuPTR " expected value after '='",
                   filename, eq_loc.begin.line + 1, eq_loc.begin.column);

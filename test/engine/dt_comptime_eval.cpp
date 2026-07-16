@@ -1,12 +1,17 @@
 #include "engine/comptime_eval.h"
 #include "engine/comptime_value.h"
 #include "engine/checker.h"
+#include "engine/checker_evaluate.h"
 #include "engine/symbol.h"
 #include "engine/type_layout.h"
 #include "cubec/ast_factory.h"
 #include "cubec/literal_numeric.h"
+#include "cubec/statement.h"
 #include "cubec/statement_block.h"
+#include "cubec/statement_comptime.h"
 #include "cubec/statement_return.h"
+#include "cubec/token.h"
+#include "cubec/program.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 #include <stdarg.h>

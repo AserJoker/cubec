@@ -9,6 +9,7 @@
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/statement_block.h"
+#include "cubec/statement.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 
@@ -139,10 +140,10 @@ node_t read_statement_if(allocator_t allocator, vec_t tokens,
   current++;
   skip_whitespace(tokens, &current);
 
-  /* 5. Parse then branch (block) */
-  then_branch = TRY_LOCAL(cleanup, read_statement_block(allocator, tokens, &current, filename));
+  /* 5. Parse then branch (any statement) */
+  then_branch = TRY_LOCAL(cleanup, read_statement(allocator, tokens, &current, filename));
   if (!then_branch) {
-    THROW_LOCAL(cleanup, "expected block after if condition");
+    THROW_LOCAL(cleanup, "expected statement after if condition");
   }
   skip_whitespace(tokens, &current);
 
@@ -158,10 +159,10 @@ node_t read_statement_if(allocator_t allocator, vec_t tokens,
         THROW_LOCAL(cleanup, "expected if after else");
       }
     } else {
-      /* else { } */
-      else_branch = TRY_LOCAL(cleanup, read_statement_block(allocator, tokens, &current, filename));
+      /* else <statement> */
+      else_branch = TRY_LOCAL(cleanup, read_statement(allocator, tokens, &current, filename));
       if (!else_branch) {
-        THROW_LOCAL(cleanup, "expected block after else");
+        THROW_LOCAL(cleanup, "expected statement after else");
       }
     }
   }

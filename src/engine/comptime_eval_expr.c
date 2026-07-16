@@ -27,6 +27,7 @@
 #include "cubec/expression_slice.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/function_argument.h"
+#include "cubec/statement_function.h"
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
@@ -270,7 +271,7 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
 /* --- call evaluation --- */
 
 /* Helper: invoke a comptime function value with given arguments */
-static comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
+comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
                                              comptime_value_t callee,
                                              comptime_value_t *args, size_t acount,
                                              node_t call_node) {
@@ -316,6 +317,45 @@ static comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
   if (sig.kind == COMPTIME_SIGNAL_ERROR) return _eval_error_val(eval);
   if (sig.kind == COMPTIME_SIGNAL_RETURN) return sig.return_value;  /* cloned into caller env */
   return _eval_temp(eval, comptime_value_create_nil(eval->allocator, NULL));
+}
+
+/* --- method value creation from symbol --- */
+
+comptime_value_t _comptime_create_method_value(comptime_eval_t eval,
+                                                checker_t ctx,
+                                                struct symbol *method_sym) {
+  if (!method_sym || method_sym->kind != SYMBOL_FUNCTION || !method_sym->function.ast_node)
+    return NULL;
+
+  cubec_statement_function_t mfn =
+      (cubec_statement_function_t)method_sym->function.ast_node;
+
+  if (!mfn->body) return NULL;
+
+  /* Extract param_names from AST arguments */
+  vec_t param_names = NULL;
+  if (mfn->arguments) {
+    vec_init_t pvi = {.auto_dispose = false};
+    param_names = (vec_t)allocator_create(eval->allocator, &g_vec_type, &pvi);
+    size_t acount = vec_get_size(mfn->arguments);
+    for (size_t i = 0; i < acount; i++) {
+      node_t arg = (node_t)vec_get(mfn->arguments, i);
+      if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
+        cubec_function_argument_t farg = (cubec_function_argument_t)arg;
+        const char *pname = _eval_ident_str((node_t)farg->identifier);
+        if (pname) vec_push(param_names, (void *)pname);
+      }
+    }
+  }
+
+  comptime_value_t fn_val = comptime_value_create_function(
+      eval->allocator,
+      eval->current_env,  /* captured_env = env where the type was declared */
+      mfn->body,
+      param_names,
+      method_sym->function.type);
+
+  return fn_val;
 }
 
 static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
@@ -374,8 +414,21 @@ static comptime_value_t _eval_member(comptime_eval_t eval, checker_t ctx,
   if (host->kind == COMPTIME_VALUE_COMPOSITE) {
     comptime_value_t field = comptime_value_get_field(host, fname, eval->allocator);
     if (field) return _eval_temp(eval, field);  /* owned, tracked as temp */
+
+    /* No field match — check instance methods */
+    if (host->type && host->type->instance_methods) {
+      size_t mc = vec_get_size(host->type->instance_methods);
+      for (size_t i = 0; i < mc; i++) {
+        struct symbol *s = (struct symbol *)vec_get(host->type->instance_methods, i);
+        if (s && s->name && strcmp(s->name, fname) == 0 && s->kind == SYMBOL_FUNCTION) {
+          comptime_value_t method_val = _comptime_create_method_value(eval, ctx, s);
+          if (method_val) return _eval_temp(eval, method_val);
+        }
+      }
+    }
+
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
-                         "no field '%s' in composite", fname);
+                         "no field or method '%s' in composite", fname);
     ctx->error_count++;
     return _eval_error_val(eval);
   }

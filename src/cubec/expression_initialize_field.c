@@ -109,7 +109,7 @@ node_t read_expression_initialize_field(allocator_t allocator, vec_t tokens,
 
   /* Parse the value expression */
   skip_whitespace(tokens, &current);
-  value = TRY_LOCAL(onerror, read_expression(allocator, tokens, &current, filename));
+  value = TRY_LOCAL(onerror, read_expression_base(allocator, tokens, &current, filename));
   if (!value) {
     THROW_LOCAL(onerror, "expected expression after '='");
   }

@@ -132,7 +132,7 @@ node_t read_switch_match(allocator_t allocator, vec_t tokens,
 
     while (true) {
       skip_whitespace(tokens, &current);
-      node_t value = TRY_LOCAL(cleanup, read_expression(allocator, tokens, &current, filename));
+      node_t value = TRY_LOCAL(cleanup, read_expression_base(allocator, tokens, &current, filename));
       if (!value) {
         THROW_LOCAL(cleanup, "expected expression in case");
       }

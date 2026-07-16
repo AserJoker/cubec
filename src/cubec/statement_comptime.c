@@ -6,7 +6,6 @@
 #include "core/type.h"
 #include "cubec/declaration_variable.h"
 #include "cubec/expression.h"
-#include "cubec/expression_comma.h"
 #include "cubec/node.h"
 #include "cubec/statement_block.h"
 #include "cubec/statement_declaration.h"
@@ -411,7 +410,7 @@ static node_t _read_comptime_for(allocator_t allocator, vec_t tokens,
         allocator_free(allocator, &declarator);
       }
     } else {
-      init = TRY_LOCAL(cleanup, read_expression_comma(allocator, tokens, &current, filename));
+      init = TRY_LOCAL(cleanup, read_expression(allocator, tokens, &current, filename));
     }
   }
   skip_whitespace(tokens, &current);
@@ -425,7 +424,7 @@ static node_t _read_comptime_for(allocator_t allocator, vec_t tokens,
 
   /* 5. Parse condition (optional, ends at ';') */
   if (!_is_symbol(tokens, current, ";")) {
-    condition = TRY_LOCAL(cleanup, read_expression_comma(allocator, tokens, &current, filename));
+    condition = TRY_LOCAL(cleanup, read_expression(allocator, tokens, &current, filename));
   }
   skip_whitespace(tokens, &current);
 
@@ -438,7 +437,7 @@ static node_t _read_comptime_for(allocator_t allocator, vec_t tokens,
 
   /* 7. Parse increment (optional, ends at ')') */
   if (!_is_symbol(tokens, current, ")")) {
-    increment = TRY_LOCAL(cleanup, read_expression_comma(allocator, tokens, &current, filename));
+    increment = TRY_LOCAL(cleanup, read_expression(allocator, tokens, &current, filename));
   }
   skip_whitespace(tokens, &current);
 

@@ -2,8 +2,11 @@
 #define _H_CUBEC_ENGINE_COMPTIME_EVAL_INTERNAL_
 #include "engine/comptime_eval.h"
 #include "engine/checker_type_util.h"
+#include "engine/symbol.h"
 #include "core/string.h"
 #include "cubec/literal_identifier.h"
+#include "cubec/statement_function.h"
+#include "cubec/function_argument.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -56,6 +59,16 @@ comptime_signal_t _comptime_exec_block(comptime_eval_t eval, checker_t ctx,
                                         node_t block);
 comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
                                        node_t stmt);
+comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
+                                      comptime_value_t callee,
+                                      comptime_value_t *args, size_t acount,
+                                      node_t call_node);
+
+/* Create a comptime function value from a method symbol's ast_node.
+ * Used by foreach dispatch and _eval_member for instance method calls. */
+comptime_value_t _comptime_create_method_value(comptime_eval_t eval,
+                                                checker_t ctx,
+                                                struct symbol *method_sym);
 
 #ifdef __cplusplus
 }

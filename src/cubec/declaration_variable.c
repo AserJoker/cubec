@@ -106,8 +106,10 @@ node_t read_declaration_variable(allocator_t allocator, vec_t tokens,
     current++;
     skip_whitespace(tokens, &current);
 
-    /* Parse the type using read_expression_type */
-    type = TRY_LOCAL(cleanup_node, read_expression_type(allocator, tokens, &current, filename));
+    /* Parse the type using read_expression_base (no comma/assignment —
+     * read_expression_type includes assignment which would consume '=' as
+     * part of the type, breaking the type/init split) */
+    type = TRY_LOCAL(cleanup_node, read_expression_base(allocator, tokens, &current, filename));
     if (!type) {
       THROW_LOCAL(cleanup_node, "expected type after ':'");
     }
@@ -122,8 +124,10 @@ node_t read_declaration_variable(allocator_t allocator, vec_t tokens,
 
     skip_whitespace(tokens, &current);
 
-    /* Parse the initializer expression using read_expression */
-    expression = TRY_LOCAL(cleanup_node, read_expression(allocator, tokens, &current, filename));
+    /* Parse the initializer expression using read_expression_base
+     * (no comma — comma in var init would conflict with comma-separated
+     * declarator lists, and assignment is already handled by the '=' above) */
+    expression = TRY_LOCAL(cleanup_node, read_expression_base(allocator, tokens, &current, filename));
     if (!expression) {
       THROW_LOCAL(cleanup_node, "expected expression after '='");
     }

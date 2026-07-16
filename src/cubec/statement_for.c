@@ -13,6 +13,7 @@
 #include "cubec/statement_block.h"
 #include "cubec/statement_declaration.h"
 #include "cubec/statement_expression.h"
+#include "cubec/statement.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 
@@ -199,10 +200,10 @@ node_t read_statement_for(allocator_t allocator, vec_t tokens,
   current++;
   skip_whitespace(tokens, &current);
 
-  /* 9. Parse body (block) */
-  body = TRY_LOCAL(cleanup, read_statement_block(allocator, tokens, &current, filename));
+  /* 9. Parse body (any statement) */
+  body = TRY_LOCAL(cleanup, read_statement(allocator, tokens, &current, filename));
   if (!body) {
-    THROW_LOCAL(cleanup, "expected block after for");
+    THROW_LOCAL(cleanup, "expected statement after for");
   }
 
   /* 10. Build location */

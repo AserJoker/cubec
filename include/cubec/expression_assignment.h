@@ -51,9 +51,10 @@ typedef struct _cubec_expression_assignment_init_t
  *
  *        This function first reads a value as the potential lvalue, then
  *        checks if an assignment operator follows. If yes, it parses the
- *        rvalue expression and returns the assignment node. If no operator
- *        follows, it returns the value node as-is without creating an
- *        assignment node.
+ *        rvalue expression (using read_expression_base) and returns the
+ *        assignment node. If no assignment operator follows, it returns
+ *        the lvalue as-is (not NULL) so the caller can continue with it.
+ *        If no value can be parsed at all, returns NULL.
  *
  * @param allocator The allocator to use for memory allocation
  * @param tokens The token vector

@@ -112,7 +112,7 @@ node_t read_function_argument(allocator_t allocator, vec_t tokens,
   if (_is_symbol(tokens, current, ":")) {
     current++;
     skip_whitespace(tokens, &current);
-    type = TRY_LOCAL(fail, read_expression_type(allocator, tokens, &current, filename));
+    type = TRY_LOCAL(fail, read_type_expression_primary(allocator, tokens, &current, filename));
     if (!type) {
       THROW_LOCAL(fail, "expected type after ':' in function parameter");
     }
