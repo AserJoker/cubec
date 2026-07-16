@@ -8,6 +8,7 @@
 #include "engine/type_hash.h"
 #include "engine/type_layout.h"
 #include "core/allocator.h"
+#include "cubec/statement_test.h"
 #include "core/string.h"
 #include "core/vec.h"
 #include "cubec/node.h"
@@ -594,6 +595,14 @@ static void _evaluate_comptime_for(checker_t ctx,
   if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
 }
 
+static void _evaluate_test(checker_t ctx,
+                           cubec_statement_test_t node) {
+  if (!ctx->comptime_eval) return;
+  comptime_signal_t sig =
+      comptime_eval_exec_block(ctx->comptime_eval, ctx, node->body);
+  if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
+}
+
 void checker_evaluate_declarations(checker_t ctx, node_t program) {
   cubec_program_node_t prog = (cubec_program_node_t)program;
   if (!prog || !prog->statements) return;
@@ -615,6 +624,7 @@ void checker_evaluate_declarations(checker_t ctx, node_t program) {
     case CUBEC_NODE_STATEMENT_COMPTIME_BLOCK:  _evaluate_comptime_block(ctx, (cubec_statement_comptime_block_t)stmt); break;
     case CUBEC_NODE_STATEMENT_COMPTIME_IF:     _evaluate_comptime_if(ctx, (cubec_statement_comptime_if_t)stmt); break;
     case CUBEC_NODE_STATEMENT_COMPTIME_FOR:    _evaluate_comptime_for(ctx, (cubec_statement_comptime_for_t)stmt); break;
+    case CUBEC_NODE_STATEMENT_TEST:            _evaluate_test(ctx, (cubec_statement_test_t)stmt); break;
     default: break;
     }
   }

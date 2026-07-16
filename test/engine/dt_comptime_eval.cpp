@@ -800,3 +800,271 @@ TEST_F(dt_comptime_eval, composite_field_assign) {
   allocator_free(allocator, &fy);
   checker_dispose(ctx);
 }
+
+/* ===== test block execution ===== */
+
+TEST_F(dt_comptime_eval, test_block_empty) {
+  /* test "basic" { } */
+  vec_t body_stmts = cubec_ast_create_vec(allocator, true);
+  node_t body = cubec_ast_create_block(allocator, T, body_stmts);
+  node_t test = cubec_ast_create_test_stmt(allocator, T, "basic", body);
+
+  vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, test);
+  node_t prog = cubec_ast_create_program(allocator, T, stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, prog);
+  EXPECT_EQ(ctx->error_count, 0u);
+
+  allocator_free(allocator, &prog);
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_comptime_eval, test_block_assert_true) {
+  /* test "ok" { assert(true); } */
+  vec_t call_args = cubec_ast_create_vec(allocator, true);
+  vec_push(call_args, cubec_ast_create_identifier(allocator, T, "true"));
+  node_t assert_call = cubec_ast_create_call(allocator, T,
+      cubec_ast_create_identifier(allocator, T, "assert"), call_args);
+  node_t expr_stmt = cubec_ast_create_expr_stmt(allocator, T, assert_call);
+
+  vec_t body_stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(body_stmts, expr_stmt);
+  node_t body = cubec_ast_create_block(allocator, T, body_stmts);
+  node_t test = cubec_ast_create_test_stmt(allocator, T, "ok", body);
+
+  vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, test);
+  node_t prog = cubec_ast_create_program(allocator, T, stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, prog);
+  EXPECT_EQ(ctx->error_count, 0u);
+
+  allocator_free(allocator, &prog);
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_comptime_eval, test_block_assert_false) {
+  /* test "fail" { assert(false); } */
+  vec_t call_args = cubec_ast_create_vec(allocator, true);
+  vec_push(call_args, cubec_ast_create_identifier(allocator, T, "false"));
+  node_t assert_call = cubec_ast_create_call(allocator, T,
+      cubec_ast_create_identifier(allocator, T, "assert"), call_args);
+  node_t expr_stmt = cubec_ast_create_expr_stmt(allocator, T, assert_call);
+
+  vec_t body_stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(body_stmts, expr_stmt);
+  node_t body = cubec_ast_create_block(allocator, T, body_stmts);
+  node_t test = cubec_ast_create_test_stmt(allocator, T, "fail", body);
+
+  vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, test);
+  node_t prog = cubec_ast_create_program(allocator, T, stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, prog);
+  EXPECT_GT(ctx->error_count, 0u);
+
+  allocator_free(allocator, &prog);
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_comptime_eval, test_block_assert_eq) {
+  /* test "math" { assert(1 + 1 == 2); } */
+  node_t one = cubec_ast_create_numeric(allocator, T, "1",
+                        CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                        CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t one2 = cubec_ast_create_numeric(allocator, T, "1",
+                         CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                         CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t two = cubec_ast_create_numeric(allocator, T, "2",
+                        CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                        CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t add = cubec_ast_create_binary(allocator, T, "+", one, one2);
+  node_t eq = cubec_ast_create_binary(allocator, T, "==", add, two);
+
+  vec_t call_args = cubec_ast_create_vec(allocator, true);
+  vec_push(call_args, eq);
+  node_t assert_call = cubec_ast_create_call(allocator, T,
+      cubec_ast_create_identifier(allocator, T, "assert"), call_args);
+  node_t expr_stmt = cubec_ast_create_expr_stmt(allocator, T, assert_call);
+
+  vec_t body_stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(body_stmts, expr_stmt);
+  node_t body = cubec_ast_create_block(allocator, T, body_stmts);
+  node_t test = cubec_ast_create_test_stmt(allocator, T, "math", body);
+
+  vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, test);
+  node_t prog = cubec_ast_create_program(allocator, T, stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, prog);
+  EXPECT_EQ(ctx->error_count, 0u);
+
+  allocator_free(allocator, &prog);
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_comptime_eval, test_block_assert_with_message) {
+  /* test "msg" { assert(false, "custom message"); } */
+  vec_t call_args = cubec_ast_create_vec(allocator, true);
+  vec_push(call_args, cubec_ast_create_identifier(allocator, T, "false"));
+  vec_push(call_args, cubec_ast_create_string(allocator, T, "custom message"));
+  node_t assert_call = cubec_ast_create_call(allocator, T,
+      cubec_ast_create_identifier(allocator, T, "assert"), call_args);
+  node_t expr_stmt = cubec_ast_create_expr_stmt(allocator, T, assert_call);
+
+  vec_t body_stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(body_stmts, expr_stmt);
+  node_t body = cubec_ast_create_block(allocator, T, body_stmts);
+  node_t test = cubec_ast_create_test_stmt(allocator, T, "msg", body);
+
+  vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, test);
+  node_t prog = cubec_ast_create_program(allocator, T, stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, prog);
+  EXPECT_GT(ctx->error_count, 0u);
+
+  allocator_free(allocator, &prog);
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_comptime_eval, test_block_uses_global_var) {
+  /* comptime var x: i32 = 42; test "var" { assert(x == 42); } */
+  node_t type_id = cubec_ast_create_identifier(allocator, T, "i32");
+  node_t init_val = cubec_ast_create_numeric(allocator, T, "42",
+                      CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                      CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t var = cubec_ast_create_var_decl_stmt(allocator, T, "x",
+                    type_id, init_val, false, false, false, true);
+
+  node_t x_id = cubec_ast_create_identifier(allocator, T, "x");
+  node_t forty_two = cubec_ast_create_numeric(allocator, T, "42",
+                        CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                        CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t eq = cubec_ast_create_binary(allocator, T, "==", x_id, forty_two);
+
+  vec_t call_args = cubec_ast_create_vec(allocator, true);
+  vec_push(call_args, eq);
+  node_t assert_call = cubec_ast_create_call(allocator, T,
+      cubec_ast_create_identifier(allocator, T, "assert"), call_args);
+  node_t expr_stmt = cubec_ast_create_expr_stmt(allocator, T, assert_call);
+
+  vec_t body_stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(body_stmts, expr_stmt);
+  node_t body = cubec_ast_create_block(allocator, T, body_stmts);
+  node_t test = cubec_ast_create_test_stmt(allocator, T, "var", body);
+
+  vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, var);
+  vec_push(stmts, test);
+  node_t prog = cubec_ast_create_program(allocator, T, stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, prog);
+  EXPECT_EQ(ctx->error_count, 0u);
+
+  allocator_free(allocator, &prog);
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_comptime_eval, test_block_calls_function) {
+  /* func double(n: i32): i32 { return n + n; } test "fn" { assert(double(21) == 42); } */
+  node_t n_type = cubec_ast_create_identifier(allocator, T, "i32");
+  vec_t fn_args = cubec_ast_create_vec(allocator, true);
+  vec_push(fn_args, cubec_ast_create_func_arg(allocator, T, "n", n_type));
+
+  node_t n_id = cubec_ast_create_identifier(allocator, T, "n");
+  node_t n_id2 = cubec_ast_create_identifier(allocator, T, "n");
+  node_t n_plus_n = cubec_ast_create_binary(allocator, T, "+", n_id, n_id2);
+  node_t ret_stmt = cubec_ast_create_return_stmt(allocator, T, n_plus_n);
+  vec_t fn_body_stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(fn_body_stmts, ret_stmt);
+  node_t fn_body = cubec_ast_create_block(allocator, T, fn_body_stmts);
+
+  node_t ret_type = cubec_ast_create_identifier(allocator, T, "i32");
+  node_t fn = cubec_ast_create_func_stmt(allocator, T, "double", fn_args,
+                ret_type, fn_body, false, false, false, false, false, false);
+
+  /* assert(double(21) == 42) */
+  node_t arg21 = cubec_ast_create_numeric(allocator, T, "21",
+                        CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                        CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  vec_t call_args = cubec_ast_create_vec(allocator, true);
+  vec_push(call_args, arg21);
+  node_t callee = cubec_ast_create_identifier(allocator, T, "double");
+  node_t call_double = cubec_ast_create_call(allocator, T, callee, call_args);
+
+  node_t forty_two = cubec_ast_create_numeric(allocator, T, "42",
+                        CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                        CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t eq = cubec_ast_create_binary(allocator, T, "==", call_double, forty_two);
+
+  vec_t assert_args = cubec_ast_create_vec(allocator, true);
+  vec_push(assert_args, eq);
+  node_t assert_call = cubec_ast_create_call(allocator, T,
+      cubec_ast_create_identifier(allocator, T, "assert"), assert_args);
+  node_t expr_stmt = cubec_ast_create_expr_stmt(allocator, T, assert_call);
+
+  vec_t body_stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(body_stmts, expr_stmt);
+  node_t body = cubec_ast_create_block(allocator, T, body_stmts);
+  node_t test = cubec_ast_create_test_stmt(allocator, T, "fn", body);
+
+  vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, fn);
+  vec_push(stmts, test);
+  node_t prog = cubec_ast_create_program(allocator, T, stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, prog);
+  EXPECT_EQ(ctx->error_count, 0u);
+
+  allocator_free(allocator, &prog);
+  checker_dispose(ctx);
+}
+
+TEST_F(dt_comptime_eval, test_block_failure_isolation) {
+  /* Two tests: first fails, second passes — error_count should be 1 (not abort) */
+  /* test "fail" { assert(false); } test "pass" { assert(true); } */
+
+  /* First test: assert(false) */
+  vec_t args1 = cubec_ast_create_vec(allocator, true);
+  vec_push(args1, cubec_ast_create_identifier(allocator, T, "false"));
+  node_t call1 = cubec_ast_create_call(allocator, T,
+      cubec_ast_create_identifier(allocator, T, "assert"), args1);
+  node_t es1 = cubec_ast_create_expr_stmt(allocator, T, call1);
+  vec_t body1_stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(body1_stmts, es1);
+  node_t body1 = cubec_ast_create_block(allocator, T, body1_stmts);
+  node_t test1 = cubec_ast_create_test_stmt(allocator, T, "fail", body1);
+
+  /* Second test: assert(true) */
+  vec_t args2 = cubec_ast_create_vec(allocator, true);
+  vec_push(args2, cubec_ast_create_identifier(allocator, T, "true"));
+  node_t call2 = cubec_ast_create_call(allocator, T,
+      cubec_ast_create_identifier(allocator, T, "assert"), args2);
+  node_t es2 = cubec_ast_create_expr_stmt(allocator, T, call2);
+  vec_t body2_stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(body2_stmts, es2);
+  node_t body2 = cubec_ast_create_block(allocator, T, body2_stmts);
+  node_t test2 = cubec_ast_create_test_stmt(allocator, T, "pass", body2);
+
+  vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, test1);
+  vec_push(stmts, test2);
+  node_t prog = cubec_ast_create_program(allocator, T, stmts);
+
+  checker_t ctx = checker_create(allocator);
+  checker_check_program(ctx, prog);
+  /* First test fails (1 error), but second test still runs */
+  EXPECT_EQ(ctx->error_count, 1u);
+
+  allocator_free(allocator, &prog);
+  checker_dispose(ctx);
+}

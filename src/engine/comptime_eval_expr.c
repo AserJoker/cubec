@@ -361,6 +361,53 @@ comptime_value_t _comptime_create_method_value(comptime_eval_t eval,
 static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
                                     node_t node) {
   cubec_expression_call_t call = (cubec_expression_call_t)node;
+
+  /* --- assert() builtin --- */
+  if (call->callee && call->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+    const char *callee_name = _eval_ident_str(call->callee);
+    if (callee_name && strcmp(callee_name, "assert") == 0) {
+      size_t acount = call->arguments ? vec_get_size(call->arguments) : 0;
+      if (acount < 1) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                             node->location,
+                             "assert() requires at least 1 argument");
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
+      /* Evaluate the condition argument */
+      comptime_value_t cond =
+          _comptime_eval_expr(eval, ctx, (node_t)vec_get(call->arguments, 0));
+      if (!cond || cond->kind == COMPTIME_VALUE_ERROR)
+        return _eval_error_val(eval);
+
+      if (!comptime_value_is_truthy(cond)) {
+        /* Optional second argument: custom message */
+        const char *msg = NULL;
+        string_t msg_owned = NULL;
+        if (acount >= 2) {
+          comptime_value_t msg_val =
+              _comptime_eval_expr(eval, ctx, (node_t)vec_get(call->arguments, 1));
+          if (msg_val && msg_val->kind == COMPTIME_VALUE_STRING)
+            msg = comptime_value_get_string(msg_val);
+        }
+        if (msg) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               node->location,
+                               "assertion failed: %s", msg);
+        } else {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               node->location,
+                               "assertion failed");
+        }
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
+      /* Assertion passed — return nil */
+      return _eval_temp(eval, comptime_value_create_nil(eval->allocator, NULL));
+    }
+  }
+
+  /* --- normal call dispatch --- */
   comptime_value_t callee = _comptime_eval_expr(eval, ctx, call->callee);
   if (!callee) return _eval_error_val(eval);
 
