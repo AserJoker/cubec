@@ -1097,14 +1097,14 @@ cubec/
   - Rustc 风格诊断：源码行 + `^` 范围标注
   - 内建类型：`builtin_i8`~`builtin_u64`、`builtin_f16`~`builtin_f64`、`builtin_bool`、`builtin_void` 等
 - **comptime 编译期求值器**（AST 解释器）：
-  - 值表示：`comptime_value_t`（NIL/BOOL/INT/FLOAT/CHAR/STRING/TYPE/POINTER/COMPOSITE/FUNCTION/ERROR，字符串深拷贝，COMPOSITE/FUNCTION 相等比较）
+  - 值表示：`comptime_value_t`（NIL/BOOL/INT/FLOAT/CHAR/STRING/TYPE/POINTER/COMPOSITE/FUNCTION/ERROR，字符串深拷贝，COMPOSITE 连续内存布局支持 struct 指针强转）
   - 虚拟内存：`comptime_allocator_t`（uint64_t 地址空间，作用域生命周期，悬垂指针检测）
   - 变量环境：`comptime_env_t`（链式作用域，闭包捕获）
   - 表达式求值：字面量、算术/逻辑/比较/位运算、赋值（含 composite 字段写回）、函数调用、成员访问、指针操作（`&`/`*`）、sizeof/alignof/typeof、slice 切片（字符串+数组）
   - 语句执行：block/if/for/while/do-while/foreach/return/break/continue/defer/switch/comptime block/comptime if/comptime for
   - 安全限制：最大循环迭代 1024，最大调用深度 256
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **测试体系**：1193 测试用例覆盖所有核心模块
+- **测试体系**：1192 测试用例覆盖所有核心模块
 
 ### 待实现 📋
 

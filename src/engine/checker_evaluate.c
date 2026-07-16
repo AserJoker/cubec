@@ -524,7 +524,7 @@ static void _evaluate_variable(checker_t ctx,
         comptime_env_bind(ctx->comptime_eval->current_env
                               ? ctx->comptime_eval->current_env
                               : ctx->comptime_eval->global_env,
-                          name, val);
+                          name, comptime_value_clone(ctx->allocator, val));
       }
     }
   }

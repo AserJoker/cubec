@@ -13,13 +13,15 @@ extern "C" {
 struct comptime_env {
   allocator_t allocator;
   comptime_env_t parent;
-  strmap_t bindings; /**< name -> comptime_value_t (not auto-disposed) */
+  strmap_t bindings;   /**< name -> comptime_value_t (auto-disposed) */
+  vec_t temporaries;   /**< temporary comptime_value_t (auto-disposed) */
 };
 
 comptime_env_t comptime_env_create(allocator_t allocator, comptime_env_t parent);
 void comptime_env_dispose(comptime_env_t self);
 void comptime_env_bind(comptime_env_t self, const char *name, comptime_value_t value);
 comptime_value_t comptime_env_lookup(comptime_env_t self, const char *name);
+comptime_value_t comptime_env_track_temp(comptime_env_t self, comptime_value_t value);
 bool comptime_env_update(comptime_env_t self, const char *name,
                           comptime_value_t value);
 

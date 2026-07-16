@@ -17,6 +17,7 @@ TEST_F(dt_comptime_value, create_nil) {
   comptime_value_t v = comptime_value_create_nil(allocator, ctx->builtin_void);
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_NIL);
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }
 
@@ -24,6 +25,7 @@ TEST_F(dt_comptime_value, nil_not_truthy) {
   checker_t ctx = checker_create(allocator);
   comptime_value_t v = comptime_value_create_nil(allocator, ctx->builtin_void);
   EXPECT_FALSE(comptime_value_is_truthy(v));
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }
 
@@ -38,6 +40,8 @@ TEST_F(dt_comptime_value, create_bool) {
   EXPECT_TRUE(t->bool_val);
   EXPECT_TRUE(comptime_value_is_truthy(t));
   EXPECT_FALSE(comptime_value_is_truthy(f));
+  allocator_free(allocator, &t);
+  allocator_free(allocator, &f);
   checker_dispose(ctx);
 }
 
@@ -52,6 +56,7 @@ TEST_F(dt_comptime_value, create_int_signed) {
   EXPECT_EQ(v->int_val.s, -42);
   EXPECT_TRUE(v->int_val.is_signed);
   EXPECT_EQ(v->int_val.width, 32);
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }
 
@@ -63,6 +68,7 @@ TEST_F(dt_comptime_value, create_int_unsigned) {
   EXPECT_EQ(v->kind, COMPTIME_VALUE_INT);
   EXPECT_EQ(v->int_val.u, 300u);
   EXPECT_FALSE(v->int_val.is_signed);
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }
 
@@ -74,6 +80,8 @@ TEST_F(dt_comptime_value, int_truthy) {
                                                      ctx->builtin_i32);
   EXPECT_FALSE(comptime_value_is_truthy(zero));
   EXPECT_TRUE(comptime_value_is_truthy(one));
+  allocator_free(allocator, &zero);
+  allocator_free(allocator, &one);
   checker_dispose(ctx);
 }
 
@@ -87,6 +95,7 @@ TEST_F(dt_comptime_value, create_float) {
   EXPECT_EQ(v->kind, COMPTIME_VALUE_FLOAT);
   EXPECT_DOUBLE_EQ(v->float_val.value, 3.14);
   EXPECT_EQ(v->float_val.width, 64);
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }
 
@@ -98,6 +107,8 @@ TEST_F(dt_comptime_value, float_truthy) {
                                                           ctx->builtin_f64);
   EXPECT_FALSE(comptime_value_is_truthy(zero));
   EXPECT_TRUE(comptime_value_is_truthy(nonzero));
+  allocator_free(allocator, &zero);
+  allocator_free(allocator, &nonzero);
   checker_dispose(ctx);
 }
 
@@ -109,6 +120,7 @@ TEST_F(dt_comptime_value, create_char) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_CHAR);
   EXPECT_EQ(v->char_val, 'A');
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }
 
@@ -122,6 +134,7 @@ TEST_F(dt_comptime_value, create_string) {
   EXPECT_EQ(v->kind, COMPTIME_VALUE_STRING);
   EXPECT_STREQ(comptime_value_get_string(v), "hello");
   EXPECT_TRUE(comptime_value_is_truthy(v));
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }
 
@@ -133,6 +146,7 @@ TEST_F(dt_comptime_value, create_type) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_TYPE);
   EXPECT_EQ(v->type_val, ctx->builtin_i32);
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }
 
@@ -145,6 +159,7 @@ TEST_F(dt_comptime_value, create_pointer) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_POINTER);
   EXPECT_EQ(v->pointer.addr, 42u);
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }
 
@@ -155,6 +170,7 @@ TEST_F(dt_comptime_value, create_error) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_ERROR);
   EXPECT_FALSE(comptime_value_is_truthy(v));
+  allocator_free(allocator, &v);
 }
 
 /* ===== equals ===== */
@@ -166,6 +182,9 @@ TEST_F(dt_comptime_value, equals_bool) {
   comptime_value_t c = comptime_value_create_bool(allocator, false, ctx->builtin_bool);
   EXPECT_TRUE(comptime_value_equals(a, b));
   EXPECT_FALSE(comptime_value_equals(a, c));
+  allocator_free(allocator, &a);
+  allocator_free(allocator, &b);
+  allocator_free(allocator, &c);
   checker_dispose(ctx);
 }
 
@@ -176,6 +195,8 @@ TEST_F(dt_comptime_value, equals_int) {
   comptime_value_t b = comptime_value_create_int(allocator, 42, 42, 32, true,
                                                    ctx->builtin_i32);
   EXPECT_TRUE(comptime_value_equals(a, b));
+  allocator_free(allocator, &a);
+  allocator_free(allocator, &b);
   checker_dispose(ctx);
 }
 
@@ -184,6 +205,8 @@ TEST_F(dt_comptime_value, equals_nil) {
   comptime_value_t a = comptime_value_create_nil(allocator, ctx->builtin_void);
   comptime_value_t b = comptime_value_create_nil(allocator, ctx->builtin_void);
   EXPECT_TRUE(comptime_value_equals(a, b));
+  allocator_free(allocator, &a);
+  allocator_free(allocator, &b);
   checker_dispose(ctx);
 }
 
@@ -193,6 +216,8 @@ TEST_F(dt_comptime_value, not_equal_different_kinds) {
                                                    ctx->builtin_i32);
   comptime_value_t b = comptime_value_create_bool(allocator, true, ctx->builtin_bool);
   EXPECT_FALSE(comptime_value_equals(a, b));
+  allocator_free(allocator, &a);
+  allocator_free(allocator, &b);
   checker_dispose(ctx);
 }
 
@@ -207,6 +232,8 @@ TEST_F(dt_comptime_value, clone_int) {
   EXPECT_EQ(c->kind, COMPTIME_VALUE_INT);
   EXPECT_EQ(c->int_val.s, -99);
   EXPECT_NE(v, c); /* different allocation */
+  allocator_free(allocator, &v);
+  allocator_free(allocator, &c);
   checker_dispose(ctx);
 }
 
@@ -218,6 +245,8 @@ TEST_F(dt_comptime_value, clone_string) {
   ASSERT_NE(c, nullptr);
   EXPECT_EQ(c->kind, COMPTIME_VALUE_STRING);
   EXPECT_STREQ(comptime_value_get_string(c), "abc");
+  allocator_free(allocator, &v);
+  allocator_free(allocator, &c);
   checker_dispose(ctx);
 }
 
@@ -228,6 +257,7 @@ TEST_F(dt_comptime_value, as_i64) {
   comptime_value_t v = comptime_value_create_int(allocator, -42, 0, 32, true,
                                                    ctx->builtin_i32);
   EXPECT_EQ(comptime_value_as_i64(v), -42);
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }
 
@@ -236,6 +266,7 @@ TEST_F(dt_comptime_value, as_u64) {
   comptime_value_t v = comptime_value_create_int(allocator, 0, 300, 16, false,
                                                    ctx->builtin_u16);
   EXPECT_EQ(comptime_value_as_u64(v), 300u);
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }
 
@@ -244,6 +275,7 @@ TEST_F(dt_comptime_value, as_f64_from_int) {
   comptime_value_t v = comptime_value_create_int(allocator, 3, 3, 32, true,
                                                    ctx->builtin_i32);
   EXPECT_DOUBLE_EQ(comptime_value_as_f64(v), 3.0);
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }
 
@@ -252,5 +284,6 @@ TEST_F(dt_comptime_value, as_f64_from_float) {
   comptime_value_t v = comptime_value_create_float(allocator, 2.5, 64,
                                                      ctx->builtin_f64);
   EXPECT_DOUBLE_EQ(comptime_value_as_f64(v), 2.5);
+  allocator_free(allocator, &v);
   checker_dispose(ctx);
 }

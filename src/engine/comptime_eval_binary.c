@@ -13,10 +13,7 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
   /* Prefix unary */
   if (!bin->left) {
     comptime_value_t rv = _comptime_eval_expr(eval, ctx, bin->right);
-    if (!rv || rv->kind == COMPTIME_VALUE_ERROR) {
-      allocator_free(eval->allocator, &rv);
-      return _eval_error_val(eval);
-    }
+    if (!rv || rv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
 
     comptime_value_t result = NULL;
     if (strcmp(op, "!") == 0)
@@ -40,8 +37,7 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
                                            rv->int_val.width,
                                            rv->int_val.is_signed, rv->type);
     }
-    allocator_free(eval->allocator, &rv);
-    return result ? result : _eval_error_val(eval);
+    return result ? _eval_temp(eval, result) : _eval_error_val(eval);
   }
 
   /* Binary */
@@ -49,8 +45,6 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
   comptime_value_t rv = _comptime_eval_expr(eval, ctx, bin->right);
   if (!lv || lv->kind == COMPTIME_VALUE_ERROR || !rv ||
       rv->kind == COMPTIME_VALUE_ERROR) {
-    allocator_free(eval->allocator, &lv);
-    allocator_free(eval->allocator, &rv);
     return _eval_error_val(eval);
   }
 
@@ -209,7 +203,5 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
                                        lv->int_val.is_signed, lv->type);
   }
 
-  allocator_free(eval->allocator, &lv);
-  allocator_free(eval->allocator, &rv);
-  return result ? result : _eval_error_val(eval);
+  return result ? _eval_temp(eval, result) : _eval_error_val(eval);
 }

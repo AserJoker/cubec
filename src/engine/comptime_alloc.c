@@ -4,6 +4,7 @@
 #include "core/strmap.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* ===== helpers ===== */
 
@@ -18,10 +19,12 @@ static void *_depth_to_ptr(int depth) {
   return (void *)(intptr_t)depth;
 }
 
+/* Copy key using raw allocator (no string_t object to leak). */
 static char *_key_copy(allocator_t allocator, const char *src) {
-  string_init_t si = {.str = src};
-  string_t s = (string_t)allocator_create(allocator, &g_string_type, &si);
-  return (char *)string_get(s);
+  size_t len = strlen(src) + 1;
+  char *copy = (char *)allocator_alloc(allocator, len);
+  memcpy(copy, src, len);
+  return copy;
 }
 
 /* ===== lifecycle ===== */
@@ -33,7 +36,7 @@ comptime_allocator_t comptime_allocator_create(allocator_t allocator) {
   self->allocator = allocator;
   self->next_addr = 1;
   self->scope_depth = 0;
-  strmap_init_t si = {.value_auto_dispose = false};
+  strmap_init_t si = {.value_auto_dispose = true};
   self->allocations = (strmap_t)allocator_create(allocator, &g_strmap_type, &si);
   strmap_init_t li = {.value_auto_dispose = false};
   self->lifetimes = (strmap_t)allocator_create(allocator, &g_strmap_type, &li);
@@ -115,9 +118,10 @@ void comptime_alloc_leave_scope(comptime_allocator_t self) {
   }
 
   for (size_t i = 0; i < vec_get_size(to_free); i++) {
-    const char *k = (const char *)vec_get(to_free, i);
+    char *k = (char *)vec_get(to_free, i);
     strmap_remove(self->allocations, k);
     strmap_remove(self->lifetimes, k);
+    allocator_free(self->allocator, (void **)&k);
   }
 
   allocator_free(self->allocator, &to_free);

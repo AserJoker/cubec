@@ -15,8 +15,14 @@ static inline const char *_eval_ident_str(node_t id_node) {
   return string_get(((cubec_literal_identifier_t)id_node)->value);
 }
 
+static inline comptime_value_t _eval_temp(comptime_eval_t eval, comptime_value_t val) {
+  if (val && eval->current_env)
+    comptime_env_track_temp(eval->current_env, val);
+  return val;
+}
+
 static inline comptime_value_t _eval_error_val(comptime_eval_t eval) {
-  return comptime_value_create_error(eval->allocator);
+  return _eval_temp(eval, comptime_value_create_error(eval->allocator));
 }
 
 static inline comptime_signal_t _eval_signal_none(void) {

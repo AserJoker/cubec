@@ -52,7 +52,7 @@ struct comptime_value {
     string_t string_val;
     semantic_type_t type_val;
     struct { uint64_t addr; } pointer;
-    struct { vec_t fields; const char **field_names; size_t field_count; } composite;
+    struct { uint8_t *data; size_t data_size; semantic_type_t element_type; } composite;
     struct { comptime_env_t captured_env; node_t body; vec_t param_names; } function;
   };
 };
@@ -87,9 +87,8 @@ comptime_value_t comptime_value_create_pointer(allocator_t allocator,
                                                semantic_type_t type);
 comptime_value_t comptime_value_create_composite(allocator_t allocator,
                                                   semantic_type_t type,
-                                                  vec_t fields,
-                                                  const char **field_names,
-                                                  size_t field_count);
+                                                  semantic_type_t element_type,
+                                                  size_t data_size);
 comptime_value_t comptime_value_create_function(allocator_t allocator,
                                                  comptime_env_t env,
                                                  node_t body,
@@ -106,6 +105,39 @@ comptime_value_t comptime_value_clone(allocator_t allocator,
 
 /** @brief Get the C string from a STRING value. Returns NULL for non-string kinds. */
 const char *comptime_value_get_string(comptime_value_t val);
+
+/* ===== mutation (field/index access for composite) ===== */
+
+/** @brief Read a field value from composite's raw data at given offset. Returns owned value. */
+comptime_value_t comptime_value_read_field(comptime_value_t composite,
+                                           size_t offset,
+                                           semantic_type_t field_type,
+                                           allocator_t allocator);
+
+/** @brief Write a field value into composite's raw data at given offset. */
+bool comptime_value_write_field(comptime_value_t composite,
+                                size_t offset,
+                                comptime_value_t value);
+
+/** @brief Get a field value by name (struct). Returns owned value. */
+comptime_value_t comptime_value_get_field(comptime_value_t composite,
+                                          const char *field_name,
+                                          allocator_t allocator);
+
+/** @brief Set a field value by name (struct). */
+bool comptime_value_set_field(comptime_value_t composite,
+                              const char *field_name,
+                              comptime_value_t value);
+
+/** @brief Get an array element by index. Returns owned value. */
+comptime_value_t comptime_value_get_index(comptime_value_t composite,
+                                          size_t index,
+                                          allocator_t allocator);
+
+/** @brief Set an array element by index. */
+bool comptime_value_set_index(comptime_value_t composite,
+                              size_t index,
+                              comptime_value_t value);
 
 /* ===== conversions ===== */
 

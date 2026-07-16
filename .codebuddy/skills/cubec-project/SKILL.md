@@ -100,7 +100,7 @@ cubec/
 │       ├── comptime_eval_expr.c # Expression evaluation
 │       ├── comptime_eval_stmt.c # Statement execution
 │       └── comptime_alloc.c    # Virtual memory (comptime allocator)
-├── test/                       # Tests (890 test cases, Google Test + C++20)
+├── test/                       # Tests (1192 test cases, Google Test + C++20)
 │   ├── main.cpp                # Test entry point
 │   ├── common/test_common.h    # RAII test allocator helper
 │   ├── core/                   # Tests for core data structures
@@ -502,9 +502,9 @@ Rustc-style error messages: source line + `^` caret span annotations via `diagno
 
 ### Value Representation (comptime_value_t)
 
-11 value kinds: `NIL`, `BOOL`, `INT` (i8..i64, u8..u64 with width+signedness), `FLOAT` (f16/f32/f64 with width), `CHAR`, `STRING`, `TYPE` (typeof result), `POINTER` (virtual address), `COMPOSITE` (struct/union instance), `FUNCTION` (closure: env + AST body + param names), `ERROR`.
+11 value kinds: `NIL`, `BOOL`, `INT` (i8..i64, u8..u64 with width+signedness), `FLOAT` (f16/f32/f64 with width), `CHAR`, `STRING`, `TYPE` (typeof result), `POINTER` (virtual address), `COMPOSITE` (struct/union instance, contiguous raw-byte layout `uint8_t *data` + `data_size` + `element_type`), `FUNCTION` (closure: env + AST body + param names), `ERROR`.
 
-API: `comptime_value_create_*` constructors, `comptime_value_is_truthy`, `comptime_value_equals`, `comptime_value_clone`, `comptime_value_as_i64/as_u64/as_f64`.
+API: `comptime_value_create_*` constructors, `comptime_value_is_truthy`, `comptime_value_equals`, `comptime_value_clone` (deep copy via `value_clone`), `comptime_value_as_i64/as_u64/as_f64`, `comptime_value_read_field/write_field` (raw byte field access by offset), `comptime_value_get_field/set_field` (named field access for struct), `comptime_value_get_index/set_index` (array element access).
 
 ### Virtual Memory (comptime_allocator_t)
 
@@ -512,7 +512,7 @@ uint64_t address space (0 = null). `strmap_t` for allocations + lifetimes. Scope
 
 ### Variable Environment (comptime_env_t)
 
-Chain-of-responsibility scope model with `strmap_t` bindings (value_auto_dispose=false). `bind(name, value)`, `lookup(name)`, `update(name, value)`. Global env pre-binds `true`, `false`, `nil`.
+Chain-of-responsibility scope model with `strmap_t` bindings (value_auto_dispose=false). `bind(name, value)`, `lookup(name)`, `update(name, value)`. Global env pre-binds `true`, `false`, `nil`. Temporaries tracked per-scope via `temporaries` vec (auto_dispose=true), released on scope exit.
 
 ### Control Flow Signals
 

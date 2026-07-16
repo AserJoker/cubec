@@ -1,4 +1,5 @@
 #include "engine/comptime_value.h"
+#include "engine/symbol.h"
 #include "core/string.h"
 #include <stdlib.h>
 #include <string.h>
@@ -19,12 +20,8 @@ static void _comptime_value_dispose(void *self, allocator_t allocator) {
     allocator_free(allocator, &v->string_val);
     break;
   case COMPTIME_VALUE_COMPOSITE:
-    allocator_free(allocator, &v->composite.fields);
-    if (v->composite.field_names) {
-      for (size_t i = 0; i < v->composite.field_count; i++)
-        allocator_free(allocator, (void **)&v->composite.field_names[i]);
-      allocator_free(allocator, (void **)&v->composite.field_names);
-    }
+    if (v->composite.data)
+      allocator_free(allocator, (void **)&v->composite.data);
     break;
   case COMPTIME_VALUE_FUNCTION:
     /* env and body are not owned by the value */
@@ -49,23 +46,10 @@ static void _comptime_value_clone(void *self, allocator_t allocator,
     }
     break;
   case COMPTIME_VALUE_COMPOSITE:
-    if (src->composite.fields) {
-      vec_init_t vi = {.auto_dispose = true};
-      dst->composite.fields =
-          (vec_t)allocator_create(allocator, &g_vec_type, &vi);
-      size_t fc = vec_get_size(src->composite.fields);
-      for (size_t i = 0; i < fc; i++) {
-        comptime_value_t f = (comptime_value_t)vec_get(src->composite.fields, i);
-        comptime_value_t cf = comptime_value_clone(allocator, f);
-        vec_push(dst->composite.fields, cf);
-      }
-      if (src->composite.field_names && src->composite.field_count > 0) {
-        dst->composite.field_names =
-            (const char **)allocator_alloc(allocator,
-                                           sizeof(const char *) * src->composite.field_count);
-        for (size_t i = 0; i < src->composite.field_count; i++)
-          dst->composite.field_names[i] = src->composite.field_names[i];
-      }
+    if (src->composite.data && src->composite.data_size > 0) {
+      dst->composite.data = (uint8_t *)allocator_alloc(allocator,
+                                                        src->composite.data_size);
+      memcpy(dst->composite.data, src->composite.data, src->composite.data_size);
     }
     break;
   case COMPTIME_VALUE_FUNCTION:
@@ -171,15 +155,18 @@ comptime_value_t comptime_value_create_pointer(allocator_t allocator,
 
 comptime_value_t comptime_value_create_composite(allocator_t allocator,
                                                   semantic_type_t type,
-                                                  vec_t fields,
-                                                  const char **field_names,
-                                                  size_t field_count) {
+                                                  semantic_type_t element_type,
+                                                  size_t data_size) {
+  uint8_t *data = NULL;
+  if (data_size > 0) {
+    data = (uint8_t *)allocator_alloc(allocator, data_size);
+    memset(data, 0, data_size);
+  }
   struct comptime_value init = {
       .kind = COMPTIME_VALUE_COMPOSITE,
       .type = type,
-      .composite = {.fields = fields,
-                     .field_names = field_names,
-                     .field_count = field_count}};
+      .composite = {.data = data, .data_size = data_size,
+                     .element_type = element_type}};
   return (comptime_value_t)allocator_create(allocator, &g_comptime_value_type,
                                              &init);
 }
@@ -251,17 +238,35 @@ bool comptime_value_equals(comptime_value_t a, comptime_value_t b) {
   case COMPTIME_VALUE_TYPE:   return a->type_val == b->type_val;
   case COMPTIME_VALUE_POINTER: return a->pointer.addr == b->pointer.addr;
   case COMPTIME_VALUE_COMPOSITE: {
-    if (a->composite.field_count != b->composite.field_count) return false;
-    if (!a->composite.fields && !b->composite.fields) return true;
-    if (!a->composite.fields || !b->composite.fields) return false;
-    size_t fc = vec_get_size(a->composite.fields);
-    if (fc != vec_get_size(b->composite.fields)) return false;
-    for (size_t i = 0; i < fc; i++) {
-      comptime_value_t fa = (comptime_value_t)vec_get(a->composite.fields, i);
-      comptime_value_t fb = (comptime_value_t)vec_get(b->composite.fields, i);
-      if (!comptime_value_equals(fa, fb)) return false;
+    if (a->composite.data_size != b->composite.data_size) return false;
+    if (!a->composite.data && !b->composite.data) return true;
+    if (!a->composite.data || !b->composite.data) return false;
+    /* If same type, memcmp the raw bytes */
+    if (a->type && a->type == b->type)
+      return memcmp(a->composite.data, b->composite.data,
+                    a->composite.data_size) == 0;
+    /* Fallback: if same element_type (arrays), compare element by element */
+    if (a->composite.element_type && a->composite.element_type == b->composite.element_type) {
+      size_t esz = a->composite.element_type->impl->size;
+      if (esz == 0) return true;
+      size_t count = a->composite.data_size / esz;
+      for (size_t i = 0; i < count; i++) {
+        comptime_value_t ea = comptime_value_read_field(a, i * esz,
+            a->composite.element_type, NULL);
+        comptime_value_t eb = comptime_value_read_field(b, i * esz,
+            b->composite.element_type, NULL);
+        /* For primitive types, direct comparison works without allocator */
+        bool eq = false;
+        if (ea && eb) eq = comptime_value_equals(ea, eb);
+        if (ea) allocator_free(NULL, &ea);
+        if (eb) allocator_free(NULL, &eb);
+        if (!eq) return false;
+      }
+      return true;
     }
-    return true;
+    /* Different types with raw data: memcmp as last resort */
+    return memcmp(a->composite.data, b->composite.data,
+                  a->composite.data_size) == 0;
   }
   case COMPTIME_VALUE_FUNCTION:
     return a->function.body == b->function.body &&
@@ -274,8 +279,7 @@ bool comptime_value_equals(comptime_value_t a, comptime_value_t b) {
 comptime_value_t comptime_value_clone(allocator_t allocator,
                                       comptime_value_t src) {
   if (!src) return NULL;
-  return (comptime_value_t)allocator_create(allocator, &g_comptime_value_type,
-                                             src);
+  return (comptime_value_t)value_clone(allocator, src);
 }
 
 /* ===== conversions ===== */
@@ -320,4 +324,182 @@ const char *comptime_value_get_string(comptime_value_t val) {
   if (!val || val->kind != COMPTIME_VALUE_STRING || !val->string_val)
     return NULL;
   return string_get(val->string_val);
+}
+
+/* ===== raw byte field read/write ===== */
+
+comptime_value_t comptime_value_read_field(comptime_value_t composite,
+                                           size_t offset,
+                                           semantic_type_t field_type,
+                                           allocator_t allocator) {
+  if (!composite || !composite->composite.data || !field_type)
+    return NULL;
+  if (offset + field_type->impl->size > composite->composite.data_size)
+    return NULL;
+  uint8_t *ptr = composite->composite.data + offset;
+  enum type_kind fk = field_type->impl->kind;
+  switch (fk) {
+  case TYPE_BOOL:
+    return comptime_value_create_bool(allocator, *(bool *)ptr, field_type);
+  case TYPE_I8:
+    return comptime_value_create_int(allocator, (int64_t)(*(int8_t *)ptr),
+                                     (uint64_t)(*(uint8_t *)ptr), 8, true, field_type);
+  case TYPE_I16:
+    return comptime_value_create_int(allocator, (int64_t)(*(int16_t *)ptr),
+                                     (uint64_t)(*(uint16_t *)ptr), 16, true, field_type);
+  case TYPE_I32:
+    return comptime_value_create_int(allocator, (int64_t)(*(int32_t *)ptr),
+                                     (uint64_t)(*(uint32_t *)ptr), 32, true, field_type);
+  case TYPE_I64:
+    return comptime_value_create_int(allocator, *(int64_t *)ptr,
+                                     *(uint64_t *)ptr, 64, true, field_type);
+  case TYPE_U8:
+    return comptime_value_create_int(allocator, (int64_t)(*(uint8_t *)ptr),
+                                     (uint64_t)(*(uint8_t *)ptr), 8, false, field_type);
+  case TYPE_U16:
+    return comptime_value_create_int(allocator, (int64_t)(*(uint16_t *)ptr),
+                                     (uint64_t)(*(uint16_t *)ptr), 16, false, field_type);
+  case TYPE_U32:
+    return comptime_value_create_int(allocator, (int64_t)(*(uint32_t *)ptr),
+                                     (uint64_t)(*(uint32_t *)ptr), 32, false, field_type);
+  case TYPE_U64:
+    return comptime_value_create_int(allocator, (int64_t)(*(uint64_t *)ptr),
+                                     *(uint64_t *)ptr, 64, false, field_type);
+  case TYPE_F32:
+    return comptime_value_create_float(allocator, (double)(*(float *)ptr),
+                                       32, field_type);
+  case TYPE_F64:
+    return comptime_value_create_float(allocator, *(double *)ptr, 64, field_type);
+  case TYPE_CHAR:
+    return comptime_value_create_char(allocator, *(char *)ptr, field_type);
+  case TYPE_POINTER:
+    return comptime_value_create_pointer(allocator, *(uint64_t *)ptr, field_type);
+  case TYPE_STRING: {
+    /* string_t stored as pointer in 8 bytes */
+    string_t s = *(string_t *)(void *)ptr;
+    return comptime_value_create_string(allocator,
+                                        s ? string_get(s) : NULL, field_type);
+  }
+  default:
+    return NULL;
+  }
+}
+
+bool comptime_value_write_field(comptime_value_t composite,
+                                size_t offset,
+                                comptime_value_t value) {
+  if (!composite || !composite->composite.data || !value)
+    return false;
+  uint8_t *ptr = composite->composite.data + offset;
+  switch (value->kind) {
+  case COMPTIME_VALUE_BOOL:
+    *(bool *)ptr = value->bool_val;
+    break;
+  case COMPTIME_VALUE_INT: {
+    size_t sz = value->int_val.width / 8;
+    if (sz == 0) sz = 1;
+    if (value->int_val.is_signed) memcpy(ptr, &value->int_val.s, sz);
+    else memcpy(ptr, &value->int_val.u, sz);
+    break;
+  }
+  case COMPTIME_VALUE_FLOAT: {
+    if (value->float_val.width == 32) {
+      float f = (float)value->float_val.value;
+      memcpy(ptr, &f, 4);
+    } else {
+      memcpy(ptr, &value->float_val.value, 8);
+    }
+    break;
+  }
+  case COMPTIME_VALUE_CHAR:
+    *(char *)ptr = value->char_val;
+    break;
+  case COMPTIME_VALUE_POINTER:
+    *(uint64_t *)ptr = value->pointer.addr;
+    break;
+  case COMPTIME_VALUE_STRING:
+    *(string_t *)(void *)ptr = value->string_val;
+    break;
+  case COMPTIME_VALUE_NIL:
+    memset(ptr, 0, 8);
+    break;
+  case COMPTIME_VALUE_COMPOSITE:
+    if (value->composite.data && value->composite.data_size > 0)
+      memcpy(ptr, value->composite.data, value->composite.data_size);
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+/* ===== named field access (struct) ===== */
+
+comptime_value_t comptime_value_get_field(comptime_value_t composite,
+                                          const char *field_name,
+                                          allocator_t allocator) {
+  if (!composite || !composite->type || !field_name) return NULL;
+  type_impl_t impl = composite->type->impl;
+  if (!impl) return NULL;
+  vec_t fields = NULL;
+  if (impl->kind == TYPE_STRUCT || impl->kind == TYPE_UNION ||
+      impl->kind == TYPE_CUNION)
+    fields = impl->struct_type.fields;
+  if (!fields) return NULL;
+  size_t fc = vec_get_size(fields);
+  for (size_t i = 0; i < fc; i++) {
+    struct symbol *s = (struct symbol *)vec_get(fields, i);
+    if (s && s->name && strcmp(s->name, field_name) == 0)
+      return comptime_value_read_field(composite, s->field.offset,
+                                       s->field.type, allocator);
+  }
+  return NULL;
+}
+
+bool comptime_value_set_field(comptime_value_t composite,
+                              const char *field_name,
+                              comptime_value_t value) {
+  if (!composite || !composite->type || !field_name) return false;
+  type_impl_t impl = composite->type->impl;
+  if (!impl) return false;
+  vec_t fields = NULL;
+  if (impl->kind == TYPE_STRUCT || impl->kind == TYPE_UNION ||
+      impl->kind == TYPE_CUNION)
+    fields = impl->struct_type.fields;
+  if (!fields) return false;
+  size_t fc = vec_get_size(fields);
+  for (size_t i = 0; i < fc; i++) {
+    struct symbol *s = (struct symbol *)vec_get(fields, i);
+    if (s && s->name && strcmp(s->name, field_name) == 0)
+      return comptime_value_write_field(composite, s->field.offset, value);
+  }
+  return false;
+}
+
+/* ===== index access (array) ===== */
+
+comptime_value_t comptime_value_get_index(comptime_value_t composite,
+                                          size_t index,
+                                          allocator_t allocator) {
+  if (!composite || !composite->composite.data) return NULL;
+  semantic_type_t elem_type = composite->composite.element_type;
+  if (!elem_type) return NULL;
+  size_t elem_size = elem_type->impl ? elem_type->impl->size : 0;
+  if (elem_size == 0) return NULL;
+  size_t offset = index * elem_size;
+  if (offset + elem_size > composite->composite.data_size) return NULL;
+  return comptime_value_read_field(composite, offset, elem_type, allocator);
+}
+
+bool comptime_value_set_index(comptime_value_t composite,
+                              size_t index,
+                              comptime_value_t value) {
+  if (!composite || !composite->composite.data) return false;
+  semantic_type_t elem_type = composite->composite.element_type;
+  if (!elem_type) return false;
+  size_t elem_size = elem_type->impl ? elem_type->impl->size : 0;
+  if (elem_size == 0) return false;
+  size_t offset = index * elem_size;
+  if (offset + elem_size > composite->composite.data_size) return false;
+  return comptime_value_write_field(composite, offset, value);
 }

@@ -71,6 +71,7 @@ TEST_F(dt_comptime_alloc, write_null_addr) {
   comptime_value_t v = comptime_value_create_int(allocator, 1, 1, 32, true,
                                                    ctx->builtin_i32);
   EXPECT_FALSE(comptime_alloc_write(a, 0, v));
+  allocator_free(allocator, &v);
   comptime_allocator_dispose(a);
   checker_dispose(ctx);
 }
@@ -81,6 +82,7 @@ TEST_F(dt_comptime_alloc, write_unknown_addr) {
   comptime_value_t v = comptime_value_create_int(allocator, 1, 1, 32, true,
                                                    ctx->builtin_i32);
   EXPECT_FALSE(comptime_alloc_write(a, 999, v));
+  allocator_free(allocator, &v);
   comptime_allocator_dispose(a);
   checker_dispose(ctx);
 }

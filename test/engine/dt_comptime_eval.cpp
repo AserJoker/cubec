@@ -1,12 +1,15 @@
 #include "engine/comptime_eval.h"
 #include "engine/comptime_value.h"
 #include "engine/checker.h"
+#include "engine/symbol.h"
+#include "engine/type_layout.h"
 #include "cubec/ast_factory.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/statement_block.h"
 #include "cubec/statement_return.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
+#include <stdarg.h>
 
 using ::testing::Test;
 
@@ -37,6 +40,7 @@ TEST_F(dt_comptime_eval, eval_int_literal) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_INT);
   EXPECT_EQ(v->int_val.s, 42);
+  allocator_free(allocator, &num);
   checker_dispose(ctx);
 }
 
@@ -48,6 +52,7 @@ TEST_F(dt_comptime_eval, eval_bool_literal) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_BOOL);
   EXPECT_TRUE(v->bool_val);
+  allocator_free(allocator, &b);
   checker_dispose(ctx);
 }
 
@@ -58,6 +63,7 @@ TEST_F(dt_comptime_eval, eval_string_literal) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_STRING);
   EXPECT_STREQ(comptime_value_get_string(v), "hello");
+  allocator_free(allocator, &s);
   checker_dispose(ctx);
 }
 
@@ -68,6 +74,7 @@ TEST_F(dt_comptime_eval, eval_char_literal) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_CHAR);
   EXPECT_EQ(v->char_val, 'X');
+  allocator_free(allocator, &c);
   checker_dispose(ctx);
 }
 
@@ -77,6 +84,7 @@ TEST_F(dt_comptime_eval, eval_nil_literal) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, n);
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_NIL);
+  allocator_free(allocator, &n);
   checker_dispose(ctx);
 }
 
@@ -95,6 +103,7 @@ TEST_F(dt_comptime_eval, eval_add) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_INT);
   EXPECT_EQ(v->int_val.s, 30);
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -110,6 +119,7 @@ TEST_F(dt_comptime_eval, eval_sub) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, bin);
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->int_val.s, 30);
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -125,6 +135,7 @@ TEST_F(dt_comptime_eval, eval_mul) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, bin);
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->int_val.s, 42);
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -141,6 +152,7 @@ TEST_F(dt_comptime_eval, eval_float_add) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_FLOAT);
   EXPECT_DOUBLE_EQ(v->float_val.value, 4.0);
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -159,6 +171,7 @@ TEST_F(dt_comptime_eval, eval_eq) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_BOOL);
   EXPECT_TRUE(v->bool_val);
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -174,6 +187,7 @@ TEST_F(dt_comptime_eval, eval_neq) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, bin);
   ASSERT_NE(v, nullptr);
   EXPECT_TRUE(v->bool_val);
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -189,6 +203,7 @@ TEST_F(dt_comptime_eval, eval_lt) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, bin);
   ASSERT_NE(v, nullptr);
   EXPECT_TRUE(v->bool_val);
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -204,6 +219,7 @@ TEST_F(dt_comptime_eval, eval_negate) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_INT);
   EXPECT_EQ(v->int_val.s, -7);
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -215,6 +231,7 @@ TEST_F(dt_comptime_eval, eval_logical_not) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_BOOL);
   EXPECT_FALSE(v->bool_val);
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -229,6 +246,7 @@ TEST_F(dt_comptime_eval, eval_logical_and) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_BOOL);
   EXPECT_FALSE(v->bool_val);
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -240,6 +258,7 @@ TEST_F(dt_comptime_eval, eval_logical_or) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, bin);
   ASSERT_NE(v, nullptr);
   EXPECT_TRUE(v->bool_val);
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -258,6 +277,7 @@ TEST_F(dt_comptime_eval, eval_ternary_true) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, tern);
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->int_val.s, 10);
+  allocator_free(allocator, &tern);
   checker_dispose(ctx);
 }
 
@@ -274,6 +294,7 @@ TEST_F(dt_comptime_eval, eval_ternary_false) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, tern);
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->int_val.s, 20);
+  allocator_free(allocator, &tern);
   checker_dispose(ctx);
 }
 
@@ -287,6 +308,7 @@ TEST_F(dt_comptime_eval, eval_typeof) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_TYPE);
   EXPECT_EQ(v->type_val, ctx->builtin_i32);
+  allocator_free(allocator, &tof);
   checker_dispose(ctx);
 }
 
@@ -298,6 +320,7 @@ TEST_F(dt_comptime_eval, eval_sizeof) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_INT);
   EXPECT_EQ(v->int_val.s, 4);
+  allocator_free(allocator, &sof);
   checker_dispose(ctx);
 }
 
@@ -309,6 +332,7 @@ TEST_F(dt_comptime_eval, eval_alignof) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_INT);
   EXPECT_GE(v->int_val.s, 1);
+  allocator_free(allocator, &aof);
   checker_dispose(ctx);
 }
 
@@ -317,12 +341,12 @@ TEST_F(dt_comptime_eval, eval_alignof) {
 TEST_F(dt_comptime_eval, comptime_var_decl_and_use) {
   checker_t ctx = checker_create(allocator);
   /* comptime x: i32 = 42; */
+  node_t type_id = cubec_ast_create_identifier(allocator, T, "i32");
+  node_t init = cubec_ast_create_numeric(allocator, T, "42",
+                      CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                      CUBEC_LITERAL_NUMERIC_TYPE_I32);
   node_t var = cubec_ast_create_var_decl_stmt(allocator, T, "x",
-                    cubec_ast_create_identifier(allocator, T, "i32"),
-                    cubec_ast_create_numeric(allocator, T, "42",
-                        CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                        CUBEC_LITERAL_NUMERIC_TYPE_I32),
-                    false, false, false, true);
+                    type_id, init, false, false, false, true);
   vec_t stmts = cubec_ast_create_vec(allocator, true);
   vec_push(stmts, var);
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
@@ -334,8 +358,8 @@ TEST_F(dt_comptime_eval, comptime_var_decl_and_use) {
   EXPECT_EQ(v->kind, COMPTIME_VALUE_INT);
   EXPECT_EQ(v->int_val.s, 42);
 
-  checker_dispose(ctx);
   allocator_free(allocator, &prog);
+  checker_dispose(ctx);
 }
 
 /* ===== if statement ===== */
@@ -343,17 +367,13 @@ TEST_F(dt_comptime_eval, comptime_var_decl_and_use) {
 TEST_F(dt_comptime_eval, comptime_if_true) {
   checker_t ctx = checker_create(allocator);
   /* comptime if true { ... } */
-  node_t then_body = cubec_ast_create_block(allocator, T,
-                    cubec_ast_create_vec(allocator, true));
-  node_t cif = cubec_ast_create_if_stmt(allocator, T,
-                 cubec_ast_create_identifier(allocator, T, "true"),
-                 then_body, NULL);
-  vec_t stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(stmts, cif);
-  /* Need to wrap in comptime block */
-  /* Actually, the evaluator tests should call directly */
+  vec_t empty_vec = cubec_ast_create_vec(allocator, true);
+  node_t then_body = cubec_ast_create_block(allocator, T, empty_vec);
+  node_t cond = cubec_ast_create_identifier(allocator, T, "true");
+  node_t cif = cubec_ast_create_if_stmt(allocator, T, cond, then_body, NULL);
   comptime_signal_t sig = comptime_eval_exec_comptime_if(ctx->comptime_eval, ctx, cif);
   EXPECT_EQ(sig.kind, COMPTIME_SIGNAL_NONE);
+  allocator_free(allocator, &cif);
   checker_dispose(ctx);
 }
 
@@ -363,41 +383,36 @@ TEST_F(dt_comptime_eval, comptime_for_loop) {
   checker_t ctx = checker_create(allocator);
 
   /* Build: comptime for init=var sum:i32=0, cond=sum<3, incr=sum=sum+1, body=empty */
+  node_t type_id = cubec_ast_create_identifier(allocator, T, "i32");
+  node_t init_val = cubec_ast_create_numeric(allocator, T, "0",
+                      CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                      CUBEC_LITERAL_NUMERIC_TYPE_I32);
   node_t init = cubec_ast_create_var_decl_stmt(allocator, T, "sum",
-                  cubec_ast_create_identifier(allocator, T, "i32"),
-                  cubec_ast_create_numeric(allocator, T, "0",
+                  type_id, init_val, false, false, false, true);
+
+  node_t sum_id = cubec_ast_create_identifier(allocator, T, "sum");
+  node_t three = cubec_ast_create_numeric(allocator, T, "3",
                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                      CUBEC_LITERAL_NUMERIC_TYPE_I32),
-                  false, false, false, true);
+                      CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t cond = cubec_ast_create_binary(allocator, T, "<", sum_id, three);
 
-  node_t cond = cubec_ast_create_binary(allocator, T, "<",
-                  cubec_ast_create_identifier(allocator, T, "sum"),
-                  cubec_ast_create_numeric(allocator, T, "3",
-                      CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                      CUBEC_LITERAL_NUMERIC_TYPE_I32));
+  node_t one = cubec_ast_create_numeric(allocator, T, "1",
+                  CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                  CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t sum_id2 = cubec_ast_create_identifier(allocator, T, "sum");
+  node_t sum_id3 = cubec_ast_create_identifier(allocator, T, "sum");
+  node_t sum_plus_1 = cubec_ast_create_binary(allocator, T, "+", sum_id2, one);
+  node_t incr = cubec_ast_create_assignment(allocator, T, "=", sum_id3, sum_plus_1);
 
-  node_t incr = cubec_ast_create_assignment(allocator, T, "=",
-                  cubec_ast_create_identifier(allocator, T, "sum"),
-                  cubec_ast_create_binary(allocator, T, "+",
-                      cubec_ast_create_identifier(allocator, T, "sum"),
-                      cubec_ast_create_numeric(allocator, T, "1",
-                          CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                          CUBEC_LITERAL_NUMERIC_TYPE_I32)));
-
-  node_t body = cubec_ast_create_block(allocator, T,
-                  cubec_ast_create_vec(allocator, true));
+  vec_t empty_vec = cubec_ast_create_vec(allocator, true);
+  node_t body = cubec_ast_create_block(allocator, T, empty_vec);
 
   node_t for_stmt = cubec_ast_create_for_stmt(allocator, T, init, cond, incr, body);
 
   comptime_signal_t sig = comptime_eval_exec_comptime_for(ctx->comptime_eval, ctx, for_stmt);
   EXPECT_EQ(sig.kind, COMPTIME_SIGNAL_NONE);
 
-  /* sum should be 3 after 3 iterations */
-  comptime_value_t v = comptime_env_lookup(ctx->comptime_eval->current_env
-                              ? ctx->comptime_eval->current_env
-                              : ctx->comptime_eval->global_env, "sum");
-  /* sum was declared in for-init scope which is gone after the loop,
-     but we can verify the loop completed without error */
+  allocator_free(allocator, &for_stmt);
   checker_dispose(ctx);
 }
 
@@ -407,20 +422,21 @@ TEST_F(dt_comptime_eval, function_call) {
   checker_t ctx = checker_create(allocator);
 
   /* Build: func double(x: i32): i32 { return x + x; } */
+  node_t x_type = cubec_ast_create_identifier(allocator, T, "i32");
   vec_t args = cubec_ast_create_vec(allocator, true);
-  vec_push(args, cubec_ast_create_func_arg(allocator, T, "x",
-                  cubec_ast_create_identifier(allocator, T, "i32")));
+  vec_push(args, cubec_ast_create_func_arg(allocator, T, "x", x_type));
 
-  node_t ret_expr = cubec_ast_create_binary(allocator, T, "+",
-                      cubec_ast_create_identifier(allocator, T, "x"),
-                      cubec_ast_create_identifier(allocator, T, "x"));
+  node_t x_id = cubec_ast_create_identifier(allocator, T, "x");
+  node_t x_id2 = cubec_ast_create_identifier(allocator, T, "x");
+  node_t x_plus_x = cubec_ast_create_binary(allocator, T, "+", x_id, x_id2);
+  node_t ret_stmt = cubec_ast_create_return_stmt(allocator, T, x_plus_x);
   vec_t body_stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(body_stmts, cubec_ast_create_return_stmt(allocator, T, ret_expr));
+  vec_push(body_stmts, ret_stmt);
   node_t body = cubec_ast_create_block(allocator, T, body_stmts);
 
+  node_t ret_type = cubec_ast_create_identifier(allocator, T, "i32");
   node_t fn = cubec_ast_create_func_stmt(allocator, T, "double", args,
-                cubec_ast_create_identifier(allocator, T, "i32"),
-                body, false, false, false, false, false, false);
+                ret_type, body, false, false, false, false, false, false);
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
   vec_push(stmts, fn);
@@ -433,10 +449,11 @@ TEST_F(dt_comptime_eval, function_call) {
   EXPECT_EQ(fn_val->kind, COMPTIME_VALUE_FUNCTION) << "got kind=" << fn_val->kind;
 
   /* Now call double(21) via the evaluator */
-  vec_t call_args = cubec_ast_create_vec(allocator, true);
-  vec_push(call_args, cubec_ast_create_numeric(allocator, T, "21",
+  node_t arg21 = cubec_ast_create_numeric(allocator, T, "21",
                         CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                        CUBEC_LITERAL_NUMERIC_TYPE_I32));
+                        CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  vec_t call_args = cubec_ast_create_vec(allocator, true);
+  vec_push(call_args, arg21);
   node_t callee = cubec_ast_create_identifier(allocator, T, "double");
   node_t call = cubec_ast_create_call(allocator, T, callee, call_args);
 
@@ -445,8 +462,9 @@ TEST_F(dt_comptime_eval, function_call) {
   EXPECT_EQ(v->kind, COMPTIME_VALUE_INT) << "got kind=" << v->kind;
   EXPECT_EQ(v->int_val.s, 42);
 
-  checker_dispose(ctx);
+  allocator_free(allocator, &call);
   allocator_free(allocator, &prog);
+  checker_dispose(ctx);
 }
 
 /* ===== comptime block ===== */
@@ -455,10 +473,11 @@ TEST_F(dt_comptime_eval, comptime_block_executes) {
   checker_t ctx = checker_create(allocator);
 
   /* comptime { } — empty comptime block */
-  node_t block = cubec_ast_create_block(allocator, T,
-                    cubec_ast_create_vec(allocator, true));
+  vec_t empty_vec = cubec_ast_create_vec(allocator, true);
+  node_t block = cubec_ast_create_block(allocator, T, empty_vec);
   comptime_signal_t sig = comptime_eval_exec_block(ctx->comptime_eval, ctx, block);
   EXPECT_EQ(sig.kind, COMPTIME_SIGNAL_NONE);
+  allocator_free(allocator, &block);
   checker_dispose(ctx);
 }
 
@@ -473,6 +492,7 @@ TEST_F(dt_comptime_eval, eval_group) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, grp);
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->int_val.s, 42);
+  allocator_free(allocator, &grp);
   checker_dispose(ctx);
 }
 
@@ -490,6 +510,7 @@ TEST_F(dt_comptime_eval, eval_comma) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, comma);
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->int_val.s, 2); /* comma returns right */
+  allocator_free(allocator, &comma);
   checker_dispose(ctx);
 }
 
@@ -509,6 +530,7 @@ TEST_F(dt_comptime_eval, eval_bitwise_and) {
   EXPECT_EQ(v->kind, COMPTIME_VALUE_INT) << "got kind=" << v->kind;
   if (v->kind == COMPTIME_VALUE_INT)
     EXPECT_EQ(v->int_val.s, 8); /* 12 & 10 = 8 */
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -524,6 +546,7 @@ TEST_F(dt_comptime_eval, eval_bitwise_or) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, bin);
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->int_val.s, 14); /* 12 | 10 = 14 */
+  allocator_free(allocator, &bin);
   checker_dispose(ctx);
 }
 
@@ -533,23 +556,25 @@ TEST_F(dt_comptime_eval, break_in_for) {
   checker_t ctx = checker_create(allocator);
 
   /* for init: x:i32=0, cond: true, incr: none, body: { break } */
-  node_t init = cubec_ast_create_var_decl_stmt(allocator, T, "x",
-                  cubec_ast_create_identifier(allocator, T, "i32"),
-                  cubec_ast_create_numeric(allocator, T, "0",
+  node_t type_id = cubec_ast_create_identifier(allocator, T, "i32");
+  node_t init_val = cubec_ast_create_numeric(allocator, T, "0",
                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                      CUBEC_LITERAL_NUMERIC_TYPE_I32),
-                  false, false, false, false);
+                      CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t init = cubec_ast_create_var_decl_stmt(allocator, T, "x",
+                  type_id, init_val, false, false, false, false);
 
+  node_t break_stmt = cubec_ast_create_break_stmt(allocator, T);
   vec_t body_stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(body_stmts, cubec_ast_create_break_stmt(allocator, T));
+  vec_push(body_stmts, break_stmt);
   node_t body = cubec_ast_create_block(allocator, T, body_stmts);
 
+  node_t true_id = cubec_ast_create_identifier(allocator, T, "true");
   node_t for_stmt = cubec_ast_create_for_stmt(allocator, T, init,
-                    cubec_ast_create_identifier(allocator, T, "true"),
-                    NULL, body);
+                    true_id, NULL, body);
 
   comptime_signal_t sig = comptime_eval_exec_comptime_for(ctx->comptime_eval, ctx, for_stmt);
   EXPECT_EQ(sig.kind, COMPTIME_SIGNAL_NONE);
+  allocator_free(allocator, &for_stmt);
   checker_dispose(ctx);
 }
 
@@ -557,35 +582,37 @@ TEST_F(dt_comptime_eval, continue_in_for) {
   checker_t ctx = checker_create(allocator);
 
   /* for init: x:i32=0, cond: x<3, incr: x=x+1, body: { continue } */
+  node_t type_id = cubec_ast_create_identifier(allocator, T, "i32");
+  node_t init_val = cubec_ast_create_numeric(allocator, T, "0",
+                      CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                      CUBEC_LITERAL_NUMERIC_TYPE_I32);
   node_t init = cubec_ast_create_var_decl_stmt(allocator, T, "x",
-                  cubec_ast_create_identifier(allocator, T, "i32"),
-                  cubec_ast_create_numeric(allocator, T, "0",
+                  type_id, init_val, false, false, false, false);
+
+  node_t x_id = cubec_ast_create_identifier(allocator, T, "x");
+  node_t three = cubec_ast_create_numeric(allocator, T, "3",
                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                      CUBEC_LITERAL_NUMERIC_TYPE_I32),
-                  false, false, false, false);
+                      CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t cond = cubec_ast_create_binary(allocator, T, "<", x_id, three);
 
-  node_t cond = cubec_ast_create_binary(allocator, T, "<",
-                  cubec_ast_create_identifier(allocator, T, "x"),
-                  cubec_ast_create_numeric(allocator, T, "3",
-                      CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                      CUBEC_LITERAL_NUMERIC_TYPE_I32));
+  node_t one = cubec_ast_create_numeric(allocator, T, "1",
+                  CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                  CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t x_id2 = cubec_ast_create_identifier(allocator, T, "x");
+  node_t x_id3 = cubec_ast_create_identifier(allocator, T, "x");
+  node_t x_plus_1 = cubec_ast_create_binary(allocator, T, "+", x_id2, one);
+  node_t incr = cubec_ast_create_assignment(allocator, T, "=", x_id3, x_plus_1);
 
-  node_t incr = cubec_ast_create_assignment(allocator, T, "=",
-                  cubec_ast_create_identifier(allocator, T, "x"),
-                  cubec_ast_create_binary(allocator, T, "+",
-                      cubec_ast_create_identifier(allocator, T, "x"),
-                      cubec_ast_create_numeric(allocator, T, "1",
-                          CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                          CUBEC_LITERAL_NUMERIC_TYPE_I32)));
-
+  node_t continue_stmt = cubec_ast_create_continue_stmt(allocator, T);
   vec_t body_stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(body_stmts, cubec_ast_create_continue_stmt(allocator, T));
+  vec_push(body_stmts, continue_stmt);
   node_t body = cubec_ast_create_block(allocator, T, body_stmts);
 
   node_t for_stmt = cubec_ast_create_for_stmt(allocator, T, init, cond, incr, body);
 
   comptime_signal_t sig = comptime_eval_exec_comptime_for(ctx->comptime_eval, ctx, for_stmt);
   EXPECT_EQ(sig.kind, COMPTIME_SIGNAL_NONE);
+  allocator_free(allocator, &for_stmt);
   checker_dispose(ctx);
 }
 
@@ -605,6 +632,7 @@ TEST_F(dt_comptime_eval, eval_string_slice) {
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_STRING);
   EXPECT_STREQ(comptime_value_get_string(v), "hello");
+  allocator_free(allocator, &slice);
   checker_dispose(ctx);
 }
 
@@ -621,6 +649,7 @@ TEST_F(dt_comptime_eval, eval_string_slice_middle) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, slice);
   ASSERT_NE(v, nullptr);
   EXPECT_STREQ(comptime_value_get_string(v), "world");
+  allocator_free(allocator, &slice);
   checker_dispose(ctx);
 }
 
@@ -628,13 +657,17 @@ TEST_F(dt_comptime_eval, eval_string_slice_middle) {
 
 TEST_F(dt_comptime_eval, eval_composite_slice) {
   checker_t ctx = checker_create(allocator);
-  /* create a composite with 5 int values [10,20,30,40,50] */
-  vec_t fields = cubec_ast_create_vec(allocator, true);
+  /* create an array composite with 5 int values [10,20,30,40,50] */
+  size_t elem_size = ctx->builtin_i32->impl->size;  /* 4 bytes per i32 */
+  size_t data_size = 5 * elem_size;
+  comptime_value_t comp = comptime_value_create_composite(
+      allocator, NULL, ctx->builtin_i32, data_size);
   for (int i = 0; i < 5; i++) {
-    vec_push(fields, comptime_value_create_int(allocator,
-                  (i + 1) * 10, (i + 1) * 10, 32, true, ctx->builtin_i32));
+    comptime_value_t elem = comptime_value_create_int(allocator,
+                            (i + 1) * 10, (i + 1) * 10, 32, true, ctx->builtin_i32);
+    comptime_value_set_index(comp, i, elem);
+    allocator_free(allocator, &elem);
   }
-  comptime_value_t comp = comptime_value_create_composite(allocator, NULL, fields, NULL, 5);
 
   /* bind composite to env so slice can find it via identifier */
   comptime_env_bind(ctx->comptime_eval->global_env, "arr", comp);
@@ -650,15 +683,21 @@ TEST_F(dt_comptime_eval, eval_composite_slice) {
   comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, slice);
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_COMPOSITE);
-  ASSERT_NE(v->composite.fields, nullptr);
-  EXPECT_EQ(vec_get_size(v->composite.fields), 3u);
+  EXPECT_EQ(v->composite.data_size, 3u * elem_size);
   /* elements should be 20, 30, 40 */
-  comptime_value_t e0 = (comptime_value_t)vec_get(v->composite.fields, 0);
-  comptime_value_t e1 = (comptime_value_t)vec_get(v->composite.fields, 1);
-  comptime_value_t e2 = (comptime_value_t)vec_get(v->composite.fields, 2);
+  comptime_value_t e0 = comptime_value_get_index(v, 0, allocator);
+  comptime_value_t e1 = comptime_value_get_index(v, 1, allocator);
+  comptime_value_t e2 = comptime_value_get_index(v, 2, allocator);
+  ASSERT_NE(e0, nullptr);
+  ASSERT_NE(e1, nullptr);
+  ASSERT_NE(e2, nullptr);
   EXPECT_EQ(e0->int_val.s, 20);
   EXPECT_EQ(e1->int_val.s, 30);
   EXPECT_EQ(e2->int_val.s, 40);
+  allocator_free(allocator, &e0);
+  allocator_free(allocator, &e1);
+  allocator_free(allocator, &e2);
+  allocator_free(allocator, &slice);
   checker_dispose(ctx);
 }
 
@@ -671,22 +710,23 @@ TEST_F(dt_comptime_eval, do_while_basic) {
   comptime_env_bind(ctx->comptime_eval->global_env, "x",
       comptime_value_create_int(allocator, 0, 0, 32, true, ctx->builtin_i32));
 
-  vec_t body_stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(body_stmts, cubec_ast_create_expr_stmt(allocator, T,
-      cubec_ast_create_assignment(allocator, T, "=",
-          cubec_ast_create_identifier(allocator, T, "x"),
-          cubec_ast_create_binary(allocator, T, "+",
-              cubec_ast_create_identifier(allocator, T, "x"),
-              cubec_ast_create_numeric(allocator, T, "1",
+  node_t x_id = cubec_ast_create_identifier(allocator, T, "x");
+  node_t one = cubec_ast_create_numeric(allocator, T, "1",
                   CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                  CUBEC_LITERAL_NUMERIC_TYPE_I32)))));
+                  CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t x_id_b = cubec_ast_create_identifier(allocator, T, "x");
+  node_t x_plus_1 = cubec_ast_create_binary(allocator, T, "+", x_id, one);
+  node_t asgn = cubec_ast_create_assignment(allocator, T, "=", x_id_b, x_plus_1);
+  node_t expr_stmt = cubec_ast_create_expr_stmt(allocator, T, asgn);
+  vec_t body_stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(body_stmts, expr_stmt);
   node_t body = cubec_ast_create_block(allocator, T, body_stmts);
 
-  node_t cond = cubec_ast_create_binary(allocator, T, "<",
-      cubec_ast_create_identifier(allocator, T, "x"),
-      cubec_ast_create_numeric(allocator, T, "3",
-          CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-          CUBEC_LITERAL_NUMERIC_TYPE_I32));
+  node_t x_id2 = cubec_ast_create_identifier(allocator, T, "x");
+  node_t three = cubec_ast_create_numeric(allocator, T, "3",
+                  CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                  CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t cond = cubec_ast_create_binary(allocator, T, "<", x_id2, three);
 
   node_t dw = cubec_ast_create_do_while_stmt(allocator, T, body, cond);
   comptime_signal_t sig = comptime_eval_exec_stmt(ctx->comptime_eval, ctx, dw);
@@ -695,8 +735,63 @@ TEST_F(dt_comptime_eval, do_while_basic) {
   comptime_value_t v = comptime_env_lookup(ctx->comptime_eval->global_env, "x");
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->int_val.s, 3);
+  allocator_free(allocator, &dw);
   checker_dispose(ctx);
 }
 
-/* TODO: composite_field_assign - member assignment needs fix for clone semantics */
-/* Currently the assignment modifies a clone, not the original in environment */
+/* ===== composite field assignment ===== */
+
+TEST_F(dt_comptime_eval, composite_field_assign) {
+  checker_t ctx = checker_create(allocator);
+
+  /* create a struct type {x: i32, y: i32} via the type system */
+  semantic_type_t pt_type = semantic_type_create_named(allocator, "Point", TYPE_STRUCT);
+  struct symbol *fx = (struct symbol *)allocator_alloc(allocator, sizeof(struct symbol));
+  fx->name = "x"; fx->kind = SYMBOL_FIELD; fx->field.type = ctx->builtin_i32;
+  fx->field.index = 0; fx->field.offset = 0; fx->field.is_pub = false;
+  struct symbol *fy = (struct symbol *)allocator_alloc(allocator, sizeof(struct symbol));
+  fy->name = "y"; fy->kind = SYMBOL_FIELD; fy->field.type = ctx->builtin_i32;
+  fy->field.index = 1; fy->field.offset = 4; fy->field.is_pub = false;
+  vec_init_t fvi = {.auto_dispose = false};
+  vec_t type_fields = (vec_t)allocator_create(allocator, &g_vec_type, &fvi);
+  vec_push(type_fields, fx);
+  vec_push(type_fields, fy);
+  pt_type->impl->struct_type.fields = type_fields;
+  type_layout_compute(pt_type, 8);
+
+  /* create composite {x: 10, y: 20} */
+  comptime_value_t comp = comptime_value_create_composite(
+      allocator, pt_type, NULL, pt_type->impl->size);
+  comptime_value_t init_x = comptime_value_create_int(allocator, 10, 10, 32, true, ctx->builtin_i32);
+  comptime_value_t init_y = comptime_value_create_int(allocator, 20, 20, 32, true, ctx->builtin_i32);
+  comptime_value_set_field(comp, "x", init_x);
+  comptime_value_set_field(comp, "y", init_y);
+  allocator_free(allocator, &init_x);
+  allocator_free(allocator, &init_y);
+  comptime_env_bind(ctx->comptime_eval->global_env, "pt", comp);
+
+  /* pt.x = 99 */
+  node_t pt_id = cubec_ast_create_identifier(allocator, T, "pt");
+  node_t target = cubec_ast_create_member(allocator, T, pt_id, "x");
+  node_t val = cubec_ast_create_numeric(allocator, T, "99",
+                  CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                  CUBEC_LITERAL_NUMERIC_TYPE_I32);
+  node_t asgn = cubec_ast_create_assignment(allocator, T, "=", target, val);
+  comptime_value_t v = comptime_eval_expr(ctx->comptime_eval, ctx, asgn);
+  ASSERT_NE(v, nullptr);
+  EXPECT_EQ(v->int_val.s, 99);
+
+  /* verify the composite was updated */
+  comptime_value_t updated = comptime_env_lookup(ctx->comptime_eval->global_env, "pt");
+  ASSERT_NE(updated, nullptr);
+  comptime_value_t x_field = comptime_value_get_field(updated, "x", allocator);
+  ASSERT_NE(x_field, nullptr);
+  EXPECT_EQ(x_field->int_val.s, 99);
+  allocator_free(allocator, &x_field);
+  allocator_free(allocator, &asgn);
+  /* pt_type is not in ctx->all_types, so we must free it manually */
+  allocator_free(allocator, &pt_type);
+  allocator_free(allocator, &fx);
+  allocator_free(allocator, &fy);
+  checker_dispose(ctx);
+}
