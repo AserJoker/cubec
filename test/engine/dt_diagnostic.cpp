@@ -118,6 +118,8 @@ TEST_F(dt_diagnostic, emit_with_source) {
   EXPECT_NE(strstr(buf, "test.cubec:1:14"), nullptr);
   EXPECT_NE(strstr(buf, "^"), nullptr);
 
+  remove(tmp_path);
+
   allocator_free(allocator, &list);
   allocator_free(allocator, &cache);
 }
