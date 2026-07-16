@@ -598,9 +598,13 @@ static void _evaluate_comptime_for(checker_t ctx,
 static void _evaluate_test(checker_t ctx,
                            cubec_statement_test_t node) {
   if (!ctx->comptime_eval) return;
+  ctx->test_count++;
+  int errors_before = ctx->error_count;
   comptime_signal_t sig =
       comptime_eval_exec_block(ctx->comptime_eval, ctx, node->body);
-  if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
+  if (sig.kind == COMPTIME_SIGNAL_ERROR || ctx->error_count > errors_before) {
+    ctx->test_fail_count++;
+  }
 }
 
 void checker_evaluate_declarations(checker_t ctx, node_t program) {

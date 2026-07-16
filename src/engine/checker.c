@@ -166,6 +166,10 @@ static void _checker_init(void *self, allocator_t allocator, void *arg) {
 
   /* Init comptime evaluator */
   ctx->comptime_eval = comptime_eval_create(allocator);
+
+  /* Init test tracking */
+  ctx->test_count = 0;
+  ctx->test_fail_count = 0;
 }
 
 static void _checker_dispose(void *self, allocator_t allocator) {

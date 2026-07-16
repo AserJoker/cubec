@@ -109,12 +109,19 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     comptime_value_t cond = _comptime_eval_expr(eval, ctx, si->condition);
     if (!cond || cond->kind == COMPTIME_VALUE_ERROR) return _eval_signal_error();
     comptime_signal_t result;
-    if (comptime_value_is_truthy(cond))
-      result = _comptime_exec_block(eval, ctx, si->then_branch);
-    else if (si->else_branch)
-      result = _comptime_exec_block(eval, ctx, si->else_branch);
-    else
+    if (comptime_value_is_truthy(cond)) {
+      if (si->then_branch && si->then_branch->kind == CUBEC_NODE_STATEMENT_BLOCK)
+        result = _comptime_exec_block(eval, ctx, si->then_branch);
+      else
+        result = _comptime_exec_stmt(eval, ctx, si->then_branch);
+    } else if (si->else_branch) {
+      if (si->else_branch->kind == CUBEC_NODE_STATEMENT_BLOCK)
+        result = _comptime_exec_block(eval, ctx, si->else_branch);
+      else
+        result = _comptime_exec_stmt(eval, ctx, si->else_branch);
+    } else {
       result = _eval_signal_none();
+    }
     return result;
   }
 
@@ -506,10 +513,16 @@ comptime_signal_t comptime_eval_exec_comptime_if(comptime_eval_t eval,
   cubec_statement_comptime_if_t ci = (cubec_statement_comptime_if_t)node;
   comptime_value_t cond = _comptime_eval_expr(eval, ctx, ci->condition);
   if (!cond || cond->kind == COMPTIME_VALUE_ERROR) return _eval_signal_error();
-  if (comptime_value_is_truthy(cond))
-    return _comptime_exec_block(eval, ctx, ci->then_branch);
-  if (ci->else_branch)
-    return _comptime_exec_block(eval, ctx, ci->else_branch);
+  if (comptime_value_is_truthy(cond)) {
+    if (ci->then_branch && ci->then_branch->kind == CUBEC_NODE_STATEMENT_BLOCK)
+      return _comptime_exec_block(eval, ctx, ci->then_branch);
+    return _comptime_exec_stmt(eval, ctx, ci->then_branch);
+  }
+  if (ci->else_branch) {
+    if (ci->else_branch->kind == CUBEC_NODE_STATEMENT_BLOCK)
+      return _comptime_exec_block(eval, ctx, ci->else_branch);
+    return _comptime_exec_stmt(eval, ctx, ci->else_branch);
+  }
   return _eval_signal_none();
 }
 

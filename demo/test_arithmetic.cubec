@@ -1,0 +1,11 @@
+test "i32_add" { assert(1 + 2 == 3); }
+test "i32_sub" { assert(10 - 3 == 7); }
+test "i32_mul" { assert(6 * 7 == 42); }
+test "i32_div" { assert(10 / 3 == 3); }
+test "i32_mod" { assert(10 % 3 == 1); }
+test "i32_neg" { assert(-5 + 10 == 5); }
+test "cmp_lt" { assert(1 < 2); }
+test "cmp_gt" { assert(3 > 2); }
+test "cmp_eq" { assert(42 == 42); }
+test "cmp_ne" { assert(1 != 2); }
+test "precedence_mul_add" { assert(2 + 3 * 4 == 14); }

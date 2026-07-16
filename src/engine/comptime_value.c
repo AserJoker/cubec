@@ -221,11 +221,16 @@ bool comptime_value_equals(comptime_value_t a, comptime_value_t b) {
   case COMPTIME_VALUE_NIL:    return true;
   case COMPTIME_VALUE_BOOL:   return a->bool_val == b->bool_val;
   case COMPTIME_VALUE_INT:
-    if (a->int_val.is_signed && b->int_val.is_signed)
-      return a->int_val.s == b->int_val.s;
-    if (!a->int_val.is_signed && !b->int_val.is_signed)
-      return a->int_val.u == b->int_val.u;
-    return false;
+    if (a->int_val.is_signed == b->int_val.is_signed) {
+      return a->int_val.is_signed ? a->int_val.s == b->int_val.s
+                                  : a->int_val.u == b->int_val.u;
+    }
+    /* Cross signed/unsigned: compare as unsigned if both values are
+     * non-negative in their respective representation */
+    if (a->int_val.is_signed && a->int_val.s < 0) return false;
+    if (b->int_val.is_signed && b->int_val.s < 0) return false;
+    return a->int_val.is_signed ? (uint64_t)a->int_val.s == b->int_val.u
+                                : a->int_val.u == (uint64_t)b->int_val.s;
   case COMPTIME_VALUE_FLOAT:  return a->float_val.value == b->float_val.value;
   case COMPTIME_VALUE_CHAR:   return a->char_val == b->char_val;
   case COMPTIME_VALUE_STRING: {

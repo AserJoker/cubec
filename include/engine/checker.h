@@ -57,6 +57,10 @@ struct checker {
 
   /* comptime evaluator */
   struct comptime_eval *comptime_eval;
+
+  /* test block tracking */
+  int test_count;
+  int test_fail_count;
 };
 
 typedef struct checker *checker_t;
