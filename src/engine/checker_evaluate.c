@@ -2,6 +2,7 @@
 #include "engine/checker_evaluate.h"
 #include "engine/checker_type_util.h"
 #include "engine/checker_check_expr.h"
+#include "engine/checker_check_stmt.h"
 #include "engine/comptime_eval.h"
 #include "engine/resolver.h"
 #include "engine/symbol.h"
@@ -389,6 +390,40 @@ static void _evaluate_function(checker_t ctx,
   if (!sym || sym->kind != SYMBOL_FUNCTION) return;
   if (sym->state == SYMBOL_EVALUATED) return;
 
+  /* Builtin function: resolve type signature only, no body, no comptime binding */
+  if (node->is_builtin) {
+    semantic_type_t ret_type = node->return_type
+        ? resolver_resolve_type(ctx, node->return_type)
+        : ctx->builtin_void;
+
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+    if (node->arguments) {
+      size_t count = vec_get_size(node->arguments);
+      for (size_t i = 0; i < count; i++) {
+        node_t arg = (node_t)vec_get(node->arguments, i);
+        if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
+          cubec_function_argument_t farg = (cubec_function_argument_t)arg;
+          if (farg->type) {
+            semantic_type_t pt = resolver_resolve_type(ctx, farg->type);
+            vec_push(params, pt);
+          }
+        }
+      }
+    }
+
+    semantic_type_t ftype = semantic_type_create_function(
+        ctx->allocator, ret_type, params, node->is_c_variadic);
+    type_hash_ensure(ftype);
+    vec_push(ctx->all_types, ftype);
+
+    sym->function.type = ftype;
+    sym->function.is_comptime = false;
+    sym->function.ast_node = NULL;
+    sym->state = SYMBOL_EVALUATED;
+    return;
+  }
+
   /* Generic function: mark evaluated, skip signature resolution */
   if (node->generic_params) {
     sym->state = SYMBOL_EVALUATED;
@@ -598,11 +633,23 @@ static void _evaluate_comptime_for(checker_t ctx,
 static void _evaluate_test(checker_t ctx,
                            cubec_statement_test_t node) {
   if (!ctx->comptime_eval) return;
+
+  /* Check the test body for type errors before evaluating */
+  int errors_before_check = ctx->error_count;
+  _check_statement(ctx, node->body, NULL);
+
   ctx->test_count++;
-  int errors_before = ctx->error_count;
+
+  /* If checker found errors, skip eval and mark test as failed */
+  if (ctx->error_count > errors_before_check) {
+    ctx->test_fail_count++;
+    return;
+  }
+
+  int errors_before_eval = ctx->error_count;
   comptime_signal_t sig =
       comptime_eval_exec_block(ctx->comptime_eval, ctx, node->body);
-  if (sig.kind == COMPTIME_SIGNAL_ERROR || ctx->error_count > errors_before) {
+  if (sig.kind == COMPTIME_SIGNAL_ERROR || ctx->error_count > errors_before_eval) {
     ctx->test_fail_count++;
   }
 }

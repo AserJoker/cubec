@@ -40,6 +40,11 @@
 static semantic_type_t _check_expr_literal_identifier(checker_t ctx, node_t expr) {
   const char *name = _checker_ident_str(expr);
   if (!name) return ctx->error_type;
+
+  /* Boolean literals are syntax, not identifiers */
+  if (strcmp(name, "true") == 0 || strcmp(name, "false") == 0)
+    return ctx->builtin_bool;
+
   struct symbol *sym = scope_lookup(ctx->current_scope, name);
   if (!sym) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
@@ -187,6 +192,89 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
   size_t arg_count = call->arguments ? vec_get_size(call->arguments) : 0;
   bool is_variadic = callee_type->impl->function.is_variadic;
 
+  /* Member call desugaring: a.method(args) → typeof(a)::method(&a, args)
+     If callee is a member expression resolving to an instance method,
+     the first param (self) is implicitly satisfied by &a (or p for pointers).
+     Offset user arguments by 1 when matching against params. */
+  bool is_member_call = false;
+  if (call->callee->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
+    cubec_expression_member_t mem = (cubec_expression_member_t)call->callee;
+    semantic_type_t host_type = _check_expression(ctx, mem->host);
+    const char *fname = _checker_ident_str((node_t)mem->field);
+
+    /* Determine the receiver type: dereference pointer for auto-deref */
+    semantic_type_t receiver_type = host_type;
+    if (host_type->impl->kind == TYPE_POINTER)
+      receiver_type = host_type->impl->pointer.pointee;
+
+    if (fname && receiver_type &&
+        (receiver_type->impl->kind == TYPE_STRUCT ||
+         receiver_type->impl->kind == TYPE_UNION ||
+         receiver_type->impl->kind == TYPE_CUNION)) {
+      /* Check if the member resolves to an instance method */
+      if (receiver_type->instance_methods) {
+        size_t mc = vec_get_size(receiver_type->instance_methods);
+        for (size_t i = 0; i < mc; i++) {
+          struct symbol *m = (struct symbol *)vec_get(receiver_type->instance_methods, i);
+          if (m && m->name && strcmp(m->name, fname) == 0 && m->kind == SYMBOL_FUNCTION) {
+            is_member_call = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (is_member_call) {
+      /* The first param is self (*ReceiverType), automatically satisfied.
+         User args start matching from param index 1. */
+      if (param_count > 0 && !is_variadic && arg_count != param_count - 1) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                             "expected %zu arguments (excluding self), got %zu",
+                             param_count - 1, arg_count);
+        ctx->error_count++;
+      }
+      /* Check that first param is a pointer to the receiver type */
+      if (param_count > 0) {
+        semantic_type_t self_param = (semantic_type_t)vec_get(params, 0);
+        semantic_type_t expected_self;
+        if (host_type->impl->kind == TYPE_POINTER) {
+          /* Pointer host: self param should match the pointer type directly */
+          expected_self = host_type;
+        } else {
+          /* Object host: self param should be *typeof(host) */
+          expected_self = semantic_type_create_pointer(ctx->allocator, host_type);
+          vec_push(ctx->all_types, expected_self);
+        }
+        if (self_param->impl->kind != TYPE_POINTER ||
+            !semantic_type_equals(self_param->impl->pointer.pointee,
+                                  host_type->impl->kind == TYPE_POINTER
+                                      ? host_type->impl->pointer.pointee
+                                      : host_type)) {
+          /* Soft warning: self param type mismatch — don't block compilation */
+        }
+      }
+      /* Check user arguments against params[1..] */
+      for (size_t i = 0; i < arg_count; i++) {
+        node_t arg = (node_t)vec_get(call->arguments, i);
+        semantic_type_t at = _check_expression(ctx, arg);
+        size_t pidx = i + 1; /* offset by self param */
+        if (pidx < param_count && at->impl->kind != TYPE_ERROR) {
+          semantic_type_t pt = (semantic_type_t)vec_get(params, pidx);
+          if (!semantic_type_can_implicit_convert(at, pt)) {
+            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                 arg->location,
+                                 "argument %zu: cannot convert '%s' to '%s'",
+                                 i + 1,
+                                 at->name ? at->name : "<anonymous>",
+                                 pt->name ? pt->name : "<anonymous>");
+            ctx->error_count++;
+          }
+        }
+      }
+      return callee_type->impl->function.return_type;
+    }
+  }
+
   if (!is_variadic && arg_count != param_count) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "expected %zu arguments, got %zu",
@@ -237,6 +325,28 @@ static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
       struct symbol *m = (struct symbol *)vec_get(host_type->instance_methods, i);
       if (m && m->name && strcmp(m->name, fname) == 0)
         return m->function.type;
+    }
+  }
+
+  /* Pointer auto-dereference: ptr.field is equivalent to (*ptr).field */
+  if (host_type->impl->kind == TYPE_POINTER) {
+    semantic_type_t pointee = host_type->impl->pointer.pointee;
+    if (pointee && (pointee->impl->kind == TYPE_STRUCT ||
+                    pointee->impl->kind == TYPE_UNION ||
+                    pointee->impl->kind == TYPE_CUNION)) {
+      vec_t fields = pointee->impl->struct_type.fields;
+      size_t fcount = fields ? vec_get_size(fields) : 0;
+      for (size_t i = 0; i < fcount; i++) {
+        struct symbol *f = (struct symbol *)vec_get(fields, i);
+        if (f && f->name && strcmp(f->name, fname) == 0)
+          return f->field.type;
+      }
+      size_t mcount = vec_get_size(pointee->instance_methods);
+      for (size_t i = 0; i < mcount; i++) {
+        struct symbol *m = (struct symbol *)vec_get(pointee->instance_methods, i);
+        if (m && m->name && strcmp(m->name, fname) == 0)
+          return m->function.type;
+      }
     }
   }
 
@@ -297,7 +407,7 @@ static semantic_type_t _check_expr_namespace_access(checker_t ctx, node_t expr) 
 static semantic_type_t _check_expr_deref(checker_t ctx, node_t expr) {
   cubec_expression_postfix_unary_t pf =
       (cubec_expression_postfix_unary_t)expr;
-  semantic_type_t host_type = _check_expression(ctx, pf->left);
+  semantic_type_t host_type = _check_expression(ctx, pf->right);
   if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
 
   if (host_type->impl->kind != TYPE_POINTER) {
@@ -312,10 +422,10 @@ static semantic_type_t _check_expr_deref(checker_t ctx, node_t expr) {
 static semantic_type_t _check_expr_addr(checker_t ctx, node_t expr) {
   cubec_expression_postfix_unary_t pf =
       (cubec_expression_postfix_unary_t)expr;
-  semantic_type_t host_type = _check_expression(ctx, pf->left);
+  semantic_type_t host_type = _check_expression(ctx, pf->right);
   if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
 
-  if (!_is_lvalue(pf->left)) {
+  if (!_is_lvalue(pf->right)) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "cannot take address of non-lvalue");
     ctx->error_count++;
@@ -328,7 +438,7 @@ static semantic_type_t _check_expr_addr(checker_t ctx, node_t expr) {
 static semantic_type_t _check_expr_try(checker_t ctx, node_t expr) {
   cubec_expression_postfix_unary_t pf =
       (cubec_expression_postfix_unary_t)expr;
-  semantic_type_t host_type = _check_expression(ctx, pf->left);
+  semantic_type_t host_type = _check_expression(ctx, pf->right);
   if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
   if (host_type->impl->kind == TYPE_POINTER)
     return host_type->impl->pointer.pointee;

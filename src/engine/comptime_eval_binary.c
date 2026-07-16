@@ -50,6 +50,16 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
 
   comptime_value_t result = NULL;
 
+  /* Pointer arithmetic is forbidden in Cubec */
+  if ((lv->kind == COMPTIME_VALUE_POINTER || rv->kind == COMPTIME_VALUE_POINTER) &&
+      (strcmp(op, "+") == 0 || strcmp(op, "-") == 0 ||
+       strcmp(op, "*") == 0 || strcmp(op, "/") == 0 || strcmp(op, "%") == 0)) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                         "pointer arithmetic is forbidden in Cubec");
+    ctx->error_count++;
+    return _eval_error_val(eval);
+  }
+
   /* Arithmetic */
   if (strcmp(op, "+") == 0) {
     if (lv->kind == COMPTIME_VALUE_INT && rv->kind == COMPTIME_VALUE_INT) {

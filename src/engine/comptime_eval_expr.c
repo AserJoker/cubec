@@ -447,6 +447,75 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
     }
   }
 
+  /* --- member call desugaring --- */
+  /* a.method(args) → typeof(a)::method(&a, args) for objects,
+                       typeof(a)::method(a, args) for pointers */
+  if (call->callee->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
+    cubec_expression_member_t mem = (cubec_expression_member_t)call->callee;
+    comptime_value_t host = _comptime_eval_expr(eval, ctx, mem->host);
+    if (!host || host->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    const char *fname = _eval_ident_str((node_t)mem->field);
+
+    /* Determine receiver type (auto-deref pointers for method lookup) */
+    semantic_type_t receiver_type = host->type;
+    bool host_is_pointer = (host->kind == COMPTIME_VALUE_POINTER);
+    if (host_is_pointer && host->type && host->type->impl->kind == TYPE_POINTER)
+      receiver_type = host->type->impl->pointer.pointee;
+
+    if (fname && receiver_type &&
+        (receiver_type->impl->kind == TYPE_STRUCT ||
+         receiver_type->impl->kind == TYPE_UNION ||
+         receiver_type->impl->kind == TYPE_CUNION) &&
+        receiver_type->instance_methods) {
+      size_t mc = vec_get_size(receiver_type->instance_methods);
+      for (size_t i = 0; i < mc; i++) {
+        struct symbol *m = (struct symbol *)vec_get(receiver_type->instance_methods, i);
+        if (m && m->name && strcmp(m->name, fname) == 0 && m->kind == SYMBOL_FUNCTION) {
+          comptime_value_t method_val = _comptime_create_method_value(eval, ctx, m);
+          if (!method_val) return _eval_error_val(eval);
+          comptime_env_track_temp(eval->current_env, method_val);
+
+          /* Compute self argument: &host for objects, host directly for pointers */
+          comptime_value_t self_val;
+          if (host_is_pointer) {
+            /* Pointer host: pass the pointer value directly */
+            self_val = comptime_value_clone(eval->allocator, host);
+          } else {
+            /* Object host: create pointer to host (take address) */
+            uint64_t addr = comptime_alloc_allocate(eval->valloc,
+                                                     comptime_value_clone(eval->allocator, host),
+                                                     eval->valloc->scope_depth);
+            semantic_type_t ptr_type = host->type
+                ? semantic_type_create_pointer(eval->allocator, host->type)
+                : NULL;
+            if (ptr_type) vec_push(ctx->all_types, ptr_type);
+            self_val = comptime_value_create_pointer(eval->allocator, addr, ptr_type);
+          }
+
+          /* Build args: [self, user_arg0, user_arg1, ...] */
+          size_t acount = call->arguments ? vec_get_size(call->arguments) : 0;
+          comptime_value_t *args =
+              (comptime_value_t *)allocator_alloc(eval->allocator,
+                                                   sizeof(comptime_value_t) * (acount + 1));
+          args[0] = self_val;
+          for (size_t j = 0; j < acount; j++) {
+            comptime_value_t arg = _comptime_eval_expr(eval, ctx,
+                                                         (node_t)vec_get(call->arguments, j));
+            if (!arg || arg->kind == COMPTIME_VALUE_ERROR) {
+              allocator_free(eval->allocator, &args);
+              return _eval_error_val(eval);
+            }
+            args[j + 1] = comptime_value_clone(eval->allocator, arg);
+          }
+          comptime_value_t result = _eval_call_function(eval, ctx, method_val, args, acount + 1, node);
+          allocator_free(eval->allocator, &args);
+          return result;
+        }
+      }
+    }
+    /* Not an instance method — fall through to normal dispatch */
+  }
+
   /* --- normal call dispatch --- */
   comptime_value_t callee = _comptime_eval_expr(eval, ctx, call->callee);
   if (!callee) return _eval_error_val(eval);
@@ -778,6 +847,7 @@ static comptime_value_t _eval_addr(comptime_eval_t eval, checker_t ctx,
       semantic_type_t ptr_type = existing->type
           ? semantic_type_create_pointer(eval->allocator, existing->type)
           : NULL;
+      if (ptr_type) vec_push(ctx->all_types, ptr_type);
       return _eval_temp(eval, comptime_value_create_pointer(eval->allocator, a, ptr_type));
     }
   }
@@ -788,6 +858,7 @@ static comptime_value_t _eval_addr(comptime_eval_t eval, checker_t ctx,
   semantic_type_t ptr_type = val->type
       ? semantic_type_create_pointer(eval->allocator, val->type)
       : NULL;
+  if (ptr_type) vec_push(ctx->all_types, ptr_type);
   return _eval_temp(eval, comptime_value_create_pointer(eval->allocator, a, ptr_type));
 }
 

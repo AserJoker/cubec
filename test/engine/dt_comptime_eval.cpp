@@ -29,6 +29,17 @@ static location_t test_loc() {
 
 #define T test_loc()
 
+/** Create AST node for: builtin func assert(condition: bool): void; */
+static node_t create_builtin_assert(allocator_t alloc) {
+  vec_t args = cubec_ast_create_vec(alloc, true);
+  node_t param = cubec_ast_create_func_arg(alloc, T, "condition",
+      cubec_ast_create_identifier(alloc, T, "bool"));
+  vec_push(args, param);
+  return cubec_ast_create_func_stmt(alloc, T, "assert", args,
+      cubec_ast_create_identifier(alloc, T, "void"), NULL,
+      false, false, false, true, false, false);
+}
+
 class dt_comptime_eval : public CubecTest {
 protected:
   TEST_ALLOCATOR;
@@ -835,6 +846,7 @@ TEST_F(dt_comptime_eval, test_block_assert_true) {
   node_t test = cubec_ast_create_test_stmt(allocator, T, "ok", body);
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, create_builtin_assert(allocator));
   vec_push(stmts, test);
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
 
@@ -860,6 +872,7 @@ TEST_F(dt_comptime_eval, test_block_assert_false) {
   node_t test = cubec_ast_create_test_stmt(allocator, T, "fail", body);
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, create_builtin_assert(allocator));
   vec_push(stmts, test);
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
 
@@ -897,6 +910,7 @@ TEST_F(dt_comptime_eval, test_block_assert_eq) {
   node_t test = cubec_ast_create_test_stmt(allocator, T, "math", body);
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, create_builtin_assert(allocator));
   vec_push(stmts, test);
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
 
@@ -923,6 +937,7 @@ TEST_F(dt_comptime_eval, test_block_assert_with_message) {
   node_t test = cubec_ast_create_test_stmt(allocator, T, "msg", body);
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, create_builtin_assert(allocator));
   vec_push(stmts, test);
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
 
@@ -961,6 +976,7 @@ TEST_F(dt_comptime_eval, test_block_uses_global_var) {
   node_t test = cubec_ast_create_test_stmt(allocator, T, "var", body);
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, create_builtin_assert(allocator));
   vec_push(stmts, var);
   vec_push(stmts, test);
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
@@ -1017,6 +1033,7 @@ TEST_F(dt_comptime_eval, test_block_calls_function) {
   node_t test = cubec_ast_create_test_stmt(allocator, T, "fn", body);
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, create_builtin_assert(allocator));
   vec_push(stmts, fn);
   vec_push(stmts, test);
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
@@ -1056,6 +1073,7 @@ TEST_F(dt_comptime_eval, test_block_failure_isolation) {
   node_t test2 = cubec_ast_create_test_stmt(allocator, T, "pass", body2);
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
+  vec_push(stmts, create_builtin_assert(allocator));
   vec_push(stmts, test1);
   vec_push(stmts, test2);
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
