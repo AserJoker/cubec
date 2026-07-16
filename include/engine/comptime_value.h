@@ -114,9 +114,11 @@ comptime_value_t comptime_value_read_field(comptime_value_t composite,
                                            semantic_type_t field_type,
                                            allocator_t allocator);
 
-/** @brief Write a field value into composite's raw data at given offset. */
+/** @brief Write a field value into composite's raw data at given offset.
+ *  field_type is used for implicit conversion and to determine write size. */
 bool comptime_value_write_field(comptime_value_t composite,
                                 size_t offset,
+                                semantic_type_t field_type,
                                 comptime_value_t value);
 
 /** @brief Get a field value by name (struct). Returns owned value. */

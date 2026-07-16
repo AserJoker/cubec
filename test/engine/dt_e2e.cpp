@@ -215,16 +215,26 @@ TEST_F(dt_e2e, recursion) {
 /* ===== Batch 6: Struct ===== */
 
 TEST_F(dt_e2e, struct_init_and_access) {
-  /* struct init list syntax is not yet supported in parser for variable
-   * initializers — skip this test until it's implemented */
-  GTEST_SKIP() << "struct init list in var declaration not yet parseable";
+  const char *src =
+    "struct Point { x: i32; y: i32; }\n"
+    "test \"struct_init\" { var p = .Point { .x = 1, .y = 2 }; assert(p.x == 1); assert(p.y == 2); }\n"
+    "test \"struct_assign\" { var p = .Point { .x = 0, .y = 0 }; p.x = 99; assert(p.x == 99); }\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 2);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
 }
 
 /* ===== Batch 7: Type operations ===== */
 
 TEST_F(dt_e2e, typeof_expr) {
-  /* typeof equality comparison not yet supported for TYPE values — skip */
-  GTEST_SKIP() << "typeof type equality comparison not yet implemented";
+  const char *src =
+    "test \"typeof_i32\" { assert(typeof(42) == typeof(1)); }\n"
+    "test \"typeof_i64\" { assert(typeof(1i64) == typeof(1i64)); }\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 2);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
 }
 
 TEST_F(dt_e2e, sizeof_alignof) {

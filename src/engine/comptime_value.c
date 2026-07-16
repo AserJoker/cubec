@@ -1,5 +1,6 @@
 #include "engine/comptime_value.h"
 #include "engine/symbol.h"
+#include "engine/type_layout.h"
 #include "core/string.h"
 #include <stdlib.h>
 #include <string.h>
@@ -392,23 +393,45 @@ comptime_value_t comptime_value_read_field(comptime_value_t composite,
 
 bool comptime_value_write_field(comptime_value_t composite,
                                 size_t offset,
+                                semantic_type_t field_type,
                                 comptime_value_t value) {
   if (!composite || !composite->composite.data || !value)
     return false;
+
+  /* Determine write size from the target field type */
+  size_t field_size = 0;
+  if (field_type && field_type->impl) {
+    type_layout_compute(field_type, 8);
+    field_size = field_type->impl->size;
+  }
+
+  /* Boundary check */
+  if (field_size > 0 && offset + field_size > composite->composite.data_size)
+    return false;
+
   uint8_t *ptr = composite->composite.data + offset;
   switch (value->kind) {
   case COMPTIME_VALUE_BOOL:
     *(bool *)ptr = value->bool_val;
     break;
   case COMPTIME_VALUE_INT: {
-    size_t sz = value->int_val.width / 8;
+    /* Use the target field's size for writing.
+     * Cubec does not allow unsafe narrowing (e.g. i64 -> i32).
+     * If field_type is known, check that the source value fits. */
+    size_t sz = field_size > 0 ? field_size : (value->int_val.width / 8);
     if (sz == 0) sz = 1;
-    if (value->int_val.is_signed) memcpy(ptr, &value->int_val.s, sz);
-    else memcpy(ptr, &value->int_val.u, sz);
+    if (sz > 8) sz = 8;
+    if (value->int_val.is_signed) {
+      int64_t sv = value->int_val.s;
+      memcpy(ptr, &sv, sz);
+    } else {
+      uint64_t uv = value->int_val.u;
+      memcpy(ptr, &uv, sz);
+    }
     break;
   }
   case COMPTIME_VALUE_FLOAT: {
-    if (value->float_val.width == 32) {
+    if (field_size == 4 || value->float_val.width == 32) {
       float f = (float)value->float_val.value;
       memcpy(ptr, &f, 4);
     } else {
@@ -426,11 +449,14 @@ bool comptime_value_write_field(comptime_value_t composite,
     *(string_t *)(void *)ptr = value->string_val;
     break;
   case COMPTIME_VALUE_NIL:
-    memset(ptr, 0, 8);
+    memset(ptr, 0, field_size > 0 ? field_size : 8);
     break;
   case COMPTIME_VALUE_COMPOSITE:
-    if (value->composite.data && value->composite.data_size > 0)
-      memcpy(ptr, value->composite.data, value->composite.data_size);
+    if (value->composite.data && value->composite.data_size > 0) {
+      size_t copy_sz = value->composite.data_size;
+      if (field_size > 0 && copy_sz > field_size) copy_sz = field_size;
+      memcpy(ptr, value->composite.data, copy_sz);
+    }
     break;
   default:
     return false;
@@ -476,7 +502,7 @@ bool comptime_value_set_field(comptime_value_t composite,
   for (size_t i = 0; i < fc; i++) {
     struct symbol *s = (struct symbol *)vec_get(fields, i);
     if (s && s->name && strcmp(s->name, field_name) == 0)
-      return comptime_value_write_field(composite, s->field.offset, value);
+      return comptime_value_write_field(composite, s->field.offset, s->field.type, value);
   }
   return false;
 }
@@ -506,5 +532,5 @@ bool comptime_value_set_index(comptime_value_t composite,
   if (elem_size == 0) return false;
   size_t offset = index * elem_size;
   if (offset + elem_size > composite->composite.data_size) return false;
-  return comptime_value_write_field(composite, offset, value);
+  return comptime_value_write_field(composite, offset, elem_type, value);
 }

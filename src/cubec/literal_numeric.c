@@ -110,28 +110,29 @@ const char *cubec_literal_numeric_type_to_string(
   }
 }
 
-static cubec_literal_numeric_type_t parse_type_suffix(const char *suffix) {
-  if (strcmp(suffix, "i8") == 0)
+static cubec_literal_numeric_type_t parse_type_suffix(const char *suffix,
+                                                       size_t len) {
+  if (len == 2 && strncmp(suffix, "i8", 2) == 0)
     return CUBEC_LITERAL_NUMERIC_TYPE_I8;
-  if (strcmp(suffix, "i16") == 0)
+  if (len == 3 && strncmp(suffix, "i16", 3) == 0)
     return CUBEC_LITERAL_NUMERIC_TYPE_I16;
-  if (strcmp(suffix, "i32") == 0)
+  if (len == 3 && strncmp(suffix, "i32", 3) == 0)
     return CUBEC_LITERAL_NUMERIC_TYPE_I32;
-  if (strcmp(suffix, "i64") == 0)
+  if (len == 3 && strncmp(suffix, "i64", 3) == 0)
     return CUBEC_LITERAL_NUMERIC_TYPE_I64;
-  if (strcmp(suffix, "u8") == 0)
+  if (len == 2 && strncmp(suffix, "u8", 2) == 0)
     return CUBEC_LITERAL_NUMERIC_TYPE_U8;
-  if (strcmp(suffix, "u16") == 0)
+  if (len == 3 && strncmp(suffix, "u16", 3) == 0)
     return CUBEC_LITERAL_NUMERIC_TYPE_U16;
-  if (strcmp(suffix, "u32") == 0)
+  if (len == 3 && strncmp(suffix, "u32", 3) == 0)
     return CUBEC_LITERAL_NUMERIC_TYPE_U32;
-  if (strcmp(suffix, "u64") == 0)
+  if (len == 3 && strncmp(suffix, "u64", 3) == 0)
     return CUBEC_LITERAL_NUMERIC_TYPE_U64;
-  if (strcmp(suffix, "f16") == 0)
+  if (len == 3 && strncmp(suffix, "f16", 3) == 0)
     return CUBEC_LITERAL_NUMERIC_TYPE_F16;
-  if (strcmp(suffix, "f32") == 0)
+  if (len == 3 && strncmp(suffix, "f32", 3) == 0)
     return CUBEC_LITERAL_NUMERIC_TYPE_F32;
-  if (strcmp(suffix, "f64") == 0)
+  if (len == 3 && strncmp(suffix, "f64", 3) == 0)
     return CUBEC_LITERAL_NUMERIC_TYPE_F64;
   return CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT;
 }
@@ -181,7 +182,7 @@ node_t read_literal_numeric(allocator_t allocator, vec_t tokens,
     const char *ident_str = token_get_string(type_token);
     size_t ident_len = token_get_string_length(type_token);
 
-    cubec_literal_numeric_type_t type = parse_type_suffix(ident_str);
+    cubec_literal_numeric_type_t type = parse_type_suffix(ident_str, ident_len);
     if (type != CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT) {
       string_nconcat(node->value, ident_str, ident_len);
       node->numeric_type = type;

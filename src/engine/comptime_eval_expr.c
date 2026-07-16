@@ -7,6 +7,7 @@
 #include "core/string.h"
 #include "core/strmap.h"
 #include "core/vec.h"
+#include <limits.h>
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
 #include "cubec/literal_char.h"
@@ -62,18 +63,57 @@ static comptime_value_t _eval_literal_numeric(comptime_eval_t eval,
     bool is_signed = (num->numeric_type == CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT) ||
                      (num->numeric_type >= CUBEC_LITERAL_NUMERIC_TYPE_I8 &&
                       num->numeric_type <= CUBEC_LITERAL_NUMERIC_TYPE_I64);
-    uint8_t width = 64;
+    /* Default integer literal is i32 (signed) or u32 (unsigned) */
+    uint8_t width = 32;
     if (type) width = (uint8_t)(type->impl->size * 8);
+    if (!type) type = is_signed ? ctx->builtin_i32 : ctx->builtin_u32;
+
     int64_t sval = 0;
     uint64_t uval = 0;
     if (is_signed) {
       sval = strtoll(text, NULL, 10);
       uval = (uint64_t)sval;
+      /* Check overflow: value must fit in the target width */
+      if (width == 8 && (sval < INT8_MIN || sval > INT8_MAX)) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                             "integer literal '%s' overflows i8", text);
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
+      if (width == 16 && (sval < INT16_MIN || sval > INT16_MAX)) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                             "integer literal '%s' overflows i16", text);
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
+      if (width == 32 && (sval < INT32_MIN || sval > INT32_MAX)) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                             "integer literal '%s' overflows i32", text);
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
     } else {
       uval = strtoull(text, NULL, 10);
       sval = (int64_t)uval;
+      if (width == 8 && uval > UINT8_MAX) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                             "integer literal '%s' overflows u8", text);
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
+      if (width == 16 && uval > UINT16_MAX) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                             "integer literal '%s' overflows u16", text);
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
+      if (width == 32 && uval > UINT32_MAX) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                             "integer literal '%s' overflows u32", text);
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
     }
-    if (!type) type = is_signed ? ctx->builtin_i64 : ctx->builtin_u64;
     return _eval_temp(eval, comptime_value_create_int(eval->allocator, sval, uval, width,
                                                        is_signed, type));
   }
@@ -570,8 +610,20 @@ static comptime_value_t _eval_group(comptime_eval_t eval, checker_t ctx,
 
 static comptime_value_t _eval_typeof(comptime_eval_t eval, checker_t ctx,
                                       node_t node) {
-  semantic_type_t type = resolver_resolve_type(ctx,
-      ((cubec_expression_typeof_t)node)->expression);
+  cubec_expression_typeof_t to = (cubec_expression_typeof_t)node;
+  /* typeof can wrap both value expressions (typeof(42)) and type expressions
+   * (typeof(i32)). Try eval first — if the inner expression produces a
+   * comptime value, extract its type field. Otherwise fall back to
+   * resolver_resolve_type for pure type expressions. */
+  comptime_value_t inner = _comptime_eval_expr(eval, ctx, to->expression);
+  if (inner && inner->kind != COMPTIME_VALUE_ERROR) {
+    if (inner->kind == COMPTIME_VALUE_TYPE)
+      return _eval_temp(eval, comptime_value_create_type(eval->allocator, inner->type_val));
+    if (inner->type)
+      return _eval_temp(eval, comptime_value_create_type(eval->allocator, inner->type));
+  }
+  /* Fallback: pure type expression (e.g. typeof(*i32)) */
+  semantic_type_t type = resolver_resolve_type(ctx, to->expression);
   if (!type) return _eval_error_val(eval);
   return _eval_temp(eval, comptime_value_create_type(eval->allocator, type));
 }
@@ -662,7 +714,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
         comptime_value_t v = _comptime_eval_expr(eval, ctx,
                                                    (node_t)vec_get(il->items, i));
         if (v && v->kind != COMPTIME_VALUE_ERROR && fsym)
-          comptime_value_write_field(comp, fsym->field.offset, v);
+          comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v);
       }
     }
     return _eval_temp(eval, comp);
