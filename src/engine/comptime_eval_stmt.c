@@ -314,7 +314,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
         for (size_t pi = 0; pi < pcount; pi++) {
           const char *pname = (const char *)vec_get(next_fn->function.param_names, pi);
           if (pi == 0)
-            comptime_env_bind(call_env, pname, self_arg);
+            comptime_env_bind_value(call_env, eval->valloc, pname, self_arg);
         }
       }
 
@@ -374,9 +374,9 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
       /* Bind/update loop variable */
       const char *vname = _eval_ident_str(sfe->variable);
       if (sfe->is_var_decl) {
-        comptime_env_bind(loop_env, vname, value);
+        comptime_env_bind_value(loop_env, eval->valloc, vname, value);
       } else {
-        comptime_env_update(loop_env, vname, value);
+        comptime_env_update_value(loop_env, eval->valloc, vname, value);
       }
 
       /* Execute body */
@@ -417,7 +417,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
                                ? _comptime_eval_expr(eval, ctx, dv->expression)
                                : _eval_temp(eval, comptime_value_create_nil(eval->allocator, NULL));
     if (val && val->kind != COMPTIME_VALUE_ERROR)
-      comptime_env_bind(eval->current_env, name, comptime_value_clone(eval->allocator, val));
+      comptime_env_bind_value(eval->current_env, eval->valloc, name, comptime_value_clone(eval->allocator, val));
     return _eval_signal_none();
   }
 
@@ -427,7 +427,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     if (!name) return _eval_signal_none();
     comptime_value_t val = _comptime_eval_expr(eval, ctx, (node_t)sf);
     if (val && val->kind != COMPTIME_VALUE_ERROR)
-      comptime_env_bind(eval->current_env, name, comptime_value_clone(eval->allocator, val));
+      comptime_env_bind_value(eval->current_env, eval->valloc, name, comptime_value_clone(eval->allocator, val));
     return _eval_signal_none();
   }
 

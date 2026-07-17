@@ -13,17 +13,29 @@ extern "C" {
 struct comptime_env {
   allocator_t allocator;
   comptime_env_t parent;
-  strmap_t bindings;   /**< name -> comptime_value_t (auto-disposed) */
+  strmap_t bindings;   /**< name -> uint64_t addr (not auto-disposed; values in alloc) */
   vec_t temporaries;   /**< temporary comptime_value_t (auto-disposed) */
 };
 
 comptime_env_t comptime_env_create(allocator_t allocator, comptime_env_t parent);
 void comptime_env_dispose(comptime_env_t self);
-void comptime_env_bind(comptime_env_t self, const char *name, comptime_value_t value);
-comptime_value_t comptime_env_lookup(comptime_env_t self, const char *name);
+
+/* Low-level addr API: store/retrieve alloc addresses directly */
+void comptime_env_bind(comptime_env_t self, const char *name, uint64_t addr);
+uint64_t comptime_env_lookup_addr(comptime_env_t self, const char *name);
+bool comptime_env_update_addr(comptime_env_t self, const char *name,
+                              uint64_t addr);
+
+/* Convenience value API: allocate/read/write through valloc */
+void comptime_env_bind_value(comptime_env_t self, comptime_allocator_t valloc,
+                              const char *name, comptime_value_t value);
+comptime_value_t comptime_env_lookup_value(comptime_env_t self,
+                                           comptime_allocator_t valloc,
+                                           const char *name);
+bool comptime_env_update_value(comptime_env_t self, comptime_allocator_t valloc,
+                                const char *name, comptime_value_t value);
+
 comptime_value_t comptime_env_track_temp(comptime_env_t self, comptime_value_t value);
-bool comptime_env_update(comptime_env_t self, const char *name,
-                          comptime_value_t value);
 
 /* ===== control flow signals ===== */
 

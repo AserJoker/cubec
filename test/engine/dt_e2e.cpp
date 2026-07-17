@@ -290,13 +290,13 @@ TEST_F(dt_e2e, addr_and_deref) {
 }
 
 TEST_F(dt_e2e, deref_assign) {
-  /* deref-assign writes to allocator copy; verify read-back through pointer */
+  /* deref-assign through pointer modifies the original variable */
   const char *src = BUILTIN_ASSERT
     "test \"deref_assign\" {\n"
     "  var x: i32 = 10;\n"
     "  var p: *i32 = x.&;\n"
     "  p.* = 99;\n"
-    "  assert(p.* == 99);\n"
+    "  assert(x == 99);\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->test_count, 1);
@@ -399,6 +399,55 @@ TEST_F(dt_e2e, pointer_method_call) {
     "  var c = .Counter { .value = 7 };\n"
     "  var pc: *Counter = c.&;\n"
     "  assert(pc.get() == 7);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 1);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== Batch 5: Pointer reference semantics ===== */
+
+TEST_F(dt_e2e, pointer_write_reflects_to_var) {
+  /* pa.x = 1 modifies a.x because pa points to a's alloc slot */
+  const char *src = BUILTIN_ASSERT
+    "struct Point { x: i32; y: i32; }\n"
+    "test \"ptr_write_reflects\" {\n"
+    "  var a = .Point { .x = 1, .y = 2 };\n"
+    "  var pa = a.&;\n"
+    "  pa.x = 99;\n"
+    "  assert(a.x == 99);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 1);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, deref_write_reflects_to_var) {
+  /* p.* = 99 modifies x because p points to x's alloc slot */
+  const char *src = BUILTIN_ASSERT
+    "test \"deref_write_reflects\" {\n"
+    "  var x: i32 = 10;\n"
+    "  var p: *i32 = x.&;\n"
+    "  p.* = 99;\n"
+    "  assert(x == 99);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 1);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, deref_member_write_reflects_to_var) {
+  /* pa.*.x = 99 modifies a.x — same as pa.x = 99 */
+  const char *src = BUILTIN_ASSERT
+    "struct Point { x: i32; y: i32; }\n"
+    "test \"deref_member_write_reflects\" {\n"
+    "  var a = .Point { .x = 1, .y = 2 };\n"
+    "  var pa = a.&;\n"
+    "  pa.*.x = 99;\n"
+    "  assert(a.x == 99);\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->test_count, 1);

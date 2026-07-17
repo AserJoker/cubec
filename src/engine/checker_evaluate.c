@@ -483,7 +483,8 @@ static void _evaluate_function(checker_t ctx,
         ctx->allocator,
         ctx->comptime_eval->global_env,
         node->body, param_names, ftype);
-    comptime_env_bind(ctx->comptime_eval->global_env, name, fn_val);
+    comptime_env_bind_value(ctx->comptime_eval->global_env,
+                            ctx->comptime_eval->valloc, name, fn_val);
   }
 }
 
@@ -559,9 +560,10 @@ static void _evaluate_variable(checker_t ctx,
       comptime_value_t val =
           comptime_eval_expr(ctx->comptime_eval, ctx, dv->expression);
       if (val && val->kind != COMPTIME_VALUE_ERROR) {
-        comptime_env_bind(ctx->comptime_eval->current_env
+        comptime_env_bind_value(ctx->comptime_eval->current_env
                               ? ctx->comptime_eval->current_env
                               : ctx->comptime_eval->global_env,
+                          ctx->comptime_eval->valloc,
                           name, comptime_value_clone(ctx->allocator, val));
       }
     }

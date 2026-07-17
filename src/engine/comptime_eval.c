@@ -16,12 +16,12 @@ comptime_eval_t comptime_eval_create(allocator_t allocator) {
   vec_init_t vi = {.auto_dispose = false};
   eval->defer_stack = (vec_t)allocator_create(allocator, &g_vec_type, &vi);
 
-  /* Bind builtin literal values in global environment */
-  comptime_env_bind(eval->global_env, "true",
+  /* Bind builtin literal values in global environment (allocated at scope depth 0) */
+  comptime_env_bind_value(eval->global_env, eval->valloc, "true",
       comptime_value_create_bool(allocator, true, NULL));
-  comptime_env_bind(eval->global_env, "false",
+  comptime_env_bind_value(eval->global_env, eval->valloc, "false",
       comptime_value_create_bool(allocator, false, NULL));
-  comptime_env_bind(eval->global_env, "nil",
+  comptime_env_bind_value(eval->global_env, eval->valloc, "nil",
       comptime_value_create_nil(allocator, NULL));
 
   return eval;

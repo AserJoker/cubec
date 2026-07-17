@@ -152,7 +152,7 @@ static comptime_value_t _eval_literal_identifier(comptime_eval_t eval,
   if (!name) return _eval_error_val(eval);
 
   /* Borrow from scope chain — no clone */
-  comptime_value_t val = comptime_env_lookup(eval->current_env, name);
+  comptime_value_t val = comptime_env_lookup_value(eval->current_env, eval->valloc, name);
   if (val) return val;
 
   struct symbol *sym = scope_lookup(ctx->current_scope, name);
@@ -196,7 +196,7 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
   if (asgn->left->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
     const char *name = _eval_ident_str(asgn->left);
     comptime_value_t cloned = comptime_value_clone(eval->allocator, rv);
-    if (!comptime_env_update(eval->current_env, name, cloned)) {
+    if (!comptime_env_update_value(eval->current_env, eval->valloc, name, cloned)) {
       allocator_free(eval->allocator, &cloned);
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
                            "undefined variable '%s' in comptime assignment",
@@ -204,7 +204,7 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
       ctx->error_count++;
       return _eval_error_val(eval);
     }
-    return comptime_env_lookup(eval->current_env, name);  /* borrowed from env */
+    return comptime_env_lookup_value(eval->current_env, eval->valloc, name);  /* borrowed from env */
   }
 
   /* member assignment: obj.field = rv */
@@ -217,7 +217,7 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
     if (mem->host->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
       /* Borrow host directly from env */
       const char *host_name = _eval_ident_str(mem->host);
-      host = comptime_env_lookup(eval->current_env, host_name);
+      host = comptime_env_lookup_value(eval->current_env, eval->valloc, host_name);
     } else {
       host = _comptime_eval_expr(eval, ctx, mem->host);
     }
@@ -331,7 +331,7 @@ comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
     for (size_t i = 0; i < pcount && i < acount; i++) {
       const char *pname = (const char *)vec_get(callee->function.param_names, i);
       /* args are already cloned by caller — ownership transfers to call_env */
-      comptime_env_bind(call_env, pname, args[i]);
+      comptime_env_bind_value(call_env, eval->valloc, pname, args[i]);
     }
   }
 
@@ -480,8 +480,19 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
           if (host_is_pointer) {
             /* Pointer host: pass the pointer value directly */
             self_val = comptime_value_clone(eval->allocator, host);
+          } else if (mem->host->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+            /* Object host is an identifier: take address directly from env
+               (no clone - pointer references the same alloc slot) */
+            const char *host_name = _eval_ident_str(mem->host);
+            uint64_t addr = comptime_env_lookup_addr(eval->current_env, host_name);
+            if (!addr) return _eval_error_val(eval);
+            semantic_type_t ptr_type = host->type
+                ? semantic_type_create_pointer(eval->allocator, host->type)
+                : NULL;
+            if (ptr_type) vec_push(ctx->all_types, ptr_type);
+            self_val = comptime_value_create_pointer(eval->allocator, addr, ptr_type);
           } else {
-            /* Object host: create pointer to host (take address) */
+            /* Object host is a complex expression: allocate a copy */
             uint64_t addr = comptime_alloc_allocate(eval->valloc,
                                                      comptime_value_clone(eval->allocator, host),
                                                      eval->valloc->scope_depth);
@@ -596,7 +607,7 @@ static comptime_value_t _eval_member(comptime_eval_t eval, checker_t ctx,
       for (size_t i = 0; i < fc; i++) {
         struct symbol *s = (struct symbol *)vec_get(t->static_fields, i);
         if (s && s->name && strcmp(s->name, fname) == 0 && s->kind == SYMBOL_VARIABLE) {
-          comptime_value_t v = comptime_env_lookup(eval->current_env, s->name);
+          comptime_value_t v = comptime_env_lookup_value(eval->current_env, eval->valloc, s->name);
           if (v) return v;  /* borrowed from env */
         }
       }
@@ -642,7 +653,7 @@ static comptime_value_t _eval_namespace_access(comptime_eval_t eval,
     for (size_t i = 0; i < mc; i++) {
       struct symbol *s = (struct symbol *)vec_get(t->static_methods, i);
       if (s && s->name && strcmp(s->name, fname) == 0 && s->kind == SYMBOL_FUNCTION) {
-        comptime_value_t v = comptime_env_lookup(eval->current_env, s->name);
+        comptime_value_t v = comptime_env_lookup_value(eval->current_env, eval->valloc, s->name);
         if (v) return v;  /* borrowed from env */
       }
     }
@@ -652,7 +663,7 @@ static comptime_value_t _eval_namespace_access(comptime_eval_t eval,
     for (size_t i = 0; i < fc; i++) {
       struct symbol *s = (struct symbol *)vec_get(t->static_fields, i);
       if (s && s->name && strcmp(s->name, fname) == 0 && s->kind == SYMBOL_VARIABLE) {
-        comptime_value_t v = comptime_env_lookup(eval->current_env, s->name);
+        comptime_value_t v = comptime_env_lookup_value(eval->current_env, eval->valloc, s->name);
         if (v) return v;  /* borrowed from env */
       }
     }
@@ -839,12 +850,13 @@ static comptime_value_t _eval_addr(comptime_eval_t eval, checker_t ctx,
 
   if (addr->right->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
     const char *name = _eval_ident_str(addr->right);
-    comptime_value_t existing = comptime_env_lookup(eval->current_env, name);
-    if (existing) {
-      uint64_t a = comptime_alloc_allocate(eval->valloc,
-                                            comptime_value_clone(eval->allocator, existing),
-                                            eval->valloc->scope_depth);
-      semantic_type_t ptr_type = existing->type
+    uint64_t a = comptime_env_lookup_addr(eval->current_env, name);
+    if (a) {
+      /* Directly use the addr from env — no clone! Pointer references the
+         same alloc slot as the variable, so writes through the pointer
+         modify the original variable. */
+      comptime_value_t existing = comptime_alloc_read(eval->valloc, a);
+      semantic_type_t ptr_type = existing && existing->type
           ? semantic_type_create_pointer(eval->allocator, existing->type)
           : NULL;
       if (ptr_type) vec_push(ctx->all_types, ptr_type);

@@ -369,7 +369,7 @@ TEST_F(dt_comptime_eval, comptime_var_decl_and_use) {
   checker_check_program(ctx, prog);
 
   /* The comptime var should have been evaluated and bound in the env */
-  comptime_value_t v = comptime_env_lookup(ctx->comptime_eval->global_env, "x");
+  comptime_value_t v = comptime_env_lookup_value(ctx->comptime_eval->global_env, ctx->comptime_eval->valloc, "x");
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_INT);
   EXPECT_EQ(v->int_val.s, 42);
@@ -460,7 +460,7 @@ TEST_F(dt_comptime_eval, function_call) {
   checker_check_program(ctx, prog);
 
   /* Verify function is in comptime env */
-  comptime_value_t fn_val = comptime_env_lookup(ctx->comptime_eval->global_env, "double");
+  comptime_value_t fn_val = comptime_env_lookup_value(ctx->comptime_eval->global_env, ctx->comptime_eval->valloc, "double");
   ASSERT_NE(fn_val, nullptr) << "function 'double' not in comptime env";
   EXPECT_EQ(fn_val->kind, COMPTIME_VALUE_FUNCTION) << "got kind=" << fn_val->kind;
 
@@ -686,7 +686,7 @@ TEST_F(dt_comptime_eval, eval_composite_slice) {
   }
 
   /* bind composite to env so slice can find it via identifier */
-  comptime_env_bind(ctx->comptime_eval->global_env, "arr", comp);
+  comptime_env_bind_value(ctx->comptime_eval->global_env, ctx->comptime_eval->valloc, "arr", comp);
 
   node_t host = cubec_ast_create_identifier(allocator, T, "arr");
   node_t start = cubec_ast_create_numeric(allocator, T, "1",
@@ -723,7 +723,7 @@ TEST_F(dt_comptime_eval, do_while_basic) {
   checker_t ctx = checker_create(allocator);
 
   /* do { x = x + 1 } while(x < 3) with x initialized to 0 */
-  comptime_env_bind(ctx->comptime_eval->global_env, "x",
+  comptime_env_bind_value(ctx->comptime_eval->global_env, ctx->comptime_eval->valloc, "x",
       comptime_value_create_int(allocator, 0, 0, 32, true, ctx->builtin_i32));
 
   node_t x_id = cubec_ast_create_identifier(allocator, T, "x");
@@ -748,7 +748,7 @@ TEST_F(dt_comptime_eval, do_while_basic) {
   comptime_signal_t sig = comptime_eval_exec_stmt(ctx->comptime_eval, ctx, dw);
   EXPECT_EQ(sig.kind, COMPTIME_SIGNAL_NONE);
 
-  comptime_value_t v = comptime_env_lookup(ctx->comptime_eval->global_env, "x");
+  comptime_value_t v = comptime_env_lookup_value(ctx->comptime_eval->global_env, ctx->comptime_eval->valloc, "x");
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->int_val.s, 3);
   allocator_free(allocator, &dw);
@@ -784,7 +784,7 @@ TEST_F(dt_comptime_eval, composite_field_assign) {
   comptime_value_set_field(comp, "y", init_y);
   allocator_free(allocator, &init_x);
   allocator_free(allocator, &init_y);
-  comptime_env_bind(ctx->comptime_eval->global_env, "pt", comp);
+  comptime_env_bind_value(ctx->comptime_eval->global_env, ctx->comptime_eval->valloc, "pt", comp);
 
   /* pt.x = 99 */
   node_t pt_id = cubec_ast_create_identifier(allocator, T, "pt");
@@ -798,7 +798,7 @@ TEST_F(dt_comptime_eval, composite_field_assign) {
   EXPECT_EQ(v->int_val.s, 99);
 
   /* verify the composite was updated */
-  comptime_value_t updated = comptime_env_lookup(ctx->comptime_eval->global_env, "pt");
+  comptime_value_t updated = comptime_env_lookup_value(ctx->comptime_eval->global_env, ctx->comptime_eval->valloc, "pt");
   ASSERT_NE(updated, nullptr);
   comptime_value_t x_field = comptime_value_get_field(updated, "x", allocator);
   ASSERT_NE(x_field, nullptr);
