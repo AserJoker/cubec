@@ -10,3 +10,4 @@ cubec_test
 build-asan
 build-linux
 build_wsl
+build-wsl
