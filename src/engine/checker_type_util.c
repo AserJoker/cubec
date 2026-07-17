@@ -10,6 +10,7 @@
 #include "cubec/node.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
+#include "cubec/generic_param.h"
 #include <string.h>
 
 /* ===== identifier helper ===== */
@@ -49,6 +50,27 @@ bool _is_lvalue(node_t expr) {
   default:
     return false;
   }
+}
+
+bool _is_struct_like(semantic_type_t t) {
+  if (!t || !t->impl) return false;
+  if (t->impl->kind == TYPE_STRUCT || t->impl->kind == TYPE_UNION ||
+      t->impl->kind == TYPE_CUNION)
+    return true;
+  if (t->impl->kind == TYPE_GENERIC_INSTANCE) {
+    semantic_type_t tmpl = t->impl->generic_instance.generic_template;
+    return tmpl && (tmpl->impl->kind == TYPE_STRUCT ||
+                    tmpl->impl->kind == TYPE_UNION ||
+                    tmpl->impl->kind == TYPE_CUNION);
+  }
+  return false;
+}
+
+vec_t _get_struct_fields(semantic_type_t t) {
+  if (!t || !t->impl) return NULL;
+  if (t->impl->kind == TYPE_GENERIC_INSTANCE)
+    return t->impl->generic_instance.fields;
+  return t->impl->struct_type.fields;
 }
 
 /* ===== type utilities ===== */
@@ -97,40 +119,198 @@ bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
                        semantic_type_t constraint, node_t arg_expr) {
   if (!constraint) return true;
 
-  if (constraint->impl->kind != TYPE_INTERFACE) {
-    /* Non-interface constraints accepted for now */
+  switch (constraint->impl->kind) {
+  case TYPE_INTERFACE: {
+    /* Check that type_arg implements all required methods */
+    vec_t required_methods = constraint->impl->interface_type.methods;
+    size_t mcount = required_methods ? vec_get_size(required_methods) : 0;
+
+    vec_t instance_methods = type_arg->instance_methods;
+    size_t imcount = instance_methods ? vec_get_size(instance_methods) : 0;
+
+    for (size_t i = 0; i < mcount; i++) {
+      struct symbol *req = (struct symbol *)vec_get(required_methods, i);
+      if (!req || !req->name) continue;
+      bool found = false;
+      for (size_t j = 0; j < imcount; j++) {
+        struct symbol *has = (struct symbol *)vec_get(instance_methods, j);
+        if (has && has->name && strcmp(has->name, req->name) == 0) {
+          if (req->function.type && has->function.type &&
+              semantic_type_equals(req->function.type, has->function.type)) {
+            found = true;
+            break;
+          }
+        }
+      }
+      if (!found) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: missing method '%s'",
+                             req->name);
+        ctx->error_count++;
+        return false;
+      }
+    }
     return true;
   }
 
-  vec_t required_methods = constraint->impl->interface_type.methods;
-  size_t mcount = required_methods ? vec_get_size(required_methods) : 0;
-
-  vec_t instance_methods = type_arg->instance_methods;
-  size_t imcount = instance_methods ? vec_get_size(instance_methods) : 0;
-
-  for (size_t i = 0; i < mcount; i++) {
-    struct symbol *req = (struct symbol *)vec_get(required_methods, i);
-    if (!req || !req->name) continue;
-    bool found = false;
-    for (size_t j = 0; j < imcount; j++) {
-      struct symbol *has = (struct symbol *)vec_get(instance_methods, j);
-      if (has && has->name && strcmp(has->name, req->name) == 0) {
-        if (req->function.type && has->function.type &&
-            semantic_type_equals(req->function.type, has->function.type)) {
-          found = true;
-          break;
-        }
-      }
-    }
-    if (!found) {
+  case TYPE_GENERIC_INSTANCE: {
+    /* Constraint like T extends Vec[Readable]
+       Check that type_arg is a GENERIC_INSTANCE of the same template
+       and that the corresponding type args satisfy the constraint's args.
+       Wildcard ? in constraint skips the corresponding arg check. */
+    if (type_arg->impl->kind != TYPE_GENERIC_INSTANCE) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                           "type does not satisfy constraint: missing method '%s'",
-                           req->name);
+                           "type does not satisfy generic constraint: not a generic instance");
       ctx->error_count++;
       return false;
     }
+
+    /* Same template */
+    if (type_arg->impl->generic_instance.generic_template !=
+        constraint->impl->generic_instance.generic_template) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                           "type does not satisfy constraint: wrong generic template");
+      ctx->error_count++;
+      return false;
+    }
+
+    /* Check type args pairwise */
+    vec_t a_args = type_arg->impl->generic_instance.type_args;
+    vec_t c_args = constraint->impl->generic_instance.type_args;
+    size_t ac = a_args ? vec_get_size(a_args) : 0;
+    size_t cc = c_args ? vec_get_size(c_args) : 0;
+    if (ac != cc) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                           "type does not satisfy constraint: type arg count mismatch");
+      ctx->error_count++;
+      return false;
+    }
+
+    for (size_t i = 0; i < cc; i++) {
+      semantic_type_t ca = (semantic_type_t)vec_get(c_args, i);
+      semantic_type_t aa = (semantic_type_t)vec_get(a_args, i);
+      /* Wildcard in constraint skips this arg check */
+      if (ca->impl->kind == TYPE_WILDCARD) continue;
+      /* Recursively check nested constraint */
+      if (!_check_constraint(ctx, aa, ca, arg_expr)) return false;
+    }
+    return true;
   }
-  return true;
+
+  case TYPE_POINTER: {
+    /* Constraint like *Readable — check pointee */
+    if (type_arg->impl->kind != TYPE_POINTER) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                           "type does not satisfy constraint: expected pointer type");
+      ctx->error_count++;
+      return false;
+    }
+    return _check_constraint(ctx, type_arg->impl->pointer.pointee,
+                             constraint->impl->pointer.pointee, arg_expr);
+  }
+
+  case TYPE_SLICE: {
+    /* Constraint like []Readable — check element */
+    if (type_arg->impl->kind != TYPE_SLICE) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                           "type does not satisfy constraint: expected slice type");
+      ctx->error_count++;
+      return false;
+    }
+    return _check_constraint(ctx, type_arg->impl->slice.element,
+                             constraint->impl->slice.element, arg_expr);
+  }
+
+  case TYPE_ARRAY: {
+    /* Constraint like [N]? — check element, ignore length if wildcard */
+    if (type_arg->impl->kind != TYPE_ARRAY) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                           "type does not satisfy constraint: expected array type");
+      ctx->error_count++;
+      return false;
+    }
+    if (constraint->impl->array.length != type_arg->impl->array.length &&
+        constraint->impl->array.length != 0) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                           "type does not satisfy constraint: array length mismatch");
+      ctx->error_count++;
+      return false;
+    }
+    return _check_constraint(ctx, type_arg->impl->array.element,
+                             constraint->impl->array.element, arg_expr);
+  }
+
+  case TYPE_STRUCT:
+  case TYPE_UNION:
+  case TYPE_CUNION: {
+    /* Structural constraint: check that type_arg has at least the fields
+       with compatible types (wildcard ? skips type check for a field) */
+    if (type_arg->impl->kind != constraint->impl->kind) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                           "type does not satisfy constraint: type kind mismatch");
+      ctx->error_count++;
+      return false;
+    }
+    vec_t c_fields = constraint->impl->struct_type.fields;
+    vec_t a_fields = type_arg->impl->struct_type.fields;
+    size_t cfc = c_fields ? vec_get_size(c_fields) : 0;
+    size_t afc = a_fields ? vec_get_size(a_fields) : 0;
+    if (afc < cfc) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                           "type does not satisfy constraint: missing fields");
+      ctx->error_count++;
+      return false;
+    }
+    for (size_t i = 0; i < cfc; i++) {
+      struct symbol *cf = (struct symbol *)vec_get(c_fields, i);
+      struct symbol *af = (struct symbol *)vec_get(a_fields, i);
+      if (!cf || !cf->name) continue;
+      if (!af || !af->name || strcmp(cf->name, af->name) != 0) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: field '%s' mismatch",
+                             cf->name);
+        ctx->error_count++;
+        return false;
+      }
+      /* Wildcard ? skips field type check */
+      if (cf->field.type && cf->field.type->impl->kind == TYPE_WILDCARD) continue;
+      if (!_check_constraint(ctx, af->field.type, cf->field.type, arg_expr))
+        return false;
+    }
+    return true;
+  }
+
+  default:
+    /* Other constraint types: structural equality check */
+    return true;
+  }
+}
+
+bool _check_generic_param_constraints(checker_t ctx, vec_t generic_params,
+                                       vec_t type_args, node_t expr) {
+  if (!generic_params || !type_args) return true;
+  size_t gcount = vec_get_size(generic_params);
+  bool all_ok = true;
+
+  for (size_t i = 0; i < gcount; i++) {
+    node_t gp_node = (node_t)vec_get(generic_params, i);
+    if (!gp_node || gp_node->kind != CUBEC_NODE_GENERIC_PARAM) continue;
+
+    cubec_generic_param_t gp = (cubec_generic_param_t)gp_node;
+    if (!gp->constraint) continue;
+
+    if (i >= vec_get_size(type_args)) continue;
+    semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
+    if (!ta) continue;
+
+    semantic_type_t constraint_type = resolver_resolve_type(ctx, gp->constraint);
+    if (!constraint_type || constraint_type->impl->kind == TYPE_ERROR) continue;
+
+    if (!_check_constraint(ctx, ta, constraint_type, expr)) {
+      all_ok = false;
+    }
+  }
+  return all_ok;
 }
 
 vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs) {
@@ -171,7 +351,7 @@ static vec_t _copy_symbol_vec(checker_t ctx, vec_t src) {
 static void _instantiate_struct_fields(checker_t ctx, semantic_type_t inst,
                                         vec_t tpl_fields, vec_t type_args) {
   vec_init_t vi = {.auto_dispose = true};
-  inst->impl->struct_type.fields =
+  inst->impl->generic_instance.fields =
       (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
 
   size_t fcount = tpl_fields ? vec_get_size(tpl_fields) : 0;
@@ -182,8 +362,8 @@ static void _instantiate_struct_fields(checker_t ctx, semantic_type_t inst,
     nf->field.index = i;
     nf->field.is_pub = f->field.is_pub;
     /* Substitute generic params in field type */
-    nf->field.type = semantic_type_substitute(ctx->allocator, f->field.type, type_args);
-    vec_push(inst->impl->struct_type.fields, nf);
+    nf->field.type = semantic_type_substitute(ctx->allocator, f->field.type, type_args, ctx->all_types);
+    vec_push(inst->impl->generic_instance.fields, nf);
   }
   type_layout_compute(inst, 8);
 }
@@ -197,7 +377,10 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   char *key = _generic_instance_cache_key(ctx, name, type_args);
   void *cached = strmap_find(ctx->type_impl_cache, key);
   allocator_free(ctx->allocator, &key);
-  if (cached) return (semantic_type_t)cached;
+  if (cached) {
+    allocator_free(ctx->allocator, &type_args);
+    return (semantic_type_t)cached;
+  }
 
   /* Create the specialized type as a GENERIC_INSTANCE */
   semantic_type_t inst = semantic_type_create_generic_instance(
@@ -210,7 +393,9 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   if (tkind == TYPE_STRUCT || tkind == TYPE_UNION || tkind == TYPE_CUNION)
     _instantiate_struct_fields(ctx, inst, template_type->impl->struct_type.fields, type_args);
 
-  /* Copy method lists from template */
+  /* Copy method lists from template (free the init-created vecs first) */
+  allocator_free(ctx->allocator, &inst->instance_methods);
+  allocator_free(ctx->allocator, &inst->static_methods);
   inst->instance_methods = _copy_symbol_vec(ctx, template_type->instance_methods);
   inst->static_methods = _copy_symbol_vec(ctx, template_type->static_methods);
 
@@ -233,6 +418,7 @@ semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
   void *cached = strmap_find(ctx->type_impl_cache, key);
   allocator_free(ctx->allocator, &key);
   if (cached) {
+    allocator_free(ctx->allocator, &type_args);
     return (semantic_type_t)cached;
   }
 
@@ -242,12 +428,12 @@ semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
   size_t pcount = vec_get_size(func_type->impl->function.params);
   for (size_t i = 0; i < pcount; i++) {
     semantic_type_t p = (semantic_type_t)vec_get(func_type->impl->function.params, i);
-    semantic_type_t new_p = semantic_type_substitute(ctx->allocator, p, type_args);
+    semantic_type_t new_p = semantic_type_substitute(ctx->allocator, p, type_args, ctx->all_types);
     vec_push(new_params, new_p);
   }
 
   semantic_type_t new_return = semantic_type_substitute(ctx->allocator,
-      func_type->impl->function.return_type, type_args);
+      func_type->impl->function.return_type, type_args, ctx->all_types);
 
   /* Create new function type with substituted types */
   semantic_type_t inst_type = semantic_type_create_function(ctx->allocator,
@@ -259,6 +445,9 @@ semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
   key = _generic_instance_cache_key(ctx, name, type_args);
   strmap_insert(ctx->type_impl_cache, key, inst_type);
   allocator_free(ctx->allocator, &key);
+
+  /* type_args is not stored in the function type, free it */
+  allocator_free(ctx->allocator, &type_args);
 
   return inst_type;
 }

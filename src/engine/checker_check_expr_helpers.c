@@ -82,13 +82,14 @@ semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
     vec_t type_args = _resolve_generic_type_args(ctx, gi->arguments);
     if (!type_args) return ctx->error_type;
     if (template_type->impl->kind == TYPE_GENERIC_INSTANCE) return template_type;
-    (void)type_args;
+    _check_generic_param_constraints(ctx, sym->type.generic_params, type_args, expr);
     return _instantiate_type(ctx, template_type, type_args, expr);
   }
 
   if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.type) {
     vec_t type_args = _resolve_generic_type_args(ctx, gi->arguments);
     if (!type_args) return ctx->error_type;
+    _check_generic_param_constraints(ctx, sym->function.generic_params, type_args, expr);
     return _instantiate_function(ctx, sym, type_args, expr);
   }
 

@@ -1,4 +1,4 @@
-﻿#include "cubec/expression.h"
+#include "cubec/expression.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_call.h"
@@ -241,11 +241,10 @@ TEST_F(dt_expression_generic_instantiation, wildcard_arg) {
       (cubec_expression_generic_instantiation_t)node;
   EXPECT_EQ(vec_get_size(gi->arguments), 1);
 
-  /* Wildcard '?' is parsed as an identifier with value "?" */
+  /* Wildcard '?' is parsed as a wildcard expression node */
   node_t arg0 = (node_t)vec_get(gi->arguments, 0);
   ASSERT_NE(arg0, nullptr);
-  EXPECT_EQ(arg0->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_STREQ(string_get(((cubec_literal_identifier_t)arg0)->value), "?");
+  EXPECT_EQ(arg0->kind, CUBEC_NODE_EXPRESSION_WILDCARD);
 
   /* foo, [, ?, ] */
   EXPECT_EQ(position, 4);
@@ -276,8 +275,7 @@ TEST_F(dt_expression_generic_instantiation, wildcard_mixed) {
 
   /* arg1: wildcard '?' */
   node_t arg1 = (node_t)vec_get(gi->arguments, 1);
-  EXPECT_EQ(arg1->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_STREQ(string_get(((cubec_literal_identifier_t)arg1)->value), "?");
+  EXPECT_EQ(arg1->kind, CUBEC_NODE_EXPRESSION_WILDCARD);
 
   /* arg2: identifier b */
   node_t arg2 = (node_t)vec_get(gi->arguments, 2);
@@ -305,8 +303,7 @@ TEST_F(dt_expression_generic_instantiation, multiple_wildcards) {
 
   for (size_t i = 0; i < 3; i++) {
     node_t arg = (node_t)vec_get(gi->arguments, i);
-    EXPECT_EQ(arg->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-    EXPECT_STREQ(string_get(((cubec_literal_identifier_t)arg)->value), "?");
+    EXPECT_EQ(arg->kind, CUBEC_NODE_EXPRESSION_WILDCARD);
   }
 
   allocator_free(allocator, &node);

@@ -78,6 +78,9 @@ static void _type_impl_dispose(void *self, allocator_t allocator) {
     if (impl->generic_instance.type_args) {
       allocator_free(allocator, &impl->generic_instance.type_args);
     }
+    if (impl->generic_instance.fields) {
+      allocator_free(allocator, &impl->generic_instance.fields);
+    }
     break;
   default:
     break;
@@ -146,6 +149,7 @@ static bool _type_impl_equals(type_impl_t a, type_impl_t b) {
   case TYPE_F16: case TYPE_F32: case TYPE_F64:
   case TYPE_CHAR: case TYPE_STRING:
   case TYPE_NIL: case TYPE_ERROR:
+  case TYPE_WILDCARD:
     return true;
 
   case TYPE_QUALIFIER:
@@ -404,11 +408,20 @@ semantic_type_t semantic_type_create_generic_param(allocator_t allocator,
   return t;
 }
 
+semantic_type_t semantic_type_create_wildcard(allocator_t allocator) {
+  semantic_type_t t = (semantic_type_t)allocator_create(
+      allocator, &g_semantic_type_type, NULL);
+  t->impl = _create_impl(allocator, TYPE_WILDCARD);
+  t->is_incomplete = false;
+  return t;
+}
+
 /* ===== type substitution for generic instantiation ===== */
 
 semantic_type_t semantic_type_substitute(allocator_t allocator,
                                           semantic_type_t type,
-                                          vec_t type_args) {
+                                          vec_t type_args,
+                                          vec_t all_types) {
   if (!type || !type->impl) return type;
 
   switch (type->impl->kind) {
@@ -421,35 +434,39 @@ semantic_type_t semantic_type_substitute(allocator_t allocator,
   }
 
   case TYPE_POINTER: {
-    semantic_type_t inner = semantic_type_substitute(allocator, type->impl->pointer.pointee, type_args);
+    semantic_type_t inner = semantic_type_substitute(allocator, type->impl->pointer.pointee, type_args, all_types);
     if (inner == type->impl->pointer.pointee) return type;
     semantic_type_t result = semantic_type_create_pointer(allocator, inner);
     type_hash_ensure(result);
+    vec_push(all_types, result);
     return result;
   }
 
   case TYPE_SLICE: {
-    semantic_type_t elem = semantic_type_substitute(allocator, type->impl->slice.element, type_args);
+    semantic_type_t elem = semantic_type_substitute(allocator, type->impl->slice.element, type_args, all_types);
     if (elem == type->impl->slice.element) return type;
     semantic_type_t result = semantic_type_create_slice(allocator, elem);
     type_hash_ensure(result);
+    vec_push(all_types, result);
     return result;
   }
 
   case TYPE_ARRAY: {
-    semantic_type_t elem = semantic_type_substitute(allocator, type->impl->array.element, type_args);
+    semantic_type_t elem = semantic_type_substitute(allocator, type->impl->array.element, type_args, all_types);
     if (elem == type->impl->array.element) return type;
     semantic_type_t result = semantic_type_create_array(allocator, elem, type->impl->array.length);
     type_hash_ensure(result);
+    vec_push(all_types, result);
     return result;
   }
 
   case TYPE_QUALIFIER: {
-    semantic_type_t base = semantic_type_substitute(allocator, type->impl->qualifier.base, type_args);
+    semantic_type_t base = semantic_type_substitute(allocator, type->impl->qualifier.base, type_args, all_types);
     if (base == type->impl->qualifier.base) return type;
     semantic_type_t result = semantic_type_create_qualifier(allocator, base,
         type->impl->qualifier.is_const, type->impl->qualifier.is_volatile);
     type_hash_ensure(result);
+    vec_push(all_types, result);
     return result;
   }
 
@@ -460,11 +477,11 @@ semantic_type_t semantic_type_substitute(allocator_t allocator,
     size_t pcount = vec_get_size(type->impl->function.params);
     for (size_t i = 0; i < pcount; i++) {
       semantic_type_t p = (semantic_type_t)vec_get(type->impl->function.params, i);
-      semantic_type_t new_p = semantic_type_substitute(allocator, p, type_args);
+      semantic_type_t new_p = semantic_type_substitute(allocator, p, type_args, all_types);
       vec_push(new_params, new_p);
       if (new_p != p) changed = true;
     }
-    semantic_type_t new_ret = semantic_type_substitute(allocator, type->impl->function.return_type, type_args);
+    semantic_type_t new_ret = semantic_type_substitute(allocator, type->impl->function.return_type, type_args, all_types);
     if (new_ret != type->impl->function.return_type) changed = true;
 
     if (!changed) {
@@ -474,6 +491,7 @@ semantic_type_t semantic_type_substitute(allocator_t allocator,
     semantic_type_t result = semantic_type_create_function(allocator, new_ret, new_params,
         type->impl->function.is_variadic);
     type_hash_ensure(result);
+    vec_push(all_types, result);
     return result;
   }
 
@@ -485,7 +503,7 @@ semantic_type_t semantic_type_substitute(allocator_t allocator,
     size_t acount = vec_get_size(type->impl->generic_instance.type_args);
     for (size_t i = 0; i < acount; i++) {
       semantic_type_t arg = (semantic_type_t)vec_get(type->impl->generic_instance.type_args, i);
-      semantic_type_t new_arg = semantic_type_substitute(allocator, arg, type_args);
+      semantic_type_t new_arg = semantic_type_substitute(allocator, arg, type_args, all_types);
       vec_push(new_args, new_arg);
       if (new_arg != arg) changed = true;
     }
@@ -498,26 +516,17 @@ semantic_type_t semantic_type_substitute(allocator_t allocator,
     semantic_type_t result = semantic_type_create_generic_instance(allocator,
         type->impl->generic_instance.generic_template, new_args);
     type_hash_ensure(result);
+    vec_push(all_types, result);
     return result;
   }
 
   case TYPE_STRUCT:
   case TYPE_UNION:
   case TYPE_CUNION: {
-    /* Substitute field types - but don't create new struct type, just substitute and reuse */
-    bool changed = false;
-    vec_t fields = type->impl->struct_type.fields;
-    size_t fcount = fields ? vec_get_size(fields) : 0;
-    for (size_t i = 0; i < fcount; i++) {
-      struct symbol *f = (struct symbol *)vec_get(fields, i);
-      semantic_type_t old_ft = f->field.type;
-      semantic_type_t new_ft = semantic_type_substitute(allocator, old_ft, type_args);
-      if (new_ft != old_ft) {
-        f->field.type = new_ft;
-        changed = true;
-      }
-    }
-    return changed ? type : type;
+    /* Cannot substitute a struct/union type in-place (would corrupt the template).
+       Return as-is; the caller should use _instantiate_struct_fields for
+       creating substituted field copies. */
+    return type;
   }
 
   default:

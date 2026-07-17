@@ -222,6 +222,16 @@ static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
 
 static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
   cubec_expression_call_t call = (cubec_expression_call_t)expr;
+
+  /* Check if callee is a direct reference to a generic function (needs type inference) */
+  struct symbol *generic_func_sym = NULL;
+  if (call->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+    const char *name = _checker_ident_str(call->callee);
+    struct symbol *sym = name ? scope_lookup(ctx->current_scope, name) : NULL;
+    if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.generic_params)
+      generic_func_sym = sym;
+  }
+
   semantic_type_t callee_type = _check_expression(ctx, call->callee);
   if (callee_type->impl->kind == TYPE_ERROR) return ctx->error_type;
 
@@ -232,9 +242,105 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
     return ctx->error_type;
   }
 
+  size_t arg_count = call->arguments ? vec_get_size(call->arguments) : 0;
+
+  /* Generic function inference: infer type args from call arguments */
+  if (generic_func_sym) {
+    /* Collect argument types */
+    vec_init_t atvi = {.auto_dispose = false};
+    vec_t arg_types = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &atvi);
+    for (size_t i = 0; i < arg_count; i++) {
+      node_t arg = (node_t)vec_get(call->arguments, i);
+      semantic_type_t at = _check_expression(ctx, arg);
+      vec_push(arg_types, at);
+    }
+
+    /* Build generic param symbols vec for _infer_type_args_from_call */
+    vec_t gp = generic_func_sym->function.generic_params;
+    size_t gcount = vec_get_size(gp);
+    vec_init_t gpvi = {.auto_dispose = false};
+    vec_t generic_param_syms = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &gpvi);
+    for (size_t i = 0; i < gcount; i++) {
+      node_t gp_node = (node_t)vec_get(gp, i);
+      const char *gp_name = gp_node ? _checker_ident_str(gp_node) : NULL;
+      if (gp_name) {
+        struct symbol *gpsym = scope_lookup(ctx->current_scope, gp_name);
+        vec_push(generic_param_syms, gpsym ? gpsym : NULL);
+      } else {
+        vec_push(generic_param_syms, NULL);
+      }
+    }
+
+    /* Infer type args */
+    vec_t type_args = _infer_type_args_from_call(ctx, callee_type,
+        generic_param_syms, arg_types, NULL);
+
+    /* Check for unresolved generic params */
+    if (type_args) {
+      size_t tcount = vec_get_size(type_args);
+      for (size_t i = 0; i < tcount; i++) {
+        if (!vec_get(type_args, i)) {
+          node_t gp_node = (node_t)vec_get(gp, i);
+          const char *gp_name = gp_node ? _checker_ident_str(gp_node) : "?";
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               expr->location,
+                               "cannot infer generic parameter '%s'",
+                               gp_name);
+          ctx->error_count++;
+        }
+      }
+    }
+
+    /* Instantiate the function */
+    if (type_args) {
+      /* Check generic param constraints */
+      _check_generic_param_constraints(ctx, generic_func_sym->function.generic_params,
+          type_args, expr);
+
+      semantic_type_t inst_type = _instantiate_function(ctx, generic_func_sym,
+          type_args, expr);
+      if (inst_type->impl->kind != TYPE_ERROR) {
+        callee_type = inst_type;
+      }
+    }
+
+    allocator_free(ctx->allocator, &generic_param_syms);
+    allocator_free(ctx->allocator, &arg_types);
+
+    /* Arguments already checked above, verify against instantiated params */
+    vec_t params = callee_type->impl->function.params;
+    size_t param_count = params ? vec_get_size(params) : 0;
+    bool is_variadic = callee_type->impl->function.is_variadic;
+
+    if (!is_variadic && arg_count != param_count) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           "expected %zu arguments, got %zu",
+                           param_count, arg_count);
+      ctx->error_count++;
+    }
+
+    for (size_t i = 0; i < arg_count; i++) {
+      node_t arg = (node_t)vec_get(call->arguments, i);
+      semantic_type_t at = _check_expression(ctx, arg);
+      if (i < param_count && at->impl->kind != TYPE_ERROR) {
+        semantic_type_t pt = (semantic_type_t)vec_get(params, i);
+        if (!semantic_type_can_implicit_convert(at, pt)) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               arg->location,
+                               "argument %zu: cannot convert '%s' to '%s'",
+                               i + 1,
+                               at->name ? at->name : "<anonymous>",
+                               pt->name ? pt->name : "<anonymous>");
+          ctx->error_count++;
+        }
+      }
+    }
+
+    return callee_type->impl->function.return_type;
+  }
+
   vec_t params = callee_type->impl->function.params;
   size_t param_count = params ? vec_get_size(params) : 0;
-  size_t arg_count = call->arguments ? vec_get_size(call->arguments) : 0;
   bool is_variadic = callee_type->impl->function.is_variadic;
 
   /* Member call desugaring: a.method(args) → typeof(a)::method(&a, args)
@@ -365,10 +471,8 @@ static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
     effective_host = semantic_type_strip_qualifier(host_type);
   }
 
-  if (effective_host->impl->kind == TYPE_STRUCT ||
-      effective_host->impl->kind == TYPE_UNION ||
-      effective_host->impl->kind == TYPE_CUNION) {
-    vec_t fields = effective_host->impl->struct_type.fields;
+  if (_is_struct_like(effective_host)) {
+    vec_t fields = _get_struct_fields(effective_host);
     size_t fcount = fields ? vec_get_size(fields) : 0;
     for (size_t i = 0; i < fcount; i++) {
       struct symbol *f = (struct symbol *)vec_get(fields, i);
@@ -400,10 +504,8 @@ static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
     bool pointee_is_const = semantic_type_is_const(pointee);
     semantic_type_t pointee_unq = semantic_type_strip_qualifier(pointee);
 
-    if (pointee_unq && (pointee_unq->impl->kind == TYPE_STRUCT ||
-                        pointee_unq->impl->kind == TYPE_UNION ||
-                        pointee_unq->impl->kind == TYPE_CUNION)) {
-      vec_t fields = pointee_unq->impl->struct_type.fields;
+    if (_is_struct_like(pointee_unq)) {
+      vec_t fields = _get_struct_fields(pointee_unq);
       size_t fcount = fields ? vec_get_size(fields) : 0;
       for (size_t i = 0; i < fcount; i++) {
         struct symbol *f = (struct symbol *)vec_get(fields, i);
@@ -656,9 +758,8 @@ static semantic_type_t _check_expr_initialize_list(checker_t ctx, node_t expr) {
     semantic_type_t t = resolver_resolve_type(ctx, il->type);
     if (t->impl->kind == TYPE_ERROR) return ctx->error_type;
 
-    if (t->impl->kind == TYPE_STRUCT || t->impl->kind == TYPE_UNION ||
-        t->impl->kind == TYPE_CUNION) {
-      vec_t fields = t->impl->struct_type.fields;
+    if (_is_struct_like(t)) {
+      vec_t fields = _get_struct_fields(t);
       size_t fcount = fields ? vec_get_size(fields) : 0;
       size_t icount = il->items ? vec_get_size(il->items) : 0;
       if (il->is_field)
@@ -744,6 +845,7 @@ semantic_type_t _check_expression(checker_t ctx, node_t expr) {
   case CUBEC_NODE_EXPRESSION_TYPE_UNION:
   case CUBEC_NODE_EXPRESSION_TYPE_INTERFACE:
   case CUBEC_NODE_EXPRESSION_TYPE_FUNCTION:
+  case CUBEC_NODE_EXPRESSION_WILDCARD:
     return resolver_resolve_type(ctx, expr);
   default: return ctx->error_type;
   }

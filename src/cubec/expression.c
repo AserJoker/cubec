@@ -31,6 +31,7 @@
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
+#include "cubec/expression_wildcard.h"
 #include <inttypes.h>
 
 static void _cubec_expression_init(cubec_expression_t self,
@@ -226,6 +227,13 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
 
   // Try char literal
   result = TRY(NULL, read_literal_char(allocator, tokens, &current, filename));
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try wildcard type: ? (in type context, e.g. []? or *?)
+  result = read_expression_wildcard(allocator, tokens, &current, filename);
   if (result) {
     *position = current;
     return result;

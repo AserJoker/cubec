@@ -116,6 +116,13 @@ static size_t _hash_type(semantic_type_t type) {
     hash = _hash_combine(hash, _hash_type(impl->generic_instance.generic_template));
     hash = _hash_combine(hash, _hash_type_vec(impl->generic_instance.type_args));
     break;
+
+  case TYPE_GENERIC_PARAM:
+    hash = _hash_combine(hash, (size_t)impl->generic_param.index);
+    break;
+
+  case TYPE_WILDCARD:
+    break;
   }
 
   return hash;

@@ -186,6 +186,69 @@ void type_layout_compute(semantic_type_t type, size_t ptr_size) {
     impl->alignment = 0;
     type->is_incomplete = false;
     break;
+
+  case TYPE_GENERIC_INSTANCE: {
+    /* Generic instances of struct/union have substituted fields */
+    semantic_type_t tmpl = impl->generic_instance.generic_template;
+    vec_t fields = impl->generic_instance.fields;
+    if (!fields || vec_get_size(fields) == 0) break;
+
+    if (tmpl && (tmpl->impl->kind == TYPE_STRUCT)) {
+      size_t offset = 0;
+      size_t max_align = 1;
+      size_t count = vec_get_size(fields);
+      for (size_t i = 0; i < count; i++) {
+        struct symbol *field = (struct symbol *)vec_get(fields, i);
+        if (!field->field.type) continue;
+        _layout_compute_impl(field->field.type, ptr_size);
+        size_t fsize = semantic_type_get_size(field->field.type);
+        size_t falign = semantic_type_get_alignment(field->field.type);
+        if (falign == 0) falign = 1;
+        if (!impl->is_packed) {
+          offset = _align_up(offset, falign);
+        }
+        field->field.offset = offset;
+        offset += fsize;
+        if (falign > max_align) max_align = falign;
+      }
+      if (!impl->is_packed) {
+        offset = _align_up(offset, max_align);
+      }
+      if (offset == 0) offset = 1;
+      impl->size = offset;
+      impl->alignment = max_align;
+      type->is_incomplete = false;
+    } else if (tmpl && (tmpl->impl->kind == TYPE_UNION ||
+                        tmpl->impl->kind == TYPE_CUNION)) {
+      size_t max_size = 0;
+      size_t max_align = 1;
+      size_t count = vec_get_size(fields);
+      for (size_t i = 0; i < count; i++) {
+        struct symbol *field = (struct symbol *)vec_get(fields, i);
+        if (!field->field.type) continue;
+        _layout_compute_impl(field->field.type, ptr_size);
+        size_t fsize = semantic_type_get_size(field->field.type);
+        size_t falign = semantic_type_get_alignment(field->field.type);
+        if (falign == 0) falign = 1;
+        field->field.offset = 0;
+        if (fsize > max_size) max_size = fsize;
+        if (falign > max_align) max_align = falign;
+      }
+      max_size = _align_up(max_size, max_align);
+      impl->size = max_size;
+      impl->alignment = max_align;
+      type->is_incomplete = false;
+    }
+    break;
+  }
+
+  case TYPE_GENERIC_PARAM:
+  case TYPE_WILDCARD:
+    /* These are compile-time only types, no runtime representation */
+    impl->size = 0;
+    impl->alignment = 0;
+    type->is_incomplete = false;
+    break;
   }
 }
 

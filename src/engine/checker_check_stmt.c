@@ -406,6 +406,9 @@ static void _check_function_body(checker_t ctx,
   struct symbol *sym = scope_lookup_local(ctx->global_scope, name);
   if (!sym || sym->kind != SYMBOL_FUNCTION || !sym->function.type) return;
 
+  /* Skip generic functions — they are checked during instantiation, not here */
+  if (sym->function.generic_params) return;
+
   semantic_type_t ftype = sym->function.type;
   semantic_type_t return_type = ftype->impl->function.return_type;
 

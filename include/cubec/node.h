@@ -83,6 +83,7 @@ enum _cubec_node_kind_t {
   CUBEC_NODE_SWITCH_MATCH,
   CUBEC_NODE_DECLARATION_VARIABLE,
   CUBEC_NODE_GENERIC_PARAM,
+  CUBEC_NODE_EXPRESSION_WILDCARD,
 };
 typedef enum _cubec_node_kind_t cubec_node_kind_t;
 void skip_whitespace(vec_t tokens, size_t *position);
