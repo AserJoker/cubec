@@ -115,6 +115,134 @@ char *_generic_instance_cache_key(checker_t ctx, const char *template_name,
   return key;
 }
 
+static semantic_type_t _cache_lookup(checker_t ctx, const char *name,
+                                     vec_t type_args) {
+  char *key = _generic_instance_cache_key(ctx, name, type_args);
+  void *found = strmap_find(ctx->type_impl_cache, key);
+  allocator_free(ctx->allocator, &key);
+  return found ? (semantic_type_t)found : NULL;
+}
+
+static void _cache_insert(checker_t ctx, const char *name,
+                           vec_t type_args, semantic_type_t type) {
+  char *key = _generic_instance_cache_key(ctx, name, type_args);
+  strmap_insert(ctx->type_impl_cache, key, type);
+  allocator_free(ctx->allocator, &key);
+}
+
+/* ===== type substitution (internal to generic instantiation) ===== */
+
+static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
+                                         vec_t type_args) {
+  if (!type || !type->impl) return type;
+
+  switch (type->impl->kind) {
+  case TYPE_GENERIC_PARAM: {
+    size_t idx = type->impl->generic_param.index;
+    if (type_args && idx < vec_get_size(type_args))
+      return (semantic_type_t)vec_get(type_args, idx);
+    return type;
+  }
+
+  case TYPE_POINTER: {
+    semantic_type_t inner = _substitute_type(ctx, type->impl->pointer.pointee, type_args);
+    if (inner == type->impl->pointer.pointee) return type;
+    semantic_type_t result = semantic_type_create_pointer(ctx->allocator, inner);
+    type_hash_ensure(result);
+    vec_push(ctx->all_types, result);
+    return result;
+  }
+
+  case TYPE_SLICE: {
+    semantic_type_t elem = _substitute_type(ctx, type->impl->slice.element, type_args);
+    if (elem == type->impl->slice.element) return type;
+    semantic_type_t result = semantic_type_create_slice(ctx->allocator, elem);
+    type_hash_ensure(result);
+    vec_push(ctx->all_types, result);
+    return result;
+  }
+
+  case TYPE_ARRAY: {
+    semantic_type_t elem = _substitute_type(ctx, type->impl->array.element, type_args);
+    if (elem == type->impl->array.element) return type;
+    semantic_type_t result = semantic_type_create_array(ctx->allocator, elem, type->impl->array.length);
+    type_hash_ensure(result);
+    vec_push(ctx->all_types, result);
+    return result;
+  }
+
+  case TYPE_QUALIFIER: {
+    semantic_type_t base = _substitute_type(ctx, type->impl->qualifier.base, type_args);
+    if (base == type->impl->qualifier.base) return type;
+    semantic_type_t result = semantic_type_create_qualifier(ctx->allocator, base,
+        type->impl->qualifier.is_const, type->impl->qualifier.is_volatile);
+    type_hash_ensure(result);
+    vec_push(ctx->all_types, result);
+    return result;
+  }
+
+  case TYPE_FUNCTION: {
+    bool changed = false;
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t new_params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+    size_t pcount = vec_get_size(type->impl->function.params);
+    for (size_t i = 0; i < pcount; i++) {
+      semantic_type_t p = (semantic_type_t)vec_get(type->impl->function.params, i);
+      semantic_type_t new_p = _substitute_type(ctx, p, type_args);
+      vec_push(new_params, new_p);
+      if (new_p != p) changed = true;
+    }
+    semantic_type_t new_ret = _substitute_type(ctx, type->impl->function.return_type, type_args);
+    if (new_ret != type->impl->function.return_type) changed = true;
+
+    if (!changed) {
+      allocator_free(ctx->allocator, &new_params);
+      return type;
+    }
+    semantic_type_t result = semantic_type_create_function(ctx->allocator, new_ret, new_params,
+        type->impl->function.is_variadic);
+    type_hash_ensure(result);
+    vec_push(ctx->all_types, result);
+    return result;
+  }
+
+  case TYPE_GENERIC_INSTANCE: {
+    bool changed = false;
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t new_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+    size_t acount = vec_get_size(type->impl->generic_instance.type_args);
+    for (size_t i = 0; i < acount; i++) {
+      semantic_type_t arg = (semantic_type_t)vec_get(type->impl->generic_instance.type_args, i);
+      semantic_type_t new_arg = _substitute_type(ctx, arg, type_args);
+      vec_push(new_args, new_arg);
+      if (new_arg != arg) changed = true;
+    }
+
+    if (!changed) {
+      allocator_free(ctx->allocator, &new_args);
+      return type;
+    }
+
+    semantic_type_t result = semantic_type_create_generic_instance(ctx->allocator,
+        type->impl->generic_instance.generic_template, new_args);
+    type_hash_ensure(result);
+    vec_push(ctx->all_types, result);
+    return result;
+  }
+
+  case TYPE_STRUCT:
+  case TYPE_UNION:
+  case TYPE_CUNION:
+    /* Cannot substitute a struct/union type in-place (would corrupt the template).
+       Return as-is; the caller should use _instantiate_struct_fields for
+       creating substituted field copies. */
+    return type;
+
+  default:
+    return type;
+  }
+}
+
 bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
                        semantic_type_t constraint, node_t arg_expr) {
   if (!constraint) return true;
@@ -362,7 +490,7 @@ static void _instantiate_struct_fields(checker_t ctx, semantic_type_t inst,
     nf->field.index = i;
     nf->field.is_pub = f->field.is_pub;
     /* Substitute generic params in field type */
-    nf->field.type = semantic_type_substitute(ctx->allocator, f->field.type, type_args, ctx->all_types);
+    nf->field.type = _substitute_type(ctx, f->field.type, type_args);
     vec_push(inst->impl->generic_instance.fields, nf);
   }
   type_layout_compute(inst, 8);
@@ -374,12 +502,10 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   if (!name) name = "<anonymous>";
 
   /* Check cache */
-  char *key = _generic_instance_cache_key(ctx, name, type_args);
-  void *cached = strmap_find(ctx->type_impl_cache, key);
-  allocator_free(ctx->allocator, &key);
+  semantic_type_t cached = _cache_lookup(ctx, name, type_args);
   if (cached) {
     allocator_free(ctx->allocator, &type_args);
-    return (semantic_type_t)cached;
+    return cached;
   }
 
   /* Create the specialized type as a GENERIC_INSTANCE */
@@ -400,9 +526,7 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   inst->static_methods = _copy_symbol_vec(ctx, template_type->static_methods);
 
   /* Cache the result */
-  key = _generic_instance_cache_key(ctx, name, type_args);
-  strmap_insert(ctx->type_impl_cache, key, inst);
-  allocator_free(ctx->allocator, &key);
+  _cache_insert(ctx, name, type_args, inst);
 
   return inst;
 }
@@ -414,12 +538,10 @@ semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
   if (!func_type) return ctx->error_type;
 
   /* Check cache */
-  char *key = _generic_instance_cache_key(ctx, name, type_args);
-  void *cached = strmap_find(ctx->type_impl_cache, key);
-  allocator_free(ctx->allocator, &key);
+  semantic_type_t cached = _cache_lookup(ctx, name, type_args);
   if (cached) {
     allocator_free(ctx->allocator, &type_args);
-    return (semantic_type_t)cached;
+    return cached;
   }
 
   /* Substitute generic params in params and return_type */
@@ -428,12 +550,12 @@ semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
   size_t pcount = vec_get_size(func_type->impl->function.params);
   for (size_t i = 0; i < pcount; i++) {
     semantic_type_t p = (semantic_type_t)vec_get(func_type->impl->function.params, i);
-    semantic_type_t new_p = semantic_type_substitute(ctx->allocator, p, type_args, ctx->all_types);
+    semantic_type_t new_p = _substitute_type(ctx, p, type_args);
     vec_push(new_params, new_p);
   }
 
-  semantic_type_t new_return = semantic_type_substitute(ctx->allocator,
-      func_type->impl->function.return_type, type_args, ctx->all_types);
+  semantic_type_t new_return = _substitute_type(ctx,
+      func_type->impl->function.return_type, type_args);
 
   /* Create new function type with substituted types */
   semantic_type_t inst_type = semantic_type_create_function(ctx->allocator,
@@ -442,9 +564,7 @@ semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
   type_hash_ensure(inst_type);
 
   /* Cache */
-  key = _generic_instance_cache_key(ctx, name, type_args);
-  strmap_insert(ctx->type_impl_cache, key, inst_type);
-  allocator_free(ctx->allocator, &key);
+  _cache_insert(ctx, name, type_args, inst_type);
 
   /* type_args is not stored in the function type, free it */
   allocator_free(ctx->allocator, &type_args);

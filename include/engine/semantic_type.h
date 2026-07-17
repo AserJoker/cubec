@@ -151,12 +151,6 @@ semantic_type_t semantic_type_create_generic_param(allocator_t allocator,
                                                     size_t index);
 semantic_type_t semantic_type_create_wildcard(allocator_t allocator);
 
-/* Type substitution for generic instantiation */
-semantic_type_t semantic_type_substitute(allocator_t allocator,
-                                          semantic_type_t type,
-                                          vec_t type_args,
-                                          vec_t all_types);
-
 #ifdef __cplusplus
 }
 #endif
