@@ -132,6 +132,10 @@ static void _cache_insert(checker_t ctx, const char *name,
 
 /* ===== type substitution (internal to generic instantiation) ===== */
 
+/* Forward declaration — needed because _substitute_type delegates to _instantiate_type */
+static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
+                                         vec_t type_args);
+
 static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
                                          vec_t type_args) {
   if (!type || !type->impl) return type;
@@ -207,12 +211,16 @@ static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
   }
 
   case TYPE_GENERIC_INSTANCE: {
+    /* Substitute type args, then delegate to _instantiate_type for proper
+       field creation, method copying, and cache dedup */
+    semantic_type_t tmpl = type->impl->generic_instance.generic_template;
+    vec_t tmpl_args = type->impl->generic_instance.type_args;
     bool changed = false;
     vec_init_t vi = {.auto_dispose = false};
     vec_t new_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-    size_t acount = vec_get_size(type->impl->generic_instance.type_args);
+    size_t acount = tmpl_args ? vec_get_size(tmpl_args) : 0;
     for (size_t i = 0; i < acount; i++) {
-      semantic_type_t arg = (semantic_type_t)vec_get(type->impl->generic_instance.type_args, i);
+      semantic_type_t arg = (semantic_type_t)vec_get(tmpl_args, i);
       semantic_type_t new_arg = _substitute_type(ctx, arg, type_args);
       vec_push(new_args, new_arg);
       if (new_arg != arg) changed = true;
@@ -223,11 +231,8 @@ static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
       return type;
     }
 
-    semantic_type_t result = semantic_type_create_generic_instance(ctx->allocator,
-        type->impl->generic_instance.generic_template, new_args);
-    type_hash_ensure(result);
-    vec_push(ctx->all_types, result);
-    return result;
+    /* _instantiate_type takes ownership of new_args (stores or frees on cache hit) */
+    return _instantiate_type(ctx, tmpl, new_args, NULL);
   }
 
   case TYPE_STRUCT:

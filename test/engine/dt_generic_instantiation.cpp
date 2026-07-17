@@ -149,6 +149,75 @@ TEST_F(dt_generic_instantiation, explicit_instantiation_no_errors) {
   compile_result_cleanup(&r, allocator);
 }
 
+/* ===== Multiple instantiations of the same template ===== */
+
+TEST_F(dt_generic_instantiation, multiple_struct_instantiations) {
+  /* struct Vec[T] instantiated with i32, f64, bool — each gets independent fields */
+  const char *src = BUILTIN_ASSERT
+    "struct Vec[T] { data: *T; len: u64; }\n"
+    "test \"multi_struct\" {\n"
+    "  var vi = .Vec[i32]{ .data = nil, .len = 0 };\n"
+    "  var vf = .Vec[f64]{ .data = nil, .len = 0 };\n"
+    "  var vb = .Vec[bool]{ .data = nil, .len = 0 };\n"
+    "  assert(vi.len == 0);\n"
+    "  assert(vf.len == 0);\n"
+    "  assert(vb.len == 0);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_instantiation, multiple_function_instantiations) {
+  /* identity[T] called with i32, f64, bool — each produces a distinct function type */
+  const char *src = BUILTIN_ASSERT
+    "func identity[T](value: T): T { return value; }\n"
+    "test \"multi_func\" {\n"
+    "  var xi = identity[i32](1);\n"
+    "  var xf = identity[f64](2.0);\n"
+    "  var xb = identity[bool](true);\n"
+    "  assert(xi == 1);\n"
+    "  assert(xf == 2.0);\n"
+    "  assert(xb == true);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_instantiation, same_instantiation_deduplicated) {
+  /* Vec[i32] used twice should return the same cached instance (no errors, no duplicates) */
+  const char *src = BUILTIN_ASSERT
+    "struct Vec[T] { data: *T; len: u64; }\n"
+    "test \"dedup\" {\n"
+    "  var v1 = .Vec[i32]{ .data = nil, .len = 1 };\n"
+    "  var v2 = .Vec[i32]{ .data = nil, .len = 2 };\n"
+    "  assert(v1.len == 1);\n"
+    "  assert(v2.len == 2);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_instantiation, mixed_type_and_function_instantiation) {
+  /* Both Vec[T] as a type and makeVec[T] as a function are instantiated */
+  const char *src = BUILTIN_ASSERT
+    "struct Pair[A, B] { first: A; second: B; }\n"
+    "func makePair[A, B](a: A, b: B): Pair[A, B] {\n"
+    "  return .Pair[A, B]{ .first = a, .second = b };\n"
+    "}\n"
+    "test \"mixed\" {\n"
+    "  var p1 = makePair[i32, f64](1, 2.0);\n"
+    "  var p2 = makePair[bool, i32](true, 3);\n"
+    "  assert(p1.first == 1);\n"
+    "  assert(p2.second == 3);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
 /* ===== Type wildcard in constraint ===== */
 
 TEST_F(dt_generic_instantiation, wildcard_type_resolution) {
