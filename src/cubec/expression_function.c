@@ -196,6 +196,13 @@ node_t read_expression_function(allocator_t allocator, vec_t tokens,
                     filename, loc->begin.line + 1, loc->begin.column);
       }
     }
+
+    /* After capture list, try to parse function name if present */
+    token_t name_tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+    if (name_tok && token_get_kind(name_tok) == CUBEC_TOKEN_IDENTIFIER) {
+      name = TRY_LOCAL(onerror, read_literal_identifier(allocator, tokens, &current, filename));
+      skip_whitespace(tokens, &current);
+    }
   } else {
     /* No capture list — captures remain NULL.
        Try to parse function name (identifier) if present. */

@@ -22,6 +22,7 @@
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression_alignof.h"
 #include "cubec/expression_function.h"
+#include "cubec/function_capture.h"
 #include "cubec/expression_initialize_list.h"
 #include "cubec/expression_initialize_field.h"
 #include "cubec/expression_comma.h"
@@ -788,14 +789,37 @@ static comptime_value_t _eval_function_expr(comptime_eval_t eval,
     }
   }
 
-  comptime_env_t captured = eval->current_env;
+  /* Create isolated environment for captured values (by-value capture) */
+  comptime_env_t captured_env = comptime_env_create(eval->allocator, NULL);
+  if (fn->captures) {
+    size_t cc = vec_get_size(fn->captures);
+    for (size_t i = 0; i < cc; i++) {
+      node_t cap_node = (node_t)vec_get(fn->captures, i);
+      if (cap_node->kind != CUBEC_NODE_FUNCTION_CAPTURE) continue;
+      cubec_function_capture_t cap = (cubec_function_capture_t)cap_node;
+      const char *cap_name = _checker_ident_str(cap->identifier);
+      if (!cap_name) continue;
+
+      /* Look up the value in current environment */
+      comptime_value_t val = comptime_env_lookup_value(
+          eval->current_env, eval->valloc, cap_name);
+      if (val) {
+        /* Clone the value for by-value capture */
+        comptime_value_t cloned = comptime_value_clone(eval->allocator, val);
+        if (cloned) {
+          comptime_env_bind_value(captured_env, eval->valloc, cap_name, cloned);
+        }
+      }
+    }
+  }
+
   semantic_type_t ftype = NULL;
   struct symbol *sym = fn->name
       ? scope_lookup(ctx->current_scope, _eval_ident_str(fn->name))
       : NULL;
   if (sym && sym->kind == SYMBOL_FUNCTION) ftype = sym->function.type;
 
-  return _eval_temp(eval, comptime_value_create_function(eval->allocator, captured, fn->body,
+  return _eval_temp(eval, comptime_value_create_function(eval->allocator, captured_env, fn->body,
                                                           param_names, ftype));
 }
 

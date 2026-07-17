@@ -84,15 +84,21 @@ pp.toString()      // → Point::toString(pp)，pp 已是指针，直接传递
 ### 4.1 语法
 
 ```c
+// 匿名函数
 func |captures| (params): ReturnType { body }
+
+// 命名局部函数（支持闭包捕获）
+func |captures| name(params): ReturnType { body }
 ```
 
 - capture 列表用 `|` 包裹，标识符 only（不允许表达式初始化）
 - 无捕获时 `||` 可省略：`func () { }` 等价于 `func || () { }`
+- 支持命名局部函数：`func |x| test(): void { x = x + 1; }`
+- 捕获列表可在函数名之前，用于匿名和命名函数
 
 ### 4.2 捕获语义
 
-**运行时：按值捕获**。闭包内修改不影响原变量：
+**运行时与 comptime：均按值捕获**。闭包内修改不影响原变量：
 
 ```c
 var x = 1;
@@ -111,15 +117,21 @@ g();
 // y 现为 2
 ```
 
-**comptime：按引用捕获**（当前实现）。comptime 闭包存储 `comptime_env_t` 指针，直接访问原始环境。
+### 4.3 按值捕获实现
 
-### 4.3 comptime 闭包模型
+闭包创建时：
+1. 遍历捕获列表，获取每个捕获的标识符名
+2. 从当前环境查找变量的 comptime_value
+3. 克隆值（deep copy）到新创建的隔离环境
+4. 隔离环境的 parent 为 NULL，确保与原环境隔离
 
-- 闭包创建时捕获当前 `comptime_env_t`（环境指针）
-- 调用时从捕获环境创建新的调用环境，参数绑定到新环境
-- 调用完成后销毁调用环境
-- 返回值在销毁前 clone 到调用者环境
-- 调用栈深度限制：`COMPTIME_MAX_CALL_STACK_DEPTH`
+闭包调用时：
+1. 创建调用环境，以捕获的隔离环境为 parent
+2. 将参数绑定到调用环境（通过 parent 链访问捕获值）
+3. 执行函数体
+4. 调用完成后销毁调用环境
+
+调用栈深度限制：`COMPTIME_MAX_CALL_STACK_DEPTH`
 
 ---
 
