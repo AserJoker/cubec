@@ -63,7 +63,7 @@ TEST_F(dt_semantic_type, create_array) {
 TEST_F(dt_semantic_type, create_qualifier) {
   semantic_type_t base =
       semantic_type_create_named(allocator, "i32", TYPE_I32);
-  semantic_type_t q = semantic_type_create_qualifier(allocator, base, true);
+  semantic_type_t q = semantic_type_create_qualifier(allocator, base, false, true);
 
   EXPECT_EQ(semantic_type_get_kind(q), TYPE_QUALIFIER);
   EXPECT_FALSE(semantic_type_is_incomplete(q));
@@ -185,4 +185,94 @@ TEST_F(dt_semantic_type, implicit_convert_same_type) {
       semantic_type_create_named(allocator, "bool", TYPE_BOOL);
   EXPECT_TRUE(semantic_type_can_implicit_convert(t, t));
   allocator_free(allocator, &t);
+}
+
+TEST_F(dt_semantic_type, qualifier_const_flag) {
+  semantic_type_t base =
+      semantic_type_create_named(allocator, "i32", TYPE_I32);
+  semantic_type_t q = semantic_type_create_qualifier(allocator, base, true, false);
+
+  EXPECT_TRUE(semantic_type_is_const(q));
+  EXPECT_FALSE(semantic_type_is_volatile(q));
+
+  allocator_free(allocator, &q);
+  allocator_free(allocator, &base);
+}
+
+TEST_F(dt_semantic_type, qualifier_volatile_flag) {
+  semantic_type_t base =
+      semantic_type_create_named(allocator, "i32", TYPE_I32);
+  semantic_type_t q = semantic_type_create_qualifier(allocator, base, false, true);
+
+  EXPECT_FALSE(semantic_type_is_const(q));
+  EXPECT_TRUE(semantic_type_is_volatile(q));
+
+  allocator_free(allocator, &q);
+  allocator_free(allocator, &base);
+}
+
+TEST_F(dt_semantic_type, qualifier_both_flags) {
+  semantic_type_t base =
+      semantic_type_create_named(allocator, "i32", TYPE_I32);
+  /* const volatile i32 → const(volatile(i32)): outer=const, inner=volatile */
+  semantic_type_t inner =
+      semantic_type_create_qualifier(allocator, base, false, true);
+  semantic_type_t outer =
+      semantic_type_create_qualifier(allocator, inner, true, false);
+
+  EXPECT_TRUE(semantic_type_is_const(outer));
+  EXPECT_FALSE(semantic_type_is_volatile(outer));
+
+  EXPECT_FALSE(semantic_type_is_const(inner));
+  EXPECT_TRUE(semantic_type_is_volatile(inner));
+
+  allocator_free(allocator, &outer);
+  allocator_free(allocator, &inner);
+  allocator_free(allocator, &base);
+}
+
+TEST_F(dt_semantic_type, strip_qualifier) {
+  semantic_type_t base =
+      semantic_type_create_named(allocator, "i32", TYPE_I32);
+  semantic_type_t q = semantic_type_create_qualifier(allocator, base, true, false);
+
+  semantic_type_t stripped = semantic_type_strip_qualifier(q);
+  EXPECT_EQ(semantic_type_get_kind(stripped), TYPE_I32);
+  EXPECT_EQ(stripped, base);
+
+  /* Stripping a non-qualifier returns itself */
+  semantic_type_t stripped2 = semantic_type_strip_qualifier(base);
+  EXPECT_EQ(stripped2, base);
+
+  allocator_free(allocator, &q);
+  allocator_free(allocator, &base);
+}
+
+TEST_F(dt_semantic_type, is_const_volatile_non_qualifier) {
+  semantic_type_t base =
+      semantic_type_create_named(allocator, "i32", TYPE_I32);
+  EXPECT_FALSE(semantic_type_is_const(base));
+  EXPECT_FALSE(semantic_type_is_volatile(base));
+
+  semantic_type_t ptr = semantic_type_create_pointer(allocator, base);
+  EXPECT_FALSE(semantic_type_is_const(ptr));
+  EXPECT_FALSE(semantic_type_is_volatile(ptr));
+
+  allocator_free(allocator, &ptr);
+  allocator_free(allocator, &base);
+}
+
+TEST_F(dt_semantic_type, implicit_convert_add_const) {
+  /* i32 → const i32 should be allowed */
+  semantic_type_t base =
+      semantic_type_create_named(allocator, "i32", TYPE_I32);
+  semantic_type_t const_base =
+      semantic_type_create_qualifier(allocator, base, true, false);
+
+  EXPECT_TRUE(semantic_type_can_implicit_convert(base, const_base));
+  /* const i32 → i32 should NOT be allowed */
+  EXPECT_FALSE(semantic_type_can_implicit_convert(const_base, base));
+
+  allocator_free(allocator, &const_base);
+  allocator_free(allocator, &base);
 }

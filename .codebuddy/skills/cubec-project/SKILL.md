@@ -68,7 +68,7 @@ cubec/
 │       ├── expression_slice.h   # Slice expression (host[start:length])
 │       ├── expression_spread.h  # Spread expression (...expr)
 │       ├── expression_ternary.h # Ternary/conditional expression (cond ? consequent : alternate)
-│       ├── expression_type_qualifier.h # Type qualifier expression (const/volatile <type>)
+│       ├── expression_type_qualifier.h # Type qualifier expression (const/volatile <type>, has is_const + is_volatile flags)
 │       ├── expression_type_function.h # Function type expression (func(params) -> type)
 │       ├── literal.h           # Literal AST node (abstract)
 │       ├── literal_char.h      # Character literal
@@ -165,7 +165,7 @@ node_t (core/node.h)
         ├── cubec_expression_postfix_unary_t (cubec/expression_postfix_unary.h)  # value.*, value.&
         ├── cubec_expression_slice_t (cubec/expression_slice.h)
         ├── cubec_expression_spread_t (cubec/expression_spread.h)
-        ├── cubec_expression_type_qualifier_t (cubec/expression_type_qualifier.h)  # const/volatile <type>
+        ├── cubec_expression_type_qualifier_t (cubec/expression_type_qualifier.h)  # const/volatile <type> (is_const + is_volatile flags)
         ├── cubec_expression_type_function_t (cubec/expression_type_function.h)  # func(params) -> type
         ├── cubec_expression_typeof_t (cubec/expression_typeof.h)  # typeof(<expression>)
         ├── cubec_expression_sizeof_t (cubec/expression_sizeof.h)  # sizeof(<expression>)
@@ -209,7 +209,7 @@ node_t (core/node.h)
         ├── cubec_expression_slice_t (cubec/expression_slice.h)
         ├── cubec_expression_spread_t (cubec/expression_spread.h)
         ├── cubec_expression_ternary_t (cubec/expression_ternary.h)
-        ├── cubec_expression_type_qualifier_t (cubec/expression_type_qualifier.h)  # const/volatile <type>
+        ├── cubec_expression_type_qualifier_t (cubec/expression_type_qualifier.h)  # const/volatile <type> (is_const + is_volatile flags)
         ├── cubec_expression_type_function_t (cubec/expression_type_function.h)  # func(params) -> type
         ├── cubec_expression_typeof_t (cubec/expression_typeof.h)  # typeof(<expression>)
         ├── cubec_expression_sizeof_t (cubec/expression_sizeof.h)  # sizeof(<expression>)
@@ -484,6 +484,8 @@ All statement and declaration types have parser implementations, including `comp
 ### Type System (semantic_type_t)
 
 Two-layer representation: `semantic_type_t` wraps AST type nodes with semantic info. Structural equivalence for type comparison. Pointer decay rules. Built-in types: `builtin_i8`~`builtin_u64`, `builtin_f16`~`builtin_f64`, `builtin_bool`, `builtin_void`, etc. Type layout computation via `type_layout_compute`.
+
+**const/volatile qualifier**: `TYPE_QUALIFIER` has `is_const` and `is_volatile` flags. `*const T` → `POINTER(QUALIFIER(const, T))` (pointer to const T, C: `const T*`). `const *T` → `QUALIFIER(const, POINTER(T))` (const pointer, C: `T* const`). Utility functions: `semantic_type_is_const()`, `semantic_type_is_volatile()`, `semantic_type_strip_qualifier()`. Const enforcement: assignment to const lvalue errors, member/deref const propagation, `is_mutable` set based on `!semantic_type_is_const()`. Implicit conversion allows `T → const T` but not `const T → T`. Comptime eval enforces const but ignores volatile.
 
 ### Symbol Table (scope_t)
 

@@ -245,7 +245,7 @@ void _check_func_params(checker_t ctx, void *fn_node, vec_t param_types) {
       struct symbol *psym = symbol_create(ctx->allocator, pname,
                                            SYMBOL_VARIABLE, arg->location);
       psym->variable.type = pt;
-      psym->variable.is_mutable = true;
+      psym->variable.is_mutable = !semantic_type_is_const(pt);
       psym->state = SYMBOL_EVALUATED;
       scope_push_symbol(ctx->current_scope, psym);
     }

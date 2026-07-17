@@ -196,7 +196,7 @@ static void _check_stmt_foreach(checker_t ctx, node_t stmt,
       }
       vsym->variable.type = elem_type ? elem_type : ctx->error_type;
     }
-    vsym->variable.is_mutable = true;
+    vsym->variable.is_mutable = !semantic_type_is_const(vsym->variable.type);
     vsym->state = SYMBOL_EVALUATED;
     scope_push_symbol(ctx->current_scope, vsym);
   }
@@ -261,7 +261,7 @@ static void _check_stmt_declaration(checker_t ctx, node_t stmt) {
                                        SYMBOL_VARIABLE, stmt->location);
   vsym->variable.type = var_type;
   vsym->variable.is_comptime = sdecl->is_comptime;
-  vsym->variable.is_mutable = true;
+  vsym->variable.is_mutable = !semantic_type_is_const(var_type);
   vsym->state = SYMBOL_EVALUATED;
   scope_push_symbol(ctx->current_scope, vsym);
 }
@@ -437,7 +437,7 @@ static void _register_func_params(checker_t ctx, cubec_statement_function_t fn,
     psym->variable.type = (params && j < vec_get_size(params))
                             ? (semantic_type_t)vec_get(params, j)
                             : ctx->error_type;
-    psym->variable.is_mutable = true;
+    psym->variable.is_mutable = !semantic_type_is_const(psym->variable.type);
     psym->state = SYMBOL_EVALUATED;
     scope_push_symbol(ctx->current_scope, psym);
   }

@@ -58,7 +58,7 @@ struct _type_impl {
   size_t explicit_align;    /**< Explicit alignment (0 = natural) */
   union {
     /* TYPE_QUALIFIER */
-    struct { semantic_type_t base; bool is_volatile; } qualifier;
+    struct { semantic_type_t base; bool is_const; bool is_volatile; } qualifier;
     /* TYPE_POINTER */
     struct { semantic_type_t pointee; } pointer;
     /* TYPE_SLICE */
@@ -125,7 +125,13 @@ semantic_type_t semantic_type_create_array(allocator_t allocator,
                                            size_t length);
 semantic_type_t semantic_type_create_qualifier(allocator_t allocator,
                                                semantic_type_t base,
-                                               bool is_volatile);
+                                               bool is_const, bool is_volatile);
+
+/* ===== qualifier query utilities ===== */
+
+bool semantic_type_is_const(semantic_type_t type);
+bool semantic_type_is_volatile(semantic_type_t type);
+semantic_type_t semantic_type_strip_qualifier(semantic_type_t type);
 semantic_type_t semantic_type_create_function(allocator_t allocator,
                                               semantic_type_t return_type,
                                               vec_t params,

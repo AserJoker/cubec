@@ -145,9 +145,9 @@ Cubec 支持前缀指针声明语法（区别于 C 的前缀 `*`）：
 
 ```c
 *i32              // 指向 i32 的指针
-* const i32       // const 指针
-* volatile i32    // volatile 指针
-* const volatile i32  // const volatile 指针
+* const i32       // 指向 const i32 的指针（C: const int*）
+* volatile i32    // 指向 volatile i32 的指针（C: volatile int*）
+* const volatile i32  // 指向 const volatile i32 的指针
 ** i32            // 指向指针的指针
 * Vec[i32]        // 指向泛型类型的指针
 * std::vec::Vec     // 指向命名空间类型的指针
@@ -165,15 +165,15 @@ Vec[* i32]        // Vec 的元素类型是指向 i32 的指针
 
 ```c
 const i32              // const 修饰的 i32 类型
-const * i32            // const 修饰的指针类型（指向 i32 的 const 指针）
+const * i32            // const 指针（C: int* const），指针本身不可重赋值
 const [] i32           // const 修饰的切片类型
 const [10] i32         // const 修饰的数组类型
 const Vec[i32]         // const 修饰的泛型类型
 const std::vec::Vec      // const 修饰的命名空间类型
-const const i32        // 嵌套 const
+const volatile i32     // const + volatile 修饰
 ```
 
-> **注意**：`const * i32` 与 `* const i32` 语义不同。`const * i32` 是 const 修饰整个指针类型，而 `* const i32` 是指针声明中 const 限定符修饰指针本身。
+> **注意**：`const * i32` 与 `* const i32` 语义不同。`const * i32` 是 const 修饰指针本身（C: `int* const`），指针不可重赋值但可通过指针修改数据；`* const i32` 是指针指向 const 数据（C: `const int*`），数据不可通过指针修改但指针可重赋值。
 
 const 类型表达式贪婪消费内部类型，包括三元：
 

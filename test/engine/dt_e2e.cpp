@@ -454,3 +454,111 @@ TEST_F(dt_e2e, deref_member_write_reflects_to_var) {
   EXPECT_EQ(r.ctx->test_fail_count, 0);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== Batch 11: const/volatile semantics ===== */
+
+TEST_F(dt_e2e, const_var_assign_error) {
+  /* Assigning to a const variable should produce an error */
+  const char *src = BUILTIN_ASSERT
+    "test \"const_assign\" {\n"
+    "  var x: const i32 = 10;\n"
+    "  x = 20;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, const_var_read_ok) {
+  /* Reading a const variable is fine */
+  const char *src = BUILTIN_ASSERT
+    "test \"const_read\" {\n"
+    "  var x: const i32 = 42;\n"
+    "  assert(x == 42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 1);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, const_field_assign_error) {
+  /* Assigning to a field of a const struct should produce an error */
+  const char *src = BUILTIN_ASSERT
+    "struct Point { x: i32; y: i32; }\n"
+    "test \"const_field_assign\" {\n"
+    "  var p: const Point = .Point { .x = 1, .y = 2 };\n"
+    "  p.x = 99;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, ptr_to_const_deref_assign_error) {
+  /* *p where p: *const i32 should not allow assignment */
+  const char *src = BUILTIN_ASSERT
+    "test \"ptr_to_const_deref_assign\" {\n"
+    "  var x: i32 = 10;\n"
+    "  var p: *const i32 = x.&;\n"
+    "  p.* = 99;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, const_ptr_reassign_error) {
+  /* p where p: const *i32 should not allow reassignment */
+  const char *src = BUILTIN_ASSERT
+    "test \"const_ptr_reassign\" {\n"
+    "  var x: i32 = 10;\n"
+    "  var y: i32 = 20;\n"
+    "  var p: const *i32 = x.&;\n"
+    "  p = y.&;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, const_volatile_type) {
+  /* const volatile i32 should compile without error */
+  const char *src = BUILTIN_ASSERT
+    "test \"const_volatile\" {\n"
+    "  var x: const volatile i32 = 42;\n"
+    "  assert(x == 42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 1);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, const_member_access) {
+  /* Reading a field of a const struct is fine */
+  const char *src = BUILTIN_ASSERT
+    "struct Point { x: i32; y: i32; }\n"
+    "test \"const_member_read\" {\n"
+    "  var p: const Point = .Point { .x = 1, .y = 2 };\n"
+    "  assert(p.x == 1);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 1);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, const_ptr_deref_read_ok) {
+  /* Reading through *const T pointer is fine */
+  const char *src = BUILTIN_ASSERT
+    "test \"const_ptr_deref_read\" {\n"
+    "  var x: i32 = 10;\n"
+    "  var p: *const i32 = x.&;\n"
+    "  assert(p.* == 10);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 1);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
+}

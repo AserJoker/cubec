@@ -195,6 +195,18 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
   /* identifier assignment: clone rv into env, return borrowed from env */
   if (asgn->left->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
     const char *name = _eval_ident_str(asgn->left);
+
+    /* Check const: variable must be mutable */
+    {
+      struct symbol *sym = scope_lookup(ctx->current_scope, name);
+      if (sym && sym->kind == SYMBOL_VARIABLE && !sym->variable.is_mutable) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                             "cannot assign to const variable '%s'", name);
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
+    }
+
     comptime_value_t cloned = comptime_value_clone(eval->allocator, rv);
     if (!comptime_env_update_value(eval->current_env, eval->valloc, name, cloned)) {
       allocator_free(eval->allocator, &cloned);
@@ -223,9 +235,27 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
     }
     if (!host) return _eval_error_val(eval);
 
+    /* Check const: if host type is const, field is not writable */
+    if (host->type && semantic_type_is_const(host->type)) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                           "cannot assign to field of const-qualified expression");
+      ctx->error_count++;
+      return _eval_error_val(eval);
+    }
+
     comptime_value_t target = host;
     /* If host is a pointer, dereference to get the composite */
     if (host->kind == COMPTIME_VALUE_POINTER) {
+      /* Check const: if pointee is const, cannot write through pointer */
+      if (host->type && host->type->impl->kind == TYPE_POINTER) {
+        semantic_type_t pointee = host->type->impl->pointer.pointee;
+        if (semantic_type_is_const(pointee)) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                               "cannot write through pointer to const type");
+          ctx->error_count++;
+          return _eval_error_val(eval);
+        }
+      }
       target = comptime_alloc_read(eval->valloc, host->pointer.addr);
       if (!target) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
@@ -253,6 +283,18 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
     cubec_expression_binary_t deref = (cubec_expression_binary_t)asgn->left;
     comptime_value_t ptr = _comptime_eval_expr(eval, ctx, deref->right);
     if (!ptr || ptr->kind != COMPTIME_VALUE_POINTER) return _eval_error_val(eval);
+
+    /* Check const: if pointee is const, cannot write through pointer */
+    if (ptr->type && ptr->type->impl->kind == TYPE_POINTER) {
+      semantic_type_t pointee = ptr->type->impl->pointer.pointee;
+      if (semantic_type_is_const(pointee)) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                             "cannot write through pointer to const type");
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
+    }
+
     comptime_value_t cloned = comptime_value_clone(eval->allocator, rv);
     if (!comptime_alloc_write(eval->valloc, ptr->pointer.addr, cloned)) {
       allocator_free(eval->allocator, &cloned);

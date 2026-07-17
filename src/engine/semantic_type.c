@@ -148,6 +148,7 @@ static bool _type_impl_equals(type_impl_t a, type_impl_t b) {
 
   case TYPE_QUALIFIER:
     return semantic_type_equals(a->qualifier.base, b->qualifier.base) &&
+           a->qualifier.is_const == b->qualifier.is_const &&
            a->qualifier.is_volatile == b->qualifier.is_volatile;
 
   case TYPE_POINTER:
@@ -230,11 +231,30 @@ bool semantic_type_can_implicit_convert(semantic_type_t from,
   if (semantic_type_equals(from, to)) return true;
   if (!from || !to || !from->impl || !to->impl) return false;
 
+  /* Adding const is safe: T → const T */
+  if (semantic_type_is_const(to) && !semantic_type_is_const(from)) {
+    semantic_type_t to_base = semantic_type_strip_qualifier(to);
+    if (semantic_type_equals(from, to_base)) return true;
+  }
+
+  /* Pointer qualifier conversion: *T → *const T (adding const to pointee is safe) */
+  {
+    semantic_type_t from_unq = semantic_type_strip_qualifier(from);
+    semantic_type_t to_unq = semantic_type_strip_qualifier(to);
+    if (from_unq->impl->kind == TYPE_POINTER && to_unq->impl->kind == TYPE_POINTER) {
+      /* Recursively check pointee compatibility (allows *T → *const T) */
+      if (semantic_type_can_implicit_convert(from_unq->impl->pointer.pointee,
+                                             to_unq->impl->pointer.pointee))
+        return true;
+    }
+  }
+
   /* nil -> pointer/slice/interface */
   if (from->impl->kind == TYPE_NIL) {
-    return to->impl->kind == TYPE_POINTER ||
-           to->impl->kind == TYPE_SLICE ||
-           to->impl->kind == TYPE_INTERFACE;
+    semantic_type_t to_unq = semantic_type_strip_qualifier(to);
+    return to_unq->impl->kind == TYPE_POINTER ||
+           to_unq->impl->kind == TYPE_SLICE ||
+           to_unq->impl->kind == TYPE_INTERFACE;
   }
 
   /* integer widening */
@@ -257,6 +277,24 @@ bool semantic_type_can_implicit_convert(semantic_type_t from,
 
   /* decay */
   return semantic_type_can_decay(from, to);
+}
+
+/* ===== qualifier query utilities ===== */
+
+bool semantic_type_is_const(semantic_type_t type) {
+  if (!type || !type->impl) return false;
+  return type->impl->kind == TYPE_QUALIFIER && type->impl->qualifier.is_const;
+}
+
+bool semantic_type_is_volatile(semantic_type_t type) {
+  if (!type || !type->impl) return false;
+  return type->impl->kind == TYPE_QUALIFIER && type->impl->qualifier.is_volatile;
+}
+
+semantic_type_t semantic_type_strip_qualifier(semantic_type_t type) {
+  if (!type || !type->impl) return type;
+  if (type->impl->kind == TYPE_QUALIFIER) return type->impl->qualifier.base;
+  return type;
 }
 
 /* ===== constructors ===== */
@@ -315,11 +353,12 @@ semantic_type_t semantic_type_create_array(allocator_t allocator,
 
 semantic_type_t semantic_type_create_qualifier(allocator_t allocator,
                                                semantic_type_t base,
-                                               bool is_volatile) {
+                                               bool is_const, bool is_volatile) {
   semantic_type_t t = (semantic_type_t)allocator_create(
       allocator, &g_semantic_type_type, NULL);
   t->impl = _create_impl(allocator, TYPE_QUALIFIER);
   t->impl->qualifier.base = base;
+  t->impl->qualifier.is_const = is_const;
   t->impl->qualifier.is_volatile = is_volatile;
   t->is_incomplete = false;
   return t;

@@ -51,6 +51,7 @@ static size_t _hash_type(semantic_type_t type) {
 
   case TYPE_QUALIFIER:
     hash = _hash_combine(hash, _hash_type(impl->qualifier.base));
+    hash = _hash_combine(hash, (size_t)impl->qualifier.is_const);
     hash = _hash_combine(hash, (size_t)impl->qualifier.is_volatile);
     break;
 

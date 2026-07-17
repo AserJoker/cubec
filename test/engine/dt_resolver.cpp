@@ -81,7 +81,7 @@ TEST_F(dt_resolver, slice_type_construction) {
 
 TEST_F(dt_resolver, qualifier_type_construction) {
   semantic_type_t const_i32 =
-      semantic_type_create_qualifier(allocator, ctx->builtin_i32, false);
+      semantic_type_create_qualifier(allocator, ctx->builtin_i32, true, false);
   type_hash_ensure(const_i32);
   type_layout_compute(const_i32, 8);
 

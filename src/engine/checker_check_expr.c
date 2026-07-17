@@ -136,6 +136,44 @@ static semantic_type_t _check_expr_binary(checker_t ctx, node_t expr) {
   return ctx->error_type;
 }
 
+/* Check if an lvalue expression refers to a const-qualified location */
+static bool _is_const_lvalue(checker_t ctx, node_t expr, semantic_type_t expr_type) {
+  if (!expr || !expr_type) return false;
+
+  switch (expr->kind) {
+  case CUBEC_NODE_LITERAL_IDENTIFIER:
+    return semantic_type_is_const(expr_type);
+
+  case CUBEC_NODE_EXPRESSION_MEMBER: {
+    cubec_expression_member_t mem = (cubec_expression_member_t)expr;
+    semantic_type_t host_type = _check_expression(ctx, mem->host);
+    /* If host is const, the field is const */
+    if (semantic_type_is_const(host_type)) return true;
+    /* For pointer.field, check if pointee is const */
+    semantic_type_t host_unq = semantic_type_strip_qualifier(host_type);
+    if (host_unq->impl->kind == TYPE_POINTER) {
+      semantic_type_t pointee = host_unq->impl->pointer.pointee;
+      if (semantic_type_is_const(pointee)) return true;
+    }
+    return semantic_type_is_const(expr_type);
+  }
+
+  case CUBEC_NODE_EXPRESSION_DEREF: {
+    cubec_expression_binary_t deref = (cubec_expression_binary_t)expr;
+    semantic_type_t ptr_type = _check_expression(ctx, deref->right);
+    semantic_type_t ptr_unq = semantic_type_strip_qualifier(ptr_type);
+    if (ptr_unq->impl->kind == TYPE_POINTER) {
+      semantic_type_t pointee = ptr_unq->impl->pointer.pointee;
+      if (semantic_type_is_const(pointee)) return true;
+    }
+    return semantic_type_is_const(expr_type);
+  }
+
+  default:
+    return semantic_type_is_const(expr_type);
+  }
+}
+
 static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
   cubec_expression_assignment_t asgn = (cubec_expression_assignment_t)expr;
   const char *op = string_get(asgn->opt);
@@ -150,6 +188,13 @@ static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
   semantic_type_t rt = _check_expression(ctx, asgn->right);
   if (lt->impl->kind == TYPE_ERROR || rt->impl->kind == TYPE_ERROR)
     return ctx->error_type;
+
+  /* Check const enforcement: cannot assign to const-qualified lvalue */
+  if (_is_const_lvalue(ctx, asgn->left, lt)) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                         "cannot assign to const-qualified expression");
+    ctx->error_count++;
+  }
 
   if (asgn->left->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
     semantic_type_t result = _check_assign_generic_lhs(ctx, expr, lt, rt);
@@ -310,48 +355,81 @@ static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
   const char *fname = _checker_ident_str((node_t)mem->field);
   if (!fname) return ctx->error_type;
 
-  if (host_type->impl->kind == TYPE_STRUCT ||
-      host_type->impl->kind == TYPE_UNION ||
-      host_type->impl->kind == TYPE_CUNION) {
-    vec_t fields = host_type->impl->struct_type.fields;
+  /* Determine the effective host type (strip qualifier wrapper, deref pointers)
+     and whether const should propagate to field access results */
+  semantic_type_t effective_host = host_type;
+  bool host_is_const = semantic_type_is_const(host_type);
+
+  /* Strip outer qualifier wrapper (e.g. const Struct → Struct) */
+  if (host_type->impl->kind == TYPE_QUALIFIER) {
+    effective_host = semantic_type_strip_qualifier(host_type);
+  }
+
+  if (effective_host->impl->kind == TYPE_STRUCT ||
+      effective_host->impl->kind == TYPE_UNION ||
+      effective_host->impl->kind == TYPE_CUNION) {
+    vec_t fields = effective_host->impl->struct_type.fields;
     size_t fcount = fields ? vec_get_size(fields) : 0;
     for (size_t i = 0; i < fcount; i++) {
       struct symbol *f = (struct symbol *)vec_get(fields, i);
-      if (f && f->name && strcmp(f->name, fname) == 0)
-        return f->field.type;
+      if (f && f->name && strcmp(f->name, fname) == 0) {
+        semantic_type_t ft = f->field.type;
+        if (host_is_const && !semantic_type_is_const(ft)) {
+          semantic_type_t cft = semantic_type_create_qualifier(
+              ctx->allocator, ft, true, false);
+          type_hash_ensure(cft);
+          vec_push(ctx->all_types, cft);
+          return cft;
+        }
+        return ft;
+      }
     }
-    size_t mcount = vec_get_size(host_type->instance_methods);
+    /* Methods don't need const propagation — they are function values */
+    size_t mcount = vec_get_size(effective_host->instance_methods);
     for (size_t i = 0; i < mcount; i++) {
-      struct symbol *m = (struct symbol *)vec_get(host_type->instance_methods, i);
+      struct symbol *m = (struct symbol *)vec_get(effective_host->instance_methods, i);
       if (m && m->name && strcmp(m->name, fname) == 0)
         return m->function.type;
     }
   }
 
   /* Pointer auto-dereference: ptr.field is equivalent to (*ptr).field */
-  if (host_type->impl->kind == TYPE_POINTER) {
-    semantic_type_t pointee = host_type->impl->pointer.pointee;
-    if (pointee && (pointee->impl->kind == TYPE_STRUCT ||
-                    pointee->impl->kind == TYPE_UNION ||
-                    pointee->impl->kind == TYPE_CUNION)) {
-      vec_t fields = pointee->impl->struct_type.fields;
+  if (effective_host->impl->kind == TYPE_POINTER) {
+    semantic_type_t pointee = effective_host->impl->pointer.pointee;
+    /* Check if pointee is const (for *const T pointers) */
+    bool pointee_is_const = semantic_type_is_const(pointee);
+    semantic_type_t pointee_unq = semantic_type_strip_qualifier(pointee);
+
+    if (pointee_unq && (pointee_unq->impl->kind == TYPE_STRUCT ||
+                        pointee_unq->impl->kind == TYPE_UNION ||
+                        pointee_unq->impl->kind == TYPE_CUNION)) {
+      vec_t fields = pointee_unq->impl->struct_type.fields;
       size_t fcount = fields ? vec_get_size(fields) : 0;
       for (size_t i = 0; i < fcount; i++) {
         struct symbol *f = (struct symbol *)vec_get(fields, i);
-        if (f && f->name && strcmp(f->name, fname) == 0)
-          return f->field.type;
+        if (f && f->name && strcmp(f->name, fname) == 0) {
+          semantic_type_t ft = f->field.type;
+          if (pointee_is_const && !semantic_type_is_const(ft)) {
+            semantic_type_t cft = semantic_type_create_qualifier(
+                ctx->allocator, ft, true, false);
+            type_hash_ensure(cft);
+            vec_push(ctx->all_types, cft);
+            return cft;
+          }
+          return ft;
+        }
       }
-      size_t mcount = vec_get_size(pointee->instance_methods);
+      size_t mcount = vec_get_size(pointee_unq->instance_methods);
       for (size_t i = 0; i < mcount; i++) {
-        struct symbol *m = (struct symbol *)vec_get(pointee->instance_methods, i);
+        struct symbol *m = (struct symbol *)vec_get(pointee_unq->instance_methods, i);
         if (m && m->name && strcmp(m->name, fname) == 0)
           return m->function.type;
       }
     }
   }
 
-  if (host_type->impl->kind == TYPE_INTERFACE) {
-    vec_t methods = host_type->impl->interface_type.methods;
+  if (effective_host->impl->kind == TYPE_INTERFACE) {
+    vec_t methods = effective_host->impl->interface_type.methods;
     size_t mcount = methods ? vec_get_size(methods) : 0;
     for (size_t i = 0; i < mcount; i++) {
       struct symbol *m = (struct symbol *)vec_get(methods, i);
@@ -410,13 +488,15 @@ static semantic_type_t _check_expr_deref(checker_t ctx, node_t expr) {
   semantic_type_t host_type = _check_expression(ctx, pf->right);
   if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
 
-  if (host_type->impl->kind != TYPE_POINTER) {
+  /* Strip qualifier wrapper (e.g. const *T) to find the underlying pointer */
+  semantic_type_t unqualified = semantic_type_strip_qualifier(host_type);
+  if (unqualified->impl->kind != TYPE_POINTER) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "cannot dereference non-pointer type");
     ctx->error_count++;
     return ctx->error_type;
   }
-  return host_type->impl->pointer.pointee;
+  return unqualified->impl->pointer.pointee;
 }
 
 static semantic_type_t _check_expr_addr(checker_t ctx, node_t expr) {

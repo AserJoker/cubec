@@ -63,16 +63,20 @@ semantic_type_t _resolve_type_pointer(checker_t ctx, node_t node) {
   semantic_type_t base = resolver_resolve_type(ctx, ptr->type);
   if (base->impl->kind == TYPE_ERROR) return ctx->error_type;
 
-  semantic_type_t result = semantic_type_create_pointer(ctx->allocator, base);
-  vec_push(ctx->all_types, result);
+  /* *const T → POINTER(QUALIFIER(const, T)) — pointer to const T (C: const T*)
+   * *volatile T → POINTER(QUALIFIER(volatile, T))
+   * *const volatile T → POINTER(QUALIFIER(const|volatile, T)) */
   if (ptr->is_const || ptr->is_volatile) {
-    semantic_type_t qualified = semantic_type_create_qualifier(
-        ctx->allocator, result, ptr->is_volatile);
-    type_hash_ensure(qualified);
-    vec_push(ctx->all_types, qualified);
-    return qualified;
+    semantic_type_t qualified_base = semantic_type_create_qualifier(
+        ctx->allocator, base, ptr->is_const, ptr->is_volatile);
+    type_hash_ensure(qualified_base);
+    vec_push(ctx->all_types, qualified_base);
+    base = qualified_base;
   }
+
+  semantic_type_t result = semantic_type_create_pointer(ctx->allocator, base);
   type_hash_ensure(result);
+  vec_push(ctx->all_types, result);
   return result;
 }
 
@@ -81,16 +85,18 @@ semantic_type_t _resolve_type_slice(checker_t ctx, node_t node) {
   semantic_type_t elem = resolver_resolve_type(ctx, sl->type);
   if (elem->impl->kind == TYPE_ERROR) return ctx->error_type;
 
-  semantic_type_t result = semantic_type_create_slice(ctx->allocator, elem);
-  vec_push(ctx->all_types, result);
+  /* []const T → SLICE(QUALIFIER(const, T)) — slice of const T */
   if (sl->is_const || sl->is_volatile) {
-    semantic_type_t qualified = semantic_type_create_qualifier(
-        ctx->allocator, result, sl->is_volatile);
-    type_hash_ensure(qualified);
-    vec_push(ctx->all_types, qualified);
-    return qualified;
+    semantic_type_t qualified_elem = semantic_type_create_qualifier(
+        ctx->allocator, elem, sl->is_const, sl->is_volatile);
+    type_hash_ensure(qualified_elem);
+    vec_push(ctx->all_types, qualified_elem);
+    elem = qualified_elem;
   }
+
+  semantic_type_t result = semantic_type_create_slice(ctx->allocator, elem);
   type_hash_ensure(result);
+  vec_push(ctx->all_types, result);
   return result;
 }
 
@@ -136,7 +142,7 @@ semantic_type_t _resolve_type_qualifier(checker_t ctx, node_t node) {
   if (base->impl->kind == TYPE_ERROR) return ctx->error_type;
 
   semantic_type_t result = semantic_type_create_qualifier(
-      ctx->allocator, base, q->is_volatile);
+      ctx->allocator, base, q->is_const, q->is_volatile);
   type_hash_ensure(result);
   vec_push(ctx->all_types, result);
   return result;

@@ -14,7 +14,8 @@ struct _cubec_expression_type_qualifier_t;
 struct _cubec_expression_type_qualifier_t {
   struct _cubec_expression_t super;
   node_t type;        /**< The underlying type expression */
-  bool is_volatile;   /**< true = volatile, false = const */
+  bool is_const;      /**< true = const qualifier */
+  bool is_volatile;   /**< true = volatile qualifier */
 };
 typedef struct _cubec_expression_type_qualifier_t *cubec_expression_type_qualifier_t;
 
@@ -24,6 +25,7 @@ struct _cubec_expression_type_qualifier_init_t {
   location_t location;
   node_t parent;
   node_t type;
+  bool is_const;
   bool is_volatile;
 };
 typedef struct _cubec_expression_type_qualifier_init_t cubec_expression_type_qualifier_init_t;

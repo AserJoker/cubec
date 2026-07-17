@@ -27,6 +27,7 @@ static void _cubec_expression_type_qualifier_init(
   TRY_VOID_LOCAL(onerror,
                  g_cubec_expression_type.init(&self->super, allocator, &super_init));
   self->type = init->type;
+  self->is_const = init->is_const;
   self->is_volatile = init->is_volatile;
 onerror:
   return;
@@ -45,6 +46,7 @@ static void _cubec_expression_type_qualifier_clone(
       cleanup,
       g_cubec_expression_type.clone(&self->super, allocator, &another->super));
   self->type = TRY_LOCAL(cleanup, value_clone(allocator, another->type));
+  self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
   return;
 
@@ -59,6 +61,7 @@ static void _cubec_expression_type_qualifier_move(
       cleanup,
       g_cubec_expression_type.move(&self->super, allocator, &another->super));
   self->type = TRY_LOCAL(cleanup, value_move(allocator, another->type));
+  self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
   return;
 
@@ -77,65 +80,107 @@ type_t g_cubec_expression_type_qualifier_type = {
 
 /* --------------------------------------------------------------------------
  *  Parser: read_expression_type_qualifier
+ *  Supports chained qualifiers: const volatile T, volatile const T
+ *  Each node represents a single qualifier; chains create nested nodes.
  * -------------------------------------------------------------------------- */
 
 node_t read_expression_type_qualifier(allocator_t allocator, vec_t tokens,
                                       size_t *position, const char *filename) {
   size_t current = *position;
-  cubec_expression_type_qualifier_t node = NULL;
-  node_t type = NULL;
-  bool is_volatile = false;
+  /* Track qualifier order: first seen → outermost, last seen → innermost. */
+  typedef enum { _Q_NONE, _Q_CONST, _Q_VOLATILE } _qualifier_kind_t;
+  _qualifier_kind_t first = _Q_NONE, second = _Q_NONE;
+  location_t start_loc = {0};
 
-  /* Expect 'const' or 'volatile' keyword */
-  token_t keyword_token = vec_get(tokens, current);
-  if (!keyword_token || token_get_kind(keyword_token) != CUBEC_TOKEN_KEYWORD) {
-    return NULL;
+  /* Consume one or more const/volatile keywords */
+  while (true) {
+    token_t kw = vec_get(tokens, current);
+    if (!kw || token_get_kind(kw) != CUBEC_TOKEN_KEYWORD) break;
+    if (token_is(kw, CUBEC_TOKEN_KEYWORD, "const")) {
+      if (first == _Q_NONE) {
+        start_loc = *token_get_location(kw);
+        first = _Q_CONST;
+      } else if (second == _Q_NONE && first != _Q_CONST) {
+        second = _Q_CONST;
+      }
+      current++;
+      skip_whitespace(tokens, &current);
+      continue;
+    }
+    if (token_is(kw, CUBEC_TOKEN_KEYWORD, "volatile")) {
+      if (first == _Q_NONE) {
+        start_loc = *token_get_location(kw);
+        first = _Q_VOLATILE;
+      } else if (second == _Q_NONE && first != _Q_VOLATILE) {
+        second = _Q_VOLATILE;
+      }
+      current++;
+      skip_whitespace(tokens, &current);
+      continue;
+    }
+    break;
   }
-  if (token_is(keyword_token, CUBEC_TOKEN_KEYWORD, "const")) {
-    is_volatile = false;
-  } else if (token_is(keyword_token, CUBEC_TOKEN_KEYWORD, "volatile")) {
-    is_volatile = true;
-  } else {
-    return NULL;
-  }
-  current++;
 
-  /* Skip whitespace after keyword */
-  skip_whitespace(tokens, &current);
+  if (first == _Q_NONE) return NULL;
 
-  /* Parse the underlying type using read_expression_type (greedy).
-   * The qualifier greedily consumes the full type expression,
-   * including ternary: const a ? b : c → const(ternary(a, b, c)).
-   * Use grouping for the alternative: (const a) ? b : c → ternary(const(a), b, c).
-   * Namespace access binds tighter: const std::vec::Vec → const(std::vec::Vec). */
-  type = TRY_LOCAL(onerror,
-                   read_expression_base(allocator, tokens, &current, filename));
+  /* Parse the underlying type using read_expression_base (greedy). */
+  node_t type = TRY_LOCAL(onerror,
+                     read_expression_base(allocator, tokens, &current, filename));
   if (!type) {
     THROW_LOCAL(onerror, "expected type after const/volatile");
   }
 
-  node = TRY_LOCAL(
-      onerror,
-      allocator_create(allocator, &g_cubec_expression_type_qualifier_type,
-                       &(cubec_expression_type_qualifier_init_t){
-                           .type = type,
-                           .is_volatile = is_volatile,
-                       }));
-
-  /* Set location from keyword to end of type */
-  {
-    location_t loc = *token_get_location(keyword_token);
+  /* Build nested qualifier nodes: second qualifier (innermost) wraps base
+   * type first, first qualifier (outermost) wraps last.
+   * e.g. const volatile i32 → const(volatile(i32))
+   *      volatile const i32 → volatile(const(i32)) */
+  node_t result = type;
+  if (second == _Q_CONST) {
+    location_t loc = start_loc;
+    loc.end = result->location.end;
     loc.filename = filename;
-    loc.end = type->location.end;
-    node->super.super.location = loc;
+    result = TRY_LOCAL(onerror,
+        allocator_create(allocator, &g_cubec_expression_type_qualifier_type,
+                         &(cubec_expression_type_qualifier_init_t){
+                             .location = loc, .type = result,
+                             .is_const = true, .is_volatile = false}));
+  } else if (second == _Q_VOLATILE) {
+    location_t loc = start_loc;
+    loc.end = result->location.end;
+    loc.filename = filename;
+    result = TRY_LOCAL(onerror,
+        allocator_create(allocator, &g_cubec_expression_type_qualifier_type,
+                         &(cubec_expression_type_qualifier_init_t){
+                             .location = loc, .type = result,
+                             .is_const = false, .is_volatile = true}));
+  }
+  if (first == _Q_CONST) {
+    location_t loc = start_loc;
+    loc.end = result->location.end;
+    loc.filename = filename;
+    result = TRY_LOCAL(onerror,
+        allocator_create(allocator, &g_cubec_expression_type_qualifier_type,
+                         &(cubec_expression_type_qualifier_init_t){
+                             .location = loc, .type = result,
+                             .is_const = true, .is_volatile = false}));
+  } else if (first == _Q_VOLATILE) {
+    location_t loc = start_loc;
+    loc.end = result->location.end;
+    loc.filename = filename;
+    result = TRY_LOCAL(onerror,
+        allocator_create(allocator, &g_cubec_expression_type_qualifier_type,
+                         &(cubec_expression_type_qualifier_init_t){
+                             .location = loc, .type = result,
+                             .is_const = false, .is_volatile = true}));
   }
 
   *position = current;
-  return (node_t)node;
+  return result;
 
 onerror:
-  allocator_free(allocator, &type);
-  allocator_free(allocator, &node);
+  /* On error, free only the nodes we allocated (not the base type which
+   * is managed by its own allocator_create). The type node is consumed
+   * by the first qualifier on success, so we only free on failure. */
   return NULL;
 }
 
@@ -144,10 +189,11 @@ onerror:
  * -------------------------------------------------------------------------- */
 
 node_t cubec_ast_create_type_qualifier(allocator_t alloc, location_t loc,
-                                       node_t base, bool is_volatile) {
+                                       node_t base, bool is_const,
+                                       bool is_volatile) {
   cubec_expression_type_qualifier_init_t init = {
       .location = loc, .parent = NULL, .type = base,
-      .is_volatile = is_volatile};
+      .is_const = is_const, .is_volatile = is_volatile};
   return (node_t)allocator_create(
       alloc, &g_cubec_expression_type_qualifier_type, &init);
 }

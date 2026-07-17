@@ -59,7 +59,8 @@ node_t cubec_ast_create_generic_instantiation(allocator_t alloc,
                                               location_t loc,
                                               node_t callee, vec_t args);
 node_t cubec_ast_create_type_qualifier(allocator_t alloc, location_t loc,
-                                       node_t base, bool is_volatile);
+                                       node_t base, bool is_const,
+                                       bool is_volatile);
 node_t cubec_ast_create_initialize_list(allocator_t alloc, location_t loc,
                                         node_t type, vec_t items,
                                         bool is_field);

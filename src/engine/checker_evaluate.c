@@ -85,7 +85,7 @@ static void _evaluate_member_declaration(checker_t ctx, semantic_type_t t,
   if (vdecl->type)
     vsym->variable.type = resolver_resolve_type(ctx, vdecl->type);
   vsym->variable.is_comptime = sdecl->is_comptime;
-  vsym->variable.is_mutable = true;
+  vsym->variable.is_mutable = !semantic_type_is_const(vsym->variable.type);
   vsym->state = SYMBOL_NAME_KNOWN; /* initializer in Pass 3 */
   vec_push(t->static_fields, vsym);
 }
@@ -549,7 +549,7 @@ static void _evaluate_variable(checker_t ctx,
 
   sym->variable.type = var_type;
   sym->variable.is_comptime = node->is_comptime;
-  sym->variable.is_mutable = true;
+  sym->variable.is_mutable = !semantic_type_is_const(var_type);
   sym->state = SYMBOL_EVALUATED;
 
   if (node->is_comptime && node->declarator &&

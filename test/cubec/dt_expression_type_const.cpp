@@ -40,6 +40,7 @@ TEST_F(dt_expression_type_const, simple) {
 
   cubec_expression_type_qualifier_t const_node =
       (cubec_expression_type_qualifier_t)node;
+  EXPECT_TRUE(const_node->is_const);
   EXPECT_FALSE(const_node->is_volatile);
   ASSERT_NE(const_node->type, nullptr);
   EXPECT_EQ(const_node->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
@@ -48,7 +49,7 @@ TEST_F(dt_expression_type_const, simple) {
   allocator_free(allocator, &tokens);
 }
 
-/* Nested const: const const i32 */
+/* Repeated const: const const i32 — duplicate const is merged into a single qualifier */
 TEST_F(dt_expression_type_const, nested_const) {
   const char *source = "const const i32";
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
@@ -59,15 +60,12 @@ TEST_F(dt_expression_type_const, nested_const) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
-  cubec_expression_type_qualifier_t outer =
+  cubec_expression_type_qualifier_t q =
       (cubec_expression_type_qualifier_t)node;
-  ASSERT_NE(outer->type, nullptr);
-  EXPECT_EQ(outer->type->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
-
-  cubec_expression_type_qualifier_t inner =
-      (cubec_expression_type_qualifier_t)outer->type;
-  ASSERT_NE(inner->type, nullptr);
-  EXPECT_EQ(inner->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  EXPECT_TRUE(q->is_const);
+  EXPECT_FALSE(q->is_volatile);
+  ASSERT_NE(q->type, nullptr);
+  EXPECT_EQ(q->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

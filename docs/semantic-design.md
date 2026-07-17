@@ -342,7 +342,8 @@ var r = m("hello");       // → __call__(&m, "hello")
 Cubec 统一 `.` 和 `->`，指针对象自动解引用：
 
 ```c
-var p: *Point = &Point{ x: 1, y: 2 };
+var pp = .Point{ .x = 1, .y = 2 };
+var p = pp.&;
 var x = p.x;         // 自动解引用：等价于 p.*.x，无需 p->x
 p.x = 10;            // 自动解引用：等价于 p.*.x = 10
 var s = p.to_string(); // 自动解引用：self 接收 *Point
@@ -360,7 +361,7 @@ var s = p.to_string(); // 自动解引用：self 接收 *Point
 `typeof(expr)` 创建新名字指向同一实现 hash，**保留原类型的所有方法和静态字段**：
 
 ```c
-var p = Point{ x: 1, y: 2 };
+var p = .Point{ .x= 1, .y= 2 };
 type T = typeof(p);     // 新名字，同一实现，保留方法集
 T::to_string(&p)        // 等价于 p.to_string()
 ```
@@ -396,7 +397,7 @@ struct check_result {
 type Base = struct { x: i32 }
 type Derived = struct { base: Base, y: i32 }
 
-var d = Derived{ ... };
+var d = .Derived{ ... };
 var b: *Base = &d;     // *Derived → *Base 隐式退化 ✓
 ```
 
@@ -410,7 +411,7 @@ var b: *Base = &d;     // *Derived → *Base 隐式退化 ✓
 方法查找**不沿退化链搜索**。当前指针类型是什么，就只有什么类型的方法：
 
 ```c
-var a = A{ ... };
+var a = .A{ ... };
 a.getX()       // A 有 getX → 调用 ✓
 a.getBaseX()   // A 没有 → Error（不会自动退化找 B 的方法）
 
@@ -456,13 +457,13 @@ union Result[E, T] { value: T; error: E; }
 - `data` 是 cunion，所有字段 offset=0，size=max(fields.size)
 - `__` 前缀字段保留给编译器，用户不允许定义
 
-### 7.2 union_is 类型检查
+### 7.2 unionIs 类型检查
 
-`union_is[T, U](u: U): bool` 检查 `u.__type__ == T的hash`：
+`unionIs[T, U](u: U): bool` 检查 `u.__type__ == T的hash`：
 
 ```c
 var result = Result[string, i32]{ value: 42 };
-if (union_is[i32](result)) {
+if (unionIs[i32](result)) {
     // result 当前持有 i32 变体
     var v = result.value;  // 安全访问
 }
@@ -606,7 +607,7 @@ var X: i32 = some_func();         // Error: 运行时函数调用
 | 字面量 | ✓ | 编译期已知 |
 | 枚举项 | ✓ | 编译期已知 |
 | `sizeof` / `alignof` | ✓ | 编译期已知 |
-| 全局变量地址 `&x` | ✓ | 链接期解析，语义上是常量 |
+| 全局变量地址 `x.&` | ✓ | 链接期解析，语义上是常量 |
 | 函数地址 `func_name` | ✓ | 链接期解析，语义上是常量 |
 | 偏移计算 `offsetof` | ✓ | 编译期已知 |
 | 运行时函数调用 | ✗ | 不可预测 |
@@ -668,8 +669,8 @@ x = 2;
 
 ```c
 var y = 1;
-var yp = &y;
-defer |yp| { print(*yp); }   // 捕获指针副本
+var yp = y.&;
+defer |yp| { print(yp.*); }   // 捕获指针副本
 y = 2;
 // defer 输出 2
 ```
@@ -1299,7 +1300,7 @@ foreach 通过迭代器接口实现，任何有 `next` 方法的类型都可迭�
 ```c
 // 迭代器 next 方法返回 {done: bool, value: T} 结构
 // Cubec:
-foreach (item in collection) { ... }
+foreach (item of collection) { ... }
 
 // C: 调用 next 方法
 {
@@ -1315,7 +1316,6 @@ foreach (item in collection) { ... }
 
 - 迭代器接口：`func next(self: *Self): {done: bool, value: T}` — 方法名为 `next`（小驼峰）
 - `done = true` 表示迭代结束，`value` 为最后一次的值
-- slice/数组自动实现迭代器接口
 - 自定义类型实现 `next` 方法即可支持 foreach
 
 #### switch
@@ -1546,7 +1546,7 @@ int32_t v = ({
 ```
 
 - 编译器在语义分析阶段追踪 union 类型窄化状态
-- 已通过 `union_is` / `if` / `.?` 等检查的路径 → 不生成运行时检查
+- 已通过 `unionIs` / `if` / `.?` 等检查的路径 → 不生成运行时检查
 - 未检查的路径 → 生成运行时检查，非法则 panic
 - 类型窄化在分支合并时重置（类似 TDZ 追踪）
 
@@ -1632,13 +1632,3 @@ var p: *i32 = (x + 1).&;  // 临时值不可取地址
 - 左值包括：变量、字段访问、解引用结果、下标访问结果
 - 临时值（算术结果、函数返回值）不可取地址
 - 结果类型为 `*T`（T 为操作数类型）
-
-### 22.3 冗余节点（待删除）
-
-以下枚举值与已有节点重复或冗余，应从 `node.h` 中删除：
-
-| 枚举值 | 原因 |
-|--------|------|
-| `CUBEC_NODE_EXPRESSION_CONDITION` | 与 `EXPRESSION_TERNARY` 重复，三元运算符已由 TERNARY 节点表示 |
-| `CUBEC_NODE_CALLABLE_BINDING` | 无实现代码，无对应语法，冗余 |
-| `CUBEC_NODE_DECLARATION_CALLABLE` | 无实现代码，无对应语法，冗余 |
