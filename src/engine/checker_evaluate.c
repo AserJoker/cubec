@@ -483,40 +483,6 @@ static void _evaluate_function(checker_t ctx,
   if (!sym || sym->kind != SYMBOL_FUNCTION) return;
   if (sym->state == SYMBOL_EVALUATED) return;
 
-  /* Builtin function: resolve type signature only, no body, no comptime binding */
-  if (node->is_builtin) {
-    semantic_type_t ret_type = node->return_type
-        ? resolver_resolve_type(ctx, node->return_type)
-        : ctx->builtin_void;
-
-    vec_init_t vi = {.auto_dispose = false};
-    vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-    if (node->arguments) {
-      size_t count = vec_get_size(node->arguments);
-      for (size_t i = 0; i < count; i++) {
-        node_t arg = (node_t)vec_get(node->arguments, i);
-        if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
-          cubec_function_argument_t farg = (cubec_function_argument_t)arg;
-          if (farg->type) {
-            semantic_type_t pt = resolver_resolve_type(ctx, farg->type);
-            vec_push(params, pt);
-          }
-        }
-      }
-    }
-
-    semantic_type_t ftype = semantic_type_create_function(
-        ctx->allocator, ret_type, params, node->is_c_variadic);
-    type_hash_ensure(ftype);
-    vec_push(ctx->all_types, ftype);
-
-    sym->function.type = ftype;
-    sym->function.is_comptime = false;
-    sym->function.ast_node = NULL;
-    sym->state = SYMBOL_EVALUATED;
-    return;
-  }
-
   /* Generic function: resolve template type with TYPE_GENERIC_PARAM params,
      store generic_params for later inference */
   if (node->generic_params) {
@@ -553,6 +519,29 @@ static void _evaluate_function(checker_t ctx,
     sym->function.generic_params = node->generic_params;
     sym->function.ast_node = (node_t)node;
     sym->state = SYMBOL_EVALUATED;
+
+    /* Validate builtin against registry */
+    if (node->is_builtin) {
+      builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
+      if (!be) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                             node->super.location,
+                             "unknown builtin '%s'", name);
+        ctx->error_count++;
+      } else if (be->kind != BUILTIN_FUNC) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                             node->super.location,
+                             "builtin '%s' is not a function", name);
+        ctx->error_count++;
+      } else if (!semantic_type_equals(ftype, be->type)) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                             node->super.location,
+                             "builtin '%s' signature mismatch", name);
+        ctx->error_count++;
+      } else {
+        sym->is_builtin = true;
+      }
+    }
     return;
   }
 
@@ -588,6 +577,29 @@ static void _evaluate_function(checker_t ctx,
   sym->function.ast_node = (node_t)node;
   /* Body NOT checked in Pass 2 — deferred to Pass 3 */
   sym->state = SYMBOL_EVALUATED;
+
+  /* Validate builtin against registry */
+  if (node->is_builtin) {
+    builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
+    if (!be) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "unknown builtin '%s'", name);
+      ctx->error_count++;
+    } else if (be->kind != BUILTIN_FUNC) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "builtin '%s' is not a function", name);
+      ctx->error_count++;
+    } else if (!semantic_type_equals(ftype, be->type)) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "builtin '%s' signature mismatch", name);
+      ctx->error_count++;
+    } else {
+      sym->is_builtin = true;
+    }
+  }
 
   /* Bind function in comptime env so it can be called at compile time */
   if (node->body) {
@@ -678,6 +690,30 @@ static void _evaluate_variable(checker_t ctx,
   sym->variable.is_mutable = !semantic_type_is_const(var_type);
   sym->state = SYMBOL_EVALUATED;
 
+  /* Validate builtin variable against registry */
+  if (node->is_builtin) {
+    builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
+    if (!be) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "unknown builtin '%s'", name);
+      ctx->error_count++;
+    } else if (be->kind != BUILTIN_VAR) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "builtin '%s' is not a variable", name);
+      ctx->error_count++;
+    } else if (var_type->impl->kind != TYPE_ERROR &&
+               !semantic_type_equals(var_type, be->type)) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "builtin '%s' type mismatch", name);
+      ctx->error_count++;
+    } else {
+      sym->is_builtin = true;
+    }
+  }
+
   if (node->is_comptime && node->declarator &&
       node->declarator->kind == CUBEC_NODE_DECLARATION_VARIABLE) {
     cubec_declaration_variable_t dv =
@@ -717,6 +753,24 @@ static void _evaluate_type_alias(checker_t ctx,
 
   /* Generic type alias: still mark evaluated (template) */
   sym->state = SYMBOL_EVALUATED;
+
+  /* Validate builtin type against registry */
+  if (node->is_builtin) {
+    builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
+    if (!be) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "unknown builtin '%s'", name);
+      ctx->error_count++;
+    } else if (be->kind != BUILTIN_TYPE) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "builtin '%s' is not a type", name);
+      ctx->error_count++;
+    } else {
+      sym->is_builtin = true;
+    }
+  }
 }
 
 static void _evaluate_import(checker_t ctx,

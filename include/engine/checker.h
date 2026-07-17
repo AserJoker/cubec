@@ -6,6 +6,7 @@
 #include "engine/diagnostic.h"
 #include "engine/scope.h"
 #include "engine/semantic_type.h"
+#include "engine/builtin.h"
 #include "engine/source.h"
 #include "core/strmap.h"
 #include <stddef.h>
@@ -54,6 +55,9 @@ struct checker {
   semantic_type_t builtin_f16, builtin_f32, builtin_f64;
   semantic_type_t builtin_char, builtin_string;
   semantic_type_t builtin_nil;
+
+  /* builtin registry */
+  builtin_table_t builtin_table;
 
   /* comptime evaluator */
   struct comptime_eval *comptime_eval;

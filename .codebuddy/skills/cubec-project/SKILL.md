@@ -479,7 +479,7 @@ All statement and declaration types have parser implementations, including `comp
 
 ### Architecture
 
-8-file split: `checker.c` (lifecycle + pass orchestration), `checker_collect.c` (Pass 1: symbol collection), `checker_check_stmt.c` (Pass 2: type checking), `checker_evaluate.c` (Pass 2: comptime evaluation + type resolution), `comptime_eval.c` (evaluator lifecycle), `comptime_eval_expr.c` (expression evaluation), `comptime_eval_stmt.c` (statement execution), `comptime_alloc.c` (virtual memory). All functions ≤ 50 lines. Design doc: `docs/semantic-design.md`.
+9-file split: `checker.c` (lifecycle + pass orchestration), `checker_collect.c` (Pass 1: symbol collection), `checker_check_stmt.c` (Pass 2: type checking), `checker_evaluate.c` (Pass 2: comptime evaluation + type resolution), `builtin.c` (builtin registry: dynamic table, validation, dispatch), `comptime_eval.c` (evaluator lifecycle), `comptime_eval_expr.c` (expression evaluation), `comptime_eval_stmt.c` (statement execution), `comptime_alloc.c` (virtual memory). All functions ≤ 50 lines. Design doc: `docs/semantic-design.md`.
 
 ### Type System (semantic_type_t)
 
@@ -489,7 +489,11 @@ Two-layer representation: `semantic_type_t` wraps AST type nodes with semantic i
 
 ### Symbol Table (scope_t)
 
-Chain-of-responsibility scope model. `scope_lookup` returns `SYMBOL_NAME_KNOWN` for imported values (cannot be used at compile time). TDZ (temporal dead zone) multi-pass checking.
+Chain-of-responsibility scope model. `scope_lookup` returns `SYMBOL_NAME_KNOWN` for imported values (cannot be used at compile time). TDZ (temporal dead zone) multi-pass checking. Symbols have `is_builtin` flag set when builtin declaration passes validation against the builtin table.
+
+### Builtin Registry (builtin_table_t)
+
+Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (kind + type + dispatch ID). Initialized in `checker_init` via `builtin_table_init_defaults` which registers `assert` as `BUILTIN_FUNC` with `BUILTIN_DISPATCH_ASSERT`. Builtin declarations go through normal checker flow (type resolution, generic param handling) then are validated against the table: unknown builtin → error, kind mismatch → error, signature mismatch → error, match → `sym->is_builtin = true`. Comptime eval uses `callee_sym->is_builtin` + dispatch ID instead of hardcoded name checks.
 
 ### Checker Passes
 
@@ -619,6 +623,7 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 - `dt_statement_function.cpp` (44 cases) — function declarations: basic function, no params, no return type (void), single/multiple params, generic single/multiple/rest params, export/inline/extern/builtin/comptime modifiers, export+inline combined, extern C-style variadic (`...`), pointer/slice/generic/no-type params, empty body, body with statements, no body semicolon (interface style), missing name/open paren/close paren errors, export+extern/extern+inline conflict errors, C variadic in non-extern error, builtin func, export+builtin func, builtin+extern mutual exclusion error, comptime func, comptime func without body error, export+comptime func, inline+comptime func, builtin+comptime mutual exclusion error, extern+comptime mutual exclusion error, clone, clone generic, move, clone extern, via read_statement, via read_program_node, consume all tokens
 
 ### Engine Tests
+- `dt_builtin.cpp` (9 cases) — builtin registry: table create/dispose, assert lookup, unknown lookup, correct declaration, unknown builtin error, signature mismatch error, kind mismatch error, e2e assert execution, non-builtin not marked
 - `dt_comptime_value.cpp` (23 cases) — value creation/disposal for all 11 kinds, truthiness, equals, clone deep copy, numeric conversions (as_i64/as_u64/as_f64)
 - `dt_comptime_alloc.cpp` (10 cases) — virtual memory lifecycle, allocate+read, write overwrite, read/write null/unknown addr, free makes addr invalid, scope enter/leave frees allocations, nested scopes, free null addr noop
 - `dt_comptime_eval.cpp` (38 cases) — evaluator: literal numeric/string/char/bool/nil, arithmetic ops, comparison ops, logical ops, bitwise ops, ternary, variable declaration+access, if/else, for loop, function call, break/continue, typeof/sizeof/alignof, group expression, comma expression, string/composite slice, do-while, foreach, composite field assignment

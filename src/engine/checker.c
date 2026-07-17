@@ -164,6 +164,10 @@ static void _checker_init(void *self, allocator_t allocator, void *arg) {
   /* Register builtin types */
   _register_builtins(ctx);
 
+  /* Init builtin registry */
+  ctx->builtin_table = builtin_table_create(allocator);
+  builtin_table_init_defaults(ctx->builtin_table, ctx);
+
   /* Init comptime evaluator */
   ctx->comptime_eval = comptime_eval_create(allocator);
 
@@ -192,6 +196,7 @@ static void _checker_dispose(void *self, allocator_t allocator) {
 
   allocator_free(allocator, &ctx->sources);
   allocator_free(allocator, &ctx->diagnostics);
+  builtin_table_dispose(ctx->builtin_table, allocator);
   allocator_free(allocator, &ctx->type_impl_cache);
   allocator_free(allocator, &ctx->type_name_table);
   allocator_free(allocator, &ctx->module_cache);

@@ -43,6 +43,7 @@ struct symbol {
   const char *name;              /**< Symbol name (not owned, points to AST or string_t) */
   enum symbol_kind kind;         /**< Symbol kind */
   enum symbol_state state;       /**< Resolution state */
+  bool is_builtin;               /**< true for builtin declarations */
   location_t location;           /**< Declaration location */
   union {
     /* SYMBOL_VARIABLE */

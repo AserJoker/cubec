@@ -97,7 +97,7 @@ cubec/
 - **表达式解析器**：完整覆盖所有表达式类型（前缀/后缀一元、二元、三元、成员访问、泛型实例化、typeof、sizeof、alignof、初始化列表、匿名函数、const/volatile 限定符等）
 - **语句解析器**：完整覆盖所有语句类型（if/for/foreach/while/do-while/switch/defer/break/continue/return/import/test/comptime 等）
 - **声明解析器**：func/struct/enum/union/cunion/interface/type/var/decorator
-- **语义分析引擎**：双层类型表示、结构等价、指针退化、TDZ 多遍检查、const/volatile 语义、Rustc 风格诊断
+- **语义分析引擎**：双层类型表示、结构等价、指针退化、TDZ 多遍检查、const/volatile 语义、builtin 动态注册表、Rustc 风格诊断
 - **comptime 编译期求值器**：AST 解释器、虚拟内存、安全限制、test 块执行
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
 
