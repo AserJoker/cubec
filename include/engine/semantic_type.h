@@ -21,7 +21,7 @@ enum type_kind {
   TYPE_POINTER, TYPE_SLICE, TYPE_ARRAY,
   TYPE_STRUCT, TYPE_UNION, TYPE_CUNION, TYPE_ENUM,
   TYPE_INTERFACE, TYPE_FUNCTION, TYPE_TYPE, TYPE_QUALIFIER,
-  TYPE_GENERIC_INSTANCE,
+  TYPE_GENERIC_INSTANCE, TYPE_GENERIC_PARAM,
   TYPE_NIL, TYPE_ERROR
 };
 
@@ -80,6 +80,11 @@ struct _type_impl {
       semantic_type_t generic_template;  /**< Generic template type */
       vec_t type_args;                   /**< Concrete type arguments (semantic_type_t), auto_dispose=false */
     } generic_instance;
+    /* TYPE_GENERIC_PARAM */
+    struct {
+      const char *name;   /**< Generic param name (e.g., "T") */
+      size_t index;       /**< Position in generic param list */
+    } generic_param;
   };
 };
 
@@ -139,6 +144,14 @@ semantic_type_t semantic_type_create_function(allocator_t allocator,
 semantic_type_t semantic_type_create_generic_instance(allocator_t allocator,
                                                        semantic_type_t template_type,
                                                        vec_t type_args);
+semantic_type_t semantic_type_create_generic_param(allocator_t allocator,
+                                                    const char *name,
+                                                    size_t index);
+
+/* Type substitution for generic instantiation */
+semantic_type_t semantic_type_substitute(allocator_t allocator,
+                                          semantic_type_t type,
+                                          vec_t type_args);
 
 #ifdef __cplusplus
 }

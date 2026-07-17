@@ -169,7 +169,7 @@ static vec_t _copy_symbol_vec(checker_t ctx, vec_t src) {
 }
 
 static void _instantiate_struct_fields(checker_t ctx, semantic_type_t inst,
-                                        vec_t tpl_fields) {
+                                        vec_t tpl_fields, vec_t type_args) {
   vec_init_t vi = {.auto_dispose = true};
   inst->impl->struct_type.fields =
       (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
@@ -181,7 +181,8 @@ static void _instantiate_struct_fields(checker_t ctx, semantic_type_t inst,
                                        SYMBOL_FIELD, f->location);
     nf->field.index = i;
     nf->field.is_pub = f->field.is_pub;
-    nf->field.type = f->field.type;
+    /* Substitute generic params in field type */
+    nf->field.type = semantic_type_substitute(ctx->allocator, f->field.type, type_args);
     vec_push(inst->impl->struct_type.fields, nf);
   }
   type_layout_compute(inst, 8);
@@ -207,7 +208,7 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   /* Copy structural info from template based on kind */
   enum type_kind tkind = template_type->impl->kind;
   if (tkind == TYPE_STRUCT || tkind == TYPE_UNION || tkind == TYPE_CUNION)
-    _instantiate_struct_fields(ctx, inst, template_type->impl->struct_type.fields);
+    _instantiate_struct_fields(ctx, inst, template_type->impl->struct_type.fields, type_args);
 
   /* Copy method lists from template */
   inst->instance_methods = _copy_symbol_vec(ctx, template_type->instance_methods);
@@ -235,10 +236,24 @@ semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
     return (semantic_type_t)cached;
   }
 
-  /* Create specialized function type.
-   * TODO: substitute generic params in params/return_type with type_args.
-   * For now return the template function type. */
-  semantic_type_t inst_type = func_type;
+  /* Substitute generic params in params and return_type */
+  vec_init_t vi = {.auto_dispose = false};
+  vec_t new_params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+  size_t pcount = vec_get_size(func_type->impl->function.params);
+  for (size_t i = 0; i < pcount; i++) {
+    semantic_type_t p = (semantic_type_t)vec_get(func_type->impl->function.params, i);
+    semantic_type_t new_p = semantic_type_substitute(ctx->allocator, p, type_args);
+    vec_push(new_params, new_p);
+  }
+
+  semantic_type_t new_return = semantic_type_substitute(ctx->allocator,
+      func_type->impl->function.return_type, type_args);
+
+  /* Create new function type with substituted types */
+  semantic_type_t inst_type = semantic_type_create_function(ctx->allocator,
+      new_return, new_params, func_type->impl->function.is_variadic);
+  vec_push(ctx->all_types, inst_type);
+  type_hash_ensure(inst_type);
 
   /* Cache */
   key = _generic_instance_cache_key(ctx, name, type_args);

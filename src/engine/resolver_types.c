@@ -45,10 +45,20 @@ semantic_type_t _resolve_type_identifier(checker_t ctx, node_t node) {
     return (semantic_type_t)found;
   }
 
-  /* Search scope chain */
+  /* Search scope chain for types or generic params */
   struct symbol *sym = scope_lookup(ctx->current_scope, name);
-  if (sym && sym->kind == SYMBOL_TYPE && sym->type.type) {
-    return sym->type.type;
+  if (sym) {
+    if (sym->kind == SYMBOL_TYPE && sym->type.type) {
+      return sym->type.type;
+    }
+    /* Handle generic params in type position: create TYPE_GENERIC_PARAM */
+    if (sym->kind == SYMBOL_GENERIC_PARAM) {
+      semantic_type_t gp_type = semantic_type_create_generic_param(
+          ctx->allocator, name, sym->generic_param.index);
+      type_hash_ensure(gp_type);
+      vec_push(ctx->all_types, gp_type);
+      return gp_type;
+    }
   }
 
   /* Unknown type */
