@@ -86,8 +86,8 @@ node_t read_literal_identifier(allocator_t allocator, vec_t tokens,
       .parent = NULL,
       .value = NULL,
   };
-  cubec_literal_identifier_t node =
-      TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_literal_identifier_type, &init));
+  cubec_literal_identifier_t node = NULL;
+  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_literal_identifier_type, &init));
   node_t node_base = (node_t)node;
   node_base->location.filename = filename;
 

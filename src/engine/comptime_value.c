@@ -28,6 +28,9 @@ static void _comptime_value_dispose(void *self, allocator_t allocator) {
     /* env and body are not owned by the value */
     allocator_free(allocator, &v->function.param_names);
     break;
+  case COMPTIME_VALUE_PACK:
+    allocator_free(allocator, &v->pack.elements);
+    break;
   default:
     break;
   }
@@ -62,6 +65,19 @@ static void _comptime_value_clone(void *self, allocator_t allocator,
       for (size_t i = 0; i < pc; i++)
         vec_push(dst->function.param_names,
                  (void *)vec_get(src->function.param_names, i));
+    }
+    break;
+  case COMPTIME_VALUE_PACK:
+    if (src->pack.elements) {
+      size_t ec = vec_get_size(src->pack.elements);
+      vec_init_t vi = {.auto_dispose = true};
+      dst->pack.elements =
+          (vec_t)allocator_create(allocator, &g_vec_type, &vi);
+      for (size_t i = 0; i < ec; i++) {
+        comptime_value_t elem = (comptime_value_t)vec_get(src->pack.elements, i);
+        comptime_value_t cloned = comptime_value_clone(allocator, elem);
+        vec_push(dst->pack.elements, cloned);
+      }
     }
     break;
   default:
@@ -193,6 +209,16 @@ comptime_value_t comptime_value_create_error(allocator_t allocator) {
                                              &init);
 }
 
+comptime_value_t comptime_value_create_pack(allocator_t allocator,
+                                            vec_t elements,
+                                            semantic_type_t type) {
+  struct comptime_value init = {
+      .kind = COMPTIME_VALUE_PACK, .type = type,
+      .pack = {.elements = elements}};
+  return (comptime_value_t)allocator_create(allocator, &g_comptime_value_type,
+                                             &init);
+}
+
 /* ===== queries ===== */
 
 bool comptime_value_is_truthy(comptime_value_t val) {
@@ -277,6 +303,17 @@ bool comptime_value_equals(comptime_value_t a, comptime_value_t b) {
   case COMPTIME_VALUE_FUNCTION:
     return a->function.body == b->function.body &&
            a->function.captured_env == b->function.captured_env;
+  case COMPTIME_VALUE_PACK: {
+    size_t ac = a->pack.elements ? vec_get_size(a->pack.elements) : 0;
+    size_t bc = b->pack.elements ? vec_get_size(b->pack.elements) : 0;
+    if (ac != bc) return false;
+    for (size_t i = 0; i < ac; i++) {
+      comptime_value_t ea = (comptime_value_t)vec_get(a->pack.elements, i);
+      comptime_value_t eb = (comptime_value_t)vec_get(b->pack.elements, i);
+      if (!comptime_value_equals(ea, eb)) return false;
+    }
+    return true;
+  }
   case COMPTIME_VALUE_ERROR:  return true;
   default:                    return false;
   }

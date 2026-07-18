@@ -178,7 +178,7 @@ type Extended = struct {
 
 ### 6.2 泛型参数包
 
-在泛型定义中使用 `...T` 定义参数包（类似 C++ variadic templates），详见 `08-generics.md`。
+在泛型定义中使用 `...T` 定义参数包（类似 C++ variadic templates），详见 `08-generics.md` 第4节。
 
 ### 6.3 函数调用和初始化展开
 
@@ -191,6 +191,16 @@ foo(...args);      // 编译期已知 args 有3个元素 → foo(1, 2, 3)
 var base = .Base{ .x = 1, .y = 2 };
 var ext = .Extended{ ...base, .z = 3 };  // 展开 base 的字段
 ```
+
+**包展开调用** — 当 `...expr` 中的 expr 是参数包变量时，展开为对应的多个调用参数：
+
+```c
+func apply[R, ...Args](fn: func(...Args) -> R, ...args: Args): R {
+    return fn(...args);    // args 展开为多个参数
+}
+```
+
+详见 `08-generics.md` 第4节。
 
 ---
 

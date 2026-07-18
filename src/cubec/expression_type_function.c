@@ -3,6 +3,7 @@
 #include "core/error.h"
 #include "core/token.h"
 #include "cubec/expression.h"
+#include "cubec/expression_spread.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -143,17 +144,18 @@ node_t read_expression_type_function(allocator_t allocator, vec_t tokens,
 
   if (_is_symbol(tokens, current, ")")) {
     /* no parameters */
-  } else if (_is_symbol(tokens, current, "...")) {
-    /* C-style variadic with no named params */
-    is_c_variadic = true;
-    current++;
-    skip_whitespace(tokens, &current);
   } else {
     /* Parse type parameters.
      * Check for named parameter pattern: if the first token is an identifier
      * followed by ':', this is a function expression, not a function type. */
     {
       size_t lookahead = current;
+      /* Skip past '...' if present for lookahead */
+      bool has_prefix_dots = _is_symbol(tokens, lookahead, "...");
+      if (has_prefix_dots) {
+        lookahead++;
+        skip_whitespace(tokens, &lookahead);
+      }
       token_t first = vec_get(tokens, lookahead);
       if (first && token_get_kind(first) == CUBEC_TOKEN_IDENTIFIER) {
         lookahead++;
@@ -168,6 +170,57 @@ node_t read_expression_type_function(allocator_t allocator, vec_t tokens,
     }
 
     while (true) {
+      /* Check for pack spread (...) or C-style variadic */
+      if (_is_symbol(tokens, current, "...")) {
+        size_t save_pos = current;
+        current++;  /* skip '...' */
+        skip_whitespace(tokens, &current);
+        /* If next token can be a type expression, it's a pack spread */
+        node_t inner = read_expression_base(allocator, tokens, &current, filename);
+        if (inner) {
+          /* Pack spread: ...Args — wrap in expression_spread node */
+          cubec_expression_spread_init_t spread_init = {
+              .location = inner->location,
+              .parent = NULL,
+              .value = inner,
+          };
+          /* Update location to include the '...' */
+          token_t first_dot = vec_get(tokens, save_pos);
+          if (first_dot) {
+            location_t *dot_loc = token_get_location(first_dot);
+            spread_init.location.begin = dot_loc->begin;
+            spread_init.location.filename = filename;
+          }
+          node_t spread = TRY_LOCAL(onerror,
+              allocator_create(allocator, &g_cubec_expression_spread_type, &spread_init));
+          vec_push(parameters, spread);
+          skip_whitespace(tokens, &current);
+
+          token_t comma_or_close = vec_get(tokens, current);
+          if (!comma_or_close) {
+            THROW_LOCAL(onerror, "unexpected end of input in function type parameter list");
+          }
+          if (token_is(comma_or_close, CUBEC_TOKEN_SYMBOL, ",")) {
+            current++;
+            skip_whitespace(tokens, &current);
+            continue;
+          } else if (token_is(comma_or_close, CUBEC_TOKEN_SYMBOL, ")")) {
+            break;
+          } else {
+            location_t *loc = token_get_location(comma_or_close);
+            THROW_LOCAL(onerror,
+                        "%s:%" PRIuPTR ":%" PRIuPTR " expected ',' or ')' in function type parameter list",
+                        filename, loc->begin.line + 1, loc->begin.column);
+          }
+        } else {
+          /* C-style variadic with no named params */
+          is_c_variadic = true;
+          current = save_pos + 1;  /* past the '...' */
+          skip_whitespace(tokens, &current);
+          break;
+        }
+      }
+
       node_t param = TRY_LOCAL(onerror,
                                read_expression_base(allocator, tokens, &current, filename));
       if (!param) {
@@ -184,12 +237,10 @@ node_t read_expression_type_function(allocator_t allocator, vec_t tokens,
       if (token_is(comma_or_close, CUBEC_TOKEN_SYMBOL, ",")) {
         current++;
         skip_whitespace(tokens, &current);
-        /* Check for '...' after comma */
+        /* Check for '...' after comma — could be pack spread or C variadic */
         if (_is_symbol(tokens, current, "...")) {
-          is_c_variadic = true;
-          current++;
-          skip_whitespace(tokens, &current);
-          break;
+          /* Will be handled in next iteration */
+          continue;
         }
       } else if (token_is(comma_or_close, CUBEC_TOKEN_SYMBOL, ")")) {
         break;

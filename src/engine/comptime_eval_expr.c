@@ -22,6 +22,7 @@
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression_alignof.h"
 #include "cubec/expression_function.h"
+#include "cubec/expression_spread.h"
 #include "cubec/function_capture.h"
 #include "cubec/expression_initialize_list.h"
 #include "cubec/expression_initialize_field.h"
@@ -371,10 +372,40 @@ comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
 
   if (callee->function.param_names) {
     size_t pcount = vec_get_size(callee->function.param_names);
-    for (size_t i = 0; i < pcount && i < acount; i++) {
+    /* Determine if the last parameter is a rest parameter by checking the type */
+    bool last_is_rest = false;
+    if (pcount > 0 && callee->type && callee->type->impl->kind == TYPE_FUNCTION) {
+      vec_t fparams = callee->type->impl->function.params;
+      size_t fpcount = fparams ? vec_get_size(fparams) : 0;
+      if (fpcount > 0) {
+        semantic_type_t last_pt = (semantic_type_t)vec_get(fparams, fpcount - 1);
+        if (last_pt && last_pt->impl->kind == TYPE_GENERIC_PACK)
+          last_is_rest = true;
+      }
+    }
+
+    for (size_t i = 0; i < pcount; i++) {
       const char *pname = (const char *)vec_get(callee->function.param_names, i);
-      /* args are already cloned by caller — ownership transfers to call_env */
-      comptime_env_bind_value(call_env, eval->valloc, pname, args[i]);
+      if (i == pcount - 1 && last_is_rest) {
+        /* Rest parameter: collect remaining args into a pack */
+        vec_init_t pvi = {.auto_dispose = true};
+        vec_t pack_elems = (vec_t)allocator_create(eval->allocator, &g_vec_type, &pvi);
+        for (size_t j = i; j < acount; j++) {
+          vec_push(pack_elems, comptime_value_clone(eval->allocator, args[j]));
+        }
+        semantic_type_t pack_type = NULL;
+        if (callee->type && callee->type->impl->kind == TYPE_FUNCTION) {
+          vec_t fparams = callee->type->impl->function.params;
+          size_t fpcount = fparams ? vec_get_size(fparams) : 0;
+          if (fpcount > 0) pack_type = (semantic_type_t)vec_get(fparams, fpcount - 1);
+        }
+        comptime_value_t pack_val = comptime_value_create_pack(
+            eval->allocator, pack_elems, pack_type);
+        comptime_env_bind_value(call_env, eval->valloc, pname, pack_val);
+      } else if (i < acount) {
+        /* args are already cloned by caller — ownership transfers to call_env */
+        comptime_env_bind_value(call_env, eval->valloc, pname, args[i]);
+      }
     }
   }
 
@@ -552,6 +583,59 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
 
           /* Build args: [self, user_arg0, user_arg1, ...] */
           size_t acount = call->arguments ? vec_get_size(call->arguments) : 0;
+
+          /* Check if any argument is a spread */
+          bool has_spread = false;
+          for (size_t j = 0; j < acount; j++) {
+            node_t arg_node = (node_t)vec_get(call->arguments, j);
+            if (arg_node && arg_node->kind == CUBEC_NODE_EXPRESSION_SPREAD) {
+              has_spread = true;
+              break;
+            }
+          }
+
+          if (has_spread) {
+            vec_init_t margvi = {.auto_dispose = false};
+            vec_t marg_vec = (vec_t)allocator_create(eval->allocator, &g_vec_type, &margvi);
+            vec_push(marg_vec, self_val);
+            for (size_t j = 0; j < acount; j++) {
+              node_t arg_node = (node_t)vec_get(call->arguments, j);
+              if (arg_node && arg_node->kind == CUBEC_NODE_EXPRESSION_SPREAD) {
+                cubec_expression_spread_t spread = (cubec_expression_spread_t)arg_node;
+                comptime_value_t pack_val = _comptime_eval_expr(eval, ctx, spread->value);
+                if (!pack_val || pack_val->kind == COMPTIME_VALUE_ERROR) {
+                  allocator_free(eval->allocator, &marg_vec);
+                  return _eval_error_val(eval);
+                }
+                if (pack_val->kind == COMPTIME_VALUE_PACK && pack_val->pack.elements) {
+                  size_t ecount = vec_get_size(pack_val->pack.elements);
+                  for (size_t k = 0; k < ecount; k++) {
+                    comptime_value_t elem = (comptime_value_t)vec_get(pack_val->pack.elements, k);
+                    vec_push(marg_vec, comptime_value_clone(eval->allocator, elem));
+                  }
+                }
+              } else {
+                comptime_value_t arg = _comptime_eval_expr(eval, ctx, arg_node);
+                if (!arg || arg->kind == COMPTIME_VALUE_ERROR) {
+                  allocator_free(eval->allocator, &marg_vec);
+                  return _eval_error_val(eval);
+                }
+                vec_push(marg_vec, comptime_value_clone(eval->allocator, arg));
+              }
+            }
+            size_t total_margs = vec_get_size(marg_vec);
+            comptime_value_t *args =
+                (comptime_value_t *)allocator_alloc(eval->allocator,
+                                                     sizeof(comptime_value_t) * (total_margs + 1));
+            for (size_t j = 0; j < total_margs; j++)
+              args[j] = (comptime_value_t)vec_get(marg_vec, j);
+            comptime_value_t result = _eval_call_function(eval, ctx, method_val, args, total_margs, node);
+            allocator_free(eval->allocator, &args);
+            allocator_free(eval->allocator, &marg_vec);
+            return result;
+          }
+
+          /* No spread — original fast path */
           comptime_value_t *args =
               (comptime_value_t *)allocator_alloc(eval->allocator,
                                                    sizeof(comptime_value_t) * (acount + 1));
@@ -581,6 +665,59 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
   /* Direct function call */
   if (callee->kind == COMPTIME_VALUE_FUNCTION) {
     size_t acount = call->arguments ? vec_get_size(call->arguments) : 0;
+
+    /* Check if any argument is a spread — if so, use dynamic vec */
+    bool has_spread = false;
+    for (size_t i = 0; i < acount; i++) {
+      node_t arg_node = (node_t)vec_get(call->arguments, i);
+      if (arg_node && arg_node->kind == CUBEC_NODE_EXPRESSION_SPREAD) {
+        has_spread = true;
+        break;
+      }
+    }
+
+    if (has_spread) {
+      /* Build argument list with spread expansion */
+      vec_init_t argvi = {.auto_dispose = false};
+      vec_t arg_vec = (vec_t)allocator_create(eval->allocator, &g_vec_type, &argvi);
+      for (size_t i = 0; i < acount; i++) {
+        node_t arg_node = (node_t)vec_get(call->arguments, i);
+        if (arg_node && arg_node->kind == CUBEC_NODE_EXPRESSION_SPREAD) {
+          cubec_expression_spread_t spread = (cubec_expression_spread_t)arg_node;
+          comptime_value_t pack_val = _comptime_eval_expr(eval, ctx, spread->value);
+          if (!pack_val || pack_val->kind == COMPTIME_VALUE_ERROR) {
+            allocator_free(eval->allocator, &arg_vec);
+            return _eval_error_val(eval);
+          }
+          if (pack_val->kind == COMPTIME_VALUE_PACK && pack_val->pack.elements) {
+            size_t ecount = vec_get_size(pack_val->pack.elements);
+            for (size_t j = 0; j < ecount; j++) {
+              comptime_value_t elem = (comptime_value_t)vec_get(pack_val->pack.elements, j);
+              vec_push(arg_vec, comptime_value_clone(eval->allocator, elem));
+            }
+          }
+        } else {
+          comptime_value_t arg = _comptime_eval_expr(eval, ctx, arg_node);
+          if (!arg || arg->kind == COMPTIME_VALUE_ERROR) {
+            allocator_free(eval->allocator, &arg_vec);
+            return _eval_error_val(eval);
+          }
+          vec_push(arg_vec, comptime_value_clone(eval->allocator, arg));
+        }
+      }
+      size_t total_args = vec_get_size(arg_vec);
+      comptime_value_t *args =
+          (comptime_value_t *)allocator_alloc(eval->allocator,
+                                               sizeof(comptime_value_t) * (total_args + 1));
+      for (size_t i = 0; i < total_args; i++)
+        args[i] = (comptime_value_t)vec_get(arg_vec, i);
+      comptime_value_t result = _eval_call_function(eval, ctx, callee, args, total_args, node);
+      allocator_free(eval->allocator, &args);
+      allocator_free(eval->allocator, &arg_vec);
+      return result;
+    }
+
+    /* No spread — original fast path */
     comptime_value_t *args =
         (comptime_value_t *)allocator_alloc(eval->allocator,
                                              sizeof(comptime_value_t) * (acount + 1));
@@ -588,11 +725,9 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
       comptime_value_t arg = _comptime_eval_expr(eval, ctx,
                                                    (node_t)vec_get(call->arguments, i));
       if (!arg || arg->kind == COMPTIME_VALUE_ERROR) {
-        /* No need to free previous args — they're borrowed from scope */
         allocator_free(eval->allocator, &args);
         return _eval_error_val(eval);
       }
-      /* Clone for cross-scope transfer */
       args[i] = comptime_value_clone(eval->allocator, arg);
     }
     comptime_value_t result = _eval_call_function(eval, ctx, callee, args, acount, node);

@@ -43,6 +43,7 @@ semantic_type_t _check_expression(checker_t ctx, node_t expr);
 static void _register_generic_params(checker_t ctx, vec_t generic_params) {
   if (!generic_params) return;
   size_t count = vec_get_size(generic_params);
+  bool seen_rest = false;
   for (size_t i = 0; i < count; i++) {
     node_t gp_node = (node_t)vec_get(generic_params, i);
     if (!gp_node || gp_node->kind != CUBEC_NODE_GENERIC_PARAM) continue;
@@ -50,9 +51,29 @@ static void _register_generic_params(checker_t ctx, vec_t generic_params) {
     const char *gp_name = _checker_ident_str(gp->name);
     if (!gp_name) continue;
 
+    /* Validate rest parameter rules */
+    if (gp->is_rest) {
+      if (seen_rest) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                            gp->super.location,
+                            "only one rest parameter allowed");
+        ctx->error_count++;
+        continue;
+      }
+      if (i != count - 1) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                            gp->super.location,
+                            "rest parameter must be last in generic parameter list");
+        ctx->error_count++;
+        continue;
+      }
+      seen_rest = true;
+    }
+
     struct symbol *sym = symbol_create(ctx->allocator, gp_name,
                                        SYMBOL_GENERIC_PARAM, gp->super.location);
     sym->generic_param.index = i;
+    sym->generic_param.is_rest = gp->is_rest;
     if (gp->constraint)
       sym->generic_param.constraint = resolver_resolve_type(ctx, gp->constraint);
     if (gp->value_type)

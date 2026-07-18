@@ -6,6 +6,7 @@
 #include "engine/diagnostic.h"
 #include "cubec/node.h"
 #include "cubec/expression_generic_instantiation.h"
+#include "cubec/expression_spread.h"
 #include "cubec/literal_identifier.h"
 
 /* ===== resolver_resolve_type (dispatcher) ===== */
@@ -50,6 +51,14 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
 
   case CUBEC_NODE_EXPRESSION_TYPEOF:
     return _resolve_type_typeof(ctx, node);
+
+  case CUBEC_NODE_EXPRESSION_SPREAD: {
+    /* Spread in type context: ...Args resolves to the inner type (TYPE_GENERIC_PACK) */
+    cubec_expression_spread_t spread = (cubec_expression_spread_t)node;
+    if (spread->value)
+      return resolver_resolve_type(ctx, spread->value);
+    return ctx->error_type;
+  }
 
   case CUBEC_NODE_EXPRESSION_WILDCARD: {
     semantic_type_t wt = semantic_type_create_wildcard(ctx->allocator);

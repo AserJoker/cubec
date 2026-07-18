@@ -24,6 +24,7 @@ struct _cubec_function_argument_t {
   struct _node_t super;
   node_t identifier; /**< Literal identifier for the parameter name */
   node_t type;       /**< Type expression (may be NULL if omitted) */
+  bool is_rest;      /**< True if this parameter uses ... prefix (pack parameter) */
 };
 typedef struct _cubec_function_argument_t *cubec_function_argument_t;
 
@@ -33,6 +34,7 @@ struct _cubec_function_argument_init_t {
   location_t location;
   node_t identifier;
   node_t type;
+  bool is_rest;
 };
 typedef struct _cubec_function_argument_init_t cubec_function_argument_init_t;
 

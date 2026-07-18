@@ -31,6 +31,7 @@ enum comptime_value_kind {
   COMPTIME_VALUE_POINTER,   /**< virtual address */
   COMPTIME_VALUE_COMPOSITE, /**< struct/union instance */
   COMPTIME_VALUE_FUNCTION,  /**< closure (env + AST body) */
+  COMPTIME_VALUE_PACK,      /**< variadic pack of values */
   COMPTIME_VALUE_ERROR,     /**< error sentinel */
 };
 
@@ -54,6 +55,7 @@ struct comptime_value {
     struct { uint64_t addr; } pointer;
     struct { uint8_t *data; size_t data_size; semantic_type_t element_type; } composite;
     struct { comptime_env_t captured_env; node_t body; vec_t param_names; } function;
+    struct { vec_t elements; } pack;
   };
 };
 
@@ -95,6 +97,9 @@ comptime_value_t comptime_value_create_function(allocator_t allocator,
                                                  vec_t param_names,
                                                  semantic_type_t type);
 comptime_value_t comptime_value_create_error(allocator_t allocator);
+comptime_value_t comptime_value_create_pack(allocator_t allocator,
+                                            vec_t elements,
+                                            semantic_type_t type);
 
 /* ===== queries ===== */
 

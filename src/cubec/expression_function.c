@@ -235,16 +235,18 @@ node_t read_expression_function(allocator_t allocator, vec_t tokens,
 
   if (_is_symbol(tokens, current, ")")) {
     /* no parameters */
-  } else if (_is_symbol(tokens, current, "...")) {
-    /* C-style variadic with no named params */
-    is_c_variadic = true;
-    current++;
-    skip_whitespace(tokens, &current);
   } else {
-    /* Parse parameters */
+    /* Parse parameters (read_function_argument handles ... prefix for pack params) */
     while (true) {
       node_t arg = TRY_LOCAL(onerror, read_function_argument(allocator, tokens, &current, filename));
       if (!arg) {
+        /* Check for C-style variadic with no named params: func(...)  */
+        if (_is_symbol(tokens, current, "...")) {
+          is_c_variadic = true;
+          current++;
+          skip_whitespace(tokens, &current);
+          break;
+        }
         THROW_LOCAL(onerror, "expected function parameter");
       }
       vec_push(arguments, arg);
@@ -255,13 +257,6 @@ node_t read_expression_function(allocator_t allocator, vec_t tokens,
       if (token_is(comma_or_close, CUBEC_TOKEN_SYMBOL, ",")) {
         current++;
         skip_whitespace(tokens, &current);
-        /* Check for '...' after comma */
-        if (_is_symbol(tokens, current, "...")) {
-          is_c_variadic = true;
-          current++;
-          skip_whitespace(tokens, &current);
-          break;
-        }
       } else if (token_is(comma_or_close, CUBEC_TOKEN_SYMBOL, ")")) {
         break;
       } else {

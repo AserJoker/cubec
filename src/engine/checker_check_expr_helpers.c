@@ -15,6 +15,7 @@
 #include "cubec/expression_assignment.h"
 #include "cubec/expression_function.h"
 #include "cubec/function_argument.h"
+#include "cubec/generic_param.h"
 #include <string.h>
 
 /* ===== assignment generic LHS helper ===== */
@@ -89,6 +90,51 @@ semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
   if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.type) {
     vec_t type_args = _resolve_generic_type_args(ctx, gi->arguments);
     if (!type_args) return ctx->error_type;
+
+    /* If there are pack parameters, coalesce excess type args into packs.
+       E.g. for foo[...Args], foo[i32, f64] should produce type_args = [PACK([i32, f64])],
+       not type_args = [i32, f64]. */
+    vec_t gp = sym->function.generic_params;
+    size_t gcount = gp ? vec_get_size(gp) : 0;
+    size_t tacount = type_args ? vec_get_size(type_args) : 0;
+    if (gcount > 0 && tacount > gcount) {
+      /* Find the pack parameter position */
+      size_t pack_idx = gcount; /* default: no pack */
+      for (size_t i = 0; i < gcount; i++) {
+        cubec_generic_param_t gp_node = (cubec_generic_param_t)(void *)vec_get(gp, i);
+        if (gp_node && gp_node->is_rest) {
+          pack_idx = i;
+          break;
+        }
+      }
+      if (pack_idx < gcount) {
+        /* Coalesce: types before pack stay, types from pack_idx onwards go into a PACK */
+        vec_init_t vi = {.auto_dispose = false};
+        vec_t new_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+        for (size_t i = 0; i < pack_idx; i++) {
+          vec_push(new_type_args, vec_get(type_args, i));
+        }
+        /* Create PACK from remaining args */
+        const char *pack_name = NULL;
+        cubec_generic_param_t pack_gp = (cubec_generic_param_t)(void *)vec_get(gp, pack_idx);
+        if (pack_gp) {
+          const char *raw = _checker_ident_str(pack_gp->name);
+          if (raw) pack_name = raw;
+        }
+        semantic_type_t pack_type = semantic_type_create_generic_pack(
+            ctx->allocator, pack_name, pack_idx);
+        for (size_t i = pack_idx; i < tacount; i++) {
+          semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
+          vec_push(pack_type->impl->generic_pack.expanded_types, ta);
+        }
+        type_hash_ensure(pack_type);
+        vec_push(ctx->all_types, pack_type);
+        vec_push(new_type_args, pack_type);
+        allocator_free(ctx->allocator, &type_args);
+        type_args = new_type_args;
+      }
+    }
+
     _check_generic_param_constraints(ctx, sym->function.generic_params, type_args, expr);
     return _instantiate_function(ctx, sym, type_args, expr);
   }

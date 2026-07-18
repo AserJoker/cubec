@@ -39,6 +39,13 @@ semantic_type_t _resolve_type_identifier(checker_t ctx, node_t node) {
   const char *name = _resolver_ident_str(node);
   if (!name) return ctx->error_type;
 
+  /* Wildcard type: ? in generic type args (e.g. Container[?]) */
+  if (strcmp(name, "?") == 0) {
+    semantic_type_t wt = semantic_type_create_wildcard(ctx->allocator);
+    vec_push(ctx->all_types, wt);
+    return wt;
+  }
+
   /* Search type_name_table first */
   void *found = strmap_find(ctx->type_name_table, name);
   if (found) {
@@ -51,8 +58,15 @@ semantic_type_t _resolve_type_identifier(checker_t ctx, node_t node) {
     if (sym->kind == SYMBOL_TYPE && sym->type.type) {
       return sym->type.type;
     }
-    /* Handle generic params in type position: create TYPE_GENERIC_PARAM */
+    /* Handle generic params in type position: create TYPE_GENERIC_PARAM or TYPE_GENERIC_PACK */
     if (sym->kind == SYMBOL_GENERIC_PARAM) {
+      if (sym->generic_param.is_rest) {
+        semantic_type_t pack_type = semantic_type_create_generic_pack(
+            ctx->allocator, name, sym->generic_param.index);
+        type_hash_ensure(pack_type);
+        vec_push(ctx->all_types, pack_type);
+        return pack_type;
+      }
       semantic_type_t gp_type = semantic_type_create_generic_param(
           ctx->allocator, name, sym->generic_param.index);
       type_hash_ensure(gp_type);

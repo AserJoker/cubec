@@ -121,6 +121,11 @@ static size_t _hash_type(semantic_type_t type) {
     hash = _hash_combine(hash, (size_t)impl->generic_param.index);
     break;
 
+  case TYPE_GENERIC_PACK:
+    hash = _hash_combine(hash, (size_t)impl->generic_pack.index);
+    hash = _hash_combine(hash, _hash_type_vec(impl->generic_pack.expanded_types));
+    break;
+
   case TYPE_WILDCARD:
     break;
   }

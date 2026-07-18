@@ -28,6 +28,7 @@
 #include "cubec/expression_slice.h"
 #include "cubec/expression_function.h"
 #include "cubec/expression_initialize_list.h"
+#include "cubec/generic_param.h"
 #include "cubec/expression_comma.h"
 #include "cubec/expression_spread.h"
 #include "cubec/expression_namespace_access.h"
@@ -255,14 +256,16 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
       vec_push(arg_types, at);
     }
 
-    /* Build generic param symbols vec for _infer_type_args_from_call */
+    /* Build generic param info for _infer_type_args_from_call.
+       Use the generic param AST nodes to get names (gp->name is a literal_identifier node).
+       Also try scope_lookup to find the symbol for constraint checking. */
     vec_t gp = generic_func_sym->function.generic_params;
     size_t gcount = vec_get_size(gp);
     vec_init_t gpvi = {.auto_dispose = false};
     vec_t generic_param_syms = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &gpvi);
     for (size_t i = 0; i < gcount; i++) {
-      node_t gp_node = (node_t)vec_get(gp, i);
-      const char *gp_name = gp_node ? _checker_ident_str(gp_node) : NULL;
+      cubec_generic_param_t gp_node = (cubec_generic_param_t)(void *)vec_get(gp, i);
+      const char *gp_name = gp_node ? _checker_ident_str(gp_node->name) : NULL;
       if (gp_name) {
         struct symbol *gpsym = scope_lookup(ctx->current_scope, gp_name);
         vec_push(generic_param_syms, gpsym ? gpsym : NULL);
@@ -279,14 +282,18 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
     if (type_args) {
       size_t tcount = vec_get_size(type_args);
       for (size_t i = 0; i < tcount; i++) {
-        if (!vec_get(type_args, i)) {
-          node_t gp_node = (node_t)vec_get(gp, i);
-          const char *gp_name = gp_node ? _checker_ident_str(gp_node) : "?";
+        semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
+        if (!ta) {
+          cubec_generic_param_t gp_node = (cubec_generic_param_t)(void *)vec_get(gp, i);
+          const char *gp_name = gp_node ? _checker_ident_str(gp_node->name) : "?";
           diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                                expr->location,
                                "cannot infer generic parameter '%s'",
                                gp_name);
           ctx->error_count++;
+        } else if (ta->impl->kind == TYPE_GENERIC_PACK &&
+                   vec_get_size(ta->impl->generic_pack.expanded_types) == 0) {
+          /* Pack parameter with empty expansion: not an error (empty pack is valid) */
         }
       }
     }

@@ -82,6 +82,11 @@ static void _type_impl_dispose(void *self, allocator_t allocator) {
       allocator_free(allocator, &impl->generic_instance.fields);
     }
     break;
+  case TYPE_GENERIC_PACK:
+    if (impl->generic_pack.expanded_types) {
+      allocator_free(allocator, &impl->generic_pack.expanded_types);
+    }
+    break;
   default:
     break;
   }
@@ -194,6 +199,13 @@ static bool _type_impl_equals(type_impl_t a, type_impl_t b) {
                                 b->generic_instance.generic_template) &&
            _type_vec_equals(a->generic_instance.type_args,
                             b->generic_instance.type_args);
+
+  case TYPE_GENERIC_PACK:
+    if (a->generic_pack.index != b->generic_pack.index) return false;
+    if (a->generic_pack.name && b->generic_pack.name &&
+        strcmp(a->generic_pack.name, b->generic_pack.name) != 0) return false;
+    return _type_vec_equals(a->generic_pack.expanded_types,
+                            b->generic_pack.expanded_types);
 
   default:
     return false;
@@ -404,6 +416,21 @@ semantic_type_t semantic_type_create_generic_param(allocator_t allocator,
   t->impl = _create_impl(allocator, TYPE_GENERIC_PARAM);
   t->impl->generic_param.name = name;
   t->impl->generic_param.index = index;
+  t->is_incomplete = false;
+  return t;
+}
+
+semantic_type_t semantic_type_create_generic_pack(allocator_t allocator,
+                                                   const char *name,
+                                                   size_t index) {
+  semantic_type_t t = (semantic_type_t)allocator_create(
+      allocator, &g_semantic_type_type, NULL);
+  t->impl = _create_impl(allocator, TYPE_GENERIC_PACK);
+  t->impl->generic_pack.name = name;
+  t->impl->generic_pack.index = index;
+  vec_init_t vi = {.auto_dispose = false};
+  t->impl->generic_pack.expanded_types =
+      (vec_t)allocator_create(allocator, &g_vec_type, &vi);
   t->is_incomplete = false;
   return t;
 }

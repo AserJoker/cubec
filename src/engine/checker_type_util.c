@@ -99,8 +99,19 @@ char *_generic_instance_cache_key(checker_t ctx, const char *template_name,
   size_t acount = type_args ? vec_get_size(type_args) : 0;
   for (size_t i = 0; i < acount; i++) {
     semantic_type_t t = (semantic_type_t)vec_get(type_args, i);
-    type_hash_ensure(t);
-    len += 1 + 20; /* '#' + max uint64 decimal */
+    if (!t) continue;
+    if (t->impl->kind == TYPE_GENERIC_PACK) {
+      /* Pack: expand each type in the pack */
+      size_t ecount = vec_get_size(t->impl->generic_pack.expanded_types);
+      for (size_t j = 0; j < ecount; j++) {
+        semantic_type_t et = (semantic_type_t)vec_get(t->impl->generic_pack.expanded_types, j);
+        if (et) { type_hash_ensure(et); }
+        len += 1 + 20; /* '#' + max uint64 decimal */
+      }
+    } else {
+      type_hash_ensure(t);
+      len += 1 + 20; /* '#' + max uint64 decimal */
+    }
   }
   char *key = (char *)allocator_alloc(ctx->allocator, len + 1);
   size_t pos = 0;
@@ -108,8 +119,19 @@ char *_generic_instance_cache_key(checker_t ctx, const char *template_name,
   pos += strlen(template_name);
   for (size_t i = 0; i < acount; i++) {
     semantic_type_t t = (semantic_type_t)vec_get(type_args, i);
-    key[pos++] = '#';
-    pos += snprintf(key + pos, len + 1 - pos, "%zu", t->impl->hash);
+    if (!t) continue;
+    if (t->impl->kind == TYPE_GENERIC_PACK) {
+      size_t ecount = vec_get_size(t->impl->generic_pack.expanded_types);
+      for (size_t j = 0; j < ecount; j++) {
+        semantic_type_t et = (semantic_type_t)vec_get(t->impl->generic_pack.expanded_types, j);
+        if (!et) continue;
+        key[pos++] = '#';
+        pos += snprintf(key + pos, len + 1 - pos, "%zu", et->impl->hash);
+      }
+    } else {
+      key[pos++] = '#';
+      pos += snprintf(key + pos, len + 1 - pos, "%zu", t->impl->hash);
+    }
   }
   key[pos] = '\0';
   return key;
@@ -143,8 +165,21 @@ static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
   switch (type->impl->kind) {
   case TYPE_GENERIC_PARAM: {
     size_t idx = type->impl->generic_param.index;
-    if (type_args && idx < vec_get_size(type_args))
-      return (semantic_type_t)vec_get(type_args, idx);
+    if (type_args && idx < vec_get_size(type_args)) {
+      semantic_type_t replacement = (semantic_type_t)vec_get(type_args, idx);
+      if (replacement) return replacement;
+    }
+    return type;
+  }
+
+  case TYPE_GENERIC_PACK: {
+    /* Substitute the pack parameter with the corresponding type_args entry.
+       The entry should be a TYPE_GENERIC_PACK containing expanded_types. */
+    size_t idx = type->impl->generic_pack.index;
+    if (type_args && idx < vec_get_size(type_args)) {
+      semantic_type_t replacement = (semantic_type_t)vec_get(type_args, idx);
+      if (replacement) return replacement;
+    }
     return type;
   }
 
@@ -193,8 +228,18 @@ static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
     for (size_t i = 0; i < pcount; i++) {
       semantic_type_t p = (semantic_type_t)vec_get(type->impl->function.params, i);
       semantic_type_t new_p = _substitute_type(ctx, p, type_args);
-      vec_push(new_params, new_p);
-      if (new_p != p) changed = true;
+      /* If substitution produced a TYPE_GENERIC_PACK, expand it into individual types */
+      if (new_p && new_p->impl->kind == TYPE_GENERIC_PACK) {
+        vec_t expanded = new_p->impl->generic_pack.expanded_types;
+        size_t ecount = expanded ? vec_get_size(expanded) : 0;
+        for (size_t j = 0; j < ecount; j++) {
+          vec_push(new_params, (semantic_type_t)vec_get(expanded, j));
+        }
+        changed = true;
+      } else {
+        vec_push(new_params, new_p);
+        if (new_p != p) changed = true;
+      }
     }
     semantic_type_t new_ret = _substitute_type(ctx, type->impl->function.return_type, type_args);
     if (new_ret != type->impl->function.return_type) changed = true;
@@ -439,8 +484,21 @@ bool _check_generic_param_constraints(checker_t ctx, vec_t generic_params,
     semantic_type_t constraint_type = resolver_resolve_type(ctx, gp->constraint);
     if (!constraint_type || constraint_type->impl->kind == TYPE_ERROR) continue;
 
-    if (!_check_constraint(ctx, ta, constraint_type, expr)) {
-      all_ok = false;
+    if (gp->is_rest) {
+      /* Pack parameter: check constraint against each expanded type */
+      if (ta->impl->kind == TYPE_GENERIC_PACK) {
+        size_t ecount = vec_get_size(ta->impl->generic_pack.expanded_types);
+        for (size_t j = 0; j < ecount; j++) {
+          semantic_type_t et = (semantic_type_t)vec_get(ta->impl->generic_pack.expanded_types, j);
+          if (!_check_constraint(ctx, et, constraint_type, expr)) {
+            all_ok = false;
+          }
+        }
+      }
+    } else {
+      if (!_check_constraint(ctx, ta, constraint_type, expr)) {
+        all_ok = false;
+      }
     }
   }
   return all_ok;
@@ -549,24 +607,16 @@ semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
     return cached;
   }
 
-  /* Substitute generic params in params and return_type */
-  vec_init_t vi = {.auto_dispose = false};
-  vec_t new_params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-  size_t pcount = vec_get_size(func_type->impl->function.params);
-  for (size_t i = 0; i < pcount; i++) {
-    semantic_type_t p = (semantic_type_t)vec_get(func_type->impl->function.params, i);
-    semantic_type_t new_p = _substitute_type(ctx, p, type_args);
-    vec_push(new_params, new_p);
+  /* Substitute generic params in the entire function type.
+     Using _substitute_type on the whole type handles pack expansion
+     correctly (TYPE_FUNCTION branch expands TYPE_GENERIC_PACK params). */
+  semantic_type_t inst_type = _substitute_type(ctx, func_type, type_args);
+
+  /* If nothing changed (no generic params), return original */
+  if (inst_type == func_type) {
+    allocator_free(ctx->allocator, &type_args);
+    return func_type;
   }
-
-  semantic_type_t new_return = _substitute_type(ctx,
-      func_type->impl->function.return_type, type_args);
-
-  /* Create new function type with substituted types */
-  semantic_type_t inst_type = semantic_type_create_function(ctx->allocator,
-      new_return, new_params, func_type->impl->function.is_variadic);
-  vec_push(ctx->all_types, inst_type);
-  type_hash_ensure(inst_type);
 
   /* Cache */
   _cache_insert(ctx, name, type_args, inst_type);

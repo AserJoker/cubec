@@ -243,6 +243,7 @@ void type_layout_compute(semantic_type_t type, size_t ptr_size) {
   }
 
   case TYPE_GENERIC_PARAM:
+  case TYPE_GENERIC_PACK:
   case TYPE_WILDCARD:
     /* These are compile-time only types, no runtime representation */
     impl->size = 0;

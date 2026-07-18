@@ -39,6 +39,7 @@ static void _register_generic_params(checker_t ctx, vec_t generic_params) {
     struct symbol *sym = symbol_create(ctx->allocator, gp_name,
                                        SYMBOL_GENERIC_PARAM, gp->super.location);
     sym->generic_param.index = i;
+    sym->generic_param.is_rest = gp->is_rest;
     /* Resolve constraint and value_type if present */
     if (gp->constraint) {
       sym->generic_param.constraint = resolver_resolve_type(ctx, gp->constraint);

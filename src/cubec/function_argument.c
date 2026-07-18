@@ -30,6 +30,7 @@ static void _cubec_function_argument_init(
   TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
   self->identifier = init->identifier;
   self->type = init->type;
+  self->is_rest = init->is_rest;
 onerror:
   return;
 }
@@ -49,6 +50,7 @@ static void _cubec_function_argument_clone(
   self->type = another->type
                    ? TRY_LOCAL(onerror, value_clone(allocator, another->type))
                    : NULL;
+  self->is_rest = another->is_rest;
 onerror:
   return;
 }
@@ -61,6 +63,7 @@ static void _cubec_function_argument_move(
   self->type = another->type
                    ? TRY_LOCAL(onerror, value_move(allocator, another->type))
                    : NULL;
+  self->is_rest = another->is_rest;
 onerror:
   return;
 }
@@ -93,14 +96,22 @@ node_t read_function_argument(allocator_t allocator, vec_t tokens,
   size_t current = *position;
   node_t identifier = NULL;
   node_t type = NULL;
+  bool is_rest = false;
 
-  /* 1. Check for identifier — if not present, return NULL */
+  /* 1. Check for '...' prefix (pack parameter) */
+  if (_is_symbol(tokens, current, "...")) {
+    is_rest = true;
+    current++;
+    skip_whitespace(tokens, &current);
+  }
+
+  /* 2. Check for identifier — if not present, return NULL */
   token_t first = vec_get(tokens, current);
   if (!first || token_get_kind(first) != CUBEC_TOKEN_IDENTIFIER) {
     return NULL;
   }
 
-  /* 2. Parse identifier */
+  /* 3. Parse identifier */
   identifier = TRY_LOCAL(fail, read_literal_identifier(allocator, tokens, &current, filename));
   if (!identifier) {
     return NULL;
@@ -108,7 +119,7 @@ node_t read_function_argument(allocator_t allocator, vec_t tokens,
 
   skip_whitespace(tokens, &current);
 
-  /* 3. Check for optional ': type' */
+  /* 4. Check for optional ': type' */
   if (_is_symbol(tokens, current, ":")) {
     current++;
     skip_whitespace(tokens, &current);
@@ -119,7 +130,7 @@ node_t read_function_argument(allocator_t allocator, vec_t tokens,
     skip_whitespace(tokens, &current);
   }
 
-  /* 4. Build location */
+  /* 5. Build location */
   location_t *start_loc = token_get_location(first);
   location_t *end_loc = type ? &((node_t)type)->location : token_get_location(vec_get(tokens, current - 1));
   location_t loc = {
@@ -128,13 +139,14 @@ node_t read_function_argument(allocator_t allocator, vec_t tokens,
       .filename = filename,
   };
 
-  /* 5. Create node */
+  /* 6. Create node */
   cubec_function_argument_t arg = NULL;
   arg = TRY_LOCAL(fail, allocator_create(allocator, &g_cubec_function_argument_type,
       &(cubec_function_argument_init_t){
           .location = loc,
           .identifier = identifier,
           .type = type,
+          .is_rest = is_rest,
       }));
 
   *position = current;

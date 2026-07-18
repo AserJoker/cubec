@@ -22,6 +22,7 @@ enum type_kind {
   TYPE_STRUCT, TYPE_UNION, TYPE_CUNION, TYPE_ENUM,
   TYPE_INTERFACE, TYPE_FUNCTION, TYPE_TYPE, TYPE_QUALIFIER,
   TYPE_GENERIC_INSTANCE, TYPE_GENERIC_PARAM,
+  TYPE_GENERIC_PACK,
   TYPE_WILDCARD,
   TYPE_NIL, TYPE_ERROR
 };
@@ -87,6 +88,12 @@ struct _type_impl {
       const char *name;   /**< Generic param name (e.g., "T") */
       size_t index;       /**< Position in generic param list */
     } generic_param;
+    /* TYPE_GENERIC_PACK */
+    struct {
+      const char *name;       /**< Pack param name (e.g., "Args") */
+      size_t index;           /**< Pack param position in generic list */
+      vec_t expanded_types;   /**< Collected concrete types (auto_dispose=false) */
+    } generic_pack;
   };
 };
 
@@ -149,6 +156,9 @@ semantic_type_t semantic_type_create_generic_instance(allocator_t allocator,
 semantic_type_t semantic_type_create_generic_param(allocator_t allocator,
                                                     const char *name,
                                                     size_t index);
+semantic_type_t semantic_type_create_generic_pack(allocator_t allocator,
+                                                   const char *name,
+                                                   size_t index);
 semantic_type_t semantic_type_create_wildcard(allocator_t allocator);
 
 #ifdef __cplusplus

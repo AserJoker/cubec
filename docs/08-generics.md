@@ -69,16 +69,107 @@ func is_null[T extends *?](ptr: T): bool { return ptr == nil; }
 
 ---
 
-## 4. 参数包
+## 4. 参数包（Parameter Packs）
 
-Cubec 支持泛型参数包（类似 C++ variadic templates），使用 `...T` 语法定义：
+Cubec 支持泛型参数包（类似 C++ variadic templates / Rust 参数包），用于定义接受可变数量类型参数的泛型函数和类型。
+
+### 4.1 参数包定义
+
+在泛型参数列表中使用 `...` 前缀定义参数包。参数包**必须是泛型参数列表的最后一个参数**：
 
 ```c
-func variadic[...T](args: ...T): void {
-    // args 是编译期已知的参数包
+// 仅含参数包
+func foo[...Args](): void {}
+
+// 普通参数 + 参数包
+func foo[T, ...Args](x: T, ...args: Args): void {}
+
+// 参数包带约束 — 展开后的每个类型都必须满足约束
+func sum[...Args extends i32](...args: Args): i32 { ... }
+```
+
+**规则**：
+- 参数包只能出现一次，且必须在泛型参数列表末尾
+- `...Args, T` 是非法的（参数包后不可有普通参数）
+- `...A, ...B` 是非法的（不允许出现多个参数包）
+- 参数包可带 `extends` 约束，每个展开的类型都必须满足该约束
+
+### 4.2 函数参数中的包展开
+
+在函数参数列表中使用 `...args: PackName` 语法声明与参数包对应的可变参数：
+
+```c
+func foo[T, ...Args](x: T, ...args: Args): void {}
+
+foo(1);           // Args = [] (空展开), args = ()
+foo(1, 2, 3);     // Args = [i32, i32], args = (2, 3)
+foo(1, "a", 3.0); // Args = [string, f64], args = ("a", 3.0)
+```
+
+- `...args: Args` 表示 args 对应参数包 `Args` 中的类型
+- 参数包展开为零个或多个参数
+- 当参数包为空展开时，对应的函数参数位置消失
+
+### 4.3 函数类型中的包展开
+
+参数包可用于函数类型表达式，实现高阶函数模式：
+
+```c
+func wrap[R, ...Args](fn: func(...Args) -> R): func(...Args) -> R {
+    return func |fn| (...args: Args): R {
+        return fn(...args);
+    };
 }
 ```
 
-- `...T` 在泛型参数列表中定义参数包
-- 参数包在编译期展开，生成具体化的函数
-- 与 `...` 展开运算符的其他用途统一（见 `04-expressions.md` 第6节）
+- `func(...Args) -> R` 是一个函数类型，其参数由参数包 `Args` 展开
+- 参数包在函数类型参数列表中的位置同样支持空展开
+
+### 4.4 调用参数中的包展开
+
+使用 `...expr` 语法在函数调用中展开参数包：
+
+```c
+func apply[R, ...Args](fn: func(...Args) -> R, ...args: Args): R {
+    return fn(...args);
+}
+```
+
+- `fn(...args)` 将 args 展开为独立的调用参数
+- 与 `...` 展开运算符统一（见 `04-expressions.md` 第6节）
+
+### 4.5 空包展开
+
+当参数包没有任何类型实参时，包展开位置产生空序列：
+
+```c
+func foo[...Args](): void {}
+foo[]();  // OK: Args 为空，调用等价于 foo()
+```
+
+- `foo[]()` 语法：空的泛型实参列表表示参数包零展开
+- 空展开在函数参数位置消失，在函数类型参数位置消失
+
+### 4.6 装饰器模式
+
+参数包使得类型安全的装饰器/包装器模式成为可能：
+
+```c
+func wrap[R, ...Args](fn: func(...Args) -> R): func(...Args) -> R {
+    return func |fn| (...args: Args): R {
+        // 前置逻辑
+        var result = fn(...args);
+        // 后置逻辑
+        return result;
+    };
+}
+```
+
+此模式捕获函数签名中的所有参数类型和返回类型，生成类型安全的包装函数。
+
+### 4.7 语义表示
+
+- **类型层**：`semantic_type_t` 中 `TYPE_GENERIC_PACK` 表示参数包类型，含 `element_types` 向量
+- **值层**：`comptime_value_t` 中 `COMPTIME_VALUE_PACK` 表示参数包值，含 `elements` 向量
+- **符号层**：`symbol_t` 的 `generic_param` 中 `is_rest` 标记参数包
+- **函数参数**：`cubec_function_argument_t` 中 `is_rest` 标记包展开参数 (`...args`)
