@@ -2,6 +2,7 @@
 #include "engine/diagnostic.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
+#include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -29,6 +30,15 @@ static struct compile_result compile_source(allocator_t allocator,
   node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
   checker_t ctx = checker_create(allocator);
   source_cache_load(ctx->sources, "test.cubec", source, false);
+
+  /* If parsing failed, g_error is set — convert to a diagnostic */
+  if (g_error) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         (location_t){0}, "%s", g_error->message);
+    ctx->error_count++;
+    error_clear();
+  }
+
   checker_check_program(ctx, prog);
   return (struct compile_result){ctx, prog, tokens};
 }
