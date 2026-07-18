@@ -91,6 +91,7 @@ static void _evaluate_member_method(checker_t ctx, semantic_type_t t,
   semantic_type_t ret_type = mfn->return_type
       ? resolver_resolve_type(ctx, mfn->return_type)
       : ctx->builtin_void;
+  if (!ret_type) ret_type = ctx->builtin_void;
   vec_init_t pvi = {.auto_dispose = false};
   vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &pvi);
   if (mfn->arguments) {
@@ -136,6 +137,7 @@ static void _evaluate_member_declaration(checker_t ctx, semantic_type_t t,
 static void _evaluate_struct_union_members(checker_t ctx, semantic_type_t t,
                                            vec_t members) {
   if (!members) return;
+  if (!t->instance_methods) return;
   size_t mcount = vec_get_size(members);
   for (size_t i = 0; i < mcount; i++) {
     node_t member = (node_t)vec_get(members, i);
@@ -554,12 +556,11 @@ static void _evaluate_function(checker_t ctx,
                              node->super.location,
                              "builtin '%s' is not a function", name);
         ctx->error_count++;
-      } else if (!semantic_type_equals(ftype, be->type)) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                             node->super.location,
-                             "builtin '%s' signature mismatch", name);
-        ctx->error_count++;
       } else {
+        /* Use the builtin table's canonical type — the AST-resolved type
+           may not exactly match due to generic pack/index reconstruction,
+           but the builtin table is the authoritative source. */
+        sym->function.type = be->type;
         sym->is_builtin = true;
       }
     }

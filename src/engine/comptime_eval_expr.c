@@ -484,12 +484,23 @@ comptime_value_t _comptime_create_method_value(comptime_eval_t eval,
 static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
                                     node_t node) {
   cubec_expression_call_t call = (cubec_expression_call_t)node;
-
   /* --- builtin dispatch --- */
-  if (call->callee && call->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
-    const char *callee_name = _eval_ident_str(call->callee);
-    struct symbol *callee_sym = callee_name
-        ? scope_lookup(ctx->current_scope, callee_name) : NULL;
+  {
+    const char *callee_name = NULL;
+    struct symbol *callee_sym = NULL;
+    node_t callee_for_dispatch = call->callee;
+
+    /* Unwrap generic_instantiation: getTupleItem[0](t) → callee = getTupleItem */
+    if (callee_for_dispatch && callee_for_dispatch->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
+      cubec_expression_generic_instantiation_t gi =
+          (cubec_expression_generic_instantiation_t)callee_for_dispatch;
+      callee_name = _eval_ident_str(gi->callee);
+      callee_sym = callee_name ? scope_lookup(ctx->current_scope, callee_name) : NULL;
+    } else if (callee_for_dispatch && callee_for_dispatch->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+      callee_name = _eval_ident_str(callee_for_dispatch);
+      callee_sym = callee_name ? scope_lookup(ctx->current_scope, callee_name) : NULL;
+    }
+
     if (callee_sym && callee_sym->is_builtin) {
       builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, callee_name);
       if (be) switch (be->dispatch) {
@@ -569,7 +580,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
         if (acount < 1) {
           diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                                node->location,
-                               "get() requires a tuple argument");
+                               "getTupleItem() requires a tuple argument");
           ctx->error_count++;
           return _eval_error_val(eval);
         }
@@ -599,7 +610,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
         if (tuple_val->kind != COMPTIME_VALUE_COMPOSITE) {
           diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                                node->location,
-                               "get() requires a tuple argument");
+                               "getTupleItem() requires a tuple argument");
           ctx->error_count++;
           return _eval_error_val(eval);
         }
@@ -609,7 +620,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
             !tuple_type->impl->generic_instance.fields) {
           diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                                node->location,
-                               "get() requires a tuple argument");
+                               "getTupleItem() requires a tuple argument");
           ctx->error_count++;
           return _eval_error_val(eval);
         }
@@ -633,7 +644,86 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
           return _eval_error_val(eval);
         }
 
-        return _eval_temp(eval, comptime_value_get_field(tuple_val, f->name, eval->allocator));
+        return _eval_temp(eval, comptime_value_read_field(tuple_val, f->field.offset,
+                                                          f->field.type, eval->allocator));
+      }
+      case BUILTIN_DISPATCH_SET: {
+        /* set[N, ...Args](tuple, value) — set the Nth element of a tuple.
+           N comes from type_args[0] (TYPE_GENERIC_VALUE). */
+        size_t acount = call->arguments ? vec_get_size(call->arguments) : 0;
+        if (acount < 2) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               node->location,
+                               "setTupleItem() requires tuple and value arguments");
+          ctx->error_count++;
+          return _eval_error_val(eval);
+        }
+        comptime_value_t tuple_val =
+            _comptime_eval_expr(eval, ctx, (node_t)vec_get(call->arguments, 0));
+        comptime_value_t value_val =
+            _comptime_eval_expr(eval, ctx, (node_t)vec_get(call->arguments, 1));
+        if (!tuple_val || tuple_val->kind == COMPTIME_VALUE_ERROR ||
+            !value_val || value_val->kind == COMPTIME_VALUE_ERROR)
+          return _eval_error_val(eval);
+
+        /* Get index N from the generic instantiation expression */
+        uint64_t idx = 0;
+        {
+          node_t callee_node = call->callee;
+          if (callee_node && callee_node->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
+            cubec_expression_generic_instantiation_t gi =
+                (cubec_expression_generic_instantiation_t)callee_node;
+            if (gi->arguments && vec_get_size(gi->arguments) >= 1) {
+              node_t n_arg = (node_t)vec_get(gi->arguments, 0);
+              if (n_arg && n_arg->kind == CUBEC_NODE_LITERAL_NUMERIC) {
+                cubec_literal_numeric_t num = (cubec_literal_numeric_t)n_arg;
+                idx = strtoull(string_get(num->value), NULL, 10);
+              }
+            }
+          }
+        }
+
+        /* Get the Nth field from the tuple composite */
+        if (tuple_val->kind != COMPTIME_VALUE_COMPOSITE) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               node->location,
+                               "set() requires a tuple argument");
+          ctx->error_count++;
+          return _eval_error_val(eval);
+        }
+
+        semantic_type_t tuple_type = tuple_val->type;
+        if (!tuple_type || tuple_type->impl->kind != TYPE_GENERIC_INSTANCE ||
+            !tuple_type->impl->generic_instance.fields) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               node->location,
+                               "set() requires a tuple argument");
+          ctx->error_count++;
+          return _eval_error_val(eval);
+        }
+
+        vec_t fields = tuple_type->impl->generic_instance.fields;
+        size_t fcount = vec_get_size(fields);
+        if (idx >= fcount) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               node->location,
+                               "tuple index %llu out of range", (unsigned long long)idx);
+          ctx->error_count++;
+          return _eval_error_val(eval);
+        }
+
+        struct symbol *f = (struct symbol *)vec_get(fields, (size_t)idx);
+        if (!f || !f->name) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               node->location,
+                               "tuple field %llu has no name", (unsigned long long)idx);
+          ctx->error_count++;
+          return _eval_error_val(eval);
+        }
+
+        /* Set the field value in-place using write_field directly */
+        comptime_value_write_field(tuple_val, f->field.offset, f->field.type, value_val);
+        return _eval_temp(eval, comptime_value_create_nil(eval->allocator, ctx->builtin_void));
       }
       default: break;
       }
@@ -1131,6 +1221,69 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
           }
         } else {
           /* Regular positional item */
+          total_values++;
+          if (field_idx < field_count) {
+            struct symbol *fsym = (struct symbol *)vec_get(type_fields, field_idx);
+            comptime_value_t v = _comptime_eval_expr(eval, ctx, item);
+            if (v && v->kind != COMPTIME_VALUE_ERROR && fsym)
+              comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v);
+            field_idx++;
+          }
+        }
+      }
+      if (total_values > field_count) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                             "too many initializers for type '%s' (%zu values for %zu fields)",
+                             type->name ? type->name : "<anonymous>",
+                             total_values, field_count);
+        ctx->error_count++;
+      }
+    }
+    return _eval_temp(eval, comp);
+  }
+
+  if (type->impl->kind == TYPE_GENERIC_INSTANCE && type->impl->generic_instance.fields) {
+    /* Tuple initialization: same as struct but fields are in generic_instance.fields */
+    vec_t type_fields = type->impl->generic_instance.fields;
+    size_t field_count = type_fields ? vec_get_size(type_fields) : 0;
+
+    comptime_value_t comp = comptime_value_create_composite(
+        eval->allocator, type, NULL, data_size);
+
+    if (il->is_field && il->items) {
+      size_t ic = vec_get_size(il->items);
+      for (size_t i = 0; i < ic; i++) {
+        node_t item = (node_t)vec_get(il->items, i);
+        if (item->kind != CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD) continue;
+        cubec_expression_initialize_field_t f =
+            (cubec_expression_initialize_field_t)item;
+        const char *fname = _eval_ident_str((node_t)f->field);
+        comptime_value_t v = _comptime_eval_expr(eval, ctx, f->value);
+        if (v && v->kind != COMPTIME_VALUE_ERROR)
+          comptime_value_set_field(comp, fname, v);
+      }
+    } else if (il->items) {
+      /* Positional init — supports pack spread */
+      size_t ic = vec_get_size(il->items);
+      size_t field_idx = 0;
+      size_t total_values = 0;
+      for (size_t i = 0; i < ic; i++) {
+        node_t item = (node_t)vec_get(il->items, i);
+
+        if (item->kind == CUBEC_NODE_EXPRESSION_SPREAD) {
+          comptime_value_t spread_val = _comptime_eval_expr(eval, ctx, item);
+          if (spread_val && spread_val->kind == COMPTIME_VALUE_PACK) {
+            vec_t elements = spread_val->pack.elements;
+            size_t ecount = elements ? vec_get_size(elements) : 0;
+            total_values += ecount;
+            for (size_t j = 0; j < ecount && field_idx < field_count; j++, field_idx++) {
+              struct symbol *fsym = (struct symbol *)vec_get(type_fields, field_idx);
+              comptime_value_t ev = (comptime_value_t)vec_get(elements, j);
+              if (ev && ev->kind != COMPTIME_VALUE_ERROR && fsym)
+                comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, ev);
+            }
+          }
+        } else {
           total_values++;
           if (field_idx < field_count) {
             struct symbol *fsym = (struct symbol *)vec_get(type_fields, field_idx);

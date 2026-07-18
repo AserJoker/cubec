@@ -191,6 +191,15 @@ static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
   cubec_expression_assignment_t asgn = (cubec_expression_assignment_t)expr;
   const char *op = string_get(asgn->opt);
 
+  /* Wildcard discard: _ = expr — always valid, no lvalue/const checks */
+  if (asgn->left && asgn->left->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+    const char *lname = _checker_ident_str(asgn->left);
+    if (lname && lname[0] == '_' && lname[1] == '\0') {
+      semantic_type_t rt = _check_expression(ctx, asgn->right);
+      return rt;
+    }
+  }
+
   if (!_is_lvalue(asgn->left)) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "left side of assignment is not a valid lvalue");
@@ -238,11 +247,28 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
 
   /* Check if callee is a direct reference to a generic function (needs type inference) */
   struct symbol *generic_func_sym = NULL;
+  vec_t explicit_type_args = NULL;
+
   if (call->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
     const char *name = _checker_ident_str(call->callee);
     struct symbol *sym = name ? scope_lookup(ctx->current_scope, name) : NULL;
     if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.generic_params)
       generic_func_sym = sym;
+  } else if (call->callee->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
+    /* Handle builtin generic instantiation callees like getTupleItem[0](t) */
+    cubec_expression_generic_instantiation_t gi =
+        (cubec_expression_generic_instantiation_t)call->callee;
+    if (gi->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+      const char *name = _checker_ident_str(gi->callee);
+      struct symbol *sym = name ? scope_lookup(ctx->current_scope, name) : NULL;
+      if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.generic_params
+          && sym->is_builtin) {
+        generic_func_sym = sym;
+        /* Resolve explicit type args from the generic_instantiation AST node */
+        explicit_type_args = _resolve_generic_type_args(ctx, gi->arguments,
+            sym->function.generic_params);
+      }
+    }
   }
 
   semantic_type_t callee_type = _check_expression(ctx, call->callee);
@@ -269,26 +295,26 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
     }
 
     /* Build generic param info for _infer_type_args_from_call.
-       Use the generic param AST nodes to get names (gp->name is a literal_identifier node).
-       Also try scope_lookup to find the symbol for constraint checking. */
+       We store the generic param names (const char*) directly so that
+       _infer_type_args_from_call can look up bindings by name.
+       Generic param names are NOT in scope (they are template-level),
+       so scope_lookup won't find them — we extract names from AST nodes. */
     vec_t gp = generic_func_sym->function.generic_params;
     size_t gcount = vec_get_size(gp);
     vec_init_t gpvi = {.auto_dispose = false};
-    vec_t generic_param_syms = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &gpvi);
+    vec_t generic_param_names = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &gpvi);
     for (size_t i = 0; i < gcount; i++) {
       cubec_generic_param_t gp_node = (cubec_generic_param_t)(void *)vec_get(gp, i);
       const char *gp_name = gp_node ? _checker_ident_str(gp_node->name) : NULL;
-      if (gp_name) {
-        struct symbol *gpsym = scope_lookup(ctx->current_scope, gp_name);
-        vec_push(generic_param_syms, gpsym ? gpsym : NULL);
-      } else {
-        vec_push(generic_param_syms, NULL);
-      }
+      vec_push(generic_param_names, (void *)gp_name);
     }
 
-    /* Infer type args */
-    vec_t type_args = _infer_type_args_from_call(ctx, callee_type,
-        generic_param_syms, arg_types, NULL);
+    /* Infer type args — use the template type for inference, not the
+       potentially partially-instantiated callee_type (e.g. when the callee
+       is a generic_instantiation like getTupleItem[0]). */
+    vec_t type_args = _infer_type_args_from_call(ctx,
+        generic_func_sym->function.type,
+        generic_param_names, arg_types, explicit_type_args);
 
     /* Check for unresolved generic params */
     if (type_args) {
@@ -316,13 +342,8 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
       _check_generic_param_constraints(ctx, generic_func_sym->function.generic_params,
           type_args, expr);
 
-      semantic_type_t inst_type = _instantiate_function(ctx, generic_func_sym,
-          type_args, expr);
-      if (inst_type->impl->kind != TYPE_ERROR) {
-        callee_type = inst_type;
-      }
-
-      /* Validate builtin length: argument must be array or tuple */
+      /* Resolve return type for builtin get/set BEFORE _instantiate_function
+         because _instantiate_function takes ownership of type_args and frees it. */
       if (generic_func_sym->is_builtin) {
         builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, generic_func_sym->name);
         if (be && be->dispatch == BUILTIN_DISPATCH_LENGTH) {
@@ -381,16 +402,97 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
             } else {
               diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                                    expr->location,
-                                   "get() requires a tuple argument");
+                                   "getTupleItem() requires a tuple argument");
+              ctx->error_count++;
+            }
+          }
+        }
+
+        /* Resolve return type for builtin set: set[N, ...Args](tuple, value): void
+           The value parameter type Args[N] must match the N-th field type.
+           Construct a concrete function type for callee_type. */
+        if (be && be->dispatch == BUILTIN_DISPATCH_SET) {
+          if (arg_count >= 1) {
+            semantic_type_t tuple_type = (semantic_type_t)vec_get(arg_types, 0);
+            if (tuple_type && tuple_type->impl->kind == TYPE_GENERIC_INSTANCE &&
+                tuple_type->impl->generic_instance.fields) {
+              size_t ta_count = type_args ? vec_get_size(type_args) : 0;
+              if (ta_count >= 1) {
+                semantic_type_t n_type = (semantic_type_t)vec_get(type_args, 0);
+                if (n_type && n_type->impl->kind == TYPE_GENERIC_VALUE) {
+                  uint64_t idx = comptime_value_as_u64(n_type->impl->generic_value.value);
+                  vec_t fields = tuple_type->impl->generic_instance.fields;
+                  size_t fcount = vec_get_size(fields);
+                  if (idx < fcount) {
+                    struct symbol *f = (struct symbol *)vec_get(fields, (size_t)idx);
+                    if (f && f->field.type) {
+                      /* Verify the value argument matches the field type */
+                      if (arg_count >= 2) {
+                        semantic_type_t val_type = (semantic_type_t)vec_get(arg_types, 1);
+                        if (val_type && !semantic_type_can_implicit_convert(val_type, f->field.type)) {
+                          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                               expr->location,
+                                               "set[%llu]: cannot convert '%s' to '%s'",
+                                               (unsigned long long)idx,
+                                               val_type->name ? val_type->name : "<anonymous>",
+                                               f->field.type->name ? f->field.type->name : "<anonymous>");
+                          ctx->error_count++;
+                        }
+                      }
+                      /* Construct concrete callee_type: (tuple, field_type) → void */
+                      vec_init_t svi = {.auto_dispose = false};
+                      vec_t new_params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &svi);
+                      vec_push(new_params, tuple_type);
+                      vec_push(new_params, f->field.type);
+                      semantic_type_t new_func = semantic_type_create_function(
+                          ctx->allocator, ctx->builtin_void, new_params, false);
+                      type_hash_ensure(new_func);
+                      vec_push(ctx->all_types, new_func);
+                      callee_type = new_func;
+                    }
+                  } else {
+                    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                         expr->location,
+                                         "tuple index %llu out of range (tuple has %zu fields)",
+                                         (unsigned long long)idx, fcount);
+                    ctx->error_count++;
+                  }
+                }
+              }
+            } else {
+              diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                   expr->location,
+                                   "setTupleItem() requires a tuple argument");
               ctx->error_count++;
             }
           }
         }
       }
+
+      /* Now instantiate the function (takes ownership of type_args).
+         For builtin get/set, callee_type was already correctly constructed
+         above with the right param/return types. We still need to call
+         _instantiate_function for caching, but don't override callee_type
+         since the builtin-specific logic is more precise than generic
+         substitution (which may mishandle PACK parameters). */
+      semantic_type_t inst_type = _instantiate_function(ctx, generic_func_sym,
+          type_args, expr);
+      if (inst_type->impl->kind != TYPE_ERROR) {
+        /* For non-builtin functions or builtins without special dispatch,
+           use the instantiated type. For get/set builtins, keep the
+           callee_type we already built above. */
+        builtin_entry_t be2 = builtin_table_lookup(ctx->builtin_table, generic_func_sym->name);
+        if (!(be2 && (be2->dispatch == BUILTIN_DISPATCH_GET ||
+                      be2->dispatch == BUILTIN_DISPATCH_SET))) {
+          callee_type = inst_type;
+        }
+      }
     }
 
-    allocator_free(ctx->allocator, &generic_param_syms);
+    allocator_free(ctx->allocator, &generic_param_names);
     allocator_free(ctx->allocator, &arg_types);
+    if (explicit_type_args)
+      allocator_free(ctx->allocator, &explicit_type_args);
 
     /* Arguments already checked above, verify against instantiated params */
     vec_t params = callee_type->impl->function.params;

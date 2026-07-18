@@ -1,9 +1,9 @@
 builtin func assert(condition:bool):void;
 test "closure" {
   var x = 1;
-  func |x| test():void {
+  func |x| testfn():void {
     x = x + 1;
   }
-  test();
+  testfn();
   assert(x == 1);
 }

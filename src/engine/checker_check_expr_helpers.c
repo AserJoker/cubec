@@ -131,6 +131,14 @@ semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
   }
 
   if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.type) {
+    /* For builtin generic functions, just return the template type.
+       The _check_expr_call generic_func_sym path will handle inference and instantiation.
+       Doing it here causes double-instantiation with incomplete type_args (e.g. getTupleItem[0]
+       only provides N, not ...Args). */
+    if (sym->is_builtin) {
+      return sym->function.type;
+    }
+
     vec_t type_args = _resolve_generic_type_args(ctx, gi->arguments, sym->function.generic_params);
     if (!type_args) return ctx->error_type;
 
@@ -152,33 +160,59 @@ semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
     /* If there's a pack param and type_args include values at or beyond pack_idx,
        coalesce them into a TYPE_GENERIC_PACK */
     if (pack_idx < gcount && tacount >= pack_idx) {
-      vec_init_t vi = {.auto_dispose = false};
-      vec_t new_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-      for (size_t i = 0; i < pack_idx; i++) {
-        vec_push(new_type_args, vec_get(type_args, i));
+      /* If all args from pack_idx onward form exactly one TYPE_GENERIC_PACK
+         (e.g. foo[...Args] where Args is already a pack), use it directly
+         instead of re-wrapping. */
+      if (pack_idx + 1 == tacount) {
+        semantic_type_t only_arg = (semantic_type_t)vec_get(type_args, pack_idx);
+        if (only_arg && only_arg->impl->kind == TYPE_GENERIC_PACK) {
+          /* Already a pack — use directly, just prepend non-pack args */
+          if (pack_idx == 0) {
+            /* All args are the single pack — no coalescing needed */
+          } else {
+            vec_init_t vi = {.auto_dispose = false};
+            vec_t new_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+            for (size_t i = 0; i < pack_idx; i++)
+              vec_push(new_type_args, vec_get(type_args, i));
+            vec_push(new_type_args, only_arg);
+            allocator_free(ctx->allocator, &type_args);
+            type_args = new_type_args;
+          }
+        } else {
+          /* Single non-pack arg at pack position — wrap into a pack */
+          goto do_coalesce_func_pack;
+        }
+      } else {
+      do_coalesce_func_pack:;
+        vec_init_t vi = {.auto_dispose = false};
+        vec_t new_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+        for (size_t i = 0; i < pack_idx; i++) {
+          vec_push(new_type_args, vec_get(type_args, i));
+        }
+        /* Create PACK from remaining args */
+        const char *pack_name = NULL;
+        cubec_generic_param_t pack_gp = (cubec_generic_param_t)(void *)vec_get(gp, pack_idx);
+        if (pack_gp) {
+          const char *raw = _checker_ident_str(pack_gp->name);
+          if (raw) pack_name = raw;
+        }
+        semantic_type_t pack_type = semantic_type_create_generic_pack(
+            ctx->allocator, pack_name, pack_idx);
+        for (size_t i = pack_idx; i < tacount; i++) {
+          semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
+          vec_push(pack_type->impl->generic_pack.expanded_types, ta);
+        }
+        type_hash_ensure(pack_type);
+        vec_push(ctx->all_types, pack_type);
+        vec_push(new_type_args, pack_type);
+        allocator_free(ctx->allocator, &type_args);
+        type_args = new_type_args;
       }
-      /* Create PACK from remaining args */
-      const char *pack_name = NULL;
-      cubec_generic_param_t pack_gp = (cubec_generic_param_t)(void *)vec_get(gp, pack_idx);
-      if (pack_gp) {
-        const char *raw = _checker_ident_str(pack_gp->name);
-        if (raw) pack_name = raw;
-      }
-      semantic_type_t pack_type = semantic_type_create_generic_pack(
-          ctx->allocator, pack_name, pack_idx);
-      for (size_t i = pack_idx; i < tacount; i++) {
-        semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
-        vec_push(pack_type->impl->generic_pack.expanded_types, ta);
-      }
-      type_hash_ensure(pack_type);
-      vec_push(ctx->all_types, pack_type);
-      vec_push(new_type_args, pack_type);
-      allocator_free(ctx->allocator, &type_args);
-      type_args = new_type_args;
     }
 
     _check_generic_param_constraints(ctx, sym->function.generic_params, type_args, expr);
-    return _instantiate_function(ctx, sym, type_args, expr);
+    semantic_type_t inst_result = _instantiate_function(ctx, sym, type_args, expr);
+    return inst_result;
   }
 
   /* Subscript indexing on value */
@@ -193,35 +227,11 @@ semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
   if (host_type->impl->kind == TYPE_SLICE)
     return host_type->impl->slice.element;
 
-  /* Tuple subscript: Tuple[i32, f64][0] → i32, Tuple[i32, f64][1] → f64 */
+  /* Tuple does not support [] subscript — use get[N](tuple) instead */
   if (host_type->impl->kind == TYPE_GENERIC_INSTANCE &&
-      host_type->impl->generic_instance.fields &&
-      gi->arguments && vec_get_size(gi->arguments) >= 1) {
-    node_t idx_node = (node_t)vec_get(gi->arguments, 0);
-    /* Try to evaluate the index at compile time */
-    if (idx_node && idx_node->kind == CUBEC_NODE_LITERAL_NUMERIC) {
-      cubec_literal_numeric_t num = (cubec_literal_numeric_t)idx_node;
-      if (num->kind == CUBEC_LITERAL_NUMERIC_KIND_INTEGER) {
-        uint64_t idx = strtoull(string_get(num->value), NULL, 10);
-        vec_t fields = host_type->impl->generic_instance.fields;
-        size_t fcount = vec_get_size(fields);
-        if (idx < fcount) {
-          struct symbol *f = (struct symbol *)vec_get(fields, (size_t)idx);
-          if (f && f->field.type) return f->field.type;
-        }
-      }
-    }
-    /* Fallback: use __get__ if present */
-    if (host_type->instance_methods) {
-      size_t mcount = vec_get_size(host_type->instance_methods);
-      for (size_t i = 0; i < mcount; i++) {
-        struct symbol *m = (struct symbol *)vec_get(host_type->instance_methods, i);
-        if (m && m->name && strcmp(m->name, "__get__") == 0 && m->function.type)
-          return m->function.type->impl->function.return_type;
-      }
-    }
+      host_type->impl->generic_instance.fields) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                         "tuple index must be a compile-time constant");
+                         "tuple indexing requires get[N](tuple), not tuple[N]");
     ctx->error_count++;
     return ctx->error_type;
   }

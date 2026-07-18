@@ -501,6 +501,8 @@ comptime_value_t comptime_value_get_field(comptime_value_t composite,
   if (impl->kind == TYPE_STRUCT || impl->kind == TYPE_UNION ||
       impl->kind == TYPE_CUNION)
     fields = impl->struct_type.fields;
+  else if (impl->kind == TYPE_GENERIC_INSTANCE)
+    fields = impl->generic_instance.fields;
   if (!fields) return NULL;
   size_t fc = vec_get_size(fields);
   for (size_t i = 0; i < fc; i++) {
@@ -522,6 +524,8 @@ bool comptime_value_set_field(comptime_value_t composite,
   if (impl->kind == TYPE_STRUCT || impl->kind == TYPE_UNION ||
       impl->kind == TYPE_CUNION)
     fields = impl->struct_type.fields;
+  else if (impl->kind == TYPE_GENERIC_INSTANCE)
+    fields = impl->generic_instance.fields;
   if (!fields) return false;
   size_t fc = vec_get_size(fields);
   for (size_t i = 0; i < fc; i++) {

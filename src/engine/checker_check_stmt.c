@@ -38,6 +38,7 @@
 #include "cubec/switch_match.h"
 #include "cubec/declaration_variable.h"
 #include "cubec/function_argument.h"
+#include "cubec/expression_assignment.h"
 #include <string.h>
 
 /* ===== Pass 3: Statement Checking ===== */
@@ -412,7 +413,28 @@ void _check_statement(checker_t ctx, node_t stmt,
   if (!stmt) return;
   switch (stmt->kind) {
   case CUBEC_NODE_STATEMENT_BLOCK:          _check_stmt_block(ctx, (cubec_statement_block_t)stmt, return_type); break;
-  case CUBEC_NODE_STATEMENT_EXPRESSION:     _check_expression(ctx, ((cubec_statement_expression_t)stmt)->expression); break;
+  case CUBEC_NODE_STATEMENT_EXPRESSION: {
+    semantic_type_t t = _check_expression(ctx, ((cubec_statement_expression_t)stmt)->expression);
+    if (t && t->impl->kind != TYPE_ERROR && t->impl->kind != TYPE_VOID) {
+      /* Check if the expression is a wildcard assignment: _ = expr */
+      node_t inner = ((cubec_statement_expression_t)stmt)->expression;
+      bool is_discard = false;
+      if (inner && inner->kind == CUBEC_NODE_EXPRESSION_ASSIGNMENT) {
+        cubec_expression_assignment_t asgn = (cubec_expression_assignment_t)inner;
+        if (asgn->left && asgn->left->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+          const char *lname = _checker_ident_str(asgn->left);
+          if (lname && lname[0] == '_' && lname[1] == '\0')
+            is_discard = true;
+        }
+      }
+      if (!is_discard) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_WARNING, stmt->location,
+                             "value of type '%s' is not used; use '_ = expr' to explicitly discard",
+                             t->name ? t->name : "<anonymous>");
+      }
+    }
+    break;
+  }
   case CUBEC_NODE_STATEMENT_RETURN:         _check_stmt_return(ctx, stmt, return_type); break;
   case CUBEC_NODE_STATEMENT_IF:             _check_stmt_if(ctx, stmt, return_type); break;
   case CUBEC_NODE_STATEMENT_WHILE:          _check_stmt_while(ctx, stmt, return_type); break;

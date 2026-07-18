@@ -179,7 +179,53 @@ void builtin_table_init_defaults(builtin_table_t table, struct checker *ctx) {
         ctx->allocator, ret_type, params, false);
     type_hash_ensure(get_type);
     vec_push(ctx->all_types, get_type);
-    builtin_table_register(table, "get",
+    builtin_table_register(table, "getTupleItem",
                            BUILTIN_FUNC, get_type, BUILTIN_DISPATCH_GET);
+  }
+
+  /* builtin func set[N: u64, ...Args](tuple: Tuple[...Args], value: Args[N]): void
+     Sets the N-th element of a tuple. Return type is void.
+     The value type Args[N] is resolved during type checking like get. */
+  {
+    /* Reuse generic params from get: N: u64 (index 0), ...Args (index 1) */
+    semantic_type_t n_param_s = semantic_type_create_generic_param(
+        ctx->allocator, "N", 0, ctx->builtin_u64, true);
+    type_hash_ensure(n_param_s);
+    vec_push(ctx->all_types, n_param_s);
+
+    semantic_type_t args_param_s = semantic_type_create_generic_pack(
+        ctx->allocator, "Args", 1);
+    type_hash_ensure(args_param_s);
+    vec_push(ctx->all_types, args_param_s);
+
+    /* Params: (tuple: Tuple[...Args], value: Args[N]) */
+    semantic_type_t tuple_inst_s = semantic_type_create_generic_instance(
+        ctx->allocator,
+        builtin_table_lookup(table, "Tuple")->type,
+        NULL);
+    vec_init_t vi_s1 = {.auto_dispose = false};
+    vec_t inst_args_s = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi_s1);
+    vec_push(inst_args_s, args_param_s);
+    tuple_inst_s->impl->generic_instance.type_args = inst_args_s;
+    type_hash_ensure(tuple_inst_s);
+    vec_push(ctx->all_types, tuple_inst_s);
+
+    /* value param: Args[N] — TYPE_PACK_INDEX placeholder */
+    semantic_type_t value_type = semantic_type_create_pack_index(
+        ctx->allocator, "Args", 1, 0);
+    type_hash_ensure(value_type);
+    vec_push(ctx->all_types, value_type);
+
+    vec_init_t vi_s2 = {.auto_dispose = false};
+    vec_t params_s = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi_s2);
+    vec_push(params_s, tuple_inst_s);   /* tuple arg */
+    vec_push(params_s, value_type);     /* value arg */
+
+    semantic_type_t set_type = semantic_type_create_function(
+        ctx->allocator, ctx->builtin_void, params_s, false);
+    type_hash_ensure(set_type);
+    vec_push(ctx->all_types, set_type);
+    builtin_table_register(table, "setTupleItem",
+                           BUILTIN_FUNC, set_type, BUILTIN_DISPATCH_SET);
   }
 }

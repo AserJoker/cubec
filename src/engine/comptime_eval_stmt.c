@@ -208,6 +208,14 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     int iterations = 0;
     comptime_signal_t sig = _eval_signal_none();
     while (true) {
+      if (++iterations > COMPTIME_MAX_LOOP_ITERATIONS) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, stmt->location,
+                             "comptime loop exceeded %d iterations",
+                             COMPTIME_MAX_LOOP_ITERATIONS);
+        ctx->error_count++;
+        sig = _eval_signal_error();
+        break;
+      }
       sig = _comptime_exec_block(eval, ctx, sdw->body);
       if (sig.kind == COMPTIME_SIGNAL_BREAK) {
         sig = _eval_signal_none();
@@ -224,14 +232,6 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
         break;
       }
       if (!comptime_value_is_truthy(cond)) break;
-      if (++iterations > COMPTIME_MAX_LOOP_ITERATIONS) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, stmt->location,
-                             "comptime loop exceeded %d iterations",
-                             COMPTIME_MAX_LOOP_ITERATIONS);
-        ctx->error_count++;
-        sig = _eval_signal_error();
-        break;
-      }
     }
     eval->loop_depth--;
     return sig;
@@ -308,7 +308,10 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
       comptime_value_t self_arg = comptime_value_clone(eval->allocator, iter);
 
       comptime_env_t call_env =
-          comptime_env_create(eval->allocator, next_fn->function.captured_env);
+          comptime_env_create(eval->allocator,
+              next_fn->function.captured_env
+                  ? next_fn->function.captured_env
+                  : eval->current_env);
       /* Bind self parameter */
       if (next_fn->function.param_names) {
         size_t pcount = vec_get_size(next_fn->function.param_names);
@@ -374,6 +377,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
 
       /* Bind/update loop variable */
       const char *vname = _eval_ident_str(sfe->variable);
+      if (!vname) break;
       if (sfe->is_var_decl) {
         comptime_env_bind_value(loop_env, eval->valloc, vname, value);
       } else {
@@ -483,6 +487,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
       for (size_t i = 0; i < mc; i++) {
         cubec_switch_match_t arm =
             (cubec_switch_match_t)vec_get(ss->matches, i);
+        if (!arm) continue;
         if (arm->is_else)
           return _comptime_exec_block(eval, ctx, arm->body);
         if (arm->values) {

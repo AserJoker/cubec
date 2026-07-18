@@ -1,6 +1,7 @@
 #include "engine/resolver.h"
 #include "engine/resolver_types.h"
 #include "engine/checker_type_util.h"
+#include "engine/comptime_value.h"
 #include "engine/symbol.h"
 #include "engine/scope.h"
 #include "engine/diagnostic.h"
@@ -100,31 +101,90 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
       /* If there's a pack param and type_args include values at or beyond pack_idx,
          coalesce them into a TYPE_GENERIC_PACK */
       if (pack_idx < gcount && tacount >= pack_idx) {
-        vec_init_t vi = {.auto_dispose = false};
-        vec_t new_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-        for (size_t i = 0; i < pack_idx; i++)
-          vec_push(new_type_args, vec_get(type_args, i));
-        const char *pack_name = NULL;
-        cubec_generic_param_t pack_gp = (cubec_generic_param_t)(void *)vec_get(gp, pack_idx);
-        if (pack_gp) {
-          const char *raw = _checker_ident_str(pack_gp->name);
-          if (raw) pack_name = raw;
+        /* If all args from pack_idx onward form exactly one TYPE_GENERIC_PACK
+           (e.g. Tuple[...Args] where Args is already a pack), use it directly
+           instead of re-wrapping. */
+        if (pack_idx + 1 == tacount) {
+          semantic_type_t only_arg = (semantic_type_t)vec_get(type_args, pack_idx);
+          if (only_arg && only_arg->impl->kind == TYPE_GENERIC_PACK) {
+            /* Already a pack — use directly, just prepend non-pack args */
+            if (pack_idx == 0) {
+              /* All args are the single pack — no coalescing needed */
+            } else {
+              vec_init_t vi = {.auto_dispose = false};
+              vec_t new_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+              for (size_t i = 0; i < pack_idx; i++)
+                vec_push(new_type_args, vec_get(type_args, i));
+              vec_push(new_type_args, only_arg);
+              allocator_free(ctx->allocator, &type_args);
+              type_args = new_type_args;
+            }
+          } else {
+            /* Single non-pack arg at pack position — wrap into a pack */
+            goto do_coalesce_pack;
+          }
+        } else {
+        do_coalesce_pack:;
+          vec_init_t vi = {.auto_dispose = false};
+          vec_t new_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+          for (size_t i = 0; i < pack_idx; i++)
+            vec_push(new_type_args, vec_get(type_args, i));
+          const char *pack_name = NULL;
+          cubec_generic_param_t pack_gp = (cubec_generic_param_t)(void *)vec_get(gp, pack_idx);
+          if (pack_gp) {
+            const char *raw = _checker_ident_str(pack_gp->name);
+            if (raw) pack_name = raw;
+          }
+          semantic_type_t pack_type = semantic_type_create_generic_pack(
+              ctx->allocator, pack_name, pack_idx);
+          for (size_t i = pack_idx; i < tacount; i++) {
+            semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
+            vec_push(pack_type->impl->generic_pack.expanded_types, ta);
+          }
+          type_hash_ensure(pack_type);
+          vec_push(ctx->all_types, pack_type);
+          vec_push(new_type_args, pack_type);
+          allocator_free(ctx->allocator, &type_args);
+          type_args = new_type_args;
         }
-        semantic_type_t pack_type = semantic_type_create_generic_pack(
-            ctx->allocator, pack_name, pack_idx);
-        for (size_t i = pack_idx; i < tacount; i++) {
-          semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
-          vec_push(pack_type->impl->generic_pack.expanded_types, ta);
-        }
-        type_hash_ensure(pack_type);
-        vec_push(ctx->all_types, pack_type);
-        vec_push(new_type_args, pack_type);
-        allocator_free(ctx->allocator, &type_args);
-        type_args = new_type_args;
       }
 
       _check_generic_param_constraints(ctx, sym->type.generic_params, type_args, node);
       return _instantiate_type(ctx, template_type, type_args, node);
+    }
+
+    if (sym && sym->kind == SYMBOL_GENERIC_PARAM) {
+      /* Generic param with index arg: Args[N] → TYPE_PACK_INDEX.
+         This occurs in builtin function return types like getTupleItem[N, ...Args](tuple): Args[N]. */
+      if (sym->generic_param.is_rest) {
+        /* Args[N]: the argument should be a value generic param (the index).
+           Resolve the index argument to get its value. */
+        vec_t type_args = _resolve_generic_type_args(ctx, gi->arguments, NULL);
+        if (type_args && vec_get_size(type_args) >= 1) {
+          semantic_type_t idx_type = (semantic_type_t)vec_get(type_args, 0);
+          if (idx_type && idx_type->impl->kind == TYPE_GENERIC_VALUE) {
+            uint64_t idx = comptime_value_as_u64(idx_type->impl->generic_value.value);
+            semantic_type_t pack_idx_type = semantic_type_create_pack_index(
+                ctx->allocator, name, sym->generic_param.index, (size_t)idx);
+            type_hash_ensure(pack_idx_type);
+            vec_push(ctx->all_types, pack_idx_type);
+            allocator_free(ctx->allocator, &type_args);
+            return pack_idx_type;
+          }
+          /* Index is a generic param (not yet resolved to value) — create pack_index with placeholder */
+          if (idx_type && idx_type->impl->kind == TYPE_GENERIC_PARAM) {
+            semantic_type_t pack_idx_type = semantic_type_create_pack_index(
+                ctx->allocator, name, sym->generic_param.index, 0);
+            type_hash_ensure(pack_idx_type);
+            vec_push(ctx->all_types, pack_idx_type);
+            allocator_free(ctx->allocator, &type_args);
+            return pack_idx_type;
+          }
+        }
+        if (type_args) allocator_free(ctx->allocator, &type_args);
+      }
+      /* Non-rest generic param with args: just return the param type */
+      return _resolve_type_identifier(ctx, gi->callee);
     }
 
     if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.type) {

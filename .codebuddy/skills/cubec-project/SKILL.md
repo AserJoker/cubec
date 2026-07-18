@@ -485,7 +485,7 @@ All statement and declaration types have parser implementations, including `comp
 
 ### Architecture
 
-9-file split: `checker.c` (lifecycle + pass orchestration), `checker_collect.c` (Pass 1: symbol collection), `checker_check_stmt.c` (Pass 2: type checking), `checker_evaluate.c` (Pass 2: comptime evaluation + type resolution), `builtin.c` (builtin registry: dynamic table, validation, dispatch), `comptime_eval.c` (evaluator lifecycle), `comptime_eval_expr.c` (expression evaluation), `comptime_eval_stmt.c` (statement execution), `comptime_alloc.c` (virtual memory). All functions ≤ 50 lines. Design doc: `docs/semantic-design.md`.
+9-file split: `checker.c` (lifecycle + pass orchestration), `checker_collect.c` (Pass 1: symbol collection), `checker_check_stmt.c` (Pass 2: type checking), `checker_check_expr.c` (Pass 2: expression type checking), `checker_check_expr_helpers.c` (expression helper functions), `checker_type_util.c` (type utilities: instantiation, substitution, unification), `type_unify.c` (generic type inference), `checker_evaluate.c` (Pass 2: comptime evaluation + type resolution), `builtin.c` (builtin registry: dynamic table, validation, dispatch), `comptime_eval.c` (evaluator lifecycle), `comptime_eval_expr.c` (expression evaluation), `comptime_eval_stmt.c` (statement execution), `comptime_alloc.c` (virtual memory). All functions ≤ 50 lines. Design doc: `docs/semantic-design.md`.
 
 ### Type System (semantic_type_t)
 
@@ -493,7 +493,9 @@ Two-layer representation: `semantic_type_t` wraps AST type nodes with semantic i
 
 **const/volatile qualifier**: `TYPE_QUALIFIER` has `is_const` and `is_volatile` flags. `*const T` → `POINTER(QUALIFIER(const, T))` (pointer to const T, C: `const T*`). `const *T` → `QUALIFIER(const, POINTER(T))` (const pointer, C: `T* const`). Utility functions: `semantic_type_is_const()`, `semantic_type_is_volatile()`, `semantic_type_strip_qualifier()`. Const enforcement: assignment to const lvalue errors, member/deref const propagation, `is_mutable` set based on `!semantic_type_is_const()`. Implicit conversion allows `T → const T` but not `const T → T`. Comptime eval enforces const but ignores volatile.
 
-**Parameter pack type**: `TYPE_GENERIC_PACK` represents a variadic pack type, containing `element_types` (vec of semantic_type_t). Used when a generic parameter is declared with `...` prefix. Pack types expand to zero or more concrete types during instantiation. The comptime value layer uses `COMPTIME_VALUE_PACK` with an `elements` vec to represent pack values at compile time.
+**Parameter pack type**: `TYPE_GENERIC_PACK` represents a variadic pack type, containing `expanded_types` (vec of semantic_type_t). Used when a generic parameter is declared with `...` prefix. Pack types expand to zero or more concrete types during instantiation. The comptime value layer uses `COMPTIME_VALUE_PACK` with an `elements` vec to represent pack values at compile time.
+
+**Generic type inference** (`type_unify.c`): `_infer_type_args_from_call` infers type arguments from call arguments using `_type_unify` (structural unification). Generic param names are passed as `const char*` strings (not symbol pointers, since generic params aren't in scope). `_type_unify` handles TYPE_GENERIC_INSTANCE elastic matching when expected type_args contain a PACK parameter. The `generic_params` vec in `_infer_type_args_from_call` must contain name strings directly, not symbol pointers from `scope_lookup` (which returns NULL for generic param names).
 
 ### Symbol Table (scope_t)
 
@@ -501,7 +503,11 @@ Chain-of-responsibility scope model. `scope_lookup` returns `SYMBOL_NAME_KNOWN` 
 
 ### Builtin Registry (builtin_table_t)
 
-Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (kind + type + dispatch ID). Initialized in `checker_init` via `builtin_table_init_defaults` which registers `assert` as `BUILTIN_FUNC` with `BUILTIN_DISPATCH_ASSERT`. Builtin declarations go through normal checker flow (type resolution, generic param handling) then are validated against the table: unknown builtin → error, kind mismatch → error, signature mismatch → error, match → `sym->is_builtin = true`. Comptime eval uses `callee_sym->is_builtin` + dispatch ID instead of hardcoded name checks.
+Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (kind + type + dispatch ID). Initialized in `checker_init` via `builtin_table_init_defaults` which registers `assert` (BUILTIN_DISPATCH_ASSERT), `Tuple` (BUILTIN_DISPATCH_TUPLE), `getTupleItem` (BUILTIN_DISPATCH_GET), `setTupleItem` (BUILTIN_DISPATCH_SET), `length` (BUILTIN_DISPATCH_LENGTH). Builtin declarations go through normal checker flow (type resolution, generic param handling) then are validated against the table: unknown builtin → error, kind mismatch → error, signature mismatch → error, match → `sym->is_builtin = true`. Comptime eval uses `callee_sym->is_builtin` + dispatch ID instead of hardcoded name checks.
+
+**getTupleItem[N: u64, ...Args](tuple: Tuple[...Args]): Args[N]** — Returns the Nth element of a tuple. N is a value generic parameter (TYPE_GENERIC_VALUE). Type checking resolves the return type by looking up the Nth field of the concrete tuple type. For builtin get/set, the callee_type is manually constructed with correct parameter and return types rather than relying on generic substitution (which mishandles PACK parameters).
+
+**setTupleItem[N: u64, ...Args](tuple: Tuple[...Args], value: Args[N]): void** — Sets the Nth element of a tuple. Value type must match the Nth field type. Type checking constructs a concrete function type (tuple, field_type) → void.
 
 ### Checker Passes
 
@@ -511,6 +517,8 @@ Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (kin
 ### Diagnostics
 
 Rustc-style error messages: source line + `^` caret span annotations via `diagnostic_list_push`.
+
+**Expression statement value discard**: Non-void, non-error expression statement results trigger a `DIAGNOSTIC_WARNING` suggesting `_ = expr` to explicitly discard. The `_ = expr` wildcard assignment pattern bypasses lvalue/const checks and accepts any right-hand type.
 
 ## Comptime Evaluator (AST Interpreter)
 
@@ -584,7 +592,7 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 1304 test cases
+- Total: 1375 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move

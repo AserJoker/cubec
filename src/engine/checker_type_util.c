@@ -750,87 +750,10 @@ static void _instantiate_struct_fields(checker_t ctx, semantic_type_t inst,
   type_layout_compute(inst, 8);
 }
 
-/* ===== Tuple subscript methods ===== */
-
-static void _add_tuple_subscript_methods(checker_t ctx, semantic_type_t inst) {
-  if (!inst->instance_methods) {
-    vec_init_t vi = {.auto_dispose = true};
-    inst->instance_methods = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-  }
-
-  /* __get__ method: func(self, index: u64) -> element_type
-     Return type is the first field's type (all positions use same element type
-     for the generic __get__; actual dispatch is by index at comptime) */
-  /* For Tuple, each position can have a different type. The __get__ method
-     returns a union of all possible types... but that's complex. Instead,
-     we use a more pragmatic approach: __get__ returns the type of _0 field,
-     and we rely on the checker's subscript logic to handle per-index types.
-     Actually, for compile-time evaluation, the __get__/__set__ methods handle
-     the actual value access by index. For type-checking, we return the first
-     field type since we can't represent "one of several types" easily.
-
-     A better approach: since Tuple is always used with comptime-known indices,
-     the checker's _check_expr_subscript can directly look up the field at the
-     given index. Let's use a simpler approach where __get__ returns the type
-     of the element at the index known at compile time.
-
-     For now: __get__ and __set__ are registered but the actual per-index type
-     is resolved at the subscript check site (in _check_expr_subscript or
-     _check_generic_ident_callee) by looking at the field at the constant index. */
-
-  /* Determine a representative return type (use first field type, or void if no fields) */
-  semantic_type_t ret_type = ctx->builtin_void;
-  if (inst->impl->generic_instance.fields) {
-    size_t fcount = vec_get_size(inst->impl->generic_instance.fields);
-    if (fcount > 0) {
-      struct symbol *f0 = (struct symbol *)vec_get(inst->impl->generic_instance.fields, 0);
-      if (f0 && f0->field.type) ret_type = f0->field.type;
-    }
-  }
-
-  /* __get__(self, index: u64): element_type */
-  {
-    vec_init_t vi = {.auto_dispose = false};
-    vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-    vec_push(params, inst);        /* self */
-    vec_push(params, ctx->builtin_u64);  /* index */
-    semantic_type_t get_type = semantic_type_create_function(
-        ctx->allocator, ret_type, params, false);
-    type_hash_ensure(get_type);
-    vec_push(ctx->all_types, get_type);
-
-    struct symbol *get_sym = symbol_create(ctx->allocator, "__get__",
-                                           SYMBOL_FUNCTION, (location_t){0});
-    get_sym->function.type = get_type;
-    get_sym->is_builtin = true;
-    vec_push(inst->instance_methods, get_sym);
-  }
-
-  /* __set__(self, index: u64, value: element_type): void */
-  {
-    vec_init_t vi = {.auto_dispose = false};
-    vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-    vec_push(params, inst);        /* self */
-    vec_push(params, ctx->builtin_u64);  /* index */
-    vec_push(params, ret_type);    /* value */
-    semantic_type_t set_type = semantic_type_create_function(
-        ctx->allocator, ctx->builtin_void, params, false);
-    type_hash_ensure(set_type);
-    vec_push(ctx->all_types, set_type);
-
-    struct symbol *set_sym = symbol_create(ctx->allocator, "__set__",
-                                           SYMBOL_FUNCTION, (location_t){0});
-    set_sym->function.type = set_type;
-    set_sym->is_builtin = true;
-    vec_push(inst->instance_methods, set_sym);
-  }
-}
-
 semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
                                    vec_t type_args, node_t instantiation_expr) {
   const char *name = template_type->name;
   if (!name) name = "<anonymous>";
-
   /* Check cache */
   semantic_type_t cached = _cache_lookup(ctx, name, type_args);
   if (cached) {
@@ -884,9 +807,6 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
       }
     }
     type_layout_compute(inst, 8);
-
-    /* Add __get__ and __set__ methods for [] subscript */
-    _add_tuple_subscript_methods(ctx, inst);
   } else if (tkind == TYPE_STRUCT || tkind == TYPE_UNION || tkind == TYPE_CUNION) {
     _instantiate_struct_fields(ctx, inst, template_type->impl->struct_type.fields, type_args);
   }
@@ -896,18 +816,6 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   allocator_free(ctx->allocator, &inst->static_methods);
   inst->instance_methods = _copy_symbol_vec(ctx,template_type->instance_methods);
   inst->static_methods = _copy_symbol_vec(ctx, template_type->static_methods);
-
-  /* For Tuple, add subscript methods to instance_methods as well */
-  if (be && be->dispatch == BUILTIN_DISPATCH_TUPLE && inst->instance_methods) {
-    size_t mc = vec_get_size(inst->instance_methods);
-    for (size_t i = 0; i < mc; i++) {
-      struct symbol *m = (struct symbol *)vec_get(inst->instance_methods, i);
-      if (m && m->name && (strcmp(m->name, "__get__") == 0 || strcmp(m->name, "__set__") == 0)) {
-        /* Already added by _add_tuple_subscript_methods via the inst directly */
-        break;
-      }
-    }
-  }
 
   /* Cache the result */
   _cache_insert(ctx, name, type_args, inst);

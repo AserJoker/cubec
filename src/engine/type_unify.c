@@ -169,15 +169,56 @@ static bool _type_unify(semantic_type_t actual, semantic_type_t expected,
         expected->impl->generic_instance.generic_template)
       return false;
 
-    /* Unify type args */
+    /* Find pack position in expected type_args */
     size_t acount = vec_get_size(actual->impl->generic_instance.type_args);
     size_t ecount = vec_get_size(expected->impl->generic_instance.type_args);
-    if (acount != ecount) return false;
-
+    size_t pack_idx = ecount;
     for (size_t i = 0; i < ecount; i++) {
-      semantic_type_t aa = (semantic_type_t)vec_get(actual->impl->generic_instance.type_args, i);
       semantic_type_t ea = (semantic_type_t)vec_get(expected->impl->generic_instance.type_args, i);
-      if (!_type_unify(aa, ea, bindings, allocator)) return false;
+      if (ea && ea->impl->kind == TYPE_GENERIC_PACK) {
+        pack_idx = i;
+        break;
+      }
+    }
+
+    if (pack_idx < ecount) {
+      /* Expected has a pack in its type_args — elastic matching:
+         args before the pack must match exactly, remaining actual
+         args are collected into the pack binding. */
+      for (size_t i = 0; i < pack_idx; i++) {
+        if (i >= acount) return false;
+        semantic_type_t aa = (semantic_type_t)vec_get(actual->impl->generic_instance.type_args, i);
+        semantic_type_t ea = (semantic_type_t)vec_get(expected->impl->generic_instance.type_args, i);
+        if (!_type_unify(aa, ea, bindings, allocator)) return false;
+      }
+      /* Collect remaining actual args into the pack */
+      semantic_type_t pack_type = (semantic_type_t)vec_get(
+          expected->impl->generic_instance.type_args, pack_idx);
+      const char *pack_name = pack_type->impl->generic_pack.name;
+      semantic_type_t pack_result = semantic_type_create_generic_pack(
+          allocator, pack_name, pack_type->impl->generic_pack.index);
+      for (size_t i = pack_idx; i < acount; i++) {
+        semantic_type_t aa = (semantic_type_t)vec_get(actual->impl->generic_instance.type_args, i);
+        vec_push(pack_result->impl->generic_pack.expanded_types, aa);
+      }
+      type_hash_ensure(pack_result);
+      /* Record binding */
+      void *existing = strmap_find(*bindings, pack_name);
+      if (existing) {
+        semantic_type_t prev = (semantic_type_t)existing;
+        if (prev->impl->hash != pack_result->impl->hash) return false;
+      } else {
+        strmap_insert(*bindings, pack_name, pack_result);
+      }
+    } else {
+      /* No pack — strict count matching */
+      if (acount != ecount) return false;
+
+      for (size_t i = 0; i < ecount; i++) {
+        semantic_type_t aa = (semantic_type_t)vec_get(actual->impl->generic_instance.type_args, i);
+        semantic_type_t ea = (semantic_type_t)vec_get(expected->impl->generic_instance.type_args, i);
+        if (!_type_unify(aa, ea, bindings, allocator)) return false;
+      }
     }
     return true;
   }
@@ -344,28 +385,14 @@ vec_t _infer_type_args_from_call(checker_t ctx,
   }
 
   /* Step 3: Map bindings to result vec by generic param name.
-     Use the generic_params vec which contains either symbol* or name strings.
+     generic_params vec contains const char* name strings (passed from caller).
      We look up each generic param name in the bindings map. */
   for (size_t i = 0; i < gcount; i++) {
     /* Already filled by explicit args */
     if (vec_get(result, i) != NULL) continue;
 
-    /* Get param name: try symbol first, then fall back to TYPE_GENERIC_PARAM name */
-    const char *gp_name = NULL;
-    void *gp_entry = vec_get(generic_params, i);
-    if (gp_entry) {
-      /* Could be a symbol* or we can extract name from func_type */
-      struct symbol *gp_sym = (struct symbol *)gp_entry;
-      if (gp_sym && gp_sym->name)
-        gp_name = gp_sym->name;
-    }
-    if (!gp_name) {
-      /* Fallback: extract name from the function type's params/return */
-      vec_t param_names = _collect_generic_param_names(func_type, ctx->allocator);
-      if (i < vec_get_size(param_names))
-        gp_name = (const char *)vec_get(param_names, i);
-      allocator_free(ctx->allocator, &param_names);
-    }
+    /* Get param name from generic_params (const char* strings) */
+    const char *gp_name = (const char *)vec_get(generic_params, i);
     if (!gp_name) continue;
 
     void *found = strmap_find(bindings, gp_name);
