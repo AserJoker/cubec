@@ -86,32 +86,32 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
   node_t result = NULL;
 
   // Try initialize list: .<type>{<items>} or .{<items>}
-  result = TRY(NULL,
-               read_expression_initialize_list(allocator, tokens, &current, filename));
+  result = read_expression_initialize_list(allocator, tokens, &current, filename);
+  if (g_error) { error_clear(); result = NULL; }
   if (result) {
     *position = current;
     return result;
   }
 
   // Try typeof: typeof(<expression>) — compile-time type computation
-  result = TRY(NULL,
-               read_expression_typeof(allocator, tokens, &current, filename));
+  result = read_expression_typeof(allocator, tokens, &current, filename);
+  if (g_error) { error_clear(); result = NULL; }
   if (result) {
     *position = current;
     return result;
   }
 
   // Try sizeof: sizeof(<expression>) — compile-time size computation
-  result = TRY(NULL,
-               read_expression_sizeof(allocator, tokens, &current, filename));
+  result = read_expression_sizeof(allocator, tokens, &current, filename);
+  if (g_error) { error_clear(); result = NULL; }
   if (result) {
     *position = current;
     return result;
   }
 
   // Try alignof: alignof(<expression>) — compile-time alignment computation
-  result = TRY(NULL,
-               read_expression_alignof(allocator, tokens, &current, filename));
+  result = read_expression_alignof(allocator, tokens, &current, filename);
+  if (g_error) { error_clear(); result = NULL; }
   if (result) {
     *position = current;
     return result;
@@ -165,8 +165,8 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
   }
 
   // Try grouped expression: ( expr )
-  result = TRY(NULL,
-               read_expression_group(allocator, tokens, &current, filename));
+  result = read_expression_group(allocator, tokens, &current, filename);
+  if (g_error) { error_clear(); result = NULL; }
   if (result) {
     *position = current;
     return result;
@@ -202,31 +202,32 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
   }
 
   // Try string literal
-  result =
-      TRY(NULL, read_literal_string(allocator, tokens, &current, filename));
+  result = read_literal_string(allocator, tokens, &current, filename);
+  if (g_error) { error_clear(); result = NULL; }
   if (result) {
     *position = current;
     return result;
   }
 
   // Try numeric literal
-  result =
-      TRY(NULL, read_literal_numeric(allocator, tokens, &current, filename));
+  result = read_literal_numeric(allocator, tokens, &current, filename);
+  if (g_error) { error_clear(); result = NULL; }
   if (result) {
     *position = current;
     return result;
   }
 
   // Try identifier
-  result =
-      TRY(NULL, read_literal_identifier(allocator, tokens, &current, filename));
+  result = read_literal_identifier(allocator, tokens, &current, filename);
+  if (g_error) { error_clear(); result = NULL; }
   if (result) {
     *position = current;
     return result;
   }
 
   // Try char literal
-  result = TRY(NULL, read_literal_char(allocator, tokens, &current, filename));
+  result = read_literal_char(allocator, tokens, &current, filename);
+  if (g_error) { error_clear(); result = NULL; }
   if (result) {
     *position = current;
     return result;

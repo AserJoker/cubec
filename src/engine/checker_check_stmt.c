@@ -179,14 +179,21 @@ static void _check_stmt_foreach(checker_t ctx, node_t stmt,
             /* next() return type should be a struct with "value" field */
             semantic_type_t next_ret =
                 s->function.type->impl->function.return_type;
-            if (next_ret && next_ret->impl->kind == TYPE_STRUCT && next_ret->static_fields) {
-              size_t fc = vec_get_size(next_ret->static_fields);
-              for (size_t j = 0; j < fc; j++) {
-                struct symbol *fs = (struct symbol *)vec_get(next_ret->static_fields, j);
-                if (fs && fs->name && strcmp(fs->name, "value") == 0 &&
-                    fs->kind == SYMBOL_FIELD) {
-                  elem_type = fs->field.type;
-                  break;
+            if (next_ret) {
+              vec_t fields = NULL;
+              if (next_ret->impl->kind == TYPE_STRUCT)
+                fields = next_ret->impl->struct_type.fields;
+              else if (next_ret->impl->kind == TYPE_GENERIC_INSTANCE)
+                fields = next_ret->impl->generic_instance.fields;
+              if (fields) {
+                size_t fc = vec_get_size(fields);
+                for (size_t j = 0; j < fc; j++) {
+                  struct symbol *fs = (struct symbol *)vec_get(fields, j);
+                  if (fs && fs->name && strcmp(fs->name, "value") == 0 &&
+                      fs->kind == SYMBOL_FIELD) {
+                    elem_type = fs->field.type;
+                    break;
+                  }
                 }
               }
             }

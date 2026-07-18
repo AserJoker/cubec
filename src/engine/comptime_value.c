@@ -277,24 +277,12 @@ bool comptime_value_equals(comptime_value_t a, comptime_value_t b) {
     if (a->type && a->type == b->type)
       return memcmp(a->composite.data, b->composite.data,
                     a->composite.data_size) == 0;
-    /* Fallback: if same element_type (arrays), compare element by element */
+    /* Fallback: if same element_type (arrays), memcmp raw bytes.
+     * Same element_type means same layout, so memcmp is correct and avoids
+     * needing an allocator for comptime_value_read_field. */
     if (a->composite.element_type && a->composite.element_type == b->composite.element_type) {
-      size_t esz = a->composite.element_type->impl->size;
-      if (esz == 0) return true;
-      size_t count = a->composite.data_size / esz;
-      for (size_t i = 0; i < count; i++) {
-        comptime_value_t ea = comptime_value_read_field(a, i * esz,
-            a->composite.element_type, NULL);
-        comptime_value_t eb = comptime_value_read_field(b, i * esz,
-            b->composite.element_type, NULL);
-        /* For primitive types, direct comparison works without allocator */
-        bool eq = false;
-        if (ea && eb) eq = comptime_value_equals(ea, eb);
-        if (ea) allocator_free(NULL, &ea);
-        if (eb) allocator_free(NULL, &eb);
-        if (!eq) return false;
-      }
-      return true;
+      return memcmp(a->composite.data, b->composite.data,
+                    a->composite.data_size) == 0;
     }
     /* Different types with raw data: memcmp as last resort */
     return memcmp(a->composite.data, b->composite.data,

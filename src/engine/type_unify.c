@@ -205,7 +205,7 @@ static bool _type_unify(semantic_type_t actual, semantic_type_t expected,
       struct symbol *af = (struct symbol *)vec_get(afields, i);
       struct symbol *ef = (struct symbol *)vec_get(efields, i);
       /* Field names must match */
-      if (!af->name || !ef->name || strcmp(af->name, ef->name) != 0) return false;
+      if (!af || !ef || !af->name || !ef->name || strcmp(af->name, ef->name) != 0) return false;
       /* Unify field types */
       if (!_type_unify(af->field.type, ef->field.type, bindings, allocator))
         return false;

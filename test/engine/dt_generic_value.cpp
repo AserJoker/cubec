@@ -226,3 +226,103 @@ TEST_F(dt_generic_value, value_param_struct_init_array_field) {
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== Value generic param: edge cases ===== */
+
+TEST_F(dt_generic_value, value_param_negative_int) {
+  /* Negative literal is valid for u64 (wraps to max uint64) — should not error */
+  const char *src = BUILTIN_ASSERT
+    "func foo[N: u64](): void {}\n"
+    "test \"neg_int\" {\n"
+    "  foo[-1]();\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_value, value_param_zero_length_array) {
+  /* Zero-length array via value param */
+  const char *src = BUILTIN_ASSERT
+    "func foo[N: u64](): void {}\n"
+    "test \"zero_len\" {\n"
+    "  foo[0]();\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_value, value_param_same_value_same_type) {
+  /* Same value should produce the same cached type instance */
+  const char *src = BUILTIN_ASSERT
+    "func foo[N: u64](): void {}\n"
+    "test \"same_type\" {\n"
+    "  foo[5]();\n"
+    "  foo[5]();\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_value, value_param_different_values_distinct_instances) {
+  /* Different values should produce distinct type instances */
+  const char *src = BUILTIN_ASSERT
+    "func foo[N: u64](): void {}\n"
+    "test \"distinct\" {\n"
+    "  foo[3]();\n"
+    "  foo[7]();\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_value, value_param_comptime_complex_expr) {
+  /* Complex comptime expression as value argument */
+  const char *src = BUILTIN_ASSERT
+    "func foo[N: u64](): void {}\n"
+    "test \"comptime_complex\" {\n"
+    "  foo[(2 + 3) * 4]();\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_value, value_param_struct_with_value_in_field) {
+  /* Verify struct field type is correctly substituted with value param */
+  const char *src = BUILTIN_ASSERT
+    "struct Buffer[N: u64, T] { data: [N]T; }\n"
+    "test \"field_type\" {\n"
+    "  var x: Buffer[5, i32];\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_value, value_param_bool_false_instantiation) {
+  /* Bool value param with false */
+  const char *src = BUILTIN_ASSERT
+    "func cond[B: bool](): void {}\n"
+    "test \"val_bool_false\" {\n"
+    "  cond[false]();\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_value, value_param_bool_type_mismatch_int) {
+  /* Passing int where bool is expected should error */
+  const char *src =
+    "func cond[B: bool](): void {}\n"
+    "test \"bool_mismatch\" {\n"
+    "  cond[42]();\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}

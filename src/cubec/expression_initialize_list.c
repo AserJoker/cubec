@@ -287,11 +287,9 @@ onerror:
   allocator_free(allocator, &items);
   allocator_free(allocator, &type);
   allocator_free(allocator, &node);
-  if (dot_token) {
-    location_t *loc = token_get_location(dot_token);
-    THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid initialize list",
-          filename, loc->begin.line + 1, loc->begin.column + 1);
-  }
+  /* Return NULL without re-throwing. The caller (read_atom) will clear
+   * g_error and try the next sub-parser. Re-throwing here would cascade
+   * the error and prevent other parsers from attempting a match. */
   return NULL;
 }
 
