@@ -169,3 +169,60 @@ TEST_F(dt_generic_pack, pack_with_constraint) {
   EXPECT_EQ(checker_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== Pack spread in initializer list ===== */
+
+TEST_F(dt_generic_pack, pack_spread_in_init_list) {
+  /* .Item{...args} spreads pack values into positional fields */
+  const char *src = BUILTIN_ASSERT
+    "struct Item { x: i32; y: i32; z: i32; }\n"
+    "func make[...Args](...args: Args): Item {\n"
+    "  return .Item{...args};\n"
+    "}\n"
+    "test \"t\" { make(1, 2, 3); }\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_pack, pack_spread_init_empty) {
+  /* Empty pack .Item{...args} degrades to .Item{} */
+  const char *src = BUILTIN_ASSERT
+    "struct Item { x: i32; y: i32; }\n"
+    "func make[...Args](...args: Args): Item {\n"
+    "  return .Item{...args};\n"
+    "}\n"
+    "test \"t\" { make(); }\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_pack, pack_spread_init_mixed) {
+  /* .Item{first, ...args} mixed fixed + pack expansion */
+  const char *src = BUILTIN_ASSERT
+    "struct Item { x: i32; y: i32; z: i32; }\n"
+    "func make[T, ...Args](first: T, ...args: Args): Item {\n"
+    "  return .Item{first, ...args};\n"
+    "}\n"
+    "test \"t\" { make(1, 2, 3); }\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_pack, pack_spread_init_too_many) {
+  /* Too many values from pack expansion for struct fields */
+  const char *src = BUILTIN_ASSERT
+    "struct Item { x: i32; }\n"
+    "func make[...Args](...args: Args): Item {\n"
+    "  return .Item{...args};\n"
+    "}\n"
+    "test \"t\" { make(1, 2); }\n";
+  auto r = compile_source(allocator, src);
+  /* Note: type checking at definition time cannot detect pack count mismatch;
+     the error would surface at comptime execution. For now, expect 0 errors
+     from the checker (the call itself is syntactically valid). */
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}

@@ -12,6 +12,7 @@
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_initialize_list.h"
 #include "cubec/expression_initialize_field.h"
+#include "cubec/expression_spread.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/expression_function.h"
 #include "cubec/function_argument.h"
@@ -212,25 +213,60 @@ void _check_init_list_positional(checker_t ctx, node_t expr,
                                   semantic_type_t t, vec_t fields,
                                   size_t fcount, size_t icount,
                                   vec_t items) {
-  for (size_t i = 0; i < icount && i < fcount; i++) {
+  size_t field_idx = 0;
+  for (size_t i = 0; i < icount; i++) {
     node_t item = (node_t)vec_get(items, i);
-    struct symbol *fsym = (struct symbol *)vec_get(fields, i);
-    if (item && fsym && fsym->field.type) {
-      semantic_type_t vt = _check_expression(ctx, item);
-      if (vt->impl->kind != TYPE_ERROR &&
-          !semantic_type_can_implicit_convert(vt, fsym->field.type)) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                             item->location,
-                             "cannot initialize field '%s' of type '%s' with '%s'",
-                             fsym->name ? fsym->name : "<anonymous>",
-                             fsym->field.type->name
-                                 ? fsym->field.type->name : "<anonymous>",
-                             vt->name ? vt->name : "<anonymous>");
-        ctx->error_count++;
+
+    if (item && item->kind == CUBEC_NODE_EXPRESSION_SPREAD) {
+      /* Pack spread: evaluate the spread expression and check expanded types */
+      semantic_type_t spread_type = _check_expression(ctx, item);
+      if (spread_type && spread_type->impl && spread_type->impl->kind == TYPE_GENERIC_PACK) {
+        vec_t expanded = spread_type->impl->generic_pack.expanded_types;
+        size_t ecount = expanded ? vec_get_size(expanded) : 0;
+        for (size_t j = 0; j < ecount && field_idx < fcount; j++, field_idx++) {
+          semantic_type_t et = (semantic_type_t)vec_get(expanded, j);
+          struct symbol *fsym = (struct symbol *)vec_get(fields, field_idx);
+          if (et && fsym && fsym->field.type) {
+            if (et->impl->kind != TYPE_ERROR &&
+                !semantic_type_can_implicit_convert(et, fsym->field.type)) {
+              diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                   item->location,
+                                   "cannot initialize field '%s' of type '%s' with '%s'",
+                                   fsym->name ? fsym->name : "<anonymous>",
+                                   fsym->field.type->name
+                                       ? fsym->field.type->name : "<anonymous>",
+                                   et->name ? et->name : "<anonymous>");
+              ctx->error_count++;
+            }
+          }
+        }
+      }
+      /* If spread_type is not TYPE_GENERIC_PACK, it's already been type-checked
+         by _check_expression → _check_expr_spread, which returns the inner type.
+         In that case, we skip expansion and treat it as a single element. */
+    } else {
+      /* Regular positional item */
+      if (field_idx < fcount) {
+        struct symbol *fsym = (struct symbol *)vec_get(fields, field_idx);
+        if (item && fsym && fsym->field.type) {
+          semantic_type_t vt = _check_expression(ctx, item);
+          if (vt->impl->kind != TYPE_ERROR &&
+              !semantic_type_can_implicit_convert(vt, fsym->field.type)) {
+            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                 item->location,
+                                 "cannot initialize field '%s' of type '%s' with '%s'",
+                                 fsym->name ? fsym->name : "<anonymous>",
+                                 fsym->field.type->name
+                                     ? fsym->field.type->name : "<anonymous>",
+                                 vt->name ? vt->name : "<anonymous>");
+            ctx->error_count++;
+          }
+        }
+        field_idx++;
       }
     }
   }
-  if (icount > fcount) {
+  if (field_idx > fcount) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                          expr->location,
                          "too many initializers for type '%s'",

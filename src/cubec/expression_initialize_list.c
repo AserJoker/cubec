@@ -6,6 +6,7 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/expression_initialize_field.h"
+#include "cubec/expression_spread.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -179,11 +180,14 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
         vec_push(items, field_item);
         current = field_pos;
       } else {
-        /* Fall back to positional expression */
+        /* Fall back to positional expression: try spread first, then regular */
         is_field_mode = false;
         mode_determined = true;
-        node_t expr_item = TRY_LOCAL(onerror,
-                                     read_expression_base(allocator, tokens, &current, filename));
+        node_t expr_item = read_expression_spread(allocator, tokens, &current, filename);
+        if (!expr_item) {
+          expr_item = TRY_LOCAL(onerror,
+                                read_expression_base(allocator, tokens, &current, filename));
+        }
         if (!expr_item) {
           THROW_LOCAL(onerror, "expected expression in initialize list");
         }
@@ -221,8 +225,11 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
                         dot_location.begin.column + 1);
           }
         }
-        node_t expr_item = TRY_LOCAL(onerror,
-                                     read_expression_base(allocator, tokens, &current, filename));
+        node_t expr_item = read_expression_spread(allocator, tokens, &current, filename);
+        if (!expr_item) {
+          expr_item = TRY_LOCAL(onerror,
+                                read_expression_base(allocator, tokens, &current, filename));
+        }
         if (!expr_item) {
           THROW_LOCAL(onerror, "expected expression in initialize list");
         }
