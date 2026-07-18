@@ -7,6 +7,8 @@
 #include "engine/symbol.h"
 #include "engine/type_hash.h"
 #include "engine/type_layout.h"
+#include "engine/builtin.h"
+#include "engine/comptime_value.h"
 #include "core/allocator.h"
 #include "core/string.h"
 #include "core/vec.h"
@@ -308,6 +310,72 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
           type_args, expr);
       if (inst_type->impl->kind != TYPE_ERROR) {
         callee_type = inst_type;
+      }
+
+      /* Validate builtin length: argument must be array or tuple */
+      if (generic_func_sym->is_builtin) {
+        builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, generic_func_sym->name);
+        if (be && be->dispatch == BUILTIN_DISPATCH_LENGTH) {
+          semantic_type_t arg_type = (semantic_type_t)vec_get(arg_types, 0);
+          bool valid = false;
+          if (arg_type) {
+            if (arg_type->impl->kind == TYPE_ARRAY) valid = true;
+            if (arg_type->impl->kind == TYPE_GENERIC_INSTANCE &&
+                arg_type->impl->generic_instance.fields) valid = true;
+          }
+          if (!valid) {
+            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                 expr->location,
+                                 "length() requires an array or tuple argument");
+            ctx->error_count++;
+          }
+        }
+
+        /* Resolve return type for builtin get: get[N, ...Args](tuple): Args[N] */
+        if (be && be->dispatch == BUILTIN_DISPATCH_GET) {
+          /* Get the tuple type from the first call argument */
+          if (arg_count >= 1) {
+            semantic_type_t tuple_type = (semantic_type_t)vec_get(arg_types, 0);
+            if (tuple_type && tuple_type->impl->kind == TYPE_GENERIC_INSTANCE &&
+                tuple_type->impl->generic_instance.fields) {
+              /* Get the index N from type_args[0] (TYPE_GENERIC_VALUE) */
+              size_t ta_count = type_args ? vec_get_size(type_args) : 0;
+              if (ta_count >= 1) {
+                semantic_type_t n_type = (semantic_type_t)vec_get(type_args, 0);
+                if (n_type && n_type->impl->kind == TYPE_GENERIC_VALUE) {
+                  uint64_t idx = comptime_value_as_u64(n_type->impl->generic_value.value);
+                  vec_t fields = tuple_type->impl->generic_instance.fields;
+                  size_t fcount = vec_get_size(fields);
+                  if (idx < fcount) {
+                    struct symbol *f = (struct symbol *)vec_get(fields, (size_t)idx);
+                    if (f && f->field.type) {
+                      /* Override the callee_type's return type */
+                      vec_init_t vi = {.auto_dispose = false};
+                      vec_t new_params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+                      vec_push(new_params, tuple_type);
+                      semantic_type_t new_func = semantic_type_create_function(
+                          ctx->allocator, f->field.type, new_params, false);
+                      type_hash_ensure(new_func);
+                      vec_push(ctx->all_types, new_func);
+                      callee_type = new_func;
+                    }
+                  } else {
+                    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                         expr->location,
+                                         "tuple index %llu out of range (tuple has %zu fields)",
+                                         (unsigned long long)idx, fcount);
+                    ctx->error_count++;
+                  }
+                }
+              }
+            } else {
+              diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                   expr->location,
+                                   "get() requires a tuple argument");
+              ctx->error_count++;
+            }
+          }
+        }
       }
     }
 

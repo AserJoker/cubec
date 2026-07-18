@@ -765,11 +765,22 @@ static void _evaluate_type_alias(checker_t ctx,
   if (node->type_value) {
     semantic_type_t resolved = resolver_resolve_type(ctx, node->type_value);
     sym->type.type = resolved;
-  } else if (!node->is_builtin) {
+  } else if (node->is_builtin) {
+    builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
+    if (be && be->kind == BUILTIN_TYPE) {
+      sym->type.type = be->type;
+    }
+  } else {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                          node->super.location,
                          "type alias '%s' requires a type expression", name);
     ctx->error_count++;
+  }
+
+  /* Register generic params for generic type alias */
+  if (node->params) {
+    _register_generic_params(ctx, node->params);
+    sym->type.generic_params = node->params;
   }
 
   /* Generic type alias: still mark evaluated (template) */

@@ -19,7 +19,9 @@ struct checker;
 enum builtin_dispatch {
   BUILTIN_DISPATCH_NONE = 0,
   BUILTIN_DISPATCH_ASSERT,
-  /* future: BUILTIN_DISPATCH_PANIC, etc. */
+  BUILTIN_DISPATCH_LENGTH,
+  BUILTIN_DISPATCH_TUPLE,
+  BUILTIN_DISPATCH_GET,
 };
 
 /**

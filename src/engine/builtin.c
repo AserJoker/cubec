@@ -103,4 +103,83 @@ void builtin_table_init_defaults(builtin_table_t table, struct checker *ctx) {
     builtin_table_register(table, "assert",
                            BUILTIN_FUNC, assert_type, BUILTIN_DISPATCH_ASSERT);
   }
+
+  /* builtin type Tuple[...Args] — variadic generic tuple */
+  {
+    semantic_type_t tuple_type = semantic_type_create_named(
+        ctx->allocator, "Tuple", TYPE_STRUCT);
+    /* No fields at template level — populated at instantiation */
+    tuple_type->impl->struct_type.fields = NULL;
+    type_hash_ensure(tuple_type);
+    vec_push(ctx->all_types, tuple_type);
+    builtin_table_register(table, "Tuple",
+                           BUILTIN_TYPE, tuple_type, BUILTIN_DISPATCH_TUPLE);
+  }
+
+  /* builtin func length[T](list: T): u64 */
+  {
+    /* Create generic param T at index 0 */
+    semantic_type_t t_param = semantic_type_create_generic_param(
+        ctx->allocator, "T", 0, NULL, false);
+    type_hash_ensure(t_param);
+    vec_push(ctx->all_types, t_param);
+
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+    vec_push(params, t_param);
+    semantic_type_t length_type = semantic_type_create_function(
+        ctx->allocator, ctx->builtin_u64, params, false);
+    type_hash_ensure(length_type);
+    vec_push(ctx->all_types, length_type);
+    builtin_table_register(table, "length",
+                           BUILTIN_FUNC, length_type, BUILTIN_DISPATCH_LENGTH);
+  }
+
+  /* builtin func get[N: u64, ...Args](tuple: Tuple[...Args]): Args[N]
+     Return type is resolved dynamically by the type checker based on
+     the compile-time constant N and the concrete Tuple type.
+     N: u64 is a value generic param; index is no longer a function param. */
+  {
+    /* Generic params: N: u64 (value param at index 0), ...Args (pack at index 1) */
+    semantic_type_t n_param = semantic_type_create_generic_param(
+        ctx->allocator, "N", 0, ctx->builtin_u64, true);
+    type_hash_ensure(n_param);
+    vec_push(ctx->all_types, n_param);
+
+    semantic_type_t args_param = semantic_type_create_generic_pack(
+        ctx->allocator, "Args", 1);
+    type_hash_ensure(args_param);
+    vec_push(ctx->all_types, args_param);
+
+    /* Params: tuple: Tuple[...Args] */
+    semantic_type_t tuple_inst = semantic_type_create_generic_instance(
+        ctx->allocator,
+        builtin_table_lookup(table, "Tuple")->type,
+        NULL);
+    /* Override the type_args with the Args pack */
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t inst_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+    vec_push(inst_args, args_param);
+    tuple_inst->impl->generic_instance.type_args = inst_args;
+    type_hash_ensure(tuple_inst);
+    vec_push(ctx->all_types, tuple_inst);
+
+    /* Function params: (tuple: Tuple[...Args]) — no index param, N is in type args */
+    vec_init_t vi2 = {.auto_dispose = false};
+    vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi2);
+    vec_push(params, tuple_inst);
+
+    /* Return type: Args[N] — TYPE_PACK_INDEX placeholder, resolved during type checking */
+    semantic_type_t ret_type = semantic_type_create_pack_index(
+        ctx->allocator, "Args", 1, 0);
+    type_hash_ensure(ret_type);
+    vec_push(ctx->all_types, ret_type);
+
+    semantic_type_t get_type = semantic_type_create_function(
+        ctx->allocator, ret_type, params, false);
+    type_hash_ensure(get_type);
+    vec_push(ctx->all_types, get_type);
+    builtin_table_register(table, "get",
+                           BUILTIN_FUNC, get_type, BUILTIN_DISPATCH_GET);
+  }
 }

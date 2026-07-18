@@ -415,7 +415,30 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     if (!name) return _eval_signal_none();
     comptime_value_t val = dv->expression
                                ? _comptime_eval_expr(eval, ctx, dv->expression)
-                               : _eval_temp(eval, comptime_value_create_nil(eval->allocator, NULL));
+                               : NULL;
+    if (!val || val->kind == COMPTIME_VALUE_ERROR) {
+      /* No initializer — create a default value based on the variable's type */
+      if (dv->type) {
+        semantic_type_t var_type = resolver_resolve_type(ctx, dv->type);
+        if (var_type && var_type->impl->kind != TYPE_ERROR) {
+          if (var_type->impl->kind == TYPE_ARRAY) {
+            val = _eval_temp(eval, comptime_value_create_composite(
+                eval->allocator, var_type,
+                var_type->impl->array.element,
+                var_type->impl->size));
+          } else if (var_type->impl->kind == TYPE_GENERIC_INSTANCE &&
+                     var_type->impl->generic_instance.fields) {
+            val = _eval_temp(eval, comptime_value_create_composite(
+                eval->allocator, var_type,
+                NULL, var_type->impl->size));
+          } else {
+            val = _eval_temp(eval, comptime_value_create_nil(eval->allocator, var_type));
+          }
+        }
+      }
+      if (!val)
+        val = _eval_temp(eval, comptime_value_create_nil(eval->allocator, NULL));
+    }
     if (val && val->kind != COMPTIME_VALUE_ERROR)
       comptime_env_bind_value(eval->current_env, eval->valloc, name, comptime_value_clone(eval->allocator, val));
     return _eval_signal_none();

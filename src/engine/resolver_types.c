@@ -68,7 +68,9 @@ semantic_type_t _resolve_type_identifier(checker_t ctx, node_t node) {
         return pack_type;
       }
       semantic_type_t gp_type = semantic_type_create_generic_param(
-          ctx->allocator, name, sym->generic_param.index);
+          ctx->allocator, name, sym->generic_param.index,
+          sym->generic_param.value_type,
+          sym->generic_param.value_type != NULL);
       type_hash_ensure(gp_type);
       vec_push(ctx->all_types, gp_type);
       return gp_type;
@@ -145,15 +147,39 @@ semantic_type_t _resolve_type_array(checker_t ctx, node_t node) {
       }
       length = (size_t)val;
     } else {
+      /* Try to resolve as a value generic param identifier */
+      const char *size_name = NULL;
+      if (arr->size->kind == CUBEC_NODE_LITERAL_IDENTIFIER)
+        size_name = _resolver_ident_str(arr->size);
+      struct symbol *size_sym = size_name
+          ? scope_lookup(ctx->current_scope, size_name) : NULL;
+
+      if (size_sym && size_sym->kind == SYMBOL_GENERIC_PARAM &&
+          size_sym->generic_param.value_type) {
+        /* Value generic param used as array length */
+        size_t param_idx = size_sym->generic_param.index;
+        semantic_type_t gp_type = semantic_type_create_generic_param(
+            ctx->allocator, size_name, param_idx,
+            size_sym->generic_param.value_type, true);
+        type_hash_ensure(gp_type);
+        vec_push(ctx->all_types, gp_type);
+
+        semantic_type_t result = semantic_type_create_array(
+            ctx->allocator, elem, 0, param_idx);
+        type_hash_ensure(result);
+        vec_push(ctx->all_types, result);
+        return result;
+      }
+
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                            arr->size->location,
-                           "array size must be a compile-time integer literal");
+                           "array size must be a compile-time integer or generic parameter");
       ctx->error_count++;
     }
   }
 
   semantic_type_t result =
-      semantic_type_create_array(ctx->allocator, elem, length);
+      semantic_type_create_array(ctx->allocator, elem, length, (size_t)-1);
   type_hash_ensure(result);
   vec_push(ctx->all_types, result);
   return result;

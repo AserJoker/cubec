@@ -51,7 +51,7 @@ TEST_F(dt_semantic_type, create_slice) {
 TEST_F(dt_semantic_type, create_array) {
   semantic_type_t elem =
       semantic_type_create_named(allocator, "f64", TYPE_F64);
-  semantic_type_t arr = semantic_type_create_array(allocator, elem, 10);
+  semantic_type_t arr = semantic_type_create_array(allocator, elem, 10, (size_t)-1);
 
   EXPECT_EQ(semantic_type_get_kind(arr), TYPE_ARRAY);
   EXPECT_FALSE(semantic_type_is_incomplete(arr));
@@ -131,7 +131,7 @@ TEST_F(dt_semantic_type, equals_pointer) {
 TEST_F(dt_semantic_type, can_decay_array_to_slice) {
   semantic_type_t elem =
       semantic_type_create_named(allocator, "u8", TYPE_U8);
-  semantic_type_t arr = semantic_type_create_array(allocator, elem, 10);
+  semantic_type_t arr = semantic_type_create_array(allocator, elem, 10, (size_t)-1);
   semantic_type_t sl = semantic_type_create_slice(allocator, elem);
 
   EXPECT_TRUE(semantic_type_can_decay(arr, sl));
@@ -144,7 +144,7 @@ TEST_F(dt_semantic_type, can_decay_array_to_slice) {
 TEST_F(dt_semantic_type, can_decay_array_to_pointer) {
   semantic_type_t elem =
       semantic_type_create_named(allocator, "i32", TYPE_I32);
-  semantic_type_t arr = semantic_type_create_array(allocator, elem, 5);
+  semantic_type_t arr = semantic_type_create_array(allocator, elem, 5, (size_t)-1);
   semantic_type_t ptr = semantic_type_create_pointer(allocator, elem);
 
   EXPECT_TRUE(semantic_type_can_decay(arr, ptr));

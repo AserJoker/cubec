@@ -1,5 +1,6 @@
 #include "engine/type_hash.h"
 #include "engine/symbol.h"
+#include "engine/comptime_value.h"
 #include "core/vec.h"
 #include <string.h>
 
@@ -66,6 +67,7 @@ static size_t _hash_type(semantic_type_t type) {
   case TYPE_ARRAY:
     hash = _hash_combine(hash, _hash_type(impl->array.element));
     hash = _hash_combine(hash, impl->array.length);
+    hash = _hash_combine(hash, impl->array.length_param_idx);
     break;
 
   case TYPE_STRUCT:
@@ -119,12 +121,51 @@ static size_t _hash_type(semantic_type_t type) {
 
   case TYPE_GENERIC_PARAM:
     hash = _hash_combine(hash, (size_t)impl->generic_param.index);
+    hash = _hash_combine(hash, (size_t)impl->generic_param.is_value);
+    if (impl->generic_param.value_type)
+      hash = _hash_combine(hash, _hash_type(impl->generic_param.value_type));
     break;
 
   case TYPE_GENERIC_PACK:
     hash = _hash_combine(hash, (size_t)impl->generic_pack.index);
     hash = _hash_combine(hash, _hash_type_vec(impl->generic_pack.expanded_types));
     break;
+
+  case TYPE_PACK_INDEX:
+    hash = _hash_combine(hash, (size_t)impl->pack_index.pack_param_idx);
+    hash = _hash_combine(hash, (size_t)impl->pack_index.index_param_idx);
+    break;
+
+  case TYPE_GENERIC_VALUE: {
+    comptime_value_t cv = impl->generic_value.value;
+    if (cv) {
+      hash = _hash_combine(hash, (size_t)cv->kind);
+      switch (cv->kind) {
+      case COMPTIME_VALUE_INT:
+        hash = _hash_combine(hash, cv->int_val.u);
+        hash = _hash_combine(hash, (size_t)cv->int_val.is_signed);
+        hash = _hash_combine(hash, (size_t)cv->int_val.width);
+        break;
+      case COMPTIME_VALUE_BOOL:
+        hash = _hash_combine(hash, (size_t)cv->bool_val);
+        break;
+      case COMPTIME_VALUE_STRING:
+        hash = _hash_combine(hash, _fnv1a(string_get(cv->string_val),
+                                           string_get_length(cv->string_val)));
+        break;
+      case COMPTIME_VALUE_CHAR:
+        hash = _hash_combine(hash, (size_t)cv->char_val);
+        break;
+      case COMPTIME_VALUE_FLOAT:
+        hash = _hash_combine(hash, (size_t)cv->float_val.value);
+        break;
+      default:
+        hash = _hash_combine(hash, (size_t)cv->kind);
+        break;
+      }
+    }
+    break;
+  }
 
   case TYPE_WILDCARD:
     break;

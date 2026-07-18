@@ -4,6 +4,8 @@
 #include "engine/symbol.h"
 #include "engine/type_hash.h"
 #include "engine/type_layout.h"
+#include "engine/comptime_value.h"
+#include "engine/comptime_eval.h"
 #include "core/allocator.h"
 #include "core/string.h"
 #include "core/vec.h"
@@ -108,6 +110,9 @@ char *_generic_instance_cache_key(checker_t ctx, const char *template_name,
         if (et) { type_hash_ensure(et); }
         len += 1 + 20; /* '#' + max uint64 decimal */
       }
+    } else if (t->impl->kind == TYPE_GENERIC_VALUE) {
+      /* Value: hash the compile-time value content */
+      len += 1 + 30; /* '#' + value representation */
     } else {
       type_hash_ensure(t);
       len += 1 + 20; /* '#' + max uint64 decimal */
@@ -127,6 +132,22 @@ char *_generic_instance_cache_key(checker_t ctx, const char *template_name,
         if (!et) continue;
         key[pos++] = '#';
         pos += snprintf(key + pos, len + 1 - pos, "%zu", et->impl->hash);
+      }
+    } else if (t->impl->kind == TYPE_GENERIC_VALUE) {
+      key[pos++] = 'v';
+      comptime_value_t cv = t->impl->generic_value.value;
+      if (cv) {
+        switch (cv->kind) {
+        case COMPTIME_VALUE_INT:
+          pos += snprintf(key + pos, len + 1 - pos, "%zu", (size_t)cv->int_val.u);
+          break;
+        case COMPTIME_VALUE_BOOL:
+          pos += snprintf(key + pos, len + 1 - pos, "%d", cv->bool_val ? 1 : 0);
+          break;
+        default:
+          pos += snprintf(key + pos, len + 1 - pos, "%zu", (size_t)cv->kind);
+          break;
+        }
       }
     } else {
       key[pos++] = '#';
@@ -203,8 +224,35 @@ static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
 
   case TYPE_ARRAY: {
     semantic_type_t elem = _substitute_type(ctx, type->impl->array.element, type_args);
+    size_t param_idx = type->impl->array.length_param_idx;
+
+    if (param_idx != (size_t)-1 && type_args && param_idx < vec_get_size(type_args)) {
+      semantic_type_t replacement = (semantic_type_t)vec_get(type_args, param_idx);
+      if (replacement && replacement->impl->kind == TYPE_GENERIC_VALUE) {
+        /* Resolve symbolic length from TYPE_GENERIC_VALUE */
+        size_t concrete_len =
+            (size_t)comptime_value_as_u64(replacement->impl->generic_value.value);
+        if (elem == type->impl->array.element && concrete_len == type->impl->array.length)
+          return type;
+        semantic_type_t result = semantic_type_create_array(
+            ctx->allocator, elem, concrete_len, (size_t)-1);
+        type_hash_ensure(result);
+        vec_push(ctx->all_types, result);
+        return result;
+      }
+      /* Replacement not yet a concrete value — propagate symbolic array */
+      if (elem == type->impl->array.element) return type;
+      semantic_type_t result = semantic_type_create_array(
+          ctx->allocator, elem, 0, param_idx);
+      type_hash_ensure(result);
+      vec_push(ctx->all_types, result);
+      return result;
+    }
+
+    /* Concrete length */
     if (elem == type->impl->array.element) return type;
-    semantic_type_t result = semantic_type_create_array(ctx->allocator, elem, type->impl->array.length);
+    semantic_type_t result = semantic_type_create_array(
+        ctx->allocator, elem, type->impl->array.length, type->impl->array.length_param_idx);
     type_hash_ensure(result);
     vec_push(ctx->all_types, result);
     return result;
@@ -286,6 +334,32 @@ static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
     /* Cannot substitute a struct/union type in-place (would corrupt the template).
        Return as-is; the caller should use _instantiate_struct_fields for
        creating substituted field copies. */
+    return type;
+
+  case TYPE_PACK_INDEX: {
+    /* Args[N] — index into a pack parameter's expanded_types */
+    size_t pack_param_idx = type->impl->pack_index.pack_param_idx;
+    size_t index_param_idx = type->impl->pack_index.index_param_idx;
+    if (type_args && index_param_idx < vec_get_size(type_args) &&
+        pack_param_idx < vec_get_size(type_args)) {
+      semantic_type_t index_type = (semantic_type_t)vec_get(type_args, index_param_idx);
+      semantic_type_t pack_type = (semantic_type_t)vec_get(type_args, pack_param_idx);
+      if (pack_type && pack_type->impl->kind == TYPE_GENERIC_PACK &&
+          pack_type->impl->generic_pack.expanded_types &&
+          index_type && index_type->impl->kind == TYPE_GENERIC_VALUE) {
+        size_t idx = (size_t)comptime_value_as_u64(
+            index_type->impl->generic_value.value);
+        vec_t expanded = pack_type->impl->generic_pack.expanded_types;
+        if (idx < vec_get_size(expanded)) {
+          return (semantic_type_t)vec_get(expanded, idx);
+        }
+      }
+    }
+    return type; /* Return as-is — caller resolves via BUILTIN_DISPATCH_GET if needed */
+  }
+
+  case TYPE_GENERIC_VALUE:
+    /* Already a concrete compile-time value, return as-is */
     return type;
 
   default:
@@ -475,6 +549,35 @@ bool _check_generic_param_constraints(checker_t ctx, vec_t generic_params,
     if (!gp_node || gp_node->kind != CUBEC_NODE_GENERIC_PARAM) continue;
 
     cubec_generic_param_t gp = (cubec_generic_param_t)gp_node;
+
+    /* Value generic param: validate the value type */
+    if (gp->value_type) {
+      semantic_type_t resolved_vt = resolver_resolve_type(ctx, gp->value_type);
+      if (i < vec_get_size(type_args)) {
+        semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
+        if (ta && ta->impl->kind == TYPE_GENERIC_VALUE) {
+          comptime_value_t cv = ta->impl->generic_value.value;
+          if (cv && cv->type && resolved_vt) {
+            if (!semantic_type_can_implicit_convert(cv->type, resolved_vt)) {
+              diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                  "value generic argument type '%s' is not compatible with declared type '%s'",
+                  semantic_type_get_name(cv->type) ? semantic_type_get_name(cv->type) : "<anonymous>",
+                  semantic_type_get_name(resolved_vt) ? semantic_type_get_name(resolved_vt) : "<anonymous>");
+              ctx->error_count++;
+              all_ok = false;
+            }
+          }
+        } else if (ta && ta->impl->kind != TYPE_GENERIC_VALUE) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+              "expected a compile-time value for value generic parameter '%s'",
+              _checker_ident_str(gp->name));
+          ctx->error_count++;
+          all_ok = false;
+        }
+      }
+      continue; /* Skip extends constraint check for value params */
+    }
+
     if (!gp->constraint) continue;
 
     if (i >= vec_get_size(type_args)) continue;
@@ -504,7 +607,8 @@ bool _check_generic_param_constraints(checker_t ctx, vec_t generic_params,
   return all_ok;
 }
 
-vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs) {
+vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs,
+                                  vec_t generic_params) {
   if (!arg_exprs) return NULL;
   size_t acount = vec_get_size(arg_exprs);
   if (acount == 0) return NULL;
@@ -514,6 +618,81 @@ vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs) {
 
   for (size_t i = 0; i < acount; i++) {
     node_t arg = (node_t)vec_get(arg_exprs, i);
+
+    /* Check if this position corresponds to a value generic param */
+    bool is_value_param = false;
+    semantic_type_t value_type = NULL;
+    if (generic_params && i < vec_get_size(generic_params)) {
+      cubec_generic_param_t gp = (cubec_generic_param_t)vec_get(generic_params, i);
+      if (gp && gp->value_type) {
+        is_value_param = true;
+        value_type = resolver_resolve_type(ctx, gp->value_type);
+      }
+    }
+
+    if (is_value_param) {
+      /* Resolve as a compile-time constant value */
+      if (arg->kind == CUBEC_NODE_LITERAL_NUMERIC) {
+        cubec_literal_numeric_t num = (cubec_literal_numeric_t)arg;
+        uint64_t uval = strtoull(string_get(num->value), NULL, 10);
+        int64_t sval = (int64_t)uval;
+        /* Use the literal's own type (i32, u64, etc.), not the constraint type */
+        semantic_type_t lit_type = _check_literal_numeric(ctx, arg);
+        comptime_value_t cv = comptime_value_create_int(
+            ctx->allocator, sval, uval, 64, false, lit_type);
+        semantic_type_t gv = semantic_type_create_generic_value(ctx->allocator, cv);
+        type_hash_ensure(gv);
+        vec_push(ctx->all_types, gv);
+        vec_push(type_args, gv);
+        continue;
+      }
+      if (arg->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+        const char *name = _checker_ident_str(arg);
+        if (name && strcmp(name, "true") == 0) {
+          comptime_value_t cv = comptime_value_create_bool(
+              ctx->allocator, true, ctx->builtin_bool);
+          semantic_type_t gv = semantic_type_create_generic_value(ctx->allocator, cv);
+          type_hash_ensure(gv);
+          vec_push(ctx->all_types, gv);
+          vec_push(type_args, gv);
+          continue;
+        }
+        if (name && strcmp(name, "false") == 0) {
+          comptime_value_t cv = comptime_value_create_bool(
+              ctx->allocator, false, ctx->builtin_bool);
+          semantic_type_t gv = semantic_type_create_generic_value(ctx->allocator, cv);
+          type_hash_ensure(gv);
+          vec_push(ctx->all_types, gv);
+          vec_push(type_args, gv);
+          continue;
+        }
+      }
+      /* General comptime eval — supports arbitrary compile-time expressions */
+      {
+        extern comptime_value_t _comptime_eval_expr(comptime_eval_t, struct checker *, node_t);
+        comptime_eval_t eval = comptime_eval_create(ctx->allocator);
+        comptime_value_t cv = _comptime_eval_expr(eval, ctx, arg);
+        if (cv && cv->kind != COMPTIME_VALUE_ERROR) {
+          semantic_type_t gv = semantic_type_create_generic_value(ctx->allocator, cv);
+          type_hash_ensure(gv);
+          vec_push(ctx->all_types, gv);
+          vec_push(type_args, gv);
+          comptime_eval_dispose(eval);
+          allocator_free(ctx->allocator, &eval);
+          continue;
+        }
+        comptime_eval_dispose(eval);
+        allocator_free(ctx->allocator, &eval);
+      }
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           ((node_t)vec_get(arg_exprs, i))->location,
+                           "value generic argument must be a compile-time constant");
+      ctx->error_count++;
+      allocator_free(ctx->allocator, &type_args);
+      return NULL;
+    }
+
+    /* Existing type resolution path */
     semantic_type_t t = resolver_resolve_type(ctx, arg);
     if (t->impl->kind == TYPE_ERROR) {
       /* Forward-declared to allow late resolution */
@@ -559,6 +738,82 @@ static void _instantiate_struct_fields(checker_t ctx, semantic_type_t inst,
   type_layout_compute(inst, 8);
 }
 
+/* ===== Tuple subscript methods ===== */
+
+static void _add_tuple_subscript_methods(checker_t ctx, semantic_type_t inst) {
+  if (!inst->instance_methods) {
+    vec_init_t vi = {.auto_dispose = true};
+    inst->instance_methods = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+  }
+
+  /* __get__ method: func(self, index: u64) -> element_type
+     Return type is the first field's type (all positions use same element type
+     for the generic __get__; actual dispatch is by index at comptime) */
+  /* For Tuple, each position can have a different type. The __get__ method
+     returns a union of all possible types... but that's complex. Instead,
+     we use a more pragmatic approach: __get__ returns the type of _0 field,
+     and we rely on the checker's subscript logic to handle per-index types.
+     Actually, for compile-time evaluation, the __get__/__set__ methods handle
+     the actual value access by index. For type-checking, we return the first
+     field type since we can't represent "one of several types" easily.
+
+     A better approach: since Tuple is always used with comptime-known indices,
+     the checker's _check_expr_subscript can directly look up the field at the
+     given index. Let's use a simpler approach where __get__ returns the type
+     of the element at the index known at compile time.
+
+     For now: __get__ and __set__ are registered but the actual per-index type
+     is resolved at the subscript check site (in _check_expr_subscript or
+     _check_generic_ident_callee) by looking at the field at the constant index. */
+
+  /* Determine a representative return type (use first field type, or void if no fields) */
+  semantic_type_t ret_type = ctx->builtin_void;
+  if (inst->impl->generic_instance.fields) {
+    size_t fcount = vec_get_size(inst->impl->generic_instance.fields);
+    if (fcount > 0) {
+      struct symbol *f0 = (struct symbol *)vec_get(inst->impl->generic_instance.fields, 0);
+      if (f0 && f0->field.type) ret_type = f0->field.type;
+    }
+  }
+
+  /* __get__(self, index: u64): element_type */
+  {
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+    vec_push(params, inst);        /* self */
+    vec_push(params, ctx->builtin_u64);  /* index */
+    semantic_type_t get_type = semantic_type_create_function(
+        ctx->allocator, ret_type, params, false);
+    type_hash_ensure(get_type);
+    vec_push(ctx->all_types, get_type);
+
+    struct symbol *get_sym = symbol_create(ctx->allocator, "__get__",
+                                           SYMBOL_FUNCTION, (location_t){0});
+    get_sym->function.type = get_type;
+    get_sym->is_builtin = true;
+    vec_push(inst->instance_methods, get_sym);
+  }
+
+  /* __set__(self, index: u64, value: element_type): void */
+  {
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+    vec_push(params, inst);        /* self */
+    vec_push(params, ctx->builtin_u64);  /* index */
+    vec_push(params, ret_type);    /* value */
+    semantic_type_t set_type = semantic_type_create_function(
+        ctx->allocator, ctx->builtin_void, params, false);
+    type_hash_ensure(set_type);
+    vec_push(ctx->all_types, set_type);
+
+    struct symbol *set_sym = symbol_create(ctx->allocator, "__set__",
+                                           SYMBOL_FUNCTION, (location_t){0});
+    set_sym->function.type = set_type;
+    set_sym->is_builtin = true;
+    vec_push(inst->instance_methods, set_sym);
+  }
+}
+
 semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
                                    vec_t type_args, node_t instantiation_expr) {
   const char *name = template_type->name;
@@ -579,14 +834,68 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
 
   /* Copy structural info from template based on kind */
   enum type_kind tkind = template_type->impl->kind;
-  if (tkind == TYPE_STRUCT || tkind == TYPE_UNION || tkind == TYPE_CUNION)
+
+  /* Special handling for builtin Tuple: fields are derived from type_args */
+  builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
+  if (be && be->dispatch == BUILTIN_DISPATCH_TUPLE && tkind == TYPE_STRUCT) {
+    /* Create anonymous fields _0, _1, ... from type_args.
+       type_args contains a single TYPE_GENERIC_PACK with expanded_types. */
+    vec_init_t vi = {.auto_dispose = true};
+    inst->impl->generic_instance.fields =
+        (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+
+    size_t tacount = type_args ? vec_get_size(type_args) : 0;
+    /* Extract field types from the pack in type_args */
+    vec_t field_types = NULL;
+    for (size_t i = 0; i < tacount; i++) {
+      semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
+      if (ta && ta->impl && ta->impl->kind == TYPE_GENERIC_PACK) {
+        field_types = ta->impl->generic_pack.expanded_types;
+        break;
+      }
+    }
+    if (field_types) {
+      size_t fcount = vec_get_size(field_types);
+      for (size_t i = 0; i < fcount; i++) {
+        semantic_type_t ft = (semantic_type_t)vec_get(field_types, i);
+        /* Anonymous field name: _0, _1, _2, ... */
+        char fname[16];
+        snprintf(fname, sizeof(fname), "_%zu", i);
+        struct symbol *fsym = symbol_create(ctx->allocator, fname,
+                                            SYMBOL_FIELD, instantiation_expr
+                                            ? instantiation_expr->location
+                                            : (location_t){0});
+        fsym->field.type = ft;
+        fsym->field.index = i;
+        fsym->field.is_pub = true;
+        vec_push(inst->impl->generic_instance.fields, fsym);
+      }
+    }
+    type_layout_compute(inst, 8);
+
+    /* Add __get__ and __set__ methods for [] subscript */
+    _add_tuple_subscript_methods(ctx, inst);
+  } else if (tkind == TYPE_STRUCT || tkind == TYPE_UNION || tkind == TYPE_CUNION) {
     _instantiate_struct_fields(ctx, inst, template_type->impl->struct_type.fields, type_args);
+  }
 
   /* Copy method lists from template (free the init-created vecs first) */
   allocator_free(ctx->allocator, &inst->instance_methods);
   allocator_free(ctx->allocator, &inst->static_methods);
-  inst->instance_methods = _copy_symbol_vec(ctx, template_type->instance_methods);
+  inst->instance_methods = _copy_symbol_vec(ctx,template_type->instance_methods);
   inst->static_methods = _copy_symbol_vec(ctx, template_type->static_methods);
+
+  /* For Tuple, add subscript methods to instance_methods as well */
+  if (be && be->dispatch == BUILTIN_DISPATCH_TUPLE && inst->instance_methods) {
+    size_t mc = vec_get_size(inst->instance_methods);
+    for (size_t i = 0; i < mc; i++) {
+      struct symbol *m = (struct symbol *)vec_get(inst->instance_methods, i);
+      if (m && m->name && (strcmp(m->name, "__get__") == 0 || strcmp(m->name, "__set__") == 0)) {
+        /* Already added by _add_tuple_subscript_methods via the inst directly */
+        break;
+      }
+    }
+  }
 
   /* Cache the result */
   _cache_insert(ctx, name, type_args, inst);

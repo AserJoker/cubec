@@ -76,6 +76,13 @@ void type_layout_compute(semantic_type_t type, size_t ptr_size) {
     break;
 
   case TYPE_ARRAY: {
+    if (impl->array.length_param_idx != (size_t)-1) {
+      /* Symbolic length — cannot compute layout yet */
+      impl->size = 0;
+      impl->alignment = 0;
+      type->is_incomplete = true;
+      break;
+    }
     _layout_compute_impl(impl->array.element, ptr_size);
     size_t elem_size = semantic_type_get_size(impl->array.element);
     size_t elem_align = semantic_type_get_alignment(impl->array.element);
@@ -244,6 +251,8 @@ void type_layout_compute(semantic_type_t type, size_t ptr_size) {
 
   case TYPE_GENERIC_PARAM:
   case TYPE_GENERIC_PACK:
+  case TYPE_GENERIC_VALUE:
+  case TYPE_PACK_INDEX:
   case TYPE_WILDCARD:
     /* These are compile-time only types, no runtime representation */
     impl->size = 0;
