@@ -551,11 +551,6 @@ static void _evaluate_function(checker_t ctx,
                              node->super.location,
                              "unknown builtin '%s'", name);
         ctx->error_count++;
-      } else if (be->kind != BUILTIN_FUNC) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                             node->super.location,
-                             "builtin '%s' is not a function", name);
-        ctx->error_count++;
       } else {
         /* Use the builtin table's canonical type — the AST-resolved type
            may not exactly match due to generic pack/index reconstruction,
@@ -607,11 +602,6 @@ static void _evaluate_function(checker_t ctx,
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                            node->super.location,
                            "unknown builtin '%s'", name);
-      ctx->error_count++;
-    } else if (be->kind != BUILTIN_FUNC) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                           node->super.location,
-                           "builtin '%s' is not a function", name);
       ctx->error_count++;
     } else if (!semantic_type_equals(ftype, be->type)) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
@@ -712,18 +702,15 @@ static void _evaluate_variable(checker_t ctx,
   sym->variable.is_mutable = !semantic_type_is_const(var_type);
   sym->state = SYMBOL_EVALUATED;
 
-  /* Validate builtin variable against registry */
+  /* Validate builtin variable against registry.
+     Since builtin table only contains functions, a builtin var declaration
+     will fail with "unknown builtin" if the name doesn't match. */
   if (node->is_builtin) {
     builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
     if (!be) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                            node->super.location,
                            "unknown builtin '%s'", name);
-      ctx->error_count++;
-    } else if (be->kind != BUILTIN_VAR) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                           node->super.location,
-                           "builtin '%s' is not a variable", name);
       ctx->error_count++;
     } else if (var_type->impl->kind != TYPE_ERROR &&
                !semantic_type_equals(var_type, be->type)) {
@@ -768,7 +755,8 @@ static void _evaluate_type_alias(checker_t ctx,
     sym->type.type = resolved;
   } else if (node->is_builtin) {
     builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
-    if (be && be->kind == BUILTIN_TYPE) {
+    if (be && !be->eval_call) {
+      /* Non-function builtin = type builtin (e.g., Tuple) */
       sym->type.type = be->type;
     }
   } else {
@@ -795,7 +783,7 @@ static void _evaluate_type_alias(checker_t ctx,
                            node->super.location,
                            "unknown builtin '%s'", name);
       ctx->error_count++;
-    } else if (be->kind != BUILTIN_TYPE) {
+    } else if (be->eval_call) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                            node->super.location,
                            "builtin '%s' is not a type", name);

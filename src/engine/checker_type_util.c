@@ -355,7 +355,7 @@ static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
         }
       }
     }
-    return type; /* Return as-is — caller resolves via BUILTIN_DISPATCH_GET if needed */
+    return type; /* Return as-is — caller resolves via eval_call if needed */
   }
 
   case TYPE_GENERIC_VALUE:
@@ -770,9 +770,10 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   /* Copy structural info from template based on kind */
   enum type_kind tkind = template_type->impl->kind;
 
-  /* Special handling for builtin Tuple: fields are derived from type_args */
+  /* Special handling for builtin Tuple type: fields are derived from type_args.
+     Tuple is registered as a builtin type with eval_call == NULL and TYPE_STRUCT. */
   builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
-  if (be && be->dispatch == BUILTIN_DISPATCH_TUPLE && tkind == TYPE_STRUCT) {
+  if (be && !be->eval_call && tkind == TYPE_STRUCT) {
     /* Create anonymous fields _0, _1, ... from type_args.
        type_args contains a single TYPE_GENERIC_PACK with expanded_types. */
     vec_init_t vi = {.auto_dispose = true};

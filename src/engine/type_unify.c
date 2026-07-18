@@ -191,7 +191,9 @@ static bool _type_unify(semantic_type_t actual, semantic_type_t expected,
         semantic_type_t ea = (semantic_type_t)vec_get(expected->impl->generic_instance.type_args, i);
         if (!_type_unify(aa, ea, bindings, allocator)) return false;
       }
-      /* Collect remaining actual args into the pack */
+      /* Collect remaining actual args into the pack.
+         If an actual arg is itself a TYPE_GENERIC_PACK, expand its
+         expanded_types into the result pack to avoid nested packs. */
       semantic_type_t pack_type = (semantic_type_t)vec_get(
           expected->impl->generic_instance.type_args, pack_idx);
       const char *pack_name = pack_type->impl->generic_pack.name;
@@ -199,7 +201,15 @@ static bool _type_unify(semantic_type_t actual, semantic_type_t expected,
           allocator, pack_name, pack_type->impl->generic_pack.index);
       for (size_t i = pack_idx; i < acount; i++) {
         semantic_type_t aa = (semantic_type_t)vec_get(actual->impl->generic_instance.type_args, i);
-        vec_push(pack_result->impl->generic_pack.expanded_types, aa);
+        if (aa && aa->impl->kind == TYPE_GENERIC_PACK) {
+          vec_t expanded = aa->impl->generic_pack.expanded_types;
+          size_t ecount = expanded ? vec_get_size(expanded) : 0;
+          for (size_t j = 0; j < ecount; j++)
+            vec_push(pack_result->impl->generic_pack.expanded_types,
+                     (semantic_type_t)vec_get(expanded, j));
+        } else {
+          vec_push(pack_result->impl->generic_pack.expanded_types, aa);
+        }
       }
       type_hash_ensure(pack_result);
       /* Record binding */

@@ -267,6 +267,60 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
         /* Resolve explicit type args from the generic_instantiation AST node */
         explicit_type_args = _resolve_generic_type_args(ctx, gi->arguments,
             sym->function.generic_params);
+        /* Coalesce excess type args into packs for generic functions with rest params.
+           E.g. for getTupleItem[N, ...Args], getTupleItem[0, i32, f64] should produce
+           explicit_type_args = [TYPE_GENERIC_VALUE(0), PACK([i32, f64])],
+           not [TYPE_GENERIC_VALUE(0), i32, f64]. */
+        if (explicit_type_args) {
+          vec_t gp = sym->function.generic_params;
+          size_t gcount = gp ? vec_get_size(gp) : 0;
+          size_t tacount = vec_get_size(explicit_type_args);
+          /* Find the pack parameter position */
+          size_t pack_idx = gcount;
+          for (size_t i = 0; i < gcount; i++) {
+            cubec_generic_param_t gp_node = (cubec_generic_param_t)(void *)vec_get(gp, i);
+            if (gp_node && gp_node->is_rest) {
+              pack_idx = i;
+              break;
+            }
+          }
+          if (pack_idx < gcount && tacount > pack_idx) {
+            /* If all args from pack_idx onward form exactly one TYPE_GENERIC_PACK,
+               use it directly instead of re-wrapping. */
+            if (pack_idx + 1 == tacount) {
+              semantic_type_t only_arg = (semantic_type_t)vec_get(explicit_type_args, pack_idx);
+              if (only_arg && only_arg->impl->kind == TYPE_GENERIC_PACK) {
+                /* Already a pack — no coalescing needed */
+              } else {
+                /* Single non-pack arg at pack position or multiple args — coalesce */
+                goto do_coalesce_func;
+              }
+            } else {
+            do_coalesce_func:;
+              vec_init_t cvi = {.auto_dispose = false};
+              vec_t new_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &cvi);
+              for (size_t i = 0; i < pack_idx; i++)
+                vec_push(new_type_args, vec_get(explicit_type_args, i));
+              const char *pack_name = NULL;
+              cubec_generic_param_t pack_gp = (cubec_generic_param_t)(void *)vec_get(gp, pack_idx);
+              if (pack_gp) {
+                const char *raw = _checker_ident_str(pack_gp->name);
+                if (raw) pack_name = raw;
+              }
+              semantic_type_t pack_type = semantic_type_create_generic_pack(
+                  ctx->allocator, pack_name, pack_idx);
+              for (size_t i = pack_idx; i < tacount; i++) {
+                semantic_type_t ta = (semantic_type_t)vec_get(explicit_type_args, i);
+                vec_push(pack_type->impl->generic_pack.expanded_types, ta);
+              }
+              type_hash_ensure(pack_type);
+              vec_push(ctx->all_types, pack_type);
+              vec_push(new_type_args, pack_type);
+              allocator_free(ctx->allocator, &explicit_type_args);
+              explicit_type_args = new_type_args;
+            }
+          }
+        }
       }
     }
   }
@@ -342,150 +396,12 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
       _check_generic_param_constraints(ctx, generic_func_sym->function.generic_params,
           type_args, expr);
 
-      /* Resolve return type for builtin get/set BEFORE _instantiate_function
-         because _instantiate_function takes ownership of type_args and frees it. */
-      if (generic_func_sym->is_builtin) {
-        builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, generic_func_sym->name);
-        if (be && be->dispatch == BUILTIN_DISPATCH_LENGTH) {
-          semantic_type_t arg_type = (semantic_type_t)vec_get(arg_types, 0);
-          bool valid = false;
-          if (arg_type) {
-            if (arg_type->impl->kind == TYPE_ARRAY) valid = true;
-            if (arg_type->impl->kind == TYPE_GENERIC_INSTANCE &&
-                arg_type->impl->generic_instance.fields) valid = true;
-          }
-          if (!valid) {
-            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                                 expr->location,
-                                 "length() requires an array or tuple argument");
-            ctx->error_count++;
-          }
-        }
-
-        /* Resolve return type for builtin get: get[N, ...Args](tuple): Args[N] */
-        if (be && be->dispatch == BUILTIN_DISPATCH_GET) {
-          /* Get the tuple type from the first call argument */
-          if (arg_count >= 1) {
-            semantic_type_t tuple_type = (semantic_type_t)vec_get(arg_types, 0);
-            if (tuple_type && tuple_type->impl->kind == TYPE_GENERIC_INSTANCE &&
-                tuple_type->impl->generic_instance.fields) {
-              /* Get the index N from type_args[0] (TYPE_GENERIC_VALUE) */
-              size_t ta_count = type_args ? vec_get_size(type_args) : 0;
-              if (ta_count >= 1) {
-                semantic_type_t n_type = (semantic_type_t)vec_get(type_args, 0);
-                if (n_type && n_type->impl->kind == TYPE_GENERIC_VALUE) {
-                  uint64_t idx = comptime_value_as_u64(n_type->impl->generic_value.value);
-                  vec_t fields = tuple_type->impl->generic_instance.fields;
-                  size_t fcount = vec_get_size(fields);
-                  if (idx < fcount) {
-                    struct symbol *f = (struct symbol *)vec_get(fields, (size_t)idx);
-                    if (f && f->field.type) {
-                      /* Override the callee_type's return type */
-                      vec_init_t vi = {.auto_dispose = false};
-                      vec_t new_params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-                      vec_push(new_params, tuple_type);
-                      semantic_type_t new_func = semantic_type_create_function(
-                          ctx->allocator, f->field.type, new_params, false);
-                      type_hash_ensure(new_func);
-                      vec_push(ctx->all_types, new_func);
-                      callee_type = new_func;
-                    }
-                  } else {
-                    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                                         expr->location,
-                                         "tuple index %llu out of range (tuple has %zu fields)",
-                                         (unsigned long long)idx, fcount);
-                    ctx->error_count++;
-                  }
-                }
-              }
-            } else {
-              diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                                   expr->location,
-                                   "getTupleItem() requires a tuple argument");
-              ctx->error_count++;
-            }
-          }
-        }
-
-        /* Resolve return type for builtin set: set[N, ...Args](tuple, value): void
-           The value parameter type Args[N] must match the N-th field type.
-           Construct a concrete function type for callee_type. */
-        if (be && be->dispatch == BUILTIN_DISPATCH_SET) {
-          if (arg_count >= 1) {
-            semantic_type_t tuple_type = (semantic_type_t)vec_get(arg_types, 0);
-            if (tuple_type && tuple_type->impl->kind == TYPE_GENERIC_INSTANCE &&
-                tuple_type->impl->generic_instance.fields) {
-              size_t ta_count = type_args ? vec_get_size(type_args) : 0;
-              if (ta_count >= 1) {
-                semantic_type_t n_type = (semantic_type_t)vec_get(type_args, 0);
-                if (n_type && n_type->impl->kind == TYPE_GENERIC_VALUE) {
-                  uint64_t idx = comptime_value_as_u64(n_type->impl->generic_value.value);
-                  vec_t fields = tuple_type->impl->generic_instance.fields;
-                  size_t fcount = vec_get_size(fields);
-                  if (idx < fcount) {
-                    struct symbol *f = (struct symbol *)vec_get(fields, (size_t)idx);
-                    if (f && f->field.type) {
-                      /* Verify the value argument matches the field type */
-                      if (arg_count >= 2) {
-                        semantic_type_t val_type = (semantic_type_t)vec_get(arg_types, 1);
-                        if (val_type && !semantic_type_can_implicit_convert(val_type, f->field.type)) {
-                          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                                               expr->location,
-                                               "set[%llu]: cannot convert '%s' to '%s'",
-                                               (unsigned long long)idx,
-                                               val_type->name ? val_type->name : "<anonymous>",
-                                               f->field.type->name ? f->field.type->name : "<anonymous>");
-                          ctx->error_count++;
-                        }
-                      }
-                      /* Construct concrete callee_type: (tuple, field_type) → void */
-                      vec_init_t svi = {.auto_dispose = false};
-                      vec_t new_params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &svi);
-                      vec_push(new_params, tuple_type);
-                      vec_push(new_params, f->field.type);
-                      semantic_type_t new_func = semantic_type_create_function(
-                          ctx->allocator, ctx->builtin_void, new_params, false);
-                      type_hash_ensure(new_func);
-                      vec_push(ctx->all_types, new_func);
-                      callee_type = new_func;
-                    }
-                  } else {
-                    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                                         expr->location,
-                                         "tuple index %llu out of range (tuple has %zu fields)",
-                                         (unsigned long long)idx, fcount);
-                    ctx->error_count++;
-                  }
-                }
-              }
-            } else {
-              diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                                   expr->location,
-                                   "setTupleItem() requires a tuple argument");
-              ctx->error_count++;
-            }
-          }
-        }
-      }
-
-      /* Now instantiate the function (takes ownership of type_args).
-         For builtin get/set, callee_type was already correctly constructed
-         above with the right param/return types. We still need to call
-         _instantiate_function for caching, but don't override callee_type
-         since the builtin-specific logic is more precise than generic
-         substitution (which may mishandle PACK parameters). */
+      /* Instantiate the function (takes ownership of type_args).
+         Normal substitution handles pack indexing (Args[N]) correctly. */
       semantic_type_t inst_type = _instantiate_function(ctx, generic_func_sym,
           type_args, expr);
       if (inst_type->impl->kind != TYPE_ERROR) {
-        /* For non-builtin functions or builtins without special dispatch,
-           use the instantiated type. For get/set builtins, keep the
-           callee_type we already built above. */
-        builtin_entry_t be2 = builtin_table_lookup(ctx->builtin_table, generic_func_sym->name);
-        if (!(be2 && (be2->dispatch == BUILTIN_DISPATCH_GET ||
-                      be2->dispatch == BUILTIN_DISPATCH_SET))) {
-          callee_type = inst_type;
-        }
+        callee_type = inst_type;
       }
     }
 

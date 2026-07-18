@@ -67,8 +67,7 @@ TEST_F(dt_builtin, table_lookup_assert) {
   checker_t ctx = checker_create(allocator);
   builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, "assert");
   ASSERT_NE(be, nullptr);
-  EXPECT_EQ(be->kind, BUILTIN_FUNC);
-  EXPECT_EQ(be->dispatch, BUILTIN_DISPATCH_ASSERT);
+  EXPECT_NE(be->eval_call, nullptr);
   checker_dispose(ctx);
 }
 
@@ -110,7 +109,7 @@ TEST_F(dt_builtin, builtin_signature_mismatch) {
 }
 
 TEST_F(dt_builtin, builtin_kind_mismatch) {
-  /* 'assert' is a builtin func, not a builtin var */
+  /* 'assert' is a builtin func, declaring as var should error */
   const char *src = "builtin var assert: bool;\n";
   auto r = compile_source(allocator, src);
   EXPECT_GT(checker_get_error_count(r.ctx), 0);
@@ -154,8 +153,7 @@ TEST_F(dt_builtin, table_lookup_tuple) {
   checker_t ctx = checker_create(allocator);
   builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, "Tuple");
   ASSERT_NE(be, nullptr);
-  EXPECT_EQ(be->kind, BUILTIN_TYPE);
-  EXPECT_EQ(be->dispatch, BUILTIN_DISPATCH_TUPLE);
+  EXPECT_EQ(be->eval_call, nullptr);
   checker_dispose(ctx);
 }
 
@@ -275,8 +273,7 @@ TEST_F(dt_builtin, table_lookup_length) {
   checker_t ctx = checker_create(allocator);
   builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, "length");
   ASSERT_NE(be, nullptr);
-  EXPECT_EQ(be->kind, BUILTIN_FUNC);
-  EXPECT_EQ(be->dispatch, BUILTIN_DISPATCH_LENGTH);
+  EXPECT_NE(be->eval_call, nullptr);
   checker_dispose(ctx);
 }
 

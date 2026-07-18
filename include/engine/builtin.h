@@ -9,39 +9,29 @@
 extern "C" {
 #endif
 
-/* forward declaration */
+/* forward declarations */
 struct checker;
+struct comptime_eval;
+struct comptime_value;
+struct builtin_entry;
+typedef struct _node_t *node_t;
 
 /**
- * @brief Dispatch identifiers for builtin entities.
- *        Used by comptime eval and codegen to route builtin calls.
+ * @brief Comptime evaluation callback for builtin functions.
+ *        Called when a builtin function is invoked at comptime.
+ *        Return the evaluated result, or COMPTIME_VALUE_ERROR on failure.
  */
-enum builtin_dispatch {
-  BUILTIN_DISPATCH_NONE = 0,
-  BUILTIN_DISPATCH_ASSERT,
-  BUILTIN_DISPATCH_LENGTH,
-  BUILTIN_DISPATCH_TUPLE,
-  BUILTIN_DISPATCH_GET,
-  BUILTIN_DISPATCH_SET,
-};
-
-/**
- * @brief Kind of builtin entity.
- */
-enum builtin_kind {
-  BUILTIN_FUNC,
-  BUILTIN_VAR,
-  BUILTIN_TYPE,
-};
+typedef struct comptime_value *(*builtin_eval_call_fn)(
+    struct comptime_eval *eval, struct checker *ctx, node_t node,
+    struct builtin_entry *be);
 
 /**
  * @brief A single entry in the builtin registry.
  */
 struct builtin_entry {
   const char *name;               /**< Builtin name (e.g., "assert") */
-  enum builtin_kind kind;         /**< Function, variable, or type */
-  semantic_type_t type;           /**< Template type (may contain TYPE_GENERIC_PARAM) */
-  enum builtin_dispatch dispatch; /**< Dispatch ID for comptime/codegen */
+  semantic_type_t type;           /**< Function type declaration */
+  builtin_eval_call_fn eval_call; /**< Comptime eval callback (NULL for types) */
 };
 
 typedef struct builtin_entry *builtin_entry_t;
@@ -71,8 +61,7 @@ void builtin_table_dispose(builtin_table_t table, allocator_t allocator);
  * @brief Register a builtin entry. Name is NOT copied — must outlive the table.
  */
 void builtin_table_register(builtin_table_t table, const char *name,
-                            enum builtin_kind kind, semantic_type_t type,
-                            enum builtin_dispatch dispatch);
+                            semantic_type_t type, builtin_eval_call_fn eval_call);
 
 /* ===== query ===== */
 
