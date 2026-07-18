@@ -110,7 +110,11 @@ node_t read_declaration_array(allocator_t allocator, vec_t tokens,
   /* Expect ']' after the size expression */
   token_t close_bracket = TRY_LOCAL(onerror, vec_get(tokens, current));
   if (!token_is(close_bracket, CUBEC_TOKEN_SYMBOL, "]")) {
-    THROW_LOCAL(onerror, "expected ']' after array size expression");
+    /* Not an array declaration — restore position and return NULL.
+       This allows the caller to try other parsers (e.g. [0; 64] is not valid). */
+    allocator_free(allocator, &size);
+    *position = current;
+    return NULL;
   }
   current++;
 

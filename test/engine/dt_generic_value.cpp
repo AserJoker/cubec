@@ -33,6 +33,7 @@ static struct compile_result compile_source(allocator_t allocator,
                          (location_t){0}, "%s", g_error->message);
     ctx->error_count++;
     error_clear();
+    return (struct compile_result){ctx, prog, tokens};
   }
 
   checker_check_program(ctx, prog);
@@ -157,6 +158,69 @@ TEST_F(dt_generic_value, same_value_cached) {
     "test \"cached\" {\n"
     "  foo[5]();\n"
     "  foo[5]();\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== Value generic param: comptime expression ===== */
+
+TEST_F(dt_generic_value, value_param_comptime_expr) {
+  const char *src = BUILTIN_ASSERT
+    "func foo[N: u64](): void {}\n"
+    "test \"comptime_expr\" {\n"
+    "  foo[2 + 3]();\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== Value generic param: struct init list ===== */
+
+TEST_F(dt_generic_value, value_param_struct_init_list_simple) {
+  /* Simple struct init with dot-prefix type */
+  const char *src = BUILTIN_ASSERT
+    "struct Pair[A, B] { first: A; second: B; }\n"
+    "test \"struct_init_simple\" {\n"
+    "  var x = .Pair[i32, i64]{ .first = 1, .second = 2 };\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_value, value_param_struct_init_list) {
+  /* Buffer[64, i32] with a single-element field init (not array repeat) */
+  const char *src = BUILTIN_ASSERT
+    "struct Buffer[N: u64, T] { data: [N]T; }\n"
+    "test \"struct_init\" {\n"
+    "  var x: Buffer[64, i32];\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_value, value_param_struct_init_with_field) {
+  /* Struct init with dot-prefix and non-array field */
+  const char *src = BUILTIN_ASSERT
+    "struct Wrapper[N: u64] { size: u64; }\n"
+    "test \"struct_init_field\" {\n"
+    "  var x = .Wrapper[64]{ .size = 64 };\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_value, value_param_struct_init_array_field) {
+  /* Struct with array field using value param — type annotation only */
+  const char *src = BUILTIN_ASSERT
+    "struct Buffer[N: u64, T] { data: [N]T; }\n"
+    "test \"struct_init_arr\" {\n"
+    "  var x: Buffer[3, i32] = .{ .data = .{ 1, 2, 3 } };\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);

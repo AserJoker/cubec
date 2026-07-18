@@ -671,14 +671,26 @@ vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs,
       {
         extern comptime_value_t _comptime_eval_expr(comptime_eval_t, struct checker *, node_t);
         comptime_eval_t eval = comptime_eval_create(ctx->allocator);
+        if (!eval) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               arg->location,
+                               "failed to create comptime evaluator");
+          ctx->error_count++;
+          allocator_free(ctx->allocator, &type_args);
+          return NULL;
+        }
         comptime_value_t cv = _comptime_eval_expr(eval, ctx, arg);
         if (cv && cv->kind != COMPTIME_VALUE_ERROR) {
-          semantic_type_t gv = semantic_type_create_generic_value(ctx->allocator, cv);
+          /* Clone value into checker's allocator before disposing eval,
+             because comptime_eval_dispose frees all values allocated
+             through eval's comptime_allocator. */
+          comptime_value_t cloned = comptime_value_clone(ctx->allocator, cv);
+          comptime_eval_dispose(eval);
+          allocator_free(ctx->allocator, &eval);
+          semantic_type_t gv = semantic_type_create_generic_value(ctx->allocator, cloned);
           type_hash_ensure(gv);
           vec_push(ctx->all_types, gv);
           vec_push(type_args, gv);
-          comptime_eval_dispose(eval);
-          allocator_free(ctx->allocator, &eval);
           continue;
         }
         comptime_eval_dispose(eval);
