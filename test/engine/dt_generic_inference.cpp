@@ -123,7 +123,7 @@ TEST_F(dt_generic_inference, infer_slice_param) {
   const char *src = BUILTIN_ASSERT
     "func first[T](s: []T): T { return s[0]; }\n"
     "test \"t\" {\n"
-    "  var arr: [3]i32;\n"
+    "  var arr: [3]i32 = undefined;\n"
     "  first(arr[:]);\n"
     "}\n";
   auto r = compile_source(allocator, src);
@@ -179,7 +179,7 @@ TEST_F(dt_generic_inference, constraint_generic_instance) {
     "struct Container[T] { data: T; }\n"
     "func process[T extends Container[?]](c: T): void {}\n"
     "test \"t\" {\n"
-    "  var c: Container[i32];\n"
+    "  var c: Container[i32] = undefined;\n"
     "  process(c);\n"
     "}\n";
   auto r = compile_source(allocator, src);
@@ -205,7 +205,7 @@ TEST_F(dt_generic_inference, constraint_wildcard_skips) {
     "struct Pair[A, B] { first: A; second: B; }\n"
     "func test_pair[T extends Pair[?, ?]](p: T): void {}\n"
     "test \"t\" {\n"
-    "  var p: Pair[i32, f64];\n"
+    "  var p: Pair[i32, f64] = undefined;\n"
     "  test_pair(p);\n"
     "}\n";
   auto r = compile_source(allocator, src);

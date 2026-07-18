@@ -101,7 +101,7 @@ TEST_F(dt_generic_value, value_param_struct_type_annotation) {
   const char *src =
     "struct Buffer[N: u64, T] { data: [N]T; }\n"
     "test \"struct_type\" {\n"
-    "  var x: Buffer[64, i32];\n"
+    "  var x: Buffer[64, i32] = undefined;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);
@@ -196,7 +196,7 @@ TEST_F(dt_generic_value, value_param_struct_init_list) {
   const char *src = BUILTIN_ASSERT
     "struct Buffer[N: u64, T] { data: [N]T; }\n"
     "test \"struct_init\" {\n"
-    "  var x: Buffer[64, i32];\n"
+    "  var x: Buffer[64, i32] = undefined;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);
@@ -296,7 +296,7 @@ TEST_F(dt_generic_value, value_param_struct_with_value_in_field) {
   const char *src = BUILTIN_ASSERT
     "struct Buffer[N: u64, T] { data: [N]T; }\n"
     "test \"field_type\" {\n"
-    "  var x: Buffer[5, i32];\n"
+    "  var x: Buffer[5, i32] = undefined;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);

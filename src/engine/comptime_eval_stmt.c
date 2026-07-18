@@ -26,6 +26,7 @@
 #include "cubec/statement_do_while.h"
 #include "cubec/statement_foreach.h"
 #include "cubec/switch_match.h"
+#include "cubec/literal_undefined.h"
 #include <string.h>
 
 /* --- defer execution --- */
@@ -413,6 +414,10 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     cubec_declaration_variable_t dv = (cubec_declaration_variable_t)sd->declarator;
     const char *name = _eval_ident_str(dv->identifier);
     if (!name) return _eval_signal_none();
+    /* undefined initializer: skip comptime binding — variable stays in TDZ */
+    if (dv->expression && dv->expression->kind == CUBEC_NODE_LITERAL_UNDEFINED) {
+      return _eval_signal_none();
+    }
     comptime_value_t val = dv->expression
                                ? _comptime_eval_expr(eval, ctx, dv->expression)
                                : NULL;

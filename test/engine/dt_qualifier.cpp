@@ -59,7 +59,7 @@ protected:
 TEST_F(dt_qualifier, const_pointer) {
   const char *src = BUILTIN_ASSERT
     "test \"const_ptr\" {\n"
-    "  var p: *const i32;\n"
+    "  var p: *const i32 = undefined;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);
@@ -69,7 +69,7 @@ TEST_F(dt_qualifier, const_pointer) {
 TEST_F(dt_qualifier, const_volatile_pointer) {
   const char *src = BUILTIN_ASSERT
     "test \"const_volatile_ptr\" {\n"
-    "  var p: *const volatile i32;\n"
+    "  var p: *const volatile i32 = undefined;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);
@@ -79,7 +79,7 @@ TEST_F(dt_qualifier, const_volatile_pointer) {
 TEST_F(dt_qualifier, const_slice) {
   const char *src = BUILTIN_ASSERT
     "test \"const_slice\" {\n"
-    "  var s: []const i32;\n"
+    "  var s: []const i32 = undefined;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);

@@ -249,19 +249,47 @@ static void _check_stmt_declaration(checker_t ctx, node_t stmt) {
   const char *vname = _checker_ident_str(vdecl->identifier);
   if (!vname) return;
 
-  semantic_type_t var_type = NULL;
-  if (vdecl->type)
-    var_type = resolver_resolve_type(ctx, vdecl->type);
-  if (!var_type && vdecl->expression) {
-    var_type = _check_expression(ctx, vdecl->expression);
-  }
+  /* Check if this is an undefined initializer */
+  bool is_undefined_init = vdecl->expression &&
+      vdecl->expression->kind == CUBEC_NODE_LITERAL_UNDEFINED;
 
-  if (!var_type) {
+  /* Non-extern/non-builtin declarations require an initializer */
+  if (!sdecl->is_extern && !sdecl->is_builtin && !vdecl->expression) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                          stmt->location,
-                         "cannot infer type for variable '%s'", vname);
+                         "variable '%s' requires an initializer", vname);
     ctx->error_count++;
-    var_type = ctx->error_type;
+  }
+
+  semantic_type_t var_type = NULL;
+
+  if (is_undefined_init) {
+    /* undefined initializer: type must come from annotation, variable is TDZ */
+    if (vdecl->type) {
+      var_type = resolver_resolve_type(ctx, vdecl->type);
+    }
+    if (!var_type) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           stmt->location,
+                           "cannot infer type for variable '%s' with undefined initializer",
+                           vname);
+      ctx->error_count++;
+      var_type = ctx->error_type;
+    }
+  } else {
+    /* Normal initializer or no initializer (extern/builtin) */
+    if (vdecl->type)
+      var_type = resolver_resolve_type(ctx, vdecl->type);
+    if (!var_type && vdecl->expression) {
+      var_type = _check_expression(ctx, vdecl->expression);
+    }
+    if (!var_type) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           stmt->location,
+                           "cannot infer type for variable '%s'", vname);
+      ctx->error_count++;
+      var_type = ctx->error_type;
+    }
   }
 
   struct symbol *vsym = symbol_create(ctx->allocator, vname,
@@ -269,7 +297,8 @@ static void _check_stmt_declaration(checker_t ctx, node_t stmt) {
   vsym->variable.type = var_type;
   vsym->variable.is_comptime = sdecl->is_comptime;
   vsym->variable.is_mutable = !semantic_type_is_const(var_type);
-  vsym->state = SYMBOL_EVALUATED;
+  /* undefined initializer → TDZ; otherwise → EVALUATED */
+  vsym->state = is_undefined_init ? SYMBOL_TDZ : SYMBOL_EVALUATED;
   scope_push_symbol(ctx->current_scope, vsym);
 }
 

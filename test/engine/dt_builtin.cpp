@@ -172,7 +172,7 @@ TEST_F(dt_builtin, tuple_instantiation_two_fields) {
   const char *src = BUILTIN_ASSERT
     "builtin type Tuple[...Args];\n"
     "test \"tuple_inst\" {\n"
-    "  var t: Tuple[i32, f64];\n"
+    "  var t: Tuple[i32, f64] = undefined;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(checker_get_error_count(r.ctx), 0);
@@ -271,7 +271,7 @@ TEST_F(dt_builtin, length_array) {
   const char *src = BUILTIN_ASSERT
     "builtin func length[T](list: T): u64;\n"
     "test \"length_array\" {\n"
-    "  var arr: [5]i32;\n"
+    "  var arr: [5]i32 = undefined;\n"
     "  assert(length(arr) == 5);\n"
     "}\n";
   auto r = compile_source(allocator, src);

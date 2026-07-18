@@ -69,6 +69,16 @@ static semantic_type_t _check_expr_literal_identifier(checker_t ctx, node_t expr
   }
 }
 
+static semantic_type_t _check_expr_literal_undefined(checker_t ctx, node_t expr) {
+  /* undefined is only valid as a variable initializer (handled in
+   * _check_stmt_declaration).  Using it as a standalone expression
+   * is an error — it has no type of its own. */
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                       "'undefined' is not valid as a standalone expression");
+  ctx->error_count++;
+  return ctx->error_type;
+}
+
 static semantic_type_t _check_expr_prefix_unary(checker_t ctx, node_t expr) {
   cubec_expression_binary_t bin = (cubec_expression_binary_t)expr;
   const char *op = string_get(bin->opt);
@@ -895,6 +905,7 @@ semantic_type_t _check_expression(checker_t ctx, node_t expr) {
   case CUBEC_NODE_LITERAL_STRING:        return ctx->builtin_string;
   case CUBEC_NODE_LITERAL_CHAR:          return ctx->builtin_char;
   case CUBEC_NODE_LITERAL_IDENTIFIER:    return _check_expr_literal_identifier(ctx, expr);
+  case CUBEC_NODE_LITERAL_UNDEFINED:    return _check_expr_literal_undefined(ctx, expr);
   case CUBEC_NODE_EXPRESSION_BINARY:     return _check_expr_binary(ctx, expr);
   case CUBEC_NODE_EXPRESSION_ASSIGNMENT: return _check_expr_assignment(ctx, expr);
   case CUBEC_NODE_EXPRESSION_CALL:       return _check_expr_call(ctx, expr);

@@ -1359,6 +1359,11 @@ comptime_value_t _comptime_eval_expr(comptime_eval_t eval, checker_t ctx,
     return _eval_addr(eval, ctx, expr);
   case CUBEC_NODE_EXPRESSION_SLICE:
     return _eval_slice(eval, ctx, expr);
+  case CUBEC_NODE_LITERAL_UNDEFINED:
+    /* undefined is not directly evaluable — it only makes sense as an
+     * initializer in a declaration (handled in comptime_eval_stmt).
+     * Returning error here prevents comptime evaluation of the bare literal. */
+    return _eval_error_val(eval);
   case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION:
     return _eval_generic_inst(eval, ctx, expr);
   case CUBEC_NODE_EXPRESSION_TYPE_STRUCT:

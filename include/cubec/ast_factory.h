@@ -20,6 +20,7 @@ node_t cubec_ast_create_numeric(allocator_t alloc, location_t loc,
 node_t cubec_ast_create_string(allocator_t alloc, location_t loc,
                                const char *value);
 node_t cubec_ast_create_char(allocator_t alloc, location_t loc, char value);
+node_t cubec_ast_create_undefined(allocator_t alloc, location_t loc);
 
 /* ===== Expressions ===== */
 

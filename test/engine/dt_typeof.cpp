@@ -59,7 +59,7 @@ protected:
 TEST_F(dt_typeof, typeof_literal) {
   const char *src = BUILTIN_ASSERT
     "test \"typeof_lit\" {\n"
-    "  var x: typeof(42);\n"
+    "  var x: typeof(42) = undefined;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);

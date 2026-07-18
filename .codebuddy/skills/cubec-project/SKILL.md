@@ -75,7 +75,8 @@ cubec/
 │       ├── literal_identifier.h# Identifier literal
 │       ├── literal_numeric.h   # Numeric literal (with type suffixes)
 │       ├── literal_string.h    # String literal
-│       ├── node.h              # AST node kind enum (70 node kinds)
+│       ├── literal_undefined.h # Undefined literal (TDZ initializer)
+│       ├── node.h              # AST node kind enum (71 node kinds)
 │       ├── program.h           # Top-level program node
 │       ├── generic_param.h      # Generic parameter node (T, T extends U, N: u64, ...T)
 │       ├── statement_block.h   # Block statement node ({ <statements> })
@@ -174,7 +175,8 @@ node_t (core/node.h)
               ├── cubec_literal_char_t
               ├── cubec_literal_identifier_t
               ├── cubec_literal_numeric_t
-              └── cubec_literal_string_t
+              ├── cubec_literal_string_t
+              └── cubec_literal_undefined_t
   └── cubec_function_argument_t (cubec/function_argument.h)  # func param (identifier [: type])
   └── cubec_function_capture_t (cubec/function_capture.h)  # func capture (identifier)
   └── cubec_statement_block_t
@@ -218,7 +220,8 @@ node_t (core/node.h)
               ├── cubec_literal_char_t
               ├── cubec_literal_identifier_t
               ├── cubec_literal_numeric_t
-              └── cubec_literal_string_t
+              ├── cubec_literal_string_t
+              └── cubec_literal_undefined_t
   └── cubec_function_argument_t (cubec/function_argument.h)  # func param (identifier [: type])
   └── cubec_function_capture_t (cubec/function_capture.h)  # func capture (identifier)
   └── cubec_statement_empty_t
@@ -362,6 +365,7 @@ read_program_node()   ──────────────────► 
               │     │           │   ├─ read_declaration_array()         [expr] [const] [volatile] <type>
               │     │           │   ├─ read_literal_string()      "..."
               │     │           │   ├─ read_literal_numeric()     42, 0xFF, 3.14e5
+              │     │           │   ├─ read_literal_undefined()   undefined
               │     │           │   ├─ read_literal_identifier()  foo
               │     │           │   └─ read_literal_char()        'a'
               │     │           │
@@ -407,6 +411,7 @@ read_atom
   ├── read_declaration_array          # [ <expr> ] <type>
   ├── read_literal_string
   ├── read_literal_numeric
+  ├── read_literal_undefined
   ├── read_literal_identifier
   └── read_literal_char
 
@@ -450,6 +455,7 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_expression_spread` (expression_spread.c) — Parses spread operator `...<expr>`. Returns `cubec_expression_spread_t` wrapping the spread value. **Standalone function** — NOT called from `read_atom`/`read_value`/`read_expression`. Designed to be explicitly invoked by callers that support spread syntax (e.g., function arguments, struct initializers). Uses `read_expression` for the value so `...a + b` spreads the entire binary expression `a + b`.
 - `read_expression_ternary` (expression_ternary.c) — Parses ternary/conditional expression `condition ? consequent : alternate`. Uses precedence climbing via `read_expression_binary` for the condition. Falls back gracefully if `?` is not found (returns condition as-is). Recursively calls `read_expression` for consequent and alternate to handle nested ternaries naturally. Full lifecycle: init/dispose/clone/move. Node fields: `condition`, `consequent`, `alternate`.
 - `read_literal_char` — Character literal AST node
+- `read_literal_undefined` — Undefined literal AST node (`undefined`), used as TDZ initializer in var declarations
 - `read_literal_identifier` — Identifier AST node
 - `read_literal_numeric` — Numeric AST node, auto-detects int/float, supports type suffixes (`i8`-`i64`, `u8`-`u64`, `f16`-`f64`)
 - `read_literal_string` — String AST node, supports auto-concatenation of adjacent strings
@@ -491,7 +497,7 @@ Two-layer representation: `semantic_type_t` wraps AST type nodes with semantic i
 
 ### Symbol Table (scope_t)
 
-Chain-of-responsibility scope model. `scope_lookup` returns `SYMBOL_NAME_KNOWN` for imported values (cannot be used at compile time). TDZ (temporal dead zone) multi-pass checking. Symbols have `is_builtin` flag set when builtin declaration passes validation against the builtin table.
+Chain-of-responsibility scope model. `scope_lookup` returns `SYMBOL_NAME_KNOWN` for imported values (cannot be used at compile time). TDZ (temporal dead zone) multi-pass checking. Symbols have `is_builtin` flag set when builtin declaration passes validation against the builtin table. `undefined` literal: `CUBEC_NODE_LITERAL_UNDEFINED` is a valid initializer for `var` declarations with explicit type annotation; the variable enters `SYMBOL_TDZ` state. Non-extern/non-builtin `var` declarations require an initializer (`var x: i32;` is an error). Using `undefined` as a standalone expression is an error.
 
 ### Builtin Registry (builtin_table_t)
 
@@ -627,6 +633,7 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 - `dt_generic_inference.cpp` (19 cases) — generic type inference from call arguments: single i32/f64 inference, two-param inference, same-param consistency, pointer/slice param inference, mismatch error, unresolved param error, constraint interface pass/fail, constraint structural pass/fail, constraint generic instance, constraint pointer, constraint wildcard skips, infer with constraint pass/fail
 
 ### Engine Tests
+- `dt_undefined.cpp` (9 cases) — undefined literal: typed undefined init, no-type error, standalone expr error, var-no-init error, extern-no-init ok, builtin-no-init ok, TDZ use before assign, assign-then-use, pointer type undefined
 - `dt_builtin.cpp` (9 cases) — builtin registry: table create/dispose, assert lookup, unknown lookup, correct declaration, unknown builtin error, signature mismatch error, kind mismatch error, e2e assert execution, non-builtin not marked
 - `dt_comptime_value.cpp` (23 cases) — value creation/disposal for all 12 kinds, truthiness, equals, clone deep copy, numeric conversions (as_i64/as_u64/as_f64)
 - `dt_comptime_alloc.cpp` (10 cases) — virtual memory lifecycle, allocate+read, write overwrite, read/write null/unknown addr, free makes addr invalid, scope enter/leave frees allocations, nested scopes, free null addr noop

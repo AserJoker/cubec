@@ -953,7 +953,8 @@ TEST_F(dt_checker, pass3_local_var) {
   vec_t body_stmts = cubec_ast_create_vec(allocator, true);
   vec_push(body_stmts, cubec_ast_create_var_decl_stmt(allocator, T, "x",
                    cubec_ast_create_identifier(allocator, T, "i32"),
-                   NULL, false, false, false, false));
+                   cubec_ast_create_numeric(allocator, T, "42", CUBEC_LITERAL_NUMERIC_KIND_INTEGER, CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
+                   false, false, false, false));
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
   vec_push(stmts, cubec_ast_create_func_stmt(allocator, T, "f",

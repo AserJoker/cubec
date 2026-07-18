@@ -31,6 +31,7 @@
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
+#include "cubec/literal_undefined.h"
 #include "cubec/expression_wildcard.h"
 #include <inttypes.h>
 
@@ -212,6 +213,13 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
   // Try numeric literal
   result = read_literal_numeric(allocator, tokens, &current, filename);
   if (g_error) { error_clear(); result = NULL; }
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try undefined literal
+  result = read_literal_undefined(allocator, tokens, &current, filename);
   if (result) {
     *position = current;
     return result;
