@@ -1,5 +1,6 @@
 #include "engine/comptime_eval_internal.h"
 #include "engine/comptime_eval_binary.h"
+#include "engine/checker_check_expr.h"
 #include "engine/resolver.h"
 #include "engine/symbol.h"
 #include "engine/type_layout.h"
@@ -904,28 +905,37 @@ static comptime_value_t _eval_group(comptime_eval_t eval, checker_t ctx,
 static comptime_value_t _eval_typeof(comptime_eval_t eval, checker_t ctx,
                                       node_t node) {
   cubec_expression_typeof_t to = (cubec_expression_typeof_t)node;
-  /* typeof can wrap both value expressions (typeof(42)) and type expressions
-   * (typeof(i32)). Try eval first — if the inner expression produces a
-   * comptime value, extract its type field. Otherwise fall back to
-   * resolver_resolve_type for pure type expressions. */
-  comptime_value_t inner = _comptime_eval_expr(eval, ctx, to->expression);
-  if (inner && inner->kind != COMPTIME_VALUE_ERROR) {
-    if (inner->kind == COMPTIME_VALUE_TYPE)
-      return _eval_temp(eval, comptime_value_create_type(eval->allocator, inner->type_val));
-    if (inner->type)
-      return _eval_temp(eval, comptime_value_create_type(eval->allocator, inner->type));
-  }
-  /* Fallback: pure type expression (e.g. typeof(*i32)) */
+  /* typeof should NOT evaluate its inner expression — only compute its type.
+   * Try resolver_resolve_type first for pure type expressions (typeof(i32)),
+   * then fall back to _check_expression for value expressions (typeof(42)). */
+  size_t err_before = ctx->error_count;
   semantic_type_t type = resolver_resolve_type(ctx, to->expression);
-  if (!type) return _eval_error_val(eval);
+  if (!type || type->impl->kind == TYPE_ERROR) {
+    if (ctx->error_count > err_before) ctx->error_count = err_before;
+    type = _check_expression(ctx, to->expression);
+  }
+  if (!type || type->impl->kind == TYPE_ERROR) return _eval_error_val(eval);
   return _eval_temp(eval, comptime_value_create_type(eval->allocator, type));
 }
 
 static comptime_value_t _eval_sizeof(comptime_eval_t eval, checker_t ctx,
                                       node_t node) {
+  /* sizeof should NOT evaluate its inner expression — only compute its type.
+   * Try resolver_resolve_type first for type expressions (sizeof(i32)),
+   * then fall back to _check_expression for value expressions (sizeof(42)).
+   * If resolver_resolve_type fails, clear its diagnostic so it doesn't
+   * pollute the error list — the _check_expression fallback handles it. */
+  size_t err_before = ctx->error_count;
   semantic_type_t type = resolver_resolve_type(ctx,
       ((cubec_expression_sizeof_t)node)->expression);
-  if (!type) return _eval_error_val(eval);
+  if (!type || type->impl->kind == TYPE_ERROR) {
+    /* Discard the "invalid type expression" diagnostic from resolver */
+    if (ctx->error_count > err_before) ctx->error_count = err_before;
+    type = _check_expression(ctx,
+        ((cubec_expression_sizeof_t)node)->expression);
+  }
+  if (!type || type->impl->kind == TYPE_ERROR) return _eval_error_val(eval);
+  if (semantic_type_is_incomplete(type)) return _eval_error_val(eval);
   type_layout_compute(type, 8);
   return _eval_temp(eval, comptime_value_create_int(eval->allocator, (int64_t)type->impl->size,
                                                       type->impl->size, 64, false, ctx->builtin_u64));
@@ -933,9 +943,17 @@ static comptime_value_t _eval_sizeof(comptime_eval_t eval, checker_t ctx,
 
 static comptime_value_t _eval_alignof(comptime_eval_t eval, checker_t ctx,
                                        node_t node) {
+  /* alignof should NOT evaluate its inner expression — only compute its type. */
+  size_t err_before = ctx->error_count;
   semantic_type_t type = resolver_resolve_type(ctx,
       ((cubec_expression_alignof_t)node)->expression);
-  if (!type) return _eval_error_val(eval);
+  if (!type || type->impl->kind == TYPE_ERROR) {
+    if (ctx->error_count > err_before) ctx->error_count = err_before;
+    type = _check_expression(ctx,
+        ((cubec_expression_alignof_t)node)->expression);
+  }
+  if (!type || type->impl->kind == TYPE_ERROR) return _eval_error_val(eval);
+  if (semantic_type_is_incomplete(type)) return _eval_error_val(eval);
   type_layout_compute(type, 8);
   return _eval_temp(eval, comptime_value_create_int(eval->allocator, (int64_t)type->impl->alignment,
                                                       type->impl->alignment, 64, false, ctx->builtin_u64));

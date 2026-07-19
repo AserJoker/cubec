@@ -252,11 +252,6 @@ node_t read_statement_function(allocator_t allocator, vec_t tokens,
     THROW_LOCAL(onerror, "function declaration requires a name");
   }
 
-  /* 6. Validate: statement functions cannot have captures */
-  if (func->captures) {
-    THROW_LOCAL(onerror, "function declaration cannot have capture list");
-  }
-
   /* 7. Validate: C-style variadic only in extern functions */
   if (func->is_c_variadic && !is_extern) {
     THROW_LOCAL(onerror, "C-style variadic '...' is only allowed in extern functions");

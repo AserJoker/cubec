@@ -144,28 +144,7 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
     skip_whitespace(tokens, &current);
     token_t brace = TRY_LOCAL(onerror, vec_get(tokens, current));
     if (!token_is(brace, CUBEC_TOKEN_SYMBOL, "{")) {
-      /* .<type> but no '{': if type is a tuple (parsed from <>), treat as
-         empty initialized tuple. Otherwise, backtrack. */
-      if (type->kind == CUBEC_NODE_EXPRESSION_TYPE_TUPLE) {
-        /* .<> is an empty tuple literal — build node with empty items */
-        items = TRY_LOCAL(onerror,
-                          allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
-        cubec_expression_initialize_list_init_t init = {
-            .type = type,
-            .items = items,
-            .is_field = false,
-        };
-        node = TRY_LOCAL(onerror,
-                         allocator_create(allocator, &g_cubec_expression_initialize_list_type, &init));
-        /* Location from '.' to end of type */
-        location_t loc = dot_location;
-        loc.end = type->location.end;
-        loc.filename = filename;
-        node->super.super.location = loc;
-        *position = current;
-        return (node_t)node;
-      }
-      /* Not a tuple type without '{' — backtrack */
+      /* .<type> but no '{' — not an initialize_list, backtrack */
       allocator_free(allocator, &type);
       return NULL;
     }

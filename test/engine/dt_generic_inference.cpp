@@ -284,7 +284,7 @@ TEST_F(dt_generic_inference, constraint_tuple_wildcard_empty_tuple) {
   const char *src = BUILTIN_ASSERT
     "func process[T extends <?>](t: T): void {}\n"
     "test \"t\" {\n"
-    "  var e: <> = .<>;\n"
+    "  var e: <> = .<>{};\n"
     "  process(e);\n"
     "}\n";
   auto r = compile_source(allocator, src);

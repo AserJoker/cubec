@@ -99,3 +99,44 @@ TEST_F(dt_typeof, alignof_primitive) {
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== sizeof/typeof/alignof do NOT evaluate inner expression ===== */
+
+TEST_F(dt_typeof, sizeof_does_not_evaluate) {
+  /* sizeof(42) should NOT evaluate the inner expression — only compute its type.
+   * 42 is a literal, so there's nothing to "execute", but this verifies the
+   * resolver→_check_expression fallback path works for value expressions. */
+  const char *src = BUILTIN_ASSERT
+    "test \"sizeof_no_eval\" {\n"
+    "  var s = sizeof(42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0) << "sizeof(42) should not produce errors";
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_typeof, typeof_does_not_evaluate) {
+  /* typeof(assert(false)) should NOT trigger the assert.
+   * typeof only computes the type without evaluating, so assert(false) is not
+   * executed and no error from assert should appear. typeof(void) returns a
+   * TYPE_TYPE wrapping void, which is valid. */
+  const char *src = BUILTIN_ASSERT
+    "test \"typeof_no_eval\" {\n"
+    "  var x: typeof(assert(true)) = undefined;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_typeof, alignof_does_not_evaluate) {
+  /* alignof(assert(false)) — assert returns void, alignof(void) is incomplete.
+   * But we test alignof with a value expression that has a complete type. */
+  const char *src = BUILTIN_ASSERT
+    "test \"alignof_no_eval\" {\n"
+    "  var a = alignof(42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}

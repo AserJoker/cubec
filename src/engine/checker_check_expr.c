@@ -807,10 +807,16 @@ static semantic_type_t _check_expr_group(checker_t ctx, node_t expr) {
 
 static semantic_type_t _check_expr_sizeof(checker_t ctx, node_t expr) {
   cubec_expression_sizeof_t sz = (cubec_expression_sizeof_t)expr;
+  /* Try resolver_resolve_type for type expressions (sizeof(i32)),
+   * fall back to _check_expression for value expressions (sizeof(x)).
+   * Clear resolver error if it fails — _check_expression handles the fallback. */
+  size_t err_before = ctx->error_count;
   semantic_type_t t = resolver_resolve_type(ctx, sz->expression);
-  if (t->impl->kind == TYPE_ERROR)
+  if (!t || t->impl->kind == TYPE_ERROR) {
+    if (ctx->error_count > err_before) ctx->error_count = err_before;
     t = _check_expression(ctx, sz->expression);
-  if (t->impl->kind == TYPE_ERROR) return ctx->error_type;
+  }
+  if (!t || t->impl->kind == TYPE_ERROR) return ctx->error_type;
   if (semantic_type_is_incomplete(t)) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "sizeof of incomplete type");
@@ -823,10 +829,13 @@ static semantic_type_t _check_expr_sizeof(checker_t ctx, node_t expr) {
 
 static semantic_type_t _check_expr_alignof(checker_t ctx, node_t expr) {
   cubec_expression_alignof_t al = (cubec_expression_alignof_t)expr;
+  size_t err_before = ctx->error_count;
   semantic_type_t t = resolver_resolve_type(ctx, al->expression);
-  if (t->impl->kind == TYPE_ERROR)
+  if (!t || t->impl->kind == TYPE_ERROR) {
+    if (ctx->error_count > err_before) ctx->error_count = err_before;
     t = _check_expression(ctx, al->expression);
-  if (t->impl->kind == TYPE_ERROR) return ctx->error_type;
+  }
+  if (!t || t->impl->kind == TYPE_ERROR) return ctx->error_type;
   if (semantic_type_is_incomplete(t)) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "alignof of incomplete type");
