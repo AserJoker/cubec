@@ -116,6 +116,7 @@ static void _register_builtins(checker_t ctx) {
   ctx->builtin_char   = _register_builtin(ctx, "char",   TYPE_CHAR);
   ctx->builtin_string = _register_builtin(ctx, "string", TYPE_STRING);
   ctx->builtin_nil    = _register_builtin(ctx, "nil",    TYPE_NIL);
+  ctx->builtin_opaque  = _register_builtin(ctx, "opaque", TYPE_OPAQUE);
   ctx->error_type     = _register_builtin(ctx, "<error>", TYPE_ERROR);
 }
 

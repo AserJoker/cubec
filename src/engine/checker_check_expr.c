@@ -30,6 +30,7 @@
 #include "cubec/expression_slice.h"
 #include "cubec/expression_function.h"
 #include "cubec/expression_initialize_list.h"
+#include "cubec/expression_initialize_field.h"
 #include "cubec/generic_param.h"
 #include "cubec/expression_comma.h"
 #include "cubec/expression_spread.h"
@@ -858,6 +859,7 @@ static semantic_type_t _check_expr_initialize_list(checker_t ctx, node_t expr) {
       (cubec_expression_initialize_list_t)expr;
 
   if (il->type) {
+    /* Explicit type: .Type{...} */
     semantic_type_t t = resolver_resolve_type(ctx, il->type);
     if (t->impl->kind == TYPE_ERROR) return ctx->error_type;
 
@@ -877,16 +879,65 @@ static semantic_type_t _check_expr_initialize_list(checker_t ctx, node_t expr) {
     return t;
   }
 
-  if (il->items && vec_get_size(il->items) > 0 && !il->is_field) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                         "anonymous initializer list requires explicit type");
-    ctx->error_count++;
-  } else if (il->is_field) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                         "named initializer list requires explicit type");
-    ctx->error_count++;
+  /* Anonymous: infer type from content */
+  if (il->is_field && il->items && vec_get_size(il->items) > 0) {
+    /* Named fields → anonymous struct */
+    semantic_type_t anon = semantic_type_create_named(ctx->allocator, NULL,
+                                                       TYPE_STRUCT);
+    vec_init_t vi = {.auto_dispose = true};
+    anon->impl->struct_type.fields =
+        (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+
+    size_t icount = vec_get_size(il->items);
+    for (size_t i = 0; i < icount; i++) {
+      node_t item = (node_t)vec_get(il->items, i);
+      if (item->kind != CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD) continue;
+      cubec_expression_initialize_field_t f =
+          (cubec_expression_initialize_field_t)item;
+      const char *fname = _checker_ident_str((node_t)f->field);
+      semantic_type_t ftype = f->value
+          ? _check_expression(ctx, f->value)
+          : ctx->error_type;
+      struct symbol *fsym = symbol_create(ctx->allocator, fname, SYMBOL_FIELD,
+                                          item->location);
+      fsym->field.type = ftype;
+      fsym->field.index = i;
+      fsym->field.is_pub = true;
+      vec_push(anon->impl->struct_type.fields, fsym);
+    }
+    type_layout_compute(anon, 8);
+    type_hash_ensure(anon);
+    vec_push(ctx->all_types, anon);
+    return anon;
+  } else if (il->items && vec_get_size(il->items) > 0) {
+    /* Positional fields → tuple */
+    size_t icount = vec_get_size(il->items);
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t elem_types = (vec_t)allocator_create(ctx->allocator, &g_vec_type,
+                                                &vi);
+    for (size_t i = 0; i < icount; i++) {
+      node_t item = (node_t)vec_get(il->items, i);
+      semantic_type_t et = _check_expression(ctx, item);
+      vec_push(elem_types, et);
+    }
+    semantic_type_t tuple = semantic_type_create_tuple(ctx->allocator,
+                                                        elem_types);
+    type_layout_compute(tuple, 8);
+    type_hash_ensure(tuple);
+    vec_push(ctx->all_types, tuple);
+    return tuple;
+  } else {
+    /* Empty .{} → empty struct */
+    semantic_type_t empty = semantic_type_create_named(ctx->allocator, NULL,
+                                                        TYPE_STRUCT);
+    vec_init_t vi = {.auto_dispose = true};
+    empty->impl->struct_type.fields =
+        (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+    type_layout_compute(empty, 8);
+    type_hash_ensure(empty);
+    vec_push(ctx->all_types, empty);
+    return empty;
   }
-  return ctx->error_type;
 }
 
 static semantic_type_t _check_expr_comma(checker_t ctx, node_t expr) {

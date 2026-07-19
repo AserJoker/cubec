@@ -3,6 +3,7 @@
 #include "engine/resolver.h"
 #include "engine/symbol.h"
 #include "engine/type_layout.h"
+#include "engine/type_hash.h"
 #include "core/allocator.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -950,6 +951,62 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
                                          node_t node) {
   cubec_expression_initialize_list_t il = (cubec_expression_initialize_list_t)node;
   semantic_type_t type = il->type ? resolver_resolve_type(ctx, il->type) : NULL;
+
+  /* Anonymous initialize list: infer type from content */
+  if (!type) {
+    if (il->is_field && il->items && vec_get_size(il->items) > 0) {
+      /* Named fields → anonymous struct */
+      type = semantic_type_create_named(ctx->allocator, NULL, TYPE_STRUCT);
+      vec_init_t fvi = {.auto_dispose = true};
+      type->impl->struct_type.fields =
+          (vec_t)allocator_create(ctx->allocator, &g_vec_type, &fvi);
+      size_t ic = vec_get_size(il->items);
+      for (size_t i = 0; i < ic; i++) {
+        node_t item = (node_t)vec_get(il->items, i);
+        if (item->kind != CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD) continue;
+        cubec_expression_initialize_field_t f =
+            (cubec_expression_initialize_field_t)item;
+        const char *fname = _eval_ident_str((node_t)f->field);
+        semantic_type_t ftype = f->value
+            ? checker_check_expression(ctx, f->value)
+            : ctx->error_type;
+        struct symbol *fsym = symbol_create(ctx->allocator, fname, SYMBOL_FIELD,
+                                            item->location);
+        fsym->field.type = ftype;
+        fsym->field.index = i;
+        fsym->field.is_pub = true;
+        vec_push(type->impl->struct_type.fields, fsym);
+      }
+      type_layout_compute(type, 8);
+      type_hash_ensure(type);
+      vec_push(ctx->all_types, type);
+    } else if (il->items && vec_get_size(il->items) > 0) {
+      /* Positional → tuple */
+      size_t ic = vec_get_size(il->items);
+      vec_init_t evi = {.auto_dispose = false};
+      vec_t elem_types = (vec_t)allocator_create(ctx->allocator, &g_vec_type,
+                                                   &evi);
+      for (size_t i = 0; i < ic; i++) {
+        node_t item = (node_t)vec_get(il->items, i);
+        semantic_type_t et = checker_check_expression(ctx, item);
+        vec_push(elem_types, et);
+      }
+      type = semantic_type_create_tuple(ctx->allocator, elem_types);
+      type_layout_compute(type, 8);
+      type_hash_ensure(type);
+      vec_push(ctx->all_types, type);
+    } else {
+      /* Empty .{} → empty struct */
+      type = semantic_type_create_named(ctx->allocator, NULL, TYPE_STRUCT);
+      vec_init_t evi = {.auto_dispose = true};
+      type->impl->struct_type.fields =
+          (vec_t)allocator_create(ctx->allocator, &g_vec_type, &evi);
+      type_layout_compute(type, 8);
+      type_hash_ensure(type);
+      vec_push(ctx->all_types, type);
+    }
+  }
+
   if (!type) return _eval_error_val(eval);
 
   type_layout_compute(type, 8);

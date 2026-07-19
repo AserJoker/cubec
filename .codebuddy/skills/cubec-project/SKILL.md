@@ -493,9 +493,25 @@ Two-layer representation: `semantic_type_t` wraps AST type nodes with semantic i
 
 **const/volatile qualifier**: `TYPE_QUALIFIER` has `is_const` and `is_volatile` flags. `*const T` → `POINTER(QUALIFIER(const, T))` (pointer to const T, C: `const T*`). `const *T` → `QUALIFIER(const, POINTER(T))` (const pointer, C: `T* const`). Utility functions: `semantic_type_is_const()`, `semantic_type_is_volatile()`, `semantic_type_strip_qualifier()`. Const enforcement: assignment to const lvalue errors, member/deref const propagation, `is_mutable` set based on `!semantic_type_is_const()`. Implicit conversion allows `T → const T` but not `const T → T`. Comptime eval enforces const but ignores volatile.
 
-**Tuple type** (`TYPE_TUPLE`): Native type kind for tuples. Syntax: `<i32, f64>` (angle brackets in type context). `_type_impl.tuple` contains `element_types` (vec of semantic_type_t) and `fields` (pre-computed `_0`, `_1`, ... symbol vec). Structural equivalence: two tuples are equal iff element types are pairwise equal. Implicit conversion: allowed if each element can be implicitly converted. `T extends <?>` generic constraint means T must be `TYPE_TUPLE`. `<` disambiguation: in type context `<` starts a tuple; in expression context `<` is comparison.
+**Tuple type** (`TYPE_TUPLE`): Native type kind for tuples. Syntax: `<i32, f64>` (angle brackets in type context). `_type_impl.tuple` contains `element_types` (vec of semantic_type_t) and `fields` (pre-computed `_0`, `_1`, ... symbol vec). Structural equivalence: two tuples are equal iff element types are pairwise equal. Tuple→Array implicit conversion: allowed if each element can be implicitly converted to the array element type and lengths match. `T extends <?>` generic constraint means T must be `TYPE_TUPLE`. `<` disambiguation: in type context `<` starts a tuple; in expression context `<` is comparison. Tuple fields are NOT directly accessible via `._0`, `._1` — must use `getTupleItem[N](tuple)` builtin function.
 
 **Parameter pack type**: `TYPE_GENERIC_PACK` represents a variadic pack type, containing `expanded_types` (vec of semantic_type_t). Used when a generic parameter is declared with `...` prefix. Pack types expand to zero or more concrete types during instantiation. The comptime value layer uses `COMPTIME_VALUE_PACK` with an `elements` vec to represent pack values at compile time.
+
+**Opaque type** (`TYPE_OPAQUE`): A type-erased pointer-like type analogous to C's `void*`. Layout: `size = sizeof(void*)`, `alignment = alignof(void*)`. Any pointer or slice type can implicitly convert to opaque. Opaque cannot implicitly convert to any other type. Registered as `builtin_opaque` in the checker. Not directly constructible via literals; typically obtained from pointer-to-opaque conversion.
+
+**Anonymous initialize_list type inference**: Initialize lists without an explicit type (`.{...}`) are context-independent semantic units that infer their type from their contents:
+- Named fields `.{.x=1, .y=2}` → anonymous `struct { x: i32, y: i32 }`
+- Positional fields `.{1, 2.0}` → tuple `<i32, f64>`
+- Empty `.{}` → empty struct
+- Tuple→Array implicit conversion: if all tuple elements can implicitly convert to the target array element type, `<e1, e2, ...>` converts to `[N]T`
+- Struct-like→struct-like: anonymous struct can implicitly convert to named struct or generic instance if field names and types match pairwise
+
+**Implicit conversion rules** (`semantic_type_can_implicit_convert`):
+1. Same type → true
+2. Qualifier strip: `T → const T`, `T → volatile T`, `T → const volatile T` (recursive)
+3. Pointer/slice → opaque
+4. Tuple → array (element-wise implicit conversion)
+5. Struct-like → struct-like (field name + type matching, supports TYPE_STRUCT/UNION/CUNION/GENERIC_INSTANCE)
 
 **Generic type inference** (`type_unify.c`): `_infer_type_args_from_call` infers type arguments from call arguments using `_type_unify` (structural unification). Generic param names are passed as `const char*` strings (not symbol pointers, since generic params aren't in scope). `_type_unify` handles TYPE_GENERIC_INSTANCE elastic matching when expected type_args contain a PACK parameter. The `generic_params` vec in `_infer_type_args_from_call` must contain name strings directly, not symbol pointers from `scope_lookup` (which returns NULL for generic param names).
 
@@ -505,7 +521,7 @@ Chain-of-responsibility scope model. `scope_lookup` returns `SYMBOL_NAME_KNOWN` 
 
 ### Builtin Registry (builtin_table_t)
 
-Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (name + type + eval_call callback). No enum dispatch IDs — each builtin entry carries an `eval_call` function pointer for comptime evaluation. Initialized in `checker_init` via `builtin_table_init_defaults` which registers `assert`, `getTupleItem`, `setTupleItem`, `length`. Builtin declarations go through normal checker flow (type resolution, generic param handling) then are validated against the table: unknown builtin → error, signature mismatch → error, match → `sym->is_builtin = true`. Comptime eval uses `callee_sym->is_builtin` + `eval_call` callback instead of hardcoded name checks or switch/case dispatch.
+Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (name + type + eval_call callback). No enum dispatch IDs — each builtin entry carries an `eval_call` function pointer for comptime evaluation. Initialized in `checker_init` via `builtin_table_init_defaults` which registers `assert`, `getTupleItem`, `setTupleItem`, `length`. **Builtin function declarations must come from standard library source code** (using `builtin func` syntax), NOT auto-registered to `global_scope` by the compiler. This ensures proper module affiliation and version decoupling. Builtin declarations go through normal checker flow (type resolution, generic param handling) then are validated against the table: unknown builtin → error, signature mismatch → error, match → `sym->is_builtin = true`. Comptime eval uses `callee_sym->is_builtin` + `eval_call` callback instead of hardcoded name checks or switch/case dispatch.
 
 **Tuple** is a native type (`TYPE_TUPLE`), not a builtin. Syntax: `<i32, f64>` (angle brackets in type context). Fields are `_0`, `_1`, etc. See Type System section for details.
 
@@ -596,7 +612,7 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 1375 test cases
+- Total: 1382 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -646,7 +662,7 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 
 ### Engine Tests
 - `dt_undefined.cpp` (9 cases) — undefined literal: typed undefined init, no-type error, standalone expr error, var-no-init error, extern-no-init ok, builtin-no-init ok, TDZ use before assign, assign-then-use, pointer type undefined
-- `dt_builtin.cpp` (9 cases) — builtin registry: table create/dispose, assert lookup, unknown lookup, correct declaration, unknown builtin error, signature mismatch error, kind mismatch error, e2e assert execution, non-builtin not marked
+- `dt_builtin.cpp` (24 cases) — builtin registry: table create/dispose, assert/length/getTupleItem/setTupleItem lookup, unknown lookup, correct declaration, unknown builtin error, signature mismatch error, kind mismatch error, e2e assert/tuple execution, tuple subscript error, length declaration, non-builtin not marked
 - `dt_comptime_value.cpp` (23 cases) — value creation/disposal for all 12 kinds, truthiness, equals, clone deep copy, numeric conversions (as_i64/as_u64/as_f64)
 - `dt_comptime_alloc.cpp` (10 cases) — virtual memory lifecycle, allocate+read, write overwrite, read/write null/unknown addr, free makes addr invalid, scope enter/leave frees allocations, nested scopes, free null addr noop
 - `dt_comptime_eval.cpp` (38 cases) — evaluator: literal numeric/string/char/bool/nil, arithmetic ops, comparison ops, logical ops, bitwise ops, ternary, variable declaration+access, if/else, for loop, function call, break/continue, typeof/sizeof/alignof, group expression, comma expression, string/composite slice, do-while, foreach, composite field assignment

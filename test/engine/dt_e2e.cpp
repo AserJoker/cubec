@@ -572,3 +572,91 @@ TEST_F(dt_e2e, const_ptr_deref_read_ok) {
   EXPECT_EQ(r.ctx->test_fail_count, 0);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== anonymous initialize_list tests ===== */
+
+TEST_F(dt_e2e, anon_init_list_named_fields) {
+  /* .{.x=1, .y=2} infers anonymous struct */
+  const char *src = BUILTIN_ASSERT
+    "test \"anon_struct\" {\n"
+    "  var p = .{ .x = 1, .y = 2 };\n"
+    "  assert(p.x == 1);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 1);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, anon_init_list_positional_tuple) {
+  /* .{1, 2} infers tuple <i32, i32> — compile test only */
+  const char *src = BUILTIN_ASSERT
+    "test \"anon_tuple\" {\n"
+    "  var t = .{ 1, 2 };\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, anon_init_list_empty_struct) {
+  /* .{} infers empty struct */
+  const char *src = BUILTIN_ASSERT
+    "test \"empty_struct\" {\n"
+    "  var e = .{};\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, tuple_to_array_implicit) {
+  /* tuple <i32, i32> implicitly converts to [2]i32 */
+  const char *src = BUILTIN_ASSERT
+    "test \"tuple_to_array\" {\n"
+    "  var a: [2]i32 = .{ 1, 2 };\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, anon_struct_to_named_struct) {
+  /* anonymous struct implicitly converts to named struct with matching fields */
+  const char *src = BUILTIN_ASSERT
+    "struct Point { x: i32; y: i32; }\n"
+    "test \"anon_to_named\" {\n"
+    "  var p: Point = .{ .x = 1, .y = 2 };\n"
+    "  assert(p.x == 1);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 1);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== opaque type tests ===== */
+
+TEST_F(dt_e2e, opaque_from_pointer) {
+  /* any pointer implicitly converts to opaque */
+  const char *src = BUILTIN_ASSERT
+    "test \"opaque_from_ptr\" {\n"
+    "  var x: i32 = 10;\n"
+    "  var p: opaque = x.&;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, opaque_no_implicit_convert_out) {
+  /* opaque cannot implicitly convert to any type */
+  const char *src = BUILTIN_ASSERT
+    "test \"opaque_no_convert\" {\n"
+    "  var p: opaque = .{};\n"
+    "  var x: i32 = p;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}

@@ -68,6 +68,12 @@ void type_layout_compute(semantic_type_t type, size_t ptr_size) {
     type->is_incomplete = false;
     break;
 
+  case TYPE_OPAQUE:
+    impl->size = ptr_size;
+    impl->alignment = ptr_size;
+    type->is_incomplete = false;
+    break;
+
   case TYPE_SLICE:
     /* slice = { ptr, len } = 2 * ptr_size */
     impl->size = 2 * ptr_size;
@@ -118,6 +124,31 @@ void type_layout_compute(semantic_type_t type, size_t ptr_size) {
       offset = _align_up(offset, max_align);
     }
     /* Empty struct: minimum size 1 (like GCC/Clang) */
+    if (offset == 0) offset = 1;
+    impl->size = offset;
+    impl->alignment = max_align;
+    type->is_incomplete = false;
+    break;
+  }
+
+  case TYPE_TUPLE: {
+    size_t offset = 0;
+    size_t max_align = 1;
+    vec_t fields = impl->tuple.fields;
+    size_t count = fields ? vec_get_size(fields) : 0;
+    for (size_t i = 0; i < count; i++) {
+      struct symbol *field = (struct symbol *)vec_get(fields, i);
+      if (!field || !field->field.type) continue;
+      _layout_compute_impl(field->field.type, ptr_size);
+      size_t fsize = semantic_type_get_size(field->field.type);
+      size_t falign = semantic_type_get_alignment(field->field.type);
+      if (falign == 0) falign = 1;
+      offset = _align_up(offset, falign);
+      field->field.offset = offset;
+      offset += fsize;
+      if (falign > max_align) max_align = falign;
+    }
+    offset = _align_up(offset, max_align);
     if (offset == 0) offset = 1;
     impl->size = offset;
     impl->alignment = max_align;

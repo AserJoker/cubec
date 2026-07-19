@@ -281,9 +281,28 @@ static void _check_stmt_declaration(checker_t ctx, node_t stmt) {
     /* Normal initializer or no initializer (extern/builtin) */
     if (vdecl->type)
       var_type = resolver_resolve_type(ctx, vdecl->type);
-    if (!var_type && vdecl->expression) {
-      var_type = _check_expression(ctx, vdecl->expression);
+
+    if (vdecl->expression) {
+      semantic_type_t init_type = _check_expression(ctx, vdecl->expression);
+
+      if (var_type) {
+        /* Explicit type annotation: check that init is compatible */
+        if (init_type && init_type->impl->kind != TYPE_ERROR &&
+            var_type->impl->kind != TYPE_ERROR &&
+            !semantic_type_can_implicit_convert(init_type, var_type)) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               stmt->location,
+                               "cannot assign '%s' to '%s'",
+                               init_type->name ? init_type->name : "<anonymous>",
+                               var_type->name ? var_type->name : "<anonymous>");
+          ctx->error_count++;
+        }
+      } else {
+        /* No type annotation: infer from initializer */
+        var_type = init_type;
+      }
     }
+
     if (!var_type) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                            stmt->location,

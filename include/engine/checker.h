@@ -55,6 +55,7 @@ struct checker {
   semantic_type_t builtin_f16, builtin_f32, builtin_f64;
   semantic_type_t builtin_char, builtin_string;
   semantic_type_t builtin_nil;
+  semantic_type_t builtin_opaque;
 
   /* builtin registry */
   builtin_table_t builtin_table;

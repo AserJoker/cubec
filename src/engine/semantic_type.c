@@ -244,6 +244,9 @@ static bool _type_impl_equals(type_impl_t a, type_impl_t b) {
     return _type_vec_equals(a->tuple.element_types,
                             b->tuple.element_types);
 
+  case TYPE_OPAQUE:
+    return true;
+
   case TYPE_PACK_INDEX:
     if (a->pack_index.pack_param_idx != b->pack_index.pack_param_idx) return false;
     if (a->pack_index.index_param_idx != b->pack_index.index_param_idx) return false;
@@ -316,10 +319,10 @@ bool semantic_type_can_implicit_convert(semantic_type_t from,
   if (semantic_type_equals(from, to)) return true;
   if (!from || !to || !from->impl || !to->impl) return false;
 
-  /* Adding const is safe: T → const T */
-  if (semantic_type_is_const(to) && !semantic_type_is_const(from)) {
+  /* Adding qualifiers is safe: T → const T, T → volatile T, T → const volatile T */
+  if (to->impl->kind == TYPE_QUALIFIER) {
     semantic_type_t to_base = semantic_type_strip_qualifier(to);
-    if (semantic_type_equals(from, to_base)) return true;
+    if (semantic_type_can_implicit_convert(from, to_base)) return true;
   }
 
   /* Pointer qualifier conversion: *T → *const T (adding const to pointee is safe) */
@@ -373,6 +376,63 @@ bool semantic_type_can_implicit_convert(semantic_type_t from,
       if (!semantic_type_can_implicit_convert(fe, te)) return false;
     }
     return true;
+  }
+
+  /* tuple → array: if all elements can implicitly convert to the array element type */
+  if (from->impl->kind == TYPE_TUPLE && to->impl->kind == TYPE_ARRAY) {
+    vec_t from_elems = from->impl->tuple.element_types;
+    size_t fc = vec_get_size(from_elems);
+    if (fc != to->impl->array.length) return false;
+    semantic_type_t elem_type = to->impl->array.element;
+    for (size_t i = 0; i < fc; i++) {
+      semantic_type_t fe = (semantic_type_t)vec_get(from_elems, i);
+      if (!semantic_type_can_implicit_convert(fe, elem_type)) return false;
+    }
+    return true;
+  }
+
+  /* any pointer/slice → opaque */
+  {
+    semantic_type_t to_unq = semantic_type_strip_qualifier(to);
+    if (to_unq->impl->kind == TYPE_OPAQUE) {
+      semantic_type_t from_unq = semantic_type_strip_qualifier(from);
+      return from_unq->impl->kind == TYPE_POINTER ||
+             from_unq->impl->kind == TYPE_SLICE;
+    }
+  }
+
+  /* struct-like to struct-like: field-wise implicit conversion (anonymous → named/generic_instance) */
+  {
+    semantic_type_t from_unq = semantic_type_strip_qualifier(from);
+    semantic_type_t to_unq = semantic_type_strip_qualifier(to);
+    bool from_struct = from_unq->impl->kind == TYPE_STRUCT ||
+                       from_unq->impl->kind == TYPE_UNION ||
+                       from_unq->impl->kind == TYPE_CUNION;
+    bool to_struct = to_unq->impl->kind == TYPE_STRUCT ||
+                     to_unq->impl->kind == TYPE_UNION ||
+                     to_unq->impl->kind == TYPE_CUNION ||
+                     to_unq->impl->kind == TYPE_GENERIC_INSTANCE;
+    if (from_struct && to_struct) {
+      vec_t from_fields = from_unq->impl->kind == TYPE_GENERIC_INSTANCE
+          ? from_unq->impl->generic_instance.fields
+          : from_unq->impl->struct_type.fields;
+      vec_t to_fields = to_unq->impl->kind == TYPE_GENERIC_INSTANCE
+          ? to_unq->impl->generic_instance.fields
+          : to_unq->impl->struct_type.fields;
+      size_t fc = from_fields ? vec_get_size(from_fields) : 0;
+      size_t tc = to_fields ? vec_get_size(to_fields) : 0;
+      if (fc != tc) return false;
+      for (size_t i = 0; i < fc; i++) {
+        struct symbol *ff = (struct symbol *)vec_get(from_fields, i);
+        struct symbol *tf = (struct symbol *)vec_get(to_fields, i);
+        if (!ff || !tf) return false;
+        if (!ff->name || !tf->name || strcmp(ff->name, tf->name) != 0)
+          return false;
+        if (!semantic_type_can_implicit_convert(ff->field.type, tf->field.type))
+          return false;
+      }
+      return true;
+    }
   }
 
   /* decay */
@@ -567,6 +627,14 @@ semantic_type_t semantic_type_create_tuple(allocator_t allocator,
     fsym->field.is_pub = true;
     vec_push(t->impl->tuple.fields, fsym);
   }
+  t->is_incomplete = false;
+  return t;
+}
+
+semantic_type_t semantic_type_create_opaque(allocator_t allocator) {
+  semantic_type_t t = (semantic_type_t)allocator_create(
+      allocator, &g_semantic_type_type, NULL);
+  t->impl = _create_impl(allocator, TYPE_OPAQUE);
   t->is_incomplete = false;
   return t;
 }
