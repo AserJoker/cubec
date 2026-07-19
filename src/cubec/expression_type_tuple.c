@@ -126,7 +126,7 @@ node_t read_expression_type_tuple(allocator_t allocator, vec_t tokens,
     size_t after_q = current + 1;
     skip_whitespace(tokens, &after_q);
     if (_is_symbol(tokens, after_q, ">")) {
-      /* <?> — return a wildcard node (represents "any tuple type" constraint) */
+      /* <?> — return a wildcard node representing "any tuple type" constraint */
       current = after_q + 1;
       cubec_expression_wildcard_t wnode =
           (cubec_expression_wildcard_t)allocator_create(
@@ -134,6 +134,7 @@ node_t read_expression_type_tuple(allocator_t allocator, vec_t tokens,
       location_t loc = *token_get_location(vec_get(tokens, start));
       loc.filename = filename;
       wnode->super.super.location = loc;
+      wnode->is_tuple = true;
       *position = current;
       return (node_t)wnode;
     }

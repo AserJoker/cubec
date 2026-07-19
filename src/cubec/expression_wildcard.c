@@ -18,6 +18,7 @@ static void _cubec_expression_wildcard_init(cubec_expression_wildcard_t self,
       .parent = NULL,
   };
   g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  self->is_tuple = false;
 }
 
 static void _cubec_expression_wildcard_dispose(cubec_expression_wildcard_t self,
@@ -29,12 +30,14 @@ static void _cubec_expression_wildcard_clone(cubec_expression_wildcard_t self,
                                               allocator_t allocator,
                                               cubec_expression_wildcard_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->is_tuple = another->is_tuple;
 }
 
 static void _cubec_expression_wildcard_move(cubec_expression_wildcard_t self,
                                              allocator_t allocator,
                                              cubec_expression_wildcard_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->is_tuple = another->is_tuple;
 }
 
 type_t g_cubec_expression_wildcard_type = {
@@ -69,6 +72,7 @@ node_t read_expression_wildcard(allocator_t allocator, vec_t tokens,
   location_t loc = *token_get_location(tok);
   loc.filename = filename;
   node->super.super.location = loc;
+  node->is_tuple = false;
 
   *position = current;
   return (node_t)node;

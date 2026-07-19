@@ -404,6 +404,7 @@ static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
 bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
                        semantic_type_t constraint, node_t arg_expr) {
   if (!constraint) return true;
+  if (!type_arg || type_arg->impl->kind == TYPE_ERROR) return false;
 
   switch (constraint->impl->kind) {
   case TYPE_INTERFACE: {
@@ -595,6 +596,19 @@ bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
     return true;
   }
 
+  case TYPE_WILDCARD: {
+    /* <?> (is_tuple=true): type_arg must be a tuple type.
+       ? (is_tuple=false): matches any type. */
+    if (constraint->impl->wildcard.is_tuple) {
+      if (type_arg->impl->kind != TYPE_TUPLE) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: expected tuple type");
+        ctx->error_count++;
+        return false;
+      }
+    }
+    return true;
+  }
   default:
     /* Other constraint types: structural equality check */
     return true;

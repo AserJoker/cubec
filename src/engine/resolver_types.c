@@ -42,7 +42,7 @@ semantic_type_t _resolve_type_identifier(checker_t ctx, node_t node) {
 
   /* Wildcard type: ? in generic type args (e.g. Container[?]) */
   if (strcmp(name, "?") == 0) {
-    semantic_type_t wt = semantic_type_create_wildcard(ctx->allocator);
+    semantic_type_t wt = semantic_type_create_wildcard(ctx->allocator, false);
     vec_push(ctx->all_types, wt);
     return wt;
   }

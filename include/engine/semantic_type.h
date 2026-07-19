@@ -116,6 +116,10 @@ struct _type_impl {
     struct {
       struct comptime_value *value; /**< The compile-time constant value */
     } generic_value;
+    /* TYPE_WILDCARD: wildcard type for constraints */
+    struct {
+      bool is_tuple; /**< true = <?> (any tuple type), false = ? (any type) */
+    } wildcard;
   };
 };
 
@@ -201,7 +205,7 @@ semantic_type_t semantic_type_create_generic_value(allocator_t allocator,
 semantic_type_t semantic_type_create_tuple(allocator_t allocator,
                                            vec_t element_types);
 semantic_type_t semantic_type_create_opaque(allocator_t allocator);
-semantic_type_t semantic_type_create_wildcard(allocator_t allocator);
+semantic_type_t semantic_type_create_wildcard(allocator_t allocator, bool is_tuple);
 
 #ifdef __cplusplus
 }

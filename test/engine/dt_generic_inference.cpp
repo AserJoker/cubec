@@ -213,6 +213,85 @@ TEST_F(dt_generic_inference, constraint_wildcard_skips) {
   compile_result_cleanup(&r, allocator);
 }
 
+/* ===== Tuple Constraint <?> Tests ===== */
+
+TEST_F(dt_generic_inference, constraint_tuple_wildcard_pass) {
+  /* T extends <?> means T must be a tuple type — <i32, f64> satisfies */
+  const char *src = BUILTIN_ASSERT
+    "func first[T extends <?>](t: T): void {}\n"
+    "test \"t\" {\n"
+    "  var tup: <i32, f64> = .<i32, f64>{1, 2.0};\n"
+    "  first(tup);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_inference, constraint_tuple_wildcard_multi_elem) {
+  /* <?> accepts any tuple regardless of element count */
+  const char *src = BUILTIN_ASSERT
+    "func process[T extends <?>](t: T): void {}\n"
+    "test \"t\" {\n"
+    "  var t1: <i32, i32, i32> = .<i32, i32, i32>{1, 2, 3};\n"
+    "  process(t1);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_inference, constraint_tuple_wildcard_fail_int) {
+  /* T extends <?> should reject non-tuple types like i32 */
+  const char *src = BUILTIN_ASSERT
+    "func process[T extends <?>](t: T): void {}\n"
+    "test \"t\" {\n"
+    "  process(42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_inference, constraint_tuple_wildcard_fail_struct) {
+  /* T extends <?> should reject struct types */
+  const char *src = BUILTIN_ASSERT
+    "func process[T extends <?>](t: T): void {}\n"
+    "struct Point { x: i32; y: i32; }\n"
+    "test \"t\" {\n"
+    "  process(.Point { .x = 1, .y = 2 });\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_inference, constraint_tuple_wildcard_fail_pointer) {
+  /* T extends <?> should reject pointer types */
+  const char *src = BUILTIN_ASSERT
+    "func process[T extends <?>](t: T): void {}\n"
+    "test \"t\" {\n"
+    "  var x: i32 = 0;\n"
+    "  process(x.&);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_inference, constraint_tuple_wildcard_empty_tuple) {
+  /* <?> should also accept empty tuple <> */
+  const char *src = BUILTIN_ASSERT
+    "func process[T extends <?>](t: T): void {}\n"
+    "test \"t\" {\n"
+    "  var e: <> = .<>;\n"
+    "  process(e);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
 /* ===== Inference + Constraint Combination Tests ===== */
 
 TEST_F(dt_generic_inference, infer_with_constraint_pass) {

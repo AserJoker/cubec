@@ -175,6 +175,7 @@ static size_t _hash_type(semantic_type_t type) {
   }
 
   case TYPE_WILDCARD:
+    hash = _hash_combine(hash, (size_t)type->impl->wildcard.is_tuple);
     break;
   }
 

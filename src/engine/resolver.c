@@ -8,6 +8,7 @@
 #include "engine/type_hash.h"
 #include "cubec/node.h"
 #include "cubec/expression_generic_instantiation.h"
+#include "cubec/expression_wildcard.h"
 #include "cubec/expression_spread.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/generic_param.h"
@@ -67,7 +68,9 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
   }
 
   case CUBEC_NODE_EXPRESSION_WILDCARD: {
-    semantic_type_t wt = semantic_type_create_wildcard(ctx->allocator);
+    /* Wildcard: is_tuple=true means <?> (any tuple), false means standalone ? */
+    cubec_expression_wildcard_t wnode = (cubec_expression_wildcard_t)node;
+    semantic_type_t wt = semantic_type_create_wildcard(ctx->allocator, wnode->is_tuple);
     vec_push(ctx->all_types, wt);
     return wt;
   }

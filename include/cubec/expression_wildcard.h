@@ -6,18 +6,20 @@ extern "C" {
 #endif
 
 /**
- * @brief AST node for wildcard type expression `?`.
+ * @brief AST node for wildcard type expression `?` or `<?>`.
  *
  * Used in constraint types to skip partial checks:
  *   - []? — only check slice structure, ignore element type
  *   - *? — only check pointer structure, ignore pointee type
  *   - Vec[?] — only check Vec template, ignore type args
+ *   - <?> — T must be a tuple type (is_tuple = true)
  *
- * Syntax: `?` (single question mark in atom position)
+ * Syntax: `?` (single question mark in atom position) or `<?>` (tuple wildcard)
  */
 struct _cubec_expression_wildcard_t;
 struct _cubec_expression_wildcard_t {
   struct _cubec_expression_t super;
+  bool is_tuple; /**< true when parsed as <?>, false for standalone ? */
 };
 typedef struct _cubec_expression_wildcard_t *cubec_expression_wildcard_t;
 

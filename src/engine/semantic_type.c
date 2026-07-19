@@ -765,10 +765,11 @@ semantic_type_t semantic_type_create_opaque(allocator_t allocator) {
   return t;
 }
 
-semantic_type_t semantic_type_create_wildcard(allocator_t allocator) {
+semantic_type_t semantic_type_create_wildcard(allocator_t allocator, bool is_tuple) {
   semantic_type_t t = (semantic_type_t)allocator_create(
       allocator, &g_semantic_type_type, NULL);
   t->impl = _create_impl(allocator, TYPE_WILDCARD);
+  t->impl->wildcard.is_tuple = is_tuple;
   t->is_incomplete = false;
   return t;
 }

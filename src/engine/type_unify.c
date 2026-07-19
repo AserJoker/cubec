@@ -34,8 +34,12 @@ static bool _type_unify(semantic_type_t actual, semantic_type_t expected,
   /* If actual is an error, unification fails */
   if (actual->impl->kind == TYPE_ERROR) return false;
 
-  /* If expected is a wildcard, always matches */
-  if (expected->impl->kind == TYPE_WILDCARD) return true;
+  /* If expected is a wildcard, check is_tuple constraint */
+  if (expected->impl->kind == TYPE_WILDCARD) {
+    if (expected->impl->wildcard.is_tuple)
+      return actual->impl->kind == TYPE_TUPLE;
+    return true;
+  }
 
   /* Expected is a generic param → record binding */
   if (expected->impl->kind == TYPE_GENERIC_PARAM) {
