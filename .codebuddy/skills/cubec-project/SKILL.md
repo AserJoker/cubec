@@ -485,7 +485,7 @@ All statement and declaration types have parser implementations, including `comp
 
 ### Architecture
 
-9-file split: `checker.c` (lifecycle + pass orchestration), `checker_collect.c` (Pass 1: symbol collection), `checker_check_stmt.c` (Pass 2: type checking), `checker_check_expr.c` (Pass 2: expression type checking), `checker_check_expr_helpers.c` (expression helper functions), `checker_type_util.c` (type utilities: instantiation, substitution, unification), `type_unify.c` (generic type inference), `checker_evaluate.c` (Pass 2: comptime evaluation + type resolution), `builtin.c` (builtin registry: dynamic table, validation, dispatch), `comptime_eval.c` (evaluator lifecycle), `comptime_eval_expr.c` (expression evaluation), `comptime_eval_stmt.c` (statement execution), `comptime_alloc.c` (virtual memory). All functions ≤ 50 lines. Design doc: `docs/semantic-design.md`.
+11-file split: `checker.c` (lifecycle + pass orchestration), `checker_collect.c` (Pass 1: symbol collection), `checker_check_stmt.c` (Pass 2: type checking), `checker_check_expr.c` (Pass 2: expression type checking), `checker_check_expr_helpers.c` (expression helper functions), `checker_type_util.c` (type utilities: instantiation, substitution, unification), `type_unify.c` (generic type inference), `checker_evaluate.c` (Pass 2: comptime evaluation + type resolution), `builtin.c` (builtin registry mechanism only), `builtin_debug.c` (assert), `builtin_collection.c` (length), `builtin_tuple.c` (getTupleItem/setTupleItem), `comptime_eval.c` (evaluator lifecycle), `comptime_eval_expr.c` (expression evaluation), `comptime_eval_stmt.c` (statement execution), `comptime_alloc.c` (virtual memory). All functions ≤ 50 lines. Design doc: `docs/semantic-design.md`.
 
 ### Type System (semantic_type_t)
 
@@ -521,7 +521,13 @@ Chain-of-responsibility scope model. `scope_lookup` returns `SYMBOL_NAME_KNOWN` 
 
 ### Builtin Registry (builtin_table_t)
 
-Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (name + type + eval_call callback). No enum dispatch IDs — each builtin entry carries an `eval_call` function pointer for comptime evaluation. Initialized in `checker_init` via `builtin_table_init_defaults` which registers `assert`, `getTupleItem`, `setTupleItem`, `length`. **Builtin function declarations must come from standard library source code** (using `builtin func` syntax), NOT auto-registered to `global_scope` by the compiler. This ensures proper module affiliation and version decoupling. Builtin declarations go through normal checker flow (type resolution, generic param handling) then are validated against the table: unknown builtin → error, signature mismatch → error, match → `sym->is_builtin = true`. Comptime eval uses `callee_sym->is_builtin` + `eval_call` callback instead of hardcoded name checks or switch/case dispatch.
+Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (name + type + eval_call callback). No enum dispatch IDs — each builtin entry carries an `eval_call` function pointer for comptime evaluation. `builtin.c` contains only the mechanism (table create/dispose/register/lookup); `builtin_table_init_defaults()` dispatches to per-module init functions. **Builtin function declarations must come from standard library source code** (using `builtin func` syntax), NOT auto-registered to `global_scope` by the compiler. This ensures proper module affiliation and version decoupling. Builtin declarations go through normal checker flow (type resolution, generic param handling) then are validated against the table: unknown builtin → error, signature mismatch → error, match → `sym->is_builtin = true`. Comptime eval uses `callee_sym->is_builtin` + `eval_call` callback instead of hardcoded name checks or switch/case dispatch.
+
+**Module split**:
+- `builtin_debug.c/h` — `assert` (type creation + `builtin_assert_eval` callback)
+- `builtin_collection.c/h` — `length` (type creation + `builtin_length_eval` callback)
+- `builtin_tuple.c/h` — `getTupleItem`, `setTupleItem` (type creation + `builtin_get_eval`/`builtin_set_eval` callbacks)
+- `builtin_dispatch.c/h` — **deleted** (callbacks moved to respective modules)
 
 **Tuple** is a native type (`TYPE_TUPLE`), not a builtin. Syntax: `<i32, f64>` (angle brackets in type context). Fields are `_0`, `_1`, etc. See Type System section for details.
 
