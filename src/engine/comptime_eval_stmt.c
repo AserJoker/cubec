@@ -8,6 +8,7 @@
 #include "cubec/expression_binary.h"
 #include "cubec/expression_function.h"
 #include "cubec/function_argument.h"
+#include "cubec/function_capture.h"
 #include "cubec/statement_block.h"
 #include "cubec/statement_if.h"
 #include "cubec/statement_while.h"
@@ -457,9 +458,51 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     cubec_statement_function_t sf = (cubec_statement_function_t)stmt;
     const char *name = _eval_ident_str(sf->name);
     if (!name) return _eval_signal_none();
-    comptime_value_t val = _comptime_eval_expr(eval, ctx, (node_t)sf);
-    if (val && val->kind != COMPTIME_VALUE_ERROR)
-      comptime_env_bind_value(eval->current_env, eval->valloc, name, comptime_value_clone(eval->allocator, val));
+
+    /* Build captured environment from captures list */
+    comptime_env_t captured_env = comptime_env_create(eval->allocator, NULL);
+    if (sf->captures) {
+      size_t cc = vec_get_size(sf->captures);
+      for (size_t i = 0; i < cc; i++) {
+        node_t cap_node = (node_t)vec_get(sf->captures, i);
+        if (cap_node->kind != CUBEC_NODE_FUNCTION_CAPTURE) continue;
+        cubec_function_capture_t cap = (cubec_function_capture_t)cap_node;
+        const char *cap_name = _eval_ident_str(cap->identifier);
+        if (!cap_name) continue;
+        comptime_value_t val = comptime_env_lookup_value(
+            eval->current_env, eval->valloc, cap_name);
+        if (val) {
+          comptime_value_t cloned = comptime_value_clone(eval->allocator, val);
+          if (cloned)
+            comptime_env_bind_value(captured_env, eval->valloc, cap_name, cloned);
+        }
+      }
+    }
+
+    /* Get function type from symbol */
+    semantic_type_t ftype = NULL;
+    struct symbol *sym = scope_lookup_local(ctx->global_scope, name);
+    if (sym && sym->kind == SYMBOL_FUNCTION) ftype = sym->function.type;
+
+    /* Extract parameter names */
+    vec_t param_names = NULL;
+    if (sf->arguments) {
+      vec_init_t pvi = {.auto_dispose = false};
+      param_names = (vec_t)allocator_create(eval->allocator, &g_vec_type, &pvi);
+      size_t ac = vec_get_size(sf->arguments);
+      for (size_t i = 0; i < ac; i++) {
+        node_t arg = (node_t)vec_get(sf->arguments, i);
+        if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
+          const char *pname = _eval_ident_str(
+              ((cubec_function_argument_t)arg)->identifier);
+          if (pname) vec_push(param_names, (void *)pname);
+        }
+      }
+    }
+
+    comptime_value_t fn_val = comptime_value_create_function(
+        eval->allocator, captured_env, sf->body, param_names, ftype);
+    comptime_env_bind_value(eval->current_env, eval->valloc, name, fn_val);
     return _eval_signal_none();
   }
 

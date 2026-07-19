@@ -96,3 +96,19 @@ TEST_F(dt_lambda, lambda_call_inline) {
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
+
+TEST_F(dt_lambda, statement_func_with_capture) {
+  /* Local named function with capture list: func |x| name() { ... } */
+  const char *src = BUILTIN_ASSERT
+    "test \"closure\" {\n"
+    "  var x = 1;\n"
+    "  func |x| testfn(): void {\n"
+    "    x = x + 1;\n"
+    "  }\n"
+    "  testfn();\n"
+    "  assert(x == 1);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0) << "error_count=" << r.ctx->error_count;
+  compile_result_cleanup(&r, allocator);
+}

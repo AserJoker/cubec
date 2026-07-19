@@ -6,6 +6,8 @@
 #include "engine/checker_evaluate.h"
 #include "engine/resolver.h"
 #include "engine/symbol.h"
+#include "engine/type_hash.h"
+#include "engine/semantic_type.h"
 #include "core/allocator.h"
 #include "core/string.h"
 #include "core/vec.h"
@@ -13,6 +15,8 @@
 #include "cubec/program.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/statement_block.h"
+#include "cubec/function_capture.h"
+#include "cubec/function_argument.h"
 #include "cubec/statement_expression.h"
 #include "cubec/statement_return.h"
 #include "cubec/statement_if.h"
@@ -401,6 +405,11 @@ static void _check_stmt_comptime_for(checker_t ctx, node_t stmt,
   ctx->current_scope = saved;
 }
 
+/* --- local function checker (forward declaration) --- */
+
+static void _check_stmt_local_function(checker_t ctx,
+                                        cubec_statement_function_t node);
+
 /* --- statement dispatch --- */
 
 static void _check_stmt_invalid_declaration(checker_t ctx, node_t stmt) {
@@ -465,6 +474,7 @@ void _check_statement(checker_t ctx, node_t stmt,
   case CUBEC_NODE_STATEMENT_DEFER:          _check_stmt_defer(ctx, stmt, return_type); break;
   case CUBEC_NODE_STATEMENT_SWITCH:         _check_stmt_switch(ctx, stmt, return_type); break;
   case CUBEC_NODE_STATEMENT_DECLARATION:    _check_stmt_declaration(ctx, stmt); break;
+  case CUBEC_NODE_STATEMENT_FUNCTION:       _check_stmt_local_function(ctx, (cubec_statement_function_t)stmt); break;
   case CUBEC_NODE_STATEMENT_EMPTY:          break;
   case CUBEC_NODE_STATEMENT_COMPTIME_BLOCK: _check_stmt_comptime_block(ctx, stmt, return_type); break;
   case CUBEC_NODE_STATEMENT_COMPTIME_IF:    _check_stmt_comptime_if(ctx, stmt, return_type); break;
@@ -474,6 +484,96 @@ void _check_statement(checker_t ctx, node_t stmt,
 }
 
 /* --- function body checker --- */
+
+static void _check_stmt_local_function(checker_t ctx,
+                                        cubec_statement_function_t node) {
+  if (!node) return;
+  const char *name = _checker_ident_str(node->name);
+
+  /* Resolve return type and parameter types */
+  semantic_type_t ret_type = node->return_type
+      ? resolver_resolve_type(ctx, node->return_type) : ctx->builtin_void;
+
+  vec_init_t pvi = {.auto_dispose = false};
+  vec_t param_types =
+      (vec_t)allocator_create(ctx->allocator, &g_vec_type, &pvi);
+  if (node->arguments) {
+    size_t acount = vec_get_size(node->arguments);
+    for (size_t i = 0; i < acount; i++) {
+      node_t arg = (node_t)vec_get(node->arguments, i);
+      if (arg->kind != CUBEC_NODE_FUNCTION_ARGUMENT) continue;
+      cubec_function_argument_t farg = (cubec_function_argument_t)arg;
+      semantic_type_t pt = farg->type
+          ? resolver_resolve_type(ctx, farg->type) : ctx->error_type;
+      vec_push(param_types, pt);
+    }
+  }
+
+  semantic_type_t ftype = semantic_type_create_function(
+      ctx->allocator, ret_type, param_types, node->is_c_variadic);
+  type_hash_ensure(ftype);
+  vec_push(ctx->all_types, ftype);
+
+  /* Register function symbol in current scope */
+  if (name) {
+    struct symbol *sym = symbol_create(ctx->allocator, name,
+                                        SYMBOL_FUNCTION, node->super.location);
+    sym->function.type = ftype;
+    sym->function.ast_node = (node_t)node;
+    sym->state = SYMBOL_EVALUATED;
+    scope_push_symbol(ctx->current_scope, sym);
+  }
+
+  /* Check function body */
+  if (node->body) {
+    scope_t saved = ctx->current_scope;
+    ctx->current_scope = scope_create(ctx->allocator, saved,
+                                       SCOPE_FUNCTION, node->super.location);
+    vec_push(ctx->all_scopes, ctx->current_scope);
+
+    /* Register parameters */
+    if (node->arguments) {
+      size_t acount = vec_get_size(node->arguments);
+      for (size_t i = 0; i < acount && i < vec_get_size(param_types); i++) {
+        node_t arg = (node_t)vec_get(node->arguments, i);
+        if (arg->kind != CUBEC_NODE_FUNCTION_ARGUMENT) continue;
+        cubec_function_argument_t farg = (cubec_function_argument_t)arg;
+        const char *pname = _checker_ident_str(farg->identifier);
+        if (!pname) continue;
+        struct symbol *psym = symbol_create(ctx->allocator, pname,
+                                            SYMBOL_VARIABLE, arg->location);
+        psym->variable.type = (semantic_type_t)vec_get(param_types, i);
+        psym->variable.is_mutable = !semantic_type_is_const(psym->variable.type);
+        psym->state = SYMBOL_EVALUATED;
+        scope_push_symbol(ctx->current_scope, psym);
+      }
+    }
+
+    /* Register captured variables */
+    if (node->captures) {
+      size_t cc = vec_get_size(node->captures);
+      for (size_t i = 0; i < cc; i++) {
+        node_t cap_node = (node_t)vec_get(node->captures, i);
+        if (cap_node->kind != CUBEC_NODE_FUNCTION_CAPTURE) continue;
+        cubec_function_capture_t cap = (cubec_function_capture_t)cap_node;
+        const char *cap_name = _checker_ident_str(cap->identifier);
+        if (!cap_name) continue;
+        struct symbol *outer_sym = scope_lookup(saved, cap_name);
+        if (outer_sym) {
+          struct symbol *cap_sym = symbol_create(ctx->allocator, cap_name,
+                                                  outer_sym->kind, cap_node->location);
+          cap_sym->variable = outer_sym->variable;
+          cap_sym->state = SYMBOL_EVALUATED;
+          scope_push_symbol(ctx->current_scope, cap_sym);
+        }
+      }
+    }
+
+    ctx->loop_depth = 0;
+    _check_statement(ctx, node->body, ret_type);
+    ctx->current_scope = saved;
+  }
+}
 
 static void _check_function_body(checker_t ctx,
                                   cubec_statement_function_t node) {
@@ -490,11 +590,32 @@ static void _check_function_body(checker_t ctx,
   semantic_type_t return_type = ftype->impl->function.return_type;
 
   scope_t saved = ctx->current_scope;
-  ctx->current_scope = scope_create(ctx->allocator, ctx->global_scope,
+  ctx->current_scope = scope_create(ctx->allocator, saved,
                                      SCOPE_FUNCTION, node->super.location);
   vec_push(ctx->all_scopes, ctx->current_scope);
 
   _register_func_params(ctx, node, ftype->impl->function.params);
+
+  /* Register captured variables in function scope */
+  if (node->captures) {
+    size_t cc = vec_get_size(node->captures);
+    for (size_t i = 0; i < cc; i++) {
+      node_t cap_node = (node_t)vec_get(node->captures, i);
+      if (cap_node->kind != CUBEC_NODE_FUNCTION_CAPTURE) continue;
+      cubec_function_capture_t cap = (cubec_function_capture_t)cap_node;
+      const char *cap_name = _checker_ident_str(cap->identifier);
+      if (!cap_name) continue;
+      /* Look up the captured variable in the enclosing scope */
+      struct symbol *outer_sym = scope_lookup(saved, cap_name);
+      if (outer_sym) {
+        struct symbol *cap_sym = symbol_create(ctx->allocator, cap_name,
+                                                outer_sym->kind, cap_node->location);
+        cap_sym->variable = outer_sym->variable;
+        cap_sym->state = SYMBOL_EVALUATED;
+        scope_push_symbol(ctx->current_scope, cap_sym);
+      }
+    }
+  }
 
   ctx->loop_depth = 0;
   _check_statement(ctx, node->body, return_type);

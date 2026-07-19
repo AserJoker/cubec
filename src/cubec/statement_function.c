@@ -46,12 +46,14 @@ static void _cubec_statement_function_init(
   self->return_type = init->return_type;
   self->body = init->body;
   self->decorators = init->decorators;
+  self->captures = init->captures;
 onerror:
   return;
 }
 
 static void _cubec_statement_function_dispose(
     cubec_statement_function_t self, allocator_t allocator) {
+  allocator_free(allocator, &self->captures);
   allocator_free(allocator, &self->decorators);
   allocator_free(allocator, &self->body);
   allocator_free(allocator, &self->return_type);
@@ -82,6 +84,9 @@ static void _cubec_statement_function_clone(
   self->body = another->body
                    ? TRY_LOCAL(onerror, value_clone(allocator, another->body))
                    : NULL;
+  self->captures = another->captures
+                       ? TRY_LOCAL(onerror, value_clone(allocator, another->captures))
+                       : NULL;
   return;
 onerror:
   return;
@@ -108,6 +113,9 @@ static void _cubec_statement_function_move(
   self->body = another->body
                    ? TRY_LOCAL(onerror, value_move(allocator, another->body))
                    : NULL;
+  self->captures = another->captures
+                       ? TRY_LOCAL(onerror, value_move(allocator, another->captures))
+                       : NULL;
   return;
 onerror:
   return;
@@ -284,6 +292,7 @@ node_t read_statement_function(allocator_t allocator, vec_t tokens,
       .return_type = func->return_type,
       .body = func->body,
       .decorators = decorators,
+      .captures = func->captures,
   };
 
   /* Nullify fields in expression_function to prevent double-free during dispose */
@@ -292,6 +301,7 @@ node_t read_statement_function(allocator_t allocator, vec_t tokens,
   func->arguments = NULL;
   func->return_type = NULL;
   func->body = NULL;
+  func->captures = NULL;
 
   allocator_free(allocator, &expr_node);
 
