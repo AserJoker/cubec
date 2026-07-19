@@ -1,4 +1,4 @@
-﻿#include "core/map.h"
+#include "core/map.h"
 #include "core/node.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -99,10 +99,13 @@ TEST_F(dt_map, remove) {
   map_insert(map, node3, val3);
   EXPECT_EQ(map_get_size(map), 3);
 
+  /* key_auto_dispose=true: map_remove frees node2; cannot use it afterwards */
   size_t result = map_remove(map, node2);
   EXPECT_EQ(result, 2);
   EXPECT_EQ(map_get_size(map), 2);
-  EXPECT_EQ(map_find(map, node2), nullptr);
+  /* Verify remaining entries are still accessible */
+  EXPECT_NE(map_find(map, node1), nullptr);
+  EXPECT_NE(map_find(map, node3), nullptr);
 
   allocator_free(allocator, &map);
 }
@@ -139,9 +142,9 @@ TEST_F(dt_map, clear) {
   map_insert(map, node3, val3);
   EXPECT_EQ(map_get_size(map), 3);
 
+  /* key_auto_dispose=true: map_clear frees all keys; cannot use them afterwards */
   map_clear(map);
   EXPECT_EQ(map_get_size(map), 0);
-  EXPECT_EQ(map_find(map, node1), nullptr);
 
   allocator_free(allocator, &map);
 }

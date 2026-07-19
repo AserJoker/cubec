@@ -1,4 +1,4 @@
-﻿#include "core/map.h"
+#include "core/map.h"
 #include "core/allocator.h"
 #include "core/type.h"
 #include "core/vec.h"
@@ -236,10 +236,29 @@ size_t map_remove(map_t self, void *key) {
   size_t idx = entry->index;
 
   if (self->index_type == MAP_INDEX_HASH) {
+    /* Update indices of entries after the removed one before removing from
+       index structure (entry is still accessible until removed from bucket) */
+    for (size_t b = 0; b < DEFAULT_BUCKET_COUNT; b++) {
+      list_iter_t iter = list_iter_first(self->index.buckets[b]);
+      map_entry_index_t *e;
+      while ((e = (map_entry_index_t *)list_iter_next(&iter)) != NULL) {
+        if (e->index > idx) {
+          e->index--;
+        }
+      }
+    }
     size_t bucket_idx = hash_bucket_index(self, entry->key_id);
     list_t bucket = self->index.buckets[bucket_idx];
     remove_entry_from_bucket(bucket, entry->key_id);
   } else {
+    /* Update indices of entries in rbtree */
+    rbtree_iter_t iter = rbtree_iter_first(self->index.rbtree);
+    map_entry_index_t *e;
+    while ((e = (map_entry_index_t *)rbtree_iter_next(&iter)) != NULL) {
+      if (e->index > idx) {
+        e->index--;
+      }
+    }
     rbtree_remove(self->index.rbtree, entry->key_id);
   }
 

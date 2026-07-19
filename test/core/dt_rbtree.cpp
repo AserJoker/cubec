@@ -1,4 +1,4 @@
-﻿#include "core/rbtree.h"
+#include "core/rbtree.h"
 #include "core/node.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -89,10 +89,15 @@ TEST_F(dt_rbtree, Remove) {
   rbtree_insert(tree, value_get_id(node3), node3);
   EXPECT_EQ(rbtree_get_size(tree), 3);
 
-  size_t result = rbtree_remove(tree, value_get_id(node2));
+  /* auto_dispose=true: rbtree_remove frees node2; save its id before remove */
+  uint64_t node2_id = value_get_id(node2);
+  size_t result = rbtree_remove(tree, node2_id);
   EXPECT_EQ(result, 2);
   EXPECT_EQ(rbtree_get_size(tree), 2);
-  EXPECT_EQ(rbtree_find(tree, value_get_id(node2)), nullptr);
+  EXPECT_EQ(rbtree_find(tree, node2_id), nullptr);
+  /* Verify remaining entries still accessible */
+  EXPECT_NE(rbtree_find(tree, value_get_id(node1)), nullptr);
+  EXPECT_NE(rbtree_find(tree, value_get_id(node3)), nullptr);
 
   allocator_free(allocator, &tree);
 }
@@ -123,9 +128,9 @@ TEST_F(dt_rbtree, Clear) {
   rbtree_insert(tree, value_get_id(node3), node3);
   EXPECT_EQ(rbtree_get_size(tree), 3);
 
+  /* auto_dispose=true: rbtree_clear frees all nodes; cannot use them afterwards */
   rbtree_clear(tree);
   EXPECT_EQ(rbtree_get_size(tree), 0);
-  EXPECT_EQ(rbtree_find(tree, value_get_id(node1)), nullptr);
 
   allocator_free(allocator, &tree);
 }
