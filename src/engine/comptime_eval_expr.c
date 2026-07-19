@@ -154,6 +154,12 @@ static comptime_value_t _eval_literal_identifier(comptime_eval_t eval,
   const char *name = _eval_ident_str(node);
   if (!name) return _eval_error_val(eval);
 
+  /* Boolean literals */
+  if (strcmp(name, "true") == 0)
+    return _eval_temp(eval, comptime_value_create_bool(eval->allocator, true, ctx->builtin_bool));
+  if (strcmp(name, "false") == 0)
+    return _eval_temp(eval, comptime_value_create_bool(eval->allocator, false, ctx->builtin_bool));
+
   /* Borrow from scope chain — no clone */
   comptime_value_t val = comptime_env_lookup_value(eval->current_env, eval->valloc, name);
   if (val) return val;
@@ -189,6 +195,10 @@ static comptime_value_t _eval_literal_identifier(comptime_eval_t eval,
       if (val && val->kind != COMPTIME_VALUE_ERROR) return val;
     }
     return _eval_error_val(eval);
+  }
+
+  if (sym->kind == SYMBOL_TYPE && sym->type.type) {
+    return _eval_temp(eval, comptime_value_create_type(eval->allocator, sym->type.type));
   }
 
   return _eval_error_val(eval);
@@ -779,6 +789,24 @@ static comptime_value_t _eval_member(comptime_eval_t eval, checker_t ctx,
         }
       }
     }
+    /* Enum member access: Color.Red → integer value with enum type */
+    if (t->impl->kind == TYPE_ENUM) {
+      vec_t items = t->impl->enum_type.items;
+      size_t ic = items ? vec_get_size(items) : 0;
+      for (size_t i = 0; i < ic; i++) {
+        struct symbol *item = (struct symbol *)vec_get(items, i);
+        if (item && item->name && strcmp(item->name, fname) == 0) {
+          semantic_type_t backing = t->impl->enum_type.backing_type;
+          if (!backing) backing = ctx->builtin_i32;
+          bool is_signed = (backing->impl->kind >= TYPE_I8 &&
+                            backing->impl->kind <= TYPE_I64);
+          uint8_t width = backing->impl->size * 8;
+          return _eval_temp(eval, comptime_value_create_int(eval->allocator,
+              item->enum_item.value, (uint64_t)item->enum_item.value,
+              width, is_signed, t));
+        }
+      }
+    }
   }
 
   if (host->kind == COMPTIME_VALUE_POINTER) {
@@ -832,6 +860,24 @@ static comptime_value_t _eval_namespace_access(comptime_eval_t eval,
       if (s && s->name && strcmp(s->name, fname) == 0 && s->kind == SYMBOL_VARIABLE) {
         comptime_value_t v = comptime_env_lookup_value(eval->current_env, eval->valloc, s->name);
         if (v) return v;  /* borrowed from env */
+      }
+    }
+  }
+  /* Enum member access: Color::Red → integer value with enum type */
+  if (t->impl->kind == TYPE_ENUM) {
+    vec_t items = t->impl->enum_type.items;
+    size_t ic = items ? vec_get_size(items) : 0;
+    for (size_t i = 0; i < ic; i++) {
+      struct symbol *item = (struct symbol *)vec_get(items, i);
+      if (item && item->name && strcmp(item->name, fname) == 0) {
+        semantic_type_t backing = t->impl->enum_type.backing_type;
+        if (!backing) backing = ctx->builtin_i32;
+        bool is_signed = (backing->impl->kind >= TYPE_I8 &&
+                          backing->impl->kind <= TYPE_I64);
+        uint8_t width = backing->impl->size * 8;
+        return _eval_temp(eval, comptime_value_create_int(eval->allocator,
+            item->enum_item.value, (uint64_t)item->enum_item.value,
+            width, is_signed, t));
       }
     }
   }

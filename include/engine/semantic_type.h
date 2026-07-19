@@ -147,6 +147,14 @@ bool semantic_type_can_decay(semantic_type_t from, semantic_type_t to);
  */
 bool semantic_type_can_implicit_convert(semantic_type_t from, semantic_type_t to);
 
+/**
+ * @brief Check if `from` can be explicitly cast to `to`.
+ * Includes all implicit conversions plus numeric narrowing,
+ * bool<->int, enum<->int, char<->int, pointer conversions,
+ * and container layout-compatible conversions.
+ */
+bool semantic_type_can_explicit_cast(semantic_type_t from, semantic_type_t to);
+
 /* ===== constructors ===== */
 
 semantic_type_t semantic_type_create_named(allocator_t allocator,

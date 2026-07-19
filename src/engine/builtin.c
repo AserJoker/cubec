@@ -1,4 +1,5 @@
 #include "engine/builtin.h"
+#include "engine/builtin_cast.h"
 #include "engine/builtin_debug.h"
 #include "engine/builtin_collection.h"
 #include "engine/builtin_tuple.h"
@@ -90,4 +91,5 @@ void builtin_table_init_defaults(builtin_table_t table, struct checker *ctx) {
   builtin_table_init_debug(table, ctx);
   builtin_table_init_collection(table, ctx);
   builtin_table_init_tuple(table, ctx);
+  builtin_table_init_cast(table, ctx);
 }

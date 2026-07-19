@@ -57,9 +57,10 @@ static semantic_type_t _check_expr_literal_identifier(checker_t ctx, node_t expr
     return ctx->error_type;
   }
   switch (sym->kind) {
-  case SYMBOL_VARIABLE: return sym->variable.type;
-  case SYMBOL_FUNCTION: return sym->function.type;
+  case SYMBOL_VARIABLE: return sym->variable.type ? sym->variable.type : ctx->error_type;
+  case SYMBOL_FUNCTION: return sym->function.type ? sym->function.type : ctx->error_type;
   case SYMBOL_ENUM_ITEM: return sym->enum_item.owning_type;
+  case SYMBOL_TYPE: return sym->type.type ? sym->type.type : ctx->error_type;
   case SYMBOL_GENERIC_PARAM:
     if (sym->generic_param.value_type)
       return sym->generic_param.value_type;
@@ -440,6 +441,29 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
       }
     }
 
+    /* For the 'cast' builtin, validate that the source type can be
+       explicitly cast to the target (return) type. */
+    if (call->callee->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
+      const char *gname = _checker_ident_str(
+          ((cubec_expression_generic_instantiation_t)call->callee)->callee);
+      if (gname && strcmp(gname, "cast") == 0 && arg_count >= 1 &&
+          callee_type->impl->kind == TYPE_FUNCTION) {
+        semantic_type_t return_type = callee_type->impl->function.return_type;
+        node_t arg0 = (node_t)vec_get(call->arguments, 0);
+        semantic_type_t arg_type = _check_expression(ctx, arg0);
+        if (return_type->impl->kind != TYPE_ERROR && arg_type->impl->kind != TYPE_ERROR) {
+          if (!semantic_type_can_explicit_cast(arg_type, return_type)) {
+            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                 expr->location,
+                                 "cannot cast '%s' to '%s'",
+                                 arg_type->name ? arg_type->name : "<anonymous>",
+                                 return_type->name ? return_type->name : "<anonymous>");
+            ctx->error_count++;
+          }
+        }
+      }
+    }
+
     return callee_type->impl->function.return_type;
   }
 
@@ -644,6 +668,17 @@ static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
     }
   }
 
+  /* Enum member access: Color.Red → returns the enum type */
+  if (effective_host->impl->kind == TYPE_ENUM) {
+    vec_t items = effective_host->impl->enum_type.items;
+    size_t icount = items ? vec_get_size(items) : 0;
+    for (size_t i = 0; i < icount; i++) {
+      struct symbol *item = (struct symbol *)vec_get(items, i);
+      if (item && item->name && strcmp(item->name, fname) == 0)
+        return effective_host;
+    }
+  }
+
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                        "type '%s' has no member '%s'",
                        host_type->name ? host_type->name : "<anonymous>",
@@ -678,6 +713,17 @@ static semantic_type_t _check_expr_namespace_access(checker_t ctx, node_t expr) 
     struct symbol *at = (struct symbol *)vec_get(host_type->associated_types, i);
     if (at && at->name && strcmp(at->name, fname) == 0)
       return at->type.type;
+  }
+
+  /* Enum member access: Color::Red → returns the enum type */
+  if (host_type->impl->kind == TYPE_ENUM) {
+    vec_t items = host_type->impl->enum_type.items;
+    size_t icount = items ? vec_get_size(items) : 0;
+    for (size_t i = 0; i < icount; i++) {
+      struct symbol *item = (struct symbol *)vec_get(items, i);
+      if (item && item->name && strcmp(item->name, fname) == 0)
+        return host_type;
+    }
   }
 
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,

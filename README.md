@@ -97,7 +97,7 @@ cubec/
 - **表达式解析器**：完整覆盖所有表达式类型（前缀/后缀一元、二元、三元、成员访问、泛型实例化、typeof、sizeof、alignof、初始化列表、匿名函数、const/volatile 限定符等）
 - **语句解析器**：完整覆盖所有语句类型（if/for/foreach/while/do-while/switch/defer/break/continue/return/import/test/comptime 等）
 - **声明解析器**：func/struct/enum/union/cunion/interface/type/var/decorator
-- **语义分析引擎**：双层类型表示、结构等价、指针退化、TDZ 多遍检查、const/volatile 语义、builtin 回调注册表、原生 tuple 类型（`<i32, f64>` 语法）、TYPE_OPAQUE（对标 C `void*`）、参数包（variadic generics）、泛型推断、匿名 initialize_list 推断、struct-like 隐式转换、Rustc 风格诊断、`undefined` 字面量与强制变量初始化、表达式语句返回值未使用警告
+- **语义分析引擎**：双层类型表示、结构等价、指针退化、TDZ 多遍检查、const/volatile 语义、builtin 回调注册表、原生 tuple 类型（`<i32, f64>` 语法）、TYPE_OPAQUE（对标 C `void*`）、参数包（variadic generics）、泛型推断、匿名 initialize_list 推断、struct-like 隐式转换、显式类型转换 cast builtin、Rustc 风格诊断、`undefined` 字面量与强制变量初始化、表达式语句返回值未使用警告
 - **comptime 编译期求值器**：AST 解释器、虚拟内存、安全限制、test 块执行、SEH 崩溃防护
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
 

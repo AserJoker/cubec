@@ -325,14 +325,19 @@ bool semantic_type_can_implicit_convert(semantic_type_t from,
     if (semantic_type_can_implicit_convert(from, to_base)) return true;
   }
 
-  /* Pointer qualifier conversion: *T → *const T (adding const to pointee is safe) */
+  /* Pointer conversion: only qualifier addition (*T → *const T) is implicit.
+     Pointee types must be structurally equivalent (same type or qualifier addition).
+     *Small → *Big downcast and other pointer conversions require explicit cast. */
   {
     semantic_type_t from_unq = semantic_type_strip_qualifier(from);
     semantic_type_t to_unq = semantic_type_strip_qualifier(to);
     if (from_unq->impl->kind == TYPE_POINTER && to_unq->impl->kind == TYPE_POINTER) {
-      /* Recursively check pointee compatibility (allows *T → *const T) */
-      if (semantic_type_can_implicit_convert(from_unq->impl->pointer.pointee,
-                                             to_unq->impl->pointer.pointee))
+      semantic_type_t from_pt = from_unq->impl->pointer.pointee;
+      semantic_type_t to_pt = to_unq->impl->pointer.pointee;
+      /* Only allow if pointee types are the same (after stripping qualifiers) */
+      semantic_type_t from_pt_unq = semantic_type_strip_qualifier(from_pt);
+      semantic_type_t to_pt_unq = semantic_type_strip_qualifier(to_pt);
+      if (semantic_type_equals(from_pt_unq, to_pt_unq))
         return true;
     }
   }
@@ -378,7 +383,7 @@ bool semantic_type_can_implicit_convert(semantic_type_t from,
     return true;
   }
 
-  /* tuple → array: if all elements can implicitly convert to the array element type */
+  /* tuple → array: layout-compatible (element size + alignment must match) */
   if (from->impl->kind == TYPE_TUPLE && to->impl->kind == TYPE_ARRAY) {
     vec_t from_elems = from->impl->tuple.element_types;
     size_t fc = vec_get_size(from_elems);
@@ -386,7 +391,9 @@ bool semantic_type_can_implicit_convert(semantic_type_t from,
     semantic_type_t elem_type = to->impl->array.element;
     for (size_t i = 0; i < fc; i++) {
       semantic_type_t fe = (semantic_type_t)vec_get(from_elems, i);
-      if (!semantic_type_can_implicit_convert(fe, elem_type)) return false;
+      if (semantic_type_get_size(fe) != semantic_type_get_size(elem_type) ||
+          semantic_type_get_alignment(fe) != semantic_type_get_alignment(elem_type))
+        return false;
     }
     return true;
   }
@@ -437,6 +444,125 @@ bool semantic_type_can_implicit_convert(semantic_type_t from,
 
   /* decay */
   return semantic_type_can_decay(from, to);
+}
+
+/* ===== explicit cast ===== */
+
+static bool _explicit_cast_numeric(semantic_type_t from, semantic_type_t to) {
+  semantic_type_t from_unq = semantic_type_strip_qualifier(from);
+  semantic_type_t to_unq = semantic_type_strip_qualifier(to);
+  enum type_kind fk = from_unq->impl->kind;
+  enum type_kind tk = to_unq->impl->kind;
+
+  /* float → int */
+  if (fk >= TYPE_F16 && fk <= TYPE_F64 && tk >= TYPE_I8 && tk <= TYPE_U64)
+    return true;
+  /* int → int (narrowing or same-width) */
+  if (fk >= TYPE_I8 && fk <= TYPE_U64 && tk >= TYPE_I8 && tk <= TYPE_U64)
+    return true;
+  /* float → float (narrowing) */
+  if (fk >= TYPE_F16 && fk <= TYPE_F64 && tk >= TYPE_F16 && tk <= TYPE_F64)
+    return true;
+  /* bool → int */
+  if (fk == TYPE_BOOL && tk >= TYPE_I8 && tk <= TYPE_U64)
+    return true;
+  /* int → bool */
+  if (fk >= TYPE_I8 && fk <= TYPE_U64 && tk == TYPE_BOOL)
+    return true;
+  /* enum → int */
+  if (fk == TYPE_ENUM && tk >= TYPE_I8 && tk <= TYPE_U64)
+    return true;
+  /* int → enum */
+  if (fk >= TYPE_I8 && fk <= TYPE_U64 && tk == TYPE_ENUM)
+    return true;
+  /* char → int */
+  if (fk == TYPE_CHAR && tk >= TYPE_I8 && tk <= TYPE_U64)
+    return true;
+  /* int → char */
+  if (fk >= TYPE_I8 && fk <= TYPE_U64 && tk == TYPE_CHAR)
+    return true;
+
+  return false;
+}
+
+static bool _explicit_cast_pointer(semantic_type_t from, semantic_type_t to) {
+  semantic_type_t from_unq = semantic_type_strip_qualifier(from);
+  semantic_type_t to_unq = semantic_type_strip_qualifier(to);
+
+  /* opaque → pointer */
+  if (from_unq->impl->kind == TYPE_OPAQUE && to_unq->impl->kind == TYPE_POINTER)
+    return true;
+  /* pointer → int */
+  if (from_unq->impl->kind == TYPE_POINTER &&
+      to_unq->impl->kind >= TYPE_I8 && to_unq->impl->kind <= TYPE_U64)
+    return true;
+  /* *Small → *Big (struct pointer downcast) */
+  if (from_unq->impl->kind == TYPE_POINTER && to_unq->impl->kind == TYPE_POINTER) {
+    semantic_type_t from_pt = semantic_type_strip_qualifier(from_unq->impl->pointer.pointee);
+    semantic_type_t to_pt = semantic_type_strip_qualifier(to_unq->impl->pointer.pointee);
+    vec_t from_fields = NULL;
+    vec_t to_fields = NULL;
+    if (from_pt->impl->kind == TYPE_STRUCT || from_pt->impl->kind == TYPE_UNION ||
+        from_pt->impl->kind == TYPE_CUNION)
+      from_fields = from_pt->impl->struct_type.fields;
+    else if (from_pt->impl->kind == TYPE_GENERIC_INSTANCE)
+      from_fields = from_pt->impl->generic_instance.fields;
+    if (to_pt->impl->kind == TYPE_STRUCT || to_pt->impl->kind == TYPE_UNION ||
+        to_pt->impl->kind == TYPE_CUNION)
+      to_fields = to_pt->impl->struct_type.fields;
+    else if (to_pt->impl->kind == TYPE_GENERIC_INSTANCE)
+      to_fields = to_pt->impl->generic_instance.fields;
+
+    if (from_fields && to_fields) {
+      size_t fc = vec_get_size(from_fields);
+      size_t tc = vec_get_size(to_fields);
+      if (fc <= tc) {
+        bool prefix_ok = true;
+        for (size_t i = 0; i < fc && prefix_ok; i++) {
+          struct symbol *ff = (struct symbol *)vec_get(from_fields, i);
+          struct symbol *tf = (struct symbol *)vec_get(to_fields, i);
+          if (!ff || !tf) prefix_ok = false;
+          else if (!ff->name || !tf->name || strcmp(ff->name, tf->name) != 0)
+            prefix_ok = false;
+          else if (!semantic_type_equals(ff->field.type, tf->field.type))
+            prefix_ok = false;
+        }
+        if (prefix_ok) return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+static bool _explicit_cast_container(semantic_type_t from, semantic_type_t to) {
+  semantic_type_t from_unq = semantic_type_strip_qualifier(from);
+  semantic_type_t to_unq = semantic_type_strip_qualifier(to);
+
+  /* array → tuple (layout-compatible) */
+  if (from_unq->impl->kind == TYPE_ARRAY && to_unq->impl->kind == TYPE_TUPLE) {
+    size_t arr_len = from_unq->impl->array.length;
+    vec_t to_elems = to_unq->impl->tuple.element_types;
+    size_t tup_len = vec_get_size(to_elems);
+    if (arr_len != tup_len) return false;
+    semantic_type_t elem = from_unq->impl->array.element;
+    for (size_t i = 0; i < tup_len; i++) {
+      semantic_type_t te = (semantic_type_t)vec_get(to_elems, i);
+      if (semantic_type_get_size(te) != semantic_type_get_size(elem) ||
+          semantic_type_get_alignment(te) != semantic_type_get_alignment(elem))
+        return false;
+    }
+    return true;
+  }
+
+  return false;
+}
+
+bool semantic_type_can_explicit_cast(semantic_type_t from, semantic_type_t to) {
+  if (semantic_type_can_implicit_convert(from, to)) return true;
+  return _explicit_cast_numeric(from, to) ||
+         _explicit_cast_pointer(from, to) ||
+         _explicit_cast_container(from, to);
 }
 
 /* ===== qualifier query utilities ===== */

@@ -509,9 +509,22 @@ Two-layer representation: `semantic_type_t` wraps AST type nodes with semantic i
 **Implicit conversion rules** (`semantic_type_can_implicit_convert`):
 1. Same type → true
 2. Qualifier strip: `T → const T`, `T → volatile T`, `T → const volatile T` (recursive)
-3. Pointer/slice → opaque
-4. Tuple → array (element-wise implicit conversion)
-5. Struct-like → struct-like (field name + type matching, supports TYPE_STRUCT/UNION/CUNION/GENERIC_INSTANCE)
+3. Pointer conversion: only qualifier addition on pointee (`*T → *const T`), pointee types must be structurally equivalent
+4. nil → pointer/slice/interface
+5. Integer widening
+6. Float widening
+7. int → float
+8. Tuple → array (element size+alignment layout-compatible)
+9. Pointer/slice → opaque
+10. Struct-like → struct-like (field name + type matching, supports TYPE_STRUCT/UNION/CUNION/GENERIC_INSTANCE)
+
+**Explicit cast rules** (`semantic_type_can_explicit_cast`):
+All implicit conversions plus:
+1. Numeric: float→int (truncation), int narrowing, float narrowing, bool↔int, enum↔int, char↔int
+2. Pointer: opaque→pointer, pointer→int, *Small→*Big downcast (struct pointer, prefix field match)
+3. Container: array→tuple (element size+alignment layout-compatible)
+
+The checker validates explicit casts in `_check_expr_call` after generic instantiation of the `cast` builtin.
 
 **Generic type inference** (`type_unify.c`): `_infer_type_args_from_call` infers type arguments from call arguments using `_type_unify` (structural unification). Generic param names are passed as `const char*` strings (not symbol pointers, since generic params aren't in scope). `_type_unify` handles TYPE_GENERIC_INSTANCE elastic matching when expected type_args contain a PACK parameter. The `generic_params` vec in `_infer_type_args_from_call` must contain name strings directly, not symbol pointers from `scope_lookup` (which returns NULL for generic param names).
 
@@ -527,6 +540,7 @@ Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (nam
 - `builtin_debug.c/h` — `assert` (type creation + `builtin_assert_eval` callback)
 - `builtin_collection.c/h` — `length` (type creation + `builtin_length_eval` callback)
 - `builtin_tuple.c/h` — `getTupleItem`, `setTupleItem` (type creation + `builtin_get_eval`/`builtin_set_eval` callbacks)
+- `builtin_cast.c/h` — `cast[T,K](expr:K):T` (type creation + `builtin_cast_eval` callback)
 - `builtin_dispatch.c/h` — **deleted** (callbacks moved to respective modules)
 
 **Tuple** is a native type (`TYPE_TUPLE`), not a builtin. Syntax: `<i32, f64>` (angle brackets in type context). Fields are `_0`, `_1`, etc. See Type System section for details.
@@ -534,6 +548,8 @@ Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (nam
 **getTupleItem[N: u64, ...Args](tuple: <...Args>): Args[N]** — Returns the Nth element of a tuple. N is a value generic parameter (TYPE_GENERIC_VALUE). Type checking resolves the return type by looking up the Nth field of the concrete tuple type. Normal generic instantiation flow handles type checking and substitution; `eval_call` callback (`builtin_get_eval`) handles comptime execution.
 
 **setTupleItem[N: u64, ...Args](tuple: <...Args>, value: Args[N]): void** — Sets the Nth element of a tuple. Value type must match the Nth field type. Same as getTupleItem: normal flow for type checking, `eval_call` for comptime.
+
+**cast[T,K](expr:K):T** — Explicit type cast. The checker validates via `semantic_type_can_explicit_cast` after generic instantiation. Comptime eval (`builtin_cast_eval`) performs the actual value conversion. Supported casts: numeric (float→int truncation, int narrowing, float narrowing, bool↔int, enum↔int, char↔int), pointer (opaque→pointer, pointer→int, *Small→*Big downcast), container (array→tuple with layout-compatible elements).
 
 ### Checker Passes
 
