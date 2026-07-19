@@ -13,9 +13,8 @@ using ::testing::Test;
 /* ===== helpers ===== */
 
 #define BUILTIN_ASSERT "builtin func assert(condition: bool): void;\n"
-#define BUILTIN_TUPLE "builtin type Tuple[...Args];\n"
-#define BUILTIN_GET "builtin func getTupleItem[N: u64, ...Args](tuple: Tuple[...Args]): Args[N];\n"
-#define BUILTIN_SET "builtin func setTupleItem[N: u64, ...Args](tuple: Tuple[...Args], value: Args[N]): void;\n"
+#define BUILTIN_GET "builtin func getTupleItem[N: u64, ...Args](tuple: <...Args>): Args[N];\n"
+#define BUILTIN_SET "builtin func setTupleItem[N: u64, ...Args](tuple: <...Args>, value: Args[N]): void;\n"
 
 struct compile_result {
   checker_t ctx;
@@ -147,34 +146,27 @@ TEST_F(dt_builtin, non_builtin_func_not_marked) {
   compile_result_cleanup(&r, allocator);
 }
 
-/* ===== Builtin Tuple type ===== */
+/* ===== Tuple type (TYPE_TUPLE, not builtin) ===== */
 
 TEST_F(dt_builtin, table_lookup_tuple) {
+  /* Tuple is no longer a builtin — lookup should return NULL */
   checker_t ctx = checker_create(allocator);
   builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, "Tuple");
-  ASSERT_NE(be, nullptr);
-  EXPECT_EQ(be->eval_call, nullptr);
+  EXPECT_EQ(be, nullptr);
   checker_dispose(ctx);
 }
 
 TEST_F(dt_builtin, tuple_declaration) {
-  const char *src = "builtin type Tuple[...Args];\n";
+  /* Tuple is now a native type — <i32, f64> syntax, not builtin type declaration */
+  const char *src = "var t: <i32, f64> = undefined;\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(checker_get_error_count(r.ctx), 0);
-
-  struct symbol *sym = scope_lookup(r.ctx->global_scope, "Tuple");
-  ASSERT_NE(sym, nullptr);
-  EXPECT_TRUE(sym->is_builtin);
-
   compile_result_cleanup(&r, allocator);
 }
 
 TEST_F(dt_builtin, tuple_instantiation_two_fields) {
   const char *src = BUILTIN_ASSERT
-    "builtin type Tuple[...Args];\n"
-    "test \"tuple_inst\" {\n"
-    "  var t: Tuple[i32, f64] = undefined;\n"
-    "}\n";
+    "var t: <i32, f64> = undefined;\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(checker_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
@@ -182,19 +174,16 @@ TEST_F(dt_builtin, tuple_instantiation_two_fields) {
 
 TEST_F(dt_builtin, tuple_init_list) {
   const char *src = BUILTIN_ASSERT
-    "builtin type Tuple[...Args];\n"
-    "test \"tuple_init\" {\n"
-    "  var t = .Tuple[i32, f64]{1, 2.0};\n"
-    "}\n";
+    "var t: <i32, f64> = .<i32, f64>{1, 2.0};\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(checker_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
 TEST_F(dt_builtin, tuple_getTupleItem) {
-  const char *src = BUILTIN_ASSERT BUILTIN_TUPLE BUILTIN_GET
+  const char *src = BUILTIN_ASSERT BUILTIN_GET
     "test \"tuple_get\" {\n"
-    "  var t = .Tuple[i32, f64]{1, 2.0};\n"
+    "  var t: <i32, f64> = .<i32, f64>{1, 2.0};\n"
     "  assert(getTupleItem[0](t) == 1);\n"
     "  assert(getTupleItem[1](t) == 2.0);\n"
     "}\n";
@@ -204,9 +193,9 @@ TEST_F(dt_builtin, tuple_getTupleItem) {
 }
 
 TEST_F(dt_builtin, tuple_single_field) {
-  const char *src = BUILTIN_ASSERT BUILTIN_TUPLE BUILTIN_GET
+  const char *src = BUILTIN_ASSERT BUILTIN_GET
     "test \"tuple_single\" {\n"
-    "  var t = .Tuple[i32]{42};\n"
+    "  var t: <i32> = .<i32>{42};\n"
     "  assert(getTupleItem[0](t) == 42);\n"
     "}\n";
   auto r = compile_source(allocator, src);
@@ -215,9 +204,9 @@ TEST_F(dt_builtin, tuple_single_field) {
 }
 
 TEST_F(dt_builtin, tuple_three_fields) {
-  const char *src = BUILTIN_ASSERT BUILTIN_TUPLE BUILTIN_GET
+  const char *src = BUILTIN_ASSERT BUILTIN_GET
     "test \"tuple_three\" {\n"
-    "  var t = .Tuple[i32, f64, bool]{1, 2.0, true};\n"
+    "  var t: <i32, f64, bool> = .<i32, f64, bool>{1, 2.0, true};\n"
     "  assert(getTupleItem[0](t) == 1);\n"
     "  assert(getTupleItem[1](t) == 2.0);\n"
     "  assert(getTupleItem[2](t) == true);\n"
@@ -228,11 +217,11 @@ TEST_F(dt_builtin, tuple_three_fields) {
 }
 
 TEST_F(dt_builtin, tuple_same_instantiation_dedup) {
-  /* Tuple[i32, f64] instantiated twice should be the same type */
-  const char *src = BUILTIN_ASSERT BUILTIN_TUPLE BUILTIN_GET
+  /* <i32, f64> used twice should be the same type */
+  const char *src = BUILTIN_ASSERT BUILTIN_GET
     "test \"tuple_dedup\" {\n"
-    "  var t1 = .Tuple[i32, f64]{1, 2.0};\n"
-    "  var t2 = .Tuple[i32, f64]{3, 4.0};\n"
+    "  var t1: <i32, f64> = .<i32, f64>{1, 2.0};\n"
+    "  var t2: <i32, f64> = .<i32, f64>{3, 4.0};\n"
     "  assert(getTupleItem[0](t1) == 1);\n"
     "  assert(getTupleItem[0](t2) == 3);\n"
     "}\n";
@@ -243,9 +232,9 @@ TEST_F(dt_builtin, tuple_same_instantiation_dedup) {
 
 TEST_F(dt_builtin, tuple_subscript_error) {
   /* t[0] should be an error — must use getTupleItem[0](t) */
-  const char *src = BUILTIN_ASSERT BUILTIN_TUPLE
+  const char *src = BUILTIN_ASSERT
     "test \"tuple_sub_err\" {\n"
-    "  var t = .Tuple[i32, f64]{1, 2.0};\n"
+    "  var t: <i32, f64> = .<i32, f64>{1, 2.0};\n"
     "  t[0];\n"
     "}\n";
   auto r = compile_source(allocator, src);
@@ -255,9 +244,9 @@ TEST_F(dt_builtin, tuple_subscript_error) {
 
 TEST_F(dt_builtin, tuple_setTupleItem) {
   /* setTupleItem modifies tuple field in-place */
-  const char *src = BUILTIN_ASSERT BUILTIN_TUPLE BUILTIN_GET BUILTIN_SET
+  const char *src = BUILTIN_ASSERT BUILTIN_GET BUILTIN_SET
     "test \"tuple_set\" {\n"
-    "  var t = .Tuple[i32, f64]{1, 2.0};\n"
+    "  var t: <i32, f64> = .<i32, f64>{1, 2.0};\n"
     "  setTupleItem[0](t, 10);\n"
     "  assert(getTupleItem[0](t) == 10);\n"
     "  assert(getTupleItem[1](t) == 2.0);\n"
@@ -303,10 +292,9 @@ TEST_F(dt_builtin, length_array) {
 
 TEST_F(dt_builtin, length_tuple) {
   const char *src = BUILTIN_ASSERT
-    "builtin type Tuple[...Args];\n"
     "builtin func length[T](list: T): u64;\n"
     "test \"length_tuple\" {\n"
-    "  var t = .Tuple[i32, f64, bool]{1, 2.0, true};\n"
+    "  var t: <i32, f64, bool> = .<i32, f64, bool>{1, 2.0, true};\n"
     "  assert(length(t) == 3);\n"
     "}\n";
   auto r = compile_source(allocator, src);

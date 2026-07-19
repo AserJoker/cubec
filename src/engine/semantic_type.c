@@ -5,6 +5,7 @@
 #include "core/allocator.h"
 #include "core/string.h"
 #include "core/vec.h"
+#include <stdio.h>
 #include <string.h>
 
 /* ===== type_name_entry lifecycle ===== */
@@ -86,6 +87,14 @@ static void _type_impl_dispose(void *self, allocator_t allocator) {
   case TYPE_GENERIC_PACK:
     if (impl->generic_pack.expanded_types) {
       allocator_free(allocator, &impl->generic_pack.expanded_types);
+    }
+    break;
+  case TYPE_TUPLE:
+    if (impl->tuple.element_types) {
+      allocator_free(allocator, &impl->tuple.element_types);
+    }
+    if (impl->tuple.fields) {
+      allocator_free(allocator, &impl->tuple.fields);
     }
     break;
   case TYPE_GENERIC_VALUE:
@@ -231,6 +240,10 @@ static bool _type_impl_equals(type_impl_t a, type_impl_t b) {
     return _type_vec_equals(a->generic_pack.expanded_types,
                             b->generic_pack.expanded_types);
 
+  case TYPE_TUPLE:
+    return _type_vec_equals(a->tuple.element_types,
+                            b->tuple.element_types);
+
   case TYPE_PACK_INDEX:
     if (a->pack_index.pack_param_idx != b->pack_index.pack_param_idx) return false;
     if (a->pack_index.index_param_idx != b->pack_index.index_param_idx) return false;
@@ -344,6 +357,21 @@ bool semantic_type_can_implicit_convert(semantic_type_t from,
   /* int -> float */
   if (from->impl->kind >= TYPE_I8 && from->impl->kind <= TYPE_U64 &&
       to->impl->kind >= TYPE_F16 && to->impl->kind <= TYPE_F64) {
+    return true;
+  }
+
+  /* tuple element-wise implicit conversion */
+  if (from->impl->kind == TYPE_TUPLE && to->impl->kind == TYPE_TUPLE) {
+    vec_t from_elems = from->impl->tuple.element_types;
+    vec_t to_elems = to->impl->tuple.element_types;
+    size_t fc = vec_get_size(from_elems);
+    size_t tc = vec_get_size(to_elems);
+    if (fc != tc) return false;
+    for (size_t i = 0; i < fc; i++) {
+      semantic_type_t fe = (semantic_type_t)vec_get(from_elems, i);
+      semantic_type_t te = (semantic_type_t)vec_get(to_elems, i);
+      if (!semantic_type_can_implicit_convert(fe, te)) return false;
+    }
     return true;
   }
 
@@ -515,6 +543,30 @@ semantic_type_t semantic_type_create_generic_value(allocator_t allocator,
       allocator, &g_semantic_type_type, NULL);
   t->impl = _create_impl(allocator, TYPE_GENERIC_VALUE);
   t->impl->generic_value.value = value;
+  t->is_incomplete = false;
+  return t;
+}
+
+semantic_type_t semantic_type_create_tuple(allocator_t allocator,
+                                           vec_t element_types) {
+  semantic_type_t t = (semantic_type_t)allocator_create(
+      allocator, &g_semantic_type_type, NULL);
+  t->impl = _create_impl(allocator, TYPE_TUPLE);
+  t->impl->tuple.element_types = element_types;
+  /* Pre-compute field symbols _0, _1, ... */
+  vec_init_t vi = {.auto_dispose = true};
+  t->impl->tuple.fields = (vec_t)allocator_create(allocator, &g_vec_type, &vi);
+  size_t ecount = element_types ? vec_get_size(element_types) : 0;
+  for (size_t i = 0; i < ecount; i++) {
+    semantic_type_t et = (semantic_type_t)vec_get(element_types, i);
+    char fname[16];
+    snprintf(fname, sizeof(fname), "_%zu", i);
+    struct symbol *fsym = symbol_create(allocator, fname, SYMBOL_FIELD, (location_t){0});
+    fsym->field.type = et;
+    fsym->field.index = i;
+    fsym->field.is_pub = true;
+    vec_push(t->impl->tuple.fields, fsym);
+  }
   t->is_incomplete = false;
   return t;
 }

@@ -1021,8 +1021,71 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
     return _eval_temp(eval, comp);
   }
 
+  if (type->impl->kind == TYPE_TUPLE) {
+    /* Tuple initialization */
+    vec_t type_fields = type->impl->tuple.fields;
+    size_t field_count = type_fields ? vec_get_size(type_fields) : 0;
+
+    comptime_value_t comp = comptime_value_create_composite(
+        eval->allocator, type, NULL, data_size);
+
+    if (il->is_field && il->items) {
+      size_t ic = vec_get_size(il->items);
+      for (size_t i = 0; i < ic; i++) {
+        node_t item = (node_t)vec_get(il->items, i);
+        if (item->kind != CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD) continue;
+        cubec_expression_initialize_field_t f =
+            (cubec_expression_initialize_field_t)item;
+        const char *fname = _eval_ident_str((node_t)f->field);
+        comptime_value_t v = _comptime_eval_expr(eval, ctx, f->value);
+        if (v && v->kind != COMPTIME_VALUE_ERROR)
+          comptime_value_set_field(comp, fname, v);
+      }
+    } else if (il->items) {
+      /* Positional init — supports pack spread */
+      size_t ic = vec_get_size(il->items);
+      size_t field_idx = 0;
+      size_t total_values = 0;
+      for (size_t i = 0; i < ic; i++) {
+        node_t item = (node_t)vec_get(il->items, i);
+
+        if (item->kind == CUBEC_NODE_EXPRESSION_SPREAD) {
+          comptime_value_t spread_val = _comptime_eval_expr(eval, ctx, item);
+          if (spread_val && spread_val->kind == COMPTIME_VALUE_PACK) {
+            vec_t elements = spread_val->pack.elements;
+            size_t ecount = elements ? vec_get_size(elements) : 0;
+            total_values += ecount;
+            for (size_t j = 0; j < ecount && field_idx < field_count; j++, field_idx++) {
+              struct symbol *fsym = (struct symbol *)vec_get(type_fields, field_idx);
+              comptime_value_t ev = (comptime_value_t)vec_get(elements, j);
+              if (ev && ev->kind != COMPTIME_VALUE_ERROR && fsym)
+                comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, ev);
+            }
+          }
+        } else {
+          total_values++;
+          if (field_idx < field_count) {
+            struct symbol *fsym = (struct symbol *)vec_get(type_fields, field_idx);
+            comptime_value_t v = _comptime_eval_expr(eval, ctx, item);
+            if (v && v->kind != COMPTIME_VALUE_ERROR && fsym)
+              comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v);
+            field_idx++;
+          }
+        }
+      }
+      if (total_values > field_count) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                             "too many initializers for type '%s' (%zu values for %zu fields)",
+                             type->name ? type->name : "<tuple>",
+                             total_values, field_count);
+        ctx->error_count++;
+      }
+    }
+    return _eval_temp(eval, comp);
+  }
+
   if (type->impl->kind == TYPE_GENERIC_INSTANCE && type->impl->generic_instance.fields) {
-    /* Tuple initialization: same as struct but fields are in generic_instance.fields */
+    /* Generic instance (struct/union) initialization */
     vec_t type_fields = type->impl->generic_instance.fields;
     size_t field_count = type_fields ? vec_get_size(type_fields) : 0;
 
@@ -1299,6 +1362,7 @@ comptime_value_t _comptime_eval_expr(comptime_eval_t eval, checker_t ctx,
   case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION:
     return _eval_generic_inst(eval, ctx, expr);
   case CUBEC_NODE_EXPRESSION_TYPE_STRUCT:
+  case CUBEC_NODE_EXPRESSION_TYPE_TUPLE:
   case CUBEC_NODE_EXPRESSION_TYPE_ENUM:
   case CUBEC_NODE_EXPRESSION_TYPE_UNION:
   case CUBEC_NODE_EXPRESSION_TYPE_FUNCTION:

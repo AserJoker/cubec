@@ -131,6 +131,10 @@ static size_t _hash_type(semantic_type_t type) {
     hash = _hash_combine(hash, _hash_type_vec(impl->generic_pack.expanded_types));
     break;
 
+  case TYPE_TUPLE:
+    hash = _hash_combine(hash, _hash_type_vec(impl->tuple.element_types));
+    break;
+
   case TYPE_PACK_INDEX:
     hash = _hash_combine(hash, (size_t)impl->pack_index.pack_param_idx);
     hash = _hash_combine(hash, (size_t)impl->pack_index.index_param_idx);

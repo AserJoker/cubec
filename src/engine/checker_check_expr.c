@@ -861,8 +861,10 @@ static semantic_type_t _check_expr_initialize_list(checker_t ctx, node_t expr) {
     semantic_type_t t = resolver_resolve_type(ctx, il->type);
     if (t->impl->kind == TYPE_ERROR) return ctx->error_type;
 
-    if (_is_struct_like(t)) {
-      vec_t fields = _get_struct_fields(t);
+    if (_is_struct_like(t) || t->impl->kind == TYPE_TUPLE) {
+      vec_t fields = t->impl->kind == TYPE_TUPLE
+          ? t->impl->tuple.fields
+          : _get_struct_fields(t);
       size_t fcount = fields ? vec_get_size(fields) : 0;
       size_t icount = il->items ? vec_get_size(il->items) : 0;
       if (il->is_field)
@@ -945,6 +947,7 @@ semantic_type_t _check_expression(checker_t ctx, node_t expr) {
   case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION: return _check_expr_generic_instantiation(ctx, expr);
   case CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER:
   case CUBEC_NODE_EXPRESSION_TYPE_STRUCT:
+  case CUBEC_NODE_EXPRESSION_TYPE_TUPLE:
   case CUBEC_NODE_EXPRESSION_TYPE_ENUM:
   case CUBEC_NODE_EXPRESSION_TYPE_UNION:
   case CUBEC_NODE_EXPRESSION_TYPE_INTERFACE:

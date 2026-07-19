@@ -264,6 +264,63 @@ static bool _type_unify(semantic_type_t actual, semantic_type_t expected,
     return true;
   }
 
+  /* Tuple: match element-by-element, with pack support */
+  case TYPE_TUPLE: {
+    vec_t aelems = actual->impl->tuple.element_types;
+    vec_t eelems = expected->impl->tuple.element_types;
+    size_t aec = aelems ? vec_get_size(aelems) : 0;
+    size_t eec = eelems ? vec_get_size(eelems) : 0;
+
+    /* Find pack position in expected elements */
+    size_t pack_pos = eec;
+    for (size_t i = 0; i < eec; i++) {
+      semantic_type_t ee = (semantic_type_t)vec_get(eelems, i);
+      if (ee && ee->impl->kind == TYPE_GENERIC_PACK) {
+        pack_pos = i;
+        break;
+      }
+    }
+
+    if (pack_pos < eec) {
+      /* Elastic matching: elements before the pack must match exactly */
+      for (size_t i = 0; i < pack_pos; i++) {
+        if (i >= aec) return false;
+        semantic_type_t ae = (semantic_type_t)vec_get(aelems, i);
+        semantic_type_t ee = (semantic_type_t)vec_get(eelems, i);
+        if (!_type_unify(ae, ee, bindings, allocator)) return false;
+      }
+
+      /* Collect remaining actual elements into the pack binding */
+      semantic_type_t pack_type = (semantic_type_t)vec_get(eelems, pack_pos);
+      const char *pack_name = pack_type->impl->generic_pack.name;
+      semantic_type_t pack_result = semantic_type_create_generic_pack(
+          allocator, pack_name, pack_type->impl->generic_pack.index);
+      for (size_t i = pack_pos; i < aec; i++) {
+        semantic_type_t ae = (semantic_type_t)vec_get(aelems, i);
+        vec_push(pack_result->impl->generic_pack.expanded_types, ae);
+      }
+      type_hash_ensure(pack_result);
+
+      /* Record binding */
+      void *existing = strmap_find(*bindings, pack_name);
+      if (existing) {
+        semantic_type_t prev = (semantic_type_t)existing;
+        if (prev->impl->hash != pack_result->impl->hash) return false;
+      } else {
+        strmap_insert(*bindings, pack_name, pack_result);
+      }
+    } else {
+      /* No pack — strict element count matching */
+      if (aec != eec) return false;
+      for (size_t i = 0; i < eec; i++) {
+        semantic_type_t ae = (semantic_type_t)vec_get(aelems, i);
+        semantic_type_t ee = (semantic_type_t)vec_get(eelems, i);
+        if (!_type_unify(ae, ee, bindings, allocator)) return false;
+      }
+    }
+    return true;
+  }
+
   default:
     return actual->impl->hash == expected->impl->hash;
   }
@@ -408,6 +465,31 @@ vec_t _infer_type_args_from_call(checker_t ctx,
     void *found = strmap_find(bindings, gp_name);
     if (found) {
       vec_set(result, i, found);
+    }
+  }
+
+  /* Track any TYPE_GENERIC_PACK values created by _type_unify into all_types
+     so they are properly freed on checker_dispose. The bindings strmap does not
+     own its values (value_auto_dispose=false), so these would otherwise leak.
+     Skip packs that are already in all_types (e.g. created by _infer_type_args_from_call
+     at line 426). */
+  {
+    size_t existing_count = vec_get_size(ctx->all_types);
+    strmap_iter_t iter = strmap_iter_first(bindings);
+    const char *key = NULL;
+    while ((key = strmap_iter_next(&iter)) != NULL) {
+      void *val = strmap_find(bindings, key);
+      if (val) {
+        semantic_type_t st = (semantic_type_t)val;
+        if (st->impl && st->impl->kind == TYPE_GENERIC_PACK) {
+          /* Check if already in all_types */
+          bool found = false;
+          for (size_t j = 0; j < existing_count; j++) {
+            if (vec_get(ctx->all_types, j) == st) { found = true; break; }
+          }
+          if (!found) vec_push(ctx->all_types, st);
+        }
+      }
     }
   }
 

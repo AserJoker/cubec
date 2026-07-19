@@ -37,6 +37,9 @@ semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
   case CUBEC_NODE_EXPRESSION_TYPE_STRUCT:
     return _resolve_type_struct(ctx, node);
 
+  case CUBEC_NODE_EXPRESSION_TYPE_TUPLE:
+    return _resolve_type_tuple(ctx, node);
+
   case CUBEC_NODE_EXPRESSION_TYPE_ENUM:
     return _resolve_type_enum(ctx, node);
 

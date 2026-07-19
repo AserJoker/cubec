@@ -756,7 +756,7 @@ static void _evaluate_type_alias(checker_t ctx,
   } else if (node->is_builtin) {
     builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
     if (be && !be->eval_call) {
-      /* Non-function builtin = type builtin (e.g., Tuple) */
+      /* Non-function builtin = type builtin (reserved for future use) */
       sym->type.type = be->type;
     }
   } else {

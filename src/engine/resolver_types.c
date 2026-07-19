@@ -13,6 +13,7 @@
 #include "cubec/declaration_array.h"
 #include "cubec/expression_type_qualifier.h"
 #include "cubec/expression_type_struct.h"
+#include "cubec/expression_type_tuple.h"
 #include "cubec/expression_type_enum.h"
 #include "cubec/expression_type_union.h"
 #include "cubec/expression_type_interface.h"
@@ -231,6 +232,29 @@ semantic_type_t _resolve_type_struct(checker_t ctx, node_t node) {
   }
 
   type_layout_compute(t, 8);
+  type_hash_ensure(t);
+  return t;
+}
+
+semantic_type_t _resolve_type_tuple(checker_t ctx, node_t node) {
+  cubec_expression_type_tuple_t tt =
+      (cubec_expression_type_tuple_t)node;
+
+  vec_init_t vi = {.auto_dispose = false};
+  vec_t element_types = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+
+  if (tt->element_types) {
+    size_t count = vec_get_size(tt->element_types);
+    for (size_t i = 0; i < count; i++) {
+      node_t elem_node = (node_t)vec_get(tt->element_types, i);
+      if (!elem_node) continue;
+      semantic_type_t resolved = resolver_resolve_type(ctx, elem_node);
+      vec_push(element_types, resolved);
+    }
+  }
+
+  semantic_type_t t = semantic_type_create_tuple(ctx->allocator, element_types);
+  vec_push(ctx->all_types, t);
   type_hash_ensure(t);
   return t;
 }

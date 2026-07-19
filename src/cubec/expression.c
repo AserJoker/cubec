@@ -14,6 +14,7 @@
 #include "cubec/expression_group.h"
 #include "cubec/expression_initialize_list.h"
 #include "cubec/expression_type_qualifier.h"
+#include "cubec/expression_type_tuple.h"
 #include "cubec/expression_type_function.h"
 #include "cubec/expression_type_interface.h"
 #include "cubec/expression_type_struct.h"
@@ -175,6 +176,13 @@ node_t read_atom(allocator_t allocator, vec_t tokens, size_t *position,
 
   // Try type qualifier: const/volatile <type> — prefix type modifiers
   result = read_expression_type_qualifier(allocator, tokens, &current, filename);
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try tuple type: <type1, type2, ...> — prefix type expression
+  result = read_expression_type_tuple(allocator, tokens, &current, filename);
   if (result) {
     *position = current;
     return result;
@@ -418,6 +426,13 @@ node_t read_type_expression_primary(allocator_t allocator, vec_t tokens,
   }
   /* Try type qualifier expression (prefix form: const/volatile <type>) */
   node = read_expression_type_qualifier(allocator, tokens, &current, filename);
+  if (node) {
+    *position = current;
+    return node;
+  }
+
+  /* Try tuple type expression (prefix form: <type1, type2, ...>) */
+  node = read_expression_type_tuple(allocator, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;

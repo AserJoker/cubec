@@ -336,6 +336,40 @@ static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
        creating substituted field copies. */
     return type;
 
+  case TYPE_TUPLE: {
+    /* Substitute element types, expanding packs */
+    vec_t elems = type->impl->tuple.element_types;
+    size_t ecount = elems ? vec_get_size(elems) : 0;
+    bool changed = false;
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t new_elems = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+    for (size_t i = 0; i < ecount; i++) {
+      semantic_type_t e = (semantic_type_t)vec_get(elems, i);
+      semantic_type_t new_e = _substitute_type(ctx, e, type_args);
+      /* If substitution produced a TYPE_GENERIC_PACK, expand it into individual types */
+      if (new_e && new_e->impl->kind == TYPE_GENERIC_PACK) {
+        vec_t expanded = new_e->impl->generic_pack.expanded_types;
+        size_t ecount2 = expanded ? vec_get_size(expanded) : 0;
+        for (size_t j = 0; j < ecount2; j++) {
+          vec_push(new_elems, (semantic_type_t)vec_get(expanded, j));
+        }
+        changed = true;
+      } else {
+        vec_push(new_elems, new_e);
+        if (new_e != e) changed = true;
+      }
+    }
+    if (!changed) {
+      allocator_free(ctx->allocator, &new_elems);
+      return type;
+    }
+    semantic_type_t result = semantic_type_create_tuple(ctx->allocator, new_elems);
+    type_hash_ensure(result);
+    type_layout_compute(result, 8);
+    vec_push(ctx->all_types, result);
+    return result;
+  }
+
   case TYPE_PACK_INDEX: {
     /* Args[N] — index into a pack parameter's expanded_types */
     size_t pack_param_idx = type->impl->pack_index.pack_param_idx;
@@ -527,6 +561,35 @@ bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
       /* Wildcard ? skips field type check */
       if (cf->field.type && cf->field.type->impl->kind == TYPE_WILDCARD) continue;
       if (!_check_constraint(ctx, af->field.type, cf->field.type, arg_expr))
+        return false;
+    }
+    return true;
+  }
+
+  case TYPE_TUPLE: {
+    /* Tuple constraint: T extends <?> means T must be a tuple type.
+       If constraint has element types, check them pairwise (wildcard skips). */
+    if (type_arg->impl->kind != TYPE_TUPLE) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                           "type does not satisfy constraint: expected tuple type");
+      ctx->error_count++;
+      return false;
+    }
+    vec_t c_elems = constraint->impl->tuple.element_types;
+    vec_t a_elems = type_arg->impl->tuple.element_types;
+    size_t cec = c_elems ? vec_get_size(c_elems) : 0;
+    size_t aec = a_elems ? vec_get_size(a_elems) : 0;
+    if (aec < cec) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                           "type does not satisfy constraint: tuple element count mismatch");
+      ctx->error_count++;
+      return false;
+    }
+    for (size_t i = 0; i < cec; i++) {
+      semantic_type_t ce = (semantic_type_t)vec_get(c_elems, i);
+      semantic_type_t ae = (semantic_type_t)vec_get(a_elems, i);
+      if (ce->impl->kind == TYPE_WILDCARD) continue;
+      if (!_check_constraint(ctx, ae, ce, arg_expr))
         return false;
     }
     return true;
@@ -762,27 +825,16 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   }
 
   /* Create the specialized type as a GENERIC_INSTANCE */
-  semantic_type_t inst = semantic_type_create_generic_instance(
-      ctx->allocator, template_type, type_args);
-  vec_push(ctx->all_types, inst);
-  type_hash_ensure(inst);
+  semantic_type_t inst = NULL;
 
   /* Copy structural info from template based on kind */
   enum type_kind tkind = template_type->impl->kind;
 
-  /* Special handling for builtin Tuple type: fields are derived from type_args.
-     Tuple is registered as a builtin type with eval_call == NULL and TYPE_STRUCT. */
-  builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
-  if (be && !be->eval_call && tkind == TYPE_STRUCT) {
-    /* Create anonymous fields _0, _1, ... from type_args.
-       type_args contains a single TYPE_GENERIC_PACK with expanded_types. */
-    vec_init_t vi = {.auto_dispose = true};
-    inst->impl->generic_instance.fields =
-        (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-
-    size_t tacount = type_args ? vec_get_size(type_args) : 0;
-    /* Extract field types from the pack in type_args */
+  /* Special handling for TYPE_TUPLE: create a native TYPE_TUPLE instead of
+     GENERIC_INSTANCE. type_args contains a TYPE_GENERIC_PACK with expanded_types. */
+  if (tkind == TYPE_TUPLE) {
     vec_t field_types = NULL;
+    size_t tacount = type_args ? vec_get_size(type_args) : 0;
     for (size_t i = 0; i < tacount; i++) {
       semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
       if (ta && ta->impl && ta->impl->kind == TYPE_GENERIC_PACK) {
@@ -790,25 +842,31 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
         break;
       }
     }
+    /* Build element_types vec from pack */
+    vec_init_t evi = {.auto_dispose = false};
+    vec_t elem_types = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &evi);
     if (field_types) {
       size_t fcount = vec_get_size(field_types);
       for (size_t i = 0; i < fcount; i++) {
-        semantic_type_t ft = (semantic_type_t)vec_get(field_types, i);
-        /* Anonymous field name: _0, _1, _2, ... */
-        char fname[16];
-        snprintf(fname, sizeof(fname), "_%zu", i);
-        struct symbol *fsym = symbol_create(ctx->allocator, fname,
-                                            SYMBOL_FIELD, instantiation_expr
-                                            ? instantiation_expr->location
-                                            : (location_t){0});
-        fsym->field.type = ft;
-        fsym->field.index = i;
-        fsym->field.is_pub = true;
-        vec_push(inst->impl->generic_instance.fields, fsym);
+        vec_push(elem_types, vec_get(field_types, i));
       }
     }
+    inst = semantic_type_create_tuple(ctx->allocator, elem_types);
+    vec_push(ctx->all_types, inst);
+    type_hash_ensure(inst);
     type_layout_compute(inst, 8);
-  } else if (tkind == TYPE_STRUCT || tkind == TYPE_UNION || tkind == TYPE_CUNION) {
+    /* Cache the result */
+    _cache_insert(ctx, name, type_args, inst);
+    return inst;
+  }
+
+  /* For non-TUPLE types, create a GENERIC_INSTANCE */
+  inst = semantic_type_create_generic_instance(
+      ctx->allocator, template_type, type_args);
+  vec_push(ctx->all_types, inst);
+  type_hash_ensure(inst);
+
+  if (tkind == TYPE_STRUCT || tkind == TYPE_UNION || tkind == TYPE_CUNION) {
     _instantiate_struct_fields(ctx, inst, template_type->impl->struct_type.fields, type_args);
   }
 

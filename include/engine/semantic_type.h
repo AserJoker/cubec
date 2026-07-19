@@ -25,6 +25,7 @@ enum type_kind {
   TYPE_GENERIC_PACK,
   TYPE_GENERIC_VALUE,
   TYPE_PACK_INDEX,
+  TYPE_TUPLE,
   TYPE_WILDCARD,
   TYPE_NIL, TYPE_ERROR
 };
@@ -105,6 +106,11 @@ struct _type_impl {
       size_t pack_param_idx;  /**< Index of the pack param in generic param list */
       size_t index_param_idx; /**< Index of the value param (N) in generic param list */
     } pack_index;
+    /* TYPE_TUPLE */
+    struct {
+      vec_t element_types; /**< Element type list (semantic_type_t, auto_dispose=false) */
+      vec_t fields;        /**< Pre-computed field symbols (_0, _1, ...) (auto_dispose=true) */
+    } tuple;
     /* TYPE_GENERIC_VALUE: compile-time constant used as a type argument */
     struct {
       struct comptime_value *value; /**< The compile-time constant value */
@@ -183,6 +189,8 @@ semantic_type_t semantic_type_create_pack_index(allocator_t allocator,
                                                 size_t index_param_idx);
 semantic_type_t semantic_type_create_generic_value(allocator_t allocator,
                                                     struct comptime_value *value);
+semantic_type_t semantic_type_create_tuple(allocator_t allocator,
+                                           vec_t element_types);
 semantic_type_t semantic_type_create_wildcard(allocator_t allocator);
 
 #ifdef __cplusplus

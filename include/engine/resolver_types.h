@@ -23,6 +23,7 @@ semantic_type_t _resolve_type_interface(checker_t ctx, node_t node);
 semantic_type_t _resolve_type_function(checker_t ctx, node_t node);
 semantic_type_t _resolve_type_namespace_access(checker_t ctx, node_t node);
 semantic_type_t _resolve_type_typeof(checker_t ctx, node_t node);
+semantic_type_t _resolve_type_tuple(checker_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

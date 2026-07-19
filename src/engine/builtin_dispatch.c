@@ -87,10 +87,10 @@ struct comptime_value *builtin_length_eval(struct comptime_eval *eval,
   if (arg->type) {
     if (arg->type->impl->kind == TYPE_ARRAY) {
       len = arg->type->impl->array.length;
-    } else if (arg->type->impl->kind == TYPE_GENERIC_INSTANCE &&
-               arg->type->impl->generic_instance.fields) {
+    } else if (arg->type->impl->kind == TYPE_TUPLE &&
+               arg->type->impl->tuple.fields) {
       /* Tuple: length = number of fields */
-      len = vec_get_size(arg->type->impl->generic_instance.fields);
+      len = vec_get_size(arg->type->impl->tuple.fields);
     } else {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                            node->location,
@@ -150,8 +150,8 @@ struct comptime_value *builtin_get_eval(struct comptime_eval *eval,
   }
 
   semantic_type_t tuple_type = tuple_val->type;
-  if (!tuple_type || tuple_type->impl->kind != TYPE_GENERIC_INSTANCE ||
-      !tuple_type->impl->generic_instance.fields) {
+  if (!tuple_type || tuple_type->impl->kind != TYPE_TUPLE ||
+      !tuple_type->impl->tuple.fields) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                          node->location,
                          "getTupleItem() requires a tuple argument");
@@ -159,7 +159,7 @@ struct comptime_value *builtin_get_eval(struct comptime_eval *eval,
     return _eval_error_val(eval);
   }
 
-  vec_t fields = tuple_type->impl->generic_instance.fields;
+  vec_t fields = tuple_type->impl->tuple.fields;
   size_t fcount = vec_get_size(fields);
   if (idx >= fcount) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
@@ -232,8 +232,8 @@ struct comptime_value *builtin_set_eval(struct comptime_eval *eval,
   }
 
   semantic_type_t tuple_type = tuple_val->type;
-  if (!tuple_type || tuple_type->impl->kind != TYPE_GENERIC_INSTANCE ||
-      !tuple_type->impl->generic_instance.fields) {
+  if (!tuple_type || tuple_type->impl->kind != TYPE_TUPLE ||
+      !tuple_type->impl->tuple.fields) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                          node->location,
                          "set() requires a tuple argument");
@@ -241,7 +241,7 @@ struct comptime_value *builtin_set_eval(struct comptime_eval *eval,
     return _eval_error_val(eval);
   }
 
-  vec_t fields = tuple_type->impl->generic_instance.fields;
+  vec_t fields = tuple_type->impl->tuple.fields;
   size_t fcount = vec_get_size(fields);
   if (idx >= fcount) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
