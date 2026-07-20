@@ -144,8 +144,8 @@ static const char *severity_str(enum diagnostic_severity severity) {
 
 static void format_location(FILE *out, location_t *loc) {
   if (loc->filename) {
-    fprintf(out, "  --> %s:%zu:%zu", loc->filename, loc->begin.line,
-            loc->begin.column);
+    fprintf(out, "  --> %s:%zu:%zu", loc->filename, loc->begin.line + 1,
+            loc->begin.column + 1);
   }
 }
 
@@ -163,7 +163,7 @@ static void emit_diagnostic(FILE *out, struct diagnostic *d,
     struct source_entry *entry =
         source_cache_find(sources, d->primary.filename);
     if (entry) {
-      size_t line = d->primary.begin.line;
+      size_t line = d->primary.begin.line + 1;
       const char *src_line = source_entry_get_line(entry, line);
       size_t line_count = source_entry_get_line_count(entry);
 
@@ -183,7 +183,7 @@ static void emit_diagnostic(FILE *out, struct diagnostic *d,
 
       /* caret line */
       fprintf(out, " %*s | ", width, "");
-      size_t col = d->primary.begin.column;
+      size_t col = d->primary.begin.column + 1;
       size_t span_len = 1;
       if (d->primary.end.offset > d->primary.begin.offset) {
         span_len = (size_t)(d->primary.end.offset - d->primary.begin.offset);
@@ -206,7 +206,7 @@ static void emit_diagnostic(FILE *out, struct diagnostic *d,
     fprintf(out, "  = %s: %s\n", severity_str(DIAGNOSTIC_NOTE), note->message);
     if (note->location.filename) {
       fprintf(out, "    --> %s:%zu:%zu\n", note->location.filename,
-              note->location.begin.line, note->location.begin.column);
+              note->location.begin.line + 1, note->location.begin.column + 1);
     }
   }
 

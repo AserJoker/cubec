@@ -256,7 +256,7 @@ static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
                            lt->name ? lt->name : "<anonymous>");
       ctx->error_count++;
     }
-    return lt;
+    return ctx->builtin_void;
   }
 
   if (!semantic_type_can_implicit_convert(rt, lt)) {
@@ -264,7 +264,7 @@ static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
                          "type mismatch in compound assignment");
     ctx->error_count++;
   }
-  return lt;
+  return ctx->builtin_void;
 }
 
 static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {

@@ -115,7 +115,7 @@ TEST_F(dt_diagnostic, emit_with_source) {
 
   EXPECT_NE(strstr(buf, "error:"), nullptr);
   EXPECT_NE(strstr(buf, "type mismatch"), nullptr);
-  EXPECT_NE(strstr(buf, "test.cubec:1:14"), nullptr);
+  EXPECT_NE(strstr(buf, "test.cubec:2:15"), nullptr);
   EXPECT_NE(strstr(buf, "^"), nullptr);
 
   remove(tmp_path);

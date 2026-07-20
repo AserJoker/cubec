@@ -11,3 +11,5 @@ build-asan
 build-linux
 build_wsl
 build-wsl
+build_asan
+build-vg
