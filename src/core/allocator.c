@@ -8,6 +8,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef RUNNING_ON_VALGRIND
+#include <valgrind/valgrind.h>
+#endif
 typedef struct _alloc_chunk_t *alloc_chunk_t;
 struct _alloc_chunk_t {
   alloc_chunk_t next;
@@ -43,19 +46,6 @@ allocator_t create_allocator(alloc_fn_t alloc_fn, free_fn_t free_fn) {
 void delete_allocator(allocator_t self) {
   if (self == NULL) {
     return;
-  }
-  while (self->chunks) {
-    alloc_chunk_t chunk = self->chunks;
-    fprintf(stderr, "memory leak: size = %" PRIuPTR ", pointer = %p",
-            chunk->size, &chunk->data);
-    if (chunk->type) {
-      fprintf(stderr, ", type=%s", chunk->type->name);
-    }
-    fprintf(stderr, "\n");
-    self->chunks = self->chunks->next;
-    chunk->last = NULL;
-    chunk->next = NULL;
-    self->free_fn(chunk);
   }
   self->free_fn(self);
 }

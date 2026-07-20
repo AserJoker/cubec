@@ -11,8 +11,6 @@
 
 using ::testing::Test;
 
-/* ===== helpers ===== */
-
 #define BUILTIN_ASSERT "builtin func assert(condition: bool): void;\n"
 
 struct compile_result {
@@ -51,9 +49,9 @@ static void compile_result_cleanup(struct compile_result *r,
   allocator_free(allocator, &r->tokens);
 }
 
-/* ===== test fixture ===== */
+/* ===== fixture ===== */
 
-class dt_lambda : public CubecTest {
+class dt_flow_tdz : public CubecTest {
 protected:
   TEST_ALLOCATOR;
   void TearDown() override {
@@ -62,110 +60,106 @@ protected:
   }
 };
 
-/* ===== anonymous function ===== */
+/* ===== tests ===== */
 
-TEST_F(dt_lambda, basic_lambda) {
+TEST_F(dt_flow_tdz, undefined_use_tdz_error) {
+  /* var x: i32 = undefined; then use x in a function body => error */
   const char *src = BUILTIN_ASSERT
-    "test \"lambda_basic\" {\n"
-    "  var f = func(x: i32): i32 { return x + 1; };\n"
+    "func foo(): void {\n"
+    "  var x: i32 = undefined;\n"
+    "  assert(x == 0);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GE(r.ctx->error_count, 1);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_flow_tdz, assign_removes_tdz) {
+  /* var x: i32 = undefined; x = 5; assert(x == 5); => OK */
+  const char *src = BUILTIN_ASSERT
+    "func foo(): void {\n"
+    "  var x: i32 = undefined;\n"
+    "  x = 5;\n"
+    "  assert(x == 5);\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
 
-TEST_F(dt_lambda, lambda_no_params) {
+TEST_F(dt_flow_tdz, if_branch_tdz_merge) {
+  /* var x: i32 = undefined; if (cond) { x = 5; } assert(x == 5); => error
+   * because x may not be assigned if cond is false */
   const char *src = BUILTIN_ASSERT
-    "test \"lambda_no_params\" {\n"
-    "  var f = func(): i32 { return 42; };\n"
-    "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(r.ctx->error_count, 0);
-  compile_result_cleanup(&r, allocator);
-}
-
-TEST_F(dt_lambda, lambda_with_capture) {
-  const char *src = BUILTIN_ASSERT
-    "test \"lambda_capture\" {\n"
-    "  var y = 10;\n"
-    "  var f = func|y|(x: i32): i32 { return x + y; };\n"
-    "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(r.ctx->error_count, 0);
-  compile_result_cleanup(&r, allocator);
-}
-
-TEST_F(dt_lambda, lambda_call_inline) {
-  const char *src = BUILTIN_ASSERT
-    "test \"lambda_call\" {\n"
-    "  var result = func(x: i32): i32 { return x * 2; }(21);\n"
-    "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(r.ctx->error_count, 0);
-  compile_result_cleanup(&r, allocator);
-}
-
-TEST_F(dt_lambda, statement_func_with_capture) {
-  /* Local named function with capture list: func |x| name() { ... } */
-  const char *src = BUILTIN_ASSERT
-    "test \"closure\" {\n"
-    "  var x = 1;\n"
-    "  func |x| testfn(): void {\n"
-    "    x = x + 1;\n"
+    "func foo(cond: bool): void {\n"
+    "  var x: i32 = undefined;\n"
+    "  if (cond) {\n"
+    "    x = 5;\n"
     "  }\n"
-    "  testfn();\n"
-    "  assert(x == 1);\n"
+    "  assert(x == 5);\n"
     "}\n";
   auto r = compile_source(allocator, src);
-  EXPECT_EQ(r.ctx->error_count, 0) << "error_count=" << r.ctx->error_count;
+  EXPECT_GE(r.ctx->error_count, 1);
   compile_result_cleanup(&r, allocator);
 }
 
-TEST_F(dt_lambda, local_struct) {
-  /* Struct declared inside a test block */
+TEST_F(dt_flow_tdz, if_else_both_assign) {
+  /* Both branches assign x => not TDZ after merge */
   const char *src = BUILTIN_ASSERT
-    "test \"local_struct\" {\n"
-    "  struct Point { x: i32; y: i32; }\n"
-    "  var p = .Point { .x = 1, .y = 2 };\n"
-    "  assert(p.x == 1);\n"
+    "func foo(cond: bool): void {\n"
+    "  var x: i32 = undefined;\n"
+    "  if (cond) {\n"
+    "    x = 5;\n"
+    "  } else {\n"
+    "    x = 10;\n"
+    "  }\n"
+    "  assert(x == 5);\n"
     "}\n";
   auto r = compile_source(allocator, src);
-  EXPECT_EQ(r.ctx->error_count, 0) << "error_count=" << r.ctx->error_count;
+  EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
 
-TEST_F(dt_lambda, local_enum) {
-  /* Enum declared inside a test block */
+TEST_F(dt_flow_tdz, loop_body_assign_no_effect) {
+  /* Assignment in loop body doesn't guarantee x is assigned after loop */
   const char *src = BUILTIN_ASSERT
-    "test \"local_enum\" {\n"
-    "  enum Color { Red, Green, Blue }\n"
-    "  var c: Color = Color.Red;\n"
+    "func foo(cond: bool): void {\n"
+    "  var x: i32 = undefined;\n"
+    "  while (cond) {\n"
+    "    x = 5;\n"
+    "  }\n"
+    "  assert(x == 5);\n"
     "}\n";
   auto r = compile_source(allocator, src);
-  EXPECT_EQ(r.ctx->error_count, 0) << "error_count=" << r.ctx->error_count;
+  EXPECT_GE(r.ctx->error_count, 1);
   compile_result_cleanup(&r, allocator);
 }
 
-TEST_F(dt_lambda, local_union) {
-  /* Union declared inside a test block */
+TEST_F(dt_flow_tdz, nested_if_tdz) {
+  /* Nested if: x assigned in inner block but not outer */
   const char *src = BUILTIN_ASSERT
-    "test \"local_union\" {\n"
-    "  union Value { i32: i32; f64: f64; }\n"
-    "  var v: Value = undefined;\n"
+    "func foo(a: bool, b: bool): void {\n"
+    "  var x: i32 = undefined;\n"
+    "  if (a) {\n"
+    "    if (b) {\n"
+    "      x = 5;\n"
+    "    }\n"
+    "  }\n"
+    "  assert(x == 5);\n"
     "}\n";
   auto r = compile_source(allocator, src);
-  EXPECT_EQ(r.ctx->error_count, 0) << "error_count=" << r.ctx->error_count;
+  EXPECT_GE(r.ctx->error_count, 1);
   compile_result_cleanup(&r, allocator);
 }
 
-TEST_F(dt_lambda, local_cunion) {
-  /* C-style union declared inside a test block */
+TEST_F(dt_flow_tdz, normal_init_no_tdz) {
+  /* Normal initializer: var x = 5 => not TDZ, use is fine */
   const char *src = BUILTIN_ASSERT
-    "test \"local_cunion\" {\n"
-    "  cunion Data { i32: i32; f64: f64; }\n"
-    "  var d: Data = undefined;\n"
+    "func foo(): void {\n"
+    "  var x = 5;\n"
+    "  assert(x == 5);\n"
     "}\n";
   auto r = compile_source(allocator, src);
-  EXPECT_EQ(r.ctx->error_count, 0) << "error_count=" << r.ctx->error_count;
+  EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }

@@ -7,6 +7,7 @@
 #include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
+#include <string>
 
 using ::testing::Test;
 
@@ -25,16 +26,19 @@ static struct compile_result compile_source(allocator_t allocator,
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   size_t pos = 0;
   node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+
+  /* If parsing failed, fail the test immediately */
+  if (g_error) {
+    std::string err_msg(g_error->message);
+    error_clear();
+    GTEST_MESSAGE_AT_(__FILE__, __LINE__,
+        ("Parsing failed: " + err_msg).c_str(),
+        ::testing::TestPartResult::kFatalFailure);
+    return (struct compile_result){NULL, prog, tokens};
+  }
+
   checker_t ctx = checker_create(allocator);
   source_cache_load(ctx->sources, "test.cubec", source, false);
-
-  if (g_error) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                         (location_t){0}, "%s", g_error->message);
-    ctx->error_count++;
-    error_clear();
-    return (struct compile_result){ctx, prog, tokens};
-  }
 
   checker_check_program(ctx, prog);
   return (struct compile_result){ctx, prog, tokens};
@@ -42,7 +46,7 @@ static struct compile_result compile_source(allocator_t allocator,
 
 static void compile_result_cleanup(struct compile_result *r,
                                    allocator_t allocator) {
-  checker_dispose(r->ctx);
+  if (r->ctx) checker_dispose(r->ctx);
   allocator_free(allocator, &r->prog);
   allocator_free(allocator, &r->tokens);
 }
@@ -52,6 +56,10 @@ static void compile_result_cleanup(struct compile_result *r,
 class dt_generic_value : public CubecTest {
 protected:
   TEST_ALLOCATOR;
+  void TearDown() override {
+    error_clear();
+    CubecTest::TearDown();
+  }
 };
 
 /* ===== Value generic param: basic declaration ===== */

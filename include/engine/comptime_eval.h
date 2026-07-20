@@ -67,6 +67,7 @@ struct comptime_eval {
   int call_depth;
   int loop_depth;
   vec_t defer_stack; /**< stack of defer body nodes to execute on scope exit */
+  vec_t captured_envs; /**< captured envs created for function values (disposed at eval teardown) */
 };
 
 typedef struct comptime_eval *comptime_eval_t;

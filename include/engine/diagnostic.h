@@ -57,6 +57,9 @@ extern type_t g_diagnostic_list_type;
 /** @brief Get the number of diagnostics. */
 size_t diagnostic_list_get_size(diagnostic_list_t self);
 
+/** @brief Get a diagnostic by index. Returns NULL if out of bounds. */
+struct diagnostic *diagnostic_list_get(diagnostic_list_t self, size_t idx);
+
 /** @brief Get the number of errors. */
 size_t diagnostic_list_get_error_count(diagnostic_list_t self);
 

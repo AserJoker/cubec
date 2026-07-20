@@ -979,6 +979,7 @@ static comptime_value_t _eval_function_expr(comptime_eval_t eval,
 
   /* Create isolated environment for captured values (by-value capture) */
   comptime_env_t captured_env = comptime_env_create(eval->allocator, NULL);
+  vec_push(eval->captured_envs, captured_env);
   if (fn->captures) {
     size_t cc = vec_get_size(fn->captures);
     for (size_t i = 0; i < cc; i++) {

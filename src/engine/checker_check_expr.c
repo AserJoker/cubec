@@ -9,6 +9,7 @@
 #include "engine/type_layout.h"
 #include "engine/builtin.h"
 #include "engine/comptime_value.h"
+#include "engine/flow_state.h"
 #include "core/allocator.h"
 #include "core/string.h"
 #include "core/vec.h"
@@ -57,7 +58,20 @@ static semantic_type_t _check_expr_literal_identifier(checker_t ctx, node_t expr
     return ctx->error_type;
   }
   switch (sym->kind) {
-  case SYMBOL_VARIABLE: return sym->variable.type ? sym->variable.type : ctx->error_type;
+  case SYMBOL_VARIABLE: {
+    /* TDZ check: variable initialized with `= undefined` is in TDZ state.
+     * Any use is an error unless the variable has been assigned on the
+     * current path (tracked by flow_state->tdz_set removal on assignment). */
+    if (sym->state == SYMBOL_TDZ) {
+      if (!ctx->current_flow || flow_state_is_tdz(ctx->current_flow, name)) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                             "use of variable '%s' before initialization", name);
+        ctx->error_count++;
+        return ctx->error_type;
+      }
+    }
+    return sym->variable.type ? sym->variable.type : ctx->error_type;
+  }
   case SYMBOL_FUNCTION: return sym->function.type ? sym->function.type : ctx->error_type;
   case SYMBOL_ENUM_ITEM: return sym->enum_item.owning_type;
   case SYMBOL_TYPE: return sym->type.type ? sym->type.type : ctx->error_type;
@@ -206,6 +220,15 @@ static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "left side of assignment is not a valid lvalue");
     ctx->error_count++;
+  }
+
+  /* For TDZ variables being assigned, remove from tdz_set before checking
+   * the lvalue — the assignment itself eliminates the TDZ state. */
+  if (asgn->left && asgn->left->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+    const char *lname = _checker_ident_str(asgn->left);
+    if (lname && ctx->current_flow && flow_state_is_tdz(ctx->current_flow, lname)) {
+      flow_state_remove_tdz(ctx->current_flow, lname);
+    }
   }
 
   semantic_type_t lt = _check_expression(ctx, asgn->left);
@@ -897,8 +920,10 @@ static semantic_type_t _check_expr_function(checker_t ctx, node_t expr) {
 
   _check_func_params(ctx, fn, param_types);
 
-  if (fn->body)
-    _check_statement(ctx, fn->body, ret_type);
+  if (fn->body) {
+    flow_state_t fs = _check_statement(ctx, fn->body, ret_type);
+    flow_state_dispose(fs, ctx->allocator);
+  }
 
   ctx->current_scope = saved;
 

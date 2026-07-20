@@ -37,6 +37,7 @@ type_t g_scope_type = {
 scope_t scope_create(allocator_t allocator, scope_t parent,
                      enum scope_kind kind, location_t location) {
   scope_t s = (scope_t)allocator_create(allocator, &g_scope_type, NULL);
+  if (!s) return NULL;
   s->parent = parent;
   s->kind = kind;
   s->location = location;

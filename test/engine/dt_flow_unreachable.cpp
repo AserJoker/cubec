@@ -11,8 +11,6 @@
 
 using ::testing::Test;
 
-/* ===== helpers ===== */
-
 #define BUILTIN_ASSERT "builtin func assert(condition: bool): void;\n"
 
 struct compile_result {
@@ -51,9 +49,19 @@ static void compile_result_cleanup(struct compile_result *r,
   allocator_free(allocator, &r->tokens);
 }
 
-/* ===== test fixture ===== */
+static size_t count_warnings(checker_t ctx) {
+  size_t count = 0;
+  size_t total = diagnostic_list_get_size(ctx->diagnostics);
+  for (size_t i = 0; i < total; i++) {
+    struct diagnostic *d = diagnostic_list_get(ctx->diagnostics, i);
+    if (d && d->severity == DIAGNOSTIC_WARNING) count++;
+  }
+  return count;
+}
 
-class dt_modifiers : public CubecTest {
+/* ===== fixture ===== */
+
+class dt_flow_unreachable : public CubecTest {
 protected:
   TEST_ALLOCATOR;
   void TearDown() override {
@@ -62,30 +70,70 @@ protected:
   }
 };
 
-/* ===== extern ===== */
+/* ===== tests ===== */
 
-TEST_F(dt_modifiers, extern_func) {
-  const char *src =
-    "extern func malloc(size: u64): *void;\n";
+TEST_F(dt_flow_unreachable, unreachable_after_return) {
+  const char *src = BUILTIN_ASSERT
+    "func foo(): void {\n"
+    "  return;\n"
+    "  var x = 5;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  EXPECT_GE(count_warnings(r.ctx), 1u);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_flow_unreachable, unreachable_after_break) {
+  const char *src = BUILTIN_ASSERT
+    "func foo(): void {\n"
+    "  while (true) {\n"
+    "    break;\n"
+    "    var x = 5;\n"
+    "  }\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  EXPECT_GE(count_warnings(r.ctx), 1u);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_flow_unreachable, unreachable_after_continue) {
+  const char *src = BUILTIN_ASSERT
+    "func foo(): void {\n"
+    "  while (true) {\n"
+    "    continue;\n"
+    "    var x = 5;\n"
+    "  }\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  EXPECT_GE(count_warnings(r.ctx), 1u);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_flow_unreachable, reachable_after_if_return) {
+  /* Code after if(return) should still be reachable (no else) */
+  const char *src = BUILTIN_ASSERT
+    "func foo(cond: bool): void {\n"
+    "  if (cond) { return; }\n"
+    "  var x = 5;\n"
+    "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
 
-TEST_F(dt_modifiers, extern_var) {
-  const char *src =
-    "extern var errno: i32;\n";
+TEST_F(dt_flow_unreachable, only_first_unreachable_warned) {
+  /* Multiple unreachable statements: only the first should get a warning */
+  const char *src = BUILTIN_ASSERT
+    "func foo(): void {\n"
+    "  return;\n"
+    "  var x = 5;\n"
+    "  var y = 10;\n"
+    "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);
-  compile_result_cleanup(&r, allocator);
-}
-
-/* ===== export ===== */
-
-TEST_F(dt_modifiers, export_func) {
-  const char *src =
-    "export func hello(): void {}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(r.ctx->error_count, 0);
+  EXPECT_EQ(count_warnings(r.ctx), 1u);
   compile_result_cleanup(&r, allocator);
 }

@@ -6,6 +6,7 @@
 #include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
+#include <string>
 
 using ::testing::Test;
 
@@ -24,16 +25,19 @@ static struct compile_result compile_source(allocator_t allocator,
   vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
   size_t pos = 0;
   node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+
+  /* If parsing failed, fail the test immediately */
+  if (g_error) {
+    std::string err_msg(g_error->message);
+    error_clear();
+    GTEST_MESSAGE_AT_(__FILE__, __LINE__,
+        ("Parsing failed: " + err_msg).c_str(),
+        ::testing::TestPartResult::kFatalFailure);
+    return (struct compile_result){NULL, prog, tokens};
+  }
+
   checker_t ctx = checker_create(allocator);
   source_cache_load(ctx->sources, "test.cubec", source, false);
-
-  /* If parsing failed, g_error is set — convert to a diagnostic */
-  if (g_error) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                         (location_t){0}, "%s", g_error->message);
-    ctx->error_count++;
-    error_clear();
-  }
 
   checker_check_program(ctx, prog);
   return (struct compile_result){ctx, prog, tokens};
@@ -41,7 +45,7 @@ static struct compile_result compile_source(allocator_t allocator,
 
 static void compile_result_cleanup(struct compile_result *r,
                                    allocator_t allocator) {
-  checker_dispose(r->ctx);
+  if (r->ctx) checker_dispose(r->ctx);
   allocator_free(allocator, &r->prog);
   allocator_free(allocator, &r->tokens);
 }
@@ -49,6 +53,10 @@ static void compile_result_cleanup(struct compile_result *r,
 class dt_generic_inference : public CubecTest {
 protected:
   TEST_ALLOCATOR;
+  void TearDown() override {
+    error_clear();
+    CubecTest::TearDown();
+  }
 };
 
 /* ===== Type Inference Tests ===== */
@@ -123,7 +131,7 @@ TEST_F(dt_generic_inference, infer_slice_param) {
   const char *src = BUILTIN_ASSERT
     "func first[T](s: []T): T { return s[0]; }\n"
     "test \"t\" {\n"
-    "  var arr: [3]i32 = undefined;\n"
+    "  var arr: [3]i32 = .{0, 0, 0};\n"
     "  first(arr[:]);\n"
     "}\n";
   auto r = compile_source(allocator, src);
@@ -179,7 +187,7 @@ TEST_F(dt_generic_inference, constraint_generic_instance) {
     "struct Container[T] { data: T; }\n"
     "func process[T extends Container[?]](c: T): void {}\n"
     "test \"t\" {\n"
-    "  var c: Container[i32] = undefined;\n"
+    "  var c = .Container[i32]{.data = 0};\n"
     "  process(c);\n"
     "}\n";
   auto r = compile_source(allocator, src);
@@ -205,7 +213,7 @@ TEST_F(dt_generic_inference, constraint_wildcard_skips) {
     "struct Pair[A, B] { first: A; second: B; }\n"
     "func test_pair[T extends Pair[?, ?]](p: T): void {}\n"
     "test \"t\" {\n"
-    "  var p: Pair[i32, f64] = undefined;\n"
+    "  var p = .Pair[i32, f64]{.first = 1, .second = 2.0};\n"
     "  test_pair(p);\n"
     "}\n";
   auto r = compile_source(allocator, src);

@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-void _check_statement(checker_t ctx, node_t stmt, semantic_type_t return_type);
+flow_state_t _check_statement(checker_t ctx, node_t stmt, semantic_type_t return_type);
 void checker_check_function_bodies(checker_t ctx, node_t program);
 
 #ifdef __cplusplus

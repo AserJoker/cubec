@@ -485,7 +485,7 @@ All statement and declaration types have parser implementations, including `comp
 
 ### Architecture
 
-11-file split: `checker.c` (lifecycle + pass orchestration), `checker_collect.c` (Pass 1: symbol collection), `checker_check_stmt.c` (Pass 2: type checking), `checker_check_expr.c` (Pass 2: expression type checking), `checker_check_expr_helpers.c` (expression helper functions), `checker_type_util.c` (type utilities: instantiation, substitution, unification), `type_unify.c` (generic type inference), `checker_evaluate.c` (Pass 2: comptime evaluation + type resolution), `builtin.c` (builtin registry mechanism only), `builtin_debug.c` (assert), `builtin_collection.c` (length), `builtin_tuple.c` (getTupleItem/setTupleItem), `comptime_eval.c` (evaluator lifecycle), `comptime_eval_expr.c` (expression evaluation), `comptime_eval_stmt.c` (statement execution), `comptime_alloc.c` (virtual memory). All functions ≤ 50 lines. Design doc: `docs/semantic-design.md`.
+13-file split: `checker.c` (lifecycle + pass orchestration), `checker_collect.c` (Pass 1: symbol collection), `checker_check_stmt.c` (Pass 2: type checking), `checker_check_expr.c` (Pass 2: expression type checking), `checker_check_expr_helpers.c` (expression helper functions), `checker_type_util.c` (type utilities: instantiation, substitution, unification), `type_unify.c` (generic type inference), `checker_evaluate.c` (Pass 2: comptime evaluation + type resolution), `flow_state.c` (control flow analysis: unreachable detection, return completeness, TDZ flow propagation), `builtin.c` (builtin registry mechanism only), `builtin_debug.c` (assert), `builtin_collection.c` (length), `builtin_tuple.c` (getTupleItem/setTupleItem), `builtin_cast.c` (cast), `comptime_eval.c` (evaluator lifecycle), `comptime_eval_expr.c` (expression evaluation), `comptime_eval_stmt.c` (statement execution), `comptime_alloc.c` (virtual memory). All functions ≤ 50 lines. Design doc: `docs/semantic-design.md`.
 
 ### Type System (semantic_type_t)
 
@@ -555,6 +555,20 @@ Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (nam
 
 1. **Pass 1 (collect)**: `checker_collect` — symbol collection, scope building
 2. **Pass 2 (check + evaluate)**: `checker_check_stmt` (type checking) + `checker_evaluate` (comptime evaluation, type resolution)
+
+### Control Flow Analysis (flow_state_t)
+
+`flow_state_t` tracks control flow state during statement checking. `_check_statement` returns `flow_state_t` instead of `void`, propagated across statements. Stored in `checker_t.current_flow` (similar to `current_scope`/`loop_depth` pattern).
+
+**Structure**: `enum flow_termination` (`FLOW_ALIVE`, `FLOW_RETURNED`, `FLOW_BROKE`, `FLOW_CONTINUED`) + `vec_t tdz_set` (variables still in TDZ on current path).
+
+**Termination merge**: Both RETURNED → RETURNED; otherwise → ALIVE. TDZ merge: union semantics (variable is TDZ if TDZ in either branch).
+
+**Unreachable code**: After return/break/continue, subsequent statements in the same block emit `DIAGNOSTIC_WARNING` (only the first unreachable statement is warned).
+
+**Return completeness**: Non-void function body must end with `flow_state_is_all_returned`; otherwise error "non-void function must return a value on all paths".
+
+**TDZ flow propagation**: `var x: T = undefined` adds x to `tdz_set`; assignment removes x from `tdz_set`. Using a TDZ variable when `flow_state_is_tdz(ctx->current_flow, name)` is true emits error "use of variable before initialization".
 
 ### Diagnostics
 
@@ -634,7 +648,7 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 1382 test cases
+- Total: 1440 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -684,6 +698,10 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 
 ### Engine Tests
 - `dt_undefined.cpp` (9 cases) — undefined literal: typed undefined init, no-type error, standalone expr error, var-no-init error, extern-no-init ok, builtin-no-init ok, TDZ use before assign, assign-then-use, pointer type undefined
+- `dt_flow_state.cpp` (11 cases) — flow_state unit tests: create/dispose, mark_returned/broke/continued, tdz_add/remove, merge_both_alive/returned/one_returned, merge_tdz_union/both_assigned/one_assigned
+- `dt_flow_unreachable.cpp` (5 cases) — unreachable code detection: after return/break/continue, reachable after if-return, only first unreachable warned
+- `dt_flow_return.cpp` (6 cases) — return completeness: void no return ok, non-void missing return error, all paths return ok, one path missing return, loop return may not execute, explicit return ok
+- `dt_flow_tdz.cpp` (7 cases) — TDZ flow propagation: undefined use TDZ error, assign removes TDZ, if branch TDZ merge (union), if/else both assign, loop body assign no effect, nested if TDZ, normal init no TDZ
 - `dt_builtin.cpp` (24 cases) — builtin registry: table create/dispose, assert/length/getTupleItem/setTupleItem lookup, unknown lookup, correct declaration, unknown builtin error, signature mismatch error, kind mismatch error, e2e assert/tuple execution, tuple subscript error, length declaration, non-builtin not marked
 - `dt_comptime_value.cpp` (23 cases) — value creation/disposal for all 12 kinds, truthiness, equals, clone deep copy, numeric conversions (as_i64/as_u64/as_f64)
 - `dt_comptime_alloc.cpp` (10 cases) — virtual memory lifecycle, allocate+read, write overwrite, read/write null/unknown addr, free makes addr invalid, scope enter/leave frees allocations, nested scopes, free null addr noop

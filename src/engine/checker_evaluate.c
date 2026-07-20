@@ -837,9 +837,13 @@ static void _evaluate_test(checker_t ctx,
                            cubec_statement_test_t node) {
   if (!ctx->comptime_eval) return;
 
-  /* Check the test body for type errors before evaluating */
+  /* Check the test body for type errors before evaluating.
+   * Set up current_flow so TDZ tracking works inside test bodies. */
   int errors_before_check = ctx->error_count;
-  _check_statement(ctx, node->body, NULL);
+  flow_state_t saved_flow = ctx->current_flow;
+  flow_state_t fs = _check_statement(ctx, node->body, NULL);
+  ctx->current_flow = saved_flow;
+  flow_state_dispose(fs, ctx->allocator);
 
   ctx->test_count++;
 

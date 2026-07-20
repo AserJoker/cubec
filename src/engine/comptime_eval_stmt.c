@@ -461,6 +461,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
 
     /* Build captured environment from captures list */
     comptime_env_t captured_env = comptime_env_create(eval->allocator, NULL);
+    vec_push(eval->captured_envs, captured_env);
     if (sf->captures) {
       size_t cc = vec_get_size(sf->captures);
       for (size_t i = 0; i < cc; i++) {

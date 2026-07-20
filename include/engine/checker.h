@@ -8,6 +8,7 @@
 #include "engine/semantic_type.h"
 #include "engine/builtin.h"
 #include "engine/source.h"
+#include "engine/flow_state.h"
 #include "core/strmap.h"
 #include <stddef.h>
 #ifdef __cplusplus
@@ -43,6 +44,9 @@ struct checker {
 
   /* loop tracking (for break/continue validation) */
   int loop_depth;
+
+  /* flow analysis (for unreachable code, return exhaustiveness, TDZ) */
+  flow_state_t current_flow;
 
   /* sentinel error type */
   semantic_type_t error_type;

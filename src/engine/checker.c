@@ -219,7 +219,7 @@ void checker_dispose(checker_t ctx) {
 }
 
 int checker_get_error_count(checker_t ctx) {
-  return ctx->error_count;
+  return ctx ? ctx->error_count : 0;
 }
 
 /* ===== Pass 1: Declaration Collection ===== */

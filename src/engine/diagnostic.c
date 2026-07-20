@@ -71,6 +71,11 @@ size_t diagnostic_list_get_size(diagnostic_list_t self) {
   return vec_get_size(self->diagnostics);
 }
 
+struct diagnostic *diagnostic_list_get(diagnostic_list_t self, size_t idx) {
+  if (idx >= vec_get_size(self->diagnostics)) return NULL;
+  return (struct diagnostic *)vec_get(self->diagnostics, idx);
+}
+
 size_t diagnostic_list_get_error_count(diagnostic_list_t self) {
   return self->error_count;
 }

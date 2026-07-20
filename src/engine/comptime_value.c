@@ -1,4 +1,5 @@
 #include "engine/comptime_value.h"
+#include "engine/comptime_eval.h"
 #include "engine/symbol.h"
 #include "engine/type_layout.h"
 #include "core/string.h"
@@ -25,7 +26,10 @@ static void _comptime_value_dispose(void *self, allocator_t allocator) {
       allocator_free(allocator, (void **)&v->composite.data);
     break;
   case COMPTIME_VALUE_FUNCTION:
-    /* env and body are not owned by the value */
+    /* captured_env is NOT owned by the function value — it is tracked
+       in comptime_eval.captured_envs and disposed during eval teardown.
+       This avoids double-free when function values are cloned (the clone
+       shares the same captured_env pointer). */
     allocator_free(allocator, &v->function.param_names);
     break;
   case COMPTIME_VALUE_PACK:
