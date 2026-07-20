@@ -13,6 +13,18 @@ extern "C" {
 
 /* Internal helpers shared between comptime_eval_expr.c and comptime_eval_stmt.c */
 
+/* --- cleanup stack entries --- */
+
+enum cleanup_kind { CLEANUP_DEFER, CLEANUP_USING };
+
+struct cleanup_entry {
+  enum cleanup_kind kind;
+  union {
+    node_t defer_body;                                          /* CLEANUP_DEFER */
+    struct { const char *name; semantic_type_t type; } using_info; /* CLEANUP_USING */
+  };
+};
+
 static inline const char *_eval_ident_str(node_t id_node) {
   if (!id_node || id_node->kind != CUBEC_NODE_LITERAL_IDENTIFIER) return NULL;
   return string_get(((cubec_literal_identifier_t)id_node)->value);

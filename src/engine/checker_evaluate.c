@@ -660,6 +660,23 @@ static void _evaluate_variable(checker_t ctx,
       (cubec_declaration_variable_t)node->declarator;
   if (!decl) return;
 
+  /* 'using' not allowed at module scope */
+  if (node->is_using) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         node->super.location,
+                         "'using' declaration not allowed at module scope");
+    ctx->error_count++;
+  }
+
+  /* 'using' cannot be initialized with undefined */
+  if (node->is_using && decl->expression &&
+      decl->expression->kind == CUBEC_NODE_LITERAL_UNDEFINED) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         node->super.location,
+                         "'using' variable cannot be initialized with undefined");
+    ctx->error_count++;
+  }
+
   const char *name = _checker_ident_str(decl->identifier);
   if (!name) return;
 
@@ -700,7 +717,39 @@ static void _evaluate_variable(checker_t ctx,
   sym->variable.type = var_type;
   sym->variable.is_comptime = node->is_comptime;
   sym->variable.is_mutable = !semantic_type_is_const(var_type);
+  sym->variable.is_using = node->is_using;
   sym->state = SYMBOL_EVALUATED;
+
+  /* 'using' requires the type to implement __dispose__ */
+  if (node->is_using && var_type && var_type->impl->kind != TYPE_ERROR) {
+    struct symbol *dispose_sym = NULL;
+    if (var_type->instance_methods) {
+      size_t mc = vec_get_size(var_type->instance_methods);
+      for (size_t i = 0; i < mc; i++) {
+        struct symbol *m = (struct symbol *)vec_get(var_type->instance_methods, i);
+        if (m && m->name && strcmp(m->name, "__dispose__") == 0) {
+          dispose_sym = m;
+          break;
+        }
+      }
+    }
+    if (!dispose_sym) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "type '%s' must implement '__dispose__' for 'using' declaration",
+                           var_type->name ? var_type->name : "<anonymous>");
+      ctx->error_count++;
+    } else if (dispose_sym->function.type &&
+               dispose_sym->function.type->impl->kind == TYPE_FUNCTION) {
+      if (dispose_sym->function.type->impl->function.return_type &&
+          dispose_sym->function.type->impl->function.return_type->impl->kind != TYPE_VOID) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                             node->super.location,
+                             "'__dispose__' must return void");
+        ctx->error_count++;
+      }
+    }
+  }
 
   /* Validate builtin variable against registry.
      Since builtin table only contains functions, a builtin var declaration

@@ -190,17 +190,18 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
     THROW_LOCAL(onerror, "'using' and 'comptime' are mutually exclusive");
 
   /* 3. Expect 'var' keyword (skip if 'using' takes its place) */
-  if (!is_using && !_is_keyword(tokens, current, "var")) {
-    return NULL;
+  if (!is_using) {
+    if (!_is_keyword(tokens, current, "var")) {
+      return NULL;
+    }
+    token_t var_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+    if (start_location.begin.offset == 0) {
+      start_location = *token_get_location(var_token);
+      start_location.filename = filename;
+    }
+    current++;
+    skip_whitespace(tokens, &current);
   }
-  token_t var_token = TRY_LOCAL(onerror, vec_get(tokens, current));
-  if (start_location.begin.offset == 0) {
-    start_location = *token_get_location(var_token);
-    start_location.filename = filename;
-  }
-  current++;
-
-  skip_whitespace(tokens, &current);
 
   /* 4. Parse single declarator */
   declarator = TRY_LOCAL(cleanup, read_declaration_variable(allocator, tokens, &current, filename));

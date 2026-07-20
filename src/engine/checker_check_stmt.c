@@ -377,6 +377,22 @@ static flow_state_t _check_stmt_declaration(checker_t ctx, node_t stmt) {
     ctx->error_count++;
   }
 
+  /* 'using' not allowed at module scope */
+  if (sdecl->is_using && scope_get_kind(ctx->current_scope) == SCOPE_GLOBAL) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         stmt->location,
+                         "'using' declaration not allowed at module scope");
+    ctx->error_count++;
+  }
+
+  /* 'using' cannot be initialized with undefined (defer would always skip __dispose__) */
+  if (sdecl->is_using && is_undefined_init) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         stmt->location,
+                         "'using' variable cannot be initialized with undefined");
+    ctx->error_count++;
+  }
+
   semantic_type_t var_type = NULL;
 
   if (is_undefined_init) {
@@ -432,9 +448,41 @@ static flow_state_t _check_stmt_declaration(checker_t ctx, node_t stmt) {
   vsym->variable.type = var_type;
   vsym->variable.is_comptime = sdecl->is_comptime;
   vsym->variable.is_mutable = !semantic_type_is_const(var_type);
+  vsym->variable.is_using = sdecl->is_using;
   /* undefined initializer → TDZ; otherwise → EVALUATED */
   vsym->state = is_undefined_init ? SYMBOL_TDZ : SYMBOL_EVALUATED;
   scope_push_symbol(ctx->current_scope, vsym);
+
+  /* 'using' requires the type to implement __dispose__ */
+  if (sdecl->is_using && var_type && var_type->impl->kind != TYPE_ERROR) {
+    struct symbol *dispose_sym = NULL;
+    if (var_type->instance_methods) {
+      size_t mc = vec_get_size(var_type->instance_methods);
+      for (size_t i = 0; i < mc; i++) {
+        struct symbol *m = (struct symbol *)vec_get(var_type->instance_methods, i);
+        if (m && m->name && strcmp(m->name, "__dispose__") == 0) {
+          dispose_sym = m;
+          break;
+        }
+      }
+    }
+    if (!dispose_sym) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           stmt->location,
+                           "type '%s' must implement '__dispose__' for 'using' declaration",
+                           var_type->name ? var_type->name : "<anonymous>");
+      ctx->error_count++;
+    } else if (dispose_sym->function.type &&
+               dispose_sym->function.type->impl->kind == TYPE_FUNCTION) {
+      if (dispose_sym->function.type->impl->function.return_type &&
+          dispose_sym->function.type->impl->function.return_type->impl->kind != TYPE_VOID) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                             stmt->location,
+                             "'__dispose__' must return void");
+        ctx->error_count++;
+      }
+    }
+  }
 
   /* Return flow state with TDZ tracking */
   flow_state_t fs = flow_state_alive(ctx->allocator);
@@ -483,6 +531,30 @@ static flow_state_t _check_stmt_return(checker_t ctx, node_t stmt,
 static flow_state_t _check_stmt_defer(checker_t ctx, node_t stmt,
                                        semantic_type_t return_type) {
   cubec_statement_defer_t sd = (cubec_statement_defer_t)stmt;
+
+  /* TDZ check: cannot capture a variable before initialization */
+  if (sd->captures) {
+    size_t cc = vec_get_size(sd->captures);
+    for (size_t i = 0; i < cc; i++) {
+      node_t cap_node = (node_t)vec_get(sd->captures, i);
+      if (cap_node->kind != CUBEC_NODE_FUNCTION_CAPTURE) continue;
+      cubec_function_capture_t cap = (cubec_function_capture_t)cap_node;
+      const char *cap_name = _checker_ident_str(cap->identifier);
+      if (!cap_name) continue;
+      struct symbol *outer_sym = scope_lookup(ctx->current_scope, cap_name);
+      if (outer_sym) {
+        if (outer_sym->state == SYMBOL_TDZ &&
+            (!ctx->current_flow || flow_state_is_tdz(ctx->current_flow, cap_name))) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               cap_node->location,
+                               "cannot capture variable '%s' before initialization",
+                               cap_name);
+          ctx->error_count++;
+        }
+      }
+    }
+  }
+
   /* Check the defer body, but defer doesn't affect control flow */
   flow_state_t body_fs = _check_statement(ctx, sd->body, return_type);
   flow_state_dispose(body_fs, ctx->allocator);

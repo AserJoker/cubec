@@ -51,6 +51,7 @@ struct symbol {
       semantic_type_t type;      /**< Variable type (NULL until resolved) */
       bool is_comptime;          /**< comptime var */
       bool is_mutable;           /**< var (true) vs val (false) */
+      bool is_using;             /**< using var (auto-defer __dispose__) */
     } variable;
 
     /* SYMBOL_FUNCTION */

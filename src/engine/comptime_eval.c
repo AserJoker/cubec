@@ -14,7 +14,7 @@ comptime_eval_t comptime_eval_create(allocator_t allocator) {
   eval->call_depth = 0;
   eval->loop_depth = 0;
   vec_init_t vi = {.auto_dispose = false};
-  eval->defer_stack = (vec_t)allocator_create(allocator, &g_vec_type, &vi);
+  eval->cleanup_stack = (vec_t)allocator_create(allocator, &g_vec_type, &vi);
   vec_init_t cvi = {.auto_dispose = false};
   eval->captured_envs = (vec_t)allocator_create(allocator, &g_vec_type, &cvi);
 
@@ -33,9 +33,9 @@ void comptime_eval_dispose(comptime_eval_t self) {
   if (!self) return;
   allocator_t a = self->allocator;
 
-  /* 1. Clear defer stack */
-  vec_resize(self->defer_stack, 0);
-  allocator_free(a, &self->defer_stack);
+  /* 1. Clear cleanup stack */
+  vec_resize(self->cleanup_stack, 0);
+  allocator_free(a, &self->cleanup_stack);
 
   /* 2. Dispose global env (frees temporaries including function values,
      but function values no longer dispose their captured_env themselves) */

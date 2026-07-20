@@ -30,16 +30,48 @@
 #include "cubec/literal_undefined.h"
 #include <string.h>
 
-/* --- defer execution --- */
+/* --- cleanup execution (defer + using dispose) --- */
 
-static void _run_defers(comptime_eval_t eval, checker_t ctx,
-                         size_t keep_count) {
-  while (vec_get_size(eval->defer_stack) > keep_count) {
-    size_t last = vec_get_size(eval->defer_stack) - 1;
-    node_t defer_body = (node_t)vec_get(eval->defer_stack, last);
-    vec_pop(eval->defer_stack);
-    _comptime_exec_block(eval, ctx, defer_body);
-    /* Do NOT free defer_body — it is owned by the AST tree */
+static void _run_cleanups(comptime_eval_t eval, checker_t ctx,
+                           size_t keep_count) {
+  while (vec_get_size(eval->cleanup_stack) > keep_count) {
+    size_t last = vec_get_size(eval->cleanup_stack) - 1;
+    struct cleanup_entry *entry = (struct cleanup_entry *)vec_get(eval->cleanup_stack, last);
+    vec_pop(eval->cleanup_stack);
+    if (entry->kind == CLEANUP_DEFER) {
+      _comptime_exec_block(eval, ctx, entry->defer_body);
+    } else { /* CLEANUP_USING */
+      comptime_value_t val = comptime_env_lookup_value(
+          eval->current_env, eval->valloc, entry->using_info.name);
+      /* using variable must be initialized (undefined is disallowed by checker) */
+      if (!val || val->kind == COMPTIME_VALUE_ERROR) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                             (location_t){0},
+                             "using variable '%s' is uninitialized at scope exit",
+                             entry->using_info.name);
+        ctx->error_count++;
+      } else if (entry->using_info.type) {
+        struct symbol *dispose_sym = NULL;
+        if (entry->using_info.type->instance_methods) {
+          size_t mc = vec_get_size(entry->using_info.type->instance_methods);
+          for (size_t i = 0; i < mc; i++) {
+            struct symbol *s = (struct symbol *)vec_get(entry->using_info.type->instance_methods, i);
+            if (s && s->name && strcmp(s->name, "__dispose__") == 0) {
+              dispose_sym = s;
+              break;
+            }
+          }
+        }
+        if (dispose_sym) {
+          comptime_value_t dispose_fn = _comptime_create_method_value(eval, ctx, dispose_sym);
+          if (dispose_fn && dispose_fn->kind == COMPTIME_VALUE_FUNCTION) {
+            comptime_value_t self_arg = comptime_value_clone(eval->allocator, val);
+            _eval_call_function(eval, ctx, dispose_fn, &self_arg, 1, NULL);
+          }
+        }
+      }
+    }
+    allocator_free(eval->allocator, &entry);
   }
 }
 
@@ -54,7 +86,7 @@ comptime_signal_t _comptime_exec_block(comptime_eval_t eval, checker_t ctx,
   comptime_env_t block_env = comptime_env_create(eval->allocator, eval->current_env);
   eval->current_env = block_env;
 
-  size_t defer_base = vec_get_size(eval->defer_stack);
+  size_t cleanup_base = vec_get_size(eval->cleanup_stack);
   comptime_signal_t sig = _eval_signal_none();
 
   if (blk->statements) {
@@ -65,7 +97,7 @@ comptime_signal_t _comptime_exec_block(comptime_eval_t eval, checker_t ctx,
     }
   }
 
-  _run_defers(eval, ctx, defer_base);
+  _run_cleanups(eval, ctx, cleanup_base);
   eval->current_env = block_env->parent;
 
   /* Clone return value into parent env before disposing block_env,
@@ -451,6 +483,19 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     }
     if (val && val->kind != COMPTIME_VALUE_ERROR)
       comptime_env_bind_value(eval->current_env, eval->valloc, name, comptime_value_clone(eval->allocator, val));
+
+    /* 'using' declaration: push cleanup entry for __dispose__ */
+    if (sd->is_using && name) {
+      semantic_type_t var_type = dv->type
+          ? resolver_resolve_type(ctx, dv->type)
+          : (val ? val->type : NULL);
+      struct cleanup_entry *entry = allocator_alloc(eval->allocator, sizeof(struct cleanup_entry));
+      entry->kind = CLEANUP_USING;
+      entry->using_info.name = name;
+      entry->using_info.type = var_type;
+      vec_push(eval->cleanup_stack, entry);
+    }
+
     return _eval_signal_none();
   }
 
@@ -518,7 +563,10 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
 
   case CUBEC_NODE_STATEMENT_DEFER: {
     cubec_statement_defer_t sd = (cubec_statement_defer_t)stmt;
-    vec_push(eval->defer_stack, sd->body);
+    struct cleanup_entry *entry = allocator_alloc(eval->allocator, sizeof(struct cleanup_entry));
+    entry->kind = CLEANUP_DEFER;
+    entry->defer_body = sd->body;
+    vec_push(eval->cleanup_stack, entry);
     return _eval_signal_none();
   }
 
