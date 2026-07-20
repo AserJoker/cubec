@@ -300,6 +300,15 @@ static void _evaluate_function(checker_t ctx,
   sym->function.ast_node = info.ast_node;
   sym->state = SYMBOL_EVALUATED;
 
+  /* inline functions must have a body (comptime already requires body, so skip) */
+  if (info.is_inline && !info.is_comptime && !info.body) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         info.location,
+                         "inline function '%s' requires a body", name);
+    ctx->error_count++;
+  }
+  /* inline + comptime: inline is silently ignored (comptime needs no inlining) */
+
   /* Validate builtin against registry */
   if (info.is_builtin) {
     builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);

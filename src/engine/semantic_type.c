@@ -294,23 +294,11 @@ bool semantic_type_equals(semantic_type_t a, semantic_type_t b) {
 /* ===== decay and implicit conversion ===== */
 
 bool semantic_type_can_decay(semantic_type_t from, semantic_type_t to) {
-  if (!from || !to || !from->impl || !to->impl) return false;
-
-  /* array -> slice */
-  if (from->impl->kind == TYPE_ARRAY && to->impl->kind == TYPE_SLICE) {
-    return semantic_type_equals(from->impl->array.element,
-                                to->impl->slice.element);
-  }
-  /* array -> pointer */
-  if (from->impl->kind == TYPE_ARRAY && to->impl->kind == TYPE_POINTER) {
-    return semantic_type_equals(from->impl->array.element,
-                                to->impl->pointer.pointee);
-  }
-  /* slice -> pointer (deprecated but allowed) */
-  if (from->impl->kind == TYPE_SLICE && to->impl->kind == TYPE_POINTER) {
-    return semantic_type_equals(from->impl->slice.element,
-                                to->impl->pointer.pointee);
-  }
+  /* No implicit array/slice decay per design:
+     - []T → *T: not allowed
+     - [N]T → []T: not allowed
+     - [N]T → *T: not allowed
+     Use builtin cast or explicit operations instead. */
   return false;
 }
 
@@ -362,11 +350,7 @@ bool semantic_type_can_implicit_convert(semantic_type_t from,
     return to->impl->size >= from->impl->size;
   }
 
-  /* int -> float */
-  if (from->impl->kind >= TYPE_I8 && from->impl->kind <= TYPE_U64 &&
-      to->impl->kind >= TYPE_F16 && to->impl->kind <= TYPE_F64) {
-    return true;
-  }
+  /* int -> float is NOT allowed (design: no int→float implicit conversion, use builtin cast) */
 
   /* tuple element-wise implicit conversion */
   if (from->impl->kind == TYPE_TUPLE && to->impl->kind == TYPE_TUPLE) {
@@ -456,6 +440,9 @@ static bool _explicit_cast_numeric(semantic_type_t from, semantic_type_t to) {
 
   /* float → int */
   if (fk >= TYPE_F16 && fk <= TYPE_F64 && tk >= TYPE_I8 && tk <= TYPE_U64)
+    return true;
+  /* int → float (explicit cast) */
+  if (fk >= TYPE_I8 && fk <= TYPE_U64 && tk >= TYPE_F16 && tk <= TYPE_F64)
     return true;
   /* int → int (narrowing or same-width) */
   if (fk >= TYPE_I8 && fk <= TYPE_U64 && tk >= TYPE_I8 && tk <= TYPE_U64)

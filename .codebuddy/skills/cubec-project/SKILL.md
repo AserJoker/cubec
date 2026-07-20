@@ -316,8 +316,8 @@ Note: `...` (ellipsis/spread) is tokenized as a `SYMBOL` with text `"..."`, rely
 - `read_token` — Tries all token types in priority order
 - `resolve_token_list` — Complete lexer entry point, returns token vector
 
-### Keywords (40 total)
-`as`, `alignof`, `break`, `builtin`, `case`, `comptime`, `const`, `continue`, `defer`, `do`, `else`, `enum`, `export`, `extends`, `extern`, `for`, `foreach`, `from`, `func`, `if`, `import`, `in`, `inline`, `interface`, `is`, `mutable`, `of`, `pub`, `register`, `return`, `sizeof`, `struct`, `switch`, `test`, `type`, `typeof`, `union`, `var`, `volatile`, `while`
+### Keywords (38 total)
+`as`, `alignof`, `break`, `builtin`, `case`, `comptime`, `const`, `continue`, `defer`, `do`, `else`, `enum`, `export`, `extends`, `extern`, `for`, `foreach`, `from`, `func`, `if`, `import`, `in`, `inline`, `interface`, `is`, `of`, `pub`, `return`, `sizeof`, `struct`, `switch`, `test`, `type`, `typeof`, `union`, `using`, `var`, `volatile`, `while`
 
 ### Known Issue
 Whitespace tokens are sometimes incorrectly marked as `SYMBOL` (documented as "bug" in tests).
@@ -513,14 +513,17 @@ Two-layer representation: `semantic_type_t` wraps AST type nodes with semantic i
 4. nil → pointer/slice/interface
 5. Integer widening
 6. Float widening
-7. int → float
-8. Tuple → array (element size+alignment layout-compatible)
-9. Pointer/slice → opaque
-10. Struct-like → struct-like (field name + type matching, supports TYPE_STRUCT/UNION/CUNION/GENERIC_INSTANCE)
+7. Tuple → array (element size+alignment layout-compatible)
+8. Pointer/slice → opaque
+9. Struct-like → struct-like (field name + type matching, supports TYPE_STRUCT/UNION/CUNION/GENERIC_INSTANCE)
+
+**NOT allowed implicitly** (per design doc): int→float, []T→*T, [N]T→[]T. These require explicit `cast[]()`.
+
+**Array/slice decay** (`semantic_type_can_decay`): returns false — no implicit array-to-slice or array-to-pointer decay.
 
 **Explicit cast rules** (`semantic_type_can_explicit_cast`):
 All implicit conversions plus:
-1. Numeric: float→int (truncation), int narrowing, float narrowing, bool↔int, enum↔int, char↔int
+1. Numeric: float→int (truncation), int→float, int narrowing, float narrowing, bool↔int, enum↔int, char↔int
 2. Pointer: opaque→pointer, pointer→int, *Small→*Big downcast (struct pointer, prefix field match)
 3. Container: array→tuple (element size+alignment layout-compatible)
 

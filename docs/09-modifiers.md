@@ -2,13 +2,12 @@
 
 ## 1. 总览
 
-Cubec 有 8 个修饰符，分为三类：
+Cubec 有 7 个修饰符，分为三类：
 
 | 修饰符 | 作用域 | 修饰目标 |
 |--------|--------|---------|
 | `builtin` | 声明级 | type / var / func |
 | `extern` | 声明级 | func / var |
-| `register` | 声明级 | var |
 | `comptime` | 声明级 + 语句 | var / func / if / for / block |
 | `inline` | 声明级 | func |
 | `export` | 声明级 | func / type / var |
@@ -19,32 +18,27 @@ Cubec 有 8 个修饰符，分为三类：
 
 ## 2. 互斥矩阵
 
-### 2.1 五选一修饰符
+### 2.1 四选一修饰符
 
-`builtin`、`extern`、`register`、`comptime`、`using` 五者互斥，声明只能选其一：
+`builtin`、`extern`、`comptime`、`using` 四者互斥，声明只能选其一：
 
 ```
-builtin  × extern  × register  × comptime  × using
+builtin  × extern  × comptime  × using
 ```
 
 | 组合 | 结果 |
 |------|------|
 | builtin + extern | ✗ 互斥 |
-| builtin + register | ✗ 互斥 |
 | builtin + comptime | ✗ 互斥 |
 | builtin + using | ✗ 互斥 |
-| extern + register | ✗ 互斥 |
 | extern + comptime | ✗ 互斥 |
 | extern + using | ✗ 互斥 |
-| register + comptime | ✗ 互斥 |
-| register + using | ✗ 互斥 |
 | comptime + using | ✗ 互斥 |
 
 ### 2.2 inline 规则
 
 - `inline` **必须有函数体**，与 `builtin`（无体）和 `extern`（无体/外部体）天然互斥
 - `inline` + `comptime`：comptime 下忽略 inline（编译期求值无需内联）
-- `inline` + `register`：不冲突（但 register 修饰变量，inline 修饰函数，不会同时出现）
 
 ### 2.3 export 规则
 
@@ -75,7 +69,7 @@ using f:File = File.open("data.txt");
 - 声明的类型**必须实现** `__dispose__` 方法（返回类型必须为 `void`）
 - **不允许**在模块作用域使用（无 `defer` 语义）
 - **不允许**使用 `undefined` 初始化
-- 与 `builtin`、`extern`、`register`、`comptime` 互斥
+- 与 `builtin`、`extern`、`comptime` 互斥
 - 与 `export` 正交（`export using` 允许）
 - `using` 是变量声明修饰符，不是独立语句
 
@@ -96,7 +90,7 @@ builtin func align[N, T](): T            // align 类型变换
 
 - **无函数体/初始值** — 实现由编译器提供
 - 可修饰 `type`、`var`、`func` 三种声明
-- 与 `extern`、`register`、`comptime`、`inline` 互斥
+- 与 `extern`、`comptime`、`inline` 互斥
 - 与 `export` 正交
 
 ---
@@ -114,27 +108,12 @@ extern var errno: i32
 - **无函数体/初始值** — 由链接器解析符号
 - 不可在 comptime 中调用（不可预测的副作用/IO）
 - extern 变量属于全局，地址在链接期解析
-- 与 `builtin`、`register`、`comptime`、`inline` 互斥
+- 与 `builtin`、`comptime`、`inline` 互斥
 - 与 `export` 正交
 
 ---
 
-## 5. register
-
-修饰变量定义，标记为运行时变量：
-
-```c
-register var counter: i32 = 0
-```
-
-- 与 `comptime` 互斥 — comptime 是编译期求值，register 是运行时变量
-- 与 `builtin`、`extern` 互斥
-- 与 `export` 正交
-- 语义细节待设计（可能涉及寄存器分配提示或禁止取地址）
-
----
-
-## 6. comptime
+## 5. comptime
 
 编译期求值修饰符和语句（详见 `07-comptime.md`）：
 
@@ -146,13 +125,13 @@ comptime for (...) { ... }             // 编译期循环
 comptime { ... }                       // 编译期执行块
 ```
 
-- 与 `register`、`builtin`、`extern` 互斥
+- 与 `builtin`、`extern` 互斥
 - comptime func 不生成运行时代码
 - comptime 下忽略 `inline`
 
 ---
 
-## 7. inline
+## 6. inline
 
 强制内联（不是建议），函数体在调用处展开：
 
@@ -168,7 +147,7 @@ inline func add(a: i32, b: i32): i32 { return a + b; }
 
 ---
 
-## 8. export
+## 7. export
 
 模块级导出修饰符，控制跨模块可见性（详见 `06-modules.md`）：
 
@@ -184,7 +163,7 @@ export var VERSION: const string = "1.0";
 
 ---
 
-## 9. pub
+## 8. pub
 
 仅修饰 struct 字段可见性：
 
@@ -200,4 +179,6 @@ type Point = struct {
 - 与 `export` 职责不同：
   - `pub` — 字段级，控制 struct 字段跨模块访问
   - `export` — 模块级，控制声明跨模块可见性
-- 当前实现仅记录 `is_pub` 标记，访问控制强制待实现
+- 访问控制框架已就位：`_is_field_accessible()` 在字段访问时检查可见性
+- 当前阶段（模块系统未实现）：所有字段在当前模块内均可访问
+- Phase 8 实现模块系统后：非 pub 字段从其他模块访问时报错

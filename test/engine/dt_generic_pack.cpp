@@ -153,7 +153,7 @@ TEST_F(dt_generic_pack, pack_expansion_in_params) {
   /* ...args: Args in function expression parameters */
   const char *src = BUILTIN_ASSERT
     "func foo[...Args](...args: Args): void {}\n"
-    "test \"t\" { foo[i32, f64](1, 2); }\n";
+    "test \"t\" { foo[i32, f64](1, 2.0); }\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(checker_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);

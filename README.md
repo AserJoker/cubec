@@ -38,7 +38,7 @@ func main(): void {
 | [`docs/06-modules.md`](docs/06-modules.md) | 模块系统：import/export、路径解析、循环依赖 |
 | [`docs/07-comptime.md`](docs/07-comptime.md) | Comptime 引擎：虚拟指针、值表示、test/build |
 | [`docs/08-generics.md`](docs/08-generics.md) | 泛型：单态化、extends 约束、参数包 |
-| [`docs/09-modifiers.md`](docs/09-modifiers.md) | 修饰符：builtin/extern/register/comptime/inline/export/pub |
+| [`docs/09-modifiers.md`](docs/09-modifiers.md) | 修饰符：builtin/extern/comptime/inline/export/pub/using |
 | [`docs/10-union-interface.md`](docs/10-union-interface.md) | Union（tagged + cunion）与 Interface 语义 |
 | [`docs/11-codegen.md`](docs/11-codegen.md) | 代码生成：C 后端映射 |
 | [`docs/12-syntax-reference.md`](docs/12-syntax-reference.md) | 语法参考：关键字、类型、运算符、表达式、语句、声明 |
@@ -97,7 +97,7 @@ cubec/
 - **表达式解析器**：完整覆盖所有表达式类型（前缀/后缀一元、二元、三元、成员访问、泛型实例化、typeof、sizeof、alignof、初始化列表、匿名函数、const/volatile 限定符等）
 - **语句解析器**：完整覆盖所有语句类型（if/for/foreach/while/do-while/switch/defer/break/continue/return/import/test/comptime 等）
 - **声明解析器**：func/struct/enum/union/cunion/interface/type/var/decorator
-- **语义分析引擎**：双层类型表示、结构等价、指针退化、TDZ 多遍检查、const/volatile 语义、builtin 回调注册表、原生 tuple 类型（`<i32, f64>` 语法）、TYPE_OPAQUE（对标 C `void*`）、参数包（variadic generics）、泛型推断、匿名 initialize_list 推断、struct-like 隐式转换、显式类型转换 cast builtin、`<?>` 元组通配符约束、Rustc 风格诊断、`undefined` 字面量与强制变量初始化、表达式语句返回值未使用警告、控制流分析（不可达代码检测、非 void 函数 return 完整性、TDZ 流传播）
+- **语义分析引擎**：双层类型表示、结构等价、无隐式类型转换（严格模式，int→float / []T→*T 需显式 cast）、TDZ 多遍检查、const/volatile 语义、builtin 回调注册表、原生 tuple 类型（`<i32, f64>` 语法）、TYPE_OPAQUE（对标 C `void*`）、参数包（variadic generics）、泛型推断、匿名 initialize_list 推断、显式类型转换 cast builtin、`<?>` 元组通配符约束、Rustc 风格诊断、`undefined` 字面量与强制变量初始化、表达式语句返回值未使用警告、控制流分析（不可达代码检测、非 void 函数 return 完整性、TDZ 流传播）、修饰符互斥矩阵强制、pub 字段访问控制框架
 - **comptime 编译期求值器**：AST 解释器、虚拟内存、安全限制、test 块执行、SEH 崩溃防护
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
 

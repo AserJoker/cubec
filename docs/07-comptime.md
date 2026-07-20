@@ -154,7 +154,7 @@ comptime var N = 10;
 comptime func factorial(n: i32): i32 { ... }
 ```
 
-- 与 `register` 互斥（见 `09-modifiers.md`）
+- 与 `using` 互斥（见 `09-modifiers.md`）
 - comptime var 在编译期求值后可被后续声明引用
 - comptime func 在编译期执行，不生成运行时代码
 

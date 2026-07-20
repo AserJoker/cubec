@@ -84,13 +84,7 @@ semantic_type_t _common_type(checker_t ctx, semantic_type_t a,
                              semantic_type_t b) {
   if (!a || !b) return ctx->error_type;
   if (semantic_type_equals(a, b)) return a;
-  /* int + float → float */
-  if (_is_integer_type(a) && b->impl->kind >= TYPE_F16 &&
-      b->impl->kind <= TYPE_F64)
-    return b;
-  if (_is_integer_type(b) && a->impl->kind >= TYPE_F16 &&
-      a->impl->kind <= TYPE_F64)
-    return a;
+  /* int + float is NOT implicitly promoted (design: no int→float conversion) */
   /* float widening */
   if (a->impl->size >= b->impl->size) return a;
   return b;

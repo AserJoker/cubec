@@ -53,7 +53,7 @@
 | `do` | `else` | `enum` | `export` | `extends` |
 | `extern` | `for` | `foreach` | `from` | `func` |
 | `if` | `import` | `in` | `inline` | `interface` |
-| `is` | `of` | `pub` | `register` | `return` |
+| `is` | `of` | `pub` | `return` |
 | `sizeof` | `struct` | `switch` | `test` | `type` |
 | `typeof` | `union` | `using` | `var` | `volatile` |
 | `while` | | | | |
@@ -699,7 +699,6 @@ interface Container[T] {
 |--------|--------|---------|
 | `builtin` | 声明级 | type / var / func |
 | `extern` | 声明级 | func / var |
-| `register` | 声明级 | var |
 | `comptime` | 声明级 + 语句 | var / func / if / for / block |
 | `inline` | 声明级 | func |
 | `export` | 声明级 | func / type / var |
@@ -708,6 +707,6 @@ interface Container[T] {
 
 ### 7.2 互斥矩阵
 
-`builtin`、`extern`、`register`、`comptime`、`using` 五者互斥，声明只能选其一。`inline` 必须有函数体，与 `builtin`（无体）和 `extern`（无体/外部体）天然互斥。`inline` + `comptime`：comptime 下忽略 inline。`export` 正交于所有其他修饰符。`pub` 仅修饰 struct 字段，与 `export` 职责不同。
+`builtin`、`extern`、`comptime`、`using` 四者互斥，声明只能选其一。`inline` 必须有函数体，与 `builtin`（无体）和 `extern`（无体/外部体）天然互斥。`inline` + `comptime`：comptime 下忽略 inline。`export` 正交于所有其他修饰符。`pub` 仅修饰 struct 字段，与 `export` 职责不同。
 
 详见 `09-modifiers.md`。

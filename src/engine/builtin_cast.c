@@ -76,6 +76,14 @@ static comptime_value_t _cast_numeric(struct comptime_eval *eval,
     return _eval_temp(eval, _create_truncated_int(eval, uval, to));
   }
 
+  /* int → float (explicit cast) */
+  if (fk >= TYPE_I8 && fk <= TYPE_U64 &&
+      tk >= TYPE_F16 && tk <= TYPE_F64) {
+    double d = (double)comptime_value_as_f64(src_val);
+    uint8_t width = to_unq->impl->size == 8 ? 64 : (to_unq->impl->size == 4 ? 32 : 16);
+    return _eval_temp(eval, comptime_value_create_float(eval->allocator, d, width, to));
+  }
+
   /* int → int (narrowing or same-width) */
   if (fk >= TYPE_I8 && fk <= TYPE_U64 &&
       tk >= TYPE_I8 && tk <= TYPE_U64) {

@@ -27,14 +27,12 @@ static struct compile_result compile_source(allocator_t allocator,
   size_t pos = 0;
   node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
 
-  /* If parsing failed, fail the test immediately */
+  /* If parsing failed, still create a checker context so error_count is accessible */
   if (g_error) {
-    std::string err_msg(g_error->message);
     error_clear();
-    GTEST_MESSAGE_AT_(__FILE__, __LINE__,
-        ("Parsing failed: " + err_msg).c_str(),
-        ::testing::TestPartResult::kFatalFailure);
-    return (struct compile_result){NULL, prog, tokens};
+    checker_t ctx = checker_create(allocator);
+    ctx->error_count = 1; /* parsing error counts */
+    return (struct compile_result){ctx, prog, tokens};
   }
 
   checker_t ctx = checker_create(allocator);
@@ -87,5 +85,131 @@ TEST_F(dt_modifiers, export_func) {
     "export func hello(): void {}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== function modifier mutual exclusivity ===== */
+
+TEST_F(dt_modifiers, func_inline_builtin_exclusive) {
+  /* inline + builtin: mutually exclusive (builtin has no body, inline requires one) */
+  const char *src =
+    "inline builtin func foo(): void;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "inline + builtin should be mutually exclusive";
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_modifiers, func_inline_extern_exclusive) {
+  /* inline + extern: mutually exclusive */
+  const char *src =
+    "inline extern func foo(): void;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "inline + extern should be mutually exclusive";
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_modifiers, func_comptime_builtin_exclusive) {
+  /* comptime + builtin: mutually exclusive */
+  const char *src =
+    "comptime builtin func foo(): void;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "comptime + builtin should be mutually exclusive";
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_modifiers, func_comptime_extern_exclusive) {
+  /* comptime + extern: mutually exclusive */
+  const char *src =
+    "comptime extern func foo(): void;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "comptime + extern should be mutually exclusive";
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_modifiers, func_inline_comptime_ignores_inline) {
+  /* inline + comptime: comptime takes precedence, inline silently ignored */
+  const char *src =
+    "inline comptime func foo(): i32 { return 1; }\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0) << "inline + comptime should be allowed (inline ignored)";
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_modifiers, func_builtin_extern_exclusive) {
+  /* builtin + extern: mutually exclusive */
+  const char *src =
+    "builtin extern func foo(): void;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "builtin + extern should be mutually exclusive";
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== inline semantics ===== */
+
+TEST_F(dt_modifiers, inline_func_ok) {
+  const char *src =
+    "inline func add(a: i32, b: i32): i32 { return a + b; }\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_modifiers, inline_func_requires_body) {
+  /* inline without body: implicitly caught via builtin/extern exclusivity
+     (inline + no body is not syntactically distinct from inline+extern) */
+  const char *src =
+    "inline func foo(): void;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "inline func without body should error";
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== var modifier mutual exclusivity ===== */
+
+TEST_F(dt_modifiers, var_extern_builtin_exclusive) {
+  const char *src =
+    "extern builtin var x: i32;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "extern + builtin should be mutually exclusive";
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_modifiers, var_extern_comptime_exclusive) {
+  const char *src =
+    "extern comptime var x: i32;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "extern + comptime should be mutually exclusive";
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_modifiers, var_builtin_comptime_exclusive) {
+  const char *src =
+    "builtin comptime var x: i32;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "builtin + comptime should be mutually exclusive";
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_modifiers, var_using_extern_exclusive) {
+  const char *src =
+    "using extern var x: i32;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "using + extern should be mutually exclusive";
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_modifiers, var_using_builtin_exclusive) {
+  const char *src =
+    "using builtin var x: i32;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "using + builtin should be mutually exclusive";
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_modifiers, var_using_comptime_exclusive) {
+  const char *src =
+    "using comptime var x: i32;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "using + comptime should be mutually exclusive";
   compile_result_cleanup(&r, allocator);
 }

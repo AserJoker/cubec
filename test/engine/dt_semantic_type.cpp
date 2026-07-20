@@ -128,26 +128,28 @@ TEST_F(dt_semantic_type, equals_pointer) {
   allocator_free(allocator, &i32_a);
 }
 
-TEST_F(dt_semantic_type, can_decay_array_to_slice) {
+TEST_F(dt_semantic_type, cannot_decay_array_to_slice) {
+  /* Design: array→slice is NOT an implicit conversion */
   semantic_type_t elem =
       semantic_type_create_named(allocator, "u8", TYPE_U8);
   semantic_type_t arr = semantic_type_create_array(allocator, elem, 10, (size_t)-1);
   semantic_type_t sl = semantic_type_create_slice(allocator, elem);
 
-  EXPECT_TRUE(semantic_type_can_decay(arr, sl));
+  EXPECT_FALSE(semantic_type_can_decay(arr, sl));
 
   allocator_free(allocator, &sl);
   allocator_free(allocator, &arr);
   allocator_free(allocator, &elem);
 }
 
-TEST_F(dt_semantic_type, can_decay_array_to_pointer) {
+TEST_F(dt_semantic_type, cannot_decay_array_to_pointer) {
+  /* Design: array→pointer is NOT an implicit conversion */
   semantic_type_t elem =
       semantic_type_create_named(allocator, "i32", TYPE_I32);
   semantic_type_t arr = semantic_type_create_array(allocator, elem, 5, (size_t)-1);
   semantic_type_t ptr = semantic_type_create_pointer(allocator, elem);
 
-  EXPECT_TRUE(semantic_type_can_decay(arr, ptr));
+  EXPECT_FALSE(semantic_type_can_decay(arr, ptr));
 
   allocator_free(allocator, &ptr);
   allocator_free(allocator, &arr);

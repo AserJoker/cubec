@@ -234,17 +234,20 @@ node_t read_statement_function(allocator_t allocator, vec_t tokens,
     }
   }
 
-  /* 2. Mutually exclusive check */
+  /* 2. Mutually exclusive check (builtin, extern, comptime are "pick one") */
   if (is_export && is_extern)
     THROW_LOCAL(onerror, "'export' and 'extern' are mutually exclusive");
   if (is_inline && is_extern)
     THROW_LOCAL(onerror, "'inline' and 'extern' are mutually exclusive");
+  if (is_inline && is_builtin)
+    THROW_LOCAL(onerror, "'inline' and 'builtin' are mutually exclusive");
   if (is_builtin && is_extern)
     THROW_LOCAL(onerror, "'builtin' and 'extern' are mutually exclusive");
   if (is_comptime && is_extern)
     THROW_LOCAL(onerror, "'comptime' and 'extern' are mutually exclusive");
   if (is_comptime && is_builtin)
     THROW_LOCAL(onerror, "'comptime' and 'builtin' are mutually exclusive");
+  /* inline + comptime: comptime takes precedence; ignore inline silently */
 
   /* 3. Expect 'func' keyword */
   if (!_is_keyword(tokens, current, "func")) {

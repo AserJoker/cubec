@@ -605,6 +605,20 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
   return callee_type->impl->function.return_type;
 }
 
+/* Check if a struct field is accessible from the current context.
+   Currently all code is in the same module, so only pub matters for future
+   cross-module access. When module system is implemented, this will check
+   whether the accessing scope is in the same module as the struct definition. */
+static bool _is_field_accessible(checker_t ctx,
+                                  struct symbol *field_sym,
+                                  semantic_type_t owner_type) {
+  /* TODO(Phase 8): check cross-module access when module system is implemented.
+     If field is not pub and accessing scope is in a different module, return false. */
+  (void)ctx;
+  (void)owner_type;
+  return true;
+}
+
 static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
   cubec_expression_member_t mem = (cubec_expression_member_t)expr;
   semantic_type_t host_type = _check_expression(ctx, mem->host);
@@ -629,6 +643,13 @@ static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
     for (size_t i = 0; i < fcount; i++) {
       struct symbol *f = (struct symbol *)vec_get(fields, i);
       if (f && f->name && strcmp(f->name, fname) == 0) {
+        if (!_is_field_accessible(ctx, f, effective_host)) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               expr->location,
+                               "field '%s' is private", fname);
+          ctx->error_count++;
+          return ctx->error_type;
+        }
         semantic_type_t ft = f->field.type;
         if (host_is_const && !semantic_type_is_const(ft)) {
           semantic_type_t cft = semantic_type_create_qualifier(
@@ -662,6 +683,13 @@ static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
       for (size_t i = 0; i < fcount; i++) {
         struct symbol *f = (struct symbol *)vec_get(fields, i);
         if (f && f->name && strcmp(f->name, fname) == 0) {
+          if (!_is_field_accessible(ctx, f, pointee_unq)) {
+            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                 expr->location,
+                                 "field '%s' is private", fname);
+            ctx->error_count++;
+            return ctx->error_type;
+          }
           semantic_type_t ft = f->field.type;
           if (pointee_is_const && !semantic_type_is_const(ft)) {
             semantic_type_t cft = semantic_type_create_qualifier(

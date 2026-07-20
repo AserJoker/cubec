@@ -56,4 +56,4 @@ export var VERSION: const string = "1.0";
 - `export` 与 `pub` 职责不同，正交：
   - `export` — 模块级，控制跨模块可见性
   - `pub` — 字段级，控制 struct 字段可见性（详见 `09-modifiers.md`）
-- `export` 可与 `builtin`、`comptime`、`register`、`inline` 组合使用
+- `export` 可与 `builtin`、`comptime`、`inline` 组合使用
