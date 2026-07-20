@@ -818,8 +818,9 @@ static flow_state_t _check_stmt_local_function(checker_t ctx,
   }
 
   /* Check function body using unified helper */
-  return _check_func_body_and_returns(ctx, &info, ret_type, param_types,
-                                       ctx->current_scope);
+  _check_func_body_and_returns(ctx, &info, ret_type, param_types,
+                                ctx->current_scope);
+  return flow_state_alive(ctx->allocator);
 }
 
 /* --- local struct declaration checker --- */

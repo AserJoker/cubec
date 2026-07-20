@@ -136,12 +136,12 @@ void _register_func_captures(checker_t ctx, const func_check_info_t *info,
 
 /* ===== unified function body check + return exhaustiveness ===== */
 
-flow_state_t _check_func_body_and_returns(checker_t ctx,
-                                           const func_check_info_t *info,
-                                           semantic_type_t return_type,
-                                           vec_t param_types,
-                                           scope_t scope_root) {
-  if (!info->body) return flow_state_alive(ctx->allocator);
+void _check_func_body_and_returns(checker_t ctx,
+                                    const func_check_info_t *info,
+                                    semantic_type_t return_type,
+                                    vec_t param_types,
+                                    scope_t scope_root) {
+  if (!info->body) return;
 
   scope_t saved = ctx->current_scope;
   ctx->current_scope = scope_create(ctx->allocator, scope_root,
@@ -170,7 +170,6 @@ flow_state_t _check_func_body_and_returns(checker_t ctx,
   flow_state_dispose(fs, ctx->allocator);
   ctx->current_flow = NULL;
   ctx->current_scope = saved;
-  return flow_state_alive(ctx->allocator);
 }
 
 /* ===== unified generic params registration ===== */

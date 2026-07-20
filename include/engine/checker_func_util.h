@@ -62,11 +62,11 @@ void _register_func_captures(checker_t ctx, const func_check_info_t *info,
  *   - local functions: pass saved (= enclosing scope)
  *   - global methods: pass ctx->global_scope
  *   - local methods: pass saved (= enclosing scope) */
-flow_state_t _check_func_body_and_returns(checker_t ctx,
-                                           const func_check_info_t *info,
-                                           semantic_type_t return_type,
-                                           vec_t param_types,
-                                           scope_t scope_root);
+void _check_func_body_and_returns(checker_t ctx,
+                                    const func_check_info_t *info,
+                                    semantic_type_t return_type,
+                                    vec_t param_types,
+                                    scope_t scope_root);
 
 /* Unified generic params registration (merges collect.c and evaluate.c versions) */
 void checker_register_generic_params(checker_t ctx, vec_t generic_params);

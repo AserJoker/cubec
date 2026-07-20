@@ -477,7 +477,7 @@ comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
 
 /* --- magic method helpers --- */
 
-static struct symbol *_find_magic_method(semantic_type_t type, const char *name) {
+struct symbol *_find_magic_method(semantic_type_t type, const char *name) {
   if (!type || !type->instance_methods) return NULL;
   size_t mc = vec_get_size(type->instance_methods);
   for (size_t i = 0; i < mc; i++) {
@@ -495,7 +495,7 @@ static struct symbol *_find_magic_method(semantic_type_t type, const char *name)
  *        - pointer host → use the pointer directly
  *        - other → allocate a copy in valloc
  */
-static comptime_value_t _eval_method_call(comptime_eval_t eval, checker_t ctx,
+comptime_value_t _eval_method_call(comptime_eval_t eval, checker_t ctx,
                                            struct symbol *method,
                                            node_t host_node,
                                            comptime_value_t host_val,
@@ -823,6 +823,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
   struct symbol *call_method = _find_magic_method(callee->type, "__call__");
   if (call_method) {
     size_t acount = call->arguments ? vec_get_size(call->arguments) : 0;
+    /* Evaluate arguments — _eval_method_call will clone them internally */
     comptime_value_t *user_args =
         (comptime_value_t *)allocator_alloc(eval->allocator,
             sizeof(comptime_value_t) * acount);
@@ -833,7 +834,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
         allocator_free(eval->allocator, &user_args);
         return _eval_error_val(eval);
       }
-      user_args[i] = comptime_value_clone(eval->allocator, arg);
+      user_args[i] = arg;
     }
     comptime_value_t result = _eval_method_call(eval, ctx, call_method,
         call->callee, callee, user_args, acount, node);
