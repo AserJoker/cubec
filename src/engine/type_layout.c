@@ -156,8 +156,39 @@ void type_layout_compute(semantic_type_t type, size_t ptr_size) {
     break;
   }
 
-  case TYPE_UNION:
+  case TYPE_UNION: {
+    /* Tagged union: layout is [tag: u64][data: max_field_size].
+       __type__ is not a named field; tag occupies offset 0-7,
+       field data starts at offset 8. */
+    size_t max_size = 0;
+    size_t max_align = 1;
+    vec_t fields = impl->struct_type.fields;
+    size_t count = vec_get_size(fields);
+    for (size_t i = 0; i < count; i++) {
+      struct symbol *field = (struct symbol *)vec_get(fields, i);
+      if (!field->field.type) continue;
+      _layout_compute_impl(field->field.type, ptr_size);
+      size_t fsize = semantic_type_get_size(field->field.type);
+      size_t falign = semantic_type_get_alignment(field->field.type);
+      if (falign == 0) falign = 1;
+      /* Fields start at offset 8 (after the u64 tag) */
+      field->field.offset = 8;
+      if (fsize > max_size) max_size = fsize;
+      if (falign > max_align) max_align = falign;
+    }
+    if (impl->explicit_align > 0 && impl->explicit_align > max_align) {
+      max_align = impl->explicit_align;
+    }
+    /* Tag requires at least 8-byte alignment */
+    if (max_align < 8) max_align = 8;
+    impl->size = 8 + _align_up(max_size, max_align); /* 8 for tag + aligned data */
+    impl->alignment = max_align;
+    type->is_incomplete = false;
+    break;
+  }
+
   case TYPE_CUNION: {
+    /* C-style untagged union: size = max_field_size, no tag */
     size_t max_size = 0;
     size_t max_align = 1;
     vec_t fields = impl->struct_type.fields;
@@ -256,8 +287,29 @@ void type_layout_compute(semantic_type_t type, size_t ptr_size) {
       impl->size = offset;
       impl->alignment = max_align;
       type->is_incomplete = false;
-    } else if (tmpl && (tmpl->impl->kind == TYPE_UNION ||
-                        tmpl->impl->kind == TYPE_CUNION)) {
+    } else if (tmpl && tmpl->impl->kind == TYPE_UNION) {
+      /* Tagged union generic instance: same layout as TYPE_UNION */
+      size_t max_size = 0;
+      size_t max_align = 1;
+      size_t count = vec_get_size(fields);
+      for (size_t i = 0; i < count; i++) {
+        struct symbol *field = (struct symbol *)vec_get(fields, i);
+        if (!field->field.type) continue;
+        _layout_compute_impl(field->field.type, ptr_size);
+        size_t fsize = semantic_type_get_size(field->field.type);
+        size_t falign = semantic_type_get_alignment(field->field.type);
+        if (falign == 0) falign = 1;
+        /* Fields start at offset 8 (after the u64 tag) */
+        field->field.offset = 8;
+        if (fsize > max_size) max_size = fsize;
+        if (falign > max_align) max_align = falign;
+      }
+      if (max_align < 8) max_align = 8;
+      impl->size = 8 + _align_up(max_size, max_align); /* 8 for tag + aligned data */
+      impl->alignment = max_align;
+      type->is_incomplete = false;
+    } else if (tmpl && tmpl->impl->kind == TYPE_CUNION) {
+      /* C-style untagged union generic instance */
       size_t max_size = 0;
       size_t max_align = 1;
       size_t count = vec_get_size(fields);

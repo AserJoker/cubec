@@ -152,6 +152,16 @@ int64_t  comptime_value_as_i64(comptime_value_t val);
 uint64_t comptime_value_as_u64(comptime_value_t val);
 double   comptime_value_as_f64(comptime_value_t val);
 
+/* ===== union tag helpers ===== */
+
+/** @brief Read the union tag from a composite's data buffer (offset 0).
+ *         Returns 0 for non-tagged-union composites. */
+uint64_t comptime_value_get_union_tag(comptime_value_t comp);
+
+/** @brief Write the union tag into a composite's data buffer (offset 0).
+ *         No-op for non-tagged-union composites. */
+bool comptime_value_set_union_tag(comptime_value_t comp, uint64_t tag);
+
 #ifdef __cplusplus
 }
 #endif

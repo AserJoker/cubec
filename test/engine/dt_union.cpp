@@ -14,6 +14,7 @@ using ::testing::Test;
 /* ===== helpers ===== */
 
 #define BUILTIN_ASSERT "builtin func assert(condition: bool): void;\n"
+#define BUILTIN_UNIONIS "builtin func unionIs[T,K](obj:K):bool;\n"
 
 struct compile_result {
   checker_t ctx;
@@ -62,11 +63,84 @@ protected:
   }
 };
 
-/* ===== union: global declarations currently crash in checker_evaluate ===== */
+TEST_F(dt_union, union_init_named) {
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result { value: i32; err: string; }\n"
+    "test \"init\" {\n"
+    "  var r = .Result{.value = 42};\n"
+    "  assert(r.value == 42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
 
-TEST_F(dt_union, union_placeholder) {
-  /* union/cunion declarations trigger SEH crash in checker_evaluate.
-   * Parser and type system are implemented; semantic evaluation has a NULL
-   * dereference bug. To be fixed separately. */
-  EXPECT_TRUE(true);
+TEST_F(dt_union, cunion_init_named) {
+  const char *src = BUILTIN_ASSERT
+    "cunion Data { a: i32; b: f64; }\n"
+    "test \"init\" {\n"
+    "  var d = .Data{.a = 10};\n"
+    "  assert(d.a == 10);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_union, unionis_true) {
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result { value: i32; err: string; }\n"
+    "test \"is_true\" {\n"
+    "  var r = .Result{.value = 42};\n"
+    "  assert(unionIs[i32](r));\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_union, unionis_false) {
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result { value: i32; err: string; }\n"
+    "test \"is_false\" {\n"
+    "  var r = .Result{.value = 42};\n"
+    "  assert(!unionIs[string](r));\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_union, union_tag_updated_on_write) {
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result { value: i32; err: string; }\n"
+    "test \"tag_update\" {\n"
+    "  var r = .Result{.value = 42};\n"
+    "  assert(unionIs[i32](r));\n"
+    "  r.err = \"hello\";\n"
+    "  assert(unionIs[string](r));\n"
+    "  assert(!unionIs[i32](r));\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_union, union_positional_init_first_field) {
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result { value: i32; err: string; }\n"
+    "test \"pos_init\" {\n"
+    "  var r = .Result{42};\n"
+    "  assert(r.value == 42);\n"
+    "  assert(unionIs[i32](r));\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
 }

@@ -248,8 +248,8 @@ TEST_F(dt_checker, pass2_union_basic) {
   semantic_type_t t = sym->type.type;
   EXPECT_FALSE(semantic_type_is_incomplete(t));
   EXPECT_EQ(semantic_type_get_kind(t), TYPE_UNION);
-  /* Union: size = max(8, 8) = 8, alignment = 8 */
-  EXPECT_EQ(semantic_type_get_size(t), 8u);
+  /* Tagged union: size = 8 (tag) + align_up(max(4,8), 8) = 16, alignment = 8 */
+  EXPECT_EQ(semantic_type_get_size(t), 16u);
   EXPECT_EQ(semantic_type_get_alignment(t), 8u);
 
   vec_t fields = t->impl->struct_type.fields;

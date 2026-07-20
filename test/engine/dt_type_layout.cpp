@@ -147,10 +147,12 @@ TEST_F(dt_type_layout, union_layout) {
 
   type_layout_compute(un, PTR64);
 
-  EXPECT_EQ(f1->field.offset, 0u);
-  EXPECT_EQ(f2->field.offset, 0u);
-  EXPECT_EQ(semantic_type_get_size(un), 4u);
-  EXPECT_EQ(semantic_type_get_alignment(un), 4u);
+  /* Tagged union: fields start at offset 8 (after u64 tag),
+     size = 8 + align_up(max_field_size, alignment) */
+  EXPECT_EQ(f1->field.offset, 8u);
+  EXPECT_EQ(f2->field.offset, 8u);
+  EXPECT_EQ(semantic_type_get_size(un), 16u); /* 8 (tag) + align_up(4, 8) = 16 */
+  EXPECT_EQ(semantic_type_get_alignment(un), 8u);
 
   allocator_free(allocator, &f2->field.type);
   allocator_free(allocator, &f1->field.type);

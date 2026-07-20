@@ -1176,6 +1176,42 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
   type_layout_compute(type, 8);
   size_t data_size = type->impl->size;
 
+  if (type->impl->kind == TYPE_UNION || type->impl->kind == TYPE_CUNION) {
+    vec_t type_fields = type->impl->struct_type.fields;
+    size_t field_count = type_fields ? vec_get_size(type_fields) : 0;
+    comptime_value_t comp = comptime_value_create_composite(
+        eval->allocator, type, NULL, data_size);
+
+    if (il->is_field && il->items) {
+      /* Named field init: .field = expr */
+      size_t ic = vec_get_size(il->items);
+      for (size_t i = 0; i < ic; i++) {
+        node_t item = (node_t)vec_get(il->items, i);
+        if (item->kind != CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD) continue;
+        cubec_expression_initialize_field_t f =
+            (cubec_expression_initialize_field_t)item;
+        const char *fname = _eval_ident_str((node_t)f->field);
+        comptime_value_t v = _comptime_eval_expr(eval, ctx, f->value);
+        if (v && v->kind != COMPTIME_VALUE_ERROR)
+          comptime_value_set_field(comp, fname, v);
+      }
+    } else if (il->items && vec_get_size(il->items) >= 1) {
+      /* Positional init: first field only for union */
+      struct symbol *fsym = field_count > 0
+          ? (struct symbol *)vec_get(type_fields, 0) : NULL;
+      comptime_value_t v = _comptime_eval_expr(eval, ctx,
+          (node_t)vec_get(il->items, 0));
+      if (v && v->kind != COMPTIME_VALUE_ERROR && fsym)
+        comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v);
+      if (vec_get_size(il->items) > 1) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+            "union initialization requires exactly one field");
+        ctx->error_count++;
+      }
+    }
+    return _eval_temp(eval, comp);
+  }
+
   if (type->impl->kind == TYPE_STRUCT) {
     vec_t type_fields = type->impl->struct_type.fields;
     size_t field_count = type_fields ? vec_get_size(type_fields) : 0;
@@ -1307,13 +1343,42 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
 
   if (type->impl->kind == TYPE_GENERIC_INSTANCE && type->impl->generic_instance.fields) {
     /* Generic instance (struct/union) initialization */
+    semantic_type_t tmpl = type->impl->generic_instance.generic_template;
+    bool is_tagged_union = tmpl && tmpl->impl->kind == TYPE_UNION;
     vec_t type_fields = type->impl->generic_instance.fields;
     size_t field_count = type_fields ? vec_get_size(type_fields) : 0;
 
     comptime_value_t comp = comptime_value_create_composite(
         eval->allocator, type, NULL, data_size);
 
-    if (il->is_field && il->items) {
+    if (is_tagged_union) {
+      /* Tagged union generic instance: same as TYPE_UNION — one field only */
+      if (il->is_field && il->items) {
+        size_t ic = vec_get_size(il->items);
+        for (size_t i = 0; i < ic; i++) {
+          node_t item = (node_t)vec_get(il->items, i);
+          if (item->kind != CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD) continue;
+          cubec_expression_initialize_field_t f =
+              (cubec_expression_initialize_field_t)item;
+          const char *fname = _eval_ident_str((node_t)f->field);
+          comptime_value_t v = _comptime_eval_expr(eval, ctx, f->value);
+          if (v && v->kind != COMPTIME_VALUE_ERROR)
+            comptime_value_set_field(comp, fname, v);
+        }
+      } else if (il->items && vec_get_size(il->items) >= 1) {
+        struct symbol *fsym = field_count > 0
+            ? (struct symbol *)vec_get(type_fields, 0) : NULL;
+        comptime_value_t v = _comptime_eval_expr(eval, ctx,
+            (node_t)vec_get(il->items, 0));
+        if (v && v->kind != COMPTIME_VALUE_ERROR && fsym)
+          comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v);
+        if (vec_get_size(il->items) > 1) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+              "union initialization requires exactly one field");
+          ctx->error_count++;
+        }
+      }
+    } else if (il->is_field && il->items) {
       size_t ic = vec_get_size(il->items);
       for (size_t i = 0; i < ic; i++) {
         node_t item = (node_t)vec_get(il->items, i);

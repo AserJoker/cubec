@@ -544,6 +544,7 @@ Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (nam
 - `builtin_collection.c/h` — `length` (type creation + `builtin_length_eval` callback)
 - `builtin_tuple.c/h` — `getTupleItem`, `setTupleItem` (type creation + `builtin_get_eval`/`builtin_set_eval` callbacks)
 - `builtin_cast.c/h` — `cast[T,K](expr:K):T` (type creation + `builtin_cast_eval` callback)
+- `builtin_union.c/h` — `unionIs[T,K](obj:K):bool` (type creation + `builtin_unionis_eval` callback)
 - `builtin_dispatch.c/h` — **deleted** (callbacks moved to respective modules)
 
 **Tuple** is a native type (`TYPE_TUPLE`), not a builtin. Syntax: `<i32, f64>` (angle brackets in type context). Fields are `_0`, `_1`, etc. See Type System section for details.
@@ -553,6 +554,8 @@ Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (nam
 **setTupleItem[N: u64, ...Args](tuple: <...Args>, value: Args[N]): void** — Sets the Nth element of a tuple. Value type must match the Nth field type. Same as getTupleItem: normal flow for type checking, `eval_call` for comptime.
 
 **cast[T,K](expr:K):T** — Explicit type cast. The checker validates via `semantic_type_can_explicit_cast` after generic instantiation. Comptime eval (`builtin_cast_eval`) performs the actual value conversion. Supported casts: numeric (float→int truncation, int narrowing, float narrowing, bool↔int, enum↔int, char↔int), pointer (opaque→pointer, pointer→int, *Small→*Big downcast), container (array→tuple with layout-compatible elements).
+
+**unionIs[T,K](obj:K):bool** — Check if a tagged union's active variant matches type T. K must be a TYPE_UNION (or generic_instance of TYPE_UNION). Comptime eval (`builtin_unionis_eval`) compares the union's tag (stored at data buffer offset 0 as uint64_t, containing the type hash of the active variant) against `type_hash(T)`.
 
 ### Checker Passes
 
@@ -824,13 +827,15 @@ export struct SomeType { ref: *a.SomeType }     // ✅ OK: struct definition
 - 节点：CUBEC_NODE_STATEMENT_ENUM, CUBEC_NODE_DECLARATION_ENUM, CUBEC_NODE_ENUM_ITEM
 
 ### union 联合体声明
-- Rust 风格 tagged union，字段用逗号分隔，支持泛型
+- Tagged union，运行时布局：`[tag: u64][data: max_field_size]`，字段 offset = 8（tag 在 offset 0-7）
+- `__type__` 不是真实字段，对 Cubec 开发者不可见；tag 存储活跃变体的 type hash
+- 初始化语法：具名 `.field = expr`（前导点和等号），位置初始化只取第一个字段
+- unionIs builtin：`builtin func unionIs[T,K](obj:K):bool` 检查 `obj.__type__ == type_hash(T)`
+- 泛型 union 实例的 tag 读写与普通 union 一致
 - `[export] union <name> [<generic_params>] { <field>: <type>, ... }`
-- 匿名 union 类型表达式：`union { ok: i32, err: *u8 }`
-- 节点：需新增 CUBEC_NODE_STATEMENT_UNION 等
 
 ### cunion C 风格联合体
-- C 兼容，字段用分号分隔，无 tag 字节
+- C 兼容，字段用分号分隔，无 tag 字节，size = max_field_size
 - `cunion <name> { <field>: <type>; ... }`
 - 不支持泛型、export、匿名类型表达式
 
