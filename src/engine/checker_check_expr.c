@@ -1,6 +1,7 @@
 #include "engine/checker.h"
 #include "engine/checker_check_expr.h"
 #include "engine/checker_check_expr_helpers.h"
+#include "engine/checker_func_util.h"
 #include "engine/checker_type_util.h"
 #include "engine/checker_check_stmt.h"
 #include "engine/resolver.h"
@@ -906,29 +907,20 @@ static semantic_type_t _check_expr_slice(checker_t ctx, node_t expr) {
 
 static semantic_type_t _check_expr_function(checker_t ctx, node_t expr) {
   cubec_expression_function_t fn = (cubec_expression_function_t)expr;
-  semantic_type_t ret_type = fn->return_type
-      ? resolver_resolve_type(ctx, fn->return_type) : ctx->builtin_void;
 
-  vec_init_t pvi = {.auto_dispose = false};
-  vec_t param_types =
-      (vec_t)allocator_create(ctx->allocator, &g_vec_type, &pvi);
+  func_check_info_t info;
+  func_check_info_from_expression(&info, fn);
 
-  scope_t saved = ctx->current_scope;
-  ctx->current_scope = scope_create(ctx->allocator, ctx->current_scope,
-                                     SCOPE_FUNCTION, expr->location);
-  vec_push(ctx->all_scopes, ctx->current_scope);
+  semantic_type_t ret_type = info.return_type
+      ? resolver_resolve_type(ctx, info.return_type) : ctx->builtin_void;
+  vec_t param_types = _resolve_func_param_types(ctx, &info);
 
-  _check_func_params(ctx, fn, param_types);
-
-  if (fn->body) {
-    flow_state_t fs = _check_statement(ctx, fn->body, ret_type);
-    flow_state_dispose(fs, ctx->allocator);
-  }
-
-  ctx->current_scope = saved;
+  /* Check function body using unified helper — includes return exhaustiveness */
+  _check_func_body_and_returns(ctx, &info, ret_type, param_types,
+                                ctx->current_scope);
 
   semantic_type_t ftype = semantic_type_create_function(
-      ctx->allocator, ret_type, param_types, fn->is_c_variadic);
+      ctx->allocator, ret_type, param_types, info.is_c_variadic);
   type_hash_ensure(ftype);
   vec_push(ctx->all_types, ftype);
   return ftype;

@@ -394,27 +394,5 @@ bool _is_op_one_of(const char *op, const char **ops, size_t count) {
   return false;
 }
 
-/* ===== function parameter helper ===== */
-
-void _check_func_params(checker_t ctx, void *fn_node, vec_t param_types) {
-  cubec_expression_function_t fn = (cubec_expression_function_t)fn_node;
-  if (!fn->arguments) return;
-  size_t acount = vec_get_size(fn->arguments);
-  for (size_t i = 0; i < acount; i++) {
-    node_t arg = (node_t)vec_get(fn->arguments, i);
-    if (arg->kind != CUBEC_NODE_FUNCTION_ARGUMENT) continue;
-    cubec_function_argument_t farg = (cubec_function_argument_t)arg;
-    semantic_type_t pt = farg->type
-        ? resolver_resolve_type(ctx, farg->type) : ctx->error_type;
-    vec_push(param_types, pt);
-    const char *pname = _checker_ident_str(farg->identifier);
-    if (pname) {
-      struct symbol *psym = symbol_create(ctx->allocator, pname,
-                                           SYMBOL_VARIABLE, arg->location);
-      psym->variable.type = pt;
-      psym->variable.is_mutable = !semantic_type_is_const(pt);
-      psym->state = SYMBOL_EVALUATED;
-      scope_push_symbol(ctx->current_scope, psym);
-    }
-  }
-}
+/* _check_func_params replaced by _resolve_func_param_types + _register_func_params_from_info
+   in checker_func_util.c */

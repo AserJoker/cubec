@@ -27,7 +27,7 @@ semantic_type_t _check_binary_bitwise(checker_t ctx, node_t expr,
                                        semantic_type_t lt,
                                        semantic_type_t rt);
 bool _is_op_one_of(const char *op, const char **ops, size_t count);
-void _check_func_params(checker_t ctx, void *fn_node, vec_t param_types);
+/* _check_func_params moved to checker_func_util.c as _resolve_func_param_types + _register_func_params_from_info */
 
 #ifdef __cplusplus
 }

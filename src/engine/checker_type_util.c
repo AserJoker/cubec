@@ -12,6 +12,9 @@
 #include "cubec/node.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
+#include "cubec/struct_field.h"
+#include "cubec/union_field.h"
+#include "cubec/enum_item.h"
 #include "cubec/generic_param.h"
 #include <string.h>
 
@@ -91,6 +94,86 @@ semantic_type_t _common_type(checker_t ctx, semantic_type_t a,
   /* float widening */
   if (a->impl->size >= b->impl->size) return a;
   return b;
+}
+
+/* ===== struct/union/enum field resolution — unified for global and local ===== */
+
+void _resolve_struct_fields(checker_t ctx, semantic_type_t t, vec_t members) {
+  vec_init_t fvi = {.auto_dispose = true};
+  vec_t fields = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &fvi);
+  if (members) {
+    size_t mcount = vec_get_size(members);
+    for (size_t i = 0; i < mcount; i++) {
+      node_t m = (node_t)vec_get(members, i);
+      if (m->kind != CUBEC_NODE_STRUCT_FIELD) continue;
+      cubec_struct_field_t sf = (cubec_struct_field_t)m;
+      const char *fname = _checker_ident_str(sf->name);
+      struct symbol *fsym = symbol_create(ctx->allocator, fname,
+                                          SYMBOL_FIELD, sf->super.location);
+      if (sf->type)
+        fsym->field.type = resolver_resolve_type(ctx, sf->type);
+      fsym->field.index = i;
+      fsym->field.is_pub = sf->is_pub;
+      vec_push(fields, fsym);
+    }
+  }
+  t->impl->struct_type.fields = fields;
+}
+
+void _resolve_union_fields(checker_t ctx, semantic_type_t t, vec_t members) {
+  vec_init_t fvi = {.auto_dispose = true};
+  vec_t fields = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &fvi);
+  if (members) {
+    size_t mcount = vec_get_size(members);
+    for (size_t i = 0; i < mcount; i++) {
+      node_t m = (node_t)vec_get(members, i);
+      if (m->kind != CUBEC_NODE_UNION_FIELD) continue;
+      cubec_union_field_t uf = (cubec_union_field_t)m;
+      const char *fname = _checker_ident_str(uf->name);
+      struct symbol *fsym = symbol_create(ctx->allocator, fname,
+                                          SYMBOL_FIELD, uf->super.location);
+      if (uf->type)
+        fsym->field.type = resolver_resolve_type(ctx, uf->type);
+      fsym->field.index = i;
+      vec_push(fields, fsym);
+    }
+  }
+  t->impl->struct_type.fields = fields;
+}
+
+void _resolve_enum_items(checker_t ctx, semantic_type_t t, vec_t items) {
+  vec_init_t ivi = {.auto_dispose = true};
+  t->impl->enum_type.items = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &ivi);
+  if (!items) return;
+  size_t count = vec_get_size(items);
+  long long auto_val = 0;
+  for (size_t i = 0; i < count; i++) {
+    node_t item_node = (node_t)vec_get(items, i);
+    if (!item_node || item_node->kind != CUBEC_NODE_ENUM_ITEM) continue;
+
+    cubec_enum_item_t item = (cubec_enum_item_t)item_node;
+    const char *iname = _checker_ident_str(item->name);
+    struct symbol *isym = symbol_create(ctx->allocator, iname,
+                                        SYMBOL_ENUM_ITEM, item->super.location);
+    isym->enum_item.owning_type = t;
+    if (item->value) {
+      if (item->value->kind == CUBEC_NODE_LITERAL_NUMERIC) {
+        cubec_literal_numeric_t num = (cubec_literal_numeric_t)item->value;
+        const char *numstr = string_get(num->value);
+        isym->enum_item.value = numstr ? atoll(numstr) : auto_val;
+      } else {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                             item->value->location,
+                             "enum value must be a compile-time integer literal");
+        ctx->error_count++;
+        isym->enum_item.value = auto_val;
+      }
+      auto_val = isym->enum_item.value + 1;
+    } else {
+      isym->enum_item.value = auto_val++;
+    }
+    vec_push(t->impl->enum_type.items, isym);
+  }
 }
 
 /* ===== generic instantiation helpers ===== */

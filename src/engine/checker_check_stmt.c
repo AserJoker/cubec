@@ -1,6 +1,7 @@
 #include "engine/checker.h"
 #include "engine/checker_check_stmt.h"
 #include "engine/checker_check_expr.h"
+#include "engine/checker_func_util.h"
 #include "engine/checker_type_util.h"
 #include "engine/checker_collect.h"
 #include "engine/checker_evaluate.h"
@@ -793,27 +794,16 @@ static flow_state_t _check_stmt_local_function(checker_t ctx,
   if (!node) return flow_state_alive(ctx->allocator);
   const char *name = _checker_ident_str(node->name);
 
-  /* Resolve return type and parameter types */
-  semantic_type_t ret_type = node->return_type
-      ? resolver_resolve_type(ctx, node->return_type) : ctx->builtin_void;
+  func_check_info_t info;
+  func_check_info_from_statement(&info, node);
 
-  vec_init_t pvi = {.auto_dispose = false};
-  vec_t param_types =
-      (vec_t)allocator_create(ctx->allocator, &g_vec_type, &pvi);
-  if (node->arguments) {
-    size_t acount = vec_get_size(node->arguments);
-    for (size_t i = 0; i < acount; i++) {
-      node_t arg = (node_t)vec_get(node->arguments, i);
-      if (arg->kind != CUBEC_NODE_FUNCTION_ARGUMENT) continue;
-      cubec_function_argument_t farg = (cubec_function_argument_t)arg;
-      semantic_type_t pt = farg->type
-          ? resolver_resolve_type(ctx, farg->type) : ctx->error_type;
-      vec_push(param_types, pt);
-    }
-  }
+  /* Resolve return type and parameter types using unified helpers */
+  semantic_type_t ret_type = info.return_type
+      ? resolver_resolve_type(ctx, info.return_type) : ctx->builtin_void;
+  vec_t param_types = _resolve_func_param_types(ctx, &info);
 
   semantic_type_t ftype = semantic_type_create_function(
-      ctx->allocator, ret_type, param_types, node->is_c_variadic);
+      ctx->allocator, ret_type, param_types, info.is_c_variadic);
   type_hash_ensure(ftype);
   vec_push(ctx->all_types, ftype);
 
@@ -822,82 +812,14 @@ static flow_state_t _check_stmt_local_function(checker_t ctx,
     struct symbol *sym = symbol_create(ctx->allocator, name,
                                         SYMBOL_FUNCTION, node->super.location);
     sym->function.type = ftype;
-    sym->function.ast_node = (node_t)node;
+    sym->function.ast_node = info.ast_node;
     sym->state = SYMBOL_EVALUATED;
     scope_push_symbol(ctx->current_scope, sym);
   }
 
-  /* Check function body */
-  flow_state_t fs = flow_state_alive(ctx->allocator);
-  if (node->body) {
-    scope_t saved = ctx->current_scope;
-    ctx->current_scope = scope_create(ctx->allocator, saved,
-                                       SCOPE_FUNCTION, node->super.location);
-    vec_push(ctx->all_scopes, ctx->current_scope);
-
-    /* Register parameters */
-    if (node->arguments) {
-      size_t acount = vec_get_size(node->arguments);
-      for (size_t i = 0; i < acount && i < vec_get_size(param_types); i++) {
-        node_t arg = (node_t)vec_get(node->arguments, i);
-        if (arg->kind != CUBEC_NODE_FUNCTION_ARGUMENT) continue;
-        cubec_function_argument_t farg = (cubec_function_argument_t)arg;
-        const char *pname = _checker_ident_str(farg->identifier);
-        if (!pname) continue;
-        struct symbol *psym = symbol_create(ctx->allocator, pname,
-                                            SYMBOL_VARIABLE, arg->location);
-        psym->variable.type = (semantic_type_t)vec_get(param_types, i);
-        psym->variable.is_mutable = !semantic_type_is_const(psym->variable.type);
-        psym->state = SYMBOL_EVALUATED;
-        scope_push_symbol(ctx->current_scope, psym);
-      }
-    }
-
-    /* Register captured variables */
-    if (node->captures) {
-      size_t cc = vec_get_size(node->captures);
-      for (size_t i = 0; i < cc; i++) {
-        node_t cap_node = (node_t)vec_get(node->captures, i);
-        if (cap_node->kind != CUBEC_NODE_FUNCTION_CAPTURE) continue;
-        cubec_function_capture_t cap = (cubec_function_capture_t)cap_node;
-        const char *cap_name = _checker_ident_str(cap->identifier);
-        if (!cap_name) continue;
-        struct symbol *outer_sym = scope_lookup(saved, cap_name);
-        if (outer_sym) {
-          /* TDZ check: cannot capture a variable before initialization */
-          if (outer_sym->state == SYMBOL_TDZ &&
-              (!ctx->current_flow || flow_state_is_tdz(ctx->current_flow, cap_name))) {
-            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                                 cap_node->location,
-                                 "cannot capture variable '%s' before initialization",
-                                 cap_name);
-            ctx->error_count++;
-          }
-          struct symbol *cap_sym = symbol_create(ctx->allocator, cap_name,
-                                                  outer_sym->kind, cap_node->location);
-          cap_sym->variable = outer_sym->variable;
-          cap_sym->state = SYMBOL_EVALUATED;
-          scope_push_symbol(ctx->current_scope, cap_sym);
-        }
-      }
-    }
-
-    ctx->loop_depth = 0;
-    flow_state_dispose(fs, ctx->allocator);
-    fs = _check_statement(ctx, node->body, ret_type);
-
-    /* Return exhaustiveness check */
-    if (ret_type->impl->kind != TYPE_VOID &&
-        !flow_state_is_all_returned(fs)) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                           node->super.location,
-                           "non-void function must return a value on all paths");
-      ctx->error_count++;
-    }
-
-    ctx->current_scope = saved;
-  }
-  return fs;
+  /* Check function body using unified helper */
+  return _check_func_body_and_returns(ctx, &info, ret_type, param_types,
+                                       ctx->current_scope);
 }
 
 /* --- local struct declaration checker --- */
@@ -919,35 +841,15 @@ static flow_state_t _check_stmt_local_struct(checker_t ctx,
   scope_push_symbol(ctx->current_scope, sym);
   strmap_insert(ctx->type_name_table, name, t);
 
-  /* Resolve fields */
-  vec_init_t fvi = {.auto_dispose = true};
-  vec_t fields = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &fvi);
-  if (node->members) {
-    size_t mcount = vec_get_size(node->members);
-    for (size_t i = 0; i < mcount; i++) {
-      node_t m = (node_t)vec_get(node->members, i);
-      if (m->kind != CUBEC_NODE_STRUCT_FIELD) continue;
-      cubec_struct_field_t sf = (cubec_struct_field_t)m;
-      const char *fname = _checker_ident_str(sf->name);
-      struct symbol *fsym = symbol_create(ctx->allocator, fname,
-                                          SYMBOL_FIELD, sf->super.location);
-      if (sf->type)
-        fsym->field.type = resolver_resolve_type(ctx, sf->type);
-      fsym->field.index = i;
-      fsym->field.is_pub = sf->is_pub;
-      vec_push(fields, fsym);
-    }
-  }
-  t->impl->struct_type.fields = fields;
-
-  /* Resolve methods and static fields into instance_methods/static_fields */
+  /* Resolve fields and methods */
+  _resolve_struct_fields(ctx, t, node->members);
   checker_evaluate_struct_union_members(ctx, t, node->members);
 
   /* Compute layout */
   type_layout_compute(t, 8);
   type_hash_ensure(t);
 
-  /* Check method bodies */
+  /* Check method bodies using unified helper */
   if (node->members) {
     size_t mcount = vec_get_size(node->members);
     for (size_t i = 0; i < mcount; i++) {
@@ -960,23 +862,12 @@ static flow_state_t _check_stmt_local_struct(checker_t ctx,
       semantic_type_t mtype = _find_method_type(ctx, t, mname);
       if (!mtype) continue;
 
-      scope_t saved = ctx->current_scope;
-      ctx->current_scope = scope_create(ctx->allocator, saved,
-                                         SCOPE_FUNCTION, mfn->super.location);
-      vec_push(ctx->all_scopes, ctx->current_scope);
-      _register_func_params(ctx, mfn, mtype->impl->function.params);
-      ctx->loop_depth = 0;
-      flow_state_t mfs = _check_statement(ctx, mfn->body, mtype->impl->function.return_type);
-      /* Return exhaustiveness for method */
-      if (mtype->impl->function.return_type->impl->kind != TYPE_VOID &&
-          !flow_state_is_all_returned(mfs)) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                             mfn->super.location,
-                             "non-void function must return a value on all paths");
-        ctx->error_count++;
-      }
-      flow_state_dispose(mfs, ctx->allocator);
-      ctx->current_scope = saved;
+      func_check_info_t minfo;
+      func_check_info_from_statement(&minfo, mfn);
+      _check_func_body_and_returns(ctx, &minfo,
+                                   mtype->impl->function.return_type,
+                                   mtype->impl->function.params,
+                                   ctx->current_scope);
     }
   }
   return flow_state_alive(ctx->allocator);
@@ -1000,32 +891,14 @@ static flow_state_t _check_stmt_local_union(checker_t ctx,
   scope_push_symbol(ctx->current_scope, sym);
   strmap_insert(ctx->type_name_table, name, t);
 
-  vec_init_t fvi = {.auto_dispose = true};
-  vec_t fields = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &fvi);
-  if (node->members) {
-    size_t mcount = vec_get_size(node->members);
-    for (size_t i = 0; i < mcount; i++) {
-      node_t m = (node_t)vec_get(node->members, i);
-      if (m->kind != CUBEC_NODE_UNION_FIELD) continue;
-      cubec_union_field_t uf = (cubec_union_field_t)m;
-      const char *fname = _checker_ident_str(uf->name);
-      struct symbol *fsym = symbol_create(ctx->allocator, fname,
-                                          SYMBOL_FIELD, uf->super.location);
-      if (uf->type)
-        fsym->field.type = resolver_resolve_type(ctx, uf->type);
-      fsym->field.index = i;
-      vec_push(fields, fsym);
-    }
-  }
-  t->impl->struct_type.fields = fields;
-
-  /* Resolve methods and static fields into instance_methods/static_fields */
+  /* Resolve fields and methods */
+  _resolve_union_fields(ctx, t, node->members);
   checker_evaluate_struct_union_members(ctx, t, node->members);
 
   type_layout_compute(t, 8);
   type_hash_ensure(t);
 
-  /* Check method bodies (same as struct) */
+  /* Check method bodies using unified helper */
   if (node->members) {
     size_t mcount = vec_get_size(node->members);
     for (size_t i = 0; i < mcount; i++) {
@@ -1038,22 +911,12 @@ static flow_state_t _check_stmt_local_union(checker_t ctx,
       semantic_type_t mtype = _find_method_type(ctx, t, mname);
       if (!mtype) continue;
 
-      scope_t saved = ctx->current_scope;
-      ctx->current_scope = scope_create(ctx->allocator, saved,
-                                         SCOPE_FUNCTION, mfn->super.location);
-      vec_push(ctx->all_scopes, ctx->current_scope);
-      _register_func_params(ctx, mfn, mtype->impl->function.params);
-      ctx->loop_depth = 0;
-      flow_state_t mfs = _check_statement(ctx, mfn->body, mtype->impl->function.return_type);
-      if (mtype->impl->function.return_type->impl->kind != TYPE_VOID &&
-          !flow_state_is_all_returned(mfs)) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                             mfn->super.location,
-                             "non-void function must return a value on all paths");
-        ctx->error_count++;
-      }
-      flow_state_dispose(mfs, ctx->allocator);
-      ctx->current_scope = saved;
+      func_check_info_t minfo;
+      func_check_info_from_statement(&minfo, mfn);
+      _check_func_body_and_returns(ctx, &minfo,
+                                   mtype->impl->function.return_type,
+                                   mtype->impl->function.params,
+                                   ctx->current_scope);
     }
   }
   return flow_state_alive(ctx->allocator);
@@ -1077,25 +940,7 @@ static flow_state_t _check_stmt_local_cunion(checker_t ctx,
   scope_push_symbol(ctx->current_scope, sym);
   strmap_insert(ctx->type_name_table, name, t);
 
-  vec_init_t fvi = {.auto_dispose = true};
-  vec_t fields = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &fvi);
-  if (node->fields) {
-    size_t fcount = vec_get_size(node->fields);
-    for (size_t i = 0; i < fcount; i++) {
-      node_t f = (node_t)vec_get(node->fields, i);
-      if (f->kind != CUBEC_NODE_STRUCT_FIELD) continue;
-      cubec_struct_field_t sf = (cubec_struct_field_t)f;
-      const char *fname = _checker_ident_str(sf->name);
-      struct symbol *fsym = symbol_create(ctx->allocator, fname,
-                                          SYMBOL_FIELD, sf->super.location);
-      if (sf->type)
-        fsym->field.type = resolver_resolve_type(ctx, sf->type);
-      fsym->field.index = i;
-      fsym->field.is_pub = sf->is_pub;
-      vec_push(fields, fsym);
-    }
-  }
-  t->impl->struct_type.fields = fields;
+  _resolve_struct_fields(ctx, t, node->fields);
 
   type_layout_compute(t, 8);
   type_hash_ensure(t);
@@ -1112,7 +957,6 @@ static flow_state_t _check_stmt_local_enum(checker_t ctx,
 
   semantic_type_t t = semantic_type_create_named(ctx->allocator, name, TYPE_ENUM);
   vec_push(ctx->all_types, t);
-  t->impl->enum_type.backing_type = ctx->builtin_i32;
 
   struct symbol *sym = symbol_create(ctx->allocator, name,
                                       SYMBOL_TYPE, node->super.location);
@@ -1121,38 +965,8 @@ static flow_state_t _check_stmt_local_enum(checker_t ctx,
   scope_push_symbol(ctx->current_scope, sym);
   strmap_insert(ctx->type_name_table, name, t);
 
-  /* Process enum items */
-  vec_init_t ivi = {.auto_dispose = true};
-  t->impl->enum_type.items = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &ivi);
-
-  int64_t auto_val = 0;
-  if (node->items) {
-    size_t icount = vec_get_size(node->items);
-    for (size_t i = 0; i < icount; i++) {
-      node_t item_node = (node_t)vec_get(node->items, i);
-      if (item_node->kind != CUBEC_NODE_ENUM_ITEM) continue;
-      cubec_enum_item_t ei = (cubec_enum_item_t)item_node;
-      const char *iname = _checker_ident_str(ei->name);
-
-      if (ei->value) {
-        /* Try to evaluate the value expression as an integer */
-        if (ei->value->kind == CUBEC_NODE_LITERAL_NUMERIC) {
-          const char *numstr = string_get(((cubec_literal_numeric_t)ei->value)->value);
-          if (numstr) auto_val = atoll(numstr);
-        }
-      }
-
-      if (iname) {
-        struct symbol *isym = symbol_create(ctx->allocator, iname,
-                                            SYMBOL_ENUM_ITEM, item_node->location);
-        isym->enum_item.value = auto_val;
-        isym->enum_item.owning_type = t;
-        isym->state = SYMBOL_EVALUATED;
-        vec_push(t->impl->enum_type.items, isym);
-      }
-      auto_val++;
-    }
-  }
+  t->impl->enum_type.backing_type = ctx->builtin_i32;
+  _resolve_enum_items(ctx, t, node->items);
 
   type_layout_compute(t, 8);
   type_hash_ensure(t);
@@ -1170,83 +984,16 @@ static void _check_function_body(checker_t ctx,
   /* Skip generic function — they are checked during instantiation, not here */
   if (sym->function.generic_params) return;
 
-  semantic_type_t ftype = sym->function.type;
-  semantic_type_t return_type = ftype->impl->function.return_type;
+  func_check_info_t info;
+  func_check_info_from_statement(&info, node);
 
-  scope_t saved = ctx->current_scope;
-  ctx->current_scope = scope_create(ctx->allocator, saved,
-                                     SCOPE_FUNCTION, node->super.location);
-  vec_push(ctx->all_scopes, ctx->current_scope);
-
-  _register_func_params(ctx, node, ftype->impl->function.params);
-
-  /* Register captured variables in function scope */
-  if (node->captures) {
-    size_t cc = vec_get_size(node->captures);
-    for (size_t i = 0; i < cc; i++) {
-      node_t cap_node = (node_t)vec_get(node->captures, i);
-      if (cap_node->kind != CUBEC_NODE_FUNCTION_CAPTURE) continue;
-      cubec_function_capture_t cap = (cubec_function_capture_t)cap_node;
-      const char *cap_name = _checker_ident_str(cap->identifier);
-      if (!cap_name) continue;
-      /* Look up the captured variable in the enclosing scope */
-      struct symbol *outer_sym = scope_lookup(saved, cap_name);
-      if (outer_sym) {
-        /* TDZ check: cannot capture a variable before initialization */
-        if (outer_sym->state == SYMBOL_TDZ &&
-            (!ctx->current_flow || flow_state_is_tdz(ctx->current_flow, cap_name))) {
-          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                               cap_node->location,
-                               "cannot capture variable '%s' before initialization",
-                               cap_name);
-          ctx->error_count++;
-        }
-        struct symbol *cap_sym = symbol_create(ctx->allocator, cap_name,
-                                                outer_sym->kind, cap_node->location);
-        cap_sym->variable = outer_sym->variable;
-        cap_sym->state = SYMBOL_EVALUATED;
-        scope_push_symbol(ctx->current_scope, cap_sym);
-      }
-    }
-  }
-
-  ctx->loop_depth = 0;
-  flow_state_t fs = _check_statement(ctx, node->body, return_type);
-
-  /* Return exhaustiveness check */
-  if (return_type->impl->kind != TYPE_VOID &&
-      !flow_state_is_all_returned(fs)) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                         node->super.location,
-                         "non-void function must return a value on all paths");
-    ctx->error_count++;
-  }
-
-  flow_state_dispose(fs, ctx->allocator);
-  ctx->current_flow = NULL;
-  ctx->current_scope = saved;
+  _check_func_body_and_returns(ctx, &info,
+                               sym->function.type->impl->function.return_type,
+                               sym->function.type->impl->function.params,
+                               ctx->current_scope);
 }
 
-static void _register_func_params(checker_t ctx, cubec_statement_function_t fn,
-                                    vec_t params) {
-  if (!fn->arguments) return;
-  size_t acount = vec_get_size(fn->arguments);
-  for (size_t j = 0; j < acount; j++) {
-    node_t arg = (node_t)vec_get(fn->arguments, j);
-    if (arg->kind != CUBEC_NODE_FUNCTION_ARGUMENT) continue;
-    cubec_function_argument_t farg = (cubec_function_argument_t)arg;
-    const char *pname = _checker_ident_str(farg->identifier);
-    if (!pname) continue;
-    struct symbol *psym = symbol_create(ctx->allocator, pname,
-                                         SYMBOL_VARIABLE, arg->location);
-    psym->variable.type = (params && j < vec_get_size(params))
-                            ? (semantic_type_t)vec_get(params, j)
-                            : ctx->error_type;
-    psym->variable.is_mutable = !semantic_type_is_const(psym->variable.type);
-    psym->state = SYMBOL_EVALUATED;
-    scope_push_symbol(ctx->current_scope, psym);
-  }
-}
+/* _register_func_params replaced by _register_func_params_from_info in checker_func_util.c */
 
 static semantic_type_t _find_method_type(checker_t ctx, semantic_type_t t,
                                           const char *mname) {
@@ -1279,31 +1026,14 @@ static void _check_type_method_bodies(checker_t ctx, const char *type_name,
 
     const char *mname = _checker_ident_str(mfn->name);
     semantic_type_t mtype = _find_method_type(ctx, t, mname);
-    semantic_type_t return_type = mtype
-        ? mtype->impl->function.return_type
-        : ctx->builtin_void;
+    if (!mtype) continue;
 
-    scope_t saved = ctx->current_scope;
-    ctx->current_scope = scope_create(ctx->allocator, ctx->global_scope,
-                                       SCOPE_FUNCTION, mfn->super.location);
-    vec_push(ctx->all_scopes, ctx->current_scope);
-
-    _register_func_params(ctx, mfn, mtype ? mtype->impl->function.params : NULL);
-
-    ctx->loop_depth = 0;
-    flow_state_t mfs = _check_statement(ctx, mfn->body, return_type);
-
-    /* Return exhaustiveness for method */
-    if (return_type->impl->kind != TYPE_VOID &&
-        !flow_state_is_all_returned(mfs)) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                           mfn->super.location,
-                           "non-void function must return a value on all paths");
-      ctx->error_count++;
-    }
-
-    flow_state_dispose(mfs, ctx->allocator);
-    ctx->current_scope = saved;
+    func_check_info_t info;
+    func_check_info_from_statement(&info, mfn);
+    _check_func_body_and_returns(ctx, &info,
+                                 mtype->impl->function.return_type,
+                                 mtype->impl->function.params,
+                                 ctx->global_scope);
   }
 }
 

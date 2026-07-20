@@ -169,3 +169,36 @@ TEST_F(dt_lambda, local_cunion) {
   EXPECT_EQ(r.ctx->error_count, 0) << "error_count=" << r.ctx->error_count;
   compile_result_cleanup(&r, allocator);
 }
+
+TEST_F(dt_lambda, expr_func_return_exhaustiveness) {
+  /* Expression function with non-void return type must return on all paths */
+  const char *src = BUILTIN_ASSERT
+    "test \"expr_func_return\" {\n"
+    "  var f = func(x: i32): i32 { if (x > 0) { return x; } };\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "should error: missing return on all paths";
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_lambda, expr_func_void_no_return_needed) {
+  /* Expression function with void return type does not require return */
+  const char *src = BUILTIN_ASSERT
+    "test \"expr_func_void\" {\n"
+    "  var f = func(x: i32): void { };\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_lambda, local_enum_non_numeric_value_error) {
+  /* Local enum with non-numeric value should error (consistent with global) */
+  const char *src = BUILTIN_ASSERT
+    "test \"local_enum_non_numeric\" {\n"
+    "  enum E { A = \"hello\" }\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0) << "should error: enum value must be integer literal";
+  compile_result_cleanup(&r, allocator);
+}

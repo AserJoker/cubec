@@ -1,5 +1,6 @@
 #include "engine/checker.h"
 #include "engine/checker_evaluate.h"
+#include "engine/checker_func_util.h"
 #include "engine/checker_type_util.h"
 #include "engine/checker_check_expr.h"
 #include "engine/checker_check_stmt.h"
@@ -40,80 +41,27 @@
 
 semantic_type_t _check_expression(checker_t ctx, node_t expr);
 
-static void _register_generic_params(checker_t ctx, vec_t generic_params) {
-  if (!generic_params) return;
-  size_t count = vec_get_size(generic_params);
-  bool seen_rest = false;
-  for (size_t i = 0; i < count; i++) {
-    node_t gp_node = (node_t)vec_get(generic_params, i);
-    if (!gp_node || gp_node->kind != CUBEC_NODE_GENERIC_PARAM) continue;
-    cubec_generic_param_t gp = (cubec_generic_param_t)gp_node;
-    const char *gp_name = _checker_ident_str(gp->name);
-    if (!gp_name) continue;
-
-    /* Validate rest parameter rules */
-    if (gp->is_rest) {
-      if (seen_rest) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                            gp->super.location,
-                            "only one rest parameter allowed");
-        ctx->error_count++;
-        continue;
-      }
-      if (i != count - 1) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                            gp->super.location,
-                            "rest parameter must be last in generic parameter list");
-        ctx->error_count++;
-        continue;
-      }
-      seen_rest = true;
-    }
-
-    struct symbol *sym = symbol_create(ctx->allocator, gp_name,
-                                       SYMBOL_GENERIC_PARAM, gp->super.location);
-    sym->generic_param.index = i;
-    sym->generic_param.is_rest = gp->is_rest;
-    if (gp->constraint)
-      sym->generic_param.constraint = resolver_resolve_type(ctx, gp->constraint);
-    if (gp->value_type)
-      sym->generic_param.value_type = resolver_resolve_type(ctx, gp->value_type);
-    sym->state = SYMBOL_EVALUATED;
-    scope_push_symbol(ctx->current_scope, sym);
-  }
-}
+/* _register_generic_params moved to checker_func_util.c as checker_register_generic_params */
 
 static void _evaluate_member_method(checker_t ctx, semantic_type_t t,
                                      cubec_statement_function_t mfn) {
   const char *mname = _checker_ident_str(mfn->name);
   struct symbol *msym = symbol_create(ctx->allocator, mname,
                                       SYMBOL_FUNCTION, mfn->super.location);
-  semantic_type_t ret_type = mfn->return_type
-      ? resolver_resolve_type(ctx, mfn->return_type)
+  func_check_info_t info;
+  func_check_info_from_statement(&info, mfn);
+  semantic_type_t ret_type = info.return_type
+      ? resolver_resolve_type(ctx, info.return_type)
       : ctx->builtin_void;
   if (!ret_type) ret_type = ctx->builtin_void;
-  vec_init_t pvi = {.auto_dispose = false};
-  vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &pvi);
-  if (mfn->arguments) {
-    size_t acount = vec_get_size(mfn->arguments);
-    for (size_t j = 0; j < acount; j++) {
-      node_t arg = (node_t)vec_get(mfn->arguments, j);
-      if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
-        cubec_function_argument_t farg = (cubec_function_argument_t)arg;
-        if (farg->type) {
-          semantic_type_t pt = resolver_resolve_type(ctx, farg->type);
-          vec_push(params, pt);
-        }
-      }
-    }
-  }
+  vec_t params = _resolve_func_param_types(ctx, &info);
   semantic_type_t mtype = semantic_type_create_function(
-      ctx->allocator, ret_type, params, mfn->is_c_variadic);
+      ctx->allocator, ret_type, params, info.is_c_variadic);
   type_hash_ensure(mtype);
   vec_push(ctx->all_types, mtype);
   msym->function.type = mtype;
-  msym->function.is_comptime = mfn->is_comptime;
-  msym->function.ast_node = (node_t)mfn;
+  msym->function.is_comptime = info.is_comptime;
+  msym->function.ast_node = info.ast_node;
   msym->state = SYMBOL_NAME_KNOWN; /* body checked in Pass 3 */
   vec_push(t->instance_methods, msym);
 }
@@ -159,114 +107,23 @@ static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
 
   semantic_type_t t = sym->type.type;
 
-  /* Generic struct: register generic params and store template.
-   * Still resolve field types (they will contain TYPE_GENERIC_PARAM),
-   * but skip layout computation since concrete sizes depend on instantiation. */
+  /* Generic struct: register generic params and store template */
   if (node->generic_params) {
-    _register_generic_params(ctx, node->generic_params);
+    checker_register_generic_params(ctx, node->generic_params);
     sym->type.generic_params = node->generic_params;
-
-    /* Create fields vec and resolve field types (with TYPE_GENERIC_PARAM) */
-    vec_init_t vi = {.auto_dispose = true};
-    t->impl->struct_type.fields =
-        (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-
-    if (node->members) {
-      size_t mcount = vec_get_size(node->members);
-      for (size_t i = 0; i < mcount; i++) {
-        node_t member = (node_t)vec_get(node->members, i);
-        if (!member) continue;
-
-        if (member->kind == CUBEC_NODE_STRUCT_FIELD) {
-          cubec_struct_field_t field = (cubec_struct_field_t)member;
-          const char *fname = _checker_ident_str(field->name);
-          struct symbol *fsym = symbol_create(ctx->allocator, fname,
-                                              SYMBOL_FIELD, field->super.location);
-          if (field->type)
-            fsym->field.type = resolver_resolve_type(ctx, field->type);
-          fsym->field.index = i;
-          fsym->field.is_pub = field->is_pub;
-          vec_push(t->impl->struct_type.fields, fsym);
-        }
-      }
-    }
-
-    /* Resolve methods and static fields */
-    checker_evaluate_struct_union_members(ctx, t, node->members);
-
-    /* Do NOT compute layout — sizes depend on concrete type args */
-    type_hash_ensure(t);
-    sym->state = SYMBOL_EVALUATED;
-    return;
   }
 
-  /* Create fields vec */
-  vec_init_t vi = {.auto_dispose = true};
-  t->impl->struct_type.fields =
-      (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-
-  /* Resolve struct fields */
-  if (node->members) {
-    size_t mcount = vec_get_size(node->members);
-    for (size_t i = 0; i < mcount; i++) {
-      node_t member = (node_t)vec_get(node->members, i);
-      if (!member) continue;
-
-      if (member->kind == CUBEC_NODE_STRUCT_FIELD) {
-        cubec_struct_field_t field = (cubec_struct_field_t)member;
-        const char *fname = _checker_ident_str(field->name);
-        struct symbol *fsym = symbol_create(ctx->allocator, fname,
-                                            SYMBOL_FIELD, field->super.location);
-        if (field->type)
-          fsym->field.type = resolver_resolve_type(ctx, field->type);
-        fsym->field.index = i;
-        fsym->field.is_pub = field->is_pub;
-        vec_push(t->impl->struct_type.fields, fsym);
-      }
-    }
-  }
-
-  /* Resolve methods and static fields */
+  /* Resolve fields and methods */
+  _resolve_struct_fields(ctx, t, node->members);
   checker_evaluate_struct_union_members(ctx, t, node->members);
 
-  type_layout_compute(t, 8);
+  /* Skip layout for generic — sizes depend on concrete type args */
+  if (!node->generic_params) type_layout_compute(t, 8);
   type_hash_ensure(t);
   sym->state = SYMBOL_EVALUATED;
 }
 
-static void _evaluate_enum_items(checker_t ctx, semantic_type_t t, vec_t items) {
-  if (!items) return;
-  size_t count = vec_get_size(items);
-  long long auto_val = 0;
-  for (size_t i = 0; i < count; i++) {
-    node_t item_node = (node_t)vec_get(items, i);
-    if (!item_node || item_node->kind != CUBEC_NODE_ENUM_ITEM) continue;
-
-    cubec_enum_item_t item = (cubec_enum_item_t)item_node;
-    const char *iname = _checker_ident_str(item->name);
-    struct symbol *isym = symbol_create(ctx->allocator, iname,
-                                        SYMBOL_ENUM_ITEM, item->super.location);
-    isym->enum_item.owning_type = t;
-    /* Evaluate explicit value if present, otherwise auto-increment */
-    if (item->value) {
-      if (item->value->kind == CUBEC_NODE_LITERAL_NUMERIC) {
-        cubec_literal_numeric_t num = (cubec_literal_numeric_t)item->value;
-        const char *numstr = string_get(num->value);
-        isym->enum_item.value = numstr ? atoll(numstr) : auto_val;
-      } else {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                             item->value->location,
-                             "enum value must be a compile-time integer literal");
-        ctx->error_count++;
-        isym->enum_item.value = auto_val;
-      }
-      auto_val = isym->enum_item.value + 1;
-    } else {
-      isym->enum_item.value = auto_val++;
-    }
-    vec_push(t->impl->enum_type.items, isym);
-  }
-}
+/* _evaluate_enum_items moved to checker_type_util.c as _resolve_enum_items */
 
 static void _evaluate_enum(checker_t ctx, cubec_statement_enum_t node) {
   const char *name = _checker_ident_str(node->name);
@@ -278,12 +135,9 @@ static void _evaluate_enum(checker_t ctx, cubec_statement_enum_t node) {
 
   semantic_type_t t = sym->type.type;
 
-  vec_init_t vi = {.auto_dispose = true};
-  t->impl->enum_type.items =
-      (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
   t->impl->enum_type.backing_type = ctx->builtin_i32;
 
-  _evaluate_enum_items(ctx, t, node->items);
+  _resolve_enum_items(ctx, t, node->items);
 
   type_layout_compute(t, 8);
   type_hash_ensure(t);
@@ -300,74 +154,18 @@ static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
 
   semantic_type_t t = sym->type.type;
 
-  /* Generic union: register generic params and store template.
-   * Still resolve field types (they will contain TYPE_GENERIC_PARAM),
-   * but skip layout computation since concrete sizes depend on instantiation. */
+  /* Generic union: register generic params and store template */
   if (node->generic_params) {
-    _register_generic_params(ctx, node->generic_params);
+    checker_register_generic_params(ctx, node->generic_params);
     sym->type.generic_params = node->generic_params;
-
-    /* Create fields vec and resolve field types (with TYPE_GENERIC_PARAM) */
-    vec_init_t vi = {.auto_dispose = true};
-    t->impl->struct_type.fields =
-        (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-
-    if (node->members) {
-      size_t mcount = vec_get_size(node->members);
-      for (size_t i = 0; i < mcount; i++) {
-        node_t member = (node_t)vec_get(node->members, i);
-        if (!member) continue;
-
-        if (member->kind == CUBEC_NODE_UNION_FIELD) {
-          cubec_union_field_t field = (cubec_union_field_t)member;
-          const char *fname = _checker_ident_str(field->name);
-          struct symbol *fsym = symbol_create(ctx->allocator, fname,
-                                              SYMBOL_FIELD, field->super.location);
-          if (field->type)
-            fsym->field.type = resolver_resolve_type(ctx, field->type);
-          fsym->field.index = i;
-          vec_push(t->impl->struct_type.fields, fsym);
-        }
-      }
-    }
-
-    /* Resolve methods and static fields */
-    checker_evaluate_struct_union_members(ctx, t, node->members);
-
-    /* Do NOT compute layout — sizes depend on concrete type args */
-    type_hash_ensure(t);
-    sym->state = SYMBOL_EVALUATED;
-    return;
   }
 
-  vec_init_t vi = {.auto_dispose = true};
-  t->impl->struct_type.fields =
-      (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-
-  /* Resolve union fields */
-  if (node->members) {
-    size_t mcount = vec_get_size(node->members);
-    for (size_t i = 0; i < mcount; i++) {
-      node_t member = (node_t)vec_get(node->members, i);
-      if (!member) continue;
-
-      if (member->kind == CUBEC_NODE_UNION_FIELD) {
-        cubec_union_field_t field = (cubec_union_field_t)member;
-        const char *fname = _checker_ident_str(field->name);
-        struct symbol *fsym = symbol_create(ctx->allocator, fname,
-                                            SYMBOL_FIELD, field->super.location);
-        if (field->type)
-          fsym->field.type = resolver_resolve_type(ctx, field->type);
-        fsym->field.index = i;
-        vec_push(t->impl->struct_type.fields, fsym);
-      }
-    }
-  }
-
-  /* Resolve methods and static fields */
+  /* Resolve fields and methods */
+  _resolve_union_fields(ctx, t, node->members);
   checker_evaluate_struct_union_members(ctx, t, node->members);
 
-  type_layout_compute(t, 8);
+  /* Skip layout for generic — sizes depend on concrete type args */
+  if (!node->generic_params) type_layout_compute(t, 8);
   type_hash_ensure(t);
   sym->state = SYMBOL_EVALUATED;
 }
@@ -382,27 +180,7 @@ static void _evaluate_cunion(checker_t ctx, cubec_statement_cunion_t node) {
 
   semantic_type_t t = sym->type.type;
 
-  vec_init_t vi = {.auto_dispose = true};
-  t->impl->struct_type.fields =
-      (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-
-  if (node->fields) {
-    size_t count = vec_get_size(node->fields);
-    for (size_t i = 0; i < count; i++) {
-      node_t field_node = (node_t)vec_get(node->fields, i);
-      if (!field_node || field_node->kind != CUBEC_NODE_STRUCT_FIELD) continue;
-
-      cubec_struct_field_t field = (cubec_struct_field_t)field_node;
-      const char *fname = _checker_ident_str(field->name);
-      struct symbol *fsym = symbol_create(ctx->allocator, fname,
-                                          SYMBOL_FIELD, field->super.location);
-      if (field->type)
-        fsym->field.type = resolver_resolve_type(ctx, field->type);
-      fsym->field.index = i;
-      fsym->field.is_pub = field->is_pub;
-      vec_push(t->impl->struct_type.fields, fsym);
-    }
-  }
+  _resolve_struct_fields(ctx, t, node->fields);
 
   type_layout_compute(t, 8);
   type_hash_ensure(t);
@@ -420,22 +198,13 @@ static void _evaluate_interface_method(checker_t ctx, semantic_type_t t,
       ? resolver_resolve_type(ctx, method->return_type)
       : ctx->builtin_void;
 
-  /* Resolve parameters */
-  vec_init_t pvi = {.auto_dispose = false};
-  vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &pvi);
-  if (method->arguments) {
-    size_t acount = vec_get_size(method->arguments);
-    for (size_t j = 0; j < acount; j++) {
-      node_t arg = (node_t)vec_get(method->arguments, j);
-      if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
-        cubec_function_argument_t farg = (cubec_function_argument_t)arg;
-        if (farg->type) {
-          semantic_type_t pt = resolver_resolve_type(ctx, farg->type);
-          vec_push(params, pt);
-        }
-      }
-    }
-  }
+  /* Resolve parameters using unified helper */
+  func_check_info_t info = {
+    .arguments = method->arguments,
+    .return_type = method->return_type,
+    .generic_params = method->generic_params,
+  };
+  vec_t params = _resolve_func_param_types(ctx, &info);
 
   semantic_type_t mtype = semantic_type_create_function(
       ctx->allocator, ret_type, params, false);
@@ -470,7 +239,7 @@ static void _evaluate_interface(checker_t ctx,
 
   /* Generic interface: register generic params, store template, skip method resolution */
   if (node->generic_params) {
-    _register_generic_params(ctx, node->generic_params);
+    checker_register_generic_params(ctx, node->generic_params);
     sym->type.generic_params = node->generic_params;
     sym->state = SYMBOL_EVALUATED;
     return;
@@ -506,106 +275,48 @@ static void _evaluate_function(checker_t ctx,
   if (!sym || sym->kind != SYMBOL_FUNCTION) return;
   if (sym->state == SYMBOL_EVALUATED) return;
 
-  /* Generic function: resolve template type with TYPE_GENERIC_PARAM params,
-     store generic_params for later inference */
-  if (node->generic_params) {
-    _register_generic_params(ctx, node->generic_params);
+  func_check_info_t info;
+  func_check_info_from_statement(&info, node);
 
-    /* Resolve return type (may contain TYPE_GENERIC_PARAM) */
-    semantic_type_t ret_type = node->return_type
-        ? resolver_resolve_type(ctx, node->return_type)
-        : ctx->builtin_void;
-
-    /* Resolve parameter types (may contain TYPE_GENERIC_PARAM) */
-    vec_init_t vi = {.auto_dispose = false};
-    vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-    if (node->arguments) {
-      size_t count = vec_get_size(node->arguments);
-      for (size_t i = 0; i < count; i++) {
-        node_t arg = (node_t)vec_get(node->arguments, i);
-        if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
-          cubec_function_argument_t farg = (cubec_function_argument_t)arg;
-          if (farg->type) {
-            semantic_type_t pt = resolver_resolve_type(ctx, farg->type);
-            vec_push(params, pt);
-          }
-        }
-      }
-    }
-
-    semantic_type_t ftype = semantic_type_create_function(
-        ctx->allocator, ret_type, params, node->is_c_variadic);
-    type_hash_ensure(ftype);
-    vec_push(ctx->all_types, ftype);
-
-    sym->function.type = ftype;
-    sym->function.generic_params = node->generic_params;
-    sym->function.ast_node = (node_t)node;
-    sym->state = SYMBOL_EVALUATED;
-
-    /* Validate builtin against registry */
-    if (node->is_builtin) {
-      builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
-      if (!be) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                             node->super.location,
-                             "unknown builtin '%s'", name);
-        ctx->error_count++;
-      } else {
-        /* Use the builtin table's canonical type — the AST-resolved type
-           may not exactly match due to generic pack/index reconstruction,
-           but the builtin table is the authoritative source. */
-        sym->function.type = be->type;
-        sym->is_builtin = true;
-      }
-    }
-    return;
+  /* Register generic params if present */
+  if (info.generic_params) {
+    checker_register_generic_params(ctx, info.generic_params);
+    sym->function.generic_params = info.generic_params;
   }
 
-  /* Resolve return type */
-  semantic_type_t ret_type = node->return_type
-      ? resolver_resolve_type(ctx, node->return_type)
+  /* Resolve return type and parameter types using unified helpers */
+  semantic_type_t ret_type = info.return_type
+      ? resolver_resolve_type(ctx, info.return_type)
       : ctx->builtin_void;
-
-  /* Resolve parameter types */
-  vec_init_t vi = {.auto_dispose = false};
-  vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-  if (node->arguments) {
-    size_t count = vec_get_size(node->arguments);
-    for (size_t i = 0; i < count; i++) {
-      node_t arg = (node_t)vec_get(node->arguments, i);
-      if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
-        cubec_function_argument_t farg = (cubec_function_argument_t)arg;
-        if (farg->type) {
-          semantic_type_t pt = resolver_resolve_type(ctx, farg->type);
-          vec_push(params, pt);
-        }
-      }
-    }
-  }
+  vec_t params = _resolve_func_param_types(ctx, &info);
 
   semantic_type_t ftype = semantic_type_create_function(
-      ctx->allocator, ret_type, params, node->is_c_variadic);
+      ctx->allocator, ret_type, params, info.is_c_variadic);
   type_hash_ensure(ftype);
   vec_push(ctx->all_types, ftype);
 
   sym->function.type = ftype;
-  sym->function.is_comptime = node->is_comptime;
-  sym->function.ast_node = (node_t)node;
-  /* Body NOT checked in Pass 2 — deferred to Pass 3 */
+  sym->function.is_comptime = info.is_comptime;
+  sym->function.ast_node = info.ast_node;
   sym->state = SYMBOL_EVALUATED;
 
   /* Validate builtin against registry */
-  if (node->is_builtin) {
+  if (info.is_builtin) {
     builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, name);
     if (!be) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                           node->super.location,
+                           info.location,
                            "unknown builtin '%s'", name);
       ctx->error_count++;
+    } else if (info.generic_params) {
+      /* Generic builtins: use the builtin table's canonical type —
+         the AST-resolved type may not exactly match due to generic
+         pack/index reconstruction. */
+      sym->function.type = be->type;
+      sym->is_builtin = true;
     } else if (!semantic_type_equals(ftype, be->type)) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                           node->super.location,
+                           info.location,
                            "builtin '%s' signature mismatch", name);
       ctx->error_count++;
     } else {
@@ -613,15 +324,17 @@ static void _evaluate_function(checker_t ctx,
     }
   }
 
-  /* Bind function in comptime env so it can be called at compile time */
-  if (node->body) {
+  /* Bind function in comptime env so it can be called at compile time.
+     Only for non-generic functions with bodies — generic templates are
+     instantiated on demand. */
+  if (info.body && !info.generic_params) {
     vec_t param_names = NULL;
-    if (node->arguments) {
+    if (info.arguments) {
       vec_init_t pvi = {.auto_dispose = false};
       param_names = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &pvi);
-      size_t acount = vec_get_size(node->arguments);
+      size_t acount = vec_get_size(info.arguments);
       for (size_t i = 0; i < acount; i++) {
-        node_t arg = (node_t)vec_get(node->arguments, i);
+        node_t arg = (node_t)vec_get(info.arguments, i);
         if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
           cubec_function_argument_t farg = (cubec_function_argument_t)arg;
           const char *pname = _checker_ident_str(farg->identifier);
@@ -632,7 +345,7 @@ static void _evaluate_function(checker_t ctx,
     comptime_value_t fn_val = comptime_value_create_function(
         ctx->allocator,
         ctx->comptime_eval->global_env,
-        node->body, param_names, ftype);
+        info.body, param_names, ftype);
     comptime_env_bind_value(ctx->comptime_eval->global_env,
                             ctx->comptime_eval->valloc, name, fn_val);
   }
@@ -817,7 +530,7 @@ static void _evaluate_type_alias(checker_t ctx,
 
   /* Register generic params for generic type alias */
   if (node->params) {
-    _register_generic_params(ctx, node->params);
+    checker_register_generic_params(ctx, node->params);
     sym->type.generic_params = node->params;
   }
 

@@ -23,6 +23,11 @@ vec_t _get_struct_fields(semantic_type_t t);
 semantic_type_t _common_type(checker_t ctx, semantic_type_t a,
                              semantic_type_t b);
 
+/* struct/union/enum field resolution — unified for global and local */
+void _resolve_struct_fields(checker_t ctx, semantic_type_t t, vec_t members);
+void _resolve_union_fields(checker_t ctx, semantic_type_t t, vec_t members);
+void _resolve_enum_items(checker_t ctx, semantic_type_t t, vec_t items);
+
 /* literal numeric helper */
 semantic_type_t _check_literal_numeric(checker_t ctx, node_t num_node);
 

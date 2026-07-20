@@ -1,5 +1,6 @@
 #include "engine/checker.h"
 #include "engine/checker_collect.h"
+#include "engine/checker_func_util.h"
 #include "engine/checker_type_util.h"
 #include "engine/resolver.h"
 #include "engine/symbol.h"
@@ -21,36 +22,7 @@
 #include "cubec/declaration_variable.h"
 #include "cubec/generic_param.h"
 
-/**
- * Register generic parameters from a vec of cubec_generic_param_t nodes
- * into the current scope. Called during Pass 2 evaluation when entering
- * a generic declaration's body.
- */
-static void _register_generic_params(checker_t ctx, vec_t generic_params) {
-  if (!generic_params) return;
-  size_t count = vec_get_size(generic_params);
-  for (size_t i = 0; i < count; i++) {
-    node_t gp_node = (node_t)vec_get(generic_params, i);
-    if (!gp_node || gp_node->kind != CUBEC_NODE_GENERIC_PARAM) continue;
-    cubec_generic_param_t gp = (cubec_generic_param_t)gp_node;
-    const char *gp_name = _checker_ident_str(gp->name);
-    if (!gp_name) continue;
-
-    struct symbol *sym = symbol_create(ctx->allocator, gp_name,
-                                       SYMBOL_GENERIC_PARAM, gp->super.location);
-    sym->generic_param.index = i;
-    sym->generic_param.is_rest = gp->is_rest;
-    /* Resolve constraint and value_type if present */
-    if (gp->constraint) {
-      sym->generic_param.constraint = resolver_resolve_type(ctx, gp->constraint);
-    }
-    if (gp->value_type) {
-      sym->generic_param.value_type = resolver_resolve_type(ctx, gp->value_type);
-    }
-    sym->state = SYMBOL_EVALUATED;
-    scope_push_symbol(ctx->current_scope, sym);
-  }
-}
+/* _register_generic_params moved to checker_func_util.c as checker_register_generic_params */
 
 static void _collect_struct(checker_t ctx, cubec_statement_struct_t node) {
   const char *name = _checker_ident_str(node->name);
