@@ -362,7 +362,7 @@ TEST_F(dt_comptime_eval, comptime_var_decl_and_use) {
                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                       CUBEC_LITERAL_NUMERIC_TYPE_I32);
   node_t var = cubec_ast_create_var_decl_stmt(allocator, T, "x",
-                    type_id, init, false, false, false, true);
+                    type_id, init, false, false, false, true, false);
   vec_t stmts = cubec_ast_create_vec(allocator, true);
   vec_push(stmts, var);
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
@@ -404,7 +404,7 @@ TEST_F(dt_comptime_eval, comptime_for_loop) {
                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                       CUBEC_LITERAL_NUMERIC_TYPE_I32);
   node_t init = cubec_ast_create_var_decl_stmt(allocator, T, "sum",
-                  type_id, init_val, false, false, false, true);
+                  type_id, init_val, false, false, false, true, false);
 
   node_t sum_id = cubec_ast_create_identifier(allocator, T, "sum");
   node_t three = cubec_ast_create_numeric(allocator, T, "3",
@@ -577,7 +577,7 @@ TEST_F(dt_comptime_eval, break_in_for) {
                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                       CUBEC_LITERAL_NUMERIC_TYPE_I32);
   node_t init = cubec_ast_create_var_decl_stmt(allocator, T, "x",
-                  type_id, init_val, false, false, false, false);
+                  type_id, init_val, false, false, false, false, false);
 
   node_t break_stmt = cubec_ast_create_break_stmt(allocator, T);
   vec_t body_stmts = cubec_ast_create_vec(allocator, true);
@@ -603,7 +603,7 @@ TEST_F(dt_comptime_eval, continue_in_for) {
                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                       CUBEC_LITERAL_NUMERIC_TYPE_I32);
   node_t init = cubec_ast_create_var_decl_stmt(allocator, T, "x",
-                  type_id, init_val, false, false, false, false);
+                  type_id, init_val, false, false, false, false, false);
 
   node_t x_id = cubec_ast_create_identifier(allocator, T, "x");
   node_t three = cubec_ast_create_numeric(allocator, T, "3",
@@ -956,7 +956,7 @@ TEST_F(dt_comptime_eval, test_block_uses_global_var) {
                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                       CUBEC_LITERAL_NUMERIC_TYPE_I32);
   node_t var = cubec_ast_create_var_decl_stmt(allocator, T, "x",
-                    type_id, init_val, false, false, false, true);
+                    type_id, init_val, false, false, false, true, false);
 
   node_t x_id = cubec_ast_create_identifier(allocator, T, "x");
   node_t forty_two = cubec_ast_create_numeric(allocator, T, "42",

@@ -100,7 +100,7 @@ node_t cubec_ast_create_var_decl_stmt(allocator_t alloc, location_t loc,
                                       const char *name, node_t type,
                                       node_t expr, bool is_export,
                                       bool is_extern, bool is_builtin,
-                                      bool is_comptime);
+                                      bool is_comptime, bool is_using);
 node_t cubec_ast_create_type_alias(allocator_t alloc, location_t loc,
                                    const char *name, node_t type_value,
                                    bool is_export, bool is_builtin);

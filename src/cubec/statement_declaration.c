@@ -27,6 +27,7 @@ static void _cubec_statement_declaration_init(
   self->is_extern = init->is_extern;
   self->is_builtin = init->is_builtin;
   self->is_comptime = init->is_comptime;
+  self->is_using = init->is_using;
   self->declarator = init->declarator;
   self->decorators = init->decorators;
 onerror:
@@ -48,6 +49,7 @@ static void _cubec_statement_declaration_clone(
   self->is_extern = another->is_extern;
   self->is_builtin = another->is_builtin;
   self->is_comptime = another->is_comptime;
+  self->is_using = another->is_using;
   self->declarator = TRY_LOCAL(onerror, value_clone(allocator, another->declarator));
   return;
 onerror:
@@ -62,6 +64,7 @@ static void _cubec_statement_declaration_move(
   self->is_extern = another->is_extern;
   self->is_builtin = another->is_builtin;
   self->is_comptime = another->is_comptime;
+  self->is_using = another->is_using;
   self->declarator = TRY_LOCAL(onerror, value_move(allocator, another->declarator));
   return;
 onerror:
@@ -97,6 +100,7 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
   bool is_extern = false;
   bool is_builtin = false;
   bool is_comptime = false;
+  bool is_using = false;
   vec_t decorators = NULL;
 
   /* Collect decorators [[...]] */
@@ -154,6 +158,16 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
       }
       current++;
       skip_whitespace(tokens, &current);
+    } else if (_is_keyword(tokens, current, "using")) {
+      if (is_using) THROW_LOCAL(onerror, "duplicate 'using' modifier");
+      is_using = true;
+      if (start_location.begin.offset == 0) {
+        token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+        start_location = *token_get_location(tok);
+        start_location.filename = filename;
+      }
+      current++;
+      skip_whitespace(tokens, &current);
     } else {
       break;
     }
@@ -168,9 +182,15 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
     THROW_LOCAL(onerror, "'extern' and 'comptime' are mutually exclusive");
   if (is_builtin && is_comptime)
     THROW_LOCAL(onerror, "'builtin' and 'comptime' are mutually exclusive");
+  if (is_using && is_extern)
+    THROW_LOCAL(onerror, "'using' and 'extern' are mutually exclusive");
+  if (is_using && is_builtin)
+    THROW_LOCAL(onerror, "'using' and 'builtin' are mutually exclusive");
+  if (is_using && is_comptime)
+    THROW_LOCAL(onerror, "'using' and 'comptime' are mutually exclusive");
 
-  /* 3. Expect 'var' keyword */
-  if (!_is_keyword(tokens, current, "var")) {
+  /* 3. Expect 'var' keyword (skip if 'using' takes its place) */
+  if (!is_using && !_is_keyword(tokens, current, "var")) {
     return NULL;
   }
   token_t var_token = TRY_LOCAL(onerror, vec_get(tokens, current));
@@ -236,6 +256,7 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
       .is_extern = is_extern,
       .is_builtin = is_builtin,
       .is_comptime = is_comptime,
+      .is_using = is_using,
       .declarator = declarator,
       .decorators = decorators,
   };
@@ -258,7 +279,7 @@ node_t cubec_ast_create_var_decl_stmt(allocator_t alloc, location_t loc,
                                       const char *name, node_t type,
                                       node_t expr, bool is_export,
                                       bool is_extern, bool is_builtin,
-                                      bool is_comptime) {
+                                      bool is_comptime, bool is_using) {
   node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
   cubec_declaration_variable_init_t dv_init = {
       .location = loc, .parent = NULL, .identifier = name_node,
@@ -268,7 +289,7 @@ node_t cubec_ast_create_var_decl_stmt(allocator_t alloc, location_t loc,
   cubec_statement_declaration_init_t sd_init = {
       .location = loc, .parent = NULL, .is_export = is_export,
       .is_extern = is_extern, .is_builtin = is_builtin,
-      .is_comptime = is_comptime, .declarator = decl_node};
+      .is_comptime = is_comptime, .is_using = is_using, .declarator = decl_node};
   return (node_t)allocator_create(alloc, &g_cubec_statement_declaration_type,
                                   &sd_init);
 }

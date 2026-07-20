@@ -339,7 +339,7 @@ TEST_F(dt_checker, pass2_variable_typed) {
                    cubec_ast_create_numeric(allocator, T, "42",
                      CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                      CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                   false, false, false, false));
+                   false, false, false, false, false));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -364,7 +364,7 @@ TEST_F(dt_checker, pass2_variable_inferred_literal) {
                    cubec_ast_create_numeric(allocator, T, "42",
                      CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                      CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                   false, false, false, false));
+                   false, false, false, false, false));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -431,7 +431,7 @@ TEST_F(dt_checker, pass2_incomplete_type_in_var) {
   vec_t stmts = cubec_ast_create_vec(allocator, true);
   vec_push(stmts, cubec_ast_create_var_decl_stmt(allocator, T, "x",
                    cubec_ast_create_identifier(allocator, T, "void"),
-                   NULL, false, false, false, false));
+                   NULL, false, false, false, false, false));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -489,7 +489,7 @@ TEST_F(dt_checker, pass2_numeric_suffix_i64) {
                    cubec_ast_create_numeric(allocator, T, "42",
                      CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                      CUBEC_LITERAL_NUMERIC_TYPE_I64),
-                   false, false, false, false));
+                   false, false, false, false, false));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -510,7 +510,7 @@ TEST_F(dt_checker, pass2_numeric_suffix_f32) {
                    cubec_ast_create_numeric(allocator, T, "3.14",
                      CUBEC_LITERAL_NUMERIC_KIND_FLOAT,
                      CUBEC_LITERAL_NUMERIC_TYPE_F32),
-                   false, false, false, false));
+                   false, false, false, false, false));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -531,7 +531,7 @@ TEST_F(dt_checker, pass2_numeric_default_float) {
                    cubec_ast_create_numeric(allocator, T, "2.0",
                      CUBEC_LITERAL_NUMERIC_KIND_FLOAT,
                      CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                   false, false, false, false));
+                   false, false, false, false, false));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -552,7 +552,7 @@ TEST_F(dt_checker, pass2_numeric_default_int) {
                    cubec_ast_create_numeric(allocator, T, "7",
                      CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                      CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                   false, false, false, false));
+                   false, false, false, false, false));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -573,7 +573,7 @@ TEST_F(dt_checker, pass2_numeric_suffix_u8) {
                    cubec_ast_create_numeric(allocator, T, "255",
                      CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                      CUBEC_LITERAL_NUMERIC_TYPE_U8),
-                   false, false, false, false));
+                   false, false, false, false, false));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -633,7 +633,7 @@ TEST_F(dt_checker, pass2_struct_static_field) {
   vec_t members = cubec_ast_create_vec(allocator, true);
   vec_push(members, cubec_ast_create_var_decl_stmt(allocator, T, "count",
                    cubec_ast_create_identifier(allocator, T, "i32"),
-                   NULL, false, false, false, false));
+                   NULL, false, false, false, false, false));
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
   vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Config", members, false));
@@ -897,7 +897,7 @@ TEST_F(dt_checker, pass3_deref_addr) {
   vec_t body_stmts = cubec_ast_create_vec(allocator, true);
   vec_push(body_stmts, cubec_ast_create_var_decl_stmt(allocator, T, "x",
                    cubec_ast_create_identifier(allocator, T, "i32"),
-                   NULL, false, false, false, false));
+                   NULL, false, false, false, false, false));
   vec_push(body_stmts, cubec_ast_create_return_stmt(allocator, T,
                    cubec_ast_create_deref(allocator, T,
                      cubec_ast_create_addr(allocator, T,
@@ -954,7 +954,7 @@ TEST_F(dt_checker, pass3_local_var) {
   vec_push(body_stmts, cubec_ast_create_var_decl_stmt(allocator, T, "x",
                    cubec_ast_create_identifier(allocator, T, "i32"),
                    cubec_ast_create_numeric(allocator, T, "42", CUBEC_LITERAL_NUMERIC_KIND_INTEGER, CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                   false, false, false, false));
+                   false, false, false, false, false));
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
   vec_push(stmts, cubec_ast_create_func_stmt(allocator, T, "f",
@@ -1042,7 +1042,7 @@ TEST_F(dt_checker, pass3_anonymous_function) {
 
   vec_t body_stmts = cubec_ast_create_vec(allocator, true);
   vec_push(body_stmts, cubec_ast_create_var_decl_stmt(allocator, T, "fn", NULL,
-                   anon_fn, false, false, false, false));
+                   anon_fn, false, false, false, false, false));
   vec_push(body_stmts, cubec_ast_create_return_stmt(allocator, T,
                    cubec_ast_create_call(allocator, T,
                      cubec_ast_create_identifier(allocator, T, "fn"),
@@ -1188,12 +1188,12 @@ TEST_F(dt_checker, pass3_deref_pointer) {
   vec_t body_stmts = cubec_ast_create_vec(allocator, true);
   vec_push(body_stmts, cubec_ast_create_var_decl_stmt(allocator, T, "x",
                    cubec_ast_create_identifier(allocator, T, "i32"),
-                   NULL, false, false, false, false));
+                   NULL, false, false, false, false, false));
   vec_push(body_stmts, cubec_ast_create_var_decl_stmt(allocator, T, "p",
                    cubec_ast_create_pointer_type(allocator, T,
                      cubec_ast_create_identifier(allocator, T, "i32"),
                      false, false),
-                   NULL, false, false, false, false));
+                   NULL, false, false, false, false, false));
   vec_push(body_stmts, cubec_ast_create_return_stmt(allocator, T,
                    cubec_ast_create_deref(allocator, T,
                      cubec_ast_create_identifier(allocator, T, "p"))));

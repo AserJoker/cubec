@@ -1,6 +1,6 @@
 builtin func assert(condition:bool):void;
 test "closure" {
-  var x = 1;
+  var x:i32 = 1;
   func |x| testfn():void {
     x = x + 1;
   }
