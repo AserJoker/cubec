@@ -112,6 +112,7 @@ Cubec 仅允许以下隐式转换：
 | `__set__` | `obj[key] = value` 索引写入 | `func __set__(self: *T, key: K, value: V): void` |
 | `__value__` | 值上下文自动拆箱 | `func __value__(self: *T): U` |
 | `__call__` | `obj(args)` 可调用 | `func __call__(self: *T, ...args): R` |
+| `__dispose__` | `using` 声明作用域退出时自动调用 | `func __dispose__(self: *T): void` |
 
 ```c
 type Map = struct {
@@ -133,6 +134,7 @@ var r = m("hello");       // → __call__(&m, "hello")
 - `.` 属性访问始终按字段名直接访问，不做拦截
 - `__value__` 类似 JavaScript 的 `Symbol.toPrimitive`，当包装类对象参与运算或需要隐式转换时自动调用，实现自动拆箱
 - `__call__` 使结构体实例可像函数一样调用
+- `__dispose__` 在 `using` 声明的作用域退出时自动调用，用于资源释放。`using` 声明的类型必须实现 `__dispose__` 方法，且返回类型必须为 `void`
 - **不支持运算符重载**，运算符行为固定，`__` 前缀保留给编译器
 
 ---

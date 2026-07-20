@@ -166,3 +166,41 @@ is_mutable = !semantic_type_is_const(element_type)
 ```
 
 如果迭代器返回的 value 类型是 const，循环变量不可修改。
+
+---
+
+## 8. using 声明
+
+`using` 是 RAII 风格的变量声明，在作用域退出时自动调用 `__dispose__` 方法释放资源：
+
+```c
+using a:Item = .{};
+// 等价于：
+// var a:Item = .{};
+// defer |a| { a.__dispose__(); }
+```
+
+### 8.1 语义规则
+
+- `using` 声明等价于 `var` 声明 + `defer` 自动调用 `__dispose__`
+- 声明的类型**必须实现** `__dispose__` 方法，且返回类型必须为 `void`
+- **不允许**在模块作用域使用 `using`（无 `defer` 语义，资源无法自动释放）
+- **不允许**使用 `undefined` 初始化（`using` 变量必须有有效值才能在 `defer` 中调用 `__dispose__`）
+- `export using` 是允许的（`export` 与 `using` 正交）
+
+### 8.2 示例
+
+```c
+type File = struct {
+    handle: *void;
+    func __dispose__(self: *File): void {
+        close(self.handle);
+    }
+}
+
+func process(): void {
+    using f:File = File.open("data.txt");
+    // 使用 f ...
+    // 作用域退出时自动调用 f.__dispose__()
+}
+```

@@ -44,7 +44,7 @@
 
 标识符遵循 Unicode 标准（通过 ICU `u_isIDStart`/`u_isIDPart` 识别），支持非 ASCII 字符。
 
-**关键字（40个）**：
+**关键字（41个）**：
 
 | | | | | |
 |---|---|---|---|---|
@@ -55,7 +55,8 @@
 | `if` | `import` | `in` | `inline` | `interface` |
 | `is` | `of` | `pub` | `register` | `return` |
 | `sizeof` | `struct` | `switch` | `test` | `type` |
-| `typeof` | `union` | `var` | `volatile` | `while` |
+| `typeof` | `union` | `using` | `var` | `volatile` |
+| `while` | | | | |
 
 > `mutable` 已移除。`void` 是预定义标识符，非关键字。
 
@@ -479,6 +480,7 @@ var x: i32 = 42;               // 显式类型注解
 var a = 1, b = 2, c = 3;       // 多变量声明
 var vec = .Vec{1, 2, 3};       // 初始化列表作为值
 var point = .Point{.x = 1, .y = 2};  // 带字段的初始化列表
+using f:File = File.open("data.txt"); // RAII 声明，作用域退出时自动调用 __dispose__
 ```
 
 ### 5.2 条件语句
@@ -702,9 +704,10 @@ interface Container[T] {
 | `inline` | 声明级 | func |
 | `export` | 声明级 | func / type / var |
 | `pub` | 字段级 | struct field |
+| `using` | 声明级 | var |
 
 ### 7.2 互斥矩阵
 
-`builtin`、`extern`、`register`、`comptime` 四者互斥，声明只能选其一。`inline` 必须有函数体，与 `builtin`（无体）和 `extern`（无体/外部体）天然互斥。`inline` + `comptime`：comptime 下忽略 inline。`export` 正交于所有其他修饰符。`pub` 仅修饰 struct 字段，与 `export` 职责不同。
+`builtin`、`extern`、`register`、`comptime`、`using` 五者互斥，声明只能选其一。`inline` 必须有函数体，与 `builtin`（无体）和 `extern`（无体/外部体）天然互斥。`inline` + `comptime`：comptime 下忽略 inline。`export` 正交于所有其他修饰符。`pub` 仅修饰 struct 字段，与 `export` 职责不同。
 
 详见 `09-modifiers.md`。

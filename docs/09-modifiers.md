@@ -2,7 +2,7 @@
 
 ## 1. 总览
 
-Cubec 有 7 个修饰符，分为三类：
+Cubec 有 8 个修饰符，分为三类：
 
 | 修饰符 | 作用域 | 修饰目标 |
 |--------|--------|---------|
@@ -13,17 +13,18 @@ Cubec 有 7 个修饰符，分为三类：
 | `inline` | 声明级 | func |
 | `export` | 声明级 | func / type / var |
 | `pub` | 字段级 | struct field |
+| `using` | 声明级 | var |
 
 ---
 
 ## 2. 互斥矩阵
 
-### 2.1 四选一修饰符
+### 2.1 五选一修饰符
 
-`builtin`、`extern`、`register`、`comptime` 四者互斥，声明只能选其一：
+`builtin`、`extern`、`register`、`comptime`、`using` 五者互斥，声明只能选其一：
 
 ```
-builtin  × extern  × register  × comptime
+builtin  × extern  × register  × comptime  × using
 ```
 
 | 组合 | 结果 |
@@ -31,9 +32,13 @@ builtin  × extern  × register  × comptime
 | builtin + extern | ✗ 互斥 |
 | builtin + register | ✗ 互斥 |
 | builtin + comptime | ✗ 互斥 |
+| builtin + using | ✗ 互斥 |
 | extern + register | ✗ 互斥 |
 | extern + comptime | ✗ 互斥 |
+| extern + using | ✗ 互斥 |
 | register + comptime | ✗ 互斥 |
+| register + using | ✗ 互斥 |
+| comptime + using | ✗ 互斥 |
 
 ### 2.2 inline 规则
 
@@ -49,11 +54,30 @@ builtin  × extern  × register  × comptime
 export builtin func panic(): void
 export comptime var N = 10
 export inline func add(a: i32, b: i32): i32 { return a + b; }
+export using var f: File = .{};
 ```
 
 ### 2.4 pub 规则
 
 `pub` 仅修饰 struct 字段，与 `export` 职责不同，不冲突。
+
+---
+
+## 10. using
+
+RAII 风格变量声明修饰符，在作用域退出时自动调用 `__dispose__` 方法：
+
+```c
+using f:File = File.open("data.txt");
+// 等价于 var f:File = File.open("data.txt"); defer |f| { f.__dispose__(); }
+```
+
+- 声明的类型**必须实现** `__dispose__` 方法（返回类型必须为 `void`）
+- **不允许**在模块作用域使用（无 `defer` 语义）
+- **不允许**使用 `undefined` 初始化
+- 与 `builtin`、`extern`、`register`、`comptime` 互斥
+- 与 `export` 正交（`export using` 允许）
+- `using` 是变量声明修饰符，不是独立语句
 
 ---
 

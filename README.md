@@ -93,7 +93,7 @@ cubec/
 
 ### 已实现
 
-- **词法分析器**：完整的 tokenizer，支持所有字面量类型、40 个关键字、符号最长匹配
+- **词法分析器**：完整的 tokenizer，支持所有字面量类型、41 个关键字、符号最长匹配
 - **表达式解析器**：完整覆盖所有表达式类型（前缀/后缀一元、二元、三元、成员访问、泛型实例化、typeof、sizeof、alignof、初始化列表、匿名函数、const/volatile 限定符等）
 - **语句解析器**：完整覆盖所有语句类型（if/for/foreach/while/do-while/switch/defer/break/continue/return/import/test/comptime 等）
 - **声明解析器**：func/struct/enum/union/cunion/interface/type/var/decorator
