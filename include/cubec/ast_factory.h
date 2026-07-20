@@ -38,6 +38,7 @@ node_t cubec_ast_create_namespace_access(allocator_t alloc, location_t loc,
 node_t cubec_ast_create_deref(allocator_t alloc, location_t loc, node_t host);
 node_t cubec_ast_create_addr(allocator_t alloc, location_t loc, node_t host);
 node_t cubec_ast_create_try(allocator_t alloc, location_t loc, node_t host);
+node_t cubec_ast_create_assert(allocator_t alloc, location_t loc, node_t host);
 node_t cubec_ast_create_ternary(allocator_t alloc, location_t loc,
                                 node_t cond, node_t then_branch,
                                 node_t else_branch);

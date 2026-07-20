@@ -154,6 +154,10 @@ double   comptime_value_as_f64(comptime_value_t val);
 
 /* ===== union tag helpers ===== */
 
+/** @brief Check if a composite value is a tagged union (TYPE_UNION or
+ *         generic_instance whose base is TYPE_UNION). */
+bool comptime_value_is_tagged_union(comptime_value_t comp);
+
 /** @brief Read the union tag from a composite's data buffer (offset 0).
  *         Returns 0 for non-tagged-union composites. */
 uint64_t comptime_value_get_union_tag(comptime_value_t comp);

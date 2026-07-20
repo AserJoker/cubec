@@ -912,16 +912,75 @@ static semantic_type_t _check_expr_try(checker_t ctx, node_t expr) {
       (cubec_expression_postfix_unary_t)expr;
   semantic_type_t host_type = _check_expression(ctx, pf->right);
   if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+
+  /* .? on pointer: dereference */
   if (host_type->impl->kind == TYPE_POINTER)
     return host_type->impl->pointer.pointee;
-  if (host_type->impl->kind == TYPE_INTERFACE) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                         "cannot unwrap interface type");
-    ctx->error_count++;
-    return ctx->error_type;
+
+  /* .? on tagged union: check tag, return value type */
+  semantic_type_t unq = semantic_type_strip_qualifier(host_type);
+  vec_t fields = NULL;
+  if (unq->impl->kind == TYPE_UNION)
+    fields = unq->impl->struct_type.fields;
+  else if (unq->impl->kind == TYPE_GENERIC_INSTANCE) {
+    semantic_type_t base = unq->impl->generic_instance.generic_template;
+    if (base && base->impl->kind == TYPE_UNION)
+      fields = unq->impl->generic_instance.fields;
   }
+
+  if (fields) {
+    size_t fc = vec_get_size(fields);
+    if (fc < 2) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           ".? requires a union with at least 2 variants");
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+    struct symbol *value_field = (struct symbol *)vec_get(fields, 0);
+    return value_field->field.type;
+  }
+
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                       "try operator requires pointer or interface type");
+                       ".? requires a pointer or tagged union type");
+  ctx->error_count++;
+  return ctx->error_type;
+}
+
+static semantic_type_t _check_expr_assert(checker_t ctx, node_t expr) {
+  cubec_expression_postfix_unary_t pf =
+      (cubec_expression_postfix_unary_t)expr;
+  semantic_type_t host_type = _check_expression(ctx, pf->right);
+  if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+
+  /* .! on pointer: assert non-null, return pointee */
+  if (host_type->impl->kind == TYPE_POINTER)
+    return host_type->impl->pointer.pointee;
+
+  /* .! on tagged union: assert correct variant, return value type */
+  semantic_type_t unq = semantic_type_strip_qualifier(host_type);
+  vec_t fields = NULL;
+  if (unq->impl->kind == TYPE_UNION)
+    fields = unq->impl->struct_type.fields;
+  else if (unq->impl->kind == TYPE_GENERIC_INSTANCE) {
+    semantic_type_t base = unq->impl->generic_instance.generic_template;
+    if (base && base->impl->kind == TYPE_UNION)
+      fields = unq->impl->generic_instance.fields;
+  }
+
+  if (fields) {
+    size_t fc = vec_get_size(fields);
+    if (fc < 2) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           ".! requires a union with at least 2 variants");
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+    struct symbol *value_field = (struct symbol *)vec_get(fields, 0);
+    return value_field->field.type;
+  }
+
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                       ".! requires a pointer or tagged union type");
   ctx->error_count++;
   return ctx->error_type;
 }
@@ -1185,6 +1244,7 @@ semantic_type_t _check_expression(checker_t ctx, node_t expr) {
   case CUBEC_NODE_EXPRESSION_DEREF:      return _check_expr_deref(ctx, expr);
   case CUBEC_NODE_EXPRESSION_ADDR:       return _check_expr_addr(ctx, expr);
   case CUBEC_NODE_EXPRESSION_TRY:        return _check_expr_try(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_ASSERT:     return _check_expr_assert(ctx, expr);
   case CUBEC_NODE_EXPRESSION_TERNARY:    return _check_expr_ternary(ctx, expr);
   case CUBEC_NODE_EXPRESSION_GROUP:      return _check_expr_group(ctx, expr);
   case CUBEC_NODE_EXPRESSION_SIZEOF:     return _check_expr_sizeof(ctx, expr);

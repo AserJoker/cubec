@@ -364,11 +364,7 @@ const char *comptime_value_get_string(comptime_value_t val) {
 
 /* ===== union tag helpers ===== */
 
-/**
- * @brief Check if a composite value is a tagged union (TYPE_UNION or
- *        generic_instance whose base is TYPE_UNION).
- */
-static bool _composite_is_tagged_union(comptime_value_t comp) {
+bool comptime_value_is_tagged_union(comptime_value_t comp) {
   if (!comp || !comp->type) return false;
   semantic_type_t unq = semantic_type_strip_qualifier(comp->type);
   if (unq->impl->kind == TYPE_UNION) return true;
@@ -385,7 +381,7 @@ static bool _composite_is_tagged_union(comptime_value_t comp) {
  *        Returns 0 if the composite is not a tagged union or has no data.
  */
 uint64_t comptime_value_get_union_tag(comptime_value_t comp) {
-  if (!_composite_is_tagged_union(comp)) return 0;
+  if (!comptime_value_is_tagged_union(comp)) return 0;
   if (!comp->composite.data || comp->composite.data_size < 8) return 0;
   uint64_t tag;
   memcpy(&tag, comp->composite.data, 8);
@@ -397,7 +393,7 @@ uint64_t comptime_value_get_union_tag(comptime_value_t comp) {
  *        Tag is stored at offset 0 as a uint64_t.
  */
 bool comptime_value_set_union_tag(comptime_value_t comp, uint64_t tag) {
-  if (!_composite_is_tagged_union(comp)) return false;
+  if (!comptime_value_is_tagged_union(comp)) return false;
   if (!comp->composite.data || comp->composite.data_size < 8) return false;
   memcpy(comp->composite.data, &tag, 8);
   return true;
@@ -536,7 +532,7 @@ bool comptime_value_write_field(comptime_value_t composite,
   /* After successful write, update union tag if writing to a tagged union.
    * The tag is the type hash of the field type being written, stored at
    * offset 0 in the data buffer. */
-  if (_composite_is_tagged_union(composite) && field_type) {
+  if (comptime_value_is_tagged_union(composite) && field_type) {
     type_hash_ensure(field_type);
     comptime_value_set_union_tag(composite, field_type->impl->hash);
   }

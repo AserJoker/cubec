@@ -92,9 +92,10 @@ type_t g_cubec_expression_postfix_unary_type = {
  *   - .*  (postfix dereference, e.g. ptr.*)
  *   - .&  (postfix address-of, e.g. obj.&)
  *   - .?  (postfix try/unwrap, e.g. result.?)
+ *   - .!  (postfix assert/panic, e.g. result.!)
  *
- * These are composed of separate '.' and '&'/'*'/'?' tokens.
- * Returns NULL if next token is not '.' followed by '&', '*', or '?'.
+ * These are composed of separate '.' and '&'/'*'/'?'/'!' tokens.
+ * Returns NULL if next token is not '.' followed by '&', '*', '?', or '!'.
  */
 node_t read_expression_postfix_unary(allocator_t allocator, vec_t tokens,
                                      size_t *position, const char *filename,
@@ -125,7 +126,7 @@ node_t read_expression_postfix_unary(allocator_t allocator, vec_t tokens,
   size_t op_len = 0;
   cubec_node_kind_t kind = CUBEC_NODE_EXPRESSION_TRY;
   if (second_len == 1 &&
-      (*second_op == '&' || *second_op == '*' || *second_op == '?')) {
+      (*second_op == '&' || *second_op == '*' || *second_op == '?' || *second_op == '!')) {
     op_text = second_op;
     op_len = second_len;
   } else {
@@ -137,6 +138,8 @@ node_t read_expression_postfix_unary(allocator_t allocator, vec_t tokens,
     kind = CUBEC_NODE_EXPRESSION_DEREF;
   } else if (*second_op == '?') {
     kind = CUBEC_NODE_EXPRESSION_TRY;
+  } else if (*second_op == '!') {
+    kind = CUBEC_NODE_EXPRESSION_ASSERT;
   }
   current++;
 
@@ -165,7 +168,7 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_deref / addr / try
+ *  Factory: cubec_ast_create_deref / addr / try / assert
  * -------------------------------------------------------------------------- */
 
 node_t cubec_ast_create_deref(allocator_t alloc, location_t loc,
@@ -192,6 +195,15 @@ node_t cubec_ast_create_try(allocator_t alloc, location_t loc, node_t host) {
   cubec_expression_postfix_unary_init_t init = {
       .location = loc, .parent = NULL, .host = host, .opt = op_str,
       .kind = CUBEC_NODE_EXPRESSION_TRY};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
+                                  &init);
+}
+
+node_t cubec_ast_create_assert(allocator_t alloc, location_t loc, node_t host) {
+  string_t op_str = _make_string(alloc, ".!");
+  cubec_expression_postfix_unary_init_t init = {
+      .location = loc, .parent = NULL, .host = host, .opt = op_str,
+      .kind = CUBEC_NODE_EXPRESSION_ASSERT};
   return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
                                   &init);
 }

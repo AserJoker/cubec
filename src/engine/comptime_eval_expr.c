@@ -1478,6 +1478,146 @@ static comptime_value_t _eval_comma(comptime_eval_t eval, checker_t ctx,
   return _comptime_eval_expr(eval, ctx, c->right);
 }
 
+static comptime_value_t _eval_try(comptime_eval_t eval, checker_t ctx,
+                                  node_t node) {
+  cubec_expression_binary_t pf = (cubec_expression_binary_t)node;
+  comptime_value_t val = _comptime_eval_expr(eval, ctx, pf->right);
+  if (!val || val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+
+  /* .? on pointer: dereference */
+  if (val->kind == COMPTIME_VALUE_POINTER) {
+    comptime_value_t pointed = comptime_alloc_read(eval->valloc, val->pointer.addr);
+    if (!pointed) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                           "dereference of null pointer in .?");
+      ctx->error_count++;
+      return _eval_error_val(eval);
+    }
+    return pointed;
+  }
+
+  /* .? on tagged union: check tag, return value or propagate error */
+  if (val->kind == COMPTIME_VALUE_COMPOSITE && comptime_value_is_tagged_union(val)) {
+    semantic_type_t unq = semantic_type_strip_qualifier(val->type);
+    vec_t fields = NULL;
+    if (unq->impl->kind == TYPE_UNION)
+      fields = unq->impl->struct_type.fields;
+    else if (unq->impl->kind == TYPE_GENERIC_INSTANCE)
+      fields = unq->impl->generic_instance.fields;
+
+    size_t fc = fields ? vec_get_size(fields) : 0;
+    if (fc < 2) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+          ".? requires a union with at least 2 variants");
+      ctx->error_count++;
+      return _eval_error_val(eval);
+    }
+
+    struct symbol *value_field = (struct symbol *)vec_get(fields, 0);
+    type_hash_ensure(value_field->field.type);
+    uint64_t tag = comptime_value_get_union_tag(val);
+
+    if (tag == value_field->field.type->impl->hash) {
+      /* Active variant matches value field — return the value */
+      return _eval_temp(eval, comptime_value_read_field(val, value_field->field.offset,
+                                                        value_field->field.type,
+                                                        eval->allocator));
+    } else {
+      /* Error variant — propagate error (comptime: report diagnostic) */
+      struct symbol *error_field = (struct symbol *)vec_get(fields, 1);
+      comptime_value_t err_val = comptime_value_read_field(val, error_field->field.offset,
+                                                           error_field->field.type,
+                                                           eval->allocator);
+      char err_buf[256];
+      const char *err_desc = "unknown error";
+      if (err_val) {
+        if (err_val->kind == COMPTIME_VALUE_STRING) {
+          const char *s = comptime_value_get_string(err_val);
+          if (s) {
+            snprintf(err_buf, sizeof(err_buf), "%s", s);
+            err_desc = err_buf;
+          }
+        }
+        allocator_free(eval->allocator, &err_val);
+      }
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+          "error propagation: union is in error state (%s)", err_desc);
+      ctx->error_count++;
+      return _eval_error_val(eval);
+    }
+  }
+
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+      ".? requires a pointer or tagged union type");
+  ctx->error_count++;
+  return _eval_error_val(eval);
+}
+
+static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, checker_t ctx,
+                                             node_t node) {
+  cubec_expression_binary_t pf = (cubec_expression_binary_t)node;
+  comptime_value_t val = _comptime_eval_expr(eval, ctx, pf->right);
+  if (!val || val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+
+  /* .! on pointer: assert non-null */
+  if (val->kind == COMPTIME_VALUE_POINTER) {
+    if (val->pointer.addr == 0) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+          "panic: null pointer in .!");
+      ctx->error_count++;
+      return _eval_error_val(eval);
+    }
+    comptime_value_t pointed = comptime_alloc_read(eval->valloc, val->pointer.addr);
+    if (!pointed) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+          "panic: dangling pointer in .!");
+      ctx->error_count++;
+      return _eval_error_val(eval);
+    }
+    return pointed;
+  }
+
+  /* .! on tagged union: assert correct variant */
+  if (val->kind == COMPTIME_VALUE_COMPOSITE && comptime_value_is_tagged_union(val)) {
+    semantic_type_t unq = semantic_type_strip_qualifier(val->type);
+    vec_t fields = NULL;
+    if (unq->impl->kind == TYPE_UNION)
+      fields = unq->impl->struct_type.fields;
+    else if (unq->impl->kind == TYPE_GENERIC_INSTANCE)
+      fields = unq->impl->generic_instance.fields;
+
+    size_t fc = fields ? vec_get_size(fields) : 0;
+    if (fc < 2) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+          ".! requires a union with at least 2 variants");
+      ctx->error_count++;
+      return _eval_error_val(eval);
+    }
+
+    struct symbol *value_field = (struct symbol *)vec_get(fields, 0);
+    type_hash_ensure(value_field->field.type);
+    uint64_t tag = comptime_value_get_union_tag(val);
+
+    if (tag == value_field->field.type->impl->hash) {
+      /* Active variant matches — return the value */
+      return _eval_temp(eval, comptime_value_read_field(val, value_field->field.offset,
+                                                        value_field->field.type,
+                                                        eval->allocator));
+    } else {
+      /* Wrong variant — panic */
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+          "panic: union is not in the expected variant");
+      ctx->error_count++;
+      return _eval_error_val(eval);
+    }
+  }
+
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+      ".! requires a pointer or tagged union type");
+  ctx->error_count++;
+  return _eval_error_val(eval);
+}
+
 static comptime_value_t _eval_deref(comptime_eval_t eval, checker_t ctx,
                                      node_t node) {
   cubec_expression_binary_t deref = (cubec_expression_binary_t)node;
@@ -1667,6 +1807,10 @@ comptime_value_t _comptime_eval_expr(comptime_eval_t eval, checker_t ctx,
     return _eval_deref(eval, ctx, expr);
   case CUBEC_NODE_EXPRESSION_ADDR:
     return _eval_addr(eval, ctx, expr);
+  case CUBEC_NODE_EXPRESSION_TRY:
+    return _eval_try(eval, ctx, expr);
+  case CUBEC_NODE_EXPRESSION_ASSERT:
+    return _eval_assert_unwrap(eval, ctx, expr);
   case CUBEC_NODE_EXPRESSION_SLICE:
     return _eval_slice(eval, ctx, expr);
   case CUBEC_NODE_LITERAL_UNDEFINED:

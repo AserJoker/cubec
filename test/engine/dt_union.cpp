@@ -144,3 +144,103 @@ TEST_F(dt_union, union_positional_init_first_field) {
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== .? (try / error propagation) ===== */
+
+TEST_F(dt_union, try_union_value_variant) {
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result { value: i32; err: string; }\n"
+    "test \"try_value\" {\n"
+    "  var r = .Result{.value = 42};\n"
+    "  var v = r.?;\n"
+    "  assert(v == 42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_union, try_union_error_propagate) {
+  /* .? on error variant should produce a diagnostic */
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result { value: i32; err: string; }\n"
+    "test \"try_error\" {\n"
+    "  var r = .Result{.err = \"fail\"};\n"
+    "  var v = r.?;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_union, try_union_generic) {
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result[V, E] { value: V; err: E; }\n"
+    "test \"try_generic\" {\n"
+    "  var r = .Result[i32, string]{.value = 42};\n"
+    "  var v = r.?;\n"
+    "  assert(v == 42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_union, try_non_union_error) {
+  /* .? on non-union, non-pointer type should be a type error */
+  const char *src = BUILTIN_ASSERT
+    "test \"try_non_union\" {\n"
+    "  var x: i32 = 5;\n"
+    "  var v = x.?;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== .! (assert / panic) ===== */
+
+TEST_F(dt_union, assert_union_value) {
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result { value: i32; err: string; }\n"
+    "test \"assert_value\" {\n"
+    "  var r = .Result{.value = 42};\n"
+    "  var v = r.!;\n"
+    "  assert(v == 42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_union, assert_union_panic) {
+  /* .! on error variant should produce a panic diagnostic */
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result { value: i32; err: string; }\n"
+    "test \"assert_panic\" {\n"
+    "  var r = .Result{.err = \"fail\"};\n"
+    "  var v = r.!;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_union, assert_non_union_error) {
+  /* .! on non-union, non-pointer type should be a type error */
+  const char *src = BUILTIN_ASSERT
+    "test \"assert_non_union\" {\n"
+    "  var x: i32 = 5;\n"
+    "  var v = x.!;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}

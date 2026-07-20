@@ -30,17 +30,45 @@ if (unionIs[i32](result)) {
 
 ### 1.3 .? 错误传播
 
-`.?` 操作符检查 union 当前类型是否匹配，不匹配则传播错误：
+`.?` 操作符检查 union 当前变体是否匹配"值变体"（第一个字段），不匹配则传播错误：
 
 ```c
-var value = result.value.?;   // 如果 result 不是 value 变体，传播错误
+union Result { value: i32; err: string; }
+var r = .Result{.value = 42};
+var v = r.?;           // OK: tag 匹配 value，v = 42
+
+var r2 = .Result{.err = "fail"};
+var v2 = r2.?;         // 编译错误：union is in error state
 ```
 
-- 鸭子类型驱动：编译器检查 `__type__` 是否匹配
+等价语义（GCC statement expression 形式）：
+```
+a.b.? ≡ ({ typeof(a.b) res = a.b; if(res.isError()) return <当前函数类型>::ofError(res.error()); else res.value() })
+```
+
+- 对 union：检查 `__type__` 是否匹配第一个字段类型，匹配则返回其值，否则传播错误
+- 对指针：等同于解引用（null 时报错）
 - 在函数中，`.?` 触发错误返回（类似 try-catch 传播）
 - 在 comptime 中，`.?` 触发编译错误
 
-### 1.4 union 成员
+### 1.4 .! 断言解包
+
+`.!` 操作符与 `.?` 类似，但失败时直接 panic 而非传播错误：
+
+```c
+union Result { value: i32; err: string; }
+var r = .Result{.value = 42};
+var v = r.!;           // OK: tag 匹配 value，v = 42
+
+var r2 = .Result{.err = "fail"};
+var v2 = r2.!;         // panic: union is not in the expected variant
+```
+
+- 对 union：检查 `__type__` 是否匹配第一个字段类型，不匹配则 panic
+- 对指针：检查是否为 null，null 则 panic
+- 在 comptime 中，panic 表现为编译错误
+
+### 1.5 union 成员
 
 union 支持与 struct 相同的成员类型：
 
@@ -51,7 +79,7 @@ union 支持与 struct 相同的成员类型：
 - spread：`...<expr> ;`
 - 嵌套声明
 
-### 1.5 cunion
+### 1.6 cunion
 
 cunion 是 **C 风格 untagged union**，与 C union 完全一致：
 
