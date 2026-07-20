@@ -426,6 +426,30 @@ bool semantic_type_can_implicit_convert(semantic_type_t from,
     }
   }
 
+  /* __value__ fallback: if source type (struct/union/cunion/generic_instance only)
+     has __value__ method whose return type can implicitly convert to target,
+     allow the conversion. Last resort after all standard rules fail.
+     Magic methods only exist on struct-like types, not on pointers or primitives. */
+  {
+    semantic_type_t from_unq = semantic_type_strip_qualifier(from);
+    bool from_struct_like = from_unq->impl->kind == TYPE_STRUCT ||
+                           from_unq->impl->kind == TYPE_UNION ||
+                           from_unq->impl->kind == TYPE_CUNION ||
+                           from_unq->impl->kind == TYPE_GENERIC_INSTANCE;
+    if (from_struct_like && from->instance_methods) {
+      size_t mc = vec_get_size(from->instance_methods);
+      for (size_t i = 0; i < mc; i++) {
+        struct symbol *s = (struct symbol *)vec_get(from->instance_methods, i);
+        if (s && s->name && strcmp(s->name, "__value__") == 0 &&
+            s->kind == SYMBOL_FUNCTION && s->function.type) {
+          semantic_type_t ret = s->function.type->impl->function.return_type;
+          if (ret && semantic_type_can_implicit_convert(ret, to))
+            return true;
+        }
+      }
+    }
+  }
+
   /* decay */
   return semantic_type_can_decay(from, to);
 }

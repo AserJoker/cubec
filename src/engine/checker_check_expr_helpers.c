@@ -238,10 +238,21 @@ semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
 
   if (host_type->instance_methods) {
     size_t mcount = vec_get_size(host_type->instance_methods);
+    struct symbol *set_method = NULL;
     for (size_t i = 0; i < mcount; i++) {
       struct symbol *m = (struct symbol *)vec_get(host_type->instance_methods, i);
       if (m && m->name && strcmp(m->name, "__get__") == 0 && m->function.type)
         return m->function.type->impl->function.return_type;
+      if (m && m->name && strcmp(m->name, "__set__") == 0 && m->function.type)
+        set_method = m;
+    }
+    /* If __set__ exists (even without __get__), the type supports indexing.
+       Return the value parameter type of __set__ so assignment type-checking works. */
+    if (set_method) {
+      vec_t params = set_method->function.type->impl->function.params;
+      if (params && vec_get_size(params) >= 2)
+        return (semantic_type_t)vec_get(params, vec_get_size(params) - 1);
+      return ctx->builtin_void;
     }
   }
 
@@ -365,26 +376,106 @@ semantic_type_t _check_binary_arithmetic(checker_t ctx, node_t expr,
                                           const char *op,
                                           semantic_type_t lt,
                                           semantic_type_t rt) {
-  if (!_is_numeric_type(lt) || !_is_numeric_type(rt)) {
+  /* __value__ fallback: unwrap struct-like operands that have __value__ */
+  semantic_type_t effective_lt = lt;
+  semantic_type_t effective_rt = rt;
+  if (!_is_numeric_type(lt)) {
+    semantic_type_t lt_unq = semantic_type_strip_qualifier(lt);
+    bool lt_struct = lt_unq->impl->kind == TYPE_STRUCT ||
+                     lt_unq->impl->kind == TYPE_UNION ||
+                     lt_unq->impl->kind == TYPE_CUNION ||
+                     lt_unq->impl->kind == TYPE_GENERIC_INSTANCE;
+    if (lt_struct && lt->instance_methods) {
+      size_t mc = vec_get_size(lt->instance_methods);
+      for (size_t i = 0; i < mc; i++) {
+        struct symbol *s = (struct symbol *)vec_get(lt->instance_methods, i);
+        if (s && s->name && strcmp(s->name, "__value__") == 0 &&
+            s->kind == SYMBOL_FUNCTION && s->function.type) {
+          effective_lt = s->function.type->impl->function.return_type;
+          break;
+        }
+      }
+    }
+  }
+  if (!_is_numeric_type(rt)) {
+    semantic_type_t rt_unq = semantic_type_strip_qualifier(rt);
+    bool rt_struct = rt_unq->impl->kind == TYPE_STRUCT ||
+                     rt_unq->impl->kind == TYPE_UNION ||
+                     rt_unq->impl->kind == TYPE_CUNION ||
+                     rt_unq->impl->kind == TYPE_GENERIC_INSTANCE;
+    if (rt_struct && rt->instance_methods) {
+      size_t mc = vec_get_size(rt->instance_methods);
+      for (size_t i = 0; i < mc; i++) {
+        struct symbol *s = (struct symbol *)vec_get(rt->instance_methods, i);
+        if (s && s->name && strcmp(s->name, "__value__") == 0 &&
+            s->kind == SYMBOL_FUNCTION && s->function.type) {
+          effective_rt = s->function.type->impl->function.return_type;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!_is_numeric_type(effective_lt) || !_is_numeric_type(effective_rt)) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "arithmetic operator '%s' requires numeric operands", op);
     ctx->error_count++;
     return ctx->error_type;
   }
-  return _common_type(ctx, lt, rt);
+  return _common_type(ctx, effective_lt, effective_rt);
 }
 
 semantic_type_t _check_binary_bitwise(checker_t ctx, node_t expr,
                                        const char *op,
                                        semantic_type_t lt,
                                        semantic_type_t rt) {
-  if (!_is_integer_type(lt) || !_is_integer_type(rt)) {
+  /* __value__ fallback: unwrap struct-like operands that have __value__ */
+  semantic_type_t effective_lt = lt;
+  semantic_type_t effective_rt = rt;
+  if (!_is_integer_type(lt)) {
+    semantic_type_t lt_unq = semantic_type_strip_qualifier(lt);
+    bool lt_struct = lt_unq->impl->kind == TYPE_STRUCT ||
+                     lt_unq->impl->kind == TYPE_UNION ||
+                     lt_unq->impl->kind == TYPE_CUNION ||
+                     lt_unq->impl->kind == TYPE_GENERIC_INSTANCE;
+    if (lt_struct && lt->instance_methods) {
+      size_t mc = vec_get_size(lt->instance_methods);
+      for (size_t i = 0; i < mc; i++) {
+        struct symbol *s = (struct symbol *)vec_get(lt->instance_methods, i);
+        if (s && s->name && strcmp(s->name, "__value__") == 0 &&
+            s->kind == SYMBOL_FUNCTION && s->function.type) {
+          effective_lt = s->function.type->impl->function.return_type;
+          break;
+        }
+      }
+    }
+  }
+  if (!_is_integer_type(rt)) {
+    semantic_type_t rt_unq = semantic_type_strip_qualifier(rt);
+    bool rt_struct = rt_unq->impl->kind == TYPE_STRUCT ||
+                     rt_unq->impl->kind == TYPE_UNION ||
+                     rt_unq->impl->kind == TYPE_CUNION ||
+                     rt_unq->impl->kind == TYPE_GENERIC_INSTANCE;
+    if (rt_struct && rt->instance_methods) {
+      size_t mc = vec_get_size(rt->instance_methods);
+      for (size_t i = 0; i < mc; i++) {
+        struct symbol *s = (struct symbol *)vec_get(rt->instance_methods, i);
+        if (s && s->name && strcmp(s->name, "__value__") == 0 &&
+            s->kind == SYMBOL_FUNCTION && s->function.type) {
+          effective_rt = s->function.type->impl->function.return_type;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!_is_integer_type(effective_lt) || !_is_integer_type(effective_rt)) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "bitwise operator '%s' requires integer operands", op);
     ctx->error_count++;
     return ctx->error_type;
   }
-  return _common_type(ctx, lt, rt);
+  return _common_type(ctx, effective_lt, effective_rt);
 }
 
 bool _is_op_one_of(const char *op, const char **ops, size_t count) {

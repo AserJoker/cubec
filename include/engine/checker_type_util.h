@@ -15,6 +15,7 @@ const char *_checker_ident_str(node_t id_node);
 bool _is_numeric_type(semantic_type_t t);
 bool _is_integer_type(semantic_type_t t);
 bool _is_bool_type(semantic_type_t t);
+bool _is_comparable_type(semantic_type_t t);
 bool _is_lvalue(node_t expr);
 bool _is_struct_like(semantic_type_t t);
 vec_t _get_struct_fields(semantic_type_t t);

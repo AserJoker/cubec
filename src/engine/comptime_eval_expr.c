@@ -337,23 +337,21 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
 
     /* Resolve index */
     size_t index = 0;
+    comptime_value_t index_val = NULL;
     if (sl->start) {
-      comptime_value_t iv = _comptime_eval_expr(eval, ctx, sl->start);
-      if (!iv || iv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
-      index = (size_t)comptime_value_as_u64(iv);
+      index_val = _comptime_eval_expr(eval, ctx, sl->start);
+      if (!index_val || index_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+      index = (size_t)comptime_value_as_u64(index_val);
     }
 
     /* Check for __set__ magic method on host type */
-    if (host->type && host->type->instance_methods) {
-      size_t mc = vec_get_size(host->type->instance_methods);
-      for (size_t i = 0; i < mc; i++) {
-        struct symbol *s = (struct symbol *)vec_get(host->type->instance_methods, i);
-        if (s && s->name && strcmp(s->name, "__set__") == 0 && s->kind == SYMBOL_FUNCTION) {
-          /* Call __set__(host, index, rv) — TODO: implement magic method dispatch */
-          /* For now, fall through to direct array access */
-          break;
-        }
-      }
+    struct symbol *set_method = _find_magic_method(host->type, "__set__");
+    if (set_method) {
+      /* __set__(self: *T, key: K, value: V): void */
+      comptime_value_t set_args[2] = { index_val ? index_val : rv, rv };
+      _eval_method_call(eval, ctx, set_method, sl->host, host, set_args, 2, node);
+      /* __set__ returns void; the assignment expression value is the rhs */
+      return _eval_temp(eval, comptime_value_clone(eval->allocator, rv));
     }
 
     /* Direct array access (no __set__) */
@@ -365,6 +363,29 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
         return _eval_error_val(eval);
       }
       return _eval_temp(eval, comptime_value_get_index(host, index, eval->allocator));
+    }
+
+    return _eval_error_val(eval);
+  }
+
+  /* generic instantiation assignment: obj[key] = rv (__set__ magic method) */
+  if (asgn->left->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
+    cubec_expression_generic_instantiation_t gi =
+        (cubec_expression_generic_instantiation_t)asgn->left;
+    comptime_value_t host = _comptime_eval_expr(eval, ctx, gi->callee);
+    if (!host || host->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+
+    comptime_value_t key_val = NULL;
+    if (gi->arguments && vec_get_size(gi->arguments) >= 1) {
+      key_val = _comptime_eval_expr(eval, ctx, (node_t)vec_get(gi->arguments, 0));
+      if (!key_val || key_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    }
+
+    struct symbol *set_method = _find_magic_method(host->type, "__set__");
+    if (set_method) {
+      comptime_value_t set_args[2] = { key_val ? key_val : rv, rv };
+      _eval_method_call(eval, ctx, set_method, gi->callee, host, set_args, 2, node);
+      return _eval_temp(eval, comptime_value_clone(eval->allocator, rv));
     }
 
     return _eval_error_val(eval);
@@ -452,6 +473,73 @@ comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
   if (sig.kind == COMPTIME_SIGNAL_ERROR) return _eval_error_val(eval);
   if (sig.kind == COMPTIME_SIGNAL_RETURN) return sig.return_value;  /* cloned into caller env */
   return _eval_temp(eval, comptime_value_create_nil(eval->allocator, NULL));
+}
+
+/* --- magic method helpers --- */
+
+static struct symbol *_find_magic_method(semantic_type_t type, const char *name) {
+  if (!type || !type->instance_methods) return NULL;
+  size_t mc = vec_get_size(type->instance_methods);
+  for (size_t i = 0; i < mc; i++) {
+    struct symbol *s = (struct symbol *)vec_get(type->instance_methods, i);
+    if (s && s->name && strcmp(s->name, name) == 0 && s->kind == SYMBOL_FUNCTION)
+      return s;
+  }
+  return NULL;
+}
+
+/**
+ * @brief Evaluate a method call on a host value, reusing the same self
+ *        construction logic as member call desugaring:
+ *        - identifier host → use env address (mutations reflect in variable)
+ *        - pointer host → use the pointer directly
+ *        - other → allocate a copy in valloc
+ */
+static comptime_value_t _eval_method_call(comptime_eval_t eval, checker_t ctx,
+                                           struct symbol *method,
+                                           node_t host_node,
+                                           comptime_value_t host_val,
+                                           comptime_value_t *extra_args,
+                                           size_t extra_count,
+                                           node_t loc_node) {
+  comptime_value_t fn_val = _comptime_create_method_value(eval, ctx, method);
+  if (!fn_val) return _eval_error_val(eval);
+  comptime_env_track_temp(eval->current_env, fn_val);
+
+  /* Compute self argument — same logic as member call desugaring (L648-674) */
+  comptime_value_t self_val;
+  bool host_is_pointer = (host_val->kind == COMPTIME_VALUE_POINTER);
+  if (host_is_pointer) {
+    self_val = comptime_value_clone(eval->allocator, host_val);
+  } else if (host_node && host_node->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+    const char *host_name = _eval_ident_str(host_node);
+    uint64_t addr = comptime_env_lookup_addr(eval->current_env, host_name);
+    if (!addr) return _eval_error_val(eval);
+    semantic_type_t ptr_type = host_val->type
+        ? semantic_type_create_pointer(eval->allocator, host_val->type)
+        : NULL;
+    if (ptr_type) { type_hash_ensure(ptr_type); vec_push(ctx->all_types, ptr_type); }
+    self_val = comptime_value_create_pointer(eval->allocator, addr, ptr_type);
+  } else {
+    uint64_t addr = comptime_alloc_allocate(eval->valloc,
+        comptime_value_clone(eval->allocator, host_val), eval->valloc->scope_depth);
+    semantic_type_t ptr_type = host_val->type
+        ? semantic_type_create_pointer(eval->allocator, host_val->type)
+        : NULL;
+    if (ptr_type) { type_hash_ensure(ptr_type); vec_push(ctx->all_types, ptr_type); }
+    self_val = comptime_value_create_pointer(eval->allocator, addr, ptr_type);
+  }
+
+  /* Build args: [self, ...extra_args] */
+  size_t total = 1 + extra_count;
+  comptime_value_t *args = allocator_alloc(eval->allocator,
+      total * sizeof(comptime_value_t));
+  args[0] = self_val;
+  for (size_t i = 0; i < extra_count; i++)
+    args[1 + i] = comptime_value_clone(eval->allocator, extra_args[i]);
+  comptime_value_t result = _eval_call_function(eval, ctx, fn_val, args, total, loc_node);
+  allocator_free(eval->allocator, &args);
+  return result;
 }
 
 /* --- method value creation from symbol --- */
@@ -732,15 +820,25 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
   }
 
   /* __call__ magic method dispatch */
-  if (callee->type && callee->type->instance_methods) {
-    size_t mc = vec_get_size(callee->type->instance_methods);
-    for (size_t i = 0; i < mc; i++) {
-      struct symbol *s = (struct symbol *)vec_get(callee->type->instance_methods, i);
-      if (s && s->name && strcmp(s->name, "__call__") == 0 && s->kind == SYMBOL_FUNCTION) {
-        /* TODO: implement __call__ dispatch — find the function in env, call with self + args */
-        break;
+  struct symbol *call_method = _find_magic_method(callee->type, "__call__");
+  if (call_method) {
+    size_t acount = call->arguments ? vec_get_size(call->arguments) : 0;
+    comptime_value_t *user_args =
+        (comptime_value_t *)allocator_alloc(eval->allocator,
+            sizeof(comptime_value_t) * acount);
+    for (size_t i = 0; i < acount; i++) {
+      comptime_value_t arg = _comptime_eval_expr(eval, ctx,
+          (node_t)vec_get(call->arguments, i));
+      if (!arg || arg->kind == COMPTIME_VALUE_ERROR) {
+        allocator_free(eval->allocator, &user_args);
+        return _eval_error_val(eval);
       }
+      user_args[i] = comptime_value_clone(eval->allocator, arg);
     }
+    comptime_value_t result = _eval_method_call(eval, ctx, call_method,
+        call->callee, callee, user_args, acount, node);
+    allocator_free(eval->allocator, &user_args);
+    return result;
   }
 
   return _eval_error_val(eval);
@@ -1370,18 +1468,32 @@ static comptime_value_t _eval_slice(comptime_eval_t eval, checker_t ctx,
   /* resolve start/length indices */
   size_t start = 0;
   size_t len = 0;
+  comptime_value_t start_val = NULL;
+  comptime_value_t len_val = NULL;
   if (sl->start) {
-    comptime_value_t sv = _comptime_eval_expr(eval, ctx, sl->start);
-    if (!sv || sv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
-    start = (size_t)comptime_value_as_u64(sv);
+    start_val = _comptime_eval_expr(eval, ctx, sl->start);
+    if (!start_val || start_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    start = (size_t)comptime_value_as_u64(start_val);
   }
   if (sl->length) {
-    comptime_value_t lv = _comptime_eval_expr(eval, ctx, sl->length);
-    if (!lv || lv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
-    len = (size_t)comptime_value_as_u64(lv);
+    len_val = _comptime_eval_expr(eval, ctx, sl->length);
+    if (!len_val || len_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    len = (size_t)comptime_value_as_u64(len_val);
   }
 
-  /* TODO: check for __get__ / slice magic method on host type */
+  /* __slice__ magic method dispatch */
+  struct symbol *slice_method = _find_magic_method(host->type, "__slice__");
+  if (slice_method) {
+    /* __slice__(self: *T, start: i32, len: i32): []V */
+    comptime_value_t slice_args[2];
+    slice_args[0] = start_val
+        ? start_val
+        : comptime_value_create_int(eval->allocator, 0, 0, 32, false, ctx->builtin_i32);
+    slice_args[1] = len_val
+        ? len_val
+        : comptime_value_create_int(eval->allocator, 0, 0, 32, false, ctx->builtin_i32);
+    return _eval_method_call(eval, ctx, slice_method, sl->host, host, slice_args, 2, node);
+  }
 
   /* string slice */
   if (host->kind == COMPTIME_VALUE_STRING) {
@@ -1427,6 +1539,21 @@ static comptime_value_t _eval_generic_inst(comptime_eval_t eval, checker_t ctx,
     if (sym && sym->kind == SYMBOL_TYPE && sym->type.type)
       return _eval_temp(eval, comptime_value_create_type(eval->allocator, sym->type.type));
   }
+
+  /* __get__ magic method: obj[key] on non-array/slice types */
+  if (gi->callee) {
+    comptime_value_t host_val = _comptime_eval_expr(eval, ctx, gi->callee);
+    if (!host_val || host_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+
+    struct symbol *get_method = _find_magic_method(host_val->type, "__get__");
+    if (get_method && gi->arguments && vec_get_size(gi->arguments) >= 1) {
+      comptime_value_t key_val = _comptime_eval_expr(eval, ctx,
+          (node_t)vec_get(gi->arguments, 0));
+      if (!key_val || key_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+      return _eval_method_call(eval, ctx, get_method, gi->callee, host_val, &key_val, 1, node);
+    }
+  }
+
   return _eval_error_val(eval);
 }
 

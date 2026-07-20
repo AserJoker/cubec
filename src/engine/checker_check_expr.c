@@ -150,8 +150,53 @@ static semantic_type_t _check_expr_binary(checker_t ctx, node_t expr) {
 
   if (_is_op_one_of(op, arith_ops, 5))
     return _check_binary_arithmetic(ctx, expr, op, lt, rt);
-  if (_is_op_one_of(op, cmp_ops, 6))
+  if (_is_op_one_of(op, cmp_ops, 6)) {
+    /* __value__ fallback for comparison operands (struct-like only) */
+    semantic_type_t effective_lt = lt;
+    semantic_type_t effective_rt = rt;
+    if (!_is_numeric_type(lt)) {
+      semantic_type_t lt_unq = semantic_type_strip_qualifier(lt);
+      bool lt_struct = lt_unq->impl->kind == TYPE_STRUCT ||
+                       lt_unq->impl->kind == TYPE_UNION ||
+                       lt_unq->impl->kind == TYPE_CUNION ||
+                       lt_unq->impl->kind == TYPE_GENERIC_INSTANCE;
+      if (lt_struct && lt->instance_methods) {
+        size_t mc = vec_get_size(lt->instance_methods);
+        for (size_t i = 0; i < mc; i++) {
+          struct symbol *s = (struct symbol *)vec_get(lt->instance_methods, i);
+          if (s && s->name && strcmp(s->name, "__value__") == 0 &&
+              s->kind == SYMBOL_FUNCTION && s->function.type) {
+            effective_lt = s->function.type->impl->function.return_type;
+            break;
+          }
+        }
+      }
+    }
+    if (!_is_numeric_type(rt)) {
+      semantic_type_t rt_unq = semantic_type_strip_qualifier(rt);
+      bool rt_struct = rt_unq->impl->kind == TYPE_STRUCT ||
+                       rt_unq->impl->kind == TYPE_UNION ||
+                       rt_unq->impl->kind == TYPE_CUNION ||
+                       rt_unq->impl->kind == TYPE_GENERIC_INSTANCE;
+      if (rt_struct && rt->instance_methods) {
+        size_t mc = vec_get_size(rt->instance_methods);
+        for (size_t i = 0; i < mc; i++) {
+          struct symbol *s = (struct symbol *)vec_get(rt->instance_methods, i);
+          if (s && s->name && strcmp(s->name, "__value__") == 0 &&
+              s->kind == SYMBOL_FUNCTION && s->function.type) {
+            effective_rt = s->function.type->impl->function.return_type;
+            break;
+          }
+        }
+      }
+    }
+    if (!_is_comparable_type(effective_lt) || !_is_comparable_type(effective_rt)) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           "comparison operator '%s' requires comparable operands", op);
+      ctx->error_count++;
+    }
     return ctx->builtin_bool;
+  }
   if (_is_op_one_of(op, logic_ops, 2)) {
     if (!_is_bool_type(lt) || !_is_bool_type(rt)) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
@@ -234,6 +279,16 @@ static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
 
   semantic_type_t lt = _check_expression(ctx, asgn->left);
   semantic_type_t rt = _check_expression(ctx, asgn->right);
+
+  /* For subscript LHS with __set__, check before early error return.
+     When __set__ exists but __get__ doesn't, the _check_expression call above
+     will have emitted "type does not support indexing" and returned error_type.
+     We still need to validate __set__ for the assignment. */
+  if (asgn->left->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
+    semantic_type_t result = _check_assign_generic_lhs(ctx, expr, lt, rt);
+    if (result) return result;
+  }
+
   if (lt->impl->kind == TYPE_ERROR || rt->impl->kind == TYPE_ERROR)
     return ctx->error_type;
 
@@ -242,11 +297,6 @@ static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "cannot assign to const-qualified expression");
     ctx->error_count++;
-  }
-
-  if (asgn->left->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
-    semantic_type_t result = _check_assign_generic_lhs(ctx, expr, lt, rt);
-    if (result) return result;
   }
 
   if (strcmp(op, "=") == 0) {
@@ -355,6 +405,44 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
   if (callee_type->impl->kind == TYPE_ERROR) return ctx->error_type;
 
   if (callee_type->impl->kind != TYPE_FUNCTION) {
+    /* Check for __call__ magic method */
+    struct symbol *call_method = NULL;
+    if (callee_type->instance_methods) {
+      size_t mc = vec_get_size(callee_type->instance_methods);
+      for (size_t i = 0; i < mc; i++) {
+        struct symbol *s = (struct symbol *)vec_get(callee_type->instance_methods, i);
+        if (s && s->name && strcmp(s->name, "__call__") == 0 &&
+            s->kind == SYMBOL_FUNCTION && s->function.type) {
+          call_method = s;
+          break;
+        }
+      }
+    }
+    if (call_method) {
+      semantic_type_t call_fn_type = call_method->function.type;
+      vec_t params = call_fn_type->impl->function.params;
+      size_t param_count = params ? vec_get_size(params) : 0;
+      /* Skip first param (self); check remaining against user args */
+      size_t user_arg_count = call->arguments ? vec_get_size(call->arguments) : 0;
+      for (size_t i = 0; i < user_arg_count; i++) {
+        node_t arg = (node_t)vec_get(call->arguments, i);
+        semantic_type_t at = _check_expression(ctx, arg);
+        size_t pidx = i + 1; /* offset by self param */
+        if (pidx < param_count && at->impl->kind != TYPE_ERROR) {
+          semantic_type_t pt = (semantic_type_t)vec_get(params, pidx);
+          if (!semantic_type_can_implicit_convert(at, pt)) {
+            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg->location,
+                "argument %zu: cannot convert '%s' to '%s'",
+                i + 1,
+                at->name ? at->name : "<anonymous>",
+                pt->name ? pt->name : "<anonymous>");
+            ctx->error_count++;
+          }
+        }
+      }
+      return call_fn_type->impl->function.return_type;
+    }
+
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "call of non-function type");
     ctx->error_count++;
@@ -925,6 +1013,18 @@ static semantic_type_t _check_expr_slice(checker_t ctx, node_t expr) {
   }
   if (ht->impl->kind == TYPE_SLICE)
     return ht;
+
+  /* __slice__ magic method */
+  if (ht->instance_methods) {
+    size_t mc = vec_get_size(ht->instance_methods);
+    for (size_t i = 0; i < mc; i++) {
+      struct symbol *s = (struct symbol *)vec_get(ht->instance_methods, i);
+      if (s && s->name && strcmp(s->name, "__slice__") == 0 &&
+          s->kind == SYMBOL_FUNCTION && s->function.type) {
+        return s->function.type->impl->function.return_type;
+      }
+    }
+  }
 
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                        "cannot slice type '%s'",

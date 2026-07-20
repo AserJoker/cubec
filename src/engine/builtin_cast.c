@@ -334,6 +334,54 @@ struct comptime_value *builtin_cast_eval(struct comptime_eval *eval,
 
   /* If already implicitly convertible, return value with target type */
   if (semantic_type_can_implicit_convert(source_type, target_type)) {
+    /* __value__ fallback: if struct-like source has __value__ and standard
+       conversions don't directly apply, unwrap via __value__ first.
+       Magic methods only exist on struct/union/cunion/generic_instance types. */
+    if (src_val->kind != COMPTIME_VALUE_INT &&
+        src_val->kind != COMPTIME_VALUE_FLOAT &&
+        src_val->kind != COMPTIME_VALUE_BOOL &&
+        src_val->kind != COMPTIME_VALUE_CHAR &&
+        src_val->kind != COMPTIME_VALUE_POINTER) {
+      semantic_type_t src_unq = semantic_type_strip_qualifier(source_type);
+      bool src_struct = src_unq->impl->kind == TYPE_STRUCT ||
+                        src_unq->impl->kind == TYPE_UNION ||
+                        src_unq->impl->kind == TYPE_CUNION ||
+                        src_unq->impl->kind == TYPE_GENERIC_INSTANCE;
+      if (src_struct && source_type->instance_methods) {
+      size_t mc = vec_get_size(source_type->instance_methods);
+      for (size_t i = 0; i < mc; i++) {
+        struct symbol *s = (struct symbol *)vec_get(source_type->instance_methods, i);
+        if (s && s->name && strcmp(s->name, "__value__") == 0 &&
+            s->kind == SYMBOL_FUNCTION) {
+          /* Call __value__ to get the unboxed value */
+          node_t host_node = (node_t)vec_get(call->arguments, 0);
+          comptime_value_t unboxed = _eval_method_call(eval, ctx, s,
+              host_node, src_val, NULL, 0, node);
+          if (unboxed && unboxed->kind != COMPTIME_VALUE_ERROR) {
+            /* Use unboxed value to continue conversion */
+            semantic_type_t unboxed_type = unboxed->type;
+            if (unboxed_type && semantic_type_can_implicit_convert(unboxed_type, target_type)) {
+              switch (unboxed->kind) {
+              case COMPTIME_VALUE_INT:
+                return _eval_temp(eval, comptime_value_create_int(eval->allocator,
+                    unboxed->int_val.s, unboxed->int_val.u,
+                    unboxed->int_val.width, unboxed->int_val.is_signed, target_type));
+              case COMPTIME_VALUE_FLOAT:
+                return _eval_temp(eval, comptime_value_create_float(eval->allocator,
+                    unboxed->float_val.value, unboxed->float_val.width, target_type));
+              case COMPTIME_VALUE_BOOL:
+                return _eval_temp(eval, comptime_value_create_bool(eval->allocator,
+                    unboxed->bool_val, target_type));
+              default:
+                return _eval_temp(eval, comptime_value_clone(eval->allocator, unboxed));
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+  }
     switch (src_val->kind) {
     case COMPTIME_VALUE_INT:
       return _eval_temp(eval, comptime_value_create_int(eval->allocator,

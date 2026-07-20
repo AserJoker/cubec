@@ -1,9 +1,15 @@
 #include "engine/comptime_eval_binary.h"
+#include "engine/comptime_eval_internal.h"
 #include "engine/resolver.h"
+#include "engine/symbol.h"
 #include "core/string.h"
 #include "core/allocator.h"
 #include "cubec/expression_binary.h"
 #include <string.h>
+
+static bool _is_comptime_numeric(comptime_value_t v) {
+  return v && (v->kind == COMPTIME_VALUE_INT || v->kind == COMPTIME_VALUE_FLOAT);
+}
 
 comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
                                         node_t node) {
@@ -46,6 +52,32 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
   if (!lv || lv->kind == COMPTIME_VALUE_ERROR || !rv ||
       rv->kind == COMPTIME_VALUE_ERROR) {
     return _eval_error_val(eval);
+  }
+
+  /* __value__ fallback: unwrap non-numeric operands for arithmetic/comparison/bitwise */
+  if (!_is_comptime_numeric(lv) && lv->type && lv->type->instance_methods) {
+    size_t mc = vec_get_size(lv->type->instance_methods);
+    for (size_t i = 0; i < mc; i++) {
+      struct symbol *s = (struct symbol *)vec_get(lv->type->instance_methods, i);
+      if (s && s->name && strcmp(s->name, "__value__") == 0 &&
+          s->kind == SYMBOL_FUNCTION) {
+        lv = _eval_method_call(eval, ctx, s, bin->left, lv, NULL, 0, node);
+        if (!lv || lv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+        break;
+      }
+    }
+  }
+  if (!_is_comptime_numeric(rv) && rv->type && rv->type->instance_methods) {
+    size_t mc = vec_get_size(rv->type->instance_methods);
+    for (size_t i = 0; i < mc; i++) {
+      struct symbol *s = (struct symbol *)vec_get(rv->type->instance_methods, i);
+      if (s && s->name && strcmp(s->name, "__value__") == 0 &&
+          s->kind == SYMBOL_FUNCTION) {
+        rv = _eval_method_call(eval, ctx, s, bin->right, rv, NULL, 0, node);
+        if (!rv || rv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+        break;
+      }
+    }
   }
 
   comptime_value_t result = NULL;

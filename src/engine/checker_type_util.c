@@ -44,6 +44,19 @@ bool _is_bool_type(semantic_type_t t) {
   return t && t->impl && t->impl->kind == TYPE_BOOL;
 }
 
+bool _is_comparable_type(semantic_type_t t) {
+  if (!t || !t->impl) return false;
+  /* Strip all qualifiers (const volatile T → T) */
+  semantic_type_t unq = t;
+  while (unq && unq->impl && unq->impl->kind == TYPE_QUALIFIER)
+    unq = unq->impl->qualifier.base;
+  if (!unq || !unq->impl) return false;
+  enum type_kind k = unq->impl->kind;
+  return (k >= TYPE_I8 && k <= TYPE_U64) ||
+         (k >= TYPE_F16 && k <= TYPE_F64) ||
+         k == TYPE_BOOL || k == TYPE_CHAR || k == TYPE_ENUM || k == TYPE_TYPE;
+}
+
 bool _is_lvalue(node_t expr) {
   if (!expr) return false;
   switch (expr->kind) {

@@ -82,6 +82,20 @@ comptime_value_t _comptime_create_method_value(comptime_eval_t eval,
                                                 checker_t ctx,
                                                 struct symbol *method_sym);
 
+/* Find a magic method by name in a type's instance_methods */
+struct symbol *_find_magic_method(semantic_type_t type, const char *name);
+
+/* Evaluate a method call: creates method value, builds [self, ...extra_args]
+ * using the same self-construction logic as member call desugaring
+ * (identifier→env addr, pointer→direct, other→alloc copy). */
+comptime_value_t _eval_method_call(comptime_eval_t eval, checker_t ctx,
+                                    struct symbol *method,
+                                    node_t host_node,
+                                    comptime_value_t host_val,
+                                    comptime_value_t *extra_args,
+                                    size_t extra_count,
+                                    node_t loc_node);
+
 #ifdef __cplusplus
 }
 #endif
