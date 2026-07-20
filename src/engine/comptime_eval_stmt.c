@@ -68,6 +68,7 @@ static void _run_cleanups(comptime_eval_t eval, checker_t ctx,
             comptime_value_t self_arg = comptime_value_clone(eval->allocator, val);
             _eval_call_function(eval, ctx, dispose_fn, &self_arg, 1, NULL);
           }
+          allocator_free(eval->allocator, &dispose_fn);
         }
       }
     }

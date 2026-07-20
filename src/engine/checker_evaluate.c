@@ -134,7 +134,7 @@ static void _evaluate_member_declaration(checker_t ctx, semantic_type_t t,
   vec_push(t->static_fields, vsym);
 }
 
-static void _evaluate_struct_union_members(checker_t ctx, semantic_type_t t,
+void checker_evaluate_struct_union_members(checker_t ctx, semantic_type_t t,
                                            vec_t members) {
   if (!members) return;
   if (!t->instance_methods) return;
@@ -192,7 +192,7 @@ static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
     }
 
     /* Resolve methods and static fields */
-    _evaluate_struct_union_members(ctx, t, node->members);
+    checker_evaluate_struct_union_members(ctx, t, node->members);
 
     /* Do NOT compute layout — sizes depend on concrete type args */
     type_hash_ensure(t);
@@ -227,7 +227,7 @@ static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
   }
 
   /* Resolve methods and static fields */
-  _evaluate_struct_union_members(ctx, t, node->members);
+  checker_evaluate_struct_union_members(ctx, t, node->members);
 
   type_layout_compute(t, 8);
   type_hash_ensure(t);
@@ -332,7 +332,7 @@ static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
     }
 
     /* Resolve methods and static fields */
-    _evaluate_struct_union_members(ctx, t, node->members);
+    checker_evaluate_struct_union_members(ctx, t, node->members);
 
     /* Do NOT compute layout — sizes depend on concrete type args */
     type_hash_ensure(t);
@@ -365,7 +365,7 @@ static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
   }
 
   /* Resolve methods and static fields */
-  _evaluate_struct_union_members(ctx, t, node->members);
+  checker_evaluate_struct_union_members(ctx, t, node->members);
 
   type_layout_compute(t, 8);
   type_hash_ensure(t);

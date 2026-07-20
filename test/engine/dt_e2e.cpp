@@ -668,3 +668,54 @@ TEST_F(dt_e2e, opaque_no_implicit_convert_out) {
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== local struct/union methods ===== */
+
+TEST_F(dt_e2e, local_struct_method_call) {
+  const char *src = BUILTIN_ASSERT
+    "test \"local_struct_method\" {\n"
+    "  struct Counter {\n"
+    "    value: i32;\n"
+    "    func get(self: *Counter): i32 { return self.value; }\n"
+    "  }\n"
+    "  var c = .Counter { .value = 42 };\n"
+    "  assert(c.get() == 42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 1);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, local_struct_using_dispose) {
+  const char *src = BUILTIN_ASSERT
+    "test \"local_using_dispose\" {\n"
+    "  struct Item {\n"
+    "    val: i32;\n"
+    "    func __dispose__(self: *Item): void { assert(false); }\n"
+    "  }\n"
+    "  using a:Item = .Item { .val = 1 };\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  /* __dispose__ calls assert(false) → test should fail, proving dispose ran */
+  EXPECT_EQ(r.ctx->test_count, 1);
+  EXPECT_EQ(r.ctx->test_fail_count, 1);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_e2e, local_union_method) {
+  const char *src = BUILTIN_ASSERT
+    "test \"local_union_method\" {\n"
+    "  union Val {\n"
+    "    i_val: i32;\n"
+    "    f_val: f64;\n"
+    "    func as_int(self: *Val): i32 { return self.i_val; }\n"
+    "  }\n"
+    "  var v = .Val { .i_val = 7 };\n"
+    "  assert(v.as_int() == 7);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->test_count, 1);
+  EXPECT_EQ(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
+}

@@ -939,7 +939,9 @@ static flow_state_t _check_stmt_local_struct(checker_t ctx,
     }
   }
   t->impl->struct_type.fields = fields;
-  allocator_free(ctx->allocator, &t->instance_methods);
+
+  /* Resolve methods and static fields into instance_methods/static_fields */
+  checker_evaluate_struct_union_members(ctx, t, node->members);
 
   /* Compute layout */
   type_layout_compute(t, 8);
@@ -1016,7 +1018,9 @@ static flow_state_t _check_stmt_local_union(checker_t ctx,
     }
   }
   t->impl->struct_type.fields = fields;
-  allocator_free(ctx->allocator, &t->instance_methods);
+
+  /* Resolve methods and static fields into instance_methods/static_fields */
+  checker_evaluate_struct_union_members(ctx, t, node->members);
 
   type_layout_compute(t, 8);
   type_hash_ensure(t);
