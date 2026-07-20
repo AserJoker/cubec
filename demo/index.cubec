@@ -1,8 +1,6 @@
 builtin func assert(condition:bool):void;
-test "closure" {
-  var x:i32 = 1;
-  defer |x| {
-    x = 1;
-  }
-  assert(x == 1);
+struct File { path: i32; func __dispose__(self:*File):void { self.path = 0; } }
+test "using_demo" {
+  using f:File = .File{.path = 1};
+  assert(f.path == 1);
 }
