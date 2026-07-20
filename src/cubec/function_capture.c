@@ -22,7 +22,7 @@ static void _cubec_function_capture_init(
     THROW_LOCAL(onerror, "init cannot be NULL");
   }
   node_init_t super_init = {
-      .kind = CUBEC_NODE_FUNCTION_BINDING,
+      .kind = CUBEC_NODE_FUNCTION_CAPTURE,
       .parent = NULL,
   };
   super_init.location = init->location;

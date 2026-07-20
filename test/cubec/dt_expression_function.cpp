@@ -57,7 +57,7 @@ TEST_F(dt_expression_function, simple_captures) {
   EXPECT_EQ(vec_get_size(fn->captures), 2);
 
   cubec_function_capture_t cap0 = (cubec_function_capture_t)vec_get(fn->captures, 0);
-  EXPECT_EQ(cap0->super.kind, CUBEC_NODE_FUNCTION_BINDING);
+  EXPECT_EQ(cap0->super.kind, CUBEC_NODE_FUNCTION_CAPTURE);
   EXPECT_NE(cap0->identifier, nullptr);
 
   cubec_function_capture_t cap1 = (cubec_function_capture_t)vec_get(fn->captures, 1);

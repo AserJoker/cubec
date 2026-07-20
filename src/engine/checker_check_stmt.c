@@ -792,6 +792,15 @@ static flow_state_t _check_stmt_local_function(checker_t ctx,
         if (!cap_name) continue;
         struct symbol *outer_sym = scope_lookup(saved, cap_name);
         if (outer_sym) {
+          /* TDZ check: cannot capture a variable before initialization */
+          if (outer_sym->state == SYMBOL_TDZ &&
+              (!ctx->current_flow || flow_state_is_tdz(ctx->current_flow, cap_name))) {
+            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                 cap_node->location,
+                                 "cannot capture variable '%s' before initialization",
+                                 cap_name);
+            ctx->error_count++;
+          }
           struct symbol *cap_sym = symbol_create(ctx->allocator, cap_name,
                                                   outer_sym->kind, cap_node->location);
           cap_sym->variable = outer_sym->variable;
@@ -1107,6 +1116,15 @@ static void _check_function_body(checker_t ctx,
       /* Look up the captured variable in the enclosing scope */
       struct symbol *outer_sym = scope_lookup(saved, cap_name);
       if (outer_sym) {
+        /* TDZ check: cannot capture a variable before initialization */
+        if (outer_sym->state == SYMBOL_TDZ &&
+            (!ctx->current_flow || flow_state_is_tdz(ctx->current_flow, cap_name))) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               cap_node->location,
+                               "cannot capture variable '%s' before initialization",
+                               cap_name);
+          ctx->error_count++;
+        }
         struct symbol *cap_sym = symbol_create(ctx->allocator, cap_name,
                                                 outer_sym->kind, cap_node->location);
         cap_sym->variable = outer_sym->variable;
