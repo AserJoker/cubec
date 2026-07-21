@@ -10,6 +10,7 @@
 #include "engine/type_layout.h"
 #include "engine/builtin.h"
 #include "engine/comptime_value.h"
+#include "engine/comptime_eval_internal.h"
 #include "engine/flow_state.h"
 #include "core/allocator.h"
 #include "core/string.h"
@@ -910,38 +911,74 @@ static semantic_type_t _check_expr_addr(checker_t ctx, node_t expr) {
 static semantic_type_t _check_expr_try(checker_t ctx, node_t expr) {
   cubec_expression_postfix_unary_t pf =
       (cubec_expression_postfix_unary_t)expr;
+
+  /* .? on union member access: u.a.? — check if a is the active variant */
+  if (pf->right->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
+    cubec_expression_member_t mem = (cubec_expression_member_t)pf->right;
+    semantic_type_t host_type = _check_expression(ctx, mem->host);
+    if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+
+    semantic_type_t unq = semantic_type_strip_qualifier(host_type);
+    vec_t fields = NULL;
+    if (unq->impl->kind == TYPE_UNION)
+      fields = unq->impl->struct_type.fields;
+    else if (unq->impl->kind == TYPE_GENERIC_INSTANCE) {
+      semantic_type_t base = unq->impl->generic_instance.generic_template;
+      if (base && base->impl->kind == TYPE_UNION)
+        fields = unq->impl->generic_instance.fields;
+    }
+
+    if (fields) {
+      const char *fname = _checker_ident_str((node_t)mem->field);
+      if (!fname) return ctx->error_type;
+      struct symbol *found = NULL;
+      size_t fc = vec_get_size(fields);
+      for (size_t i = 0; i < fc; i++) {
+        struct symbol *f = (struct symbol *)vec_get(fields, i);
+        if (f && f->name && strcmp(f->name, fname) == 0) { found = f; break; }
+      }
+      if (!found) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                             "union has no field '%s'", fname);
+        ctx->error_count++;
+        return ctx->error_type;
+      }
+      return found->field.type;
+    }
+    /* Host is not a union — fall through to check full operand */
+  }
+
   semantic_type_t host_type = _check_expression(ctx, pf->right);
   if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+
+  /* .? on Result protocol: isError() + value() + error() */
+  struct symbol *is_err_fn = _find_magic_method(host_type, "isError");
+  struct symbol *val_fn = _find_magic_method(host_type, "value");
+  struct symbol *err_fn = _find_magic_method(host_type, "error");
+  if (is_err_fn && val_fn) {
+    semantic_type_t val_ret = val_fn->function.type
+        ? val_fn->function.type->impl->function.return_type : NULL;
+    if (!val_ret) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           ".? value() has no return type");
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+    if (!err_fn) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           ".? requires error() method on Result type");
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+    return val_ret;
+  }
 
   /* .? on pointer: dereference */
   if (host_type->impl->kind == TYPE_POINTER)
     return host_type->impl->pointer.pointee;
 
-  /* .? on tagged union: check tag, return value type */
-  semantic_type_t unq = semantic_type_strip_qualifier(host_type);
-  vec_t fields = NULL;
-  if (unq->impl->kind == TYPE_UNION)
-    fields = unq->impl->struct_type.fields;
-  else if (unq->impl->kind == TYPE_GENERIC_INSTANCE) {
-    semantic_type_t base = unq->impl->generic_instance.generic_template;
-    if (base && base->impl->kind == TYPE_UNION)
-      fields = unq->impl->generic_instance.fields;
-  }
-
-  if (fields) {
-    size_t fc = vec_get_size(fields);
-    if (fc < 2) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                           ".? requires a union with at least 2 variants");
-      ctx->error_count++;
-      return ctx->error_type;
-    }
-    struct symbol *value_field = (struct symbol *)vec_get(fields, 0);
-    return value_field->field.type;
-  }
-
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                       ".? requires a pointer or tagged union type");
+                       ".? requires a pointer, union field access, or Result type");
   ctx->error_count++;
   return ctx->error_type;
 }
@@ -949,38 +986,74 @@ static semantic_type_t _check_expr_try(checker_t ctx, node_t expr) {
 static semantic_type_t _check_expr_assert(checker_t ctx, node_t expr) {
   cubec_expression_postfix_unary_t pf =
       (cubec_expression_postfix_unary_t)expr;
+
+  /* .! on union member access: u.a.! — assert a is the active variant */
+  if (pf->right->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
+    cubec_expression_member_t mem = (cubec_expression_member_t)pf->right;
+    semantic_type_t host_type = _check_expression(ctx, mem->host);
+    if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+
+    semantic_type_t unq = semantic_type_strip_qualifier(host_type);
+    vec_t fields = NULL;
+    if (unq->impl->kind == TYPE_UNION)
+      fields = unq->impl->struct_type.fields;
+    else if (unq->impl->kind == TYPE_GENERIC_INSTANCE) {
+      semantic_type_t base = unq->impl->generic_instance.generic_template;
+      if (base && base->impl->kind == TYPE_UNION)
+        fields = unq->impl->generic_instance.fields;
+    }
+
+    if (fields) {
+      const char *fname = _checker_ident_str((node_t)mem->field);
+      if (!fname) return ctx->error_type;
+      struct symbol *found = NULL;
+      size_t fc = vec_get_size(fields);
+      for (size_t i = 0; i < fc; i++) {
+        struct symbol *f = (struct symbol *)vec_get(fields, i);
+        if (f && f->name && strcmp(f->name, fname) == 0) { found = f; break; }
+      }
+      if (!found) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                             "union has no field '%s'", fname);
+        ctx->error_count++;
+        return ctx->error_type;
+      }
+      return found->field.type;
+    }
+    /* Host is not a union — fall through to check full operand */
+  }
+
   semantic_type_t host_type = _check_expression(ctx, pf->right);
   if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+
+  /* .! on Result protocol: isError() + value() + error() */
+  struct symbol *is_err_fn = _find_magic_method(host_type, "isError");
+  struct symbol *val_fn = _find_magic_method(host_type, "value");
+  struct symbol *err_fn = _find_magic_method(host_type, "error");
+  if (is_err_fn && val_fn) {
+    semantic_type_t val_ret = val_fn->function.type
+        ? val_fn->function.type->impl->function.return_type : NULL;
+    if (!val_ret) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           ".! value() has no return type");
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+    if (!err_fn) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           ".! requires error() method on Result type");
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+    return val_ret;
+  }
 
   /* .! on pointer: assert non-null, return pointee */
   if (host_type->impl->kind == TYPE_POINTER)
     return host_type->impl->pointer.pointee;
 
-  /* .! on tagged union: assert correct variant, return value type */
-  semantic_type_t unq = semantic_type_strip_qualifier(host_type);
-  vec_t fields = NULL;
-  if (unq->impl->kind == TYPE_UNION)
-    fields = unq->impl->struct_type.fields;
-  else if (unq->impl->kind == TYPE_GENERIC_INSTANCE) {
-    semantic_type_t base = unq->impl->generic_instance.generic_template;
-    if (base && base->impl->kind == TYPE_UNION)
-      fields = unq->impl->generic_instance.fields;
-  }
-
-  if (fields) {
-    size_t fc = vec_get_size(fields);
-    if (fc < 2) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                           ".! requires a union with at least 2 variants");
-      ctx->error_count++;
-      return ctx->error_type;
-    }
-    struct symbol *value_field = (struct symbol *)vec_get(fields, 0);
-    return value_field->field.type;
-  }
-
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                       ".! requires a pointer or tagged union type");
+                       ".! requires a pointer, union field access, or Result type");
   ctx->error_count++;
   return ctx->error_type;
 }
