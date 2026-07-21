@@ -128,7 +128,10 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
 
   case CUBEC_NODE_STATEMENT_EXPRESSION: {
     cubec_statement_expression_t se = (cubec_statement_expression_t)stmt;
-    _comptime_eval_expr(eval, ctx, se->expression);  /* result is temporary, auto-freed */
+    int errs_before = ctx->error_count;
+    _comptime_eval_expr(eval, ctx, se->expression);
+    if (ctx->error_count > errs_before)
+      return _eval_signal_error();
     return _eval_signal_none();
   }
 

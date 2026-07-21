@@ -585,7 +585,10 @@ static void _evaluate_comptime_block(checker_t ctx,
   if (!ctx->comptime_eval) return;
   comptime_signal_t sig =
       comptime_eval_exec_block(ctx->comptime_eval, ctx, node->body);
-  if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
+  /* error_count is already incremented by the code that produces the error
+   * (e.g., panic eval callback, or _comptime_exec_stmt); no need to
+   * increment again here. The signal just tells us to stop evaluating. */
+  (void)sig;
 }
 
 static void _evaluate_comptime_if(checker_t ctx,
