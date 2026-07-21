@@ -447,7 +447,8 @@ comptime_value_t comptime_value_read_field(comptime_value_t composite,
     return comptime_value_create_char(allocator, *(char *)ptr, field_type);
   case TYPE_POINTER:
     return comptime_value_create_pointer(allocator, *(uint64_t *)ptr, field_type);
-  case TYPE_STRING: {
+  case TYPE_STRING:
+  case TYPE_STR: {
     /* string_t stored as pointer in 8 bytes */
     string_t s = *(string_t *)(void *)ptr;
     return comptime_value_create_string(allocator,

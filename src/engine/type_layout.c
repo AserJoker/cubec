@@ -26,6 +26,7 @@ static size_t _primitive_size(enum type_kind kind) {
   case TYPE_F64:    return 8;
   case TYPE_CHAR:   return 1;
   case TYPE_STRING: return sizeof(void *); /* slice-like: ptr + len */
+  case TYPE_STR:    return sizeof(void *); /* same layout as string */
   case TYPE_NIL:    return 0;
   case TYPE_ERROR:  return 0;
   default:          return 0;
@@ -57,6 +58,13 @@ void type_layout_compute(semantic_type_t type, size_t ptr_size) {
 
   case TYPE_STRING:
     /* string = { ptr, len } = 2 * ptr_size */
+    impl->size = 2 * ptr_size;
+    impl->alignment = ptr_size;
+    type->is_incomplete = false;
+    break;
+
+  case TYPE_STR:
+    /* str = compile-time string, same layout as string */
     impl->size = 2 * ptr_size;
     impl->alignment = ptr_size;
     type->is_incomplete = false;

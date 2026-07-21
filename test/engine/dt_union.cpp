@@ -65,7 +65,7 @@ protected:
 
 TEST_F(dt_union, union_init_named) {
   const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
-    "union Result { value: i32; err: string; }\n"
+    "union Result { value: i32; err: str; }\n"
     "test \"init\" {\n"
     "  var r = .Result{.value = 42};\n"
     "  assert(r.value == 42);\n"
@@ -91,7 +91,7 @@ TEST_F(dt_union, cunion_init_named) {
 
 TEST_F(dt_union, unionis_true) {
   const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
-    "union Result { value: i32; err: string; }\n"
+    "union Result { value: i32; err: str; }\n"
     "test \"is_true\" {\n"
     "  var r = .Result{.value = 42};\n"
     "  assert(unionIs[i32](r));\n"
@@ -104,10 +104,10 @@ TEST_F(dt_union, unionis_true) {
 
 TEST_F(dt_union, unionis_false) {
   const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
-    "union Result { value: i32; err: string; }\n"
+    "union Result { value: i32; err: str; }\n"
     "test \"is_false\" {\n"
     "  var r = .Result{.value = 42};\n"
-    "  assert(!unionIs[string](r));\n"
+    "  assert(!unionIs[str](r));\n"
     "}\n";
   auto r = compile_source(allocator, src);
   ASSERT_NE(r.ctx, nullptr);
@@ -117,12 +117,12 @@ TEST_F(dt_union, unionis_false) {
 
 TEST_F(dt_union, union_tag_updated_on_write) {
   const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
-    "union Result { value: i32; err: string; }\n"
+    "union Result { value: i32; err: str; }\n"
     "test \"tag_update\" {\n"
     "  var r = .Result{.value = 42};\n"
     "  assert(unionIs[i32](r));\n"
     "  r.err = \"hello\";\n"
-    "  assert(unionIs[string](r));\n"
+    "  assert(unionIs[str](r));\n"
     "  assert(!unionIs[i32](r));\n"
     "}\n";
   auto r = compile_source(allocator, src);
@@ -133,7 +133,7 @@ TEST_F(dt_union, union_tag_updated_on_write) {
 
 TEST_F(dt_union, union_positional_init_first_field) {
   const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
-    "union Result { value: i32; err: string; }\n"
+    "union Result { value: i32; err: str; }\n"
     "test \"pos_init\" {\n"
     "  var r = .Result{42};\n"
     "  assert(r.value == 42);\n"
@@ -149,7 +149,7 @@ TEST_F(dt_union, union_positional_init_first_field) {
 
 TEST_F(dt_union, try_union_value_variant) {
   const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
-    "union Result { value: i32; err: string; }\n"
+    "union Result { value: i32; err: str; }\n"
     "test \"try_value\" {\n"
     "  var r = .Result{.value = 42};\n"
     "  var v = r.?;\n"
@@ -164,7 +164,7 @@ TEST_F(dt_union, try_union_value_variant) {
 TEST_F(dt_union, try_union_error_propagate) {
   /* .? on error variant should produce a diagnostic */
   const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
-    "union Result { value: i32; err: string; }\n"
+    "union Result { value: i32; err: str; }\n"
     "test \"try_error\" {\n"
     "  var r = .Result{.err = \"fail\"};\n"
     "  var v = r.?;\n"
@@ -179,7 +179,7 @@ TEST_F(dt_union, try_union_generic) {
   const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
     "union Result[V, E] { value: V; err: E; }\n"
     "test \"try_generic\" {\n"
-    "  var r = .Result[i32, string]{.value = 42};\n"
+    "  var r = .Result[i32, str]{.value = 42};\n"
     "  var v = r.?;\n"
     "  assert(v == 42);\n"
     "}\n";
@@ -206,7 +206,7 @@ TEST_F(dt_union, try_non_union_error) {
 
 TEST_F(dt_union, assert_union_value) {
   const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
-    "union Result { value: i32; err: string; }\n"
+    "union Result { value: i32; err: str; }\n"
     "test \"assert_value\" {\n"
     "  var r = .Result{.value = 42};\n"
     "  var v = r.!;\n"
@@ -221,7 +221,7 @@ TEST_F(dt_union, assert_union_value) {
 TEST_F(dt_union, assert_union_panic) {
   /* .! on error variant should produce a panic diagnostic */
   const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
-    "union Result { value: i32; err: string; }\n"
+    "union Result { value: i32; err: str; }\n"
     "test \"assert_panic\" {\n"
     "  var r = .Result{.err = \"fail\"};\n"
     "  var v = r.!;\n"

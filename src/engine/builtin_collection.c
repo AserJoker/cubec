@@ -12,6 +12,7 @@
 #include "core/allocator.h"
 #include "core/string.h"
 #include "core/vec.h"
+#include <string.h>
 
 /* ===== length eval callback ===== */
 
@@ -40,6 +41,9 @@ struct comptime_value *builtin_length_eval(struct comptime_eval *eval,
     } else if (arg->type->impl->kind == TYPE_TUPLE &&
                arg->type->impl->tuple.fields) {
       len = vec_get_size(arg->type->impl->tuple.fields);
+    } else if (arg->type->impl->kind == TYPE_STR) {
+      const char *s = comptime_value_get_string(arg);
+      len = s ? (uint64_t)strlen(s) : 0;
     } else {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                            node->location,

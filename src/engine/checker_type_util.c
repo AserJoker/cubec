@@ -54,7 +54,8 @@ bool _is_comparable_type(semantic_type_t t) {
   enum type_kind k = unq->impl->kind;
   return (k >= TYPE_I8 && k <= TYPE_U64) ||
          (k >= TYPE_F16 && k <= TYPE_F64) ||
-         k == TYPE_BOOL || k == TYPE_CHAR || k == TYPE_ENUM || k == TYPE_TYPE;
+         k == TYPE_BOOL || k == TYPE_CHAR || k == TYPE_ENUM || k == TYPE_STR ||
+         k == TYPE_TYPE;
 }
 
 bool _is_lvalue(node_t expr) {

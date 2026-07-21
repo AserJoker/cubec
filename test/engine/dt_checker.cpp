@@ -53,7 +53,7 @@ TEST_F(dt_checker, builtin_types_registered) {
   EXPECT_EQ(semantic_type_get_kind(ctx->builtin_bool), TYPE_BOOL);
   EXPECT_EQ(semantic_type_get_kind(ctx->builtin_i32), TYPE_I32);
   EXPECT_EQ(semantic_type_get_kind(ctx->builtin_f64), TYPE_F64);
-  EXPECT_EQ(semantic_type_get_kind(ctx->builtin_string), TYPE_STRING);
+  EXPECT_EQ(semantic_type_get_kind(ctx->builtin_str), TYPE_STR);
   EXPECT_EQ(semantic_type_get_kind(ctx->builtin_nil), TYPE_NIL);
   EXPECT_EQ(semantic_type_get_kind(ctx->error_type), TYPE_ERROR);
 
@@ -102,7 +102,7 @@ TEST_F(dt_checker, builtin_type_sizes) {
   EXPECT_EQ(semantic_type_get_size(ctx->builtin_i64), 8u);
   EXPECT_EQ(semantic_type_get_size(ctx->builtin_f32), 4u);
   EXPECT_EQ(semantic_type_get_size(ctx->builtin_f64), 8u);
-  EXPECT_EQ(semantic_type_get_size(ctx->builtin_string), 16u); /* ptr+len */
+  EXPECT_EQ(semantic_type_get_size(ctx->builtin_str), 16u); /* ptr+len */
 
   checker_dispose(ctx);
 }

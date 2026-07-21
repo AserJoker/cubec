@@ -1232,7 +1232,7 @@ semantic_type_t _check_expression(checker_t ctx, node_t expr) {
   if (!expr) return ctx->error_type;
   switch (expr->kind) {
   case CUBEC_NODE_LITERAL_NUMERIC:       return _check_literal_numeric(ctx, expr);
-  case CUBEC_NODE_LITERAL_STRING:        return ctx->builtin_string;
+  case CUBEC_NODE_LITERAL_STRING:        return ctx->builtin_str;
   case CUBEC_NODE_LITERAL_CHAR:          return ctx->builtin_char;
   case CUBEC_NODE_LITERAL_IDENTIFIER:    return _check_expr_literal_identifier(ctx, expr);
   case CUBEC_NODE_LITERAL_UNDEFINED:    return _check_expr_literal_undefined(ctx, expr);

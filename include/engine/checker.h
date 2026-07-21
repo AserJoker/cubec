@@ -57,7 +57,7 @@ struct checker {
   semantic_type_t builtin_i8, builtin_i16, builtin_i32, builtin_i64;
   semantic_type_t builtin_u8, builtin_u16, builtin_u32, builtin_u64;
   semantic_type_t builtin_f16, builtin_f32, builtin_f64;
-  semantic_type_t builtin_char, builtin_string;
+  semantic_type_t builtin_char, builtin_str;
   semantic_type_t builtin_nil;
   semantic_type_t builtin_opaque;
 

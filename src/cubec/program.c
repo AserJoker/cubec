@@ -20,6 +20,7 @@
 #include "cubec/statement_union.h"
 #include "cubec/statement_import.h"
 #include "cubec/statement_test.h"
+#include "cubec/statement_comptime.h"
 #include "cubec/token.h"
 #include <stdint.h>
 
@@ -131,6 +132,10 @@ node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
     if (!statement) {
       /* Try statement_test (test "name" { }) */
       statement = TRY_LOCAL(onerror, read_statement_test(allocator, tokens, &current, filename));
+    }
+    if (!statement) {
+      /* Try comptime block/if/for (comptime { } / comptime if / comptime for) */
+      statement = TRY_LOCAL(onerror, read_statement_comptime(allocator, tokens, &current, filename));
     }
     if (!statement) {
       /* Try statement_empty (;) */

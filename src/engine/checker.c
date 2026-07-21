@@ -114,7 +114,7 @@ static void _register_builtins(checker_t ctx) {
   ctx->builtin_f32    = _register_builtin(ctx, "f32",    TYPE_F32);
   ctx->builtin_f64    = _register_builtin(ctx, "f64",    TYPE_F64);
   ctx->builtin_char   = _register_builtin(ctx, "char",   TYPE_CHAR);
-  ctx->builtin_string = _register_builtin(ctx, "string", TYPE_STRING);
+  ctx->builtin_str    = _register_builtin(ctx, "str", TYPE_STR);
   ctx->builtin_nil    = _register_builtin(ctx, "nil",    TYPE_NIL);
   ctx->builtin_opaque  = _register_builtin(ctx, "opaque", TYPE_OPAQUE);
   ctx->error_type     = _register_builtin(ctx, "<error>", TYPE_ERROR);

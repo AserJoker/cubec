@@ -4,6 +4,7 @@
 #include "engine/builtin_collection.h"
 #include "engine/builtin_tuple.h"
 #include "engine/builtin_union.h"
+#include "engine/builtin_string.h"
 #include "core/allocator.h"
 #include "core/vec.h"
 #include <string.h>
@@ -94,4 +95,5 @@ void builtin_table_init_defaults(builtin_table_t table, struct checker *ctx) {
   builtin_table_init_tuple(table, ctx);
   builtin_table_init_cast(table, ctx);
   builtin_table_init_union(table, ctx);
+  builtin_table_init_string(table, ctx);
 }

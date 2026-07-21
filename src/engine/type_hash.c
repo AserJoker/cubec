@@ -46,7 +46,7 @@ static size_t _hash_type(semantic_type_t type) {
   case TYPE_I8: case TYPE_I16: case TYPE_I32: case TYPE_I64:
   case TYPE_U8: case TYPE_U16: case TYPE_U32: case TYPE_U64:
   case TYPE_F16: case TYPE_F32: case TYPE_F64:
-  case TYPE_CHAR: case TYPE_STRING:
+  case TYPE_CHAR: case TYPE_STRING: case TYPE_STR:
   case TYPE_NIL: case TYPE_ERROR:
     break;
 

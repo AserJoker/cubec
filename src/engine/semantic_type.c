@@ -170,7 +170,7 @@ static bool _type_impl_equals(type_impl_t a, type_impl_t b) {
   case TYPE_I8: case TYPE_I16: case TYPE_I32: case TYPE_I64:
   case TYPE_U8: case TYPE_U16: case TYPE_U32: case TYPE_U64:
   case TYPE_F16: case TYPE_F32: case TYPE_F64:
-  case TYPE_CHAR: case TYPE_STRING:
+  case TYPE_CHAR: case TYPE_STRING: case TYPE_STR:
   case TYPE_NIL: case TYPE_ERROR:
   case TYPE_WILDCARD:
     return true;
@@ -336,6 +336,18 @@ bool semantic_type_can_implicit_convert(semantic_type_t from,
     return to_unq->impl->kind == TYPE_POINTER ||
            to_unq->impl->kind == TYPE_SLICE ||
            to_unq->impl->kind == TYPE_INTERFACE;
+  }
+
+  /* str -> const []u8 (auto decay) */
+  if (from->impl->kind == TYPE_STR) {
+    semantic_type_t to_unq = semantic_type_strip_qualifier(to);
+    if (to_unq->impl->kind == TYPE_SLICE) {
+      /* Must be const []u8 — check element type is u8 and qualifier is const */
+      semantic_type_t elem = to_unq->impl->slice.element;
+      semantic_type_t elem_unq = semantic_type_strip_qualifier(elem);
+      if (elem_unq->impl->kind == TYPE_U8 && semantic_type_is_const(to))
+        return true;
+    }
   }
 
   /* integer widening */
@@ -610,7 +622,7 @@ semantic_type_t semantic_type_create_named(allocator_t allocator,
       allocator, &g_semantic_type_type, (void *)name);
   t->impl = _create_impl(allocator, kind);
   /* Primitive types are complete immediately */
-  if (kind >= TYPE_VOID && kind <= TYPE_STRING) {
+  if (kind >= TYPE_VOID && kind <= TYPE_STR) {
     t->is_incomplete = false;
   }
   return t;

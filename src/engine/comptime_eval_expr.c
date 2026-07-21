@@ -140,7 +140,7 @@ static comptime_value_t _eval_literal_string(comptime_eval_t eval,
                                               checker_t ctx, node_t node) {
   cubec_literal_string_t s = (cubec_literal_string_t)node;
   return _eval_temp(eval, comptime_value_create_string(eval->allocator, string_get(s->value),
-                                                         ctx->builtin_string));
+                                                         ctx->builtin_str));
 }
 
 static comptime_value_t _eval_literal_char(comptime_eval_t eval,
@@ -385,6 +385,26 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
     if (set_method) {
       comptime_value_t set_args[2] = { key_val ? key_val : rv, rv };
       _eval_method_call(eval, ctx, set_method, gi->callee, host, set_args, 2, node);
+      return _eval_temp(eval, comptime_value_clone(eval->allocator, rv));
+    }
+
+    /* str[index] = char: compile-time string mutation */
+    if (host->kind == COMPTIME_VALUE_STRING && key_val) {
+      const char *s = comptime_value_get_string(host);
+      int64_t idx = comptime_value_as_i64(key_val);
+      size_t slen = s ? strlen(s) : 0;
+      if (idx < 0 || (size_t)idx >= slen) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+            "string index %lld out of range (length %llu)", (long long)idx,
+            (unsigned long long)slen);
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
+      /* Mutate the string_t in-place */
+      if (host->string_val && rv->kind == COMPTIME_VALUE_CHAR) {
+        char *mutable = (char *)string_get(host->string_val);
+        if (mutable) mutable[idx] = rv->char_val;
+      }
       return _eval_temp(eval, comptime_value_clone(eval->allocator, rv));
     }
 
@@ -1712,7 +1732,7 @@ static comptime_value_t _eval_slice(comptime_eval_t eval, checker_t ctx,
     memcpy(buf, s + start, len);
     buf[len] = '\0';
     comptime_value_t result = comptime_value_create_string(eval->allocator,
-                                                            buf, ctx->builtin_string);
+                                                            buf, ctx->builtin_str);
     allocator_free(eval->allocator, &buf);
     return _eval_temp(eval, result);
   }
@@ -1750,6 +1770,27 @@ static comptime_value_t _eval_generic_inst(comptime_eval_t eval, checker_t ctx,
   if (gi->callee) {
     comptime_value_t host_val = _comptime_eval_expr(eval, ctx, gi->callee);
     if (!host_val || host_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+
+    /* str[index] → char */
+    if (host_val->kind == COMPTIME_VALUE_STRING && gi->arguments &&
+        vec_get_size(gi->arguments) >= 1) {
+      comptime_value_t key_val = _comptime_eval_expr(eval, ctx,
+          (node_t)vec_get(gi->arguments, 0));
+      if (!key_val || key_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+      const char *s = comptime_value_get_string(host_val);
+      int64_t idx = comptime_value_as_i64(key_val);
+      size_t slen = s ? strlen(s) : 0;
+      if (idx < 0 || (size_t)idx >= slen) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+            "string index %lld out of range (length %llu)", (long long)idx,
+            (unsigned long long)slen);
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
+      char c = s[idx];
+      return _eval_temp(eval, comptime_value_create_char(eval->allocator, c,
+                                                          ctx->builtin_char));
+    }
 
     struct symbol *get_method = _find_magic_method(host_val->type, "__get__");
     if (get_method && gi->arguments && vec_get_size(gi->arguments) >= 1) {

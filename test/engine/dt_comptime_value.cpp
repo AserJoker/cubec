@@ -129,7 +129,7 @@ TEST_F(dt_comptime_value, create_char) {
 TEST_F(dt_comptime_value, create_string) {
   checker_t ctx = checker_create(allocator);
   comptime_value_t v = comptime_value_create_string(allocator, "hello",
-                                                      ctx->builtin_string);
+                                                      ctx->builtin_str);
   ASSERT_NE(v, nullptr);
   EXPECT_EQ(v->kind, COMPTIME_VALUE_STRING);
   EXPECT_STREQ(comptime_value_get_string(v), "hello");
@@ -240,7 +240,7 @@ TEST_F(dt_comptime_value, clone_int) {
 TEST_F(dt_comptime_value, clone_string) {
   checker_t ctx = checker_create(allocator);
   comptime_value_t v = comptime_value_create_string(allocator, "abc",
-                                                      ctx->builtin_string);
+                                                      ctx->builtin_str);
   comptime_value_t c = comptime_value_clone(allocator, v);
   ASSERT_NE(c, nullptr);
   EXPECT_EQ(c->kind, COMPTIME_VALUE_STRING);

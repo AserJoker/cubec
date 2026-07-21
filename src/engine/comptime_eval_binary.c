@@ -94,6 +94,21 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
 
   /* Arithmetic */
   if (strcmp(op, "+") == 0) {
+    /* str + str concatenation */
+    if (lv->kind == COMPTIME_VALUE_STRING && rv->kind == COMPTIME_VALUE_STRING) {
+      const char *a = comptime_value_get_string(lv);
+      const char *b = comptime_value_get_string(rv);
+      size_t la = a ? strlen(a) : 0;
+      size_t lb = b ? strlen(b) : 0;
+      char *buf = (char *)allocator_alloc(eval->allocator, la + lb + 1);
+      memcpy(buf, a, la);
+      memcpy(buf + la, b, lb);
+      buf[la + lb] = '\0';
+      comptime_value_t result = comptime_value_create_string(eval->allocator, buf,
+                                                             ctx->builtin_str);
+      allocator_free(eval->allocator, &buf);
+      return _eval_temp(eval, result);
+    }
     if (lv->kind == COMPTIME_VALUE_INT && rv->kind == COMPTIME_VALUE_INT) {
       int64_t s = lv->int_val.s + rv->int_val.s;
       result = comptime_value_create_int(eval->allocator, s, (uint64_t)s,

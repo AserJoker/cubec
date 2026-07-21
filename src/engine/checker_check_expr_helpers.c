@@ -37,6 +37,18 @@ semantic_type_t _check_assign_generic_lhs(checker_t ctx, node_t expr,
     return NULL;
 
   semantic_type_t host_type = sym->variable.type;
+
+  /* str[index] = char: compile-time writable */
+  if (host_type->impl->kind == TYPE_STR) {
+    if (!semantic_type_can_implicit_convert(rt, ctx->builtin_char)) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+          "cannot assign '%s' to str index (expected char)",
+          rt->name ? rt->name : "<anonymous>");
+      ctx->error_count++;
+    }
+    return ctx->builtin_void;
+  }
+
   if (host_type->instance_methods) {
     size_t mcount = vec_get_size(host_type->instance_methods);
     for (size_t i = 0; i < mcount; i++) {
@@ -226,6 +238,8 @@ semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
     return host_type->impl->array.element;
   if (host_type->impl->kind == TYPE_SLICE)
     return host_type->impl->slice.element;
+  if (host_type->impl->kind == TYPE_STR)
+    return ctx->builtin_char;
 
   /* Tuple does not support [] subscript — use get[N](tuple) instead */
   if (host_type->impl->kind == TYPE_GENERIC_INSTANCE &&
@@ -417,6 +431,13 @@ semantic_type_t _check_binary_arithmetic(checker_t ctx, node_t expr,
   }
 
   if (!_is_numeric_type(effective_lt) || !_is_numeric_type(effective_rt)) {
+    /* str + str → str (concatenation) */
+    if (op[0] == '+' && op[1] == '\0') {
+      semantic_type_t lt_unq = semantic_type_strip_qualifier(lt);
+      semantic_type_t rt_unq = semantic_type_strip_qualifier(rt);
+      if (lt_unq->impl->kind == TYPE_STR && rt_unq->impl->kind == TYPE_STR)
+        return ctx->builtin_str;
+    }
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "arithmetic operator '%s' requires numeric operands", op);
     ctx->error_count++;

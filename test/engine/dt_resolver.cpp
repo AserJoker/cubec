@@ -41,7 +41,7 @@ TEST_F(dt_resolver, builtin_lookup_via_name_table) {
 TEST_F(dt_resolver, all_builtins_in_name_table) {
   const char *names[] = {"void", "bool", "i8",   "i16",  "i32",
                           "i64", "u8",   "u16",  "u32",  "u64",
-                          "f16", "f32",  "f64",  "char", "string", "nil"};
+                          "f16", "f32",  "f64",  "char", "str", "nil"};
   for (auto name : names) {
     void *found = strmap_find(ctx->type_name_table, name);
     EXPECT_NE(found, nullptr) << "builtin '" << name << "' not in name table";

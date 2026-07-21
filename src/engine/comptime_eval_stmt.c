@@ -93,7 +93,8 @@ comptime_signal_t _comptime_exec_block(comptime_eval_t eval, checker_t ctx,
   if (blk->statements) {
     size_t count = vec_get_size(blk->statements);
     for (size_t i = 0; i < count; i++) {
-      sig = _comptime_exec_stmt(eval, ctx, (node_t)vec_get(blk->statements, i));
+      node_t s = (node_t)vec_get(blk->statements, i);
+      sig = _comptime_exec_stmt(eval, ctx, s);
       if (sig.kind != COMPTIME_SIGNAL_NONE) break;
     }
   }

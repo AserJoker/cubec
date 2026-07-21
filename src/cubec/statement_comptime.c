@@ -505,27 +505,46 @@ node_t read_statement_comptime(allocator_t allocator, vec_t tokens,
 
   /* 2. Peek at next token to determine which comptime form */
   token_t next = TRY_LOCAL(onerror, vec_get(tokens, current));
-  if (!next) return NULL;
+  if (!next) {
+    THROW_LOCAL(onerror, "expected '{', 'if', or 'for' after 'comptime'");
+  }
+
+  /* If next token is a declaration/function modifier, this is 'comptime' as
+   * a modifier (e.g. comptime var, comptime func), not a comptime block/if/for.
+   * Return NULL so the caller can try read_statement_declaration / function. */
+  if (token_get_kind(next) == CUBEC_TOKEN_KEYWORD) {
+    if (location_is(token_get_location(next), "var") ||
+        location_is(token_get_location(next), "func") ||
+        location_is(token_get_location(next), "export") ||
+        location_is(token_get_location(next), "inline") ||
+        location_is(token_get_location(next), "extern") ||
+        location_is(token_get_location(next), "builtin")) {
+      return NULL;
+    }
+  }
+
+  node_t result = NULL;
 
   /* comptime { ... } */
   if (token_is(next, CUBEC_TOKEN_SYMBOL, "{")) {
-    return _read_comptime_block(allocator, tokens, &current, filename, start_location);
+    result = TRY_LOCAL(onerror, _read_comptime_block(allocator, tokens, &current, filename, start_location));
   }
-
   /* comptime if(...) { } */
-  if (token_get_kind(next) == CUBEC_TOKEN_KEYWORD &&
+  else if (token_get_kind(next) == CUBEC_TOKEN_KEYWORD &&
       location_is(token_get_location(next), "if")) {
-    return _read_comptime_if(allocator, tokens, &current, filename, start_location);
+    result = TRY_LOCAL(onerror, _read_comptime_if(allocator, tokens, &current, filename, start_location));
   }
-
   /* comptime for(...) { } */
-  if (token_get_kind(next) == CUBEC_TOKEN_KEYWORD &&
+  else if (token_get_kind(next) == CUBEC_TOKEN_KEYWORD &&
       location_is(token_get_location(next), "for")) {
-    return _read_comptime_for(allocator, tokens, &current, filename, start_location);
+    result = TRY_LOCAL(onerror, _read_comptime_for(allocator, tokens, &current, filename, start_location));
+  }
+  else {
+    THROW_LOCAL(onerror, "expected '{', 'if', or 'for' after 'comptime'");
   }
 
-  /* Not a comptime statement — let declaration/function parsers handle it */
-  return NULL;
+  *position = current;
+  return result;
 
 onerror:
   return NULL;
