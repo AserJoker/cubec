@@ -1580,7 +1580,7 @@ static comptime_value_t _eval_try(comptime_eval_t eval, checker_t ctx,
             const char *s = comptime_value_get_string(err_result);
             if (s) { snprintf(err_buf, sizeof(err_buf), "%s", s); err_desc = err_buf; }
           }
-          _eval_temp(eval, err_result);
+          /* err_result is already tracked by _eval_call_function; do not _eval_temp */
         }
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
             "error propagation: %s", err_desc);
@@ -1694,7 +1694,7 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, checker_t ctx,
             const char *s = comptime_value_get_string(err_result);
             if (s) { snprintf(err_buf, sizeof(err_buf), "%s", s); err_desc = err_buf; }
           }
-          _eval_temp(eval, err_result);
+          /* err_result is already tracked by _eval_call_function; do not _eval_temp */
         }
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
             "panic: %s", err_desc);
