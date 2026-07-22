@@ -59,32 +59,35 @@ typedef struct _cubec_statement_comptime_if_init_t
     cubec_statement_comptime_if_init_t;
 
 /**
- * @brief AST node for comptime for: comptime for(init; cond; incr) { }
+ * @brief AST node for comptime foreach: comptime foreach(var item [: type] of iter) { }
  *
- * Compile-time loop unrolling. The loop is unrolled at compile time.
+ * Compile-time iterator expansion. The iterator must be evaluable at
+ * compile time and the loop is expanded at compile time.
  */
-struct _cubec_statement_comptime_for_t;
-struct _cubec_statement_comptime_for_t {
+struct _cubec_statement_comptime_foreach_t;
+struct _cubec_statement_comptime_foreach_t {
   struct _node_t super;
-  node_t init;       /**< Init statement/expression (nullable) */
-  node_t condition;  /**< Condition expression (nullable) */
-  node_t increment;  /**< Increment expression (nullable) */
-  node_t body;       /**< Block statement (required) */
+  bool is_var_decl;   /**< True if 'var' keyword was used */
+  node_t variable;    /**< Loop variable identifier (required) */
+  node_t var_type;    /**< Loop variable type annotation (nullable) */
+  node_t iterator;    /**< Iterator expression (required) */
+  node_t body;        /**< Block statement (required) */
 };
-typedef struct _cubec_statement_comptime_for_t *cubec_statement_comptime_for_t;
+typedef struct _cubec_statement_comptime_foreach_t *cubec_statement_comptime_foreach_t;
 
-extern type_t g_cubec_statement_comptime_for_type;
+extern type_t g_cubec_statement_comptime_foreach_type;
 
-struct _cubec_statement_comptime_for_init_t {
+struct _cubec_statement_comptime_foreach_init_t {
   location_t location;
   node_t parent;
-  node_t init;
-  node_t condition;
-  node_t increment;
+  bool is_var_decl;
+  node_t variable;
+  node_t var_type;
+  node_t iterator;
   node_t body;
 };
-typedef struct _cubec_statement_comptime_for_init_t
-    cubec_statement_comptime_for_init_t;
+typedef struct _cubec_statement_comptime_foreach_init_t
+    cubec_statement_comptime_foreach_init_t;
 
 /**
  * @brief Try to parse a comptime statement: comptime { } | comptime if() | comptime for()

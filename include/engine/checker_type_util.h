@@ -37,6 +37,8 @@ char *_generic_instance_cache_key(checker_t ctx, const char *template_name,
                                    vec_t type_args);
 bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
                        semantic_type_t constraint, node_t arg_expr);
+bool _check_constraint_silent(checker_t ctx, semantic_type_t type_arg,
+                              semantic_type_t constraint);
 vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs, vec_t generic_params);
 semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
                                    vec_t type_args, node_t instantiation_expr);

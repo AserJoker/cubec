@@ -5,6 +5,9 @@
 #include "engine/checker_type_util.h"
 #include "engine/checker_collect.h"
 #include "engine/checker_evaluate.h"
+#include "engine/comptime_eval.h"
+#include "engine/comptime_value.h"
+#include "engine/diagnostic.h"
 #include "engine/flow_state.h"
 #include "engine/resolver.h"
 #include "engine/symbol.h"
@@ -584,6 +587,33 @@ static flow_state_t _check_stmt_comptime_if(checker_t ctx, node_t stmt,
   cubec_statement_comptime_if_t ci =
       (cubec_statement_comptime_if_t)stmt;
   if (ci->condition) _check_expression(ctx, ci->condition);
+
+  /* Evaluate condition at comptime to determine taken branch */
+  if (ctx->comptime_eval && ci->condition) {
+    comptime_value_t cond =
+        comptime_eval_expr(ctx->comptime_eval, ctx, ci->condition);
+    if (!cond || !cond || cond->kind == COMPTIME_VALUE_ERROR ||
+        cond->kind == COMPTIME_VALUE_FATAL) {
+      ctx->error_count++;
+      return flow_state_alive(ctx->allocator);
+    }
+    if (cond->kind != COMPTIME_VALUE_BOOL) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, stmt->location,
+                           "comptime if condition must be a compile-time bool");
+      ctx->error_count++;
+      return flow_state_alive(ctx->allocator);
+    }
+
+    /* Only check the taken branch */
+    bool condition_true = comptime_value_is_truthy(cond);
+    node_t taken = condition_true ? ci->then_branch : ci->else_branch;
+    if (taken) {
+      return _check_statement(ctx, taken, return_type);
+    }
+    return flow_state_alive(ctx->allocator);
+  }
+
+  /* Fallback: no comptime eval, check both branches */
   flow_state_t pre_flow = ctx->current_flow
       ? flow_state_clone(ctx->allocator, ctx->current_flow)
       : flow_state_alive(ctx->allocator);
@@ -602,36 +632,83 @@ static flow_state_t _check_stmt_comptime_if(checker_t ctx, node_t stmt,
   return merged;
 }
 
-/* --- comptime for --- */
+/* --- comptime foreach --- */
 
-static flow_state_t _check_stmt_comptime_for(checker_t ctx, node_t stmt,
-                                              semantic_type_t return_type) {
-  cubec_statement_comptime_for_t cf =
-      (cubec_statement_comptime_for_t)stmt;
+static flow_state_t _check_stmt_comptime_foreach(checker_t ctx, node_t stmt,
+                                                   semantic_type_t return_type) {
+  cubec_statement_comptime_foreach_t cf =
+      (cubec_statement_comptime_foreach_t)stmt;
+  semantic_type_t iter_type = _check_expression(ctx, cf->iterator);
+
   scope_t saved = ctx->current_scope;
   ctx->current_scope = scope_create(ctx->allocator, ctx->current_scope,
                                      SCOPE_COMPTIME, stmt->location);
   vec_push(ctx->all_scopes, ctx->current_scope);
-  if (cf->init) {
-    flow_state_t init_fs = _check_statement(ctx, cf->init, return_type);
-    flow_state_dispose(init_fs, ctx->allocator);
+
+  const char *vname = _checker_ident_str(cf->variable);
+  if (vname) {
+    struct symbol *vsym = symbol_create(ctx->allocator, vname,
+                                         SYMBOL_VARIABLE, stmt->location);
+    /* Derive element type from iterator or use explicit type */
+    if (cf->var_type) {
+      vsym->variable.type = resolver_resolve_type(ctx, cf->var_type);
+      if (!vsym->variable.type) vsym->variable.type = ctx->error_type;
+    } else if (iter_type->impl->kind == TYPE_SLICE)
+      vsym->variable.type = iter_type->impl->slice.element;
+    else if (iter_type->impl->kind == TYPE_ARRAY)
+      vsym->variable.type = iter_type->impl->array.element;
+    else if (iter_type->impl->kind == TYPE_STRING)
+      vsym->variable.type = ctx->builtin_char;
+    else {
+      /* Iterator protocol: look for next() in instance_methods */
+      semantic_type_t elem_type = NULL;
+      if (iter_type->instance_methods) {
+        size_t mc = vec_get_size(iter_type->instance_methods);
+        for (size_t i = 0; i < mc; i++) {
+          struct symbol *s = (struct symbol *)vec_get(iter_type->instance_methods, i);
+          if (s && s->name && strcmp(s->name, "next") == 0 &&
+              s->kind == SYMBOL_FUNCTION && s->function.type) {
+            semantic_type_t next_ret =
+                s->function.type->impl->function.return_type;
+            if (next_ret) {
+              vec_t fields = NULL;
+              if (next_ret->impl->kind == TYPE_STRUCT)
+                fields = next_ret->impl->struct_type.fields;
+              else if (next_ret->impl->kind == TYPE_GENERIC_INSTANCE)
+                fields = next_ret->impl->generic_instance.fields;
+              if (fields) {
+                size_t fc = vec_get_size(fields);
+                for (size_t j = 0; j < fc; j++) {
+                  struct symbol *fs = (struct symbol *)vec_get(fields, j);
+                  if (fs && fs->name && strcmp(fs->name, "value") == 0 &&
+                      fs->kind == SYMBOL_FIELD) {
+                    elem_type = fs->field.type;
+                    break;
+                  }
+                }
+              }
+            }
+            break;
+          }
+        }
+      }
+      vsym->variable.type = elem_type ? elem_type : ctx->error_type;
+    }
+    vsym->variable.is_mutable = !semantic_type_is_const(vsym->variable.type);
+    vsym->state = SYMBOL_EVALUATED;
+    scope_push_symbol(ctx->current_scope, vsym);
   }
-  if (cf->condition) _check_expression(ctx, cf->condition);
-  if (cf->increment) _check_expression(ctx, cf->increment);
+
   /* Save pre-loop flow state (body may not execute) */
   flow_state_t pre_flow = ctx->current_flow
       ? flow_state_clone(ctx->allocator, ctx->current_flow)
       : flow_state_alive(ctx->allocator);
   ctx->loop_depth++;
-  flow_state_t body_fs;
-  if (cf->body) {
-    body_fs = _check_statement(ctx, cf->body, return_type);
-  } else {
-    body_fs = flow_state_alive(ctx->allocator);
-  }
+  flow_state_t body_fs = cf->body
+      ? _check_statement(ctx, cf->body, return_type)
+      : flow_state_alive(ctx->allocator);
   ctx->loop_depth--;
   ctx->current_scope = saved;
-  /* Loop body may not execute */
   flow_state_dispose(body_fs, ctx->allocator);
   return pre_flow;
 }
@@ -777,8 +854,8 @@ flow_state_t _check_statement(checker_t ctx, node_t stmt,
   case CUBEC_NODE_STATEMENT_COMPTIME_IF:
     fs = _check_stmt_comptime_if(ctx, stmt, return_type);
     break;
-  case CUBEC_NODE_STATEMENT_COMPTIME_FOR:
-    fs = _check_stmt_comptime_for(ctx, stmt, return_type);
+  case CUBEC_NODE_STATEMENT_COMPTIME_FOREACH:
+    fs = _check_stmt_comptime_foreach(ctx, stmt, return_type);
     break;
   default:
     fs = _check_stmt_invalid_declaration(ctx, stmt);

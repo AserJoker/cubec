@@ -127,3 +127,89 @@ TEST_F(dt_comptime_stmt, comptime_var_implicit_const) {
   EXPECT_TRUE(semantic_type_is_const(y_sym->variable.type));
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== extends expression ===== */
+
+TEST_F(dt_comptime_stmt, extends_comptime_eval) {
+  /* extends expression should be evaluable at comptime and return bool */
+  const char *src =
+    "comptime var is_int = i32 extends i32;\n"
+    "comptime var not_int = i32 extends f64;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_comptime_stmt, extends_in_comptime_if) {
+  /* extends can be used in comptime if condition */
+  const char *src =
+    "comptime var cond = true;\n"
+    "comptime if(cond) {\n"
+    "  comptime var x = 1;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== comptime if ===== */
+
+TEST_F(dt_comptime_stmt, comptime_if_true_branch_taken) {
+  /* comptime if(true) — then branch taken, else branch NOT checked */
+  const char *src =
+    "comptime if(true) {\n"
+    "  comptime var x = 1;\n"
+    "} else {\n"
+    "  comptime var y = nonexistent_type;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  /* x should exist (taken branch), y should NOT exist */
+  struct symbol *x_sym = scope_lookup_local(r.ctx->global_scope, "x");
+  EXPECT_NE(x_sym, nullptr);
+  struct symbol *y_sym = scope_lookup_local(r.ctx->global_scope, "y");
+  EXPECT_EQ(y_sym, nullptr);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_comptime_stmt, comptime_if_false_branch_taken) {
+  /* comptime if(false) — else branch taken, then branch NOT checked */
+  const char *src =
+    "comptime if(false) {\n"
+    "  comptime var y = nonexistent_type;\n"
+    "} else {\n"
+    "  comptime var x = 1;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  struct symbol *x_sym = scope_lookup_local(r.ctx->global_scope, "x");
+  EXPECT_NE(x_sym, nullptr);
+  struct symbol *y_sym = scope_lookup_local(r.ctx->global_scope, "y");
+  EXPECT_EQ(y_sym, nullptr);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_comptime_stmt, comptime_if_non_bool_error) {
+  /* comptime if with non-bool condition should error */
+  const char *src =
+    "comptime var x = 42;\n"
+    "comptime if(x) {\n"
+    "  comptime var y = 1;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_comptime_stmt, comptime_if_no_else) {
+  /* comptime if(true) without else — should work */
+  const char *src =
+    "comptime if(true) {\n"
+    "  comptime var x = 1;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  struct symbol *x_sym = scope_lookup_local(r.ctx->global_scope, "x");
+  EXPECT_NE(x_sym, nullptr);
+  compile_result_cleanup(&r, allocator);
+}

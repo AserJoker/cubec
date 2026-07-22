@@ -217,6 +217,10 @@ static semantic_type_t _check_expr_binary(checker_t ctx, node_t expr) {
   if (_is_op_one_of(op, bit_ops, 5))
     return _check_binary_bitwise(ctx, expr, op, lt, rt);
 
+  /* extends: returns bool; actual constraint check in comptime eval */
+  if (strcmp(op, "extends") == 0)
+    return ctx->builtin_bool;
+
   return ctx->error_type;
 }
 

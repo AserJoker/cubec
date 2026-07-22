@@ -26,11 +26,11 @@ union Result {
 
 func TestUnion():Result {
   var item = .Test{._err = "test"};
-  _  = item._value.?;
+  _  = item._value.!;
   return .Result{._value = 123};
 }
 
 test "using_demo" {
   var res = TestUnion();
-  assert(res.error() == "test");
+  assert(false);
 }

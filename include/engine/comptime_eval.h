@@ -94,9 +94,9 @@ struct comptime_signal comptime_eval_exec_stmt(comptime_eval_t eval,
 struct comptime_signal comptime_eval_exec_comptime_if(comptime_eval_t eval,
                                                        checker_t ctx,
                                                        node_t node);
-struct comptime_signal comptime_eval_exec_comptime_for(comptime_eval_t eval,
-                                                        checker_t ctx,
-                                                        node_t node);
+struct comptime_signal comptime_eval_exec_comptime_foreach(comptime_eval_t eval,
+                                                            checker_t ctx,
+                                                            node_t node);
 
 #ifdef __cplusplus
 }

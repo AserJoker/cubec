@@ -167,8 +167,8 @@ comptime if (N > 5) {
     export var big = true;
 }
 
-comptime for (var i = 0; i < N; i = i + 1) {
-    // 编译期循环生成声明
+comptime foreach (item of items) {
+    // 编译期迭代器展开
 }
 
 comptime {
@@ -176,7 +176,7 @@ comptime {
 }
 ```
 
-- `comptime if` — 编译期条件分支，决定生成哪些声明
-- `comptime for` — 编译期循环，可批量生成声明
+- `comptime if` — 编译期条件分支，条件必须编译期求值为 bool，未采取分支不做类型检查
+- `comptime foreach` — 编译期迭代器展开，使用 `of` 关键字指定迭代器
 - `comptime { }` — 编译期执行块
 - 所有 comptime 语句在第二遍（按序求值/检查）阶段执行

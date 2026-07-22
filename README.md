@@ -97,8 +97,8 @@ cubec/
 - **表达式解析器**：完整覆盖所有表达式类型（前缀/后缀一元、二元、三元、成员访问、泛型实例化、typeof、sizeof、alignof、初始化列表、匿名函数、const/volatile 限定符等）
 - **语句解析器**：完整覆盖所有语句类型（if/for/foreach/while/do-while/switch/defer/break/continue/return/import/test/comptime 等）
 - **声明解析器**：func/struct/enum/union/cunion/interface/type/var/decorator
-- **语义分析引擎**：双层类型表示、结构等价、无隐式类型转换（严格模式，int→float / []T→*T 需显式 cast）、TDZ 多遍检查、const/volatile 语义、builtin 回调注册表、原生 tuple 类型（`<i32, f64>` 语法）、TYPE_OPAQUE（对标 C `void*`）、参数包（variadic generics）、泛型推断、匿名 initialize_list 推断、显式类型转换 cast builtin、`<?>` 元组通配符约束、Rustc 风格诊断、`undefined` 字面量与强制变量初始化、表达式语句返回值未使用警告、控制流分析（不可达代码检测、非 void 函数 return 完整性、TDZ 流传播）、修饰符互斥矩阵强制、pub 字段访问控制框架、tagged union 运行时布局（`__type__` tag + data）、unionIs builtin、错误传播运算符（`.?` try / `.!` assert）、`assert`（test 块专用）/`panic`（不可恢复中止）builtin、魔术方法（`__dispose__`、`__value__`）、模块系统（import/export、路径解析、`::` 命名空间访问、export 可见性过滤、循环依赖检测、跨模块 pub 字段访问控制）
-- **comptime 编译期求值器**：AST 解释器、虚拟内存、安全限制、test 块执行、SEH 崩溃防护、union/cunion 初始化与 tag 读写、`.?` 错误传播与 `.!` 断言解包求值、FATAL signal 传播与 `fatal_error` 编译中止
+- **语义分析引擎**：双层类型表示、结构等价、无隐式类型转换（严格模式，int→float / []T→*T 需显式 cast）、TDZ 多遍检查、const/volatile 语义、builtin 回调注册表、原生 tuple 类型（`<i32, f64>` 语法）、TYPE_OPAQUE（对标 C `void*`）、参数包（variadic generics）、泛型推断、匿名 initialize_list 推断、显式类型转换 cast builtin、`<?>` 元组通配符约束、Rustc 风格诊断、`undefined` 字面量与强制变量初始化、表达式语句返回值未使用警告、控制流分析（不可达代码检测、非 void 函数 return 完整性、TDZ 流传播）、修饰符互斥矩阵强制、pub 字段访问控制框架、tagged union 运行时布局（`__type__` tag + data）、unionIs builtin、错误传播运算符（`.?` try / `.!` assert）、`assert`（test 块专用）/`panic`（不可恢复中止）builtin、魔术方法（`__dispose__`、`__value__`）、模块系统（import/export、路径解析、`::` 命名空间访问、export 可见性过滤、循环依赖检测、跨模块 pub 字段访问控制）、`extends` 表达式求值（comptime bool 返回）
+- **comptime 编译期求值器**：AST 解释器、虚拟内存、安全限制、test 块执行、SEH 崩溃防护、union/cunion 初始化与 tag 读写、`.?` 错误传播与 `.!` 断言解包求值、FATAL signal 传播与 `fatal_error` 编译中止、`comptime if` 条件必知+分支跳过（未采取分支不做类型检查）、`comptime foreach` 迭代器展开
 - **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
 
 ### 待实现

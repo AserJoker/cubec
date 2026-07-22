@@ -116,6 +116,180 @@ comptime_signal_t _comptime_exec_block(comptime_eval_t eval, checker_t ctx,
   return sig;
 }
 
+/* --- shared foreach loop logic (used by both foreach and comptime foreach) --- */
+
+static comptime_signal_t _comptime_exec_foreach_loop(
+    comptime_eval_t eval, checker_t ctx, location_t loc,
+    bool is_var_decl, node_t variable, node_t var_type,
+    comptime_value_t iter, node_t body) {
+  /* foreach only supports iterators with a next() method.
+   * Look up the next() instance method on the iterator's type. */
+  if (!iter->type || !iter->type->instance_methods) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         loc,
+                         "foreach requires an iterator with next() method");
+    ctx->error_count++;
+    return _eval_signal_error();
+  }
+
+  struct symbol *next_sym = NULL;
+  size_t mc = vec_get_size(iter->type->instance_methods);
+  for (size_t i = 0; i < mc; i++) {
+    struct symbol *s = (struct symbol *)vec_get(iter->type->instance_methods, i);
+    if (s && s->name && strcmp(s->name, "next") == 0) {
+      next_sym = s;
+      break;
+    }
+  }
+  if (!next_sym) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         loc,
+                         "foreach requires an iterator with next() method");
+    ctx->error_count++;
+    return _eval_signal_error();
+  }
+
+  /* Create the next() function value from the method symbol. */
+  comptime_value_t next_fn = _comptime_create_method_value(eval, ctx, next_sym);
+  comptime_env_track_temp(eval->current_env, next_fn);
+  if (!next_fn || next_fn->kind != COMPTIME_VALUE_FUNCTION) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         loc,
+                         "foreach: next() method not found at comptime");
+    ctx->error_count++;
+    return _eval_signal_error();
+  }
+
+  /* Enter foreach scope */
+  comptime_env_t loop_env =
+      comptime_env_create(eval->allocator, eval->current_env);
+  eval->current_env = loop_env;
+  comptime_alloc_enter_scope(eval->valloc);
+
+  eval->loop_depth++;
+  int iterations = 0;
+  comptime_signal_t sig = _eval_signal_none();
+
+  while (true) {
+    if (++iterations > COMPTIME_MAX_LOOP_ITERATIONS) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           loc,
+                           "comptime loop exceeded %d iterations",
+                           COMPTIME_MAX_LOOP_ITERATIONS);
+      ctx->error_count++;
+      sig = _eval_signal_error();
+      break;
+    }
+
+    /* Call next() on the iterator: next(self=iter) */
+    comptime_value_t self_arg = comptime_value_clone(eval->allocator, iter);
+
+    comptime_env_t call_env =
+        comptime_env_create(eval->allocator,
+            next_fn->function.captured_env
+                ? next_fn->function.captured_env
+                : eval->current_env);
+    /* Bind self parameter */
+    if (next_fn->function.param_names) {
+      size_t pcount = vec_get_size(next_fn->function.param_names);
+      for (size_t pi = 0; pi < pcount; pi++) {
+        const char *pname = (const char *)vec_get(next_fn->function.param_names, pi);
+        if (pi == 0)
+          comptime_env_bind_value(call_env, eval->valloc, pname, self_arg);
+      }
+    }
+
+    comptime_env_t prev_env = eval->current_env;
+    eval->current_env = call_env;
+    eval->call_depth++;
+
+    comptime_signal_t call_sig =
+        _comptime_exec_block(eval, ctx, next_fn->function.body);
+
+    eval->call_depth--;
+    eval->current_env = prev_env;
+
+    /* Copy modified self data back to original iterator. */
+    if (self_arg && iter &&
+        self_arg->kind == COMPTIME_VALUE_COMPOSITE &&
+        iter->kind == COMPTIME_VALUE_COMPOSITE &&
+        self_arg->composite.data_size == iter->composite.data_size &&
+        self_arg->composite.data && iter->composite.data) {
+      memcpy(iter->composite.data, self_arg->composite.data,
+             iter->composite.data_size);
+    }
+
+    /* Clone return value before disposing call_env */
+    comptime_value_t result = NULL;
+    if (call_sig.kind == COMPTIME_SIGNAL_RETURN && call_sig.return_value) {
+      result = comptime_value_clone(eval->allocator, call_sig.return_value);
+      comptime_env_track_temp(eval->current_env, result);
+    } else if (call_sig.kind == COMPTIME_SIGNAL_ERROR) {
+      comptime_env_dispose(call_env);
+      sig = _eval_signal_error();
+      break;
+    }
+
+    comptime_env_dispose(call_env);
+
+    if (_val_is_error(result)) {
+      sig = _eval_signal_error();
+      break;
+    }
+
+    /* Check result.done */
+    comptime_value_t done =
+        comptime_value_get_field(result, "done", eval->allocator);
+    if (done && comptime_value_is_truthy(done)) {
+      allocator_free(eval->allocator, &done);
+      break;
+    }
+    allocator_free(eval->allocator, &done);
+
+    /* Get result.value */
+    comptime_value_t value =
+        comptime_value_get_field(result, "value", eval->allocator);
+    if (!value) {
+      sig = _eval_signal_error();
+      break;
+    }
+
+    /* Bind/update loop variable */
+    const char *vname = _eval_ident_str(variable);
+    if (!vname) break;
+    if (is_var_decl || !comptime_env_lookup_addr(loop_env, vname)) {
+      comptime_env_bind_value(loop_env, eval->valloc, vname, value);
+    } else {
+      comptime_env_update_value(loop_env, eval->valloc, vname, value);
+    }
+
+    /* Execute body */
+    sig = _comptime_exec_block(eval, ctx, body);
+    if (sig.kind == COMPTIME_SIGNAL_BREAK) {
+      sig = _eval_signal_none();
+      break;
+    }
+    if (sig.kind == COMPTIME_SIGNAL_CONTINUE) {
+      sig = _eval_signal_none();
+      continue;
+    }
+    if (sig.kind != COMPTIME_SIGNAL_NONE) break;
+  }
+
+  eval->loop_depth--;
+  comptime_alloc_leave_scope(eval->valloc);
+  /* Clone return value into parent env before disposing loop env */
+  if (sig.kind == COMPTIME_SIGNAL_RETURN && sig.return_value) {
+    comptime_value_t cloned =
+        comptime_value_clone(eval->allocator, sig.return_value);
+    comptime_env_track_temp(eval->current_env->parent, cloned);
+    sig.return_value = cloned;
+  }
+  eval->current_env = loop_env->parent;
+  comptime_env_dispose(loop_env);
+  return sig;
+}
+
 /* --- statement dispatcher --- */
 
 comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
@@ -295,177 +469,12 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     if (_val_is_error(iter))
       return _eval_signal_error();
 
-    /* foreach only supports iterators with a next() method.
-     * Look up the next() instance method on the iterator's type. */
-    if (!iter->type || !iter->type->instance_methods) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                           stmt->location,
-                           "foreach requires an iterator with next() method");
-      ctx->error_count++;
-      return _eval_signal_error();
-    }
-
-    struct symbol *next_sym = NULL;
-    size_t mc = vec_get_size(iter->type->instance_methods);
-    for (size_t i = 0; i < mc; i++) {
-      struct symbol *s = (struct symbol *)vec_get(iter->type->instance_methods, i);
-      if (s && s->name && strcmp(s->name, "next") == 0) {
-        next_sym = s;
-        break;
-      }
-    }
-    if (!next_sym) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                           stmt->location,
-                           "foreach requires an iterator with next() method");
-      ctx->error_count++;
-      return _eval_signal_error();
-    }
-
-    /* Create the next() function value from the method symbol.
-     * The symbol's ast_node holds the function body and param info. */
-    comptime_value_t next_fn = _comptime_create_method_value(eval, ctx, next_sym);
-    comptime_env_track_temp(eval->current_env, next_fn);
-    if (!next_fn || next_fn->kind != COMPTIME_VALUE_FUNCTION) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                           stmt->location,
-                           "foreach: next() method not found at comptime");
-      ctx->error_count++;
-      return _eval_signal_error();
-    }
-
-    /* Enter foreach scope */
-    comptime_env_t loop_env =
-        comptime_env_create(eval->allocator, eval->current_env);
-    eval->current_env = loop_env;
-    comptime_alloc_enter_scope(eval->valloc);
-
-    eval->loop_depth++;
-    int iterations = 0;
-    comptime_signal_t sig = _eval_signal_none();
-
-    while (true) {
-      if (++iterations > COMPTIME_MAX_LOOP_ITERATIONS) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                             stmt->location,
-                             "comptime loop exceeded %d iterations",
-                             COMPTIME_MAX_LOOP_ITERATIONS);
-        ctx->error_count++;
-        sig = _eval_signal_error();
-        break;
-      }
-
-      /* Call next() on the iterator: next(self=iter)
-       * We manually manage the call env so we can copy the modified
-       * self data back to the original iterator before disposing the env. */
-      comptime_value_t self_arg = comptime_value_clone(eval->allocator, iter);
-
-      comptime_env_t call_env =
-          comptime_env_create(eval->allocator,
-              next_fn->function.captured_env
-                  ? next_fn->function.captured_env
-                  : eval->current_env);
-      /* Bind self parameter */
-      if (next_fn->function.param_names) {
-        size_t pcount = vec_get_size(next_fn->function.param_names);
-        for (size_t pi = 0; pi < pcount; pi++) {
-          const char *pname = (const char *)vec_get(next_fn->function.param_names, pi);
-          if (pi == 0)
-            comptime_env_bind_value(call_env, eval->valloc, pname, self_arg);
-        }
-      }
-
-      comptime_env_t prev_env = eval->current_env;
-      eval->current_env = call_env;
-      eval->call_depth++;
-
-      comptime_signal_t call_sig =
-          _comptime_exec_block(eval, ctx, next_fn->function.body);
-
-      eval->call_depth--;
-      eval->current_env = prev_env;
-
-      /* Copy modified self data back to original iterator.
-       * The method may have mutated self (e.g. advancing a counter),
-       * and those changes must persist for the next next() call. */
-      if (self_arg && iter &&
-          self_arg->kind == COMPTIME_VALUE_COMPOSITE &&
-          iter->kind == COMPTIME_VALUE_COMPOSITE &&
-          self_arg->composite.data_size == iter->composite.data_size &&
-          self_arg->composite.data && iter->composite.data) {
-        memcpy(iter->composite.data, self_arg->composite.data,
-               iter->composite.data_size);
-      }
-
-      /* Clone return value before disposing call_env */
-      comptime_value_t result = NULL;
-      if (call_sig.kind == COMPTIME_SIGNAL_RETURN && call_sig.return_value) {
-        result = comptime_value_clone(eval->allocator, call_sig.return_value);
-        comptime_env_track_temp(eval->current_env, result);
-      } else if (call_sig.kind == COMPTIME_SIGNAL_ERROR) {
-        comptime_env_dispose(call_env);
-        sig = _eval_signal_error();
-        break;
-      }
-
-      comptime_env_dispose(call_env);
-
-      if (_val_is_error(result)) {
-        sig = _eval_signal_error();
-        break;
-      }
-
-      /* Check result.done */
-      comptime_value_t done =
-          comptime_value_get_field(result, "done", eval->allocator);
-      if (done && comptime_value_is_truthy(done)) {
-        allocator_free(eval->allocator, &done);
-        break;
-      }
-      allocator_free(eval->allocator, &done);
-
-      /* Get result.value */
-      comptime_value_t value =
-          comptime_value_get_field(result, "value", eval->allocator);
-      if (!value) {
-        sig = _eval_signal_error();
-        break;
-      }
-
-      /* Bind/update loop variable */
-      const char *vname = _eval_ident_str(sfe->variable);
-      if (!vname) break;
-      if (sfe->is_var_decl || !comptime_env_lookup_addr(loop_env, vname)) {
-        comptime_env_bind_value(loop_env, eval->valloc, vname, value);
-      } else {
-        comptime_env_update_value(loop_env, eval->valloc, vname, value);
-      }
-
-      /* Execute body */
-      sig = _comptime_exec_block(eval, ctx, sfe->body);
-      if (sig.kind == COMPTIME_SIGNAL_BREAK) {
-        sig = _eval_signal_none();
-        break;
-      }
-      if (sig.kind == COMPTIME_SIGNAL_CONTINUE) {
-        sig = _eval_signal_none();
-        continue;
-      }
-      if (sig.kind != COMPTIME_SIGNAL_NONE) break;
-    }
-
-    eval->loop_depth--;
-    comptime_alloc_leave_scope(eval->valloc);
-    /* Clone return value into parent env before disposing loop env */
-    if (sig.kind == COMPTIME_SIGNAL_RETURN && sig.return_value) {
-      comptime_value_t cloned =
-          comptime_value_clone(eval->allocator, sig.return_value);
-      comptime_env_track_temp(eval->current_env->parent, cloned);
-      sig.return_value = cloned;
-    }
-    eval->current_env = loop_env->parent;
-    comptime_env_dispose(loop_env);
-    return sig;
+    return _comptime_exec_foreach_loop(eval, ctx, stmt->location,
+                                        sfe->is_var_decl,
+                                        sfe->variable,
+                                        sfe->var_type,
+                                        iter,
+                                        sfe->body);
   }
 
   case CUBEC_NODE_STATEMENT_DECLARATION: {
@@ -640,8 +649,8 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
   case CUBEC_NODE_STATEMENT_COMPTIME_IF:
     return comptime_eval_exec_comptime_if(eval, ctx, stmt);
 
-  case CUBEC_NODE_STATEMENT_COMPTIME_FOR:
-    return comptime_eval_exec_comptime_for(eval, ctx, stmt);
+  case CUBEC_NODE_STATEMENT_COMPTIME_FOREACH:
+    return comptime_eval_exec_comptime_foreach(eval, ctx, stmt);
 
   /* Type/import/test declarations: skip (handled by checker_evaluate) */
   case CUBEC_NODE_STATEMENT_STRUCT:
@@ -674,7 +683,17 @@ comptime_signal_t comptime_eval_exec_comptime_if(comptime_eval_t eval,
                                                   node_t node) {
   cubec_statement_comptime_if_t ci = (cubec_statement_comptime_if_t)node;
   comptime_value_t cond = _comptime_eval_expr(eval, ctx, ci->condition);
-  if (_val_is_error(cond)) return _eval_signal_error();
+  if (_val_is_error(cond)) {
+    if (cond && cond->kind == COMPTIME_VALUE_FATAL)
+      return _eval_signal_fatal();
+    return _eval_signal_error();
+  }
+  if (cond->kind != COMPTIME_VALUE_BOOL) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                         "comptime if condition must be a compile-time bool");
+    ctx->error_count++;
+    return _eval_signal_error();
+  }
   if (comptime_value_is_truthy(cond)) {
     if (ci->then_branch && ci->then_branch->kind == CUBEC_NODE_STATEMENT_BLOCK)
       return _comptime_exec_block(eval, ctx, ci->then_branch);
@@ -688,45 +707,19 @@ comptime_signal_t comptime_eval_exec_comptime_if(comptime_eval_t eval,
   return _eval_signal_none();
 }
 
-comptime_signal_t comptime_eval_exec_comptime_for(comptime_eval_t eval,
-                                                   checker_t ctx,
-                                                   node_t node) {
-  cubec_statement_comptime_for_t cf = (cubec_statement_comptime_for_t)node;
-  comptime_alloc_enter_scope(eval->valloc);
-  if (cf->init) _comptime_exec_stmt(eval, ctx, cf->init);
-  eval->loop_depth++;
-  int iterations = 0;
-  comptime_signal_t sig = _eval_signal_none();
-  while (true) {
-    if (cf->condition) {
-      comptime_value_t cond = _comptime_eval_expr(eval, ctx, cf->condition);
-      if (_val_is_error(cond)) {
-        sig = _eval_signal_error();
-        break;
-      }
-      if (!comptime_value_is_truthy(cond)) break;
-    }
-    if (++iterations > COMPTIME_MAX_LOOP_ITERATIONS) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
-                           "comptime loop exceeded %d iterations",
-                           COMPTIME_MAX_LOOP_ITERATIONS);
-      ctx->error_count++;
-      sig = _eval_signal_error();
-      break;
-    }
-    sig = _comptime_exec_block(eval, ctx, cf->body);
-    if (sig.kind == COMPTIME_SIGNAL_BREAK) {
-      sig = _eval_signal_none();
-      break;
-    }
-    if (sig.kind == COMPTIME_SIGNAL_CONTINUE) {
-      sig = _eval_signal_none();
-    } else if (sig.kind != COMPTIME_SIGNAL_NONE) {
-      break;
-    }
-    if (cf->increment) _comptime_eval_expr(eval, ctx, cf->increment);
-  }
-  eval->loop_depth--;
-  comptime_alloc_leave_scope(eval->valloc);
-  return sig;
+comptime_signal_t comptime_eval_exec_comptime_foreach(comptime_eval_t eval,
+                                                        checker_t ctx,
+                                                        node_t node) {
+  cubec_statement_comptime_foreach_t cf =
+      (cubec_statement_comptime_foreach_t)node;
+  comptime_value_t iter = _comptime_eval_expr(eval, ctx, cf->iterator);
+  if (_val_is_error(iter))
+    return _eval_signal_error();
+
+  return _comptime_exec_foreach_loop(eval, ctx, node->location,
+                                      cf->is_var_decl,
+                                      cf->variable,
+                                      cf->var_type,
+                                      iter,
+                                      cf->body);
 }

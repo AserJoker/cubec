@@ -262,37 +262,42 @@ void checker_collect_declarations(checker_t ctx, node_t program) {
   for (size_t i = 0; i < count; i++) {
     node_t stmt = (node_t)vec_get(prog->statements, i);
     if (!stmt) continue;
+    checker_collect_statement(ctx, stmt);
+  }
+}
 
-    switch (stmt->kind) {
-    case CUBEC_NODE_STATEMENT_STRUCT:
-      _collect_struct(ctx, (cubec_statement_struct_t)stmt);
-      break;
-    case CUBEC_NODE_STATEMENT_ENUM:
-      _collect_enum(ctx, (cubec_statement_enum_t)stmt);
-      break;
-    case CUBEC_NODE_STATEMENT_UNION:
-      _collect_union(ctx, (cubec_statement_union_t)stmt);
-      break;
-    case CUBEC_NODE_STATEMENT_CUNION:
-      _collect_cunion(ctx, (cubec_statement_cunion_t)stmt);
-      break;
-    case CUBEC_NODE_STATEMENT_INTERFACE:
-      _collect_interface(ctx, (cubec_statement_interface_t)stmt);
-      break;
-    case CUBEC_NODE_STATEMENT_FUNCTION:
-      _collect_function(ctx, (cubec_statement_function_t)stmt);
-      break;
-    case CUBEC_NODE_STATEMENT_DECLARATION:
-      _collect_variable(ctx, (cubec_statement_declaration_t)stmt);
-      break;
-    case CUBEC_NODE_STATEMENT_DECLARATION_TYPE:
-      _collect_type_alias(ctx, (cubec_statement_declaration_type_t)stmt);
-      break;
-    case CUBEC_NODE_STATEMENT_IMPORT:
-      _collect_import(ctx, (cubec_statement_import_t)stmt);
-      break;
-    default:
-      break;
-    }
+void checker_collect_statement(checker_t ctx, node_t stmt) {
+  if (!stmt) return;
+
+  switch (stmt->kind) {
+  case CUBEC_NODE_STATEMENT_STRUCT:
+    _collect_struct(ctx, (cubec_statement_struct_t)stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_ENUM:
+    _collect_enum(ctx, (cubec_statement_enum_t)stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_UNION:
+    _collect_union(ctx, (cubec_statement_union_t)stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_CUNION:
+    _collect_cunion(ctx, (cubec_statement_cunion_t)stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_INTERFACE:
+    _collect_interface(ctx, (cubec_statement_interface_t)stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_FUNCTION:
+    _collect_function(ctx, (cubec_statement_function_t)stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_DECLARATION:
+    _collect_variable(ctx, (cubec_statement_declaration_t)stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_DECLARATION_TYPE:
+    _collect_type_alias(ctx, (cubec_statement_declaration_type_t)stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_IMPORT:
+    _collect_import(ctx, (cubec_statement_import_t)stmt);
+    break;
+  default:
+    break;
   }
 }

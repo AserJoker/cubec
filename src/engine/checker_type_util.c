@@ -492,14 +492,16 @@ static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
   }
 }
 
-bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
-                       semantic_type_t constraint, node_t arg_expr) {
+/* Core constraint checking logic. When silent=true, no diagnostics are
+   emitted — used by _check_constraint_silent for extends expression eval. */
+static bool _check_constraint_impl(checker_t ctx, semantic_type_t type_arg,
+                                   semantic_type_t constraint, node_t arg_expr,
+                                   bool silent) {
   if (!constraint) return true;
   if (!type_arg || type_arg->impl->kind == TYPE_ERROR) return false;
 
   switch (constraint->impl->kind) {
   case TYPE_INTERFACE: {
-    /* Check that type_arg implements all required methods */
     vec_t required_methods = constraint->impl->interface_type.methods;
     size_t mcount = required_methods ? vec_get_size(required_methods) : 0;
 
@@ -521,10 +523,12 @@ bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
         }
       }
       if (!found) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                             "type does not satisfy constraint: missing method '%s'",
-                             req->name);
-        ctx->error_count++;
+        if (!silent) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                               "type does not satisfy constraint: missing method '%s'",
+                               req->name);
+          ctx->error_count++;
+        }
         return false;
       }
     }
@@ -532,101 +536,104 @@ bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
   }
 
   case TYPE_GENERIC_INSTANCE: {
-    /* Constraint like T extends Vec[Readable]
-       Check that type_arg is a GENERIC_INSTANCE of the same template
-       and that the corresponding type args satisfy the constraint's args.
-       Wildcard ? in constraint skips the corresponding arg check. */
     if (type_arg->impl->kind != TYPE_GENERIC_INSTANCE) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                           "type does not satisfy generic constraint: not a generic instance");
-      ctx->error_count++;
+      if (!silent) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy generic constraint: not a generic instance");
+        ctx->error_count++;
+      }
       return false;
     }
 
-    /* Same template */
     if (type_arg->impl->generic_instance.generic_template !=
         constraint->impl->generic_instance.generic_template) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                           "type does not satisfy constraint: wrong generic template");
-      ctx->error_count++;
+      if (!silent) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: wrong generic template");
+        ctx->error_count++;
+      }
       return false;
     }
 
-    /* Check type args pairwise */
     vec_t a_args = type_arg->impl->generic_instance.type_args;
     vec_t c_args = constraint->impl->generic_instance.type_args;
     size_t ac = a_args ? vec_get_size(a_args) : 0;
     size_t cc = c_args ? vec_get_size(c_args) : 0;
     if (ac != cc) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                           "type does not satisfy constraint: type arg count mismatch");
-      ctx->error_count++;
+      if (!silent) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: type arg count mismatch");
+        ctx->error_count++;
+      }
       return false;
     }
 
     for (size_t i = 0; i < cc; i++) {
       semantic_type_t ca = (semantic_type_t)vec_get(c_args, i);
       semantic_type_t aa = (semantic_type_t)vec_get(a_args, i);
-      /* Wildcard in constraint skips this arg check */
       if (ca->impl->kind == TYPE_WILDCARD) continue;
-      /* Recursively check nested constraint */
-      if (!_check_constraint(ctx, aa, ca, arg_expr)) return false;
+      if (!_check_constraint_impl(ctx, aa, ca, arg_expr, silent)) return false;
     }
     return true;
   }
 
   case TYPE_POINTER: {
-    /* Constraint like *Readable — check pointee */
     if (type_arg->impl->kind != TYPE_POINTER) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                           "type does not satisfy constraint: expected pointer type");
-      ctx->error_count++;
+      if (!silent) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: expected pointer type");
+        ctx->error_count++;
+      }
       return false;
     }
-    return _check_constraint(ctx, type_arg->impl->pointer.pointee,
-                             constraint->impl->pointer.pointee, arg_expr);
+    return _check_constraint_impl(ctx, type_arg->impl->pointer.pointee,
+                                  constraint->impl->pointer.pointee, arg_expr, silent);
   }
 
   case TYPE_SLICE: {
-    /* Constraint like []Readable — check element */
     if (type_arg->impl->kind != TYPE_SLICE) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                           "type does not satisfy constraint: expected slice type");
-      ctx->error_count++;
+      if (!silent) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: expected slice type");
+        ctx->error_count++;
+      }
       return false;
     }
-    return _check_constraint(ctx, type_arg->impl->slice.element,
-                             constraint->impl->slice.element, arg_expr);
+    return _check_constraint_impl(ctx, type_arg->impl->slice.element,
+                                  constraint->impl->slice.element, arg_expr, silent);
   }
 
   case TYPE_ARRAY: {
-    /* Constraint like [N]? — check element, ignore length if wildcard */
     if (type_arg->impl->kind != TYPE_ARRAY) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                           "type does not satisfy constraint: expected array type");
-      ctx->error_count++;
+      if (!silent) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: expected array type");
+        ctx->error_count++;
+      }
       return false;
     }
     if (constraint->impl->array.length != type_arg->impl->array.length &&
         constraint->impl->array.length != 0) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                           "type does not satisfy constraint: array length mismatch");
-      ctx->error_count++;
+      if (!silent) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: array length mismatch");
+        ctx->error_count++;
+      }
       return false;
     }
-    return _check_constraint(ctx, type_arg->impl->array.element,
-                             constraint->impl->array.element, arg_expr);
+    return _check_constraint_impl(ctx, type_arg->impl->array.element,
+                                  constraint->impl->array.element, arg_expr, silent);
   }
 
   case TYPE_STRUCT:
   case TYPE_UNION:
   case TYPE_CUNION: {
-    /* Structural constraint: check that type_arg has at least the fields
-       with compatible types (wildcard ? skips type check for a field) */
     if (type_arg->impl->kind != constraint->impl->kind) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                           "type does not satisfy constraint: type kind mismatch");
-      ctx->error_count++;
+      if (!silent) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: type kind mismatch");
+        ctx->error_count++;
+      }
       return false;
     }
     vec_t c_fields = constraint->impl->struct_type.fields;
@@ -634,9 +641,11 @@ bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
     size_t cfc = c_fields ? vec_get_size(c_fields) : 0;
     size_t afc = a_fields ? vec_get_size(a_fields) : 0;
     if (afc < cfc) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                           "type does not satisfy constraint: missing fields");
-      ctx->error_count++;
+      if (!silent) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: missing fields");
+        ctx->error_count++;
+      }
       return false;
     }
     for (size_t i = 0; i < cfc; i++) {
@@ -644,27 +653,28 @@ bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
       struct symbol *af = (struct symbol *)vec_get(a_fields, i);
       if (!cf || !cf->name) continue;
       if (!af || !af->name || strcmp(cf->name, af->name) != 0) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                             "type does not satisfy constraint: field '%s' mismatch",
-                             cf->name);
-        ctx->error_count++;
+        if (!silent) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                               "type does not satisfy constraint: field '%s' mismatch",
+                               cf->name);
+          ctx->error_count++;
+        }
         return false;
       }
-      /* Wildcard ? skips field type check */
       if (cf->field.type && cf->field.type->impl->kind == TYPE_WILDCARD) continue;
-      if (!_check_constraint(ctx, af->field.type, cf->field.type, arg_expr))
+      if (!_check_constraint_impl(ctx, af->field.type, cf->field.type, arg_expr, silent))
         return false;
     }
     return true;
   }
 
   case TYPE_TUPLE: {
-    /* Tuple constraint: T extends <?> means T must be a tuple type.
-       If constraint has element types, check them pairwise (wildcard skips). */
     if (type_arg->impl->kind != TYPE_TUPLE) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                           "type does not satisfy constraint: expected tuple type");
-      ctx->error_count++;
+      if (!silent) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: expected tuple type");
+        ctx->error_count++;
+      }
       return false;
     }
     vec_t c_elems = constraint->impl->tuple.element_types;
@@ -672,38 +682,49 @@ bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
     size_t cec = c_elems ? vec_get_size(c_elems) : 0;
     size_t aec = a_elems ? vec_get_size(a_elems) : 0;
     if (aec < cec) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                           "type does not satisfy constraint: tuple element count mismatch");
-      ctx->error_count++;
+      if (!silent) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                             "type does not satisfy constraint: tuple element count mismatch");
+        ctx->error_count++;
+      }
       return false;
     }
     for (size_t i = 0; i < cec; i++) {
       semantic_type_t ce = (semantic_type_t)vec_get(c_elems, i);
       semantic_type_t ae = (semantic_type_t)vec_get(a_elems, i);
       if (ce->impl->kind == TYPE_WILDCARD) continue;
-      if (!_check_constraint(ctx, ae, ce, arg_expr))
+      if (!_check_constraint_impl(ctx, ae, ce, arg_expr, silent))
         return false;
     }
     return true;
   }
 
   case TYPE_WILDCARD: {
-    /* <?> (is_tuple=true): type_arg must be a tuple type.
-       ? (is_tuple=false): matches any type. */
     if (constraint->impl->wildcard.is_tuple) {
       if (type_arg->impl->kind != TYPE_TUPLE) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
-                             "type does not satisfy constraint: expected tuple type");
-        ctx->error_count++;
+        if (!silent) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
+                               "type does not satisfy constraint: expected tuple type");
+          ctx->error_count++;
+        }
         return false;
       }
     }
     return true;
   }
   default:
-    /* Other constraint types: structural equality check */
     return true;
   }
+}
+
+bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
+                       semantic_type_t constraint, node_t arg_expr) {
+  return _check_constraint_impl(ctx, type_arg, constraint, arg_expr, false);
+}
+
+bool _check_constraint_silent(checker_t ctx, semantic_type_t type_arg,
+                              semantic_type_t constraint) {
+  return _check_constraint_impl(ctx, type_arg, constraint, NULL, true);
 }
 
 bool _check_generic_param_constraints(checker_t ctx, vec_t generic_params,

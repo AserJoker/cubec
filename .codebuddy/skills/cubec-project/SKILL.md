@@ -884,8 +884,8 @@ export struct SomeType { ref: *a.SomeType }     // ✅ OK: struct definition
 
 ### comptime 编译时求值
 - `comptime { }` — 独立 AST 节点
-- `comptime if(condition) { } else { }` — 独立 AST 节点
-- `comptime for(init; cond; incr) { }` — 编译期循环展开
+- `comptime if(condition) { } else { }` — 独立 AST 节点，条件必须编译期求值为 bool，未采取分支不做类型检查
+- `comptime foreach(item of iter) { }` — 编译期迭代器展开，支持 `var` 和类型注解
 
 ## Generics System (泛型系统)
 
@@ -1058,7 +1058,8 @@ func[T](x: T): void {
 }
 ```
 
-不满足条件的分支不参与代码生成，类似 C++17 `if constexpr` 或 Zig `comptime if`。
+不满足条件的分支不参与代码生成和类型检查，类似 C++17 `if constexpr` 或 Zig `comptime if`。
+条件必须是编译期可求值为 bool 的值，否则编译报错。`extends` 表达式在 comptime 求值器中返回 bool 值。
 
 #### 12. 全类型编译期计算
 

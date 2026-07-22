@@ -121,7 +121,7 @@ extern var errno: i32
 comptime var N = 10;                    // 编译期变量
 comptime func factorial(n: i32): i32    // 编译期函数
 comptime if (N > 5) { ... }            // 编译期条件
-comptime for (...) { ... }             // 编译期循环
+comptime foreach (item of iter) { ... }  // 编译期迭代器展开
 comptime { ... }                       // 编译期执行块
 ```
 

@@ -425,7 +425,7 @@ TEST_F(dt_comptime_eval, comptime_for_loop) {
 
   node_t for_stmt = cubec_ast_create_for_stmt(allocator, T, init, cond, incr, body);
 
-  comptime_signal_t sig = comptime_eval_exec_comptime_for(ctx->comptime_eval, ctx, for_stmt);
+  comptime_signal_t sig = comptime_eval_exec_stmt(ctx->comptime_eval, ctx, for_stmt);
   EXPECT_EQ(sig.kind, COMPTIME_SIGNAL_NONE);
 
   allocator_free(allocator, &for_stmt);
@@ -588,7 +588,7 @@ TEST_F(dt_comptime_eval, break_in_for) {
   node_t for_stmt = cubec_ast_create_for_stmt(allocator, T, init,
                     true_id, NULL, body);
 
-  comptime_signal_t sig = comptime_eval_exec_comptime_for(ctx->comptime_eval, ctx, for_stmt);
+  comptime_signal_t sig = comptime_eval_exec_stmt(ctx->comptime_eval, ctx, for_stmt);
   EXPECT_EQ(sig.kind, COMPTIME_SIGNAL_NONE);
   allocator_free(allocator, &for_stmt);
   checker_dispose(ctx);
@@ -626,7 +626,7 @@ TEST_F(dt_comptime_eval, continue_in_for) {
 
   node_t for_stmt = cubec_ast_create_for_stmt(allocator, T, init, cond, incr, body);
 
-  comptime_signal_t sig = comptime_eval_exec_comptime_for(ctx->comptime_eval, ctx, for_stmt);
+  comptime_signal_t sig = comptime_eval_exec_stmt(ctx->comptime_eval, ctx, for_stmt);
   EXPECT_EQ(sig.kind, COMPTIME_SIGNAL_NONE);
   allocator_free(allocator, &for_stmt);
   checker_dispose(ctx);

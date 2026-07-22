@@ -2,6 +2,7 @@
 #include "engine/comptime_eval_internal.h"
 #include "engine/resolver.h"
 #include "engine/symbol.h"
+#include "engine/checker_type_util.h"
 #include "core/string.h"
 #include "core/allocator.h"
 #include "cubec/expression_binary.h"
@@ -258,6 +259,16 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
     result = comptime_value_create_int(eval->allocator, (int64_t)shifted, shifted,
                                        lv->int_val.width,
                                        lv->int_val.is_signed, lv->type);
+  }
+
+  /* extends: compile-time constraint check — returns bool */
+  else if (strcmp(op, "extends") == 0) {
+    semantic_type_t type_arg = (lv->kind == COMPTIME_VALUE_TYPE) ? lv->type_val : lv->type;
+    semantic_type_t constraint = (rv->kind == COMPTIME_VALUE_TYPE) ? rv->type_val : rv->type;
+    if (type_arg && constraint) {
+      bool satisfies = _check_constraint_silent(ctx, type_arg, constraint);
+      result = comptime_value_create_bool(eval->allocator, satisfies, ctx->builtin_bool);
+    }
   }
 
   return result ? _eval_temp(eval, result) : _eval_error_val(eval);

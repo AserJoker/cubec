@@ -6,6 +6,7 @@
 #include "engine/checker_check_expr.h"
 #include "engine/checker_check_stmt.h"
 #include "engine/comptime_eval.h"
+#include "engine/comptime_eval_internal.h"
 #include "engine/resolver.h"
 #include "engine/symbol.h"
 #include "engine/type_hash.h"
@@ -14,6 +15,7 @@
 #include "core/allocator.h"
 #include "cubec/token.h"
 #include "cubec/statement_test.h"
+#include "cubec/statement_block.h"
 #include "core/string.h"
 #include "core/vec.h"
 #include "cubec/node.h"
@@ -795,18 +797,67 @@ static void _evaluate_comptime_block(checker_t ctx,
 static void _evaluate_comptime_if(checker_t ctx,
                                   cubec_statement_comptime_if_t node) {
   if (!ctx->comptime_eval) return;
+
+  /* Evaluate condition — must be compile-time bool */
+  comptime_value_t cond =
+      comptime_eval_expr(ctx->comptime_eval, ctx, node->condition);
+  if (!cond || _val_is_error(cond)) {
+    if (cond && cond->kind == COMPTIME_VALUE_FATAL) {
+      ctx->fatal_error = true;
+      return;
+    }
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         node->super.location,
+                         "comptime if condition must be a compile-time bool");
+    ctx->error_count++;
+    return;
+  }
+  if (cond->kind != COMPTIME_VALUE_BOOL) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         node->super.location,
+                         "comptime if condition must be a compile-time bool");
+    ctx->error_count++;
+    return;
+  }
+
+  /* Determine taken branch */
+  bool condition_true = comptime_value_is_truthy(cond);
+  node_t taken = condition_true ? node->then_branch : node->else_branch;
+
+  /* Collect and evaluate declarations in the taken branch only */
+  if (taken) {
+    if (taken->kind == CUBEC_NODE_STATEMENT_BLOCK) {
+      cubec_statement_block_t blk = (cubec_statement_block_t)taken;
+      if (blk->statements) {
+        size_t count = vec_get_size(blk->statements);
+        for (size_t i = 0; i < count; i++) {
+          if (ctx->fatal_error) break;
+          node_t s = (node_t)vec_get(blk->statements, i);
+          checker_collect_statement(ctx, s);
+        }
+        for (size_t i = 0; i < count; i++) {
+          if (ctx->fatal_error) break;
+          node_t s = (node_t)vec_get(blk->statements, i);
+          checker_evaluate_statement(ctx, s);
+        }
+      }
+    }
+  }
+
+  /* Execute the taken branch at comptime */
   comptime_signal_t sig =
       comptime_eval_exec_comptime_if(ctx->comptime_eval, ctx, (node_t)node);
   if (sig.kind == COMPTIME_SIGNAL_FATAL)
     ctx->fatal_error = true;
-  else if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
+  else if (sig.kind == COMPTIME_SIGNAL_ERROR)
+    ctx->error_count++;
 }
 
-static void _evaluate_comptime_for(checker_t ctx,
-                                   cubec_statement_comptime_for_t node) {
+static void _evaluate_comptime_foreach(checker_t ctx,
+                                       cubec_statement_comptime_foreach_t node) {
   if (!ctx->comptime_eval) return;
   comptime_signal_t sig =
-      comptime_eval_exec_comptime_for(ctx->comptime_eval, ctx, (node_t)node);
+      comptime_eval_exec_comptime_foreach(ctx->comptime_eval, ctx, (node_t)node);
   if (sig.kind == COMPTIME_SIGNAL_FATAL)
     ctx->fatal_error = true;
   else if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
@@ -858,24 +909,30 @@ void checker_evaluate_declarations(checker_t ctx, node_t program) {
 
   size_t count = vec_get_size(prog->statements);
   for (size_t i = 0; i < count; i++) {
-    if (ctx->fatal_error) break;  /* panic stops all evaluation */
+    if (ctx->fatal_error) break;
     node_t stmt = (node_t)vec_get(prog->statements, i);
     if (!stmt) continue;
-    switch (stmt->kind) {
-    case CUBEC_NODE_STATEMENT_STRUCT:          _evaluate_struct(ctx, (cubec_statement_struct_t)stmt); break;
-    case CUBEC_NODE_STATEMENT_ENUM:            _evaluate_enum(ctx, (cubec_statement_enum_t)stmt); break;
-    case CUBEC_NODE_STATEMENT_UNION:           _evaluate_union(ctx, (cubec_statement_union_t)stmt); break;
-    case CUBEC_NODE_STATEMENT_CUNION:          _evaluate_cunion(ctx, (cubec_statement_cunion_t)stmt); break;
-    case CUBEC_NODE_STATEMENT_INTERFACE:       _evaluate_interface(ctx, (cubec_statement_interface_t)stmt); break;
-    case CUBEC_NODE_STATEMENT_FUNCTION:        _evaluate_function(ctx, (cubec_statement_function_t)stmt); break;
-    case CUBEC_NODE_STATEMENT_DECLARATION:     _evaluate_variable(ctx, (cubec_statement_declaration_t)stmt); break;
-    case CUBEC_NODE_STATEMENT_DECLARATION_TYPE: _evaluate_type_alias(ctx, (cubec_statement_declaration_type_t)stmt); break;
-    case CUBEC_NODE_STATEMENT_IMPORT:          _evaluate_import(ctx, (cubec_statement_import_t)stmt); break;
-    case CUBEC_NODE_STATEMENT_COMPTIME_BLOCK:  _evaluate_comptime_block(ctx, (cubec_statement_comptime_block_t)stmt); break;
-    case CUBEC_NODE_STATEMENT_COMPTIME_IF:     _evaluate_comptime_if(ctx, (cubec_statement_comptime_if_t)stmt); break;
-    case CUBEC_NODE_STATEMENT_COMPTIME_FOR:    _evaluate_comptime_for(ctx, (cubec_statement_comptime_for_t)stmt); break;
-    case CUBEC_NODE_STATEMENT_TEST:            _evaluate_test(ctx, (cubec_statement_test_t)stmt); break;
-    default: break;
-    }
+    checker_evaluate_statement(ctx, stmt);
+  }
+}
+
+void checker_evaluate_statement(checker_t ctx, node_t stmt) {
+  if (!stmt) return;
+
+  switch (stmt->kind) {
+  case CUBEC_NODE_STATEMENT_STRUCT:          _evaluate_struct(ctx, (cubec_statement_struct_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_ENUM:            _evaluate_enum(ctx, (cubec_statement_enum_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_UNION:           _evaluate_union(ctx, (cubec_statement_union_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_CUNION:          _evaluate_cunion(ctx, (cubec_statement_cunion_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_INTERFACE:       _evaluate_interface(ctx, (cubec_statement_interface_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_FUNCTION:        _evaluate_function(ctx, (cubec_statement_function_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_DECLARATION:     _evaluate_variable(ctx, (cubec_statement_declaration_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_DECLARATION_TYPE: _evaluate_type_alias(ctx, (cubec_statement_declaration_type_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_IMPORT:          _evaluate_import(ctx, (cubec_statement_import_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_COMPTIME_BLOCK:  _evaluate_comptime_block(ctx, (cubec_statement_comptime_block_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_COMPTIME_IF:     _evaluate_comptime_if(ctx, (cubec_statement_comptime_if_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_COMPTIME_FOREACH: _evaluate_comptime_foreach(ctx, (cubec_statement_comptime_foreach_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_TEST:            _evaluate_test(ctx, (cubec_statement_test_t)stmt); break;
+  default: break;
   }
 }

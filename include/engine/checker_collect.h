@@ -7,6 +7,7 @@ extern "C" {
 #endif
 
 void checker_collect_declarations(checker_t ctx, node_t program);
+void checker_collect_statement(checker_t ctx, node_t stmt);
 
 #ifdef __cplusplus
 }
