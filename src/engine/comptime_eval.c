@@ -17,6 +17,10 @@ comptime_eval_t comptime_eval_create(allocator_t allocator) {
   eval->cleanup_stack = (vec_t)allocator_create(allocator, &g_vec_type, &vi);
   vec_init_t cvi = {.auto_dispose = false};
   eval->captured_envs = (vec_t)allocator_create(allocator, &g_vec_type, &cvi);
+  vec_init_t rti = {.auto_dispose = false};
+  eval->return_type_stack = (vec_t)allocator_create(allocator, &g_vec_type, &rti);
+  eval->propagated_return = false;
+  eval->propagated_return_value = NULL;
 
   /* Bind builtin literal values in global environment (allocated at scope depth 0) */
   comptime_env_bind_value(eval->global_env, eval->valloc, "true",
@@ -52,6 +56,10 @@ void comptime_eval_dispose(comptime_eval_t self) {
     comptime_env_dispose(env);
   }
   allocator_free(a, &self->captured_envs);
+
+  /* 5. Free return type stack */
+  vec_resize(self->return_type_stack, 0);
+  allocator_free(a, &self->return_type_stack);
 
   /* Do NOT free self here — _checker_dispose calls allocator_free for the eval struct */
 }

@@ -681,7 +681,7 @@ TEST_F(dt_comptime_eval, eval_composite_slice) {
   for (int i = 0; i < 5; i++) {
     comptime_value_t elem = comptime_value_create_int(allocator,
                             (i + 1) * 10, (i + 1) * 10, 32, true, ctx->builtin_i32);
-    comptime_value_set_index(comp, i, elem);
+    comptime_value_set_index(comp, i, elem, allocator);
     allocator_free(allocator, &elem);
   }
 
@@ -780,8 +780,8 @@ TEST_F(dt_comptime_eval, composite_field_assign) {
       allocator, pt_type, NULL, pt_type->impl->size);
   comptime_value_t init_x = comptime_value_create_int(allocator, 10, 10, 32, true, ctx->builtin_i32);
   comptime_value_t init_y = comptime_value_create_int(allocator, 20, 20, 32, true, ctx->builtin_i32);
-  comptime_value_set_field(comp, "x", init_x);
-  comptime_value_set_field(comp, "y", init_y);
+  comptime_value_set_field(comp, "x", init_x, allocator);
+  comptime_value_set_field(comp, "y", init_y, allocator);
   allocator_free(allocator, &init_x);
   allocator_free(allocator, &init_y);
   comptime_env_bind_value(ctx->comptime_eval->global_env, ctx->comptime_eval->valloc, "pt", comp);
@@ -805,11 +805,12 @@ TEST_F(dt_comptime_eval, composite_field_assign) {
   EXPECT_EQ(x_field->int_val.s, 99);
   allocator_free(allocator, &x_field);
   allocator_free(allocator, &asgn);
-  /* pt_type is not in ctx->all_types, so we must free it manually */
+  /* Dispose checker first — comptime values reference pt_type via comp->type,
+     so pt_type must remain valid until comptime_allocator_dispose runs. */
+  checker_dispose(ctx);
   allocator_free(allocator, &pt_type);
   allocator_free(allocator, &fx);
   allocator_free(allocator, &fy);
-  checker_dispose(ctx);
 }
 
 /* ===== test block execution ===== */

@@ -16,6 +16,72 @@ static void _comptime_value_init(void *self, allocator_t allocator, void *arg) {
   *dst = *src;
 }
 
+/* Iterate string_t fields in a composite value's data buffer.
+ * For structs: iterate all fields.
+ * For tagged unions: only iterate fields of the active variant
+ *   (non-active variant slots contain garbage, not valid string_t pointers). */
+static void _foreach_string_field(comptime_value_t v,
+                                  bool (*fn)(string_t *slot, void *ctx),
+                                  void *ctx) {
+  if (!v->type || !v->type->impl || !v->composite.data) return;
+  vec_t fields = NULL;
+  type_impl_t impl = v->type->impl;
+  bool is_union = false;
+  if (impl->kind == TYPE_STRUCT) {
+    fields = impl->struct_type.fields;
+  } else if (impl->kind == TYPE_UNION || impl->kind == TYPE_CUNION) {
+    fields = impl->struct_type.fields;
+    is_union = true;
+  } else if (impl->kind == TYPE_GENERIC_INSTANCE) {
+    fields = impl->generic_instance.fields;
+    semantic_type_t base = impl->generic_instance.generic_template;
+    if (base && base->impl &&
+        (base->impl->kind == TYPE_UNION || base->impl->kind == TYPE_CUNION))
+      is_union = true;
+  }
+  if (!fields) return;
+
+  /* For tagged unions, find the active variant's type hash */
+  uint64_t active_tag = 0;
+  if (is_union && comptime_value_is_tagged_union(v)) {
+    active_tag = comptime_value_get_union_tag(v);
+  }
+
+  size_t fc = vec_get_size(fields);
+  for (size_t i = 0; i < fc; i++) {
+    struct symbol *s = (struct symbol *)vec_get(fields, i);
+    if (!s || (s->kind != SYMBOL_VARIABLE && s->kind != SYMBOL_FIELD)) continue;
+    semantic_type_t ft = s->field.type;
+    if (!ft || !ft->impl) continue;
+    /* For tagged unions, skip non-active variant fields */
+    if (is_union && active_tag != 0) {
+      type_hash_ensure(ft);
+      if (ft->impl->hash != active_tag) continue;
+    }
+    enum type_kind fk = ft->impl->kind;
+    if (fk == TYPE_STRING || fk == TYPE_STR) {
+      string_t *slot = (string_t *)(void *)(v->composite.data + s->field.offset);
+      fn(slot, ctx);
+    }
+  }
+}
+
+static bool _dispose_string_slot(string_t *slot, void *ctx) {
+  allocator_t allocator = (allocator_t)ctx;
+  if (*slot) allocator_free(allocator, (void **)slot);
+  return true;
+}
+
+static bool _clone_string_slot(string_t *slot, void *ctx) {
+  allocator_t allocator = (allocator_t)ctx;
+  if (*slot) {
+    string_t new_str = (string_t)allocator_create(allocator, &g_string_type, NULL);
+    string_set(new_str, string_get(*slot));
+    *slot = new_str;
+  }
+  return true;
+}
+
 static void _comptime_value_dispose(void *self, allocator_t allocator) {
   comptime_value_t v = (comptime_value_t)self;
   switch (v->kind) {
@@ -23,8 +89,12 @@ static void _comptime_value_dispose(void *self, allocator_t allocator) {
     allocator_free(allocator, &v->string_val);
     break;
   case COMPTIME_VALUE_COMPOSITE:
-    if (v->composite.data)
+    if (v->composite.data) {
+      /* Dispose string_t objects embedded in composite data before freeing the buffer.
+       * For tagged unions, only the active variant's string_t is valid. */
+      _foreach_string_field(v, _dispose_string_slot, allocator);
       allocator_free(allocator, (void **)&v->composite.data);
+    }
     break;
   case COMPTIME_VALUE_FUNCTION:
     /* captured_env is NOT owned by the function value — it is tracked
@@ -59,6 +129,11 @@ static void _comptime_value_clone(void *self, allocator_t allocator,
       dst->composite.data = (uint8_t *)allocator_alloc(allocator,
                                                         src->composite.data_size);
       memcpy(dst->composite.data, src->composite.data, src->composite.data_size);
+      /* Deep-copy string_t fields: memcpy copies the pointer but not the
+       * underlying string object. For tagged unions, only the active variant's
+       * string_t is valid — non-active slots contain garbage.
+       * Use dst (which has the same type and tag as src) to find slots. */
+      _foreach_string_field(dst, _clone_string_slot, allocator);
     }
     break;
   case COMPTIME_VALUE_FUNCTION:
@@ -462,7 +537,8 @@ comptime_value_t comptime_value_read_field(comptime_value_t composite,
 bool comptime_value_write_field(comptime_value_t composite,
                                 size_t offset,
                                 semantic_type_t field_type,
-                                comptime_value_t value) {
+                                comptime_value_t value,
+                                allocator_t allocator) {
   if (!composite || !composite->composite.data || !value)
     return false;
 
@@ -483,9 +559,6 @@ bool comptime_value_write_field(comptime_value_t composite,
     *(bool *)ptr = value->bool_val;
     break;
   case COMPTIME_VALUE_INT: {
-    /* Use the target field's size for writing.
-     * Cubec does not allow unsafe narrowing (e.g. i64 -> i32).
-     * If field_type is known, check that the source value fits. */
     size_t sz = field_size > 0 ? field_size : (value->int_val.width / 8);
     if (sz == 0) sz = 1;
     if (sz > 8) sz = 8;
@@ -513,9 +586,18 @@ bool comptime_value_write_field(comptime_value_t composite,
   case COMPTIME_VALUE_POINTER:
     *(uint64_t *)ptr = value->pointer.addr;
     break;
-  case COMPTIME_VALUE_STRING:
-    *(string_t *)(void *)ptr = value->string_val;
+  case COMPTIME_VALUE_STRING: {
+    /* Deep-copy the string_t object: allocate a new string_t and copy content,
+     * then store the new pointer. This avoids sharing string_t between composites,
+     * which would cause use-after-free during disposal. */
+    string_t new_str = NULL;
+    if (value->string_val && allocator) {
+      new_str = (string_t)allocator_create(allocator, &g_string_type, NULL);
+      string_set(new_str, string_get(value->string_val));
+    }
+    *(string_t *)(void *)ptr = new_str;
     break;
+  }
   case COMPTIME_VALUE_NIL:
     memset(ptr, 0, field_size > 0 ? field_size : 8);
     break;
@@ -568,7 +650,8 @@ comptime_value_t comptime_value_get_field(comptime_value_t composite,
 
 bool comptime_value_set_field(comptime_value_t composite,
                               const char *field_name,
-                              comptime_value_t value) {
+                              comptime_value_t value,
+                              allocator_t allocator) {
   if (!composite || !composite->type || !field_name) return false;
   type_impl_t impl = composite->type->impl;
   if (!impl) return false;
@@ -583,7 +666,7 @@ bool comptime_value_set_field(comptime_value_t composite,
   for (size_t i = 0; i < fc; i++) {
     struct symbol *s = (struct symbol *)vec_get(fields, i);
     if (s && s->name && strcmp(s->name, field_name) == 0)
-      return comptime_value_write_field(composite, s->field.offset, s->field.type, value);
+      return comptime_value_write_field(composite, s->field.offset, s->field.type, value, allocator);
   }
   return false;
 }
@@ -605,7 +688,8 @@ comptime_value_t comptime_value_get_index(comptime_value_t composite,
 
 bool comptime_value_set_index(comptime_value_t composite,
                               size_t index,
-                              comptime_value_t value) {
+                              comptime_value_t value,
+                              allocator_t allocator) {
   if (!composite || !composite->composite.data) return false;
   semantic_type_t elem_type = composite->composite.element_type;
   if (!elem_type) return false;
@@ -613,5 +697,5 @@ bool comptime_value_set_index(comptime_value_t composite,
   if (elem_size == 0) return false;
   size_t offset = index * elem_size;
   if (offset + elem_size > composite->composite.data_size) return false;
-  return comptime_value_write_field(composite, offset, elem_type, value);
+  return comptime_value_write_field(composite, offset, elem_type, value, allocator);
 }

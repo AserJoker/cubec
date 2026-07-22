@@ -289,7 +289,7 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
     }
 
     if (target->kind == COMPTIME_VALUE_COMPOSITE) {
-      if (!comptime_value_set_field(target, fname, rv)) {
+      if (!comptime_value_set_field(target, fname, rv, eval->allocator)) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
                              "no field '%s' in composite", fname);
         ctx->error_count++;
@@ -356,7 +356,7 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
 
     /* Direct array access (no __set__) */
     if (host->kind == COMPTIME_VALUE_COMPOSITE && host->composite.element_type) {
-      if (!comptime_value_set_index(host, index, rv)) {
+      if (!comptime_value_set_index(host, index, rv, eval->allocator)) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
                              "array index %zu out of bounds", index);
         ctx->error_count++;
@@ -475,7 +475,16 @@ comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
   eval->current_env = call_env;
   eval->call_depth++;
 
+  /* Push return type onto stack for .? error propagation */
+  semantic_type_t ret_type = (callee->type && callee->type->impl->kind == TYPE_FUNCTION)
+      ? callee->type->impl->function.return_type : NULL;
+  vec_push(eval->return_type_stack, ret_type);
+
   comptime_signal_t sig = _comptime_exec_block(eval, ctx, callee->function.body);
+
+  /* Pop return type */
+  size_t rts = vec_get_size(eval->return_type_stack);
+  if (rts > 0) vec_resize(eval->return_type_stack, rts - 1);
 
   eval->call_depth--;
   eval->current_env = prev_env;
@@ -940,6 +949,18 @@ static comptime_value_t _eval_member(comptime_eval_t eval, checker_t ctx,
     if (pointed->kind == COMPTIME_VALUE_COMPOSITE) {
       comptime_value_t field = comptime_value_get_field(pointed, fname, eval->allocator);
       if (field) return _eval_temp(eval, field);
+
+      /* Auto-deref pointer for method lookup: p.method() → typeof(*p)::method(p) */
+      if (pointed->type && pointed->type->instance_methods) {
+        size_t mc = vec_get_size(pointed->type->instance_methods);
+        for (size_t i = 0; i < mc; i++) {
+          struct symbol *s = (struct symbol *)vec_get(pointed->type->instance_methods, i);
+          if (s && s->name && strcmp(s->name, fname) == 0 && s->kind == SYMBOL_FUNCTION) {
+            comptime_value_t method_val = _comptime_create_method_value(eval, ctx, s);
+            if (method_val) return _eval_temp(eval, method_val);
+          }
+        }
+      }
     }
   }
 
@@ -963,13 +984,18 @@ static comptime_value_t _eval_namespace_access(comptime_eval_t eval,
         return _eval_temp(eval, comptime_value_create_type(eval->allocator, s->type.type));
     }
   }
-  if (t->static_methods) {
-    size_t mc = vec_get_size(t->static_methods);
+  /* All methods are in instance_methods; :: is unified namespace access.
+   * a.b() desugars to typeof(a)::b(a.&) — no static/instance split. */
+  if (t->instance_methods) {
+    size_t mc = vec_get_size(t->instance_methods);
     for (size_t i = 0; i < mc; i++) {
-      struct symbol *s = (struct symbol *)vec_get(t->static_methods, i);
+      struct symbol *s = (struct symbol *)vec_get(t->instance_methods, i);
       if (s && s->name && strcmp(s->name, fname) == 0 && s->kind == SYMBOL_FUNCTION) {
-        comptime_value_t v = comptime_env_lookup_value(eval->current_env, eval->valloc, s->name);
-        if (v) return v;  /* borrowed from env */
+        comptime_value_t fn_val = _comptime_create_method_value(eval, ctx, s);
+        if (fn_val) {
+          comptime_env_track_temp(eval->current_env, fn_val);
+          return fn_val;
+        }
       }
     }
   }
@@ -1213,7 +1239,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
         const char *fname = _eval_ident_str((node_t)f->field);
         comptime_value_t v = _comptime_eval_expr(eval, ctx, f->value);
         if (v && v->kind != COMPTIME_VALUE_ERROR)
-          comptime_value_set_field(comp, fname, v);
+          comptime_value_set_field(comp, fname, v, eval->allocator);
       }
     } else if (il->items && vec_get_size(il->items) >= 1) {
       /* Positional init: first field only for union */
@@ -1222,7 +1248,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
       comptime_value_t v = _comptime_eval_expr(eval, ctx,
           (node_t)vec_get(il->items, 0));
       if (v && v->kind != COMPTIME_VALUE_ERROR && fsym)
-        comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v);
+        comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v, eval->allocator);
       if (vec_get_size(il->items) > 1) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
             "union initialization requires exactly one field");
@@ -1250,7 +1276,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
         const char *fname = _eval_ident_str((node_t)f->field);
         comptime_value_t v = _comptime_eval_expr(eval, ctx, f->value);
         if (v && v->kind != COMPTIME_VALUE_ERROR)
-          comptime_value_set_field(comp, fname, v);
+          comptime_value_set_field(comp, fname, v, eval->allocator);
       }
     } else if (il->items) {
       /* Positional init — supports pack spread */
@@ -1272,7 +1298,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
               struct symbol *fsym = (struct symbol *)vec_get(type_fields, field_idx);
               comptime_value_t ev = (comptime_value_t)vec_get(elements, j);
               if (ev && ev->kind != COMPTIME_VALUE_ERROR && fsym)
-                comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, ev);
+                comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, ev, eval->allocator);
             }
           }
         } else {
@@ -1282,7 +1308,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
             struct symbol *fsym = (struct symbol *)vec_get(type_fields, field_idx);
             comptime_value_t v = _comptime_eval_expr(eval, ctx, item);
             if (v && v->kind != COMPTIME_VALUE_ERROR && fsym)
-              comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v);
+              comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v, eval->allocator);
             field_idx++;
           }
         }
@@ -1316,7 +1342,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
         const char *fname = _eval_ident_str((node_t)f->field);
         comptime_value_t v = _comptime_eval_expr(eval, ctx, f->value);
         if (v && v->kind != COMPTIME_VALUE_ERROR)
-          comptime_value_set_field(comp, fname, v);
+          comptime_value_set_field(comp, fname, v, eval->allocator);
       }
     } else if (il->items) {
       /* Positional init — supports pack spread */
@@ -1336,7 +1362,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
               struct symbol *fsym = (struct symbol *)vec_get(type_fields, field_idx);
               comptime_value_t ev = (comptime_value_t)vec_get(elements, j);
               if (ev && ev->kind != COMPTIME_VALUE_ERROR && fsym)
-                comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, ev);
+                comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, ev, eval->allocator);
             }
           }
         } else {
@@ -1345,7 +1371,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
             struct symbol *fsym = (struct symbol *)vec_get(type_fields, field_idx);
             comptime_value_t v = _comptime_eval_expr(eval, ctx, item);
             if (v && v->kind != COMPTIME_VALUE_ERROR && fsym)
-              comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v);
+              comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v, eval->allocator);
             field_idx++;
           }
         }
@@ -1383,7 +1409,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
           const char *fname = _eval_ident_str((node_t)f->field);
           comptime_value_t v = _comptime_eval_expr(eval, ctx, f->value);
           if (v && v->kind != COMPTIME_VALUE_ERROR)
-            comptime_value_set_field(comp, fname, v);
+            comptime_value_set_field(comp, fname, v, eval->allocator);
         }
       } else if (il->items && vec_get_size(il->items) >= 1) {
         struct symbol *fsym = field_count > 0
@@ -1391,7 +1417,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
         comptime_value_t v = _comptime_eval_expr(eval, ctx,
             (node_t)vec_get(il->items, 0));
         if (v && v->kind != COMPTIME_VALUE_ERROR && fsym)
-          comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v);
+          comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v, eval->allocator);
         if (vec_get_size(il->items) > 1) {
           diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
               "union initialization requires exactly one field");
@@ -1408,7 +1434,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
         const char *fname = _eval_ident_str((node_t)f->field);
         comptime_value_t v = _comptime_eval_expr(eval, ctx, f->value);
         if (v && v->kind != COMPTIME_VALUE_ERROR)
-          comptime_value_set_field(comp, fname, v);
+          comptime_value_set_field(comp, fname, v, eval->allocator);
       }
     } else if (il->items) {
       /* Positional init — supports pack spread */
@@ -1428,7 +1454,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
               struct symbol *fsym = (struct symbol *)vec_get(type_fields, field_idx);
               comptime_value_t ev = (comptime_value_t)vec_get(elements, j);
               if (ev && ev->kind != COMPTIME_VALUE_ERROR && fsym)
-                comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, ev);
+                comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, ev, eval->allocator);
             }
           }
         } else {
@@ -1437,7 +1463,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
             struct symbol *fsym = (struct symbol *)vec_get(type_fields, field_idx);
             comptime_value_t v = _comptime_eval_expr(eval, ctx, item);
             if (v && v->kind != COMPTIME_VALUE_ERROR && fsym)
-              comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v);
+              comptime_value_write_field(comp, fsym->field.offset, fsym->field.type, v, eval->allocator);
             field_idx++;
           }
         }
@@ -1475,13 +1501,13 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
                j++, arr_idx++) {
             comptime_value_t ev = (comptime_value_t)vec_get(elements, j);
             if (ev && ev->kind != COMPTIME_VALUE_ERROR)
-              comptime_value_set_index(comp, arr_idx, ev);
+              comptime_value_set_index(comp, arr_idx, ev, eval->allocator);
           }
         }
       } else {
         comptime_value_t v = _comptime_eval_expr(eval, ctx, item);
         if (v && v->kind != COMPTIME_VALUE_ERROR)
-          comptime_value_set_index(comp, arr_idx, v);
+          comptime_value_set_index(comp, arr_idx, v, eval->allocator);
         arr_idx++;
       }
     }
@@ -1496,6 +1522,51 @@ static comptime_value_t _eval_comma(comptime_eval_t eval, checker_t ctx,
   cubec_expression_comma_t c = (cubec_expression_comma_t)node;
   _comptime_eval_expr(eval, ctx, c->left);  /* side effect only, result is temporary */
   return _comptime_eval_expr(eval, ctx, c->right);
+}
+
+/* Try to construct an error return value for .?/.! propagation.
+ * If the current function returns a type with ofError static method,
+ * call it with the error value and return the constructed value.
+ * Returns NULL if propagation could not be performed. */
+static comptime_value_t _propagate_error_value(comptime_eval_t eval,
+                                                checker_t ctx,
+                                                node_t node,
+                                                comptime_value_t err_val) {
+  size_t rts = vec_get_size(eval->return_type_stack);
+  if (rts == 0) return NULL;
+  semantic_type_t ret_type = (semantic_type_t)vec_get(eval->return_type_stack, rts - 1);
+  if (!ret_type) return NULL;
+
+  /* Check if return type has ofError method (unified method list) */
+  if (!ret_type->instance_methods) return NULL;
+  struct symbol *of_err_fn = NULL;
+  size_t mc = vec_get_size(ret_type->instance_methods);
+  for (size_t i = 0; i < mc; i++) {
+    struct symbol *s = (struct symbol *)vec_get(ret_type->instance_methods, i);
+    if (s && s->name && strcmp(s->name, "ofError") == 0 && s->kind == SYMBOL_FUNCTION) {
+      of_err_fn = s;
+      break;
+    }
+  }
+  if (!of_err_fn) return NULL;
+
+  /* Call ofError with the error value */
+  comptime_value_t fn_val = _comptime_create_method_value(eval, ctx, of_err_fn);
+  if (!fn_val) return NULL;
+  comptime_env_track_temp(eval->current_env, fn_val);
+
+  /* Clone err_val before passing to _eval_call_function: the caller's
+     temporary must not be shared with valloc->allocations (double-free). */
+  comptime_value_t cloned_err = comptime_value_clone(eval->allocator, err_val);
+  comptime_value_t result = _eval_call_function(eval, ctx, fn_val, &cloned_err, 1, node);
+  if (result && result->kind != COMPTIME_VALUE_ERROR) {
+    /* Propagation succeeded — set pending return and return NULL
+     * so the caller treats this as a control flow signal, not a value. */
+    eval->propagated_return = true;
+    eval->propagated_return_value = result;
+    return NULL;
+  }
+  return result;
 }
 
 static comptime_value_t _eval_try(comptime_eval_t eval, checker_t ctx,
@@ -1533,7 +1604,7 @@ static comptime_value_t _eval_try(comptime_eval_t eval, checker_t ctx,
                                                               found->field.type,
                                                               eval->allocator));
           } else {
-            /* Active variant doesn't match — propagate error with str */
+            /* Active variant doesn't match — try ofError propagation first */
             const char *active_name = "<unknown>";
             for (size_t i = 0; i < fc; i++) {
               struct symbol *f = (struct symbol *)vec_get(fields, i);
@@ -1541,6 +1612,17 @@ static comptime_value_t _eval_try(comptime_eval_t eval, checker_t ctx,
                 active_name = f->name;
                 break;
               }
+            }
+            /* Build error string value for propagation */
+            char err_buf[256];
+            snprintf(err_buf, sizeof(err_buf), "union is in '%s' variant, expected '%s'",
+                     active_name, fname);
+            comptime_value_t err_str = comptime_value_create_string(
+                eval->allocator, err_buf, ctx->builtin_str);
+            comptime_env_track_temp(eval->current_env, err_str);
+            _propagate_error_value(eval, ctx, node, err_str);
+            if (eval->propagated_return) {
+              return _eval_error_val(eval);
             }
             diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
                 "error propagation: union is in '%s' variant, expected '%s'",
@@ -1570,20 +1652,31 @@ static comptime_value_t _eval_try(comptime_eval_t eval, checker_t ctx,
         return _eval_error_val(eval);
       bool is_error = (is_err_result->kind == COMPTIME_VALUE_BOOL && is_err_result->bool_val);
       if (is_error) {
-        /* Propagate error: call error() and report */
+        /* Propagate error: call error() and try ofError propagation */
         comptime_value_t err_result = _eval_method_call(eval, ctx, err_fn,
             pf->right, val, NULL, 0, (node_t)pf);
-        char err_buf[256];
-        const char *err_desc = "unknown error";
         if (err_result) {
+          /* Try ofError propagation first */
+          _propagate_error_value(eval, ctx, node, err_result);
+          if (eval->propagated_return) {
+            /* ofError succeeded — return error_val to signal abort;
+             * the pending return value is in eval->propagated_return_value */
+            return _eval_error_val(eval);
+          }
+          char err_buf[256];
+          const char *err_desc = "unknown error";
           if (err_result->kind == COMPTIME_VALUE_STRING) {
             const char *s = comptime_value_get_string(err_result);
             if (s) { snprintf(err_buf, sizeof(err_buf), "%s", s); err_desc = err_buf; }
           }
-          /* err_result is already tracked by _eval_call_function; do not _eval_temp */
+          /* err_result is already tracked by _eval_call_function */
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+              "error propagation: %s", err_desc);
+          ctx->error_count++;
+          return _eval_error_val(eval);
         }
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
-            "error propagation: %s", err_desc);
+            "error propagation: could not retrieve error value");
         ctx->error_count++;
         return _eval_error_val(eval);
       }

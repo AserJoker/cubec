@@ -124,7 +124,8 @@ comptime_value_t comptime_value_read_field(comptime_value_t composite,
 bool comptime_value_write_field(comptime_value_t composite,
                                 size_t offset,
                                 semantic_type_t field_type,
-                                comptime_value_t value);
+                                comptime_value_t value,
+                                allocator_t allocator);
 
 /** @brief Get a field value by name (struct). Returns owned value. */
 comptime_value_t comptime_value_get_field(comptime_value_t composite,
@@ -134,7 +135,8 @@ comptime_value_t comptime_value_get_field(comptime_value_t composite,
 /** @brief Set a field value by name (struct). */
 bool comptime_value_set_field(comptime_value_t composite,
                               const char *field_name,
-                              comptime_value_t value);
+                              comptime_value_t value,
+                              allocator_t allocator);
 
 /** @brief Get an array element by index. Returns owned value. */
 comptime_value_t comptime_value_get_index(comptime_value_t composite,
@@ -144,7 +146,8 @@ comptime_value_t comptime_value_get_index(comptime_value_t composite,
 /** @brief Set an array element by index. */
 bool comptime_value_set_index(comptime_value_t composite,
                               size_t index,
-                              comptime_value_t value);
+                              comptime_value_t value,
+                              allocator_t allocator);
 
 /* ===== conversions ===== */
 

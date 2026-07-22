@@ -379,3 +379,170 @@ TEST_F(dt_result_protocol, try_missing_error_method) {
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== .? error propagation via ofError ===== */
+
+/* When .? is used inside a function that returns a Result type,
+ * and the Result type has an ofError method, the error should be
+ * automatically wrapped via ofError and returned, rather than
+ * aborting the comptime evaluation. */
+
+TEST_F(dt_result_protocol, try_propagate_via_ofError_struct) {
+  /* struct Result with ofError: .? in a returning function propagates error */
+  const char *src = BUILTIN_ASSERT
+    "struct Result {\n"
+    "  _val: i32;\n"
+    "  _err: str;\n"
+    "  _isErr: bool;\n"
+    "  func isError(self: *Result): bool { return self._isErr; }\n"
+    "  func value(self: *Result): i32 { return self._val; }\n"
+    "  func error(self: *Result): str { return self._err; }\n"
+    "  func ofError(e: str): Result { return .Result{._val = 0, ._err = e, ._isErr = true}; }\n"
+    "}\n"
+    "comptime func mayFail(ok: bool): Result {\n"
+    "  var r = .Result{._val = 0, ._err = \"fail\", ._isErr = true};\n"
+    "  var v = r.?;\n"
+    "  return .Result{._val = v, ._err = \"\", ._isErr = false};\n"
+    "}\n"
+    "test \"propagate_ofError\" {\n"
+    "  var result = mayFail(false);\n"
+    "  assert(result.isError());\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_result_protocol, try_propagate_via_ofError_union) {
+  /* union Result with ofError: .? on wrong variant propagates via ofError.
+   * After mayFail returns, verify the function didn't abort (no "error propagation" diag). */
+  const char *src = BUILTIN_ASSERT
+    "union Result {\n"
+    "  value: i32;\n"
+    "  err: str;\n"
+    "  func ofError(e: str): Result { return .Result{.err = e}; }\n"
+    "}\n"
+    "comptime func mayFail(): Result {\n"
+    "  var r = .Result{.err = \"fail\"};\n"
+    "  var v = r.value.?;\n"
+    "  return .Result{.value = v};\n"
+    "}\n"
+    "test \"propagate_union_ofError\" {\n"
+    "  var result = mayFail();\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  /* Check that there's no "error propagation" diagnostic —
+   * propagation via ofError should succeed silently */
+  bool found_propagation_error = false;
+  diagnostic_list_t diags2 = r.ctx->diagnostics;
+  if (diags2) {
+    size_t count = diagnostic_list_get_size(diags2);
+    for (size_t i = 0; i < count; i++) {
+      struct diagnostic *d = diagnostic_list_get(diags2, i);
+      if (d && strstr(d->message, "error propagation")) {
+        found_propagation_error = true;
+      }
+    }
+  }
+  EXPECT_FALSE(found_propagation_error);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_result_protocol, try_no_ofError_aborts) {
+  /* .? on error without ofError on return type should still abort */
+  const char *src = BUILTIN_ASSERT
+    "struct Result {\n"
+    "  _val: i32;\n"
+    "  _err: str;\n"
+    "  _isErr: bool;\n"
+    "  func isError(self: *Result): bool { return self._isErr; }\n"
+    "  func value(self: *Result): i32 { return self._val; }\n"
+    "  func error(self: *Result): str { return self._err; }\n"
+    "}\n"
+    "comptime func mayFail(ok: bool): Result {\n"
+    "  var r = .Result{._val = 0, ._err = \"fail\", ._isErr = true};\n"
+    "  var v = r.?;\n"
+    "  return .Result{._val = v, ._err = \"\", ._isErr = false};\n"
+    "}\n"
+    "test \"no_ofError_aborts\" {\n"
+    "  var result = mayFail(false);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_result_protocol, try_propagate_via_ofError_success_path) {
+  /* .? on success should still return the value, not call ofError */
+  const char *src = BUILTIN_ASSERT
+    "struct Result {\n"
+    "  _val: i32;\n"
+    "  _err: str;\n"
+    "  _isErr: bool;\n"
+    "  func isError(self: *Result): bool { return self._isErr; }\n"
+    "  func value(self: *Result): i32 { return self._val; }\n"
+    "  func error(self: *Result): str { return self._err; }\n"
+    "  func ofError(e: str): Result { return .Result{._val = 0, ._err = e, ._isErr = true}; }\n"
+    "}\n"
+    "comptime func mayFail(ok: bool): Result {\n"
+    "  var r = .Result{._val = 42, ._err = \"\", ._isErr = false};\n"
+    "  var v = r.?;\n"
+    "  return .Result{._val = v, ._err = \"\", ._isErr = false};\n"
+    "}\n"
+    "test \"ofError_success_path\" {\n"
+    "  var result = mayFail(true);\n"
+    "  assert(!result.isError());\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== :: method access (unified namespace) ===== */
+
+TEST_F(dt_result_protocol, namespace_access_method) {
+  /* Result::ofError(e) should work — :: accesses all methods */
+  const char *src = BUILTIN_ASSERT
+    "struct Result {\n"
+    "  _val: i32;\n"
+    "  _err: str;\n"
+    "  _isErr: bool;\n"
+    "  func isError(self: *Result): bool { return self._isErr; }\n"
+    "  func value(self: *Result): i32 { return self._val; }\n"
+    "  func error(self: *Result): str { return self._err; }\n"
+    "  func ofError(e: str): Result { return .Result{._val = 0, ._err = e, ._isErr = true}; }\n"
+    "}\n"
+    "test \"namespace_method\" {\n"
+    "  var e = Result::ofError(\"bad\");\n"
+    "  assert(e.isError());\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== pointer auto-deref for method calls ===== */
+
+TEST_F(dt_result_protocol, pointer_autoderef_method) {
+  /* p.method() should auto-deref pointer and find method */
+  const char *src = BUILTIN_ASSERT
+    "struct Counter {\n"
+    "  count: i32;\n"
+    "  func get(self: *Counter): i32 { return self.count; }\n"
+    "}\n"
+    "test \"ptr_deref_method\" {\n"
+    "  var c = .Counter{.count = 5};\n"
+    "  var p = c.&;\n"
+    "  var v = p.get();\n"
+    "  assert(v == 5);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}

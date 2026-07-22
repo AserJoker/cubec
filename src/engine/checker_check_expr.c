@@ -843,11 +843,12 @@ static semantic_type_t _check_expr_namespace_access(checker_t ctx, node_t expr) 
     if (sf && sf->name && strcmp(sf->name, fname) == 0)
       return sf->variable.type;
   }
-  size_t smcount = vec_get_size(host_type->static_methods);
-  for (size_t i = 0; i < smcount; i++) {
-    struct symbol *sm = (struct symbol *)vec_get(host_type->static_methods, i);
-    if (sm && sm->name && strcmp(sm->name, fname) == 0)
-      return sm->function.type;
+  /* All methods are in instance_methods; :: is unified namespace access */
+  size_t imcount = vec_get_size(host_type->instance_methods);
+  for (size_t i = 0; i < imcount; i++) {
+    struct symbol *im = (struct symbol *)vec_get(host_type->instance_methods, i);
+    if (im && im->name && strcmp(im->name, fname) == 0)
+      return im->function.type;
   }
   size_t atcount = vec_get_size(host_type->associated_types);
   for (size_t i = 0; i < atcount; i++) {
@@ -868,7 +869,7 @@ static semantic_type_t _check_expr_namespace_access(checker_t ctx, node_t expr) 
   }
 
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                       "type '%s' has no static member '%s'",
+                       "type '%s' has no member '%s'",
                        host_type->name ? host_type->name : "<anonymous>",
                        fname);
   ctx->error_count++;

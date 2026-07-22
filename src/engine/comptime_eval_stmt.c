@@ -130,6 +130,16 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     cubec_statement_expression_t se = (cubec_statement_expression_t)stmt;
     int errs_before = ctx->error_count;
     _comptime_eval_expr(eval, ctx, se->expression);
+    /* Check if .? error propagation set a pending return */
+    if (eval->propagated_return) {
+      comptime_value_t rv = eval->propagated_return_value;
+      eval->propagated_return = false;
+      eval->propagated_return_value = NULL;
+      comptime_signal_t sig;
+      sig.kind = COMPTIME_SIGNAL_RETURN;
+      sig.return_value = rv;
+      return sig;
+    }
     if (ctx->error_count > errs_before)
       return _eval_signal_error();
     return _eval_signal_none();
@@ -311,6 +321,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     /* Create the next() function value from the method symbol.
      * The symbol's ast_node holds the function body and param info. */
     comptime_value_t next_fn = _comptime_create_method_value(eval, ctx, next_sym);
+    comptime_env_track_temp(eval->current_env, next_fn);
     if (!next_fn || next_fn->kind != COMPTIME_VALUE_FUNCTION) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                            stmt->location,
@@ -403,7 +414,11 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
       /* Check result.done */
       comptime_value_t done =
           comptime_value_get_field(result, "done", eval->allocator);
-      if (done && comptime_value_is_truthy(done)) break;
+      if (done && comptime_value_is_truthy(done)) {
+        allocator_free(eval->allocator, &done);
+        break;
+      }
+      allocator_free(eval->allocator, &done);
 
       /* Get result.value */
       comptime_value_t value =
@@ -416,7 +431,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
       /* Bind/update loop variable */
       const char *vname = _eval_ident_str(sfe->variable);
       if (!vname) break;
-      if (sfe->is_var_decl) {
+      if (sfe->is_var_decl || !comptime_env_lookup_addr(loop_env, vname)) {
         comptime_env_bind_value(loop_env, eval->valloc, vname, value);
       } else {
         comptime_env_update_value(loop_env, eval->valloc, vname, value);
@@ -463,6 +478,16 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     comptime_value_t val = dv->expression
                                ? _comptime_eval_expr(eval, ctx, dv->expression)
                                : NULL;
+    /* Check if .? error propagation set a pending return */
+    if (eval->propagated_return) {
+      comptime_value_t rv = eval->propagated_return_value;
+      eval->propagated_return = false;
+      eval->propagated_return_value = NULL;
+      comptime_signal_t sig;
+      sig.kind = COMPTIME_SIGNAL_RETURN;
+      sig.return_value = rv;
+      return sig;
+    }
     if (!val || val->kind == COMPTIME_VALUE_ERROR) {
       /* No initializer — create a default value based on the variable's type */
       if (dv->type) {

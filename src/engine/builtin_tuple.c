@@ -173,7 +173,7 @@ struct comptime_value *builtin_set_eval(struct comptime_eval *eval,
   }
 
   /* Set the field value in-place using write_field directly */
-  comptime_value_write_field(tuple_val, f->field.offset, f->field.type, value_val);
+  comptime_value_write_field(tuple_val, f->field.offset, f->field.type, value_val, eval->allocator);
   return _eval_temp(eval, comptime_value_create_nil(eval->allocator, ctx->builtin_void));
 }
 
