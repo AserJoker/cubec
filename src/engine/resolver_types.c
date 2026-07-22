@@ -76,6 +76,14 @@ semantic_type_t _resolve_type_identifier(checker_t ctx, node_t node) {
       vec_push(ctx->all_types, gp_type);
       return gp_type;
     }
+    /* SYMBOL_MODULE in type position → return TYPE_MODULE for namespace access */
+    if (sym->kind == SYMBOL_MODULE) {
+      semantic_type_t mt = semantic_type_create_named(ctx->allocator, name, TYPE_MODULE);
+      type_layout_compute(mt, 8);
+      type_hash_ensure(mt);
+      vec_push(ctx->all_types, mt);
+      return mt;
+    }
   }
 
   /* Unknown type */
@@ -416,6 +424,24 @@ semantic_type_t _resolve_type_namespace_access(checker_t ctx, node_t node) {
 
   semantic_type_t host_type = resolver_resolve_type(ctx, ns->host);
   if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+
+  /* Module scope access: module_name::TypeName */
+  if (host_type->impl->kind == TYPE_MODULE) {
+    const char *mod_name = host_type->name;
+    struct symbol *mod_sym = scope_lookup(ctx->current_scope, mod_name);
+    if (!mod_sym || mod_sym->kind != SYMBOL_MODULE) return ctx->error_type;
+    scope_t mod_scope = mod_sym->module.scope;
+    if (!mod_scope) return ctx->error_type;
+    struct symbol *member = scope_lookup_local(mod_scope, field_name);
+    if (!member || !member->is_export || member->kind != SYMBOL_TYPE || !member->type.type) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                           "module '%s' has no exported type '%s'",
+                           mod_name, field_name);
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+    return member->type.type;
+  }
 
   /* Look up associated type */
   size_t count = vec_get_size(host_type->associated_types);

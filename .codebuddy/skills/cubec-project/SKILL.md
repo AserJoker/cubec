@@ -721,6 +721,8 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 
 ## Module System (模块系统)
 
+**Implementation Status**: Syntax + Semantics fully implemented. Relative path resolution (`./xxx`, `../xxx`) works. `::` namespace access works in both expression and type positions. Export visibility filtering enforced. Cyclic dependency detection via MODULE_PARSING state + TDZ semantics. Logical paths (`std/vec`) not yet supported. Cross-module comptime function calls not yet supported.
+
 ### Import Syntax
 
 Use `import` keyword for module imports, with namespace-style access:

@@ -1,5 +1,6 @@
 #include "engine/checker.h"
 #include "engine/checker_evaluate.h"
+#include "engine/checker_collect.h"
 #include "engine/checker_func_util.h"
 #include "engine/checker_type_util.h"
 #include "engine/checker_check_expr.h"
@@ -9,13 +10,16 @@
 #include "engine/symbol.h"
 #include "engine/type_hash.h"
 #include "engine/type_layout.h"
+#include "engine/module.h"
 #include "core/allocator.h"
+#include "cubec/token.h"
 #include "cubec/statement_test.h"
 #include "core/string.h"
 #include "core/vec.h"
 #include "cubec/node.h"
 #include "cubec/program.h"
 #include "cubec/literal_identifier.h"
+#include "cubec/literal_string.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/statement_struct.h"
 #include "cubec/statement_enum.h"
@@ -407,14 +411,38 @@ static void _evaluate_variable(checker_t ctx,
   if (sym->state == SYMBOL_EVALUATED) return;
 
   semantic_type_t var_type = NULL;
+  semantic_type_t init_type = NULL;
 
   /* Explicit type annotation */
   if (decl->type)
     var_type = resolver_resolve_type(ctx, decl->type);
 
-  /* Type inference from initializer expression */
-  if (!var_type && decl->expression)
-    var_type = _check_expression(ctx, decl->expression);
+  /* Evaluate initializer expression.
+     'undefined' is special — it's only valid as a variable initializer
+     and means zero-initialization with the declared type. It has no
+     standalone type, so we handle it here rather than through
+     _check_expression (which would reject it). */
+  bool is_undefined_init = decl->expression &&
+      decl->expression->kind == CUBEC_NODE_LITERAL_UNDEFINED;
+
+  if (is_undefined_init) {
+    /* undefined requires an explicit type annotation */
+    if (!var_type) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "variable '%s' initialized with 'undefined' requires a type annotation",
+                           name);
+      ctx->error_count++;
+      var_type = ctx->error_type;
+    }
+    /* init_type stays NULL — undefined is compatible with any type */
+  } else if (decl->expression) {
+    init_type = _check_expression(ctx, decl->expression);
+  }
+
+  /* Type inference from initializer when no explicit type */
+  if (!var_type && init_type)
+    var_type = init_type;
 
   /* extern/builtin require explicit type */
   if ((node->is_extern || node->is_builtin) && !decl->type) {
@@ -435,6 +463,19 @@ static void _evaluate_variable(checker_t ctx,
   }
 
   _check_var_type_completeness(ctx, &node->super, var_type, name);
+
+  /* Check initializer type compatibility with explicit type annotation */
+  if (var_type && init_type && var_type->impl->kind != TYPE_ERROR &&
+      init_type->impl->kind != TYPE_ERROR &&
+      !semantic_type_can_implicit_convert(init_type, var_type)) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         node->super.location,
+                         "cannot initialize variable '%s' of type '%s' with value of type '%s'",
+                         name,
+                         var_type->name ? var_type->name : "<anonymous>",
+                         init_type->name ? init_type->name : "<anonymous>");
+    ctx->error_count++;
+  }
 
   sym->variable.type = var_type;
   sym->variable.is_comptime = node->is_comptime;
@@ -575,9 +616,137 @@ static void _evaluate_import(checker_t ctx,
   if (!sym || sym->kind != SYMBOL_MODULE) return;
   if (sym->state == SYMBOL_EVALUATED) return;
 
-  /* TODO: module resolution — load and check imported module */
+  /* Extract path string from the import statement */
+  const char *import_path = NULL;
+  if (node->path && node->path->kind == CUBEC_NODE_LITERAL_STRING) {
+    cubec_literal_string_t path_lit = (cubec_literal_string_t)node->path;
+    import_path = string_get(path_lit->value);
+  }
+  if (!import_path || !*import_path) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->super.location,
+                         "import requires a path string");
+    ctx->error_count++;
+    return;
+  }
 
+  /* Resolve the import path relative to the current file */
+  char *resolved = module_resolve_path(import_path, ctx->current_file);
+  if (!resolved) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->super.location,
+                         "cannot resolve import path '%s'", import_path);
+    ctx->error_count++;
+    return;
+  }
+
+  /* Check module_cache: already loaded or in progress (cycle) */
+  module_entry_t cached = (module_entry_t)strmap_find(ctx->module_cache, resolved);
+  if (cached) {
+    sym->module.scope = cached->scope;
+    sym->state = SYMBOL_EVALUATED;
+    if (cached->state == MODULE_PARSING) {
+      /* Circular dependency: symbols from the in-progress module
+         are available by name (NAME_KNOWN) but value references
+         will trigger TDZ errors — consistent with TDZ semantics. */
+    }
+    free(resolved);
+    return;
+  }
+
+  /* Load the module file */
+  size_t src_len;
+  char *source = module_read_file(resolved, &src_len);
+  if (!source) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->super.location,
+                         "cannot read module '%s'", import_path);
+    ctx->error_count++;
+    free(resolved);
+    return;
+  }
+
+  /* Tokenize */
+  vec_t tokens = resolve_token_list(ctx->allocator, resolved, source);
+  if (!tokens) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->super.location,
+                         "lexing failed for module '%s'", import_path);
+    ctx->error_count++;
+    free(source);
+    free(resolved);
+    return;
+  }
+
+  /* Parse */
+  size_t pos = 0;
+  node_t program = read_program_node(ctx->allocator, tokens, &pos, resolved);
+  if (!program) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->super.location,
+                         "parsing failed for module '%s'", import_path);
+    ctx->error_count++;
+    free(source);
+    free(resolved);
+    return;
+  }
+
+  /* Create module entry with PARSING state (for cycle detection) */
+  module_entry_t entry = module_entry_create(resolved);
+  entry->source = source;
+
+  /* Insert into cache BEFORE compiling (enables cycle detection) */
+  strmap_insert(ctx->module_cache, resolved, entry);
+
+  /* Compile the imported module in the SAME checker context.
+     This ensures all modules share the same builtin types, type_name_table,
+     and comptime evaluator — critical for type compatibility across modules.
+
+     The module's global scope is a child of the checker's global_scope
+     so that builtin types are visible, but module symbols don't pollute
+     the main scope. */
+  scope_t mod_scope = scope_create(ctx->allocator, ctx->global_scope,
+                                    SCOPE_GLOBAL, node->super.location);
+  vec_push(ctx->all_scopes, mod_scope);
+
+  /* Save and swap checker state */
+  scope_t saved_scope = ctx->current_scope;
+  scope_t saved_global = ctx->global_scope;
+  const char *saved_file = ctx->current_file;
+  flow_state_t saved_flow = ctx->current_flow;
+
+  /* Switch to module's scope as the "global" scope for compilation.
+     The module scope is a child of the real global_scope so builtins
+     are accessible via scope_lookup. */
+  ctx->global_scope = mod_scope;
+  ctx->current_scope = mod_scope;
+  ctx->current_file = resolved;
+  ctx->current_flow = NULL;
+
+  /* Load source into the source cache for diagnostics */
+  source_cache_load(ctx->sources, resolved, source, false);
+
+  /* Compile the imported module using the same checker */
+  checker_collect_declarations(ctx, program);
+  entry->state = MODULE_PARSED;
+  checker_evaluate_declarations(ctx, program);
+
+  /* Run function body checking on the imported module */
+  checker_check_function_bodies(ctx, program);
+
+  /* Restore checker state */
+  ctx->global_scope = saved_global;
+  ctx->current_scope = saved_scope;
+  ctx->current_file = saved_file;
+  ctx->current_flow = saved_flow;
+
+  /* Update module entry */
+  entry->state = MODULE_CHECKED;
+  entry->scope = mod_scope;
+  entry->checker = NULL; /* no separate checker */
+  entry->tokens = tokens;
+  entry->program = program;
+
+  /* Link the symbol to the module's scope */
+  sym->module.scope = mod_scope;
   sym->state = SYMBOL_EVALUATED;
+
+  free(resolved);
 }
 
 static void _evaluate_comptime_block(checker_t ctx,

@@ -9,6 +9,7 @@
 #include "engine/symbol.h"
 #include "engine/type_hash.h"
 #include "engine/type_layout.h"
+#include "engine/module.h"
 #include "core/allocator.h"
 #include "core/string.h"
 #include "core/vec.h"
@@ -203,6 +204,20 @@ static void _checker_dispose(void *self, allocator_t allocator) {
   builtin_table_dispose(ctx->builtin_table, allocator);
   allocator_free(allocator, &ctx->type_impl_cache);
   allocator_free(allocator, &ctx->type_name_table);
+
+  /* Dispose all module entries (source buffers, resolved paths, tokens, programs) */
+  strmap_iter_t iter = strmap_iter_first(ctx->module_cache);
+  const char *key;
+  while ((key = strmap_iter_next(&iter)) != NULL) {
+    module_entry_t entry = (module_entry_t)strmap_find(ctx->module_cache, key);
+    if (entry) {
+      /* Free tokens and program that were allocated via ctx->allocator */
+      if (entry->tokens) allocator_free(allocator, &entry->tokens);
+      if (entry->program) allocator_free(allocator, &entry->program);
+      module_entry_dispose(entry);
+    }
+  }
+  strmap_clear(ctx->module_cache);
   allocator_free(allocator, &ctx->module_cache);
 }
 

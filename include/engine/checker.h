@@ -28,7 +28,7 @@ struct checker {
   vec_t all_scopes;           /**< all child scopes for cleanup */
 
   /* caches */
-  strmap_t module_cache;      /**< module name -> scope_t */
+  strmap_t module_cache;      /**< resolved path -> module_entry_t (imported modules) */
   strmap_t type_name_table;   /**< type name -> semantic_type_t */
   strmap_t type_impl_cache;   /**< hash string -> type_impl_t (dedup) */
 
@@ -79,6 +79,9 @@ struct checker {
 
   /* fatal error flag: set by panic, stops all further evaluation */
   bool fatal_error;
+
+  /* current file being compiled (for import path resolution) */
+  const char *current_file;
 };
 
 typedef struct checker *checker_t;

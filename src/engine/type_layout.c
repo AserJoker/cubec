@@ -28,6 +28,7 @@ static size_t _primitive_size(enum type_kind kind) {
   case TYPE_STRING: return sizeof(void *); /* slice-like: ptr + len */
   case TYPE_STR:    return sizeof(void *); /* same layout as string */
   case TYPE_NIL:    return 0;
+  case TYPE_MODULE: return 0;
   case TYPE_ERROR:  return 0;
   default:          return 0;
   }

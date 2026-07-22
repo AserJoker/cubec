@@ -28,7 +28,7 @@ enum type_kind {
   TYPE_TUPLE,
   TYPE_OPAQUE,
   TYPE_WILDCARD,
-  TYPE_NIL, TYPE_ERROR
+  TYPE_NIL, TYPE_MODULE, TYPE_ERROR
 };
 
 /* forward declaration */
@@ -47,6 +47,7 @@ struct type_name_entry {
   vec_t static_methods;   /**< vec of symbol* (FUNCTION without self) */
   vec_t static_fields;    /**< vec of symbol* (VARIABLE) */
   vec_t associated_types; /**< vec of symbol* (TYPE) */
+  const char *source_file; /**< Source file where this type was defined (for cross-module pub check) */
   bool is_interface;      /**< true for interface types */
   bool is_incomplete;     /**< true until fields are resolved */
 };

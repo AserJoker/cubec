@@ -169,9 +169,16 @@ static comptime_value_t _eval_literal_identifier(comptime_eval_t eval,
   if (!sym) return _eval_error_val(eval);
 
   if (sym->state == SYMBOL_NAME_KNOWN) {
+    /* NAME_KNOWN means the symbol is declared but not yet fully resolved.
+       For imported symbols, this happens during circular dependency resolution
+       (MODULE_PARSING state). Report TDZ error for value references. */
+    if (sym->kind == SYMBOL_MODULE) {
+      /* MODULE symbols with NAME_KNOWN are valid for namespace access (::)
+         but cannot be used as values directly. */
+      return _eval_error_val(eval);
+    }
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
-                         "cannot use imported value '%s' at compile time",
-                         name);
+                         "use of '%s' before full resolution", name);
     ctx->error_count++;
     return _eval_error_val(eval);
   }
@@ -181,6 +188,15 @@ static comptime_value_t _eval_literal_identifier(comptime_eval_t eval,
                          "use of variable '%s' before initialization", name);
     ctx->error_count++;
     return _eval_error_val(eval);
+  }
+
+  if (sym->kind == SYMBOL_MODULE) {
+    /* Return a TYPE_MODULE comptime value for namespace access (module::member) */
+    semantic_type_t mt = semantic_type_create_named(eval->allocator, name, TYPE_MODULE);
+    type_layout_compute(mt, 8);
+    type_hash_ensure(mt);
+    vec_push(ctx->all_types, mt);
+    return _eval_temp(eval, comptime_value_create_type(eval->allocator, mt));
   }
 
   if (sym->kind == SYMBOL_ENUM_ITEM) {
@@ -1002,6 +1018,46 @@ static comptime_value_t _eval_namespace_access(comptime_eval_t eval,
   if (!fname) return _eval_error_val(eval);
 
   semantic_type_t t = host->type_val;
+
+  /* Module scope access: module_name::member */
+  if (t->impl->kind == TYPE_MODULE) {
+    const char *mod_name = t->name;
+    struct symbol *mod_sym = scope_lookup(ctx->current_scope, mod_name);
+    if (!mod_sym || mod_sym->kind != SYMBOL_MODULE) return _eval_error_val(eval);
+    scope_t mod_scope = mod_sym->module.scope;
+    if (!mod_scope) return _eval_error_val(eval);
+    struct symbol *member = scope_lookup_local(mod_scope, fname);
+    if (!member || !member->is_export) return _eval_error_val(eval);
+    switch (member->kind) {
+    case SYMBOL_TYPE:
+      return _eval_temp(eval, comptime_value_create_type(eval->allocator, member->type.type));
+    case SYMBOL_FUNCTION:
+      if (member->function.ast_node) {
+        comptime_value_t fn_val = _comptime_create_method_value(eval, ctx, member);
+        if (fn_val) return fn_val;
+      }
+      return _eval_error_val(eval);
+    case SYMBOL_VARIABLE: {
+      comptime_value_t v = comptime_env_lookup_value(eval->current_env, eval->valloc, member->name);
+      if (v) return v;
+      return _eval_error_val(eval);
+    }
+    case SYMBOL_ENUM_ITEM: {
+      semantic_type_t owning = member->enum_item.owning_type;
+      semantic_type_t backing = owning && owning->impl->kind == TYPE_ENUM
+          ? owning->impl->enum_type.backing_type : ctx->builtin_i32;
+      if (!backing) backing = ctx->builtin_i32;
+      bool is_signed = (backing->impl->kind >= TYPE_I8 && backing->impl->kind <= TYPE_I64);
+      uint8_t width = backing->impl->size * 8;
+      return _eval_temp(eval, comptime_value_create_int(eval->allocator,
+          member->enum_item.value, (uint64_t)member->enum_item.value,
+          width, is_signed, owning));
+    }
+    default:
+      return _eval_error_val(eval);
+    }
+  }
+
   if (t->associated_types) {
     size_t ac = vec_get_size(t->associated_types);
     for (size_t i = 0; i < ac; i++) {

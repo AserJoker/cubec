@@ -24,6 +24,11 @@
 
 /* _register_generic_params moved to checker_func_util.c as checker_register_generic_params */
 
+/** Set source_file on a type for cross-module pub visibility checks. */
+static inline void _set_source_file(semantic_type_t t, const char *current_file) {
+  if (t) t->source_file = current_file;
+}
+
 static void _collect_struct(checker_t ctx, cubec_statement_struct_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
@@ -38,11 +43,13 @@ static void _collect_struct(checker_t ctx, cubec_statement_struct_t node) {
 
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, name, TYPE_STRUCT);
+  _set_source_file(t, ctx->current_file);
   vec_push(ctx->all_types, t);
 
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
   sym->type.type = t;
+  sym->is_export = node->is_export;
   sym->state = SYMBOL_NAME_KNOWN;
   scope_push_symbol(ctx->global_scope, sym);
 
@@ -63,11 +70,13 @@ static void _collect_enum(checker_t ctx, cubec_statement_enum_t node) {
 
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, name, TYPE_ENUM);
+  _set_source_file(t, ctx->current_file);
   vec_push(ctx->all_types, t);
 
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
   sym->type.type = t;
+  sym->is_export = node->is_export;
   sym->state = SYMBOL_NAME_KNOWN;
   scope_push_symbol(ctx->global_scope, sym);
 
@@ -88,11 +97,13 @@ static void _collect_union(checker_t ctx, cubec_statement_union_t node) {
 
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, name, TYPE_UNION);
+  _set_source_file(t, ctx->current_file);
   vec_push(ctx->all_types, t);
 
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
   sym->type.type = t;
+  sym->is_export = node->is_export;
   sym->state = SYMBOL_NAME_KNOWN;
   scope_push_symbol(ctx->global_scope, sym);
 
@@ -113,6 +124,7 @@ static void _collect_cunion(checker_t ctx, cubec_statement_cunion_t node) {
 
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, name, TYPE_CUNION);
+  _set_source_file(t, ctx->current_file);
   vec_push(ctx->all_types, t);
 
   struct symbol *sym =
@@ -139,12 +151,14 @@ static void _collect_interface(checker_t ctx,
 
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, name, TYPE_INTERFACE);
+  _set_source_file(t, ctx->current_file);
   t->is_interface = true;
   vec_push(ctx->all_types, t);
 
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
   sym->type.type = t;
+  sym->is_export = node->is_export;
   sym->state = SYMBOL_NAME_KNOWN;
   scope_push_symbol(ctx->global_scope, sym);
 
@@ -167,6 +181,7 @@ static void _collect_function(checker_t ctx,
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_FUNCTION,
                     node->super.location);
+  sym->is_export = node->is_export;
   sym->state = SYMBOL_NAME_KNOWN;
   scope_push_symbol(ctx->global_scope, sym);
 }
@@ -191,6 +206,7 @@ static void _collect_variable(checker_t ctx,
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_VARIABLE,
                     node->super.location);
+  sym->is_export = node->is_export;
   sym->variable.is_comptime = node->is_comptime;
   sym->variable.is_mutable = true;
   scope_push_symbol(ctx->global_scope, sym);
@@ -211,6 +227,7 @@ static void _collect_type_alias(checker_t ctx,
 
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
+  sym->is_export = node->is_export;
   sym->state = SYMBOL_NAME_KNOWN;
   scope_push_symbol(ctx->global_scope, sym);
 }

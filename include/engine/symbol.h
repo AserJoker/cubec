@@ -44,6 +44,7 @@ struct symbol {
   enum symbol_kind kind;         /**< Symbol kind */
   enum symbol_state state;       /**< Resolution state */
   bool is_builtin;               /**< true for builtin declarations */
+  bool is_export;                /**< true for export declarations (cross-module visibility) */
   location_t location;           /**< Declaration location */
   union {
     /* SYMBOL_VARIABLE */

@@ -83,6 +83,14 @@ static semantic_type_t _check_expr_literal_identifier(checker_t ctx, node_t expr
     if (sym->generic_param.constraint)
       return sym->generic_param.constraint;
     return ctx->error_type;
+  case SYMBOL_MODULE: {
+    /* Return a TYPE_MODULE nominal type for namespace access (module::member) */
+    semantic_type_t mt = semantic_type_create_named(ctx->allocator, name, TYPE_MODULE);
+    type_layout_compute(mt, 8);
+    type_hash_ensure(mt);
+    vec_push(ctx->all_types, mt);
+    return mt;
+  }
   default: return ctx->error_type;
   }
 }
@@ -723,10 +731,15 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
 static bool _is_field_accessible(checker_t ctx,
                                   struct symbol *field_sym,
                                   semantic_type_t owner_type) {
-  /* TODO(Phase 8): check cross-module access when module system is implemented.
-     If field is not pub and accessing scope is in a different module, return false. */
-  (void)ctx;
-  (void)owner_type;
+  if (!field_sym->field.is_pub) {
+    /* Check if the owner type is from a different module.
+       If source_file differs from current_file, access is denied for non-pub fields. */
+    if (owner_type && owner_type->source_file && ctx->current_file) {
+      if (strcmp(owner_type->source_file, ctx->current_file) != 0) {
+        return false;
+      }
+    }
+  }
   return true;
 }
 
@@ -877,6 +890,47 @@ static semantic_type_t _check_expr_namespace_access(checker_t ctx, node_t expr) 
       (cubec_expression_namespace_access_t)expr;
   semantic_type_t host_type = _check_expression(ctx, ns->host);
   if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+
+  /* Module scope access: module_name::member */
+  if (host_type->impl->kind == TYPE_MODULE) {
+    const char *mod_name = host_type->name;
+    struct symbol *mod_sym = scope_lookup(ctx->current_scope, mod_name);
+    if (!mod_sym || mod_sym->kind != SYMBOL_MODULE) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           "module '%s' not found", mod_name ? mod_name : "<unknown>");
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+    scope_t mod_scope = mod_sym->module.scope;
+    if (!mod_scope) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           "module '%s' is not yet loaded", mod_name);
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+    const char *fname = _checker_ident_str((node_t)ns->field);
+    if (!fname) return ctx->error_type;
+    struct symbol *member = scope_lookup_local(mod_scope, fname);
+    if (!member || !member->is_export) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           "module '%s' has no exported member '%s'",
+                           mod_name, fname);
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+    switch (member->kind) {
+    case SYMBOL_TYPE: return member->type.type ? member->type.type : ctx->error_type;
+    case SYMBOL_FUNCTION: return member->function.type ? member->function.type : ctx->error_type;
+    case SYMBOL_VARIABLE: return member->variable.type ? member->variable.type : ctx->error_type;
+    case SYMBOL_ENUM_ITEM: return member->enum_item.owning_type;
+    default:
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           "module '%s' member '%s' is not a type, function, or variable",
+                           mod_name, fname);
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+  }
 
   const char *fname = _checker_ident_str((node_t)ns->field);
   if (!fname) return ctx->error_type;

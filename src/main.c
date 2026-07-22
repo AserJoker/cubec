@@ -59,6 +59,7 @@ static int cmd_test(int argc, char *argv[]) {
   }
 
   checker_t ctx = checker_create(allocator);
+  ctx->current_file = filename;
   source_cache_load(ctx->sources, filename, source, false);
   checker_check_program(ctx, program);
 
