@@ -113,7 +113,7 @@ TEST_F(dt_generic_instantiation, union_field_substitution) {
     "union Option[T] { value: T; empty: void; }\n"
     "test \"union_field_sub\" {\n"
     "  var o = .Option[i32]{ .value = 42 };\n"
-    "  assert(o.value == 42);\n"
+    "  assert(o.value.! == 42);\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);

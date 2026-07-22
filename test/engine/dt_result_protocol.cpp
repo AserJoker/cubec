@@ -651,3 +651,76 @@ TEST_F(dt_result_protocol, full_result_protocol_via_pointer) {
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== Union field direct access is forbidden ===== */
+
+TEST_F(dt_result_protocol, union_field_direct_read_error) {
+  /* Direct field read on union should error: must use .? or .! */
+  const char *src = BUILTIN_ASSERT
+    "union Result { value: i32; err: str; }\n"
+    "test \"direct_read\" {\n"
+    "  var r = .Result{.value = 42};\n"
+    "  var x = r.value;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_GT(r.ctx->error_count, 0);
+  /* Verify diagnostic mentions .? or .! */
+  bool found_hint = false;
+  diagnostic_list_t diags = r.ctx->diagnostics;
+  if (diags) {
+    size_t count = diagnostic_list_get_size(diags);
+    for (size_t i = 0; i < count; i++) {
+      struct diagnostic *d = diagnostic_list_get(diags, i);
+      if (d && strstr(d->message, ".?")) { found_hint = true; break; }
+    }
+  }
+  EXPECT_TRUE(found_hint);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_result_protocol, union_field_write_allowed) {
+  /* Writing to union field (setting active variant) is allowed */
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result { value: i32; err: str; }\n"
+    "test \"field_write\" {\n"
+    "  var r = .Result{.value = 42};\n"
+    "  r.err = \"fail\";\n"
+    "  assert(unionIs[str](r));\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_result_protocol, union_field_dot_bang_allowed) {
+  /* Using .! on union field is allowed */
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result { value: i32; err: str; }\n"
+    "test \"dot_bang_ok\" {\n"
+    "  var r = .Result{.value = 42};\n"
+    "  assert(r.value.! == 42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_result_protocol, union_method_access_allowed) {
+  /* Method call on union is still allowed (not a field read) */
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Val {\n"
+    "  i_val: i32;\n"
+    "  func as_int(self: *Val): i32 { return self.i_val.!; }\n"
+    "}\n"
+    "test \"method_ok\" {\n"
+    "  var v = .Val{.i_val = 7};\n"
+    "  assert(v.as_int() == 7);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}

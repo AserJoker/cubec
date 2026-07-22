@@ -709,7 +709,7 @@ TEST_F(dt_e2e, local_union_method) {
     "  union Val {\n"
     "    i_val: i32;\n"
     "    f_val: f64;\n"
-    "    func as_int(self: *Val): i32 { return self.i_val; }\n"
+    "    func as_int(self: *Val): i32 { return self.i_val.!; }\n"
     "  }\n"
     "  var v = .Val { .i_val = 7 };\n"
     "  assert(v.as_int() == 7);\n"

@@ -278,7 +278,10 @@ static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
     }
   }
 
+  /* Set assignment LHS flag so union field write is not rejected */
+  ctx->in_assignment_lhs = true;
   semantic_type_t lt = _check_expression(ctx, asgn->left);
+  ctx->in_assignment_lhs = false;
   semantic_type_t rt = _check_expression(ctx, asgn->right);
 
   /* For subscript LHS with __set__, check before early error return.
@@ -727,6 +730,7 @@ static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
   }
 
   if (_is_struct_like(effective_host)) {
+    bool is_union = (effective_host->impl->kind == TYPE_UNION);
     vec_t fields = _get_struct_fields(effective_host);
     size_t fcount = fields ? vec_get_size(fields) : 0;
     for (size_t i = 0; i < fcount; i++) {
@@ -736,6 +740,16 @@ static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
           diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                                expr->location,
                                "field '%s' is private", fname);
+          ctx->error_count++;
+          return ctx->error_type;
+        }
+        /* Union field access must use .? or .! — direct read is unsafe.
+           Writing (assignment LHS) is allowed to set the active variant. */
+        if (is_union && !ctx->in_assignment_lhs) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                               expr->location,
+                               "cannot directly access union field '%s'; use '%s.?' or '%s.!' instead",
+                               fname, fname, fname);
           ctx->error_count++;
           return ctx->error_type;
         }
@@ -767,6 +781,7 @@ static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
     semantic_type_t pointee_unq = semantic_type_strip_qualifier(pointee);
 
     if (_is_struct_like(pointee_unq)) {
+      bool is_union = (pointee_unq->impl->kind == TYPE_UNION);
       vec_t fields = _get_struct_fields(pointee_unq);
       size_t fcount = fields ? vec_get_size(fields) : 0;
       for (size_t i = 0; i < fcount; i++) {
@@ -776,6 +791,16 @@ static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
             diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                                  expr->location,
                                  "field '%s' is private", fname);
+            ctx->error_count++;
+            return ctx->error_type;
+          }
+          /* Union field access must use .? or .! — direct read is unsafe.
+             Writing (assignment LHS) is allowed to set the active variant. */
+          if (is_union && !ctx->in_assignment_lhs) {
+            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                 expr->location,
+                                 "cannot directly access union field '%s'; use '%s.?' or '%s.!' instead",
+                                 fname, fname, fname);
             ctx->error_count++;
             return ctx->error_type;
           }

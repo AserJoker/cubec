@@ -885,6 +885,19 @@ static comptime_value_t _eval_member(comptime_eval_t eval, checker_t ctx,
   if (!fname) return _eval_error_val(eval);
 
   if (host->kind == COMPTIME_VALUE_COMPOSITE) {
+    /* Union field access must use .? or .! — direct read is unsafe */
+    if (comptime_value_is_tagged_union(host)) {
+      /* Check if it's a field (not a method) */
+      comptime_value_t field = comptime_value_get_field(host, fname, eval->allocator);
+      if (field) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                             "cannot directly access union field '%s'; use '%s.?' or '%s.!' instead",
+                             fname, fname, fname);
+        ctx->error_count++;
+        return _eval_error_val(eval);
+      }
+    }
+
     comptime_value_t field = comptime_value_get_field(host, fname, eval->allocator);
     if (field) return _eval_temp(eval, field);  /* owned, tracked as temp */
 
@@ -947,6 +960,18 @@ static comptime_value_t _eval_member(comptime_eval_t eval, checker_t ctx,
       return _eval_error_val(eval);
     }
     if (pointed->kind == COMPTIME_VALUE_COMPOSITE) {
+      /* Union field access must use .? or .! — direct read is unsafe */
+      if (comptime_value_is_tagged_union(pointed)) {
+        comptime_value_t field = comptime_value_get_field(pointed, fname, eval->allocator);
+        if (field) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                               "cannot directly access union field '%s'; use '%s.?' or '%s.!' instead",
+                               fname, fname, fname);
+          ctx->error_count++;
+          return _eval_error_val(eval);
+        }
+      }
+
       comptime_value_t field = comptime_value_get_field(pointed, fname, eval->allocator);
       if (field) return _eval_temp(eval, field);
 

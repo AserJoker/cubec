@@ -68,7 +68,7 @@ TEST_F(dt_union, union_init_named) {
     "union Result { value: i32; err: str; }\n"
     "test \"init\" {\n"
     "  var r = .Result{.value = 42};\n"
-    "  assert(r.value == 42);\n"
+    "  assert(r.value.! == 42);\n"
     "}\n";
   auto r = compile_source(allocator, src);
   ASSERT_NE(r.ctx, nullptr);
@@ -136,7 +136,7 @@ TEST_F(dt_union, union_positional_init_first_field) {
     "union Result { value: i32; err: str; }\n"
     "test \"pos_init\" {\n"
     "  var r = .Result{42};\n"
-    "  assert(r.value == 42);\n"
+    "  assert(r.value.! == 42);\n"
     "  assert(unionIs[i32](r));\n"
     "}\n";
   auto r = compile_source(allocator, src);

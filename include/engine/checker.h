@@ -70,6 +70,9 @@ struct checker {
   /* test block tracking */
   int test_count;
   int test_fail_count;
+
+  /* assignment context flag: union field write is allowed */
+  bool in_assignment_lhs;
 };
 
 typedef struct checker *checker_t;
