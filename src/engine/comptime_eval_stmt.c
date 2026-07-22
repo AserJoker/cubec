@@ -482,6 +482,9 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     comptime_value_t val = dv->expression
                                ? _comptime_eval_expr(eval, ctx, dv->expression)
                                : NULL;
+    /* Check for panic (FATAL) — abort everything */
+    if (val && val->kind == COMPTIME_VALUE_FATAL)
+      return _eval_signal_fatal();
     /* Check if .? error propagation set a pending return */
     if (eval->propagated_return) {
       comptime_value_t rv = eval->propagated_return_value;
