@@ -213,7 +213,7 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
                                           node_t node) {
   cubec_expression_assignment_t asgn = (cubec_expression_assignment_t)node;
   comptime_value_t rv = _comptime_eval_expr(eval, ctx, asgn->right);
-  if (!rv || rv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+  if (_val_is_error(rv)) return _eval_propagate_error(eval, rv);
 
   /* identifier assignment: clone rv into env, return borrowed from env */
   if (asgn->left->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
@@ -333,14 +333,14 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
   if (asgn->left->kind == CUBEC_NODE_EXPRESSION_SLICE) {
     cubec_expression_slice_t sl = (cubec_expression_slice_t)asgn->left;
     comptime_value_t host = _comptime_eval_expr(eval, ctx, sl->host);
-    if (!host || host->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    if (_val_is_error(host)) return _eval_propagate_error(eval, host);
 
     /* Resolve index */
     size_t index = 0;
     comptime_value_t index_val = NULL;
     if (sl->start) {
       index_val = _comptime_eval_expr(eval, ctx, sl->start);
-      if (!index_val || index_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+      if (_val_is_error(index_val)) return _eval_propagate_error(eval, index_val);
       index = (size_t)comptime_value_as_u64(index_val);
     }
 
@@ -373,12 +373,12 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
     cubec_expression_generic_instantiation_t gi =
         (cubec_expression_generic_instantiation_t)asgn->left;
     comptime_value_t host = _comptime_eval_expr(eval, ctx, gi->callee);
-    if (!host || host->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    if (_val_is_error(host)) return _eval_propagate_error(eval, host);
 
     comptime_value_t key_val = NULL;
     if (gi->arguments && vec_get_size(gi->arguments) >= 1) {
       key_val = _comptime_eval_expr(eval, ctx, (node_t)vec_get(gi->arguments, 0));
-      if (!key_val || key_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+      if (_val_is_error(key_val)) return _eval_propagate_error(eval, key_val);
     }
 
     struct symbol *set_method = _find_magic_method(host->type, "__set__");
@@ -499,6 +499,7 @@ comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
 
   comptime_env_dispose(call_env);
 
+  if (sig.kind == COMPTIME_SIGNAL_FATAL) return _eval_fatal_val(eval);
   if (sig.kind == COMPTIME_SIGNAL_ERROR) return _eval_error_val(eval);
   if (sig.kind == COMPTIME_SIGNAL_RETURN) return sig.return_value;  /* cloned into caller env */
   return _eval_temp(eval, comptime_value_create_nil(eval->allocator, NULL));
@@ -644,7 +645,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
   if (call->callee->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
     cubec_expression_member_t mem = (cubec_expression_member_t)call->callee;
     comptime_value_t host = _comptime_eval_expr(eval, ctx, mem->host);
-    if (!host || host->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    if (_val_is_error(host)) return _eval_propagate_error(eval, host);
     const char *fname = _eval_ident_str((node_t)mem->field);
 
     /* Determine receiver type (auto-deref pointers for method lookup) */
@@ -716,7 +717,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
               if (arg_node && arg_node->kind == CUBEC_NODE_EXPRESSION_SPREAD) {
                 cubec_expression_spread_t spread = (cubec_expression_spread_t)arg_node;
                 comptime_value_t pack_val = _comptime_eval_expr(eval, ctx, spread->value);
-                if (!pack_val || pack_val->kind == COMPTIME_VALUE_ERROR) {
+                if (_val_is_error(pack_val)) {
                   allocator_free(eval->allocator, &marg_vec);
                   return _eval_error_val(eval);
                 }
@@ -729,7 +730,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
                 }
               } else {
                 comptime_value_t arg = _comptime_eval_expr(eval, ctx, arg_node);
-                if (!arg || arg->kind == COMPTIME_VALUE_ERROR) {
+                if (_val_is_error(arg)) {
                   allocator_free(eval->allocator, &marg_vec);
                   return _eval_error_val(eval);
                 }
@@ -756,7 +757,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
           for (size_t j = 0; j < acount; j++) {
             comptime_value_t arg = _comptime_eval_expr(eval, ctx,
                                                          (node_t)vec_get(call->arguments, j));
-            if (!arg || arg->kind == COMPTIME_VALUE_ERROR) {
+            if (_val_is_error(arg)) {
               allocator_free(eval->allocator, &args);
               return _eval_error_val(eval);
             }
@@ -798,7 +799,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
         if (arg_node && arg_node->kind == CUBEC_NODE_EXPRESSION_SPREAD) {
           cubec_expression_spread_t spread = (cubec_expression_spread_t)arg_node;
           comptime_value_t pack_val = _comptime_eval_expr(eval, ctx, spread->value);
-          if (!pack_val || pack_val->kind == COMPTIME_VALUE_ERROR) {
+          if (_val_is_error(pack_val)) {
             allocator_free(eval->allocator, &arg_vec);
             return _eval_error_val(eval);
           }
@@ -811,7 +812,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
           }
         } else {
           comptime_value_t arg = _comptime_eval_expr(eval, ctx, arg_node);
-          if (!arg || arg->kind == COMPTIME_VALUE_ERROR) {
+          if (_val_is_error(arg)) {
             allocator_free(eval->allocator, &arg_vec);
             return _eval_error_val(eval);
           }
@@ -837,7 +838,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
     for (size_t i = 0; i < acount; i++) {
       comptime_value_t arg = _comptime_eval_expr(eval, ctx,
                                                    (node_t)vec_get(call->arguments, i));
-      if (!arg || arg->kind == COMPTIME_VALUE_ERROR) {
+      if (_val_is_error(arg)) {
         allocator_free(eval->allocator, &args);
         return _eval_error_val(eval);
       }
@@ -859,7 +860,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
     for (size_t i = 0; i < acount; i++) {
       comptime_value_t arg = _comptime_eval_expr(eval, ctx,
           (node_t)vec_get(call->arguments, i));
-      if (!arg || arg->kind == COMPTIME_VALUE_ERROR) {
+      if (_val_is_error(arg)) {
         allocator_free(eval->allocator, &user_args);
         return _eval_error_val(eval);
       }
@@ -1061,7 +1062,7 @@ static comptime_value_t _eval_ternary(comptime_eval_t eval, checker_t ctx,
                                        node_t node) {
   cubec_expression_ternary_t tern = (cubec_expression_ternary_t)node;
   comptime_value_t cond = _comptime_eval_expr(eval, ctx, tern->condition);
-  if (!cond || cond->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+  if (_val_is_error(cond)) return _eval_propagate_error(eval, cond);
   if (comptime_value_is_truthy(cond))
     return _comptime_eval_expr(eval, ctx, tern->consequent);
   return _comptime_eval_expr(eval, ctx, tern->alternate);
@@ -1602,7 +1603,7 @@ static comptime_value_t _eval_try(comptime_eval_t eval, checker_t ctx,
   if (pf->right->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
     cubec_expression_member_t mem = (cubec_expression_member_t)pf->right;
     comptime_value_t host_val = _comptime_eval_expr(eval, ctx, mem->host);
-    if (!host_val || host_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    if (_val_is_error(host_val)) return _eval_propagate_error(eval, host_val);
 
     /* Auto-deref pointer: self.field.? where self is *T */
     if (host_val->kind == COMPTIME_VALUE_POINTER) {
@@ -1668,7 +1669,7 @@ static comptime_value_t _eval_try(comptime_eval_t eval, checker_t ctx,
   }
 
   comptime_value_t val = _comptime_eval_expr(eval, ctx, pf->right);
-  if (!val || val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+  if (_val_is_error(val)) return _eval_propagate_error(eval, val);
 
   /* .? on Result protocol: isError() + value() + error() */
   if (val->type) {
@@ -1679,7 +1680,7 @@ static comptime_value_t _eval_try(comptime_eval_t eval, checker_t ctx,
       /* Call isError() */
       comptime_value_t is_err_result = _eval_method_call(eval, ctx, is_err_fn,
           pf->right, val, NULL, 0, (node_t)pf);
-      if (!is_err_result || is_err_result->kind == COMPTIME_VALUE_ERROR)
+      if (_val_is_error(is_err_result))
         return _eval_error_val(eval);
       bool is_error = (is_err_result->kind == COMPTIME_VALUE_BOOL && is_err_result->bool_val);
       if (is_error) {
@@ -1744,7 +1745,7 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, checker_t ctx,
   if (pf->right->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
     cubec_expression_member_t mem = (cubec_expression_member_t)pf->right;
     comptime_value_t host_val = _comptime_eval_expr(eval, ctx, mem->host);
-    if (!host_val || host_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    if (_val_is_error(host_val)) return _eval_propagate_error(eval, host_val);
 
     /* Auto-deref pointer: self.field.! where self is *T */
     if (host_val->kind == COMPTIME_VALUE_POINTER) {
@@ -1799,7 +1800,7 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, checker_t ctx,
   }
 
   comptime_value_t val = _comptime_eval_expr(eval, ctx, pf->right);
-  if (!val || val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+  if (_val_is_error(val)) return _eval_propagate_error(eval, val);
 
   /* .! on Result protocol: isError() + value() + error() */
   if (val->type) {
@@ -1810,7 +1811,7 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, checker_t ctx,
       /* Call isError() */
       comptime_value_t is_err_result = _eval_method_call(eval, ctx, is_err_fn,
           pf->right, val, NULL, 0, (node_t)pf);
-      if (!is_err_result || is_err_result->kind == COMPTIME_VALUE_ERROR)
+      if (_val_is_error(is_err_result))
         return _eval_error_val(eval);
       bool is_error = (is_err_result->kind == COMPTIME_VALUE_BOOL && is_err_result->bool_val);
       if (is_error) {
@@ -1913,7 +1914,7 @@ static comptime_value_t _eval_slice(comptime_eval_t eval, checker_t ctx,
                                      node_t node) {
   cubec_expression_slice_t sl = (cubec_expression_slice_t)node;
   comptime_value_t host = _comptime_eval_expr(eval, ctx, sl->host);
-  if (!host || host->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+  if (_val_is_error(host)) return _eval_propagate_error(eval, host);
 
   /* resolve start/length indices */
   size_t start = 0;
@@ -1922,12 +1923,12 @@ static comptime_value_t _eval_slice(comptime_eval_t eval, checker_t ctx,
   comptime_value_t len_val = NULL;
   if (sl->start) {
     start_val = _comptime_eval_expr(eval, ctx, sl->start);
-    if (!start_val || start_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    if (_val_is_error(start_val)) return _eval_propagate_error(eval, start_val);
     start = (size_t)comptime_value_as_u64(start_val);
   }
   if (sl->length) {
     len_val = _comptime_eval_expr(eval, ctx, sl->length);
-    if (!len_val || len_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    if (_val_is_error(len_val)) return _eval_propagate_error(eval, len_val);
     len = (size_t)comptime_value_as_u64(len_val);
   }
 
@@ -1993,14 +1994,14 @@ static comptime_value_t _eval_generic_inst(comptime_eval_t eval, checker_t ctx,
   /* __get__ magic method: obj[key] on non-array/slice types */
   if (gi->callee) {
     comptime_value_t host_val = _comptime_eval_expr(eval, ctx, gi->callee);
-    if (!host_val || host_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    if (_val_is_error(host_val)) return _eval_propagate_error(eval, host_val);
 
     /* str[index] → char */
     if (host_val->kind == COMPTIME_VALUE_STRING && gi->arguments &&
         vec_get_size(gi->arguments) >= 1) {
       comptime_value_t key_val = _comptime_eval_expr(eval, ctx,
           (node_t)vec_get(gi->arguments, 0));
-      if (!key_val || key_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+      if (_val_is_error(key_val)) return _eval_propagate_error(eval, key_val);
       const char *s = comptime_value_get_string(host_val);
       int64_t idx = comptime_value_as_i64(key_val);
       size_t slen = s ? strlen(s) : 0;
@@ -2020,7 +2021,7 @@ static comptime_value_t _eval_generic_inst(comptime_eval_t eval, checker_t ctx,
     if (get_method && gi->arguments && vec_get_size(gi->arguments) >= 1) {
       comptime_value_t key_val = _comptime_eval_expr(eval, ctx,
           (node_t)vec_get(gi->arguments, 0));
-      if (!key_val || key_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+      if (_val_is_error(key_val)) return _eval_propagate_error(eval, key_val);
       return _eval_method_call(eval, ctx, get_method, gi->callee, host_val, &key_val, 1, node);
     }
   }

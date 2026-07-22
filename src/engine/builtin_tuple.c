@@ -32,7 +32,7 @@ struct comptime_value *builtin_get_eval(struct comptime_eval *eval,
   }
   comptime_value_t tuple_val =
       _comptime_eval_expr(eval, ctx, (node_t)vec_get(call->arguments, 0));
-  if (!tuple_val || tuple_val->kind == COMPTIME_VALUE_ERROR)
+  if (_val_is_error(tuple_val))
     return _eval_error_val(eval);
 
   /* Get index N from the generic instantiation expression */
@@ -113,8 +113,8 @@ struct comptime_value *builtin_set_eval(struct comptime_eval *eval,
       _comptime_eval_expr(eval, ctx, (node_t)vec_get(call->arguments, 0));
   comptime_value_t value_val =
       _comptime_eval_expr(eval, ctx, (node_t)vec_get(call->arguments, 1));
-  if (!tuple_val || tuple_val->kind == COMPTIME_VALUE_ERROR ||
-      !value_val || value_val->kind == COMPTIME_VALUE_ERROR)
+  if (_val_is_error(tuple_val) ||
+      _val_is_error(value_val))
     return _eval_error_val(eval);
 
   /* Get index N from the generic instantiation expression */

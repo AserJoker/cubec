@@ -67,7 +67,7 @@ TEST_F(dt_flow_tdz, undefined_use_tdz_error) {
   const char *src = BUILTIN_ASSERT
     "func foo(): void {\n"
     "  var x: i32 = undefined;\n"
-    "  assert(x == 0);\n"
+    "  x == 0;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_GE(r.ctx->error_count, 1);
@@ -75,12 +75,12 @@ TEST_F(dt_flow_tdz, undefined_use_tdz_error) {
 }
 
 TEST_F(dt_flow_tdz, assign_removes_tdz) {
-  /* var x: i32 = undefined; x = 5; assert(x == 5); => OK */
+  /* var x: i32 = undefined; x = 5; x == 5; => OK */
   const char *src = BUILTIN_ASSERT
     "func foo(): void {\n"
     "  var x: i32 = undefined;\n"
     "  x = 5;\n"
-    "  assert(x == 5);\n"
+    "  x == 5;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);
@@ -88,7 +88,7 @@ TEST_F(dt_flow_tdz, assign_removes_tdz) {
 }
 
 TEST_F(dt_flow_tdz, if_branch_tdz_merge) {
-  /* var x: i32 = undefined; if (cond) { x = 5; } assert(x == 5); => error
+  /* var x: i32 = undefined; if (cond) { x = 5; } x == 5; => error
    * because x may not be assigned if cond is false */
   const char *src = BUILTIN_ASSERT
     "func foo(cond: bool): void {\n"
@@ -96,7 +96,7 @@ TEST_F(dt_flow_tdz, if_branch_tdz_merge) {
     "  if (cond) {\n"
     "    x = 5;\n"
     "  }\n"
-    "  assert(x == 5);\n"
+    "  x == 5;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_GE(r.ctx->error_count, 1);
@@ -113,7 +113,7 @@ TEST_F(dt_flow_tdz, if_else_both_assign) {
     "  } else {\n"
     "    x = 10;\n"
     "  }\n"
-    "  assert(x == 5);\n"
+    "  x == 5;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);
@@ -128,7 +128,7 @@ TEST_F(dt_flow_tdz, loop_body_assign_no_effect) {
     "  while (cond) {\n"
     "    x = 5;\n"
     "  }\n"
-    "  assert(x == 5);\n"
+    "  x == 5;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_GE(r.ctx->error_count, 1);
@@ -145,7 +145,7 @@ TEST_F(dt_flow_tdz, nested_if_tdz) {
     "      x = 5;\n"
     "    }\n"
     "  }\n"
-    "  assert(x == 5);\n"
+    "  x == 5;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_GE(r.ctx->error_count, 1);
@@ -157,7 +157,7 @@ TEST_F(dt_flow_tdz, normal_init_no_tdz) {
   const char *src = BUILTIN_ASSERT
     "func foo(): void {\n"
     "  var x = 5;\n"
-    "  assert(x == 5);\n"
+    "  x == 5;\n"
     "}\n";
   auto r = compile_source(allocator, src);
   EXPECT_EQ(r.ctx->error_count, 0);

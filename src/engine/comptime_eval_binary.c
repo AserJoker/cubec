@@ -19,7 +19,7 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
   /* Prefix unary */
   if (!bin->left) {
     comptime_value_t rv = _comptime_eval_expr(eval, ctx, bin->right);
-    if (!rv || rv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+    if (_val_is_error(rv)) return _eval_propagate_error(eval, rv);
 
     comptime_value_t result = NULL;
     if (strcmp(op, "!") == 0)
@@ -49,7 +49,7 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
   /* Binary */
   comptime_value_t lv = _comptime_eval_expr(eval, ctx, bin->left);
   comptime_value_t rv = _comptime_eval_expr(eval, ctx, bin->right);
-  if (!lv || lv->kind == COMPTIME_VALUE_ERROR || !rv ||
+  if (_val_is_error(lv) || !rv ||
       rv->kind == COMPTIME_VALUE_ERROR) {
     return _eval_error_val(eval);
   }
@@ -62,7 +62,7 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
       if (s && s->name && strcmp(s->name, "__value__") == 0 &&
           s->kind == SYMBOL_FUNCTION) {
         lv = _eval_method_call(eval, ctx, s, bin->left, lv, NULL, 0, node);
-        if (!lv || lv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+        if (_val_is_error(lv)) return _eval_propagate_error(eval, lv);
         break;
       }
     }
@@ -74,7 +74,7 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
       if (s && s->name && strcmp(s->name, "__value__") == 0 &&
           s->kind == SYMBOL_FUNCTION) {
         rv = _eval_method_call(eval, ctx, s, bin->right, rv, NULL, 0, node);
-        if (!rv || rv->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+        if (_val_is_error(rv)) return _eval_propagate_error(eval, rv);
         break;
       }
     }

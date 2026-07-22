@@ -40,6 +40,26 @@ static inline comptime_value_t _eval_error_val(comptime_eval_t eval) {
   return _eval_temp(eval, comptime_value_create_error(eval->allocator));
 }
 
+/* Fatal value: signals panic (unrecoverable) from builtin eval callback.
+   The expression evaluator converts this into COMPTIME_SIGNAL_FATAL. */
+static inline comptime_value_t _eval_fatal_val(comptime_eval_t eval) {
+  return _eval_temp(eval, comptime_value_create_fatal(eval->allocator));
+}
+
+/* Check if a value is error or fatal (both indicate evaluation failure) */
+static inline bool _val_is_error(comptime_value_t val) {
+  return !val || val->kind == COMPTIME_VALUE_ERROR || val->kind == COMPTIME_VALUE_FATAL;
+}
+
+/* Propagate fatal/error: if val is FATAL, return fatal; otherwise return error.
+   Used in expression evaluation where a sub-expression failed. */
+static inline comptime_value_t _eval_propagate_error(comptime_eval_t eval,
+                                                      comptime_value_t val) {
+  if (val && val->kind == COMPTIME_VALUE_FATAL)
+    return _eval_fatal_val(eval);
+  return _eval_error_val(eval);
+}
+
 static inline comptime_signal_t _eval_signal_none(void) {
   return (comptime_signal_t){.kind = COMPTIME_SIGNAL_NONE, .return_value = NULL};
 }
@@ -61,6 +81,11 @@ static inline comptime_signal_t _eval_signal_continue(void) {
 
 static inline comptime_signal_t _eval_signal_error(void) {
   return (comptime_signal_t){.kind = COMPTIME_SIGNAL_ERROR,
+                              .return_value = NULL};
+}
+
+static inline comptime_signal_t _eval_signal_fatal(void) {
+  return (comptime_signal_t){.kind = COMPTIME_SIGNAL_FATAL,
                               .return_value = NULL};
 }
 

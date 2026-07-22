@@ -44,7 +44,7 @@ static void _run_cleanups(comptime_eval_t eval, checker_t ctx,
       comptime_value_t val = comptime_env_lookup_value(
           eval->current_env, eval->valloc, entry->using_info.name);
       /* using variable must be initialized (undefined is disallowed by checker) */
-      if (!val || val->kind == COMPTIME_VALUE_ERROR) {
+      if (_val_is_error(val)) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                              (location_t){0},
                              "using variable '%s' is uninitialized at scope exit",
@@ -128,8 +128,10 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
 
   case CUBEC_NODE_STATEMENT_EXPRESSION: {
     cubec_statement_expression_t se = (cubec_statement_expression_t)stmt;
-    int errs_before = ctx->error_count;
-    _comptime_eval_expr(eval, ctx, se->expression);
+    comptime_value_t val = _comptime_eval_expr(eval, ctx, se->expression);
+    /* Check for panic (FATAL) — abort everything */
+    if (val && val->kind == COMPTIME_VALUE_FATAL)
+      return _eval_signal_fatal();
     /* Check if .? error propagation set a pending return */
     if (eval->propagated_return) {
       comptime_value_t rv = eval->propagated_return_value;
@@ -140,7 +142,9 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
       sig.return_value = rv;
       return sig;
     }
-    if (ctx->error_count > errs_before)
+    /* In test blocks, assert failure increments error_count but doesn't abort.
+       Outside test blocks, any error count increase still aborts the block. */
+    if (ctx->error_count > 0 && !eval->in_test_block)
       return _eval_signal_error();
     return _eval_signal_none();
   }
@@ -156,7 +160,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
   case CUBEC_NODE_STATEMENT_IF: {
     cubec_statement_if_t si = (cubec_statement_if_t)stmt;
     comptime_value_t cond = _comptime_eval_expr(eval, ctx, si->condition);
-    if (!cond || cond->kind == COMPTIME_VALUE_ERROR) return _eval_signal_error();
+    if (_val_is_error(cond)) return _eval_signal_error();
     comptime_signal_t result;
     if (comptime_value_is_truthy(cond)) {
       if (si->then_branch && si->then_branch->kind == CUBEC_NODE_STATEMENT_BLOCK)
@@ -181,7 +185,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     comptime_signal_t sig = _eval_signal_none();
     while (true) {
       comptime_value_t cond = _comptime_eval_expr(eval, ctx, sw->condition);
-      if (!cond || cond->kind == COMPTIME_VALUE_ERROR) {
+      if (_val_is_error(cond)) {
         sig = _eval_signal_error();
         break;
       }
@@ -219,7 +223,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     while (true) {
       if (sf->condition) {
         comptime_value_t cond = _comptime_eval_expr(eval, ctx, sf->condition);
-        if (!cond || cond->kind == COMPTIME_VALUE_ERROR) {
+        if (_val_is_error(cond)) {
           sig = _eval_signal_error();
           break;
         }
@@ -275,7 +279,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
         break;
       }
       comptime_value_t cond = _comptime_eval_expr(eval, ctx, sdw->condition);
-      if (!cond || cond->kind == COMPTIME_VALUE_ERROR) {
+      if (_val_is_error(cond)) {
         sig = _eval_signal_error();
         break;
       }
@@ -288,7 +292,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
   case CUBEC_NODE_STATEMENT_FOREACH: {
     cubec_statement_foreach_t sfe = (cubec_statement_foreach_t)stmt;
     comptime_value_t iter = _comptime_eval_expr(eval, ctx, sfe->iterator);
-    if (!iter || iter->kind == COMPTIME_VALUE_ERROR)
+    if (_val_is_error(iter))
       return _eval_signal_error();
 
     /* foreach only supports iterators with a next() method.
@@ -406,7 +410,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
 
       comptime_env_dispose(call_env);
 
-      if (!result || result->kind == COMPTIME_VALUE_ERROR) {
+      if (_val_is_error(result)) {
         sig = _eval_signal_error();
         break;
       }
@@ -488,7 +492,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
       sig.return_value = rv;
       return sig;
     }
-    if (!val || val->kind == COMPTIME_VALUE_ERROR) {
+    if (_val_is_error(val)) {
       /* No initializer — create a default value based on the variable's type */
       if (dv->type) {
         semantic_type_t var_type = resolver_resolve_type(ctx, dv->type);
@@ -603,7 +607,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
   case CUBEC_NODE_STATEMENT_SWITCH: {
     cubec_statement_switch_t ss = (cubec_statement_switch_t)stmt;
     comptime_value_t cond = _comptime_eval_expr(eval, ctx, ss->condition);
-    if (!cond || cond->kind == COMPTIME_VALUE_ERROR) return _eval_signal_error();
+    if (_val_is_error(cond)) return _eval_signal_error();
     if (ss->matches) {
       size_t mc = vec_get_size(ss->matches);
       for (size_t i = 0; i < mc; i++) {
@@ -667,7 +671,7 @@ comptime_signal_t comptime_eval_exec_comptime_if(comptime_eval_t eval,
                                                   node_t node) {
   cubec_statement_comptime_if_t ci = (cubec_statement_comptime_if_t)node;
   comptime_value_t cond = _comptime_eval_expr(eval, ctx, ci->condition);
-  if (!cond || cond->kind == COMPTIME_VALUE_ERROR) return _eval_signal_error();
+  if (_val_is_error(cond)) return _eval_signal_error();
   if (comptime_value_is_truthy(cond)) {
     if (ci->then_branch && ci->then_branch->kind == CUBEC_NODE_STATEMENT_BLOCK)
       return _comptime_exec_block(eval, ctx, ci->then_branch);
@@ -693,7 +697,7 @@ comptime_signal_t comptime_eval_exec_comptime_for(comptime_eval_t eval,
   while (true) {
     if (cf->condition) {
       comptime_value_t cond = _comptime_eval_expr(eval, ctx, cf->condition);
-      if (!cond || cond->kind == COMPTIME_VALUE_ERROR) {
+      if (_val_is_error(cond)) {
         sig = _eval_signal_error();
         break;
       }

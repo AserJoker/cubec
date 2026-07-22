@@ -33,6 +33,7 @@ enum comptime_value_kind {
   COMPTIME_VALUE_FUNCTION,  /**< closure (env + AST body) */
   COMPTIME_VALUE_PACK,      /**< variadic pack of values */
   COMPTIME_VALUE_ERROR,     /**< error sentinel */
+  COMPTIME_VALUE_FATAL,     /**< fatal sentinel (panic — abort compilation) */
 };
 
 /** @brief Forward declaration for comptime environment. */
@@ -97,6 +98,7 @@ comptime_value_t comptime_value_create_function(allocator_t allocator,
                                                  vec_t param_names,
                                                  semantic_type_t type);
 comptime_value_t comptime_value_create_error(allocator_t allocator);
+comptime_value_t comptime_value_create_fatal(allocator_t allocator);
 comptime_value_t comptime_value_create_pack(allocator_t allocator,
                                             vec_t elements,
                                             semantic_type_t type);

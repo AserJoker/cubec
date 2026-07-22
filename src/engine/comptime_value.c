@@ -289,6 +289,12 @@ comptime_value_t comptime_value_create_error(allocator_t allocator) {
                                              &init);
 }
 
+comptime_value_t comptime_value_create_fatal(allocator_t allocator) {
+  struct comptime_value init = {.kind = COMPTIME_VALUE_FATAL, .type = NULL};
+  return (comptime_value_t)allocator_create(allocator, &g_comptime_value_type,
+                                             &init);
+}
+
 comptime_value_t comptime_value_create_pack(allocator_t allocator,
                                             vec_t elements,
                                             semantic_type_t type) {
@@ -302,7 +308,7 @@ comptime_value_t comptime_value_create_pack(allocator_t allocator,
 /* ===== queries ===== */
 
 bool comptime_value_is_truthy(comptime_value_t val) {
-  if (!val || val->kind == COMPTIME_VALUE_ERROR) return false;
+  if (!val || val->kind == COMPTIME_VALUE_ERROR || val->kind == COMPTIME_VALUE_FATAL) return false;
   switch (val->kind) {
   case COMPTIME_VALUE_NIL:    return false;
   case COMPTIME_VALUE_BOOL:   return val->bool_val;

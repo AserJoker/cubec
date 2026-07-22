@@ -585,10 +585,8 @@ static void _evaluate_comptime_block(checker_t ctx,
   if (!ctx->comptime_eval) return;
   comptime_signal_t sig =
       comptime_eval_exec_block(ctx->comptime_eval, ctx, node->body);
-  /* error_count is already incremented by the code that produces the error
-   * (e.g., panic eval callback, or _comptime_exec_stmt); no need to
-   * increment again here. The signal just tells us to stop evaluating. */
-  (void)sig;
+  if (sig.kind == COMPTIME_SIGNAL_FATAL)
+    ctx->fatal_error = true;
 }
 
 static void _evaluate_comptime_if(checker_t ctx,
@@ -596,7 +594,9 @@ static void _evaluate_comptime_if(checker_t ctx,
   if (!ctx->comptime_eval) return;
   comptime_signal_t sig =
       comptime_eval_exec_comptime_if(ctx->comptime_eval, ctx, (node_t)node);
-  if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
+  if (sig.kind == COMPTIME_SIGNAL_FATAL)
+    ctx->fatal_error = true;
+  else if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
 }
 
 static void _evaluate_comptime_for(checker_t ctx,
@@ -604,7 +604,9 @@ static void _evaluate_comptime_for(checker_t ctx,
   if (!ctx->comptime_eval) return;
   comptime_signal_t sig =
       comptime_eval_exec_comptime_for(ctx->comptime_eval, ctx, (node_t)node);
-  if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
+  if (sig.kind == COMPTIME_SIGNAL_FATAL)
+    ctx->fatal_error = true;
+  else if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
 }
 
 static void _evaluate_test(checker_t ctx,
@@ -612,12 +614,15 @@ static void _evaluate_test(checker_t ctx,
   if (!ctx->comptime_eval) return;
 
   /* Check the test body for type errors before evaluating.
-   * Set up current_flow so TDZ tracking works inside test bodies. */
+   * Set up current_flow so TDZ tracking works inside test bodies.
+   * Set in_test_block so assert() is allowed in checker. */
+  ctx->in_test_block = true;
   int errors_before_check = ctx->error_count;
   flow_state_t saved_flow = ctx->current_flow;
   flow_state_t fs = _check_statement(ctx, node->body, NULL);
   ctx->current_flow = saved_flow;
   flow_state_dispose(fs, ctx->allocator);
+  ctx->in_test_block = false;
 
   ctx->test_count++;
 
@@ -627,9 +632,18 @@ static void _evaluate_test(checker_t ctx,
     return;
   }
 
+  /* Evaluate with in_test_block set so assert failure is non-fatal */
+  ctx->comptime_eval->in_test_block = true;
   int errors_before_eval = ctx->error_count;
   comptime_signal_t sig =
       comptime_eval_exec_block(ctx->comptime_eval, ctx, node->body);
+  ctx->comptime_eval->in_test_block = false;
+
+  if (sig.kind == COMPTIME_SIGNAL_FATAL) {
+    /* panic inside test: fatal — stop compilation */
+    ctx->fatal_error = true;
+    return;
+  }
   if (sig.kind == COMPTIME_SIGNAL_ERROR || ctx->error_count > errors_before_eval) {
     ctx->test_fail_count++;
   }
@@ -641,6 +655,7 @@ void checker_evaluate_declarations(checker_t ctx, node_t program) {
 
   size_t count = vec_get_size(prog->statements);
   for (size_t i = 0; i < count; i++) {
+    if (ctx->fatal_error) break;  /* panic stops all evaluation */
     node_t stmt = (node_t)vec_get(prog->statements, i);
     if (!stmt) continue;
     switch (stmt->kind) {

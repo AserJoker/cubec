@@ -45,6 +45,7 @@ enum comptime_signal_kind {
   COMPTIME_SIGNAL_BREAK,
   COMPTIME_SIGNAL_CONTINUE,
   COMPTIME_SIGNAL_ERROR,
+  COMPTIME_SIGNAL_FATAL,   /**< panic: unrecoverable, abort compilation */
 };
 
 struct comptime_signal {
@@ -71,6 +72,7 @@ struct comptime_eval {
   vec_t return_type_stack; /**< stack of semantic_type_t for current function return types */
   bool propagated_return; /**< set by .? when ofError propagation succeeds */
   comptime_value_t propagated_return_value; /**< the ofError result to return */
+  bool in_test_block;     /**< true while evaluating a test block body */
 };
 
 typedef struct comptime_eval *comptime_eval_t;

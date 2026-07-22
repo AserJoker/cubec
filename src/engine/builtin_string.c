@@ -194,7 +194,7 @@ struct comptime_value *builtin_toString_eval(struct comptime_eval *eval,
   }
   comptime_value_t arg =
       _comptime_eval_expr(eval, ctx, (node_t)vec_get(call->arguments, 0));
-  if (!arg || arg->kind == COMPTIME_VALUE_ERROR)
+  if (_val_is_error(arg))
     return _eval_error_val(eval);
 
   return _to_string_value(eval, ctx, arg, node);

@@ -19,6 +19,15 @@ struct comptime_value *builtin_assert_eval(struct comptime_eval *eval,
                                          struct checker *ctx, node_t node,
                                          struct builtin_entry *be) {
   (void)be;
+
+  /* assert() is only allowed inside test blocks */
+  if (!eval->in_test_block) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                         "assert can only be used inside test blocks");
+    ctx->error_count++;
+    return _eval_error_val(eval);
+  }
+
   cubec_expression_call_t call = (cubec_expression_call_t)node;
   size_t acount = call->arguments ? vec_get_size(call->arguments) : 0;
   if (acount < 1) {
@@ -30,7 +39,7 @@ struct comptime_value *builtin_assert_eval(struct comptime_eval *eval,
   }
   comptime_value_t cond =
       _comptime_eval_expr(eval, ctx, (node_t)vec_get(call->arguments, 0));
-  if (!cond || cond->kind == COMPTIME_VALUE_ERROR)
+  if (_val_is_error(cond))
     return _eval_error_val(eval);
 
   if (!comptime_value_is_truthy(cond)) {
@@ -51,7 +60,9 @@ struct comptime_value *builtin_assert_eval(struct comptime_eval *eval,
                            "assertion failed");
     }
     ctx->error_count++;
-    return _eval_error_val(eval);
+    /* In test block: don't abort — continue executing remaining statements.
+       Outside test block: this shouldn't happen (checker rejects it). */
+    return _eval_temp(eval, comptime_value_create_nil(eval->allocator, NULL));
   }
   return _eval_temp(eval, comptime_value_create_nil(eval->allocator, NULL));
 }

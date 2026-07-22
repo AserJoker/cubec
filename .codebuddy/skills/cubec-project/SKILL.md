@@ -485,7 +485,7 @@ All statement and declaration types have parser implementations, including `comp
 
 ### Architecture
 
-13-file split: `checker.c` (lifecycle + pass orchestration), `checker_collect.c` (Pass 1: symbol collection), `checker_check_stmt.c` (Pass 2: type checking), `checker_check_expr.c` (Pass 2: expression type checking), `checker_check_expr_helpers.c` (expression helper functions), `checker_type_util.c` (type utilities: instantiation, substitution, unification), `type_unify.c` (generic type inference), `checker_evaluate.c` (Pass 2: comptime evaluation + type resolution), `flow_state.c` (control flow analysis: unreachable detection, return completeness, TDZ flow propagation), `builtin.c` (builtin registry mechanism only), `builtin_debug.c` (assert), `builtin_collection.c` (length), `builtin_tuple.c` (getTupleItem/setTupleItem), `builtin_cast.c` (cast), `comptime_eval.c` (evaluator lifecycle), `comptime_eval_expr.c` (expression evaluation), `comptime_eval_stmt.c` (statement execution), `comptime_alloc.c` (virtual memory). All functions ≤ 50 lines. Design doc: `docs/semantic-design.md`.
+13-file split: `checker.c` (lifecycle + pass orchestration), `checker_collect.c` (Pass 1: symbol collection), `checker_check_stmt.c` (Pass 2: type checking), `checker_check_expr.c` (Pass 2: expression type checking), `checker_check_expr_helpers.c` (expression helper functions), `checker_type_util.c` (type utilities: instantiation, substitution, unification), `type_unify.c` (generic type inference), `checker_evaluate.c` (Pass 2: comptime evaluation + type resolution), `flow_state.c` (control flow analysis: unreachable detection, return completeness, TDZ flow propagation), `builtin.c` (builtin registry mechanism only), `builtin_debug.c` (assert), `builtin_panic.c` (panic), `builtin_collection.c` (length), `builtin_tuple.c` (getTupleItem/setTupleItem), `builtin_cast.c` (cast), `comptime_eval.c` (evaluator lifecycle), `comptime_eval_expr.c` (expression evaluation), `comptime_eval_stmt.c` (statement execution), `comptime_alloc.c` (virtual memory). All functions ≤ 50 lines. Design doc: `docs/semantic-design.md`.
 
 ### Type System (semantic_type_t)
 
@@ -540,7 +540,8 @@ Chain-of-responsibility scope model. `scope_lookup` returns `SYMBOL_NAME_KNOWN` 
 Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (name + type + eval_call callback). No enum dispatch IDs — each builtin entry carries an `eval_call` function pointer for comptime evaluation. `builtin.c` contains only the mechanism (table create/dispose/register/lookup); `builtin_table_init_defaults()` dispatches to per-module init functions. **Builtin function declarations must come from standard library source code** (using `builtin func` syntax), NOT auto-registered to `global_scope` by the compiler. This ensures proper module affiliation and version decoupling. Builtin declarations go through normal checker flow (type resolution, generic param handling) then are validated against the table: unknown builtin → error, signature mismatch → error, match → `sym->is_builtin = true`. Comptime eval uses `callee_sym->is_builtin` + `eval_call` callback instead of hardcoded name checks or switch/case dispatch.
 
 **Module split**:
-- `builtin_debug.c/h` — `assert` (type creation + `builtin_assert_eval` callback)
+- `builtin_debug.c/h` — `assert` (type creation + `builtin_assert_eval` callback). **assert is only allowed inside test blocks**; calling it elsewhere is an error. On failure, assert reports the error but does NOT abort the block — subsequent statements continue executing (test-local failure).
+- `builtin_panic.c/h` — `panic(msg: str): void` (type creation + `builtin_panic_eval` callback). **panic is unrecoverable** — it propagates `COMPTIME_VALUE_FATAL` which triggers `COMPTIME_SIGNAL_FATAL`, sets `ctx->fatal_error`, and aborts all further compilation. No subsequent declarations or statements are evaluated.
 - `builtin_collection.c/h` — `length` (type creation + `builtin_length_eval` callback)
 - `builtin_tuple.c/h` — `getTupleItem`, `setTupleItem` (type creation + `builtin_get_eval`/`builtin_set_eval` callbacks)
 - `builtin_cast.c/h` — `cast[T,K](expr:K):T` (type creation + `builtin_cast_eval` callback)
@@ -654,7 +655,7 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 1440 test cases
+- Total: 1580 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -708,7 +709,8 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 - `dt_flow_unreachable.cpp` (5 cases) — unreachable code detection: after return/break/continue, reachable after if-return, only first unreachable warned
 - `dt_flow_return.cpp` (6 cases) — return completeness: void no return ok, non-void missing return error, all paths return ok, one path missing return, loop return may not execute, explicit return ok
 - `dt_flow_tdz.cpp` (7 cases) — TDZ flow propagation: undefined use TDZ error, assign removes TDZ, if branch TDZ merge (union), if/else both assign, loop body assign no effect, nested if TDZ, normal init no TDZ
-- `dt_builtin.cpp` (24 cases) — builtin registry: table create/dispose, assert/length/getTupleItem/setTupleItem lookup, unknown lookup, correct declaration, unknown builtin error, signature mismatch error, kind mismatch error, e2e assert/tuple execution, tuple subscript error, length declaration, non-builtin not marked
+- `dt_builtin.cpp` (27 cases) — builtin registry: table create/dispose, assert/length/getTupleItem/setTupleItem lookup, unknown lookup, correct declaration, unknown builtin error, signature mismatch error, kind mismatch error, e2e assert/tuple execution, tuple subscript error, length declaration, non-builtin not marked, assert-only-in-test-blocks, assert failure continues in test
+- `dt_builtin_panic.cpp` (7 cases) — panic builtin: with string message, aborts block, in function, no args error, builtin registered, fatal stops later tests, panic in function propagates fatal
 - `dt_comptime_value.cpp` (23 cases) — value creation/disposal for all 12 kinds, truthiness, equals, clone deep copy, numeric conversions (as_i64/as_u64/as_f64)
 - `dt_comptime_alloc.cpp` (10 cases) — virtual memory lifecycle, allocate+read, write overwrite, read/write null/unknown addr, free makes addr invalid, scope enter/leave frees allocations, nested scopes, free null addr noop
 - `dt_comptime_eval.cpp` (38 cases) — evaluator: literal numeric/string/char/bool/nil, arithmetic ops, comparison ops, logical ops, bitwise ops, ternary, variable declaration+access, if/else, for loop, function call, break/continue, typeof/sizeof/alignof, group expression, comma expression, string/composite slice, do-while, foreach, composite field assignment
@@ -1105,7 +1107,8 @@ builtin var MAX_SIZE: u64;          // 编译期常量
 **内置函数**：
 
 ```c
-builtin func panic(msg: []u8): void;     // 编译器内联处理
+builtin func panic(msg: str): void;       // 不可恢复中止，设置 fatal_error 停止编译
+builtin func assert(condition: bool): void; // test 块专用断言，失败不中止块
 builtin func sizeof(expr): u64;           // 编译期大小计算
 builtin func alignof(expr): u64;          // 编译期对齐计算
 ```

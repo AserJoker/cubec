@@ -40,7 +40,7 @@ struct comptime_value *builtin_unionis_eval(struct comptime_eval *eval,
   /* Evaluate the argument */
   comptime_value_t obj_val = _comptime_eval_expr(eval, ctx,
       (node_t)vec_get(call->arguments, 0));
-  if (!obj_val || obj_val->kind == COMPTIME_VALUE_ERROR)
+  if (_val_is_error(obj_val))
     return _eval_error_val(eval);
 
   /* Verify the argument is a tagged union composite */

@@ -73,6 +73,12 @@ struct checker {
 
   /* assignment context flag: union field write is allowed */
   bool in_assignment_lhs;
+
+  /* test block context flag: assert is only allowed inside test blocks */
+  bool in_test_block;
+
+  /* fatal error flag: set by panic, stops all further evaluation */
+  bool fatal_error;
 };
 
 typedef struct checker *checker_t;

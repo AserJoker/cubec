@@ -175,6 +175,9 @@ static void _checker_init(void *self, allocator_t allocator, void *arg) {
   /* Init test tracking */
   ctx->test_count = 0;
   ctx->test_fail_count = 0;
+  ctx->in_assignment_lhs = false;
+  ctx->in_test_block = false;
+  ctx->fatal_error = false;
 }
 
 static void _checker_dispose(void *self, allocator_t allocator) {

@@ -21,6 +21,7 @@ using ::testing::Test;
 
 /* ===== helpers ===== */
 
+#define BUILTIN_ASSERT "builtin func assert(condition: bool): void;\n"
 #define BUILTIN_PANIC "builtin func panic(msg: str): void;\n"
 
 struct compile_result {
@@ -99,22 +100,21 @@ TEST_F(dt_builtin_panic, panic_with_string) {
 /* ===== panic aborts block ===== */
 
 TEST_F(dt_builtin_panic, panic_aborts_block) {
-  /* After panic, the block should abort — subsequent statements should not be
-   * evaluated. We verify this by checking that no "undeclared identifier" error
-   * is produced for 'x' (which comes after panic). If the block continued,
-   * the var statement would succeed but assert(x == 1) would run too. */
+  /* After panic, the block should abort (FATAL) — subsequent statements
+   * should not be evaluated. The fatal_error flag stops all further
+   * evaluation, so no additional errors from statements after panic. */
   const char *src = BUILTIN_PANIC
     "comptime {\n"
     "  panic(\"stop\");\n"
     "  var x: i32 = 1;\n"
-    "  assert(x == 1);\n"
     "}\n";
   auto r = compile_source(allocator, src);
   ASSERT_NE(r.ctx, nullptr);
-  /* Should have exactly 1 error (the panic), not additional errors from
-   * statements after it that shouldn't have executed */
+  /* Should have exactly 1 error (the panic), not additional errors.
+     fatal_error should be set, stopping all further evaluation. */
   int err_count = checker_get_error_count(r.ctx);
   EXPECT_EQ(err_count, 1);
+  EXPECT_TRUE(r.ctx->fatal_error);
 
   compile_result_cleanup(&r, allocator);
 }
@@ -158,4 +158,42 @@ TEST_F(dt_builtin_panic, panic_builtin_registered) {
   EXPECT_NE(be, nullptr);
   EXPECT_NE(be->eval_call, nullptr);
   checker_dispose(ctx);
+}
+
+/* ===== panic stops compilation (fatal) ===== */
+
+TEST_F(dt_builtin_panic, panic_fatal_stops_later_tests) {
+  /* panic in comptime block should set fatal_error and skip later declarations.
+     A test block after panic should not be executed. */
+  const char *src = BUILTIN_ASSERT BUILTIN_PANIC
+    "comptime {\n"
+    "  panic(\"fatal\");\n"
+    "}\n"
+    "test \"after_panic\" {\n"
+    "  assert(false);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  /* Should have 1 error (panic) and fatal_error set.
+     The test block should be skipped entirely (not even counted). */
+  EXPECT_TRUE(r.ctx->fatal_error);
+  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_builtin_panic, panic_in_function_fatal) {
+  /* panic called inside a comptime function propagates FATAL signal */
+  const char *src = BUILTIN_PANIC
+    "comptime func boom(): void {\n"
+    "  panic(\"boom\");\n"
+    "}\n"
+    "comptime {\n"
+    "  boom();\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_TRUE(r.ctx->fatal_error);
+
+  compile_result_cleanup(&r, allocator);
 }

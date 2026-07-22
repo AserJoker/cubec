@@ -322,3 +322,43 @@ TEST_F(dt_builtin, length_non_array_tuple_error) {
   EXPECT_GT(checker_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== assert only allowed in test blocks ===== */
+
+TEST_F(dt_builtin, assert_outside_test_block_error) {
+  /* assert in comptime block (not test) should be an error */
+  const char *src = BUILTIN_ASSERT
+    "comptime {\n"
+    "  assert(true);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_builtin, assert_in_test_block_ok) {
+  /* assert inside test block is allowed */
+  const char *src = BUILTIN_ASSERT
+    "test \"assert_in_test\" {\n"
+    "  assert(true);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_builtin, assert_failure_continues_in_test) {
+  /* assert failure does NOT abort the test block — subsequent stmts run */
+  const char *src = BUILTIN_ASSERT
+    "test \"assert_continue\" {\n"
+    "  assert(false);\n"
+    "  var x: i32 = 1;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  /* assert(false) reports error but block continues — no fatal */
+  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  EXPECT_FALSE(r.ctx->fatal_error);
+  /* test should be counted as failed */
+  EXPECT_GT(r.ctx->test_fail_count, 0);
+  compile_result_cleanup(&r, allocator);
+}

@@ -325,6 +325,25 @@ static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
 static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
   cubec_expression_call_t call = (cubec_expression_call_t)expr;
 
+  /* assert() is only allowed inside test blocks */
+  {
+    const char *callee_name = NULL;
+    if (call->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER)
+      callee_name = _checker_ident_str(call->callee);
+    else if (call->callee->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
+      cubec_expression_generic_instantiation_t gi =
+          (cubec_expression_generic_instantiation_t)call->callee;
+      if (gi->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER)
+        callee_name = _checker_ident_str(gi->callee);
+    }
+    if (callee_name && strcmp(callee_name, "assert") == 0 && !ctx->in_test_block) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           "assert can only be used inside test blocks");
+      ctx->error_count++;
+      return ctx->error_type;
+    }
+  }
+
   /* Check if callee is a direct reference to a generic function (needs type inference) */
   struct symbol *generic_func_sym = NULL;
   vec_t explicit_type_args = NULL;

@@ -286,7 +286,7 @@ struct comptime_value *builtin_cast_eval(struct comptime_eval *eval,
   /* Evaluate the argument */
   comptime_value_t src_val = _comptime_eval_expr(eval, ctx,
       (node_t)vec_get(call->arguments, 0));
-  if (!src_val || src_val->kind == COMPTIME_VALUE_ERROR)
+  if (_val_is_error(src_val))
     return _eval_error_val(eval);
 
   /* Get target type T from the generic instantiation's first type argument.

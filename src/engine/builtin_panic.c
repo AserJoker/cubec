@@ -33,7 +33,7 @@ struct comptime_value *builtin_panic_eval(struct comptime_eval *eval,
 
   comptime_value_t msg_val =
       _comptime_eval_expr(eval, ctx, (node_t)vec_get(call->arguments, 0));
-  if (!msg_val || msg_val->kind == COMPTIME_VALUE_ERROR) {
+  if (_val_is_error(msg_val)) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
                          "panic");
     ctx->error_count++;
@@ -53,7 +53,10 @@ struct comptime_value *builtin_panic_eval(struct comptime_eval *eval,
                          "panic: <non-string argument>");
   }
   ctx->error_count++;
-  return _eval_error_val(eval);
+
+  /* panic is unrecoverable — propagate FATAL signal to abort compilation.
+     The expression statement dispatcher will see this and unwind all blocks. */
+  return _eval_fatal_val(eval);
 }
 
 /* ===== init ===== */
