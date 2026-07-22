@@ -264,14 +264,14 @@ static void _cache_insert(checker_t ctx, const char *name,
   allocator_free(ctx->allocator, &key);
 }
 
-/* ===== type substitution (internal to generic instantiation) ===== */
+/* ===== type substitution ===== */
 
 /* Forward declaration — needed because _substitute_type delegates to _instantiate_type */
-static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
-                                         vec_t type_args);
+semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
+                                   vec_t type_args);
 
-static semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
-                                         vec_t type_args) {
+semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
+                                   vec_t type_args) {
   if (!type || !type->impl) return type;
 
   switch (type->impl->kind) {

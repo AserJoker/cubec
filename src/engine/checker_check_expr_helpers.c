@@ -1,5 +1,6 @@
 #include "engine/checker_check_expr_helpers.h"
 #include "engine/checker_check_expr.h"
+#include "engine/checker_check_stmt.h"
 #include "engine/checker_type_util.h"
 #include "engine/resolver.h"
 #include "engine/symbol.h"
@@ -223,7 +224,26 @@ semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
     }
 
     _check_generic_param_constraints(ctx, sym->function.generic_params, type_args, expr);
+
+    /* Copy type_args before _instantiate_function (which takes ownership) */
+    vec_t type_args_copy = NULL;
+    {
+      vec_init_t cpi = {.auto_dispose = false};
+      type_args_copy = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &cpi);
+      size_t tcount = vec_get_size(type_args);
+      for (size_t ti = 0; ti < tcount; ti++)
+        vec_push(type_args_copy, vec_get(type_args, ti));
+    }
+
     semantic_type_t inst_result = _instantiate_function(ctx, sym, type_args, expr);
+    if (inst_result->impl->kind != TYPE_ERROR) {
+      /* Enqueue for body checking in the worklist */
+      _enqueue_body_check(ctx, sym, inst_result, type_args_copy,
+          ctx->global_scope, false, NULL);
+      type_args_copy = NULL;  /* ownership transferred */
+    } else {
+      allocator_free(ctx->allocator, &type_args_copy);
+    }
     return inst_result;
   }
 

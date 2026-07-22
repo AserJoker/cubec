@@ -82,9 +82,26 @@ struct checker {
 
   /* current file being compiled (for import path resolution) */
   const char *current_file;
+
+  /* generic monomorphization worklist (Pass 4) */
+  vec_t body_check_worklist;   /**< vec of body_check_entry_t* */
+  strmap_t checked_bodies;     /**< cache key -> "1" (already body-checked) */
 };
 
 typedef struct checker *checker_t;
+
+/**
+ * @brief Entry in the generic monomorphization worklist.
+ *        Tracks a function body that needs to be checked.
+ */
+typedef struct {
+  struct symbol *func_sym;     /**< Function symbol (template symbol for generics) */
+  semantic_type_t inst_type;   /**< Instantiated function type (original type for non-generics) */
+  vec_t type_args;             /**< Concrete type arguments (NULL for non-generics) */
+  scope_t scope_root;          /**< Parent scope for body checking */
+  bool is_method;              /**< True if this is a type method */
+  semantic_type_t host_type;   /**< Host type for methods (NULL for free functions) */
+} body_check_entry_t;
 
 /** @brief Virtual table for checker. */
 extern type_t g_checker_type;

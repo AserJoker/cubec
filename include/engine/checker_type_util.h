@@ -45,6 +45,10 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
 semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
                                       vec_t type_args, node_t instantiation_expr);
 
+/* Substitute generic params in a type with concrete type arguments */
+semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
+                                   vec_t type_args);
+
 /* type unification for generic inference */
 vec_t _infer_type_args_from_call(checker_t ctx,
                                   semantic_type_t func_type,

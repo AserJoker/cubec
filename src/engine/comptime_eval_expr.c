@@ -619,7 +619,7 @@ comptime_value_t _comptime_create_method_value(comptime_eval_t eval,
 
   comptime_value_t fn_val = comptime_value_create_function(
       eval->allocator,
-      eval->current_env,  /* captured_env = env where the type was declared */
+      eval->global_env,  /* Module-level functions capture global_env for cross-module access */
       mfn->body,
       param_names,
       method_sym->function.type);
@@ -1034,7 +1034,7 @@ static comptime_value_t _eval_namespace_access(comptime_eval_t eval,
     case SYMBOL_FUNCTION:
       if (member->function.ast_node) {
         comptime_value_t fn_val = _comptime_create_method_value(eval, ctx, member);
-        if (fn_val) return fn_val;
+        if (fn_val) return _eval_temp(eval, fn_val);
       }
       return _eval_error_val(eval);
     case SYMBOL_VARIABLE: {

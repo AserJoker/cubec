@@ -26,6 +26,7 @@
 #include "cubec/function_argument.h"
 #include "cubec/statement_expression.h"
 #include "cubec/statement_return.h"
+#include "cubec/generic_param.h"
 #include "cubec/statement_struct.h"
 #include "cubec/statement_union.h"
 #include "cubec/statement_cunion.h"
@@ -1059,16 +1060,12 @@ static void _check_function_body(checker_t ctx,
   struct symbol *sym = scope_lookup_local(ctx->global_scope, name);
   if (!sym || sym->kind != SYMBOL_FUNCTION || !sym->function.type) return;
 
-  /* Skip generic function — they are checked during instantiation, not here */
+  /* Skip generic functions — they are checked during monomorphization */
   if (sym->function.generic_params) return;
 
-  func_check_info_t info;
-  func_check_info_from_statement(&info, node);
-
-  _check_func_body_and_returns(ctx, &info,
-                               sym->function.type->impl->function.return_type,
-                               sym->function.type->impl->function.params,
-                               ctx->current_scope);
+  /* Enqueue for body checking */
+  _enqueue_body_check(ctx, sym, sym->function.type, NULL,
+                       ctx->current_scope, false, NULL);
 }
 
 /* _register_func_params replaced by _register_func_params_from_info in checker_func_util.c */
@@ -1106,12 +1103,27 @@ static void _check_type_method_bodies(checker_t ctx, const char *type_name,
     semantic_type_t mtype = _find_method_type(ctx, t, mname);
     if (!mtype) continue;
 
+    /* Skip generic methods — they are checked during monomorphization */
     func_check_info_t info;
     func_check_info_from_statement(&info, mfn);
-    _check_func_body_and_returns(ctx, &info,
-                                 mtype->impl->function.return_type,
-                                 mtype->impl->function.params,
-                                 ctx->global_scope);
+    if (info.generic_params) continue;
+
+    /* Find the method symbol for enqueuing */
+    struct symbol *msym = NULL;
+    if (t && t->instance_methods) {
+      size_t mc = vec_get_size(t->instance_methods);
+      for (size_t j = 0; j < mc; j++) {
+        struct symbol *m = (struct symbol *)vec_get(t->instance_methods, j);
+        if (m && m->name && strcmp(m->name, mname) == 0) {
+          msym = m;
+          break;
+        }
+      }
+    }
+    if (!msym) continue;
+
+    _enqueue_body_check(ctx, msym, mtype, NULL,
+                         ctx->global_scope, true, t);
   }
 }
 
@@ -1147,6 +1159,118 @@ void checker_check_function_bodies(checker_t ctx, node_t program) {
   }
 }
 
+/* ===== worklist-driven body checking (Pass 3 + Pass 4) ===== */
+
+void _enqueue_body_check(checker_t ctx, struct symbol *func_sym,
+                          semantic_type_t inst_type, vec_t type_args,
+                          scope_t scope_root, bool is_method,
+                          semantic_type_t host_type) {
+  const char *name = func_sym->name;
+
+  /* Generate dedup key — for non-generic, use name directly (no allocation) */
+  char *key = type_args
+      ? _generic_instance_cache_key(ctx, name, type_args)
+      : NULL;
+  const char *lookup_key = key ? key : name;
+
+  if (strmap_find(ctx->checked_bodies, lookup_key)) {
+    if (key) allocator_free(ctx->allocator, &key);
+    if (type_args) allocator_free(ctx->allocator, &type_args);
+    return;
+  }
+
+  /* For non-generic: use name (persistent) as key — no allocation needed.
+     For generic: use the heap-allocated key. */
+  if (key) {
+    strmap_insert(ctx->checked_bodies, key, (void *)(uintptr_t)1);
+    allocator_free(ctx->allocator, &key);
+  } else {
+    /* name is persistent (from symbol table), safe to use as key */
+    strmap_insert(ctx->checked_bodies, name, (void *)(uintptr_t)1);
+  }
+
+  body_check_entry_t *entry =
+      allocator_alloc(ctx->allocator, sizeof(body_check_entry_t));
+  if (!entry) {
+    if (type_args) allocator_free(ctx->allocator, &type_args);
+    return;
+  }
+  entry->func_sym = func_sym;
+  entry->inst_type = inst_type;
+  entry->type_args = type_args;
+  entry->scope_root = scope_root;
+  entry->is_method = is_method;
+  entry->host_type = host_type;
+  vec_push(ctx->body_check_worklist, entry);
+}
+
+static void _check_body_from_entry(checker_t ctx, body_check_entry_t *entry) {
+  struct symbol *sym = entry->func_sym;
+  semantic_type_t inst_type = entry->inst_type;
+  vec_t type_args = entry->type_args;
+
+  if (!sym || !sym->function.ast_node) goto done;
+  cubec_statement_function_t fnode =
+      (cubec_statement_function_t)sym->function.ast_node;
+  if (!fnode->body) goto done;
+
+  /* Create generic param bindings scope if type_args provided */
+  scope_t scope_root = entry->scope_root;
+  if (type_args) {
+    scope_t generic_scope = scope_create(ctx->allocator, scope_root,
+        SCOPE_BLOCK, fnode->super.location);
+    vec_push(ctx->all_scopes, generic_scope);
+
+    vec_t gp = sym->function.generic_params;
+    if (gp) {
+      size_t gcount = vec_get_size(gp);
+      for (size_t i = 0; i < gcount; i++) {
+        cubec_generic_param_t gp_node =
+            (cubec_generic_param_t)(void *)vec_get(gp, i);
+        const char *gp_name = _checker_ident_str(gp_node->name);
+        semantic_type_t concrete = (semantic_type_t)vec_get(type_args, i);
+        if (!gp_name || !concrete) continue;
+        struct symbol *gp_sym = symbol_create(ctx->allocator,
+            gp_name, SYMBOL_TYPE, fnode->super.location);
+        gp_sym->type.type = concrete;
+        gp_sym->state = SYMBOL_EVALUATED;
+        scope_push_symbol(generic_scope, gp_sym);
+      }
+    }
+    scope_root = generic_scope;
+  }
+
+  {
+    func_check_info_t info;
+    func_check_info_from_statement(&info, fnode);
+
+    _check_func_body_and_returns(ctx, &info,
+        inst_type->impl->function.return_type,
+        inst_type->impl->function.params,
+        scope_root);
+  }
+
+done:
+  if (type_args) allocator_free(ctx->allocator, &type_args);
+}
+
+void checker_check_all_bodies(checker_t ctx, node_t program) {
+  if (!ctx || !program) return;
+
+  /* Phase 1: Enqueue non-generic functions and methods */
+  checker_check_function_bodies(ctx, program);
+
+  /* Phase 2: Process worklist — body checking may trigger new entries */
+  size_t idx = 0;
+  while (idx < vec_get_size(ctx->body_check_worklist)) {
+    body_check_entry_t *entry =
+        (body_check_entry_t *)vec_get(ctx->body_check_worklist, idx);
+    idx++;
+    _check_body_from_entry(ctx, entry);
+    allocator_free(ctx->allocator, &entry);
+  }
+}
+
 /* ===== main entry ===== */
 
 void checker_check_program(checker_t ctx, node_t program) {
@@ -1158,8 +1282,6 @@ void checker_check_program(checker_t ctx, node_t program) {
   /* Pass 2: Sequential evaluation and checking */
   checker_evaluate_declarations(ctx, program);
 
-  /* Pass 3: Function body checking */
-  checker_check_function_bodies(ctx, program);
-
-  /* Pass 4: Generic instantiation — TODO */
+  /* Pass 3 + Pass 4: Body checking with worklist-driven generic monomorphization */
+  checker_check_all_bodies(ctx, program);
 }

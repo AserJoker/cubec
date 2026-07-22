@@ -245,3 +245,92 @@ TEST_F(dt_generic_instantiation, wildcard_type_resolution) {
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== Generic function body checking (Pass 4) ===== */
+
+TEST_F(dt_generic_instantiation, generic_func_body_checked) {
+  /* Generic function body should be type-checked with concrete types */
+  const char *src = BUILTIN_ASSERT
+    "func identity[T](x: T): T { return x; }\n"
+    "test \"identity\" {\n"
+    "  var a = identity[i32](42);\n"
+    "  assert(a == 42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_instantiation, generic_func_body_type_error) {
+  /* Generic function body with type error should be caught when instantiated.
+     Using i32 where bool is expected. */
+  const char *src =
+    "func assign_bool[T](x: T): bool { return x; }\n"
+    "func caller(): void {\n"
+    "  var b = assign_bool[i32](1);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  /* i32 cannot implicitly convert to bool */
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_instantiation, generic_func_multiple_instantiations) {
+  /* Same generic function instantiated with different type args */
+  const char *src = BUILTIN_ASSERT
+    "func id[T](x: T): T { return x; }\n"
+    "test \"multi\" {\n"
+    "  var a = id[i32](1);\n"
+    "  var b = id[f64](2.0);\n"
+    "  var c = id[bool](true);\n"
+    "  assert(a == 1);\n"
+    "  assert(b == 2.0);\n"
+    "  assert(c == true);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_instantiation, generic_func_dedup_body_check) {
+  /* Same instantiation twice should only check body once */
+  const char *src = BUILTIN_ASSERT
+    "func id[T](x: T): T { return x; }\n"
+    "test \"dedup\" {\n"
+    "  var a = id[i32](1);\n"
+    "  var b = id[i32](2);\n"
+    "  assert(a == 1);\n"
+    "  assert(b == 2);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_instantiation, cascading_monomorphization) {
+  /* Generic function A calls generic function B — cascading instantiation */
+  const char *src = BUILTIN_ASSERT
+    "func double[T](x: T): T { return x + x; }\n"
+    "func quad[T](x: T): T { return double[T](x) + double[T](x); }\n"
+    "test \"cascade\" {\n"
+    "  var r = quad[i32](2);\n"
+    "  assert(r == 8);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_instantiation, generic_type_field_access) {
+  /* Field access on a generic type instance should work */
+  const char *src = BUILTIN_ASSERT
+    "struct Pair[A, B] { first: A; second: B; }\n"
+    "test \"fields\" {\n"
+    "  var p = .Pair[i32, f64]{ .first = 1, .second = 2.0 };\n"
+    "  assert(p.first == 1);\n"
+    "  assert(p.second == 2.0);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}

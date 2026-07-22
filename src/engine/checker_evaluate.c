@@ -68,6 +68,7 @@ static void _evaluate_member_method(checker_t ctx, semantic_type_t t,
   msym->function.type = mtype;
   msym->function.is_comptime = info.is_comptime;
   msym->function.ast_node = info.ast_node;
+  msym->function.generic_params = info.generic_params;
   msym->state = SYMBOL_NAME_KNOWN; /* body checked in Pass 3 */
   vec_push(t->instance_methods, msym);
 }

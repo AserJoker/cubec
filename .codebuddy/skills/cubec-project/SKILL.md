@@ -95,13 +95,13 @@ cubec/
 │   └── engine/                 # Semantic analysis + comptime evaluator
 │       ├── checker.c           # Checker lifecycle (create/dispose + pass orchestration)
 │       ├── checker_collect.c   # Pass 1: symbol collection
-│       ├── checker_check_stmt.c # Pass 2: type checking
+│       ├── checker_check_stmt.c # Pass 2+3: type checking + queue-driven body check
 │       ├── checker_evaluate.c  # Pass 2: comptime evaluation + type resolution
 │       ├── comptime_eval.c     # Evaluator lifecycle (create/dispose)
 │       ├── comptime_eval_expr.c # Expression evaluation
 │       ├── comptime_eval_stmt.c # Statement execution
 │       └── comptime_alloc.c    # Virtual memory (comptime allocator)
-├── test/                       # Tests (1192 test cases, Google Test + C++20)
+├── test/                       # Tests (1611 test cases, Google Test + C++20)
 │   ├── main.cpp                # Test entry point
 │   ├── common/test_common.h    # RAII test allocator helper
 │   ├── core/                   # Tests for core data structures
@@ -562,6 +562,32 @@ Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (nam
 
 1. **Pass 1 (collect)**: `checker_collect` — symbol collection, scope building
 2. **Pass 2 (check + evaluate)**: `checker_check_stmt` (type checking) + `checker_evaluate` (comptime evaluation, type resolution)
+3. **Pass 3 (body check)**: `checker_check_all_bodies` — queue-driven worklist algorithm for function body type checking
+
+### Queue-Driven Monomorphization (Pass 3)
+
+Generic function/type method bodies are type-checked via a worklist algorithm:
+
+1. **Initial enqueue**: All non-generic functions and non-generic type methods are enqueued
+2. **Worklist processing**: Dequeue each entry, type-check its body; when a generic call is encountered:
+   - Infer type arguments from call arguments
+   - Instantiate the generic function type
+   - Enqueue the instantiated function for body checking (if not already checked)
+3. **Deduplication**: `checked_bodies` strmap prevents duplicate body checks — non-generic uses function name as key, generic uses `_generic_instance_cache_key`
+
+**Data structures** (in `struct checker`):
+- `body_check_worklist` (vec of `body_check_entry_t*`) — pending body checks
+- `checked_bodies` (strmap) — cache key → "1" for deduplication
+
+**`body_check_entry_t`**: `{ func_sym, inst_type, type_args, scope_root, is_method, host_type }`
+
+**Key files**:
+- `checker_check_stmt.c`: `_enqueue_body_check`, `_check_body_from_entry`, `checker_check_all_bodies`
+- `checker_check_expr.c`: generic call → enqueue after instantiation
+- `checker_check_expr_helpers.c`: `_check_generic_ident_callee` → enqueue after explicit instantiation
+- `checker_type_util.c`: `_substitute_type` (exposed, replaces generic params with concrete types)
+
+**Cross-module comptime**: `_comptime_create_method_value` uses `eval->global_env` (not `current_env`) so module-level functions can resolve symbols from imported modules.
 
 ### Control Flow Analysis (flow_state_t)
 
@@ -655,7 +681,7 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 
 - Framework: Google Test + C++20
 - Helper: `test_allocator` RAII class in `test/common/test_common.h`
-- Total: 1580 test cases
+- Total: 1611 test cases
 
 ### Core Tests
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
@@ -721,7 +747,7 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 
 ## Module System (模块系统)
 
-**Implementation Status**: Syntax + Semantics fully implemented. Relative path resolution (`./xxx`, `../xxx`) works. `::` namespace access works in both expression and type positions. Export visibility filtering enforced. Cyclic dependency detection via MODULE_PARSING state + TDZ semantics. Logical paths (`std/vec`) not yet supported. Cross-module comptime function calls not yet supported.
+**Implementation Status**: Syntax + Semantics fully implemented. Relative path resolution (`./xxx`, `../xxx`) works. `::` namespace access works in both expression and type positions. Export visibility filtering enforced. Cyclic dependency detection via MODULE_PARSING state + TDZ semantics. Logical paths (`std/vec`) not yet supported. Cross-module comptime function calls supported (comptime functions resolve imported module symbols via global_env).
 
 ### Import Syntax
 

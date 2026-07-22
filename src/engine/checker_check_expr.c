@@ -1,6 +1,7 @@
 #include "engine/checker.h"
 #include "engine/checker_check_expr.h"
 #include "engine/checker_check_expr_helpers.h"
+#include "engine/checker_check_stmt.h"
 #include "engine/checker_func_util.h"
 #include "engine/checker_type_util.h"
 #include "engine/checker_check_stmt.h"
@@ -545,12 +546,28 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
       _check_generic_param_constraints(ctx, generic_func_sym->function.generic_params,
           type_args, expr);
 
+      /* Copy type_args before _instantiate_function (which takes ownership) */
+      vec_t type_args_copy = NULL;
+      {
+        vec_init_t cpi = {.auto_dispose = false};
+        type_args_copy = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &cpi);
+        size_t tcount = vec_get_size(type_args);
+        for (size_t ti = 0; ti < tcount; ti++)
+          vec_push(type_args_copy, vec_get(type_args, ti));
+      }
+
       /* Instantiate the function (takes ownership of type_args).
          Normal substitution handles pack indexing (Args[N]) correctly. */
       semantic_type_t inst_type = _instantiate_function(ctx, generic_func_sym,
           type_args, expr);
       if (inst_type->impl->kind != TYPE_ERROR) {
         callee_type = inst_type;
+        /* Enqueue for body checking in the worklist */
+        _enqueue_body_check(ctx, generic_func_sym, inst_type, type_args_copy,
+            ctx->global_scope, false, NULL);
+        type_args_copy = NULL;  /* ownership transferred to entry */
+      } else {
+        allocator_free(ctx->allocator, &type_args_copy);
       }
     }
 
@@ -636,7 +653,8 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
     if (fname && receiver_type &&
         (receiver_type->impl->kind == TYPE_STRUCT ||
          receiver_type->impl->kind == TYPE_UNION ||
-         receiver_type->impl->kind == TYPE_CUNION)) {
+         receiver_type->impl->kind == TYPE_CUNION ||
+         receiver_type->impl->kind == TYPE_GENERIC_INSTANCE)) {
       /* Check if the member resolves to an instance method */
       if (receiver_type->instance_methods) {
         size_t mc = vec_get_size(receiver_type->instance_methods);
@@ -644,6 +662,27 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
           struct symbol *m = (struct symbol *)vec_get(receiver_type->instance_methods, i);
           if (m && m->name && strcmp(m->name, fname) == 0 && m->kind == SYMBOL_FUNCTION) {
             is_member_call = true;
+
+            /* For TYPE_GENERIC_INSTANCE, substitute method type with concrete type args */
+            if (receiver_type->impl->kind == TYPE_GENERIC_INSTANCE) {
+              semantic_type_t tpl = receiver_type->impl->generic_instance.generic_template;
+              vec_t targs = receiver_type->impl->generic_instance.type_args;
+              semantic_type_t sub_type = _substitute_type(ctx, m->function.type, targs);
+              if (sub_type && sub_type->impl->kind != TYPE_ERROR) {
+                callee_type = sub_type;
+                /* Enqueue substituted method for body checking */
+                vec_t targs_copy = NULL;
+                {
+                  vec_init_t cpi = {.auto_dispose = false};
+                  targs_copy = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &cpi);
+                  size_t tcount = vec_get_size(targs);
+                  for (size_t ti = 0; ti < tcount; ti++)
+                    vec_push(targs_copy, vec_get(targs, ti));
+                }
+                _enqueue_body_check(ctx, m, sub_type, targs_copy,
+                    ctx->global_scope, true, receiver_type);
+              }
+            }
             break;
           }
         }

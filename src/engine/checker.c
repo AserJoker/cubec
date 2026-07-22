@@ -179,6 +179,12 @@ static void _checker_init(void *self, allocator_t allocator, void *arg) {
   ctx->in_assignment_lhs = false;
   ctx->in_test_block = false;
   ctx->fatal_error = false;
+
+  /* Init generic monomorphization worklist (auto_dispose=false: entries managed manually) */
+  vec_init_t wl_init = {.auto_dispose = false};
+  ctx->body_check_worklist = allocator_create(allocator, &g_vec_type, &wl_init);
+  strmap_init_t cb_init = {.value_auto_dispose = false};
+  ctx->checked_bodies = (strmap_t)allocator_create(allocator, &g_strmap_type, &cb_init);
 }
 
 static void _checker_dispose(void *self, allocator_t allocator) {
@@ -204,6 +210,8 @@ static void _checker_dispose(void *self, allocator_t allocator) {
   builtin_table_dispose(ctx->builtin_table, allocator);
   allocator_free(allocator, &ctx->type_impl_cache);
   allocator_free(allocator, &ctx->type_name_table);
+  allocator_free(allocator, &ctx->body_check_worklist);
+  allocator_free(allocator, &ctx->checked_bodies);
 
   /* Dispose all module entries (source buffers, resolved paths, tokens, programs) */
   strmap_iter_t iter = strmap_iter_first(ctx->module_cache);

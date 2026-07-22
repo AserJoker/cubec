@@ -402,3 +402,60 @@ TEST_F(dt_module, export_flag_set_on_symbols) {
 
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== cross-module comptime function calls ===== */
+
+TEST_F(dt_module, cross_module_comptime_func_call) {
+  /* Module A exports a comptime function that can be called cross-module */
+  const char *helper_src =
+    "export comptime func add_val(x: i32, y: i32): i32 { return x + y; }\n";
+  char *helper_path = write_temp_file(temp_dir, "helper.cubec", helper_src);
+  ASSERT_NE(helper_path, nullptr);
+
+  char main_path[512];
+  snprintf(main_path, sizeof(main_path), "%s/main.cubec", temp_dir);
+  const char *main_src =
+    "import helper from \"./helper\";\n"
+    "comptime var result = helper::add_val(5, 3);\n";
+
+  auto r = compile_file(allocator, main_path, main_src);
+  ASSERT_NE(r.ctx, nullptr);
+  if (checker_get_error_count(r.ctx) > 0) {
+    diagnostic_list_t diags = r.ctx->diagnostics;
+    if (diags) {
+      size_t dcount = diagnostic_list_get_size(diags);
+      for (size_t i = 0; i < dcount; i++) {
+        struct diagnostic *d = diagnostic_list_get(diags, i);
+        if (d) printf("  DIAG: %s\n", d->message);
+      }
+    }
+  }
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+
+  compile_result_cleanup(&r, allocator);
+  free(helper_path);
+}
+
+TEST_F(dt_module, cross_module_comptime_func_with_local_var) {
+  /* Module A's comptime function uses local variables */
+  const char *math_src =
+    "export comptime func double_val(x: i32): i32 {\n"
+    "  var y = x * 2;\n"
+    "  return y;\n"
+    "}\n";
+  char *math_path = write_temp_file(temp_dir, "math.cubec", math_src);
+  ASSERT_NE(math_path, nullptr);
+
+  char main_path[512];
+  snprintf(main_path, sizeof(main_path), "%s/main.cubec", temp_dir);
+  const char *main_src =
+    "import math from \"./math\";\n"
+    "comptime var r = math::double_val(21);\n";
+
+  auto r = compile_file(allocator, main_path, main_src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+
+  compile_result_cleanup(&r, allocator);
+  free(math_path);
+}
