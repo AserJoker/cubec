@@ -1834,7 +1834,7 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, checker_t ctx,
                                                               found->field.type,
                                                               eval->allocator));
           } else {
-            /* Wrong variant — panic with str error */
+            /* Wrong variant — panic (fatal): .! on wrong variant is unrecoverable */
             const char *active_name = "<unknown>";
             for (size_t i = 0; i < fc; i++) {
               struct symbol *f = (struct symbol *)vec_get(fields, i);
@@ -1847,7 +1847,7 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, checker_t ctx,
                 "panic: union is in '%s' variant, expected '%s'",
                 active_name, fname);
             ctx->error_count++;
-            return _eval_error_val(eval);
+            return _eval_fatal_val(eval);
           }
         }
       }
@@ -1886,7 +1886,7 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, checker_t ctx,
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
             "panic: %s", err_desc);
         ctx->error_count++;
-        return _eval_error_val(eval);
+        return _eval_fatal_val(eval);
       }
       /* Not error — call value() */
       comptime_value_t value_result = _eval_method_call(eval, ctx, val_fn,
@@ -1901,14 +1901,14 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, checker_t ctx,
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
           "panic: null pointer in .!");
       ctx->error_count++;
-      return _eval_error_val(eval);
+      return _eval_fatal_val(eval);
     }
     comptime_value_t pointed = comptime_alloc_read(eval->valloc, val->pointer.addr);
     if (!pointed) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
           "panic: dangling pointer in .!");
       ctx->error_count++;
-      return _eval_error_val(eval);
+      return _eval_fatal_val(eval);
     }
     return pointed;
   }

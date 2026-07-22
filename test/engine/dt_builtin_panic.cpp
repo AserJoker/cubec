@@ -197,3 +197,22 @@ TEST_F(dt_builtin_panic, panic_in_function_fatal) {
 
   compile_result_cleanup(&r, allocator);
 }
+
+TEST_F(dt_builtin_panic, assert_unwrap_wrong_variant_fatal) {
+  /* .! on wrong union variant should panic (fatal), not just error.
+     Execution must stop — subsequent assert(false) must NOT be reached. */
+  const char *src = BUILTIN_ASSERT
+    "union Test { _err:str; _value:i32; };\n"
+    "test \"unwrap_wrong\" {\n"
+    "  var item = .Test{._err = \"oops\"};\n"
+    "  _ = item._value.!;\n"
+    "  assert(false);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_TRUE(r.ctx->fatal_error);
+  /* Should have the panic error, but NOT the assert(false) error */
+  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+
+  compile_result_cleanup(&r, allocator);
+}
