@@ -1579,6 +1579,12 @@ static comptime_value_t _eval_try(comptime_eval_t eval, checker_t ctx,
     comptime_value_t host_val = _comptime_eval_expr(eval, ctx, mem->host);
     if (!host_val || host_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
 
+    /* Auto-deref pointer: self.field.? where self is *T */
+    if (host_val->kind == COMPTIME_VALUE_POINTER) {
+      comptime_value_t pointed = comptime_alloc_read(eval->valloc, host_val->pointer.addr);
+      if (pointed) host_val = pointed;
+    }
+
     if (host_val->kind == COMPTIME_VALUE_COMPOSITE && comptime_value_is_tagged_union(host_val)) {
       const char *fname = _eval_ident_str((node_t)mem->field);
       semantic_type_t unq = semantic_type_strip_qualifier(host_val->type);
@@ -1714,6 +1720,12 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, checker_t ctx,
     cubec_expression_member_t mem = (cubec_expression_member_t)pf->right;
     comptime_value_t host_val = _comptime_eval_expr(eval, ctx, mem->host);
     if (!host_val || host_val->kind == COMPTIME_VALUE_ERROR) return _eval_error_val(eval);
+
+    /* Auto-deref pointer: self.field.! where self is *T */
+    if (host_val->kind == COMPTIME_VALUE_POINTER) {
+      comptime_value_t pointed = comptime_alloc_read(eval->valloc, host_val->pointer.addr);
+      if (pointed) host_val = pointed;
+    }
 
     if (host_val->kind == COMPTIME_VALUE_COMPOSITE && comptime_value_is_tagged_union(host_val)) {
       const char *fname = _eval_ident_str((node_t)mem->field);

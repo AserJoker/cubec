@@ -919,6 +919,10 @@ static semantic_type_t _check_expr_try(checker_t ctx, node_t expr) {
     semantic_type_t host_type = _check_expression(ctx, mem->host);
     if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
 
+    /* Auto-deref pointer: self.field.? where self: *T */
+    if (host_type->impl->kind == TYPE_POINTER)
+      host_type = host_type->impl->pointer.pointee;
+
     semantic_type_t unq = semantic_type_strip_qualifier(host_type);
     vec_t fields = NULL;
     if (unq->impl->kind == TYPE_UNION)
@@ -993,6 +997,10 @@ static semantic_type_t _check_expr_assert(checker_t ctx, node_t expr) {
     cubec_expression_member_t mem = (cubec_expression_member_t)pf->right;
     semantic_type_t host_type = _check_expression(ctx, mem->host);
     if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+
+    /* Auto-deref pointer: self.field.! where self: *T */
+    if (host_type->impl->kind == TYPE_POINTER)
+      host_type = host_type->impl->pointer.pointee;
 
     semantic_type_t unq = semantic_type_strip_qualifier(host_type);
     vec_t fields = NULL;

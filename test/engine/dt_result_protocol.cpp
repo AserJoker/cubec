@@ -22,7 +22,7 @@ using ::testing::Test;
 /* ===== helpers ===== */
 
 #define BUILTIN_ASSERT "builtin func assert(cond: bool): void;\n"
-#define BUILTIN_UNIONIS "builtin func unionIs[T](v: T): bool;\n"
+#define BUILTIN_UNIONIS "builtin func unionIs[T,K](v: K): bool;\n"
 
 struct compile_result {
   checker_t ctx;
@@ -540,6 +540,111 @@ TEST_F(dt_result_protocol, pointer_autoderef_method) {
     "  var p = c.&;\n"
     "  var v = p.get();\n"
     "  assert(v == 5);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== .! and .? on union via pointer (self: *T) ===== */
+
+TEST_F(dt_result_protocol, dot_bang_union_field_via_pointer) {
+  /* self._err.! inside a method where self: *Result —
+   * pointer auto-dereference must happen before union field check */
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result {\n"
+    "  _err: str;\n"
+    "  _value: i32;\n"
+    "  func ofError(err: str): Result { return .Result{._err = err}; }\n"
+    "  func ofValue(value: i32): Result { return .Result{._value = value}; }\n"
+    "  func isError(self: *Result): bool { return unionIs[str](self.*); }\n"
+    "  func error(self: *Result): str { return self._err.!; }\n"
+    "  func value(self: *Result): i32 { return self._value.!; }\n"
+    "}\n"
+    "test \"dot_bang_via_ptr\" {\n"
+    "  var r = .Result{._value = 42};\n"
+    "  assert(r.value() == 42);\n"
+    "  var r2 = .Result{._err = \"fail\"};\n"
+    "  assert(r2.isError());\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  if (r.ctx->error_count > 0) {
+    diagnostic_list_t diags = r.ctx->diagnostics;
+    if (diags) {
+      size_t count = diagnostic_list_get_size(diags);
+      for (size_t i = 0; i < count; i++) {
+        struct diagnostic *d = diagnostic_list_get(diags, i);
+        if (d) printf("  diag[%zu]: %s\n", i, d->message);
+      }
+    }
+  }
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_result_protocol, dot_try_union_field_via_pointer) {
+  /* self._value.? inside a method where self: *Result —
+   * pointer auto-dereference for .? on union member */
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result {\n"
+    "  _err: str;\n"
+    "  _value: i32;\n"
+    "  func ofError(err: str): Result { return .Result{._err = err}; }\n"
+    "  func ofValue(value: i32): Result { return .Result{._value = value}; }\n"
+    "  func isError(self: *Result): bool { return unionIs[str](self.*); }\n"
+    "  func error(self: *Result): str { return self._err.!; }\n"
+    "  func value(self: *Result): i32 { return self._value.!; }\n"
+    "  func ofError(e: str): Result { return .Result{._err = e}; }\n"
+    "}\n"
+    "comptime func mayFail(): Result {\n"
+    "  var r = .Result{._err = \"fail\"};\n"
+    "  var v = r._value.?;\n"
+    "  return .Result{._value = v};\n"
+    "}\n"
+    "test \"dot_try_via_ptr\" {\n"
+    "  var result = mayFail();\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  /* Propagation via ofError should succeed — no "error propagation" diagnostic */
+  bool found_propagation_error = false;
+  diagnostic_list_t diags2 = r.ctx->diagnostics;
+  if (diags2) {
+    size_t count = diagnostic_list_get_size(diags2);
+    for (size_t i = 0; i < count; i++) {
+      struct diagnostic *d = diagnostic_list_get(diags2, i);
+      if (d && strstr(d->message, "error propagation")) {
+        found_propagation_error = true;
+      }
+    }
+  }
+  EXPECT_FALSE(found_propagation_error);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_result_protocol, full_result_protocol_via_pointer) {
+  /* Complete test matching user's example: Result with .? propagation
+   * through TestUnion function */
+  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+    "union Result {\n"
+    "  _err: str;\n"
+    "  _value: i32;\n"
+    "  func ofError(err: str): Result { return .Result{._err = err}; }\n"
+    "  func ofValue(value: i32): Result { return .Result{._value = value}; }\n"
+    "  func isError(self: *Result): bool { return unionIs[str](self.*); }\n"
+    "  func error(self: *Result): str { return self._err.!; }\n"
+    "  func value(self: *Result): i32 { return self._value.!; }\n"
+    "}\n"
+    "comptime func TestUnion(): Result {\n"
+    "  var item = .Result{._err = \"test\"};\n"
+    "  _ = item._value.?;\n"
+    "  return .Result{._value = 123};\n"
+    "}\n"
+    "test \"using_demo\" {\n"
+    "  var res = TestUnion();\n"
+    "  assert(res.isError());\n"
     "}\n";
   auto r = compile_source(allocator, src);
   ASSERT_NE(r.ctx, nullptr);
