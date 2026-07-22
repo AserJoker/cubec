@@ -403,6 +403,27 @@ static void _evaluate_variable(checker_t ctx,
     ctx->error_count++;
   }
 
+  /* Global comptime variables must be const and cannot use undefined.
+     This guarantees the value is known at compile time, so comptime if/for
+     etc. never depend on external mutation. */
+  if (node->is_comptime && scope_get_kind(ctx->current_scope) == SCOPE_GLOBAL) {
+    if (decl->expression &&
+        decl->expression->kind == CUBEC_NODE_LITERAL_UNDEFINED) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "comptime variable '%s' cannot be initialized with 'undefined' — value must be known at compile time",
+                           _checker_ident_str(decl->identifier));
+      ctx->error_count++;
+    }
+    if (!decl->expression) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "comptime variable '%s' requires an initializer — value must be known at compile time",
+                           _checker_ident_str(decl->identifier));
+      ctx->error_count++;
+    }
+  }
+
   const char *name = _checker_ident_str(decl->identifier);
   if (!name) return;
 
@@ -463,6 +484,19 @@ static void _evaluate_variable(checker_t ctx,
   }
 
   _check_var_type_completeness(ctx, &node->super, var_type, name);
+
+  /* Global comptime variables are implicitly const — their value is fixed
+     at compile time, so they must not be mutable. This guarantees comptime
+     if/for etc. never depend on external mutation. */
+  if (node->is_comptime && scope_get_kind(ctx->current_scope) == SCOPE_GLOBAL &&
+      var_type && var_type->impl->kind != TYPE_ERROR &&
+      !semantic_type_is_const(var_type)) {
+    semantic_type_t const_type = semantic_type_create_qualifier(
+        ctx->allocator, var_type, true, false);
+    type_hash_ensure(const_type);
+    vec_push(ctx->all_types, const_type);
+    var_type = const_type;
+  }
 
   /* Check initializer type compatibility with explicit type annotation */
   if (var_type && init_type && var_type->impl->kind != TYPE_ERROR &&

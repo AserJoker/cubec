@@ -87,3 +87,43 @@ TEST_F(dt_comptime_stmt, comptime_var_string) {
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
+
+TEST_F(dt_comptime_stmt, comptime_var_undefined_error) {
+  /* Global comptime var cannot be initialized with undefined */
+  const char *src =
+    "comptime var x: i32 = undefined;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_comptime_stmt, comptime_var_no_init_error) {
+  /* Global comptime var must have an initializer — enforced at parse time */
+  const char *src =
+    "comptime var x: i32;\n";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", src);
+  size_t pos = 0;
+  node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+  /* Parse-time error: g_error should be set */
+  EXPECT_NE(g_error, nullptr);
+  error_clear();
+  allocator_free(allocator, &prog);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_comptime_stmt, comptime_var_implicit_const) {
+  /* Global comptime var is implicitly const — type auto-wrapped to const */
+  const char *src =
+    "comptime var x = 42;\n"
+    "comptime var y: i32 = 10;\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(r.ctx->error_count, 0);
+  /* Verify the types are const */
+  struct symbol *x_sym = scope_lookup_local(r.ctx->global_scope, "x");
+  ASSERT_NE(x_sym, nullptr);
+  EXPECT_TRUE(semantic_type_is_const(x_sym->variable.type));
+  struct symbol *y_sym = scope_lookup_local(r.ctx->global_scope, "y");
+  ASSERT_NE(y_sym, nullptr);
+  EXPECT_TRUE(semantic_type_is_const(y_sym->variable.type));
+  compile_result_cleanup(&r, allocator);
+}
