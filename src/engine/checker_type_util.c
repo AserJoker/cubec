@@ -911,7 +911,9 @@ vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs,
 
 static vec_t _copy_symbol_vec(checker_t ctx, vec_t src) {
   if (!src) return NULL;
-  vec_init_t vi = {.auto_dispose = true};
+  /* auto_dispose = false: symbols are owned by the template type.
+     If true, both template and instance would free the same symbols (double-free). */
+  vec_init_t vi = {.auto_dispose = false};
   vec_t dst = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
   size_t count = vec_get_size(src);
   for (size_t i = 0; i < count; i++)

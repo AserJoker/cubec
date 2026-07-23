@@ -50,17 +50,37 @@ semantic_type_t _check_expression(checker_t ctx, node_t expr);
 /* _register_generic_params moved to checker_func_util.c as checker_register_generic_params */
 
 static void _evaluate_member_method(checker_t ctx, semantic_type_t t,
-                                     cubec_statement_function_t mfn) {
+                                     cubec_statement_function_t mfn,
+                                     size_t type_gp_count) {
   const char *mname = _checker_ident_str(mfn->name);
   struct symbol *msym = symbol_create(ctx->allocator, mname,
                                       SYMBOL_FUNCTION, mfn->super.location);
   func_check_info_t info;
   func_check_info_from_statement(&info, mfn);
+
+  /* Register method-level generic params with index offset.
+     Type-level params (e.g. T from struct Vec[T]) are already in scope.
+     Method-level params (e.g. U from func map[U]) need offset indices
+     so _substitute_type can use a combined type_args vector. */
+  scope_t saved_scope = ctx->current_scope;
+  if (info.generic_params) {
+    ctx->current_scope = scope_create(ctx->allocator, saved_scope,
+        SCOPE_BLOCK, mfn->super.location);
+    vec_push(ctx->all_scopes, ctx->current_scope);
+    checker_register_generic_params_offset(ctx, info.generic_params, type_gp_count);
+    msym->function.generic_param_offset = type_gp_count;
+  }
+
   semantic_type_t ret_type = info.return_type
       ? resolver_resolve_type(ctx, info.return_type)
       : ctx->builtin_void;
   if (!ret_type) ret_type = ctx->builtin_void;
   vec_t params = _resolve_func_param_types(ctx, &info);
+
+  if (info.generic_params) {
+    ctx->current_scope = saved_scope;
+  }
+
   semantic_type_t mtype = semantic_type_create_function(
       ctx->allocator, ret_type, params, info.is_c_variadic);
   type_hash_ensure(mtype);
@@ -90,7 +110,7 @@ static void _evaluate_member_declaration(checker_t ctx, semantic_type_t t,
 }
 
 void checker_evaluate_struct_union_members(checker_t ctx, semantic_type_t t,
-                                           vec_t members) {
+                                           vec_t members, size_t type_gp_count) {
   if (!members) return;
   if (!t->instance_methods) return;
   size_t mcount = vec_get_size(members);
@@ -98,7 +118,8 @@ void checker_evaluate_struct_union_members(checker_t ctx, semantic_type_t t,
     node_t member = (node_t)vec_get(members, i);
     if (!member) continue;
     if (member->kind == CUBEC_NODE_STATEMENT_FUNCTION)
-      _evaluate_member_method(ctx, t, (cubec_statement_function_t)member);
+      _evaluate_member_method(ctx, t, (cubec_statement_function_t)member,
+                              type_gp_count);
     else if (member->kind == CUBEC_NODE_STATEMENT_DECLARATION)
       _evaluate_member_declaration(ctx, t, (cubec_statement_declaration_t)member);
   }
@@ -122,7 +143,10 @@ static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
 
   /* Resolve fields and methods */
   _resolve_struct_fields(ctx, t, node->members);
-  checker_evaluate_struct_union_members(ctx, t, node->members);
+  {
+    size_t type_gp_count = node->generic_params ? vec_get_size(node->generic_params) : 0;
+    checker_evaluate_struct_union_members(ctx, t, node->members, type_gp_count);
+  }
 
   /* Skip layout for generic — sizes depend on concrete type args */
   if (!node->generic_params) type_layout_compute(t, 8);
@@ -169,7 +193,10 @@ static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
 
   /* Resolve fields and methods */
   _resolve_union_fields(ctx, t, node->members);
-  checker_evaluate_struct_union_members(ctx, t, node->members);
+  {
+    size_t type_gp_count = node->generic_params ? vec_get_size(node->generic_params) : 0;
+    checker_evaluate_struct_union_members(ctx, t, node->members, type_gp_count);
+  }
 
   /* Skip layout for generic — sizes depend on concrete type args */
   if (!node->generic_params) type_layout_compute(t, 8);

@@ -70,6 +70,8 @@ void _check_func_body_and_returns(checker_t ctx,
 
 /* Unified generic params registration (merges collect.c and evaluate.c versions) */
 void checker_register_generic_params(checker_t ctx, vec_t generic_params);
+void checker_register_generic_params_offset(checker_t ctx, vec_t generic_params,
+                                             size_t offset);
 
 #ifdef __cplusplus
 }

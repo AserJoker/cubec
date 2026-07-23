@@ -9,7 +9,7 @@ extern "C" {
 void checker_evaluate_declarations(checker_t ctx, node_t program);
 void checker_evaluate_statement(checker_t ctx, node_t stmt);
 void checker_evaluate_struct_union_members(checker_t ctx, semantic_type_t t,
-                                           vec_t members);
+                                           vec_t members, size_t type_gp_count);
 
 #ifdef __cplusplus
 }

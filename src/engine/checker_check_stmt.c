@@ -922,7 +922,7 @@ static flow_state_t _check_stmt_local_struct(checker_t ctx,
 
   /* Resolve fields and methods */
   _resolve_struct_fields(ctx, t, node->members);
-  checker_evaluate_struct_union_members(ctx, t, node->members);
+  checker_evaluate_struct_union_members(ctx, t, node->members, 0);
 
   /* Compute layout */
   type_layout_compute(t, 8);
@@ -972,7 +972,7 @@ static flow_state_t _check_stmt_local_union(checker_t ctx,
 
   /* Resolve fields and methods */
   _resolve_union_fields(ctx, t, node->members);
-  checker_evaluate_struct_union_members(ctx, t, node->members);
+  checker_evaluate_struct_union_members(ctx, t, node->members, 0);
 
   type_layout_compute(t, 8);
   type_hash_ensure(t);
@@ -1221,6 +1221,32 @@ static void _check_body_from_entry(checker_t ctx, body_check_entry_t *entry) {
         SCOPE_BLOCK, fnode->super.location);
     vec_push(ctx->all_scopes, generic_scope);
 
+    /* For methods on generic instances, bind type-level params first */
+    size_t type_gp_count = 0;
+    if (entry->is_method && entry->host_type &&
+        entry->host_type->impl->kind == TYPE_GENERIC_INSTANCE) {
+      semantic_type_t tmpl =
+          entry->host_type->impl->generic_instance.generic_template;
+      struct symbol *tmpl_sym = scope_lookup_local(ctx->global_scope, tmpl->name);
+      if (tmpl_sym && tmpl_sym->kind == SYMBOL_TYPE && tmpl_sym->type.generic_params) {
+        vec_t type_gp = tmpl_sym->type.generic_params;
+        type_gp_count = vec_get_size(type_gp);
+        for (size_t i = 0; i < type_gp_count && i < vec_get_size(type_args); i++) {
+          cubec_generic_param_t gp_node =
+              (cubec_generic_param_t)(void *)vec_get(type_gp, i);
+          const char *gp_name = _checker_ident_str(gp_node->name);
+          semantic_type_t concrete = (semantic_type_t)vec_get(type_args, i);
+          if (!gp_name || !concrete) continue;
+          struct symbol *gp_sym = symbol_create(ctx->allocator,
+              gp_name, SYMBOL_TYPE, fnode->super.location);
+          gp_sym->type.type = concrete;
+          gp_sym->state = SYMBOL_EVALUATED;
+          scope_push_symbol(generic_scope, gp_sym);
+        }
+      }
+    }
+
+    /* Bind method/function-level generic params (offset by type_gp_count) */
     vec_t gp = sym->function.generic_params;
     if (gp) {
       size_t gcount = vec_get_size(gp);
@@ -1228,7 +1254,9 @@ static void _check_body_from_entry(checker_t ctx, body_check_entry_t *entry) {
         cubec_generic_param_t gp_node =
             (cubec_generic_param_t)(void *)vec_get(gp, i);
         const char *gp_name = _checker_ident_str(gp_node->name);
-        semantic_type_t concrete = (semantic_type_t)vec_get(type_args, i);
+        size_t arg_idx = type_gp_count + i;
+        semantic_type_t concrete = (arg_idx < vec_get_size(type_args))
+            ? (semantic_type_t)vec_get(type_args, arg_idx) : NULL;
         if (!gp_name || !concrete) continue;
         struct symbol *gp_sym = symbol_create(ctx->allocator,
             gp_name, SYMBOL_TYPE, fnode->super.location);

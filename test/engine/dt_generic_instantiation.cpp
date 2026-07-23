@@ -334,3 +334,137 @@ TEST_F(dt_generic_instantiation, generic_type_field_access) {
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== Generic methods on non-generic struct ===== */
+
+TEST_F(dt_generic_instantiation, non_generic_struct_generic_method_inferred) {
+  /* Non-generic struct with a generic method — type arg inferred from call */
+  const char *src = BUILTIN_ASSERT
+    "struct Box {\n"
+    "  val: i32;\n"
+    "  func identity[U](self: *Box, x: U): U { return x; }\n"
+    "}\n"
+    "test \"box_identity\" {\n"
+    "  var b = .Box{.val = 42};\n"
+    "  var xi = b.identity(10);\n"
+    "  var xf = b.identity(2.0);\n"
+    "  assert(xi == 10);\n"
+    "  assert(xf == 2.0);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  if (r.ctx->error_count > 0) {
+    diagnostic_list_t diags = r.ctx->diagnostics;
+    if (diags) {
+      size_t dcount = diagnostic_list_get_size(diags);
+      for (size_t i = 0; i < dcount; i++) {
+        struct diagnostic *d = diagnostic_list_get(diags, i);
+        if (d) printf("  DIAG: %s\n", d->message);
+      }
+    }
+  }
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== Generic methods on generic struct ===== */
+
+TEST_F(dt_generic_instantiation, generic_struct_generic_method_inferred) {
+  /* Generic struct with generic method — both type-level and method-level inferred */
+  const char *src = BUILTIN_ASSERT
+    "struct Store[T] {\n"
+    "  data: T;\n"
+    "  func convert[U](self: *Store[T], fallback: U): U { return fallback; }\n"
+    "}\n"
+    "test \"convert\" {\n"
+    "  var s = .Store[i32]{.data = 10};\n"
+    "  var r = s.convert(2.0);\n"
+    "  assert(r == 2.0);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  if (r.ctx && r.ctx->error_count > 0) {
+    diagnostic_list_t diags = r.ctx->diagnostics;
+    if (diags) {
+      size_t dcount = diagnostic_list_get_size(diags);
+      for (size_t i = 0; i < dcount; i++) {
+        struct diagnostic *d = diagnostic_list_get(diags, i);
+        if (d) printf("  DIAG: %s\n", d->message);
+      }
+    }
+  }
+  if (r.ctx) EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_instantiation, generic_struct_generic_method_explicit_type_arg) {
+  /* Generic method with explicit type arg: obj.method[U](args) */
+  const char *src = BUILTIN_ASSERT
+    "struct Store[T] {\n"
+    "  data: T;\n"
+    "  func convert[U](self: *Store[T], fallback: U): U { return fallback; }\n"
+    "}\n"
+    "test \"explicit\" {\n"
+    "  var s = .Store[i32]{.data = 5};\n"
+    "  var r = s.convert[f64](3.0);\n"
+    "  assert(r == 3.0);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  if (r.ctx->error_count > 0) {
+    diagnostic_list_t diags = r.ctx->diagnostics;
+    if (diags) {
+      size_t dcount = diagnostic_list_get_size(diags);
+      for (size_t i = 0; i < dcount; i++) {
+        struct diagnostic *d = diagnostic_list_get(diags, i);
+        if (d) printf("  DIAG: %s\n", d->message);
+      }
+    }
+  }
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_instantiation, generic_method_type_error) {
+  /* Type error in generic method body should be caught when instantiated.
+     When U=i32, return x (i32) cannot convert to bool. */
+  const char *src =
+    "struct Box {\n"
+    "  val: i32;\n"
+    "  func bad[U](self: *Box, x: U): bool { return x; }\n"
+    "}\n"
+    "func caller(): void {\n"
+    "  var b = .Box{.val = 1};\n"
+    "  var r = b.bad(42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_instantiation, generic_method_two_params) {
+  /* Generic method with two method-level type params */
+  const char *src = BUILTIN_ASSERT
+    "struct Pair[A, B] {\n"
+    "  first: A;\n"
+    "  second: B;\n"
+    "  func zip[C, D](self: *Pair[A, B], x: C, y: D): i32 {\n"
+    "    return 0;\n"
+    "  }\n"
+    "}\n"
+    "test \"zip\" {\n"
+    "  var p = .Pair[i32, f64]{.first = 1, .second = 2.0};\n"
+    "  var r = p.zip(true, 3);\n"
+    "  assert(r == 0);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  if (r.ctx->error_count > 0) {
+    diagnostic_list_t diags = r.ctx->diagnostics;
+    if (diags) {
+      size_t dcount = diagnostic_list_get_size(diags);
+      for (size_t i = 0; i < dcount; i++) {
+        struct diagnostic *d = diagnostic_list_get(diags, i);
+        if (d) printf("  DIAG: %s\n", d->message);
+      }
+    }
+  }
+  EXPECT_EQ(r.ctx->error_count, 0);
+  compile_result_cleanup(&r, allocator);
+}

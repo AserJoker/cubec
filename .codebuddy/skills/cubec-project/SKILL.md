@@ -575,6 +575,14 @@ Generic function/type method bodies are type-checked via a worklist algorithm:
    - Enqueue the instantiated function for body checking (if not already checked)
 3. **Deduplication**: `checked_bodies` strmap prevents duplicate body checks — non-generic uses function name as key, generic uses `_generic_instance_cache_key`
 
+**Method-level generic params**: Methods on structs can have their own generic parameters (e.g., `func map[U](self: *Vec[T], f: func(T) -> U): Vec[U]`). These use an **offset index scheme** — type-level params (T) start at index 0, method-level params (U) start at index `type_gp_count`. Combined `type_args = [T_concrete, U_concrete]` allows a single `_substitute_type` call to replace all params.
+
+- `_evaluate_member_method` registers method-level params via `checker_register_generic_params_offset` (with offset = type param count)
+- `symbol.function.generic_param_offset` stores the offset for body checking
+- `_check_body_from_entry` binds type-level params first, then method-level params (offset by `type_gp_count`)
+- Member call desugaring (`obj.method(args)`) infers method-level type args and builds combined type_args
+- Explicit type args (`obj.method[U](args)`) handled via `CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION` with member callee
+
 **Data structures** (in `struct checker`):
 - `body_check_worklist` (vec of `body_check_entry_t*`) — pending body checks
 - `checked_bodies` (strmap) — cache key → "1" for deduplication
@@ -583,9 +591,10 @@ Generic function/type method bodies are type-checked via a worklist algorithm:
 
 **Key files**:
 - `checker_check_stmt.c`: `_enqueue_body_check`, `_check_body_from_entry`, `checker_check_all_bodies`
-- `checker_check_expr.c`: generic call → enqueue after instantiation
+- `checker_check_expr.c`: generic call → enqueue after instantiation, member call desugaring with method-level generic inference
 - `checker_check_expr_helpers.c`: `_check_generic_ident_callee` → enqueue after explicit instantiation
-- `checker_type_util.c`: `_substitute_type` (exposed, replaces generic params with concrete types)
+- `checker_type_util.c`: `_substitute_type` (exposed, replaces generic params with concrete types), `_copy_symbol_vec` (shallow copy with auto_dispose=false — symbols owned by template, not instance)
+- `checker_func_util.c`: `checker_register_generic_params_offset` (register method-level params with index offset)
 
 **Cross-module comptime**: `_comptime_create_method_value` uses `eval->global_env` (not `current_env`) so module-level functions can resolve symbols from imported modules.
 

@@ -337,6 +337,8 @@ static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
 
 static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
   cubec_expression_call_t call = (cubec_expression_call_t)expr;
+  semantic_type_t callee_type = NULL;
+  bool is_explicit_method_call = false;  /* obj.method[T](args) — skip self in arg check */
 
   /* assert() is only allowed inside test blocks */
   {
@@ -434,10 +436,79 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
           }
         }
       }
+    } else if (gi->callee->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
+      /* obj.method[T](args) — generic method with explicit type args.
+         Handle directly here (don't set generic_func_sym) because the
+         generic inference path doesn't handle self-param offset. */
+      cubec_expression_member_t mem = (cubec_expression_member_t)gi->callee;
+      semantic_type_t host_type = _check_expression(ctx, mem->host);
+      const char *fname = _checker_ident_str((node_t)mem->field);
+      semantic_type_t receiver_type = host_type;
+      if (host_type && host_type->impl->kind == TYPE_POINTER)
+        receiver_type = host_type->impl->pointer.pointee;
+
+      if (fname && receiver_type &&
+          (receiver_type->impl->kind == TYPE_STRUCT ||
+           receiver_type->impl->kind == TYPE_UNION ||
+           receiver_type->impl->kind == TYPE_CUNION ||
+           receiver_type->impl->kind == TYPE_GENERIC_INSTANCE)) {
+        if (receiver_type->instance_methods) {
+          size_t mc = vec_get_size(receiver_type->instance_methods);
+          for (size_t mi = 0; mi < mc; mi++) {
+            struct symbol *m = (struct symbol *)vec_get(receiver_type->instance_methods, mi);
+            if (m && m->name && strcmp(m->name, fname) == 0 &&
+                m->kind == SYMBOL_FUNCTION && m->function.generic_params) {
+              /* Resolve explicit method-level type args */
+              vec_t method_type_args = _resolve_generic_type_args(ctx, gi->arguments,
+                  m->function.generic_params);
+
+              /* Build combined type_args: [type_level_args..., method_args...] */
+              vec_init_t cvi = {.auto_dispose = false};
+              vec_t combined_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &cvi);
+              if (receiver_type->impl->kind == TYPE_GENERIC_INSTANCE) {
+                vec_t targs = receiver_type->impl->generic_instance.type_args;
+                size_t tc = vec_get_size(targs);
+                for (size_t ti = 0; ti < tc; ti++)
+                  vec_push(combined_args, vec_get(targs, ti));
+              }
+              if (method_type_args) {
+                size_t mtc = vec_get_size(method_type_args);
+                for (size_t mti = 0; mti < mtc; mti++)
+                  vec_push(combined_args, vec_get(method_type_args, mti));
+                allocator_free(ctx->allocator, &method_type_args);
+              }
+
+              /* Substitute and set callee_type */
+              if (vec_get_size(combined_args) > 0) {
+                semantic_type_t sub_type = _substitute_type(ctx, m->function.type, combined_args);
+                if (sub_type && sub_type->impl->kind != TYPE_ERROR) {
+                  callee_type = sub_type;
+                  is_explicit_method_call = true;
+                  /* Copy for body check entry */
+                  vec_t combined_copy = NULL;
+                  {
+                    vec_init_t cpi = {.auto_dispose = false};
+                    combined_copy = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &cpi);
+                    size_t cc = vec_get_size(combined_args);
+                    for (size_t ci = 0; ci < cc; ci++)
+                      vec_push(combined_copy, vec_get(combined_args, ci));
+                  }
+                  _enqueue_body_check(ctx, m, sub_type, combined_copy,
+                      ctx->global_scope, true, receiver_type);
+                }
+              }
+              allocator_free(ctx->allocator, &combined_args);
+              break;
+            }
+          }
+        }
+      }
     }
   }
 
-  semantic_type_t callee_type = _check_expression(ctx, call->callee);
+  /* obj.method[T](args) may have already set callee_type above */
+  if (!callee_type)
+    callee_type = _check_expression(ctx, call->callee);
   if (callee_type->impl->kind == TYPE_ERROR) return ctx->error_type;
 
   if (callee_type->impl->kind != TYPE_FUNCTION) {
@@ -640,6 +711,7 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
      the first param (self) is implicitly satisfied by &a (or p for pointers).
      Offset user arguments by 1 when matching against params. */
   bool is_member_call = false;
+  struct symbol *member_method_sym = NULL;
   if (call->callee->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
     cubec_expression_member_t mem = (cubec_expression_member_t)call->callee;
     semantic_type_t host_type = _check_expression(ctx, mem->host);
@@ -662,26 +734,124 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
           struct symbol *m = (struct symbol *)vec_get(receiver_type->instance_methods, i);
           if (m && m->name && strcmp(m->name, fname) == 0 && m->kind == SYMBOL_FUNCTION) {
             is_member_call = true;
+            member_method_sym = m;
 
-            /* For TYPE_GENERIC_INSTANCE, substitute method type with concrete type args */
+            /* Build combined type_args for substitution */
+            vec_t combined_type_args = NULL;
+            size_t type_gp_count = 0;
+
             if (receiver_type->impl->kind == TYPE_GENERIC_INSTANCE) {
-              semantic_type_t tpl = receiver_type->impl->generic_instance.generic_template;
+              /* Type-level args from the generic instance */
               vec_t targs = receiver_type->impl->generic_instance.type_args;
-              semantic_type_t sub_type = _substitute_type(ctx, m->function.type, targs);
+              type_gp_count = vec_get_size(targs);
+
+              vec_init_t cvi = {.auto_dispose = false};
+              combined_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &cvi);
+              for (size_t ti = 0; ti < type_gp_count; ti++)
+                vec_push(combined_type_args, vec_get(targs, ti));
+            }
+
+            if (m->function.generic_params) {
+              /* Method has own generic params — infer from call arguments */
+              vec_t method_gp = m->function.generic_params;
+              size_t method_gcount = vec_get_size(method_gp);
+
+              /* Collect all argument types: self + user args.
+                 _infer_type_args_from_call matches arg_types[i] against
+                 func_params[i], so we must include the self arg to keep
+                 alignment correct. */
+              vec_init_t atvi = {.auto_dispose = false};
+              vec_t all_arg_types = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &atvi);
+              /* Prepend self type: pointer to receiver */
+              semantic_type_t self_type = host_type;
+              if (host_type->impl->kind != TYPE_POINTER) {
+                self_type = semantic_type_create_pointer(ctx->allocator, host_type);
+                vec_push(ctx->all_types, self_type);
+              }
+              vec_push(all_arg_types, self_type);
+              for (size_t ai = 0; ai < arg_count; ai++) {
+                node_t arg = (node_t)vec_get(call->arguments, ai);
+                semantic_type_t at = _check_expression(ctx, arg);
+                vec_push(all_arg_types, at);
+              }
+
+              /* Build generic param names for method-level params */
+              vec_init_t gpvi = {.auto_dispose = false};
+              vec_t method_gp_names = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &gpvi);
+              for (size_t gi = 0; gi < method_gcount; gi++) {
+                cubec_generic_param_t gp_node =
+                    (cubec_generic_param_t)(void *)vec_get(method_gp, gi);
+                const char *gp_name = gp_node ? _checker_ident_str(gp_node->name) : NULL;
+                vec_push(method_gp_names, (void *)gp_name);
+              }
+
+              /* Infer method-level type args from the template method type */
+              vec_t method_type_args = _infer_type_args_from_call(ctx,
+                  m->function.type, method_gp_names, all_arg_types, NULL);
+
+              /* Check for unresolved method-level generic params */
+              if (method_type_args) {
+                size_t mtcount = vec_get_size(method_type_args);
+                for (size_t mi = 0; mi < mtcount; mi++) {
+                  semantic_type_t mta = (semantic_type_t)vec_get(method_type_args, mi);
+                  if (!mta) {
+                    cubec_generic_param_t gp_node =
+                        (cubec_generic_param_t)(void *)vec_get(method_gp, mi);
+                    const char *gp_name = gp_node ? _checker_ident_str(gp_node->name) : "?";
+                    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                         expr->location,
+                                         "cannot infer generic parameter '%s'",
+                                         gp_name);
+                    ctx->error_count++;
+                  }
+                }
+              }
+
+              /* Append method-level args to combined_type_args */
+              if (!combined_type_args) {
+                vec_init_t cvi2 = {.auto_dispose = false};
+                combined_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &cvi2);
+              }
+              if (method_type_args) {
+                size_t mtcount = vec_get_size(method_type_args);
+                for (size_t mi = 0; mi < mtcount; mi++)
+                  vec_push(combined_type_args, vec_get(method_type_args, mi));
+              }
+
+              allocator_free(ctx->allocator, &method_gp_names);
+              allocator_free(ctx->allocator, &all_arg_types);
+              if (method_type_args)
+                allocator_free(ctx->allocator, &method_type_args);
+            }
+
+            /* Substitute method type with combined type_args.
+               For methods on TYPE_GENERIC_INSTANCE, we always substitute
+               (even non-generic methods) because the template method type
+               contains TYPE_GENERIC_PARAM references (from the type-level params). */
+            if (combined_type_args && vec_get_size(combined_type_args) > 0) {
+              semantic_type_t sub_type = _substitute_type(ctx, m->function.type, combined_type_args);
               if (sub_type && sub_type->impl->kind != TYPE_ERROR) {
                 callee_type = sub_type;
-                /* Enqueue substituted method for body checking */
+                /* Enqueue for body checking with combined type_args copy */
                 vec_t targs_copy = NULL;
                 {
                   vec_init_t cpi = {.auto_dispose = false};
                   targs_copy = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &cpi);
-                  size_t tcount = vec_get_size(targs);
-                  for (size_t ti = 0; ti < tcount; ti++)
-                    vec_push(targs_copy, vec_get(targs, ti));
+                  size_t tc = vec_get_size(combined_type_args);
+                  for (size_t ti = 0; ti < tc; ti++)
+                    vec_push(targs_copy, vec_get(combined_type_args, ti));
                 }
                 _enqueue_body_check(ctx, m, sub_type, targs_copy,
                     ctx->global_scope, true, receiver_type);
               }
+              allocator_free(ctx->allocator, &combined_type_args);
+            } else if (combined_type_args) {
+              allocator_free(ctx->allocator, &combined_type_args);
+            }
+
+            /* For non-generic methods on plain structs, set callee_type from symbol */
+            if (!callee_type && m->function.type) {
+              callee_type = m->function.type;
             }
             break;
           }
@@ -690,6 +860,15 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
     }
 
     if (is_member_call) {
+      /* Re-read callee_type params after potential substitution */
+      if (!callee_type || callee_type->impl->kind != TYPE_FUNCTION) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                             "cannot resolve method type");
+        ctx->error_count++;
+        return ctx->error_type;
+      }
+      params = callee_type->impl->function.params;
+      param_count = params ? vec_get_size(params) : 0;
       /* The first param is self (*ReceiverType), automatically satisfied.
          User args start matching from param index 1. */
       if (param_count > 0 && !is_variadic && arg_count != param_count - 1) {
@@ -740,18 +919,23 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
     }
   }
 
-  if (!is_variadic && arg_count != param_count) {
+  /* For obj.method[T](args), callee_type includes self — skip it in arg check */
+  size_t param_offset = is_explicit_method_call ? 1 : 0;
+  size_t effective_param_count = param_count > param_offset ? param_count - param_offset : 0;
+
+  if (!is_variadic && arg_count != effective_param_count) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "expected %zu arguments, got %zu",
-                         param_count, arg_count);
+                         effective_param_count, arg_count);
     ctx->error_count++;
   }
 
   for (size_t i = 0; i < arg_count; i++) {
     node_t arg = (node_t)vec_get(call->arguments, i);
     semantic_type_t at = _check_expression(ctx, arg);
-    if (i < param_count && at->impl->kind != TYPE_ERROR) {
-      semantic_type_t pt = (semantic_type_t)vec_get(params, i);
+    size_t pidx = i + param_offset;
+    if (pidx < param_count && at->impl->kind != TYPE_ERROR) {
+      semantic_type_t pt = (semantic_type_t)vec_get(params, pidx);
       if (!semantic_type_can_implicit_convert(at, pt)) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                              arg->location,

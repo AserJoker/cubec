@@ -62,6 +62,7 @@ struct symbol {
       struct symbol *self_param; /**< Method self parameter (NULL for free functions) */
       node_t ast_node;           /**< AST node (cubec_statement_function_t) for comptime dispatch */
       vec_t generic_params;     /**< vec of cubec_generic_param_t (NULL for non-generic) */
+      size_t generic_param_offset; /**< Index offset for method-level generic params (0 for free functions) */
     } function;
 
     /* SYMBOL_TYPE */
