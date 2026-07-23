@@ -8,6 +8,7 @@
 #include "engine/comptime_eval.h"
 #include "core/allocator.h"
 #include "core/string.h"
+#include "core/strmap.h"
 #include "core/vec.h"
 #include "cubec/node.h"
 #include "cubec/literal_identifier.h"
@@ -24,6 +25,36 @@ const char *_checker_ident_str(node_t id_node) {
   if (!id_node) return NULL;
   cubec_literal_identifier_t id = (cubec_literal_identifier_t)id_node;
   return string_get(id->value);
+}
+
+/* ===== type bindings helper ===== */
+
+/**
+ * @brief Build a strmap_t (name → semantic_type_t) from a vec_t type_args
+ *        using param names from the generic_params vec.
+ *
+ * This is a temporary bridge: callers still produce vec_t type_args
+ * (positional), but the new data model uses name-based strmap_t.
+ * The full rewrite of _substitute_type / _instantiate_type / _infer_type_args_from_call
+ * will eliminate this helper by producing strmap_t directly.
+ */
+static strmap_t _type_bindings_from_vec(allocator_t allocator, vec_t generic_params,
+                                         vec_t type_args) {
+  strmap_init_t si = {.value_auto_dispose = false};
+  strmap_t bindings = (strmap_t)allocator_create(allocator, &g_strmap_type, &si);
+  if (!generic_params || !type_args) return bindings;
+  size_t gcount = vec_get_size(generic_params);
+  size_t tacount = vec_get_size(type_args);
+  for (size_t i = 0; i < gcount && i < tacount; i++) {
+    node_t gp_node = (node_t)vec_get(generic_params, i);
+    if (!gp_node || gp_node->kind != CUBEC_NODE_GENERIC_PARAM) continue;
+    cubec_generic_param_t gp = (cubec_generic_param_t)gp_node;
+    const char *name = _checker_ident_str(gp->name);
+    if (!name) continue;
+    semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
+    if (ta) strmap_insert(bindings, name, ta);
+  }
+  return bindings;
 }
 
 /* ===== type predicates ===== */
@@ -187,62 +218,66 @@ void _resolve_enum_items(checker_t ctx, semantic_type_t t, vec_t items) {
 /* ===== generic instantiation helpers ===== */
 
 char *_generic_instance_cache_key(checker_t ctx, const char *template_name,
-                                   vec_t type_args) {
+                                   strmap_t type_bindings) {
   size_t len = strlen(template_name);
-  size_t acount = type_args ? vec_get_size(type_args) : 0;
-  for (size_t i = 0; i < acount; i++) {
-    semantic_type_t t = (semantic_type_t)vec_get(type_args, i);
-    if (!t) continue;
-    if (t->impl->kind == TYPE_GENERIC_PACK) {
-      /* Pack: expand each type in the pack */
-      size_t ecount = vec_get_size(t->impl->generic_pack.expanded_types);
-      for (size_t j = 0; j < ecount; j++) {
-        semantic_type_t et = (semantic_type_t)vec_get(t->impl->generic_pack.expanded_types, j);
-        if (et) { type_hash_ensure(et); }
-        len += 1 + 20; /* '#' + max uint64 decimal */
+  /* Estimate key length from bindings — must account for pack expanded_types
+     which generate multiple '#hash' entries per binding */
+  size_t entry_count = 0;
+  if (type_bindings) {
+    strmap_iter_t iter = strmap_iter_first(type_bindings);
+    const char *bname = NULL;
+    while ((bname = strmap_iter_next(&iter)) != NULL) {
+      semantic_type_t t = (semantic_type_t)strmap_find(type_bindings, bname);
+      if (!t) continue;
+      if (t->impl->kind == TYPE_GENERIC_PACK) {
+        entry_count += vec_get_size(t->impl->generic_pack.expanded_types);
+      } else {
+        entry_count++;
       }
-    } else if (t->impl->kind == TYPE_GENERIC_VALUE) {
-      /* Value: hash the compile-time value content */
-      len += 1 + 30; /* '#' + value representation */
-    } else {
-      type_hash_ensure(t);
-      len += 1 + 20; /* '#' + max uint64 decimal */
     }
   }
+  len += entry_count * (1 + 20); /* '#' + hash per entry */
+  len += 64; /* extra safety margin */
   char *key = (char *)allocator_alloc(ctx->allocator, len + 1);
   size_t pos = 0;
   memcpy(key + pos, template_name, strlen(template_name));
   pos += strlen(template_name);
-  for (size_t i = 0; i < acount; i++) {
-    semantic_type_t t = (semantic_type_t)vec_get(type_args, i);
-    if (!t) continue;
-    if (t->impl->kind == TYPE_GENERIC_PACK) {
-      size_t ecount = vec_get_size(t->impl->generic_pack.expanded_types);
-      for (size_t j = 0; j < ecount; j++) {
-        semantic_type_t et = (semantic_type_t)vec_get(t->impl->generic_pack.expanded_types, j);
-        if (!et) continue;
-        key[pos++] = '#';
-        pos += snprintf(key + pos, len + 1 - pos, "%zu", et->impl->hash);
-      }
-    } else if (t->impl->kind == TYPE_GENERIC_VALUE) {
-      key[pos++] = 'v';
-      comptime_value_t cv = t->impl->generic_value.value;
-      if (cv) {
-        switch (cv->kind) {
-        case COMPTIME_VALUE_INT:
-          pos += snprintf(key + pos, len + 1 - pos, "%zu", (size_t)cv->int_val.u);
-          break;
-        case COMPTIME_VALUE_BOOL:
-          pos += snprintf(key + pos, len + 1 - pos, "%d", cv->bool_val ? 1 : 0);
-          break;
-        default:
-          pos += snprintf(key + pos, len + 1 - pos, "%zu", (size_t)cv->kind);
-          break;
+  if (type_bindings) {
+    strmap_iter_t iter = strmap_iter_first(type_bindings);
+    const char *bname = NULL;
+    while ((bname = strmap_iter_next(&iter)) != NULL) {
+      semantic_type_t t = (semantic_type_t)strmap_find(type_bindings, bname);
+      if (!t) continue;
+      if (t->impl->kind == TYPE_GENERIC_PACK) {
+        size_t ecount = vec_get_size(t->impl->generic_pack.expanded_types);
+        for (size_t j = 0; j < ecount; j++) {
+          semantic_type_t et = (semantic_type_t)vec_get(t->impl->generic_pack.expanded_types, j);
+          if (!et) continue;
+          type_hash_ensure(et);
+          key[pos++] = '#';
+          pos += snprintf(key + pos, len + 1 - pos, "%zu", et->impl->hash);
         }
+      } else if (t->impl->kind == TYPE_GENERIC_VALUE) {
+        key[pos++] = 'v';
+        comptime_value_t cv = t->impl->generic_value.value;
+        if (cv) {
+          switch (cv->kind) {
+          case COMPTIME_VALUE_INT:
+            pos += snprintf(key + pos, len + 1 - pos, "%zu", (size_t)cv->int_val.u);
+            break;
+          case COMPTIME_VALUE_BOOL:
+            pos += snprintf(key + pos, len + 1 - pos, "%d", cv->bool_val ? 1 : 0);
+            break;
+          default:
+            pos += snprintf(key + pos, len + 1 - pos, "%zu", (size_t)cv->kind);
+            break;
+          }
+        }
+      } else {
+        type_hash_ensure(t);
+        key[pos++] = '#';
+        pos += snprintf(key + pos, len + 1 - pos, "%zu", t->impl->hash);
       }
-    } else {
-      key[pos++] = '#';
-      pos += snprintf(key + pos, len + 1 - pos, "%zu", t->impl->hash);
     }
   }
   key[pos] = '\0';
@@ -250,16 +285,16 @@ char *_generic_instance_cache_key(checker_t ctx, const char *template_name,
 }
 
 static semantic_type_t _cache_lookup(checker_t ctx, const char *name,
-                                     vec_t type_args) {
-  char *key = _generic_instance_cache_key(ctx, name, type_args);
+                                     strmap_t type_bindings) {
+  char *key = _generic_instance_cache_key(ctx, name, type_bindings);
   void *found = strmap_find(ctx->type_impl_cache, key);
   allocator_free(ctx->allocator, &key);
   return found ? (semantic_type_t)found : NULL;
 }
 
 static void _cache_insert(checker_t ctx, const char *name,
-                           vec_t type_args, semantic_type_t type) {
-  char *key = _generic_instance_cache_key(ctx, name, type_args);
+                           strmap_t type_bindings, semantic_type_t type) {
+  char *key = _generic_instance_cache_key(ctx, name, type_bindings);
   strmap_insert(ctx->type_impl_cache, key, type);
   allocator_free(ctx->allocator, &key);
 }
@@ -268,35 +303,49 @@ static void _cache_insert(checker_t ctx, const char *name,
 
 /* Forward declaration — needed because _substitute_type delegates to _instantiate_type */
 semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
-                                   vec_t type_args);
+                                   strmap_t type_bindings);
+
+/* Forward declaration — needed because _substitute_type delegates to _instantiate_type */
+semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
+                                   strmap_t type_bindings);
+
+static int _subst_depth = 0;
 
 semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
-                                   vec_t type_args) {
+                                   strmap_t type_bindings) {
   if (!type || !type->impl) return type;
+  _subst_depth++;
+  if (_subst_depth > 500) {
+    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
+    if (dbg) {
+      fprintf(dbg, "BUG: _substitute_type depth %d, kind=%d\n", _subst_depth, (int)type->impl->kind);
+      fclose(dbg);
+    }
+    _subst_depth--;
+    return type;
+  }
 
   switch (type->impl->kind) {
   case TYPE_GENERIC_PARAM: {
-    size_t idx = type->impl->generic_param.index;
-    if (type_args && idx < vec_get_size(type_args)) {
-      semantic_type_t replacement = (semantic_type_t)vec_get(type_args, idx);
+    const char *name = type->impl->generic_param.name;
+    if (type_bindings && name) {
+      semantic_type_t replacement = (semantic_type_t)strmap_find(type_bindings, name);
       if (replacement) return replacement;
     }
     return type;
   }
 
   case TYPE_GENERIC_PACK: {
-    /* Substitute the pack parameter with the corresponding type_args entry.
-       The entry should be a TYPE_GENERIC_PACK containing expanded_types. */
-    size_t idx = type->impl->generic_pack.index;
-    if (type_args && idx < vec_get_size(type_args)) {
-      semantic_type_t replacement = (semantic_type_t)vec_get(type_args, idx);
+    const char *name = type->impl->generic_pack.name;
+    if (type_bindings && name) {
+      semantic_type_t replacement = (semantic_type_t)strmap_find(type_bindings, name);
       if (replacement) return replacement;
     }
     return type;
   }
 
   case TYPE_POINTER: {
-    semantic_type_t inner = _substitute_type(ctx, type->impl->pointer.pointee, type_args);
+    semantic_type_t inner = _substitute_type(ctx, type->impl->pointer.pointee, type_bindings);
     if (inner == type->impl->pointer.pointee) return type;
     semantic_type_t result = semantic_type_create_pointer(ctx->allocator, inner);
     type_hash_ensure(result);
@@ -305,7 +354,7 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
   }
 
   case TYPE_SLICE: {
-    semantic_type_t elem = _substitute_type(ctx, type->impl->slice.element, type_args);
+    semantic_type_t elem = _substitute_type(ctx, type->impl->slice.element, type_bindings);
     if (elem == type->impl->slice.element) return type;
     semantic_type_t result = semantic_type_create_slice(ctx->allocator, elem);
     type_hash_ensure(result);
@@ -314,11 +363,11 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
   }
 
   case TYPE_ARRAY: {
-    semantic_type_t elem = _substitute_type(ctx, type->impl->array.element, type_args);
-    size_t param_idx = type->impl->array.length_param_idx;
+    semantic_type_t elem = _substitute_type(ctx, type->impl->array.element, type_bindings);
+    const char *length_param_name = type->impl->array.length_param_name;
 
-    if (param_idx != (size_t)-1 && type_args && param_idx < vec_get_size(type_args)) {
-      semantic_type_t replacement = (semantic_type_t)vec_get(type_args, param_idx);
+    if (length_param_name && type_bindings) {
+      semantic_type_t replacement = (semantic_type_t)strmap_find(type_bindings, length_param_name);
       if (replacement && replacement->impl->kind == TYPE_GENERIC_VALUE) {
         /* Resolve symbolic length from TYPE_GENERIC_VALUE */
         size_t concrete_len =
@@ -326,7 +375,7 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
         if (elem == type->impl->array.element && concrete_len == type->impl->array.length)
           return type;
         semantic_type_t result = semantic_type_create_array(
-            ctx->allocator, elem, concrete_len, (size_t)-1);
+            ctx->allocator, elem, concrete_len, NULL);
         type_hash_ensure(result);
         vec_push(ctx->all_types, result);
         return result;
@@ -334,7 +383,7 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
       /* Replacement not yet a concrete value — propagate symbolic array */
       if (elem == type->impl->array.element) return type;
       semantic_type_t result = semantic_type_create_array(
-          ctx->allocator, elem, 0, param_idx);
+          ctx->allocator, elem, 0, length_param_name);
       type_hash_ensure(result);
       vec_push(ctx->all_types, result);
       return result;
@@ -343,14 +392,14 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
     /* Concrete length */
     if (elem == type->impl->array.element) return type;
     semantic_type_t result = semantic_type_create_array(
-        ctx->allocator, elem, type->impl->array.length, type->impl->array.length_param_idx);
+        ctx->allocator, elem, type->impl->array.length, type->impl->array.length_param_name);
     type_hash_ensure(result);
     vec_push(ctx->all_types, result);
     return result;
   }
 
   case TYPE_QUALIFIER: {
-    semantic_type_t base = _substitute_type(ctx, type->impl->qualifier.base, type_args);
+    semantic_type_t base = _substitute_type(ctx, type->impl->qualifier.base, type_bindings);
     if (base == type->impl->qualifier.base) return type;
     semantic_type_t result = semantic_type_create_qualifier(ctx->allocator, base,
         type->impl->qualifier.is_const, type->impl->qualifier.is_volatile);
@@ -366,7 +415,7 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
     size_t pcount = vec_get_size(type->impl->function.params);
     for (size_t i = 0; i < pcount; i++) {
       semantic_type_t p = (semantic_type_t)vec_get(type->impl->function.params, i);
-      semantic_type_t new_p = _substitute_type(ctx, p, type_args);
+      semantic_type_t new_p = _substitute_type(ctx, p, type_bindings);
       /* If substitution produced a TYPE_GENERIC_PACK, expand it into individual types */
       if (new_p && new_p->impl->kind == TYPE_GENERIC_PACK) {
         vec_t expanded = new_p->impl->generic_pack.expanded_types;
@@ -380,7 +429,7 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
         if (new_p != p) changed = true;
       }
     }
-    semantic_type_t new_ret = _substitute_type(ctx, type->impl->function.return_type, type_args);
+    semantic_type_t new_ret = _substitute_type(ctx, type->impl->function.return_type, type_bindings);
     if (new_ret != type->impl->function.return_type) changed = true;
 
     if (!changed) {
@@ -395,28 +444,31 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
   }
 
   case TYPE_GENERIC_INSTANCE: {
-    /* Substitute type args, then delegate to _instantiate_type for proper
+    /* Substitute type bindings, then delegate to _instantiate_type for proper
        field creation, method copying, and cache dedup */
     semantic_type_t tmpl = type->impl->generic_instance.generic_template;
-    vec_t tmpl_args = type->impl->generic_instance.type_args;
+    strmap_t tmpl_bindings = type->impl->generic_instance.type_bindings;
     bool changed = false;
-    vec_init_t vi = {.auto_dispose = false};
-    vec_t new_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-    size_t acount = tmpl_args ? vec_get_size(tmpl_args) : 0;
-    for (size_t i = 0; i < acount; i++) {
-      semantic_type_t arg = (semantic_type_t)vec_get(tmpl_args, i);
-      semantic_type_t new_arg = _substitute_type(ctx, arg, type_args);
-      vec_push(new_args, new_arg);
-      if (new_arg != arg) changed = true;
+    strmap_init_t si = {.value_auto_dispose = false};
+    strmap_t new_bindings = (strmap_t)allocator_create(ctx->allocator, &g_strmap_type, &si);
+    if (tmpl_bindings) {
+      strmap_iter_t iter = strmap_iter_first(tmpl_bindings);
+      const char *bname = NULL;
+      while ((bname = strmap_iter_next(&iter)) != NULL) {
+        semantic_type_t arg = (semantic_type_t)strmap_find(tmpl_bindings, bname);
+        semantic_type_t new_arg = _substitute_type(ctx, arg, type_bindings);
+        strmap_insert(new_bindings, bname, new_arg);
+        if (new_arg != arg) changed = true;
+      }
     }
 
     if (!changed) {
-      allocator_free(ctx->allocator, &new_args);
+      allocator_free(ctx->allocator, &new_bindings);
       return type;
     }
 
-    /* _instantiate_type takes ownership of new_args (stores or frees on cache hit) */
-    return _instantiate_type(ctx, tmpl, new_args, NULL);
+    /* _instantiate_type takes ownership of new_bindings */
+    return _instantiate_type(ctx, tmpl, new_bindings, NULL);
   }
 
   case TYPE_STRUCT:
@@ -436,7 +488,7 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
     vec_t new_elems = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
     for (size_t i = 0; i < ecount; i++) {
       semantic_type_t e = (semantic_type_t)vec_get(elems, i);
-      semantic_type_t new_e = _substitute_type(ctx, e, type_args);
+      semantic_type_t new_e = _substitute_type(ctx, e, type_bindings);
       /* If substitution produced a TYPE_GENERIC_PACK, expand it into individual types */
       if (new_e && new_e->impl->kind == TYPE_GENERIC_PACK) {
         vec_t expanded = new_e->impl->generic_pack.expanded_types;
@@ -462,13 +514,12 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
   }
 
   case TYPE_PACK_INDEX: {
-    /* Args[N] — index into a pack parameter's expanded_types */
-    size_t pack_param_idx = type->impl->pack_index.pack_param_idx;
-    size_t index_param_idx = type->impl->pack_index.index_param_idx;
-    if (type_args && index_param_idx < vec_get_size(type_args) &&
-        pack_param_idx < vec_get_size(type_args)) {
-      semantic_type_t index_type = (semantic_type_t)vec_get(type_args, index_param_idx);
-      semantic_type_t pack_type = (semantic_type_t)vec_get(type_args, pack_param_idx);
+    /* Args[N] — index into a pack parameter's expanded_types using name-based lookup */
+    const char *pack_name = type->impl->pack_index.pack_name;
+    const char *index_param_name = type->impl->pack_index.index_param_name;
+    if (type_bindings && index_param_name && pack_name) {
+      semantic_type_t index_type = (semantic_type_t)strmap_find(type_bindings, index_param_name);
+      semantic_type_t pack_type = (semantic_type_t)strmap_find(type_bindings, pack_name);
       if (pack_type && pack_type->impl->kind == TYPE_GENERIC_PACK &&
           pack_type->impl->generic_pack.expanded_types &&
           index_type && index_type->impl->kind == TYPE_GENERIC_VALUE) {
@@ -555,10 +606,10 @@ static bool _check_constraint_impl(checker_t ctx, semantic_type_t type_arg,
       return false;
     }
 
-    vec_t a_args = type_arg->impl->generic_instance.type_args;
-    vec_t c_args = constraint->impl->generic_instance.type_args;
-    size_t ac = a_args ? vec_get_size(a_args) : 0;
-    size_t cc = c_args ? vec_get_size(c_args) : 0;
+    strmap_t a_bindings = type_arg->impl->generic_instance.type_bindings;
+    strmap_t c_bindings = constraint->impl->generic_instance.type_bindings;
+    size_t ac = a_bindings ? strmap_get_size(a_bindings) : 0;
+    size_t cc = c_bindings ? strmap_get_size(c_bindings) : 0;
     if (ac != cc) {
       if (!silent) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg_expr->location,
@@ -568,11 +619,16 @@ static bool _check_constraint_impl(checker_t ctx, semantic_type_t type_arg,
       return false;
     }
 
-    for (size_t i = 0; i < cc; i++) {
-      semantic_type_t ca = (semantic_type_t)vec_get(c_args, i);
-      semantic_type_t aa = (semantic_type_t)vec_get(a_args, i);
-      if (ca->impl->kind == TYPE_WILDCARD) continue;
-      if (!_check_constraint_impl(ctx, aa, ca, arg_expr, silent)) return false;
+    /* Iterate constraint bindings and check each against the arg binding */
+    if (c_bindings) {
+      strmap_iter_t iter = strmap_iter_first(c_bindings);
+      const char *bname = NULL;
+      while ((bname = strmap_iter_next(&iter)) != NULL) {
+        semantic_type_t ca = (semantic_type_t)strmap_find(c_bindings, bname);
+        semantic_type_t aa = a_bindings ? (semantic_type_t)strmap_find(a_bindings, bname) : NULL;
+        if (ca && ca->impl->kind == TYPE_WILDCARD) continue;
+        if (!_check_constraint_impl(ctx, aa, ca, arg_expr, silent)) return false;
+      }
     }
     return true;
   }
@@ -728,8 +784,8 @@ bool _check_constraint_silent(checker_t ctx, semantic_type_t type_arg,
 }
 
 bool _check_generic_param_constraints(checker_t ctx, vec_t generic_params,
-                                       vec_t type_args, node_t expr) {
-  if (!generic_params || !type_args) return true;
+                                       strmap_t type_bindings, node_t expr) {
+  if (!generic_params || !type_bindings) return true;
   size_t gcount = vec_get_size(generic_params);
   bool all_ok = true;
 
@@ -738,39 +794,35 @@ bool _check_generic_param_constraints(checker_t ctx, vec_t generic_params,
     if (!gp_node || gp_node->kind != CUBEC_NODE_GENERIC_PARAM) continue;
 
     cubec_generic_param_t gp = (cubec_generic_param_t)gp_node;
+    const char *gp_name = _checker_ident_str(gp->name);
+    semantic_type_t ta = gp_name ? (semantic_type_t)strmap_find(type_bindings, gp_name) : NULL;
 
     /* Value generic param: validate the value type */
     if (gp->value_type) {
       semantic_type_t resolved_vt = resolver_resolve_type(ctx, gp->value_type);
-      if (i < vec_get_size(type_args)) {
-        semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
-        if (ta && ta->impl->kind == TYPE_GENERIC_VALUE) {
-          comptime_value_t cv = ta->impl->generic_value.value;
-          if (cv && cv->type && resolved_vt) {
-            if (!semantic_type_can_implicit_convert(cv->type, resolved_vt)) {
-              diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                  "value generic argument type '%s' is not compatible with declared type '%s'",
-                  semantic_type_get_name(cv->type) ? semantic_type_get_name(cv->type) : "<anonymous>",
-                  semantic_type_get_name(resolved_vt) ? semantic_type_get_name(resolved_vt) : "<anonymous>");
-              ctx->error_count++;
-              all_ok = false;
-            }
+      if (ta && ta->impl->kind == TYPE_GENERIC_VALUE) {
+        comptime_value_t cv = ta->impl->generic_value.value;
+        if (cv && cv->type && resolved_vt) {
+          if (!semantic_type_can_implicit_convert(cv->type, resolved_vt)) {
+            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                "value generic argument type '%s' is not compatible with declared type '%s'",
+                semantic_type_get_name(cv->type) ? semantic_type_get_name(cv->type) : "<anonymous>",
+                semantic_type_get_name(resolved_vt) ? semantic_type_get_name(resolved_vt) : "<anonymous>");
+            ctx->error_count++;
+            all_ok = false;
           }
-        } else if (ta && ta->impl->kind != TYPE_GENERIC_VALUE) {
-          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-              "expected a compile-time value for value generic parameter '%s'",
-              _checker_ident_str(gp->name));
-          ctx->error_count++;
-          all_ok = false;
         }
+      } else if (ta && ta->impl->kind != TYPE_GENERIC_VALUE) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+            "expected a compile-time value for value generic parameter '%s'",
+            gp_name ? gp_name : "?");
+        ctx->error_count++;
+        all_ok = false;
       }
       continue; /* Skip extends constraint check for value params */
     }
 
     if (!gp->constraint) continue;
-
-    if (i >= vec_get_size(type_args)) continue;
-    semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
     if (!ta) continue;
 
     semantic_type_t constraint_type = resolver_resolve_type(ctx, gp->constraint);
@@ -909,6 +961,77 @@ vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs,
   return type_args;
 }
 
+strmap_t _resolve_generic_type_bindings_pack(checker_t ctx, vec_t arg_exprs,
+                                              vec_t generic_params) {
+  vec_t type_args = _resolve_generic_type_args(ctx, arg_exprs, generic_params);
+  if (!type_args) {
+    strmap_init_t si = {.value_auto_dispose = false};
+    strmap_t empty = (strmap_t)allocator_create(ctx->allocator, &g_strmap_type, &si);
+    return empty;
+  }
+
+  /* Coalesce excess type args into packs for generic types with rest params.
+     E.g. for Tuple[...Args], Tuple[i32, f64] → type_args = [PACK([i32, f64])].
+     Or for foo[N, ...Args], foo[0, i32, f64] → [GENERIC_VALUE(0), PACK([i32, f64])]. */
+  size_t gcount = generic_params ? vec_get_size(generic_params) : 0;
+  size_t tacount = vec_get_size(type_args);
+
+  /* Find the pack (rest) parameter position */
+  size_t pack_idx = gcount; /* default: no pack */
+  for (size_t i = 0; i < gcount; i++) {
+    cubec_generic_param_t gp_node =
+        (cubec_generic_param_t)(void *)vec_get(generic_params, i);
+    if (gp_node && gp_node->is_rest) {
+      pack_idx = i;
+      break;
+    }
+  }
+
+  if (pack_idx < gcount && tacount > pack_idx) {
+    /* Check if all args from pack_idx onward form exactly one TYPE_GENERIC_PACK
+       (e.g. Tuple[...Args] where Args is already a pack), use it directly
+       instead of re-wrapping. */
+    if (pack_idx + 1 == tacount) {
+      semantic_type_t only_arg = (semantic_type_t)vec_get(type_args, pack_idx);
+      if (only_arg && only_arg->impl->kind == TYPE_GENERIC_PACK) {
+        /* Already a pack — no coalescing needed */
+      } else {
+        /* Single non-pack arg at pack position — wrap into a pack */
+        goto do_coalesce_pack;
+      }
+    } else {
+    do_coalesce_pack:;
+      vec_init_t vi = {.auto_dispose = false};
+      vec_t new_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+      for (size_t i = 0; i < pack_idx; i++)
+        vec_push(new_type_args, vec_get(type_args, i));
+
+      const char *pack_name = NULL;
+      cubec_generic_param_t pack_gp =
+          (cubec_generic_param_t)(void *)vec_get(generic_params, pack_idx);
+      if (pack_gp) {
+        const char *raw = _checker_ident_str(pack_gp->name);
+        if (raw) pack_name = raw;
+      }
+      semantic_type_t pack_type = semantic_type_create_generic_pack(
+          ctx->allocator, pack_name);
+      for (size_t i = pack_idx; i < tacount; i++) {
+        semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
+        vec_push(pack_type->impl->generic_pack.expanded_types, ta);
+      }
+      type_hash_ensure(pack_type);
+      vec_push(ctx->all_types, pack_type);
+      vec_push(new_type_args, pack_type);
+      allocator_free(ctx->allocator, &type_args);
+      type_args = new_type_args;
+    }
+  }
+
+  strmap_t bindings = _type_bindings_from_vec(ctx->allocator, generic_params, type_args);
+  allocator_free(ctx->allocator, &type_args);
+  return bindings;
+}
+
 static vec_t _copy_symbol_vec(checker_t ctx, vec_t src) {
   if (!src) return NULL;
   /* auto_dispose = false: symbols are owned by the template type.
@@ -922,7 +1045,7 @@ static vec_t _copy_symbol_vec(checker_t ctx, vec_t src) {
 }
 
 static void _instantiate_struct_fields(checker_t ctx, semantic_type_t inst,
-                                        vec_t tpl_fields, vec_t type_args) {
+                                        vec_t tpl_fields, strmap_t type_bindings) {
   vec_init_t vi = {.auto_dispose = true};
   inst->impl->generic_instance.fields =
       (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
@@ -935,20 +1058,20 @@ static void _instantiate_struct_fields(checker_t ctx, semantic_type_t inst,
     nf->field.index = i;
     nf->field.is_pub = f->field.is_pub;
     /* Substitute generic params in field type */
-    nf->field.type = _substitute_type(ctx, f->field.type, type_args);
+    nf->field.type = _substitute_type(ctx, f->field.type, type_bindings);
     vec_push(inst->impl->generic_instance.fields, nf);
   }
   type_layout_compute(inst, 8);
 }
 
 semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
-                                   vec_t type_args, node_t instantiation_expr) {
+                                   strmap_t type_bindings, node_t instantiation_expr) {
   const char *name = template_type->name;
   if (!name) name = "<anonymous>";
   /* Check cache */
-  semantic_type_t cached = _cache_lookup(ctx, name, type_args);
+  semantic_type_t cached = _cache_lookup(ctx, name, type_bindings);
   if (cached) {
-    allocator_free(ctx->allocator, &type_args);
+    allocator_free(ctx->allocator, &type_bindings);
     return cached;
   }
 
@@ -959,15 +1082,18 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   enum type_kind tkind = template_type->impl->kind;
 
   /* Special handling for TYPE_TUPLE: create a native TYPE_TUPLE instead of
-     GENERIC_INSTANCE. type_args contains a TYPE_GENERIC_PACK with expanded_types. */
+     GENERIC_INSTANCE. type_bindings should contain a TYPE_GENERIC_PACK entry. */
   if (tkind == TYPE_TUPLE) {
     vec_t field_types = NULL;
-    size_t tacount = type_args ? vec_get_size(type_args) : 0;
-    for (size_t i = 0; i < tacount; i++) {
-      semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
-      if (ta && ta->impl && ta->impl->kind == TYPE_GENERIC_PACK) {
-        field_types = ta->impl->generic_pack.expanded_types;
-        break;
+    if (type_bindings) {
+      strmap_iter_t iter = strmap_iter_first(type_bindings);
+      const char *bname = NULL;
+      while ((bname = strmap_iter_next(&iter)) != NULL) {
+        semantic_type_t ta = (semantic_type_t)strmap_find(type_bindings, bname);
+        if (ta && ta->impl && ta->impl->kind == TYPE_GENERIC_PACK) {
+          field_types = ta->impl->generic_pack.expanded_types;
+          break;
+        }
       }
     }
     /* Build element_types vec from pack */
@@ -984,18 +1110,19 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
     type_hash_ensure(inst);
     type_layout_compute(inst, 8);
     /* Cache the result */
-    _cache_insert(ctx, name, type_args, inst);
+    _cache_insert(ctx, name, type_bindings, inst);
+    allocator_free(ctx->allocator, &type_bindings);
     return inst;
   }
 
   /* For non-TUPLE types, create a GENERIC_INSTANCE */
   inst = semantic_type_create_generic_instance(
-      ctx->allocator, template_type, type_args);
+      ctx->allocator, template_type, type_bindings);
   vec_push(ctx->all_types, inst);
   type_hash_ensure(inst);
 
   if (tkind == TYPE_STRUCT || tkind == TYPE_UNION || tkind == TYPE_CUNION) {
-    _instantiate_struct_fields(ctx, inst, template_type->impl->struct_type.fields, type_args);
+    _instantiate_struct_fields(ctx, inst, template_type->impl->struct_type.fields, type_bindings);
   }
 
   /* Copy method lists from template (free the init-created vecs first) */
@@ -1005,41 +1132,60 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   inst->static_methods = _copy_symbol_vec(ctx, template_type->static_methods);
 
   /* Cache the result */
-  _cache_insert(ctx, name, type_args, inst);
+  _cache_insert(ctx, name, type_bindings, inst);
 
+  /* Do NOT free type_bindings — the GENERIC_INSTANCE owns it (stored at
+     inst->impl->generic_instance.type_bindings). Freeing would cause use-after-free
+     when the instance's bindings are later read (e.g. by _substitute_type,
+     _type_unify, or constraint checking). */
   return inst;
 }
 
+static int _instantiate_func_count = 0;
+
 semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
-                                      vec_t type_args, node_t instantiation_expr) {
+                                      strmap_t type_bindings, node_t instantiation_expr) {
   const char *name = func_sym->name;
+  _instantiate_func_count++;
+  if (_instantiate_func_count % 50 == 0) {
+    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
+    if (dbg) {
+      fprintf(dbg, "TRACE: _instantiate_function #%d name=%s\n", _instantiate_func_count, name ? name : "<null>");
+      fclose(dbg);
+    }
+  }
+  if (_instantiate_func_count > 200) {
+    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
+    if (dbg) {
+      fprintf(dbg, "BUG: _instantiate_function called too many times: name=%s count=%d\n",
+              name ? name : "<null>", _instantiate_func_count);
+      fclose(dbg);
+    }
+    return ctx->error_type;
+  }
   semantic_type_t func_type = func_sym->function.type;
   if (!func_type) return ctx->error_type;
 
   /* Check cache */
-  semantic_type_t cached = _cache_lookup(ctx, name, type_args);
+  semantic_type_t cached = _cache_lookup(ctx, name, type_bindings);
   if (cached) {
-    allocator_free(ctx->allocator, &type_args);
     return cached;
   }
 
   /* Substitute generic params in the entire function type.
      Using _substitute_type on the whole type handles pack expansion
      correctly (TYPE_FUNCTION branch expands TYPE_GENERIC_PACK params). */
-  semantic_type_t inst_type = _substitute_type(ctx, func_type, type_args);
+  semantic_type_t inst_type = _substitute_type(ctx, func_type, type_bindings);
 
   /* If nothing changed (no generic params), return original */
   if (inst_type == func_type) {
-    allocator_free(ctx->allocator, &type_args);
     return func_type;
   }
 
   /* Cache */
-  _cache_insert(ctx, name, type_args, inst_type);
+  _cache_insert(ctx, name, type_bindings, inst_type);
 
-  /* type_args is not stored in the function type, free it */
-  allocator_free(ctx->allocator, &type_args);
-
+  /* NOTE: caller owns type_bindings and must free it or pass to _enqueue_body_check */
   return inst_type;
 }
 

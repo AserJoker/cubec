@@ -870,34 +870,20 @@ flow_state_t _check_statement(checker_t ctx, node_t stmt,
 static flow_state_t _check_stmt_local_function(checker_t ctx,
                                                 cubec_statement_function_t node) {
   if (!node) return flow_state_alive(ctx->allocator);
-  const char *name = _checker_ident_str(node->name);
 
   func_check_info_t info;
   func_check_info_from_statement(&info, node);
 
-  /* Resolve return type and parameter types using unified helpers */
-  semantic_type_t ret_type = info.return_type
-      ? resolver_resolve_type(ctx, info.return_type) : ctx->builtin_void;
-  vec_t param_types = _resolve_func_param_types(ctx, &info);
+  _process_function(ctx, &info, &(func_context_t){
+      .symbol_scope = ctx->current_scope,
+      .defer_body = false,
+      .is_method = false,
+      .host_type = NULL,
+      .use_child_scope = false,
+      .pre_existing_sym = NULL,
+      .symbol_state = SYMBOL_EVALUATED
+  });
 
-  semantic_type_t ftype = semantic_type_create_function(
-      ctx->allocator, ret_type, param_types, info.is_c_variadic);
-  type_hash_ensure(ftype);
-  vec_push(ctx->all_types, ftype);
-
-  /* Register function symbol in current scope */
-  if (name) {
-    struct symbol *sym = symbol_create(ctx->allocator, name,
-                                        SYMBOL_FUNCTION, node->super.location);
-    sym->function.type = ftype;
-    sym->function.ast_node = info.ast_node;
-    sym->state = SYMBOL_EVALUATED;
-    scope_push_symbol(ctx->current_scope, sym);
-  }
-
-  /* Check function body using unified helper */
-  _check_func_body_and_returns(ctx, &info, ret_type, param_types,
-                                ctx->current_scope);
   return flow_state_alive(ctx->allocator);
 }
 
@@ -1162,20 +1148,20 @@ void checker_check_function_bodies(checker_t ctx, node_t program) {
 /* ===== worklist-driven body checking (Pass 3 + Pass 4) ===== */
 
 void _enqueue_body_check(checker_t ctx, struct symbol *func_sym,
-                          semantic_type_t inst_type, vec_t type_args,
+                          semantic_type_t inst_type, strmap_t type_bindings,
                           scope_t scope_root, bool is_method,
                           semantic_type_t host_type) {
   const char *name = func_sym->name;
 
   /* Generate dedup key — for non-generic, use name directly (no allocation) */
-  char *key = type_args
-      ? _generic_instance_cache_key(ctx, name, type_args)
+  char *key = type_bindings
+      ? _generic_instance_cache_key(ctx, name, type_bindings)
       : NULL;
   const char *lookup_key = key ? key : name;
 
   if (strmap_find(ctx->checked_bodies, lookup_key)) {
     if (key) allocator_free(ctx->allocator, &key);
-    if (type_args) allocator_free(ctx->allocator, &type_args);
+    if (type_bindings) allocator_free(ctx->allocator, &type_bindings);
     return;
   }
 
@@ -1192,12 +1178,12 @@ void _enqueue_body_check(checker_t ctx, struct symbol *func_sym,
   body_check_entry_t *entry =
       allocator_alloc(ctx->allocator, sizeof(body_check_entry_t));
   if (!entry) {
-    if (type_args) allocator_free(ctx->allocator, &type_args);
+    if (type_bindings) allocator_free(ctx->allocator, &type_bindings);
     return;
   }
   entry->func_sym = func_sym;
   entry->inst_type = inst_type;
-  entry->type_args = type_args;
+  entry->type_bindings = type_bindings;
   entry->scope_root = scope_root;
   entry->is_method = is_method;
   entry->host_type = host_type;
@@ -1207,63 +1193,32 @@ void _enqueue_body_check(checker_t ctx, struct symbol *func_sym,
 static void _check_body_from_entry(checker_t ctx, body_check_entry_t *entry) {
   struct symbol *sym = entry->func_sym;
   semantic_type_t inst_type = entry->inst_type;
-  vec_t type_args = entry->type_args;
+  strmap_t type_bindings = entry->type_bindings;
 
   if (!sym || !sym->function.ast_node) goto done;
   cubec_statement_function_t fnode =
       (cubec_statement_function_t)sym->function.ast_node;
   if (!fnode->body) goto done;
 
-  /* Create generic param bindings scope if type_args provided */
+  /* Create generic param bindings scope if type_bindings provided */
   scope_t scope_root = entry->scope_root;
-  if (type_args) {
+  if (type_bindings) {
     scope_t generic_scope = scope_create(ctx->allocator, scope_root,
         SCOPE_BLOCK, fnode->super.location);
     vec_push(ctx->all_scopes, generic_scope);
 
-    /* For methods on generic instances, bind type-level params first */
-    size_t type_gp_count = 0;
-    if (entry->is_method && entry->host_type &&
-        entry->host_type->impl->kind == TYPE_GENERIC_INSTANCE) {
-      semantic_type_t tmpl =
-          entry->host_type->impl->generic_instance.generic_template;
-      struct symbol *tmpl_sym = scope_lookup_local(ctx->global_scope, tmpl->name);
-      if (tmpl_sym && tmpl_sym->kind == SYMBOL_TYPE && tmpl_sym->type.generic_params) {
-        vec_t type_gp = tmpl_sym->type.generic_params;
-        type_gp_count = vec_get_size(type_gp);
-        for (size_t i = 0; i < type_gp_count && i < vec_get_size(type_args); i++) {
-          cubec_generic_param_t gp_node =
-              (cubec_generic_param_t)(void *)vec_get(type_gp, i);
-          const char *gp_name = _checker_ident_str(gp_node->name);
-          semantic_type_t concrete = (semantic_type_t)vec_get(type_args, i);
-          if (!gp_name || !concrete) continue;
-          struct symbol *gp_sym = symbol_create(ctx->allocator,
-              gp_name, SYMBOL_TYPE, fnode->super.location);
-          gp_sym->type.type = concrete;
-          gp_sym->state = SYMBOL_EVALUATED;
-          scope_push_symbol(generic_scope, gp_sym);
-        }
-      }
-    }
-
-    /* Bind method/function-level generic params (offset by type_gp_count) */
-    vec_t gp = sym->function.generic_params;
-    if (gp) {
-      size_t gcount = vec_get_size(gp);
-      for (size_t i = 0; i < gcount; i++) {
-        cubec_generic_param_t gp_node =
-            (cubec_generic_param_t)(void *)vec_get(gp, i);
-        const char *gp_name = _checker_ident_str(gp_node->name);
-        size_t arg_idx = type_gp_count + i;
-        semantic_type_t concrete = (arg_idx < vec_get_size(type_args))
-            ? (semantic_type_t)vec_get(type_args, arg_idx) : NULL;
-        if (!gp_name || !concrete) continue;
-        struct symbol *gp_sym = symbol_create(ctx->allocator,
-            gp_name, SYMBOL_TYPE, fnode->super.location);
-        gp_sym->type.type = concrete;
-        gp_sym->state = SYMBOL_EVALUATED;
-        scope_push_symbol(generic_scope, gp_sym);
-      }
+    /* Bind all generic params from type_bindings (both type-level and method-level).
+       With name-based bindings, no offset calculation needed — all names are unique. */
+    strmap_iter_t iter = strmap_iter_first(type_bindings);
+    const char *gp_name = NULL;
+    while ((gp_name = strmap_iter_next(&iter)) != NULL) {
+      semantic_type_t concrete = (semantic_type_t)strmap_find(type_bindings, gp_name);
+      if (!gp_name || !concrete) continue;
+      struct symbol *gp_sym = symbol_create(ctx->allocator,
+          gp_name, SYMBOL_TYPE, fnode->super.location);
+      gp_sym->type.type = concrete;
+      gp_sym->state = SYMBOL_EVALUATED;
+      scope_push_symbol(generic_scope, gp_sym);
     }
     scope_root = generic_scope;
   }
@@ -1279,7 +1234,7 @@ static void _check_body_from_entry(checker_t ctx, body_check_entry_t *entry) {
   }
 
 done:
-  if (type_args) allocator_free(ctx->allocator, &type_args);
+  if (type_bindings) allocator_free(ctx->allocator, &type_bindings);
 }
 
 void checker_check_all_bodies(checker_t ctx, node_t program) {
@@ -1290,7 +1245,13 @@ void checker_check_all_bodies(checker_t ctx, node_t program) {
 
   /* Phase 2: Process worklist — body checking may trigger new entries */
   size_t idx = 0;
+  size_t max_iterations = vec_get_size(ctx->body_check_worklist) + 100; /* safety limit */
   while (idx < vec_get_size(ctx->body_check_worklist)) {
+    if (idx >= max_iterations) {
+      fprintf(stderr, "BUG: body check worklist exceeded safety limit (idx=%zu, size=%zu)\n",
+              idx, vec_get_size(ctx->body_check_worklist));
+      break;
+    }
     body_check_entry_t *entry =
         (body_check_entry_t *)vec_get(ctx->body_check_worklist, idx);
     idx++;

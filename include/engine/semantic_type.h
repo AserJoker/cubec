@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_ENGINE_SEMANTIC_TYPE_
 #define _H_CUBEC_ENGINE_SEMANTIC_TYPE_
 #include "core/location.h"
+#include "core/strmap.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include <stdbool.h>
@@ -72,7 +73,7 @@ struct _type_impl {
     /* TYPE_SLICE */
     struct { semantic_type_t element; } slice;
     /* TYPE_ARRAY */
-    struct { semantic_type_t element; size_t length; size_t length_param_idx; } array;
+    struct { semantic_type_t element; size_t length; const char *length_param_name; } array;
     /* TYPE_STRUCT / TYPE_UNION / TYPE_CUNION */
     struct { vec_t fields; } struct_type;  /* vec of symbol* (FIELD) */
     /* TYPE_ENUM */
@@ -86,27 +87,24 @@ struct _type_impl {
     /* TYPE_GENERIC_INSTANCE */
     struct {
       semantic_type_t generic_template;  /**< Generic template type */
-      vec_t type_args;                   /**< Concrete type arguments (semantic_type_t), auto_dispose=false */
+      strmap_t type_bindings;            /**< Name → concrete semantic_type_t bindings */
       vec_t fields;                      /**< Substituted fields (vec of symbol* FIELD), for struct/union instances */
     } generic_instance;
     /* TYPE_GENERIC_PARAM */
     struct {
       const char *name;   /**< Generic param name (e.g., "T") */
-      size_t index;       /**< Position in generic param list */
       semantic_type_t value_type; /**< Non-NULL for value params (e.g., N:u64) */
       bool is_value;      /**< true = value generic param, false = type param */
     } generic_param;
     /* TYPE_GENERIC_PACK */
     struct {
       const char *name;       /**< Pack param name (e.g., "Args") */
-      size_t index;           /**< Pack param position in generic list */
       vec_t expanded_types;   /**< Collected concrete types (auto_dispose=false) */
     } generic_pack;
     /* TYPE_PACK_INDEX */
     struct {
-      const char *pack_name;  /**< Name of the pack being indexed (e.g., "Args") */
-      size_t pack_param_idx;  /**< Index of the pack param in generic param list */
-      size_t index_param_idx; /**< Index of the value param (N) in generic param list */
+      const char *pack_name;       /**< Name of the pack being indexed (e.g., "Args") */
+      const char *index_param_name;/**< Name of the value param (e.g., "N") */
     } pack_index;
     /* TYPE_TUPLE */
     struct {
@@ -172,7 +170,7 @@ semantic_type_t semantic_type_create_slice(allocator_t allocator,
 semantic_type_t semantic_type_create_array(allocator_t allocator,
                                            semantic_type_t element,
                                            size_t length,
-                                           size_t length_param_idx);
+                                           const char *length_param_name);
 semantic_type_t semantic_type_create_qualifier(allocator_t allocator,
                                                semantic_type_t base,
                                                bool is_const, bool is_volatile);
@@ -188,19 +186,16 @@ semantic_type_t semantic_type_create_function(allocator_t allocator,
                                               bool is_variadic);
 semantic_type_t semantic_type_create_generic_instance(allocator_t allocator,
                                                        semantic_type_t template_type,
-                                                       vec_t type_args);
+                                                       strmap_t type_bindings);
 semantic_type_t semantic_type_create_generic_param(allocator_t allocator,
                                                     const char *name,
-                                                    size_t index,
                                                     semantic_type_t value_type,
                                                     bool is_value);
 semantic_type_t semantic_type_create_generic_pack(allocator_t allocator,
-                                                   const char *name,
-                                                   size_t index);
+                                                   const char *name);
 semantic_type_t semantic_type_create_pack_index(allocator_t allocator,
                                                 const char *pack_name,
-                                                size_t pack_param_idx,
-                                                size_t index_param_idx);
+                                                const char *index_param_name);
 semantic_type_t semantic_type_create_generic_value(allocator_t allocator,
                                                     struct comptime_value *value);
 semantic_type_t semantic_type_create_tuple(allocator_t allocator,

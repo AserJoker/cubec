@@ -205,7 +205,7 @@ struct comptime_value *builtin_toString_eval(struct comptime_eval *eval,
 void builtin_table_init_string(builtin_table_t table, struct checker *ctx) {
   /* builtin func toString[T](obj: T): str */
   semantic_type_t t_param = semantic_type_create_generic_param(
-      ctx->allocator, "T", 0, NULL, false);
+      ctx->allocator, "T", NULL, false);
   type_hash_ensure(t_param);
   vec_push(ctx->all_types, t_param);
 

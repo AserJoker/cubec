@@ -63,13 +63,13 @@ semantic_type_t _resolve_type_identifier(checker_t ctx, node_t node) {
     if (sym->kind == SYMBOL_GENERIC_PARAM) {
       if (sym->generic_param.is_rest) {
         semantic_type_t pack_type = semantic_type_create_generic_pack(
-            ctx->allocator, name, sym->generic_param.index);
+            ctx->allocator, name);
         type_hash_ensure(pack_type);
         vec_push(ctx->all_types, pack_type);
         return pack_type;
       }
       semantic_type_t gp_type = semantic_type_create_generic_param(
-          ctx->allocator, name, sym->generic_param.index,
+          ctx->allocator, name,
           sym->generic_param.value_type,
           sym->generic_param.value_type != NULL);
       type_hash_ensure(gp_type);
@@ -166,15 +166,14 @@ semantic_type_t _resolve_type_array(checker_t ctx, node_t node) {
       if (size_sym && size_sym->kind == SYMBOL_GENERIC_PARAM &&
           size_sym->generic_param.value_type) {
         /* Value generic param used as array length */
-        size_t param_idx = size_sym->generic_param.index;
         semantic_type_t gp_type = semantic_type_create_generic_param(
-            ctx->allocator, size_name, param_idx,
+            ctx->allocator, size_name,
             size_sym->generic_param.value_type, true);
         type_hash_ensure(gp_type);
         vec_push(ctx->all_types, gp_type);
 
         semantic_type_t result = semantic_type_create_array(
-            ctx->allocator, elem, 0, param_idx);
+            ctx->allocator, elem, 0, size_name);
         type_hash_ensure(result);
         vec_push(ctx->all_types, result);
         return result;
@@ -188,7 +187,7 @@ semantic_type_t _resolve_type_array(checker_t ctx, node_t node) {
   }
 
   semantic_type_t result =
-      semantic_type_create_array(ctx->allocator, elem, length, (size_t)-1);
+      semantic_type_create_array(ctx->allocator, elem, length, NULL);
   type_hash_ensure(result);
   vec_push(ctx->all_types, result);
   return result;

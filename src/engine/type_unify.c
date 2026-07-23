@@ -135,7 +135,7 @@ static bool _type_unify(semantic_type_t actual, semantic_type_t expected,
 
       /* Create a TYPE_GENERIC_PACK with the expanded types */
       semantic_type_t pack_result = semantic_type_create_generic_pack(
-          allocator, pack_name, pack_type->impl->generic_pack.index);
+          allocator, pack_name);
       for (size_t i = pack_pos; i < apcount; i++) {
         semantic_type_t ap = (semantic_type_t)vec_get(actual->impl->function.params, i);
         vec_push(pack_result->impl->generic_pack.expanded_types, ap);
@@ -173,65 +173,26 @@ static bool _type_unify(semantic_type_t actual, semantic_type_t expected,
         expected->impl->generic_instance.generic_template)
       return false;
 
-    /* Find pack position in expected type_args */
-    size_t acount = vec_get_size(actual->impl->generic_instance.type_args);
-    size_t ecount = vec_get_size(expected->impl->generic_instance.type_args);
-    size_t pack_idx = ecount;
-    for (size_t i = 0; i < ecount; i++) {
-      semantic_type_t ea = (semantic_type_t)vec_get(expected->impl->generic_instance.type_args, i);
-      if (ea && ea->impl->kind == TYPE_GENERIC_PACK) {
-        pack_idx = i;
-        break;
-      }
-    }
+    /* Iterate over expected type_bindings and unify each against actual */
+    strmap_t a_bindings = actual->impl->generic_instance.type_bindings;
+    strmap_t e_bindings = expected->impl->generic_instance.type_bindings;
+    size_t ac = a_bindings ? strmap_get_size(a_bindings) : 0;
+    size_t ec = e_bindings ? strmap_get_size(e_bindings) : 0;
+    if (ac != ec) return false;
 
-    if (pack_idx < ecount) {
-      /* Expected has a pack in its type_args — elastic matching:
-         args before the pack must match exactly, remaining actual
-         args are collected into the pack binding. */
-      for (size_t i = 0; i < pack_idx; i++) {
-        if (i >= acount) return false;
-        semantic_type_t aa = (semantic_type_t)vec_get(actual->impl->generic_instance.type_args, i);
-        semantic_type_t ea = (semantic_type_t)vec_get(expected->impl->generic_instance.type_args, i);
-        if (!_type_unify(aa, ea, bindings, allocator)) return false;
-      }
-      /* Collect remaining actual args into the pack.
-         If an actual arg is itself a TYPE_GENERIC_PACK, expand its
-         expanded_types into the result pack to avoid nested packs. */
-      semantic_type_t pack_type = (semantic_type_t)vec_get(
-          expected->impl->generic_instance.type_args, pack_idx);
-      const char *pack_name = pack_type->impl->generic_pack.name;
-      semantic_type_t pack_result = semantic_type_create_generic_pack(
-          allocator, pack_name, pack_type->impl->generic_pack.index);
-      for (size_t i = pack_idx; i < acount; i++) {
-        semantic_type_t aa = (semantic_type_t)vec_get(actual->impl->generic_instance.type_args, i);
-        if (aa && aa->impl->kind == TYPE_GENERIC_PACK) {
-          vec_t expanded = aa->impl->generic_pack.expanded_types;
-          size_t ecount = expanded ? vec_get_size(expanded) : 0;
-          for (size_t j = 0; j < ecount; j++)
-            vec_push(pack_result->impl->generic_pack.expanded_types,
-                     (semantic_type_t)vec_get(expanded, j));
-        } else {
-          vec_push(pack_result->impl->generic_pack.expanded_types, aa);
+    if (e_bindings) {
+      strmap_iter_t iter = strmap_iter_first(e_bindings);
+      const char *bname = NULL;
+      while ((bname = strmap_iter_next(&iter)) != NULL) {
+        semantic_type_t ea = (semantic_type_t)strmap_find(e_bindings, bname);
+        semantic_type_t aa = a_bindings ? (semantic_type_t)strmap_find(a_bindings, bname) : NULL;
+        if (!ea || !aa) return false;
+        /* Handle pack in expected: collect remaining actual into pack binding */
+        if (ea->impl->kind == TYPE_GENERIC_PACK && aa->impl->kind == TYPE_GENERIC_PACK) {
+          if (!_type_unify(aa, ea, bindings, allocator)) return false;
+        } else if (!_type_unify(aa, ea, bindings, allocator)) {
+          return false;
         }
-      }
-      type_hash_ensure(pack_result);
-      /* Record binding */
-      void *existing = strmap_find(*bindings, pack_name);
-      if (existing) {
-        semantic_type_t prev = (semantic_type_t)existing;
-        if (prev->impl->hash != pack_result->impl->hash) return false;
-      } else {
-        strmap_insert(*bindings, pack_name, pack_result);
-      }
-    } else {
-      /* No pack — strict count matching */
-      if (acount != ecount) return false;
-
-      for (size_t i = 0; i < ecount; i++) {
-        semantic_type_t aa = (semantic_type_t)vec_get(actual->impl->generic_instance.type_args, i);
-        semantic_type_t ea = (semantic_type_t)vec_get(expected->impl->generic_instance.type_args, i);
-        if (!_type_unify(aa, ea, bindings, allocator)) return false;
       }
     }
     return true;
@@ -298,7 +259,7 @@ static bool _type_unify(semantic_type_t actual, semantic_type_t expected,
       semantic_type_t pack_type = (semantic_type_t)vec_get(eelems, pack_pos);
       const char *pack_name = pack_type->impl->generic_pack.name;
       semantic_type_t pack_result = semantic_type_create_generic_pack(
-          allocator, pack_name, pack_type->impl->generic_pack.index);
+          allocator, pack_name);
       for (size_t i = pack_pos; i < aec; i++) {
         semantic_type_t ae = (semantic_type_t)vec_get(aelems, i);
         vec_push(pack_result->impl->generic_pack.expanded_types, ae);
@@ -365,40 +326,33 @@ static vec_t _collect_generic_param_names(semantic_type_t func_type,
 
 /* ===== public API ===== */
 
-vec_t _infer_type_args_from_call(checker_t ctx,
+strmap_t _infer_type_args_from_call(checker_t ctx,
                                   semantic_type_t func_type,
-                                  vec_t generic_params,
                                   vec_t arg_types,
-                                  vec_t explicit_type_args) {
+                                  strmap_t explicit_bindings) {
   if (!func_type || func_type->impl->kind != TYPE_FUNCTION) return NULL;
 
-  size_t gcount = generic_params ? vec_get_size(generic_params) : 0;
-  if (gcount == 0) return explicit_type_args;  /* Not generic */
+  /* Step 1: Build bindings via unification */
+  strmap_init_t si = {.value_auto_dispose = false};
+  strmap_t bindings = (strmap_t)allocator_create(ctx->allocator, &g_strmap_type, &si);
 
-  /* Initialize result vec: fill with NULLs for each generic param */
-  vec_init_t vi = {.auto_dispose = false};
-  vec_t result = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-  for (size_t i = 0; i < gcount; i++)
-    vec_push(result, NULL);
-
-  /* Step 1: Fill in explicit type args */
-  size_t ecount = explicit_type_args ? vec_get_size(explicit_type_args) : 0;
-  for (size_t i = 0; i < ecount && i < gcount; i++) {
-    semantic_type_t ta = (semantic_type_t)vec_get(explicit_type_args, i);
-    if (ta) {
-      vec_set(result, i, ta);
+  /* Merge explicit bindings first */
+  if (explicit_bindings) {
+    strmap_iter_t it = strmap_iter_first(explicit_bindings);
+    const char *key;
+    while ((key = strmap_iter_next(&it)) != NULL) {
+      semantic_type_t val = (semantic_type_t)strmap_find(explicit_bindings, key);
+      if (val) strmap_insert(bindings, key, val);
     }
   }
 
   /* Step 2: Unify call args with func params to infer missing bindings */
-  strmap_init_t si = {.value_auto_dispose = false};
-  strmap_t bindings = (strmap_t)allocator_create(ctx->allocator, &g_strmap_type, &si);
   vec_t func_params = func_type->impl->function.params;
   size_t pcount = func_params ? vec_get_size(func_params) : 0;
   size_t acount = arg_types ? vec_get_size(arg_types) : 0;
 
   /* Find pack position in func params */
-  size_t pack_pos = pcount;  /* position of first pack param, or pcount if none */
+  size_t pack_pos = pcount;
   for (size_t i = 0; i < pcount; i++) {
     semantic_type_t ep = (semantic_type_t)vec_get(func_params, i);
     if (ep && ep->impl->kind == TYPE_GENERIC_PACK) {
@@ -421,7 +375,7 @@ vec_t _infer_type_args_from_call(checker_t ctx,
 
     /* Create a TYPE_GENERIC_PACK with the expanded types */
     semantic_type_t pack_result = semantic_type_create_generic_pack(
-        ctx->allocator, pack_name, pack_type->impl->generic_pack.index);
+        ctx->allocator, pack_name);
     for (size_t i = pack_pos; i < acount; i++) {
       semantic_type_t ap = (semantic_type_t)vec_get(arg_types, i);
       vec_push(pack_result->impl->generic_pack.expanded_types, ap);
@@ -448,35 +402,9 @@ vec_t _infer_type_args_from_call(checker_t ctx,
     }
   }
 
-  /* Also unify return type if it contains a generic param not covered by args */
-  semantic_type_t ret_type = func_type->impl->function.return_type;
-  if (ret_type && ret_type->impl->kind == TYPE_GENERIC_PARAM) {
-    /* Return type param may be inferable if same as a param type */
-    /* Already handled: if arg unification bound the same name, it's in bindings */
-  }
-
-  /* Step 3: Map bindings to result vec by generic param name.
-     generic_params vec contains const char* name strings (passed from caller).
-     We look up each generic param name in the bindings map. */
-  for (size_t i = 0; i < gcount; i++) {
-    /* Already filled by explicit args */
-    if (vec_get(result, i) != NULL) continue;
-
-    /* Get param name from generic_params (const char* strings) */
-    const char *gp_name = (const char *)vec_get(generic_params, i);
-    if (!gp_name) continue;
-
-    void *found = strmap_find(bindings, gp_name);
-    if (found) {
-      vec_set(result, i, found);
-    }
-  }
-
   /* Track any TYPE_GENERIC_PACK values created by _type_unify into all_types
      so they are properly freed on checker_dispose. The bindings strmap does not
-     own its values (value_auto_dispose=false), so these would otherwise leak.
-     Skip packs that are already in all_types (e.g. created by _infer_type_args_from_call
-     at line 426). */
+     own its values (value_auto_dispose=false), so these would otherwise leak. */
   {
     size_t existing_count = vec_get_size(ctx->all_types);
     strmap_iter_t iter = strmap_iter_first(bindings);
@@ -486,7 +414,6 @@ vec_t _infer_type_args_from_call(checker_t ctx,
       if (val) {
         semantic_type_t st = (semantic_type_t)val;
         if (st->impl && st->impl->kind == TYPE_GENERIC_PACK) {
-          /* Check if already in all_types */
           bool found = false;
           for (size_t j = 0; j < existing_count; j++) {
             if (vec_get(ctx->all_types, j) == st) { found = true; break; }
@@ -497,6 +424,5 @@ vec_t _infer_type_args_from_call(checker_t ctx,
     }
   }
 
-  allocator_free(ctx->allocator, &bindings);
-  return result;
+  return bindings;
 }

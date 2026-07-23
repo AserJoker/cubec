@@ -352,3 +352,49 @@ TEST_F(dt_generic_inference, same_function_multiple_inferred_calls) {
   EXPECT_EQ(checker_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
+
+TEST_F(dt_generic_inference, infer_from_func_return_type) {
+  /* U should be inferred from the return type of the fn parameter */
+  const char *src = BUILTIN_ASSERT
+    "func apply[U](fn: func() -> U): void {}\n"
+    "test \"t\" {\n"
+    "  apply(func(): i32 { return 42; });\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_inference, infer_from_func_param_type) {
+  /* T should be inferred from the parameter type of the fn parameter */
+  const char *src = BUILTIN_ASSERT
+    "func consume[T](fn: func(T) -> void, val: T): void {}\n"
+    "test \"t\" {\n"
+    "  consume(func(x: i32): void {}, 42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_inference, generic_type_alias) {
+  /* type Pair[A,B] = struct { first: A; second: B; }; */
+  const char *src =
+    "type Pair[A, B] = struct { first: A; second: B; };\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_generic_inference, generic_type_alias_instantiation) {
+  /* Instantiate a generic type alias */
+  const char *src = BUILTIN_ASSERT
+    "type Pair[A, B] = struct { first: A; second: B; };\n"
+    "test \"t\" {\n"
+    "  var x: Pair[i32, f64] = .Pair[i32, f64]{1, 2.0};\n"
+    "  assert(x.first == 1);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}

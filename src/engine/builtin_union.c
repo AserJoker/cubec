@@ -123,12 +123,12 @@ struct comptime_value *builtin_unionis_eval(struct comptime_eval *eval,
 void builtin_table_init_union(builtin_table_t table, struct checker *ctx) {
   /* builtin func unionIs[T,K](obj:K):bool */
   semantic_type_t t_param = semantic_type_create_generic_param(
-      ctx->allocator, "T", 0, NULL, false);
+      ctx->allocator, "T", NULL, false);
   type_hash_ensure(t_param);
   vec_push(ctx->all_types, t_param);
 
   semantic_type_t k_param = semantic_type_create_generic_param(
-      ctx->allocator, "K", 1, NULL, false);
+      ctx->allocator, "K", NULL, false);
   type_hash_ensure(k_param);
   vec_push(ctx->all_types, k_param);
 

@@ -52,45 +52,17 @@ semantic_type_t _check_expression(checker_t ctx, node_t expr);
 static void _evaluate_member_method(checker_t ctx, semantic_type_t t,
                                      cubec_statement_function_t mfn,
                                      size_t type_gp_count) {
-  const char *mname = _checker_ident_str(mfn->name);
-  struct symbol *msym = symbol_create(ctx->allocator, mname,
-                                      SYMBOL_FUNCTION, mfn->super.location);
   func_check_info_t info;
   func_check_info_from_statement(&info, mfn);
-
-  /* Register method-level generic params with index offset.
-     Type-level params (e.g. T from struct Vec[T]) are already in scope.
-     Method-level params (e.g. U from func map[U]) need offset indices
-     so _substitute_type can use a combined type_args vector. */
-  scope_t saved_scope = ctx->current_scope;
-  if (info.generic_params) {
-    ctx->current_scope = scope_create(ctx->allocator, saved_scope,
-        SCOPE_BLOCK, mfn->super.location);
-    vec_push(ctx->all_scopes, ctx->current_scope);
-    checker_register_generic_params_offset(ctx, info.generic_params, type_gp_count);
-    msym->function.generic_param_offset = type_gp_count;
-  }
-
-  semantic_type_t ret_type = info.return_type
-      ? resolver_resolve_type(ctx, info.return_type)
-      : ctx->builtin_void;
-  if (!ret_type) ret_type = ctx->builtin_void;
-  vec_t params = _resolve_func_param_types(ctx, &info);
-
-  if (info.generic_params) {
-    ctx->current_scope = saved_scope;
-  }
-
-  semantic_type_t mtype = semantic_type_create_function(
-      ctx->allocator, ret_type, params, info.is_c_variadic);
-  type_hash_ensure(mtype);
-  vec_push(ctx->all_types, mtype);
-  msym->function.type = mtype;
-  msym->function.is_comptime = info.is_comptime;
-  msym->function.ast_node = info.ast_node;
-  msym->function.generic_params = info.generic_params;
-  msym->state = SYMBOL_NAME_KNOWN; /* body checked in Pass 3 */
-  vec_push(t->instance_methods, msym);
+  _process_function(ctx, &info, &(func_context_t){
+      .symbol_scope = ctx->global_scope,
+      .defer_body = true,
+      .is_method = true,
+      .host_type = t,
+      .use_child_scope = true,
+      .pre_existing_sym = NULL,
+      .symbol_state = SYMBOL_NAME_KNOWN
+  });
 }
 
 static void _evaluate_member_declaration(checker_t ctx, semantic_type_t t,
@@ -312,27 +284,15 @@ static void _evaluate_function(checker_t ctx,
   func_check_info_t info;
   func_check_info_from_statement(&info, node);
 
-  /* Register generic params if present */
-  if (info.generic_params) {
-    checker_register_generic_params(ctx, info.generic_params);
-    sym->function.generic_params = info.generic_params;
-  }
-
-  /* Resolve return type and parameter types using unified helpers */
-  semantic_type_t ret_type = info.return_type
-      ? resolver_resolve_type(ctx, info.return_type)
-      : ctx->builtin_void;
-  vec_t params = _resolve_func_param_types(ctx, &info);
-
-  semantic_type_t ftype = semantic_type_create_function(
-      ctx->allocator, ret_type, params, info.is_c_variadic);
-  type_hash_ensure(ftype);
-  vec_push(ctx->all_types, ftype);
-
-  sym->function.type = ftype;
-  sym->function.is_comptime = info.is_comptime;
-  sym->function.ast_node = info.ast_node;
-  sym->state = SYMBOL_EVALUATED;
+  semantic_type_t ftype = _process_function(ctx, &info, &(func_context_t){
+      .symbol_scope = NULL,        /* symbol already exists in global_scope */
+      .defer_body = true,
+      .is_method = false,
+      .host_type = NULL,
+      .use_child_scope = false,
+      .pre_existing_sym = sym,
+      .symbol_state = SYMBOL_EVALUATED
+  });
 
   /* inline functions must have a body (comptime already requires body, so skip) */
   if (info.is_inline && !info.is_comptime && !info.body) {
@@ -626,6 +586,13 @@ static void _evaluate_type_alias(checker_t ctx,
   if (!sym || sym->kind != SYMBOL_TYPE) return;
   if (sym->state == SYMBOL_EVALUATED) return;
 
+  /* Register generic params BEFORE resolving type_value,
+     so that type expressions can reference the generic parameters. */
+  if (node->params) {
+    checker_register_generic_params(ctx, node->params);
+    sym->type.generic_params = node->params;
+  }
+
   if (node->type_value) {
     semantic_type_t resolved = resolver_resolve_type(ctx, node->type_value);
     sym->type.type = resolved;
@@ -640,12 +607,6 @@ static void _evaluate_type_alias(checker_t ctx,
                          node->super.location,
                          "type alias '%s' requires a type expression", name);
     ctx->error_count++;
-  }
-
-  /* Register generic params for generic type alias */
-  if (node->params) {
-    checker_register_generic_params(ctx, node->params);
-    sym->type.generic_params = node->params;
   }
 
   /* Generic type alias: still mark evaluated (template) */
@@ -895,13 +856,26 @@ static void _evaluate_test(checker_t ctx,
                            cubec_statement_test_t node) {
   if (!ctx->comptime_eval) return;
 
+  {
+    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
+    if (dbg) { fprintf(dbg, "ENTER _evaluate_test\n"); fflush(dbg); fclose(dbg); }
+  }
+
   /* Check the test body for type errors before evaluating.
    * Set up current_flow so TDZ tracking works inside test bodies.
    * Set in_test_block so assert() is allowed in checker. */
   ctx->in_test_block = true;
   int errors_before_check = ctx->error_count;
   flow_state_t saved_flow = ctx->current_flow;
+  {
+    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
+    if (dbg) { fprintf(dbg, "BEFORE _check_statement\n"); fflush(dbg); fclose(dbg); }
+  }
   flow_state_t fs = _check_statement(ctx, node->body, NULL);
+  {
+    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
+    if (dbg) { fprintf(dbg, "AFTER _check_statement\n"); fflush(dbg); fclose(dbg); }
+  }
   ctx->current_flow = saved_flow;
   flow_state_dispose(fs, ctx->allocator);
   ctx->in_test_block = false;
@@ -917,8 +891,16 @@ static void _evaluate_test(checker_t ctx,
   /* Evaluate with in_test_block set so assert failure is non-fatal */
   ctx->comptime_eval->in_test_block = true;
   int errors_before_eval = ctx->error_count;
+  {
+    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
+    if (dbg) { fprintf(dbg, "BEFORE comptime_eval_exec_block\n"); fflush(dbg); fclose(dbg); }
+  }
   comptime_signal_t sig =
       comptime_eval_exec_block(ctx->comptime_eval, ctx, node->body);
+  {
+    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
+    if (dbg) { fprintf(dbg, "AFTER comptime_eval_exec_block\n"); fflush(dbg); fclose(dbg); }
+  }
   ctx->comptime_eval->in_test_block = false;
 
   if (sig.kind == COMPTIME_SIGNAL_FATAL) {

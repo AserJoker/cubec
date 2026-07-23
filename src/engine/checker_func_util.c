@@ -4,6 +4,8 @@
 #include "engine/semantic_type.h"
 #include "engine/flow_state.h"
 #include "engine/diagnostic.h"
+#include "engine/type_hash.h"
+#include "engine/checker_check_stmt.h"
 #include "core/allocator.h"
 #include "core/vec.h"
 #include "core/type.h"
@@ -206,7 +208,6 @@ void checker_register_generic_params(checker_t ctx, vec_t generic_params) {
 
     struct symbol *sym = symbol_create(ctx->allocator, gp_name,
                                        SYMBOL_GENERIC_PARAM, gp->super.location);
-    sym->generic_param.index = i;
     sym->generic_param.is_rest = gp->is_rest;
     if (gp->constraint)
       sym->generic_param.constraint = resolver_resolve_type(ctx, gp->constraint);
@@ -217,46 +218,63 @@ void checker_register_generic_params(checker_t ctx, vec_t generic_params) {
   }
 }
 
-void checker_register_generic_params_offset(checker_t ctx, vec_t generic_params,
-                                             size_t offset) {
-  if (!generic_params) return;
-  size_t count = vec_get_size(generic_params);
-  bool seen_rest = false;
-  for (size_t i = 0; i < count; i++) {
-    node_t gp_node = (node_t)vec_get(generic_params, i);
-    if (!gp_node || gp_node->kind != CUBEC_NODE_GENERIC_PARAM) continue;
-    cubec_generic_param_t gp = (cubec_generic_param_t)gp_node;
-    const char *gp_name = _checker_ident_str(gp->name);
-    if (!gp_name) continue;
+/* ===== unified function processing ===== */
 
-    /* Validate rest parameter rules */
-    if (gp->is_rest) {
-      if (seen_rest) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                            gp->super.location,
-                            "only one rest parameter allowed");
-        ctx->error_count++;
-        continue;
-      }
-      if (i != count - 1) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                            gp->super.location,
-                            "rest parameter must be last in generic parameter list");
-        ctx->error_count++;
-        continue;
-      }
-      seen_rest = true;
+semantic_type_t _process_function(checker_t ctx, func_check_info_t *info,
+                                   func_context_t *fctx) {
+  /* 1. Register generic params */
+  scope_t saved = ctx->current_scope;
+  if (info->generic_params) {
+    if (fctx->use_child_scope) {
+      ctx->current_scope = scope_create(ctx->allocator, saved,
+          SCOPE_BLOCK, info->location);
+      vec_push(ctx->all_scopes, ctx->current_scope);
     }
-
-    struct symbol *sym = symbol_create(ctx->allocator, gp_name,
-                                       SYMBOL_GENERIC_PARAM, gp->super.location);
-    sym->generic_param.index = offset + i;
-    sym->generic_param.is_rest = gp->is_rest;
-    if (gp->constraint)
-      sym->generic_param.constraint = resolver_resolve_type(ctx, gp->constraint);
-    if (gp->value_type)
-      sym->generic_param.value_type = resolver_resolve_type(ctx, gp->value_type);
-    sym->state = SYMBOL_EVALUATED;
-    scope_push_symbol(ctx->current_scope, sym);
+    checker_register_generic_params(ctx, info->generic_params);
   }
+
+  /* 2. Resolve return type and parameter types */
+  semantic_type_t ret_type = info->return_type
+      ? resolver_resolve_type(ctx, info->return_type) : ctx->builtin_void;
+  if (!ret_type) ret_type = ctx->builtin_void;
+  vec_t param_types = _resolve_func_param_types(ctx, info);
+
+  if (info->generic_params && fctx->use_child_scope)
+    ctx->current_scope = saved;
+
+  /* 3. Create function type */
+  semantic_type_t ftype = semantic_type_create_function(
+      ctx->allocator, ret_type, param_types, info->is_c_variadic);
+  type_hash_ensure(ftype);
+  vec_push(ctx->all_types, ftype);
+
+  /* 4. Symbol binding */
+  const char *name = info->name ? _checker_ident_str(info->name) : NULL;
+  struct symbol *sym = fctx->pre_existing_sym;
+  enum symbol_state sym_state = fctx->symbol_state;
+  if (!sym && name && fctx->symbol_scope) {
+    sym = symbol_create(ctx->allocator, name, SYMBOL_FUNCTION, info->location);
+    sym->function.type = ftype;
+    sym->function.is_comptime = info->is_comptime;
+    sym->function.ast_node = info->ast_node;
+    sym->function.generic_params = info->generic_params;
+    sym->state = sym_state;
+    if (fctx->is_method)
+      vec_push(fctx->host_type->instance_methods, sym);
+    else
+      scope_push_symbol(fctx->symbol_scope, sym);
+  } else if (sym) {
+    sym->function.type = ftype;
+    sym->function.is_comptime = info->is_comptime;
+    sym->function.ast_node = info->ast_node;
+    sym->function.generic_params = info->generic_params;
+    sym->state = sym_state;
+  }
+
+  /* 5. Body checking */
+  if (info->body && !fctx->defer_body) {
+    _check_func_body_and_returns(ctx, info, ret_type, param_types, saved);
+  }
+
+  return ftype;
 }

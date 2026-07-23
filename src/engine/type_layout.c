@@ -91,7 +91,7 @@ void type_layout_compute(semantic_type_t type, size_t ptr_size) {
     break;
 
   case TYPE_ARRAY: {
-    if (impl->array.length_param_idx != (size_t)-1) {
+    if (impl->array.length_param_name != NULL) {
       /* Symbolic length — cannot compute layout yet */
       impl->size = 0;
       impl->alignment = 0;

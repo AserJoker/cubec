@@ -183,12 +183,12 @@ void builtin_table_init_tuple(builtin_table_t table, struct checker *ctx) {
   /* builtin func getTupleItem[N: u64, ...Args](tuple: <...Args>): Args[N] */
   {
     semantic_type_t n_param = semantic_type_create_generic_param(
-        ctx->allocator, "N", 0, ctx->builtin_u64, true);
+        ctx->allocator, "N", ctx->builtin_u64, true);
     type_hash_ensure(n_param);
     vec_push(ctx->all_types, n_param);
 
     semantic_type_t args_param = semantic_type_create_generic_pack(
-        ctx->allocator, "Args", 1);
+        ctx->allocator, "Args");
     type_hash_ensure(args_param);
     vec_push(ctx->all_types, args_param);
 
@@ -206,7 +206,7 @@ void builtin_table_init_tuple(builtin_table_t table, struct checker *ctx) {
     vec_push(params, tuple_param_type);
 
     semantic_type_t ret_type = semantic_type_create_pack_index(
-        ctx->allocator, "Args", 1, 0);
+        ctx->allocator, "Args", "N");
     type_hash_ensure(ret_type);
     vec_push(ctx->all_types, ret_type);
 
@@ -220,12 +220,12 @@ void builtin_table_init_tuple(builtin_table_t table, struct checker *ctx) {
   /* builtin func setTupleItem[N: u64, ...Args](tuple: <...Args>, value: Args[N]): void */
   {
     semantic_type_t n_param_s = semantic_type_create_generic_param(
-        ctx->allocator, "N", 0, ctx->builtin_u64, true);
+        ctx->allocator, "N", ctx->builtin_u64, true);
     type_hash_ensure(n_param_s);
     vec_push(ctx->all_types, n_param_s);
 
     semantic_type_t args_param_s = semantic_type_create_generic_pack(
-        ctx->allocator, "Args", 1);
+        ctx->allocator, "Args");
     type_hash_ensure(args_param_s);
     vec_push(ctx->all_types, args_param_s);
 
@@ -239,7 +239,7 @@ void builtin_table_init_tuple(builtin_table_t table, struct checker *ctx) {
     vec_push(ctx->all_types, tuple_param_type_s);
 
     semantic_type_t value_type = semantic_type_create_pack_index(
-        ctx->allocator, "Args", 1, 0);
+        ctx->allocator, "Args", "N");
     type_hash_ensure(value_type);
     vec_push(ctx->all_types, value_type);
 

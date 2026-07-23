@@ -7,6 +7,7 @@
 #include "engine/type_hash.h"
 #include "core/allocator.h"
 #include "core/string.h"
+#include "core/strmap.h"
 #include "core/vec.h"
 #include "cubec/node.h"
 #include "cubec/literal_identifier.h"
@@ -95,52 +96,19 @@ semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
 
   if (sym && sym->kind == SYMBOL_TYPE && sym->type.type) {
     semantic_type_t template_type = sym->type.type;
-    vec_t type_args = _resolve_generic_type_args(ctx, gi->arguments, sym->type.generic_params);
-    if (!type_args) return ctx->error_type;
-    if (template_type->impl->kind == TYPE_GENERIC_INSTANCE) return template_type;
-
-    /* Coalesce excess type args into packs for generic types with rest params.
-       E.g. for Tuple[...Args], Tuple[i32, f64] → type_args = [PACK([i32, f64])]. */
-    vec_t gp = sym->type.generic_params;
-    size_t gcount = gp ? vec_get_size(gp) : 0;
-    size_t tacount = type_args ? vec_get_size(type_args) : 0;
-    /* Find the pack parameter position */
-    size_t pack_idx = gcount;
-    for (size_t i = 0; i < gcount; i++) {
-      cubec_generic_param_t gp_node = (cubec_generic_param_t)(void *)vec_get(gp, i);
-      if (gp_node && gp_node->is_rest) {
-        pack_idx = i;
-        break;
-      }
-    }
-    /* If there's a pack param and type_args include values at or beyond pack_idx,
-       coalesce them into a TYPE_GENERIC_PACK */
-    if (pack_idx < gcount && tacount >= pack_idx) {
-      vec_init_t vi = {.auto_dispose = false};
-      vec_t new_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-      for (size_t i = 0; i < pack_idx; i++)
-        vec_push(new_type_args, vec_get(type_args, i));
-      const char *pack_name = NULL;
-      cubec_generic_param_t pack_gp = (cubec_generic_param_t)(void *)vec_get(gp, pack_idx);
-      if (pack_gp) {
-        const char *raw = _checker_ident_str(pack_gp->name);
-        if (raw) pack_name = raw;
-      }
-      semantic_type_t pack_type = semantic_type_create_generic_pack(
-          ctx->allocator, pack_name, pack_idx);
-      for (size_t i = pack_idx; i < tacount; i++) {
-        semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
-        vec_push(pack_type->impl->generic_pack.expanded_types, ta);
-      }
-      type_hash_ensure(pack_type);
-      vec_push(ctx->all_types, pack_type);
-      vec_push(new_type_args, pack_type);
-      allocator_free(ctx->allocator, &type_args);
-      type_args = new_type_args;
+    if (template_type->impl->kind == TYPE_GENERIC_INSTANCE) {
+      strmap_t dummy = _resolve_generic_type_bindings_pack(ctx, gi->arguments, sym->type.generic_params);
+      allocator_free(ctx->allocator, &dummy);
+      return template_type;
     }
 
-    _check_generic_param_constraints(ctx, sym->type.generic_params, type_args, expr);
-    return _instantiate_type(ctx, template_type, type_args, expr);
+    strmap_t type_bindings = _resolve_generic_type_bindings_pack(ctx, gi->arguments, sym->type.generic_params);
+    if (strmap_get_size(type_bindings) == 0 && vec_get_size(gi->arguments) > 0) {
+      allocator_free(ctx->allocator, &type_bindings);
+      return ctx->error_type;
+    }
+    _check_generic_param_constraints(ctx, sym->type.generic_params, type_bindings, expr);
+    return _instantiate_type(ctx, template_type, type_bindings, expr);
   }
 
   if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.type) {
@@ -152,98 +120,22 @@ semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
       return sym->function.type;
     }
 
-    vec_t type_args = _resolve_generic_type_args(ctx, gi->arguments, sym->function.generic_params);
-    if (!type_args) return ctx->error_type;
-
-    /* If there are pack parameters, coalesce excess type args into packs.
-       E.g. for foo[...Args], foo[i32, f64] should produce type_args = [PACK([i32, f64])],
-       not type_args = [i32, f64]. */
-    vec_t gp = sym->function.generic_params;
-    size_t gcount = gp ? vec_get_size(gp) : 0;
-    size_t tacount = type_args ? vec_get_size(type_args) : 0;
-    /* Find the pack parameter position */
-    size_t pack_idx = gcount;
-    for (size_t i = 0; i < gcount; i++) {
-      cubec_generic_param_t gp_node = (cubec_generic_param_t)(void *)vec_get(gp, i);
-      if (gp_node && gp_node->is_rest) {
-        pack_idx = i;
-        break;
-      }
+    strmap_t type_bindings_fn = _resolve_generic_type_bindings_pack(ctx,
+        gi->arguments, sym->function.generic_params);
+    if (strmap_get_size(type_bindings_fn) == 0 && vec_get_size(gi->arguments) > 0) {
+      allocator_free(ctx->allocator, &type_bindings_fn);
+      return ctx->error_type;
     }
-    /* If there's a pack param and type_args include values at or beyond pack_idx,
-       coalesce them into a TYPE_GENERIC_PACK */
-    if (pack_idx < gcount && tacount >= pack_idx) {
-      /* If all args from pack_idx onward form exactly one TYPE_GENERIC_PACK
-         (e.g. foo[...Args] where Args is already a pack), use it directly
-         instead of re-wrapping. */
-      if (pack_idx + 1 == tacount) {
-        semantic_type_t only_arg = (semantic_type_t)vec_get(type_args, pack_idx);
-        if (only_arg && only_arg->impl->kind == TYPE_GENERIC_PACK) {
-          /* Already a pack — use directly, just prepend non-pack args */
-          if (pack_idx == 0) {
-            /* All args are the single pack — no coalescing needed */
-          } else {
-            vec_init_t vi = {.auto_dispose = false};
-            vec_t new_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-            for (size_t i = 0; i < pack_idx; i++)
-              vec_push(new_type_args, vec_get(type_args, i));
-            vec_push(new_type_args, only_arg);
-            allocator_free(ctx->allocator, &type_args);
-            type_args = new_type_args;
-          }
-        } else {
-          /* Single non-pack arg at pack position — wrap into a pack */
-          goto do_coalesce_func_pack;
-        }
-      } else {
-      do_coalesce_func_pack:;
-        vec_init_t vi = {.auto_dispose = false};
-        vec_t new_type_args = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
-        for (size_t i = 0; i < pack_idx; i++) {
-          vec_push(new_type_args, vec_get(type_args, i));
-        }
-        /* Create PACK from remaining args */
-        const char *pack_name = NULL;
-        cubec_generic_param_t pack_gp = (cubec_generic_param_t)(void *)vec_get(gp, pack_idx);
-        if (pack_gp) {
-          const char *raw = _checker_ident_str(pack_gp->name);
-          if (raw) pack_name = raw;
-        }
-        semantic_type_t pack_type = semantic_type_create_generic_pack(
-            ctx->allocator, pack_name, pack_idx);
-        for (size_t i = pack_idx; i < tacount; i++) {
-          semantic_type_t ta = (semantic_type_t)vec_get(type_args, i);
-          vec_push(pack_type->impl->generic_pack.expanded_types, ta);
-        }
-        type_hash_ensure(pack_type);
-        vec_push(ctx->all_types, pack_type);
-        vec_push(new_type_args, pack_type);
-        allocator_free(ctx->allocator, &type_args);
-        type_args = new_type_args;
-      }
-    }
-
-    _check_generic_param_constraints(ctx, sym->function.generic_params, type_args, expr);
-
-    /* Copy type_args before _instantiate_function (which takes ownership) */
-    vec_t type_args_copy = NULL;
-    {
-      vec_init_t cpi = {.auto_dispose = false};
-      type_args_copy = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &cpi);
-      size_t tcount = vec_get_size(type_args);
-      for (size_t ti = 0; ti < tcount; ti++)
-        vec_push(type_args_copy, vec_get(type_args, ti));
-    }
-
-    semantic_type_t inst_result = _instantiate_function(ctx, sym, type_args, expr);
+    _check_generic_param_constraints(ctx, sym->function.generic_params, type_bindings_fn, expr);
+    semantic_type_t inst_result = _instantiate_function(ctx, sym, type_bindings_fn, expr);
     if (inst_result->impl->kind != TYPE_ERROR) {
-      /* Enqueue for body checking in the worklist */
-      _enqueue_body_check(ctx, sym, inst_result, type_args_copy,
+      /* Enqueue for body checking — _enqueue_body_check takes ownership
+         of type_bindings on success, frees on duplicate. */
+      _enqueue_body_check(ctx, sym, inst_result, type_bindings_fn,
           ctx->global_scope, false, NULL);
-      type_args_copy = NULL;  /* ownership transferred */
-    } else {
-      allocator_free(ctx->allocator, &type_args_copy);
+      type_bindings_fn = NULL; /* ownership transferred */
     }
+    if (type_bindings_fn) allocator_free(ctx->allocator, &type_bindings_fn);
     return inst_result;
   }
 

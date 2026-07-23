@@ -97,7 +97,7 @@ typedef struct checker *checker_t;
 typedef struct {
   struct symbol *func_sym;     /**< Function symbol (template symbol for generics) */
   semantic_type_t inst_type;   /**< Instantiated function type (original type for non-generics) */
-  vec_t type_args;             /**< Concrete type arguments (NULL for non-generics) */
+  strmap_t type_bindings;      /**< Name → concrete semantic_type_t (NULL for non-generics) */
   scope_t scope_root;          /**< Parent scope for body checking */
   bool is_method;              /**< True if this is a type method */
   semantic_type_t host_type;   /**< Host type for methods (NULL for free functions) */

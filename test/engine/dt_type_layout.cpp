@@ -77,7 +77,7 @@ TEST_F(dt_type_layout, array_size) {
   semantic_type_t elem =
       semantic_type_create_named(allocator, "i32", TYPE_I32);
   type_layout_compute(elem, PTR64);
-  semantic_type_t arr = semantic_type_create_array(allocator, elem, 10, (size_t)-1);
+  semantic_type_t arr = semantic_type_create_array(allocator, elem, 10, NULL);
   type_layout_compute(arr, PTR64);
   EXPECT_EQ(semantic_type_get_size(arr), 40u);
   EXPECT_EQ(semantic_type_get_alignment(arr), 4u);

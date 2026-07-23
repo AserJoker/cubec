@@ -61,7 +61,7 @@ struct comptime_value *builtin_length_eval(struct comptime_eval *eval,
 void builtin_table_init_collection(builtin_table_t table, struct checker *ctx) {
   /* builtin func length[T](list: T): u64 */
   semantic_type_t t_param = semantic_type_create_generic_param(
-      ctx->allocator, "T", 0, NULL, false);
+      ctx->allocator, "T", NULL, false);
   type_hash_ensure(t_param);
   vec_push(ctx->all_types, t_param);
 

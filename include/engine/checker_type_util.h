@@ -2,6 +2,7 @@
 #define _H_CUBEC_ENGINE_CHECKER_TYPE_UTIL_
 #include "engine/checker.h"
 #include "core/node.h"
+#include "core/strmap.h"
 #include "engine/semantic_type.h"
 #include <stdbool.h>
 #ifdef __cplusplus
@@ -34,31 +35,31 @@ semantic_type_t _check_literal_numeric(checker_t ctx, node_t num_node);
 
 /* generic instantiation helpers */
 char *_generic_instance_cache_key(checker_t ctx, const char *template_name,
-                                   vec_t type_args);
+                                   strmap_t type_bindings);
 bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
                        semantic_type_t constraint, node_t arg_expr);
 bool _check_constraint_silent(checker_t ctx, semantic_type_t type_arg,
                               semantic_type_t constraint);
 vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs, vec_t generic_params);
+strmap_t _resolve_generic_type_bindings_pack(checker_t ctx, vec_t arg_exprs, vec_t generic_params);
 semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
-                                   vec_t type_args, node_t instantiation_expr);
+                                   strmap_t type_bindings, node_t instantiation_expr);
 semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
-                                      vec_t type_args, node_t instantiation_expr);
+                                      strmap_t type_bindings, node_t instantiation_expr);
 
-/* Substitute generic params in a type with concrete type arguments */
+/* Substitute generic params in a type with concrete type bindings */
 semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
-                                   vec_t type_args);
+                                   strmap_t type_bindings);
 
 /* type unification for generic inference */
-vec_t _infer_type_args_from_call(checker_t ctx,
+strmap_t _infer_type_args_from_call(checker_t ctx,
                                   semantic_type_t func_type,
-                                  vec_t generic_params,
                                   vec_t arg_types,
-                                  vec_t explicit_type_args);
+                                  strmap_t explicit_bindings);
 
 /* Check generic param constraints */
 bool _check_generic_param_constraints(checker_t ctx, vec_t generic_params,
-                                       vec_t type_args, node_t expr);
+                                       strmap_t type_bindings, node_t expr);
 
 #ifdef __cplusplus
 }

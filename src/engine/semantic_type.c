@@ -77,8 +77,8 @@ static void _type_impl_dispose(void *self, allocator_t allocator) {
     }
     break;
   case TYPE_GENERIC_INSTANCE:
-    if (impl->generic_instance.type_args) {
-      allocator_free(allocator, &impl->generic_instance.type_args);
+    if (impl->generic_instance.type_bindings) {
+      allocator_free(allocator, &impl->generic_instance.type_bindings);
     }
     if (impl->generic_instance.fields) {
       allocator_free(allocator, &impl->generic_instance.fields);
@@ -187,8 +187,10 @@ static bool _type_impl_equals(type_impl_t a, type_impl_t b) {
     return semantic_type_equals(a->slice.element, b->slice.element);
 
   case TYPE_ARRAY:
-    if (a->array.length_param_idx != b->array.length_param_idx) return false;
-    if (a->array.length_param_idx == (size_t)-1 &&
+    if (a->array.length_param_name && b->array.length_param_name
+            ? strcmp(a->array.length_param_name, b->array.length_param_name) != 0
+            : a->array.length_param_name != b->array.length_param_name) return false;
+    if (!a->array.length_param_name && !b->array.length_param_name &&
         a->array.length != b->array.length) return false;
     return semantic_type_equals(a->array.element, b->array.element);
 
@@ -214,14 +216,27 @@ static bool _type_impl_equals(type_impl_t a, type_impl_t b) {
   case TYPE_TYPE:
     return semantic_type_equals(a->type_of.inner, b->type_of.inner);
 
-  case TYPE_GENERIC_INSTANCE:
-    return semantic_type_equals(a->generic_instance.generic_template,
-                                b->generic_instance.generic_template) &&
-           _type_vec_equals(a->generic_instance.type_args,
-                            b->generic_instance.type_args);
+  case TYPE_GENERIC_INSTANCE: {
+    if (!semantic_type_equals(a->generic_instance.generic_template,
+                              b->generic_instance.generic_template)) return false;
+    /* Compare type_bindings: both must have same size and matching entries */
+    strmap_t ab = a->generic_instance.type_bindings;
+    strmap_t bb = b->generic_instance.type_bindings;
+    size_t asz = ab ? strmap_get_size(ab) : 0;
+    size_t bsz = bb ? strmap_get_size(bb) : 0;
+    if (asz != bsz) return false;
+    if (asz == 0) return true;
+    strmap_iter_t it = strmap_iter_first(ab);
+    const char *key;
+    while ((key = strmap_iter_next(&it)) != NULL) {
+      semantic_type_t av = (semantic_type_t)strmap_find(ab, key);
+      semantic_type_t bv = (semantic_type_t)strmap_find(bb, key);
+      if (!bv || !semantic_type_equals(av, bv)) return false;
+    }
+    return true;
+  }
 
   case TYPE_GENERIC_PARAM:
-    if (a->generic_param.index != b->generic_param.index) return false;
     if (a->generic_param.is_value != b->generic_param.is_value) return false;
     if (a->generic_param.name && b->generic_param.name
             ? strcmp(a->generic_param.name, b->generic_param.name) != 0
@@ -234,7 +249,6 @@ static bool _type_impl_equals(type_impl_t a, type_impl_t b) {
     return true;
 
   case TYPE_GENERIC_PACK:
-    if (a->generic_pack.index != b->generic_pack.index) return false;
     if (a->generic_pack.name && b->generic_pack.name &&
         strcmp(a->generic_pack.name, b->generic_pack.name) != 0) return false;
     return _type_vec_equals(a->generic_pack.expanded_types,
@@ -248,10 +262,10 @@ static bool _type_impl_equals(type_impl_t a, type_impl_t b) {
     return true;
 
   case TYPE_PACK_INDEX:
-    if (a->pack_index.pack_param_idx != b->pack_index.pack_param_idx) return false;
-    if (a->pack_index.index_param_idx != b->pack_index.index_param_idx) return false;
     if (a->pack_index.pack_name && b->pack_index.pack_name &&
         strcmp(a->pack_index.pack_name, b->pack_index.pack_name) != 0) return false;
+    if (a->pack_index.index_param_name && b->pack_index.index_param_name &&
+        strcmp(a->pack_index.index_param_name, b->pack_index.index_param_name) != 0) return false;
     return true;
 
   case TYPE_GENERIC_VALUE: {
@@ -282,13 +296,29 @@ static bool _type_impl_equals(type_impl_t a, type_impl_t b) {
   }
 }
 
+static int _equals_depth = 0;
+
 bool semantic_type_equals(semantic_type_t a, semantic_type_t b) {
   if (a == b) return true;
   if (!a || !b) return false;
   /* Same name => same type (nominal equality for named types) */
   if (a->name && b->name && strcmp(a->name, b->name) == 0) return true;
   /* Structural equality via impl */
-  return _type_impl_equals(a->impl, b->impl);
+  _equals_depth++;
+  if (_equals_depth > 500) {
+    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
+    if (dbg) {
+      fprintf(dbg, "BUG: semantic_type_equals depth %d, kinds=%d/%d, aname=%s bname=%s\n",
+              _equals_depth, (int)a->impl->kind, (int)b->impl->kind,
+              a->name ? a->name : "<null>", b->name ? b->name : "<null>");
+      fclose(dbg);
+    }
+    _equals_depth--;
+    return false;
+  }
+  bool result = _type_impl_equals(a->impl, b->impl);
+  _equals_depth--;
+  return result;
 }
 
 /* ===== decay and implicit conversion ===== */
@@ -651,14 +681,14 @@ semantic_type_t semantic_type_create_slice(allocator_t allocator,
 semantic_type_t semantic_type_create_array(allocator_t allocator,
                                            semantic_type_t element,
                                            size_t length,
-                                           size_t length_param_idx) {
+                                           const char *length_param_name) {
   semantic_type_t t = (semantic_type_t)allocator_create(
       allocator, &g_semantic_type_type, NULL);
   t->impl = _create_impl(allocator, TYPE_ARRAY);
   t->impl->array.element = element;
   t->impl->array.length = length;
-  t->impl->array.length_param_idx = length_param_idx;
-  t->is_incomplete = (length_param_idx != (size_t)-1);
+  t->impl->array.length_param_name = length_param_name;
+  t->is_incomplete = (length_param_name != NULL);
   return t;
 }
 
@@ -691,26 +721,24 @@ semantic_type_t semantic_type_create_function(allocator_t allocator,
 
 semantic_type_t semantic_type_create_generic_instance(allocator_t allocator,
                                                        semantic_type_t template_type,
-                                                       vec_t type_args) {
+                                                       strmap_t type_bindings) {
   semantic_type_t t = (semantic_type_t)allocator_create(
       allocator, &g_semantic_type_type, NULL);
   t->impl = _create_impl(allocator, TYPE_GENERIC_INSTANCE);
   t->impl->generic_instance.generic_template = template_type;
-  t->impl->generic_instance.type_args = type_args;
+  t->impl->generic_instance.type_bindings = type_bindings;
   t->is_incomplete = false;
   return t;
 }
 
 semantic_type_t semantic_type_create_generic_param(allocator_t allocator,
                                                     const char *name,
-                                                    size_t index,
                                                     semantic_type_t value_type,
                                                     bool is_value) {
   semantic_type_t t = (semantic_type_t)allocator_create(
       allocator, &g_semantic_type_type, NULL);
   t->impl = _create_impl(allocator, TYPE_GENERIC_PARAM);
   t->impl->generic_param.name = name;
-  t->impl->generic_param.index = index;
   t->impl->generic_param.value_type = value_type;
   t->impl->generic_param.is_value = is_value;
   t->is_incomplete = false;
@@ -718,13 +746,11 @@ semantic_type_t semantic_type_create_generic_param(allocator_t allocator,
 }
 
 semantic_type_t semantic_type_create_generic_pack(allocator_t allocator,
-                                                   const char *name,
-                                                   size_t index) {
+                                                   const char *name) {
   semantic_type_t t = (semantic_type_t)allocator_create(
       allocator, &g_semantic_type_type, NULL);
   t->impl = _create_impl(allocator, TYPE_GENERIC_PACK);
   t->impl->generic_pack.name = name;
-  t->impl->generic_pack.index = index;
   vec_init_t vi = {.auto_dispose = false};
   t->impl->generic_pack.expanded_types =
       (vec_t)allocator_create(allocator, &g_vec_type, &vi);
@@ -734,14 +760,12 @@ semantic_type_t semantic_type_create_generic_pack(allocator_t allocator,
 
 semantic_type_t semantic_type_create_pack_index(allocator_t allocator,
                                                 const char *pack_name,
-                                                size_t pack_param_idx,
-                                                size_t index_param_idx) {
+                                                const char *index_param_name) {
   semantic_type_t t = (semantic_type_t)allocator_create(
       allocator, &g_semantic_type_type, NULL);
   t->impl = _create_impl(allocator, TYPE_PACK_INDEX);
   t->impl->pack_index.pack_name = pack_name;
-  t->impl->pack_index.pack_param_idx = pack_param_idx;
-  t->impl->pack_index.index_param_idx = index_param_idx;
+  t->impl->pack_index.index_param_name = index_param_name;
   t->is_incomplete = false;
   return t;
 }

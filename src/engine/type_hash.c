@@ -1,6 +1,7 @@
 #include "engine/type_hash.h"
 #include "engine/symbol.h"
 #include "engine/comptime_value.h"
+#include "core/strmap.h"
 #include "core/vec.h"
 #include <string.h>
 
@@ -67,7 +68,9 @@ static size_t _hash_type(semantic_type_t type) {
   case TYPE_ARRAY:
     hash = _hash_combine(hash, _hash_type(impl->array.element));
     hash = _hash_combine(hash, impl->array.length);
-    hash = _hash_combine(hash, impl->array.length_param_idx);
+    if (impl->array.length_param_name)
+      hash = _hash_combine(hash, _fnv1a(impl->array.length_param_name,
+                                         strlen(impl->array.length_param_name)));
     break;
 
   case TYPE_STRUCT:
@@ -114,20 +117,37 @@ static size_t _hash_type(semantic_type_t type) {
     hash = _hash_combine(hash, _hash_type(impl->type_of.inner));
     break;
 
-  case TYPE_GENERIC_INSTANCE:
+  case TYPE_GENERIC_INSTANCE: {
     hash = _hash_combine(hash, _hash_type(impl->generic_instance.generic_template));
-    hash = _hash_combine(hash, _hash_type_vec(impl->generic_instance.type_args));
+    /* Hash type_bindings: iterate deterministically by key name */
+    strmap_t tb = impl->generic_instance.type_bindings;
+    if (tb) {
+      size_t bcount = strmap_get_size(tb);
+      hash = _hash_combine(hash, bcount);
+      strmap_iter_t it = strmap_iter_first(tb);
+      const char *key;
+      while ((key = strmap_iter_next(&it)) != NULL) {
+        hash = _hash_combine(hash, _fnv1a(key, strlen(key)));
+        semantic_type_t val = (semantic_type_t)strmap_find(tb, key);
+        if (val) hash = _hash_combine(hash, _hash_type(val));
+      }
+    }
     break;
+  }
 
   case TYPE_GENERIC_PARAM:
-    hash = _hash_combine(hash, (size_t)impl->generic_param.index);
     hash = _hash_combine(hash, (size_t)impl->generic_param.is_value);
+    if (impl->generic_param.name)
+      hash = _hash_combine(hash, _fnv1a(impl->generic_param.name,
+                                         strlen(impl->generic_param.name)));
     if (impl->generic_param.value_type)
       hash = _hash_combine(hash, _hash_type(impl->generic_param.value_type));
     break;
 
   case TYPE_GENERIC_PACK:
-    hash = _hash_combine(hash, (size_t)impl->generic_pack.index);
+    if (impl->generic_pack.name)
+      hash = _hash_combine(hash, _fnv1a(impl->generic_pack.name,
+                                         strlen(impl->generic_pack.name)));
     hash = _hash_combine(hash, _hash_type_vec(impl->generic_pack.expanded_types));
     break;
 
@@ -139,8 +159,12 @@ static size_t _hash_type(semantic_type_t type) {
     break;
 
   case TYPE_PACK_INDEX:
-    hash = _hash_combine(hash, (size_t)impl->pack_index.pack_param_idx);
-    hash = _hash_combine(hash, (size_t)impl->pack_index.index_param_idx);
+    if (impl->pack_index.pack_name)
+      hash = _hash_combine(hash, _fnv1a(impl->pack_index.pack_name,
+                                         strlen(impl->pack_index.pack_name)));
+    if (impl->pack_index.index_param_name)
+      hash = _hash_combine(hash, _fnv1a(impl->pack_index.index_param_name,
+                                         strlen(impl->pack_index.index_param_name)));
     break;
 
   case TYPE_GENERIC_VALUE: {

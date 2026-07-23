@@ -3,6 +3,7 @@
 #include "engine/checker.h"
 #include "engine/symbol.h"
 #include "core/node.h"
+#include "core/strmap.h"
 #include "engine/semantic_type.h"
 #include "engine/scope.h"
 #ifdef __cplusplus
@@ -15,10 +16,10 @@ void checker_check_function_bodies(checker_t ctx, node_t program);
 /**
  * @brief Enqueue a function body for checking in the worklist.
  *        Deduplicates by cache key — if already checked, the entry is skipped.
- *        Takes ownership of type_args (frees on duplicate or when entry is processed).
+ *        Takes ownership of type_bindings (frees on duplicate or when entry is processed).
  */
 void _enqueue_body_check(checker_t ctx, struct symbol *func_sym,
-                          semantic_type_t inst_type, vec_t type_args,
+                          semantic_type_t inst_type, strmap_t type_bindings,
                           scope_t scope_root, bool is_method,
                           semantic_type_t host_type);
 
