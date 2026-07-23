@@ -192,7 +192,7 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
   /* 3. Expect 'var' keyword (skip if 'using' takes its place) */
   if (!is_using) {
     if (!_is_keyword(tokens, current, "var")) {
-      return NULL;
+      goto onerror;
     }
     token_t var_token = TRY_LOCAL(onerror, vec_get(tokens, current));
     if (start_location.begin.offset == 0) {

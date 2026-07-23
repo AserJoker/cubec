@@ -1,4 +1,5 @@
 #include "engine/checker.h"
+#include "engine/checker_decorator.h"
 #include "engine/checker_evaluate.h"
 #include "engine/checker_collect.h"
 #include "engine/checker_func_util.h"
@@ -124,6 +125,11 @@ static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
   if (!node->generic_params) type_layout_compute(t, 8);
   type_hash_ensure(t);
   sym->state = SYMBOL_EVALUATED;
+
+  /* Evaluate decorators (skip for generic — evaluated at instantiation) */
+  if (node->decorators && !node->generic_params)
+    checker_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
+                                name, (node_t)node);
 }
 
 /* _evaluate_enum_items moved to checker_type_util.c as _resolve_enum_items */
@@ -145,6 +151,10 @@ static void _evaluate_enum(checker_t ctx, cubec_statement_enum_t node) {
   type_layout_compute(t, 8);
   type_hash_ensure(t);
   sym->state = SYMBOL_EVALUATED;
+
+  if (node->decorators)
+    checker_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
+                                name, (node_t)node);
 }
 
 static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
@@ -174,6 +184,11 @@ static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
   if (!node->generic_params) type_layout_compute(t, 8);
   type_hash_ensure(t);
   sym->state = SYMBOL_EVALUATED;
+
+  /* Evaluate decorators (skip for generic — evaluated at instantiation) */
+  if (node->decorators && !node->generic_params)
+    checker_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
+                                name, (node_t)node);
 }
 
 static void _evaluate_cunion(checker_t ctx, cubec_statement_cunion_t node) {
@@ -352,6 +367,11 @@ static void _evaluate_function(checker_t ctx,
     comptime_env_bind_value(ctx->comptime_eval->global_env,
                             ctx->comptime_eval->valloc, name, fn_val);
   }
+
+  /* Evaluate decorators (skip for generic — evaluated at instantiation) */
+  if (info.decorators && !info.generic_params)
+    checker_evaluate_decorators(ctx, info.decorators, DECORATOR_TARGET_FUNC,
+                                name, (node_t)node);
 }
 
 static void _check_var_type_completeness(checker_t ctx, node_t loc_node,
@@ -559,7 +579,11 @@ static void _evaluate_variable(checker_t ctx,
     }
   }
 
-  if (node->is_comptime && node->declarator &&
+  /* Bind comptime-evaluable value to comptime env.
+   * For comptime var: always bind.
+   * For non-comptime var with decorators: also try to bind (needed for decorator eval). */
+  bool need_comptime_binding = node->is_comptime || (node->decorators != NULL);
+  if (need_comptime_binding && node->declarator &&
       node->declarator->kind == CUBEC_NODE_DECLARATION_VARIABLE) {
     cubec_declaration_variable_t dv =
         (cubec_declaration_variable_t)node->declarator;
@@ -575,6 +599,10 @@ static void _evaluate_variable(checker_t ctx,
       }
     }
   }
+
+  if (node->decorators)
+    checker_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_VAR,
+                                name, (node_t)node);
 }
 
 static void _evaluate_type_alias(checker_t ctx,
@@ -629,6 +657,10 @@ static void _evaluate_type_alias(checker_t ctx,
       sym->is_builtin = true;
     }
   }
+
+  if (node->decorators)
+    checker_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
+                                name, (node_t)node);
 }
 
 static void _evaluate_import(checker_t ctx,

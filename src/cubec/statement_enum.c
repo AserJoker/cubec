@@ -129,7 +129,7 @@ node_t read_statement_enum(allocator_t allocator, vec_t tokens,
 
   /* 2. Expect 'enum' keyword */
   if (!_is_keyword(tokens, current, "enum")) {
-    return NULL;
+    goto onerror;
   }
   if (start_location.begin.offset == 0) {
     token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));

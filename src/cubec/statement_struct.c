@@ -138,7 +138,7 @@ node_t read_statement_struct(allocator_t allocator, vec_t tokens,
 
   /* 2. Expect 'struct' keyword */
   if (!_is_keyword(tokens, current, "struct")) {
-    return NULL;
+    goto onerror;
   }
   if (start_location.begin.offset == 0) {
     token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));

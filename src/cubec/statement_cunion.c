@@ -120,7 +120,7 @@ node_t read_statement_cunion(allocator_t allocator, vec_t tokens,
 
   /* 1. Expect 'cunion' keyword */
   if (!_is_keyword(tokens, current, "cunion")) {
-    return NULL;
+    goto onerror;
   }
   token_t cunion_token = TRY_LOCAL(onerror, vec_get(tokens, current));
   location_t start_location = *token_get_location(cunion_token);

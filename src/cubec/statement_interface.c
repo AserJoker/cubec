@@ -140,7 +140,7 @@ node_t read_statement_interface(allocator_t allocator, vec_t tokens,
 
   /* 2. Expect 'interface' keyword */
   if (!_is_keyword(tokens, current, "interface")) {
-    return NULL;
+    goto onerror;
   }
   if (start_location.begin.offset == 0) {
     token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));

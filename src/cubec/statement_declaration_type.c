@@ -150,7 +150,7 @@ node_t read_statement_declaration_type(allocator_t allocator, vec_t tokens,
 
   /* 2. Expect 'type' keyword */
   if (!_is_keyword(tokens, current, "type")) {
-    return NULL;
+    goto onerror;
   }
   token_t type_token = TRY_LOCAL(onerror, vec_get(tokens, current));
   if (start_location.begin.offset == 0) {

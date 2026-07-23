@@ -251,7 +251,7 @@ node_t read_statement_function(allocator_t allocator, vec_t tokens,
 
   /* 3. Expect 'func' keyword */
   if (!_is_keyword(tokens, current, "func")) {
-    return NULL;
+    goto onerror;
   }
 
   /* 4. Delegate to read_expression_function for the actual func parsing */
