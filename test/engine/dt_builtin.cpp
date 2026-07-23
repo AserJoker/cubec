@@ -328,7 +328,7 @@ TEST_F(dt_builtin, length_non_array_tuple_error) {
 TEST_F(dt_builtin, assert_outside_test_block_error) {
   /* assert in comptime block (not test) should be an error */
   const char *src = BUILTIN_ASSERT
-    "comptime {\n"
+    "comptime if (true) {\n"
     "  assert(true);\n"
     "}\n";
   auto r = compile_source(allocator, src);

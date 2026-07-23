@@ -141,7 +141,7 @@ TEST_F(dt_comptime_string, str_index_read) {
 TEST_F(dt_comptime_string, str_index_write_comptime) {
   const char *src = BUILTIN_ASSERT
     "test \"str_index_write\" {\n"
-    "  comptime {\n"
+    "  comptime if (true) {\n"
     "    var s: str = \"hello\";\n"
     "    s[0] = 'H';\n"
     "    assert(s == \"Hello\");\n"

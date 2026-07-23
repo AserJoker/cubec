@@ -642,10 +642,6 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
     return _eval_signal_none();
   }
 
-  case CUBEC_NODE_STATEMENT_COMPTIME_BLOCK:
-    return _comptime_exec_block(eval, ctx,
-        ((cubec_statement_comptime_block_t)stmt)->body);
-
   case CUBEC_NODE_STATEMENT_COMPTIME_IF:
     return comptime_eval_exec_comptime_if(eval, ctx, stmt);
 

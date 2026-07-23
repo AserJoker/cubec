@@ -644,7 +644,7 @@ Covers: literal numeric/string/char/identifier, binary ops (10 precedence levels
 
 ### Statement Execution (_exec_stmt)
 
-Covers: block (with scope), expression, return, if, while, do-while, for, foreach, declaration, function, break, continue, empty, defer, switch, comptime block/if/for. Type declaration nodes are skipped (handled by checker_evaluate).
+Covers: block (with scope), expression, return, if, while, do-while, for, foreach, declaration, function, break, continue, empty, defer, switch, comptime if/foreach. Type declaration nodes are skipped (handled by checker_evaluate).
 
 ### Safety Limits
 
@@ -653,7 +653,7 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 
 ### Checker Integration
 
-`checker_t` owns `comptime_eval_t`. `_evaluate_comptime_block/if/for` delegate to evaluator. `_evaluate_variable` binds comptime var values to env. `_evaluate_function` binds comptime functions with body to env (param names as C strings, not string_t objects).
+`checker_t` owns `comptime_eval_t`. `_evaluate_comptime_if/foreach` delegate to evaluator. `_evaluate_variable` binds comptime var values to env. `_evaluate_function` binds non-extern functions with body to env (param names as C strings, not string_t objects).
 
 ## Build System
 
@@ -918,7 +918,6 @@ export struct SomeType { ref: *a.SomeType }     // ✅ OK: struct definition
 - 可修饰：func、struct/enum/union、type、var
 
 ### comptime 编译时求值
-- `comptime { }` — 独立 AST 节点
 - `comptime if(condition) { } else { }` — 独立 AST 节点，条件必须编译期求值为 bool，未采取分支不做类型检查
 - `comptime foreach(item of iter) { }` — 编译期迭代器展开，支持 `var` 和类型注解
 

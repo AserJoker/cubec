@@ -213,3 +213,68 @@ TEST_F(dt_comptime_stmt, comptime_if_no_else) {
   EXPECT_NE(x_sym, nullptr);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== local comptime var ===== */
+
+TEST_F(dt_comptime_stmt, local_comptime_var_basic) {
+  /* Local comptime var should be evaluated at compile time */
+  const char *src = BUILTIN_ASSERT
+    "test \"local_comptime_var\" {\n"
+    "  comptime var x = 1 + 2;\n"
+    "  assert(x == 3);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_comptime_stmt, local_comptime_var_implicit_const) {
+  /* Local comptime var is implicitly const — cannot be reassigned */
+  const char *src = BUILTIN_ASSERT
+    "test \"local_comptime_const\" {\n"
+    "  comptime var x = 42;\n"
+    "  x = 99;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_comptime_stmt, local_comptime_var_no_init_error) {
+  /* Local comptime var must have an initializer — enforced at parse time */
+  const char *src =
+    "comptime var x: i32;\n";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", src);
+  size_t pos = 0;
+  node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+  EXPECT_NE(g_error, nullptr);
+  error_clear();
+  allocator_free(allocator, &prog);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_comptime_stmt, local_comptime_var_undefined_error) {
+  /* Local comptime var cannot be initialized with undefined */
+  const char *src = BUILTIN_ASSERT
+    "test \"local_comptime_undefined\" {\n"
+    "  comptime var x: i32 = undefined;\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== local comptime func ===== */
+
+TEST_F(dt_comptime_stmt, local_comptime_func_basic) {
+  /* Local comptime func should be bound to comptime env */
+  const char *src = BUILTIN_ASSERT
+    "test \"local_comptime_func\" {\n"
+    "  comptime func double(x: i32): i32 { return x + x; }\n"
+    "  comptime var y = double(21);\n"
+    "  assert(y == 42);\n"
+    "}\n";
+  auto r = compile_source(allocator, src);
+  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}

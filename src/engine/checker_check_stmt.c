@@ -382,6 +382,25 @@ static flow_state_t _check_stmt_declaration(checker_t ctx, node_t stmt) {
     ctx->error_count++;
   }
 
+  /* Local comptime variables require an initializer and cannot use undefined.
+     Value must be known at compile time. */
+  if (sdecl->is_comptime) {
+    if (is_undefined_init) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           stmt->location,
+                           "comptime variable '%s' cannot be initialized with 'undefined' — value must be known at compile time",
+                           vname);
+      ctx->error_count++;
+    }
+    if (!vdecl->expression) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           stmt->location,
+                           "comptime variable '%s' requires an initializer — value must be known at compile time",
+                           vname);
+      ctx->error_count++;
+    }
+  }
+
   /* 'using' not allowed at module scope */
   if (sdecl->is_using && scope_get_kind(ctx->current_scope) == SCOPE_GLOBAL) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
@@ -448,6 +467,16 @@ static flow_state_t _check_stmt_declaration(checker_t ctx, node_t stmt) {
     }
   }
 
+  /* Local comptime variables are implicitly const */
+  if (sdecl->is_comptime && var_type && var_type->impl->kind != TYPE_ERROR &&
+      !semantic_type_is_const(var_type)) {
+    semantic_type_t const_type = semantic_type_create_qualifier(
+        ctx->allocator, var_type, true, false);
+    type_hash_ensure(const_type);
+    vec_push(ctx->all_types, const_type);
+    var_type = const_type;
+  }
+
   struct symbol *vsym = symbol_create(ctx->allocator, vname,
                                        SYMBOL_VARIABLE, stmt->location);
   vsym->variable.type = var_type;
@@ -486,6 +515,21 @@ static flow_state_t _check_stmt_declaration(checker_t ctx, node_t stmt) {
                              "'__dispose__' must return void");
         ctx->error_count++;
       }
+    }
+  }
+
+  /* Local comptime variable: evaluate initializer at compile time and bind to
+     comptime env so it's available for comptime if/foreach conditions. */
+  if (sdecl->is_comptime && vdecl->expression && ctx->comptime_eval) {
+    comptime_value_t val =
+        comptime_eval_expr(ctx->comptime_eval, ctx, vdecl->expression);
+    if (val && val->kind != COMPTIME_VALUE_ERROR) {
+      comptime_env_bind_value(
+          ctx->comptime_eval->current_env
+              ? ctx->comptime_eval->current_env
+              : ctx->comptime_eval->global_env,
+          ctx->comptime_eval->valloc,
+          vname, comptime_value_clone(ctx->allocator, val));
     }
   }
 
@@ -563,21 +607,6 @@ static flow_state_t _check_stmt_defer(checker_t ctx, node_t stmt,
   /* Check the defer body, but defer doesn't affect control flow */
   flow_state_t body_fs = _check_statement(ctx, sd->body, return_type);
   flow_state_dispose(body_fs, ctx->allocator);
-  return flow_state_alive(ctx->allocator);
-}
-
-/* --- comptime block --- */
-
-static flow_state_t _check_stmt_comptime_block(checker_t ctx, node_t stmt,
-                                                semantic_type_t return_type) {
-  cubec_statement_comptime_block_t cb =
-      (cubec_statement_comptime_block_t)stmt;
-  if (cb->body) {
-    flow_state_t fs = _check_statement(ctx, cb->body, return_type);
-    return fs;
-  }
-  if (ctx->current_flow)
-    return flow_state_clone(ctx->allocator, ctx->current_flow);
   return flow_state_alive(ctx->allocator);
 }
 
@@ -849,9 +878,6 @@ flow_state_t _check_statement(checker_t ctx, node_t stmt,
   case CUBEC_NODE_STATEMENT_EMPTY:
     fs = flow_state_alive(ctx->allocator);
     break;
-  case CUBEC_NODE_STATEMENT_COMPTIME_BLOCK:
-    fs = _check_stmt_comptime_block(ctx, stmt, return_type);
-    break;
   case CUBEC_NODE_STATEMENT_COMPTIME_IF:
     fs = _check_stmt_comptime_if(ctx, stmt, return_type);
     break;
@@ -874,7 +900,7 @@ static flow_state_t _check_stmt_local_function(checker_t ctx,
   func_check_info_t info;
   func_check_info_from_statement(&info, node);
 
-  _process_function(ctx, &info, &(func_context_t){
+  semantic_type_t ftype = _process_function(ctx, &info, &(func_context_t){
       .symbol_scope = ctx->current_scope,
       .defer_body = false,
       .is_method = false,
@@ -883,6 +909,41 @@ static flow_state_t _check_stmt_local_function(checker_t ctx,
       .pre_existing_sym = NULL,
       .symbol_state = SYMBOL_EVALUATED
   });
+
+  /* Bind local comptime function to comptime env so it can be called at
+     compile time. Non-comptime local functions are not bound (they are not
+     available for comptime execution at the local level). */
+  if (info.is_comptime && info.body && !info.generic_params &&
+      ftype && ctx->comptime_eval) {
+    const char *fname = info.name ? _checker_ident_str(info.name) : NULL;
+    if (fname) {
+      vec_t param_names = NULL;
+      if (info.arguments) {
+        vec_init_t pvi = {.auto_dispose = false};
+        param_names = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &pvi);
+        size_t acount = vec_get_size(info.arguments);
+        for (size_t i = 0; i < acount; i++) {
+          node_t arg = (node_t)vec_get(info.arguments, i);
+          if (arg->kind == CUBEC_NODE_FUNCTION_ARGUMENT) {
+            cubec_function_argument_t farg = (cubec_function_argument_t)arg;
+            const char *pname = _checker_ident_str(farg->identifier);
+            if (pname) vec_push(param_names, (void *)pname);
+          }
+        }
+      }
+      comptime_value_t fn_val = comptime_value_create_function(
+          ctx->allocator,
+          ctx->comptime_eval->current_env
+              ? ctx->comptime_eval->current_env
+              : ctx->comptime_eval->global_env,
+          info.body, param_names, ftype);
+      comptime_env_bind_value(
+          ctx->comptime_eval->current_env
+              ? ctx->comptime_eval->current_env
+              : ctx->comptime_eval->global_env,
+          ctx->comptime_eval->valloc, fname, fn_val);
+    }
+  }
 
   return flow_state_alive(ctx->allocator);
 }

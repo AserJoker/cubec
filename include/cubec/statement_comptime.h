@@ -10,28 +10,6 @@ extern "C" {
 #endif
 
 /**
- * @brief AST node for comptime block: comptime { <body> }
- *
- * The body is executed at compile time. The block introduces a new scope.
- */
-struct _cubec_statement_comptime_block_t;
-struct _cubec_statement_comptime_block_t {
-  struct _node_t super;
-  node_t body;   /**< Block statement (required) */
-};
-typedef struct _cubec_statement_comptime_block_t *cubec_statement_comptime_block_t;
-
-extern type_t g_cubec_statement_comptime_block_type;
-
-struct _cubec_statement_comptime_block_init_t {
-  location_t location;
-  node_t parent;
-  node_t body;
-};
-typedef struct _cubec_statement_comptime_block_init_t
-    cubec_statement_comptime_block_init_t;
-
-/**
  * @brief AST node for comptime if: comptime if(condition) { } [else { }]
  *
  * Compile-time conditional branch. The condition must be evaluable at

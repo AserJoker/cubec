@@ -328,9 +328,9 @@ static void _evaluate_function(checker_t ctx,
   }
 
   /* Bind function in comptime env so it can be called at compile time.
-     Only for non-generic functions with bodies — generic templates are
-     instantiated on demand. */
-  if (info.body && !info.generic_params) {
+     All non-extern non-generic functions with bodies are bound — comptime
+     and non-comptime alike. Generic templates are instantiated on demand. */
+  if (!info.is_extern && info.body && !info.generic_params) {
     vec_t param_names = NULL;
     if (info.arguments) {
       vec_init_t pvi = {.auto_dispose = false};
@@ -774,15 +774,6 @@ static void _evaluate_import(checker_t ctx,
   free(resolved);
 }
 
-static void _evaluate_comptime_block(checker_t ctx,
-                                     cubec_statement_comptime_block_t node) {
-  if (!ctx->comptime_eval) return;
-  comptime_signal_t sig =
-      comptime_eval_exec_block(ctx->comptime_eval, ctx, node->body);
-  if (sig.kind == COMPTIME_SIGNAL_FATAL)
-    ctx->fatal_error = true;
-}
-
 static void _evaluate_comptime_if(checker_t ctx,
                                   cubec_statement_comptime_if_t node) {
   if (!ctx->comptime_eval) return;
@@ -939,7 +930,6 @@ void checker_evaluate_statement(checker_t ctx, node_t stmt) {
   case CUBEC_NODE_STATEMENT_DECLARATION:     _evaluate_variable(ctx, (cubec_statement_declaration_t)stmt); break;
   case CUBEC_NODE_STATEMENT_DECLARATION_TYPE: _evaluate_type_alias(ctx, (cubec_statement_declaration_type_t)stmt); break;
   case CUBEC_NODE_STATEMENT_IMPORT:          _evaluate_import(ctx, (cubec_statement_import_t)stmt); break;
-  case CUBEC_NODE_STATEMENT_COMPTIME_BLOCK:  _evaluate_comptime_block(ctx, (cubec_statement_comptime_block_t)stmt); break;
   case CUBEC_NODE_STATEMENT_COMPTIME_IF:     _evaluate_comptime_if(ctx, (cubec_statement_comptime_if_t)stmt); break;
   case CUBEC_NODE_STATEMENT_COMPTIME_FOREACH: _evaluate_comptime_foreach(ctx, (cubec_statement_comptime_foreach_t)stmt); break;
   case CUBEC_NODE_STATEMENT_TEST:            _evaluate_test(ctx, (cubec_statement_test_t)stmt); break;

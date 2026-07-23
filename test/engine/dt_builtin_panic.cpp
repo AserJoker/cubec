@@ -72,7 +72,7 @@ protected:
 
 TEST_F(dt_builtin_panic, panic_with_string) {
   const char *src = BUILTIN_PANIC
-    "comptime {\n"
+    "comptime if (true) {\n"
     "  panic(\"something went wrong\");\n"
     "}\n";
   auto r = compile_source(allocator, src);
@@ -104,7 +104,7 @@ TEST_F(dt_builtin_panic, panic_aborts_block) {
    * should not be evaluated. The fatal_error flag stops all further
    * evaluation, so no additional errors from statements after panic. */
   const char *src = BUILTIN_PANIC
-    "comptime {\n"
+    "comptime if (true) {\n"
     "  panic(\"stop\");\n"
     "  var x: i32 = 1;\n"
     "}\n";
@@ -126,7 +126,7 @@ TEST_F(dt_builtin_panic, panic_in_function) {
     "comptime func fail(): void {\n"
     "  panic(\"always fails\");\n"
     "}\n"
-    "comptime {\n"
+    "comptime if (true) {\n"
     "  fail();\n"
     "}\n";
   auto r = compile_source(allocator, src);
@@ -140,7 +140,7 @@ TEST_F(dt_builtin_panic, panic_in_function) {
 
 TEST_F(dt_builtin_panic, panic_no_args) {
   const char *src = BUILTIN_PANIC
-    "comptime {\n"
+    "comptime if (true) {\n"
     "  panic();\n"
     "}\n";
   auto r = compile_source(allocator, src);
@@ -166,7 +166,7 @@ TEST_F(dt_builtin_panic, panic_fatal_stops_later_tests) {
   /* panic in comptime block should set fatal_error and skip later declarations.
      A test block after panic should not be executed. */
   const char *src = BUILTIN_ASSERT BUILTIN_PANIC
-    "comptime {\n"
+    "comptime if (true) {\n"
     "  panic(\"fatal\");\n"
     "}\n"
     "test \"after_panic\" {\n"
@@ -188,7 +188,7 @@ TEST_F(dt_builtin_panic, panic_in_function_fatal) {
     "comptime func boom(): void {\n"
     "  panic(\"boom\");\n"
     "}\n"
-    "comptime {\n"
+    "comptime if (true) {\n"
     "  boom();\n"
     "}\n";
   auto r = compile_source(allocator, src);

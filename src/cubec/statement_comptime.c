@@ -14,62 +14,6 @@
 #include <inttypes.h>
 
 /* ==========================================================================
- *  comptime block: comptime { <body> }
- * ========================================================================== */
-
-static void _cubec_statement_comptime_block_init(
-    cubec_statement_comptime_block_t self, allocator_t allocator,
-    cubec_statement_comptime_block_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
-  node_init_t super_init = {
-      .kind = CUBEC_NODE_STATEMENT_COMPTIME_BLOCK,
-      .parent = NULL,
-  };
-  super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
-  self->body = init->body;
-onerror:
-  return;
-}
-
-static void _cubec_statement_comptime_block_dispose(
-    cubec_statement_comptime_block_t self, allocator_t allocator) {
-  allocator_free(allocator, &self->body);
-  g_node_type.dispose(&self->super, allocator);
-}
-
-static void _cubec_statement_comptime_block_clone(
-    cubec_statement_comptime_block_t self, allocator_t allocator,
-    cubec_statement_comptime_block_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
-  self->body = TRY_LOCAL(onerror, value_clone(allocator, another->body));
-  return;
-onerror:
-  return;
-}
-
-static void _cubec_statement_comptime_block_move(
-    cubec_statement_comptime_block_t self, allocator_t allocator,
-    cubec_statement_comptime_block_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
-  self->body = TRY_LOCAL(onerror, value_move(allocator, another->body));
-  return;
-onerror:
-  return;
-}
-
-type_t g_cubec_statement_comptime_block_type = {
-    .name = "cubec.cubec.statement_comptime_block",
-    .size = sizeof(struct _cubec_statement_comptime_block_t),
-    .init = (type_init_fn_t)_cubec_statement_comptime_block_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_comptime_block_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_comptime_block_clone,
-    .move = (type_move_fn_t)_cubec_statement_comptime_block_move,
-};
-
-/* ==========================================================================
  *  comptime if: comptime if(condition) { } [else { }]
  * ========================================================================== */
 
@@ -219,45 +163,6 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
   if (!token) return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
-}
-
-/* ==========================================================================
- *  Parser: comptime block — comptime { <body> }
- * ========================================================================== */
-
-static node_t _read_comptime_block(allocator_t allocator, vec_t tokens,
-                                    size_t *position, const char *filename,
-                                    location_t start_location) {
-  size_t current = *position;
-  node_t body = NULL;
-  cubec_statement_comptime_block_t node = NULL;
-
-  /* 1. Parse body (block) */
-  body = TRY_LOCAL(cleanup, read_statement_block(allocator, tokens, &current, filename));
-  if (!body) {
-    THROW_LOCAL(cleanup, "expected block after 'comptime'");
-  }
-
-  /* 2. Build location */
-  location_t loc = start_location;
-  loc.end = body->location.end;
-
-  cubec_statement_comptime_block_init_t init = {
-      .location = loc,
-      .parent = NULL,
-      .body = body,
-  };
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_comptime_block_type, &init));
-  *position = current;
-  return &node->super;
-
-cleanup:
-  allocator_free(allocator, &body);
-  allocator_free(allocator, &node);
-onerror:
-  allocator_free(allocator, &body);
-  allocator_free(allocator, &node);
-  return NULL;
 }
 
 /* ==========================================================================
@@ -500,7 +405,7 @@ node_t read_statement_comptime(allocator_t allocator, vec_t tokens,
   /* 2. Peek at next token to determine which comptime form */
   token_t next = TRY_LOCAL(onerror, vec_get(tokens, current));
   if (!next) {
-    THROW_LOCAL(onerror, "expected '{', 'if', or 'for' after 'comptime'");
+    THROW_LOCAL(onerror, "expected 'if' or 'foreach' after 'comptime'");
   }
 
   /* If next token is a declaration/function modifier, this is 'comptime' as
@@ -519,12 +424,8 @@ node_t read_statement_comptime(allocator_t allocator, vec_t tokens,
 
   node_t result = NULL;
 
-  /* comptime { ... } */
-  if (token_is(next, CUBEC_TOKEN_SYMBOL, "{")) {
-    result = TRY_LOCAL(onerror, _read_comptime_block(allocator, tokens, &current, filename, start_location));
-  }
   /* comptime if(...) { } */
-  else if (token_get_kind(next) == CUBEC_TOKEN_KEYWORD &&
+  if (token_get_kind(next) == CUBEC_TOKEN_KEYWORD &&
       location_is(token_get_location(next), "if")) {
     result = TRY_LOCAL(onerror, _read_comptime_if(allocator, tokens, &current, filename, start_location));
   }
@@ -534,7 +435,7 @@ node_t read_statement_comptime(allocator_t allocator, vec_t tokens,
     result = TRY_LOCAL(onerror, _read_comptime_foreach(allocator, tokens, &current, filename, start_location));
   }
   else {
-    THROW_LOCAL(onerror, "expected '{', 'if', or 'foreach' after 'comptime'");
+    THROW_LOCAL(onerror, "expected 'if' or 'foreach' after 'comptime'");
   }
 
   *position = current;
