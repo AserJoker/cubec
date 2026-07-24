@@ -1087,3 +1087,30 @@ TEST_F(dt_comptime_eval, test_block_failure_isolation) {
   allocator_free(allocator, &prog);
   checker_dispose(ctx);
 }
+
+/* ===== extern function cannot be called at comptime ===== */
+
+TEST_F(dt_comptime_eval, extern_call_in_comptime_error) {
+  const char *src =
+      "extern func read_file(path: *u8): []u8;\n"
+      "comptime func try_read(): []u8 {\n"
+      "    return read_file(\"test\");\n"
+      "}\n";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", src);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t prog = read_program_node(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(prog, nullptr);
+
+  checker_t ctx = checker_create(allocator);
+  source_cache_load(ctx->sources, "test.cubec", src, false);
+  checker_check_program(ctx, prog);
+
+  /* Should report error: cannot call extern at comptime */
+  EXPECT_GT(ctx->error_count, 0u);
+
+  checker_dispose(ctx);
+  allocator_free(allocator, &prog);
+  allocator_free(allocator, &tokens);
+}

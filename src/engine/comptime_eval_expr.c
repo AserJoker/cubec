@@ -653,6 +653,21 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
         return be->eval_call(eval, ctx, node, be);
       }
     }
+
+    /* extern functions cannot be called at comptime (no body, side effects) */
+    if (callee_sym && callee_sym->kind == SYMBOL_FUNCTION) {
+      node_t fn_ast = callee_sym->function.ast_node;
+      if (fn_ast && fn_ast->kind == CUBEC_NODE_STATEMENT_FUNCTION) {
+        cubec_statement_function_t fn_node = (cubec_statement_function_t)fn_ast;
+        if (fn_node->is_extern) {
+          diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+                               "cannot call extern function '%s' at comptime",
+                               callee_name ? callee_name : "<unknown>");
+          ctx->error_count++;
+          return _eval_error_val(eval);
+        }
+      }
+    }
   }
 
   /* --- member call desugaring --- */
