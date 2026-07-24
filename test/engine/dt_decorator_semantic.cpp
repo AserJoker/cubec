@@ -179,3 +179,76 @@ TEST_F(dt_decorator_semantic, type_decorator_unknown_func) {
   EXPECT_GT(r.ctx->error_count, 0u);
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== decorator: function closure semantics ===== */
+
+TEST_F(dt_decorator_semantic, func_decorator_basic) {
+  /* [[identity]] func add(a: i32, b: i32): i32 { return a + b; }
+   * The decorator returns the original function unchanged.
+   * Original should be saved as __original_add in comptime env. */
+  const char *src =
+      "builtin func assert(condition: bool): void;\n"
+      "comptime func identity(f) { return f; }\n"
+      "[[identity]] func add(a: i32, b: i32): i32 { return a + b; }\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0u);
+
+  /* __original_add should be bound in comptime env */
+  comptime_value_t orig = comptime_env_lookup_value(
+      r.ctx->comptime_eval->global_env, r.ctx->comptime_eval->valloc,
+      "__original_add");
+  ASSERT_NE(orig, nullptr);
+  EXPECT_EQ(orig->kind, COMPTIME_VALUE_FUNCTION);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_decorator_semantic, func_decorator_original_preserved) {
+  /* Decorator that returns the original function unchanged.
+   * Verify __original_<name> is bound and the main binding still works. */
+  const char *src =
+      "builtin func assert(condition: bool): void;\n"
+      "comptime func identity(f) { return f; }\n"
+      "[[identity]] func greet(): str { return \"hello\"; }\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0u);
+
+  /* Both __original_greet and greet should exist in comptime env */
+  comptime_value_t orig = comptime_env_lookup_value(
+      r.ctx->comptime_eval->global_env, r.ctx->comptime_eval->valloc,
+      "__original_greet");
+  ASSERT_NE(orig, nullptr);
+  EXPECT_EQ(orig->kind, COMPTIME_VALUE_FUNCTION);
+
+  comptime_value_t wrapped = comptime_env_lookup_value(
+      r.ctx->comptime_eval->global_env, r.ctx->comptime_eval->valloc,
+      "greet");
+  ASSERT_NE(wrapped, nullptr);
+  EXPECT_EQ(wrapped->kind, COMPTIME_VALUE_FUNCTION);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_decorator_semantic, func_decorator_chain) {
+  /* Two decorators on the same function.
+   * First decorator saves original as __original_<name>.
+   * Second decorator sees the first decorator's result as the current binding. */
+  const char *src =
+      "builtin func assert(condition: bool): void;\n"
+      "comptime func identity(f) { return f; }\n"
+      "[[identity]] [[identity]] func compute(): i32 { return 42; }\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0u);
+
+  /* __original_compute should exist (saved by first decorator) */
+  comptime_value_t orig = comptime_env_lookup_value(
+      r.ctx->comptime_eval->global_env, r.ctx->comptime_eval->valloc,
+      "__original_compute");
+  ASSERT_NE(orig, nullptr);
+  EXPECT_EQ(orig->kind, COMPTIME_VALUE_FUNCTION);
+
+  compile_result_cleanup(&r, allocator);
+}

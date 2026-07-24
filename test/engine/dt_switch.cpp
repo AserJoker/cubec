@@ -62,10 +62,86 @@ protected:
   }
 };
 
-/* ===== switch: placeholder — switch in test blocks triggers SEH crash ===== */
+/* ===== switch in test block ===== */
 
-TEST_F(dt_switch, switch_placeholder) {
-  /* switch statement in test blocks currently crashes in comptime eval.
-   * Parser and checker are implemented. To be fixed separately. */
-  EXPECT_TRUE(true);
+TEST_F(dt_switch, switch_in_test_block_basic) {
+  const char *src = BUILTIN_ASSERT
+      "test \"switch_test\" {\n"
+      "    var x: i32 = 1;\n"
+      "    switch(x) {\n"
+      "        case(1) -> {\n"
+      "            assert(true);\n"
+      "        }\n"
+      "        else -> {\n"
+      "            assert(false);\n"
+      "        }\n"
+      "    }\n"
+      "}\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0u);
+  EXPECT_EQ(r.ctx->test_fail_count, 0u);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_switch, switch_in_test_block_multi_case) {
+  const char *src = BUILTIN_ASSERT
+      "test \"multi\" {\n"
+      "    var x: i32 = 2;\n"
+      "    switch(x) {\n"
+      "        case(1, 2) -> {\n"
+      "            assert(true);\n"
+      "        }\n"
+      "        else -> {\n"
+      "            assert(false);\n"
+      "        }\n"
+      "    }\n"
+      "}\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0u);
+  EXPECT_EQ(r.ctx->test_fail_count, 0u);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_switch, switch_in_test_block_no_else) {
+  const char *src = BUILTIN_ASSERT
+      "test \"no_else\" {\n"
+      "    var x: i32 = 5;\n"
+      "    switch(x) {\n"
+      "        case(1) -> {\n"
+      "            assert(false);\n"
+      "        }\n"
+      "    }\n"
+      "}\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0u);
+  /* No match, no else — nothing happens, test should pass */
+  EXPECT_EQ(r.ctx->test_fail_count, 0u);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_switch, switch_in_test_block_string) {
+  const char *src = BUILTIN_ASSERT
+      "test \"str_switch\" {\n"
+      "    var s: str = \"hello\";\n"
+      "    switch(s) {\n"
+      "        case(\"hello\") -> {\n"
+      "            assert(true);\n"
+      "        }\n"
+      "        else -> {\n"
+      "            assert(false);\n"
+      "        }\n"
+      "    }\n"
+      "}\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0u);
+  EXPECT_EQ(r.ctx->test_fail_count, 0u);
+
+  compile_result_cleanup(&r, allocator);
 }

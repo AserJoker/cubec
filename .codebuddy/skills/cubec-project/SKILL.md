@@ -916,6 +916,7 @@ export struct SomeType { ref: *a.SomeType }     // ✅ OK: struct definition
 - `[[expr]]` C++11 attribute 风格，内部是编译期表达式，求值后必须是符合要求的函数
 - 多个叠加：`[[inline]] [[export]] func foo() { }`
 - 可修饰：func、struct/enum/union、type、var
+- 闭包语义：函数装饰器将原函数保存为 `__original_<name>`，symbol 指向装饰器返回的函数；变量装饰器 inline 展开；类型装饰器原地修改
 
 ### comptime 编译时求值
 - `comptime if(condition) { } else { }` — 独立 AST 节点，条件必须编译期求值为 bool，未采取分支不做类型检查

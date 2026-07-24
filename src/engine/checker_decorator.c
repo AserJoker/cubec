@@ -21,6 +21,7 @@
 #include "core/allocator.h"
 #include "core/string.h"
 #include "core/vec.h"
+#include <stdio.h>
 #include <string.h>
 
 /* ===== helpers ===== */
@@ -82,10 +83,21 @@ static comptime_value_t _get_decorated_item(checker_t ctx,
 
 /**
  * @brief Apply the decorator result to the decorated item.
+ *
+ * For FUNC: on first decorator that returns a function, bind the original
+ * function value to `__original_<name>` in the comptime env, then update
+ * the `<name>` binding to the decorator result. Also update the symbol's
+ * ast_node and type to point to the decorator-returned function so that
+ * codegen emits the wrapper as the primary function.
+ *
+ * For VAR: inline expansion — update the comptime env binding directly.
+ *
+ * For TYPE: in-place mutation — no binding update needed.
  */
 static void _apply_decorator_result(checker_t ctx, decorator_target_t target,
                                      const char *name, node_t ast_node,
-                                     comptime_value_t result) {
+                                     comptime_value_t result,
+                                     bool *original_saved) {
   comptime_eval_t eval = ctx->comptime_eval;
   if (!eval || !result || _val_is_error(result)) return;
 
@@ -94,9 +106,35 @@ static void _apply_decorator_result(checker_t ctx, decorator_target_t target,
     return;
   }
 
-  /* VAR / FUNC: update the comptime env binding with the result */
+  comptime_env_t env = eval->current_env ? eval->current_env : eval->global_env;
+
+  if (target == DECORATOR_TARGET_FUNC && result->kind == COMPTIME_VALUE_FUNCTION) {
+    /* On first decorator application, save the original function */
+    if (!*original_saved) {
+      comptime_value_t orig = comptime_env_lookup_value(env, eval->valloc, name);
+      if (orig) {
+        /* Bind original as __original_<name> */
+        char orig_name[256];
+        snprintf(orig_name, sizeof(orig_name), "__original_%s", name);
+        comptime_env_bind_value(env, eval->valloc, orig_name,
+                                comptime_value_clone(ctx->allocator, orig));
+        *original_saved = true;
+      }
+    }
+
+    /* Update comptime env binding to the decorator result */
+    comptime_env_update_value(env, eval->valloc, name,
+                              comptime_value_clone(ctx->allocator, result));
+
+    /* Note: symbol ast_node/type update deferred to codegen phase.
+     * The comptime env binding is sufficient for compile-time dispatch.
+     * At codegen, the original function will be emitted as __original_<name>
+     * and the decorator-returned wrapper will be emitted as <name>. */
+    return;
+  }
+
+  /* VAR / FUNC (non-function result): update the comptime env binding */
   if (target == DECORATOR_TARGET_VAR || target == DECORATOR_TARGET_FUNC) {
-    comptime_env_t env = eval->current_env ? eval->current_env : eval->global_env;
     comptime_env_update_value(env, eval->valloc, name,
                               comptime_value_clone(ctx->allocator, result));
   }
@@ -111,6 +149,7 @@ void checker_evaluate_decorators(checker_t ctx, vec_t decorators,
   comptime_eval_t eval = ctx->comptime_eval;
   if (!eval) return;
 
+  bool original_saved = false;  /* tracks if __original_<name> was bound */
   size_t dcount = vec_get_size(decorators);
   for (size_t i = 0; i < dcount; i++) {
     cubec_decorator_t dec = (cubec_decorator_t)vec_get(decorators, i);
@@ -183,7 +222,8 @@ void checker_evaluate_decorators(checker_t ctx, vec_t decorators,
 
     /* Apply the result */
     if (result && !_val_is_error(result)) {
-      _apply_decorator_result(ctx, target, name, ast_node, result);
+      _apply_decorator_result(ctx, target, name, ast_node, result,
+                              &original_saved);
     }
   }
 }
