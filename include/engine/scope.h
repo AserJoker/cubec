@@ -67,6 +67,13 @@ struct symbol *scope_lookup(scope_t self, const char *name);
 struct symbol *scope_lookup_local(scope_t self, const char *name);
 
 /**
+ * @brief Get the symbols vector for this scope.
+ *        Used for iterating all symbols (e.g. re-export).
+ * @return The vec of symbol* (do NOT modify).
+ */
+vec_t scope_get_symbols(scope_t self);
+
+/**
  * @brief Look up a symbol in instance scope (. access).
  *        Searches the TYPE_INSTANCE scope chain only.
  */

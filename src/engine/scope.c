@@ -63,6 +63,10 @@ struct symbol *scope_lookup_local(scope_t self, const char *name) {
   return NULL;
 }
 
+vec_t scope_get_symbols(scope_t self) {
+  return self ? self->symbols : NULL;
+}
+
 struct symbol *scope_lookup(scope_t self, const char *name) {
   /* For type scopes, only search type chain */
   if (self->kind == SCOPE_TYPE_INSTANCE || self->kind == SCOPE_TYPE_STATIC) {

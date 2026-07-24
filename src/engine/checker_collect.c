@@ -19,6 +19,7 @@
 #include "cubec/statement_declaration.h"
 #include "cubec/statement_declaration_type.h"
 #include "cubec/statement_import.h"
+#include "cubec/statement_export_from.h"
 #include "cubec/declaration_variable.h"
 #include "cubec/generic_param.h"
 
@@ -254,6 +255,20 @@ static void _collect_import(checker_t ctx,
   scope_push_symbol(ctx->global_scope, sym);
 }
 
+/**
+ * @brief Collect phase for export-from statement.
+ *
+ * Re-export does not create a SYMBOL_MODULE in the current scope.
+ * Actual symbol proxying happens in the evaluate phase after
+ * the target module is loaded. This is a no-op placeholder.
+ */
+static void _collect_export_from(checker_t ctx,
+                                  cubec_statement_export_from_t node) {
+  (void)ctx;
+  (void)node;
+  /* Nothing to do in collect phase — symbol proxying is deferred to evaluate */
+}
+
 void checker_collect_declarations(checker_t ctx, node_t program) {
   cubec_program_node_t prog = (cubec_program_node_t)program;
   if (!prog || !prog->statements) return;
@@ -296,6 +311,9 @@ void checker_collect_statement(checker_t ctx, node_t stmt) {
     break;
   case CUBEC_NODE_STATEMENT_IMPORT:
     _collect_import(ctx, (cubec_statement_import_t)stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_EXPORT_FROM:
+    _collect_export_from(ctx, (cubec_statement_export_from_t)stmt);
     break;
   default:
     break;

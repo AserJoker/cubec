@@ -655,6 +655,7 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
   case CUBEC_NODE_STATEMENT_CUNION:
   case CUBEC_NODE_STATEMENT_INTERFACE:
   case CUBEC_NODE_STATEMENT_IMPORT:
+  case CUBEC_NODE_STATEMENT_EXPORT_FROM:
   case CUBEC_NODE_STATEMENT_DECLARATION_TYPE:
   case CUBEC_NODE_STATEMENT_TEST:
     return _eval_signal_none();

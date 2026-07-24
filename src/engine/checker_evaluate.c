@@ -33,6 +33,7 @@
 #include "cubec/statement_declaration.h"
 #include "cubec/statement_declaration_type.h"
 #include "cubec/statement_import.h"
+#include "cubec/statement_export_from.h"
 #include "cubec/statement_comptime.h"
 #include "cubec/struct_field.h"
 #include "cubec/enum_item.h"
@@ -876,6 +877,237 @@ static void _evaluate_import(checker_t ctx,
   free(resolved);
 }
 
+/**
+ * @brief Load a module by path and return its scope.
+ *
+ * Shared by _evaluate_import and _evaluate_export_from.
+ * Resolves the path, checks cache, loads/compiles if needed.
+ * Returns the module's scope, or NULL on failure.
+ * The caller must free() the returned resolved path (if out_resolved is non-NULL).
+ *
+ * @param ctx          Checker context
+ * @param import_path  Raw import path string
+ * @param location     Location for diagnostics
+ * @param out_resolved If non-NULL, receives the malloc'd resolved path (caller frees)
+ */
+static scope_t _load_module_by_path(checker_t ctx, const char *import_path,
+                                     location_t location,
+                                     char **out_resolved) {
+  char *resolved = module_resolve_path(import_path, ctx->current_file);
+  if (!resolved) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, location,
+                         "cannot resolve import path '%s'", import_path);
+    ctx->error_count++;
+    return NULL;
+  }
+
+  /* Check module_cache */
+  module_entry_t cached = (module_entry_t)strmap_find(ctx->module_cache, resolved);
+  if (cached) {
+    if (out_resolved) *out_resolved = resolved; else free(resolved);
+    return cached->scope;
+  }
+
+  /* Load the module file */
+  size_t src_len;
+  char *source = module_read_file(resolved, &src_len);
+  if (!source) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, location,
+                         "cannot read module '%s'", import_path);
+    ctx->error_count++;
+    free(resolved);
+    return NULL;
+  }
+
+  /* Tokenize */
+  vec_t tokens = resolve_token_list(ctx->allocator, resolved, source);
+  if (!tokens) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, location,
+                         "lexing failed for module '%s'", import_path);
+    ctx->error_count++;
+    free(source);
+    free(resolved);
+    return NULL;
+  }
+
+  /* Parse */
+  size_t pos = 0;
+  node_t program = read_program_node(ctx->allocator, tokens, &pos, resolved);
+  if (!program) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, location,
+                         "parsing failed for module '%s'", import_path);
+    ctx->error_count++;
+    free(source);
+    free(resolved);
+    return NULL;
+  }
+
+  /* Create module entry with PARSING state (for cycle detection) */
+  module_entry_t entry = module_entry_create(resolved);
+  entry->source = source;
+
+  /* Insert into cache BEFORE compiling */
+  strmap_insert(ctx->module_cache, resolved, entry);
+
+  /* Compile the module in the SAME checker context */
+  scope_t mod_scope = scope_create(ctx->allocator, ctx->global_scope,
+                                    SCOPE_GLOBAL, location);
+  vec_push(ctx->all_scopes, mod_scope);
+
+  /* Save and swap checker state */
+  scope_t saved_scope = ctx->current_scope;
+  scope_t saved_global = ctx->global_scope;
+  const char *saved_file = ctx->current_file;
+  flow_state_t saved_flow = ctx->current_flow;
+
+  ctx->global_scope = mod_scope;
+  ctx->current_scope = mod_scope;
+  ctx->current_file = resolved;
+  ctx->current_flow = NULL;
+
+  source_cache_load(ctx->sources, resolved, source, false);
+
+  checker_collect_declarations(ctx, program);
+  entry->state = MODULE_PARSED;
+  checker_evaluate_declarations(ctx, program);
+  checker_check_function_bodies(ctx, program);
+
+  /* Restore checker state */
+  ctx->global_scope = saved_global;
+  ctx->current_scope = saved_scope;
+  ctx->current_file = saved_file;
+  ctx->current_flow = saved_flow;
+
+  /* Update module entry */
+  entry->state = MODULE_CHECKED;
+  entry->scope = mod_scope;
+  entry->checker = NULL;
+  entry->tokens = tokens;
+  entry->program = program;
+
+  if (out_resolved) *out_resolved = resolved; else free(resolved);
+  return mod_scope;
+}
+
+/**
+ * @brief Create a proxy symbol that re-exports a symbol from another module.
+ *
+ * The proxy shares the type/ast_node references with the original symbol
+ * and is marked is_export=true in the current module's scope.
+ */
+static struct symbol *_create_proxy_symbol(checker_t ctx,
+                                           struct symbol *original,
+                                           location_t location) {
+  struct symbol *proxy = symbol_create(ctx->allocator, original->name,
+                                       original->kind, location);
+  proxy->is_export = true;
+  proxy->state = original->state;
+
+  /* Copy kind-specific fields */
+  switch (original->kind) {
+  case SYMBOL_VARIABLE:
+    proxy->variable.type = original->variable.type;
+    proxy->variable.is_comptime = original->variable.is_comptime;
+    proxy->variable.is_mutable = original->variable.is_mutable;
+    proxy->variable.is_using = original->variable.is_using;
+    break;
+  case SYMBOL_FUNCTION:
+    proxy->function.type = original->function.type;
+    proxy->function.is_comptime = original->function.is_comptime;
+    proxy->function.self_param = original->function.self_param;
+    proxy->function.ast_node = original->function.ast_node;
+    proxy->function.generic_params = original->function.generic_params;
+    break;
+  case SYMBOL_TYPE:
+    proxy->type.type = original->type.type;
+    proxy->type.generic_params = original->type.generic_params;
+    break;
+  case SYMBOL_ENUM_ITEM:
+    proxy->enum_item.value = original->enum_item.value;
+    proxy->enum_item.owning_type = original->enum_item.owning_type;
+    break;
+  default:
+    break;
+  }
+  return proxy;
+}
+
+static void _evaluate_export_from(checker_t ctx,
+                                  cubec_statement_export_from_t node) {
+  /* Extract path string */
+  const char *import_path = NULL;
+  if (node->path && node->path->kind == CUBEC_NODE_LITERAL_STRING) {
+    cubec_literal_string_t path_lit = (cubec_literal_string_t)node->path;
+    import_path = string_get(path_lit->value);
+  }
+  if (!import_path || !*import_path) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->super.location,
+                         "export from requires a path string");
+    ctx->error_count++;
+    return;
+  }
+
+  /* Load the target module */
+  scope_t mod_scope = _load_module_by_path(ctx, import_path, node->super.location, NULL);
+  if (!mod_scope) return;
+
+  if (node->is_star) {
+    /* export * from "path" — re-export all exported symbols */
+    vec_t symbols = scope_get_symbols(mod_scope);
+    size_t count = vec_get_size(symbols);
+    for (size_t i = 0; i < count; i++) {
+      struct symbol *sym = (struct symbol *)vec_get(symbols, i);
+      if (!sym->is_export) continue;
+
+      /* Skip if already declared in current scope */
+      if (scope_lookup_local(ctx->global_scope, sym->name)) continue;
+
+      struct symbol *proxy = _create_proxy_symbol(ctx, sym, node->super.location);
+      scope_push_symbol(ctx->global_scope, proxy);
+    }
+  } else {
+    /* export { a, b } from "path" — selective re-export */
+    if (!node->names) return;
+    size_t ncount = vec_get_size(node->names);
+    for (size_t i = 0; i < ncount; i++) {
+      node_t name_node = (node_t)vec_get(node->names, i);
+      const char *name = _checker_ident_str(name_node);
+      if (!name) continue;
+
+      /* Look up in target module's scope */
+      struct symbol *original = scope_lookup_local(mod_scope, name);
+      if (!original) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                             name_node->location,
+                             "module '%s' has no member '%s'",
+                             import_path, name);
+        ctx->error_count++;
+        continue;
+      }
+      if (!original->is_export) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                             name_node->location,
+                             "'%s' is not exported from module '%s'",
+                             name, import_path);
+        ctx->error_count++;
+        continue;
+      }
+
+      /* Check for duplicate in current scope */
+      if (scope_lookup_local(ctx->global_scope, name)) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                             name_node->location,
+                             "duplicate declaration of '%s'", name);
+        ctx->error_count++;
+        continue;
+      }
+
+      struct symbol *proxy = _create_proxy_symbol(ctx, original, node->super.location);
+      scope_push_symbol(ctx->global_scope, proxy);
+    }
+  }
+}
+
 static void _evaluate_comptime_if(checker_t ctx,
                                   cubec_statement_comptime_if_t node) {
   if (!ctx->comptime_eval) return;
@@ -1032,6 +1264,7 @@ void checker_evaluate_statement(checker_t ctx, node_t stmt) {
   case CUBEC_NODE_STATEMENT_DECLARATION:     _evaluate_variable(ctx, (cubec_statement_declaration_t)stmt); break;
   case CUBEC_NODE_STATEMENT_DECLARATION_TYPE: _evaluate_type_alias(ctx, (cubec_statement_declaration_type_t)stmt); break;
   case CUBEC_NODE_STATEMENT_IMPORT:          _evaluate_import(ctx, (cubec_statement_import_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_EXPORT_FROM:     _evaluate_export_from(ctx, (cubec_statement_export_from_t)stmt); break;
   case CUBEC_NODE_STATEMENT_COMPTIME_IF:     _evaluate_comptime_if(ctx, (cubec_statement_comptime_if_t)stmt); break;
   case CUBEC_NODE_STATEMENT_COMPTIME_FOREACH: _evaluate_comptime_foreach(ctx, (cubec_statement_comptime_foreach_t)stmt); break;
   case CUBEC_NODE_STATEMENT_TEST:            _evaluate_test(ctx, (cubec_statement_test_t)stmt); break;

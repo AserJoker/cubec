@@ -768,6 +768,7 @@ static flow_state_t _check_stmt_invalid_declaration(checker_t ctx, node_t stmt) 
       stmt->kind == CUBEC_NODE_STATEMENT_FUNCTION ||
       stmt->kind == CUBEC_NODE_STATEMENT_INTERFACE ||
       stmt->kind == CUBEC_NODE_STATEMENT_IMPORT ||
+      stmt->kind == CUBEC_NODE_STATEMENT_EXPORT_FROM ||
       stmt->kind == CUBEC_NODE_STATEMENT_TEST) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, stmt->location,
                          "declaration not allowed in this scope");
