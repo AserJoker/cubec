@@ -13,6 +13,7 @@
 #include "engine/type_hash.h"
 #include "engine/type_layout.h"
 #include "engine/module.h"
+#include "engine/manifest.h"
 #include "core/allocator.h"
 #include "cubec/token.h"
 #include "cubec/statement_test.h"
@@ -734,6 +735,45 @@ static void _evaluate_type_alias(checker_t ctx,
                                 name, (node_t)node);
 }
 
+/**
+ * @brief Lazy-initialize project context on first non-relative import.
+ *
+ * Finds project root, sets cubec_home, and loads manifest deps.
+ */
+static void _ensure_project_context(checker_t ctx) {
+  if (ctx->project_root) return;  /* already initialized */
+  if (!ctx->current_file) return;
+
+  char *root = manifest_find_root(ctx->current_file);
+  if (root) {
+    ctx->project_root = root;
+    if (!ctx->cubec_home) {
+      ctx->cubec_home = strdup(root);
+    }
+    /* Load manifest deps */
+    if (!ctx->manifest_deps) {
+      strmap_init_t si = {.value_auto_dispose = false};
+      ctx->manifest_deps = (strmap_t)allocator_create(ctx->allocator, &g_strmap_type, &si);
+      char *proj_name = NULL;
+      char **dep_names = NULL;
+      if (manifest_parse(root, &proj_name, &dep_names) == 0) {
+        if (dep_names) {
+          for (int i = 0; dep_names[i]; i++) {
+            strmap_insert(ctx->manifest_deps, dep_names[i], (void *)(intptr_t)1);
+          }
+          manifest_free_dep_names(dep_names);
+        }
+      }
+      free(proj_name);
+    }
+  } else {
+    /* No manifest — single file mode */
+    if (!ctx->cubec_home) {
+      ctx->cubec_home = strdup(".");
+    }
+  }
+}
+
 static void _evaluate_import(checker_t ctx,
                              cubec_statement_import_t node) {
   const char *name = _checker_ident_str(node->module_name);
@@ -757,8 +797,17 @@ static void _evaluate_import(checker_t ctx,
     return;
   }
 
-  /* Resolve the import path relative to the current file */
-  char *resolved = module_resolve_path(import_path, ctx->current_file);
+  /* Resolve the import path */
+  _ensure_project_context(ctx);
+  bool is_ghost = false;
+  char *resolved = module_resolve_import(import_path, ctx->current_file,
+                                          ctx->cubec_home, ctx->project_root,
+                                          ctx->manifest_deps, &is_ghost);
+  if (is_ghost) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->super.location,
+                         "dependency '%s' not declared in manifest.json", import_path);
+    ctx->error_count++;
+  }
   if (!resolved) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->super.location,
                          "cannot resolve import path '%s'", import_path);
@@ -893,7 +942,16 @@ static void _evaluate_import(checker_t ctx,
 static scope_t _load_module_by_path(checker_t ctx, const char *import_path,
                                      location_t location,
                                      char **out_resolved) {
-  char *resolved = module_resolve_path(import_path, ctx->current_file);
+  _ensure_project_context(ctx);
+  bool is_ghost = false;
+  char *resolved = module_resolve_import(import_path, ctx->current_file,
+                                          ctx->cubec_home, ctx->project_root,
+                                          ctx->manifest_deps, &is_ghost);
+  if (is_ghost) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, location,
+                         "dependency '%s' not declared in manifest.json", import_path);
+    ctx->error_count++;
+  }
   if (!resolved) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, location,
                          "cannot resolve import path '%s'", import_path);

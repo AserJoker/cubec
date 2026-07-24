@@ -18,6 +18,8 @@
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
+#include <stdlib.h>
+#include <string.h>
 #include "cubec/literal_char.h"
 #include "cubec/statement_struct.h"
 #include "cubec/statement_enum.h"
@@ -185,6 +187,12 @@ static void _checker_init(void *self, allocator_t allocator, void *arg) {
   ctx->body_check_worklist = allocator_create(allocator, &g_vec_type, &wl_init);
   strmap_init_t cb_init = {.value_auto_dispose = false};
   ctx->checked_bodies = (strmap_t)allocator_create(allocator, &g_strmap_type, &cb_init);
+
+  /* Init project context (lazy-initialized on first non-relative import) */
+  ctx->project_root = NULL;
+  ctx->manifest_deps = NULL;
+  const char *env_home = getenv("CUBEC_HOME");
+  ctx->cubec_home = env_home ? strdup(env_home) : NULL;
 }
 
 static void _checker_dispose(void *self, allocator_t allocator) {
@@ -227,6 +235,14 @@ static void _checker_dispose(void *self, allocator_t allocator) {
   }
   strmap_clear(ctx->module_cache);
   allocator_free(allocator, &ctx->module_cache);
+
+  /* Free project context */
+  if (ctx->project_root) { free((void *)ctx->project_root); ctx->project_root = NULL; }
+  if (ctx->cubec_home) { free((void *)ctx->cubec_home); ctx->cubec_home = NULL; }
+  if (ctx->manifest_deps) {
+    strmap_clear(ctx->manifest_deps);
+    allocator_free(allocator, &ctx->manifest_deps);
+  }
 }
 
 type_t g_checker_type = {

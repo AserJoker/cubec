@@ -83,6 +83,11 @@ struct checker {
   /* current file being compiled (for import path resolution) */
   const char *current_file;
 
+  /* project context (lazy-initialized on first non-relative import) */
+  const char *project_root;   /**< project root dir (manifest.json location, malloc'd) */
+  const char *cubec_home;     /**< CUBEC_HOME path (malloc'd, from env or project_root) */
+  strmap_t manifest_deps;     /**< dep_name -> "1" (declared dependencies) */
+
   /* generic monomorphization worklist (Pass 4) */
   vec_t body_check_worklist;   /**< vec of body_check_entry_t* */
   strmap_t checked_bodies;     /**< cache key -> "1" (already body-checked) */

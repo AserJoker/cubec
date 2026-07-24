@@ -1,0 +1,1 @@
+export func println(msg: str): void;
