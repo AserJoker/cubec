@@ -1,5 +1,6 @@
 #include "engine/symbol.h"
 #include "core/allocator.h"
+#include "core/vec.h"
 #include <string.h>
 
 static void _symbol_init(void *self, allocator_t allocator, void *arg) {
@@ -12,9 +13,10 @@ static void _symbol_init(void *self, allocator_t allocator, void *arg) {
 }
 
 static void _symbol_dispose(void *self, allocator_t allocator) {
-  (void)self;
-  (void)allocator;
-  /* symbol doesn't own name or type pointers */
+  struct symbol *sym = (struct symbol *)self;
+  if (sym->kind == SYMBOL_GENERIC_PARAM) {
+    allocator_free(allocator, &sym->generic_param.constraints);
+  }
 }
 
 type_t g_symbol_type = {
