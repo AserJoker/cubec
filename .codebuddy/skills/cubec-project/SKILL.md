@@ -957,6 +957,9 @@ func[T](x: T): T
 // 约束形式：通过 extends 限制
 func[T extends Numeric](x: T): T
 
+// 多约束形式：& 连接，T 必须同时满足所有约束
+func[T extends Printable & Serializable](x: T): str
+
 // Rest 参数：以 ... 为前缀，收集零个或多个类型实参
 type Variadic[...Args] = i32
 func[T extends Numeric, ...Rest](first: T, rest: Rest): T

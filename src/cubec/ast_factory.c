@@ -360,7 +360,8 @@ bool cubec_node_replace(node_t old_node, node_t new_node) {
   }
   case CUBEC_NODE_GENERIC_PARAM: {
     cubec_generic_param_t gp = (cubec_generic_param_t)parent;
-    return _replace_ptr(&gp->constraint, old_node, new_node) ||
+    bool replaced = _replace_in_vec(gp->constraints, old_node, new_node);
+    return replaced ||
            _replace_ptr(&gp->value_type, old_node, new_node);
   }
 

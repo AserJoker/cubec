@@ -15,6 +15,7 @@ extern "C" {
  * Supports four forms defined in SKILL rules 1, 8:
  *   - Simple:      T
  *   - Constrained: T extends Numeric
+ *   - Multi-constraint: T extends Printable & Serializable
  *   - Value:       N: u64
  *   - Rest:        ...T  (zero or more type args collected into T)
  *
@@ -31,7 +32,7 @@ struct _cubec_generic_param_t;
 struct _cubec_generic_param_t {
   struct _node_t super;
   node_t name;       /**< Literal identifier for the parameter name */
-  node_t constraint; /**< Optional type expression for `extends` constraint (may be NULL) */
+  vec_t constraints; /**< Optional vec of type expressions for `extends` constraint (may be NULL) */
   node_t value_type; /**< Optional type annotation for value generics like `N: u64` (may be NULL) */
   bool is_rest;      /**< Whether this is a rest param (prefixed with `...`) */
 };
@@ -42,7 +43,7 @@ extern type_t g_cubec_generic_param_type;
 struct _cubec_generic_param_init_t {
   location_t location;
   node_t name;
-  node_t constraint;
+  vec_t constraints;
   node_t value_type;
   bool is_rest;
 };

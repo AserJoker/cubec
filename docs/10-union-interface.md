@@ -131,4 +131,4 @@ interface 约束检查流程：
 4. 所有方法都满足 → `T extends Interface` 返回 true
 
 - 约束检查是**结构等价**（方法名+签名匹配），不是名字等价
-- 暂不支持多约束（一个泛型参数只能 extends 一个 interface）
+- 多约束使用 `&` 连接：`[T extends A & B]` 表示 T 必须同时满足 A 和 B

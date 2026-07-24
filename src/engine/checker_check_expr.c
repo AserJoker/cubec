@@ -82,8 +82,10 @@ static semantic_type_t _check_expr_literal_identifier(checker_t ctx, node_t expr
   case SYMBOL_GENERIC_PARAM:
     if (sym->generic_param.value_type)
       return sym->generic_param.value_type;
-    if (sym->generic_param.constraint)
-      return sym->generic_param.constraint;
+    if (sym->generic_param.constraints) {
+      semantic_type_t first = (semantic_type_t)vec_get(sym->generic_param.constraints, 0);
+      if (first) return first;
+    }
     return ctx->error_type;
   case SYMBOL_MODULE: {
     /* Return a TYPE_MODULE nominal type for namespace access (module::member) */

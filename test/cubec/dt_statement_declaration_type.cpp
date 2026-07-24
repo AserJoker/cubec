@@ -59,7 +59,7 @@ TEST_F(dt_statement_declaration_type, single_generic_param) {
   EXPECT_EQ(param->super.kind, CUBEC_NODE_GENERIC_PARAM);
   EXPECT_NE(param->name, nullptr);
   EXPECT_EQ(param->name->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_EQ(param->constraint, nullptr);
+  EXPECT_EQ(param->constraints, nullptr);
   EXPECT_EQ(param->value_type, nullptr);
 
   EXPECT_NE(decl->type_value, nullptr);
@@ -91,7 +91,7 @@ TEST_F(dt_statement_declaration_type, multiple_generic_params) {
     EXPECT_EQ(param->super.kind, CUBEC_NODE_GENERIC_PARAM);
     EXPECT_NE(param->name, nullptr);
     EXPECT_EQ(param->name->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-    EXPECT_EQ(param->constraint, nullptr);
+    EXPECT_EQ(param->constraints, nullptr);
     EXPECT_EQ(param->value_type, nullptr);
   }
 
@@ -121,7 +121,7 @@ TEST_F(dt_statement_declaration_type, generic_param_with_constraint) {
   EXPECT_EQ(param->super.kind, CUBEC_NODE_GENERIC_PARAM);
   EXPECT_NE(param->name, nullptr);
   EXPECT_EQ(param->name->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_NE(param->constraint, nullptr);
+  EXPECT_NE(param->constraints, nullptr);
   EXPECT_EQ(param->value_type, nullptr);
 
   allocator_free(allocator, &node);
@@ -148,14 +148,14 @@ TEST_F(dt_statement_declaration_type, generic_param_with_value_type) {
   cubec_generic_param_t param0 = (cubec_generic_param_t)vec_get(decl->params, 0);
   EXPECT_EQ(param0->super.kind, CUBEC_NODE_GENERIC_PARAM);
   EXPECT_NE(param0->name, nullptr);
-  EXPECT_EQ(param0->constraint, nullptr);
+  EXPECT_EQ(param0->constraints, nullptr);
   EXPECT_NE(param0->value_type, nullptr);
 
   /* Second param: T (simple type generic) */
   cubec_generic_param_t param1 = (cubec_generic_param_t)vec_get(decl->params, 1);
   EXPECT_EQ(param1->super.kind, CUBEC_NODE_GENERIC_PARAM);
   EXPECT_NE(param1->name, nullptr);
-  EXPECT_EQ(param1->constraint, nullptr);
+  EXPECT_EQ(param1->constraints, nullptr);
   EXPECT_EQ(param1->value_type, nullptr);
 
   allocator_free(allocator, &node);
@@ -302,7 +302,7 @@ TEST_F(dt_statement_declaration_type, rest_param_single) {
   EXPECT_NE(param->name, nullptr);
   EXPECT_EQ(param->name->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
   EXPECT_TRUE(param->is_rest);
-  EXPECT_EQ(param->constraint, nullptr);
+  EXPECT_EQ(param->constraints, nullptr);
   EXPECT_EQ(param->value_type, nullptr);
 
   allocator_free(allocator, &node);
@@ -360,7 +360,7 @@ TEST_F(dt_statement_declaration_type, rest_param_with_constraint) {
   cubec_generic_param_t param1 = (cubec_generic_param_t)vec_get(decl->params, 1);
   EXPECT_EQ(param1->super.kind, CUBEC_NODE_GENERIC_PARAM);
   EXPECT_TRUE(param1->is_rest);
-  EXPECT_NE(param1->constraint, nullptr);
+  EXPECT_NE(param1->constraints, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -657,6 +657,54 @@ TEST_F(dt_statement_declaration_type, builtin_type_move) {
   EXPECT_EQ(decl->type_value, nullptr);
 
   allocator_free(allocator, &moved);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ==========================================================================
+ *  Multi-constraint with & (AND)
+ * ========================================================================== */
+
+/* ---- T extends A & B ---- */
+
+TEST_F(dt_statement_declaration_type, multi_constraint_and) {
+  const char *source = "type Foo[T extends Printable & Serializable] = T;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;
+  ASSERT_NE(decl->params, nullptr);
+  EXPECT_EQ(vec_get_size(decl->params), 1);
+
+  cubec_generic_param_t param = (cubec_generic_param_t)vec_get(decl->params, 0);
+  ASSERT_NE(param->constraints, nullptr);
+  EXPECT_EQ(vec_get_size(param->constraints), 2u);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- T extends A & B & C ---- */
+
+TEST_F(dt_statement_declaration_type, multi_constraint_three) {
+  const char *source = "type Foo[T extends A & B & C] = T;";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;
+  cubec_generic_param_t param = (cubec_generic_param_t)vec_get(decl->params, 0);
+  ASSERT_NE(param->constraints, nullptr);
+  EXPECT_EQ(vec_get_size(param->constraints), 3u);
+
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

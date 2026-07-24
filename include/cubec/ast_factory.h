@@ -160,7 +160,7 @@ node_t cubec_ast_create_switch_match(allocator_t alloc, location_t loc,
 node_t cubec_ast_create_decorator(allocator_t alloc, location_t loc,
                                   node_t expr);
 node_t cubec_ast_create_generic_param(allocator_t alloc, location_t loc,
-                                      const char *name, node_t constraint,
+                                      const char *name, vec_t constraints,
                                       node_t value_type, bool is_rest);
 node_t cubec_ast_create_func_capture(allocator_t alloc, location_t loc,
                                      const char *name);

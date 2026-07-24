@@ -174,12 +174,12 @@ TEST_F(dt_statement_function, generic_multiple_params) {
 
   /* First: T extends Numeric */
   cubec_generic_param_t param0 = (cubec_generic_param_t)vec_get(fn->generic_params, 0);
-  EXPECT_NE(param0->constraint, nullptr);
+  EXPECT_NE(param0->constraints, nullptr);
   EXPECT_EQ(param0->value_type, nullptr);
 
   /* Second: N: u64 */
   cubec_generic_param_t param1 = (cubec_generic_param_t)vec_get(fn->generic_params, 1);
-  EXPECT_EQ(param1->constraint, nullptr);
+  EXPECT_EQ(param1->constraints, nullptr);
   EXPECT_NE(param1->value_type, nullptr);
 
   allocator_free(allocator, &node);

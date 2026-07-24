@@ -209,8 +209,17 @@ void checker_register_generic_params(checker_t ctx, vec_t generic_params) {
     struct symbol *sym = symbol_create(ctx->allocator, gp_name,
                                        SYMBOL_GENERIC_PARAM, gp->super.location);
     sym->generic_param.is_rest = gp->is_rest;
-    if (gp->constraint)
-      sym->generic_param.constraint = resolver_resolve_type(ctx, gp->constraint);
+    if (gp->constraints) {
+      size_t ccount = vec_get_size(gp->constraints);
+      vec_t cvec = allocator_create(ctx->allocator, &g_vec_type,
+                                    &(vec_init_t){.auto_dispose = false});
+      for (size_t j = 0; j < ccount; j++) {
+        node_t cnode = (node_t)vec_get(gp->constraints, j);
+        semantic_type_t ct = resolver_resolve_type(ctx, cnode);
+        vec_push(cvec, ct);
+      }
+      sym->generic_param.constraints = cvec;
+    }
     if (gp->value_type)
       sym->generic_param.value_type = resolver_resolve_type(ctx, gp->value_type);
     sym->state = SYMBOL_EVALUATED;

@@ -37,7 +37,7 @@ func main(): void {
 | [`docs/05-control-flow.md`](docs/05-control-flow.md) | 控制流：if/for/foreach/switch/defer |
 | [`docs/06-modules.md`](docs/06-modules.md) | 模块系统：import/export、路径解析、循环依赖 |
 | [`docs/07-comptime.md`](docs/07-comptime.md) | Comptime 引擎：虚拟指针、值表示、test/build |
-| [`docs/08-generics.md`](docs/08-generics.md) | 泛型：单态化、extends 约束、参数包 |
+| [`docs/08-generics.md`](docs/08-generics.md) | 泛型：单态化、extends 约束（含多约束 `&`）、参数包 |
 | [`docs/09-modifiers.md`](docs/09-modifiers.md) | 修饰符：builtin/extern/comptime/inline/export/pub/using |
 | [`docs/10-union-interface.md`](docs/10-union-interface.md) | Union（tagged + cunion）与 Interface 语义 |
 | [`docs/11-codegen.md`](docs/11-codegen.md) | 代码生成：C 后端映射 |

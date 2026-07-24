@@ -213,3 +213,50 @@ TEST_F(dt_implement, struct_no_implement) {
 
   compile_result_cleanup(&r, allocator);
 }
+
+/* ===== multi-constraint extends: T extends A & B ===== */
+
+TEST_F(dt_implement, multi_constraint_satisfied) {
+  const char *src =
+      "interface Printable {\n"
+      "    func to_string(self): str;\n"
+      "}\n"
+      "interface Serializable {\n"
+      "    func serialize(self): str;\n"
+      "}\n"
+      "struct Foo implement Printable, Serializable {\n"
+      "    func to_string(self): str { return \"Foo\"; }\n"
+      "    func serialize(self): str { return \"Foo\"; }\n"
+      "}\n"
+      "func process[T extends Printable & Serializable](x: T): str {\n"
+      "    return x.to_string();\n"
+      "}\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0u);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_implement, multi_constraint_partial_fail) {
+  const char *src =
+      "interface Printable {\n"
+      "    func to_string(self): str;\n"
+      "}\n"
+      "interface Serializable {\n"
+      "    func serialize(self): str;\n"
+      "}\n"
+      "struct Foo implement Printable {\n"
+      "    func to_string(self): str { return \"Foo\"; }\n"
+      "}\n"
+      "func process[T extends Printable & Serializable](x: T): str {\n"
+      "    return x.to_string();\n"
+      "}\n"
+      "test \"t\" { process(.Foo {}); }\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  /* Foo only implements Printable, not Serializable — should fail */
+  EXPECT_GT(r.ctx->error_count, 0u);
+
+  compile_result_cleanup(&r, allocator);
+}

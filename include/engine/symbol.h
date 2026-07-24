@@ -91,7 +91,7 @@ struct symbol {
 
     /* SYMBOL_GENERIC_PARAM */
     struct {
-      semantic_type_t constraint; /**< extends constraint type (NULL if unconstrained) */
+      vec_t constraints;         /**< vec of extends constraint types (NULL if unconstrained) */
       semantic_type_t value_type; /**< Value generic type like N: u64 (NULL if type param) */
       bool is_rest;              /**< true for variadic pack parameter (...Args) */
     } generic_param;

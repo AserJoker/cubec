@@ -53,13 +53,14 @@ func is_null[T extends *?](ptr: T): bool { return ptr == nil; }
 
 - `[T]` — T 无约束，可以是任意类型
 - `[T extends Printable]` — T 必须满足 Printable 约束
+- `[T extends Printable & Serializable]` — T 必须同时满足所有约束（AND 语义，`&` 连接）
 - `[T extends []?]` — T 必须是 slice 类型，元素类型任意
 - `[T extends *?]` — T 必须是指针类型，指向类型任意
 - `[T extends [?]?]` — T 必须是数组类型，长度和元素类型均任意
 - `?` 可匹配类型参数和值参数（如数组长度），出现在 `extends` 约束的类型模式中
 - `?` 不能单独作为类型使用，只能用于约束模式
 - 为可读性，复杂模式应封装为类型别名：`type Array[T, N: u64] = [N]T`
-- 暂不支持多约束
+- 多约束使用 `&` 连接：`[T extends A & B]` 表示 T 必须同时满足 A 和 B
 
 ---
 

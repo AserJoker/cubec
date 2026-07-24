@@ -822,26 +822,30 @@ bool _check_generic_param_constraints(checker_t ctx, vec_t generic_params,
       continue; /* Skip extends constraint check for value params */
     }
 
-    if (!gp->constraint) continue;
+    if (!gp->constraints) continue;
     if (!ta) continue;
 
-    semantic_type_t constraint_type = resolver_resolve_type(ctx, gp->constraint);
-    if (!constraint_type || constraint_type->impl->kind == TYPE_ERROR) continue;
+    size_t ccount = vec_get_size(gp->constraints);
+    for (size_t c = 0; c < ccount; c++) {
+      node_t cnode = (node_t)vec_get(gp->constraints, c);
+      semantic_type_t constraint_type = resolver_resolve_type(ctx, cnode);
+      if (!constraint_type || constraint_type->impl->kind == TYPE_ERROR) continue;
 
-    if (gp->is_rest) {
-      /* Pack parameter: check constraint against each expanded type */
-      if (ta->impl->kind == TYPE_GENERIC_PACK) {
-        size_t ecount = vec_get_size(ta->impl->generic_pack.expanded_types);
-        for (size_t j = 0; j < ecount; j++) {
-          semantic_type_t et = (semantic_type_t)vec_get(ta->impl->generic_pack.expanded_types, j);
-          if (!_check_constraint(ctx, et, constraint_type, expr)) {
-            all_ok = false;
+      if (gp->is_rest) {
+        /* Pack parameter: check constraint against each expanded type */
+        if (ta->impl->kind == TYPE_GENERIC_PACK) {
+          size_t ecount = vec_get_size(ta->impl->generic_pack.expanded_types);
+          for (size_t j = 0; j < ecount; j++) {
+            semantic_type_t et = (semantic_type_t)vec_get(ta->impl->generic_pack.expanded_types, j);
+            if (!_check_constraint(ctx, et, constraint_type, expr)) {
+              all_ok = false;
+            }
           }
         }
-      }
-    } else {
-      if (!_check_constraint(ctx, ta, constraint_type, expr)) {
-        all_ok = false;
+      } else {
+        if (!_check_constraint(ctx, ta, constraint_type, expr)) {
+          all_ok = false;
+        }
       }
     }
   }
