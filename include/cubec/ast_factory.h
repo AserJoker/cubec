@@ -82,13 +82,13 @@ node_t cubec_ast_create_block(allocator_t alloc, location_t loc,
                               vec_t statements);
 node_t cubec_ast_create_struct_stmt(allocator_t alloc, location_t loc,
                                     const char *name, vec_t members,
-                                    bool is_export);
+                                    bool is_export, vec_t implements);
 node_t cubec_ast_create_enum_stmt(allocator_t alloc, location_t loc,
                                   const char *name, vec_t items,
                                   bool is_export);
 node_t cubec_ast_create_union_stmt(allocator_t alloc, location_t loc,
                                    const char *name, vec_t members,
-                                   bool is_export);
+                                   bool is_export, vec_t implements);
 node_t cubec_ast_create_cunion_stmt(allocator_t alloc, location_t loc,
                                     const char *name, vec_t fields);
 node_t cubec_ast_create_func_stmt(allocator_t alloc, location_t loc,

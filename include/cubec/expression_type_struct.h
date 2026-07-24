@@ -80,7 +80,8 @@ node_t read_expression_type_struct(allocator_t allocator, vec_t tokens,
  */
 node_t read_expression_type_struct_body(allocator_t allocator, vec_t tokens,
                                          size_t *position, const char *filename,
-                                         location_t start_location);
+                                         location_t start_location,
+                                         vec_t *out_implements);
 
 #ifdef __cplusplus
 }

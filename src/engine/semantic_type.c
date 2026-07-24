@@ -31,6 +31,7 @@ static void _type_name_entry_dispose(void *self, allocator_t allocator) {
   allocator_free(allocator, &t->static_methods);
   allocator_free(allocator, &t->static_fields);
   allocator_free(allocator, &t->associated_types);
+  allocator_free(allocator, &t->implements);
   allocator_free(allocator, &t->impl);
 }
 

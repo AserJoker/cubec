@@ -113,7 +113,7 @@ TEST_F(dt_checker, pass2_struct_basic_debug) {
   /* Minimal: just create checker + empty struct */
   vec_t stmts = cubec_ast_create_vec(allocator, true);
   vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Point",
-                   cubec_ast_create_vec(allocator, true), false));
+                   cubec_ast_create_vec(allocator, true), false, NULL));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -137,7 +137,7 @@ TEST_F(dt_checker, pass2_struct_basic) {
                    cubec_ast_create_identifier(allocator, T, "f64"), false));
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Point", members, false));
+  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Point", members, false, NULL));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -235,7 +235,7 @@ TEST_F(dt_checker, pass2_union_basic) {
                    cubec_ast_create_identifier(allocator, T, "f64")));
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(stmts, cubec_ast_create_union_stmt(allocator, T, "Value", members, false));
+  vec_push(stmts, cubec_ast_create_union_stmt(allocator, T, "Value", members, false, NULL));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -406,9 +406,9 @@ TEST_F(dt_checker, pass2_duplicate_continues) {
   /* Two structs with same name — Pass 1 errors, Pass 2 skips */
   vec_t stmts = cubec_ast_create_vec(allocator, true);
   vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Foo",
-                   cubec_ast_create_vec(allocator, true), false));
+                   cubec_ast_create_vec(allocator, true), false, NULL));
   vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Foo",
-                   cubec_ast_create_vec(allocator, true), false));
+                   cubec_ast_create_vec(allocator, true), false, NULL));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -454,7 +454,7 @@ TEST_F(dt_checker, pass2_function_with_custom_types) {
                    cubec_ast_create_identifier(allocator, T, "f64"), false));
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Point", members, false));
+  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Point", members, false, NULL));
   vec_push(stmts, cubec_ast_create_func_stmt(allocator, T, "origin",
                    cubec_ast_create_vec(allocator, true),
                    cubec_ast_create_identifier(allocator, T, "Point"),
@@ -602,7 +602,7 @@ TEST_F(dt_checker, pass2_struct_method) {
                    NULL, false, false, false, false, false, false));
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Counter", members, false));
+  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Counter", members, false, NULL));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -636,7 +636,7 @@ TEST_F(dt_checker, pass2_struct_static_field) {
                    NULL, false, false, false, false, false));
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Config", members, false));
+  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Config", members, false, NULL));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -880,7 +880,7 @@ TEST_F(dt_checker, pass3_member_access) {
                    false, false, false, false, false, false));
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Point", members, false));
+  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Point", members, false, NULL));
 
   node_t prog = cubec_ast_create_program(allocator, T, stmts);
   checker_t ctx = checker_create(allocator);
@@ -1074,7 +1074,7 @@ TEST_F(dt_checker, pass3_init_list_field) {
                    cubec_ast_create_identifier(allocator, T, "f64"), false));
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Point", fields, false));
+  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Point", fields, false, NULL));
 
   /* initialize list with named fields */
   vec_t init_items = cubec_ast_create_vec(allocator, true);
@@ -1115,7 +1115,7 @@ TEST_F(dt_checker, pass3_init_list_field_mismatch) {
                    cubec_ast_create_identifier(allocator, T, "f64"), false));
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Point", fields, false));
+  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Point", fields, false, NULL));
 
   vec_t init_items = cubec_ast_create_vec(allocator, true);
   vec_push(init_items, cubec_ast_create_initialize_field(allocator, T, "x",
@@ -1152,7 +1152,7 @@ TEST_F(dt_checker, pass3_init_list_positional) {
                    cubec_ast_create_identifier(allocator, T, "i32"), false));
 
   vec_t stmts = cubec_ast_create_vec(allocator, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Pair", fields, false));
+  vec_push(stmts, cubec_ast_create_struct_stmt(allocator, T, "Pair", fields, false, NULL));
 
   vec_t init_items = cubec_ast_create_vec(allocator, true);
   vec_push(init_items, cubec_ast_create_numeric(allocator, T, "1",

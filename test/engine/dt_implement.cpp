@@ -1,0 +1,215 @@
+#include "engine/checker.h"
+#include "engine/comptime_eval.h"
+#include "engine/comptime_value.h"
+#include "engine/diagnostic.h"
+#include "engine/symbol.h"
+#include "engine/semantic_type.h"
+#include "cubec/token.h"
+#include "cubec/program.h"
+#include "core/error.h"
+#include "common/test_common.h"
+#include <gtest/gtest.h>
+#include <string>
+
+using ::testing::Test;
+
+/* ===== helpers ===== */
+
+struct compile_result {
+  checker_t ctx;
+  node_t prog;
+  vec_t tokens;
+};
+
+static struct compile_result compile_source(allocator_t allocator,
+                                            const char *source) {
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  size_t pos = 0;
+  node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+
+  if (g_error) {
+    std::string err_msg(g_error->message);
+    error_clear();
+    GTEST_MESSAGE_AT_(__FILE__, __LINE__,
+        ("Parsing failed: " + err_msg).c_str(),
+        ::testing::TestPartResult::kFatalFailure);
+    return (struct compile_result){NULL, prog, tokens};
+  }
+
+  checker_t ctx = checker_create(allocator);
+  source_cache_load(ctx->sources, "test.cubec", source, false);
+
+  checker_check_program(ctx, prog);
+  return (struct compile_result){ctx, prog, tokens};
+}
+
+static void compile_result_cleanup(struct compile_result *r,
+                                   allocator_t allocator) {
+  if (r->ctx) checker_dispose(r->ctx);
+  allocator_free(allocator, &r->prog);
+  allocator_free(allocator, &r->tokens);
+}
+
+/* ===== test fixture ===== */
+
+class dt_implement : public CubecTest {
+protected:
+  TEST_ALLOCATOR;
+  void TearDown() override {
+    error_clear();
+    CubecTest::TearDown();
+  }
+};
+
+/* ===== struct implement satisfied ===== */
+
+TEST_F(dt_implement, struct_satisfied) {
+  const char *src =
+      "interface Printable {\n"
+      "    func to_string(self): str;\n"
+      "}\n"
+      "struct Foo implement Printable {\n"
+      "    func to_string(self): str { return \"Foo\"; }\n"
+      "}\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0u);
+
+  /* Verify implements vec is populated */
+  struct symbol *sym = scope_lookup_local(r.ctx->global_scope, "Foo");
+  ASSERT_NE(sym, nullptr);
+  ASSERT_EQ(sym->kind, SYMBOL_TYPE);
+  semantic_type_t t = sym->type.type;
+  ASSERT_NE(t, nullptr);
+  ASSERT_NE(t->implements, nullptr);
+  EXPECT_EQ(vec_get_size(t->implements), 1u);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== struct implement missing method ===== */
+
+TEST_F(dt_implement, struct_missing_method) {
+  const char *src =
+      "interface Printable {\n"
+      "    func to_string(self): str;\n"
+      "}\n"
+      "struct Foo implement Printable {\n"
+      "}\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_GT(r.ctx->error_count, 0u);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== struct implement non-interface type ===== */
+
+TEST_F(dt_implement, struct_non_interface) {
+  const char *src =
+      "struct Foo implement i32 {\n"
+      "}\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_GT(r.ctx->error_count, 0u);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== struct implement multiple interfaces ===== */
+
+TEST_F(dt_implement, struct_multiple) {
+  const char *src =
+      "interface A {\n"
+      "    func a(self): i32;\n"
+      "}\n"
+      "interface B {\n"
+      "    func b(self): f64;\n"
+      "}\n"
+      "struct Foo implement A, B {\n"
+      "    func a(self): i32 { return 1; }\n"
+      "    func b(self): f64 { return 2.0; }\n"
+      "}\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0u);
+
+  struct symbol *sym = scope_lookup_local(r.ctx->global_scope, "Foo");
+  ASSERT_NE(sym, nullptr);
+  semantic_type_t t = sym->type.type;
+  ASSERT_NE(t->implements, nullptr);
+  EXPECT_EQ(vec_get_size(t->implements), 2u);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== union implement satisfied ===== */
+
+TEST_F(dt_implement, union_satisfied) {
+  const char *src =
+      "interface HasValue {\n"
+      "    func get_value(self): i32;\n"
+      "}\n"
+      "union Option implement HasValue {\n"
+      "    value: i32;\n"
+      "    empty: void;\n"
+      "    func get_value(self): i32 { return 0; }\n"
+      "}\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0u);
+
+  struct symbol *sym = scope_lookup_local(r.ctx->global_scope, "Option");
+  ASSERT_NE(sym, nullptr);
+  semantic_type_t t = sym->type.type;
+  ASSERT_NE(t->implements, nullptr);
+  EXPECT_EQ(vec_get_size(t->implements), 1u);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== struct implement generic interface ===== */
+
+TEST_F(dt_implement, struct_generic_interface) {
+  const char *src =
+      "interface Container[T] {\n"
+      "    func get(self): T;\n"
+      "}\n"
+      "struct Box[T] implement Container[T] {\n"
+      "    value: T;\n"
+      "    func get(self): T { return self.value; }\n"
+      "}\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  /* Generic structs resolve interface type but skip constraint check */
+  EXPECT_EQ(r.ctx->error_count, 0u);
+
+  /* Verify implements vec is populated even for generic */
+  struct symbol *sym = scope_lookup_local(r.ctx->global_scope, "Box");
+  ASSERT_NE(sym, nullptr);
+  ASSERT_EQ(sym->kind, SYMBOL_TYPE);
+  semantic_type_t t = sym->type.type;
+  ASSERT_NE(t->implements, nullptr);
+  EXPECT_EQ(vec_get_size(t->implements), 1u);
+
+  compile_result_cleanup(&r, allocator);
+}
+
+/* ===== struct without implement — no implements vec ===== */
+
+TEST_F(dt_implement, struct_no_implement) {
+  const char *src =
+      "struct Foo {\n"
+      "    x: i32;\n"
+      "}\n";
+  struct compile_result r = compile_source(allocator, src);
+  ASSERT_NE(r.ctx, nullptr);
+  EXPECT_EQ(r.ctx->error_count, 0u);
+
+  struct symbol *sym = scope_lookup_local(r.ctx->global_scope, "Foo");
+  ASSERT_NE(sym, nullptr);
+  semantic_type_t t = sym->type.type;
+  EXPECT_EQ(t->implements, nullptr);
+
+  compile_result_cleanup(&r, allocator);
+}

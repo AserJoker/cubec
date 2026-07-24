@@ -1131,6 +1131,19 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   inst->instance_methods = _copy_symbol_vec(ctx,template_type->instance_methods);
   inst->static_methods = _copy_symbol_vec(ctx, template_type->static_methods);
 
+  /* Propagate implements from template, with generic param substitution */
+  if (template_type->implements) {
+    size_t ic = vec_get_size(template_type->implements);
+    vec_t inst_impls = (vec_t)allocator_create(
+        ctx->allocator, &g_vec_type, &(vec_init_t){false});
+    for (size_t i = 0; i < ic; i++) {
+      semantic_type_t iface = (semantic_type_t)vec_get(template_type->implements, i);
+      semantic_type_t substituted = _substitute_type(ctx, iface, type_bindings);
+      vec_push(inst_impls, substituted);
+    }
+    inst->implements = inst_impls;
+  }
+
   /* Cache the result */
   _cache_insert(ctx, name, type_bindings, inst);
 

@@ -13,7 +13,7 @@ extern "C" {
  * @brief AST node for struct declaration statement.
  *
  * Syntax:
- *   [export] struct <name> [<generic_params>] { <members> }
+ *   [export] struct <name> [<generic_params>] [implement <iface1, iface2, ...>] { <members> }
  *
  * Members can be:
  * - Instance fields: [pub] <name> : <type> ;
@@ -34,6 +34,7 @@ struct _cubec_statement_struct_t {
   bool is_export;       /**< Whether this struct is exported */
   node_t name;          /**< Identifier node for the struct name */
   vec_t generic_params; /**< Vector of cubec_generic_param_t (may be NULL) */
+  vec_t implements;     /**< Vector of type expression nodes for implement clause (may be NULL) */
   vec_t members;        /**< Vector of member nodes (auto_dispose=true) */
   vec_t decorators;     /**< Vector of cubec_decorator_t (may be NULL) */
 };
@@ -47,6 +48,7 @@ struct _cubec_statement_struct_init_t {
   bool is_export;
   node_t name;
   vec_t generic_params;
+  vec_t implements;
   vec_t members;
   vec_t decorators;
 };

@@ -388,3 +388,87 @@ TEST_F(dt_statement_struct, via_read_program) {
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
+
+/* ==========================================================================
+ *  implement clause parsing
+ * ========================================================================== */
+
+/* ---- struct with single implement ---- */
+
+TEST_F(dt_statement_struct, implement_single) {
+  const char *source = "struct Foo implement Printable { }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_struct(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_STRUCT);
+
+  cubec_statement_struct_t struct_node = (cubec_statement_struct_t)node;
+  ASSERT_NE(struct_node->implements, nullptr);
+  EXPECT_EQ(vec_get_size(struct_node->implements), 1u);
+  EXPECT_EQ(struct_node->generic_params, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- struct with generic + implement ---- */
+
+TEST_F(dt_statement_struct, implement_generic) {
+  const char *source = "struct Vec[T] implement Iterable[T] { }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_struct(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_STRUCT);
+
+  cubec_statement_struct_t struct_node = (cubec_statement_struct_t)node;
+  ASSERT_NE(struct_node->implements, nullptr);
+  EXPECT_EQ(vec_get_size(struct_node->implements), 1u);
+  ASSERT_NE(struct_node->generic_params, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- struct with multiple implement ---- */
+
+TEST_F(dt_statement_struct, implement_multiple) {
+  const char *source = "struct Foo implement A, B, C { }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_struct(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_STRUCT);
+
+  cubec_statement_struct_t struct_node = (cubec_statement_struct_t)node;
+  ASSERT_NE(struct_node->implements, nullptr);
+  EXPECT_EQ(vec_get_size(struct_node->implements), 3u);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- struct without implement — implements is NULL ---- */
+
+TEST_F(dt_statement_struct, no_implement) {
+  const char *source = "struct Foo { }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_struct(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  cubec_statement_struct_t struct_node = (cubec_statement_struct_t)node;
+  EXPECT_EQ(struct_node->implements, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}

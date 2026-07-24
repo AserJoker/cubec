@@ -256,3 +256,45 @@ TEST_F(dt_statement_union, via_read_program) {
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
+
+/* ==========================================================================
+ *  implement clause parsing
+ * ========================================================================== */
+
+/* ---- union with single implement ---- */
+
+TEST_F(dt_statement_union, implement_single) {
+  const char *source = "union Result[E, T] implement Protocol[E, T] { }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_union(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_UNION);
+
+  cubec_statement_union_t union_node = (cubec_statement_union_t)node;
+  ASSERT_NE(union_node->implements, nullptr);
+  EXPECT_EQ(vec_get_size(union_node->implements), 1u);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ---- union without implement — implements is NULL ---- */
+
+TEST_F(dt_statement_union, no_implement) {
+  const char *source = "union Option[T] { value: T; }";
+  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+
+  size_t position = 0;
+  node_t node = read_statement_union(allocator, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  cubec_statement_union_t union_node = (cubec_statement_union_t)node;
+  EXPECT_EQ(union_node->implements, nullptr);
+
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}

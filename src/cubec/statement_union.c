@@ -33,6 +33,7 @@ static void _cubec_statement_union_init(
   self->is_export = init->is_export;
   self->name = init->name;
   self->generic_params = init->generic_params;
+  self->implements = init->implements;
   self->members = init->members;
   self->decorators = init->decorators;
 onerror:
@@ -42,6 +43,7 @@ onerror:
 static void _cubec_statement_union_dispose(
     cubec_statement_union_t self, allocator_t allocator) {
   allocator_free(allocator, &self->decorators);
+  allocator_free(allocator, &self->implements);
   allocator_free(allocator, &self->members);
   allocator_free(allocator, &self->generic_params);
   allocator_free(allocator, &self->name);
@@ -57,6 +59,9 @@ static void _cubec_statement_union_clone(
   self->generic_params = another->generic_params
                              ? TRY_LOCAL(onerror, value_clone(allocator, another->generic_params))
                              : NULL;
+  self->implements = another->implements
+                         ? TRY_LOCAL(onerror, value_clone(allocator, another->implements))
+                         : NULL;
   self->members = TRY_LOCAL(onerror, value_clone(allocator, another->members));
   return;
 onerror:
@@ -72,6 +77,9 @@ static void _cubec_statement_union_move(
   self->generic_params = another->generic_params
                              ? TRY_LOCAL(onerror, value_move(allocator, another->generic_params))
                              : NULL;
+  self->implements = another->implements
+                         ? TRY_LOCAL(onerror, value_move(allocator, another->implements))
+                         : NULL;
   self->members = TRY_LOCAL(onerror, value_move(allocator, another->members));
   return;
 onerror:
@@ -111,6 +119,7 @@ node_t read_statement_union(allocator_t allocator, vec_t tokens,
   cubec_statement_union_t node = NULL;
   location_t start_location = {0};
   vec_t decorators = NULL;
+  vec_t implements = NULL;
 
   /* Collect decorators [[...]] */
   {
@@ -156,7 +165,7 @@ node_t read_statement_union(allocator_t allocator, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* 4. Delegate to read_expression_type_union_body for [generic_params] { members } */
-  expr_node = TRY_LOCAL(cleanup, read_expression_type_union_body(allocator, tokens, &current, filename, start_location));
+  expr_node = TRY_LOCAL(cleanup, read_expression_type_union_body(allocator, tokens, &current, filename, start_location, &implements));
   if (!expr_node) {
     THROW_LOCAL(cleanup, "expected '{' after union name");
   }
@@ -175,6 +184,7 @@ node_t read_statement_union(allocator_t allocator, vec_t tokens,
       .is_export = is_export,
       .name = name,
       .generic_params = expr_union->generic_params,
+      .implements = implements,
       .members = expr_union->members,
       .decorators = decorators,
   };
@@ -191,11 +201,13 @@ node_t read_statement_union(allocator_t allocator, vec_t tokens,
 
 cleanup:
   allocator_free(allocator, &decorators);
+  allocator_free(allocator, &implements);
   allocator_free(allocator, &name);
   allocator_free(allocator, &expr_node);
   allocator_free(allocator, &node);
 onerror:
   allocator_free(allocator, &decorators);
+  allocator_free(allocator, &implements);
   allocator_free(allocator, &name);
   allocator_free(allocator, &expr_node);
   allocator_free(allocator, &node);
@@ -204,11 +216,12 @@ onerror:
 
 node_t cubec_ast_create_union_stmt(allocator_t alloc, location_t loc,
                                    const char *name, vec_t members,
-                                   bool is_export) {
+                                   bool is_export, vec_t implements) {
   node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
   cubec_statement_union_init_t init = {
       .location = loc, .parent = NULL, .is_export = is_export,
-      .name = name_node, .generic_params = NULL, .members = members};
+      .name = name_node, .generic_params = NULL, .implements = implements,
+      .members = members};
   return (node_t)allocator_create(alloc, &g_cubec_statement_union_type,
                                   &init);
 }

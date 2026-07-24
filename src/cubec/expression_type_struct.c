@@ -106,16 +106,44 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
 
 node_t read_expression_type_struct_body(allocator_t allocator, vec_t tokens,
                                          size_t *position, const char *filename,
-                                         location_t start_location) {
+                                         location_t start_location,
+                                         vec_t *out_implements) {
   size_t current = *position;
   vec_t generic_params = NULL;
   vec_t members = NULL;
+  vec_t implements = NULL;
   cubec_expression_type_struct_t node = NULL;
 
   /* 1. Parse optional generic parameters */
   generic_params = TRY_LOCAL(cleanup, read_generic_params(allocator, tokens, &current, filename));
   if (generic_params) {
     skip_whitespace(tokens, &current);
+  }
+
+  /* 1b. Parse optional 'implement' clause (statement form only) */
+  if (out_implements && _is_keyword(tokens, current, "implement")) {
+    current++;
+    skip_whitespace(tokens, &current);
+    node_t iface_expr = TRY_LOCAL(cleanup,
+        read_type_expression_primary(allocator, tokens, &current, filename));
+    if (!iface_expr) {
+      THROW_LOCAL(cleanup, "expected interface type after 'implement'");
+    }
+    implements = TRY_LOCAL(cleanup,
+        allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+    vec_push(implements, iface_expr);
+    skip_whitespace(tokens, &current);
+    while (_is_symbol(tokens, current, ",")) {
+      current++;
+      skip_whitespace(tokens, &current);
+      iface_expr = TRY_LOCAL(cleanup,
+          read_type_expression_primary(allocator, tokens, &current, filename));
+      if (!iface_expr) {
+        THROW_LOCAL(cleanup, "expected interface type after ',' in implement clause");
+      }
+      vec_push(implements, iface_expr);
+      skip_whitespace(tokens, &current);
+    }
   }
 
   /* 2. Expect '{' */
@@ -193,10 +221,12 @@ node_t read_expression_type_struct_body(allocator_t allocator, vec_t tokens,
       .members = members,
   };
   node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_expression_type_struct_type, &init));
+  if (out_implements) *out_implements = implements;
   *position = current;
   return (node_t)&node->super;
 
 cleanup:
+  allocator_free(allocator, &implements);
   allocator_free(allocator, &members);
   allocator_free(allocator, &generic_params);
   allocator_free(allocator, &node);
@@ -221,7 +251,7 @@ node_t read_expression_type_struct(allocator_t allocator, vec_t tokens,
   current++;
   skip_whitespace(tokens, &current);
 
-  node_t result = read_expression_type_struct_body(allocator, tokens, &current, filename, start_location);
+  node_t result = read_expression_type_struct_body(allocator, tokens, &current, filename, start_location, NULL);
   if (result) {
     *position = current;
   }

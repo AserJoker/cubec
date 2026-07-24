@@ -126,6 +126,41 @@ static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
   type_hash_ensure(t);
   sym->state = SYMBOL_EVALUATED;
 
+  /* Verify implement clauses (skip constraint check for generic — verified at instantiation) */
+  if (node->implements) {
+    vec_t impl_vec = (vec_t)allocator_create(
+        ctx->allocator, &g_vec_type, &(vec_init_t){false});
+    size_t icount = vec_get_size(node->implements);
+    for (size_t i = 0; i < icount; i++) {
+      node_t iface_expr = (node_t)vec_get(node->implements, i);
+      semantic_type_t iface_type = resolver_resolve_type(ctx, iface_expr);
+      if (!iface_type || iface_type->impl->kind == TYPE_ERROR) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+            iface_expr->location,
+            "cannot resolve interface type in implement clause");
+        ctx->error_count++;
+        continue;
+      }
+      if (iface_type->impl->kind != TYPE_INTERFACE &&
+          !(iface_type->impl->kind == TYPE_GENERIC_INSTANCE &&
+            iface_type->impl->generic_instance.generic_template->impl->kind
+                == TYPE_INTERFACE)) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+            iface_expr->location,
+            "implement clause requires an interface type, got '%s'",
+            iface_type->name ? iface_type->name : "<anonymous>");
+        ctx->error_count++;
+        continue;
+      }
+      /* Skip constraint check for generic — verified at instantiation time */
+      if (!node->generic_params) {
+        _check_constraint(ctx, t, iface_type, (node_t)node);
+      }
+      vec_push(impl_vec, iface_type);
+    }
+    t->implements = impl_vec;
+  }
+
   /* Evaluate decorators (skip for generic — evaluated at instantiation) */
   if (node->decorators && !node->generic_params)
     checker_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
@@ -184,6 +219,41 @@ static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
   if (!node->generic_params) type_layout_compute(t, 8);
   type_hash_ensure(t);
   sym->state = SYMBOL_EVALUATED;
+
+  /* Verify implement clauses (skip constraint check for generic — verified at instantiation) */
+  if (node->implements) {
+    vec_t impl_vec = (vec_t)allocator_create(
+        ctx->allocator, &g_vec_type, &(vec_init_t){false});
+    size_t icount = vec_get_size(node->implements);
+    for (size_t i = 0; i < icount; i++) {
+      node_t iface_expr = (node_t)vec_get(node->implements, i);
+      semantic_type_t iface_type = resolver_resolve_type(ctx, iface_expr);
+      if (!iface_type || iface_type->impl->kind == TYPE_ERROR) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+            iface_expr->location,
+            "cannot resolve interface type in implement clause");
+        ctx->error_count++;
+        continue;
+      }
+      if (iface_type->impl->kind != TYPE_INTERFACE &&
+          !(iface_type->impl->kind == TYPE_GENERIC_INSTANCE &&
+            iface_type->impl->generic_instance.generic_template->impl->kind
+                == TYPE_INTERFACE)) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+            iface_expr->location,
+            "implement clause requires an interface type, got '%s'",
+            iface_type->name ? iface_type->name : "<anonymous>");
+        ctx->error_count++;
+        continue;
+      }
+      /* Skip constraint check for generic — verified at instantiation time */
+      if (!node->generic_params) {
+        _check_constraint(ctx, t, iface_type, (node_t)node);
+      }
+      vec_push(impl_vec, iface_type);
+    }
+    t->implements = impl_vec;
+  }
 
   /* Evaluate decorators (skip for generic — evaluated at instantiation) */
   if (node->decorators && !node->generic_params)
