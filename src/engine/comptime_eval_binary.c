@@ -12,7 +12,7 @@ static bool _is_comptime_numeric(comptime_value_t v) {
   return v && (v->kind == COMPTIME_VALUE_INT || v->kind == COMPTIME_VALUE_FLOAT);
 }
 
-comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
+comptime_value_t _comptime_eval_binary(comptime_eval_t eval, context_t ctx,
                                         node_t node) {
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
   const char *op = string_get(bin->opt);

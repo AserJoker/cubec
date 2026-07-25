@@ -1,7 +1,6 @@
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/icu_data.h"
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/diagnostic.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
@@ -39,29 +38,31 @@ static int cmd_test(int argc, char *argv[]) {
   }
 
   allocator_t allocator = create_allocator(NULL, NULL);
+  context_t ctx = context_create(allocator);
+  ctx->current_file = filename;
+  source_cache_load(ctx->sources, filename, source, false);
 
-  vec_t tokens = resolve_token_list(allocator, filename, source);
+  vec_t tokens = resolve_token_list(ctx, filename, source);
   if (!tokens) {
     fprintf(stderr, "error: lexing failed\n");
+    context_dispose(ctx);
     free(source);
     delete_allocator(allocator);
     return 1;
   }
 
   size_t position = 0;
-  node_t program = read_program_node(allocator, tokens, &position, filename);
+  node_t program = read_program_node(ctx, tokens, &position, filename);
   if (!program) {
     fprintf(stderr, "error: parsing failed\n");
+    context_dispose(ctx);
     allocator_free(allocator, &tokens);
     free(source);
     delete_allocator(allocator);
     return 1;
   }
 
-  checker_t ctx = checker_create(allocator);
-  ctx->current_file = filename;
-  source_cache_load(ctx->sources, filename, source, false);
-  checker_check_program(ctx, program);
+  context_check_program(ctx, program);
 
   /* Emit diagnostics */
   diagnostic_list_emit(ctx->diagnostics, ctx->sources);
@@ -75,7 +76,7 @@ static int cmd_test(int argc, char *argv[]) {
 
   int result = (failed > 0) ? 1 : 0;
 
-  checker_dispose(ctx);
+  context_dispose(ctx);
   allocator_free(allocator, &program);
   allocator_free(allocator, &tokens);
   free(source);
@@ -97,11 +98,5 @@ int _main(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
   int res = _main(argc, argv);
-  if (g_error) {
-    char *err = error_to_string(g_error, NULL);
-    fprintf(stderr, "%s", err);
-    free(err);
-    error_clear();
-  }
   return res;
 }

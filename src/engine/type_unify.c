@@ -326,7 +326,7 @@ static vec_t _collect_generic_param_names(semantic_type_t func_type,
 
 /* ===== public API ===== */
 
-strmap_t _infer_type_args_from_call(checker_t ctx,
+strmap_t _infer_type_args_from_call(context_t ctx,
                                   semantic_type_t func_type,
                                   vec_t arg_types,
                                   strmap_t explicit_bindings) {
@@ -403,7 +403,7 @@ strmap_t _infer_type_args_from_call(checker_t ctx,
   }
 
   /* Track any TYPE_GENERIC_PACK values created by _type_unify into all_types
-     so they are properly freed on checker_dispose. The bindings strmap does not
+     so they are properly freed on context_dispose. The bindings strmap does not
      own its values (value_auto_dispose=false), so these would otherwise leak. */
   {
     size_t existing_count = vec_get_size(ctx->all_types);

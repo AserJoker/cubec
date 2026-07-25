@@ -1,4 +1,4 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/checker_collect.h"
 #include "engine/checker_func_util.h"
 #include "engine/checker_type_util.h"
@@ -23,14 +23,14 @@
 #include "cubec/declaration_variable.h"
 #include "cubec/generic_param.h"
 
-/* _register_generic_params moved to checker_func_util.c as checker_register_generic_params */
+/* _register_generic_params moved to checker_func_util.c as context_register_generic_params */
 
 /** Set source_file on a type for cross-module pub visibility checks. */
 static inline void _set_source_file(semantic_type_t t, const char *current_file) {
   if (t) t->source_file = current_file;
 }
 
-static void _collect_struct(checker_t ctx, cubec_statement_struct_t node) {
+static void _collect_struct(context_t ctx, cubec_statement_struct_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
 
@@ -57,7 +57,7 @@ static void _collect_struct(checker_t ctx, cubec_statement_struct_t node) {
   strmap_insert(ctx->type_name_table, name, t);
 }
 
-static void _collect_enum(checker_t ctx, cubec_statement_enum_t node) {
+static void _collect_enum(context_t ctx, cubec_statement_enum_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
 
@@ -84,7 +84,7 @@ static void _collect_enum(checker_t ctx, cubec_statement_enum_t node) {
   strmap_insert(ctx->type_name_table, name, t);
 }
 
-static void _collect_union(checker_t ctx, cubec_statement_union_t node) {
+static void _collect_union(context_t ctx, cubec_statement_union_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
 
@@ -111,7 +111,7 @@ static void _collect_union(checker_t ctx, cubec_statement_union_t node) {
   strmap_insert(ctx->type_name_table, name, t);
 }
 
-static void _collect_cunion(checker_t ctx, cubec_statement_cunion_t node) {
+static void _collect_cunion(context_t ctx, cubec_statement_cunion_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
 
@@ -137,7 +137,7 @@ static void _collect_cunion(checker_t ctx, cubec_statement_cunion_t node) {
   strmap_insert(ctx->type_name_table, name, t);
 }
 
-static void _collect_interface(checker_t ctx,
+static void _collect_interface(context_t ctx,
                                 cubec_statement_interface_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
@@ -166,7 +166,7 @@ static void _collect_interface(checker_t ctx,
   strmap_insert(ctx->type_name_table, name, t);
 }
 
-static void _collect_function(checker_t ctx,
+static void _collect_function(context_t ctx,
                                cubec_statement_function_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
@@ -187,7 +187,7 @@ static void _collect_function(checker_t ctx,
   scope_push_symbol(ctx->global_scope, sym);
 }
 
-static void _collect_variable(checker_t ctx,
+static void _collect_variable(context_t ctx,
                                cubec_statement_declaration_t node) {
   cubec_declaration_variable_t decl =
       (cubec_declaration_variable_t)node->declarator;
@@ -213,7 +213,7 @@ static void _collect_variable(checker_t ctx,
   scope_push_symbol(ctx->global_scope, sym);
 }
 
-static void _collect_type_alias(checker_t ctx,
+static void _collect_type_alias(context_t ctx,
                                  cubec_statement_declaration_type_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
@@ -233,7 +233,7 @@ static void _collect_type_alias(checker_t ctx,
   scope_push_symbol(ctx->global_scope, sym);
 }
 
-static void _collect_import(checker_t ctx,
+static void _collect_import(context_t ctx,
                              cubec_statement_import_t node) {
   const char *name = _checker_ident_str(node->module_name);
   if (!name) return;
@@ -262,14 +262,14 @@ static void _collect_import(checker_t ctx,
  * Actual symbol proxying happens in the evaluate phase after
  * the target module is loaded. This is a no-op placeholder.
  */
-static void _collect_export_from(checker_t ctx,
+static void _collect_export_from(context_t ctx,
                                   cubec_statement_export_from_t node) {
   (void)ctx;
   (void)node;
   /* Nothing to do in collect phase — symbol proxying is deferred to evaluate */
 }
 
-void checker_collect_declarations(checker_t ctx, node_t program) {
+void context_collect_declarations(context_t ctx, node_t program) {
   cubec_program_node_t prog = (cubec_program_node_t)program;
   if (!prog || !prog->statements) return;
 
@@ -277,11 +277,11 @@ void checker_collect_declarations(checker_t ctx, node_t program) {
   for (size_t i = 0; i < count; i++) {
     node_t stmt = (node_t)vec_get(prog->statements, i);
     if (!stmt) continue;
-    checker_collect_statement(ctx, stmt);
+    context_collect_statement(ctx, stmt);
   }
 }
 
-void checker_collect_statement(checker_t ctx, node_t stmt) {
+void context_collect_statement(context_t ctx, node_t stmt) {
   if (!stmt) return;
 
   switch (stmt->kind) {

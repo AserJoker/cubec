@@ -1,13 +1,13 @@
 #ifndef _H_CUBEC_ENGINE_CHECKER_COLLECT_
 #define _H_CUBEC_ENGINE_CHECKER_COLLECT_
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "core/node.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void checker_collect_declarations(checker_t ctx, node_t program);
-void checker_collect_statement(checker_t ctx, node_t stmt);
+void context_collect_declarations(context_t ctx, node_t program);
+void context_collect_statement(context_t ctx, node_t stmt);
 
 #ifdef __cplusplus
 }

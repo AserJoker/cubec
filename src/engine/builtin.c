@@ -92,7 +92,7 @@ builtin_entry_t builtin_table_lookup(builtin_table_t table, const char *name) {
 
 /* ===== defaults ===== */
 
-void builtin_table_init_defaults(builtin_table_t table, struct checker *ctx) {
+void builtin_table_init_defaults(builtin_table_t table, struct context *ctx) {
   builtin_table_init_debug(table, ctx);
   builtin_table_init_collection(table, ctx);
   builtin_table_init_tuple(table, ctx);

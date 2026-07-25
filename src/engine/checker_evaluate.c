@@ -1,4 +1,4 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/checker_decorator.h"
 #include "engine/checker_evaluate.h"
 #include "engine/checker_collect.h"
@@ -48,11 +48,11 @@
 
 /* ===== Pass 2: Declaration Evaluation ===== */
 
-semantic_type_t _check_expression(checker_t ctx, node_t expr);
+semantic_type_t _check_expression(context_t ctx, node_t expr);
 
-/* _register_generic_params moved to checker_func_util.c as checker_register_generic_params */
+/* _register_generic_params moved to checker_func_util.c as context_register_generic_params */
 
-static void _evaluate_member_method(checker_t ctx, semantic_type_t t,
+static void _evaluate_member_method(context_t ctx, semantic_type_t t,
                                      cubec_statement_function_t mfn,
                                      size_t type_gp_count) {
   func_check_info_t info;
@@ -68,7 +68,7 @@ static void _evaluate_member_method(checker_t ctx, semantic_type_t t,
   });
 }
 
-static void _evaluate_member_declaration(checker_t ctx, semantic_type_t t,
+static void _evaluate_member_declaration(context_t ctx, semantic_type_t t,
                                          cubec_statement_declaration_t sdecl) {
   cubec_declaration_variable_t vdecl =
       (cubec_declaration_variable_t)sdecl->declarator;
@@ -84,7 +84,7 @@ static void _evaluate_member_declaration(checker_t ctx, semantic_type_t t,
   vec_push(t->static_fields, vsym);
 }
 
-void checker_evaluate_struct_union_members(checker_t ctx, semantic_type_t t,
+void context_evaluate_struct_union_members(context_t ctx, semantic_type_t t,
                                            vec_t members, size_t type_gp_count) {
   if (!members) return;
   if (!t->instance_methods) return;
@@ -100,7 +100,7 @@ void checker_evaluate_struct_union_members(checker_t ctx, semantic_type_t t,
   }
 }
 
-static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
+static void _evaluate_struct(context_t ctx, cubec_statement_struct_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
 
@@ -112,7 +112,7 @@ static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
 
   /* Generic struct: register generic params and store template */
   if (node->generic_params) {
-    checker_register_generic_params(ctx, node->generic_params);
+    context_register_generic_params(ctx, node->generic_params);
     sym->type.generic_params = node->generic_params;
   }
 
@@ -120,7 +120,7 @@ static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
   _resolve_struct_fields(ctx, t, node->members);
   {
     size_t type_gp_count = node->generic_params ? vec_get_size(node->generic_params) : 0;
-    checker_evaluate_struct_union_members(ctx, t, node->members, type_gp_count);
+    context_evaluate_struct_union_members(ctx, t, node->members, type_gp_count);
   }
 
   /* Skip layout for generic — sizes depend on concrete type args */
@@ -165,13 +165,13 @@ static void _evaluate_struct(checker_t ctx, cubec_statement_struct_t node) {
 
   /* Evaluate decorators (skip for generic — evaluated at instantiation) */
   if (node->decorators && !node->generic_params)
-    checker_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
+    context_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
                                 name, (node_t)node);
 }
 
 /* _evaluate_enum_items moved to checker_type_util.c as _resolve_enum_items */
 
-static void _evaluate_enum(checker_t ctx, cubec_statement_enum_t node) {
+static void _evaluate_enum(context_t ctx, cubec_statement_enum_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
 
@@ -190,11 +190,11 @@ static void _evaluate_enum(checker_t ctx, cubec_statement_enum_t node) {
   sym->state = SYMBOL_EVALUATED;
 
   if (node->decorators)
-    checker_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
+    context_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
                                 name, (node_t)node);
 }
 
-static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
+static void _evaluate_union(context_t ctx, cubec_statement_union_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
 
@@ -206,7 +206,7 @@ static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
 
   /* Generic union: register generic params and store template */
   if (node->generic_params) {
-    checker_register_generic_params(ctx, node->generic_params);
+    context_register_generic_params(ctx, node->generic_params);
     sym->type.generic_params = node->generic_params;
   }
 
@@ -214,7 +214,7 @@ static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
   _resolve_union_fields(ctx, t, node->members);
   {
     size_t type_gp_count = node->generic_params ? vec_get_size(node->generic_params) : 0;
-    checker_evaluate_struct_union_members(ctx, t, node->members, type_gp_count);
+    context_evaluate_struct_union_members(ctx, t, node->members, type_gp_count);
   }
 
   /* Skip layout for generic — sizes depend on concrete type args */
@@ -259,11 +259,11 @@ static void _evaluate_union(checker_t ctx, cubec_statement_union_t node) {
 
   /* Evaluate decorators (skip for generic — evaluated at instantiation) */
   if (node->decorators && !node->generic_params)
-    checker_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
+    context_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
                                 name, (node_t)node);
 }
 
-static void _evaluate_cunion(checker_t ctx, cubec_statement_cunion_t node) {
+static void _evaluate_cunion(context_t ctx, cubec_statement_cunion_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
 
@@ -280,7 +280,7 @@ static void _evaluate_cunion(checker_t ctx, cubec_statement_cunion_t node) {
   sym->state = SYMBOL_EVALUATED;
 }
 
-static void _evaluate_interface_method(checker_t ctx, semantic_type_t t,
+static void _evaluate_interface_method(context_t ctx, semantic_type_t t,
                                          cubec_interface_method_t method) {
   const char *mname = _checker_ident_str(method->name);
   struct symbol *msym = symbol_create(ctx->allocator, mname,
@@ -308,7 +308,7 @@ static void _evaluate_interface_method(checker_t ctx, semantic_type_t t,
   vec_push(t->impl->interface_type.methods, msym);
 }
 
-static void _evaluate_associated_type(checker_t ctx, semantic_type_t t,
+static void _evaluate_associated_type(context_t ctx, semantic_type_t t,
                                        cubec_statement_declaration_type_t tdecl) {
   const char *tname = _checker_ident_str(tdecl->name);
   struct symbol *tsym = symbol_create(ctx->allocator, tname,
@@ -319,7 +319,7 @@ static void _evaluate_associated_type(checker_t ctx, semantic_type_t t,
   vec_push(t->associated_types, tsym);
 }
 
-static void _evaluate_interface(checker_t ctx,
+static void _evaluate_interface(context_t ctx,
                                 cubec_statement_interface_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
@@ -332,7 +332,7 @@ static void _evaluate_interface(checker_t ctx,
 
   /* Generic interface: register generic params, store template, skip method resolution */
   if (node->generic_params) {
-    checker_register_generic_params(ctx, node->generic_params);
+    context_register_generic_params(ctx, node->generic_params);
     sym->type.generic_params = node->generic_params;
     sym->state = SYMBOL_EVALUATED;
     return;
@@ -359,7 +359,7 @@ static void _evaluate_interface(checker_t ctx,
   sym->state = SYMBOL_EVALUATED;
 }
 
-static void _evaluate_function(checker_t ctx,
+static void _evaluate_function(context_t ctx,
                                cubec_statement_function_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
@@ -442,11 +442,11 @@ static void _evaluate_function(checker_t ctx,
 
   /* Evaluate decorators (skip for generic — evaluated at instantiation) */
   if (info.decorators && !info.generic_params)
-    checker_evaluate_decorators(ctx, info.decorators, DECORATOR_TARGET_FUNC,
+    context_evaluate_decorators(ctx, info.decorators, DECORATOR_TARGET_FUNC,
                                 name, (node_t)node);
 }
 
-static void _check_var_type_completeness(checker_t ctx, node_t loc_node,
+static void _check_var_type_completeness(context_t ctx, node_t loc_node,
                                            semantic_type_t var_type,
                                            const char *name) {
   if (var_type && var_type->impl->kind == TYPE_VOID) {
@@ -462,7 +462,7 @@ static void _check_var_type_completeness(checker_t ctx, node_t loc_node,
   }
 }
 
-static void _evaluate_variable(checker_t ctx,
+static void _evaluate_variable(context_t ctx,
                                cubec_statement_declaration_t node) {
   cubec_declaration_variable_t decl =
       (cubec_declaration_variable_t)node->declarator;
@@ -673,11 +673,11 @@ static void _evaluate_variable(checker_t ctx,
   }
 
   if (node->decorators)
-    checker_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_VAR,
+    context_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_VAR,
                                 name, (node_t)node);
 }
 
-static void _evaluate_type_alias(checker_t ctx,
+static void _evaluate_type_alias(context_t ctx,
                                  cubec_statement_declaration_type_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
@@ -689,7 +689,7 @@ static void _evaluate_type_alias(checker_t ctx,
   /* Register generic params BEFORE resolving type_value,
      so that type expressions can reference the generic parameters. */
   if (node->params) {
-    checker_register_generic_params(ctx, node->params);
+    context_register_generic_params(ctx, node->params);
     sym->type.generic_params = node->params;
   }
 
@@ -731,7 +731,7 @@ static void _evaluate_type_alias(checker_t ctx,
   }
 
   if (node->decorators)
-    checker_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
+    context_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
                                 name, (node_t)node);
 }
 
@@ -740,7 +740,7 @@ static void _evaluate_type_alias(checker_t ctx,
  *
  * Finds project root, sets cubec_home, and loads manifest deps.
  */
-static void _ensure_project_context(checker_t ctx) {
+static void _ensure_project_context(context_t ctx) {
   if (ctx->project_root) return;  /* already initialized */
   if (!ctx->current_file) return;
 
@@ -774,7 +774,7 @@ static void _ensure_project_context(checker_t ctx) {
   }
 }
 
-static void _evaluate_import(checker_t ctx,
+static void _evaluate_import(context_t ctx,
                              cubec_statement_import_t node) {
   const char *name = _checker_ident_str(node->module_name);
   if (!name) return;
@@ -841,7 +841,7 @@ static void _evaluate_import(checker_t ctx,
   }
 
   /* Tokenize */
-  vec_t tokens = resolve_token_list(ctx->allocator, resolved, source);
+  vec_t tokens = resolve_token_list(ctx, resolved, source);
   if (!tokens) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->super.location,
                          "lexing failed for module '%s'", import_path);
@@ -853,7 +853,7 @@ static void _evaluate_import(checker_t ctx,
 
   /* Parse */
   size_t pos = 0;
-  node_t program = read_program_node(ctx->allocator, tokens, &pos, resolved);
+  node_t program = read_program_node(ctx, tokens, &pos, resolved);
   if (!program) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->super.location,
                          "parsing failed for module '%s'", import_path);
@@ -899,12 +899,12 @@ static void _evaluate_import(checker_t ctx,
   source_cache_load(ctx->sources, resolved, source, false);
 
   /* Compile the imported module using the same checker */
-  checker_collect_declarations(ctx, program);
+  context_collect_declarations(ctx, program);
   entry->state = MODULE_PARSED;
-  checker_evaluate_declarations(ctx, program);
+  context_evaluate_declarations(ctx, program);
 
   /* Run function body checking on the imported module */
-  checker_check_function_bodies(ctx, program);
+  context_check_function_bodies(ctx, program);
 
   /* Restore checker state */
   ctx->global_scope = saved_global;
@@ -915,7 +915,7 @@ static void _evaluate_import(checker_t ctx,
   /* Update module entry */
   entry->state = MODULE_CHECKED;
   entry->scope = mod_scope;
-  entry->checker = NULL; /* no separate checker */
+  entry->ctx = NULL; /* no separate checker */
   entry->tokens = tokens;
   entry->program = program;
 
@@ -939,7 +939,7 @@ static void _evaluate_import(checker_t ctx,
  * @param location     Location for diagnostics
  * @param out_resolved If non-NULL, receives the malloc'd resolved path (caller frees)
  */
-static scope_t _load_module_by_path(checker_t ctx, const char *import_path,
+static scope_t _load_module_by_path(context_t ctx, const char *import_path,
                                      location_t location,
                                      char **out_resolved) {
   _ensure_project_context(ctx);
@@ -978,7 +978,7 @@ static scope_t _load_module_by_path(checker_t ctx, const char *import_path,
   }
 
   /* Tokenize */
-  vec_t tokens = resolve_token_list(ctx->allocator, resolved, source);
+  vec_t tokens = resolve_token_list(ctx, resolved, source);
   if (!tokens) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, location,
                          "lexing failed for module '%s'", import_path);
@@ -990,7 +990,7 @@ static scope_t _load_module_by_path(checker_t ctx, const char *import_path,
 
   /* Parse */
   size_t pos = 0;
-  node_t program = read_program_node(ctx->allocator, tokens, &pos, resolved);
+  node_t program = read_program_node(ctx, tokens, &pos, resolved);
   if (!program) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, location,
                          "parsing failed for module '%s'", import_path);
@@ -1025,10 +1025,10 @@ static scope_t _load_module_by_path(checker_t ctx, const char *import_path,
 
   source_cache_load(ctx->sources, resolved, source, false);
 
-  checker_collect_declarations(ctx, program);
+  context_collect_declarations(ctx, program);
   entry->state = MODULE_PARSED;
-  checker_evaluate_declarations(ctx, program);
-  checker_check_function_bodies(ctx, program);
+  context_evaluate_declarations(ctx, program);
+  context_check_function_bodies(ctx, program);
 
   /* Restore checker state */
   ctx->global_scope = saved_global;
@@ -1039,7 +1039,7 @@ static scope_t _load_module_by_path(checker_t ctx, const char *import_path,
   /* Update module entry */
   entry->state = MODULE_CHECKED;
   entry->scope = mod_scope;
-  entry->checker = NULL;
+  entry->ctx = NULL;
   entry->tokens = tokens;
   entry->program = program;
 
@@ -1053,7 +1053,7 @@ static scope_t _load_module_by_path(checker_t ctx, const char *import_path,
  * The proxy shares the type/ast_node references with the original symbol
  * and is marked is_export=true in the current module's scope.
  */
-static struct symbol *_create_proxy_symbol(checker_t ctx,
+static struct symbol *_create_proxy_symbol(context_t ctx,
                                            struct symbol *original,
                                            location_t location) {
   struct symbol *proxy = symbol_create(ctx->allocator, original->name,
@@ -1090,7 +1090,7 @@ static struct symbol *_create_proxy_symbol(checker_t ctx,
   return proxy;
 }
 
-static void _evaluate_export_from(checker_t ctx,
+static void _evaluate_export_from(context_t ctx,
                                   cubec_statement_export_from_t node) {
   /* Extract path string */
   const char *import_path = NULL;
@@ -1166,7 +1166,7 @@ static void _evaluate_export_from(checker_t ctx,
   }
 }
 
-static void _evaluate_comptime_if(checker_t ctx,
+static void _evaluate_comptime_if(context_t ctx,
                                   cubec_statement_comptime_if_t node) {
   if (!ctx->comptime_eval) return;
 
@@ -1205,12 +1205,12 @@ static void _evaluate_comptime_if(checker_t ctx,
         for (size_t i = 0; i < count; i++) {
           if (ctx->fatal_error) break;
           node_t s = (node_t)vec_get(blk->statements, i);
-          checker_collect_statement(ctx, s);
+          context_collect_statement(ctx, s);
         }
         for (size_t i = 0; i < count; i++) {
           if (ctx->fatal_error) break;
           node_t s = (node_t)vec_get(blk->statements, i);
-          checker_evaluate_statement(ctx, s);
+          context_evaluate_statement(ctx, s);
         }
       }
     }
@@ -1225,7 +1225,7 @@ static void _evaluate_comptime_if(checker_t ctx,
     ctx->error_count++;
 }
 
-static void _evaluate_comptime_foreach(checker_t ctx,
+static void _evaluate_comptime_foreach(context_t ctx,
                                        cubec_statement_comptime_foreach_t node) {
   if (!ctx->comptime_eval) return;
   comptime_signal_t sig =
@@ -1235,7 +1235,7 @@ static void _evaluate_comptime_foreach(checker_t ctx,
   else if (sig.kind == COMPTIME_SIGNAL_ERROR) ctx->error_count++;
 }
 
-static void _evaluate_test(checker_t ctx,
+static void _evaluate_test(context_t ctx,
                            cubec_statement_test_t node) {
   if (!ctx->comptime_eval) return;
 
@@ -1275,7 +1275,7 @@ static void _evaluate_test(checker_t ctx,
   }
 }
 
-void checker_evaluate_declarations(checker_t ctx, node_t program) {
+void context_evaluate_declarations(context_t ctx, node_t program) {
   cubec_program_node_t prog = (cubec_program_node_t)program;
   if (!prog || !prog->statements) return;
 
@@ -1284,11 +1284,11 @@ void checker_evaluate_declarations(checker_t ctx, node_t program) {
     if (ctx->fatal_error) break;
     node_t stmt = (node_t)vec_get(prog->statements, i);
     if (!stmt) continue;
-    checker_evaluate_statement(ctx, stmt);
+    context_evaluate_statement(ctx, stmt);
   }
 }
 
-void checker_evaluate_statement(checker_t ctx, node_t stmt) {
+void context_evaluate_statement(context_t ctx, node_t stmt) {
   if (!stmt) return;
 
   switch (stmt->kind) {

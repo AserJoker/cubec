@@ -9,13 +9,13 @@ extern "C" {
  * @brief Register string-related builtins (toString).
  *        Must be called after checker's builtin types are initialized.
  */
-void builtin_table_init_string(builtin_table_t table, struct checker *ctx);
+void builtin_table_init_string(builtin_table_t table, struct context *ctx);
 
 /**
  * @brief Comptime eval callback for toString[T](obj: T): str.
  */
 struct comptime_value *builtin_toString_eval(struct comptime_eval *eval,
-                                            struct checker *ctx, node_t node,
+                                            struct context *ctx, node_t node,
                                             struct builtin_entry *be);
 
 #ifdef __cplusplus

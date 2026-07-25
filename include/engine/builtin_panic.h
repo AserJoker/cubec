@@ -5,9 +5,9 @@
 extern "C" {
 #endif
 
-void builtin_table_init_panic(builtin_table_t table, struct checker *ctx);
+void builtin_table_init_panic(builtin_table_t table, struct context *ctx);
 struct comptime_value *builtin_panic_eval(struct comptime_eval *eval,
-                                          struct checker *ctx, node_t node,
+                                          struct context *ctx, node_t node,
                                           struct builtin_entry *be);
 
 #ifdef __cplusplus

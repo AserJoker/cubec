@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-comptime_value_t _comptime_eval_binary(comptime_eval_t eval, checker_t ctx,
+comptime_value_t _comptime_eval_binary(comptime_eval_t eval, context_t ctx,
                                         node_t node);
 
 #ifdef __cplusplus

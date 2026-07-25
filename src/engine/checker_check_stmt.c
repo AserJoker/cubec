@@ -1,4 +1,4 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/checker_check_stmt.h"
 #include "engine/checker_check_expr.h"
 #include "engine/checker_func_util.h"
@@ -63,15 +63,15 @@
 
 /* ===== Pass 3: Statement Checking ===== */
 
-flow_state_t _check_statement(checker_t ctx, node_t stmt,
+flow_state_t _check_statement(context_t ctx, node_t stmt,
                                semantic_type_t return_type);
-static void _register_func_params(checker_t ctx,
+static void _register_func_params(context_t ctx,
                                     cubec_statement_function_t fn,
                                     vec_t params);
 
 /* --- block --- */
 
-static flow_state_t _check_stmt_block(checker_t ctx,
+static flow_state_t _check_stmt_block(context_t ctx,
                                        cubec_statement_block_t block,
                                        semantic_type_t return_type) {
   if (!block || !block->statements) {
@@ -119,7 +119,7 @@ static flow_state_t _check_stmt_block(checker_t ctx,
 
 /* --- if --- */
 
-static flow_state_t _check_stmt_if(checker_t ctx, node_t stmt,
+static flow_state_t _check_stmt_if(context_t ctx, node_t stmt,
                                     semantic_type_t return_type) {
   cubec_statement_if_t sif = (cubec_statement_if_t)stmt;
   semantic_type_t ct = _check_expression(ctx, sif->condition);
@@ -152,7 +152,7 @@ static flow_state_t _check_stmt_if(checker_t ctx, node_t stmt,
 
 /* --- while --- */
 
-static flow_state_t _check_stmt_while(checker_t ctx, node_t stmt,
+static flow_state_t _check_stmt_while(context_t ctx, node_t stmt,
                                        semantic_type_t return_type) {
   cubec_statement_while_t sw = (cubec_statement_while_t)stmt;
   semantic_type_t ct = _check_expression(ctx, sw->condition);
@@ -178,7 +178,7 @@ static flow_state_t _check_stmt_while(checker_t ctx, node_t stmt,
 
 /* --- do-while --- */
 
-static flow_state_t _check_stmt_do_while(checker_t ctx, node_t stmt,
+static flow_state_t _check_stmt_do_while(context_t ctx, node_t stmt,
                                           semantic_type_t return_type) {
   cubec_statement_do_while_t dw = (cubec_statement_do_while_t)stmt;
   /* Save pre-loop flow state (loop may not continue after first iteration) */
@@ -203,7 +203,7 @@ static flow_state_t _check_stmt_do_while(checker_t ctx, node_t stmt,
 
 /* --- for --- */
 
-static flow_state_t _check_stmt_for(checker_t ctx, node_t stmt,
+static flow_state_t _check_stmt_for(context_t ctx, node_t stmt,
                                      semantic_type_t return_type) {
   cubec_statement_for_t sf = (cubec_statement_for_t)stmt;
   scope_t saved = ctx->current_scope;
@@ -239,7 +239,7 @@ static flow_state_t _check_stmt_for(checker_t ctx, node_t stmt,
 
 /* --- foreach --- */
 
-static flow_state_t _check_stmt_foreach(checker_t ctx, node_t stmt,
+static flow_state_t _check_stmt_foreach(context_t ctx, node_t stmt,
                                          semantic_type_t return_type) {
   cubec_statement_foreach_t sfe = (cubec_statement_foreach_t)stmt;
   semantic_type_t iter_type = _check_expression(ctx, sfe->iterator);
@@ -317,7 +317,7 @@ static flow_state_t _check_stmt_foreach(checker_t ctx, node_t stmt,
 
 /* --- switch --- */
 
-static flow_state_t _check_stmt_switch(checker_t ctx, node_t stmt,
+static flow_state_t _check_stmt_switch(context_t ctx, node_t stmt,
                                         semantic_type_t return_type) {
   cubec_statement_switch_t ss = (cubec_statement_switch_t)stmt;
   _check_expression(ctx, ss->condition);
@@ -360,7 +360,7 @@ static flow_state_t _check_stmt_switch(checker_t ctx, node_t stmt,
 
 /* --- declaration --- */
 
-static flow_state_t _check_stmt_declaration(checker_t ctx, node_t stmt) {
+static flow_state_t _check_stmt_declaration(context_t ctx, node_t stmt) {
   cubec_statement_declaration_t sdecl =
       (cubec_statement_declaration_t)stmt;
   cubec_declaration_variable_t vdecl =
@@ -543,7 +543,7 @@ static flow_state_t _check_stmt_declaration(checker_t ctx, node_t stmt) {
 
 /* --- return --- */
 
-static flow_state_t _check_stmt_return(checker_t ctx, node_t stmt,
+static flow_state_t _check_stmt_return(context_t ctx, node_t stmt,
                                         semantic_type_t return_type) {
   cubec_statement_return_t ret = (cubec_statement_return_t)stmt;
   if (ret->expression) {
@@ -577,7 +577,7 @@ static flow_state_t _check_stmt_return(checker_t ctx, node_t stmt,
 
 /* --- defer --- */
 
-static flow_state_t _check_stmt_defer(checker_t ctx, node_t stmt,
+static flow_state_t _check_stmt_defer(context_t ctx, node_t stmt,
                                        semantic_type_t return_type) {
   cubec_statement_defer_t sd = (cubec_statement_defer_t)stmt;
 
@@ -612,7 +612,7 @@ static flow_state_t _check_stmt_defer(checker_t ctx, node_t stmt,
 
 /* --- comptime if --- */
 
-static flow_state_t _check_stmt_comptime_if(checker_t ctx, node_t stmt,
+static flow_state_t _check_stmt_comptime_if(context_t ctx, node_t stmt,
                                              semantic_type_t return_type) {
   cubec_statement_comptime_if_t ci =
       (cubec_statement_comptime_if_t)stmt;
@@ -664,7 +664,7 @@ static flow_state_t _check_stmt_comptime_if(checker_t ctx, node_t stmt,
 
 /* --- comptime foreach --- */
 
-static flow_state_t _check_stmt_comptime_foreach(checker_t ctx, node_t stmt,
+static flow_state_t _check_stmt_comptime_foreach(context_t ctx, node_t stmt,
                                                    semantic_type_t return_type) {
   cubec_statement_comptime_foreach_t cf =
       (cubec_statement_comptime_foreach_t)stmt;
@@ -745,22 +745,22 @@ static flow_state_t _check_stmt_comptime_foreach(checker_t ctx, node_t stmt,
 
 /* --- local type declaration checkers (forward declarations) --- */
 
-static flow_state_t _check_stmt_local_function(checker_t ctx,
+static flow_state_t _check_stmt_local_function(context_t ctx,
                                                 cubec_statement_function_t node);
-static flow_state_t _check_stmt_local_struct(checker_t ctx,
+static flow_state_t _check_stmt_local_struct(context_t ctx,
                                               cubec_statement_struct_t node);
-static flow_state_t _check_stmt_local_union(checker_t ctx,
+static flow_state_t _check_stmt_local_union(context_t ctx,
                                              cubec_statement_union_t node);
-static flow_state_t _check_stmt_local_cunion(checker_t ctx,
+static flow_state_t _check_stmt_local_cunion(context_t ctx,
                                               cubec_statement_cunion_t node);
-static flow_state_t _check_stmt_local_enum(checker_t ctx,
+static flow_state_t _check_stmt_local_enum(context_t ctx,
                                             cubec_statement_enum_t node);
-static semantic_type_t _find_method_type(checker_t ctx, semantic_type_t t,
+static semantic_type_t _find_method_type(context_t ctx, semantic_type_t t,
                                          const char *mname);
 
 /* --- statement dispatch --- */
 
-static flow_state_t _check_stmt_invalid_declaration(checker_t ctx, node_t stmt) {
+static flow_state_t _check_stmt_invalid_declaration(context_t ctx, node_t stmt) {
   if (stmt->kind == CUBEC_NODE_STATEMENT_STRUCT ||
       stmt->kind == CUBEC_NODE_STATEMENT_ENUM ||
       stmt->kind == CUBEC_NODE_STATEMENT_UNION ||
@@ -777,7 +777,7 @@ static flow_state_t _check_stmt_invalid_declaration(checker_t ctx, node_t stmt) 
   return flow_state_alive(ctx->allocator);
 }
 
-static flow_state_t _check_stmt_break_or_continue(checker_t ctx, node_t stmt,
+static flow_state_t _check_stmt_break_or_continue(context_t ctx, node_t stmt,
                                                    const char *keyword) {
   if (ctx->loop_depth <= 0) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, stmt->location,
@@ -792,7 +792,7 @@ static flow_state_t _check_stmt_break_or_continue(checker_t ctx, node_t stmt,
   return fs;
 }
 
-flow_state_t _check_statement(checker_t ctx, node_t stmt,
+flow_state_t _check_statement(context_t ctx, node_t stmt,
                               semantic_type_t return_type) {
   if (!stmt) return flow_state_alive(ctx->allocator);
   flow_state_t fs;
@@ -894,7 +894,7 @@ flow_state_t _check_statement(checker_t ctx, node_t stmt,
 
 /* --- function body checker --- */
 
-static flow_state_t _check_stmt_local_function(checker_t ctx,
+static flow_state_t _check_stmt_local_function(context_t ctx,
                                                 cubec_statement_function_t node) {
   if (!node) return flow_state_alive(ctx->allocator);
 
@@ -951,7 +951,7 @@ static flow_state_t _check_stmt_local_function(checker_t ctx,
 
 /* --- local struct declaration checker --- */
 
-static flow_state_t _check_stmt_local_struct(checker_t ctx,
+static flow_state_t _check_stmt_local_struct(context_t ctx,
                                               cubec_statement_struct_t node) {
   if (!node) return flow_state_alive(ctx->allocator);
   const char *name = _checker_ident_str(node->name);
@@ -970,7 +970,7 @@ static flow_state_t _check_stmt_local_struct(checker_t ctx,
 
   /* Resolve fields and methods */
   _resolve_struct_fields(ctx, t, node->members);
-  checker_evaluate_struct_union_members(ctx, t, node->members, 0);
+  context_evaluate_struct_union_members(ctx, t, node->members, 0);
 
   /* Compute layout */
   type_layout_compute(t, 8);
@@ -1002,7 +1002,7 @@ static flow_state_t _check_stmt_local_struct(checker_t ctx,
 
 /* --- local union declaration checker --- */
 
-static flow_state_t _check_stmt_local_union(checker_t ctx,
+static flow_state_t _check_stmt_local_union(context_t ctx,
                                              cubec_statement_union_t node) {
   if (!node) return flow_state_alive(ctx->allocator);
   const char *name = _checker_ident_str(node->name);
@@ -1020,7 +1020,7 @@ static flow_state_t _check_stmt_local_union(checker_t ctx,
 
   /* Resolve fields and methods */
   _resolve_union_fields(ctx, t, node->members);
-  checker_evaluate_struct_union_members(ctx, t, node->members, 0);
+  context_evaluate_struct_union_members(ctx, t, node->members, 0);
 
   type_layout_compute(t, 8);
   type_hash_ensure(t);
@@ -1051,7 +1051,7 @@ static flow_state_t _check_stmt_local_union(checker_t ctx,
 
 /* --- local cunion declaration checker --- */
 
-static flow_state_t _check_stmt_local_cunion(checker_t ctx,
+static flow_state_t _check_stmt_local_cunion(context_t ctx,
                                               cubec_statement_cunion_t node) {
   if (!node) return flow_state_alive(ctx->allocator);
   const char *name = _checker_ident_str(node->name);
@@ -1076,7 +1076,7 @@ static flow_state_t _check_stmt_local_cunion(checker_t ctx,
 
 /* --- local enum declaration checker --- */
 
-static flow_state_t _check_stmt_local_enum(checker_t ctx,
+static flow_state_t _check_stmt_local_enum(context_t ctx,
                                             cubec_statement_enum_t node) {
   if (!node) return flow_state_alive(ctx->allocator);
   const char *name = _checker_ident_str(node->name);
@@ -1100,7 +1100,7 @@ static flow_state_t _check_stmt_local_enum(checker_t ctx,
   return flow_state_alive(ctx->allocator);
 }
 
-static void _check_function_body(checker_t ctx,
+static void _check_function_body(context_t ctx,
                                   cubec_statement_function_t node) {
   if (!node || !node->body) return;
 
@@ -1118,7 +1118,7 @@ static void _check_function_body(checker_t ctx,
 
 /* _register_func_params replaced by _register_func_params_from_info in checker_func_util.c */
 
-static semantic_type_t _find_method_type(checker_t ctx, semantic_type_t t,
+static semantic_type_t _find_method_type(context_t ctx, semantic_type_t t,
                                           const char *mname) {
   if (!t) return NULL;
   size_t mcount = vec_get_size(t->instance_methods);
@@ -1130,7 +1130,7 @@ static semantic_type_t _find_method_type(checker_t ctx, semantic_type_t t,
   return NULL;
 }
 
-static void _check_type_method_bodies(checker_t ctx, const char *type_name,
+static void _check_type_method_bodies(context_t ctx, const char *type_name,
                                        vec_t members) {
   if (!members) return;
   semantic_type_t t = NULL;
@@ -1175,7 +1175,7 @@ static void _check_type_method_bodies(checker_t ctx, const char *type_name,
   }
 }
 
-void checker_check_function_bodies(checker_t ctx, node_t program) {
+void context_check_function_bodies(context_t ctx, node_t program) {
   cubec_program_node_t prog = (cubec_program_node_t)program;
   if (!prog || !prog->statements) return;
 
@@ -1209,7 +1209,7 @@ void checker_check_function_bodies(checker_t ctx, node_t program) {
 
 /* ===== worklist-driven body checking (Pass 3 + Pass 4) ===== */
 
-void _enqueue_body_check(checker_t ctx, struct symbol *func_sym,
+void _enqueue_body_check(context_t ctx, struct symbol *func_sym,
                           semantic_type_t inst_type, strmap_t type_bindings,
                           scope_t scope_root, bool is_method,
                           semantic_type_t host_type) {
@@ -1252,7 +1252,7 @@ void _enqueue_body_check(checker_t ctx, struct symbol *func_sym,
   vec_push(ctx->body_check_worklist, entry);
 }
 
-static void _check_body_from_entry(checker_t ctx, body_check_entry_t *entry) {
+static void _check_body_from_entry(context_t ctx, body_check_entry_t *entry) {
   struct symbol *sym = entry->func_sym;
   semantic_type_t inst_type = entry->inst_type;
   strmap_t type_bindings = entry->type_bindings;
@@ -1299,11 +1299,11 @@ done:
   if (type_bindings) allocator_free(ctx->allocator, &type_bindings);
 }
 
-void checker_check_all_bodies(checker_t ctx, node_t program) {
+void context_check_all_bodies(context_t ctx, node_t program) {
   if (!ctx || !program) return;
 
   /* Phase 1: Enqueue non-generic functions and methods */
-  checker_check_function_bodies(ctx, program);
+  context_check_function_bodies(ctx, program);
 
   /* Phase 2: Process worklist — body checking may trigger new entries */
   size_t idx = 0;
@@ -1324,15 +1324,15 @@ void checker_check_all_bodies(checker_t ctx, node_t program) {
 
 /* ===== main entry ===== */
 
-void checker_check_program(checker_t ctx, node_t program) {
+void context_check_program(context_t ctx, node_t program) {
   if (!ctx || !program) return;
 
   /* Pass 1: Declaration collection */
-  checker_collect_declarations(ctx, program);
+  context_collect_declarations(ctx, program);
 
   /* Pass 2: Sequential evaluation and checking */
-  checker_evaluate_declarations(ctx, program);
+  context_evaluate_declarations(ctx, program);
 
   /* Pass 3 + Pass 4: Body checking with worklist-driven generic monomorphization */
-  checker_check_all_bodies(ctx, program);
+  context_check_all_bodies(ctx, program);
 }

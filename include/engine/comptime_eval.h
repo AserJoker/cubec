@@ -1,7 +1,7 @@
 #ifndef _H_CUBEC_ENGINE_COMPTIME_EVAL_
 #define _H_CUBEC_ENGINE_COMPTIME_EVAL_
 #include "core/allocator.h"
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/comptime_alloc.h"
 #include "engine/comptime_value.h"
 #ifdef __cplusplus
@@ -83,20 +83,20 @@ void comptime_eval_dispose(comptime_eval_t self);
 
 /* ===== expression evaluation ===== */
 
-comptime_value_t comptime_eval_expr(comptime_eval_t eval, checker_t ctx,
+comptime_value_t comptime_eval_expr(comptime_eval_t eval, context_t ctx,
                                      node_t expr);
 
 /* ===== statement execution ===== */
 
 struct comptime_signal comptime_eval_exec_block(comptime_eval_t eval,
-                                                 checker_t ctx, node_t block);
+                                                 context_t ctx, node_t block);
 struct comptime_signal comptime_eval_exec_stmt(comptime_eval_t eval,
-                                                checker_t ctx, node_t stmt);
+                                                context_t ctx, node_t stmt);
 struct comptime_signal comptime_eval_exec_comptime_if(comptime_eval_t eval,
-                                                       checker_t ctx,
+                                                       context_t ctx,
                                                        node_t node);
 struct comptime_signal comptime_eval_exec_comptime_foreach(comptime_eval_t eval,
-                                                            checker_t ctx,
+                                                            context_t ctx,
                                                             node_t node);
 
 #ifdef __cplusplus

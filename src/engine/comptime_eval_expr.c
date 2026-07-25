@@ -40,7 +40,7 @@
 /* --- literal evaluation --- */
 
 static comptime_value_t _eval_literal_numeric(comptime_eval_t eval,
-                                               checker_t ctx, node_t node) {
+                                               context_t ctx, node_t node) {
   cubec_literal_numeric_t num = (cubec_literal_numeric_t)node;
   const char *text = string_get(num->value);
   if (!text) return _eval_error_val(eval);
@@ -137,21 +137,21 @@ static comptime_value_t _eval_literal_numeric(comptime_eval_t eval,
 }
 
 static comptime_value_t _eval_literal_string(comptime_eval_t eval,
-                                              checker_t ctx, node_t node) {
+                                              context_t ctx, node_t node) {
   cubec_literal_string_t s = (cubec_literal_string_t)node;
   return _eval_temp(eval, comptime_value_create_string(eval->allocator, string_get(s->value),
                                                          ctx->builtin_str));
 }
 
 static comptime_value_t _eval_literal_char(comptime_eval_t eval,
-                                            checker_t ctx, node_t node) {
+                                            context_t ctx, node_t node) {
   cubec_literal_char_t c = (cubec_literal_char_t)node;
   return _eval_temp(eval, comptime_value_create_char(eval->allocator, c->value,
                                                        ctx->builtin_char));
 }
 
 static comptime_value_t _eval_literal_identifier(comptime_eval_t eval,
-                                                  checker_t ctx, node_t node) {
+                                                  context_t ctx, node_t node) {
   const char *name = _eval_ident_str(node);
   if (!name) return _eval_error_val(eval);
 
@@ -225,7 +225,7 @@ static comptime_value_t _eval_literal_identifier(comptime_eval_t eval,
 
 /* --- assignment evaluation --- */
 
-static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_assignment(comptime_eval_t eval, context_t ctx,
                                           node_t node) {
   cubec_expression_assignment_t asgn = (cubec_expression_assignment_t)node;
   comptime_value_t rv = _comptime_eval_expr(eval, ctx, asgn->right);
@@ -433,7 +433,7 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, checker_t ctx,
 /* --- call evaluation --- */
 
 /* Helper: invoke a comptime function value with given arguments */
-comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
+comptime_value_t _eval_call_function(comptime_eval_t eval, context_t ctx,
                                              comptime_value_t callee,
                                              comptime_value_t *args, size_t acount,
                                              node_t call_node) {
@@ -541,7 +541,7 @@ struct symbol *_find_magic_method(semantic_type_t type, const char *name) {
  *        - pointer host → use the pointer directly
  *        - other → allocate a copy in valloc
  */
-comptime_value_t _eval_method_call(comptime_eval_t eval, checker_t ctx,
+comptime_value_t _eval_method_call(comptime_eval_t eval, context_t ctx,
                                            struct symbol *method,
                                            node_t host_node,
                                            comptime_value_t host_val,
@@ -591,7 +591,7 @@ comptime_value_t _eval_method_call(comptime_eval_t eval, checker_t ctx,
 /* --- method value creation from symbol --- */
 
 comptime_value_t _comptime_create_method_value(comptime_eval_t eval,
-                                                checker_t ctx,
+                                                context_t ctx,
                                                 struct symbol *method_sym) {
   if (!method_sym || method_sym->kind != SYMBOL_FUNCTION || !method_sym->function.ast_node)
     return NULL;
@@ -627,7 +627,7 @@ comptime_value_t _comptime_create_method_value(comptime_eval_t eval,
   return fn_val;
 }
 
-static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_call(comptime_eval_t eval, context_t ctx,
                                     node_t node) {
   cubec_expression_call_t call = (cubec_expression_call_t)node;
   /* --- builtin dispatch --- */
@@ -908,7 +908,7 @@ static comptime_value_t _eval_call(comptime_eval_t eval, checker_t ctx,
 
 /* --- member / namespace access --- */
 
-static comptime_value_t _eval_member(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_member(comptime_eval_t eval, context_t ctx,
                                       node_t node) {
   cubec_expression_member_t mem = (cubec_expression_member_t)node;
   comptime_value_t host = _comptime_eval_expr(eval, ctx, mem->host);
@@ -1025,7 +1025,7 @@ static comptime_value_t _eval_member(comptime_eval_t eval, checker_t ctx,
 }
 
 static comptime_value_t _eval_namespace_access(comptime_eval_t eval,
-                                                checker_t ctx, node_t node) {
+                                                context_t ctx, node_t node) {
   cubec_expression_namespace_access_t ns = (cubec_expression_namespace_access_t)node;
   comptime_value_t host = _comptime_eval_expr(eval, ctx, ns->host);
   if (!host || host->kind != COMPTIME_VALUE_TYPE) return _eval_error_val(eval);
@@ -1129,7 +1129,7 @@ static comptime_value_t _eval_namespace_access(comptime_eval_t eval,
 
 /* --- other expression evaluations --- */
 
-static comptime_value_t _eval_ternary(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_ternary(comptime_eval_t eval, context_t ctx,
                                        node_t node) {
   cubec_expression_ternary_t tern = (cubec_expression_ternary_t)node;
   comptime_value_t cond = _comptime_eval_expr(eval, ctx, tern->condition);
@@ -1139,12 +1139,12 @@ static comptime_value_t _eval_ternary(comptime_eval_t eval, checker_t ctx,
   return _comptime_eval_expr(eval, ctx, tern->alternate);
 }
 
-static comptime_value_t _eval_group(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_group(comptime_eval_t eval, context_t ctx,
                                      node_t node) {
   return _comptime_eval_expr(eval, ctx, ((cubec_expression_group_t)node)->inner);
 }
 
-static comptime_value_t _eval_typeof(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_typeof(comptime_eval_t eval, context_t ctx,
                                       node_t node) {
   cubec_expression_typeof_t to = (cubec_expression_typeof_t)node;
   /* typeof should NOT evaluate its inner expression — only compute its type.
@@ -1160,7 +1160,7 @@ static comptime_value_t _eval_typeof(comptime_eval_t eval, checker_t ctx,
   return _eval_temp(eval, comptime_value_create_type(eval->allocator, type));
 }
 
-static comptime_value_t _eval_sizeof(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_sizeof(comptime_eval_t eval, context_t ctx,
                                       node_t node) {
   /* sizeof should NOT evaluate its inner expression — only compute its type.
    * Try resolver_resolve_type first for type expressions (sizeof(i32)),
@@ -1183,7 +1183,7 @@ static comptime_value_t _eval_sizeof(comptime_eval_t eval, checker_t ctx,
                                                       type->impl->size, 64, false, ctx->builtin_u64));
 }
 
-static comptime_value_t _eval_alignof(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_alignof(comptime_eval_t eval, context_t ctx,
                                        node_t node) {
   /* alignof should NOT evaluate its inner expression — only compute its type. */
   size_t err_before = ctx->error_count;
@@ -1202,7 +1202,7 @@ static comptime_value_t _eval_alignof(comptime_eval_t eval, checker_t ctx,
 }
 
 static comptime_value_t _eval_function_expr(comptime_eval_t eval,
-                                             checker_t ctx, node_t node) {
+                                             context_t ctx, node_t node) {
   cubec_expression_function_t fn = (cubec_expression_function_t)node;
   vec_t param_names = NULL;
   if (fn->arguments) {
@@ -1254,7 +1254,7 @@ static comptime_value_t _eval_function_expr(comptime_eval_t eval,
                                                           param_names, ftype));
 }
 
-static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_init_list(comptime_eval_t eval, context_t ctx,
                                          node_t node) {
   cubec_expression_initialize_list_t il = (cubec_expression_initialize_list_t)node;
   semantic_type_t type = il->type ? resolver_resolve_type(ctx, il->type) : NULL;
@@ -1275,7 +1275,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
             (cubec_expression_initialize_field_t)item;
         const char *fname = _eval_ident_str((node_t)f->field);
         semantic_type_t ftype = f->value
-            ? checker_check_expression(ctx, f->value)
+            ? context_check_expression(ctx, f->value)
             : ctx->error_type;
         struct symbol *fsym = symbol_create(ctx->allocator, fname, SYMBOL_FIELD,
                                             item->location);
@@ -1295,7 +1295,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
                                                    &evi);
       for (size_t i = 0; i < ic; i++) {
         node_t item = (node_t)vec_get(il->items, i);
-        semantic_type_t et = checker_check_expression(ctx, item);
+        semantic_type_t et = context_check_expression(ctx, item);
         vec_push(elem_types, et);
       }
       type = semantic_type_create_tuple(ctx->allocator, elem_types);
@@ -1614,7 +1614,7 @@ static comptime_value_t _eval_init_list(comptime_eval_t eval, checker_t ctx,
   return _eval_error_val(eval);
 }
 
-static comptime_value_t _eval_comma(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_comma(comptime_eval_t eval, context_t ctx,
                                      node_t node) {
   cubec_expression_comma_t c = (cubec_expression_comma_t)node;
   _comptime_eval_expr(eval, ctx, c->left);  /* side effect only, result is temporary */
@@ -1626,7 +1626,7 @@ static comptime_value_t _eval_comma(comptime_eval_t eval, checker_t ctx,
  * call it with the error value and return the constructed value.
  * Returns NULL if propagation could not be performed. */
 static comptime_value_t _propagate_error_value(comptime_eval_t eval,
-                                                checker_t ctx,
+                                                context_t ctx,
                                                 node_t node,
                                                 comptime_value_t err_val) {
   size_t rts = vec_get_size(eval->return_type_stack);
@@ -1666,7 +1666,7 @@ static comptime_value_t _propagate_error_value(comptime_eval_t eval,
   return result;
 }
 
-static comptime_value_t _eval_try(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_try(comptime_eval_t eval, context_t ctx,
                                   node_t node) {
   cubec_expression_binary_t pf = (cubec_expression_binary_t)node;
 
@@ -1808,7 +1808,7 @@ static comptime_value_t _eval_try(comptime_eval_t eval, checker_t ctx,
   return _eval_error_val(eval);
 }
 
-static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, context_t ctx,
                                              node_t node) {
   cubec_expression_binary_t pf = (cubec_expression_binary_t)node;
 
@@ -1934,7 +1934,7 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, checker_t ctx,
   return _eval_error_val(eval);
 }
 
-static comptime_value_t _eval_deref(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_deref(comptime_eval_t eval, context_t ctx,
                                      node_t node) {
   cubec_expression_binary_t deref = (cubec_expression_binary_t)node;
   comptime_value_t val = _comptime_eval_expr(eval, ctx, deref->right);
@@ -1949,7 +1949,7 @@ static comptime_value_t _eval_deref(comptime_eval_t eval, checker_t ctx,
   return pointed;  /* borrowed from alloc */
 }
 
-static comptime_value_t _eval_addr(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_addr(comptime_eval_t eval, context_t ctx,
                                     node_t node) {
   cubec_expression_binary_t addr = (cubec_expression_binary_t)node;
   comptime_value_t val = _comptime_eval_expr(eval, ctx, addr->right);
@@ -1981,7 +1981,7 @@ static comptime_value_t _eval_addr(comptime_eval_t eval, checker_t ctx,
   return _eval_temp(eval, comptime_value_create_pointer(eval->allocator, a, ptr_type));
 }
 
-static comptime_value_t _eval_slice(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_slice(comptime_eval_t eval, context_t ctx,
                                      node_t node) {
   cubec_expression_slice_t sl = (cubec_expression_slice_t)node;
   comptime_value_t host = _comptime_eval_expr(eval, ctx, sl->host);
@@ -2051,7 +2051,7 @@ static comptime_value_t _eval_slice(comptime_eval_t eval, checker_t ctx,
   return _eval_error_val(eval);
 }
 
-static comptime_value_t _eval_generic_inst(comptime_eval_t eval, checker_t ctx,
+static comptime_value_t _eval_generic_inst(comptime_eval_t eval, context_t ctx,
                                             node_t node) {
   cubec_expression_generic_instantiation_t gi =
       (cubec_expression_generic_instantiation_t)node;
@@ -2102,7 +2102,7 @@ static comptime_value_t _eval_generic_inst(comptime_eval_t eval, checker_t ctx,
 
 /* --- main expression dispatcher --- */
 
-comptime_value_t _comptime_eval_expr(comptime_eval_t eval, checker_t ctx,
+comptime_value_t _comptime_eval_expr(comptime_eval_t eval, context_t ctx,
                                       node_t expr) {
   if (!expr) return _eval_error_val(eval);
   eval->eval_expr_count++;
@@ -2180,7 +2180,7 @@ comptime_value_t _comptime_eval_expr(comptime_eval_t eval, checker_t ctx,
   }
 }
 
-comptime_value_t comptime_eval_expr(comptime_eval_t eval, checker_t ctx,
+comptime_value_t comptime_eval_expr(comptime_eval_t eval, context_t ctx,
                                      node_t expr) {
   return _comptime_eval_expr(eval, ctx, expr);
 }

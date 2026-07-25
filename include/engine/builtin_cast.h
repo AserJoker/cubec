@@ -9,13 +9,13 @@ extern "C" {
  * @brief Register cast builtin (func cast[T,K](expr:K):T).
  *        Must be called after checker's builtin types are initialized.
  */
-void builtin_table_init_cast(builtin_table_t table, struct checker *ctx);
+void builtin_table_init_cast(builtin_table_t table, struct context *ctx);
 
 /**
  * @brief Comptime eval callback for cast[T,K](expr:K):T.
  */
 struct comptime_value *builtin_cast_eval(struct comptime_eval *eval,
-                                         struct checker *ctx, node_t node,
+                                         struct context *ctx, node_t node,
                                          struct builtin_entry *be);
 
 #ifdef __cplusplus

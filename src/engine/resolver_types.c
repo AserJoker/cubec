@@ -36,7 +36,7 @@ const char *_resolver_ident_str(node_t id_node) {
 
 /* ===== type resolution sub-functions ===== */
 
-semantic_type_t _resolve_type_identifier(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_identifier(context_t ctx, node_t node) {
   const char *name = _resolver_ident_str(node);
   if (!name) return ctx->error_type;
 
@@ -93,7 +93,7 @@ semantic_type_t _resolve_type_identifier(checker_t ctx, node_t node) {
   return ctx->error_type;
 }
 
-semantic_type_t _resolve_type_pointer(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_pointer(context_t ctx, node_t node) {
   cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
   semantic_type_t base = resolver_resolve_type(ctx, ptr->type);
   if (base->impl->kind == TYPE_ERROR) return ctx->error_type;
@@ -115,7 +115,7 @@ semantic_type_t _resolve_type_pointer(checker_t ctx, node_t node) {
   return result;
 }
 
-semantic_type_t _resolve_type_slice(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_slice(context_t ctx, node_t node) {
   cubec_declaration_slice_t sl = (cubec_declaration_slice_t)node;
   semantic_type_t elem = resolver_resolve_type(ctx, sl->type);
   if (elem->impl->kind == TYPE_ERROR) return ctx->error_type;
@@ -135,7 +135,7 @@ semantic_type_t _resolve_type_slice(checker_t ctx, node_t node) {
   return result;
 }
 
-semantic_type_t _resolve_type_array(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_array(context_t ctx, node_t node) {
   cubec_declaration_array_t arr = (cubec_declaration_array_t)node;
   semantic_type_t elem = resolver_resolve_type(ctx, arr->type);
   if (elem->impl->kind == TYPE_ERROR) return ctx->error_type;
@@ -193,7 +193,7 @@ semantic_type_t _resolve_type_array(checker_t ctx, node_t node) {
   return result;
 }
 
-semantic_type_t _resolve_type_qualifier(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_qualifier(context_t ctx, node_t node) {
   cubec_expression_type_qualifier_t q =
       (cubec_expression_type_qualifier_t)node;
   semantic_type_t base = resolver_resolve_type(ctx, q->type);
@@ -206,7 +206,7 @@ semantic_type_t _resolve_type_qualifier(checker_t ctx, node_t node) {
   return result;
 }
 
-semantic_type_t _resolve_type_struct(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_struct(context_t ctx, node_t node) {
   cubec_expression_type_struct_t st =
       (cubec_expression_type_struct_t)node;
   semantic_type_t t =
@@ -243,7 +243,7 @@ semantic_type_t _resolve_type_struct(checker_t ctx, node_t node) {
   return t;
 }
 
-semantic_type_t _resolve_type_tuple(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_tuple(context_t ctx, node_t node) {
   cubec_expression_type_tuple_t tt =
       (cubec_expression_type_tuple_t)node;
 
@@ -266,7 +266,7 @@ semantic_type_t _resolve_type_tuple(checker_t ctx, node_t node) {
   return t;
 }
 
-semantic_type_t _resolve_type_enum(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_enum(context_t ctx, node_t node) {
   cubec_expression_type_enum_t en =
       (cubec_expression_type_enum_t)node;
   semantic_type_t t =
@@ -317,7 +317,7 @@ semantic_type_t _resolve_type_enum(checker_t ctx, node_t node) {
   return t;
 }
 
-semantic_type_t _resolve_type_union(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_union(context_t ctx, node_t node) {
   cubec_expression_type_union_t un =
       (cubec_expression_type_union_t)node;
   semantic_type_t t =
@@ -354,7 +354,7 @@ semantic_type_t _resolve_type_union(checker_t ctx, node_t node) {
   return t;
 }
 
-semantic_type_t _resolve_type_interface(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_interface(context_t ctx, node_t node) {
   cubec_expression_type_interface_t iface =
       (cubec_expression_type_interface_t)node;
   semantic_type_t t =
@@ -388,7 +388,7 @@ semantic_type_t _resolve_type_interface(checker_t ctx, node_t node) {
   return t;
 }
 
-semantic_type_t _resolve_type_function(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_function(context_t ctx, node_t node) {
   cubec_expression_type_function_t ft =
       (cubec_expression_type_function_t)node;
 
@@ -415,7 +415,7 @@ semantic_type_t _resolve_type_function(checker_t ctx, node_t node) {
   return result;
 }
 
-semantic_type_t _resolve_type_namespace_access(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_namespace_access(context_t ctx, node_t node) {
   cubec_expression_namespace_access_t ns =
       (cubec_expression_namespace_access_t)node;
   const char *field_name = _resolver_ident_str((node_t)ns->field);
@@ -465,9 +465,9 @@ semantic_type_t _resolve_type_namespace_access(checker_t ctx, node_t node) {
   return ctx->error_type;
 }
 
-semantic_type_t _resolve_type_typeof(checker_t ctx, node_t node) {
+semantic_type_t _resolve_type_typeof(context_t ctx, node_t node) {
   cubec_expression_typeof_t to = (cubec_expression_typeof_t)node;
-  semantic_type_t inner = checker_check_expression(ctx, to->expression);
+  semantic_type_t inner = context_check_expression(ctx, to->expression);
   if (!inner || inner->impl->kind == TYPE_ERROR) return ctx->error_type;
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, NULL, TYPE_TYPE);

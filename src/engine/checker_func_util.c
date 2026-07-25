@@ -16,7 +16,7 @@
 #include <string.h>
 
 /* Forward declaration — defined in checker_check_stmt.c */
-flow_state_t _check_statement(checker_t ctx, node_t stmt,
+flow_state_t _check_statement(context_t ctx, node_t stmt,
                                semantic_type_t return_type);
 
 /* Forward declaration — defined in checker_check_stmt.c */
@@ -64,7 +64,7 @@ void func_check_info_from_expression(func_check_info_t *info,
 
 /* ===== unified parameter type resolution ===== */
 
-vec_t _resolve_func_param_types(checker_t ctx, const func_check_info_t *info) {
+vec_t _resolve_func_param_types(context_t ctx, const func_check_info_t *info) {
   vec_init_t vi = {.auto_dispose = false};
   vec_t param_types = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
   if (!info->arguments) return param_types;
@@ -82,7 +82,7 @@ vec_t _resolve_func_param_types(checker_t ctx, const func_check_info_t *info) {
 
 /* ===== unified parameter symbol registration ===== */
 
-void _register_func_params_from_info(checker_t ctx,
+void _register_func_params_from_info(context_t ctx,
                                       const func_check_info_t *info,
                                       vec_t param_types) {
   if (!info->arguments) return;
@@ -106,7 +106,7 @@ void _register_func_params_from_info(checker_t ctx,
 
 /* ===== unified capture registration ===== */
 
-void _register_func_captures(checker_t ctx, const func_check_info_t *info,
+void _register_func_captures(context_t ctx, const func_check_info_t *info,
                               scope_t enclosing_scope) {
   if (!info->captures) return;
   size_t cc = vec_get_size(info->captures);
@@ -138,7 +138,7 @@ void _register_func_captures(checker_t ctx, const func_check_info_t *info,
 
 /* ===== unified function body check + return exhaustiveness ===== */
 
-void _check_func_body_and_returns(checker_t ctx,
+void _check_func_body_and_returns(context_t ctx,
                                     const func_check_info_t *info,
                                     semantic_type_t return_type,
                                     vec_t param_types,
@@ -176,7 +176,7 @@ void _check_func_body_and_returns(checker_t ctx,
 
 /* ===== unified generic params registration ===== */
 
-void checker_register_generic_params(checker_t ctx, vec_t generic_params) {
+void context_register_generic_params(context_t ctx, vec_t generic_params) {
   if (!generic_params) return;
   size_t count = vec_get_size(generic_params);
   bool seen_rest = false;
@@ -229,7 +229,7 @@ void checker_register_generic_params(checker_t ctx, vec_t generic_params) {
 
 /* ===== unified function processing ===== */
 
-semantic_type_t _process_function(checker_t ctx, func_check_info_t *info,
+semantic_type_t _process_function(context_t ctx, func_check_info_t *info,
                                    func_context_t *fctx) {
   /* 1. Register generic params */
   scope_t saved = ctx->current_scope;
@@ -239,7 +239,7 @@ semantic_type_t _process_function(checker_t ctx, func_check_info_t *info,
           SCOPE_BLOCK, info->location);
       vec_push(ctx->all_scopes, ctx->current_scope);
     }
-    checker_register_generic_params(ctx, info->generic_params);
+    context_register_generic_params(ctx, info->generic_params);
   }
 
   /* 2. Resolve return type and parameter types */

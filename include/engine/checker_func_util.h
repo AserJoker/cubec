@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_ENGINE_CHECKER_FUNC_UTIL_
 #define _H_CUBEC_ENGINE_CHECKER_FUNC_UTIL_
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/symbol.h"
 #include "core/node.h"
 #include "core/vec.h"
@@ -45,15 +45,15 @@ void func_check_info_from_expression(func_check_info_t *info,
                                       cubec_expression_function_t node);
 
 /* Resolve parameter types from func_check_info */
-vec_t _resolve_func_param_types(checker_t ctx, const func_check_info_t *info);
+vec_t _resolve_func_param_types(context_t ctx, const func_check_info_t *info);
 
 /* Register parameter symbols in current scope from func_check_info + resolved types */
-void _register_func_params_from_info(checker_t ctx,
+void _register_func_params_from_info(context_t ctx,
                                       const func_check_info_t *info,
                                       vec_t param_types);
 
 /* Register captures (with TDZ check) in the function scope */
-void _register_func_captures(checker_t ctx, const func_check_info_t *info,
+void _register_func_captures(context_t ctx, const func_check_info_t *info,
                               scope_t enclosing_scope);
 
 /* Check function body and return exhaustiveness.
@@ -62,14 +62,14 @@ void _register_func_captures(checker_t ctx, const func_check_info_t *info,
  *   - local functions: pass saved (= enclosing scope)
  *   - global methods: pass ctx->global_scope
  *   - local methods: pass saved (= enclosing scope) */
-void _check_func_body_and_returns(checker_t ctx,
+void _check_func_body_and_returns(context_t ctx,
                                     const func_check_info_t *info,
                                     semantic_type_t return_type,
                                     vec_t param_types,
                                     scope_t scope_root);
 
 /* Unified generic params registration (merges collect.c and evaluate.c versions) */
-void checker_register_generic_params(checker_t ctx, vec_t generic_params);
+void context_register_generic_params(context_t ctx, vec_t generic_params);
 
 /**
  * @brief Context controlling how _process_function handles a function declaration.
@@ -93,7 +93,7 @@ typedef struct func_context {
  * Returns the created function type. Callers handle post-processing
  * (builtin validation, comptime binding, etc.) themselves.
  */
-semantic_type_t _process_function(checker_t ctx, func_check_info_t *info,
+semantic_type_t _process_function(context_t ctx, func_check_info_t *info,
                                    func_context_t *fctx);
 
 #ifdef __cplusplus

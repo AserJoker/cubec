@@ -1,4 +1,4 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/checker_type_util.h"
 #include "engine/checker_collect.h"
 #include "engine/checker_evaluate.h"
@@ -76,7 +76,7 @@
 
 /* ===== builtin type registration ===== */
 
-static semantic_type_t _register_builtin(checker_t ctx, const char *name,
+static semantic_type_t _register_builtin(context_t ctx, const char *name,
                                           enum type_kind kind) {
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, name, kind);
@@ -102,7 +102,7 @@ static semantic_type_t _register_builtin(checker_t ctx, const char *name,
   return t;
 }
 
-static void _register_builtins(checker_t ctx) {
+static void _register_builtins(context_t ctx) {
   ctx->builtin_void   = _register_builtin(ctx, "void",   TYPE_VOID);
   ctx->builtin_bool   = _register_builtin(ctx, "bool",   TYPE_BOOL);
   ctx->builtin_i8     = _register_builtin(ctx, "i8",     TYPE_I8);
@@ -123,12 +123,12 @@ static void _register_builtins(checker_t ctx) {
   ctx->error_type     = _register_builtin(ctx, "<error>", TYPE_ERROR);
 }
 
-/* ===== checker lifecycle ===== */
+/* ===== context lifecycle ===== */
 
-static void _checker_init(void *self, allocator_t allocator, void *arg) {
+static void _context_init(void *self, allocator_t allocator, void *arg) {
   (void)arg;
-  checker_t ctx = (checker_t)self;
-  memset(ctx, 0, sizeof(struct checker));
+  context_t ctx = (context_t)self;
+  memset(ctx, 0, sizeof(struct context));
   ctx->allocator = allocator;
 
   /* Create global scope */
@@ -195,8 +195,8 @@ static void _checker_init(void *self, allocator_t allocator, void *arg) {
   ctx->cubec_home = env_home ? strdup(env_home) : NULL;
 }
 
-static void _checker_dispose(void *self, allocator_t allocator) {
-  checker_t ctx = (checker_t)self;
+static void _context_dispose(void *self, allocator_t allocator) {
+  context_t ctx = (context_t)self;
   (void)allocator;
 
   /* Dispose comptime evaluator first (values reference semantic types) */
@@ -245,22 +245,22 @@ static void _checker_dispose(void *self, allocator_t allocator) {
   }
 }
 
-type_t g_checker_type = {
-    .size = sizeof(struct checker),
-    .name = "cubec.engine.checker",
-    .init = (type_init_fn_t)_checker_init,
-    .dispose = (type_dispose_fn_t)_checker_dispose,
+type_t g_context_type = {
+    .size = sizeof(struct context),
+    .name = "cubec.engine.context",
+    .init = (type_init_fn_t)_context_init,
+    .dispose = (type_dispose_fn_t)_context_dispose,
 };
 
-checker_t checker_create(allocator_t allocator) {
-  return (checker_t)allocator_create(allocator, &g_checker_type, NULL);
+context_t context_create(allocator_t allocator) {
+  return (context_t)allocator_create(allocator, &g_context_type, NULL);
 }
 
-void checker_dispose(checker_t ctx) {
+void context_dispose(context_t ctx) {
   allocator_free(ctx->allocator, &ctx);
 }
 
-int checker_get_error_count(checker_t ctx) {
+int context_get_error_count(context_t ctx) {
   return ctx ? ctx->error_count : 0;
 }
 

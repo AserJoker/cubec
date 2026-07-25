@@ -90,13 +90,13 @@ static inline comptime_signal_t _eval_signal_fatal(void) {
 }
 
 /* Forward declarations for cross-file calls */
-comptime_value_t _comptime_eval_expr(comptime_eval_t eval, checker_t ctx,
+comptime_value_t _comptime_eval_expr(comptime_eval_t eval, context_t ctx,
                                       node_t expr);
-comptime_signal_t _comptime_exec_block(comptime_eval_t eval, checker_t ctx,
+comptime_signal_t _comptime_exec_block(comptime_eval_t eval, context_t ctx,
                                         node_t block);
-comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
+comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, context_t ctx,
                                        node_t stmt);
-comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
+comptime_value_t _eval_call_function(comptime_eval_t eval, context_t ctx,
                                       comptime_value_t callee,
                                       comptime_value_t *args, size_t acount,
                                       node_t call_node);
@@ -104,7 +104,7 @@ comptime_value_t _eval_call_function(comptime_eval_t eval, checker_t ctx,
 /* Create a comptime function value from a method symbol's ast_node.
  * Used by foreach dispatch and _eval_member for instance method calls. */
 comptime_value_t _comptime_create_method_value(comptime_eval_t eval,
-                                                checker_t ctx,
+                                                context_t ctx,
                                                 struct symbol *method_sym);
 
 /* Find a magic method by name in a type's instance_methods */
@@ -113,7 +113,7 @@ struct symbol *_find_magic_method(semantic_type_t type, const char *name);
 /* Evaluate a method call: creates method value, builds [self, ...extra_args]
  * using the same self-construction logic as member call desugaring
  * (identifier→env addr, pointer→direct, other→alloc copy). */
-comptime_value_t _eval_method_call(comptime_eval_t eval, checker_t ctx,
+comptime_value_t _eval_method_call(comptime_eval_t eval, context_t ctx,
                                     struct symbol *method,
                                     node_t host_node,
                                     comptime_value_t host_val,

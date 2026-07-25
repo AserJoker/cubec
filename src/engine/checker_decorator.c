@@ -56,7 +56,7 @@ static const char *_value_kind_name(enum comptime_value_kind kind) {
  * For VAR/FUNC: look up by name in comptime env.
  * For TYPE: create a COMPTIME_VALUE_TYPE wrapping the semantic type.
  */
-static comptime_value_t _get_decorated_item(checker_t ctx,
+static comptime_value_t _get_decorated_item(context_t ctx,
                                              decorator_target_t target,
                                              const char *name,
                                              node_t ast_node) {
@@ -94,7 +94,7 @@ static comptime_value_t _get_decorated_item(checker_t ctx,
  *
  * For TYPE: in-place mutation — no binding update needed.
  */
-static void _apply_decorator_result(checker_t ctx, decorator_target_t target,
+static void _apply_decorator_result(context_t ctx, decorator_target_t target,
                                      const char *name, node_t ast_node,
                                      comptime_value_t result,
                                      bool *original_saved) {
@@ -142,7 +142,7 @@ static void _apply_decorator_result(checker_t ctx, decorator_target_t target,
 
 /* ===== public API ===== */
 
-void checker_evaluate_decorators(checker_t ctx, vec_t decorators,
+void context_evaluate_decorators(context_t ctx, vec_t decorators,
                                   decorator_target_t target,
                                   const char *name, node_t ast_node) {
   if (!ctx || !decorators || !name) return;

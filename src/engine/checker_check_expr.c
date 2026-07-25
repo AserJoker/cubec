@@ -1,4 +1,4 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/checker_check_expr.h"
 #include "engine/checker_check_expr_helpers.h"
 #include "engine/checker_check_stmt.h"
@@ -46,7 +46,7 @@
 
 /* ===== expression checker sub-functions ===== */
 
-static semantic_type_t _check_expr_literal_identifier(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_literal_identifier(context_t ctx, node_t expr) {
   const char *name = _checker_ident_str(expr);
   if (!name) return ctx->error_type;
 
@@ -99,7 +99,7 @@ static semantic_type_t _check_expr_literal_identifier(checker_t ctx, node_t expr
   }
 }
 
-static semantic_type_t _check_expr_literal_undefined(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_literal_undefined(context_t ctx, node_t expr) {
   /* undefined is only valid as a variable initializer (handled in
    * _check_stmt_declaration).  Using it as a standalone expression
    * is an error — it has no type of its own. */
@@ -109,7 +109,7 @@ static semantic_type_t _check_expr_literal_undefined(checker_t ctx, node_t expr)
   return ctx->error_type;
 }
 
-static semantic_type_t _check_expr_prefix_unary(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_prefix_unary(context_t ctx, node_t expr) {
   cubec_expression_binary_t bin = (cubec_expression_binary_t)expr;
   const char *op = string_get(bin->opt);
   semantic_type_t rt = _check_expression(ctx, bin->right);
@@ -145,7 +145,7 @@ static semantic_type_t _check_expr_prefix_unary(checker_t ctx, node_t expr) {
   return rt;
 }
 
-static semantic_type_t _check_expr_binary(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_binary(context_t ctx, node_t expr) {
   cubec_expression_binary_t bin = (cubec_expression_binary_t)expr;
   const char *op = string_get(bin->opt);
 
@@ -229,7 +229,7 @@ static semantic_type_t _check_expr_binary(checker_t ctx, node_t expr) {
 }
 
 /* Check if an lvalue expression refers to a const-qualified location */
-static bool _is_const_lvalue(checker_t ctx, node_t expr, semantic_type_t expr_type) {
+static bool _is_const_lvalue(context_t ctx, node_t expr, semantic_type_t expr_type) {
   if (!expr || !expr_type) return false;
 
   switch (expr->kind) {
@@ -266,7 +266,7 @@ static bool _is_const_lvalue(checker_t ctx, node_t expr, semantic_type_t expr_ty
   }
 }
 
-static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_assignment(context_t ctx, node_t expr) {
   cubec_expression_assignment_t asgn = (cubec_expression_assignment_t)expr;
   const char *op = string_get(asgn->opt);
 
@@ -338,7 +338,7 @@ static semantic_type_t _check_expr_assignment(checker_t ctx, node_t expr) {
   return ctx->builtin_void;
 }
 
-static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
   cubec_expression_call_t call = (cubec_expression_call_t)expr;
   semantic_type_t callee_type = NULL;
   bool is_explicit_method_call = false;  /* obj.method[T](args) — skip self in arg check */
@@ -877,7 +877,7 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
    Currently all code is in the same module, so only pub matters for future
    cross-module access. When module system is implemented, this will check
    whether the accessing scope is in the same module as the struct definition. */
-static bool _is_field_accessible(checker_t ctx,
+static bool _is_field_accessible(context_t ctx,
                                   struct symbol *field_sym,
                                   semantic_type_t owner_type) {
   if (!field_sym->field.is_pub) {
@@ -892,7 +892,7 @@ static bool _is_field_accessible(checker_t ctx,
   return true;
 }
 
-static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_member(context_t ctx, node_t expr) {
   cubec_expression_member_t mem = (cubec_expression_member_t)expr;
   semantic_type_t host_type = _check_expression(ctx, mem->host);
   if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
@@ -1034,7 +1034,7 @@ static semantic_type_t _check_expr_member(checker_t ctx, node_t expr) {
   return ctx->error_type;
 }
 
-static semantic_type_t _check_expr_namespace_access(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_namespace_access(context_t ctx, node_t expr) {
   cubec_expression_namespace_access_t ns =
       (cubec_expression_namespace_access_t)expr;
   semantic_type_t host_type = _check_expression(ctx, ns->host);
@@ -1123,7 +1123,7 @@ static semantic_type_t _check_expr_namespace_access(checker_t ctx, node_t expr) 
   return ctx->error_type;
 }
 
-static semantic_type_t _check_expr_deref(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_deref(context_t ctx, node_t expr) {
   cubec_expression_postfix_unary_t pf =
       (cubec_expression_postfix_unary_t)expr;
   semantic_type_t host_type = _check_expression(ctx, pf->right);
@@ -1140,7 +1140,7 @@ static semantic_type_t _check_expr_deref(checker_t ctx, node_t expr) {
   return unqualified->impl->pointer.pointee;
 }
 
-static semantic_type_t _check_expr_addr(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_addr(context_t ctx, node_t expr) {
   cubec_expression_postfix_unary_t pf =
       (cubec_expression_postfix_unary_t)expr;
   semantic_type_t host_type = _check_expression(ctx, pf->right);
@@ -1156,7 +1156,7 @@ static semantic_type_t _check_expr_addr(checker_t ctx, node_t expr) {
   return pt;
 }
 
-static semantic_type_t _check_expr_try(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_try(context_t ctx, node_t expr) {
   cubec_expression_postfix_unary_t pf =
       (cubec_expression_postfix_unary_t)expr;
 
@@ -1235,7 +1235,7 @@ static semantic_type_t _check_expr_try(checker_t ctx, node_t expr) {
   return ctx->error_type;
 }
 
-static semantic_type_t _check_expr_assert(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_assert(context_t ctx, node_t expr) {
   cubec_expression_postfix_unary_t pf =
       (cubec_expression_postfix_unary_t)expr;
 
@@ -1314,7 +1314,7 @@ static semantic_type_t _check_expr_assert(checker_t ctx, node_t expr) {
   return ctx->error_type;
 }
 
-static semantic_type_t _check_expr_ternary(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_ternary(context_t ctx, node_t expr) {
   cubec_expression_ternary_t tern = (cubec_expression_ternary_t)expr;
   semantic_type_t ct = _check_expression(ctx, tern->condition);
   semantic_type_t tt = _check_expression(ctx, tern->consequent);
@@ -1328,12 +1328,12 @@ static semantic_type_t _check_expr_ternary(checker_t ctx, node_t expr) {
   return _common_type(ctx, tt, ft);
 }
 
-static semantic_type_t _check_expr_group(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_group(context_t ctx, node_t expr) {
   cubec_expression_group_t grp = (cubec_expression_group_t)expr;
   return _check_expression(ctx, grp->inner);
 }
 
-static semantic_type_t _check_expr_sizeof(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_sizeof(context_t ctx, node_t expr) {
   cubec_expression_sizeof_t sz = (cubec_expression_sizeof_t)expr;
   /* Try resolver_resolve_type for type expressions (sizeof(i32)),
    * fall back to _check_expression for value expressions (sizeof(x)).
@@ -1355,7 +1355,7 @@ static semantic_type_t _check_expr_sizeof(checker_t ctx, node_t expr) {
   return ctx->builtin_u64;
 }
 
-static semantic_type_t _check_expr_alignof(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_alignof(context_t ctx, node_t expr) {
   cubec_expression_alignof_t al = (cubec_expression_alignof_t)expr;
   size_t err_before = ctx->error_count;
   semantic_type_t t = resolver_resolve_type(ctx, al->expression);
@@ -1374,7 +1374,7 @@ static semantic_type_t _check_expr_alignof(checker_t ctx, node_t expr) {
   return ctx->builtin_u64;
 }
 
-static semantic_type_t _check_expr_typeof(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_typeof(context_t ctx, node_t expr) {
   cubec_expression_typeof_t to = (cubec_expression_typeof_t)expr;
   semantic_type_t inner = _check_expression(ctx, to->expression);
   semantic_type_t t =
@@ -1385,7 +1385,7 @@ static semantic_type_t _check_expr_typeof(checker_t ctx, node_t expr) {
   return t;
 }
 
-static semantic_type_t _check_expr_slice(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_slice(context_t ctx, node_t expr) {
   cubec_expression_slice_t sl = (cubec_expression_slice_t)expr;
   semantic_type_t ht = _check_expression(ctx, sl->host);
   if (ht->impl->kind == TYPE_ERROR) return ctx->error_type;
@@ -1421,7 +1421,7 @@ static semantic_type_t _check_expr_slice(checker_t ctx, node_t expr) {
   return ctx->error_type;
 }
 
-static semantic_type_t _check_expr_function(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_function(context_t ctx, node_t expr) {
   cubec_expression_function_t fn = (cubec_expression_function_t)expr;
 
   func_check_info_t info;
@@ -1438,7 +1438,7 @@ static semantic_type_t _check_expr_function(checker_t ctx, node_t expr) {
   });
 }
 
-static semantic_type_t _check_expr_initialize_list(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_initialize_list(context_t ctx, node_t expr) {
   cubec_expression_initialize_list_t il =
       (cubec_expression_initialize_list_t)expr;
 
@@ -1524,18 +1524,18 @@ static semantic_type_t _check_expr_initialize_list(checker_t ctx, node_t expr) {
   }
 }
 
-static semantic_type_t _check_expr_comma(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_comma(context_t ctx, node_t expr) {
   cubec_expression_comma_t cm = (cubec_expression_comma_t)expr;
   _check_expression(ctx, cm->left);
   return _check_expression(ctx, cm->right);
 }
 
-static semantic_type_t _check_expr_spread(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_spread(context_t ctx, node_t expr) {
   cubec_expression_spread_t sp = (cubec_expression_spread_t)expr;
   return _check_expression(ctx, sp->value);
 }
 
-static semantic_type_t _check_expr_generic_instantiation(checker_t ctx, node_t expr) {
+static semantic_type_t _check_expr_generic_instantiation(context_t ctx, node_t expr) {
   cubec_expression_generic_instantiation_t gi =
       (cubec_expression_generic_instantiation_t)expr;
 
@@ -1553,7 +1553,7 @@ static semantic_type_t _check_expr_generic_instantiation(checker_t ctx, node_t e
 
 /* ===== dispatch ===== */
 
-semantic_type_t _check_expression(checker_t ctx, node_t expr) {
+semantic_type_t _check_expression(context_t ctx, node_t expr) {
   if (!expr) return ctx->error_type;
   switch (expr->kind) {
   case CUBEC_NODE_LITERAL_NUMERIC:       return _check_literal_numeric(ctx, expr);
@@ -1594,6 +1594,6 @@ semantic_type_t _check_expression(checker_t ctx, node_t expr) {
   }
 }
 
-semantic_type_t checker_check_expression(checker_t ctx, node_t expr) {
+semantic_type_t context_check_expression(context_t ctx, node_t expr) {
   return _check_expression(ctx, expr);
 }

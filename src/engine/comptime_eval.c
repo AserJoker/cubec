@@ -62,5 +62,5 @@ void comptime_eval_dispose(comptime_eval_t self) {
   vec_resize(self->return_type_stack, 0);
   allocator_free(a, &self->return_type_stack);
 
-  /* Do NOT free self here — _checker_dispose calls allocator_free for the eval struct */
+  /* Do NOT free self here — _context_dispose calls allocator_free for the eval struct */
 }

@@ -9,13 +9,13 @@ extern "C" {
  * @brief Register debug-related builtins (assert).
  *        Must be called after checker's builtin types are initialized.
  */
-void builtin_table_init_debug(builtin_table_t table, struct checker *ctx);
+void builtin_table_init_debug(builtin_table_t table, struct context *ctx);
 
 /**
  * @brief Comptime eval callback for assert(condition: bool): void.
  */
 struct comptime_value *builtin_assert_eval(struct comptime_eval *eval,
-                                           struct checker *ctx, node_t node,
+                                           struct context *ctx, node_t node,
                                            struct builtin_entry *be);
 
 #ifdef __cplusplus

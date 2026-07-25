@@ -11,8 +11,8 @@ extern "C" {
 /**
  * @brief Forward declaration of checker to avoid circular include.
  */
-struct checker;
-typedef struct checker *checker_t;
+struct context;
+typedef struct context *context_t;
 
 /**
  * @brief Resolve an AST type expression node to a semantic_type_t.
@@ -34,7 +34,7 @@ typedef struct checker *checker_t;
  * @param node The AST type expression node.
  * @return The resolved semantic_type_t, or ctx->error_type on failure.
  */
-semantic_type_t resolver_resolve_type(checker_t ctx, node_t node);
+semantic_type_t resolver_resolve_type(context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

@@ -1,7 +1,7 @@
 #ifndef _H_CUBEC_ENGINE_MODULE_
 #define _H_CUBEC_ENGINE_MODULE_
 #include "core/type.h"
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/scope.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -24,7 +24,7 @@ enum module_state {
 typedef struct module_entry {
   scope_t scope;             /**< Module's global scope */
   enum module_state state;   /**< Current loading state */
-  checker_t checker;         /**< Checker that compiled this module */
+  context_t ctx;         /**< Checker that compiled this module */
   char *resolved_path;       /**< Resolved file path (malloc'd, must free) */
   char *source;              /**< File content (malloc'd, must free) */
   vec_t tokens;              /**< Token list (owned by module's allocator) */

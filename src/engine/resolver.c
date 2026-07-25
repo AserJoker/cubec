@@ -16,7 +16,7 @@
 
 /* ===== resolver_resolve_type (dispatcher) ===== */
 
-semantic_type_t resolver_resolve_type(checker_t ctx, node_t node) {
+semantic_type_t resolver_resolve_type(context_t ctx, node_t node) {
   if (!node) return ctx->builtin_void;
 
   switch (node->kind) {

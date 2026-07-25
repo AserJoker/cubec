@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_ENGINE_CHECKER_DECORATOR_
 #define _H_CUBEC_ENGINE_CHECKER_DECORATOR_
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "core/node.h"
 #include "core/vec.h"
 #ifdef __cplusplus
@@ -27,7 +27,7 @@ typedef enum {
  * @param name      Name of the decorated symbol
  * @param ast_node  AST node of the decorated declaration
  */
-void checker_evaluate_decorators(checker_t ctx, vec_t decorators,
+void context_evaluate_decorators(context_t ctx, vec_t decorators,
                                   decorator_target_t target,
                                   const char *name, node_t ast_node);
 

@@ -24,7 +24,7 @@
 /* ===== unionIs eval callback ===== */
 
 struct comptime_value *builtin_unionis_eval(struct comptime_eval *eval,
-                                            struct checker *ctx, node_t node,
+                                            struct context *ctx, node_t node,
                                             struct builtin_entry *be) {
   (void)be;
   cubec_expression_call_t call = (cubec_expression_call_t)node;
@@ -120,7 +120,7 @@ struct comptime_value *builtin_unionis_eval(struct comptime_eval *eval,
 
 /* ===== init ===== */
 
-void builtin_table_init_union(builtin_table_t table, struct checker *ctx) {
+void builtin_table_init_union(builtin_table_t table, struct context *ctx) {
   /* builtin func unionIs[T,K](obj:K):bool */
   semantic_type_t t_param = semantic_type_create_generic_param(
       ctx->allocator, "T", NULL, false);

@@ -1,4 +1,4 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/checker_type_util.h"
 #include "engine/resolver.h"
 #include "engine/symbol.h"
@@ -125,7 +125,7 @@ vec_t _get_struct_fields(semantic_type_t t) {
 
 /* ===== type utilities ===== */
 
-semantic_type_t _common_type(checker_t ctx, semantic_type_t a,
+semantic_type_t _common_type(context_t ctx, semantic_type_t a,
                              semantic_type_t b) {
   if (!a || !b) return ctx->error_type;
   if (semantic_type_equals(a, b)) return a;
@@ -137,13 +137,14 @@ semantic_type_t _common_type(checker_t ctx, semantic_type_t a,
 
 /* ===== struct/union/enum field resolution — unified for global and local ===== */
 
-void _resolve_struct_fields(checker_t ctx, semantic_type_t t, vec_t members) {
+void _resolve_struct_fields(context_t ctx, semantic_type_t t, vec_t members) {
   vec_init_t fvi = {.auto_dispose = true};
   vec_t fields = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &fvi);
   if (members) {
     size_t mcount = vec_get_size(members);
     for (size_t i = 0; i < mcount; i++) {
       node_t m = (node_t)vec_get(members, i);
+      if (!m) continue;
       if (m->kind != CUBEC_NODE_STRUCT_FIELD) continue;
       cubec_struct_field_t sf = (cubec_struct_field_t)m;
       const char *fname = _checker_ident_str(sf->name);
@@ -159,7 +160,7 @@ void _resolve_struct_fields(checker_t ctx, semantic_type_t t, vec_t members) {
   t->impl->struct_type.fields = fields;
 }
 
-void _resolve_union_fields(checker_t ctx, semantic_type_t t, vec_t members) {
+void _resolve_union_fields(context_t ctx, semantic_type_t t, vec_t members) {
   vec_init_t fvi = {.auto_dispose = true};
   vec_t fields = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &fvi);
   if (members) {
@@ -180,7 +181,7 @@ void _resolve_union_fields(checker_t ctx, semantic_type_t t, vec_t members) {
   t->impl->struct_type.fields = fields;
 }
 
-void _resolve_enum_items(checker_t ctx, semantic_type_t t, vec_t items) {
+void _resolve_enum_items(context_t ctx, semantic_type_t t, vec_t items) {
   vec_init_t ivi = {.auto_dispose = true};
   t->impl->enum_type.items = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &ivi);
   if (!items) return;
@@ -217,7 +218,7 @@ void _resolve_enum_items(checker_t ctx, semantic_type_t t, vec_t items) {
 
 /* ===== generic instantiation helpers ===== */
 
-char *_generic_instance_cache_key(checker_t ctx, const char *template_name,
+char *_generic_instance_cache_key(context_t ctx, const char *template_name,
                                    strmap_t type_bindings) {
   size_t len = strlen(template_name);
   /* Estimate key length from bindings — must account for pack expanded_types
@@ -284,7 +285,7 @@ char *_generic_instance_cache_key(checker_t ctx, const char *template_name,
   return key;
 }
 
-static semantic_type_t _cache_lookup(checker_t ctx, const char *name,
+static semantic_type_t _cache_lookup(context_t ctx, const char *name,
                                      strmap_t type_bindings) {
   char *key = _generic_instance_cache_key(ctx, name, type_bindings);
   void *found = strmap_find(ctx->type_impl_cache, key);
@@ -292,7 +293,7 @@ static semantic_type_t _cache_lookup(checker_t ctx, const char *name,
   return found ? (semantic_type_t)found : NULL;
 }
 
-static void _cache_insert(checker_t ctx, const char *name,
+static void _cache_insert(context_t ctx, const char *name,
                            strmap_t type_bindings, semantic_type_t type) {
   char *key = _generic_instance_cache_key(ctx, name, type_bindings);
   strmap_insert(ctx->type_impl_cache, key, type);
@@ -302,16 +303,16 @@ static void _cache_insert(checker_t ctx, const char *name,
 /* ===== type substitution ===== */
 
 /* Forward declaration — needed because _substitute_type delegates to _instantiate_type */
-semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
+semantic_type_t _substitute_type(context_t ctx, semantic_type_t type,
                                    strmap_t type_bindings);
 
 /* Forward declaration — needed because _substitute_type delegates to _instantiate_type */
-semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
+semantic_type_t _substitute_type(context_t ctx, semantic_type_t type,
                                    strmap_t type_bindings);
 
 static int _subst_depth = 0;
 
-semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
+semantic_type_t _substitute_type(context_t ctx, semantic_type_t type,
                                    strmap_t type_bindings) {
   if (!type || !type->impl) return type;
   _subst_depth++;
@@ -548,7 +549,7 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
 
 /* Core constraint checking logic. When silent=true, no diagnostics are
    emitted — used by _check_constraint_silent for extends expression eval. */
-static bool _check_constraint_impl(checker_t ctx, semantic_type_t type_arg,
+static bool _check_constraint_impl(context_t ctx, semantic_type_t type_arg,
                                    semantic_type_t constraint, node_t arg_expr,
                                    bool silent) {
   if (!constraint) return true;
@@ -776,17 +777,17 @@ static bool _check_constraint_impl(checker_t ctx, semantic_type_t type_arg,
   }
 }
 
-bool _check_constraint(checker_t ctx, semantic_type_t type_arg,
+bool _check_constraint(context_t ctx, semantic_type_t type_arg,
                        semantic_type_t constraint, node_t arg_expr) {
   return _check_constraint_impl(ctx, type_arg, constraint, arg_expr, false);
 }
 
-bool _check_constraint_silent(checker_t ctx, semantic_type_t type_arg,
+bool _check_constraint_silent(context_t ctx, semantic_type_t type_arg,
                               semantic_type_t constraint) {
   return _check_constraint_impl(ctx, type_arg, constraint, NULL, true);
 }
 
-bool _check_generic_param_constraints(checker_t ctx, vec_t generic_params,
+bool _check_generic_param_constraints(context_t ctx, vec_t generic_params,
                                        strmap_t type_bindings, node_t expr) {
   if (!generic_params || !type_bindings) return true;
   size_t gcount = vec_get_size(generic_params);
@@ -855,7 +856,7 @@ bool _check_generic_param_constraints(checker_t ctx, vec_t generic_params,
   return all_ok;
 }
 
-vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs,
+vec_t _resolve_generic_type_args(context_t ctx, vec_t arg_exprs,
                                   vec_t generic_params) {
   if (!arg_exprs) return NULL;
   size_t acount = vec_get_size(arg_exprs);
@@ -917,7 +918,7 @@ vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs,
       }
       /* General comptime eval — supports arbitrary compile-time expressions */
       {
-        extern comptime_value_t _comptime_eval_expr(comptime_eval_t, struct checker *, node_t);
+        extern comptime_value_t _comptime_eval_expr(comptime_eval_t, struct context *, node_t);
         comptime_eval_t eval = comptime_eval_create(ctx->allocator);
         if (!eval) {
           diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
@@ -956,7 +957,7 @@ vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs,
     semantic_type_t t = resolver_resolve_type(ctx, arg);
     if (t->impl->kind == TYPE_ERROR) {
       /* Forward-declared to allow late resolution */
-      extern semantic_type_t _check_expression(checker_t, node_t);
+      extern semantic_type_t _check_expression(context_t, node_t);
       t = _check_expression(ctx, arg);
     }
     if (!t || t->impl->kind == TYPE_ERROR) {
@@ -968,7 +969,7 @@ vec_t _resolve_generic_type_args(checker_t ctx, vec_t arg_exprs,
   return type_args;
 }
 
-strmap_t _resolve_generic_type_bindings_pack(checker_t ctx, vec_t arg_exprs,
+strmap_t _resolve_generic_type_bindings_pack(context_t ctx, vec_t arg_exprs,
                                               vec_t generic_params) {
   vec_t type_args = _resolve_generic_type_args(ctx, arg_exprs, generic_params);
   if (!type_args) {
@@ -1039,7 +1040,7 @@ strmap_t _resolve_generic_type_bindings_pack(checker_t ctx, vec_t arg_exprs,
   return bindings;
 }
 
-static vec_t _copy_symbol_vec(checker_t ctx, vec_t src) {
+static vec_t _copy_symbol_vec(context_t ctx, vec_t src) {
   if (!src) return NULL;
   /* auto_dispose = false: symbols are owned by the template type.
      If true, both template and instance would free the same symbols (double-free). */
@@ -1051,7 +1052,7 @@ static vec_t _copy_symbol_vec(checker_t ctx, vec_t src) {
   return dst;
 }
 
-static void _instantiate_struct_fields(checker_t ctx, semantic_type_t inst,
+static void _instantiate_struct_fields(context_t ctx, semantic_type_t inst,
                                         vec_t tpl_fields, strmap_t type_bindings) {
   vec_init_t vi = {.auto_dispose = true};
   inst->impl->generic_instance.fields =
@@ -1071,7 +1072,7 @@ static void _instantiate_struct_fields(checker_t ctx, semantic_type_t inst,
   type_layout_compute(inst, 8);
 }
 
-semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
+semantic_type_t _instantiate_type(context_t ctx, semantic_type_t template_type,
                                    strmap_t type_bindings, node_t instantiation_expr) {
   const char *name = template_type->name;
   if (!name) name = "<anonymous>";
@@ -1161,7 +1162,7 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   return inst;
 }
 
-semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
+semantic_type_t _instantiate_function(context_t ctx, struct symbol *func_sym,
                                       strmap_t type_bindings, node_t instantiation_expr) {
   const char *name = func_sym->name;
   ctx->instantiate_func_count++;
@@ -1201,7 +1202,7 @@ semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
 
 /* ===== literal numeric helper ===== */
 
-semantic_type_t _check_literal_numeric(checker_t ctx, node_t num_node) {
+semantic_type_t _check_literal_numeric(context_t ctx, node_t num_node) {
   if (!num_node) return ctx->error_type;
   cubec_literal_numeric_t num = (cubec_literal_numeric_t)num_node;
   switch (num->numeric_type) {

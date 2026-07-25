@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 /* forward declarations */
-struct checker;
+struct context;
 struct comptime_eval;
 struct comptime_value;
 struct builtin_entry;
@@ -22,7 +22,7 @@ typedef struct _node_t *node_t;
  *        Return the evaluated result, or COMPTIME_VALUE_ERROR on failure.
  */
 typedef struct comptime_value *(*builtin_eval_call_fn)(
-    struct comptime_eval *eval, struct checker *ctx, node_t node,
+    struct comptime_eval *eval, struct context *ctx, node_t node,
     struct builtin_entry *be);
 
 /**
@@ -73,7 +73,7 @@ builtin_entry_t builtin_table_lookup(builtin_table_t table, const char *name);
  * @brief Register the default set of builtins (assert, etc.).
  *        Must be called after checker's builtin types are initialized.
  */
-void builtin_table_init_defaults(builtin_table_t table, struct checker *ctx);
+void builtin_table_init_defaults(builtin_table_t table, struct context *ctx);
 
 #ifdef __cplusplus
 }

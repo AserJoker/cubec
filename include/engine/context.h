@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_ENGINE_CHECKER_
-#define _H_CUBEC_ENGINE_CHECKER_
+#ifndef _H_CUBEC_ENGINE_CONTEXT_
+#define _H_CUBEC_ENGINE_CONTEXT_
 #include "core/allocator.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -16,10 +16,10 @@ extern "C" {
 #endif
 
 /**
- * @brief The semantic checker context.
+ * @brief The semantic context.
  *        Owns all semantic analysis state: scopes, types, diagnostics.
  */
-struct checker {
+struct context {
   allocator_t allocator;
 
   /* scopes */
@@ -92,11 +92,11 @@ struct checker {
   vec_t body_check_worklist;   /**< vec of body_check_entry_t* */
   strmap_t checked_bodies;     /**< cache key -> "1" (already body-checked) */
 
-  /* instantiation safety counter (reset per checker_create) */
+  /* instantiation safety counter (reset per context_create) */
   int instantiate_func_count;
 };
 
-typedef struct checker *checker_t;
+typedef struct context *context_t;
 
 /**
  * @brief Entry in the generic monomorphization worklist.
@@ -105,25 +105,25 @@ typedef struct checker *checker_t;
 typedef struct {
   struct symbol *func_sym;     /**< Function symbol (template symbol for generics) */
   semantic_type_t inst_type;   /**< Instantiated function type (original type for non-generics) */
-  strmap_t type_bindings;      /**< Name → concrete semantic_type_t (NULL for non-generics) */
+  strmap_t type_bindings;      /**< Name -> concrete semantic_type_t (NULL for non-generics) */
   scope_t scope_root;          /**< Parent scope for body checking */
   bool is_method;              /**< True if this is a type method */
   semantic_type_t host_type;   /**< Host type for methods (NULL for free functions) */
 } body_check_entry_t;
 
-/** @brief Virtual table for checker. */
-extern type_t g_checker_type;
+/** @brief Virtual table for context. */
+extern type_t g_context_type;
 
 /**
- * @brief Create a new checker context.
+ * @brief Create a new context.
  *        Initializes builtin types, global scope, and diagnostic system.
  */
-checker_t checker_create(allocator_t allocator);
+context_t context_create(allocator_t allocator);
 
 /**
- * @brief Dispose a checker context and all owned resources.
+ * @brief Dispose a context and all owned resources.
  */
-void checker_dispose(checker_t ctx);
+void context_dispose(context_t ctx);
 
 /**
  * @brief Run the full semantic analysis pipeline on a program AST.
@@ -132,21 +132,21 @@ void checker_dispose(checker_t ctx);
  *        2. Type resolution (resolve type expressions)
  *        3. Body checking (check function bodies, expressions, statements)
  *
- * @param ctx     The checker context.
+ * @param ctx     The context.
  * @param program The program AST root node.
  */
-void checker_check_program(checker_t ctx, node_t program);
+void context_check_program(context_t ctx, node_t program);
 
 /**
  * @brief Check an expression and return its semantic type.
  *        Public wrapper for internal _check_expression, used by resolver.
  */
-semantic_type_t checker_check_expression(checker_t ctx, node_t expr);
+semantic_type_t context_check_expression(context_t ctx, node_t expr);
 
 /**
  * @brief Get the number of errors recorded.
  */
-int checker_get_error_count(checker_t ctx);
+int context_get_error_count(context_t ctx);
 
 #ifdef __cplusplus
 }

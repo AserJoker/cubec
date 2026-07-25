@@ -61,7 +61,7 @@ static comptime_value_t _create_truncated_int(struct comptime_eval *eval,
 }
 
 static comptime_value_t _cast_numeric(struct comptime_eval *eval,
-                                      struct checker *ctx,
+                                      struct context *ctx,
                                       semantic_type_t from, semantic_type_t to,
                                       comptime_value_t src_val) {
   semantic_type_t from_unq = semantic_type_strip_qualifier(from);
@@ -151,7 +151,7 @@ static comptime_value_t _cast_numeric(struct comptime_eval *eval,
 /* ===== cast eval: pointer conversions ===== */
 
 static comptime_value_t _cast_pointer(struct comptime_eval *eval,
-                                      struct checker *ctx,
+                                      struct context *ctx,
                                       semantic_type_t from, semantic_type_t to,
                                       comptime_value_t src_val) {
   (void)ctx;
@@ -239,7 +239,7 @@ static comptime_value_t _cast_pointer(struct comptime_eval *eval,
 /* ===== cast eval: container conversions ===== */
 
 static comptime_value_t _cast_container(struct comptime_eval *eval,
-                                        struct checker *ctx,
+                                        struct context *ctx,
                                         semantic_type_t from, semantic_type_t to,
                                         comptime_value_t src_val,
                                         node_t node) {
@@ -292,7 +292,7 @@ static comptime_value_t _cast_container(struct comptime_eval *eval,
 /* ===== main eval callback ===== */
 
 struct comptime_value *builtin_cast_eval(struct comptime_eval *eval,
-                                         struct checker *ctx, node_t node,
+                                         struct context *ctx, node_t node,
                                          struct builtin_entry *be) {
   (void)be;
   cubec_expression_call_t call = (cubec_expression_call_t)node;
@@ -452,7 +452,7 @@ struct comptime_value *builtin_cast_eval(struct comptime_eval *eval,
 
 /* ===== init ===== */
 
-void builtin_table_init_cast(builtin_table_t table, struct checker *ctx) {
+void builtin_table_init_cast(builtin_table_t table, struct context *ctx) {
   /* builtin func cast[T,K](expr:K):T */
   semantic_type_t t_param = semantic_type_create_generic_param(
       ctx->allocator, "T", NULL, false);

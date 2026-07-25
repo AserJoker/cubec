@@ -32,7 +32,7 @@
 
 /* --- cleanup execution (defer + using dispose) --- */
 
-static void _run_cleanups(comptime_eval_t eval, checker_t ctx,
+static void _run_cleanups(comptime_eval_t eval, context_t ctx,
                            size_t keep_count) {
   while (vec_get_size(eval->cleanup_stack) > keep_count) {
     size_t last = vec_get_size(eval->cleanup_stack) - 1;
@@ -78,7 +78,7 @@ static void _run_cleanups(comptime_eval_t eval, checker_t ctx,
 
 /* --- block execution --- */
 
-comptime_signal_t _comptime_exec_block(comptime_eval_t eval, checker_t ctx,
+comptime_signal_t _comptime_exec_block(comptime_eval_t eval, context_t ctx,
                                         node_t block) {
   if (!block) return _eval_signal_none();
   cubec_statement_block_t blk = (cubec_statement_block_t)block;
@@ -119,7 +119,7 @@ comptime_signal_t _comptime_exec_block(comptime_eval_t eval, checker_t ctx,
 /* --- shared foreach loop logic (used by both foreach and comptime foreach) --- */
 
 static comptime_signal_t _comptime_exec_foreach_loop(
-    comptime_eval_t eval, checker_t ctx, location_t loc,
+    comptime_eval_t eval, context_t ctx, location_t loc,
     bool is_var_decl, node_t variable, node_t var_type,
     comptime_value_t iter, node_t body) {
   /* foreach only supports iterators with a next() method.
@@ -292,7 +292,7 @@ static comptime_signal_t _comptime_exec_foreach_loop(
 
 /* --- statement dispatcher --- */
 
-comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
+comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, context_t ctx,
                                        node_t stmt) {
   if (!stmt) return _eval_signal_none();
 
@@ -666,17 +666,17 @@ comptime_signal_t _comptime_exec_stmt(comptime_eval_t eval, checker_t ctx,
 }
 
 comptime_signal_t comptime_eval_exec_stmt(comptime_eval_t eval,
-                                           checker_t ctx, node_t stmt) {
+                                           context_t ctx, node_t stmt) {
   return _comptime_exec_stmt(eval, ctx, stmt);
 }
 
 comptime_signal_t comptime_eval_exec_block(comptime_eval_t eval,
-                                            checker_t ctx, node_t block) {
+                                            context_t ctx, node_t block) {
   return _comptime_exec_block(eval, ctx, block);
 }
 
 comptime_signal_t comptime_eval_exec_comptime_if(comptime_eval_t eval,
-                                                  checker_t ctx,
+                                                  context_t ctx,
                                                   node_t node) {
   cubec_statement_comptime_if_t ci = (cubec_statement_comptime_if_t)node;
   comptime_value_t cond = _comptime_eval_expr(eval, ctx, ci->condition);
@@ -705,7 +705,7 @@ comptime_signal_t comptime_eval_exec_comptime_if(comptime_eval_t eval,
 }
 
 comptime_signal_t comptime_eval_exec_comptime_foreach(comptime_eval_t eval,
-                                                        checker_t ctx,
+                                                        context_t ctx,
                                                         node_t node) {
   cubec_statement_comptime_foreach_t cf =
       (cubec_statement_comptime_foreach_t)node;

@@ -16,7 +16,7 @@
 /* ===== assert eval callback ===== */
 
 struct comptime_value *builtin_assert_eval(struct comptime_eval *eval,
-                                         struct checker *ctx, node_t node,
+                                         struct context *ctx, node_t node,
                                          struct builtin_entry *be) {
   (void)be;
 
@@ -69,7 +69,7 @@ struct comptime_value *builtin_assert_eval(struct comptime_eval *eval,
 
 /* ===== init ===== */
 
-void builtin_table_init_debug(builtin_table_t table, struct checker *ctx) {
+void builtin_table_init_debug(builtin_table_t table, struct context *ctx) {
   /* assert(condition: bool): void */
   vec_init_t vi = {.auto_dispose = false};
   vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);

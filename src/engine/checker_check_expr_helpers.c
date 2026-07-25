@@ -24,7 +24,7 @@
 
 /* ===== assignment generic LHS helper ===== */
 
-semantic_type_t _check_assign_generic_lhs(checker_t ctx, node_t expr,
+semantic_type_t _check_assign_generic_lhs(context_t ctx, node_t expr,
                                            semantic_type_t lt,
                                            semantic_type_t rt) {
   cubec_expression_assignment_t asgn = (cubec_expression_assignment_t)expr;
@@ -88,7 +88,7 @@ semantic_type_t _check_assign_generic_lhs(checker_t ctx, node_t expr,
 
 /* ===== generic instantiation ident callee helper ===== */
 
-semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
+semantic_type_t _check_generic_ident_callee(context_t ctx, node_t expr) {
   cubec_expression_generic_instantiation_t gi =
       (cubec_expression_generic_instantiation_t)expr;
   const char *name = _checker_ident_str(gi->callee);
@@ -215,7 +215,7 @@ semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
 
 /* ===== init list helpers ===== */
 
-void _check_init_list_named_fields(checker_t ctx, node_t expr,
+void _check_init_list_named_fields(context_t ctx, node_t expr,
                                     semantic_type_t t, vec_t fields,
                                     size_t fcount, size_t icount,
                                     vec_t items) {
@@ -255,7 +255,7 @@ void _check_init_list_named_fields(checker_t ctx, node_t expr,
   }
 }
 
-void _check_init_list_positional(checker_t ctx, node_t expr,
+void _check_init_list_positional(context_t ctx, node_t expr,
                                   semantic_type_t t, vec_t fields,
                                   size_t fcount, size_t icount,
                                   vec_t items) {
@@ -323,7 +323,7 @@ void _check_init_list_positional(checker_t ctx, node_t expr,
 
 /* ===== binary operator helpers ===== */
 
-semantic_type_t _check_binary_arithmetic(checker_t ctx, node_t expr,
+semantic_type_t _check_binary_arithmetic(context_t ctx, node_t expr,
                                           const char *op,
                                           semantic_type_t lt,
                                           semantic_type_t rt) {
@@ -383,7 +383,7 @@ semantic_type_t _check_binary_arithmetic(checker_t ctx, node_t expr,
   return _common_type(ctx, effective_lt, effective_rt);
 }
 
-semantic_type_t _check_binary_bitwise(checker_t ctx, node_t expr,
+semantic_type_t _check_binary_bitwise(context_t ctx, node_t expr,
                                        const char *op,
                                        semantic_type_t lt,
                                        semantic_type_t rt) {

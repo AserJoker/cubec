@@ -30,7 +30,7 @@
  * - other: fallback representation
  */
 static comptime_value_t _to_string_value(struct comptime_eval *eval,
-                                          struct checker *ctx,
+                                          struct context *ctx,
                                           comptime_value_t arg,
                                           node_t node_for_loc) {
   char buf[128];
@@ -181,7 +181,7 @@ static comptime_value_t _to_string_value(struct comptime_eval *eval,
 /* ===== toString eval callback ===== */
 
 struct comptime_value *builtin_toString_eval(struct comptime_eval *eval,
-                                            struct checker *ctx, node_t node,
+                                            struct context *ctx, node_t node,
                                             struct builtin_entry *be) {
   (void)be;
   cubec_expression_call_t call = (cubec_expression_call_t)node;
@@ -202,7 +202,7 @@ struct comptime_value *builtin_toString_eval(struct comptime_eval *eval,
 
 /* ===== init ===== */
 
-void builtin_table_init_string(builtin_table_t table, struct checker *ctx) {
+void builtin_table_init_string(builtin_table_t table, struct context *ctx) {
   /* builtin func toString[T](obj: T): str */
   semantic_type_t t_param = semantic_type_create_generic_param(
       ctx->allocator, "T", NULL, false);

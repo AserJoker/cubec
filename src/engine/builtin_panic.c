@@ -18,7 +18,7 @@
 /* ===== panic eval callback ===== */
 
 struct comptime_value *builtin_panic_eval(struct comptime_eval *eval,
-                                          struct checker *ctx, node_t node,
+                                          struct context *ctx, node_t node,
                                           struct builtin_entry *be) {
   (void)be;
   cubec_expression_call_t call = (cubec_expression_call_t)node;
@@ -61,7 +61,7 @@ struct comptime_value *builtin_panic_eval(struct comptime_eval *eval,
 
 /* ===== init ===== */
 
-void builtin_table_init_panic(builtin_table_t table, struct checker *ctx) {
+void builtin_table_init_panic(builtin_table_t table, struct context *ctx) {
   /* builtin func panic(msg: str): void */
   vec_init_t vi = {.auto_dispose = false};
   vec_t params = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
