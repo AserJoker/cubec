@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_LITERAL_NUMERIC_
 #define _H_CUBEC_CUBEC_LITERAL_NUMERIC_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
@@ -53,7 +54,7 @@ struct _cubec_literal_numeric_init_t {
 };
 typedef struct _cubec_literal_numeric_init_t cubec_literal_numeric_init_t;
 
-node_t read_literal_numeric(allocator_t allocator, vec_t tokens, size_t *position,
+node_t read_literal_numeric(context_t ctx, vec_t tokens, size_t *position,
                             const char *filename);
 
 const char *cubec_literal_numeric_type_to_string(cubec_literal_numeric_type_t type);

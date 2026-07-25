@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_INITIALIZE_LIST_
 #define _H_CUBEC_CUBEC_EXPRESSION_INITIALIZE_LIST_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -43,7 +44,7 @@ typedef struct _cubec_expression_initialize_list_init_t cubec_expression_initial
  * @return A new cubec_expression_initialize_list_t node, or NULL if the
  *         current token is not \c '.' followed by \c '{' or identifier+\c {.
  */
-node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
+node_t read_expression_initialize_list(context_t ctx, vec_t tokens,
                                        size_t *position, const char *filename);
 
 #ifdef __cplusplus

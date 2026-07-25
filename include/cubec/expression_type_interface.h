@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_TYPE_INTERFACE_
 #define _H_CUBEC_CUBEC_EXPRESSION_TYPE_INTERFACE_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -59,7 +60,7 @@ typedef struct _cubec_expression_type_interface_init_t cubec_expression_type_int
  * @return A new cubec_expression_type_interface_t node, or NULL if current token
  *         is not 'interface' keyword.
  */
-node_t read_expression_type_interface(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_interface(context_t ctx, vec_t tokens,
                                        size_t *position, const char *filename);
 
 /**
@@ -76,7 +77,7 @@ node_t read_expression_type_interface(allocator_t allocator, vec_t tokens,
  * @param start_location Location of the 'interface' keyword (for error span).
  * @return A new cubec_expression_type_interface_t node, or NULL on error.
  */
-node_t read_expression_type_interface_body(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_interface_body(context_t ctx, vec_t tokens,
                                             size_t *position, const char *filename,
                                             location_t start_location);
 

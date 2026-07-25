@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_GENERIC_PARAM_
 #define _H_CUBEC_CUBEC_GENERIC_PARAM_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -60,7 +61,7 @@ typedef struct _cubec_generic_param_init_t cubec_generic_param_init_t;
  * @return A vec_t of cubec_generic_param_t nodes with auto_dispose=true,
  *         or NULL if the current token is not '['.
  */
-vec_t read_generic_params(allocator_t allocator, vec_t tokens,
+vec_t read_generic_params(context_t ctx, vec_t tokens,
                           size_t *position, const char *filename);
 
 #ifdef __cplusplus

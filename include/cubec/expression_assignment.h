@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_ASSIGNMENT_
 #define _H_CUBEC_CUBEC_EXPRESSION_ASSIGNMENT_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
@@ -63,7 +64,7 @@ typedef struct _cubec_expression_assignment_init_t
  * @return A new cubec_expression_assignment_t node, or the value node if
  *         no assignment operator follows
  */
-node_t read_expression_assignment(allocator_t allocator, vec_t tokens,
+node_t read_expression_assignment(context_t ctx, vec_t tokens,
                                   size_t *position, const char *filename);
 
 #ifdef __cplusplus

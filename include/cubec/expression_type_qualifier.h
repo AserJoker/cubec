@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_TYPE_QUALIFIER_
 #define _H_CUBEC_CUBEC_EXPRESSION_TYPE_QUALIFIER_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -38,7 +39,7 @@ typedef struct _cubec_expression_type_qualifier_init_t cubec_expression_type_qua
  * @return A new cubec_expression_type_qualifier_t node, or NULL if the current
  *         token is not the keyword const or volatile.
  */
-node_t read_expression_type_qualifier(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_qualifier(context_t ctx, vec_t tokens,
                                       size_t *position, const char *filename);
 
 #ifdef __cplusplus

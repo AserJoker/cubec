@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_BREAK_
 #define _H_CUBEC_CUBEC_STATEMENT_BREAK_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -34,7 +35,7 @@ typedef struct _cubec_statement_break_init_t cubec_statement_break_init_t;
 /**
  * @brief Try to parse a break statement.
  */
-node_t read_statement_break(allocator_t allocator, vec_t tokens,
+node_t read_statement_break(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename);
 
 #ifdef __cplusplus

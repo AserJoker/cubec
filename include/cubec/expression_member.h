@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_MEMBER_
 #define _H_CUBEC_CUBEC_EXPRESSION_MEMBER_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -35,7 +36,7 @@ typedef struct _cubec_expression_member_init_t cubec_expression_member_init_t;
  * @return A new cubec_expression_member_t node, or NULL if the current
  *         token is not \c '.'.
  */
-node_t read_expression_member(allocator_t allocator, vec_t tokens,
+node_t read_expression_member(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename,
                               node_t host);
 

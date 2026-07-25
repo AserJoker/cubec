@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_LITERAL_UNDEFINED_
 #define _H_CUBEC_CUBEC_LITERAL_UNDEFINED_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -16,7 +17,7 @@ typedef struct _cubec_literal_undefined_t *cubec_literal_undefined_t;
 
 extern type_t g_cubec_literal_undefined_type;
 
-node_t read_literal_undefined(allocator_t allocator, vec_t tokens,
+node_t read_literal_undefined(context_t ctx, vec_t tokens,
                                size_t *position, const char *filename);
 
 #ifdef __cplusplus

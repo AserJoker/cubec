@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_TYPE_FUNCTION_
 #define _H_CUBEC_CUBEC_EXPRESSION_TYPE_FUNCTION_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -54,7 +55,7 @@ typedef struct _cubec_expression_type_function_init_t cubec_expression_type_func
  * @return A new cubec_expression_type_function_t node, or NULL if current token
  *         is not 'func' keyword.
  */
-node_t read_expression_type_function(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_function(context_t ctx, vec_t tokens,
                                      size_t *position, const char *filename);
 
 #ifdef __cplusplus

@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_TEST_
 #define _H_CUBEC_CUBEC_STATEMENT_TEST_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
@@ -44,7 +45,7 @@ typedef struct _cubec_statement_test_init_t cubec_statement_test_init_t;
 /**
  * @brief Try to parse a test block statement.
  */
-node_t read_statement_test(allocator_t allocator, vec_t tokens,
+node_t read_statement_test(context_t ctx, vec_t tokens,
                             size_t *position, const char *filename);
 
 #ifdef __cplusplus

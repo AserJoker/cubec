@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_DECORATOR_
 #define _H_CUBEC_CUBEC_DECORATOR_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -42,7 +43,7 @@ typedef struct _cubec_decorator_init_t cubec_decorator_init_t;
 /**
  * @brief Try to parse a decorator: [[expression]]
  */
-node_t read_decorator(allocator_t allocator, vec_t tokens,
+node_t read_decorator(context_t ctx, vec_t tokens,
                        size_t *position, const char *filename);
 
 #ifdef __cplusplus

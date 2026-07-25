@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_SIZEOF_
 #define _H_CUBEC_CUBEC_EXPRESSION_SIZEOF_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -49,7 +50,7 @@ typedef struct _cubec_expression_sizeof_init_t cubec_expression_sizeof_init_t;
  * @return A new cubec_expression_sizeof_t node, or NULL if current token
  *         is not 'sizeof' keyword.
  */
-node_t read_expression_sizeof(allocator_t allocator, vec_t tokens,
+node_t read_expression_sizeof(context_t ctx, vec_t tokens,
                                size_t *position, const char *filename);
 
 #ifdef __cplusplus

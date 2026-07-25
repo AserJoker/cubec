@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_COMPTIME_
 #define _H_CUBEC_CUBEC_STATEMENT_COMPTIME_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -74,7 +75,7 @@ typedef struct _cubec_statement_comptime_foreach_init_t
  * Returns NULL if 'comptime' is followed by 'var', 'func', or other modifiers
  * (those are handled by declaration/function parsers).
  */
-node_t read_statement_comptime(allocator_t allocator, vec_t tokens,
+node_t read_statement_comptime(context_t ctx, vec_t tokens,
                                 size_t *position, const char *filename);
 
 #ifdef __cplusplus

@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_TYPE_ENUM_
 #define _H_CUBEC_CUBEC_EXPRESSION_TYPE_ENUM_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -53,7 +54,7 @@ typedef struct _cubec_expression_type_enum_init_t cubec_expression_type_enum_ini
  * @return A new cubec_expression_type_enum_t node, or NULL if current token
  *         is not 'enum' keyword.
  */
-node_t read_expression_type_enum(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_enum(context_t ctx, vec_t tokens,
                                   size_t *position, const char *filename);
 
 /**
@@ -69,7 +70,7 @@ node_t read_expression_type_enum(allocator_t allocator, vec_t tokens,
  * @param start_location Location of the 'enum' keyword (for error span).
  * @return A new cubec_expression_type_enum_t node, or NULL on error.
  */
-node_t read_expression_type_enum_body(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_enum_body(context_t ctx, vec_t tokens,
                                        size_t *position, const char *filename,
                                        location_t start_location);
 

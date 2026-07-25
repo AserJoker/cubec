@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_DECLARATION_VARIABLE_
 #define _H_CUBEC_CUBEC_DECLARATION_VARIABLE_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -40,7 +41,7 @@ typedef struct _cubec_declaration_variable_init_t cubec_declaration_variable_ini
  * @return A new cubec_declaration_variable_t node, or NULL if current token
  *         is not an identifier.
  */
-node_t read_declaration_variable(allocator_t allocator, vec_t tokens,
+node_t read_declaration_variable(context_t ctx, vec_t tokens,
                                  size_t *position, const char *filename);
 
 #ifdef __cplusplus

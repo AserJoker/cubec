@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_EXPORT_FROM_
 #define _H_CUBEC_CUBEC_STATEMENT_EXPORT_FROM_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -50,7 +51,7 @@ typedef struct _cubec_statement_export_from_init_t cubec_statement_export_from_i
  * @return A new cubec_statement_export_from_t node, or NULL if current token
  *         is not 'export' followed by '*' or '{'.
  */
-node_t read_statement_export_from(allocator_t allocator, vec_t tokens,
+node_t read_statement_export_from(context_t ctx, vec_t tokens,
                                   size_t *position, const char *filename);
 
 #ifdef __cplusplus

@@ -5,70 +5,71 @@
 #include "core/node.h"
 #include "core/vec.h"
 #include "cubec/literal_numeric.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* ===== Literals ===== */
 
-node_t cubec_ast_create_identifier(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_identifier(context_t ctx, location_t loc,
                                    const char *name);
-node_t cubec_ast_create_numeric(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_numeric(context_t ctx, location_t loc,
                                 const char *value,
                                 cubec_literal_numeric_kind_t kind,
                                 cubec_literal_numeric_type_t ntype);
-node_t cubec_ast_create_string(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_string(context_t ctx, location_t loc,
                                const char *value);
-node_t cubec_ast_create_char(allocator_t alloc, location_t loc, char value);
-node_t cubec_ast_create_undefined(allocator_t alloc, location_t loc);
+node_t cubec_ast_create_char(context_t ctx, location_t loc, char value);
+node_t cubec_ast_create_undefined(context_t ctx, location_t loc);
 
 /* ===== Expressions ===== */
 
-node_t cubec_ast_create_binary(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_binary(context_t ctx, location_t loc,
                                const char *op, node_t left, node_t right);
-node_t cubec_ast_create_assignment(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_assignment(context_t ctx, location_t loc,
                                    const char *op, node_t lvalue,
                                    node_t rvalue);
-node_t cubec_ast_create_call(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_call(context_t ctx, location_t loc,
                              node_t callee, vec_t args);
-node_t cubec_ast_create_member(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_member(context_t ctx, location_t loc,
                                node_t host, const char *field);
-node_t cubec_ast_create_namespace_access(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_namespace_access(context_t ctx, location_t loc,
                                          node_t host, const char *field);
-node_t cubec_ast_create_deref(allocator_t alloc, location_t loc, node_t host);
-node_t cubec_ast_create_addr(allocator_t alloc, location_t loc, node_t host);
-node_t cubec_ast_create_try(allocator_t alloc, location_t loc, node_t host);
-node_t cubec_ast_create_assert(allocator_t alloc, location_t loc, node_t host);
-node_t cubec_ast_create_ternary(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_deref(context_t ctx, location_t loc, node_t host);
+node_t cubec_ast_create_addr(context_t ctx, location_t loc, node_t host);
+node_t cubec_ast_create_try(context_t ctx, location_t loc, node_t host);
+node_t cubec_ast_create_assert(context_t ctx, location_t loc, node_t host);
+node_t cubec_ast_create_ternary(context_t ctx, location_t loc,
                                 node_t cond, node_t then_branch,
                                 node_t else_branch);
-node_t cubec_ast_create_group(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_group(context_t ctx, location_t loc,
                               node_t inner);
-node_t cubec_ast_create_typeof(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_typeof(context_t ctx, location_t loc,
                                node_t expr);
-node_t cubec_ast_create_sizeof(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_sizeof(context_t ctx, location_t loc,
                                node_t expr);
-node_t cubec_ast_create_alignof(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_alignof(context_t ctx, location_t loc,
                                 node_t expr);
-node_t cubec_ast_create_slice_expr(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_slice_expr(context_t ctx, location_t loc,
                                    node_t host, node_t start,
                                    node_t length);
-node_t cubec_ast_create_spread(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_spread(context_t ctx, location_t loc,
                                node_t value);
-node_t cubec_ast_create_comma(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_comma(context_t ctx, location_t loc,
                               node_t left, node_t right);
-node_t cubec_ast_create_generic_instantiation(allocator_t alloc,
+node_t cubec_ast_create_generic_instantiation(context_t ctx,
                                               location_t loc,
                                               node_t callee, vec_t args);
-node_t cubec_ast_create_type_qualifier(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_type_qualifier(context_t ctx, location_t loc,
                                        node_t base, bool is_const,
                                        bool is_volatile);
-node_t cubec_ast_create_initialize_list(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_initialize_list(context_t ctx, location_t loc,
                                         node_t type, vec_t items,
                                         bool is_field);
-node_t cubec_ast_create_initialize_field(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_initialize_field(context_t ctx, location_t loc,
                                          const char *name, node_t value);
-node_t cubec_ast_create_function_expr(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_function_expr(context_t ctx, location_t loc,
                                       node_t name, vec_t captures,
                                       vec_t generic_params, vec_t args,
                                       node_t return_type, node_t body,
@@ -76,112 +77,114 @@ node_t cubec_ast_create_function_expr(allocator_t alloc, location_t loc,
 
 /* ===== Statements ===== */
 
-node_t cubec_ast_create_program(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_program(context_t ctx, location_t loc,
                                 vec_t statements);
-node_t cubec_ast_create_block(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_block(context_t ctx, location_t loc,
                               vec_t statements);
-node_t cubec_ast_create_struct_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_struct_stmt(context_t ctx, location_t loc,
                                     const char *name, vec_t members,
                                     bool is_export, vec_t implements);
-node_t cubec_ast_create_enum_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_enum_stmt(context_t ctx, location_t loc,
                                   const char *name, vec_t items,
                                   bool is_export);
-node_t cubec_ast_create_union_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_union_stmt(context_t ctx, location_t loc,
                                    const char *name, vec_t members,
                                    bool is_export, vec_t implements);
-node_t cubec_ast_create_cunion_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_cunion_stmt(context_t ctx, location_t loc,
                                     const char *name, vec_t fields);
-node_t cubec_ast_create_func_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_func_stmt(context_t ctx, location_t loc,
                                   const char *name, vec_t args,
                                   node_t return_type, node_t body,
                                   bool is_export, bool is_inline,
                                   bool is_extern, bool is_builtin,
                                   bool is_comptime, bool is_c_variadic);
-node_t cubec_ast_create_var_decl_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_var_decl_stmt(context_t ctx, location_t loc,
                                       const char *name, node_t type,
                                       node_t expr, bool is_export,
                                       bool is_extern, bool is_builtin,
                                       bool is_comptime, bool is_using);
-node_t cubec_ast_create_type_alias(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_type_alias(context_t ctx, location_t loc,
                                    const char *name, node_t type_value,
                                    bool is_export, bool is_builtin);
-node_t cubec_ast_create_iface_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_iface_stmt(context_t ctx, location_t loc,
                                    const char *name, vec_t members,
                                    bool is_export);
-node_t cubec_ast_create_if_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_if_stmt(context_t ctx, location_t loc,
                                 node_t cond, node_t then_branch,
                                 node_t else_branch);
-node_t cubec_ast_create_while_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_while_stmt(context_t ctx, location_t loc,
                                    node_t cond, node_t body);
-node_t cubec_ast_create_do_while_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_do_while_stmt(context_t ctx, location_t loc,
                                       node_t body, node_t cond);
-node_t cubec_ast_create_for_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_for_stmt(context_t ctx, location_t loc,
                                  node_t init, node_t cond, node_t incr,
                                  node_t body);
-node_t cubec_ast_create_foreach_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_foreach_stmt(context_t ctx, location_t loc,
                                      bool is_var_decl, node_t variable,
                                      node_t var_type, node_t iterator,
                                      node_t body);
-node_t cubec_ast_create_return_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_return_stmt(context_t ctx, location_t loc,
                                     node_t expr);
-node_t cubec_ast_create_expr_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_expr_stmt(context_t ctx, location_t loc,
                                   node_t expr);
-node_t cubec_ast_create_break_stmt(allocator_t alloc, location_t loc);
-node_t cubec_ast_create_continue_stmt(allocator_t alloc, location_t loc);
-node_t cubec_ast_create_empty_stmt(allocator_t alloc, location_t loc);
-node_t cubec_ast_create_defer_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_break_stmt(context_t ctx, location_t loc);
+node_t cubec_ast_create_continue_stmt(context_t ctx, location_t loc);
+node_t cubec_ast_create_empty_stmt(context_t ctx, location_t loc);
+node_t cubec_ast_create_error(context_t ctx, location_t loc);
+node_t cubec_ast_create_error_stmt(context_t ctx, location_t loc);
+node_t cubec_ast_create_defer_stmt(context_t ctx, location_t loc,
                                    vec_t captures, node_t body);
-node_t cubec_ast_create_switch_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_switch_stmt(context_t ctx, location_t loc,
                                     node_t cond, vec_t matches);
-node_t cubec_ast_create_import_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_import_stmt(context_t ctx, location_t loc,
                                     const char *module_name,
                                     const char *alias, const char *path);
-node_t cubec_ast_create_test_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_test_stmt(context_t ctx, location_t loc,
                                   const char *name, node_t body);
 
 /* ===== Sub-element nodes ===== */
 
-node_t cubec_ast_create_struct_field(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_struct_field(context_t ctx, location_t loc,
                                      const char *name, node_t type,
                                      bool is_pub);
-node_t cubec_ast_create_enum_item(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_enum_item(context_t ctx, location_t loc,
                                   const char *name, node_t type,
                                   node_t value);
-node_t cubec_ast_create_union_field(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_union_field(context_t ctx, location_t loc,
                                     const char *name, node_t type);
-node_t cubec_ast_create_func_arg(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_func_arg(context_t ctx, location_t loc,
                                  const char *name, node_t type);
-node_t cubec_ast_create_iface_method(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_iface_method(context_t ctx, location_t loc,
                                      const char *name, vec_t args,
                                      node_t return_type);
-node_t cubec_ast_create_switch_match(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_switch_match(context_t ctx, location_t loc,
                                      bool is_else, vec_t values,
                                      node_t body);
-node_t cubec_ast_create_decorator(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_decorator(context_t ctx, location_t loc,
                                   node_t expr);
-node_t cubec_ast_create_generic_param(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_generic_param(context_t ctx, location_t loc,
                                       const char *name, vec_t constraints,
                                       node_t value_type, bool is_rest);
-node_t cubec_ast_create_func_capture(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_func_capture(context_t ctx, location_t loc,
                                      const char *name);
 
 /* ===== Type expression nodes ===== */
 
-node_t cubec_ast_create_pointer_type(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_pointer_type(context_t ctx, location_t loc,
                                      node_t base, bool is_const,
                                      bool is_volatile);
-node_t cubec_ast_create_slice_type(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_slice_type(context_t ctx, location_t loc,
                                    node_t base, bool is_const,
                                    bool is_volatile);
-node_t cubec_ast_create_array_type(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_array_type(context_t ctx, location_t loc,
                                    node_t size, node_t base);
-node_t cubec_ast_create_variable_decl(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_variable_decl(context_t ctx, location_t loc,
                                       node_t identifier, node_t type,
                                       node_t expression);
 
 /* ===== Utility ===== */
 
-vec_t cubec_ast_create_vec(allocator_t alloc, bool auto_dispose);
+vec_t cubec_ast_create_vec(context_t ctx, bool auto_dispose);
 
 /**
  * @brief Replace an AST node in its parent's child pointer.

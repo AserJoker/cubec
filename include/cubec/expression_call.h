@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_CALL_
 #define _H_CUBEC_CUBEC_EXPRESSION_CALL_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -44,7 +45,7 @@ typedef struct _cubec_expression_call_init_t cubec_expression_call_init_t;
  * @return A new cubec_expression_call_t node, or NULL if the next token
  *         is not \c '(' (position is NOT advanced on NULL return).
  */
-node_t read_expression_call(allocator_t allocator, vec_t tokens,
+node_t read_expression_call(context_t ctx, vec_t tokens,
                             size_t *position, const char *filename,
                             node_t callee);
 

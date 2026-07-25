@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_FUNCTION_
 #define _H_CUBEC_CUBEC_STATEMENT_FUNCTION_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -91,7 +92,7 @@ typedef struct _cubec_statement_function_init_t cubec_statement_function_init_t;
  * @return A new cubec_statement_function_t node, or NULL if current token
  *         is not a function declaration prefix (export/inline/extern/builtin/comptime/func).
  */
-node_t read_statement_function(allocator_t allocator, vec_t tokens,
+node_t read_statement_function(context_t ctx, vec_t tokens,
                                 size_t *position, const char *filename);
 
 #ifdef __cplusplus

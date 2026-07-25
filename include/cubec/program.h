@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_PROGRAM_
 #define _H_CUBEC_CUBEC_PROGRAM_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -21,7 +22,7 @@ struct _cubec_program_node_init_t {
   vec_t statements; /**< If non-NULL, ownership is transferred; if NULL, an empty vec is created */
 };
 typedef struct _cubec_program_node_init_t cubec_program_node_init_t;
-node_t read_program_node(allocator_t allocator, vec_t tokens, size_t *position,
+node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
                          const char *filename);
 #ifdef __cplusplus
 }

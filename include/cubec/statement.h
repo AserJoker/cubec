@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_
 #define _H_CUBEC_CUBEC_STATEMENT_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -19,7 +20,7 @@ extern "C" {
  * @return A new statement node, or NULL if the current token does not start a
  *         valid statement.
  */
-node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
+node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
                       const char *filename);
 
 #ifdef __cplusplus

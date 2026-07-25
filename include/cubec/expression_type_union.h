@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_TYPE_UNION_
 #define _H_CUBEC_CUBEC_EXPRESSION_TYPE_UNION_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -60,7 +61,7 @@ typedef struct _cubec_expression_type_union_init_t cubec_expression_type_union_i
  * @return A new cubec_expression_type_union_t node, or NULL if current token
  *         is not 'union' keyword.
  */
-node_t read_expression_type_union(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_union(context_t ctx, vec_t tokens,
                                    size_t *position, const char *filename);
 
 /**
@@ -76,7 +77,7 @@ node_t read_expression_type_union(allocator_t allocator, vec_t tokens,
  * @param start_location Location of the 'union' keyword (for error span).
  * @return A new cubec_expression_type_union_t node, or NULL on error.
  */
-node_t read_expression_type_union_body(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_union_body(context_t ctx, vec_t tokens,
                                         size_t *position, const char *filename,
                                         location_t start_location,
                                         vec_t *out_implements);

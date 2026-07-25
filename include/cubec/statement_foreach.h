@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_FOREACH_
 #define _H_CUBEC_CUBEC_STATEMENT_FOREACH_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -53,7 +54,7 @@ typedef struct _cubec_statement_foreach_init_t cubec_statement_foreach_init_t;
 /**
  * @brief Try to parse a foreach statement.
  */
-node_t read_statement_foreach(allocator_t allocator, vec_t tokens,
+node_t read_statement_foreach(context_t ctx, vec_t tokens,
                                size_t *position, const char *filename);
 
 #ifdef __cplusplus

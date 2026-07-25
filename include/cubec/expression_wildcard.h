@@ -29,7 +29,7 @@ extern type_t g_cubec_expression_wildcard_type;
  * @brief Parse a wildcard type expression `?`.
  * @return Wildcard node, or NULL if current token is not `?`.
  */
-node_t read_expression_wildcard(allocator_t allocator, vec_t tokens,
+node_t read_expression_wildcard(context_t ctx, vec_t tokens,
                                 size_t *position, const char *filename);
 
 #ifdef __cplusplus

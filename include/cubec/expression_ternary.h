@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_TERNARY_
 #define _H_CUBEC_CUBEC_EXPRESSION_TERNARY_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -37,7 +38,7 @@ typedef struct _cubec_expression_ternary_init_t cubec_expression_ternary_init_t;
  * @param filename The source filename for error reporting
  * @return A new cubec_expression_ternary_t node, or the condition if no '?' follows
  */
-node_t read_expression_ternary(allocator_t allocator, vec_t tokens,
+node_t read_expression_ternary(context_t ctx, vec_t tokens,
                                size_t *position, const char *filename);
 
 #ifdef __cplusplus

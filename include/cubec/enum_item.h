@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_ENUM_ITEM_
 #define _H_CUBEC_CUBEC_ENUM_ITEM_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -53,7 +54,7 @@ typedef struct _cubec_enum_item_init_t cubec_enum_item_init_t;
  * @return A new cubec_enum_item_t node, or NULL if current tokens
  *         don't match the item pattern.
  */
-node_t read_enum_item(allocator_t allocator, vec_t tokens,
+node_t read_enum_item(context_t ctx, vec_t tokens,
                        size_t *position, const char *filename);
 
 #ifdef __cplusplus

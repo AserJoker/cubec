@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_EMPTY_
 #define _H_CUBEC_CUBEC_STATEMENT_EMPTY_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -23,7 +24,7 @@ struct _cubec_statement_empty_init_t {
 };
 typedef struct _cubec_statement_empty_init_t cubec_statement_empty_init_t;
 
-node_t read_statement_empty(allocator_t allocator, vec_t tokens, size_t *position,
+node_t read_statement_empty(context_t ctx, vec_t tokens, size_t *position,
                             const char *filename);
 
 #ifdef __cplusplus

@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_GROUP_
 #define _H_CUBEC_CUBEC_EXPRESSION_GROUP_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -31,7 +32,7 @@ typedef struct _cubec_expression_group_init_t cubec_expression_group_init_t;
  * @return A new cubec_expression_group_t node, or NULL if the current
  *         token is not \c '('.
  */
-node_t read_expression_group(allocator_t allocator, vec_t tokens,
+node_t read_expression_group(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename);
 
 #ifdef __cplusplus

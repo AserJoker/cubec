@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_UNION_FIELD_
 #define _H_CUBEC_CUBEC_UNION_FIELD_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -51,7 +52,7 @@ typedef struct _cubec_union_field_init_t cubec_union_field_init_t;
  * @return A new cubec_union_field_t node, or NULL if current tokens
  *         don't match the field pattern.
  */
-node_t read_union_field(allocator_t allocator, vec_t tokens,
+node_t read_union_field(context_t ctx, vec_t tokens,
                           size_t *position, const char *filename);
 
 #ifdef __cplusplus

@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_SWITCH_MATCH_
 #define _H_CUBEC_CUBEC_SWITCH_MATCH_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -47,7 +48,7 @@ typedef struct _cubec_switch_match_init_t cubec_switch_match_init_t;
 /**
  * @brief Try to parse a switch match arm (case or else).
  */
-node_t read_switch_match(allocator_t allocator, vec_t tokens,
+node_t read_switch_match(context_t ctx, vec_t tokens,
                           size_t *position, const char *filename);
 
 #ifdef __cplusplus

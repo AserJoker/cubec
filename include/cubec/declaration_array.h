@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_DECLARATION_ARRAY_
 #define _H_CUBEC_CUBEC_DECLARATION_ARRAY_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -38,7 +39,7 @@ typedef struct _cubec_declaration_array_init_t cubec_declaration_array_init_t;
  * @return A new cubec_declaration_array_t node, or NULL if current token
  *         is not '[' followed by non-']' token.
  */
-node_t read_declaration_array(allocator_t allocator, vec_t tokens,
+node_t read_declaration_array(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename);
 
 /* Debug function to print tokens */

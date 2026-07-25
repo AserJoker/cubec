@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_BINARY_
 #define _H_CUBEC_CUBEC_EXPRESSION_BINARY_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
@@ -37,7 +38,7 @@ typedef struct _cubec_expression_binary_init_t cubec_expression_binary_init_t;
  * @return A new cubec_expression_binary_t node (with left=NULL), or NULL if
  *         the current token is not a prefix operator.
  */
-node_t read_expression_prefix(allocator_t allocator, vec_t tokens,
+node_t read_expression_prefix(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename);
 
 /**
@@ -48,7 +49,7 @@ node_t read_expression_prefix(allocator_t allocator, vec_t tokens,
  * @return A cubec_expression_binary_t node for binary ops, or a unary/value
  *         node if no binary operators are present.
  */
-node_t read_expression_binary(allocator_t allocator, vec_t tokens,
+node_t read_expression_binary(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename);
 
 #ifdef __cplusplus

@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_INITIALIZE_FIELD_
 #define _H_CUBEC_CUBEC_EXPRESSION_INITIALIZE_FIELD_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -38,7 +39,7 @@ typedef struct _cubec_expression_initialize_field_init_t cubec_expression_initia
  * @return A new cubec_expression_initialize_field_t node, or NULL if the current
  *         token is not \c '.' followed by identifier and \c =.
  */
-node_t read_expression_initialize_field(allocator_t allocator, vec_t tokens,
+node_t read_expression_initialize_field(context_t ctx, vec_t tokens,
                                         size_t *position, const char *filename);
 
 #ifdef __cplusplus

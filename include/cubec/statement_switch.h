@@ -1,6 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_SWITCH_
 #define _H_CUBEC_CUBEC_STATEMENT_SWITCH_
 #include "core/allocator.h"
+#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -45,7 +46,7 @@ typedef struct _cubec_statement_switch_init_t cubec_statement_switch_init_t;
 /**
  * @brief Try to parse a switch statement.
  */
-node_t read_statement_switch(allocator_t allocator, vec_t tokens,
+node_t read_statement_switch(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename);
 
 #ifdef __cplusplus
