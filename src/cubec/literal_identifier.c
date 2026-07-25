@@ -1,7 +1,6 @@
 #include "cubec/literal_identifier.h"
 #include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/string.h"
 #include "core/token.h"
@@ -9,27 +8,24 @@
 #include "cubec/ast_factory.h"
 #include "cubec/literal.h"
 #include "cubec/token.h"
+#include "engine/context.h"
 
 static void _cubec_literal_identifier_init(cubec_literal_identifier_t self,
                                            allocator_t allocator,
                                            cubec_literal_identifier_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_literal_init_t super_init = {
       .kind = CUBEC_NODE_LITERAL_IDENTIFIER,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_cubec_literal_type.init(&self->super, allocator, &super_init));
+  g_cubec_literal_type.init(&self->super, allocator, &super_init);
   if (init->value) {
     self->value = allocator_create(allocator, &g_string_type,
                                    &(string_init_t){.str = init->value});
   } else {
     self->value = allocator_create(allocator, &g_string_type, NULL);
   }
-onerror:
-  return;
 }
 
 static void _cubec_literal_identifier_dispose(cubec_literal_identifier_t self,
@@ -43,23 +39,15 @@ static void _cubec_literal_identifier_dispose(cubec_literal_identifier_t self,
 static void _cubec_literal_identifier_clone(cubec_literal_identifier_t self,
                                             allocator_t allocator,
                                             cubec_literal_identifier_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_literal_type.clone(&self->super, allocator, &another->super));
-  self->value = TRY_LOCAL(cleanup, value_clone(allocator, another->value));
-  return;
-
-cleanup:
-  allocator_free(allocator, &self->value);
+  g_cubec_literal_type.clone(&self->super, allocator, &another->super);
+  self->value = value_clone(allocator, another->value);
 }
 
 static void _cubec_literal_identifier_move(cubec_literal_identifier_t self,
                                            allocator_t allocator,
                                            cubec_literal_identifier_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_literal_type.move(&self->super, allocator, &another->super));
-  self->value = TRY_LOCAL(cleanup, value_move(allocator, another->value));
-  return;
-
-cleanup:
-  allocator_free(allocator, &self->value);
+  g_cubec_literal_type.move(&self->super, allocator, &another->super);
+  self->value = value_move(allocator, another->value);
 }
 
 type_t g_cubec_literal_identifier_type = {
@@ -71,11 +59,12 @@ type_t g_cubec_literal_identifier_type = {
     .move = (type_move_fn_t)_cubec_literal_identifier_move,
 };
 
-node_t read_literal_identifier(allocator_t allocator, vec_t tokens,
+node_t read_literal_identifier(context_t ctx, vec_t tokens,
                                size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
-  token_t token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t token = vec_get(tokens, current);
   if (!token_is(token, CUBEC_TOKEN_IDENTIFIER, NULL)) {
     return NULL;
   }
@@ -87,7 +76,8 @@ node_t read_literal_identifier(allocator_t allocator, vec_t tokens,
       .value = NULL,
   };
   cubec_literal_identifier_t node = NULL;
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_literal_identifier_type, &init));
+  node = allocator_create(allocator, &g_cubec_literal_identifier_type, &init);
+  if (!node) goto onerror;
   node_t node_base = (node_t)node;
   node_base->location.filename = filename;
 
@@ -103,7 +93,7 @@ onerror:
   return NULL;
 }
 
-node_t cubec_ast_create_identifier(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_identifier(context_t ctx, location_t loc,
                                    const char *name) {
-  return (node_t)_make_ident_node(alloc, loc, name);
+  return (node_t)_make_ident_node(ctx, loc, name);
 }

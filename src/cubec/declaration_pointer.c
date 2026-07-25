@@ -1,30 +1,26 @@
 #include "cubec/declaration_pointer.h"
 #include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
+#include "engine/context.h"
 
 static void _cubec_declaration_pointer_init(cubec_declaration_pointer_t self,
                                             allocator_t allocator,
                                             cubec_declaration_pointer_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_declaration_init_t super_init = {
       .kind = CUBEC_NODE_DECLARATION_POINTER,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_cubec_declaration_type.init(&self->super, allocator, &super_init));
+  g_cubec_declaration_type.init(&self->super, allocator, &super_init);
   self->type = init->type;
   self->is_const = init->is_const;
   self->is_volatile = init->is_volatile;
-onerror:
-  return;
 }
 
 static void _cubec_declaration_pointer_dispose(cubec_declaration_pointer_t self,
@@ -36,27 +32,19 @@ static void _cubec_declaration_pointer_dispose(cubec_declaration_pointer_t self,
 static void _cubec_declaration_pointer_clone(cubec_declaration_pointer_t self,
                                              allocator_t allocator,
                                              cubec_declaration_pointer_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_declaration_type.clone(&self->super, allocator, &another->super));
-  self->type = TRY_LOCAL(cleanup, value_clone(allocator, another->type));
+  g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
+  self->type = value_clone(allocator, another->type);
   self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
-  return;
-
-cleanup:
-  allocator_free(allocator, &self->type);
 }
 
 static void _cubec_declaration_pointer_move(cubec_declaration_pointer_t self,
                                             allocator_t allocator,
                                             cubec_declaration_pointer_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_declaration_type.move(&self->super, allocator, &another->super));
-  self->type = TRY_LOCAL(cleanup, value_move(allocator, another->type));
+  g_cubec_declaration_type.move(&self->super, allocator, &another->super);
+  self->type = value_move(allocator, another->type);
   self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
-  return;
-
-cleanup:
-  allocator_free(allocator, &self->type);
 }
 
 type_t g_cubec_declaration_pointer_type = {
@@ -78,8 +66,9 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   return location_is(token_get_location(token), keyword);
 }
 
-node_t read_declaration_pointer(allocator_t allocator, vec_t tokens,
+node_t read_declaration_pointer(context_t ctx, vec_t tokens,
                                 size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_declaration_pointer_t node = NULL;
   node_t type = NULL;
@@ -88,7 +77,7 @@ node_t read_declaration_pointer(allocator_t allocator, vec_t tokens,
   bool is_volatile = false;
 
   /* Expect '*' (pointer indicator) */
-  token_t star_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t star_token = vec_get(tokens, current);
   if (!token_is(star_token, CUBEC_TOKEN_SYMBOL, "*")) {
     return NULL;
   }
@@ -123,17 +112,18 @@ node_t read_declaration_pointer(allocator_t allocator, vec_t tokens,
    * ternary: *a ? b : c → pointer(ternary(a, b, c)).
    * Use grouping for the alternative: (* a) ? b : c → ternary(pointer(a), b, c).
    * Namespace access binds tighter: *std::vec::Vec → *(std::vec::Vec). */
-  type = TRY_LOCAL(onerror, read_expression_base(allocator, tokens, &current, filename));
+  type = read_expression_base(ctx, tokens, &current, filename);
   if (!type) {
-    THROW_LOCAL(onerror, "expected type after pointer declaration");
+    goto onerror;
   }
 
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_declaration_pointer_type,
+  node = allocator_create(allocator, &g_cubec_declaration_pointer_type,
                           &(cubec_declaration_pointer_init_t){
                               .type = type,
                               .is_const = is_const,
                               .is_volatile = is_volatile,
-                          }));
+                          });
+  if (!node) goto onerror;
 
   /* Set location from start to end of type */
   node->super.super.super.location = start_location;
@@ -152,10 +142,11 @@ onerror:
  *  Factory: cubec_ast_create_pointer_type
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_pointer_type(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_pointer_type(context_t ctx, location_t loc,
                                      node_t base, bool is_const,
                                      bool is_volatile) {
-  cubec_declaration_pointer_init_t init = {.location = loc, .parent = NULL,
+  allocator_t alloc = ctx->allocator;
+                                           cubec_declaration_pointer_init_t init = {
                                            .type = base,
                                            .is_const = is_const,
                                            .is_volatile = is_volatile};

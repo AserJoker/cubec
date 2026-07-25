@@ -1,10 +1,11 @@
 #include "cubec/token.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/location.h"
 #include "core/position.h"
 #include "core/token.h"
 #include "core/vec.h"
+#include "engine/context.h"
+#include "engine/diagnostic.h"
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -12,52 +13,62 @@
 #include <unicode/urename.h>
 #include <unicode/utypes.h>
 
-static token_t create_eof_token(allocator_t allocator, location_t location) {
+static token_t create_eof_token(context_t ctx, location_t location) {
+  allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_EOF, location});
 }
 
-static token_t create_identifier_token(allocator_t allocator,
+static token_t create_identifier_token(context_t ctx,
                                        location_t location) {
+  allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_IDENTIFIER, location});
 }
-static token_t create_keyword_token(allocator_t allocator,
+static token_t create_keyword_token(context_t ctx,
                                     location_t location) {
+  allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_KEYWORD, location});
 }
-static token_t create_numeric_token(allocator_t allocator,
+static token_t create_numeric_token(context_t ctx,
                                     location_t location) {
+  allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_NUMERIC, location});
 }
-static token_t create_string_token(allocator_t allocator, location_t location) {
+static token_t create_string_token(context_t ctx, location_t location) {
+  allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_STRING, location});
 }
 
-static token_t create_char_token(allocator_t allocator, location_t location) {
+static token_t create_char_token(context_t ctx, location_t location) {
+  allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_CHAR, location});
 }
 
-static token_t create_symbol_token(allocator_t allocator, location_t location) {
+static token_t create_symbol_token(context_t ctx, location_t location) {
+  allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_SYMBOL, location});
 }
-static token_t create_whitespace_token(allocator_t allocator,
+static token_t create_whitespace_token(context_t ctx,
                                        location_t location) {
+  allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_WHITESPACE, location});
 }
-static token_t create_comment_token(allocator_t allocator,
+static token_t create_comment_token(context_t ctx,
                                     location_t location) {
+  allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_COMMENT, location});
 }
-static token_t create_multiline_comment_token(allocator_t allocator,
+static token_t create_multiline_comment_token(context_t ctx,
                                               location_t location) {
+  allocator_t allocator = ctx->allocator;
   return allocator_create(
       allocator, &g_token_type,
       &(token_init_t){CUBEC_TOKEN_MULTILINE_COMMENT, location});
@@ -148,7 +159,7 @@ static const char *symbols[] = {
     ";",   "::",  ":",   "%",   "[",  "]",  "{",   "}",   "(",  ")",  "~",  0,
 };
 
-static token_t read_symbol_token(allocator_t allocator, position_t *position,
+static token_t read_symbol_token(context_t ctx, position_t *position,
                                  const char *filename) {
   position_t current = *position;
   size_t idx = 0;
@@ -169,11 +180,11 @@ static token_t read_symbol_token(allocator_t allocator, position_t *position,
     return NULL;
   }
   token_t token = create_symbol_token(
-      allocator, (location_t){filename, *position, current});
+      ctx, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
-static token_t read_whitespace_token(allocator_t allocator,
+static token_t read_whitespace_token(context_t ctx,
                                      position_t *position,
                                      const char *filename) {
   position_t current = *position;
@@ -193,11 +204,11 @@ static token_t read_whitespace_token(allocator_t allocator,
     return NULL;
   }
   token_t token = create_whitespace_token(
-      allocator, (location_t){filename, *position, current});
+      ctx, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
-static token_t read_comment_token(allocator_t allocator, position_t *position,
+static token_t read_comment_token(context_t ctx, position_t *position,
                                   const char *filename) {
   position_t current = *position;
   if (*current.offset == '/' && *(current.offset + 1) == '/') {
@@ -215,7 +226,7 @@ static token_t read_comment_token(allocator_t allocator, position_t *position,
       current.column += length;
     }
     token_t token = create_comment_token(
-        allocator, (location_t){filename, *position, current});
+        ctx, (location_t){filename, *position, current});
     *position = current;
     return token;
   } else {
@@ -223,7 +234,7 @@ static token_t read_comment_token(allocator_t allocator, position_t *position,
   }
 }
 
-static token_t read_multiline_comment_token(allocator_t allocator,
+static token_t read_multiline_comment_token(context_t ctx,
                                             position_t *position,
                                             const char *filename) {
   position_t current = *position;
@@ -233,8 +244,16 @@ static token_t read_multiline_comment_token(allocator_t allocator,
     size_t length = 0;
     while (true) {
       if (!*current.offset) {
-        THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-              filename, current.line + 1, current.column);
+        /* Unterminated multiline comment — record error and return the
+         * partial comment token so the lexer can continue normally */
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                             (location_t){filename, *position, current},
+                             "unterminated multiline comment");
+        ctx->error_count++;
+        token_t token = create_multiline_comment_token(
+            ctx, (location_t){filename, *position, current});
+        *position = current;
+        return token;
       }
       if (*current.offset == '*') {
         if (*(current.offset + 1) == '/') {
@@ -263,7 +282,7 @@ static token_t read_multiline_comment_token(allocator_t allocator,
       }
     }
     token_t token = create_multiline_comment_token(
-        allocator, (location_t){filename, *position, current});
+        ctx, (location_t){filename, *position, current});
     *position = current;
     return token;
   } else {
@@ -271,7 +290,7 @@ static token_t read_multiline_comment_token(allocator_t allocator,
   }
 }
 
-static token_t read_numeric_token(allocator_t allocator, position_t *position,
+static token_t read_numeric_token(context_t ctx, position_t *position,
                                   const char *filename) {
   position_t current = *position;
   if (*current.offset >= '0' && *current.offset <= '9') {
@@ -334,9 +353,7 @@ static token_t read_numeric_token(allocator_t allocator, position_t *position,
             }
           }
         } else {
-          THROW(NULL,
-                "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-                filename, current.line + 1, current.column);
+          return NULL;
         }
       }
       if (*current.offset == 'e' || *current.offset == 'E') {
@@ -352,9 +369,7 @@ static token_t read_numeric_token(allocator_t allocator, position_t *position,
             }
           }
         } else {
-          THROW(NULL,
-                "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-                filename, current.line + 1, current.column);
+          return NULL;
         }
       }
     }
@@ -362,11 +377,11 @@ static token_t read_numeric_token(allocator_t allocator, position_t *position,
     return NULL;
   }
   token_t token = create_numeric_token(
-      allocator, (location_t){filename, *position, current});
+      ctx, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
-static token_t read_string_token(allocator_t allocator, position_t *position,
+static token_t read_string_token(context_t ctx, position_t *position,
                                  const char *filename) {
   position_t current = *position;
   if (*current.offset != '\"') {
@@ -376,14 +391,12 @@ static token_t read_string_token(allocator_t allocator, position_t *position,
   current.column++;
   while (true) {
     if (!*current.offset) {
-      THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-            filename, current.line + 1, current.column);
+      return NULL;
     }
     size_t length = 0;
     uint32_t code = read_unicode(current.offset, &length);
     if (code == '\n' || code == '\r' || code == 0x2028 || code == 2029) {
-      THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-            filename, current.line + 1, current.column);
+      return NULL;
     }
     if (*current.offset == '\"') {
       current.offset++;
@@ -410,9 +423,7 @@ static token_t read_string_token(allocator_t allocator, position_t *position,
         current.offset++;
         current.column++;
         if (*current.offset != '{') {
-          THROW(NULL,
-                "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-                filename, current.line + 1, current.column);
+          return NULL;
         }
         current.offset++;
         current.column++;
@@ -423,9 +434,7 @@ static token_t read_string_token(allocator_t allocator, position_t *position,
             current.offset++;
             current.column++;
           } else {
-            THROW(NULL,
-                  "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-                  filename, current.line + 1, current.column);
+            return NULL;
           }
         }
         current.offset++;
@@ -437,8 +446,7 @@ static token_t read_string_token(allocator_t allocator, position_t *position,
         current.offset++;
         current.column++;
       } else {
-        THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-              filename, current.line + 1, current.column);
+        return NULL;
       }
     } else {
       current.column++;
@@ -446,11 +454,11 @@ static token_t read_string_token(allocator_t allocator, position_t *position,
     }
   }
   token_t token = create_string_token(
-      allocator, (location_t){filename, *position, current});
+      ctx, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
-static token_t read_char_token(allocator_t allocator, position_t *position,
+static token_t read_char_token(context_t ctx, position_t *position,
                                const char *filename) {
   position_t current = *position;
   if (*current.offset != '\'') {
@@ -459,16 +467,14 @@ static token_t read_char_token(allocator_t allocator, position_t *position,
   current.offset++;
   current.column++;
   if (!*current.offset) {
-    THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-          filename, current.line + 1, current.column);
+    return NULL;
   }
   unsigned char code = 0;
   if (*current.offset == '\\') {
     current.offset++;
     current.column++;
     if (!*current.offset) {
-      THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-            filename, current.line + 1, current.column);
+      return NULL;
     }
     switch (*current.offset) {
     case 'n':
@@ -519,8 +525,7 @@ static token_t read_char_token(allocator_t allocator, position_t *position,
       current.offset++;
       current.column++;
       if (*current.offset != '{') {
-        THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-              filename, current.line + 1, current.column);
+        return NULL;
       }
       current.offset++;
       current.column++;
@@ -531,36 +536,31 @@ static token_t read_char_token(allocator_t allocator, position_t *position,
           current.offset++;
           current.column++;
         } else {
-          THROW(NULL,
-                "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-                filename, current.line + 1, current.column);
+          return NULL;
         }
       }
       current.offset++;
       current.column++;
       break;
     default:
-      THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-            filename, current.line + 1, current.column);
+      return NULL;
     }
   } else {
     code = (unsigned char)*current.offset;
     if (code == '\0' || code == '\'' || code == '"' || code == '\\' ||
         code == '\n' || code == '\r') {
-      THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-            filename, current.line + 1, current.column);
+      return NULL;
     }
     current.offset++;
     current.column++;
   }
   if (*current.offset != '\'') {
-    THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-          filename, current.line + 1, current.column);
+    return NULL;
   }
   current.offset++;
   current.column++;
   token_t token =
-      create_char_token(allocator, (location_t){filename, *position, current});
+      create_char_token(ctx, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
@@ -573,7 +573,7 @@ static const char *keywords[] = {
     "struct",  "switch",  "test",     "cunion", "union", "using", "volatile", "while",
     "extends", "as",      "typeof", "sizeof", "alignof", "builtin", "type", "undefined", "var", 0,
 };
-static token_t read_identifier_token(allocator_t allocator,
+static token_t read_identifier_token(context_t ctx,
                                      position_t *position,
                                      const char *filename) {
   position_t current = *position;
@@ -597,66 +597,67 @@ static token_t read_identifier_token(allocator_t allocator,
     token_t token = NULL;
     for (size_t idx = 0; keywords[idx]; idx++) {
       if (location_is(&location, keywords[idx])) {
-        token = create_keyword_token(allocator, location);
+        token = create_keyword_token(ctx, location);
         break;
       }
     }
     if (!token) {
-      token = create_identifier_token(allocator, location);
+      token = create_identifier_token(ctx, location);
     }
     *position = current;
     return token;
   }
   return NULL;
 }
-static token_t read_eof_token(allocator_t allocator, position_t *position,
+static token_t read_eof_token(context_t ctx, position_t *position,
                               const char *filename) {
   if (*position->offset) {
     return NULL;
   }
-  return create_eof_token(allocator,
+  return create_eof_token(ctx,
                           (location_t){filename, *position, *position});
 }
 
-token_t read_token(allocator_t allocator, position_t *position,
+token_t read_token(context_t ctx, position_t *position,
                    const char *filename) {
+  allocator_t allocator = ctx->allocator;
   token_t token = NULL;
   if (!token) {
-    token = TRY(NULL, read_eof_token(allocator, position, filename));
+    token = read_eof_token(ctx, position, filename);
   }
   if (!token) {
-    token = TRY(NULL, read_numeric_token(allocator, position, filename));
+    token = read_numeric_token(ctx, position, filename);
   }
   if (!token) {
-    token = TRY(NULL, read_string_token(allocator, position, filename));
+    token = read_string_token(ctx, position, filename);
   }
   if (!token) {
-    token = TRY(NULL, read_char_token(allocator, position, filename));
+    token = read_char_token(ctx, position, filename);
   }
   if (!token) {
-    token = TRY(NULL, read_comment_token(allocator, position, filename));
+    token = read_comment_token(ctx, position, filename);
   }
   if (!token) {
     token =
-        TRY(NULL, read_multiline_comment_token(allocator, position, filename));
+        read_multiline_comment_token(ctx, position, filename);
   }
   if (!token) {
-    token = TRY(NULL, read_whitespace_token(allocator, position, filename));
+    token = read_whitespace_token(ctx, position, filename);
   }
   if (!token) {
-    token = TRY(NULL, read_identifier_token(allocator, position, filename));
+    token = read_identifier_token(ctx, position, filename);
   }
   if (!token) {
-    token = TRY(NULL, read_symbol_token(allocator, position, filename));
+    token = read_symbol_token(ctx, position, filename);
   }
   if (!token) {
-    THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid or unexpected token",
-          filename, position->line + 1, position->column);
+    return NULL;
   }
   return token;
 }
-vec_t resolve_token_list(allocator_t allocator, const char *filename,
+vec_t resolve_token_list(context_t ctx, const char *filename,
                          const char *source) {
+  allocator_t allocator = ctx->allocator;
   vec_t vec = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   position_t position = {
       .column = 0,
@@ -665,7 +666,8 @@ vec_t resolve_token_list(allocator_t allocator, const char *filename,
   };
   while (true) {
     token_t token =
-        TRY_LOCAL(onerror, read_token(allocator, &position, filename));
+        read_token(ctx, &position, filename);
+    if (!token) goto onerror;
     vec_push(vec, token);
     if (token_get_kind(token) == CUBEC_TOKEN_EOF) {
       break;

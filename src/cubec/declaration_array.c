@@ -1,7 +1,6 @@
 #include "cubec/declaration_array.h"
 #include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/location.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
@@ -9,23 +8,20 @@
 #include "cubec/literal_numeric.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
+#include "engine/context.h"
 
 static void _cubec_declaration_array_init(cubec_declaration_array_t self,
                                           allocator_t allocator,
                                           cubec_declaration_array_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_declaration_init_t super_init = {
       .kind = CUBEC_NODE_DECLARATION_ARRAY,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_cubec_declaration_type.init(&self->super, allocator, &super_init));
+  g_cubec_declaration_type.init(&self->super, allocator, &super_init);
   self->size = init->size;
   self->type = init->type;
-onerror:
-  return;
 }
 
 static void _cubec_declaration_array_dispose(cubec_declaration_array_t self,
@@ -38,9 +34,9 @@ static void _cubec_declaration_array_dispose(cubec_declaration_array_t self,
 static void _cubec_declaration_array_clone(cubec_declaration_array_t self,
                                            allocator_t allocator,
                                            cubec_declaration_array_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_declaration_type.clone(&self->super, allocator, &another->super));
-  self->size = TRY_LOCAL(cleanup, value_clone(allocator, another->size));
-  self->type = TRY_LOCAL(cleanup, value_clone(allocator, another->type));
+  g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
+  self->size = value_clone(allocator, another->size);
+  self->type = value_clone(allocator, another->type);
   return;
 
 cleanup:
@@ -51,9 +47,9 @@ cleanup:
 static void _cubec_declaration_array_move(cubec_declaration_array_t self,
                                           allocator_t allocator,
                                           cubec_declaration_array_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_declaration_type.move(&self->super, allocator, &another->super));
-  self->size = TRY_LOCAL(cleanup, value_move(allocator, another->size));
-  self->type = TRY_LOCAL(cleanup, value_move(allocator, another->type));
+  g_cubec_declaration_type.move(&self->super, allocator, &another->super);
+  self->size = value_move(allocator, another->size);
+  self->type = value_move(allocator, another->type);
   return;
 
 cleanup:
@@ -70,8 +66,9 @@ type_t g_cubec_declaration_array_type = {
     .move = (type_move_fn_t)_cubec_declaration_array_move,
 };
 
-node_t read_declaration_array(allocator_t allocator, vec_t tokens,
+node_t read_declaration_array(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_declaration_array_t node = NULL;
   node_t size = NULL;
@@ -79,7 +76,7 @@ node_t read_declaration_array(allocator_t allocator, vec_t tokens,
   location_t start_location = {0};
 
   /* Expect '[' (array indicator) */
-  token_t open_bracket = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t open_bracket = vec_get(tokens, current);
   if (!token_is(open_bracket, CUBEC_TOKEN_SYMBOL, "[")) {
     return NULL;
   }
@@ -89,7 +86,7 @@ node_t read_declaration_array(allocator_t allocator, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* Check if this is a slice (empty brackets []) - if so, not an array */
-  token_t next_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t next_token = vec_get(tokens, current);
   if (token_is(next_token, CUBEC_TOKEN_SYMBOL, "]")) {
     /* This is a slice, not an array - return NULL so slice parser handles it */
     return NULL;
@@ -99,16 +96,16 @@ node_t read_declaration_array(allocator_t allocator, vec_t tokens,
   start_location.filename = filename;
 
   /* Parse the array size expression using read_expression */
-  size = read_expression(allocator, tokens, &current, filename);
+  size = read_expression(ctx, tokens, &current, filename);
   if (!size) {
-    THROW_LOCAL(onerror, "expected expression for array size");
+    goto onerror;
   }
 
   /* Skip whitespace before checking for ']' */
   skip_whitespace(tokens, &current);
 
   /* Expect ']' after the size expression */
-  token_t close_bracket = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t close_bracket = vec_get(tokens, current);
   if (!token_is(close_bracket, CUBEC_TOKEN_SYMBOL, "]")) {
     /* Not an array declaration — restore position and return NULL.
        This allows the caller to try other parsers (e.g. [0; 64] is not valid). */
@@ -124,16 +121,17 @@ node_t read_declaration_array(allocator_t allocator, vec_t tokens,
    * Use grouping for the alternative: ([N] a) ? b : c → ternary(array(a), b, c).
    * Namespace access binds tighter: [N]std::vec::Vec → [N](std::vec::Vec). */
   skip_whitespace(tokens, &current);
-  type = read_expression_base(allocator, tokens, &current, filename);
+  type = read_expression_base(ctx, tokens, &current, filename);
   if (!type) {
-    THROW_LOCAL(onerror, "expected type after array declaration");
+    goto onerror;
   }
 
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_declaration_array_type,
+  node = allocator_create(allocator, &g_cubec_declaration_array_type,
                           &(cubec_declaration_array_init_t){
                               .size = size,
                               .type = type,
-                          }));
+                          });
+  if (!node) goto onerror;
 
   /* Set location from start to end of type */
   node->super.super.super.location = start_location;
@@ -153,9 +151,10 @@ onerror:
  *  Factory: cubec_ast_create_array_type
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_array_type(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_array_type(context_t ctx, location_t loc,
                                    node_t size, node_t base) {
-  cubec_declaration_array_init_t init = {.location = loc, .parent = NULL,
+  allocator_t alloc = ctx->allocator;
+                                         cubec_declaration_array_init_t init = {
                                          .size = size, .type = base};
   return (node_t)allocator_create(alloc, &g_cubec_declaration_array_type,
                                   &init);

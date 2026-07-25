@@ -1,6 +1,5 @@
 #include "cubec/expression_type_enum.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -9,6 +8,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -17,20 +17,15 @@
 static void _cubec_expression_type_enum_init(
     cubec_expression_type_enum_t self, allocator_t allocator,
     cubec_expression_type_enum_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_TYPE_ENUM,
       .parent = NULL,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  TRY_VOID_LOCAL(onerror,
-                 g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
   self->items = init->items;
-onerror:
-  return;
 }
 
 static void _cubec_expression_type_enum_dispose(
@@ -42,22 +37,16 @@ static void _cubec_expression_type_enum_dispose(
 static void _cubec_expression_type_enum_clone(
     cubec_expression_type_enum_t self, allocator_t allocator,
     cubec_expression_type_enum_t another) {
-  TRY_VOID_LOCAL(onerror,
-                 g_cubec_expression_type.clone(&self->super, allocator, &another->super));
-  self->items = TRY_LOCAL(onerror, value_clone(allocator, another->items));
-  return;
-onerror:
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->items = value_clone(allocator, another->items);
   return;
 }
 
 static void _cubec_expression_type_enum_move(
     cubec_expression_type_enum_t self, allocator_t allocator,
     cubec_expression_type_enum_t another) {
-  TRY_VOID_LOCAL(onerror,
-                 g_cubec_expression_type.move(&self->super, allocator, &another->super));
-  self->items = TRY_LOCAL(onerror, value_move(allocator, another->items));
-  return;
-onerror:
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->items = value_move(allocator, another->items);
   return;
 }
 
@@ -92,24 +81,25 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *            { items }
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_type_enum_body(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_enum_body(context_t ctx, vec_t tokens,
                                        size_t *position, const char *filename,
                                        location_t start_location) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   vec_t items = NULL;
   cubec_expression_type_enum_t node = NULL;
 
   /* 1. Expect '{' */
   if (!_is_symbol(tokens, current, "{")) {
-    THROW_LOCAL(cleanup, "expected '{' after enum");
+    goto cleanup;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 2. Parse items — comma separated enum_item nodes */
-  items = TRY_LOCAL(cleanup, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+  items = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, "}")) {
-    node_t item = read_enum_item(allocator, tokens, &current, filename);
+    node_t item = read_enum_item(ctx, tokens, &current, filename);
     if (!item) {
       break;
     }
@@ -127,13 +117,11 @@ node_t read_expression_type_enum_body(allocator_t allocator, vec_t tokens,
 
   /* 3. Expect '}' */
   if (!_is_symbol(tokens, current, "}")) {
-    token_t tok = TRY_LOCAL(cleanup, vec_get(tokens, current));
+    token_t tok = vec_get(tokens, current);
     location_t *loc = token_get_location(tok);
-    THROW_LOCAL(cleanup,
-                "%s:%" PRIuPTR ":%" PRIuPTR " expected '}' to close enum type",
-                filename, loc->begin.line + 1, loc->begin.column);
+    goto cleanup;
   }
-  token_t close_brace = TRY_LOCAL(cleanup, vec_get(tokens, current));
+  token_t close_brace = vec_get(tokens, current);
   current++;
 
   /* 4. Build location spanning from start to '}' */
@@ -149,7 +137,7 @@ node_t read_expression_type_enum_body(allocator_t allocator, vec_t tokens,
       .parent = NULL,
       .items = items,
   };
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_expression_type_enum_type, &init));
+  node = allocator_create(allocator, &g_cubec_expression_type_enum_type, &init);
   *position = current;
   return (node_t)&node->super;
 
@@ -163,21 +151,22 @@ cleanup:
  *  Parser: read_expression_type_enum — entry point for type expressions
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_type_enum(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_enum(context_t ctx, vec_t tokens,
                                   size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
   /* Expect 'enum' keyword */
   if (!_is_keyword(tokens, current, "enum")) {
     return NULL;
   }
-  token_t enum_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t enum_token = vec_get(tokens, current);
   location_t start_location = *token_get_location(enum_token);
   start_location.filename = filename;
   current++;
   skip_whitespace(tokens, &current);
 
-  node_t result = read_expression_type_enum_body(allocator, tokens, &current, filename, start_location);
+  node_t result = read_expression_type_enum_body(ctx, tokens, &current, filename, start_location);
   if (result) {
     *position = current;
   }

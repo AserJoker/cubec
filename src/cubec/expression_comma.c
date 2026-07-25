@@ -1,6 +1,5 @@
 #include "cubec/expression_comma.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
@@ -8,6 +7,7 @@
 #include "cubec/expression_assignment.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -16,20 +16,16 @@
 static void _cubec_expression_comma_init(cubec_expression_comma_t self,
                                          allocator_t allocator,
                                          cubec_expression_comma_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_COMMA,
       .parent = NULL,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
   self->left = init->left;
   self->right = init->right;
-onerror:
-  return;
 }
 
 static void _cubec_expression_comma_dispose(cubec_expression_comma_t self,
@@ -42,9 +38,9 @@ static void _cubec_expression_comma_dispose(cubec_expression_comma_t self,
 static void _cubec_expression_comma_clone(cubec_expression_comma_t self,
                                           allocator_t allocator,
                                           cubec_expression_comma_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
-  self->left = TRY_LOCAL(cleanup, value_clone(allocator, another->left));
-  self->right = TRY_LOCAL(cleanup, value_clone(allocator, another->right));
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->left = value_clone(allocator, another->left);
+  self->right = value_clone(allocator, another->right);
   return;
 
 cleanup:
@@ -55,9 +51,9 @@ cleanup:
 static void _cubec_expression_comma_move(cubec_expression_comma_t self,
                                          allocator_t allocator,
                                          cubec_expression_comma_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
-  self->left = TRY_LOCAL(cleanup, value_move(allocator, another->left));
-  self->right = TRY_LOCAL(cleanup, value_move(allocator, another->right));
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->left = value_move(allocator, another->left);
+  self->right = value_move(allocator, another->right);
   return;
 
 cleanup:
@@ -78,8 +74,9 @@ type_t g_cubec_expression_comma_type = {
  *  Parser: read_expression_comma
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_comma(allocator_t allocator, vec_t tokens,
+node_t read_expression_comma(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t left = NULL;
   node_t right = NULL;
@@ -88,9 +85,9 @@ node_t read_expression_comma(allocator_t allocator, vec_t tokens,
   /* Try assignment first (value = expression). If no assignment operator
    * follows the value, read_expression_assignment returns NULL and we
    * fall through to read_expression_base which handles ternary/binary. */
-  left = read_expression_assignment(allocator, tokens, &current, filename);
+  left = read_expression_assignment(ctx, tokens, &current, filename);
   if (!left) {
-    left = read_expression_base(allocator, tokens, &current, filename);
+    left = read_expression_base(ctx, tokens, &current, filename);
   }
   if (!left) {
     return NULL;
@@ -109,19 +106,18 @@ node_t read_expression_comma(allocator_t allocator, vec_t tokens,
 
   /* Parse right operand: recursively call self for right-associativity
    * This allows comma expressions like a, b, c to parse as comma(a, comma(b, c)) */
-  right = read_expression_comma(allocator, tokens, &current, filename);
+  right = read_expression_comma(ctx, tokens, &current, filename);
   if (!right) {
     allocator_free(allocator, &left);
-    THROW_LOCAL(onerror, "expected expression after comma");
+    goto onerror;
   }
 
   /* Create comma node */
-  node = TRY_LOCAL(onerror,
-                   allocator_create(allocator, &g_cubec_expression_comma_type,
+  node = allocator_create(allocator, &g_cubec_expression_comma_type,
                                     &(cubec_expression_comma_init_t){
                                         .left = left,
                                         .right = right,
-                                    }));
+                                    });
 
   *position = current;
   return (node_t)node;
@@ -137,9 +133,10 @@ onerror:
  *  Factory: cubec_ast_create_comma
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_comma(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_comma(context_t ctx, location_t loc,
                               node_t left, node_t right) {
-  cubec_expression_comma_init_t init = {.location = loc, .parent = NULL,
+  allocator_t alloc = ctx->allocator;
+                                        cubec_expression_comma_init_t init = {
                                         .left = left, .right = right};
   return (node_t)allocator_create(alloc, &g_cubec_expression_comma_type,
                                   &init);

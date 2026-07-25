@@ -1,12 +1,12 @@
 #include "cubec/expression_group.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -15,19 +15,15 @@
 static void _cubec_expression_group_init(cubec_expression_group_t self,
                                          allocator_t allocator,
                                          cubec_expression_group_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_GROUP,
       .parent = NULL,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
   self->inner = init->inner;
-onerror:
-  return;
 }
 
 static void _cubec_expression_group_dispose(cubec_expression_group_t self,
@@ -39,23 +35,15 @@ static void _cubec_expression_group_dispose(cubec_expression_group_t self,
 static void _cubec_expression_group_clone(cubec_expression_group_t self,
                                           allocator_t allocator,
                                           cubec_expression_group_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
-  self->inner = TRY_LOCAL(cleanup, value_clone(allocator, another->inner));
-  return;
-
-cleanup:
-  allocator_free(allocator, &self->inner);
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->inner = value_clone(allocator, another->inner);
 }
 
 static void _cubec_expression_group_move(cubec_expression_group_t self,
                                          allocator_t allocator,
                                          cubec_expression_group_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
-  self->inner = TRY_LOCAL(cleanup, value_move(allocator, another->inner));
-  return;
-
-cleanup:
-  allocator_free(allocator, &self->inner);
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->inner = value_move(allocator, another->inner);
 }
 
 type_t g_cubec_expression_group_type = {
@@ -71,8 +59,9 @@ type_t g_cubec_expression_group_type = {
  *  Parser: read_expression_group
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_group(allocator_t allocator, vec_t tokens,
+node_t read_expression_group(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_group_t node = NULL;
   node_t inner = NULL;
@@ -87,7 +76,7 @@ node_t read_expression_group(allocator_t allocator, vec_t tokens,
   /* Parse inner expression */
   skip_whitespace(tokens, &current);
   inner =
-      TRY_LOCAL(onerror, read_expression(allocator, tokens, &current, filename));
+      read_expression(ctx, tokens, &current, filename);
   if (!inner) {
     goto onerror;
   }
@@ -100,10 +89,10 @@ node_t read_expression_group(allocator_t allocator, vec_t tokens,
   }
   current++;
 
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_group_type,
+  node = allocator_create(allocator, &g_cubec_expression_group_type,
                           &(cubec_expression_group_init_t){
                               .inner = inner,
-                          }));
+                          });
   location_t *loc = token_get_location(open_token);
   node->super.super.location = *loc;
   node->super.super.location.filename = filename;
@@ -121,9 +110,10 @@ onerror:
  *  Factory: cubec_ast_create_group
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_group(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_group(context_t ctx, location_t loc,
                               node_t inner) {
-  cubec_expression_group_init_t init = {.location = loc, .parent = NULL,
+  allocator_t alloc = ctx->allocator;
+                                        cubec_expression_group_init_t init = {
                                         .inner = inner};
   return (node_t)allocator_create(alloc, &g_cubec_expression_group_type,
                                   &init);

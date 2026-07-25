@@ -1,29 +1,25 @@
 #include "cubec/literal_char.h"
 #include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
 #include "cubec/ast_factory.h"
 #include "cubec/literal.h"
 #include "cubec/token.h"
+#include "engine/context.h"
 
 static void _cubec_literal_char_init(cubec_literal_char_t self,
                                      allocator_t allocator,
                                      cubec_literal_char_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_literal_init_t super_init = {
       .kind = CUBEC_NODE_LITERAL_CHAR,
       .parent = NULL,
   };
   super_init.location = init->location;
   self->value = init->value;
-  TRY_VOID_LOCAL(onerror, g_cubec_literal_type.init(&self->super, allocator, &super_init));
-onerror:
-  return;
+  g_cubec_literal_type.init(&self->super, allocator, &super_init);
 }
 
 static void _cubec_literal_char_dispose(cubec_literal_char_t self,
@@ -34,16 +30,14 @@ static void _cubec_literal_char_dispose(cubec_literal_char_t self,
 static void _cubec_literal_char_clone(cubec_literal_char_t self,
                                       allocator_t allocator,
                                       cubec_literal_char_t another) {
-  TRY_VOID_LOCAL(onerror, g_cubec_literal_type.clone(&self->super, allocator, &another->super));
+  g_cubec_literal_type.clone(&self->super, allocator, &another->super);
   self->value = another->value;
-onerror:
-  return;
 }
 
 static void _cubec_literal_char_move(cubec_literal_char_t self,
                                      allocator_t allocator,
                                      cubec_literal_char_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_literal_type.move(&self->super, allocator, &another->super));
+  g_cubec_literal_type.move(&self->super, allocator, &another->super);
   self->value = another->value;
   return;
 
@@ -60,11 +54,12 @@ type_t g_cubec_literal_char_type = {
     .move = (type_move_fn_t)_cubec_literal_char_move,
 };
 
-node_t read_literal_char(allocator_t allocator, vec_t tokens,
+node_t read_literal_char(context_t ctx, vec_t tokens,
                          size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
-  token_t token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t token = vec_get(tokens, current);
   if (!token_is(token, CUBEC_TOKEN_CHAR, NULL)) {
     return NULL;
   }
@@ -82,7 +77,8 @@ node_t read_literal_char(allocator_t allocator, vec_t tokens,
       .value = value,
   };
   cubec_literal_char_t node =
-      TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_literal_char_type, &init));
+      allocator_create(allocator, &g_cubec_literal_char_type, &init);
+  if (!node) goto onerror;
   node_t node_base = (node_t)node;
   node_base->location.filename = filename;
   current++;
@@ -94,7 +90,8 @@ onerror:
   return NULL;
 }
 
-node_t cubec_ast_create_char(allocator_t alloc, location_t loc, char value) {
+node_t cubec_ast_create_char(context_t ctx, location_t loc, char value) {
+  allocator_t alloc = ctx->allocator;
   cubec_literal_char_init_t init = {.location = loc, .parent = NULL,
                                     .value = value};
   return (node_t)allocator_create(alloc, &g_cubec_literal_char_type, &init);

@@ -1,6 +1,5 @@
 #include "cubec/statement_comptime.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -12,6 +11,7 @@
 #include "cubec/statement_declaration.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* ==========================================================================
  *  comptime if: comptime if(condition) { } [else { }]
@@ -20,20 +20,16 @@
 static void _cubec_statement_comptime_if_init(
     cubec_statement_comptime_if_t self, allocator_t allocator,
     cubec_statement_comptime_if_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_COMPTIME_IF,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
+  g_node_type.init(&self->super, allocator, &super_init);
   self->condition = init->condition;
   self->then_branch = init->then_branch;
   self->else_branch = init->else_branch;
-onerror:
-  return;
 }
 
 static void _cubec_statement_comptime_if_dispose(
@@ -47,24 +43,20 @@ static void _cubec_statement_comptime_if_dispose(
 static void _cubec_statement_comptime_if_clone(
     cubec_statement_comptime_if_t self, allocator_t allocator,
     cubec_statement_comptime_if_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
-  self->condition = TRY_LOCAL(onerror, value_clone(allocator, another->condition));
-  self->then_branch = TRY_LOCAL(onerror, value_clone(allocator, another->then_branch));
-  self->else_branch = another->else_branch ? TRY_LOCAL(onerror, value_clone(allocator, another->else_branch)) : NULL;
-  return;
-onerror:
+  g_node_type.clone(&self->super, allocator, &another->super);
+  self->condition = value_clone(allocator, another->condition);
+  self->then_branch = value_clone(allocator, another->then_branch);
+  self->else_branch = another->else_branch ? value_clone(allocator, another->else_branch) : NULL;
   return;
 }
 
 static void _cubec_statement_comptime_if_move(
     cubec_statement_comptime_if_t self, allocator_t allocator,
     cubec_statement_comptime_if_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
-  self->condition = TRY_LOCAL(onerror, value_move(allocator, another->condition));
-  self->then_branch = TRY_LOCAL(onerror, value_move(allocator, another->then_branch));
-  self->else_branch = another->else_branch ? TRY_LOCAL(onerror, value_move(allocator, another->else_branch)) : NULL;
-  return;
-onerror:
+  g_node_type.move(&self->super, allocator, &another->super);
+  self->condition = value_move(allocator, another->condition);
+  self->then_branch = value_move(allocator, another->then_branch);
+  self->else_branch = another->else_branch ? value_move(allocator, another->else_branch) : NULL;
   return;
 }
 
@@ -84,22 +76,18 @@ type_t g_cubec_statement_comptime_if_type = {
 static void _cubec_statement_comptime_foreach_init(
     cubec_statement_comptime_foreach_t self, allocator_t allocator,
     cubec_statement_comptime_foreach_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_COMPTIME_FOREACH,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
+  g_node_type.init(&self->super, allocator, &super_init);
   self->is_var_decl = init->is_var_decl;
   self->variable = init->variable;
   self->var_type = init->var_type;
   self->iterator = init->iterator;
   self->body = init->body;
-onerror:
-  return;
 }
 
 static void _cubec_statement_comptime_foreach_dispose(
@@ -114,28 +102,24 @@ static void _cubec_statement_comptime_foreach_dispose(
 static void _cubec_statement_comptime_foreach_clone(
     cubec_statement_comptime_foreach_t self, allocator_t allocator,
     cubec_statement_comptime_foreach_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
+  g_node_type.clone(&self->super, allocator, &another->super);
   self->is_var_decl = another->is_var_decl;
-  self->variable = TRY_LOCAL(onerror, value_clone(allocator, another->variable));
-  self->var_type = another->var_type ? TRY_LOCAL(onerror, value_clone(allocator, another->var_type)) : NULL;
-  self->iterator = TRY_LOCAL(onerror, value_clone(allocator, another->iterator));
-  self->body = TRY_LOCAL(onerror, value_clone(allocator, another->body));
-  return;
-onerror:
+  self->variable = value_clone(allocator, another->variable);
+  self->var_type = another->var_type ? value_clone(allocator, another->var_type) : NULL;
+  self->iterator = value_clone(allocator, another->iterator);
+  self->body = value_clone(allocator, another->body);
   return;
 }
 
 static void _cubec_statement_comptime_foreach_move(
     cubec_statement_comptime_foreach_t self, allocator_t allocator,
     cubec_statement_comptime_foreach_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
+  g_node_type.move(&self->super, allocator, &another->super);
   self->is_var_decl = another->is_var_decl;
-  self->variable = TRY_LOCAL(onerror, value_move(allocator, another->variable));
-  self->var_type = another->var_type ? TRY_LOCAL(onerror, value_move(allocator, another->var_type)) : NULL;
-  self->iterator = TRY_LOCAL(onerror, value_move(allocator, another->iterator));
-  self->body = TRY_LOCAL(onerror, value_move(allocator, another->body));
-  return;
-onerror:
+  self->variable = value_move(allocator, another->variable);
+  self->var_type = another->var_type ? value_move(allocator, another->var_type) : NULL;
+  self->iterator = value_move(allocator, another->iterator);
+  self->body = value_move(allocator, another->body);
   return;
 }
 
@@ -169,9 +153,10 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: comptime if — comptime if(condition) { } [else { }]
  * ========================================================================== */
 
-static node_t _read_comptime_if(allocator_t allocator, vec_t tokens,
+static node_t _read_comptime_if(context_t ctx, vec_t tokens,
                                  size_t *position, const char *filename,
                                  location_t start_location) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t condition = NULL;
   node_t then_branch = NULL;
@@ -187,29 +172,29 @@ static node_t _read_comptime_if(allocator_t allocator, vec_t tokens,
 
   /* 2. Expect '(' */
   if (!_is_symbol(tokens, current, "(")) {
-    THROW_LOCAL(onerror, "expected '(' after 'comptime if'");
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 3. Parse condition expression */
-  condition = TRY_LOCAL(cleanup, read_expression(allocator, tokens, &current, filename));
+  condition = read_expression(ctx, tokens, &current, filename);
   if (!condition) {
-    THROW_LOCAL(cleanup, "expected condition expression in comptime if");
+    goto cleanup;
   }
   skip_whitespace(tokens, &current);
 
   /* 4. Expect ')' */
   if (!_is_symbol(tokens, current, ")")) {
-    THROW_LOCAL(cleanup, "expected ')' after comptime if condition");
+    goto cleanup;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 5. Parse then branch (block) */
-  then_branch = TRY_LOCAL(cleanup, read_statement_block(allocator, tokens, &current, filename));
+  then_branch = read_statement_block(ctx, tokens, &current, filename);
   if (!then_branch) {
-    THROW_LOCAL(cleanup, "expected block after comptime if condition");
+    goto cleanup;
   }
   skip_whitespace(tokens, &current);
 
@@ -220,15 +205,15 @@ static node_t _read_comptime_if(allocator_t allocator, vec_t tokens,
 
     if (_is_keyword(tokens, current, "if")) {
       /* else if — parse as nested comptime if */
-      else_branch = TRY_LOCAL(cleanup, _read_comptime_if(allocator, tokens, &current, filename, start_location));
+      else_branch = _read_comptime_if(ctx, tokens, &current, filename, start_location);
       if (!else_branch) {
-        THROW_LOCAL(cleanup, "expected comptime if after else");
+        goto cleanup;
       }
     } else {
       /* else { } */
-      else_branch = TRY_LOCAL(cleanup, read_statement_block(allocator, tokens, &current, filename));
+      else_branch = read_statement_block(ctx, tokens, &current, filename);
       if (!else_branch) {
-        THROW_LOCAL(cleanup, "expected block after else in comptime if");
+        goto cleanup;
       }
     }
   }
@@ -248,7 +233,7 @@ static node_t _read_comptime_if(allocator_t allocator, vec_t tokens,
       .then_branch = then_branch,
       .else_branch = else_branch,
   };
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_comptime_if_type, &init));
+  node = allocator_create(allocator, &g_cubec_statement_comptime_if_type, &init);
   *position = current;
   return &node->super;
 
@@ -269,9 +254,10 @@ onerror:
  *  Parser: comptime foreach — comptime foreach(var item [: type] of iter) { }
  * ========================================================================== */
 
-static node_t _read_comptime_foreach(allocator_t allocator, vec_t tokens,
+static node_t _read_comptime_foreach(context_t ctx, vec_t tokens,
                                       size_t *position, const char *filename,
                                       location_t start_location) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t variable = NULL;
   node_t var_type = NULL;
@@ -289,7 +275,7 @@ static node_t _read_comptime_foreach(allocator_t allocator, vec_t tokens,
 
   /* 2. Expect '(' */
   if (!_is_symbol(tokens, current, "(")) {
-    THROW_LOCAL(onerror, "expected '(' after 'comptime foreach'");
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
@@ -300,9 +286,9 @@ static node_t _read_comptime_foreach(allocator_t allocator, vec_t tokens,
     current++;
     skip_whitespace(tokens, &current);
 
-    variable = TRY_LOCAL(cleanup, read_literal_identifier(allocator, tokens, &current, filename));
+    variable = read_literal_identifier(ctx, tokens, &current, filename);
     if (!variable) {
-      THROW_LOCAL(cleanup, "expected identifier after 'var' in comptime foreach");
+      goto cleanup;
     }
     skip_whitespace(tokens, &current);
 
@@ -310,46 +296,46 @@ static node_t _read_comptime_foreach(allocator_t allocator, vec_t tokens,
     if (_is_symbol(tokens, current, ":")) {
       current++;
       skip_whitespace(tokens, &current);
-      var_type = TRY_LOCAL(cleanup, read_expression_type(allocator, tokens, &current, filename));
+      var_type = read_expression_type(ctx, tokens, &current, filename);
       if (!var_type) {
-        THROW_LOCAL(cleanup, "expected type after ':' in comptime foreach");
+        goto cleanup;
       }
       skip_whitespace(tokens, &current);
     }
   } else {
     is_var_decl = false;
-    variable = TRY_LOCAL(cleanup, read_literal_identifier(allocator, tokens, &current, filename));
+    variable = read_literal_identifier(ctx, tokens, &current, filename);
     if (!variable) {
-      THROW_LOCAL(cleanup, "expected identifier in comptime foreach");
+      goto cleanup;
     }
     skip_whitespace(tokens, &current);
   }
 
   /* 4. Expect 'of' keyword */
   if (!_is_keyword(tokens, current, "of")) {
-    THROW_LOCAL(cleanup, "expected 'of' in comptime foreach");
+    goto cleanup;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 5. Parse iterator expression */
-  iterator = TRY_LOCAL(cleanup, read_expression(allocator, tokens, &current, filename));
+  iterator = read_expression(ctx, tokens, &current, filename);
   if (!iterator) {
-    THROW_LOCAL(cleanup, "expected iterator expression after 'of'");
+    goto cleanup;
   }
   skip_whitespace(tokens, &current);
 
   /* 6. Expect ')' */
   if (!_is_symbol(tokens, current, ")")) {
-    THROW_LOCAL(cleanup, "expected ')' after iterator in comptime foreach");
+    goto cleanup;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 7. Parse body (block) */
-  body = TRY_LOCAL(cleanup, read_statement_block(allocator, tokens, &current, filename));
+  body = read_statement_block(ctx, tokens, &current, filename);
   if (!body) {
-    THROW_LOCAL(cleanup, "expected block after comptime foreach");
+    goto cleanup;
   }
 
   /* 8. Build location */
@@ -365,7 +351,7 @@ static node_t _read_comptime_foreach(allocator_t allocator, vec_t tokens,
       .iterator = iterator,
       .body = body,
   };
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_comptime_foreach_type, &finit));
+  node = allocator_create(allocator, &g_cubec_statement_comptime_foreach_type, &finit);
   *position = current;
   return &node->super;
 
@@ -388,24 +374,25 @@ onerror:
  *  Public dispatcher: read_statement_comptime
  * ========================================================================== */
 
-node_t read_statement_comptime(allocator_t allocator, vec_t tokens,
+node_t read_statement_comptime(context_t ctx, vec_t tokens,
                                 size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
   /* 1. Expect 'comptime' keyword */
   if (!_is_keyword(tokens, current, "comptime")) {
     return NULL;
   }
-  token_t comptime_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t comptime_token = vec_get(tokens, current);
   location_t start_location = *token_get_location(comptime_token);
   start_location.filename = filename;
   current++;
   skip_whitespace(tokens, &current);
 
   /* 2. Peek at next token to determine which comptime form */
-  token_t next = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t next = vec_get(tokens, current);
   if (!next) {
-    THROW_LOCAL(onerror, "expected 'if' or 'foreach' after 'comptime'");
+    goto onerror;
   }
 
   /* If next token is a declaration/function modifier, this is 'comptime' as
@@ -427,15 +414,15 @@ node_t read_statement_comptime(allocator_t allocator, vec_t tokens,
   /* comptime if(...) { } */
   if (token_get_kind(next) == CUBEC_TOKEN_KEYWORD &&
       location_is(token_get_location(next), "if")) {
-    result = TRY_LOCAL(onerror, _read_comptime_if(allocator, tokens, &current, filename, start_location));
+    result = _read_comptime_if(ctx, tokens, &current, filename, start_location);
   }
   /* comptime foreach(...) { } */
   else if (token_get_kind(next) == CUBEC_TOKEN_KEYWORD &&
       location_is(token_get_location(next), "foreach")) {
-    result = TRY_LOCAL(onerror, _read_comptime_foreach(allocator, tokens, &current, filename, start_location));
+    result = _read_comptime_foreach(ctx, tokens, &current, filename, start_location);
   }
   else {
-    THROW_LOCAL(onerror, "expected 'if' or 'foreach' after 'comptime'");
+    goto onerror;
   }
 
   *position = current;

@@ -1,6 +1,5 @@
 #include "cubec/expression_type_union.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -13,6 +12,7 @@
 #include "cubec/token.h"
 #include "cubec/union_field.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -21,21 +21,16 @@
 static void _cubec_expression_type_union_init(
     cubec_expression_type_union_t self, allocator_t allocator,
     cubec_expression_type_union_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_TYPE_UNION,
       .parent = NULL,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  TRY_VOID_LOCAL(onerror,
-                 g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
   self->generic_params = init->generic_params;
   self->members = init->members;
-onerror:
-  return;
 }
 
 static void _cubec_expression_type_union_dispose(
@@ -48,28 +43,22 @@ static void _cubec_expression_type_union_dispose(
 static void _cubec_expression_type_union_clone(
     cubec_expression_type_union_t self, allocator_t allocator,
     cubec_expression_type_union_t another) {
-  TRY_VOID_LOCAL(onerror,
-                 g_cubec_expression_type.clone(&self->super, allocator, &another->super));
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
-                             ? TRY_LOCAL(onerror, value_clone(allocator, another->generic_params))
+                             ? value_clone(allocator, another->generic_params)
                              : NULL;
-  self->members = TRY_LOCAL(onerror, value_clone(allocator, another->members));
-  return;
-onerror:
+  self->members = value_clone(allocator, another->members);
   return;
 }
 
 static void _cubec_expression_type_union_move(
     cubec_expression_type_union_t self, allocator_t allocator,
     cubec_expression_type_union_t another) {
-  TRY_VOID_LOCAL(onerror,
-                 g_cubec_expression_type.move(&self->super, allocator, &another->super));
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
-                             ? TRY_LOCAL(onerror, value_move(allocator, another->generic_params))
+                             ? value_move(allocator, another->generic_params)
                              : NULL;
-  self->members = TRY_LOCAL(onerror, value_move(allocator, another->members));
-  return;
-onerror:
+  self->members = value_move(allocator, another->members);
   return;
 }
 
@@ -104,10 +93,11 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *            [generic_params] { members }
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_type_union_body(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_union_body(context_t ctx, vec_t tokens,
                                         size_t *position, const char *filename,
                                         location_t start_location,
                                         vec_t *out_implements) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   vec_t generic_params = NULL;
   vec_t members = NULL;
@@ -115,7 +105,7 @@ node_t read_expression_type_union_body(allocator_t allocator, vec_t tokens,
   cubec_expression_type_union_t node = NULL;
 
   /* 1. Parse optional generic parameters */
-  generic_params = TRY_LOCAL(cleanup, read_generic_params(allocator, tokens, &current, filename));
+  generic_params = read_generic_params(ctx, tokens, &current, filename);
   if (generic_params) {
     skip_whitespace(tokens, &current);
   }
@@ -124,22 +114,19 @@ node_t read_expression_type_union_body(allocator_t allocator, vec_t tokens,
   if (out_implements && _is_keyword(tokens, current, "implement")) {
     current++;
     skip_whitespace(tokens, &current);
-    node_t iface_expr = TRY_LOCAL(cleanup,
-        read_type_expression_primary(allocator, tokens, &current, filename));
+    node_t iface_expr = read_type_expression_primary(ctx, tokens, &current, filename);
     if (!iface_expr) {
-      THROW_LOCAL(cleanup, "expected interface type after 'implement'");
+      goto cleanup;
     }
-    implements = TRY_LOCAL(cleanup,
-        allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+    implements = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
     vec_push(implements, iface_expr);
     skip_whitespace(tokens, &current);
     while (_is_symbol(tokens, current, ",")) {
       current++;
       skip_whitespace(tokens, &current);
-      iface_expr = TRY_LOCAL(cleanup,
-          read_type_expression_primary(allocator, tokens, &current, filename));
+      iface_expr = read_type_expression_primary(ctx, tokens, &current, filename);
       if (!iface_expr) {
-        THROW_LOCAL(cleanup, "expected interface type after ',' in implement clause");
+        goto cleanup;
       }
       vec_push(implements, iface_expr);
       skip_whitespace(tokens, &current);
@@ -148,43 +135,41 @@ node_t read_expression_type_union_body(allocator_t allocator, vec_t tokens,
 
   /* 2. Expect '{' */
   if (!_is_symbol(tokens, current, "{")) {
-    THROW_LOCAL(cleanup, "expected '{' after union");
+    goto cleanup;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 3. Parse members — union fields, spread, statements (func/var/type/etc.) */
-  members = TRY_LOCAL(cleanup, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+  members = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, "}")) {
     node_t member = NULL;
 
     /* Try spread: ...expr ; */
-    token_t tok = TRY_LOCAL(cleanup, vec_get(tokens, current));
+    token_t tok = vec_get(tokens, current);
     if (token_is(tok, CUBEC_TOKEN_SYMBOL, "...")) {
-      member = TRY_LOCAL(cleanup, read_expression_spread(allocator, tokens, &current, filename));
+      member = read_expression_spread(ctx, tokens, &current, filename);
       if (!member) {
         break;
       }
       skip_whitespace(tokens, &current);
       /* Expect ';' after spread */
-      token_t semi = TRY_LOCAL(cleanup, vec_get(tokens, current));
+      token_t semi = vec_get(tokens, current);
       if (!token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
         location_t *loc = token_get_location(semi);
-        THROW_LOCAL(cleanup,
-                    "%s:%" PRIuPTR ":%" PRIuPTR " expected ';' after spread expression",
-                    filename, loc->begin.line + 1, loc->begin.column);
+        goto cleanup;
       }
       current++;
     }
 
     /* Try union field: <identifier> : <type> */
     if (!member) {
-      member = read_union_field(allocator, tokens, &current, filename);
+      member = read_union_field(ctx, tokens, &current, filename);
     }
 
     /* Try statement (var, type, func, struct, interface, etc.) */
     if (!member) {
-      member = read_statement(allocator, tokens, &current, filename);
+      member = read_statement(ctx, tokens, &current, filename);
     }
 
     if (!member) {
@@ -197,13 +182,11 @@ node_t read_expression_type_union_body(allocator_t allocator, vec_t tokens,
 
   /* 4. Expect '}' */
   if (!_is_symbol(tokens, current, "}")) {
-    token_t tok = TRY_LOCAL(cleanup, vec_get(tokens, current));
+    token_t tok = vec_get(tokens, current);
     location_t *loc = token_get_location(tok);
-    THROW_LOCAL(cleanup,
-                "%s:%" PRIuPTR ":%" PRIuPTR " expected '}' to close union type",
-                filename, loc->begin.line + 1, loc->begin.column);
+    goto cleanup;
   }
-  token_t close_brace = TRY_LOCAL(cleanup, vec_get(tokens, current));
+  token_t close_brace = vec_get(tokens, current);
   current++;
 
   /* 5. Build location spanning from start to '}' */
@@ -220,7 +203,7 @@ node_t read_expression_type_union_body(allocator_t allocator, vec_t tokens,
       .generic_params = generic_params,
       .members = members,
   };
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_expression_type_union_type, &init));
+  node = allocator_create(allocator, &g_cubec_expression_type_union_type, &init);
   if (out_implements) *out_implements = implements;
   *position = current;
   return (node_t)&node->super;
@@ -237,21 +220,22 @@ cleanup:
  *  Parser: read_expression_type_union — entry point for type expressions
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_type_union(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_union(context_t ctx, vec_t tokens,
                                    size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
   /* Expect 'union' keyword — but NOT 'cunion' */
   if (!_is_keyword(tokens, current, "union")) {
     return NULL;
   }
-  token_t union_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t union_token = vec_get(tokens, current);
   location_t start_location = *token_get_location(union_token);
   start_location.filename = filename;
   current++;
   skip_whitespace(tokens, &current);
 
-  node_t result = read_expression_type_union_body(allocator, tokens, &current, filename, start_location, NULL);
+  node_t result = read_expression_type_union_body(ctx, tokens, &current, filename, start_location, NULL);
   if (result) {
     *position = current;
   }

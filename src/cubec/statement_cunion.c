@@ -2,7 +2,6 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -13,6 +12,7 @@
 #include "cubec/struct_field.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -21,20 +21,16 @@
 static void _cubec_statement_cunion_init(
     cubec_statement_cunion_t self, allocator_t allocator,
     cubec_statement_cunion_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_CUNION,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
+  g_node_type.init(&self->super, allocator, &super_init);
   self->name = init->name;
   self->fields = init->fields;
   self->decorators = init->decorators;
-onerror:
-  return;
 }
 
 static void _cubec_statement_cunion_dispose(
@@ -48,22 +44,18 @@ static void _cubec_statement_cunion_dispose(
 static void _cubec_statement_cunion_clone(
     cubec_statement_cunion_t self, allocator_t allocator,
     cubec_statement_cunion_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
-  self->name = TRY_LOCAL(onerror, value_clone(allocator, another->name));
-  self->fields = TRY_LOCAL(onerror, value_clone(allocator, another->fields));
-  return;
-onerror:
+  g_node_type.clone(&self->super, allocator, &another->super);
+  self->name = value_clone(allocator, another->name);
+  self->fields = value_clone(allocator, another->fields);
   return;
 }
 
 static void _cubec_statement_cunion_move(
     cubec_statement_cunion_t self, allocator_t allocator,
     cubec_statement_cunion_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
-  self->name = TRY_LOCAL(onerror, value_move(allocator, another->name));
-  self->fields = TRY_LOCAL(onerror, value_move(allocator, another->fields));
-  return;
-onerror:
+  g_node_type.move(&self->super, allocator, &another->super);
+  self->name = value_move(allocator, another->name);
+  self->fields = value_move(allocator, another->fields);
   return;
 }
 
@@ -97,8 +89,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_cunion — cunion <name> { <fields> }
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_cunion(allocator_t allocator, vec_t tokens,
+node_t read_statement_cunion(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t name = NULL;
   vec_t fields = NULL;
@@ -109,10 +102,10 @@ node_t read_statement_cunion(allocator_t allocator, vec_t tokens,
   {
     while (true) {
       skip_whitespace(tokens, &current);
-      node_t dec = read_decorator(allocator, tokens, &current, filename);
+      node_t dec = read_decorator(ctx, tokens, &current, filename);
       if (!dec) break;
       if (!decorators) {
-        decorators = TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+        decorators = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
       }
       vec_push(decorators, dec);
     }
@@ -122,31 +115,31 @@ node_t read_statement_cunion(allocator_t allocator, vec_t tokens,
   if (!_is_keyword(tokens, current, "cunion")) {
     goto onerror;
   }
-  token_t cunion_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t cunion_token = vec_get(tokens, current);
   location_t start_location = *token_get_location(cunion_token);
   start_location.filename = filename;
   current++;
   skip_whitespace(tokens, &current);
 
   /* 2. Parse cunion name (required) */
-  name = TRY_LOCAL(cleanup, read_literal_identifier(allocator, tokens, &current, filename));
+  name = read_literal_identifier(ctx, tokens, &current, filename);
   if (!name) {
-    THROW_LOCAL(cleanup, "expected cunion name after 'cunion'");
+    goto cleanup;
   }
 
   skip_whitespace(tokens, &current);
 
   /* 3. Expect '{' */
   if (!_is_symbol(tokens, current, "{")) {
-    THROW_LOCAL(cleanup, "expected '{' after cunion name");
+    goto cleanup;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 4. Parse fields — semicolon-separated struct_field nodes */
-  fields = TRY_LOCAL(cleanup, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+  fields = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, "}")) {
-    node_t field = read_struct_field(allocator, tokens, &current, filename);
+    node_t field = read_struct_field(ctx, tokens, &current, filename);
     if (!field) {
       break;
     }
@@ -156,13 +149,11 @@ node_t read_statement_cunion(allocator_t allocator, vec_t tokens,
 
   /* 5. Expect '}' */
   if (!_is_symbol(tokens, current, "}")) {
-    token_t tok = TRY_LOCAL(cleanup, vec_get(tokens, current));
+    token_t tok = vec_get(tokens, current);
     location_t *loc = token_get_location(tok);
-    THROW_LOCAL(cleanup,
-                "%s:%" PRIuPTR ":%" PRIuPTR " expected '}' to close cunion",
-                filename, loc->begin.line + 1, loc->begin.column);
+    goto cleanup;
   }
-  token_t close_brace = TRY_LOCAL(cleanup, vec_get(tokens, current));
+  token_t close_brace = vec_get(tokens, current);
   current++;
 
   /* 6. Build location */
@@ -180,7 +171,7 @@ node_t read_statement_cunion(allocator_t allocator, vec_t tokens,
       .fields = fields,
       .decorators = decorators,
   };
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_cunion_type, &init));
+  node = allocator_create(allocator, &g_cubec_statement_cunion_type, &init);
   *position = current;
   return &node->super;
 
@@ -197,11 +188,12 @@ onerror:
   return NULL;
 }
 
-node_t cubec_ast_create_cunion_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_cunion_stmt(context_t ctx, location_t loc,
                                     const char *name, vec_t fields) {
-  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  allocator_t alloc = ctx->allocator;
+  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
   cubec_statement_cunion_init_t init = {
-      .location = loc, .parent = NULL, .name = name_node, .fields = fields};
+      .location = loc, .parent = NULL, .name = (node_t)name_node, .fields = fields};
   return (node_t)allocator_create(alloc, &g_cubec_statement_cunion_type,
                                   &init);
 }

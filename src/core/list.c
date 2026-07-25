@@ -1,6 +1,5 @@
 #include "core/list.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include <stdbool.h>
 
 struct _list_t {
@@ -84,14 +83,14 @@ void **list_get_data(list_t self) {
 
 void *list_get_first(list_t self) {
   if (self->head == NULL) {
-    THROW(NULL, "RangeError: list is empty");
+    return NULL;
   }
   return self->head->data;
 }
 
 void *list_get_last(list_t self) {
   if (self->tail == NULL) {
-    THROW(NULL, "RangeError: list is empty");
+    return NULL;
   }
   return self->tail->data;
 }
@@ -112,7 +111,7 @@ size_t list_push(list_t self, void *data) {
 
 void *list_pop(list_t self) {
   if (self->tail == NULL) {
-    THROW(NULL, "RangeError: list is empty");
+    return NULL;
   }
   list_node_t *node = self->tail;
   void *data = node->data;
@@ -146,7 +145,7 @@ size_t list_unshift(list_t self, void *data) {
 
 void *list_shift(list_t self) {
   if (self->head == NULL) {
-    THROW(NULL, "RangeError: list is empty");
+    return NULL;
   }
   list_node_t *node = self->head;
   void *data = node->data;
@@ -166,9 +165,7 @@ void *list_shift(list_t self) {
 
 size_t list_insert(list_t self, size_t idx, void *data) {
   if (idx > self->size) {
-    THROW((size_t)-1,
-          "RangeError: index %" PRIuPTR " out of list length %" PRIuPTR, idx,
-          self->size);
+    return (size_t)-1;
   }
   if (idx == 0) {
     return list_unshift(self, data);
@@ -226,7 +223,7 @@ void *list_iter_get(list_iter_t *iter) {
 
 void *list_iter_set(list_iter_t *iter, void *data) {
   if (iter->current == NULL) {
-    THROW(NULL, "RangeError: iterator is exhausted");
+    return NULL;
   }
   list_node_t *node = (list_node_t *)iter->current;
   void *old_data = node->data;

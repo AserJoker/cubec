@@ -1,6 +1,5 @@
 #include "cubec/expression_postfix_unary.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/string.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
@@ -9,6 +8,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <string.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move (reuses expression_binary)
@@ -17,9 +17,7 @@
 static void _cubec_expression_postfix_unary_init(
     cubec_expression_postfix_unary_t self, allocator_t allocator,
     cubec_expression_postfix_unary_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
 
   cubec_expression_init_t super_init = {
       .kind = init->kind,
@@ -28,13 +26,11 @@ static void _cubec_expression_postfix_unary_init(
   super_init.location = init->location;
   super_init.parent = init->parent;
 
-  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
   self->left = NULL;
   self->right = init->host;
   self->opt = init->opt;
 
-onerror:
-  return;
 }
 
 static void
@@ -48,10 +44,10 @@ _cubec_expression_postfix_unary_dispose(cubec_expression_postfix_unary_t self,
 static void _cubec_expression_postfix_unary_clone(
     cubec_expression_postfix_unary_t self, allocator_t allocator,
     cubec_expression_postfix_unary_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->left = NULL;
-  self->right = TRY_LOCAL(cleanup, value_clone(allocator, another->right));
-  self->opt = (string_t)TRY_LOCAL(cleanup, value_clone(allocator, another->opt));
+  self->right = value_clone(allocator, another->right);
+  self->opt = (string_t)value_clone(allocator, another->opt);
   return;
 
 cleanup:
@@ -63,10 +59,10 @@ static void
 _cubec_expression_postfix_unary_move(cubec_expression_postfix_unary_t self,
                                      allocator_t allocator,
                                      cubec_expression_postfix_unary_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->left = NULL;
-  self->right = TRY_LOCAL(cleanup, value_move(allocator, another->right));
-  self->opt = (string_t)TRY_LOCAL(cleanup, value_move(allocator, another->opt));
+  self->right = value_move(allocator, another->right);
+  self->opt = (string_t)value_move(allocator, another->opt);
   return;
 
 cleanup:
@@ -97,15 +93,16 @@ type_t g_cubec_expression_postfix_unary_type = {
  * These are composed of separate '.' and '&'/'*'/'?'/'!' tokens.
  * Returns NULL if next token is not '.' followed by '&', '*', '?', or '!'.
  */
-node_t read_expression_postfix_unary(allocator_t allocator, vec_t tokens,
+node_t read_expression_postfix_unary(context_t ctx, vec_t tokens,
                                      size_t *position, const char *filename,
                                      node_t host) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_postfix_unary_t node = NULL;
   string_t opt = NULL;
 
   /* Expect '.' token first */
-  token_t dot_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t dot_token = vec_get(tokens, current);
   if (!token_is(dot_token, CUBEC_TOKEN_SYMBOL, ".")) {
     return NULL;
   }
@@ -113,7 +110,7 @@ node_t read_expression_postfix_unary(allocator_t allocator, vec_t tokens,
 
   /* Expect '&' or '*' after '.' */
   skip_whitespace(tokens, &current);
-  token_t second_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t second_token = vec_get(tokens, current);
   if (!second_token || token_get_kind(second_token) != CUBEC_TOKEN_SYMBOL) {
     return NULL;
   }
@@ -144,16 +141,16 @@ node_t read_expression_postfix_unary(allocator_t allocator, vec_t tokens,
   current++;
 
   /* Build operator string ".&" or ".*" */
-  opt = TRY_LOCAL(onerror, allocator_create(allocator, &g_string_type, NULL));
+  opt = allocator_create(allocator, &g_string_type, NULL);
   string_nconcat(opt, ".", 1);
   string_nconcat(opt, op_text, op_len);
 
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_postfix_unary_type,
+  node = allocator_create(allocator, &g_cubec_expression_postfix_unary_type,
                           &(cubec_expression_postfix_unary_init_t){
                               .host = host,
                               .opt = opt,
                               .kind = kind,
-                          }));
+                          });
   location_t *loc = token_get_location(dot_token);
   node->super.super.location = *loc;
   node->super.super.location.filename = filename;
@@ -171,9 +168,10 @@ onerror:
  *  Factory: cubec_ast_create_deref / addr / try / assert
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_deref(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_deref(context_t ctx, location_t loc,
                               node_t host) {
-  string_t op_str = _make_string(alloc, ".*");
+  allocator_t alloc = ctx->allocator;
+  string_t op_str = _make_string(ctx, ".*");
   cubec_expression_postfix_unary_init_t init = {
       .location = loc, .parent = NULL, .host = host, .opt = op_str,
       .kind = CUBEC_NODE_EXPRESSION_DEREF};
@@ -181,8 +179,9 @@ node_t cubec_ast_create_deref(allocator_t alloc, location_t loc,
                                   &init);
 }
 
-node_t cubec_ast_create_addr(allocator_t alloc, location_t loc, node_t host) {
-  string_t op_str = _make_string(alloc, ".&");
+node_t cubec_ast_create_addr(context_t ctx, location_t loc, node_t host) {
+  allocator_t alloc = ctx->allocator;
+  string_t op_str = _make_string(ctx, ".&");
   cubec_expression_postfix_unary_init_t init = {
       .location = loc, .parent = NULL, .host = host, .opt = op_str,
       .kind = CUBEC_NODE_EXPRESSION_ADDR};
@@ -190,8 +189,9 @@ node_t cubec_ast_create_addr(allocator_t alloc, location_t loc, node_t host) {
                                   &init);
 }
 
-node_t cubec_ast_create_try(allocator_t alloc, location_t loc, node_t host) {
-  string_t op_str = _make_string(alloc, ".?");
+node_t cubec_ast_create_try(context_t ctx, location_t loc, node_t host) {
+  allocator_t alloc = ctx->allocator;
+  string_t op_str = _make_string(ctx, ".?");
   cubec_expression_postfix_unary_init_t init = {
       .location = loc, .parent = NULL, .host = host, .opt = op_str,
       .kind = CUBEC_NODE_EXPRESSION_TRY};
@@ -199,8 +199,9 @@ node_t cubec_ast_create_try(allocator_t alloc, location_t loc, node_t host) {
                                   &init);
 }
 
-node_t cubec_ast_create_assert(allocator_t alloc, location_t loc, node_t host) {
-  string_t op_str = _make_string(alloc, ".!");
+node_t cubec_ast_create_assert(context_t ctx, location_t loc, node_t host) {
+  allocator_t alloc = ctx->allocator;
+  string_t op_str = _make_string(ctx, ".!");
   cubec_expression_postfix_unary_init_t init = {
       .location = loc, .parent = NULL, .host = host, .opt = op_str,
       .kind = CUBEC_NODE_EXPRESSION_ASSERT};

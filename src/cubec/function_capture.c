@@ -1,7 +1,6 @@
 #include "cubec/function_capture.h"
 #include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -10,6 +9,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -18,18 +18,14 @@
 static void _cubec_function_capture_init(
     cubec_function_capture_t self, allocator_t allocator,
     cubec_function_capture_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_FUNCTION_CAPTURE,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
+  g_node_type.init(&self->super, allocator, &super_init);
   self->identifier = init->identifier;
-onerror:
-  return;
 }
 
 static void _cubec_function_capture_dispose(
@@ -41,19 +37,15 @@ static void _cubec_function_capture_dispose(
 static void _cubec_function_capture_clone(
     cubec_function_capture_t self, allocator_t allocator,
     cubec_function_capture_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
-  self->identifier = TRY_LOCAL(onerror, value_clone(allocator, another->identifier));
-onerror:
-  return;
+  g_node_type.clone(&self->super, allocator, &another->super);
+  self->identifier = value_clone(allocator, another->identifier);
 }
 
 static void _cubec_function_capture_move(
     cubec_function_capture_t self, allocator_t allocator,
     cubec_function_capture_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
-  self->identifier = TRY_LOCAL(onerror, value_move(allocator, another->identifier));
-onerror:
-  return;
+  g_node_type.move(&self->super, allocator, &another->super);
+  self->identifier = value_move(allocator, another->identifier);
 }
 
 type_t g_cubec_function_capture_type = {
@@ -69,8 +61,9 @@ type_t g_cubec_function_capture_type = {
  *  Parser: read_function_capture
  * -------------------------------------------------------------------------- */
 
-node_t read_function_capture(allocator_t allocator, vec_t tokens,
+node_t read_function_capture(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t identifier = NULL;
 
@@ -81,7 +74,7 @@ node_t read_function_capture(allocator_t allocator, vec_t tokens,
   }
 
   /* 2. Parse identifier */
-  identifier = TRY_LOCAL(fail, read_literal_identifier(allocator, tokens, &current, filename));
+  identifier = read_literal_identifier(ctx, tokens, &current, filename);
   if (!identifier) {
     return NULL;
   }
@@ -96,11 +89,12 @@ node_t read_function_capture(allocator_t allocator, vec_t tokens,
 
   /* 4. Create node */
   cubec_function_capture_t cap = NULL;
-  cap = TRY_LOCAL(fail, allocator_create(allocator, &g_cubec_function_capture_type,
+  cap = allocator_create(allocator, &g_cubec_function_capture_type,
       &(cubec_function_capture_init_t){
           .location = loc,
           .identifier = identifier,
-      }));
+      });
+  if (!cap) goto fail;
 
   *position = current;
   return (node_t)&cap->super;
@@ -114,11 +108,12 @@ fail:
  *  Factory: cubec_ast_create_func_capture
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_func_capture(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_func_capture(context_t ctx, location_t loc,
                                      const char *name) {
-  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  allocator_t alloc = ctx->allocator;
+  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
   cubec_function_capture_init_t init = {.location = loc,
-                                        .identifier = name_node};
+                                        .identifier = (node_t)name_node};
   return (node_t)allocator_create(alloc, &g_cubec_function_capture_type,
                                   &init);
 }

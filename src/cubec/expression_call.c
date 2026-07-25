@@ -1,6 +1,5 @@
 #include "cubec/expression_call.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
@@ -9,6 +8,8 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -17,16 +18,14 @@
 static void _cubec_expression_call_init(cubec_expression_call_t self,
                                          allocator_t allocator,
                                          cubec_expression_call_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_CALL,
       .parent = NULL,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
 
   self->callee = init->callee;
   if (init->arguments) {
@@ -35,10 +34,8 @@ static void _cubec_expression_call_init(cubec_expression_call_t self,
   } else {
     /* If no arguments vec was provided (e.g. clone path), create an empty one */
     self->arguments =
-        TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+        allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   }
-onerror:
-  return;
 }
 
 static void _cubec_expression_call_dispose(cubec_expression_call_t self,
@@ -51,9 +48,9 @@ static void _cubec_expression_call_dispose(cubec_expression_call_t self,
 static void _cubec_expression_call_clone(cubec_expression_call_t self,
                                           allocator_t allocator,
                                           cubec_expression_call_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
-  self->callee = TRY_LOCAL(cleanup, value_clone(allocator, another->callee));
-  self->arguments = TRY_LOCAL(cleanup, value_clone(allocator, another->arguments));
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->callee = value_clone(allocator, another->callee);
+  self->arguments = value_clone(allocator, another->arguments);
   return;
 
 cleanup:
@@ -64,14 +61,14 @@ cleanup:
 static void _cubec_expression_call_move(cubec_expression_call_t self,
                                          allocator_t allocator,
                                          cubec_expression_call_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
-  self->callee = TRY_LOCAL(cleanup, value_move(allocator, another->callee));
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->callee = value_move(allocator, another->callee);
 
   /* Transfer arguments vec directly */
   allocator_free(allocator, &self->arguments);
   self->arguments = another->arguments;
   another->arguments =
-      TRY_LOCAL(cleanup, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+      allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   return;
 
 cleanup:
@@ -93,9 +90,10 @@ type_t g_cubec_expression_call_type = {
  *  Parser: read_expression_call
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_call(allocator_t allocator, vec_t tokens,
+node_t read_expression_call(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename,
                              node_t callee) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_call_t node = NULL;
   vec_t arguments = NULL;
@@ -109,7 +107,7 @@ node_t read_expression_call(allocator_t allocator, vec_t tokens,
   current++; /* Consumed '(' — committed to parsing a call from here */
 
   arguments =
-      TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+      allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
 
   /* Parse comma-separated arguments */
   bool expect_comma = false;
@@ -129,10 +127,10 @@ node_t read_expression_call(allocator_t allocator, vec_t tokens,
 
     /* Parse one argument: try spread first, then regular expression */
     node_t arg =
-        read_expression_spread(allocator, tokens, &current, filename);
+        read_expression_spread(ctx, tokens, &current, filename);
     if (!arg) {
       arg =
-          TRY_LOCAL(onerror, read_expression_base(allocator, tokens, &current, filename));
+          read_expression_base(ctx, tokens, &current, filename);
     }
     if (!arg) {
       goto onerror;
@@ -153,11 +151,11 @@ node_t read_expression_call(allocator_t allocator, vec_t tokens,
     }
   }
 
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_call_type,
+  node = allocator_create(allocator, &g_cubec_expression_call_type,
                           &(cubec_expression_call_init_t){
                               .callee = callee,
                               .arguments = arguments,
-                          }));
+                          });
   /* NOTE: arguments ownership has been transferred to node via init —
    *        do NOT free it here. */
 
@@ -174,25 +172,26 @@ node_t read_expression_call(allocator_t allocator, vec_t tokens,
   return (node_t)node;
 
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       open_paren ? *token_get_location(open_paren) : (location_t){0},
+                       "invalid function call syntax");
+  ctx->error_count++;
   /* autodispose=true: freeing arguments also frees all its elements */
   allocator_free(allocator, &arguments);
   /* NOTE: callee is NOT freed here — the caller (read_value) still owns the
-   *       pointer and will clean it up when the error propagates via TRY_LOCAL */
+   *       pointer and will clean it up when the error propagates */
   allocator_free(allocator, &node);
-  {
-    location_t *loc = token_get_location(open_paren);
-    THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid function call arguments",
-          filename, loc->begin.line + 1, loc->begin.column + 1);
-  }
+  return NULL;
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: cubec_ast_create_call
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_call(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_call(context_t ctx, location_t loc,
                              node_t callee, vec_t args) {
-  cubec_expression_call_init_t init = {.location = loc, .parent = NULL,
+  allocator_t alloc = ctx->allocator;
+                                       cubec_expression_call_init_t init = {
                                        .callee = callee,
                                        .arguments = args};
   return (node_t)allocator_create(alloc, &g_cubec_expression_call_type,

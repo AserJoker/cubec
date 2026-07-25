@@ -1,5 +1,4 @@
 #include "cubec/statement.h"
-#include "core/error.h"
 #include "cubec/statement_block.h"
 #include "cubec/statement_comptime.h"
 #include "cubec/statement_declaration.h"
@@ -23,15 +22,17 @@
 #include "cubec/statement_break.h"
 #include "cubec/statement_continue.h"
 #include "cubec/statement_defer.h"
+#include "engine/context.h"
 
-node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
+node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
                       const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
   /* Try specific statement types first (they have distinguishing prefixes) */
 
   /* Try block statement ({...}) */
-  node_t node = TRY_LOCAL(onerror, read_statement_block(allocator, tokens, &current, filename));
+  node_t node = read_statement_block(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -40,7 +41,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
   /* Try comptime statement (comptime { } / comptime if / comptime for) —
      must be before declaration/function since 'comptime' is also a modifier */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_comptime(allocator, tokens, &current, filename));
+  node = read_statement_comptime(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -48,7 +49,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try declaration statement (var ...) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_declaration(allocator, tokens, &current, filename));
+  node = read_statement_declaration(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -56,7 +57,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try type declaration statement (type ...) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_declaration_type(allocator, tokens, &current, filename));
+  node = read_statement_declaration_type(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -64,7 +65,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try function statement (func ... / export func ... / inline func ... / extern func ...) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_function(allocator, tokens, &current, filename));
+  node = read_statement_function(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -72,7 +73,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try interface statement (interface ... / export interface ...) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_interface(allocator, tokens, &current, filename));
+  node = read_statement_interface(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -80,7 +81,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try struct statement (struct ... / export struct ...) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_struct(allocator, tokens, &current, filename));
+  node = read_statement_struct(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -88,7 +89,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try enum statement (enum ... / export enum ...) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_enum(allocator, tokens, &current, filename));
+  node = read_statement_enum(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -96,7 +97,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try cunion statement (cunion ...) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_cunion(allocator, tokens, &current, filename));
+  node = read_statement_cunion(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -104,7 +105,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try union statement (union ... / export union ...) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_union(allocator, tokens, &current, filename));
+  node = read_statement_union(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -112,7 +113,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try if statement (if(...) { } else ...) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_if(allocator, tokens, &current, filename));
+  node = read_statement_if(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -120,7 +121,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try while statement (while(...) { }) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_while(allocator, tokens, &current, filename));
+  node = read_statement_while(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -128,7 +129,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try do-while statement (do { } while(...);) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_do_while(allocator, tokens, &current, filename));
+  node = read_statement_do_while(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -136,7 +137,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try for statement (for(init; cond; incr) { }) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_for(allocator, tokens, &current, filename));
+  node = read_statement_for(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -144,7 +145,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try foreach statement (foreach(name : iter) { }) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_foreach(allocator, tokens, &current, filename));
+  node = read_statement_foreach(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -152,7 +153,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try switch statement (switch(value) { case(...) -> { } else -> { } }) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_switch(allocator, tokens, &current, filename));
+  node = read_statement_switch(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -160,7 +161,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try import statement (import ...) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_import(allocator, tokens, &current, filename));
+  node = read_statement_import(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -168,7 +169,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try return statement (return ...;) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_return(allocator, tokens, &current, filename));
+  node = read_statement_return(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -176,7 +177,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try break statement (break;) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_break(allocator, tokens, &current, filename));
+  node = read_statement_break(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -184,7 +185,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try continue statement (continue;) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_continue(allocator, tokens, &current, filename));
+  node = read_statement_continue(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -192,7 +193,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try defer statement (defer expr; / defer { }) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_defer(allocator, tokens, &current, filename));
+  node = read_statement_defer(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -200,7 +201,7 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
 
   /* Try empty statement (;) */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_empty(allocator, tokens, &current, filename));
+  node = read_statement_empty(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
@@ -209,14 +210,11 @@ node_t read_statement(allocator_t allocator, vec_t tokens, size_t *position,
   /* Expression statement is the fallback — it has no distinguishing prefix,
      any expression can start it, so it must be tried last. */
   current = *position;
-  node = TRY_LOCAL(onerror, read_statement_expression(allocator, tokens, &current, filename));
+  node = read_statement_expression(ctx, tokens, &current, filename);
   if (node) {
     *position = current;
     return node;
   }
 
-  return NULL;
-
-onerror:
   return NULL;
 }

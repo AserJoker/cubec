@@ -1,6 +1,5 @@
 #include "cubec/expression_generic_instantiation.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
@@ -10,6 +9,8 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -18,16 +19,14 @@
 static void _cubec_expression_generic_instantiation_init(
     cubec_expression_generic_instantiation_t self, allocator_t allocator,
     cubec_expression_generic_instantiation_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION,
       .parent = NULL,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
 
   self->callee = init->callee;
   if (init->arguments) {
@@ -36,10 +35,8 @@ static void _cubec_expression_generic_instantiation_init(
   } else {
     /* If no arguments vec was provided (e.g. clone path), create an empty one */
     self->arguments =
-        TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+        allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   }
-onerror:
-  return;
 }
 
 static void _cubec_expression_generic_instantiation_dispose(
@@ -52,9 +49,9 @@ static void _cubec_expression_generic_instantiation_dispose(
 static void _cubec_expression_generic_instantiation_clone(
     cubec_expression_generic_instantiation_t self, allocator_t allocator,
     cubec_expression_generic_instantiation_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
-  self->callee = TRY_LOCAL(cleanup, value_clone(allocator, another->callee));
-  self->arguments = TRY_LOCAL(cleanup, value_clone(allocator, another->arguments));
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->callee = value_clone(allocator, another->callee);
+  self->arguments = value_clone(allocator, another->arguments);
   return;
 
 cleanup:
@@ -65,14 +62,14 @@ cleanup:
 static void _cubec_expression_generic_instantiation_move(
     cubec_expression_generic_instantiation_t self, allocator_t allocator,
     cubec_expression_generic_instantiation_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
-  self->callee = TRY_LOCAL(cleanup, value_move(allocator, another->callee));
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->callee = value_move(allocator, another->callee);
 
   /* Transfer arguments vec directly */
   allocator_free(allocator, &self->arguments);
   self->arguments = another->arguments;
   another->arguments =
-      TRY_LOCAL(cleanup, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+      allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   return;
 
 cleanup:
@@ -98,10 +95,11 @@ type_t g_cubec_expression_generic_instantiation_type = {
  *  Parser: read_expression_generic_instantiation
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_generic_instantiation(allocator_t allocator,
+node_t read_expression_generic_instantiation(context_t ctx,
                                              vec_t tokens, size_t *position,
                                              const char *filename,
                                              node_t callee) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_generic_instantiation_t node = NULL;
   vec_t arguments = NULL;
@@ -115,7 +113,7 @@ node_t read_expression_generic_instantiation(allocator_t allocator,
   current++; /* Consumed '[' — committed to parsing from here */
 
   arguments =
-      TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+      allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
 
   /* Parse comma-separated arguments */
   bool expect_comma = false;
@@ -135,10 +133,9 @@ node_t read_expression_generic_instantiation(allocator_t allocator,
 
     /* Parse one argument: try spread first, then regular expression */
     node_t arg =
-        read_expression_spread(allocator, tokens, &current, filename);
+        read_expression_spread(ctx, tokens, &current, filename);
     if (!arg) {
-      arg = TRY_LOCAL(onerror,
-                      read_expression_base(allocator, tokens, &current, filename));
+      arg = read_expression_base(ctx, tokens, &current, filename);
     }
     if (!arg) {
       /* Try wildcard '?' as a generic argument */
@@ -146,13 +143,13 @@ node_t read_expression_generic_instantiation(allocator_t allocator,
       token_t question_tok = vec_get(tokens, current);
       if (token_is(question_tok, CUBEC_TOKEN_SYMBOL, "?")) {
         /* Create a wildcard placeholder node */
-        arg = TRY_LOCAL(onerror, allocator_create(
+        arg = allocator_create(
             allocator, &g_cubec_literal_identifier_type,
             &(cubec_literal_identifier_init_t){
                 .location = *token_get_location(question_tok),
                 .parent = NULL,
                 .value = "?",
-            }));
+            });
         current++;
       } else {
         goto onerror;
@@ -174,12 +171,12 @@ node_t read_expression_generic_instantiation(allocator_t allocator,
     }
   }
 
-  node = TRY_LOCAL(onerror, allocator_create(
+  node = allocator_create(
       allocator, &g_cubec_expression_generic_instantiation_type,
       &(cubec_expression_generic_instantiation_init_t){
           .callee = callee,
           .arguments = arguments,
-      }));
+      });
   /* NOTE: arguments ownership has been transferred to node via init —
    *        do NOT free it here. */
 
@@ -196,27 +193,26 @@ node_t read_expression_generic_instantiation(allocator_t allocator,
   return (node_t)node;
 
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       open_bracket ? *token_get_location(open_bracket) : (location_t){0},
+                       "invalid generic instantiation syntax");
+  ctx->error_count++;
   /* autodispose=true: freeing arguments also frees all its elements */
   allocator_free(allocator, &arguments);
   /* NOTE: callee is NOT freed here — the caller (read_value) still owns the
-   *       pointer and will clean it up when the error propagates via TRY_LOCAL */
+   *       pointer and will clean it up when the error propagates */
   allocator_free(allocator, &node);
-  {
-    location_t *loc = token_get_location(open_bracket);
-    THROW(NULL,
-          "%s:%" PRIuPTR ":%" PRIuPTR
-          " invalid generic instantiation arguments",
-          filename, loc->begin.line + 1, loc->begin.column + 1);
-  }
+  return NULL;
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: cubec_ast_create_generic_instantiation
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_generic_instantiation(allocator_t alloc,
+node_t cubec_ast_create_generic_instantiation(context_t ctx,
                                               location_t loc,
                                               node_t callee, vec_t args) {
+  allocator_t alloc = ctx->allocator;
   cubec_expression_generic_instantiation_init_t init = {
       .location = loc, .parent = NULL, .callee = callee, .arguments = args};
   return (node_t)allocator_create(

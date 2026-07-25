@@ -1,10 +1,10 @@
 #include "cubec/expression_wildcard.h"
 #include "cubec/expression.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/token.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -53,8 +53,9 @@ type_t g_cubec_expression_wildcard_type = {
  *  Parser
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_wildcard(allocator_t allocator, vec_t tokens,
+node_t read_expression_wildcard(context_t ctx, vec_t tokens,
                                 size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
   skip_whitespace(tokens, &current);

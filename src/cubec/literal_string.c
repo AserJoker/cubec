@@ -1,7 +1,6 @@
 #include "cubec/literal_string.h"
 #include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/string.h"
 #include "core/token.h"
@@ -11,27 +10,24 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <stdio.h>
+#include "engine/context.h"
 
 static void _cubec_literal_string_init(cubec_literal_string_t self,
                                        allocator_t allocator,
                                        cubec_literal_string_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_literal_init_t super_init = {
       .kind = CUBEC_NODE_LITERAL_STRING,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_cubec_literal_type.init(&self->super, allocator, &super_init));
+  g_cubec_literal_type.init(&self->super, allocator, &super_init);
   if (init->value) {
     self->value = allocator_create(allocator, &g_string_type,
                                    &(string_init_t){.str = init->value});
   } else {
     self->value = allocator_create(allocator, &g_string_type, NULL);
   }
-onerror:
-  return;
 }
 
 static void _cubec_literal_string_dispose(cubec_literal_string_t self,
@@ -45,23 +41,15 @@ static void _cubec_literal_string_dispose(cubec_literal_string_t self,
 static void _cubec_literal_string_clone(cubec_literal_string_t self,
                                         allocator_t allocator,
                                         cubec_literal_string_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_literal_type.clone(&self->super, allocator, &another->super));
-  self->value = TRY_LOCAL(cleanup, value_clone(allocator, another->value));
-  return;
-
-cleanup:
-  allocator_free(allocator, &self->value);
+  g_cubec_literal_type.clone(&self->super, allocator, &another->super);
+  self->value = value_clone(allocator, another->value);
 }
 
 static void _cubec_literal_string_move(cubec_literal_string_t self,
                                        allocator_t allocator,
                                        cubec_literal_string_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_literal_type.move(&self->super, allocator, &another->super));
-  self->value = TRY_LOCAL(cleanup, value_move(allocator, another->value));
-  return;
-
-cleanup:
-  allocator_free(allocator, &self->value);
+  g_cubec_literal_type.move(&self->super, allocator, &another->super);
+  self->value = value_move(allocator, another->value);
 }
 
 type_t g_cubec_literal_string_type = {
@@ -73,11 +61,12 @@ type_t g_cubec_literal_string_type = {
     .move = (type_move_fn_t)_cubec_literal_string_move,
 };
 
-node_t read_literal_string(allocator_t allocator, vec_t tokens, size_t *position,
+node_t read_literal_string(context_t ctx, vec_t tokens, size_t *position,
                            const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
-  token_t first_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t first_token = vec_get(tokens, current);
   if (!token_is(first_token, CUBEC_TOKEN_STRING, NULL)) {
     return NULL;
   }
@@ -89,7 +78,8 @@ node_t read_literal_string(allocator_t allocator, vec_t tokens, size_t *position
       .value = NULL,
   };
   cubec_literal_string_t node =
-      TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_literal_string_type, &init));
+      allocator_create(allocator, &g_cubec_literal_string_type, &init);
+  if (!node) goto onerror;
   node_t node_base = (node_t)node;
   node_base->location.filename = filename;
 
@@ -102,7 +92,7 @@ node_t read_literal_string(allocator_t allocator, vec_t tokens, size_t *position
 
   while (true) {
     skip_whitespace(tokens, &current);
-    token_t token = TRY_LOCAL(onerror, vec_get(tokens, current));
+    token_t token = vec_get(tokens, current);
     if (!token_is(token, CUBEC_TOKEN_STRING, NULL)) {
       break;
     }
@@ -123,9 +113,9 @@ onerror:
   return NULL;
 }
 
-node_t cubec_ast_create_string(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_string(context_t ctx, location_t loc,
                                const char *value) {
-  cubec_literal_string_init_t init = {.location = loc, .parent = NULL,
-                                       .value = value};
+  allocator_t alloc = ctx->allocator;
+  cubec_literal_string_init_t init = {.value = value};
   return (node_t)allocator_create(alloc, &g_cubec_literal_string_type, &init);
 }

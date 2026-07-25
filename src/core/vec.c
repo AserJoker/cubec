@@ -1,6 +1,5 @@
-﻿#include "core/vec.h"
+#include "core/vec.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/type.h"
 #include <stdbool.h>
 
@@ -29,17 +28,8 @@ static void _vec_clone(vec_t self, allocator_t allocator, vec_t another) {
   self->size = another->size;
   self->data = allocator_alloc(allocator, sizeof(void *) * self->capacity);
   for (size_t idx = 0; idx < self->size; idx++) {
-    self->data[idx] = TRY_LOCAL(cleanup, value_clone(allocator, another->data[idx]));
+    self->data[idx] = value_clone(allocator, another->data[idx]);
   }
-  return;
-
-cleanup:
-  for (size_t i = 0; i < self->size; i++) {
-    allocator_free(allocator, &self->data[i]);
-  }
-  allocator_free(allocator, &self->data);
-  self->size = 0;
-  self->capacity = 0;
 }
 static void _vec_move(vec_t self, allocator_t allocator, vec_t another) {
   self->auto_dispose = another->auto_dispose;
@@ -75,16 +65,13 @@ size_t vec_get_capacity(vec_t self) { return self->capacity; }
 void **vec_get_data(vec_t self) { return self->data; }
 void *vec_get(vec_t self, size_t idx) {
   if (idx >= self->size) {
-    THROW(NULL, "RangeError: index %" PRIuPTR " out of vec length %" PRIuPTR,
-          idx, self->size);
+    return NULL;
   }
   return self->data[idx];
 }
 size_t vec_set(vec_t self, size_t idx, void *data) {
   if (idx >= self->size) {
-    THROW((size_t)-1,
-          "RangeError: index %" PRIuPTR " out of vec length %" PRIuPTR, idx,
-          self->size);
+    return (size_t)-1;
   }
   if (self->auto_dispose) {
     allocator_free(self->allocator, &self->data[idx]);
@@ -124,15 +111,13 @@ size_t vec_push(vec_t self, void *data) {
 }
 size_t vec_pop(vec_t self) {
   if (!self->size) {
-    THROW((size_t)-1, "RangeError: vec is empty");
+    return (size_t)-1;
   }
   return vec_resize(self, self->size - 1);
 }
 size_t vec_remove(vec_t self, size_t idx) {
   if (idx >= self->size) {
-    THROW((size_t)-1,
-          "RangeError: index %" PRIuPTR " out of vec length %" PRIuPTR, idx,
-          self->size);
+    return (size_t)-1;
   }
   void *item = self->data[idx];
   for (size_t i = idx; i < self->size - 1; i++) {
@@ -147,9 +132,7 @@ size_t vec_remove(vec_t self, size_t idx) {
 }
 size_t vec_insert(vec_t self, size_t idx, void *data) {
   if (vec_resize(self, self->size + 1) == (size_t)-1) {
-    THROW((size_t)-1,
-          "RangeError: index %" PRIuPTR " out of vec length %" PRIuPTR, idx,
-          self->size);
+    return (size_t)-1;
   }
   for (size_t i = self->size - 1; i > idx; i--) {
     self->data[i] = self->data[i - 1];
@@ -186,7 +169,7 @@ void *vec_iter_get(vec_iter_t *iter) {
 
 void *vec_iter_set(vec_iter_t *iter, void *data) {
   if (iter->idx >= iter->vec->size) {
-    THROW(NULL, "RangeError: iterator is exhausted");
+    return NULL;
   }
   vec_t self = iter->vec;
   void *old_data = self->data[iter->idx];

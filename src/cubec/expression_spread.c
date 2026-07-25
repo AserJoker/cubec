@@ -1,12 +1,12 @@
 #include "cubec/expression_spread.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -15,19 +15,15 @@
 static void _cubec_expression_spread_init(cubec_expression_spread_t self,
                                           allocator_t allocator,
                                           cubec_expression_spread_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_SPREAD,
       .parent = NULL,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
   self->value = init->value;
-onerror:
-  return;
 }
 
 static void _cubec_expression_spread_dispose(cubec_expression_spread_t self,
@@ -39,23 +35,15 @@ static void _cubec_expression_spread_dispose(cubec_expression_spread_t self,
 static void _cubec_expression_spread_clone(cubec_expression_spread_t self,
                                            allocator_t allocator,
                                            cubec_expression_spread_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
-  self->value = TRY_LOCAL(cleanup, value_clone(allocator, another->value));
-  return;
-
-cleanup:
-  allocator_free(allocator, &self->value);
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->value = value_clone(allocator, another->value);
 }
 
 static void _cubec_expression_spread_move(cubec_expression_spread_t self,
                                           allocator_t allocator,
                                           cubec_expression_spread_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
-  self->value = TRY_LOCAL(cleanup, value_move(allocator, another->value));
-  return;
-
-cleanup:
-  allocator_free(allocator, &self->value);
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->value = value_move(allocator, another->value);
 }
 
 type_t g_cubec_expression_spread_type = {
@@ -71,8 +59,9 @@ type_t g_cubec_expression_spread_type = {
  *  Parser: read_expression_spread
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_spread(allocator_t allocator, vec_t tokens,
+node_t read_expression_spread(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_spread_t node = NULL;
   node_t value = NULL;
@@ -87,15 +76,15 @@ node_t read_expression_spread(allocator_t allocator, vec_t tokens,
   /* Expect a value expression after the spread operator */
   skip_whitespace(tokens, &current);
   value =
-      TRY_LOCAL(onerror, read_expression_base(allocator, tokens, &current, filename));
+      read_expression_base(ctx, tokens, &current, filename);
   if (!value) {
     goto onerror;
   }
 
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_spread_type,
+  node = allocator_create(allocator, &g_cubec_expression_spread_type,
                           &(cubec_expression_spread_init_t){
                               .value = value,
-                          }));
+                          });
 
   /* Location spans from first '.' to end of value */
   token_t first_dot = vec_get(tokens, *position);
@@ -116,9 +105,10 @@ onerror:
  *  Factory: cubec_ast_create_spread
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_spread(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_spread(context_t ctx, location_t loc,
                                node_t value) {
-  cubec_expression_spread_init_t init = {.location = loc, .parent = NULL,
+  allocator_t alloc = ctx->allocator;
+                                         cubec_expression_spread_init_t init = {
                                          .value = value};
   return (node_t)allocator_create(alloc, &g_cubec_expression_spread_type,
                                   &init);

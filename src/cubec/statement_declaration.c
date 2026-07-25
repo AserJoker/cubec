@@ -2,7 +2,6 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -10,19 +9,18 @@
 #include "cubec/declaration_variable.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
+#include "engine/context.h"
 
 static void _cubec_statement_declaration_init(
     cubec_statement_declaration_t self, allocator_t allocator,
     cubec_statement_declaration_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_DECLARATION,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
+  g_node_type.init(&self->super, allocator, &super_init);
   self->is_export = init->is_export;
   self->is_extern = init->is_extern;
   self->is_builtin = init->is_builtin;
@@ -30,8 +28,6 @@ static void _cubec_statement_declaration_init(
   self->is_using = init->is_using;
   self->declarator = init->declarator;
   self->decorators = init->decorators;
-onerror:
-  return;
 }
 
 static void _cubec_statement_declaration_dispose(
@@ -44,30 +40,26 @@ static void _cubec_statement_declaration_dispose(
 static void _cubec_statement_declaration_clone(
     cubec_statement_declaration_t self, allocator_t allocator,
     cubec_statement_declaration_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
+  g_node_type.clone(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->is_extern = another->is_extern;
   self->is_builtin = another->is_builtin;
   self->is_comptime = another->is_comptime;
   self->is_using = another->is_using;
-  self->declarator = TRY_LOCAL(onerror, value_clone(allocator, another->declarator));
-  return;
-onerror:
+  self->declarator = value_clone(allocator, another->declarator);
   return;
 }
 
 static void _cubec_statement_declaration_move(
     cubec_statement_declaration_t self, allocator_t allocator,
     cubec_statement_declaration_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
+  g_node_type.move(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->is_extern = another->is_extern;
   self->is_builtin = another->is_builtin;
   self->is_comptime = another->is_comptime;
   self->is_using = another->is_using;
-  self->declarator = TRY_LOCAL(onerror, value_move(allocator, another->declarator));
-  return;
-onerror:
+  self->declarator = value_move(allocator, another->declarator);
   return;
 }
 
@@ -90,8 +82,9 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   return location_is(token_get_location(token), keyword);
 }
 
-node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
+node_t read_statement_declaration(context_t ctx, vec_t tokens,
                                   size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_statement_declaration_t node = NULL;
   node_t declarator = NULL;
@@ -107,10 +100,10 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
   {
     while (true) {
       skip_whitespace(tokens, &current);
-      node_t dec = read_decorator(allocator, tokens, &current, filename);
+      node_t dec = read_decorator(ctx, tokens, &current, filename);
       if (!dec) break;
       if (!decorators) {
-        decorators = TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+        decorators = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
       }
       vec_push(decorators, dec);
     }
@@ -119,50 +112,50 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
   /* 1. Parse optional modifiers: export / extern / builtin / comptime */
   while (true) {
     if (_is_keyword(tokens, current, "export")) {
-      if (is_export) THROW_LOCAL(onerror, "duplicate 'export' modifier");
+      if (is_export) goto onerror;
       is_export = true;
       if (start_location.begin.offset == 0) {
-        token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+        token_t tok = vec_get(tokens, current);
         start_location = *token_get_location(tok);
         start_location.filename = filename;
       }
       current++;
       skip_whitespace(tokens, &current);
     } else if (_is_keyword(tokens, current, "extern")) {
-      if (is_extern) THROW_LOCAL(onerror, "duplicate 'extern' modifier");
+      if (is_extern) goto onerror;
       is_extern = true;
       if (start_location.begin.offset == 0) {
-        token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+        token_t tok = vec_get(tokens, current);
         start_location = *token_get_location(tok);
         start_location.filename = filename;
       }
       current++;
       skip_whitespace(tokens, &current);
     } else if (_is_keyword(tokens, current, "builtin")) {
-      if (is_builtin) THROW_LOCAL(onerror, "duplicate 'builtin' modifier");
+      if (is_builtin) goto onerror;
       is_builtin = true;
       if (start_location.begin.offset == 0) {
-        token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+        token_t tok = vec_get(tokens, current);
         start_location = *token_get_location(tok);
         start_location.filename = filename;
       }
       current++;
       skip_whitespace(tokens, &current);
     } else if (_is_keyword(tokens, current, "comptime")) {
-      if (is_comptime) THROW_LOCAL(onerror, "duplicate 'comptime' modifier");
+      if (is_comptime) goto onerror;
       is_comptime = true;
       if (start_location.begin.offset == 0) {
-        token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+        token_t tok = vec_get(tokens, current);
         start_location = *token_get_location(tok);
         start_location.filename = filename;
       }
       current++;
       skip_whitespace(tokens, &current);
     } else if (_is_keyword(tokens, current, "using")) {
-      if (is_using) THROW_LOCAL(onerror, "duplicate 'using' modifier");
+      if (is_using) goto onerror;
       is_using = true;
       if (start_location.begin.offset == 0) {
-        token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+        token_t tok = vec_get(tokens, current);
         start_location = *token_get_location(tok);
         start_location.filename = filename;
       }
@@ -175,26 +168,26 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
 
   /* 2. Mutually exclusive check */
   if (is_extern && is_export)
-    THROW_LOCAL(onerror, "'extern' and 'export' are mutually exclusive");
+    goto onerror;
   if (is_extern && is_builtin)
-    THROW_LOCAL(onerror, "'extern' and 'builtin' are mutually exclusive");
+    goto onerror;
   if (is_extern && is_comptime)
-    THROW_LOCAL(onerror, "'extern' and 'comptime' are mutually exclusive");
+    goto onerror;
   if (is_builtin && is_comptime)
-    THROW_LOCAL(onerror, "'builtin' and 'comptime' are mutually exclusive");
+    goto onerror;
   if (is_using && is_extern)
-    THROW_LOCAL(onerror, "'using' and 'extern' are mutually exclusive");
+    goto onerror;
   if (is_using && is_builtin)
-    THROW_LOCAL(onerror, "'using' and 'builtin' are mutually exclusive");
+    goto onerror;
   if (is_using && is_comptime)
-    THROW_LOCAL(onerror, "'using' and 'comptime' are mutually exclusive");
+    goto onerror;
 
   /* 3. Expect 'var' keyword (skip if 'using' takes its place) */
   if (!is_using) {
     if (!_is_keyword(tokens, current, "var")) {
       goto onerror;
     }
-    token_t var_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+    token_t var_token = vec_get(tokens, current);
     if (start_location.begin.offset == 0) {
       start_location = *token_get_location(var_token);
       start_location.filename = filename;
@@ -204,21 +197,19 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
   }
 
   /* 4. Parse single declarator */
-  declarator = TRY_LOCAL(cleanup, read_declaration_variable(allocator, tokens, &current, filename));
+  declarator = read_declaration_variable(ctx, tokens, &current, filename);
   if (!declarator) {
-    THROW_LOCAL(cleanup, "expected variable declarator after 'var'");
+    goto cleanup;
   }
 
   /* 5. Validate: extern/builtin declarations must not have initializer */
   if (is_extern || is_builtin) {
     cubec_declaration_variable_t dv = (cubec_declaration_variable_t)declarator;
     if (dv->expression) {
-      THROW_LOCAL(cleanup, "%s var declaration cannot have an initializer",
-                  is_extern ? "extern" : "builtin");
+      goto cleanup;
     }
     if (!dv->type) {
-      THROW_LOCAL(cleanup, "%s var declaration requires a type annotation",
-                  is_extern ? "extern" : "builtin");
+      goto cleanup;
     }
   }
 
@@ -226,19 +217,17 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
   if (is_comptime) {
     cubec_declaration_variable_t dv = (cubec_declaration_variable_t)declarator;
     if (!dv->expression) {
-      THROW_LOCAL(cleanup, "comptime var declaration requires an initializer");
+      goto cleanup;
     }
   }
 
   skip_whitespace(tokens, &current);
 
   /* 6. Expect semicolon */
-  token_t semi = TRY_LOCAL(cleanup, vec_get(tokens, current));
+  token_t semi = vec_get(tokens, current);
   if (!token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
     location_t *loc = token_get_location(semi);
-    THROW_LOCAL(cleanup,
-                "%s:%" PRIuPTR ":%" PRIuPTR " expected ';' after declaration statement",
-                filename, loc->begin.line + 1, loc->begin.column);
+    goto cleanup;
   }
   current++;
 
@@ -261,7 +250,7 @@ node_t read_statement_declaration(allocator_t allocator, vec_t tokens,
       .declarator = declarator,
       .decorators = decorators,
   };
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_declaration_type, &init));
+  node = allocator_create(allocator, &g_cubec_statement_declaration_type, &init);
   *position = current;
   return &node->super;
 
@@ -276,14 +265,15 @@ onerror:
   return NULL;
 }
 
-node_t cubec_ast_create_var_decl_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_var_decl_stmt(context_t ctx, location_t loc,
                                       const char *name, node_t type,
                                       node_t expr, bool is_export,
                                       bool is_extern, bool is_builtin,
                                       bool is_comptime, bool is_using) {
-  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  allocator_t alloc = ctx->allocator;
+  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
   cubec_declaration_variable_init_t dv_init = {
-      .location = loc, .parent = NULL, .identifier = name_node,
+      .location = loc, .parent = NULL, .identifier = (node_t)name_node,
       .type = type, .expression = expr};
   node_t decl_node = (node_t)allocator_create(
       alloc, &g_cubec_declaration_variable_type, &dv_init);

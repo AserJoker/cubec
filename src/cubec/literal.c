@@ -1,22 +1,18 @@
 #include "cubec/literal.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/type.h"
 #include "cubec/expression.h"
+#include "engine/context.h"
 
 static void _cubec_literal_init(cubec_literal_t self, allocator_t allocator,
                                 cubec_literal_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_expression_init_t super_init = {
       .kind = init->kind,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
-onerror:
-  return;
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
 }
 
 static void _cubec_literal_dispose(cubec_literal_t self,
@@ -26,14 +22,12 @@ static void _cubec_literal_dispose(cubec_literal_t self,
 
 static void _cubec_literal_clone(cubec_literal_t self, allocator_t allocator,
                                  cubec_literal_t another) {
-  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
-onerror:
-  return;
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
 }
 
 static void _cubec_literal_move(cubec_literal_t self, allocator_t allocator,
                                 cubec_literal_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
   return;
 
 cleanup:

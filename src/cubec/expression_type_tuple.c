@@ -1,6 +1,5 @@
 #include "cubec/expression_type_tuple.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -11,6 +10,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <string.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -19,20 +19,15 @@
 static void _cubec_expression_type_tuple_init(
     cubec_expression_type_tuple_t self, allocator_t allocator,
     cubec_expression_type_tuple_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_TYPE_TUPLE,
       .parent = NULL,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  TRY_VOID_LOCAL(onerror,
-                 g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
   self->element_types = init->element_types;
-onerror:
-  return;
 }
 
 static void _cubec_expression_type_tuple_dispose(
@@ -44,13 +39,10 @@ static void _cubec_expression_type_tuple_dispose(
 static void _cubec_expression_type_tuple_clone(
     cubec_expression_type_tuple_t self, allocator_t allocator,
     cubec_expression_type_tuple_t another) {
-  TRY_VOID_LOCAL(onerror,
-                 g_cubec_expression_type.clone(&self->super, allocator, &another->super));
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->element_types = another->element_types
-                           ? TRY_LOCAL(onerror, value_clone(allocator, another->element_types))
+                           ? value_clone(allocator, another->element_types)
                            : NULL;
-  return;
-onerror:
   return;
 }
 
@@ -85,10 +77,11 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_expression_type_tuple
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_type_tuple(allocator_t allocator, vec_t tokens,
+node_t read_expression_type_tuple(context_t ctx, vec_t tokens,
                                     size_t *position, const char *filename) {
-  /* Parse: <type1, type2, ...>
-     In a type context, '<' starts a tuple type expression.
+  allocator_t allocator = ctx->allocator;
+  size_t current = *position;
+  /* In a type context, '<' starts a tuple type expression.
      Special cases:
        - <> is an empty tuple
        - <?> means "tuple constraint" (T extends <?> = T must be a tuple)
@@ -99,7 +92,7 @@ node_t read_expression_type_tuple(allocator_t allocator, vec_t tokens,
 
   if (!_is_symbol(tokens, start, "<")) return NULL;
 
-  size_t current = start + 1;
+  current = start + 1;
   skip_whitespace(tokens, &current);
 
   /* Check for <> — empty tuple */
@@ -148,9 +141,9 @@ node_t read_expression_type_tuple(allocator_t allocator, vec_t tokens,
     skip_whitespace(tokens, &current);
 
     /* Check for spread: ...Args in <...Args> */
-    node_t elem = read_expression_spread(allocator, tokens, &current, filename);
+    node_t elem = read_expression_spread(ctx, tokens, &current, filename);
     if (!elem) {
-      elem = read_type_expression_primary(allocator, tokens, &current, filename);
+      elem = read_type_expression_primary(ctx, tokens, &current, filename);
     }
     if (!elem) break;
 

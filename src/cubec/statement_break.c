@@ -2,13 +2,13 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -17,17 +17,13 @@
 static void _cubec_statement_break_init(
     cubec_statement_break_t self, allocator_t allocator,
     cubec_statement_break_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_BREAK,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
-onerror:
-  return;
+  g_node_type.init(&self->super, allocator, &super_init);
 }
 
 static void _cubec_statement_break_dispose(
@@ -38,18 +34,14 @@ static void _cubec_statement_break_dispose(
 static void _cubec_statement_break_clone(
     cubec_statement_break_t self, allocator_t allocator,
     cubec_statement_break_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
-  return;
-onerror:
+  g_node_type.clone(&self->super, allocator, &another->super);
   return;
 }
 
 static void _cubec_statement_break_move(
     cubec_statement_break_t self, allocator_t allocator,
     cubec_statement_break_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
-  return;
-onerror:
+  g_node_type.move(&self->super, allocator, &another->super);
   return;
 }
 
@@ -83,15 +75,16 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_break — break;
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_break(allocator_t allocator, vec_t tokens,
+node_t read_statement_break(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
   /* 1. Expect 'break' keyword */
   if (!_is_keyword(tokens, current, "break")) {
     return NULL;
   }
-  token_t break_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t break_token = vec_get(tokens, current);
   location_t start_location = *token_get_location(break_token);
   start_location.filename = filename;
   current++;
@@ -99,12 +92,11 @@ node_t read_statement_break(allocator_t allocator, vec_t tokens,
 
   /* 2. Expect ';' */
   if (!_is_symbol(tokens, current, ";")) {
-    token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+    token_t tok = vec_get(tokens, current);
     location_t *loc = token_get_location(tok);
-    THROW_LOCAL(onerror, "%s:%" PRIuPTR ":%" PRIuPTR " expected ';' after 'break'",
-                filename, loc->begin.line + 1, loc->begin.column);
+    goto onerror;
   }
-  token_t semi = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t semi = vec_get(tokens, current);
   current++;
 
   /* 3. Build location */
@@ -115,8 +107,7 @@ node_t read_statement_break(allocator_t allocator, vec_t tokens,
       .location = loc,
       .parent = NULL,
   };
-  cubec_statement_break_t node = TRY_LOCAL(onerror,
-      allocator_create(allocator, &g_cubec_statement_break_type, &init));
+  cubec_statement_break_t node = allocator_create(allocator, &g_cubec_statement_break_type, &init);
   *position = current;
   return &node->super;
 
@@ -124,7 +115,8 @@ onerror:
   return NULL;
 }
 
-node_t cubec_ast_create_break_stmt(allocator_t alloc, location_t loc) {
+node_t cubec_ast_create_break_stmt(context_t ctx, location_t loc) {
+  allocator_t alloc = ctx->allocator;
   cubec_statement_break_init_t init = {.location = loc, .parent = NULL};
   return (node_t)allocator_create(alloc, &g_cubec_statement_break_type,
                                   &init);

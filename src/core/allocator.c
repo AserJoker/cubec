@@ -1,5 +1,4 @@
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/type.h"
 #include <inttypes.h>
 #include <stdatomic.h>
@@ -81,7 +80,7 @@ void *allocator_create(allocator_t self, type_t *type, void *arg) {
   alloc_chunk_t chunk = value_get_chunk(data);
   chunk->type = type;
   if (type->init) {
-    TRY_VOID(NULL, type->init(data, self, arg));
+    type->init(data, self, arg);
   }
   return data;
 }
@@ -128,13 +127,10 @@ void *value_clone(allocator_t allocator, void *another) {
       }
       alloc_chunk_t chunk = value_get_chunk(data);
       chunk->type = type;
-      TRY_VOID_LOCAL(onerror, type->clone(data, allocator, another));
+      type->clone(data, allocator, another);
       return data;
-    onerror:
-      allocator_free(allocator, &data);
-      return NULL;
     } else {
-      THROW(NULL, "%s does not support cloning", type->name);
+      abort();
     }
   } else {
     alloc_chunk_t chunk = value_get_chunk(another);
@@ -156,13 +152,10 @@ void *value_move(allocator_t allocator, void *another) {
       }
       alloc_chunk_t chunk = value_get_chunk(data);
       chunk->type = type;
-      TRY_VOID_LOCAL(onerror, type->move(data, allocator, another));
+      type->move(data, allocator, another);
       return data;
-    onerror:
-      allocator_free(allocator, &data);
-      return NULL;
     } else {
-      THROW(NULL, "%s is not movable", type->name);
+      abort();
     }
   } else {
     alloc_chunk_t chunk = value_get_chunk(another);

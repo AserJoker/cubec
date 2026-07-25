@@ -1,7 +1,6 @@
 #include "cubec/interface_method.h"
 #include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -14,6 +13,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -22,21 +22,17 @@
 static void _cubec_interface_method_init(
     cubec_interface_method_t self, allocator_t allocator,
     cubec_interface_method_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_INTERFACE_METHOD,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
+  g_node_type.init(&self->super, allocator, &super_init);
   self->name = init->name;
   self->generic_params = init->generic_params;
   self->arguments = init->arguments;
   self->return_type = init->return_type;
-onerror:
-  return;
 }
 
 static void _cubec_interface_method_dispose(
@@ -51,34 +47,30 @@ static void _cubec_interface_method_dispose(
 static void _cubec_interface_method_clone(
     cubec_interface_method_t self, allocator_t allocator,
     cubec_interface_method_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
-  self->name = TRY_LOCAL(onerror, value_clone(allocator, another->name));
+  g_node_type.clone(&self->super, allocator, &another->super);
+  self->name = value_clone(allocator, another->name);
   self->generic_params = another->generic_params
-                             ? TRY_LOCAL(onerror, value_clone(allocator, another->generic_params))
+                             ? value_clone(allocator, another->generic_params)
                              : NULL;
-  self->arguments = TRY_LOCAL(onerror, value_clone(allocator, another->arguments));
+  self->arguments = value_clone(allocator, another->arguments);
   self->return_type = another->return_type
-                          ? TRY_LOCAL(onerror, value_clone(allocator, another->return_type))
+                          ? value_clone(allocator, another->return_type)
                           : NULL;
-  return;
-onerror:
   return;
 }
 
 static void _cubec_interface_method_move(
     cubec_interface_method_t self, allocator_t allocator,
     cubec_interface_method_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
-  self->name = TRY_LOCAL(onerror, value_move(allocator, another->name));
+  g_node_type.move(&self->super, allocator, &another->super);
+  self->name = value_move(allocator, another->name);
   self->generic_params = another->generic_params
-                             ? TRY_LOCAL(onerror, value_move(allocator, another->generic_params))
+                             ? value_move(allocator, another->generic_params)
                              : NULL;
-  self->arguments = TRY_LOCAL(onerror, value_move(allocator, another->arguments));
+  self->arguments = value_move(allocator, another->arguments);
   self->return_type = another->return_type
-                          ? TRY_LOCAL(onerror, value_move(allocator, another->return_type))
+                          ? value_move(allocator, another->return_type)
                           : NULL;
-  return;
-onerror:
   return;
 }
 
@@ -112,8 +104,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_interface_method
  * -------------------------------------------------------------------------- */
 
-node_t read_interface_method(allocator_t allocator, vec_t tokens,
+node_t read_interface_method(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t name = NULL;
   vec_t generic_params = NULL;
@@ -125,39 +118,39 @@ node_t read_interface_method(allocator_t allocator, vec_t tokens,
   if (!_is_keyword(tokens, current, "func")) {
     return NULL;
   }
-  token_t func_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t func_token = vec_get(tokens, current);
   location_t start_location = *token_get_location(func_token);
   start_location.filename = filename;
   current++;
   skip_whitespace(tokens, &current);
 
   /* 2. Parse method name (required) */
-  name = TRY_LOCAL(cleanup, read_literal_identifier(allocator, tokens, &current, filename));
+  name = read_literal_identifier(ctx, tokens, &current, filename);
   if (!name) {
-    THROW_LOCAL(cleanup, "expected method name after 'func'");
+    goto cleanup;
   }
 
   skip_whitespace(tokens, &current);
 
   /* 3. Parse optional generic parameters */
-  generic_params = TRY_LOCAL(cleanup, read_generic_params(allocator, tokens, &current, filename));
+  generic_params = read_generic_params(ctx, tokens, &current, filename);
   if (generic_params) {
     skip_whitespace(tokens, &current);
   }
 
   /* 4. Expect '(' */
   if (!_is_symbol(tokens, current, "(")) {
-    THROW_LOCAL(cleanup, "expected '(' after method name");
+    goto cleanup;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 5. Parse parameter list */
-  arguments = TRY_LOCAL(cleanup, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+  arguments = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, ")")) {
-    node_t arg = TRY_LOCAL(cleanup, read_function_argument(allocator, tokens, &current, filename));
+    node_t arg = read_function_argument(ctx, tokens, &current, filename);
     if (!arg) {
-      THROW_LOCAL(cleanup, "expected parameter in method signature");
+      goto cleanup;
     }
     vec_push(arguments, arg);
     skip_whitespace(tokens, &current);
@@ -176,20 +169,18 @@ node_t read_interface_method(allocator_t allocator, vec_t tokens,
   if (_is_symbol(tokens, current, ":")) {
     current++;
     skip_whitespace(tokens, &current);
-    return_type = TRY_LOCAL(cleanup, read_expression_type(allocator, tokens, &current, filename));
+    return_type = read_expression_type(ctx, tokens, &current, filename);
     if (!return_type) {
-      THROW_LOCAL(cleanup, "expected type expression after ':'");
+      goto cleanup;
     }
     skip_whitespace(tokens, &current);
   }
 
   /* 8. Expect ';' (method signature has no body) */
-  token_t semi = TRY_LOCAL(cleanup, vec_get(tokens, current));
+  token_t semi = vec_get(tokens, current);
   if (!token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
     location_t *loc = token_get_location(semi);
-    THROW_LOCAL(cleanup,
-                "%s:%" PRIuPTR ":%" PRIuPTR " expected ';' after method signature",
-                filename, loc->begin.line + 1, loc->begin.column);
+    goto cleanup;
   }
   current++;
 
@@ -208,7 +199,8 @@ node_t read_interface_method(allocator_t allocator, vec_t tokens,
       .arguments = arguments,
       .return_type = return_type,
   };
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_interface_method_type, &init));
+  node = allocator_create(allocator, &g_cubec_interface_method_type, &init);
+  if (!node) goto cleanup;
   *position = current;
   return &node->super;
 
@@ -231,12 +223,13 @@ onerror:
  *  Factory: cubec_ast_create_iface_method
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_iface_method(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_iface_method(context_t ctx, location_t loc,
                                      const char *name, vec_t args,
                                      node_t return_type) {
-  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  allocator_t alloc = ctx->allocator;
+  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
   cubec_interface_method_init_t init = {
-      .location = loc, .name = name_node, .generic_params = NULL,
+      .location = loc, .name = (node_t)name_node, .generic_params = NULL,
       .arguments = args, .return_type = return_type};
   return (node_t)allocator_create(alloc, &g_cubec_interface_method_type,
                                   &init);

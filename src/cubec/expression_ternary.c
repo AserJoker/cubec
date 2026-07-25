@@ -1,6 +1,5 @@
 #include "cubec/expression_ternary.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
@@ -8,9 +7,10 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* Forward declaration for read_expression_binary */
-extern node_t read_expression_binary(allocator_t allocator, vec_t tokens,
+extern node_t read_expression_binary(context_t ctx, vec_t tokens,
                                      size_t *position, const char *filename);
 
 /* --------------------------------------------------------------------------
@@ -20,22 +20,17 @@ extern node_t read_expression_binary(allocator_t allocator, vec_t tokens,
 static void _cubec_expression_ternary_init(cubec_expression_ternary_t self,
                                            allocator_t allocator,
                                            cubec_expression_ternary_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_TERNARY,
       .parent = NULL,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
 
   self->condition = init->condition;
   self->consequent = init->consequent;
   self->alternate = init->alternate;
-onerror:
-  return;
 }
 
 static void _cubec_expression_ternary_dispose(cubec_expression_ternary_t self,
@@ -49,10 +44,10 @@ static void _cubec_expression_ternary_dispose(cubec_expression_ternary_t self,
 static void _cubec_expression_ternary_clone(cubec_expression_ternary_t self,
                                             allocator_t allocator,
                                             cubec_expression_ternary_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
-  self->condition = TRY_LOCAL(cleanup, value_clone(allocator, another->condition));
-  self->consequent = TRY_LOCAL(cleanup, value_clone(allocator, another->consequent));
-  self->alternate = TRY_LOCAL(cleanup, value_clone(allocator, another->alternate));
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->condition = value_clone(allocator, another->condition);
+  self->consequent = value_clone(allocator, another->consequent);
+  self->alternate = value_clone(allocator, another->alternate);
   return;
 
 cleanup:
@@ -64,10 +59,10 @@ cleanup:
 static void _cubec_expression_ternary_move(cubec_expression_ternary_t self,
                                            allocator_t allocator,
                                            cubec_expression_ternary_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
-  self->condition = TRY_LOCAL(cleanup, value_move(allocator, another->condition));
-  self->consequent = TRY_LOCAL(cleanup, value_move(allocator, another->consequent));
-  self->alternate = TRY_LOCAL(cleanup, value_move(allocator, another->alternate));
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->condition = value_move(allocator, another->condition);
+  self->consequent = value_move(allocator, another->consequent);
+  self->alternate = value_move(allocator, another->alternate);
   return;
 
 cleanup:
@@ -89,8 +84,9 @@ type_t g_cubec_expression_ternary_type = {
  *  Parser: read_expression_ternary
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_ternary(allocator_t allocator, vec_t tokens,
+node_t read_expression_ternary(context_t ctx, vec_t tokens,
                                size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t condition = NULL;
   cubec_expression_ternary_t node = NULL;
@@ -100,7 +96,7 @@ node_t read_expression_ternary(allocator_t allocator, vec_t tokens,
   /* Parse condition using read_expression_binary.
    * This handles all binary ops including ==, !=, extends.
    * If no '?' follows, returns the condition as-is. */
-  condition = TRY_LOCAL(onerror, read_expression_binary(allocator, tokens, &current, filename));
+  condition = read_expression_binary(ctx, tokens, &current, filename);
   if (!condition) {
     return NULL;
   }
@@ -116,8 +112,7 @@ node_t read_expression_ternary(allocator_t allocator, vec_t tokens,
 
   /* Parse consequent expression (the true branch) */
   skip_whitespace(tokens, &current);
-  consequent = TRY_LOCAL(onerror,
-                         read_expression(allocator, tokens, &current, filename));
+  consequent = read_expression(ctx, tokens, &current, filename);
   if (!consequent) {
     goto onerror;
   }
@@ -133,18 +128,17 @@ node_t read_expression_ternary(allocator_t allocator, vec_t tokens,
   /* Parse alternate expression (the false branch) via read_expression
    * to handle nested ternaries naturally */
   skip_whitespace(tokens, &current);
-  alternate = TRY_LOCAL(onerror,
-                        read_expression(allocator, tokens, &current, filename));
+  alternate = read_expression(ctx, tokens, &current, filename);
   if (!alternate) {
     goto onerror;
   }
 
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_ternary_type,
+  node = allocator_create(allocator, &g_cubec_expression_ternary_type,
                           &(cubec_expression_ternary_init_t){
                               .condition = condition,
                               .consequent = consequent,
                               .alternate = alternate,
-                          }));
+                          });
 
   /* Location spans from condition start to alternate end */
   {
@@ -165,8 +159,7 @@ onerror:
     allocator_free(allocator, &alternate);
     allocator_free(allocator, &consequent);
     allocator_free(allocator, &node);
-    THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid ternary expression",
-          filename, loc.begin.line + 1, loc.begin.column + 1);
+    return NULL;
   }
   allocator_free(allocator, &condition);
   allocator_free(allocator, &alternate);
@@ -179,10 +172,11 @@ onerror:
  *  Factory: cubec_ast_create_ternary
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_ternary(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_ternary(context_t ctx, location_t loc,
                                 node_t cond, node_t then_branch,
                                 node_t else_branch) {
-  cubec_expression_ternary_init_t init = {
+  allocator_t alloc = ctx->allocator;
+      cubec_expression_ternary_init_t init = {
       .location = loc, .parent = NULL, .condition = cond,
       .consequent = then_branch, .alternate = else_branch};
   return (node_t)allocator_create(alloc, &g_cubec_expression_ternary_type,

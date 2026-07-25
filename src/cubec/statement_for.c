@@ -2,7 +2,6 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -16,6 +15,7 @@
 #include "cubec/statement.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -24,21 +24,17 @@
 static void _cubec_statement_for_init(
     cubec_statement_for_t self, allocator_t allocator,
     cubec_statement_for_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_FOR,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
+  g_node_type.init(&self->super, allocator, &super_init);
   self->init = init->init;
   self->condition = init->condition;
   self->increment = init->increment;
   self->body = init->body;
-onerror:
-  return;
 }
 
 static void _cubec_statement_for_dispose(
@@ -53,26 +49,22 @@ static void _cubec_statement_for_dispose(
 static void _cubec_statement_for_clone(
     cubec_statement_for_t self, allocator_t allocator,
     cubec_statement_for_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
-  self->init = another->init ? TRY_LOCAL(onerror, value_clone(allocator, another->init)) : NULL;
-  self->condition = another->condition ? TRY_LOCAL(onerror, value_clone(allocator, another->condition)) : NULL;
-  self->increment = another->increment ? TRY_LOCAL(onerror, value_clone(allocator, another->increment)) : NULL;
-  self->body = TRY_LOCAL(onerror, value_clone(allocator, another->body));
-  return;
-onerror:
+  g_node_type.clone(&self->super, allocator, &another->super);
+  self->init = another->init ? value_clone(allocator, another->init) : NULL;
+  self->condition = another->condition ? value_clone(allocator, another->condition) : NULL;
+  self->increment = another->increment ? value_clone(allocator, another->increment) : NULL;
+  self->body = value_clone(allocator, another->body);
   return;
 }
 
 static void _cubec_statement_for_move(
     cubec_statement_for_t self, allocator_t allocator,
     cubec_statement_for_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
-  self->init = another->init ? TRY_LOCAL(onerror, value_move(allocator, another->init)) : NULL;
-  self->condition = another->condition ? TRY_LOCAL(onerror, value_move(allocator, another->condition)) : NULL;
-  self->increment = another->increment ? TRY_LOCAL(onerror, value_move(allocator, another->increment)) : NULL;
-  self->body = TRY_LOCAL(onerror, value_move(allocator, another->body));
-  return;
-onerror:
+  g_node_type.move(&self->super, allocator, &another->super);
+  self->init = another->init ? value_move(allocator, another->init) : NULL;
+  self->condition = another->condition ? value_move(allocator, another->condition) : NULL;
+  self->increment = another->increment ? value_move(allocator, another->increment) : NULL;
+  self->body = value_move(allocator, another->body);
   return;
 }
 
@@ -106,8 +98,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_for — for(init; cond; incr) { }
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_for(allocator_t allocator, vec_t tokens,
+node_t read_statement_for(context_t ctx, vec_t tokens,
                            size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t init = NULL;
   node_t condition = NULL;
@@ -119,7 +112,7 @@ node_t read_statement_for(allocator_t allocator, vec_t tokens,
   if (!_is_keyword(tokens, current, "for")) {
     return NULL;
   }
-  token_t for_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t for_token = vec_get(tokens, current);
   location_t start_location = *token_get_location(for_token);
   start_location.filename = filename;
   current++;
@@ -127,7 +120,7 @@ node_t read_statement_for(allocator_t allocator, vec_t tokens,
 
   /* 2. Expect '(' */
   if (!_is_symbol(tokens, current, "(")) {
-    THROW_LOCAL(onerror, "expected '(' after 'for'");
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
@@ -136,14 +129,14 @@ node_t read_statement_for(allocator_t allocator, vec_t tokens,
   if (!_is_symbol(tokens, current, ";")) {
     if (_is_keyword(tokens, current, "var")) {
       /* Parse var declaration without consuming ';' */
-      token_t var_token = TRY_LOCAL(cleanup, vec_get(tokens, current));
+      token_t var_token = vec_get(tokens, current);
       location_t var_loc = *token_get_location(var_token);
       var_loc.filename = filename;
       current++;
       skip_whitespace(tokens, &current);
-      node_t declarator = TRY_LOCAL(cleanup, read_declaration_variable(allocator, tokens, &current, filename));
+      node_t declarator = read_declaration_variable(ctx, tokens, &current, filename);
       if (!declarator) {
-        THROW_LOCAL(cleanup, "expected variable declarator after 'var' in for init");
+        goto cleanup;
       }
       /* Wrap in statement_expression-like node: use statement_declaration pattern */
       /* Actually, just create a statement_declaration node without the ';' */
@@ -156,54 +149,63 @@ node_t read_statement_for(allocator_t allocator, vec_t tokens,
           .is_comptime = false,
           .declarator = declarator,
       };
-      init = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_declaration_type, &decl_init));
+      init = allocator_create(allocator, &g_cubec_statement_declaration_type, &decl_init);
       if (!init) {
         allocator_free(allocator, &declarator);
       }
     } else {
       /* Parse as expression (including assignment) */
-      init = TRY_LOCAL(cleanup, read_expression_comma(allocator, tokens, &current, filename));
+      init = read_expression_comma(ctx, tokens, &current, filename);
+      if (!init) {
+        goto cleanup;
+      }
     }
   }
   skip_whitespace(tokens, &current);
 
   /* 4. Expect first ';' */
   if (!_is_symbol(tokens, current, ";")) {
-    THROW_LOCAL(cleanup, "expected ';' after for init");
+    goto cleanup;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 5. Parse condition (optional, ends at ';') */
   if (!_is_symbol(tokens, current, ";")) {
-    condition = TRY_LOCAL(cleanup, read_expression_comma(allocator, tokens, &current, filename));
+    condition = read_expression_comma(ctx, tokens, &current, filename);
+    if (!condition) {
+      goto cleanup;
+    }
   }
   skip_whitespace(tokens, &current);
 
   /* 6. Expect second ';' */
   if (!_is_symbol(tokens, current, ";")) {
-    THROW_LOCAL(cleanup, "expected ';' after for condition");
+    goto cleanup;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 7. Parse increment (optional, ends at ')') */
   if (!_is_symbol(tokens, current, ")")) {
-    increment = TRY_LOCAL(cleanup, read_expression_comma(allocator, tokens, &current, filename));
+    increment = read_expression_comma(ctx, tokens, &current, filename);
+    if (!increment) {
+      goto cleanup;
+    }
   }
   skip_whitespace(tokens, &current);
 
   /* 8. Expect ')' */
   if (!_is_symbol(tokens, current, ")")) {
-    THROW_LOCAL(cleanup, "expected ')' after for increment");
+    goto cleanup;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 9. Parse body (any statement) */
-  body = TRY_LOCAL(cleanup, read_statement(allocator, tokens, &current, filename));
+  body = read_statement(ctx, tokens, &current, filename);
   if (!body) {
-    THROW_LOCAL(cleanup, "expected statement after for");
+    goto cleanup;
   }
 
   /* 10. Build location */
@@ -218,7 +220,7 @@ node_t read_statement_for(allocator_t allocator, vec_t tokens,
       .increment = increment,
       .body = body,
   };
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_for_type, &finit));
+  node = allocator_create(allocator, &g_cubec_statement_for_type, &finit);
   *position = current;
   return &node->super;
 
@@ -237,10 +239,11 @@ onerror:
   return NULL;
 }
 
-node_t cubec_ast_create_for_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_for_stmt(context_t ctx, location_t loc,
                                  node_t init_node, node_t cond,
                                  node_t incr, node_t body) {
-  cubec_statement_for_init_t init = {
+  allocator_t alloc = ctx->allocator;
+      cubec_statement_for_init_t init = {
       .location = loc, .parent = NULL, .init = init_node,
       .condition = cond, .increment = incr, .body = body};
   return (node_t)allocator_create(alloc, &g_cubec_statement_for_type, &init);

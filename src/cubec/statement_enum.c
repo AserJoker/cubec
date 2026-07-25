@@ -2,7 +2,6 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -13,6 +12,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -21,21 +21,17 @@
 static void _cubec_statement_enum_init(
     cubec_statement_enum_t self, allocator_t allocator,
     cubec_statement_enum_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_ENUM,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
+  g_node_type.init(&self->super, allocator, &super_init);
   self->is_export = init->is_export;
   self->name = init->name;
   self->items = init->items;
   self->decorators = init->decorators;
-onerror:
-  return;
 }
 
 static void _cubec_statement_enum_dispose(
@@ -49,24 +45,20 @@ static void _cubec_statement_enum_dispose(
 static void _cubec_statement_enum_clone(
     cubec_statement_enum_t self, allocator_t allocator,
     cubec_statement_enum_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
+  g_node_type.clone(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
-  self->name = TRY_LOCAL(onerror, value_clone(allocator, another->name));
-  self->items = TRY_LOCAL(onerror, value_clone(allocator, another->items));
-  return;
-onerror:
+  self->name = value_clone(allocator, another->name);
+  self->items = value_clone(allocator, another->items);
   return;
 }
 
 static void _cubec_statement_enum_move(
     cubec_statement_enum_t self, allocator_t allocator,
     cubec_statement_enum_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
+  g_node_type.move(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
-  self->name = TRY_LOCAL(onerror, value_move(allocator, another->name));
-  self->items = TRY_LOCAL(onerror, value_move(allocator, another->items));
-  return;
-onerror:
+  self->name = value_move(allocator, another->name);
+  self->items = value_move(allocator, another->items);
   return;
 }
 
@@ -94,8 +86,9 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
  *  Parser: read_statement_enum — delegates to read_expression_type_enum
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_enum(allocator_t allocator, vec_t tokens,
+node_t read_statement_enum(context_t ctx, vec_t tokens,
                             size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   bool is_export = false;
   node_t name = NULL;
@@ -108,10 +101,10 @@ node_t read_statement_enum(allocator_t allocator, vec_t tokens,
   {
     while (true) {
       skip_whitespace(tokens, &current);
-      node_t dec = read_decorator(allocator, tokens, &current, filename);
+      node_t dec = read_decorator(ctx, tokens, &current, filename);
       if (!dec) break;
       if (!decorators) {
-        decorators = TRY_LOCAL(onerror, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+        decorators = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
       }
       vec_push(decorators, dec);
     }
@@ -120,7 +113,7 @@ node_t read_statement_enum(allocator_t allocator, vec_t tokens,
   /* 1. Parse optional 'export' modifier */
   if (_is_keyword(tokens, current, "export")) {
     is_export = true;
-    token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+    token_t tok = vec_get(tokens, current);
     start_location = *token_get_location(tok);
     start_location.filename = filename;
     current++;
@@ -132,7 +125,7 @@ node_t read_statement_enum(allocator_t allocator, vec_t tokens,
     goto onerror;
   }
   if (start_location.begin.offset == 0) {
-    token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+    token_t tok = vec_get(tokens, current);
     start_location = *token_get_location(tok);
     start_location.filename = filename;
   }
@@ -140,18 +133,18 @@ node_t read_statement_enum(allocator_t allocator, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* 3. Parse enum name (required for statement form) */
-  name = TRY_LOCAL(cleanup, read_literal_identifier(allocator, tokens, &current, filename));
+  name = read_literal_identifier(ctx, tokens, &current, filename);
   if (!name) {
-    THROW_LOCAL(cleanup, "expected enum name after 'enum'");
+    goto cleanup;
   }
 
   skip_whitespace(tokens, &current);
 
   /* 4. Delegate to read_expression_type_enum_body for { items }
    *    (enum keyword already consumed, pass start_location for span) */
-  expr_node = TRY_LOCAL(cleanup, read_expression_type_enum_body(allocator, tokens, &current, filename, start_location));
+  expr_node = read_expression_type_enum_body(ctx, tokens, &current, filename, start_location);
   if (!expr_node) {
-    THROW_LOCAL(cleanup, "expected '{' after enum name");
+    goto cleanup;
   }
   cubec_expression_type_enum_t expr_enum = (cubec_expression_type_enum_t)expr_node;
 
@@ -176,7 +169,7 @@ node_t read_statement_enum(allocator_t allocator, vec_t tokens,
 
   allocator_free(allocator, &expr_node);
 
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_enum_type, &init));
+  node = allocator_create(allocator, &g_cubec_statement_enum_type, &init);
   *position = current;
   return &node->super;
 
@@ -193,13 +186,14 @@ onerror:
   return NULL;
 }
 
-node_t cubec_ast_create_enum_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_enum_stmt(context_t ctx, location_t loc,
                                   const char *name, vec_t items,
                                   bool is_export) {
-  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  allocator_t alloc = ctx->allocator;
+  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
   cubec_statement_enum_init_t init = {.location = loc, .parent = NULL,
                                       .is_export = is_export,
-                                      .name = name_node, .items = items};
+                                      .name = (node_t)name_node, .items = items};
   return (node_t)allocator_create(alloc, &g_cubec_statement_enum_type,
                                   &init);
 }

@@ -1,7 +1,6 @@
 #include "cubec/literal_numeric.h"
 #include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/string.h"
 #include "core/token.h"
@@ -12,13 +11,12 @@
 #include "cubec/token.h"
 #include <stdbool.h>
 #include <string.h>
+#include "engine/context.h"
 
 static void _cubec_literal_numeric_init(cubec_literal_numeric_t self,
                                         allocator_t allocator,
                                         cubec_literal_numeric_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_literal_init_t super_init = {
       .kind = CUBEC_NODE_LITERAL_NUMERIC,
       .parent = NULL,
@@ -26,15 +24,13 @@ static void _cubec_literal_numeric_init(cubec_literal_numeric_t self,
   super_init.location = init->location;
   self->kind = init->kind;
   self->numeric_type = init->numeric_type;
-  TRY_VOID_LOCAL(onerror, g_cubec_literal_type.init(&self->super, allocator, &super_init));
+  g_cubec_literal_type.init(&self->super, allocator, &super_init);
   if (init->value) {
     self->value = allocator_create(allocator, &g_string_type,
                                    &(string_init_t){.str = init->value});
   } else {
     self->value = allocator_create(allocator, &g_string_type, NULL);
   }
-onerror:
-  return;
 }
 
 static void _cubec_literal_numeric_dispose(cubec_literal_numeric_t self,
@@ -48,27 +44,19 @@ static void _cubec_literal_numeric_dispose(cubec_literal_numeric_t self,
 static void _cubec_literal_numeric_clone(cubec_literal_numeric_t self,
                                          allocator_t allocator,
                                          cubec_literal_numeric_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_literal_type.clone(&self->super, allocator, &another->super));
+  g_cubec_literal_type.clone(&self->super, allocator, &another->super);
   self->kind = another->kind;
   self->numeric_type = another->numeric_type;
-  self->value = TRY_LOCAL(cleanup, value_clone(allocator, another->value));
-  return;
-
-cleanup:
-  allocator_free(allocator, &self->value);
+  self->value = value_clone(allocator, another->value);
 }
 
 static void _cubec_literal_numeric_move(cubec_literal_numeric_t self,
                                         allocator_t allocator,
                                         cubec_literal_numeric_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_literal_type.move(&self->super, allocator, &another->super));
+  g_cubec_literal_type.move(&self->super, allocator, &another->super);
   self->kind = another->kind;
   self->numeric_type = another->numeric_type;
-  self->value = TRY_LOCAL(cleanup, value_move(allocator, another->value));
-  return;
-
-cleanup:
-  allocator_free(allocator, &self->value);
+  self->value = value_move(allocator, another->value);
 }
 
 type_t g_cubec_literal_numeric_type = {
@@ -145,11 +133,12 @@ static bool is_float_token(const char *value, size_t len) {
   return false;
 }
 
-node_t read_literal_numeric(allocator_t allocator, vec_t tokens,
+node_t read_literal_numeric(context_t ctx, vec_t tokens,
                             size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
-  token_t first_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t first_token = vec_get(tokens, current);
   if (!token_is(first_token, CUBEC_TOKEN_NUMERIC, NULL)) {
     return NULL;
   }
@@ -170,14 +159,15 @@ node_t read_literal_numeric(allocator_t allocator, vec_t tokens,
       .numeric_type = numeric_type,
   };
   cubec_literal_numeric_t node =
-      TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_literal_numeric_type, &init));
+      allocator_create(allocator, &g_cubec_literal_numeric_type, &init);
+  if (!node) goto onerror;
   node_t node_base = (node_t)node;
   node_base->location.filename = filename;
 
   string_nconcat(node->value, token_str, token_len);
   current++;
 
-  token_t type_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t type_token = vec_get(tokens, current);
   if (token_is(type_token, CUBEC_TOKEN_IDENTIFIER, NULL)) {
     const char *ident_str = token_get_string(type_token);
     size_t ident_len = token_get_string_length(type_token);
@@ -199,11 +189,12 @@ onerror:
   return NULL;
 }
 
-node_t cubec_ast_create_numeric(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_numeric(context_t ctx, location_t loc,
                                 const char *value,
                                 cubec_literal_numeric_kind_t kind,
                                 cubec_literal_numeric_type_t ntype) {
-  cubec_literal_numeric_init_t init = {.location = loc, .parent = NULL,
+  allocator_t alloc = ctx->allocator;
+                                       cubec_literal_numeric_init_t init = {
                                        .value = value, .kind = kind,
                                        .numeric_type = ntype};
   return (node_t)allocator_create(alloc, &g_cubec_literal_numeric_type, &init);

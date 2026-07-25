@@ -1,6 +1,5 @@
 #include "cubec/expression_initialize_list.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
@@ -11,6 +10,7 @@
 #include "cubec/token.h"
 #include <inttypes.h>
 #include <stdbool.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -19,29 +19,23 @@
 static void _cubec_expression_initialize_list_init(
     cubec_expression_initialize_list_t self, allocator_t allocator,
     cubec_expression_initialize_list_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_INITIALIZE_LIST,
       .parent = NULL,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  TRY_VOID_LOCAL(onerror,
-                 g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
 
   self->type = init->type;
   self->is_field = init->is_field;
   if (init->items) {
     self->items = init->items;
   } else {
-    self->items = TRY_LOCAL(onerror,
-                            allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+    self->items = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   }
 
-onerror:
-  return;
 }
 
 static void _cubec_expression_initialize_list_dispose(
@@ -54,10 +48,9 @@ static void _cubec_expression_initialize_list_dispose(
 static void _cubec_expression_initialize_list_clone(
     cubec_expression_initialize_list_t self, allocator_t allocator,
     cubec_expression_initialize_list_t another) {
-  TRY_VOID_LOCAL(cleanup,
-                 g_cubec_expression_type.clone(&self->super, allocator, &another->super));
-  self->type = TRY_LOCAL(cleanup, value_clone(allocator, another->type));
-  self->items = TRY_LOCAL(cleanup, value_clone(allocator, another->items));
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->type = value_clone(allocator, another->type);
+  self->items = value_clone(allocator, another->items);
   self->is_field = another->is_field;
   return;
 
@@ -69,15 +62,13 @@ cleanup:
 static void _cubec_expression_initialize_list_move(
     cubec_expression_initialize_list_t self, allocator_t allocator,
     cubec_expression_initialize_list_t another) {
-  TRY_VOID_LOCAL(cleanup,
-                 g_cubec_expression_type.move(&self->super, allocator, &another->super));
-  self->type = TRY_LOCAL(cleanup, value_move(allocator, another->type));
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->type = value_move(allocator, another->type);
   self->is_field = another->is_field;
 
   allocator_free(allocator, &self->items);
   self->items = another->items;
-  another->items = TRY_LOCAL(cleanup,
-                             allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+  another->items = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   return;
 
 cleanup:
@@ -108,9 +99,10 @@ type_t g_cubec_expression_initialize_list_type = {
  *   - All positional expressions: expr1, expr2
  * Mixing field and positional items is an error.
  */
-node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
+node_t read_expression_initialize_list(context_t ctx, vec_t tokens,
                                        size_t *position,
                                        const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_initialize_list_t node = NULL;
   node_t type = NULL;
@@ -119,7 +111,7 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
   location_t dot_location = {0};
 
   /* Expect '.' */
-  dot_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  dot_token = vec_get(tokens, current);
   if (!token_is(dot_token, CUBEC_TOKEN_SYMBOL, ".")) {
     return NULL;
   }
@@ -128,21 +120,20 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
 
   /* Look ahead: identifier + '{' → typed, '{' → anonymous, else → not ours */
   skip_whitespace(tokens, &current);
-  token_t next = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t next = vec_get(tokens, current);
 
   if (token_is(next, CUBEC_TOKEN_SYMBOL, "{")) {
     /* Anonymous: .{ ... } — type stays NULL */
     current++;
   } else {
     /* Possible typed: .<type>{ ... } — type is a type expression */
-    type = TRY_LOCAL(onerror,
-                     read_expression_type(allocator, tokens, &current, filename));
+    type = read_expression_type(ctx, tokens, &current, filename);
     if (!type) {
       return NULL;
     }
 
     skip_whitespace(tokens, &current);
-    token_t brace = TRY_LOCAL(onerror, vec_get(tokens, current));
+    token_t brace = vec_get(tokens, current);
     if (!token_is(brace, CUBEC_TOKEN_SYMBOL, "{")) {
       /* .<type> but no '{' — not an initialize_list, backtrack */
       allocator_free(allocator, &type);
@@ -152,15 +143,14 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
   }
 
   /* We have consumed up to and including '{'. Now parse items. */
-  items = TRY_LOCAL(onerror,
-                    allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+  items = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
 
   bool mode_determined = false;
   bool is_field_mode = false;
 
   while (true) {
     skip_whitespace(tokens, &current);
-    token_t tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+    token_t tok = vec_get(tokens, current);
 
     /* Check for closing '}' */
     if (token_is(tok, CUBEC_TOKEN_SYMBOL, "}")) {
@@ -173,7 +163,7 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
       /* Try initialize_field first (only if starts with '.' + identifier + '=') */
       size_t field_pos = current;
       node_t field_item =
-          read_expression_initialize_field(allocator, tokens, &field_pos, filename);
+          read_expression_initialize_field(ctx, tokens, &field_pos, filename);
       if (field_item) {
         is_field_mode = true;
         mode_determined = true;
@@ -183,13 +173,12 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
         /* Fall back to positional expression: try spread first, then regular */
         is_field_mode = false;
         mode_determined = true;
-        node_t expr_item = read_expression_spread(allocator, tokens, &current, filename);
+        node_t expr_item = read_expression_spread(ctx, tokens, &current, filename);
         if (!expr_item) {
-          expr_item = TRY_LOCAL(onerror,
-                                read_expression_base(allocator, tokens, &current, filename));
+          expr_item = read_expression_base(ctx, tokens, &current, filename);
         }
         if (!expr_item) {
-          THROW_LOCAL(onerror, "expected expression in initialize list");
+          goto onerror;
         }
         vec_push(items, expr_item);
       }
@@ -197,14 +186,10 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
       /* Mode already determined */
       if (is_field_mode) {
         node_t field_item =
-            read_expression_initialize_field(allocator, tokens, &current, filename);
+            read_expression_initialize_field(ctx, tokens, &current, filename);
         if (!field_item) {
           /* In field mode, non-field item is an error (mixed items) */
-          THROW_LOCAL(onerror,
-                      "%s:%" PRIuPTR ":%" PRIuPTR
-                      " mixed field and positional items in initialize list",
-                      filename, dot_location.begin.line + 1,
-                      dot_location.begin.column + 1);
+          goto onerror;
         }
         vec_push(items, field_item);
       } else {
@@ -215,23 +200,18 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
           /* Peek further: identifier + '=' → it's a field in positional mode = error */
           size_t field_test = current;
           node_t field_test_item =
-              read_expression_initialize_field(allocator, tokens, &field_test, filename);
+              read_expression_initialize_field(ctx, tokens, &field_test, filename);
           if (field_test_item) {
             allocator_free(allocator, &field_test_item);
-            THROW_LOCAL(onerror,
-                        "%s:%" PRIuPTR ":%" PRIuPTR
-                        " mixed field and positional items in initialize list",
-                        filename, dot_location.begin.line + 1,
-                        dot_location.begin.column + 1);
+            goto onerror;
           }
         }
-        node_t expr_item = read_expression_spread(allocator, tokens, &current, filename);
+        node_t expr_item = read_expression_spread(ctx, tokens, &current, filename);
         if (!expr_item) {
-          expr_item = TRY_LOCAL(onerror,
-                                read_expression_base(allocator, tokens, &current, filename));
+          expr_item = read_expression_base(ctx, tokens, &current, filename);
         }
         if (!expr_item) {
-          THROW_LOCAL(onerror, "expected expression in initialize list");
+          goto onerror;
         }
         vec_push(items, expr_item);
       }
@@ -239,12 +219,12 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
 
     /* After an item, expect ',' or '}' */
     skip_whitespace(tokens, &current);
-    tok = TRY_LOCAL(onerror, vec_get(tokens, current));
+    tok = vec_get(tokens, current);
     if (token_is(tok, CUBEC_TOKEN_SYMBOL, ",")) {
       current++;
       skip_whitespace(tokens, &current);
       /* Trailing comma: if next is '}', just close the list */
-      token_t after_comma = TRY_LOCAL(onerror, vec_get(tokens, current));
+      token_t after_comma = vec_get(tokens, current);
       if (token_is(after_comma, CUBEC_TOKEN_SYMBOL, "}")) {
         current++;
         break;
@@ -253,22 +233,17 @@ node_t read_expression_initialize_list(allocator_t allocator, vec_t tokens,
       current++;
       break;
     } else {
-      THROW_LOCAL(onerror,
-                  "%s:%" PRIuPTR ":%" PRIuPTR
-                  " expected ',' or '}' in initialize list",
-                  filename, dot_location.begin.line + 1,
-                  dot_location.begin.column + 1);
+      goto onerror;
     }
   }
 
   /* Build node */
-  node = TRY_LOCAL(onerror,
-                   allocator_create(allocator, &g_cubec_expression_initialize_list_type,
+  node = allocator_create(allocator, &g_cubec_expression_initialize_list_type,
                                    &(cubec_expression_initialize_list_init_t){
                                        .type = type,
                                        .items = items,
                                        .is_field = is_field_mode,
-                                   }));
+                                   });
   /* NOTE: items ownership transferred to node via init — do NOT free here */
 
   /* Location spans from '.' to '}' */
@@ -297,10 +272,11 @@ onerror:
  *  Factory: cubec_ast_create_initialize_list
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_initialize_list(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_initialize_list(context_t ctx, location_t loc,
                                         node_t type, vec_t items,
                                         bool is_field) {
-  cubec_expression_initialize_list_init_t init = {
+  allocator_t alloc = ctx->allocator;
+      cubec_expression_initialize_list_init_t init = {
       .location = loc, .parent = NULL, .type = type, .items = items,
       .is_field = is_field};
   return (node_t)allocator_create(

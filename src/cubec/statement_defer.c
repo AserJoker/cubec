@@ -2,7 +2,6 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -12,6 +11,7 @@
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -20,19 +20,15 @@
 static void _cubec_statement_defer_init(
     cubec_statement_defer_t self, allocator_t allocator,
     cubec_statement_defer_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_DEFER,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
+  g_node_type.init(&self->super, allocator, &super_init);
   self->captures = init->captures;
   self->body = init->body;
-onerror:
-  return;
 }
 
 static void _cubec_statement_defer_dispose(
@@ -45,26 +41,22 @@ static void _cubec_statement_defer_dispose(
 static void _cubec_statement_defer_clone(
     cubec_statement_defer_t self, allocator_t allocator,
     cubec_statement_defer_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
+  g_node_type.clone(&self->super, allocator, &another->super);
   self->captures = another->captures
-                       ? TRY_LOCAL(onerror, value_clone(allocator, another->captures))
+                       ? value_clone(allocator, another->captures)
                        : NULL;
-  self->body = TRY_LOCAL(onerror, value_clone(allocator, another->body));
-  return;
-onerror:
+  self->body = value_clone(allocator, another->body);
   return;
 }
 
 static void _cubec_statement_defer_move(
     cubec_statement_defer_t self, allocator_t allocator,
     cubec_statement_defer_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
+  g_node_type.move(&self->super, allocator, &another->super);
   self->captures = another->captures
-                       ? TRY_LOCAL(onerror, value_move(allocator, another->captures))
+                       ? value_move(allocator, another->captures)
                        : NULL;
-  self->body = TRY_LOCAL(onerror, value_move(allocator, another->body));
-  return;
-onerror:
+  self->body = value_move(allocator, another->body);
   return;
 }
 
@@ -98,8 +90,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_defer — defer [|captures|] { }
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_defer(allocator_t allocator, vec_t tokens,
+node_t read_statement_defer(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   vec_t captures = NULL;
   node_t body = NULL;
@@ -109,7 +102,7 @@ node_t read_statement_defer(allocator_t allocator, vec_t tokens,
   if (!_is_keyword(tokens, current, "defer")) {
     return NULL;
   }
-  token_t defer_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t defer_token = vec_get(tokens, current);
   location_t start_location = *token_get_location(defer_token);
   start_location.filename = filename;
   current++;
@@ -125,12 +118,12 @@ node_t read_statement_defer(allocator_t allocator, vec_t tokens,
     current++;
     skip_whitespace(tokens, &current);
 
-    captures = TRY_LOCAL(cleanup, allocator_create(allocator, &g_vec_type, &(vec_init_t){true}));
+    captures = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
 
     while (true) {
-      node_t cap = TRY_LOCAL(cleanup, read_function_capture(allocator, tokens, &current, filename));
+      node_t cap = read_function_capture(ctx, tokens, &current, filename);
       if (!cap) {
-        THROW_LOCAL(cleanup, "expected capture name in defer capture list");
+        goto cleanup;
       }
       vec_push(captures, cap);
 
@@ -144,19 +137,17 @@ node_t read_statement_defer(allocator_t allocator, vec_t tokens,
         skip_whitespace(tokens, &current);
         break;
       } else {
-        token_t tok = TRY_LOCAL(cleanup, vec_get(tokens, current));
+        token_t tok = vec_get(tokens, current);
         location_t *loc = token_get_location(tok);
-        THROW_LOCAL(cleanup,
-                    "%s:%" PRIuPTR ":%" PRIuPTR " expected ',' or '|' in defer capture list",
-                    filename, loc->begin.line + 1, loc->begin.column);
+        goto cleanup;
       }
     }
   }
 
   /* 3. Parse block body: defer { ... } */
-  body = TRY_LOCAL(cleanup, read_statement_block(allocator, tokens, &current, filename));
+  body = read_statement_block(ctx, tokens, &current, filename);
   if (!body) {
-    THROW_LOCAL(cleanup, "expected block after 'defer'");
+    goto cleanup;
   }
 
   /* 4. Build location */
@@ -169,7 +160,7 @@ node_t read_statement_defer(allocator_t allocator, vec_t tokens,
       .captures = captures,
       .body = body,
   };
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_defer_type, &init));
+  node = allocator_create(allocator, &g_cubec_statement_defer_type, &init);
   *position = current;
   return &node->super;
 
@@ -184,9 +175,10 @@ onerror:
   return NULL;
 }
 
-node_t cubec_ast_create_defer_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_defer_stmt(context_t ctx, location_t loc,
                                    vec_t captures, node_t body) {
-  cubec_statement_defer_init_t init = {.location = loc, .parent = NULL,
+  allocator_t alloc = ctx->allocator;
+                                       cubec_statement_defer_init_t init = {
                                        .captures = captures, .body = body};
   return (node_t)allocator_create(alloc, &g_cubec_statement_defer_type,
                                   &init);

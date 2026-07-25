@@ -2,6 +2,7 @@
 #include "cubec/ast_factory_internal.h"
 #include "core/string.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_assignment.h"
@@ -68,14 +69,16 @@
 
 /* ===== Helpers ===== */
 
-string_t _make_string(allocator_t alloc, const char *str) {
+string_t _make_string(context_t ctx, const char *str) {
+  allocator_t alloc = ctx->allocator;
   string_init_t si = {.str = str};
   return (string_t)allocator_create(alloc, &g_string_type, &si);
 }
 
-cubec_literal_identifier_t _make_ident_node(allocator_t alloc,
+cubec_literal_identifier_t _make_ident_node(context_t ctx,
                                              location_t loc,
                                              const char *name) {
+  allocator_t alloc = ctx->allocator;
   cubec_literal_identifier_init_t init = {.location = loc, .parent = NULL,
                                            .value = name};
   return (cubec_literal_identifier_t)allocator_create(
@@ -84,7 +87,8 @@ cubec_literal_identifier_t _make_ident_node(allocator_t alloc,
 
 /* ===== Utility ===== */
 
-vec_t cubec_ast_create_vec(allocator_t alloc, bool auto_dispose) {
+vec_t cubec_ast_create_vec(context_t ctx, bool auto_dispose) {
+  allocator_t alloc = ctx->allocator;
   vec_init_t vi = {.auto_dispose = auto_dispose};
   return (vec_t)allocator_create(alloc, &g_vec_type, &vi);
 }

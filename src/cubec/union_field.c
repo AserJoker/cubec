@@ -1,7 +1,6 @@
 #include "cubec/union_field.h"
 #include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -11,6 +10,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -19,19 +19,15 @@
 static void _cubec_union_field_init(cubec_union_field_t self,
                                       allocator_t allocator,
                                       cubec_union_field_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_UNION_FIELD,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
+  g_node_type.init(&self->super, allocator, &super_init);
   self->name = init->name;
   self->type = init->type;
-onerror:
-  return;
 }
 
 static void _cubec_union_field_dispose(cubec_union_field_t self,
@@ -44,22 +40,18 @@ static void _cubec_union_field_dispose(cubec_union_field_t self,
 static void _cubec_union_field_clone(cubec_union_field_t self,
                                        allocator_t allocator,
                                        cubec_union_field_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
-  self->name = TRY_LOCAL(onerror, value_clone(allocator, another->name));
-  self->type = TRY_LOCAL(onerror, value_clone(allocator, another->type));
-  return;
-onerror:
+  g_node_type.clone(&self->super, allocator, &another->super);
+  self->name = value_clone(allocator, another->name);
+  self->type = value_clone(allocator, another->type);
   return;
 }
 
 static void _cubec_union_field_move(cubec_union_field_t self,
                                       allocator_t allocator,
                                       cubec_union_field_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
-  self->name = TRY_LOCAL(onerror, value_move(allocator, another->name));
-  self->type = TRY_LOCAL(onerror, value_move(allocator, another->type));
-  return;
-onerror:
+  g_node_type.move(&self->super, allocator, &another->super);
+  self->name = value_move(allocator, another->name);
+  self->type = value_move(allocator, another->type);
   return;
 }
 
@@ -76,22 +68,23 @@ type_t g_cubec_union_field_type = {
  *  Parser: read_union_field — <identifier> : <type> ;
  * -------------------------------------------------------------------------- */
 
-node_t read_union_field(allocator_t allocator, vec_t tokens,
+node_t read_union_field(context_t ctx, vec_t tokens,
                           size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t name = NULL;
   node_t type_expr = NULL;
   cubec_union_field_t node = NULL;
 
   /* Parse field name (identifier) */
-  name = TRY_LOCAL(cleanup, read_literal_identifier(allocator, tokens, &current, filename));
+  name = read_literal_identifier(ctx, tokens, &current, filename);
   if (!name) {
     goto cleanup;
   }
 
   /* Expect ':' */
   skip_whitespace(tokens, &current);
-  token_t colon_token = TRY_LOCAL(cleanup, vec_get(tokens, current));
+  token_t colon_token = vec_get(tokens, current);
   if (!token_is(colon_token, CUBEC_TOKEN_SYMBOL, ":")) {
     goto cleanup;
   }
@@ -100,20 +93,17 @@ node_t read_union_field(allocator_t allocator, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* Parse type expression */
-  type_expr = TRY_LOCAL(cleanup, read_expression_type(allocator, tokens, &current, filename));
+  type_expr = read_expression_type(ctx, tokens, &current, filename);
   if (!type_expr) {
-    THROW_LOCAL(cleanup, "%s:%" PRIuPTR ":%" PRIuPTR " expected type after ':'",
-                filename, colon_loc.begin.line + 1, colon_loc.begin.column);
+    goto cleanup;
   }
 
   /* Expect ';' */
   skip_whitespace(tokens, &current);
-  token_t semi = TRY_LOCAL(cleanup, vec_get(tokens, current));
+  token_t semi = vec_get(tokens, current);
   if (!token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
     location_t *loc = token_get_location(semi);
-    THROW_LOCAL(cleanup,
-                "%s:%" PRIuPTR ":%" PRIuPTR " expected ';' after union field",
-                filename, loc->begin.line + 1, loc->begin.column);
+    goto cleanup;
   }
   current++;
 
@@ -132,7 +122,8 @@ node_t read_union_field(allocator_t allocator, vec_t tokens,
       .name = name,
       .type = type_expr,
   };
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_union_field_type, &init));
+  node = allocator_create(allocator, &g_cubec_union_field_type, &init);
+  if (!node) goto cleanup;
   *position = current;
   return &node->super;
 
@@ -147,10 +138,11 @@ cleanup:
  *  Factory: cubec_ast_create_union_field
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_union_field(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_union_field(context_t ctx, location_t loc,
                                     const char *name, node_t type) {
-  node_t name_node = (node_t)_make_ident_node(alloc, loc, name);
+  allocator_t alloc = ctx->allocator;
+  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
   cubec_union_field_init_t init = {.location = loc, .parent = NULL,
-                                   .name = name_node, .type = type};
+                                   .name = (node_t)name_node, .type = type};
   return (node_t)allocator_create(alloc, &g_cubec_union_field_type, &init);
 }

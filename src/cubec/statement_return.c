@@ -2,7 +2,6 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/node.h"
 #include "core/token.h"
 #include "core/type.h"
@@ -10,6 +9,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -18,18 +18,14 @@
 static void _cubec_statement_return_init(
     cubec_statement_return_t self, allocator_t allocator,
     cubec_statement_return_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_RETURN,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_node_type.init(&self->super, allocator, &super_init));
+  g_node_type.init(&self->super, allocator, &super_init);
   self->expression = init->expression;
-onerror:
-  return;
 }
 
 static void _cubec_statement_return_dispose(
@@ -41,23 +37,19 @@ static void _cubec_statement_return_dispose(
 static void _cubec_statement_return_clone(
     cubec_statement_return_t self, allocator_t allocator,
     cubec_statement_return_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.clone(&self->super, allocator, &another->super));
+  g_node_type.clone(&self->super, allocator, &another->super);
   self->expression = another->expression
-                         ? TRY_LOCAL(onerror, value_clone(allocator, another->expression))
+                         ? value_clone(allocator, another->expression)
                          : NULL;
-onerror:
-  return;
 }
 
 static void _cubec_statement_return_move(
     cubec_statement_return_t self, allocator_t allocator,
     cubec_statement_return_t another) {
-  TRY_VOID_LOCAL(onerror, g_node_type.move(&self->super, allocator, &another->super));
+  g_node_type.move(&self->super, allocator, &another->super);
   self->expression = another->expression
-                         ? TRY_LOCAL(onerror, value_move(allocator, another->expression))
+                         ? value_move(allocator, another->expression)
                          : NULL;
-onerror:
-  return;
 }
 
 type_t g_cubec_statement_return_type = {
@@ -90,8 +82,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_return
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_return(allocator_t allocator, vec_t tokens,
+node_t read_statement_return(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t expression = NULL;
   cubec_statement_return_t node = NULL;
@@ -100,7 +93,7 @@ node_t read_statement_return(allocator_t allocator, vec_t tokens,
   if (!_is_keyword(tokens, current, "return")) {
     return NULL;
   }
-  token_t return_token = TRY_LOCAL(cleanup, vec_get(tokens, current));
+  token_t return_token = vec_get(tokens, current);
   location_t start_location = *token_get_location(return_token);
   start_location.filename = filename;
   current++;
@@ -108,20 +101,18 @@ node_t read_statement_return(allocator_t allocator, vec_t tokens,
 
   /* 2. Parse optional expression (if not immediately followed by ';') */
   if (!_is_symbol(tokens, current, ";")) {
-    expression = TRY_LOCAL(cleanup, read_expression(allocator, tokens, &current, filename));
+    expression = read_expression(ctx, tokens, &current, filename);
     if (!expression) {
-      THROW_LOCAL(cleanup, "expected expression after 'return'");
+      goto cleanup;
     }
     skip_whitespace(tokens, &current);
   }
 
   /* 3. Expect ';' */
-  token_t semi = TRY_LOCAL(cleanup, vec_get(tokens, current));
+  token_t semi = vec_get(tokens, current);
   if (!semi || !token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
     location_t *loc = token_get_location(semi);
-    THROW_LOCAL(cleanup,
-                "%s:%" PRIuPTR ":%" PRIuPTR " expected ';' after return statement",
-                filename, loc->begin.line + 1, loc->begin.column);
+    goto cleanup;
   }
   current++;
 
@@ -139,7 +130,7 @@ node_t read_statement_return(allocator_t allocator, vec_t tokens,
       .parent = NULL,
       .expression = expression,
   };
-  node = TRY_LOCAL(cleanup, allocator_create(allocator, &g_cubec_statement_return_type, &init));
+  node = allocator_create(allocator, &g_cubec_statement_return_type, &init);
   *position = current;
   return &node->super;
 
@@ -149,9 +140,10 @@ cleanup:
   return NULL;
 }
 
-node_t cubec_ast_create_return_stmt(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_return_stmt(context_t ctx, location_t loc,
                                     node_t expr) {
-  cubec_statement_return_init_t init = {.location = loc, .parent = NULL,
+  allocator_t alloc = ctx->allocator;
+                                        cubec_statement_return_init_t init = {
                                         .expression = expr};
   return (node_t)allocator_create(alloc, &g_cubec_statement_return_type,
                                   &init);

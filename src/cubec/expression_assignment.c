@@ -1,6 +1,5 @@
 #include "cubec/expression_assignment.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/string.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
@@ -9,6 +8,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -17,22 +17,18 @@
 static void _cubec_expression_assignment_init(
     cubec_expression_assignment_t self, allocator_t allocator,
     cubec_expression_assignment_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_ASSIGNMENT,
       .parent = NULL,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
 
   self->left = init->lvalue;
   self->right = init->rvalue;
   self->opt = init->opt;
-onerror:
-  return;
 }
 
 static void _cubec_expression_assignment_dispose(
@@ -46,10 +42,10 @@ static void _cubec_expression_assignment_dispose(
 static void _cubec_expression_assignment_clone(
     cubec_expression_assignment_t self, allocator_t allocator,
     cubec_expression_assignment_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
-  self->left = TRY_LOCAL(cleanup, value_clone(allocator, another->left));
-  self->right = TRY_LOCAL(cleanup, value_clone(allocator, another->right));
-  self->opt = (string_t)TRY_LOCAL(cleanup, value_clone(allocator, another->opt));
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->left = value_clone(allocator, another->left);
+  self->right = value_clone(allocator, another->right);
+  self->opt = (string_t)value_clone(allocator, another->opt);
   return;
 
 cleanup:
@@ -62,10 +58,10 @@ cleanup:
 static void _cubec_expression_assignment_move(
     cubec_expression_assignment_t self, allocator_t allocator,
     cubec_expression_assignment_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
-  self->left = TRY_LOCAL(cleanup, value_move(allocator, another->left));
-  self->right = TRY_LOCAL(cleanup, value_move(allocator, another->right));
-  self->opt = (string_t)TRY_LOCAL(cleanup, value_move(allocator, another->opt));
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->left = value_move(allocator, another->left);
+  self->right = value_move(allocator, another->right);
+  self->opt = (string_t)value_move(allocator, another->opt);
   return;
 
 cleanup:
@@ -108,8 +104,9 @@ static bool is_assignment_operator_token(token_t tok) {
   return false;
 }
 
-node_t read_expression_assignment(allocator_t allocator, vec_t tokens,
+node_t read_expression_assignment(context_t ctx, vec_t tokens,
                                   size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t lvalue = NULL;
   node_t rvalue = NULL;
@@ -118,7 +115,7 @@ node_t read_expression_assignment(allocator_t allocator, vec_t tokens,
   token_t op_token = NULL;
 
   /* First, read a value as the potential lvalue */
-  lvalue = TRY_LOCAL(onerror, read_value(allocator, tokens, &current, filename));
+  lvalue = read_value(ctx, tokens, &current, filename);
   if (!lvalue) {
     return NULL;
   }
@@ -139,28 +136,25 @@ node_t read_expression_assignment(allocator_t allocator, vec_t tokens,
   op_token = tok;
   const char *op_text = token_get_string(op_token);
   size_t op_len = token_get_string_length(op_token);
-  opt = TRY_LOCAL(onerror, allocator_create(allocator, &g_string_type, NULL));
+  opt = allocator_create(allocator, &g_string_type, NULL);
   string_nconcat(opt, op_text, op_len);
   current++; /* consume operator */
 
   /* Parse rvalue expression */
   skip_whitespace(tokens, &current);
-  rvalue = TRY_LOCAL(onerror,
-                     read_expression_base(allocator, tokens, &current, filename));
+  rvalue = read_expression_base(ctx, tokens, &current, filename);
   if (!rvalue) {
     /* No rvalue expression found — this is an error */
-    THROW_LOCAL(onerror, "%s:%" PRIuPTR ":%" PRIuPTR " expected expression after assignment operator",
-                filename, token_get_location(op_token)->end.line + 1,
-                token_get_location(op_token)->end.column + 1);
+    goto onerror;
   }
 
   /* Create assignment node */
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_assignment_type,
+  node = allocator_create(allocator, &g_cubec_expression_assignment_type,
                           &(cubec_expression_assignment_init_t){
                               .lvalue = lvalue,
                               .rvalue = rvalue,
                               .opt = opt,
-                          }));
+                          });
 
   /* Location spans from lvalue start to rvalue end */
   {
@@ -185,10 +179,11 @@ onerror:
  *  Factory: cubec_ast_create_assignment
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_assignment(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_assignment(context_t ctx, location_t loc,
                                    const char *op, node_t lvalue,
                                    node_t rvalue) {
-  string_t op_str = _make_string(alloc, op);
+  allocator_t alloc = ctx->allocator;
+  string_t op_str = _make_string(ctx, op);
   cubec_expression_assignment_init_t init = {.location = loc, .parent = NULL,
                                               .lvalue = lvalue,
                                               .rvalue = rvalue,

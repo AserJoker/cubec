@@ -1,6 +1,5 @@
 #include "cubec/expression_slice.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
@@ -8,6 +7,8 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -16,22 +17,18 @@
 static void _cubec_expression_slice_init(cubec_expression_slice_t self,
                                           allocator_t allocator,
                                           cubec_expression_slice_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_SLICE,
       .parent = NULL,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  TRY_VOID_LOCAL(onerror, g_cubec_expression_type.init(&self->super, allocator, &super_init));
+  g_cubec_expression_type.init(&self->super, allocator, &super_init);
 
   self->host = init->host;
   self->start = init->start;
   self->length = init->length;
-onerror:
-  return;
 }
 
 static void _cubec_expression_slice_dispose(cubec_expression_slice_t self,
@@ -45,10 +42,10 @@ static void _cubec_expression_slice_dispose(cubec_expression_slice_t self,
 static void _cubec_expression_slice_clone(cubec_expression_slice_t self,
                                            allocator_t allocator,
                                            cubec_expression_slice_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.clone(&self->super, allocator, &another->super));
-  self->host = TRY_LOCAL(cleanup, value_clone(allocator, another->host));
-  self->start = TRY_LOCAL(cleanup, value_clone(allocator, another->start));
-  self->length = TRY_LOCAL(cleanup, value_clone(allocator, another->length));
+  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  self->host = value_clone(allocator, another->host);
+  self->start = value_clone(allocator, another->start);
+  self->length = value_clone(allocator, another->length);
   return;
 
 cleanup:
@@ -60,10 +57,10 @@ cleanup:
 static void _cubec_expression_slice_move(cubec_expression_slice_t self,
                                           allocator_t allocator,
                                           cubec_expression_slice_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_expression_type.move(&self->super, allocator, &another->super));
-  self->host = TRY_LOCAL(cleanup, value_move(allocator, another->host));
-  self->start = TRY_LOCAL(cleanup, value_move(allocator, another->start));
-  self->length = TRY_LOCAL(cleanup, value_move(allocator, another->length));
+  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  self->host = value_move(allocator, another->host);
+  self->start = value_move(allocator, another->start);
+  self->length = value_move(allocator, another->length);
   return;
 
 cleanup:
@@ -85,9 +82,10 @@ type_t g_cubec_expression_slice_type = {
  *  Parser: read_expression_slice
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_slice(allocator_t allocator, vec_t tokens,
+node_t read_expression_slice(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename,
                               node_t host) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_slice_t node = NULL;
   node_t start = NULL;
@@ -164,16 +162,14 @@ node_t read_expression_slice(allocator_t allocator, vec_t tokens,
     /* Parse optional length expression */
     peek = vec_get(tokens, current);
     if (!token_is(peek, CUBEC_TOKEN_SYMBOL, "]")) {
-      length = TRY_LOCAL(onerror,
-                         read_expression(allocator, tokens, &current, filename));
+      length = read_expression(ctx, tokens, &current, filename);
       if (!length) {
         goto onerror;
       }
     }
   } else {
     /* Parse start expression first */
-    start = TRY_LOCAL(onerror,
-                      read_expression(allocator, tokens, &current, filename));
+    start = read_expression(ctx, tokens, &current, filename);
     if (!start) {
       goto onerror;
     }
@@ -192,8 +188,7 @@ node_t read_expression_slice(allocator_t allocator, vec_t tokens,
     /* Parse optional length expression */
     peek = vec_get(tokens, current);
     if (!token_is(peek, CUBEC_TOKEN_SYMBOL, "]")) {
-      length = TRY_LOCAL(onerror,
-                         read_expression(allocator, tokens, &current, filename));
+      length = read_expression(ctx, tokens, &current, filename);
       if (!length) {
         goto onerror;
       }
@@ -208,12 +203,12 @@ node_t read_expression_slice(allocator_t allocator, vec_t tokens,
   }
   current++;
 
-  node = TRY_LOCAL(onerror, allocator_create(allocator, &g_cubec_expression_slice_type,
+  node = allocator_create(allocator, &g_cubec_expression_slice_type,
                           &(cubec_expression_slice_init_t){
                               .host = host,
                               .start = start,
                               .length = length,
-                          }));
+                          });
 
   /* Location spans from '[' to ']' */
   {
@@ -228,25 +223,26 @@ node_t read_expression_slice(allocator_t allocator, vec_t tokens,
   return (node_t)node;
 
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       open_bracket ? *token_get_location(open_bracket) : (location_t){0},
+                       "invalid slice expression syntax");
+  ctx->error_count++;
   allocator_free(allocator, &start);
   allocator_free(allocator, &length);
   /* host ownership: caller (read_value) owns it and will clean up */
   allocator_free(allocator, &node);
-  {
-    location_t *loc = token_get_location(open_bracket);
-    THROW(NULL, "%s:%" PRIuPTR ":%" PRIuPTR " invalid slice expression",
-          filename, loc->begin.line + 1, loc->begin.column + 1);
-  }
+  return NULL;
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: cubec_ast_create_slice_expr
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_slice_expr(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_slice_expr(context_t ctx, location_t loc,
                                    node_t host, node_t start,
                                    node_t length) {
-  cubec_expression_slice_init_t init = {.location = loc, .parent = NULL,
+  allocator_t alloc = ctx->allocator;
+                                        cubec_expression_slice_init_t init = {
                                         .host = host, .start = start,
                                         .length = length};
   return (node_t)allocator_create(alloc, &g_cubec_expression_slice_type,

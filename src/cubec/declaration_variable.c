@@ -1,31 +1,27 @@
 #include "cubec/declaration_variable.h"
 #include "cubec/ast_factory_internal.h"
 #include "core/allocator.h"
-#include "core/error.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
+#include "engine/context.h"
 
 static void _cubec_declaration_variable_init(cubec_declaration_variable_t self,
                                              allocator_t allocator,
                                              cubec_declaration_variable_init_t *init) {
-  if (!init) {
-    THROW_LOCAL(onerror, "init cannot be NULL");
-  }
+  if (!init) return;
   cubec_declaration_init_t super_init = {
       .kind = CUBEC_NODE_DECLARATION_VARIABLE,
       .parent = NULL,
   };
   super_init.location = init->location;
-  TRY_VOID_LOCAL(onerror, g_cubec_declaration_type.init(&self->super, allocator, &super_init));
+  g_cubec_declaration_type.init(&self->super, allocator, &super_init);
   self->identifier = init->identifier;
   self->type = init->type;
   self->expression = init->expression;
-onerror:
-  return;
 }
 
 static void _cubec_declaration_variable_dispose(cubec_declaration_variable_t self,
@@ -39,10 +35,10 @@ static void _cubec_declaration_variable_dispose(cubec_declaration_variable_t sel
 static void _cubec_declaration_variable_clone(cubec_declaration_variable_t self,
                                               allocator_t allocator,
                                               cubec_declaration_variable_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_declaration_type.clone(&self->super, allocator, &another->super));
-  self->identifier = TRY_LOCAL(cleanup, value_clone(allocator, another->identifier));
-  self->type = TRY_LOCAL(cleanup, value_clone(allocator, another->type));
-  self->expression = TRY_LOCAL(cleanup, value_clone(allocator, another->expression));
+  g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
+  self->identifier = value_clone(allocator, another->identifier);
+  self->type = value_clone(allocator, another->type);
+  self->expression = value_clone(allocator, another->expression);
   return;
 
 cleanup:
@@ -54,10 +50,10 @@ cleanup:
 static void _cubec_declaration_variable_move(cubec_declaration_variable_t self,
                                              allocator_t allocator,
                                              cubec_declaration_variable_t another) {
-  TRY_VOID_LOCAL(cleanup, g_cubec_declaration_type.move(&self->super, allocator, &another->super));
-  self->identifier = TRY_LOCAL(cleanup, value_move(allocator, another->identifier));
-  self->type = TRY_LOCAL(cleanup, value_move(allocator, another->type));
-  self->expression = TRY_LOCAL(cleanup, value_move(allocator, another->expression));
+  g_cubec_declaration_type.move(&self->super, allocator, &another->super);
+  self->identifier = value_move(allocator, another->identifier);
+  self->type = value_move(allocator, another->type);
+  self->expression = value_move(allocator, another->expression);
   return;
 
 cleanup:
@@ -75,8 +71,9 @@ type_t g_cubec_declaration_variable_type = {
     .move = (type_move_fn_t)_cubec_declaration_variable_move,
 };
 
-node_t read_declaration_variable(allocator_t allocator, vec_t tokens,
+node_t read_declaration_variable(context_t ctx, vec_t tokens,
                                  size_t *position, const char *filename) {
+  allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_declaration_variable_t node = NULL;
   node_t identifier = NULL;
@@ -85,7 +82,7 @@ node_t read_declaration_variable(allocator_t allocator, vec_t tokens,
   location_t start_location = {0};
 
   /* Check for identifier first to get start location */
-  token_t ident_token = TRY_LOCAL(onerror, vec_get(tokens, current));
+  token_t ident_token = vec_get(tokens, current);
   if (token_get_kind(ident_token) != CUBEC_TOKEN_IDENTIFIER) {
     return NULL;
   }
@@ -93,7 +90,7 @@ node_t read_declaration_variable(allocator_t allocator, vec_t tokens,
   start_location.filename = filename;
 
   /* Parse identifier using read_literal_identifier */
-  identifier = TRY_LOCAL(onerror, read_literal_identifier(allocator, tokens, &current, filename));
+  identifier = read_literal_identifier(ctx, tokens, &current, filename);
   if (!identifier) {
     return NULL;
   }
@@ -101,7 +98,7 @@ node_t read_declaration_variable(allocator_t allocator, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* Check for optional type annotation ': <type>' */
-  token_t colon_token = TRY_LOCAL(cleanup_node, vec_get(tokens, current));
+  token_t colon_token = vec_get(tokens, current);
   if (token_is(colon_token, CUBEC_TOKEN_SYMBOL, ":")) {
     current++;
     skip_whitespace(tokens, &current);
@@ -109,16 +106,16 @@ node_t read_declaration_variable(allocator_t allocator, vec_t tokens,
     /* Parse the type using read_expression_base (no comma/assignment —
      * read_expression_type includes assignment which would consume '=' as
      * part of the type, breaking the type/init split) */
-    type = TRY_LOCAL(cleanup_node, read_expression_base(allocator, tokens, &current, filename));
+    type = read_expression_base(ctx, tokens, &current, filename);
     if (!type) {
-      THROW_LOCAL(cleanup_node, "expected type after ':'");
+      goto cleanup_node;
     }
 
     skip_whitespace(tokens, &current);
   }
 
   /* Expect '=' (optional — absent for extern/builtin declarations) */
-  token_t eq_token = TRY_LOCAL(cleanup_node, vec_get(tokens, current));
+  token_t eq_token = vec_get(tokens, current);
   if (token_is(eq_token, CUBEC_TOKEN_SYMBOL, "=")) {
     current++;
 
@@ -127,19 +124,20 @@ node_t read_declaration_variable(allocator_t allocator, vec_t tokens,
     /* Parse the initializer expression using read_expression_base
      * (no comma — comma in var init would conflict with comma-separated
      * declarator lists, and assignment is already handled by the '=' above) */
-    expression = TRY_LOCAL(cleanup_node, read_expression_base(allocator, tokens, &current, filename));
+    expression = read_expression_base(ctx, tokens, &current, filename);
     if (!expression) {
-      THROW_LOCAL(cleanup_node, "expected expression after '='");
+      goto cleanup_node;
     }
   }
 
   /* Create the variable declarator node */
-  node = TRY_LOCAL(cleanup_node, allocator_create(allocator, &g_cubec_declaration_variable_type,
+  node = allocator_create(allocator, &g_cubec_declaration_variable_type,
                           &(cubec_declaration_variable_init_t){
                               .identifier = identifier,
                               .type = type,
                               .expression = expression,
-                          }));
+                          });
+  if (!node) goto cleanup_node;
 
   /* Set location from start to end of expression (or type/identifier if no expression) */
   node->super.super.super.location = start_location;
@@ -171,10 +169,11 @@ onerror:
  *  Factory: cubec_ast_create_variable_decl
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_variable_decl(allocator_t alloc, location_t loc,
+node_t cubec_ast_create_variable_decl(context_t ctx, location_t loc,
                                       node_t identifier, node_t type,
                                       node_t expression) {
-  cubec_declaration_variable_init_t init = {
+  allocator_t alloc = ctx->allocator;
+      cubec_declaration_variable_init_t init = {
       .location = loc, .parent = NULL, .identifier = identifier,
       .type = type, .expression = expression};
   return (node_t)allocator_create(alloc, &g_cubec_declaration_variable_type,
