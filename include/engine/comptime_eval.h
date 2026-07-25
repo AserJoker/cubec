@@ -67,6 +67,7 @@ struct comptime_eval {
   comptime_env_t current_env;
   int call_depth;
   int loop_depth;
+  int eval_expr_count;  /**< safety counter, reset per comptime_eval_create */
   vec_t cleanup_stack; /**< stack of cleanup_entry to execute on scope exit */
   vec_t captured_envs; /**< captured envs created for function values (disposed at eval teardown) */
   vec_t return_type_stack; /**< stack of semantic_type_t for current function return types */

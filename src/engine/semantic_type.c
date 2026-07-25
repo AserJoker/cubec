@@ -307,13 +307,6 @@ bool semantic_type_equals(semantic_type_t a, semantic_type_t b) {
   /* Structural equality via impl */
   _equals_depth++;
   if (_equals_depth > 500) {
-    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
-    if (dbg) {
-      fprintf(dbg, "BUG: semantic_type_equals depth %d, kinds=%d/%d, aname=%s bname=%s\n",
-              _equals_depth, (int)a->impl->kind, (int)b->impl->kind,
-              a->name ? a->name : "<null>", b->name ? b->name : "<null>");
-      fclose(dbg);
-    }
     _equals_depth--;
     return false;
   }
@@ -550,6 +543,12 @@ static bool _explicit_cast_pointer(semantic_type_t from, semantic_type_t to) {
   if (from_unq->impl->kind == TYPE_POINTER &&
       to_unq->impl->kind >= TYPE_I8 && to_unq->impl->kind <= TYPE_U64)
     return true;
+  /* slice → pointer: []T → *T (extract data pointer with start offset) */
+  if (from_unq->impl->kind == TYPE_SLICE && to_unq->impl->kind == TYPE_POINTER) {
+    semantic_type_t slice_elem = from_unq->impl->slice.element;
+    semantic_type_t ptr_pointee = to_unq->impl->pointer.pointee;
+    return semantic_type_equals(slice_elem, ptr_pointee);
+  }
   /* *Small → *Big (struct pointer downcast) */
   if (from_unq->impl->kind == TYPE_POINTER && to_unq->impl->kind == TYPE_POINTER) {
     semantic_type_t from_pt = semantic_type_strip_qualifier(from_unq->impl->pointer.pointee);

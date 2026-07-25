@@ -2102,19 +2102,11 @@ static comptime_value_t _eval_generic_inst(comptime_eval_t eval, checker_t ctx,
 
 /* --- main expression dispatcher --- */
 
-static int _eval_expr_count = 0;
-
 comptime_value_t _comptime_eval_expr(comptime_eval_t eval, checker_t ctx,
                                       node_t expr) {
   if (!expr) return _eval_error_val(eval);
-  _eval_expr_count++;
-  if (_eval_expr_count > 5000) {
-    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
-    if (dbg) {
-      fprintf(dbg, "BUG: _comptime_eval_expr called %d times, last kind=%d\n",
-              _eval_expr_count, (int)expr->kind);
-      fclose(dbg);
-    }
+  eval->eval_expr_count++;
+  if (eval->eval_expr_count > 100000) {
     return _eval_error_val(eval);
   }
   switch (expr->kind) {

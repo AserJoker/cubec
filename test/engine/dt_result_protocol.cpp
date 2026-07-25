@@ -690,6 +690,14 @@ TEST_F(dt_result_protocol, union_field_write_allowed) {
     "}\n";
   auto r = compile_source(allocator, src);
   ASSERT_NE(r.ctx, nullptr);
+  if (r.ctx->error_count > 0) {
+    size_t dc = diagnostic_list_get_size(r.ctx->diagnostics);
+    for (size_t i = 0; i < dc; i++) {
+      struct diagnostic *d = diagnostic_list_get(r.ctx->diagnostics, i);
+      if (d && d->severity == DIAGNOSTIC_ERROR)
+        printf("  DIAG[%zu]: %s\n", i, d->message);
+    }
+  }
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }

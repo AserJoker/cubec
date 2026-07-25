@@ -84,8 +84,8 @@ void type_layout_compute(semantic_type_t type, size_t ptr_size) {
     break;
 
   case TYPE_SLICE:
-    /* slice = { ptr, len } = 2 * ptr_size */
-    impl->size = 2 * ptr_size;
+    /* slice = { T* data; size_t start; size_t length; } = 3 * ptr_size */
+    impl->size = 3 * ptr_size;
     impl->alignment = ptr_size;
     type->is_incomplete = false;
     break;

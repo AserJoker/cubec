@@ -106,6 +106,14 @@ TEST_F(dt_generic_pack, pack_param_empty_expansion) {
     "func foo[...Args](): void {}\n"
     "test \"t\" { foo[](); }\n";
   auto r = compile_source(allocator, src);
+  if (checker_get_error_count(r.ctx) > 0) {
+    size_t dc = diagnostic_list_get_size(r.ctx->diagnostics);
+    for (size_t i = 0; i < dc; i++) {
+      struct diagnostic *d = diagnostic_list_get(r.ctx->diagnostics, i);
+      if (d && d->severity == DIAGNOSTIC_ERROR)
+        printf("  DIAG[%zu]: %s\n", i, d->message);
+    }
+  }
   EXPECT_EQ(checker_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }

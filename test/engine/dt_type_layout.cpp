@@ -65,8 +65,8 @@ TEST_F(dt_type_layout, slice_size) {
       semantic_type_create_named(allocator, "u8", TYPE_U8);
   semantic_type_t sl = semantic_type_create_slice(allocator, elem);
   type_layout_compute(sl, PTR64);
-  /* slice = { ptr, len } = 2 * 8 = 16 */
-  EXPECT_EQ(semantic_type_get_size(sl), 16u);
+  /* slice = { data, start, length } = 3 * 8 = 24 */
+  EXPECT_EQ(semantic_type_get_size(sl), 24u);
   EXPECT_EQ(semantic_type_get_alignment(sl), 8u);
 
   allocator_free(allocator, &sl);

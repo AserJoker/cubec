@@ -74,7 +74,7 @@ TEST_F(dt_resolver, slice_type_construction) {
   type_layout_compute(sl_u8, 8);
 
   EXPECT_EQ(semantic_type_get_kind(sl_u8), TYPE_SLICE);
-  EXPECT_EQ(semantic_type_get_size(sl_u8), 16u);
+  EXPECT_EQ(semantic_type_get_size(sl_u8), 24u);
 
   allocator_free(allocator, &sl_u8);
 }

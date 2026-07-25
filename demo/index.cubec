@@ -1,36 +1,6 @@
 builtin func assert(condition:bool):void;
-builtin func unionIs[T,K](u:K):bool;
-union Test {
-  _err:str;
-  _value:i32;
-};
-union Result {
-  _err:str;
-  _value:i32;
-  func ofError(err:str):Result {
-    return .Result{._err = err};
-  }
-  func ofValue(value:i32):Result {
-    return .Result{._value = value};
-  }
-  func isError(self:*Result):bool {
-    return unionIs[str](self.*);
-  }
-  func error(self:*Result):str {
-    return self._err.!;
-  }
-  func value(self:*Result):i32 {
-    return self._value.!;
-  }
-}
-
-func TestUnion():Result {
-  var item = .Test{._err = "test"};
-  _  = item._value.!;
-  return .Result{._value = 123};
-}
-
 test "using_demo" {
-  var res = TestUnion();
-  assert(false);
+  var item = .[3]i32{1,2,3};
+  var pi = item[1].&;
+  assert(pi.* == 2);
 }

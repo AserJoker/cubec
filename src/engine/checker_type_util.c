@@ -316,50 +316,49 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
   if (!type || !type->impl) return type;
   _subst_depth++;
   if (_subst_depth > 500) {
-    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
-    if (dbg) {
-      fprintf(dbg, "BUG: _substitute_type depth %d, kind=%d\n", _subst_depth, (int)type->impl->kind);
-      fclose(dbg);
-    }
     _subst_depth--;
     return type;
   }
+
+  semantic_type_t result = type; /* default: return unchanged */
 
   switch (type->impl->kind) {
   case TYPE_GENERIC_PARAM: {
     const char *name = type->impl->generic_param.name;
     if (type_bindings && name) {
       semantic_type_t replacement = (semantic_type_t)strmap_find(type_bindings, name);
-      if (replacement) return replacement;
+      if (replacement) { result = replacement; break; }
     }
-    return type;
+    break;
   }
 
   case TYPE_GENERIC_PACK: {
     const char *name = type->impl->generic_pack.name;
     if (type_bindings && name) {
       semantic_type_t replacement = (semantic_type_t)strmap_find(type_bindings, name);
-      if (replacement) return replacement;
+      if (replacement) { result = replacement; break; }
     }
-    return type;
+    break;
   }
 
   case TYPE_POINTER: {
     semantic_type_t inner = _substitute_type(ctx, type->impl->pointer.pointee, type_bindings);
-    if (inner == type->impl->pointer.pointee) return type;
-    semantic_type_t result = semantic_type_create_pointer(ctx->allocator, inner);
-    type_hash_ensure(result);
-    vec_push(ctx->all_types, result);
-    return result;
+    if (inner != type->impl->pointer.pointee) {
+      result = semantic_type_create_pointer(ctx->allocator, inner);
+      type_hash_ensure(result);
+      vec_push(ctx->all_types, result);
+    }
+    break;
   }
 
   case TYPE_SLICE: {
     semantic_type_t elem = _substitute_type(ctx, type->impl->slice.element, type_bindings);
-    if (elem == type->impl->slice.element) return type;
-    semantic_type_t result = semantic_type_create_slice(ctx->allocator, elem);
-    type_hash_ensure(result);
-    vec_push(ctx->all_types, result);
-    return result;
+    if (elem != type->impl->slice.element) {
+      result = semantic_type_create_slice(ctx->allocator, elem);
+      type_hash_ensure(result);
+      vec_push(ctx->all_types, result);
+    }
+    break;
   }
 
   case TYPE_ARRAY: {
@@ -369,43 +368,43 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
     if (length_param_name && type_bindings) {
       semantic_type_t replacement = (semantic_type_t)strmap_find(type_bindings, length_param_name);
       if (replacement && replacement->impl->kind == TYPE_GENERIC_VALUE) {
-        /* Resolve symbolic length from TYPE_GENERIC_VALUE */
         size_t concrete_len =
             (size_t)comptime_value_as_u64(replacement->impl->generic_value.value);
-        if (elem == type->impl->array.element && concrete_len == type->impl->array.length)
-          return type;
-        semantic_type_t result = semantic_type_create_array(
-            ctx->allocator, elem, concrete_len, NULL);
+        if (elem != type->impl->array.element || concrete_len != type->impl->array.length) {
+          result = semantic_type_create_array(
+              ctx->allocator, elem, concrete_len, NULL);
+          type_hash_ensure(result);
+          vec_push(ctx->all_types, result);
+        }
+        break;
+      }
+      if (elem != type->impl->array.element) {
+        result = semantic_type_create_array(
+            ctx->allocator, elem, 0, length_param_name);
         type_hash_ensure(result);
         vec_push(ctx->all_types, result);
-        return result;
       }
-      /* Replacement not yet a concrete value — propagate symbolic array */
-      if (elem == type->impl->array.element) return type;
-      semantic_type_t result = semantic_type_create_array(
-          ctx->allocator, elem, 0, length_param_name);
-      type_hash_ensure(result);
-      vec_push(ctx->all_types, result);
-      return result;
+      break;
     }
 
-    /* Concrete length */
-    if (elem == type->impl->array.element) return type;
-    semantic_type_t result = semantic_type_create_array(
-        ctx->allocator, elem, type->impl->array.length, type->impl->array.length_param_name);
-    type_hash_ensure(result);
-    vec_push(ctx->all_types, result);
-    return result;
+    if (elem != type->impl->array.element) {
+      result = semantic_type_create_array(
+          ctx->allocator, elem, type->impl->array.length, type->impl->array.length_param_name);
+      type_hash_ensure(result);
+      vec_push(ctx->all_types, result);
+    }
+    break;
   }
 
   case TYPE_QUALIFIER: {
     semantic_type_t base = _substitute_type(ctx, type->impl->qualifier.base, type_bindings);
-    if (base == type->impl->qualifier.base) return type;
-    semantic_type_t result = semantic_type_create_qualifier(ctx->allocator, base,
-        type->impl->qualifier.is_const, type->impl->qualifier.is_volatile);
-    type_hash_ensure(result);
-    vec_push(ctx->all_types, result);
-    return result;
+    if (base != type->impl->qualifier.base) {
+      result = semantic_type_create_qualifier(ctx->allocator, base,
+          type->impl->qualifier.is_const, type->impl->qualifier.is_volatile);
+      type_hash_ensure(result);
+      vec_push(ctx->all_types, result);
+    }
+    break;
   }
 
   case TYPE_FUNCTION: {
@@ -434,13 +433,13 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
 
     if (!changed) {
       allocator_free(ctx->allocator, &new_params);
-      return type;
+    } else {
+      result = semantic_type_create_function(ctx->allocator, new_ret, new_params,
+          type->impl->function.is_variadic);
+      type_hash_ensure(result);
+      vec_push(ctx->all_types, result);
     }
-    semantic_type_t result = semantic_type_create_function(ctx->allocator, new_ret, new_params,
-        type->impl->function.is_variadic);
-    type_hash_ensure(result);
-    vec_push(ctx->all_types, result);
-    return result;
+    break;
   }
 
   case TYPE_GENERIC_INSTANCE: {
@@ -464,11 +463,11 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
 
     if (!changed) {
       allocator_free(ctx->allocator, &new_bindings);
-      return type;
+    } else {
+      /* _instantiate_type takes ownership of new_bindings */
+      result = _instantiate_type(ctx, tmpl, new_bindings, NULL);
     }
-
-    /* _instantiate_type takes ownership of new_bindings */
-    return _instantiate_type(ctx, tmpl, new_bindings, NULL);
+    break;
   }
 
   case TYPE_STRUCT:
@@ -477,15 +476,15 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
     /* Cannot substitute a struct/union type in-place (would corrupt the template).
        Return as-is; the caller should use _instantiate_struct_fields for
        creating substituted field copies. */
-    return type;
+    break;
 
   case TYPE_TUPLE: {
     /* Substitute element types, expanding packs */
     vec_t elems = type->impl->tuple.element_types;
     size_t ecount = elems ? vec_get_size(elems) : 0;
     bool changed = false;
-    vec_init_t vi = {.auto_dispose = false};
-    vec_t new_elems = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+    vec_init_t tvi = {.auto_dispose = false};
+    vec_t new_elems = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &tvi);
     for (size_t i = 0; i < ecount; i++) {
       semantic_type_t e = (semantic_type_t)vec_get(elems, i);
       semantic_type_t new_e = _substitute_type(ctx, e, type_bindings);
@@ -504,13 +503,13 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
     }
     if (!changed) {
       allocator_free(ctx->allocator, &new_elems);
-      return type;
+    } else {
+      result = semantic_type_create_tuple(ctx->allocator, new_elems);
+      type_hash_ensure(result);
+      type_layout_compute(result, 8);
+      vec_push(ctx->all_types, result);
     }
-    semantic_type_t result = semantic_type_create_tuple(ctx->allocator, new_elems);
-    type_hash_ensure(result);
-    type_layout_compute(result, 8);
-    vec_push(ctx->all_types, result);
-    return result;
+    break;
   }
 
   case TYPE_PACK_INDEX: {
@@ -527,20 +526,24 @@ semantic_type_t _substitute_type(checker_t ctx, semantic_type_t type,
             index_type->impl->generic_value.value);
         vec_t expanded = pack_type->impl->generic_pack.expanded_types;
         if (idx < vec_get_size(expanded)) {
-          return (semantic_type_t)vec_get(expanded, idx);
+          result = (semantic_type_t)vec_get(expanded, idx);
+          break;
         }
       }
     }
-    return type; /* Return as-is — caller resolves via eval_call if needed */
+    break; /* Return as-is — caller resolves via eval_call if needed */
   }
 
   case TYPE_GENERIC_VALUE:
     /* Already a concrete compile-time value, return as-is */
-    return type;
+    break;
 
   default:
-    return type;
+    break;
   }
+
+  _subst_depth--;
+  return result;
 }
 
 /* Core constraint checking logic. When silent=true, no diagnostics are
@@ -1158,26 +1161,16 @@ semantic_type_t _instantiate_type(checker_t ctx, semantic_type_t template_type,
   return inst;
 }
 
-static int _instantiate_func_count = 0;
-
 semantic_type_t _instantiate_function(checker_t ctx, struct symbol *func_sym,
                                       strmap_t type_bindings, node_t instantiation_expr) {
   const char *name = func_sym->name;
-  _instantiate_func_count++;
-  if (_instantiate_func_count % 50 == 0) {
-    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
-    if (dbg) {
-      fprintf(dbg, "TRACE: _instantiate_function #%d name=%s\n", _instantiate_func_count, name ? name : "<null>");
-      fclose(dbg);
-    }
-  }
-  if (_instantiate_func_count > 200) {
-    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
-    if (dbg) {
-      fprintf(dbg, "BUG: _instantiate_function called too many times: name=%s count=%d\n",
-              name ? name : "<null>", _instantiate_func_count);
-      fclose(dbg);
-    }
+  ctx->instantiate_func_count++;
+  if (ctx->instantiate_func_count > 10000) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+        instantiation_expr ? instantiation_expr->location : (location_t){0},
+        "too many generic instantiations for '%s' (possible infinite recursion)",
+        name ? name : "<anonymous>");
+    ctx->error_count++;
     return ctx->error_type;
   }
   semantic_type_t func_type = func_sym->function.type;

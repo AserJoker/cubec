@@ -91,6 +91,9 @@ struct checker {
   /* generic monomorphization worklist (Pass 4) */
   vec_t body_check_worklist;   /**< vec of body_check_entry_t* */
   strmap_t checked_bodies;     /**< cache key -> "1" (already body-checked) */
+
+  /* instantiation safety counter (reset per checker_create) */
+  int instantiate_func_count;
 };
 
 typedef struct checker *checker_t;

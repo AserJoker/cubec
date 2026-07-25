@@ -7,6 +7,7 @@
 #include "engine/builtin_string.h"
 #include "engine/builtin_panic.h"
 #include "engine/builtin_typename.h"
+#include "engine/builtin_slice.h"
 #include "core/allocator.h"
 #include "core/vec.h"
 #include <string.h>
@@ -100,4 +101,5 @@ void builtin_table_init_defaults(builtin_table_t table, struct checker *ctx) {
   builtin_table_init_string(table, ctx);
   builtin_table_init_panic(table, ctx);
   builtin_table_init_typename(table, ctx);
+  builtin_table_init_slice(table, ctx);
 }

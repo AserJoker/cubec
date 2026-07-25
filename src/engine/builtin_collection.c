@@ -38,6 +38,12 @@ struct comptime_value *builtin_length_eval(struct comptime_eval *eval,
   if (arg->type) {
     if (arg->type->impl->kind == TYPE_ARRAY) {
       len = arg->type->impl->array.length;
+    } else if (arg->type->impl->kind == TYPE_SLICE) {
+      /* slice = { data, start, length }; length is at offset 2*ptr_size */
+      if (arg->kind == COMPTIME_VALUE_COMPOSITE && arg->composite.data) {
+        const size_t ptr_size = 8; /* matches type_layout_compute default */
+        memcpy(&len, arg->composite.data + 2 * ptr_size, ptr_size);
+      }
     } else if (arg->type->impl->kind == TYPE_TUPLE &&
                arg->type->impl->tuple.fields) {
       len = vec_get_size(arg->type->impl->tuple.fields);
@@ -47,7 +53,7 @@ struct comptime_value *builtin_length_eval(struct comptime_eval *eval,
     } else {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                            node->location,
-                           "length() requires an array or tuple argument");
+                           "length() requires an array, slice, or tuple argument");
       ctx->error_count++;
       return _eval_error_val(eval);
     }

@@ -140,5 +140,6 @@ void builtin_table_init_union(builtin_table_t table, struct checker *ctx) {
       ctx->allocator, ctx->builtin_bool, params, false);
   type_hash_ensure(unionis_type);
   vec_push(ctx->all_types, unionis_type);
+
   builtin_table_register(table, "unionIs", unionis_type, builtin_unionis_eval);
 }

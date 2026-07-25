@@ -13,6 +13,7 @@ comptime_eval_t comptime_eval_create(allocator_t allocator) {
   eval->current_env = eval->global_env;
   eval->call_depth = 0;
   eval->loop_depth = 0;
+  eval->eval_expr_count = 0;
   vec_init_t vi = {.auto_dispose = false};
   eval->cleanup_stack = (vec_t)allocator_create(allocator, &g_vec_type, &vi);
   vec_init_t cvi = {.auto_dispose = false};

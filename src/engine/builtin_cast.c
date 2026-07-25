@@ -5,7 +5,7 @@
  * Conversion rules implemented in builtin_cast_eval:
  *   Numeric: float→int (truncation), int narrowing, float narrowing,
  *            bool↔int, enum↔int, char↔int
- *   Pointer: opaque→pointer, pointer→int, *Small→*Big (downcast)
+ *   Pointer: opaque→pointer, pointer→int, []T→*T, *Small→*Big (downcast)
  *   Container: array→tuple (layout-compatible)
  */
 
@@ -13,6 +13,7 @@
 #include "engine/comptime_eval_internal.h"
 #include "engine/symbol.h"
 #include "engine/type_hash.h"
+#include "engine/type_layout.h"
 #include "engine/diagnostic.h"
 #include "engine/resolver.h"
 #include "engine/checker_type_util.h"
@@ -168,6 +169,27 @@ static comptime_value_t _cast_pointer(struct comptime_eval *eval,
       to_unq->impl->kind >= TYPE_I8 && to_unq->impl->kind <= TYPE_U64) {
     uint64_t addr = src_val->kind == COMPTIME_VALUE_POINTER ? src_val->pointer.addr : 0;
     return _eval_temp(eval, _create_truncated_int(eval, addr, to));
+  }
+
+  /* slice → pointer: []T → *T (extract data pointer with start offset applied) */
+  if (from_unq->impl->kind == TYPE_SLICE && to_unq->impl->kind == TYPE_POINTER) {
+    if (src_val->kind == COMPTIME_VALUE_COMPOSITE && src_val->composite.data) {
+      const size_t ptr_size = 8; /* matches type_layout_compute default */
+      /* Read data pointer at offset 0 */
+      uint64_t base_addr = 0;
+      memcpy(&base_addr, src_val->composite.data, ptr_size);
+      /* Read start at offset ptr_size */
+      uint64_t start = 0;
+      memcpy(&start, src_val->composite.data + ptr_size, ptr_size);
+      /* Apply start offset: result = base_addr + start * sizeof(T) */
+      semantic_type_t elem_type = from_unq->impl->slice.element;
+      type_layout_compute(elem_type, 8);
+      uint64_t result_addr = base_addr + start * elem_type->impl->size;
+      return _eval_temp(eval, comptime_value_create_pointer(
+          eval->allocator, result_addr, to));
+    }
+    /* Non-composite slice value: return zero pointer */
+    return _eval_temp(eval, comptime_value_create_pointer(eval->allocator, 0, to));
   }
 
   /* *Small → *Big (struct pointer downcast) */

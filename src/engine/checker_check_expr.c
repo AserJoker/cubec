@@ -372,18 +372,39 @@ static semantic_type_t _check_expr_call(checker_t ctx, node_t expr) {
     if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.generic_params)
       generic_func_sym = sym;
   } else if (call->callee->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
-    /* Handle builtin generic instantiation callees like getTupleItem[0](t) */
     cubec_expression_generic_instantiation_t gi =
         (cubec_expression_generic_instantiation_t)call->callee;
     if (gi->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+      /* Generic function with explicit type args (e.g. unionIs[i32](r), cast[*i32](x)).
+         Only set generic_func_sym if not all generic params are explicitly provided —
+         the remaining ones need inference from call arguments.
+         If all params are bound, _check_generic_ident_callee handles instantiation. */
       const char *name = _checker_ident_str(gi->callee);
       struct symbol *sym = name ? scope_lookup(ctx->current_scope, name) : NULL;
-      if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.generic_params
-          && sym->is_builtin) {
-        generic_func_sym = sym;
-        /* Resolve explicit type args with pack coalescing from the generic_instantiation AST node */
-        explicit_bindings = _resolve_generic_type_bindings_pack(ctx, gi->arguments,
+      if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.generic_params) {
+        strmap_t partial_bindings = _resolve_generic_type_bindings_pack(ctx, gi->arguments,
             sym->function.generic_params);
+        /* Check if all generic params are covered by the explicit bindings */
+        vec_t gp = sym->function.generic_params;
+        size_t gp_count = gp ? vec_get_size(gp) : 0;
+        bool all_bound = true;
+        for (size_t gi_idx = 0; gi_idx < gp_count; gi_idx++) {
+          cubec_generic_param_t gp_node = (cubec_generic_param_t)(void *)vec_get(gp, gi_idx);
+          const char *gp_name = gp_node ? _checker_ident_str(gp_node->name) : NULL;
+          if (gp_name && !strmap_find(partial_bindings, gp_name)) {
+            /* Unbound pack with no explicit args → empty expansion, still "bound" */
+            if (gp_node && gp_node->is_rest &&
+                (!gi->arguments || vec_get_size(gi->arguments) == 0))
+              continue;
+            all_bound = false;
+          }
+        }
+        if (!all_bound) {
+          generic_func_sym = sym;
+          explicit_bindings = partial_bindings;
+          partial_bindings = NULL; /* ownership transferred */
+        }
+        if (partial_bindings) allocator_free(ctx->allocator, &partial_bindings);
       }
     } else if (gi->callee->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
       /* obj.method[T](args) — generic method with explicit type args.

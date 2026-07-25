@@ -112,20 +112,45 @@ semantic_type_t _check_generic_ident_callee(checker_t ctx, node_t expr) {
   }
 
   if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.type) {
-    /* For builtin generic functions, just return the template type.
-       The _check_expr_call generic_func_sym path will handle inference and instantiation.
-       Doing it here causes double-instantiation with incomplete type_args (e.g. getTupleItem[0]
-       only provides N, not ...Args). */
-    if (sym->is_builtin) {
-      return sym->function.type;
-    }
-
     strmap_t type_bindings_fn = _resolve_generic_type_bindings_pack(ctx,
         gi->arguments, sym->function.generic_params);
     if (strmap_get_size(type_bindings_fn) == 0 && vec_get_size(gi->arguments) > 0) {
       allocator_free(ctx->allocator, &type_bindings_fn);
       return ctx->error_type;
     }
+
+    /* Check if all generic params are resolved — if not, return the template
+       type so _check_expr_call's generic_func_sym path can infer remaining
+       params from call arguments (e.g. unionIs[T,K] where K is inferred). */
+    vec_t gp = sym->function.generic_params;
+    size_t gp_count = gp ? vec_get_size(gp) : 0;
+    bool all_bound = true;
+    for (size_t i = 0; i < gp_count; i++) {
+      cubec_generic_param_t gp_node = (cubec_generic_param_t)(void *)vec_get(gp, i);
+      const char *gp_name = gp_node ? _checker_ident_str(gp_node->name) : NULL;
+      if (gp_name && !strmap_find(type_bindings_fn, gp_name)) {
+        /* Unbound pack param with no explicit args → empty expansion is valid */
+        if (gp_node && gp_node->is_rest &&
+            (!gi->arguments || vec_get_size(gi->arguments) == 0)) {
+          semantic_type_t empty_pack = semantic_type_create_generic_pack(
+              ctx->allocator, gp_name);
+          type_hash_ensure(empty_pack);
+          vec_push(ctx->all_types, empty_pack);
+          strmap_insert(type_bindings_fn, gp_name, empty_pack);
+          continue;
+        }
+        all_bound = false;
+      }
+    }
+
+    if (!all_bound) {
+      /* Not all generic params are explicitly provided — return template type.
+         The caller (_check_expr_call) will set generic_func_sym and use
+         _infer_type_args_from_call to resolve the remaining params. */
+      allocator_free(ctx->allocator, &type_bindings_fn);
+      return sym->function.type;
+    }
+
     _check_generic_param_constraints(ctx, sym->function.generic_params, type_bindings_fn, expr);
     semantic_type_t inst_result = _instantiate_function(ctx, sym, type_bindings_fn, expr);
     if (inst_result->impl->kind != TYPE_ERROR) {

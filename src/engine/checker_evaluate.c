@@ -1239,26 +1239,13 @@ static void _evaluate_test(checker_t ctx,
                            cubec_statement_test_t node) {
   if (!ctx->comptime_eval) return;
 
-  {
-    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
-    if (dbg) { fprintf(dbg, "ENTER _evaluate_test\n"); fflush(dbg); fclose(dbg); }
-  }
-
   /* Check the test body for type errors before evaluating.
    * Set up current_flow so TDZ tracking works inside test bodies.
    * Set in_test_block so assert() is allowed in checker. */
   ctx->in_test_block = true;
   int errors_before_check = ctx->error_count;
   flow_state_t saved_flow = ctx->current_flow;
-  {
-    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
-    if (dbg) { fprintf(dbg, "BEFORE _check_statement\n"); fflush(dbg); fclose(dbg); }
-  }
   flow_state_t fs = _check_statement(ctx, node->body, NULL);
-  {
-    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
-    if (dbg) { fprintf(dbg, "AFTER _check_statement\n"); fflush(dbg); fclose(dbg); }
-  }
   ctx->current_flow = saved_flow;
   flow_state_dispose(fs, ctx->allocator);
   ctx->in_test_block = false;
@@ -1274,16 +1261,8 @@ static void _evaluate_test(checker_t ctx,
   /* Evaluate with in_test_block set so assert failure is non-fatal */
   ctx->comptime_eval->in_test_block = true;
   int errors_before_eval = ctx->error_count;
-  {
-    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
-    if (dbg) { fprintf(dbg, "BEFORE comptime_eval_exec_block\n"); fflush(dbg); fclose(dbg); }
-  }
   comptime_signal_t sig =
       comptime_eval_exec_block(ctx->comptime_eval, ctx, node->body);
-  {
-    FILE *dbg = fopen("C:/tmp/cubec_debug.txt", "a");
-    if (dbg) { fprintf(dbg, "AFTER comptime_eval_exec_block\n"); fflush(dbg); fclose(dbg); }
-  }
   ctx->comptime_eval->in_test_block = false;
 
   if (sig.kind == COMPTIME_SIGNAL_FATAL) {

@@ -98,6 +98,14 @@ TEST_F(dt_union, unionis_true) {
     "}\n";
   auto r = compile_source(allocator, src);
   ASSERT_NE(r.ctx, nullptr);
+  if (r.ctx->error_count > 0) {
+    size_t dc = diagnostic_list_get_size(r.ctx->diagnostics);
+    for (size_t i = 0; i < dc; i++) {
+      struct diagnostic *d = diagnostic_list_get(r.ctx->diagnostics, i);
+      if (d && d->severity == DIAGNOSTIC_ERROR)
+        printf("  DIAG[%zu]: %s\n", i, d->message);
+    }
+  }
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -111,6 +119,14 @@ TEST_F(dt_union, unionis_false) {
     "}\n";
   auto r = compile_source(allocator, src);
   ASSERT_NE(r.ctx, nullptr);
+  if (r.ctx->error_count > 0) {
+    size_t dc = diagnostic_list_get_size(r.ctx->diagnostics);
+    for (size_t i = 0; i < dc; i++) {
+      struct diagnostic *d = diagnostic_list_get(r.ctx->diagnostics, i);
+      if (d && d->severity == DIAGNOSTIC_ERROR)
+        printf("  DIAG[%zu]: %s\n", i, d->message);
+    }
+  }
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -127,6 +143,14 @@ TEST_F(dt_union, union_tag_updated_on_write) {
     "}\n";
   auto r = compile_source(allocator, src);
   ASSERT_NE(r.ctx, nullptr);
+  if (r.ctx->error_count > 0) {
+    size_t dc = diagnostic_list_get_size(r.ctx->diagnostics);
+    for (size_t i = 0; i < dc; i++) {
+      struct diagnostic *d = diagnostic_list_get(r.ctx->diagnostics, i);
+      if (d && d->severity == DIAGNOSTIC_ERROR)
+        printf("  DIAG[%zu]: %s\n", i, d->message);
+    }
+  }
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -141,6 +165,14 @@ TEST_F(dt_union, union_positional_init_first_field) {
     "}\n";
   auto r = compile_source(allocator, src);
   ASSERT_NE(r.ctx, nullptr);
+  if (r.ctx->error_count > 0) {
+    size_t dc = diagnostic_list_get_size(r.ctx->diagnostics);
+    for (size_t i = 0; i < dc; i++) {
+      struct diagnostic *d = diagnostic_list_get(r.ctx->diagnostics, i);
+      if (d && d->severity == DIAGNOSTIC_ERROR)
+        printf("  DIAG[%zu]: %s\n", i, d->message);
+    }
+  }
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -185,6 +217,14 @@ TEST_F(dt_union, try_union_generic) {
     "}\n";
   auto r = compile_source(allocator, src);
   ASSERT_NE(r.ctx, nullptr);
+  if (r.ctx->error_count > 0) {
+    size_t dc = diagnostic_list_get_size(r.ctx->diagnostics);
+    for (size_t i = 0; i < dc; i++) {
+      struct diagnostic *d = diagnostic_list_get(r.ctx->diagnostics, i);
+      if (d && d->severity == DIAGNOSTIC_ERROR)
+        printf("  DIAG[%zu]: %s\n", i, d->message);
+    }
+  }
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
