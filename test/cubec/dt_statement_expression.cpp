@@ -11,18 +11,20 @@ using ::testing::Test;
 
 class dt_statement_expression : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ---- Simple identifier expression statement ---- */
 
 TEST_F(dt_statement_expression, simple_identifier) {
   const char *source = "foo;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_EXPRESSION);
 
@@ -38,11 +40,11 @@ TEST_F(dt_statement_expression, simple_identifier) {
 
 TEST_F(dt_statement_expression, numeric_literal) {
   const char *source = "42;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_EXPRESSION);
 
@@ -58,11 +60,11 @@ TEST_F(dt_statement_expression, numeric_literal) {
 
 TEST_F(dt_statement_expression, binary_expression) {
   const char *source = "a + b;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_EXPRESSION);
 
@@ -78,11 +80,11 @@ TEST_F(dt_statement_expression, binary_expression) {
 
 TEST_F(dt_statement_expression, function_call) {
   const char *source = "foo();";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_EXPRESSION);
 
@@ -98,11 +100,11 @@ TEST_F(dt_statement_expression, function_call) {
 
 TEST_F(dt_statement_expression, namespace_access_call) {
   const char *source = "std::Vec::create();";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_EXPRESSION);
 
@@ -118,11 +120,11 @@ TEST_F(dt_statement_expression, namespace_access_call) {
 
 TEST_F(dt_statement_expression, consume_all_tokens) {
   const char *source = "foo;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* foo, ; → 2 tokens + EOF */
   EXPECT_EQ(position, 2);
@@ -135,14 +137,11 @@ TEST_F(dt_statement_expression, consume_all_tokens) {
 
 TEST_F(dt_statement_expression, missing_semicolon_is_error) {
   const char *source = "foo";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = NULL;
-  CATCH_ERROR(
-      node = read_statement_expression(allocator, tokens, &position, "test.cubec"),
-      error_clear());
+  node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -152,11 +151,11 @@ TEST_F(dt_statement_expression, missing_semicolon_is_error) {
 
 TEST_F(dt_statement_expression, semicolon_only_returns_null) {
   const char *source = ";";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   /* read_expression returns NULL for bare ';', so read_statement_expression returns NULL */
   EXPECT_EQ(node, nullptr);
 
@@ -167,11 +166,11 @@ TEST_F(dt_statement_expression, semicolon_only_returns_null) {
 
 TEST_F(dt_statement_expression, clone) {
   const char *source = "foo;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -191,11 +190,11 @@ TEST_F(dt_statement_expression, clone) {
 
 TEST_F(dt_statement_expression, move) {
   const char *source = "foo;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);

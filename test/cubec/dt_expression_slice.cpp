@@ -1,4 +1,4 @@
-﻿#include "cubec/expression.h"
+#include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_generic_instantiation.h"
@@ -9,14 +9,15 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
-#include "core/error.h"
 #include <gtest/gtest.h>
 
 using ::testing::Test;
 
 class dt_expression_slice : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 
   void SetUp() override { CubecTest::SetUp(); }
 };
@@ -27,11 +28,11 @@ protected:
 
 TEST_F(dt_expression_slice, simple_with_start_and_length) {
   const char *source = "arr[0:10]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SLICE);
 
@@ -56,11 +57,11 @@ TEST_F(dt_expression_slice, simple_with_start_and_length) {
 
 TEST_F(dt_expression_slice, simple_with_start_only) {
   const char *source = "arr[5:]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SLICE);
 
@@ -77,11 +78,11 @@ TEST_F(dt_expression_slice, simple_with_start_only) {
 
 TEST_F(dt_expression_slice, simple_with_length_only) {
   const char *source = "arr[:10]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SLICE);
 
@@ -98,11 +99,11 @@ TEST_F(dt_expression_slice, simple_with_length_only) {
 
 TEST_F(dt_expression_slice, with_identifier_index) {
   const char *source = "arr[start:len]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SLICE);
 
@@ -123,11 +124,11 @@ TEST_F(dt_expression_slice, with_identifier_index) {
 
 TEST_F(dt_expression_slice, with_binary_expression) {
   const char *source = "arr[a + 1:b - 1]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SLICE);
 
@@ -149,11 +150,11 @@ TEST_F(dt_expression_slice, with_binary_expression) {
 TEST_F(dt_expression_slice, slice_on_call_result) {
   /* getArray()[0:10] — slice on call result */
   const char *source = "getArray()[0:10]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SLICE);
 
@@ -167,11 +168,11 @@ TEST_F(dt_expression_slice, slice_on_call_result) {
 TEST_F(dt_expression_slice, slice_on_member_access) {
   /* obj.arr[0:10] — slice on member access */
   const char *source = "obj.arr[0:10]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SLICE);
 
@@ -189,11 +190,11 @@ TEST_F(dt_expression_slice, slice_on_member_access) {
 TEST_F(dt_expression_slice, slice_then_member) {
   /* arr[0:10].field — slice then member access */
   const char *source = "arr[0:10].field";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
@@ -207,11 +208,11 @@ TEST_F(dt_expression_slice, slice_then_member) {
 TEST_F(dt_expression_slice, slice_then_call) {
   /* arr[0:10]() — slice then call (unlikely but should work) */
   const char *source = "arr[0:10]()";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -225,11 +226,11 @@ TEST_F(dt_expression_slice, slice_then_call) {
 TEST_F(dt_expression_slice, chained_slices) {
   /* arr[1:2][0:1] — nested slice */
   const char *source = "arr[1:2][0:1]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SLICE);
 
@@ -249,11 +250,11 @@ TEST_F(dt_expression_slice, chained_slices) {
 
 TEST_F(dt_expression_slice, not_a_slice_no_bracket) {
   const char *source = "arr";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* Should just be an identifier, not a slice */
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
@@ -266,11 +267,11 @@ TEST_F(dt_expression_slice, empty_brackets_is_generic) {
   /* arr[] without ':' is valid generic instantiation with empty args,
    * NOT a slice error. Slice requires ':' to distinguish from generics. */
   const char *source = "arr[]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* Should be generic_instantiation with empty args, not slice */
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
@@ -285,11 +286,11 @@ TEST_F(dt_expression_slice, empty_brackets_is_generic) {
 
 TEST_F(dt_expression_slice, missing_colon_error) {
   const char *source = "arr[0]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* Should be generic_instantiation, not slice */
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
@@ -300,33 +301,29 @@ TEST_F(dt_expression_slice, missing_colon_error) {
 
 TEST_F(dt_expression_slice, unclosed_bracket) {
   const char *source = "arr[0:10";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = NULL;
-  /* parse error expected: unclosed bracket → THROW inside parser */
-  CATCH_ERROR(
-      node = read_expression(allocator, tokens, &position, "test.cubec"),
-      error_clear());
-  EXPECT_EQ(node, nullptr);
+  /* parse error expected: unclosed bracket → recorded in diagnostics */
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  EXPECT_GT(context_get_error_count(ctx), 0);
 
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_slice, start_without_colon_error) {
   const char *source = "arr[0 10]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = NULL;
-  /* parse error expected: expected ':' after start expression */
-  CATCH_ERROR(
-      node = read_expression(allocator, tokens, &position, "test.cubec"),
-      error_clear());
-  EXPECT_EQ(node, nullptr);
+  /* parse error expected: expected ':' after start expression → recorded in diagnostics */
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  EXPECT_GT(context_get_error_count(ctx), 0);
 
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
@@ -336,11 +333,11 @@ TEST_F(dt_expression_slice, start_without_colon_error) {
 
 TEST_F(dt_expression_slice, complex_start_expression) {
   const char *source = "arr[a * 2 + 1:len]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SLICE);
 
@@ -355,11 +352,11 @@ TEST_F(dt_expression_slice, complex_start_expression) {
 TEST_F(dt_expression_slice, nested_ternary_in_slice) {
   /* arr[a ? b : c: len] — ternary in start position */
   const char *source = "arr[a ? b : c: len]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SLICE);
 

@@ -15,7 +15,9 @@ using ::testing::Test;
 
 class dt_expression_type_interface : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ==========================================================================
@@ -25,11 +27,11 @@ protected:
 /* Simple: interface { } */
 TEST_F(dt_expression_type_interface, simple_empty) {
   const char *source = "interface { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_INTERFACE);
 
@@ -46,11 +48,11 @@ TEST_F(dt_expression_type_interface, simple_empty) {
 /* Interface with method: interface { func next(self): Item; } */
 TEST_F(dt_expression_type_interface, with_method) {
   const char *source = "interface { func next(self): Item; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_INTERFACE);
 
@@ -69,11 +71,11 @@ TEST_F(dt_expression_type_interface, with_method) {
 /* Interface with associated type and method */
 TEST_F(dt_expression_type_interface, with_type_and_method) {
   const char *source = "interface { type Item; func next(self): Item; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_INTERFACE);
 
@@ -101,11 +103,11 @@ TEST_F(dt_expression_type_interface, with_type_and_method) {
 /* interface[T] { func get(self, idx: u64): T; } */
 TEST_F(dt_expression_type_interface, generic) {
   const char *source = "interface[T] { func get(self, idx: u64): T; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_INTERFACE);
 
@@ -123,11 +125,11 @@ TEST_F(dt_expression_type_interface, generic) {
 /* Multi-param generic: interface[K, V] { func map(self, key: K): V; } */
 TEST_F(dt_expression_type_interface, generic_multi) {
   const char *source = "interface[K, V] { func map(self, key: K): V; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_INTERFACE);
 
@@ -147,11 +149,11 @@ TEST_F(dt_expression_type_interface, generic_multi) {
 /* Pointer to interface: *interface { func bar(): i32; } */
 TEST_F(dt_expression_type_interface, pointer_to_interface) {
   const char *source = "*interface { func bar(): i32; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -166,11 +168,11 @@ TEST_F(dt_expression_type_interface, pointer_to_interface) {
 /* Slice of interface: []interface { func run(); } */
 TEST_F(dt_expression_type_interface, slice_of_interface) {
   const char *source = "[]interface { func run(); }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -185,11 +187,11 @@ TEST_F(dt_expression_type_interface, slice_of_interface) {
 /* Const interface: const interface { func bar(); } */
 TEST_F(dt_expression_type_interface, const_interface) {
   const char *source = "const interface { func bar(); }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -208,11 +210,11 @@ TEST_F(dt_expression_type_interface, const_interface) {
 
 TEST_F(dt_expression_type_interface, consume_all_tokens) {
   const char *source = "interface { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   skip_whitespace(tokens, &position);
@@ -230,11 +232,11 @@ TEST_F(dt_expression_type_interface, consume_all_tokens) {
 
 TEST_F(dt_expression_type_interface, non_interface_returns_null) {
   const char *source = "i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type_interface(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type_interface(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -246,11 +248,11 @@ TEST_F(dt_expression_type_interface, non_interface_returns_null) {
 
 TEST_F(dt_expression_type_interface, clone) {
   const char *source = "interface { func next(self): Item; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -269,11 +271,11 @@ TEST_F(dt_expression_type_interface, clone) {
 
 TEST_F(dt_expression_type_interface, move) {
   const char *source = "interface { func next(self): Item; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);
@@ -295,11 +297,11 @@ TEST_F(dt_expression_type_interface, move) {
 
 TEST_F(dt_expression_type_interface, via_read_atom) {
   const char *source = "interface { func bar(): i32; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_atom(allocator, tokens, &position, "test.cubec");
+  node_t node = read_atom(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_INTERFACE);
 
@@ -310,11 +312,11 @@ TEST_F(dt_expression_type_interface, via_read_atom) {
 /* Via read_expression (full expression pipeline) */
 TEST_F(dt_expression_type_interface, via_read_expression) {
   const char *source = "interface { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_INTERFACE);
 

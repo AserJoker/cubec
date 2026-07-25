@@ -3,13 +3,12 @@
  * @brief Tests for the module import/export system.
  */
 
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/symbol.h"
 #include "engine/diagnostic.h"
 #include "engine/module.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 #include <cstdio>
@@ -25,38 +24,33 @@ using ::testing::Test;
 /* ===== helpers ===== */
 
 struct compile_result {
-  checker_t ctx;
+  context_t ctx;
   node_t prog;
   vec_t tokens;
 };
 
-static struct compile_result compile_file(allocator_t allocator,
+static struct compile_result compile_file(context_t ctx,
                                           const char *filename,
                                           const char *source) {
-  vec_t tokens = resolve_token_list(allocator, filename, source);
+  allocator_t allocator = ctx->allocator;
+  vec_t tokens = resolve_token_list(ctx, filename, source);
   size_t pos = 0;
-  node_t prog = read_program_node(allocator, tokens, &pos, filename);
+  node_t prog = read_program_node(ctx, tokens, &pos, filename);
 
-  if (g_error) {
-    std::string err_msg(g_error->message);
-    error_clear();
-    GTEST_MESSAGE_AT_(__FILE__, __LINE__,
-        ("Parsing failed: " + err_msg).c_str(),
-        ::testing::TestPartResult::kFatalFailure);
-    return (struct compile_result){NULL, prog, tokens};
+  if (!prog || !tokens) {
+    ctx->error_count = 1;
+    return (struct compile_result){ctx, prog, tokens};
   }
 
-  checker_t ctx = checker_create(allocator);
   ctx->current_file = filename;
   source_cache_load(ctx->sources, filename, source, false);
 
-  checker_check_program(ctx, prog);
+  context_check_program(ctx, prog);
   return (struct compile_result){ctx, prog, tokens};
 }
 
 static void compile_result_cleanup(struct compile_result *r,
                                    allocator_t allocator) {
-  if (r->ctx) checker_dispose(r->ctx);
   allocator_free(allocator, &r->prog);
   allocator_free(allocator, &r->tokens);
 }
@@ -90,7 +84,9 @@ static char *make_temp_dir(void) {
 
 class dt_module : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
   char *temp_dir;
 
   void SetUp() override {
@@ -111,7 +107,6 @@ protected:
       system(cmd);
       free(temp_dir);
     }
-    error_clear();
     CubecTest::TearDown();
   }
 };
@@ -155,9 +150,9 @@ TEST_F(dt_module, import_export_func) {
     "import math from \"./math\";\n"
     "var x: i32 = math::add(1, 2);\n";
 
-  auto r = compile_file(allocator, main_path, main_src);
+  auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
   free(math_path);
@@ -176,9 +171,9 @@ TEST_F(dt_module, import_export_type) {
     "import types from \"./types\";\n"
     "func use_point(p: types::Point): void {}\n";
 
-  auto r = compile_file(allocator, main_path, main_src);
+  auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
-  if (checker_get_error_count(r.ctx) > 0) {
+  if (context_get_error_count(r.ctx) > 0) {
     diagnostic_list_t diags = r.ctx->diagnostics;
     if (diags) {
       size_t dcount = diagnostic_list_get_size(diags);
@@ -188,7 +183,7 @@ TEST_F(dt_module, import_export_type) {
       }
     }
   }
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
 
   /* Verify the type is accessible via module scope */
   struct symbol *mod_sym = scope_lookup_local(r.ctx->global_scope, "types");
@@ -217,9 +212,9 @@ TEST_F(dt_module, import_export_struct_init) {
     "import types from \"./types\";\n"
     "var p = .types::Point{.x = 10, .y = 20};\n";
 
-  auto r = compile_file(allocator, main_path, main_src);
+  auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
-  if (checker_get_error_count(r.ctx) > 0) {
+  if (context_get_error_count(r.ctx) > 0) {
     diagnostic_list_t diags = r.ctx->diagnostics;
     if (diags) {
       size_t dcount = diagnostic_list_get_size(diags);
@@ -229,7 +224,7 @@ TEST_F(dt_module, import_export_struct_init) {
       }
     }
   }
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
   free(types_path);
@@ -248,9 +243,9 @@ TEST_F(dt_module, import_export_struct_init_alias) {
     "import vec as v from \"./vec\";\n"
     "var p = .v::Vec2{.x = 1.5, .y = 2.5};\n";
 
-  auto r = compile_file(allocator, main_path, main_src);
+  auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
-  if (checker_get_error_count(r.ctx) > 0) {
+  if (context_get_error_count(r.ctx) > 0) {
     diagnostic_list_t diags = r.ctx->diagnostics;
     if (diags) {
       size_t dcount = diagnostic_list_get_size(diags);
@@ -260,7 +255,7 @@ TEST_F(dt_module, import_export_struct_init_alias) {
       }
     }
   }
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
   free(vec_path);
@@ -282,10 +277,10 @@ TEST_F(dt_module, non_exported_symbol_invisible) {
     "import mod from \"./mod\";\n"
     "var x: mod::Helper = 0;\n";
 
-  auto r = compile_file(allocator, main_path, main_src);
+  auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
   /* mod::Helper should fail because Helper is not exported */
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
   free(mod_path);
@@ -305,9 +300,9 @@ TEST_F(dt_module, import_alias) {
     "import vec as v from \"./vec\";\n"
     "func use_vec(p: v::Vec2): void {}\n";
 
-  auto r = compile_file(allocator, main_path, main_src);
+  auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
 
   /* Verify the alias works: 'v' should resolve to the module */
   struct symbol *alias_sym = scope_lookup_local(r.ctx->global_scope, "v");
@@ -326,9 +321,9 @@ TEST_F(dt_module, import_file_not_found) {
   const char *main_src =
     "import missing from \"./nonexistent\";\n";
 
-  auto r = compile_file(allocator, main_path, main_src);
+  auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
 
   /* Check that the error message mentions "cannot read module" */
   bool found = false;
@@ -356,7 +351,7 @@ TEST_F(dt_module, module_entry_lifecycle) {
   EXPECT_EQ(entry->state, MODULE_PARSING);
   EXPECT_NE(entry->resolved_path, nullptr);
   EXPECT_STREQ(entry->resolved_path, "/tmp/test.cubec");
-  EXPECT_EQ(entry->checker, nullptr);
+  EXPECT_EQ(entry->ctx, nullptr);
   EXPECT_EQ(entry->scope, nullptr);
 
   module_entry_dispose(entry);
@@ -373,7 +368,7 @@ TEST_F(dt_module, export_flag_set_on_symbols) {
     "export var pub_var: i32 = 1;\n"
     "var priv_var: i32 = 2;\n";
 
-  auto r = compile_file(allocator, "test.cubec", src);
+  auto r = compile_file(ctx, "test.cubec", src);
   ASSERT_NE(r.ctx, nullptr);
 
   struct symbol *pub_fn = scope_lookup_local(r.ctx->global_scope, "pub_func");
@@ -418,9 +413,9 @@ TEST_F(dt_module, cross_module_comptime_func_call) {
     "import helper from \"./helper\";\n"
     "comptime var result = helper::add_val(5, 3);\n";
 
-  auto r = compile_file(allocator, main_path, main_src);
+  auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
-  if (checker_get_error_count(r.ctx) > 0) {
+  if (context_get_error_count(r.ctx) > 0) {
     diagnostic_list_t diags = r.ctx->diagnostics;
     if (diags) {
       size_t dcount = diagnostic_list_get_size(diags);
@@ -430,7 +425,7 @@ TEST_F(dt_module, cross_module_comptime_func_call) {
       }
     }
   }
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
   free(helper_path);
@@ -452,9 +447,9 @@ TEST_F(dt_module, cross_module_comptime_func_with_local_var) {
     "import math from \"./math\";\n"
     "comptime var r = math::double_val(21);\n";
 
-  auto r = compile_file(allocator, main_path, main_src);
+  auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
   free(math_path);

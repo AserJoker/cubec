@@ -12,7 +12,9 @@ using ::testing::Test;
 
 class dt_statement_cunion : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ==========================================================================
@@ -21,11 +23,11 @@ protected:
 
 TEST_F(dt_statement_cunion, basic_cunion) {
   const char *source = "cunion Data { int_val: i32; float_val: f64; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_cunion(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_cunion(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_CUNION);
 
@@ -43,11 +45,11 @@ TEST_F(dt_statement_cunion, basic_cunion) {
 
 TEST_F(dt_statement_cunion, cunion_empty) {
   const char *source = "cunion Empty { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_cunion(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_cunion(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_CUNION);
 
@@ -63,11 +65,11 @@ TEST_F(dt_statement_cunion, cunion_empty) {
 
 TEST_F(dt_statement_cunion, cunion_with_pointer_field) {
   const char *source = "cunion Value { as_i32: i32; as_ptr: *u8; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_cunion(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_cunion(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_cunion_t cunion_node = (cubec_statement_cunion_t)node;
@@ -82,11 +84,11 @@ TEST_F(dt_statement_cunion, cunion_with_pointer_field) {
 
 TEST_F(dt_statement_cunion, cunion_field_details) {
   const char *source = "cunion Data { int_val: i32; float_val: f64; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_cunion(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_cunion(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_cunion_t cunion_node = (cubec_statement_cunion_t)node;
@@ -111,11 +113,11 @@ TEST_F(dt_statement_cunion, cunion_field_details) {
 
 TEST_F(dt_statement_cunion, clone) {
   const char *source = "cunion Data { int_val: i32; float_val: f64; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_cunion(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_cunion(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -134,11 +136,11 @@ TEST_F(dt_statement_cunion, clone) {
 
 TEST_F(dt_statement_cunion, move) {
   const char *source = "cunion Data { int_val: i32; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_cunion(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_cunion(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);
@@ -160,11 +162,11 @@ TEST_F(dt_statement_cunion, move) {
 
 TEST_F(dt_statement_cunion, consume_all_tokens) {
   const char *source = "cunion Data { int_val: i32; float_val: f64; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_cunion(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_cunion(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(position, vec_get_size(tokens) - 1);
 
@@ -178,11 +180,11 @@ TEST_F(dt_statement_cunion, consume_all_tokens) {
 
 TEST_F(dt_statement_cunion, via_read_statement) {
   const char *source = "cunion Data { int_val: i32; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_CUNION);
 
@@ -192,11 +194,11 @@ TEST_F(dt_statement_cunion, via_read_statement) {
 
 TEST_F(dt_statement_cunion, via_read_program) {
   const char *source = "cunion Data { int_val: i32; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_program_node(allocator, tokens, &position, "test.cubec");
+  node_t node = read_program_node(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_PROGRAM);
 
@@ -210,11 +212,11 @@ TEST_F(dt_statement_cunion, via_read_program) {
 
 TEST_F(dt_statement_cunion, non_cunion_returns_null) {
   const char *source = "struct Foo { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_cunion(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_cunion(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);

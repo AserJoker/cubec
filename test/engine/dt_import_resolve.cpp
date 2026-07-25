@@ -3,14 +3,13 @@
  * @brief Tests for extended import path resolution (std, project deps, global deps).
  */
 
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/symbol.h"
 #include "engine/diagnostic.h"
 #include "engine/module.h"
 #include "engine/manifest.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 #include <cstdio>
@@ -26,38 +25,33 @@ using ::testing::Test;
 /* ===== helpers ===== */
 
 struct compile_result {
-  checker_t ctx;
+  context_t ctx;
   node_t prog;
   vec_t tokens;
 };
 
-static struct compile_result compile_file(allocator_t allocator,
+static struct compile_result compile_file(context_t ctx,
                                           const char *filename,
                                           const char *source) {
-  vec_t tokens = resolve_token_list(allocator, filename, source);
+  allocator_t allocator = ctx->allocator;
+  vec_t tokens = resolve_token_list(ctx, filename, source);
   size_t pos = 0;
-  node_t prog = read_program_node(allocator, tokens, &pos, filename);
+  node_t prog = read_program_node(ctx, tokens, &pos, filename);
 
-  if (g_error) {
-    std::string err_msg(g_error->message);
-    error_clear();
-    GTEST_MESSAGE_AT_(__FILE__, __LINE__,
-        ("Parsing failed: " + err_msg).c_str(),
-        ::testing::TestPartResult::kFatalFailure);
-    return (struct compile_result){NULL, prog, tokens};
+  if (!prog || !tokens) {
+    ctx->error_count = 1;
+    return (struct compile_result){ctx, prog, tokens};
   }
 
-  checker_t ctx = checker_create(allocator);
   ctx->current_file = filename;
   source_cache_load(ctx->sources, filename, source, false);
 
-  checker_check_program(ctx, prog);
+  context_check_program(ctx, prog);
   return (struct compile_result){ctx, prog, tokens};
 }
 
 static void compile_result_cleanup(struct compile_result *r,
                                    allocator_t allocator) {
-  if (r->ctx) checker_dispose(r->ctx);
   allocator_free(allocator, &r->prog);
   allocator_free(allocator, &r->tokens);
 }
@@ -88,7 +82,9 @@ static void write_temp_file(const char *dir, const char *name,
 
 class dt_import_resolve : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
   char *temp_dir;
 
   void SetUp() override {
@@ -108,7 +104,6 @@ protected:
       system(cmd);
       free(temp_dir);
     }
-    error_clear();
     CubecTest::TearDown();
   }
 };
@@ -289,9 +284,9 @@ TEST_F(dt_import_resolve, import_std_integration) {
   const char *main_src =
     "import io from \"std/io\";\n";
 
-  auto r = compile_file(allocator, main_path, main_src);
+  auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
-  if (checker_get_error_count(r.ctx) > 0) {
+  if (context_get_error_count(r.ctx) > 0) {
     diagnostic_list_t diags = r.ctx->diagnostics;
     if (diags) {
       size_t dcount = diagnostic_list_get_size(diags);
@@ -301,7 +296,7 @@ TEST_F(dt_import_resolve, import_std_integration) {
       }
     }
   }
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
 }
@@ -336,9 +331,9 @@ TEST_F(dt_import_resolve, import_project_dep_integration) {
   const char *main_src =
     "import vec from \"mylib/vec\";\n";
 
-  auto r = compile_file(allocator, main_path, main_src);
+  auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
-  if (checker_get_error_count(r.ctx) > 0) {
+  if (context_get_error_count(r.ctx) > 0) {
     diagnostic_list_t diags = r.ctx->diagnostics;
     if (diags) {
       size_t dcount = diagnostic_list_get_size(diags);
@@ -348,7 +343,7 @@ TEST_F(dt_import_resolve, import_project_dep_integration) {
       }
     }
   }
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
 }
@@ -365,9 +360,9 @@ TEST_F(dt_import_resolve, ghost_dep_error_integration) {
   const char *main_src =
     "import x from \"unknown/mod\";\n";
 
-  auto r = compile_file(allocator, main_path, main_src);
+  auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
 }

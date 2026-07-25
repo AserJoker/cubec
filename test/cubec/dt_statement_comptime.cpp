@@ -11,7 +11,9 @@ using ::testing::Test;
 
 class dt_statement_comptime : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ==========================================================================
@@ -20,11 +22,11 @@ protected:
 
 TEST_F(dt_statement_comptime, if_basic) {
   const char *source = "comptime if (true) { var x = 1; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_COMPTIME_IF);
 
@@ -39,11 +41,11 @@ TEST_F(dt_statement_comptime, if_basic) {
 
 TEST_F(dt_statement_comptime, if_with_else) {
   const char *source = "comptime if (x) { var a = 1; } else { var b = 2; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_COMPTIME_IF);
 
@@ -59,11 +61,11 @@ TEST_F(dt_statement_comptime, if_with_else) {
 
 TEST_F(dt_statement_comptime, if_else_if) {
   const char *source = "comptime if (a) { } else if (b) { } else { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_COMPTIME_IF);
 
@@ -77,11 +79,11 @@ TEST_F(dt_statement_comptime, if_else_if) {
 
 TEST_F(dt_statement_comptime, if_extends_condition) {
   const char *source = "comptime if (T extends Numeric) { var x = 1; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_COMPTIME_IF);
 
@@ -91,11 +93,11 @@ TEST_F(dt_statement_comptime, if_extends_condition) {
 
 TEST_F(dt_statement_comptime, if_clone) {
   const char *source = "comptime if (x) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -109,11 +111,11 @@ TEST_F(dt_statement_comptime, if_clone) {
 
 TEST_F(dt_statement_comptime, if_move) {
   const char *source = "comptime if (x) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);
@@ -131,11 +133,11 @@ TEST_F(dt_statement_comptime, if_move) {
 
 TEST_F(dt_statement_comptime, foreach_basic) {
   const char *source = "comptime foreach(item of items) { var x = item; }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_COMPTIME_FOREACH);
 
@@ -152,11 +154,11 @@ TEST_F(dt_statement_comptime, foreach_basic) {
 
 TEST_F(dt_statement_comptime, foreach_var_with_type) {
   const char *source = "comptime foreach(var item: i32 of items) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_COMPTIME_FOREACH);
 
@@ -173,11 +175,11 @@ TEST_F(dt_statement_comptime, foreach_var_with_type) {
 
 TEST_F(dt_statement_comptime, foreach_clone) {
   const char *source = "comptime foreach(item of items) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -191,11 +193,11 @@ TEST_F(dt_statement_comptime, foreach_clone) {
 
 TEST_F(dt_statement_comptime, foreach_move) {
   const char *source = "comptime foreach(item of items) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);
@@ -213,11 +215,11 @@ TEST_F(dt_statement_comptime, foreach_move) {
 
 TEST_F(dt_statement_comptime, non_comptime_returns_null) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -227,11 +229,11 @@ TEST_F(dt_statement_comptime, comptime_var_not_consumed) {
   /* comptime var should NOT be consumed by read_statement_comptime —
      it falls through to declaration parser */
   const char *source = "comptime var x: i32 = 42;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -241,11 +243,11 @@ TEST_F(dt_statement_comptime, comptime_func_not_consumed) {
   /* comptime func should NOT be consumed by read_statement_comptime —
      it falls through to function parser */
   const char *source = "comptime func foo(): void { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_comptime(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_comptime(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -257,11 +259,11 @@ TEST_F(dt_statement_comptime, comptime_func_not_consumed) {
 
 TEST_F(dt_statement_comptime, via_read_statement_if) {
   const char *source = "comptime if (x) { } else { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_COMPTIME_IF);
 
@@ -271,11 +273,11 @@ TEST_F(dt_statement_comptime, via_read_statement_if) {
 
 TEST_F(dt_statement_comptime, via_read_statement_foreach) {
   const char *source = "comptime foreach(item of items) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_COMPTIME_FOREACH);
 
@@ -286,11 +288,11 @@ TEST_F(dt_statement_comptime, via_read_statement_foreach) {
 TEST_F(dt_statement_comptime, comptime_var_via_read_statement) {
   /* comptime var should still be parsed as declaration statement */
   const char *source = "comptime var x: i32 = 42;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION);
 

@@ -3,7 +3,7 @@
  * @brief Tests for .? and .! with Result protocol (isError/value/error).
  */
 
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/builtin.h"
 #include "engine/comptime_eval.h"
 #include "engine/comptime_value.h"
@@ -12,7 +12,6 @@
 #include "cubec/ast_factory.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 #include <string>
@@ -25,47 +24,42 @@ using ::testing::Test;
 #define BUILTIN_UNIONIS "builtin func unionIs[T,K](v: K): bool;\n"
 
 struct compile_result {
-  checker_t ctx;
+  context_t ctx;
   node_t prog;
   vec_t tokens;
 };
 
-static struct compile_result compile_source(allocator_t allocator,
+static struct compile_result compile_source(context_t ctx,
                                             const char *source) {
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  allocator_t allocator = ctx->allocator;
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   size_t pos = 0;
-  node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+  node_t prog = read_program_node(ctx, tokens, &pos, "test.cubec");
   struct compile_result cr;
-  if (g_error) {
-    std::string err_msg(g_error->message);
-    error_clear();
+  if (!prog || !tokens) {
     GTEST_MESSAGE_AT_(__FILE__, __LINE__,
-        ("Parsing failed: " + err_msg).c_str(),
+        "Parsing failed",
         ::testing::TestPartResult::kFatalFailure);
     cr.ctx = NULL; cr.prog = prog; cr.tokens = tokens;
     return cr;
   }
-  checker_t ctx = checker_create(allocator);
   source_cache_load(ctx->sources, "test.cubec", source, false);
-  checker_check_program(ctx, prog);
+  context_check_program(ctx, prog);
   cr.ctx = ctx; cr.prog = prog; cr.tokens = tokens;
   return cr;
 }
 
 static void compile_result_cleanup(struct compile_result *r,
                                    allocator_t allocator) {
-  if (r->ctx) checker_dispose(r->ctx);
   allocator_free(allocator, &r->prog);
   allocator_free(allocator, &r->tokens);
 }
 
 class dt_result_protocol : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
-  void TearDown() override {
-    error_clear();
-    CubecTest::TearDown();
-  }
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ===== .? on union member access ===== */
@@ -79,7 +73,7 @@ TEST_F(dt_result_protocol, try_union_field_value) {
     "  var v = r.value.?;\n"
     "  assert(v == 42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -93,7 +87,7 @@ TEST_F(dt_result_protocol, try_union_field_error_propagate) {
     "  var r = .Result{.err = \"fail\"};\n"
     "  var v = r.value.?;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -108,7 +102,7 @@ TEST_F(dt_result_protocol, try_union_err_field_active) {
     "  var v = r.err.?;\n"
     "  assert(v == \"fail\");\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -123,7 +117,7 @@ TEST_F(dt_result_protocol, try_union_generic_field) {
     "  var v = r.value.?;\n"
     "  assert(v == 42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -140,7 +134,7 @@ TEST_F(dt_result_protocol, assert_union_field_value) {
     "  var v = r.value.!;\n"
     "  assert(v == 42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -154,7 +148,7 @@ TEST_F(dt_result_protocol, assert_union_field_panic) {
     "  var r = .Result{.err = \"fail\"};\n"
     "  var v = r.value.!;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -171,7 +165,7 @@ TEST_F(dt_result_protocol, try_pointer_deref) {
     "  var v = p.?;\n"
     "  assert(v == 10);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -184,7 +178,7 @@ TEST_F(dt_result_protocol, try_pointer_null) {
     "  var p: *i32 = null;\n"
     "  var v = p.?;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -201,7 +195,7 @@ TEST_F(dt_result_protocol, assert_pointer_deref) {
     "  var v = p.!;\n"
     "  assert(v == 10);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -216,7 +210,7 @@ TEST_F(dt_result_protocol, try_on_non_union_non_pointer) {
     "  var x: i32 = 5;\n"
     "  var v = x.?;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -229,7 +223,7 @@ TEST_F(dt_result_protocol, assert_on_non_union_non_pointer) {
     "  var x: i32 = 5;\n"
     "  var v = x.!;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -256,7 +250,7 @@ TEST_F(dt_result_protocol, struct_result_try_value) {
     "  var v = r.?;\n"
     "  assert(v == 42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -277,7 +271,7 @@ TEST_F(dt_result_protocol, struct_result_try_error_propagate) {
     "  var r = .MyResult{._val = 0, ._err = \"fail\", ._isErr = true};\n"
     "  var v = r.?;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -299,7 +293,7 @@ TEST_F(dt_result_protocol, struct_result_assert_value) {
     "  var v = r.!;\n"
     "  assert(v == 42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -320,7 +314,7 @@ TEST_F(dt_result_protocol, struct_result_assert_panic) {
     "  var r = .MyResult{._val = 0, ._err = \"fail\", ._isErr = true};\n"
     "  var v = r.!;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0);
 
@@ -355,7 +349,7 @@ TEST_F(dt_result_protocol, try_missing_value_method) {
     "  var r = .BadResult{._isErr = false};\n"
     "  var v = r.?;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -374,7 +368,7 @@ TEST_F(dt_result_protocol, try_missing_error_method) {
     "  var r = .BadResult{._val = 42, ._isErr = false};\n"
     "  var v = r.?;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -408,7 +402,7 @@ TEST_F(dt_result_protocol, try_propagate_via_ofError_struct) {
     "  var result = mayFail(false);\n"
     "  assert(result.isError());\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -431,7 +425,7 @@ TEST_F(dt_result_protocol, try_propagate_via_ofError_union) {
     "test \"propagate_union_ofError\" {\n"
     "  var result = mayFail();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   /* Check that there's no "error propagation" diagnostic —
    * propagation via ofError should succeed silently */
@@ -469,7 +463,7 @@ TEST_F(dt_result_protocol, try_no_ofError_aborts) {
     "test \"no_ofError_aborts\" {\n"
     "  var result = mayFail(false);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -496,7 +490,7 @@ TEST_F(dt_result_protocol, try_propagate_via_ofError_success_path) {
     "  var result = mayFail(true);\n"
     "  assert(!result.isError());\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -520,7 +514,7 @@ TEST_F(dt_result_protocol, namespace_access_method) {
     "  var e = Result::ofError(\"bad\");\n"
     "  assert(e.isError());\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -541,7 +535,7 @@ TEST_F(dt_result_protocol, pointer_autoderef_method) {
     "  var v = p.get();\n"
     "  assert(v == 5);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -568,7 +562,7 @@ TEST_F(dt_result_protocol, dot_bang_union_field_via_pointer) {
     "  var r2 = .Result{._err = \"fail\"};\n"
     "  assert(r2.isError());\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   if (r.ctx->error_count > 0) {
     diagnostic_list_t diags = r.ctx->diagnostics;
@@ -606,7 +600,7 @@ TEST_F(dt_result_protocol, dot_try_union_field_via_pointer) {
     "test \"dot_try_via_ptr\" {\n"
     "  var result = mayFail();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   /* Propagation via ofError should succeed — no "error propagation" diagnostic */
   bool found_propagation_error = false;
@@ -646,7 +640,7 @@ TEST_F(dt_result_protocol, full_result_protocol_via_pointer) {
     "  var res = TestUnion();\n"
     "  assert(res.isError());\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -662,7 +656,7 @@ TEST_F(dt_result_protocol, union_field_direct_read_error) {
     "  var r = .Result{.value = 42};\n"
     "  var x = r.value;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0);
   /* Verify diagnostic mentions .? or .! */
@@ -688,7 +682,7 @@ TEST_F(dt_result_protocol, union_field_write_allowed) {
     "  r.err = \"fail\";\n"
     "  assert(unionIs[str](r));\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   if (r.ctx->error_count > 0) {
     size_t dc = diagnostic_list_get_size(r.ctx->diagnostics);
@@ -710,7 +704,7 @@ TEST_F(dt_result_protocol, union_field_dot_bang_allowed) {
     "  var r = .Result{.value = 42};\n"
     "  assert(r.value.! == 42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
@@ -727,7 +721,7 @@ TEST_F(dt_result_protocol, union_method_access_allowed) {
     "  var v = .Val{.i_val = 7};\n"
     "  assert(v.as_int() == 7);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);

@@ -13,17 +13,19 @@ using ::testing::Test;
 
 class dt_expression_initialize_list : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ---- Anonymous empty list: .{} ---- */
 TEST_F(dt_expression_initialize_list, anonymous_empty) {
   const char *source = ".{}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -39,11 +41,11 @@ TEST_F(dt_expression_initialize_list, anonymous_empty) {
 /* ---- Typed empty list: .Vec{} ---- */
 TEST_F(dt_expression_initialize_list, typed_empty) {
   const char *source = ".Vec{}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -59,11 +61,11 @@ TEST_F(dt_expression_initialize_list, typed_empty) {
 /* ---- Typed with field items: .Vec{.x=1, .y=2} ---- */
 TEST_F(dt_expression_initialize_list, typed_field_items) {
   const char *source = ".Vec{.x = 1, .y = 2}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -91,11 +93,11 @@ TEST_F(dt_expression_initialize_list, typed_field_items) {
 /* ---- Typed with positional items: .Vec{1, 2, 3} ---- */
 TEST_F(dt_expression_initialize_list, typed_positional_items) {
   const char *source = ".Vec{1, 2, 3}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -116,11 +118,11 @@ TEST_F(dt_expression_initialize_list, typed_positional_items) {
 /* ---- Anonymous with field items: .{.x=1, .y=2} ---- */
 TEST_F(dt_expression_initialize_list, anonymous_field_items) {
   const char *source = ".{.x = 1, .y = 2}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -136,11 +138,11 @@ TEST_F(dt_expression_initialize_list, anonymous_field_items) {
 /* ---- Anonymous with positional items: .{1, 2, 3} ---- */
 TEST_F(dt_expression_initialize_list, anonymous_positional_items) {
   const char *source = ".{1, 2, 3}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -156,11 +158,11 @@ TEST_F(dt_expression_initialize_list, anonymous_positional_items) {
 /* ---- Nested initialize_list as expression: .{.Test{}} ---- */
 TEST_F(dt_expression_initialize_list, nested_initialize_list_as_expression) {
   const char *source = ".{.Test{}}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -185,11 +187,11 @@ TEST_F(dt_expression_initialize_list, nested_initialize_list_as_expression) {
 /* ---- Field vs expression disambiguation: .{.Test=123} ---- */
 TEST_F(dt_expression_initialize_list, field_vs_expression_disambiguation) {
   const char *source = ".{.Test = 123}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -210,11 +212,11 @@ TEST_F(dt_expression_initialize_list, field_vs_expression_disambiguation) {
 /* ---- Postfix chain: .Vec{1,2}.field ---- */
 TEST_F(dt_expression_initialize_list, postfix_member_chain) {
   const char *source = ".Vec{1, 2}.field";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
@@ -225,11 +227,11 @@ TEST_F(dt_expression_initialize_list, postfix_member_chain) {
 /* ---- Expression context: 1 + .Vec{1,2} ---- */
 TEST_F(dt_expression_initialize_list, in_binary_expression) {
   const char *source = "1 + .Vec{1, 2}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -240,11 +242,11 @@ TEST_F(dt_expression_initialize_list, in_binary_expression) {
 /* ---- Trailing comma is allowed ---- */
 TEST_F(dt_expression_initialize_list, trailing_comma_is_allowed) {
   const char *source = ".Vec{1, }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -258,14 +260,11 @@ TEST_F(dt_expression_initialize_list, trailing_comma_is_allowed) {
 /* ---- Error: unclosed brace ---- */
 TEST_F(dt_expression_initialize_list, unclosed_brace_is_error) {
   const char *source = ".Vec{1, 2";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = NULL;
-  CATCH_ERROR(
-      node = read_expression(allocator, tokens, &position, "test.cubec"),
-      error_clear());
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -274,14 +273,11 @@ TEST_F(dt_expression_initialize_list, unclosed_brace_is_error) {
 /* ---- Error: mixed field and positional items ---- */
 TEST_F(dt_expression_initialize_list, mixed_items_is_error) {
   const char *source = ".Vec{1, .x = 2}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = NULL;
-  CATCH_ERROR(
-      node = read_expression(allocator, tokens, &position, "test.cubec"),
-      error_clear());
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -290,11 +286,11 @@ TEST_F(dt_expression_initialize_list, mixed_items_is_error) {
 /* ---- Clone ---- */
 TEST_F(dt_expression_initialize_list, clone) {
   const char *source = ".Vec{.x = 1, .y = 2}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t original = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t original = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(original, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, original);
@@ -314,11 +310,11 @@ TEST_F(dt_expression_initialize_list, clone) {
 /* ---- Move ---- */
 TEST_F(dt_expression_initialize_list, move) {
   const char *source = ".Vec{1, 2}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t original = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t original = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(original, nullptr);
 
   node_t moved = (node_t)value_move(allocator, original);
@@ -333,11 +329,11 @@ TEST_F(dt_expression_initialize_list, move) {
 /* ---- Single positional item ---- */
 TEST_F(dt_expression_initialize_list, single_positional_item) {
   const char *source = ".Vec{42}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -352,11 +348,11 @@ TEST_F(dt_expression_initialize_list, single_positional_item) {
 /* ---- Single field item ---- */
 TEST_F(dt_expression_initialize_list, single_field_item) {
   const char *source = ".Vec{.x = 1}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -371,12 +367,12 @@ TEST_F(dt_expression_initialize_list, single_field_item) {
 /* ---- Not an initialize_list: no dot ---- */
 TEST_F(dt_expression_initialize_list, no_dot_returns_null) {
   const char *source = "Vec{1, 2}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   /* Should not parse as initialize_list; read_expression will try other paths */
-  node_t node = read_expression_initialize_list(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_initialize_list(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -385,11 +381,11 @@ TEST_F(dt_expression_initialize_list, no_dot_returns_null) {
 /* ---- Not an initialize_list: dot + identifier without brace ---- */
 TEST_F(dt_expression_initialize_list, dot_identifier_no_brace_returns_null) {
   const char *source = ".Vec";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_list(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_initialize_list(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -398,11 +394,11 @@ TEST_F(dt_expression_initialize_list, dot_identifier_no_brace_returns_null) {
 /* ---- Anonymous with nested typed initialize_list and field in same list ---- */
 TEST_F(dt_expression_initialize_list, nested_typed_with_fields) {
   const char *source = ".{.Inner{.a = 1}}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -427,11 +423,11 @@ TEST_F(dt_expression_initialize_list, nested_typed_with_fields) {
 /* ---- Typed with member access type: .std.vec.Vec{1, 2} ---- */
 TEST_F(dt_expression_initialize_list, typed_namespace_access_type) {
   const char *source = ".std::vec::Vec{1, 2}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -449,11 +445,11 @@ TEST_F(dt_expression_initialize_list, typed_namespace_access_type) {
 /* ---- Typed with generic instantiation: .Vec[i32]{1, 2} ---- */
 TEST_F(dt_expression_initialize_list, typed_generic_instantiation) {
   const char *source = ".Vec[i32]{1, 2}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -471,11 +467,11 @@ TEST_F(dt_expression_initialize_list, typed_generic_instantiation) {
 /* ---- Typed with pointer type: .*i32{1, 2} ---- */
 TEST_F(dt_expression_initialize_list, typed_pointer_type) {
   const char *source = ".* i32{1, 2}";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 

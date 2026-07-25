@@ -14,18 +14,20 @@ using ::testing::Test;
 
 class dt_expression_alignof : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ---- Basic alignof with identifier ---- */
 
 TEST_F(dt_expression_alignof, alignof_identifier) {
   const char *source = "alignof(x)";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_alignof(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_alignof(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ALIGNOF);
 
@@ -41,11 +43,11 @@ TEST_F(dt_expression_alignof, alignof_identifier) {
 
 TEST_F(dt_expression_alignof, alignof_binary_expression) {
   const char *source = "alignof(a + b)";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_alignof(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_alignof(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_expression_alignof_t a = (cubec_expression_alignof_t)node;
@@ -60,11 +62,11 @@ TEST_F(dt_expression_alignof, alignof_binary_expression) {
 
 TEST_F(dt_expression_alignof, alignof_function_call) {
   const char *source = "alignof(foo())";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_alignof(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_alignof(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_expression_alignof_t a = (cubec_expression_alignof_t)node;
@@ -79,11 +81,11 @@ TEST_F(dt_expression_alignof, alignof_function_call) {
 
 TEST_F(dt_expression_alignof, via_read_expression) {
   const char *source = "alignof(x)";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ALIGNOF);
 
@@ -95,11 +97,11 @@ TEST_F(dt_expression_alignof, via_read_expression) {
 
 TEST_F(dt_expression_alignof, alignof_member_access_in_expression) {
   const char *source = "alignof(x).field";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
@@ -115,11 +117,11 @@ TEST_F(dt_expression_alignof, alignof_member_access_in_expression) {
 
 TEST_F(dt_expression_alignof, alignof_in_binary) {
   const char *source = "alignof(x) + alignof(y)";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -138,11 +140,11 @@ TEST_F(dt_expression_alignof, alignof_in_binary) {
 
 TEST_F(dt_expression_alignof, consume_all_tokens) {
   const char *source = "alignof(x)";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_alignof(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_alignof(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(position, 4);
 
@@ -154,14 +156,11 @@ TEST_F(dt_expression_alignof, consume_all_tokens) {
 
 TEST_F(dt_expression_alignof, missing_lparen_is_error) {
   const char *source = "alignof x";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = NULL;
-  CATCH_ERROR(
-      node = read_expression_alignof(allocator, tokens, &position, "test.cubec"),
-      error_clear());
+  node_t node = read_expression_alignof(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -171,14 +170,11 @@ TEST_F(dt_expression_alignof, missing_lparen_is_error) {
 
 TEST_F(dt_expression_alignof, missing_rparen_is_error) {
   const char *source = "alignof(x";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = NULL;
-  CATCH_ERROR(
-      node = read_expression_alignof(allocator, tokens, &position, "test.cubec"),
-      error_clear());
+  node_t node = read_expression_alignof(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -188,11 +184,11 @@ TEST_F(dt_expression_alignof, missing_rparen_is_error) {
 
 TEST_F(dt_expression_alignof, not_alignof_returns_null) {
   const char *source = "foo";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_alignof(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_alignof(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -202,11 +198,11 @@ TEST_F(dt_expression_alignof, not_alignof_returns_null) {
 
 TEST_F(dt_expression_alignof, clone) {
   const char *source = "alignof(x)";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_alignof(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_alignof(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -226,11 +222,11 @@ TEST_F(dt_expression_alignof, clone) {
 
 TEST_F(dt_expression_alignof, move) {
   const char *source = "alignof(x)";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_alignof(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_alignof(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);

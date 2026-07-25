@@ -18,17 +18,19 @@ using ::testing::Test;
 
 class dt_expression_type : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* Test: simple identifier type (e.g., "i32", "Vec") */
 TEST_F(dt_expression_type, simple_identifier) {
   const char *source = "i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -42,11 +44,11 @@ TEST_F(dt_expression_type, simple_identifier) {
 /* Test: another simple identifier */
 TEST_F(dt_expression_type, another_simple_identifier) {
   const char *source = "Vec";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -60,11 +62,11 @@ TEST_F(dt_expression_type, another_simple_identifier) {
 /* Test: generic instantiation with single argument (e.g., "Vec[i32]") */
 TEST_F(dt_expression_type, generic_single_argument) {
   const char *source = "Vec[i32]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -86,11 +88,11 @@ TEST_F(dt_expression_type, generic_single_argument) {
 /* Test: generic instantiation with multiple arguments (e.g., "Map[string, i32]") */
 TEST_F(dt_expression_type, generic_multiple_arguments) {
   const char *source = "Map[string, i32]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -112,11 +114,11 @@ TEST_F(dt_expression_type, generic_multiple_arguments) {
 /* Test: generic with type parameter (e.g., "Option[T]") */
 TEST_F(dt_expression_type, generic_type_parameter) {
   const char *source = "Option[T]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -135,11 +137,11 @@ TEST_F(dt_expression_type, generic_type_parameter) {
 /* Test: single namespace access (e.g., "std::vec") */
 TEST_F(dt_expression_type, single_member_access) {
   const char *source = "std::vec";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
@@ -160,11 +162,11 @@ TEST_F(dt_expression_type, single_member_access) {
 /* Test: chained namespace access (e.g., "std::vec::Vec") */
 TEST_F(dt_expression_type, chained_member_access) {
   const char *source = "std::vec::Vec";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
@@ -193,11 +195,11 @@ TEST_F(dt_expression_type, chained_member_access) {
 /* Test: namespace access with generic instantiation (e.g., "std::vec::Vec[i32]") */
 TEST_F(dt_expression_type, member_with_generic) {
   const char *source = "std::vec::Vec[i32]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -219,11 +221,11 @@ TEST_F(dt_expression_type, member_with_generic) {
 /* Test: type with spaces around :: */
 TEST_F(dt_expression_type, member_with_spaces) {
   const char *source = "std :: vec";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
@@ -239,11 +241,11 @@ TEST_F(dt_expression_type, member_with_spaces) {
 /* Test: consume all tokens */
 TEST_F(dt_expression_type, consume_all_tokens) {
   const char *source = "std::vec::Vec[i32]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   /* All tokens should be consumed:
@@ -259,11 +261,11 @@ TEST_F(dt_expression_type, consume_all_tokens) {
  * Semantic analysis will validate type-specific usage later. */
 TEST_F(dt_expression_type, non_identifier_parsed_as_expression) {
   const char *source = "123";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -274,11 +276,11 @@ TEST_F(dt_expression_type, non_identifier_parsed_as_expression) {
 /* Test: string literal parsed as expression */
 TEST_F(dt_expression_type, string_literal_parsed_as_expression) {
   const char *source = "\"hello\"";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_STRING);
 
@@ -289,11 +291,11 @@ TEST_F(dt_expression_type, string_literal_parsed_as_expression) {
 /* Test: numeric literal parsed as expression */
 TEST_F(dt_expression_type, numeric_literal_parsed_as_expression) {
   const char *source = "42";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -304,11 +306,11 @@ TEST_F(dt_expression_type, numeric_literal_parsed_as_expression) {
 /* Test: generic with nested generic (e.g., "Result[Ok[i32], Err[string]]") */
 TEST_F(dt_expression_type, generic_with_nested_generic) {
   const char *source = "Result[Ok[i32], Err[string]]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -327,11 +329,11 @@ TEST_F(dt_expression_type, generic_with_nested_generic) {
 /* Test: generic argument is a namespace access type (e.g., "Vec[std::vec::Vec]") */
 TEST_F(dt_expression_type, generic_with_member_argument) {
   const char *source = "Vec[std::vec::Vec]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -353,11 +355,11 @@ TEST_F(dt_expression_type, generic_with_member_argument) {
 /* Test: generic with multiple namespace access arguments (e.g., "Map[std::vec::Vec, std::str::String]") */
 TEST_F(dt_expression_type, generic_with_multiple_member_arguments) {
   const char *source = "Map[std::vec::Vec, std::str::String]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -382,11 +384,11 @@ TEST_F(dt_expression_type, generic_with_multiple_member_arguments) {
 /* Test: generic with mixed arguments: simple type and namespace type (e.g., "Pair[i32, std::vec::Vec]") */
 TEST_F(dt_expression_type, generic_with_mixed_arguments) {
   const char *source = "Pair[i32, std::vec::Vec]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -411,11 +413,11 @@ TEST_F(dt_expression_type, generic_with_mixed_arguments) {
 /* Test: deeply nested generic with namespace access (e.g., "Outer[Inner[std::a::B], std::c::D]") */
 TEST_F(dt_expression_type, deeply_nested_generic_with_member) {
   const char *source = "Outer[Inner[std::a::B], std::c::D]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -442,11 +444,11 @@ TEST_F(dt_expression_type, deeply_nested_generic_with_member) {
 /* Test: empty brackets return null (not valid) */
 TEST_F(dt_expression_type, empty_brackets_returns_null) {
   const char *source = "Vec[]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   /* Should return null or partial result - this tests error handling */
   /* The behavior depends on implementation - either returns null or
    * parses Vec and stops before [] */
@@ -458,11 +460,11 @@ TEST_F(dt_expression_type, empty_brackets_returns_null) {
 /* Test: underscore prefix identifier */
 TEST_F(dt_expression_type, underscore_identifier) {
   const char *source = "_T";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -480,11 +482,11 @@ TEST_F(dt_expression_type, underscore_identifier) {
 /* Test: simple pointer declaration (e.g., "* i32") */
 TEST_F(dt_expression_type, simple_pointer_declaration) {
   const char *source = "* i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -504,11 +506,11 @@ TEST_F(dt_expression_type, simple_pointer_declaration) {
 /* Test: pointer with const qualifier (e.g., "* const i32") */
 TEST_F(dt_expression_type, pointer_with_const) {
   const char *source = "* const i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -525,11 +527,11 @@ TEST_F(dt_expression_type, pointer_with_const) {
 /* Test: pointer with volatile qualifier (e.g., "* volatile i32") */
 TEST_F(dt_expression_type, pointer_with_volatile) {
   const char *source = "* volatile i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -546,11 +548,11 @@ TEST_F(dt_expression_type, pointer_with_volatile) {
 /* Test: pointer with const and volatile (e.g., "* const volatile i32") */
 TEST_F(dt_expression_type, pointer_with_const_volatile) {
   const char *source = "* const volatile i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -567,11 +569,11 @@ TEST_F(dt_expression_type, pointer_with_const_volatile) {
 /* Test: chained pointer declaration (e.g., "** i32") */
 TEST_F(dt_expression_type, chained_pointer_declaration) {
   const char *source = "** i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -593,11 +595,11 @@ TEST_F(dt_expression_type, chained_pointer_declaration) {
 /* Test: pointer to generic type (e.g., "* Vec[i32]") */
 TEST_F(dt_expression_type, pointer_to_generic_type) {
   const char *source = "* Vec[i32]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -612,11 +614,11 @@ TEST_F(dt_expression_type, pointer_to_generic_type) {
 /* Test: pointer to namespace type (e.g., "* std::vec::Vec") */
 TEST_F(dt_expression_type, pointer_to_member_type) {
   const char *source = "* std::vec::Vec";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -631,11 +633,11 @@ TEST_F(dt_expression_type, pointer_to_member_type) {
 /* Test: generic with pointer element type (e.g., "Vec[* i32]") */
 TEST_F(dt_expression_type, generic_with_pointer_argument) {
   const char *source = "Vec[* i32]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -653,11 +655,11 @@ TEST_F(dt_expression_type, generic_with_pointer_argument) {
 /* Test: pointer declaration with pointer to pointer (e.g., "* * i32") */
 TEST_F(dt_expression_type, pointer_to_pointer) {
   const char *source = "* * i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -676,11 +678,11 @@ TEST_F(dt_expression_type, pointer_to_pointer) {
 /* Test: pointer declaration on complex namespace type (e.g., "* std::vec::Vec[i32]") */
 TEST_F(dt_expression_type, pointer_on_complex_type) {
   const char *source = "* std::vec::Vec[i32]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -695,11 +697,11 @@ TEST_F(dt_expression_type, pointer_on_complex_type) {
 /* Test: pointer with reversed qualifier order (e.g., "* volatile const i32") */
 TEST_F(dt_expression_type, pointer_reversed_qualifier_order) {
   const char *source = "* volatile const i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -716,11 +718,11 @@ TEST_F(dt_expression_type, pointer_reversed_qualifier_order) {
 /* Test: pointer with repeated qualifiers (e.g., "* const const i32") */
 TEST_F(dt_expression_type, pointer_repeated_qualifiers) {
   const char *source = "* const const i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -737,11 +739,11 @@ TEST_F(dt_expression_type, pointer_repeated_qualifiers) {
 /* Test: pointer with mixed repeated qualifiers (e.g., "* const volatile const i32") */
 TEST_F(dt_expression_type, pointer_mixed_repeated_qualifiers) {
   const char *source = "* const volatile const i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -762,11 +764,11 @@ TEST_F(dt_expression_type, pointer_mixed_repeated_qualifiers) {
 /* Test: simple slice declaration (e.g., "[] i32") */
 TEST_F(dt_expression_type, simple_slice_declaration) {
   const char *source = "[] i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -786,11 +788,11 @@ TEST_F(dt_expression_type, simple_slice_declaration) {
 /* Test: slice with const qualifier (e.g., "[] const i32") */
 TEST_F(dt_expression_type, slice_with_const) {
   const char *source = "[] const i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -807,11 +809,11 @@ TEST_F(dt_expression_type, slice_with_const) {
 /* Test: slice with volatile qualifier (e.g., "[] volatile i32") */
 TEST_F(dt_expression_type, slice_with_volatile) {
   const char *source = "[] volatile i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -828,11 +830,11 @@ TEST_F(dt_expression_type, slice_with_volatile) {
 /* Test: slice with const and volatile (e.g., "[] const volatile i32") */
 TEST_F(dt_expression_type, slice_with_const_volatile) {
   const char *source = "[] const volatile i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -849,11 +851,11 @@ TEST_F(dt_expression_type, slice_with_const_volatile) {
 /* Test: slice to generic type (e.g., "[] Vec[i32]") */
 TEST_F(dt_expression_type, slice_to_generic_type) {
   const char *source = "[] Vec[i32]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -868,11 +870,11 @@ TEST_F(dt_expression_type, slice_to_generic_type) {
 /* Test: slice to namespace type (e.g., "[] std::vec::Vec") */
 TEST_F(dt_expression_type, slice_to_member_type) {
   const char *source = "[] std::vec::Vec";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -887,11 +889,11 @@ TEST_F(dt_expression_type, slice_to_member_type) {
 /* Test: generic with slice element type (e.g., "Vec[[] i32]") */
 TEST_F(dt_expression_type, generic_with_slice_argument) {
   const char *source = "Vec[[] i32]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -909,11 +911,11 @@ TEST_F(dt_expression_type, generic_with_slice_argument) {
 /* Test: slice with reversed qualifier order (e.g., "[] volatile const i32") */
 TEST_F(dt_expression_type, slice_reversed_qualifier_order) {
   const char *source = "[] volatile const i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -930,11 +932,11 @@ TEST_F(dt_expression_type, slice_reversed_qualifier_order) {
 /* Test: slice with repeated qualifiers (e.g., "[] volatile volatile i32") */
 TEST_F(dt_expression_type, slice_repeated_qualifiers) {
   const char *source = "[] volatile volatile i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -951,11 +953,11 @@ TEST_F(dt_expression_type, slice_repeated_qualifiers) {
 /* Test: slice with mixed repeated qualifiers (e.g., "[] const volatile const i32") */
 TEST_F(dt_expression_type, slice_mixed_repeated_qualifiers) {
   const char *source = "[] const volatile const i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -976,11 +978,11 @@ TEST_F(dt_expression_type, slice_mixed_repeated_qualifiers) {
 /* Test: simple array declaration (e.g., "[10] i32") */
 TEST_F(dt_expression_type, simple_array_declaration) {
   const char *source = "[10] i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
 
@@ -1000,11 +1002,11 @@ TEST_F(dt_expression_type, simple_array_declaration) {
 /* Test: array with identifier size (e.g., "[N] i32") */
 TEST_F(dt_expression_type, array_with_identifier_size) {
   const char *source = "[N] i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
 
@@ -1019,11 +1021,11 @@ TEST_F(dt_expression_type, array_with_identifier_size) {
 /* Test: array with expression size (e.g., "[a + b] i32") */
 TEST_F(dt_expression_type, array_with_expression_size) {
   const char *source = "[a + b] i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
 
@@ -1038,11 +1040,11 @@ TEST_F(dt_expression_type, array_with_expression_size) {
 /* Test: array with whitespace in size expression (e.g., "[ 10 ] i32") */
 TEST_F(dt_expression_type, array_with_whitespace_in_size) {
   const char *source = "[ 10 ] i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
 
@@ -1057,11 +1059,11 @@ TEST_F(dt_expression_type, array_with_whitespace_in_size) {
 /* Test: array to generic type (e.g., "[10] Vec[i32]") */
 TEST_F(dt_expression_type, array_to_generic_type) {
   const char *source = "[10] Vec[i32]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
 
@@ -1076,11 +1078,11 @@ TEST_F(dt_expression_type, array_to_generic_type) {
 /* Test: array to namespace type (e.g., "[10] std::vec::Vec") */
 TEST_F(dt_expression_type, array_to_member_type) {
   const char *source = "[10] std::vec::Vec";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
 
@@ -1095,11 +1097,11 @@ TEST_F(dt_expression_type, array_to_member_type) {
 /* Test: chained array declaration (e.g., "[10][20] i32") */
 TEST_F(dt_expression_type, chained_array_declaration) {
   const char *source = "[10][20] i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
 
@@ -1118,11 +1120,11 @@ TEST_F(dt_expression_type, chained_array_declaration) {
 /* Test: array with pointer (e.g., "[10] * i32") */
 TEST_F(dt_expression_type, array_with_pointer) {
   const char *source = "[10] * i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
 
@@ -1137,11 +1139,11 @@ TEST_F(dt_expression_type, array_with_pointer) {
 /* Test: pointer to array (e.g., "* [10] i32") */
 TEST_F(dt_expression_type, pointer_to_array) {
   const char *source = "* [10] i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -1156,11 +1158,11 @@ TEST_F(dt_expression_type, pointer_to_array) {
 /* Test: generic with array argument (e.g., "Vec[[10] i32]") */
 TEST_F(dt_expression_type, generic_with_array_argument) {
   const char *source = "Vec[[10] i32]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
 
@@ -1178,11 +1180,11 @@ TEST_F(dt_expression_type, generic_with_array_argument) {
 /* Test: empty brackets is slice, not array (e.g., "[] i32") */
 TEST_F(dt_expression_type, empty_brackets_is_slice) {
   const char *source = "[] i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* Empty brackets should be parsed as slice, not array */
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
@@ -1195,21 +1197,21 @@ TEST_F(dt_expression_type, empty_brackets_is_slice) {
 TEST_F(dt_expression_type, slice_and_array_are_distinct) {
   /* Empty brackets = slice */
   const char *slice_source = "[] i32";
-  vec_t slice_tokens = resolve_token_list(allocator, "test.cubec", slice_source);
+  vec_t slice_tokens = resolve_token_list(ctx, "test.cubec", slice_source);
   ASSERT_NE(slice_tokens, nullptr);
 
   size_t slice_pos = 0;
-  node_t slice_node = read_expression_type(allocator, slice_tokens, &slice_pos, "test.cubec");
+  node_t slice_node = read_expression_type(ctx, slice_tokens, &slice_pos, "test.cubec");
   ASSERT_NE(slice_node, nullptr);
   EXPECT_EQ(slice_node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
   /* Non-empty brackets = array */
   const char *array_source = "[10] i32";
-  vec_t array_tokens = resolve_token_list(allocator, "test.cubec", array_source);
+  vec_t array_tokens = resolve_token_list(ctx, "test.cubec", array_source);
   ASSERT_NE(array_tokens, nullptr);
 
   size_t array_pos = 0;
-  node_t array_node = read_expression_type(allocator, array_tokens, &array_pos, "test.cubec");
+  node_t array_node = read_expression_type(ctx, array_tokens, &array_pos, "test.cubec");
   ASSERT_NE(array_node, nullptr);
   EXPECT_EQ(array_node->kind, CUBEC_NODE_DECLARATION_ARRAY);
 
@@ -1226,11 +1228,11 @@ TEST_F(dt_expression_type, slice_and_array_are_distinct) {
 /* Test: simple grouped type (e.g., "( i32 )") */
 TEST_F(dt_expression_type, simple_type_group) {
   const char *source = "( i32 )";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
@@ -1248,11 +1250,11 @@ TEST_F(dt_expression_type, simple_type_group) {
 /* Test: grouped generic type (e.g., "( Vec[i32] )") */
 TEST_F(dt_expression_type, type_group_with_generic) {
   const char *source = "( Vec[i32] )";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
@@ -1267,11 +1269,11 @@ TEST_F(dt_expression_type, type_group_with_generic) {
 /* Test: grouped namespace type (e.g., "( std::vec::Vec )") */
 TEST_F(dt_expression_type, type_group_with_member) {
   const char *source = "( std::vec::Vec )";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
@@ -1286,11 +1288,11 @@ TEST_F(dt_expression_type, type_group_with_member) {
 /* Test: grouped pointer type (e.g., "( * i32 )") */
 TEST_F(dt_expression_type, type_group_with_pointer) {
   const char *source = "( * i32 )";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
@@ -1305,11 +1307,11 @@ TEST_F(dt_expression_type, type_group_with_pointer) {
 /* Test: grouped slice type (e.g., "( [] i32 )") */
 TEST_F(dt_expression_type, type_group_with_slice) {
   const char *source = "( [] i32 )";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
@@ -1324,11 +1326,11 @@ TEST_F(dt_expression_type, type_group_with_slice) {
 /* Test: non-group returns null */
 TEST_F(dt_expression_type, non_group_returns_null) {
   const char *source = "i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* Should return the identifier, not a group */
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
@@ -1340,11 +1342,11 @@ TEST_F(dt_expression_type, non_group_returns_null) {
 /* Test: type group consume all tokens */
 TEST_F(dt_expression_type, type_group_consume_all_tokens) {
   const char *source = "( i32 )";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   /* All tokens should be consumed: (, whitespace, i32, whitespace, ) → 5 tokens */
@@ -1357,11 +1359,11 @@ TEST_F(dt_expression_type, type_group_consume_all_tokens) {
 /* Test: nested type group (e.g., "( ( i32 ) )") */
 TEST_F(dt_expression_type, nested_type_group) {
   const char *source = "( ( i32 ) )";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 

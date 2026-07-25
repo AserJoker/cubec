@@ -1,10 +1,9 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/builtin.h"
 #include "engine/symbol.h"
 #include "engine/diagnostic.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 #include <string>
@@ -17,46 +16,41 @@ using ::testing::Test;
 #define BUILTIN_CAST "builtin func cast[T,K](expr:K):T;\n"
 
 struct compile_result {
-  checker_t ctx;
+  context_t ctx;
   node_t prog;
   vec_t tokens;
 };
 
-static struct compile_result compile_source(allocator_t allocator,
+static struct compile_result compile_source(context_t ctx,
                                             const char *source) {
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  allocator_t allocator = ctx->allocator;
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   size_t pos = 0;
-  node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+  node_t prog = read_program_node(ctx, tokens, &pos, "test.cubec");
 
-  if (g_error) {
-    std::string err_msg(g_error->message);
-    error_clear();
+  if (!prog || !tokens) {
     GTEST_MESSAGE_AT_(__FILE__, __LINE__,
-        ("Parsing failed: " + err_msg).c_str(),
+        "Parsing failed",
         ::testing::TestPartResult::kFatalFailure);
     return (struct compile_result){NULL, prog, tokens};
   }
 
-  checker_t ctx = checker_create(allocator);
   source_cache_load(ctx->sources, "test.cubec", source, false);
-  checker_check_program(ctx, prog);
+  context_check_program(ctx, prog);
   return (struct compile_result){ctx, prog, tokens};
 }
 
 static void compile_result_cleanup(struct compile_result *r,
                                    allocator_t allocator) {
-  if (r->ctx) checker_dispose(r->ctx);
   allocator_free(allocator, &r->prog);
   allocator_free(allocator, &r->tokens);
 }
 
 class dt_magic_method : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
-  void TearDown() override {
-    error_clear();
-    CubecTest::TearDown();
-  }
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ===== __get__ ===== */
@@ -70,8 +64,8 @@ TEST_F(dt_magic_method, get_type_check) {
     "  var x: i32 = v[0];\n"
     "  assert(x == 42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -83,7 +77,7 @@ TEST_F(dt_magic_method, get_comptime_eval) {
     "  var v: Vec = .Vec{.data = 7};\n"
     "  assert(v[0] == 7);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->test_fail_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -96,8 +90,8 @@ TEST_F(dt_magic_method, get_missing_error) {
     "  var s: S = .S{.x = 1};\n"
     "  var y: i32 = s[0];\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0u);
+  auto r = compile_source(ctx, src);
+  EXPECT_GT(context_get_error_count(r.ctx), 0u);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -112,8 +106,8 @@ TEST_F(dt_magic_method, set_type_check) {
     "  v[0] = 99;\n"
     "  assert(v.data == 99);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -126,7 +120,7 @@ TEST_F(dt_magic_method, set_comptime_eval) {
     "  v[0] = 42;\n"
     "  assert(v.data == 42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->test_fail_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -139,8 +133,8 @@ TEST_F(dt_magic_method, set_missing_error) {
     "  var s: S = .S{.x = 1};\n"
     "  s[0] = 99;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0u);
+  auto r = compile_source(ctx, src);
+  EXPECT_GT(context_get_error_count(r.ctx), 0u);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -155,8 +149,8 @@ TEST_F(dt_magic_method, call_type_check) {
     "  var r: i32 = a(5);\n"
     "  assert(r == 15);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -168,7 +162,7 @@ TEST_F(dt_magic_method, call_comptime_eval) {
     "  var a: Adder = .Adder{.offset = 10};\n"
     "  assert(a(5) == 15);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->test_fail_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -181,8 +175,8 @@ TEST_F(dt_magic_method, call_missing_error) {
     "  var s: S = .S{.x = 1};\n"
     "  var r: i32 = s(42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0u);
+  auto r = compile_source(ctx, src);
+  EXPECT_GT(context_get_error_count(r.ctx), 0u);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -195,8 +189,8 @@ TEST_F(dt_magic_method, call_pointer_no_magic) {
     "  var p: *S = s.&;\n"
     "  var r: i32 = p(42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0u);
+  auto r = compile_source(ctx, src);
+  EXPECT_GT(context_get_error_count(r.ctx), 0u);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -210,8 +204,8 @@ TEST_F(dt_magic_method, slice_type_check) {
     "  var b: Buf = .Buf{.data = 1};\n"
     "  var s: i32 = b[0:1];\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -224,7 +218,7 @@ TEST_F(dt_magic_method, slice_comptime_eval) {
     "  var s: i32 = b[0:1];\n"
     "  assert(s == 42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->test_fail_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -237,8 +231,8 @@ TEST_F(dt_magic_method, slice_missing_error) {
     "  var s: S = .S{.x = 1};\n"
     "  var r: []i32 = s[0:1];\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0u);
+  auto r = compile_source(ctx, src);
+  EXPECT_GT(context_get_error_count(r.ctx), 0u);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -253,8 +247,8 @@ TEST_F(dt_magic_method, value_binary_op) {
     "  var r: i32 = w + 5;\n"
     "  assert(r == 15);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -266,7 +260,7 @@ TEST_F(dt_magic_method, value_comparison) {
     "  var w: Wrapped = .Wrapped{.val = 10};\n"
     "  assert(w == 10);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->test_fail_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -280,8 +274,8 @@ TEST_F(dt_magic_method, value_implicit_convert) {
     "  var x: i32 = w;\n"
     "  assert(x == 42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -293,7 +287,7 @@ TEST_F(dt_magic_method, value_not_called_when_unnecessary) {
     "  var w: Wrapped = .Wrapped{.val = 5};\n"
     "  assert(w.val == 5);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->test_fail_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -306,8 +300,8 @@ TEST_F(dt_magic_method, value_missing_error) {
     "  var s: S = .S{.x = 1};\n"
     "  var r: i32 = s + 1;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0u);
+  auto r = compile_source(ctx, src);
+  EXPECT_GT(context_get_error_count(r.ctx), 0u);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -320,7 +314,7 @@ TEST_F(dt_magic_method, value_bitwise_op) {
     "  var r: i32 = f & 0x0F;\n"
     "  assert(r == 0x0F);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }

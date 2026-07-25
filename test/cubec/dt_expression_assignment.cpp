@@ -12,7 +12,9 @@ using ::testing::Test;
 
 class dt_expression_assignment : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ============================================================================
@@ -39,11 +41,11 @@ static void expect_assignment(node_t node, const char *expected_op,
 
 TEST_F(dt_expression_assignment, simple_assignment_identifier) {
   const char *source = "x = 42";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -55,11 +57,11 @@ TEST_F(dt_expression_assignment, simple_assignment_identifier) {
 
 TEST_F(dt_expression_assignment, simple_assignment_identifier_to_identifier) {
   const char *source = "a = b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -71,11 +73,11 @@ TEST_F(dt_expression_assignment, simple_assignment_identifier_to_identifier) {
 
 TEST_F(dt_expression_assignment, simple_assignment_with_whitespace) {
   const char *source = "x    =    42";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -91,11 +93,11 @@ TEST_F(dt_expression_assignment, simple_assignment_with_whitespace) {
 
 TEST_F(dt_expression_assignment, compound_add_assignment) {
   const char *source = "x += 1";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "+=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -107,11 +109,11 @@ TEST_F(dt_expression_assignment, compound_add_assignment) {
 
 TEST_F(dt_expression_assignment, compound_sub_assignment) {
   const char *source = "x -= y";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "-=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -123,11 +125,11 @@ TEST_F(dt_expression_assignment, compound_sub_assignment) {
 
 TEST_F(dt_expression_assignment, compound_mul_assignment) {
   const char *source = "x *= 2";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "*=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -139,11 +141,11 @@ TEST_F(dt_expression_assignment, compound_mul_assignment) {
 
 TEST_F(dt_expression_assignment, compound_div_assignment) {
   const char *source = "x /= y";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "/=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -155,11 +157,11 @@ TEST_F(dt_expression_assignment, compound_div_assignment) {
 
 TEST_F(dt_expression_assignment, compound_mod_assignment) {
   const char *source = "x %= 10";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "%=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -171,11 +173,11 @@ TEST_F(dt_expression_assignment, compound_mod_assignment) {
 
 TEST_F(dt_expression_assignment, compound_and_assignment) {
   const char *source = "x &= mask";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "&=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -187,11 +189,11 @@ TEST_F(dt_expression_assignment, compound_and_assignment) {
 
 TEST_F(dt_expression_assignment, compound_or_assignment) {
   const char *source = "x |= 0xFF";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "|=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -203,11 +205,11 @@ TEST_F(dt_expression_assignment, compound_or_assignment) {
 
 TEST_F(dt_expression_assignment, compound_xor_assignment) {
   const char *source = "x ^= key";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "^=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -219,11 +221,11 @@ TEST_F(dt_expression_assignment, compound_xor_assignment) {
 
 TEST_F(dt_expression_assignment, compound_left_shift_assignment) {
   const char *source = "x <<= 4";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "<<=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -235,11 +237,11 @@ TEST_F(dt_expression_assignment, compound_left_shift_assignment) {
 
 TEST_F(dt_expression_assignment, compound_right_shift_assignment) {
   const char *source = "x >>= 2";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, ">>=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -251,11 +253,11 @@ TEST_F(dt_expression_assignment, compound_right_shift_assignment) {
 
 TEST_F(dt_expression_assignment, compound_logical_and_assignment) {
   const char *source = "x &&= y";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "&&=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -267,11 +269,11 @@ TEST_F(dt_expression_assignment, compound_logical_and_assignment) {
 
 TEST_F(dt_expression_assignment, compound_logical_or_assignment) {
   const char *source = "x ||= true";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "||=", CUBEC_NODE_LITERAL_IDENTIFIER,
@@ -290,11 +292,11 @@ TEST_F(dt_expression_assignment, non_assignment_returns_null) {
    * try other expression types. The lvalue may be part of a larger
    * expression (e.g., "a + b" should be parsed as binary, not partial). */
   const char *source = "x + y";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   EXPECT_EQ(node, nullptr);
 
@@ -305,11 +307,11 @@ TEST_F(dt_expression_assignment, non_assignment_returns_null_for_simple_value) {
   /* A simple identifier without assignment operator returns NULL.
    * Position is not advanced since this is not a valid assignment. */
   const char *source = "x";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   EXPECT_EQ(node, nullptr);
 
@@ -322,11 +324,11 @@ TEST_F(dt_expression_assignment, non_assignment_returns_null_for_simple_value) {
 
 TEST_F(dt_expression_assignment, assignment_with_member_lvalue) {
   const char *source = "obj.field = value";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ASSIGNMENT);
@@ -343,11 +345,11 @@ TEST_F(dt_expression_assignment, assignment_with_member_lvalue) {
 TEST_F(dt_expression_assignment, assignment_with_call_lvalue) {
   /* cache.get(key) = value */
   const char *source = "cache.get(key) = value";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ASSIGNMENT);
@@ -364,11 +366,11 @@ TEST_F(dt_expression_assignment, assignment_with_call_lvalue) {
 TEST_F(dt_expression_assignment, assignment_with_slice_lvalue) {
   /* arr[0:5] = value */
   const char *source = "arr[0:5] = x";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ASSIGNMENT);
@@ -388,11 +390,11 @@ TEST_F(dt_expression_assignment, assignment_with_slice_lvalue) {
 
 TEST_F(dt_expression_assignment, assignment_with_binary_rvalue) {
   const char *source = "x = a + b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ASSIGNMENT);
@@ -411,11 +413,11 @@ TEST_F(dt_expression_assignment, assignment_with_binary_rvalue) {
 
 TEST_F(dt_expression_assignment, assignment_with_ternary_rvalue) {
   const char *source = "x = a ? b : c";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ASSIGNMENT);
@@ -431,11 +433,11 @@ TEST_F(dt_expression_assignment, assignment_with_ternary_rvalue) {
 
 TEST_F(dt_expression_assignment, assignment_with_call_rvalue) {
   const char *source = "x = get_value()";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ASSIGNMENT);
@@ -456,11 +458,11 @@ TEST_F(dt_expression_assignment, assignment_with_call_rvalue) {
 TEST_F(dt_expression_assignment, assignment_with_prefix_unary_rvalue) {
   /* x = -y  =>  x = (-y) */
   const char *source = "x = -y";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ASSIGNMENT);
@@ -478,11 +480,11 @@ TEST_F(dt_expression_assignment, assignment_with_prefix_unary_rvalue) {
 TEST_F(dt_expression_assignment, assignment_with_postfix_deref_rvalue) {
   /* x = ptr.*  =>  x = (ptr.*) */
   const char *source = "x = ptr.*";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ASSIGNMENT);
@@ -500,30 +502,26 @@ TEST_F(dt_expression_assignment, assignment_with_postfix_deref_rvalue) {
 
 TEST_F(dt_expression_assignment, missing_rvalue_error) {
   const char *source = "x =";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  error_clear();
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   EXPECT_EQ(node, nullptr);
-  EXPECT_NE(g_error, nullptr);
 
   allocator_free(allocator, &tokens);
 }
 
 TEST_F(dt_expression_assignment, missing_rvalue_with_compound_error) {
   const char *source = "x +=";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  error_clear();
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   EXPECT_EQ(node, nullptr);
-  EXPECT_NE(g_error, nullptr);
 
   allocator_free(allocator, &tokens);
 }
@@ -535,11 +533,11 @@ TEST_F(dt_expression_assignment, missing_rvalue_with_compound_error) {
 TEST_F(dt_expression_assignment, assignment_with_chained_postfix) {
   /* obj.field.member = value */
   const char *source = "obj.field.member = value";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ASSIGNMENT);
@@ -555,11 +553,11 @@ TEST_F(dt_expression_assignment, assignment_with_chained_postfix) {
 TEST_F(dt_expression_assignment, assignment_with_generic_instantiation_lvalue) {
   /* map[str] = value */
   const char *source = "map[str] = value";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_assignment(allocator, tokens, &position,
+  node_t node = read_expression_assignment(ctx, tokens, &position,
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ASSIGNMENT);

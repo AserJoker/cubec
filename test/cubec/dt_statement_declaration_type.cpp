@@ -11,18 +11,20 @@ using ::testing::Test;
 
 class dt_statement_declaration_type : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ---- Simple type alias: type MyInt = i32; ---- */
 
 TEST_F(dt_statement_declaration_type, simple_alias) {
   const char *source = "type MyInt = i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -40,11 +42,11 @@ TEST_F(dt_statement_declaration_type, simple_alias) {
 
 TEST_F(dt_statement_declaration_type, single_generic_param) {
   const char *source = "type Vec3[T] = Vec[Vec[Vec[T]]];";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -72,11 +74,11 @@ TEST_F(dt_statement_declaration_type, single_generic_param) {
 
 TEST_F(dt_statement_declaration_type, multiple_generic_params) {
   const char *source = "type Pair[A, B] = i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -105,11 +107,11 @@ TEST_F(dt_statement_declaration_type, multiple_generic_params) {
 
 TEST_F(dt_statement_declaration_type, generic_param_with_constraint) {
   const char *source = "type NumericVec[T extends Numeric] = Vec[T];";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -132,11 +134,11 @@ TEST_F(dt_statement_declaration_type, generic_param_with_constraint) {
 
 TEST_F(dt_statement_declaration_type, generic_param_with_value_type) {
   const char *source = "type FixedArray[N: u64, T] = [N]T;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -166,11 +168,11 @@ TEST_F(dt_statement_declaration_type, generic_param_with_value_type) {
 
 TEST_F(dt_statement_declaration_type, pointer_type_expression) {
   const char *source = "type MyPtr = *i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -185,11 +187,11 @@ TEST_F(dt_statement_declaration_type, pointer_type_expression) {
 
 TEST_F(dt_statement_declaration_type, consume_all_tokens) {
   const char *source = "type MyInt = i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* type, MyInt, =, i32, ;, + whitespace/comment tokens + EOF */
   EXPECT_EQ(position, vec_get_size(tokens) - 1);
@@ -202,11 +204,11 @@ TEST_F(dt_statement_declaration_type, consume_all_tokens) {
 
 TEST_F(dt_statement_declaration_type, clone) {
   const char *source = "type MyInt = i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -226,11 +228,11 @@ TEST_F(dt_statement_declaration_type, clone) {
 
 TEST_F(dt_statement_declaration_type, clone_with_generic_params) {
   const char *source = "type Vec3[T] = Vec[Vec[Vec[T]]];";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -254,11 +256,11 @@ TEST_F(dt_statement_declaration_type, clone_with_generic_params) {
 
 TEST_F(dt_statement_declaration_type, move) {
   const char *source = "type Vec3[T] = Vec[Vec[Vec[T]]];";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);
@@ -285,11 +287,11 @@ TEST_F(dt_statement_declaration_type, move) {
 
 TEST_F(dt_statement_declaration_type, rest_param_single) {
   const char *source = "type Variadic[...Args] = i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -313,11 +315,11 @@ TEST_F(dt_statement_declaration_type, rest_param_single) {
 
 TEST_F(dt_statement_declaration_type, rest_param_after_regular) {
   const char *source = "type Tuple[T, ...Rest] = i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -344,11 +346,11 @@ TEST_F(dt_statement_declaration_type, rest_param_after_regular) {
 
 TEST_F(dt_statement_declaration_type, rest_param_with_constraint) {
   const char *source = "type Filter[T, ...Rest extends Numeric] = i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -370,11 +372,11 @@ TEST_F(dt_statement_declaration_type, rest_param_with_constraint) {
 
 TEST_F(dt_statement_declaration_type, clone_with_rest_param) {
   const char *source = "type Variadic[...Args] = i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -396,11 +398,11 @@ TEST_F(dt_statement_declaration_type, clone_with_rest_param) {
 
 TEST_F(dt_statement_declaration_type, regular_param_is_not_rest) {
   const char *source = "type Vec3[T] = Vec[Vec[Vec[T]]];";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;
@@ -415,11 +417,11 @@ TEST_F(dt_statement_declaration_type, regular_param_is_not_rest) {
 
 TEST_F(dt_statement_declaration_type, export_simple_alias) {
   const char *source = "export type MyInt = i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -437,11 +439,11 @@ TEST_F(dt_statement_declaration_type, export_simple_alias) {
 
 TEST_F(dt_statement_declaration_type, export_generic_alias) {
   const char *source = "export type Vec3[T] = Vec[Vec[Vec[T]]];";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -458,11 +460,11 @@ TEST_F(dt_statement_declaration_type, export_generic_alias) {
 
 TEST_F(dt_statement_declaration_type, non_export_alias) {
   const char *source = "type MyInt = i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -477,11 +479,11 @@ TEST_F(dt_statement_declaration_type, non_export_alias) {
 
 TEST_F(dt_statement_declaration_type, export_pointer_type) {
   const char *source = "export type MyPtr = *i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -497,11 +499,11 @@ TEST_F(dt_statement_declaration_type, export_pointer_type) {
 
 TEST_F(dt_statement_declaration_type, export_clone) {
   const char *source = "export type MyInt = i32;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -522,11 +524,11 @@ TEST_F(dt_statement_declaration_type, export_clone) {
 
 TEST_F(dt_statement_declaration_type, export_move) {
   const char *source = "export type Vec3[T] = Vec[Vec[Vec[T]]];";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);
@@ -551,11 +553,11 @@ TEST_F(dt_statement_declaration_type, export_move) {
 
 TEST_F(dt_statement_declaration_type, builtin_type_no_body) {
   const char *source = "builtin type RemoveConst[T];";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -574,11 +576,11 @@ TEST_F(dt_statement_declaration_type, builtin_type_no_body) {
 
 TEST_F(dt_statement_declaration_type, export_builtin_type) {
   const char *source = "export builtin type Ptr[T];";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -595,11 +597,11 @@ TEST_F(dt_statement_declaration_type, export_builtin_type) {
 
 TEST_F(dt_statement_declaration_type, builtin_type_no_params) {
   const char *source = "builtin type Void;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -617,11 +619,11 @@ TEST_F(dt_statement_declaration_type, builtin_type_no_params) {
 
 TEST_F(dt_statement_declaration_type, builtin_type_clone) {
   const char *source = "builtin type RemoveConst[T];";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -641,11 +643,11 @@ TEST_F(dt_statement_declaration_type, builtin_type_clone) {
 
 TEST_F(dt_statement_declaration_type, builtin_type_move) {
   const char *source = "builtin type RemoveConst[T];";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);
@@ -669,11 +671,11 @@ TEST_F(dt_statement_declaration_type, builtin_type_move) {
 
 TEST_F(dt_statement_declaration_type, multi_constraint_and) {
   const char *source = "type Foo[T extends Printable & Serializable] = T;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION_TYPE);
 
@@ -693,11 +695,11 @@ TEST_F(dt_statement_declaration_type, multi_constraint_and) {
 
 TEST_F(dt_statement_declaration_type, multi_constraint_three) {
   const char *source = "type Foo[T extends A & B & C] = T;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;

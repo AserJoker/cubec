@@ -1,10 +1,9 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/builtin.h"
 #include "engine/symbol.h"
 #include "engine/diagnostic.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 #include <string>
@@ -18,42 +17,36 @@ using ::testing::Test;
 
 class dt_cast : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
-  void TearDown() override {
-    error_clear();
-    CubecTest::TearDown();
-  }
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 
   struct compile_result {
-    checker_t ctx;
+    context_t ctx;
     node_t prog;
     vec_t tokens;
   };
 
   struct compile_result compile_source(const char *source) {
-    vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+    vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
     size_t pos = 0;
-    node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+    node_t prog = read_program_node(ctx, tokens, &pos, "test.cubec");
 
     /* If parsing failed, fail the test immediately */
-    if (g_error) {
-      std::string err_msg(g_error->message);
-      error_clear();
+    if (!prog || !tokens) {
       GTEST_MESSAGE_AT_(__FILE__, __LINE__,
-          ("Parsing failed: " + err_msg).c_str(),
+          "Parsing failed",
           ::testing::TestPartResult::kFatalFailure);
       return (struct compile_result){NULL, prog, tokens};
     }
 
-    checker_t ctx = checker_create(allocator);
     source_cache_load(ctx->sources, "test.cubec", source, false);
 
-    checker_check_program(ctx, prog);
+    context_check_program(ctx, prog);
     return (struct compile_result){ctx, prog, tokens};
   }
 
   void compile_result_cleanup(struct compile_result *r) {
-    if (r->ctx) checker_dispose(r->ctx);
     allocator_free(allocator, &r->prog);
     allocator_free(allocator, &r->tokens);
   }
@@ -68,7 +61,7 @@ TEST_F(dt_cast, float_to_int) {
     "  assert(x == 3);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -79,7 +72,7 @@ TEST_F(dt_cast, int_narrowing) {
     "  assert(x == 44);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -90,7 +83,7 @@ TEST_F(dt_cast, float_narrowing) {
     "  assert(x != 0.0);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -103,7 +96,7 @@ TEST_F(dt_cast, bool_to_int) {
     "  assert(x == 1);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -114,7 +107,7 @@ TEST_F(dt_cast, int_to_bool) {
     "  assert(x);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -128,7 +121,7 @@ TEST_F(dt_cast, enum_to_int) {
     "  assert(v == 0);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -140,7 +133,7 @@ TEST_F(dt_cast, int_to_enum) {
     "  assert(v == Color.Green);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -153,7 +146,7 @@ TEST_F(dt_cast, char_to_int) {
     "  assert(x == 65);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -164,7 +157,7 @@ TEST_F(dt_cast, int_to_char) {
     "  assert(x == 'A');\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -178,7 +171,7 @@ TEST_F(dt_cast, opaque_to_pointer) {
     "  var q: *i32 = cast[*i32](p);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -192,7 +185,7 @@ TEST_F(dt_cast, pointer_to_int) {
     "  var addr: u64 = cast[u64](p);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -207,7 +200,7 @@ TEST_F(dt_cast, struct_ptr_downcast) {
     "  var p: *Ext = cast[*Ext](b.&);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -220,7 +213,7 @@ TEST_F(dt_cast, array_to_tuple) {
     "  var t: <i32, i32, i32> = cast[<i32, i32, i32>](a);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -232,7 +225,7 @@ TEST_F(dt_cast, invalid_string_to_int) {
     "  var x: i32 = cast[i32](\"hello\");\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }
 
@@ -244,6 +237,6 @@ TEST_F(dt_cast, invalid_ptr_to_unrelated_ptr) {
     "  var q: *f64 = cast[*f64](p);\n"
     "}\n";
   auto r = compile_source(src);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r);
 }

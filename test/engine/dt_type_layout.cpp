@@ -8,7 +8,9 @@ using ::testing::Test;
 
 class dt_type_layout : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
   static constexpr size_t PTR64 = 8;
 };
 

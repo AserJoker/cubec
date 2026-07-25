@@ -12,7 +12,6 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
-#include "core/error.h"
 #include "core/string.h"
 #include <gtest/gtest.h>
 
@@ -20,7 +19,9 @@ using ::testing::Test;
 
 class dt_expression_type_volatile : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* --------------------------------------------------------------------------
@@ -30,11 +31,11 @@ protected:
 /* Simple volatile type: volatile i32 */
 TEST_F(dt_expression_type_volatile, simple) {
   const char *source = "volatile i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -52,11 +53,11 @@ TEST_F(dt_expression_type_volatile, simple) {
 /* Repeated volatile: volatile volatile i32 — duplicate volatile is merged */
 TEST_F(dt_expression_type_volatile, nested_volatile) {
   const char *source = "volatile volatile i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -74,11 +75,11 @@ TEST_F(dt_expression_type_volatile, nested_volatile) {
 /* Non-volatile token returns NULL */
 TEST_F(dt_expression_type_volatile, non_volatile_returns_null) {
   const char *source = "i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type_qualifier(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type_qualifier(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -91,11 +92,11 @@ TEST_F(dt_expression_type_volatile, non_volatile_returns_null) {
 /* volatile * i32 → type_volatile(pointer(*i32)) */
 TEST_F(dt_expression_type_volatile, volatile_pointer) {
   const char *source = "volatile * i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -118,11 +119,11 @@ TEST_F(dt_expression_type_volatile, volatile_pointer) {
 /* volatile [] i32 → type_volatile(slice([]i32)) */
 TEST_F(dt_expression_type_volatile, volatile_slice) {
   const char *source = "volatile [] i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -138,11 +139,11 @@ TEST_F(dt_expression_type_volatile, volatile_slice) {
 /* volatile [ 10 ] i32 → type_volatile(array([10]i32)) */
 TEST_F(dt_expression_type_volatile, volatile_array) {
   const char *source = "volatile [ 10 ] i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -158,11 +159,11 @@ TEST_F(dt_expression_type_volatile, volatile_array) {
 /* volatile * volatile i32 → type_volatile(pointer(*volatile i32)) */
 TEST_F(dt_expression_type_volatile, volatile_pointer_volatile) {
   const char *source = "volatile * volatile i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -189,11 +190,11 @@ TEST_F(dt_expression_type_volatile, volatile_pointer_volatile) {
 /* volatile Vec[i32] → type_volatile(generic(Vec[i32])) */
 TEST_F(dt_expression_type_volatile, volatile_generic) {
   const char *source = "volatile Vec[ i32 ]";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -210,11 +211,11 @@ TEST_F(dt_expression_type_volatile, volatile_generic) {
 /* volatile std::vec::Vec → type_volatile(namespace_access(std::vec::Vec)) */
 TEST_F(dt_expression_type_volatile, volatile_member) {
   const char *source = "volatile std::vec::Vec";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -234,11 +235,11 @@ TEST_F(dt_expression_type_volatile, volatile_member) {
 /* volatile ( a ? b : c ) → type_volatile(type_group(ternary)) */
 TEST_F(dt_expression_type_volatile, volatile_with_type_group_ternary) {
   const char *source = "volatile ( a ? b : c )";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -263,11 +264,11 @@ TEST_F(dt_expression_type_volatile, volatile_with_type_group_ternary) {
 /* volatile greedily consumes ternary: volatile a ? b : c → volatile(a ? b : c) */
 TEST_F(dt_expression_type_volatile, volatile_greedy_ternary) {
   const char *source = "volatile a ? b : c";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -296,11 +297,11 @@ TEST_F(dt_expression_type_volatile, volatile_greedy_ternary) {
 /* const volatile i32 → type_const(type_volatile(i32)) */
 TEST_F(dt_expression_type_volatile, const_volatile) {
   const char *source = "const volatile i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -325,11 +326,11 @@ TEST_F(dt_expression_type_volatile, const_volatile) {
 /* volatile const i32 → type_volatile(type_const(i32)) */
 TEST_F(dt_expression_type_volatile, volatile_const) {
   const char *source = "volatile const i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
 
@@ -358,11 +359,11 @@ TEST_F(dt_expression_type_volatile, volatile_const) {
 /* Clone produces independent copy */
 TEST_F(dt_expression_type_volatile, clone) {
   const char *source = "volatile i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -382,11 +383,11 @@ TEST_F(dt_expression_type_volatile, clone) {
 /* Move transfers ownership */
 TEST_F(dt_expression_type_volatile, move) {
   const char *source = "volatile i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);

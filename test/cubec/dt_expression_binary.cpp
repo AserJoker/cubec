@@ -15,7 +15,9 @@ using ::testing::Test;
 
 class dt_expression_binary : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ============================================================================
@@ -24,11 +26,11 @@ protected:
 
 TEST_F(dt_expression_binary, prefix_not) {
   const char *source = "!flag";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -46,11 +48,11 @@ TEST_F(dt_expression_binary, prefix_not) {
 
 TEST_F(dt_expression_binary, prefix_negate) {
   const char *source = "-42";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -66,11 +68,11 @@ TEST_F(dt_expression_binary, prefix_negate) {
 
 TEST_F(dt_expression_binary, prefix_positive) {
   const char *source = "+value";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -84,11 +86,11 @@ TEST_F(dt_expression_binary, prefix_positive) {
 TEST_F(dt_expression_binary, prefix_address) {
   /* Postfix addr: x.& instead of &x */
   const char *source = "x.&";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ADDR);
 
@@ -104,11 +106,11 @@ TEST_F(dt_expression_binary, prefix_address) {
 TEST_F(dt_expression_binary, prefix_deref) {
   /* Postfix deref: ptr.* instead of *ptr */
   const char *source = "ptr.*";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_DEREF);
 
@@ -124,11 +126,11 @@ TEST_F(dt_expression_binary, prefix_deref) {
 TEST_F(dt_expression_binary, postfix_try) {
   /* Postfix try: result.? (like Rust's ? operator) */
   const char *source = "result.?";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TRY);
 
@@ -144,11 +146,11 @@ TEST_F(dt_expression_binary, postfix_try) {
 TEST_F(dt_expression_binary, postfix_try_with_member_access) {
   /* obj.field.? - try on member expression */
   const char *source = "obj.field.?";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TRY);
 
@@ -164,11 +166,11 @@ TEST_F(dt_expression_binary, postfix_try_with_member_access) {
 TEST_F(dt_expression_binary, postfix_try_with_call) {
   /* foo().? - try on call result */
   const char *source = "foo().?";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TRY);
 
@@ -183,11 +185,11 @@ TEST_F(dt_expression_binary, postfix_try_with_call) {
 
 TEST_F(dt_expression_binary, prefix_bitnot) {
   const char *source = "~mask";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -200,11 +202,11 @@ TEST_F(dt_expression_binary, prefix_bitnot) {
 
 TEST_F(dt_expression_binary, prefix_not_negate_chained) {
   const char *source = "!!x";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -227,11 +229,11 @@ TEST_F(dt_expression_binary, prefix_not_negate_chained) {
 TEST_F(dt_expression_binary, read_value_fallback) {
   /* No prefix operator → falls back to read_value */
   const char *source = "hello";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -242,11 +244,11 @@ TEST_F(dt_expression_binary, read_value_fallback) {
 TEST_F(dt_expression_binary, prefix_negate_deep_chain) {
   /* --n */
   const char *source = "--n";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_expression_binary_t outer = (cubec_expression_binary_t)node;
@@ -268,11 +270,11 @@ TEST_F(dt_expression_binary, prefix_negate_deep_chain) {
 TEST_F(dt_expression_binary, prefix_not_member) {
   /* !obj.field: ! applies to (obj.field) */
   const char *source = "!obj.field";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -289,11 +291,11 @@ TEST_F(dt_expression_binary, prefix_not_member) {
 TEST_F(dt_expression_binary, non_prefix_symbol_returns_null) {
   /* "=" is a symbol but not a prefix operator */
   const char *source = "=x";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_prefix(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_prefix(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -321,11 +323,11 @@ static void expect_binary(node_t node, const char *expected_op,
 
 TEST_F(dt_expression_binary, binary_multiply) {
   const char *source = "a * b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "*", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -335,11 +337,11 @@ TEST_F(dt_expression_binary, binary_multiply) {
 
 TEST_F(dt_expression_binary, binary_divide) {
   const char *source = "x / y";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "/", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -349,11 +351,11 @@ TEST_F(dt_expression_binary, binary_divide) {
 
 TEST_F(dt_expression_binary, binary_modulo) {
   const char *source = "a % b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "%", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -365,11 +367,11 @@ TEST_F(dt_expression_binary, binary_modulo) {
 
 TEST_F(dt_expression_binary, binary_add) {
   const char *source = "a + b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "+", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -379,11 +381,11 @@ TEST_F(dt_expression_binary, binary_add) {
 
 TEST_F(dt_expression_binary, binary_subtract) {
   const char *source = "a - b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "-", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -395,11 +397,11 @@ TEST_F(dt_expression_binary, binary_subtract) {
 
 TEST_F(dt_expression_binary, binary_left_shift) {
   const char *source = "x << 2";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "<<", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -409,11 +411,11 @@ TEST_F(dt_expression_binary, binary_left_shift) {
 
 TEST_F(dt_expression_binary, binary_right_shift) {
   const char *source = "x >> 3";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, ">>", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -425,11 +427,11 @@ TEST_F(dt_expression_binary, binary_right_shift) {
 
 TEST_F(dt_expression_binary, binary_less_than) {
   const char *source = "a < b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "<", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -439,11 +441,11 @@ TEST_F(dt_expression_binary, binary_less_than) {
 
 TEST_F(dt_expression_binary, binary_greater_than) {
   const char *source = "a > b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, ">", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -453,11 +455,11 @@ TEST_F(dt_expression_binary, binary_greater_than) {
 
 TEST_F(dt_expression_binary, binary_less_equal) {
   const char *source = "a <= b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "<=", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -467,11 +469,11 @@ TEST_F(dt_expression_binary, binary_less_equal) {
 
 TEST_F(dt_expression_binary, binary_greater_equal) {
   const char *source = "a >= b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, ">=", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -483,11 +485,11 @@ TEST_F(dt_expression_binary, binary_greater_equal) {
 
 TEST_F(dt_expression_binary, binary_equals) {
   const char *source = "a == b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "==", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -497,11 +499,11 @@ TEST_F(dt_expression_binary, binary_equals) {
 
 TEST_F(dt_expression_binary, binary_not_equals) {
   const char *source = "a != b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "!=", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -513,11 +515,11 @@ TEST_F(dt_expression_binary, binary_not_equals) {
 
 TEST_F(dt_expression_binary, binary_bitwise_and) {
   const char *source = "a & b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "&", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -527,11 +529,11 @@ TEST_F(dt_expression_binary, binary_bitwise_and) {
 
 TEST_F(dt_expression_binary, binary_bitwise_xor) {
   const char *source = "a ^ b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "^", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -541,11 +543,11 @@ TEST_F(dt_expression_binary, binary_bitwise_xor) {
 
 TEST_F(dt_expression_binary, binary_bitwise_or) {
   const char *source = "a | b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "|", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -557,11 +559,11 @@ TEST_F(dt_expression_binary, binary_bitwise_or) {
 
 TEST_F(dt_expression_binary, binary_logical_and) {
   const char *source = "a && b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "&&", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -571,11 +573,11 @@ TEST_F(dt_expression_binary, binary_logical_and) {
 
 TEST_F(dt_expression_binary, binary_logical_or) {
   const char *source = "a || b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "||", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -588,11 +590,11 @@ TEST_F(dt_expression_binary, binary_logical_or) {
 TEST_F(dt_expression_binary, precedence_mul_before_add) {
   /* a + b * c  =>  a + (b * c) */
   const char *source = "a + b * c";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -611,11 +613,11 @@ TEST_F(dt_expression_binary, precedence_mul_before_add) {
 TEST_F(dt_expression_binary, precedence_mul_before_add_reverse) {
   /* a * b + c  =>  (a * b) + c */
   const char *source = "a * b + c";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -634,11 +636,11 @@ TEST_F(dt_expression_binary, precedence_mul_before_add_reverse) {
 TEST_F(dt_expression_binary, precedence_left_assoc_add) {
   /* a + b + c  =>  (a + b) + c  (left-associative) */
   const char *source = "a + b + c";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -657,11 +659,11 @@ TEST_F(dt_expression_binary, precedence_left_assoc_add) {
 TEST_F(dt_expression_binary, precedence_logical_and_or) {
   /* a && b || c  =>  (a && b) || c  (&& binds tighter) */
   const char *source = "a && b || c";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -680,11 +682,11 @@ TEST_F(dt_expression_binary, precedence_logical_and_or) {
 TEST_F(dt_expression_binary, precedence_full_chain) {
   /* a * b + c < d && e | f  =>  ((((a * b) + c) < d) && (e | f)) */
   const char *source = "a * b + c < d && e | f";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -713,11 +715,11 @@ TEST_F(dt_expression_binary, precedence_full_chain) {
 TEST_F(dt_expression_binary, prefix_neg_then_mul) {
   /* -42 * 3  =>  (-42) * 3  (unary - binds tighter than *) */
   const char *source = "-42 * 3";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -743,11 +745,11 @@ TEST_F(dt_expression_binary, prefix_neg_then_mul) {
 TEST_F(dt_expression_binary, prefix_deref_then_add) {
   /* ptr.* + 1  =>  (ptr.*) + 1 */
   const char *source = "ptr.* + 1";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -768,11 +770,11 @@ TEST_F(dt_expression_binary, prefix_deref_then_add) {
 TEST_F(dt_expression_binary, prefix_addr_then_binary_and) {
   /* x.& & mask  =>  (x.&) & mask  (first .& is postfix addr, second & is binary) */
   const char *source = "x.& & mask";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -799,11 +801,11 @@ TEST_F(dt_expression_binary, prefix_addr_then_binary_and) {
 
 TEST_F(dt_expression_binary, binary_no_whitespace) {
   const char *source = "a+b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "+", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -813,11 +815,11 @@ TEST_F(dt_expression_binary, binary_no_whitespace) {
 
 TEST_F(dt_expression_binary, binary_lots_of_whitespace) {
   const char *source = "a    +    b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   expect_binary(node, "+", CUBEC_NODE_LITERAL_IDENTIFIER,
                 CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -830,11 +832,11 @@ TEST_F(dt_expression_binary, binary_lots_of_whitespace) {
 TEST_F(dt_expression_binary, binary_with_member_access) {
   /* obj.field + value  =>  (obj.field) + value */
   const char *source = "obj.field + value";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -855,11 +857,11 @@ TEST_F(dt_expression_binary, binary_with_member_access) {
 /* ---- T extends U: binary expression ---- */
 TEST_F(dt_expression_binary, extends_binary) {
   const char *source = "T extends U";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -875,11 +877,11 @@ TEST_F(dt_expression_binary, extends_binary) {
 /* ---- T extends U == true: extends and == same precedence, left-associative ---- */
 TEST_F(dt_expression_binary, extends_with_eq) {
   const char *source = "T extends U == true";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* extends and == have same precedence (6), left-associative:
    * (T extends U) == true */
@@ -899,11 +901,11 @@ TEST_F(dt_expression_binary, extends_with_eq) {
 /* ---- T extends U ? a : b: extends as ternary condition ---- */
 TEST_F(dt_expression_binary, extends_in_ternary) {
   const char *source = "T extends U ? a : b";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* T extends U is the condition, ? a : b forms the ternary */
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
@@ -921,11 +923,11 @@ TEST_F(dt_expression_binary, extends_in_ternary) {
 /* ---- typeof(x) extends i32: typeof as left operand of extends ---- */
 TEST_F(dt_expression_binary, typeof_extends_binary) {
   const char *source = "typeof(x) extends i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -941,11 +943,11 @@ TEST_F(dt_expression_binary, typeof_extends_binary) {
 /* ---- T extends std::Vec: namespace access as right operand ---- */
 TEST_F(dt_expression_binary, extends_namespace) {
   const char *source = "T extends std::Vec";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 

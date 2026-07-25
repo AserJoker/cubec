@@ -1,4 +1,4 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/resolver.h"
 #include "engine/symbol.h"
 #include "engine/semantic_type.h"
@@ -11,18 +11,9 @@ using ::testing::Test;
 
 class dt_resolver : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
-  checker_t ctx;
-
-  void SetUp() override {
-    CubecTest::SetUp();
-    ctx = checker_create(allocator);
-  }
-
-  void TearDown() override {
-    checker_dispose(ctx);
-    CubecTest::TearDown();
-  }
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* Test resolver via checker context — the resolver is tested through

@@ -1,10 +1,9 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/diagnostic.h"
 #include "engine/symbol.h"
 #include "engine/semantic_type.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 #include <string>
@@ -16,37 +15,34 @@ using ::testing::Test;
 #define BUILTIN_ASSERT "builtin func assert(condition: bool): void;\n"
 
 struct compile_result {
-  checker_t ctx;
+  context_t ctx;
   node_t prog;
   vec_t tokens;
 };
 
-static struct compile_result compile_source(allocator_t allocator,
+static struct compile_result compile_source(context_t ctx,
                                             const char *source) {
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  allocator_t allocator = ctx->allocator;
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   size_t pos = 0;
-  node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+  node_t prog = read_program_node(ctx, tokens, &pos, "test.cubec");
 
   /* If parsing failed, fail the test immediately */
-  if (g_error) {
-    std::string err_msg(g_error->message);
-    error_clear();
+  if (!prog || !tokens) {
     GTEST_MESSAGE_AT_(__FILE__, __LINE__,
-        ("Parsing failed: " + err_msg).c_str(),
+        "Parsing failed",
         ::testing::TestPartResult::kFatalFailure);
     return (struct compile_result){NULL, prog, tokens};
   }
 
-  checker_t ctx = checker_create(allocator);
   source_cache_load(ctx->sources, "test.cubec", source, false);
 
-  checker_check_program(ctx, prog);
+  context_check_program(ctx, prog);
   return (struct compile_result){ctx, prog, tokens};
 }
 
 static void compile_result_cleanup(struct compile_result *r,
                                    allocator_t allocator) {
-  if (r->ctx) checker_dispose(r->ctx);
   allocator_free(allocator, &r->prog);
   allocator_free(allocator, &r->tokens);
 }
@@ -55,11 +51,9 @@ static void compile_result_cleanup(struct compile_result *r,
 
 class dt_typeof : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
-  void TearDown() override {
-    error_clear();
-    CubecTest::TearDown();
-  }
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ===== typeof expression ===== */
@@ -69,7 +63,7 @@ TEST_F(dt_typeof, typeof_literal) {
     "test \"typeof_lit\" {\n"
     "  var x: typeof(42) = undefined;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -81,7 +75,7 @@ TEST_F(dt_typeof, sizeof_primitive) {
     "test \"sizeof_i32\" {\n"
     "  var s = sizeof(i32);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -91,7 +85,7 @@ TEST_F(dt_typeof, sizeof_pointer) {
     "test \"sizeof_ptr\" {\n"
     "  var s = sizeof(*i32);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -103,7 +97,7 @@ TEST_F(dt_typeof, alignof_primitive) {
     "test \"alignof_i32\" {\n"
     "  var a = alignof(i32);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -118,7 +112,7 @@ TEST_F(dt_typeof, sizeof_does_not_evaluate) {
     "test \"sizeof_no_eval\" {\n"
     "  var s = sizeof(42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0) << "sizeof(42) should not produce errors";
   compile_result_cleanup(&r, allocator);
 }
@@ -132,7 +126,7 @@ TEST_F(dt_typeof, typeof_does_not_evaluate) {
     "test \"typeof_no_eval\" {\n"
     "  var x: typeof(assert(true)) = undefined;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -144,7 +138,7 @@ TEST_F(dt_typeof, alignof_does_not_evaluate) {
     "test \"alignof_no_eval\" {\n"
     "  var a = alignof(42);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }

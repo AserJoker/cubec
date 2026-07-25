@@ -3,7 +3,7 @@
  * @brief Tests for panic builtin function.
  */
 
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/builtin.h"
 #include "engine/comptime_eval.h"
 #include "engine/comptime_value.h"
@@ -12,7 +12,6 @@
 #include "cubec/ast_factory.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 #include <string>
@@ -25,47 +24,42 @@ using ::testing::Test;
 #define BUILTIN_PANIC "builtin func panic(msg: str): void;\n"
 
 struct compile_result {
-  checker_t ctx;
+  context_t ctx;
   node_t prog;
   vec_t tokens;
 };
 
-static struct compile_result compile_source(allocator_t allocator,
+static struct compile_result compile_source(context_t ctx,
                                             const char *source) {
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  allocator_t allocator = ctx->allocator;
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   size_t pos = 0;
-  node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+  node_t prog = read_program_node(ctx, tokens, &pos, "test.cubec");
   struct compile_result cr;
-  if (g_error) {
-    std::string err_msg(g_error->message);
-    error_clear();
+  if (!prog || !tokens) {
     GTEST_MESSAGE_AT_(__FILE__, __LINE__,
-        ("Parsing failed: " + err_msg).c_str(),
+        "Parsing failed",
         ::testing::TestPartResult::kFatalFailure);
     cr.ctx = NULL; cr.prog = prog; cr.tokens = tokens;
     return cr;
   }
-  checker_t ctx = checker_create(allocator);
   source_cache_load(ctx->sources, "test.cubec", source, false);
-  checker_check_program(ctx, prog);
+  context_check_program(ctx, prog);
   cr.ctx = ctx; cr.prog = prog; cr.tokens = tokens;
   return cr;
 }
 
 static void compile_result_cleanup(struct compile_result *r,
                                    allocator_t allocator) {
-  if (r->ctx) checker_dispose(r->ctx);
   allocator_free(allocator, &r->prog);
   allocator_free(allocator, &r->tokens);
 }
 
 class dt_builtin_panic : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
-  void TearDown() override {
-    error_clear();
-    CubecTest::TearDown();
-  }
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ===== panic with message ===== */
@@ -75,9 +69,9 @@ TEST_F(dt_builtin_panic, panic_with_string) {
     "comptime if (true) {\n"
     "  panic(\"something went wrong\");\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
 
   /* Check that the diagnostic contains "panic: something went wrong" */
   bool found = false;
@@ -108,11 +102,11 @@ TEST_F(dt_builtin_panic, panic_aborts_block) {
     "  panic(\"stop\");\n"
     "  var x: i32 = 1;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   /* Should have exactly 1 error (the panic), not additional errors.
      fatal_error should be set, stopping all further evaluation. */
-  int err_count = checker_get_error_count(r.ctx);
+  int err_count = context_get_error_count(r.ctx);
   EXPECT_EQ(err_count, 1);
   EXPECT_TRUE(r.ctx->fatal_error);
 
@@ -129,9 +123,9 @@ TEST_F(dt_builtin_panic, panic_in_function) {
     "comptime if (true) {\n"
     "  fail();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
 }
@@ -143,9 +137,9 @@ TEST_F(dt_builtin_panic, panic_no_args) {
     "comptime if (true) {\n"
     "  panic();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
 }
@@ -153,11 +147,11 @@ TEST_F(dt_builtin_panic, panic_no_args) {
 /* ===== panic builtin registered ===== */
 
 TEST_F(dt_builtin_panic, panic_builtin_registered) {
-  checker_t ctx = checker_create(allocator);
+  context_t ctx = context_create(allocator);
   builtin_entry_t be = builtin_table_lookup(ctx->builtin_table, "panic");
   EXPECT_NE(be, nullptr);
   EXPECT_NE(be->eval_call, nullptr);
-  checker_dispose(ctx);
+  context_dispose(ctx);
 }
 
 /* ===== panic stops compilation (fatal) ===== */
@@ -172,12 +166,12 @@ TEST_F(dt_builtin_panic, panic_fatal_stops_later_tests) {
     "test \"after_panic\" {\n"
     "  assert(false);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   /* Should have 1 error (panic) and fatal_error set.
      The test block should be skipped entirely (not even counted). */
   EXPECT_TRUE(r.ctx->fatal_error);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
 }
@@ -191,7 +185,7 @@ TEST_F(dt_builtin_panic, panic_in_function_fatal) {
     "comptime if (true) {\n"
     "  boom();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_TRUE(r.ctx->fatal_error);
 
@@ -208,11 +202,11 @@ TEST_F(dt_builtin_panic, assert_unwrap_wrong_variant_fatal) {
     "  _ = item._value.!;\n"
     "  assert(false);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_TRUE(r.ctx->fatal_error);
   /* Should have the panic error, but NOT the assert(false) error */
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
 }
@@ -232,11 +226,11 @@ TEST_F(dt_builtin_panic, assert_unwrap_in_function_fatal) {
     "  var res = boom();\n"
     "  assert(false);\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_TRUE(r.ctx->fatal_error);
   /* Should have the panic error from .!, but NOT the assert(false) error */
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
 
   compile_result_cleanup(&r, allocator);
 }

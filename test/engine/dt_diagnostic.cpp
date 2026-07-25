@@ -7,7 +7,9 @@ using ::testing::Test;
 
 class dt_diagnostic : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 TEST_F(dt_diagnostic, create_and_empty) {

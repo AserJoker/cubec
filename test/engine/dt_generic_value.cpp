@@ -1,10 +1,9 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/diagnostic.h"
 #include "engine/symbol.h"
 #include "engine/semantic_type.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 #include <string>
@@ -16,37 +15,34 @@ using ::testing::Test;
 #define BUILTIN_ASSERT "builtin func assert(condition: bool): void;\n"
 
 struct compile_result {
-  checker_t ctx;
+  context_t ctx;
   node_t prog;
   vec_t tokens;
 };
 
-static struct compile_result compile_source(allocator_t allocator,
+static struct compile_result compile_source(context_t ctx,
                                             const char *source) {
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  allocator_t allocator = ctx->allocator;
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   size_t pos = 0;
-  node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+  node_t prog = read_program_node(ctx, tokens, &pos, "test.cubec");
 
   /* If parsing failed, fail the test immediately */
-  if (g_error) {
-    std::string err_msg(g_error->message);
-    error_clear();
+  if (!prog || !tokens) {
     GTEST_MESSAGE_AT_(__FILE__, __LINE__,
-        ("Parsing failed: " + err_msg).c_str(),
+        "Parsing failed",
         ::testing::TestPartResult::kFatalFailure);
     return (struct compile_result){NULL, prog, tokens};
   }
 
-  checker_t ctx = checker_create(allocator);
   source_cache_load(ctx->sources, "test.cubec", source, false);
 
-  checker_check_program(ctx, prog);
+  context_check_program(ctx, prog);
   return (struct compile_result){ctx, prog, tokens};
 }
 
 static void compile_result_cleanup(struct compile_result *r,
                                    allocator_t allocator) {
-  if (r->ctx) checker_dispose(r->ctx);
   allocator_free(allocator, &r->prog);
   allocator_free(allocator, &r->tokens);
 }
@@ -55,25 +51,23 @@ static void compile_result_cleanup(struct compile_result *r,
 
 class dt_generic_value : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
-  void TearDown() override {
-    error_clear();
-    CubecTest::TearDown();
-  }
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ===== Value generic param: basic declaration ===== */
 
 TEST_F(dt_generic_value, value_param_func_declaration) {
   const char *src = "func foo[N: u64](): void {}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
 
 TEST_F(dt_generic_value, value_param_struct_declaration) {
   const char *src = "struct Buffer[N: u64, T] { data: [N]T; }\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -86,7 +80,7 @@ TEST_F(dt_generic_value, value_param_int_instantiation) {
     "test \"val_int\" {\n"
     "  foo[5]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -98,7 +92,7 @@ TEST_F(dt_generic_value, value_param_different_values_distinct_types) {
     "  foo[5]();\n"
     "  foo[10]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -111,7 +105,7 @@ TEST_F(dt_generic_value, value_param_struct_type_annotation) {
     "test \"struct_type\" {\n"
     "  var x: Buffer[64, i32] = undefined;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -125,7 +119,7 @@ TEST_F(dt_generic_value, value_param_bool) {
     "  cond[true]();\n"
     "  cond[false]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -139,7 +133,7 @@ TEST_F(dt_generic_value, value_param_type_mismatch) {
     "test \"mismatch\" {\n"
     "  foo[true]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -153,7 +147,7 @@ TEST_F(dt_generic_value, value_param_not_constant) {
     "  var n = 5;\n"
     "  foo[n]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -167,7 +161,7 @@ TEST_F(dt_generic_value, same_value_cached) {
     "  foo[5]();\n"
     "  foo[5]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -180,7 +174,7 @@ TEST_F(dt_generic_value, value_param_comptime_expr) {
     "test \"comptime_expr\" {\n"
     "  foo[2 + 3]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -194,7 +188,7 @@ TEST_F(dt_generic_value, value_param_struct_init_list_simple) {
     "test \"struct_init_simple\" {\n"
     "  var x = .Pair[i32, i64]{ .first = 1, .second = 2 };\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -206,7 +200,7 @@ TEST_F(dt_generic_value, value_param_struct_init_list) {
     "test \"struct_init\" {\n"
     "  var x: Buffer[64, i32] = undefined;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -218,7 +212,7 @@ TEST_F(dt_generic_value, value_param_struct_init_with_field) {
     "test \"struct_init_field\" {\n"
     "  var x = .Wrapper[64]{ .size = 64 };\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -230,7 +224,7 @@ TEST_F(dt_generic_value, value_param_struct_init_array_field) {
     "test \"struct_init_arr\" {\n"
     "  var x: Buffer[3, i32] = .{ .data = .{ 1, 2, 3 } };\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -244,7 +238,7 @@ TEST_F(dt_generic_value, value_param_negative_int) {
     "test \"neg_int\" {\n"
     "  foo[-1]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -256,7 +250,7 @@ TEST_F(dt_generic_value, value_param_zero_length_array) {
     "test \"zero_len\" {\n"
     "  foo[0]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -269,7 +263,7 @@ TEST_F(dt_generic_value, value_param_same_value_same_type) {
     "  foo[5]();\n"
     "  foo[5]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -282,7 +276,7 @@ TEST_F(dt_generic_value, value_param_different_values_distinct_instances) {
     "  foo[3]();\n"
     "  foo[7]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -294,7 +288,7 @@ TEST_F(dt_generic_value, value_param_comptime_complex_expr) {
     "test \"comptime_complex\" {\n"
     "  foo[(2 + 3) * 4]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -306,7 +300,7 @@ TEST_F(dt_generic_value, value_param_struct_with_value_in_field) {
     "test \"field_type\" {\n"
     "  var x: Buffer[5, i32] = undefined;\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -318,7 +312,7 @@ TEST_F(dt_generic_value, value_param_bool_false_instantiation) {
     "test \"val_bool_false\" {\n"
     "  cond[false]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_EQ(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }
@@ -330,7 +324,7 @@ TEST_F(dt_generic_value, value_param_bool_type_mismatch_int) {
     "test \"bool_mismatch\" {\n"
     "  cond[42]();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   EXPECT_GT(r.ctx->error_count, 0);
   compile_result_cleanup(&r, allocator);
 }

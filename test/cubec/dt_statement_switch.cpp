@@ -10,16 +10,18 @@ using ::testing::Test;
 
 class dt_statement_switch : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 TEST_F(dt_statement_switch, simple_switch) {
   const char *source = "switch(x) { case(1) -> { } case(2) -> { } else -> { } }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_switch(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_switch(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_SWITCH);
 
@@ -52,11 +54,11 @@ TEST_F(dt_statement_switch, simple_switch) {
 
 TEST_F(dt_statement_switch, multi_value_case) {
   const char *source = "switch(x) { case(1, 2, 3) -> { } else -> { } }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_switch(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_switch(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_switch_t sw = (cubec_statement_switch_t)node;
@@ -70,11 +72,11 @@ TEST_F(dt_statement_switch, multi_value_case) {
 
 TEST_F(dt_statement_switch, switch_no_else) {
   const char *source = "switch(x) { case(1) -> { } case(2) -> { } }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_switch(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_switch(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_switch_t sw = (cubec_statement_switch_t)node;
@@ -86,11 +88,11 @@ TEST_F(dt_statement_switch, switch_no_else) {
 
 TEST_F(dt_statement_switch, switch_only_else) {
   const char *source = "switch(x) { else -> { } }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_switch(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_switch(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_switch_t sw = (cubec_statement_switch_t)node;
@@ -104,11 +106,11 @@ TEST_F(dt_statement_switch, switch_only_else) {
 
 TEST_F(dt_statement_switch, switch_empty) {
   const char *source = "switch(x) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_switch(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_switch(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_switch_t sw = (cubec_statement_switch_t)node;
@@ -120,11 +122,11 @@ TEST_F(dt_statement_switch, switch_empty) {
 
 TEST_F(dt_statement_switch, clone) {
   const char *source = "switch(x) { case(1) -> { } else -> { } }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_switch(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_switch(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -138,11 +140,11 @@ TEST_F(dt_statement_switch, clone) {
 
 TEST_F(dt_statement_switch, move) {
   const char *source = "switch(x) { case(1) -> { } else -> { } }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_switch(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_switch(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);
@@ -156,11 +158,11 @@ TEST_F(dt_statement_switch, move) {
 
 TEST_F(dt_statement_switch, via_read_statement) {
   const char *source = "switch(x) { case(1) -> { } else -> { } }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_SWITCH);
 
@@ -170,11 +172,11 @@ TEST_F(dt_statement_switch, via_read_statement) {
 
 TEST_F(dt_statement_switch, non_switch_returns_null) {
   const char *source = "if(x) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_switch(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_switch(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -182,11 +184,11 @@ TEST_F(dt_statement_switch, non_switch_returns_null) {
 
 TEST_F(dt_statement_switch, case_with_expression) {
   const char *source = "switch(x) { case(1 + 1) -> { } }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_switch(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_switch(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_switch_t sw = (cubec_statement_switch_t)node;

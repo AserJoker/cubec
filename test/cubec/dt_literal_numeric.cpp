@@ -1,4 +1,4 @@
-﻿#include "cubec/literal_numeric.h"
+#include "cubec/literal_numeric.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
@@ -8,16 +8,18 @@ using ::testing::Test;
 
 class dt_literal_numeric : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 TEST_F(dt_literal_numeric, parse_non_numeric_returns_null) {
   const char *source = "\"hello\"";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_numeric(allocator, tokens, &position, "test.cubec");
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -25,11 +27,11 @@ TEST_F(dt_literal_numeric, parse_non_numeric_returns_null) {
 
 TEST_F(dt_literal_numeric, parse_integer) {
   const char *source = "42";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_numeric(allocator, tokens, &position, "test.cubec");
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -44,11 +46,11 @@ TEST_F(dt_literal_numeric, parse_integer) {
 
 TEST_F(dt_literal_numeric, parse_float) {
   const char *source = "3.14";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_numeric(allocator, tokens, &position, "test.cubec");
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -63,11 +65,11 @@ TEST_F(dt_literal_numeric, parse_float) {
 
 TEST_F(dt_literal_numeric, parse_integer_with_i32_suffix) {
   const char *source = "42i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_numeric(allocator, tokens, &position, "test.cubec");
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -83,11 +85,11 @@ TEST_F(dt_literal_numeric, parse_integer_with_i32_suffix) {
 
 TEST_F(dt_literal_numeric, parse_integer_with_u64_suffix) {
   const char *source = "100u64";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_numeric(allocator, tokens, &position, "test.cubec");
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -102,11 +104,11 @@ TEST_F(dt_literal_numeric, parse_integer_with_u64_suffix) {
 
 TEST_F(dt_literal_numeric, parse_float_with_f32_suffix) {
   const char *source = "3.14f32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_numeric(allocator, tokens, &position, "test.cubec");
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -121,11 +123,11 @@ TEST_F(dt_literal_numeric, parse_float_with_f32_suffix) {
 
 TEST_F(dt_literal_numeric, parse_float_with_f64_suffix) {
   const char *source = "2.718281828f64";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_numeric(allocator, tokens, &position, "test.cubec");
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -140,11 +142,11 @@ TEST_F(dt_literal_numeric, parse_float_with_f64_suffix) {
 
 TEST_F(dt_literal_numeric, parse_hex_integer) {
   const char *source = "0xFF";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_numeric(allocator, tokens, &position, "test.cubec");
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -159,11 +161,11 @@ TEST_F(dt_literal_numeric, parse_hex_integer) {
 
 TEST_F(dt_literal_numeric, parse_octal_integer) {
   const char *source = "0o755";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_numeric(allocator, tokens, &position, "test.cubec");
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -178,11 +180,11 @@ TEST_F(dt_literal_numeric, parse_octal_integer) {
 
 TEST_F(dt_literal_numeric, parse_binary_integer) {
   const char *source = "0b1010";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_numeric(allocator, tokens, &position, "test.cubec");
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_NUMERIC);
 

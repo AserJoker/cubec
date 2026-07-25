@@ -10,16 +10,18 @@ using ::testing::Test;
 
 class dt_statement_while : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 TEST_F(dt_statement_while, simple_while) {
   const char *source = "while(x > 0) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_while(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_while(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_WHILE);
 
@@ -34,11 +36,11 @@ TEST_F(dt_statement_while, simple_while) {
 
 TEST_F(dt_statement_while, clone) {
   const char *source = "while(x) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_while(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_while(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -52,11 +54,11 @@ TEST_F(dt_statement_while, clone) {
 
 TEST_F(dt_statement_while, move) {
   const char *source = "while(x) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_while(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_while(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);
@@ -70,11 +72,11 @@ TEST_F(dt_statement_while, move) {
 
 TEST_F(dt_statement_while, via_read_statement) {
   const char *source = "while(x > 0) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_WHILE);
 
@@ -84,11 +86,11 @@ TEST_F(dt_statement_while, via_read_statement) {
 
 TEST_F(dt_statement_while, non_while_returns_null) {
   const char *source = "if(x) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_while(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_while(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -100,16 +102,18 @@ TEST_F(dt_statement_while, non_while_returns_null) {
 
 class dt_statement_do_while : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 TEST_F(dt_statement_do_while, simple_do_while) {
   const char *source = "do { } while(x > 0);";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_do_while(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_do_while(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DO_WHILE);
 
@@ -124,11 +128,11 @@ TEST_F(dt_statement_do_while, simple_do_while) {
 
 TEST_F(dt_statement_do_while, clone) {
   const char *source = "do { } while(x);";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_do_while(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_do_while(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -142,11 +146,11 @@ TEST_F(dt_statement_do_while, clone) {
 
 TEST_F(dt_statement_do_while, move) {
   const char *source = "do { } while(x);";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_do_while(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_do_while(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);
@@ -160,11 +164,11 @@ TEST_F(dt_statement_do_while, move) {
 
 TEST_F(dt_statement_do_while, via_read_statement) {
   const char *source = "do { } while(x > 0);";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DO_WHILE);
 
@@ -174,11 +178,11 @@ TEST_F(dt_statement_do_while, via_read_statement) {
 
 TEST_F(dt_statement_do_while, non_do_while_returns_null) {
   const char *source = "while(x) { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_do_while(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement_do_while(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);

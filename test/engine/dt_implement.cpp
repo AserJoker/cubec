@@ -1,4 +1,4 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/comptime_eval.h"
 #include "engine/comptime_value.h"
 #include "engine/diagnostic.h"
@@ -6,7 +6,6 @@
 #include "engine/semantic_type.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 #include <string>
@@ -16,36 +15,33 @@ using ::testing::Test;
 /* ===== helpers ===== */
 
 struct compile_result {
-  checker_t ctx;
+  context_t ctx;
   node_t prog;
   vec_t tokens;
 };
 
-static struct compile_result compile_source(allocator_t allocator,
+static struct compile_result compile_source(context_t ctx,
                                             const char *source) {
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  allocator_t allocator = ctx->allocator;
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   size_t pos = 0;
-  node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+  node_t prog = read_program_node(ctx, tokens, &pos, "test.cubec");
 
-  if (g_error) {
-    std::string err_msg(g_error->message);
-    error_clear();
+  if (!prog || !tokens) {
     GTEST_MESSAGE_AT_(__FILE__, __LINE__,
-        ("Parsing failed: " + err_msg).c_str(),
+        "Parsing failed",
         ::testing::TestPartResult::kFatalFailure);
     return (struct compile_result){NULL, prog, tokens};
   }
 
-  checker_t ctx = checker_create(allocator);
   source_cache_load(ctx->sources, "test.cubec", source, false);
 
-  checker_check_program(ctx, prog);
+  context_check_program(ctx, prog);
   return (struct compile_result){ctx, prog, tokens};
 }
 
 static void compile_result_cleanup(struct compile_result *r,
                                    allocator_t allocator) {
-  if (r->ctx) checker_dispose(r->ctx);
   allocator_free(allocator, &r->prog);
   allocator_free(allocator, &r->tokens);
 }
@@ -54,11 +50,9 @@ static void compile_result_cleanup(struct compile_result *r,
 
 class dt_implement : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
-  void TearDown() override {
-    error_clear();
-    CubecTest::TearDown();
-  }
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ===== struct implement satisfied ===== */
@@ -71,7 +65,7 @@ TEST_F(dt_implement, struct_satisfied) {
       "struct Foo implement Printable {\n"
       "    func to_string(self): str { return \"Foo\"; }\n"
       "}\n";
-  struct compile_result r = compile_source(allocator, src);
+  struct compile_result r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0u);
 
@@ -96,7 +90,7 @@ TEST_F(dt_implement, struct_missing_method) {
       "}\n"
       "struct Foo implement Printable {\n"
       "}\n";
-  struct compile_result r = compile_source(allocator, src);
+  struct compile_result r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0u);
 
@@ -109,7 +103,7 @@ TEST_F(dt_implement, struct_non_interface) {
   const char *src =
       "struct Foo implement i32 {\n"
       "}\n";
-  struct compile_result r = compile_source(allocator, src);
+  struct compile_result r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_GT(r.ctx->error_count, 0u);
 
@@ -130,7 +124,7 @@ TEST_F(dt_implement, struct_multiple) {
       "    func a(self): i32 { return 1; }\n"
       "    func b(self): f64 { return 2.0; }\n"
       "}\n";
-  struct compile_result r = compile_source(allocator, src);
+  struct compile_result r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0u);
 
@@ -155,7 +149,7 @@ TEST_F(dt_implement, union_satisfied) {
       "    empty: void;\n"
       "    func get_value(self): i32 { return 0; }\n"
       "}\n";
-  struct compile_result r = compile_source(allocator, src);
+  struct compile_result r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0u);
 
@@ -179,7 +173,7 @@ TEST_F(dt_implement, struct_generic_interface) {
       "    value: T;\n"
       "    func get(self): T { return self.value; }\n"
       "}\n";
-  struct compile_result r = compile_source(allocator, src);
+  struct compile_result r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   /* Generic structs resolve interface type but skip constraint check */
   EXPECT_EQ(r.ctx->error_count, 0u);
@@ -202,7 +196,7 @@ TEST_F(dt_implement, struct_no_implement) {
       "struct Foo {\n"
       "    x: i32;\n"
       "}\n";
-  struct compile_result r = compile_source(allocator, src);
+  struct compile_result r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0u);
 
@@ -231,7 +225,7 @@ TEST_F(dt_implement, multi_constraint_satisfied) {
       "func process[T extends Printable & Serializable](x: T): str {\n"
       "    return x.to_string();\n"
       "}\n";
-  struct compile_result r = compile_source(allocator, src);
+  struct compile_result r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   EXPECT_EQ(r.ctx->error_count, 0u);
 
@@ -253,7 +247,7 @@ TEST_F(dt_implement, multi_constraint_partial_fail) {
       "    return x.to_string();\n"
       "}\n"
       "test \"t\" { process(.Foo {}); }\n";
-  struct compile_result r = compile_source(allocator, src);
+  struct compile_result r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
   /* Foo only implements Printable, not Serializable — should fail */
   EXPECT_GT(r.ctx->error_count, 0u);

@@ -11,18 +11,20 @@ using ::testing::Test;
 
 class dt_statement_using : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ---- using with type annotation ---- */
 
 TEST_F(dt_statement_using, using_with_type) {
   const char *source = "using a:Item = .{};";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION);
 
@@ -39,11 +41,11 @@ TEST_F(dt_statement_using, using_with_type) {
 
 TEST_F(dt_statement_using, using_inferred_type) {
   const char *source = "using a = .Item{};";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION);
 
@@ -58,11 +60,11 @@ TEST_F(dt_statement_using, using_inferred_type) {
 
 TEST_F(dt_statement_using, export_using) {
   const char *source = "export using a:Item = .{};";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION);
 
@@ -78,11 +80,11 @@ TEST_F(dt_statement_using, export_using) {
 
 TEST_F(dt_statement_using, using_undefined_error) {
   const char *source = "using a:Item = undefined;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   /* Parsing succeeds — undefined is still valid syntax,
    * the error is reported by the checker, not the parser */
   ASSERT_NE(node, nullptr);
@@ -99,11 +101,11 @@ TEST_F(dt_statement_using, using_undefined_error) {
 
 TEST_F(dt_statement_using, using_extern_conflict) {
   const char *source = "extern using a:Item;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -113,11 +115,11 @@ TEST_F(dt_statement_using, using_extern_conflict) {
 
 TEST_F(dt_statement_using, using_builtin_conflict) {
   const char *source = "builtin using a:Item;";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -127,11 +129,11 @@ TEST_F(dt_statement_using, using_builtin_conflict) {
 
 TEST_F(dt_statement_using, using_comptime_conflict) {
   const char *source = "comptime using a:Item = .{};";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(allocator, tokens, &position, "test.cubec");
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);

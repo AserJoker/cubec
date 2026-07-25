@@ -1,9 +1,8 @@
-#include "engine/checker.h"
+#include "engine/context.h"
 #include "engine/diagnostic.h"
 #include "engine/symbol.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include "core/error.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 #include <string>
@@ -15,48 +14,43 @@ using ::testing::Test;
 #define BUILTIN_ASSERT "builtin func assert(condition: bool): void;\n"
 
 struct compile_result {
-  checker_t ctx;
+  context_t ctx;
   node_t prog;
   vec_t tokens;
 };
 
-static struct compile_result compile_source(allocator_t allocator,
+static struct compile_result compile_source(context_t ctx,
                                             const char *source) {
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  allocator_t allocator = ctx->allocator;
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   size_t pos = 0;
-  node_t prog = read_program_node(allocator, tokens, &pos, "test.cubec");
+  node_t prog = read_program_node(ctx, tokens, &pos, "test.cubec");
 
   /* If parsing failed, fail the test immediately */
-  if (g_error) {
-    std::string err_msg(g_error->message);
-    error_clear();
+  if (!prog || !tokens) {
     GTEST_MESSAGE_AT_(__FILE__, __LINE__,
-        ("Parsing failed: " + err_msg).c_str(),
+        "Parsing failed",
         ::testing::TestPartResult::kFatalFailure);
     return (struct compile_result){NULL, prog, tokens};
   }
 
-  checker_t ctx = checker_create(allocator);
   source_cache_load(ctx->sources, "test.cubec", source, false);
 
-  checker_check_program(ctx, prog);
+  context_check_program(ctx, prog);
   return (struct compile_result){ctx, prog, tokens};
 }
 
 static void compile_result_cleanup(struct compile_result *r,
                                    allocator_t allocator) {
-  if (r->ctx) checker_dispose(r->ctx);
   allocator_free(allocator, &r->prog);
   allocator_free(allocator, &r->tokens);
 }
 
 class dt_generic_pack : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
-  void TearDown() override {
-    error_clear();
-    CubecTest::TearDown();
-  }
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ===== Pack parameter declaration ===== */
@@ -65,8 +59,8 @@ TEST_F(dt_generic_pack, pack_param_declaration) {
   /* func foo[...Args](): void {} — pack parameter with no constraint */
   const char *src = BUILTIN_ASSERT
     "func foo[...Args](): void {}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -74,8 +68,8 @@ TEST_F(dt_generic_pack, pack_param_must_be_last) {
   /* Pack parameter must be the last in the generic parameter list */
   const char *src = BUILTIN_ASSERT
     "func foo[...Args, T](): void {}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -83,8 +77,8 @@ TEST_F(dt_generic_pack, only_one_rest_param) {
   /* Only one rest parameter is allowed */
   const char *src = BUILTIN_ASSERT
     "func foo[...A, ...B](): void {}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_GT(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -95,8 +89,8 @@ TEST_F(dt_generic_pack, pack_param_single_explicit) {
   const char *src = BUILTIN_ASSERT
     "func foo[...Args](): void {}\n"
     "test \"t\" { foo[i32, f64](); }\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -105,8 +99,8 @@ TEST_F(dt_generic_pack, pack_param_empty_expansion) {
   const char *src = BUILTIN_ASSERT
     "func foo[...Args](): void {}\n"
     "test \"t\" { foo[](); }\n";
-  auto r = compile_source(allocator, src);
-  if (checker_get_error_count(r.ctx) > 0) {
+  auto r = compile_source(ctx, src);
+  if (context_get_error_count(r.ctx) > 0) {
     size_t dc = diagnostic_list_get_size(r.ctx->diagnostics);
     for (size_t i = 0; i < dc; i++) {
       struct diagnostic *d = diagnostic_list_get(r.ctx->diagnostics, i);
@@ -114,7 +108,7 @@ TEST_F(dt_generic_pack, pack_param_empty_expansion) {
         printf("  DIAG[%zu]: %s\n", i, d->message);
     }
   }
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -125,8 +119,8 @@ TEST_F(dt_generic_pack, mixed_regular_and_pack) {
   const char *src = BUILTIN_ASSERT
     "func foo[T, ...Args](x: T, ...args: Args): void {}\n"
     "test \"t\" { foo(1); foo(1, 2, 3); }\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -138,8 +132,8 @@ TEST_F(dt_generic_pack, pack_in_function_type) {
     "func foo[R, ...Args](fn: func(...Args) -> R): R {\n"
     "  return fn();\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -150,8 +144,8 @@ TEST_F(dt_generic_pack, pack_inference_from_call) {
   const char *src = BUILTIN_ASSERT
     "func foo[...Args](): void {}\n"
     "test \"t\" { foo[i32, f64](); }\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -162,8 +156,8 @@ TEST_F(dt_generic_pack, pack_expansion_in_params) {
   const char *src = BUILTIN_ASSERT
     "func foo[...Args](...args: Args): void {}\n"
     "test \"t\" { foo[i32, f64](1, 2.0); }\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -177,8 +171,8 @@ TEST_F(dt_generic_pack, decorator_pattern_e2e) {
     "    return fn(...args);\n"
     "  };\n"
     "}\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -191,8 +185,8 @@ TEST_F(dt_generic_pack, pack_with_constraint) {
     "  return 0;\n"
     "}\n"
     "test \"t\" { sum[i32, i32](1, 2); }\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -206,8 +200,8 @@ TEST_F(dt_generic_pack, pack_spread_in_init_list) {
     "  return .Item{...args};\n"
     "}\n"
     "test \"t\" { make(1, 2, 3); }\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -219,8 +213,8 @@ TEST_F(dt_generic_pack, pack_spread_init_empty) {
     "  return .Item{...args};\n"
     "}\n"
     "test \"t\" { make(); }\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -232,8 +226,8 @@ TEST_F(dt_generic_pack, pack_spread_init_mixed) {
     "  return .Item{first, ...args};\n"
     "}\n"
     "test \"t\" { make(1, 2, 3); }\n";
-  auto r = compile_source(allocator, src);
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  auto r = compile_source(ctx, src);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
@@ -245,10 +239,10 @@ TEST_F(dt_generic_pack, pack_spread_init_too_many) {
     "  return .Item{...args};\n"
     "}\n"
     "test \"t\" { make(1, 2); }\n";
-  auto r = compile_source(allocator, src);
+  auto r = compile_source(ctx, src);
   /* Note: type checking at definition time cannot detect pack count mismatch;
      the error would surface at comptime execution. For now, expect 0 errors
      from the checker (the call itself is syntactically valid). */
-  EXPECT_EQ(checker_get_error_count(r.ctx), 0);
+  EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }

@@ -13,7 +13,9 @@ using ::testing::Test;
 
 class dt_expression_type_enum : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
 };
 
 /* ==========================================================================
@@ -23,11 +25,11 @@ protected:
 /* Simple: enum { } */
 TEST_F(dt_expression_type_enum, simple_empty) {
   const char *source = "enum { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_ENUM);
 
@@ -43,11 +45,11 @@ TEST_F(dt_expression_type_enum, simple_empty) {
 /* enum with items: enum { Red, Green, Blue } */
 TEST_F(dt_expression_type_enum, with_items) {
   const char *source = "enum { Red, Green, Blue }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_ENUM);
 
@@ -71,11 +73,11 @@ TEST_F(dt_expression_type_enum, with_items) {
 /* enum with type and value: enum { A: u8 = 1 } */
 TEST_F(dt_expression_type_enum, with_type_and_value) {
   const char *source = "enum { A: u8 = 1 }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_ENUM);
 
@@ -100,11 +102,11 @@ TEST_F(dt_expression_type_enum, with_type_and_value) {
 /* Pointer to enum: *enum { A, B } */
 TEST_F(dt_expression_type_enum, pointer_to_enum) {
   const char *source = "*enum { A, B }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -122,11 +124,11 @@ TEST_F(dt_expression_type_enum, pointer_to_enum) {
 
 TEST_F(dt_expression_type_enum, consume_all_tokens) {
   const char *source = "enum { Red, Green }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   skip_whitespace(tokens, &position);
@@ -144,11 +146,11 @@ TEST_F(dt_expression_type_enum, consume_all_tokens) {
 
 TEST_F(dt_expression_type_enum, non_enum_returns_null) {
   const char *source = "i32";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type_enum(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type_enum(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -160,11 +162,11 @@ TEST_F(dt_expression_type_enum, non_enum_returns_null) {
 
 TEST_F(dt_expression_type_enum, clone) {
   const char *source = "enum { Red, Green }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
@@ -183,11 +185,11 @@ TEST_F(dt_expression_type_enum, clone) {
 
 TEST_F(dt_expression_type_enum, move) {
   const char *source = "enum { Red }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);
@@ -209,11 +211,11 @@ TEST_F(dt_expression_type_enum, move) {
 
 TEST_F(dt_expression_type_enum, via_read_atom) {
   const char *source = "enum { Red }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_atom(allocator, tokens, &position, "test.cubec");
+  node_t node = read_atom(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_ENUM);
 
@@ -223,11 +225,11 @@ TEST_F(dt_expression_type_enum, via_read_atom) {
 
 TEST_F(dt_expression_type_enum, via_read_expression) {
   const char *source = "enum { }";
-  vec_t tokens = resolve_token_list(allocator, "test.cubec", source);
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(allocator, tokens, &position, "test.cubec");
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_ENUM);
 
