@@ -1,6 +1,7 @@
 #include "cubec/statement_return.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
+#include "cubec/node_error.h"
 #include "core/allocator.h"
 #include "core/node.h"
 #include "core/token.h"
@@ -10,6 +11,7 @@
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -103,7 +105,7 @@ node_t read_statement_return(context_t ctx, vec_t tokens,
   if (!_is_symbol(tokens, current, ";")) {
     expression = read_expression(ctx, tokens, &current, filename);
     if (!expression) {
-      goto cleanup;
+      goto onerror;
     }
     skip_whitespace(tokens, &current);
   }
@@ -112,7 +114,7 @@ node_t read_statement_return(context_t ctx, vec_t tokens,
   token_t semi = vec_get(tokens, current);
   if (!semi || !token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
     location_t *loc = token_get_location(semi);
-    goto cleanup;
+    goto onerror;
   }
   current++;
 
@@ -134,10 +136,13 @@ node_t read_statement_return(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
+onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid return statement");
+  ctx->error_count++;
   allocator_free(allocator, &expression);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_return_stmt(context_t ctx, location_t loc,

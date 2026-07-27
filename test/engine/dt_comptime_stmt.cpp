@@ -98,8 +98,8 @@ TEST_F(dt_comptime_stmt, comptime_var_no_init_error) {
   vec_t tokens = resolve_token_list(ctx, "test.cubec", src);
   size_t pos = 0;
   node_t prog = read_program_node(ctx, tokens, &pos, "test.cubec");
-  /* Parse-time error: prog should be null */
-  EXPECT_EQ(prog, nullptr);
+  /* Error recovery: program node is returned but error was recorded */
+  EXPECT_GT(context_get_error_count(ctx), 0);
   allocator_free(allocator, &prog);
   allocator_free(allocator, &tokens);
 }
@@ -240,7 +240,8 @@ TEST_F(dt_comptime_stmt, local_comptime_var_no_init_error) {
   vec_t tokens = resolve_token_list(ctx, "test.cubec", src);
   size_t pos = 0;
   node_t prog = read_program_node(ctx, tokens, &pos, "test.cubec");
-  EXPECT_EQ(prog, nullptr);
+  /* Error recovery: program node is returned but error was recorded */
+  EXPECT_GT(context_get_error_count(ctx), 0);
   allocator_free(allocator, &prog);
   allocator_free(allocator, &tokens);
 }

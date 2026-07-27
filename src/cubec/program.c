@@ -1,6 +1,7 @@
 #include "cubec/program.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
+#include "cubec/node_error.h"
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/node.h"
@@ -22,8 +23,9 @@
 #include "cubec/statement_test.h"
 #include "cubec/statement_comptime.h"
 #include "cubec/token.h"
-#include <stdint.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
+#include <stdint.h>
 
 static void _cubec_program_node_init(cubec_program_node_t self,
                                      allocator_t allocator,
@@ -89,56 +91,122 @@ node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
 
     /* Try statement_import (import ...) */
     node_t statement = read_statement_import(ctx, tokens, &current, filename);
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
+    }
     if (!statement) {
       /* Try statement_export_from (export * from / export { } from) */
       statement = read_statement_export_from(ctx, tokens, &current, filename);
+    }
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
     }
     if (!statement) {
       /* Try statement_declaration (var ...) */
       statement = read_statement_declaration(ctx, tokens, &current, filename);
     }
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
+    }
     if (!statement) {
       /* Try statement_declaration_type (type ...) */
       statement = read_statement_declaration_type(ctx, tokens, &current, filename);
+    }
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
     }
     if (!statement) {
       /* Try statement_function (func ... / export func ... / inline func ... / extern func ...) */
       statement = read_statement_function(ctx, tokens, &current, filename);
     }
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
+    }
     if (!statement) {
       /* Try statement_interface (interface ... / export interface ...) */
       statement = read_statement_interface(ctx, tokens, &current, filename);
+    }
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
     }
     if (!statement) {
       /* Try statement_struct (struct ... / export struct ...) */
       statement = read_statement_struct(ctx, tokens, &current, filename);
     }
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
+    }
     if (!statement) {
       /* Try statement_enum (enum ... / export enum ...) */
       statement = read_statement_enum(ctx, tokens, &current, filename);
+    }
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
     }
     if (!statement) {
       /* Try statement_cunion (cunion ...) */
       statement = read_statement_cunion(ctx, tokens, &current, filename);
     }
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
+    }
     if (!statement) {
       /* Try statement_union (union ... / export union ...) */
       statement = read_statement_union(ctx, tokens, &current, filename);
+    }
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
     }
     if (!statement) {
       /* Try statement_test (test "name" { }) */
       statement = read_statement_test(ctx, tokens, &current, filename);
     }
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
+    }
     if (!statement) {
       /* Try comptime block/if/for (comptime { } / comptime if / comptime for) */
       statement = read_statement_comptime(ctx, tokens, &current, filename);
+    }
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
     }
     if (!statement) {
       /* Try statement_empty (;) */
       statement = read_statement_empty(ctx, tokens, &current, filename);
     }
+    if (node_is_error(statement)) {
+      vec_push(node->statements, statement);
+      continue;
+    }
     if (!statement) {
-      break;
+      /* No parser matched — check for unrecognized token */
+      token_t next = vec_get(tokens, current);
+      if (next && token_get_kind(next) != CUBEC_TOKEN_EOF) {
+        /* Record diagnostic, skip bad token, create StatementError */
+        location_t loc = *token_get_location(next);
+        loc.filename = filename;
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, loc,
+                             "unexpected token at top level");
+        ctx->error_count++;
+        current++;
+        statement = cubec_ast_create_error_stmt(ctx, loc);
+        vec_push(node->statements, statement);
+        continue;
+      }
+      break;  /* EOF — normal end */
     }
     vec_push(node->statements, statement);
   }

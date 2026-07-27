@@ -6,8 +6,10 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -119,6 +121,8 @@ node_t read_expression_prefix(context_t ctx, vec_t tokens,
   if (!is_prefix_operator_token(op_token)) {
     return NULL;
   }
+  location_t start_location = *token_get_location(op_token);
+  start_location.filename = filename;
   current++;
 
   /* Build operator string */
@@ -129,6 +133,7 @@ node_t read_expression_prefix(context_t ctx, vec_t tokens,
 
   /* Parse operand via read_unary (prefix unary binds tighter than binary) */
   right = read_unary(ctx, tokens, &current, filename);
+  if (node_is_error(right)) { allocator_free(allocator, &opt); return right; }
   if (!right) {
     goto onerror;
   }
@@ -147,10 +152,13 @@ node_t read_expression_prefix(context_t ctx, vec_t tokens,
   return (node_t)node;
 
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid prefix expression");
+  ctx->error_count++;
   allocator_free(allocator, &opt);
   allocator_free(allocator, &right);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
@@ -281,6 +289,7 @@ static node_t read_binary_rhs(context_t ctx, vec_t tokens,
     /* Parse right operand via read_unary (no binary yet) */
     skip_whitespace(tokens, &current);
     node_t right = read_unary(ctx, tokens, &current, filename);
+    if (node_is_error(right)) { allocator_free(allocator, &opt); return right; }
     if (!right) {
       allocator_free(allocator, &opt);
       break;

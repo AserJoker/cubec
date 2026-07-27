@@ -164,8 +164,11 @@ TEST_F(dt_statement_block, unclosed_brace_is_error) {
 
   size_t position = 0;
   node_t node = read_statement_block(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  /* Error recovery: block is still returned but contains a StatementError */
+  ASSERT_NE(node, nullptr);
+  EXPECT_GT(context_get_error_count(ctx), 0);
 
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
@@ -178,8 +181,11 @@ TEST_F(dt_statement_block, unexpected_token_is_error) {
 
   size_t position = 0;
   node_t node = read_statement_block(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  /* Error recovery: block is still returned but contains a StatementError */
+  ASSERT_NE(node, nullptr);
+  EXPECT_GT(context_get_error_count(ctx), 0);
 
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 

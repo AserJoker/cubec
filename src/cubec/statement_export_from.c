@@ -1,6 +1,7 @@
 #include "cubec/statement_export_from.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
+#include "cubec/node_error.h"
 #include "core/allocator.h"
 #include "core/node.h"
 #include "core/token.h"
@@ -11,6 +12,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* ===== lifecycle ===== */
 
@@ -118,7 +120,7 @@ node_t read_statement_export_from(context_t ctx, vec_t tokens,
       skip_whitespace(tokens, &current);
       node_t name = read_literal_identifier(ctx, tokens, &current, filename);
       if (!name) {
-        goto cleanup;
+        goto onerror;
       }
       vec_push(names, name);
 
@@ -132,7 +134,7 @@ node_t read_statement_export_from(context_t ctx, vec_t tokens,
         current++;
         continue;
       }
-      goto cleanup;
+      goto onerror;
     }
   } else {
     /* export followed by something else (struct/func/etc.) — not our node */
@@ -145,7 +147,7 @@ node_t read_statement_export_from(context_t ctx, vec_t tokens,
   if (!_is_keyword(tokens, current, "from")) {
     token_t tok = vec_get(tokens, current);
     location_t *loc = token_get_location(tok);
-    goto cleanup;
+    goto onerror;
   }
   current++;
 
@@ -154,7 +156,7 @@ node_t read_statement_export_from(context_t ctx, vec_t tokens,
   /* Parse module path (required string literal) */
   path = read_literal_string(ctx, tokens, &current, filename);
   if (!path) {
-    goto cleanup;
+    goto onerror;
   }
 
   skip_whitespace(tokens, &current);
@@ -163,7 +165,7 @@ node_t read_statement_export_from(context_t ctx, vec_t tokens,
   token_t semi = vec_get(tokens, current);
   if (!semi || !token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
     location_t *loc = token_get_location(semi);
-    goto cleanup;
+    goto onerror;
   }
   current++;
 
@@ -186,13 +188,12 @@ node_t read_statement_export_from(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
-  allocator_free(allocator, &names);
-  allocator_free(allocator, &path);
-  allocator_free(allocator, &node);
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid export from statement");
+  ctx->error_count++;
   allocator_free(allocator, &names);
   allocator_free(allocator, &path);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }

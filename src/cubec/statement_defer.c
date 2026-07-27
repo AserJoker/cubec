@@ -1,6 +1,7 @@
 #include "cubec/statement_defer.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
+#include "cubec/node_error.h"
 #include "core/allocator.h"
 #include "core/node.h"
 #include "core/token.h"
@@ -12,6 +13,7 @@
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -123,7 +125,7 @@ node_t read_statement_defer(context_t ctx, vec_t tokens,
     while (true) {
       node_t cap = read_function_capture(ctx, tokens, &current, filename);
       if (!cap) {
-        goto cleanup;
+        goto onerror;
       }
       vec_push(captures, cap);
 
@@ -139,7 +141,7 @@ node_t read_statement_defer(context_t ctx, vec_t tokens,
       } else {
         token_t tok = vec_get(tokens, current);
         location_t *loc = token_get_location(tok);
-        goto cleanup;
+        goto onerror;
       }
     }
   }
@@ -147,7 +149,7 @@ node_t read_statement_defer(context_t ctx, vec_t tokens,
   /* 3. Parse block body: defer { ... } */
   body = read_statement_block(ctx, tokens, &current, filename);
   if (!body) {
-    goto cleanup;
+    goto onerror;
   }
 
   /* 4. Build location */
@@ -164,15 +166,14 @@ node_t read_statement_defer(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
-  allocator_free(allocator, &body);
-  allocator_free(allocator, &captures);
-  allocator_free(allocator, &node);
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid defer statement");
+  ctx->error_count++;
   allocator_free(allocator, &body);
   allocator_free(allocator, &captures);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_defer_stmt(context_t ctx, location_t loc,

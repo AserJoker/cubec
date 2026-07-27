@@ -8,9 +8,11 @@
 #include "cubec/ast_factory.h"
 #include "cubec/literal.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <stdio.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 static void _cubec_literal_string_init(cubec_literal_string_t self,
                                        allocator_t allocator,
@@ -71,6 +73,9 @@ node_t read_literal_string(context_t ctx, vec_t tokens, size_t *position,
     return NULL;
   }
 
+  location_t start_location = *token_get_location(first_token);
+  start_location.filename = filename;
+
   location_t *location = token_get_location(first_token);
   cubec_literal_string_init_t init = {
       .location = *location,
@@ -109,8 +114,11 @@ node_t read_literal_string(context_t ctx, vec_t tokens, size_t *position,
   *position = current;
   return node_base;
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid string literal");
+  ctx->error_count++;
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_string(context_t ctx, location_t loc,

@@ -1,6 +1,7 @@
 #include "cubec/statement_break.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
+#include "cubec/node_error.h"
 #include "core/allocator.h"
 #include "core/node.h"
 #include "core/token.h"
@@ -9,6 +10,7 @@
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -112,7 +114,10 @@ node_t read_statement_break(context_t ctx, vec_t tokens,
   return &node->super;
 
 onerror:
-  return NULL;
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "expected ';' after 'break'");
+  ctx->error_count++;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_break_stmt(context_t ctx, location_t loc) {

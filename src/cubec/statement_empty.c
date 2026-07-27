@@ -1,6 +1,7 @@
 #include "cubec/statement_empty.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
+#include "cubec/node_error.h"
 #include "core/allocator.h"
 #include "core/node.h"
 #include "core/token.h"
@@ -8,6 +9,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 static void _cubec_statement_empty_init(cubec_statement_empty_t self,
                                         allocator_t allocator,
@@ -51,10 +53,13 @@ node_t read_statement_empty(context_t ctx, vec_t tokens, size_t *position,
                             const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
+  location_t start_location = {0};
   token_t token = vec_get(tokens, current);
   if (!token_is(token, CUBEC_TOKEN_SYMBOL, ";")) {
     return NULL;
   }
+  start_location = *token_get_location(token);
+  start_location.filename = filename;
   location_t *location = token_get_location(token);
   cubec_statement_empty_init_t init = {
       .location = *location,
@@ -67,8 +72,11 @@ node_t read_statement_empty(context_t ctx, vec_t tokens, size_t *position,
   *position = current;
   return &node->super;
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "expected ';'");
+  ctx->error_count++;
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_empty_stmt(context_t ctx, location_t loc) {

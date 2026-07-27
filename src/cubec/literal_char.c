@@ -6,8 +6,10 @@
 #include "core/type.h"
 #include "cubec/ast_factory.h"
 #include "cubec/literal.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 static void _cubec_literal_char_init(cubec_literal_char_t self,
                                      allocator_t allocator,
@@ -64,6 +66,9 @@ node_t read_literal_char(context_t ctx, vec_t tokens,
     return NULL;
   }
 
+  location_t start_location = *token_get_location(token);
+  start_location.filename = filename;
+
   location_t *location = token_get_location(token);
   const char *token_str = token_get_string(token);
   size_t token_len = token_get_string_length(token);
@@ -86,8 +91,11 @@ node_t read_literal_char(context_t ctx, vec_t tokens,
   *position = current;
   return node_base;
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid character literal");
+  ctx->error_count++;
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_char(context_t ctx, location_t loc, char value) {

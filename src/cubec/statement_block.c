@@ -1,6 +1,7 @@
 #include "cubec/statement_block.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
+#include "cubec/node_error.h"
 #include "core/allocator.h"
 #include "core/node.h"
 #include "core/token.h"
@@ -9,6 +10,7 @@
 #include "cubec/statement.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 static void _cubec_statement_block_init(cubec_statement_block_t self,
                                          allocator_t allocator,
@@ -81,24 +83,60 @@ node_t read_statement_block(context_t ctx, vec_t tokens,
       break;
     }
 
+    /* Check for EOF (unterminated block) */
+    if (next && token_get_kind(next) == CUBEC_TOKEN_EOF) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           *token_get_location(lbrace),
+                           "unterminated block (missing '}')");
+      ctx->error_count++;
+      break;
+    }
+
     /* Try to parse a statement */
     node_t stmt = read_statement(ctx, tokens, &current, filename);
-    if (!stmt) {
-      location_t *loc = token_get_location(next);
-      goto cleanup;
+
+    /* Error node (CUBEC_NODE_ERROR or CUBEC_NODE_STATEMENT_ERROR) — push and continue */
+    if (node_is_error(stmt)) {
+      vec_push(statements, stmt);
+      continue;
     }
+
+    /* NULL — no parser matched (unrecognized token) */
+    if (!stmt) {
+      /* Record diagnostic, skip the bad token, create StatementError */
+      token_t bad = vec_get(tokens, current);
+      if (bad) {
+        location_t loc = *token_get_location(bad);
+        loc.filename = filename;
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, loc,
+                             "unexpected token");
+        ctx->error_count++;
+        current++;
+        stmt = cubec_ast_create_error_stmt(ctx, loc);
+        vec_push(statements, stmt);
+      } else {
+        break;  /* No more tokens */
+      }
+      continue;
+    }
+
     vec_push(statements, stmt);
   }
 
-  /* Build location spanning from '{' to '}' */
+  /* Build location spanning from '{' to current position */
   location_t *start_loc = token_get_location(lbrace);
-  token_t rbrace = vec_get(tokens, current - 1);
-  location_t *end_loc = token_get_location(rbrace);
   location_t loc = {
       .begin = start_loc->begin,
-      .end = end_loc->end,
+      .end = start_loc->begin,  /* fallback */
       .filename = filename,
   };
+  /* Try to get end from the '}' or last consumed token */
+  if (current > 0) {
+    token_t end_tok = vec_get(tokens, current - 1);
+    if (end_tok) {
+      loc.end = token_get_location(end_tok)->end;
+    }
+  }
 
   cubec_statement_block_init_t init = {
       .location = loc,
@@ -109,11 +147,6 @@ node_t read_statement_block(context_t ctx, vec_t tokens,
       allocator_create(allocator, &g_cubec_statement_block_type, &init);
   *position = current;
   return &node->super;
-
-cleanup:
-  allocator_free(allocator, &statements);
-onerror:
-  return NULL;
 }
 
 node_t cubec_ast_create_block(context_t ctx, location_t loc,

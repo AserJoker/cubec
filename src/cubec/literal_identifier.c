@@ -7,8 +7,10 @@
 #include "core/type.h"
 #include "cubec/ast_factory.h"
 #include "cubec/literal.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 static void _cubec_literal_identifier_init(cubec_literal_identifier_t self,
                                            allocator_t allocator,
@@ -68,6 +70,9 @@ node_t read_literal_identifier(context_t ctx, vec_t tokens,
   if (!token_is(token, CUBEC_TOKEN_IDENTIFIER, NULL)) {
     return NULL;
   }
+
+  location_t start_location = *token_get_location(token);
+  start_location.filename = filename;
 
   location_t *location = token_get_location(token);
   cubec_literal_identifier_init_t init = {

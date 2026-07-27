@@ -3,6 +3,7 @@
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_string.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/program.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
@@ -119,8 +120,9 @@ TEST_F(dt_statement_import, missing_from_keyword) {
 
   size_t position = 0;
   node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
 
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
@@ -133,8 +135,9 @@ TEST_F(dt_statement_import, missing_semicolon) {
 
   size_t position = 0;
   node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
 
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
@@ -161,8 +164,9 @@ TEST_F(dt_statement_import, missing_module_name) {
 
   size_t position = 0;
   node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
 
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
@@ -175,8 +179,9 @@ TEST_F(dt_statement_import, missing_path) {
 
   size_t position = 0;
   node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
 
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
