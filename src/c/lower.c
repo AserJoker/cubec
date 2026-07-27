@@ -10,6 +10,11 @@
 #include "c/c_ir_forward_decl.h"
 #include "c/c_ir_include.h"
 #include "c/c_ir_stmt_block.h"
+#include "c/c_ir_stmt_return.h"
+#include "c/c_ir_expr_literal.h"
+#include "c/c_ir_expr_call.h"
+#include "c/c_ir_expr_compound.h"
+#include "c/c_ir_expr_initializer.h"
 #include "cubec/node.h"
 #include "cubec/statement_function.h"
 #include "cubec/function_argument.h"
@@ -288,7 +293,8 @@ static void lower_scope_declarations(allocator_t allocator, context_t ctx,
 /**
  * @brief Lower the program AST into a C IR compilation unit.
  */
-c_ir_unit_t lower_program(allocator_t allocator, context_t ctx, node_t program) {
+c_ir_unit_t lower_program(allocator_t allocator, context_t ctx, node_t program,
+                           bool generate_executable) {
   if (!program || program->kind != CUBEC_NODE_PROGRAM) return NULL;
 
   /* Compute module hash from filename */
@@ -317,7 +323,107 @@ c_ir_unit_t lower_program(allocator_t allocator, context_t ctx, node_t program) 
   /* Lower global scope declarations (types, enums, etc.) */
   lower_scope_declarations(allocator, ctx, unit, module_hash);
 
-  /* TODO: Lower function bodies */
+  /* Generate C main wrapper for executable */
+  if (generate_executable) {
+    /* Find the exported main function in global scope */
+    vec_t symbols = scope_get_symbols(ctx->global_scope);
+    size_t sym_count = vec_get_size(symbols);
+    for (size_t i = 0; i < sym_count; i++) {
+      struct symbol *sym = vec_get(symbols, i);
+      if (sym->kind == SYMBOL_FUNCTION && sym->is_export &&
+          strcmp(sym->name, "main") == 0) {
+        /* Found exported main — generate C main wrapper */
+        string_t mangled_main = mangle_name(allocator, module_hash, "main");
+
+        /* Build: int main(int argc, char *argv[]) {
+         *   return mxxxx_main((mxxxx_slice_str){ .ptr = argv, .start = 0, .length = argc });
+         * }
+         */
+        vec_t main_params = allocator_create(allocator, &g_vec_type,
+                                               &(vec_init_t){.auto_dispose = false});
+        /* argc: int */
+        c_type_t int_type = c_type_primitive(allocator, "int");
+        c_ir_param_t argc_p = c_ir_param_create(allocator, int_type, "argc");
+        vec_push(main_params, argc_p);
+        /* argv: char** */
+        c_type_t char_type = c_type_primitive(allocator, "char");
+        c_type_t char_ptr = c_type_pointer(allocator, char_type);
+        c_type_t char_ptr_ptr = c_type_pointer(allocator, char_ptr);
+        c_ir_param_t argv_p = c_ir_param_create(allocator, char_ptr_ptr, "argv");
+        vec_push(main_params, argv_p);
+
+        /* Build argument: (slice_str){ .ptr = argv, .start = 0, .length = argc } */
+        vec_t init_fields = allocator_create(allocator, &g_vec_type,
+                                               &(vec_init_t){.auto_dispose = false});
+
+        /* .ptr = argv */
+        c_ir_node_t argv_ident = (c_ir_node_t)c_ir_expr_ident_create(
+            allocator, "argv", loc);
+        c_ir_node_t init_ptr = (c_ir_node_t)c_ir_expr_initializer_create(
+            allocator, "ptr", argv_ident, loc);
+        vec_push(init_fields, init_ptr);
+
+        /* .start = 0 */
+        c_ir_node_t zero = (c_ir_node_t)c_ir_expr_numeric_create(
+            allocator, "0", loc);
+        c_ir_node_t init_start = (c_ir_node_t)c_ir_expr_initializer_create(
+            allocator, "start", zero, loc);
+        vec_push(init_fields, init_start);
+
+        /* .length = argc */
+        c_ir_node_t argc_ident = (c_ir_node_t)c_ir_expr_ident_create(
+            allocator, "argc", loc);
+        c_ir_node_t init_len = (c_ir_node_t)c_ir_expr_initializer_create(
+            allocator, "length", argc_ident, loc);
+        vec_push(init_fields, init_len);
+
+        /* slice type name: module_hash_slice_<string_type> */
+        /* []str → element type is TYPE_STR → lower_type gives mxxxx_string */
+        string_t string_mangled = mangle_name(allocator, module_hash, "string");
+        char slice_name[256];
+        snprintf(slice_name, sizeof(slice_name), "%s_slice_%s",
+                 module_hash, string_get(string_mangled));
+        allocator_free(allocator, &string_mangled);
+        c_type_t slice_type = c_type_primitive(allocator, slice_name);
+        c_ir_node_t slice_compound = (c_ir_node_t)c_ir_expr_compound_create(
+            allocator, slice_type, init_fields, loc);
+
+        /* Call: mxxxx_main(slice_arg) */
+        c_ir_node_t callee = (c_ir_node_t)c_ir_expr_ident_create(
+            allocator, string_get(mangled_main), loc);
+        vec_t call_args = allocator_create(allocator, &g_vec_type,
+                                             &(vec_init_t){.auto_dispose = false});
+        vec_push(call_args, slice_compound);
+        c_ir_node_t call = (c_ir_node_t)c_ir_expr_call_create(
+            allocator, callee, call_args, loc);
+
+        /* return call; */
+        c_ir_node_t ret = (c_ir_node_t)c_ir_stmt_return_create(
+            allocator, call, loc);
+
+        /* Body block */
+        vec_t body_stmts = allocator_create(allocator, &g_vec_type,
+                                              &(vec_init_t){.auto_dispose = false});
+        vec_push(body_stmts, ret);
+        c_ir_node_t body = (c_ir_node_t)c_ir_stmt_block_create(
+            allocator, body_stmts, loc);
+
+        /* Create main function def (non-static, public) */
+        c_type_t ret_type = c_type_primitive(allocator, "int");
+        c_ir_node_t main_def = (c_ir_node_t)c_ir_function_def_create(
+            allocator, ret_type, "main", main_params,
+            false,  /* is_static */
+            false,  /* is_inline */
+            false,  /* is_hidden */
+            false,  /* is_artificial */
+            body, loc);
+        vec_push(unit->function_defs, main_def);
+
+        allocator_free(allocator, &mangled_main);
+        break;
+      }
+    }
+  }
 
   allocator_free(allocator, &module_hash_str);
   return unit;

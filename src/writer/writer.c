@@ -66,12 +66,12 @@ static void emit_indent(string_t out, writer_state_t *state) {
 
 static void write_type(string_t out, c_type_t type, const char *name) {
   string_concat(out, string_get(type->left));
+  if (string_get_length(type->right) > 0) {
+    string_concat(out, string_get(type->right));
+  }
   if (name) {
     string_concat(out, " ");
     string_concat(out, name);
-  }
-  if (string_get_length(type->right) > 0) {
-    string_concat(out, string_get(type->right));
   }
 }
 

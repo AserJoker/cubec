@@ -88,12 +88,20 @@ static int cmd_test(int argc, char *argv[]) {
   return result;
 }
 
-static int cmd_compile(int argc, char *argv[]) {
+static int cmd_build(int argc, char *argv[]) {
   if (argc < 3) {
-    fprintf(stderr, "usage: cubecc compile <file>.cubec\n");
+    fprintf(stderr, "usage: cubecc build <file>.cubec [--library]\n");
     return 1;
   }
   const char *filename = argv[2];
+  bool generate_executable = true;
+
+  /* Parse options */
+  for (int i = 3; i < argc; i++) {
+    if (strcmp(argv[i], "--library") == 0) {
+      generate_executable = false;
+    }
+  }
 
   size_t src_len;
   char *source = read_file(filename, &src_len);
@@ -143,7 +151,7 @@ static int cmd_compile(int argc, char *argv[]) {
   }
 
   /* Lower to C IR */
-  c_ir_unit_t unit = lower_program(allocator, ctx, program);
+  c_ir_unit_t unit = lower_program(allocator, ctx, program, generate_executable);
   if (!unit) {
     fprintf(stderr, "error: lowering failed\n");
     context_dispose(ctx);
@@ -209,13 +217,14 @@ int _main(int argc, char *argv[]) {
   if (argc >= 2 && strcmp(argv[1], "test") == 0) {
     return cmd_test(argc, argv);
   }
-  if (argc >= 2 && strcmp(argv[1], "compile") == 0) {
-    return cmd_compile(argc, argv);
+  if (argc >= 2 && strcmp(argv[1], "build") == 0) {
+    return cmd_build(argc, argv);
   }
 
   fprintf(stderr, "usage: cubecc <command> [args]\n");
-  fprintf(stderr, "  test <file>.cubec     Run test blocks\n");
-  fprintf(stderr, "  compile <file>.cubec  Compile to C\n");
+  fprintf(stderr, "  test <file>.cubec       Run test blocks\n");
+  fprintf(stderr, "  build <file>.cubec      Compile to C (executable by default)\n");
+  fprintf(stderr, "    --library             Generate library (no C main entry)\n");
   return 1;
 }
 
