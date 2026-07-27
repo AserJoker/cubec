@@ -202,7 +202,8 @@ onerror:
   /* NOTE: callee is NOT freed here — the caller (read_value) still owns the
    *       pointer and will clean it up when the error propagates */
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx,
+      open_bracket ? *token_get_location(open_bracket) : (location_t){0});
 }
 
 /* --------------------------------------------------------------------------

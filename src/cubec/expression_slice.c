@@ -231,7 +231,8 @@ onerror:
   allocator_free(allocator, &length);
   /* host ownership: caller (read_value) owns it and will clean up */
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx,
+      open_bracket ? *token_get_location(open_bracket) : (location_t){0});
 }
 
 /* --------------------------------------------------------------------------
