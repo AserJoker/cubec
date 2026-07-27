@@ -1,4 +1,6 @@
 #include "cubec/expression_assignment.h"
+#include "cubec/node_error.h"
+#include "engine/diagnostic.h"
 #include "core/allocator.h"
 #include "core/string.h"
 #include "core/token.h"
@@ -62,13 +64,6 @@ static void _cubec_expression_assignment_move(
   self->left = value_move(allocator, another->left);
   self->right = value_move(allocator, another->right);
   self->opt = (string_t)value_move(allocator, another->opt);
-  return;
-
-cleanup:
-  /* Clean up already-moved members on failure */
-  allocator_free(allocator, &self->opt);
-  allocator_free(allocator, &self->right);
-  allocator_free(allocator, &self->left);
 }
 
 type_t g_cubec_expression_assignment_type = {
@@ -116,9 +111,12 @@ node_t read_expression_assignment(context_t ctx, vec_t tokens,
 
   /* First, read a value as the potential lvalue */
   lvalue = read_value(ctx, tokens, &current, filename);
+  if (node_is_error(lvalue)) return lvalue;
   if (!lvalue) {
     return NULL;
   }
+
+  location_t start_location = lvalue->location;
 
   /* Skip whitespace and check for assignment operator */
   skip_whitespace(tokens, &current);
@@ -143,6 +141,11 @@ node_t read_expression_assignment(context_t ctx, vec_t tokens,
   /* Parse rvalue expression */
   skip_whitespace(tokens, &current);
   rvalue = read_expression_base(ctx, tokens, &current, filename);
+  if (node_is_error(rvalue)) {
+    allocator_free(allocator, &lvalue);
+    allocator_free(allocator, &opt);
+    return rvalue;
+  }
   if (!rvalue) {
     /* No rvalue expression found — this is an error */
     goto onerror;
@@ -168,11 +171,14 @@ node_t read_expression_assignment(context_t ctx, vec_t tokens,
   return (node_t)node;
 
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid assignment expression");
+  ctx->error_count++;
   allocator_free(allocator, &opt);
   allocator_free(allocator, &rvalue);
   allocator_free(allocator, &lvalue);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------

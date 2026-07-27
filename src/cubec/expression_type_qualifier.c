@@ -5,8 +5,10 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -106,9 +108,11 @@ node_t read_expression_type_qualifier(context_t ctx, vec_t tokens,
   }
 
   if (first == _Q_NONE) return NULL;
+  start_loc.filename = filename;
 
   /* Parse the underlying type using read_expression_base (greedy). */
   node_t type = read_expression_base(ctx, tokens, &current, filename);
+  if (node_is_error(type)) return type;
   if (!type) {
     goto onerror;
   }
@@ -157,10 +161,10 @@ node_t read_expression_type_qualifier(context_t ctx, vec_t tokens,
   return result;
 
 onerror:
-  /* On error, free only the nodes we allocated (not the base type which
-   * is managed by its own allocator_create). The type node is consumed
-   * by the first qualifier on success, so we only free on failure. */
-  return NULL;
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_loc, "invalid type qualifier expression");
+  ctx->error_count++;
+  return cubec_ast_create_error(ctx, start_loc);
 }
 
 /* --------------------------------------------------------------------------

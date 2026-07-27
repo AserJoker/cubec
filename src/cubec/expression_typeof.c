@@ -7,8 +7,10 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 static void _cubec_expression_typeof_init(cubec_expression_typeof_t self,
                                            allocator_t allocator,
@@ -33,7 +35,6 @@ static void _cubec_expression_typeof_clone(cubec_expression_typeof_t self,
                                             cubec_expression_typeof_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->expression = value_clone(allocator, another->expression);
-  return;
 }
 
 static void _cubec_expression_typeof_move(cubec_expression_typeof_t self,
@@ -41,7 +42,6 @@ static void _cubec_expression_typeof_move(cubec_expression_typeof_t self,
                                            cubec_expression_typeof_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->expression = value_move(allocator, another->expression);
-  return;
 }
 
 type_t g_cubec_expression_typeof_type = {
@@ -57,12 +57,15 @@ node_t read_expression_typeof(context_t ctx, vec_t tokens,
                                size_t *position, const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
+  node_t expr = NULL;
 
   /* Expect 'typeof' keyword */
   token_t typeof_token = vec_get(tokens, current);
   if (!token_is(typeof_token, CUBEC_TOKEN_KEYWORD, "typeof")) {
     return NULL;
   }
+  location_t start_location = *token_get_location(typeof_token);
+  start_location.filename = filename;
   size_t typeof_start = current;
   current++;
 
@@ -70,13 +73,13 @@ node_t read_expression_typeof(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
   token_t lparen = vec_get(tokens, current);
   if (!token_is(lparen, CUBEC_TOKEN_SYMBOL, "(")) {
-    location_t *loc = token_get_location(lparen);
     goto onerror;
   }
   current++;
 
   /* Parse the inner expression */
-  node_t expr = read_expression(ctx, tokens, &current, filename);
+  expr = read_expression(ctx, tokens, &current, filename);
+  if (node_is_error(expr)) return expr;
   if (!expr) {
     goto onerror;
   }
@@ -85,7 +88,6 @@ node_t read_expression_typeof(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
   token_t rparen = vec_get(tokens, current);
   if (!token_is(rparen, CUBEC_TOKEN_SYMBOL, ")")) {
-    location_t *loc = token_get_location(rparen);
     goto cleanup;
   }
   current++;
@@ -110,9 +112,12 @@ node_t read_expression_typeof(context_t ctx, vec_t tokens,
   return (node_t)&node->super;
 
 cleanup:
-  allocator_free(allocator, &expr);
 onerror:
-  return NULL;
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid typeof expression");
+  ctx->error_count++;
+  allocator_free(allocator, &expr);
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------

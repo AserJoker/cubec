@@ -5,8 +5,10 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -71,12 +73,15 @@ node_t read_expression_spread(context_t ctx, vec_t tokens,
   if (!token_is(spread_token, CUBEC_TOKEN_SYMBOL, "...")) {
     return NULL;
   }
+  location_t start_location = *token_get_location(spread_token);
+  start_location.filename = filename;
   current++;
 
   /* Expect a value expression after the spread operator */
   skip_whitespace(tokens, &current);
   value =
       read_expression_base(ctx, tokens, &current, filename);
+  if (node_is_error(value)) return value;
   if (!value) {
     goto onerror;
   }
@@ -96,9 +101,12 @@ node_t read_expression_spread(context_t ctx, vec_t tokens,
   return (node_t)node;
 
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid spread expression");
+  ctx->error_count++;
   allocator_free(allocator, &value);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------

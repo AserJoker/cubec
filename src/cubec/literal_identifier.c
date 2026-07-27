@@ -94,8 +94,11 @@ node_t read_literal_identifier(context_t ctx, vec_t tokens,
   *position = current;
   return node_base;
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid identifier");
+  ctx->error_count++;
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_identifier(context_t ctx, location_t loc,

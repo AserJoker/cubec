@@ -6,8 +6,10 @@
 #include "cubec/expression.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -86,12 +88,16 @@ node_t read_expression_comma(context_t ctx, vec_t tokens,
    * follows the value, read_expression_assignment returns NULL and we
    * fall through to read_expression_base which handles ternary/binary. */
   left = read_expression_assignment(ctx, tokens, &current, filename);
+  if (node_is_error(left)) return left;
   if (!left) {
     left = read_expression_base(ctx, tokens, &current, filename);
   }
+  if (node_is_error(left)) return left;
   if (!left) {
     return NULL;
   }
+
+  location_t start_location = left->location;
 
   /* Check if next token is a comma */
   skip_whitespace(tokens, &current);
@@ -107,6 +113,10 @@ node_t read_expression_comma(context_t ctx, vec_t tokens,
   /* Parse right operand: recursively call self for right-associativity
    * This allows comma expressions like a, b, c to parse as comma(a, comma(b, c)) */
   right = read_expression_comma(ctx, tokens, &current, filename);
+  if (node_is_error(right)) {
+    allocator_free(allocator, &left);
+    return right;
+  }
   if (!right) {
     allocator_free(allocator, &left);
     goto onerror;
@@ -123,10 +133,13 @@ node_t read_expression_comma(context_t ctx, vec_t tokens,
   return (node_t)node;
 
 onerror:
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid comma expression");
+  ctx->error_count++;
   allocator_free(allocator, &right);
   allocator_free(allocator, &left);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
