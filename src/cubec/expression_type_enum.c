@@ -4,11 +4,14 @@
 #include "core/token.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "cubec/ast_factory.h"
 #include "cubec/enum_item.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -100,6 +103,7 @@ node_t read_expression_type_enum_body(context_t ctx, vec_t tokens,
   items = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, "}")) {
     node_t item = read_enum_item(ctx, tokens, &current, filename);
+    if (node_is_error(item)) goto onerror;
     if (!item) {
       break;
     }
@@ -145,6 +149,10 @@ cleanup:
   allocator_free(allocator, &items);
   allocator_free(allocator, &node);
   return NULL;
+onerror:
+  allocator_free(allocator, &items);
+  allocator_free(allocator, &node);
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
@@ -167,11 +175,14 @@ node_t read_expression_type_enum(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   node_t result = read_expression_type_enum_body(ctx, tokens, &current, filename, start_location);
+  if (node_is_error(result)) return result;
   if (result) {
     *position = current;
+    return result;
   }
-  return result;
 
-onerror:
-  return NULL;
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid enum type expression");
+  ctx->error_count++;
+  return cubec_ast_create_error(ctx, start_location);
 }

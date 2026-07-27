@@ -315,6 +315,7 @@ node_t read_expression_binary(context_t ctx, vec_t tokens,
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t left = read_unary(ctx, tokens, position, filename);
+  if (node_is_error(left)) return left;
   if (!left) {
     return NULL;
   }

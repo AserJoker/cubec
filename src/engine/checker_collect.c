@@ -313,6 +313,10 @@ void context_collect_statement(context_t ctx, node_t stmt) {
   case CUBEC_NODE_STATEMENT_EXPORT_FROM:
     _collect_export_from(ctx, (cubec_statement_export_from_t)stmt);
     break;
+  case CUBEC_NODE_STATEMENT_ERROR:
+  case CUBEC_NODE_ERROR:
+    /* Parse error — diagnostic already recorded. Nothing to collect. */
+    break;
   default:
     break;
   }

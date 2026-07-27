@@ -4,15 +4,18 @@
 #include "core/token.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/expression_spread.h"
 #include "cubec/generic_param.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/statement.h"
 #include "cubec/token.h"
 #include "cubec/union_field.h"
 #include <inttypes.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -115,6 +118,7 @@ node_t read_expression_type_union_body(context_t ctx, vec_t tokens,
     current++;
     skip_whitespace(tokens, &current);
     node_t iface_expr = read_type_expression_primary(ctx, tokens, &current, filename);
+    if (node_is_error(iface_expr)) goto onerror;
     if (!iface_expr) {
       goto cleanup;
     }
@@ -125,6 +129,7 @@ node_t read_expression_type_union_body(context_t ctx, vec_t tokens,
       current++;
       skip_whitespace(tokens, &current);
       iface_expr = read_type_expression_primary(ctx, tokens, &current, filename);
+      if (node_is_error(iface_expr)) goto onerror;
       if (!iface_expr) {
         goto cleanup;
       }
@@ -149,6 +154,7 @@ node_t read_expression_type_union_body(context_t ctx, vec_t tokens,
     token_t tok = vec_get(tokens, current);
     if (token_is(tok, CUBEC_TOKEN_SYMBOL, "...")) {
       member = read_expression_spread(ctx, tokens, &current, filename);
+      if (node_is_error(member)) goto onerror;
       if (!member) {
         break;
       }
@@ -165,11 +171,13 @@ node_t read_expression_type_union_body(context_t ctx, vec_t tokens,
     /* Try union field: <identifier> : <type> */
     if (!member) {
       member = read_union_field(ctx, tokens, &current, filename);
+      if (node_is_error(member)) goto onerror;
     }
 
     /* Try statement (var, type, func, struct, interface, etc.) */
     if (!member) {
       member = read_statement(ctx, tokens, &current, filename);
+      if (node_is_error(member)) goto onerror;
     }
 
     if (!member) {
@@ -214,6 +222,12 @@ cleanup:
   allocator_free(allocator, &generic_params);
   allocator_free(allocator, &node);
   return NULL;
+onerror:
+  allocator_free(allocator, &implements);
+  allocator_free(allocator, &members);
+  allocator_free(allocator, &generic_params);
+  allocator_free(allocator, &node);
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
@@ -236,11 +250,14 @@ node_t read_expression_type_union(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   node_t result = read_expression_type_union_body(ctx, tokens, &current, filename, start_location, NULL);
+  if (node_is_error(result)) return result;
   if (result) {
     *position = current;
+    return result;
   }
-  return result;
 
-onerror:
-  return NULL;
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid union type expression");
+  ctx->error_count++;
+  return cubec_ast_create_error(ctx, start_location);
 }

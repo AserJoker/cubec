@@ -5,9 +5,11 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* Forward declaration for read_expression_binary */
 extern node_t read_expression_binary(context_t ctx, vec_t tokens,
@@ -97,6 +99,7 @@ node_t read_expression_ternary(context_t ctx, vec_t tokens,
    * This handles all binary ops including ==, !=, extends.
    * If no '?' follows, returns the condition as-is. */
   condition = read_expression_binary(ctx, tokens, &current, filename);
+  if (node_is_error(condition)) return condition;
   if (!condition) {
     return NULL;
   }
@@ -109,10 +112,16 @@ node_t read_expression_ternary(context_t ctx, vec_t tokens,
     return condition;
   }
   current++; /* Consumed '?' — committed to parsing a ternary from here */
+  location_t start_location = condition->location;
+  start_location.filename = filename;
 
   /* Parse consequent expression (the true branch) */
   skip_whitespace(tokens, &current);
   consequent = read_expression(ctx, tokens, &current, filename);
+  if (node_is_error(consequent)) {
+    allocator_free(allocator, &condition);
+    return consequent;
+  }
   if (!consequent) {
     goto onerror;
   }
@@ -129,6 +138,11 @@ node_t read_expression_ternary(context_t ctx, vec_t tokens,
    * to handle nested ternaries naturally */
   skip_whitespace(tokens, &current);
   alternate = read_expression(ctx, tokens, &current, filename);
+  if (node_is_error(alternate)) {
+    allocator_free(allocator, &condition);
+    allocator_free(allocator, &consequent);
+    return alternate;
+  }
   if (!alternate) {
     goto onerror;
   }
@@ -152,20 +166,11 @@ node_t read_expression_ternary(context_t ctx, vec_t tokens,
   return (node_t)node;
 
 onerror:
-  /* condition may be NULL if error propagated — save location before freeing */
-  if (condition) {
-    location_t loc = condition->location;
-    allocator_free(allocator, &condition);
-    allocator_free(allocator, &alternate);
-    allocator_free(allocator, &consequent);
-    allocator_free(allocator, &node);
-    return NULL;
-  }
   allocator_free(allocator, &condition);
   allocator_free(allocator, &alternate);
   allocator_free(allocator, &consequent);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------

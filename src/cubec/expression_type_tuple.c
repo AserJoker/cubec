@@ -4,13 +4,16 @@
 #include "core/token.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/expression_spread.h"
 #include "cubec/expression_wildcard.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <string.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -92,6 +95,9 @@ node_t read_expression_type_tuple(context_t ctx, vec_t tokens,
 
   if (!_is_symbol(tokens, start, "<")) return NULL;
 
+  location_t start_location = *token_get_location(vec_get(tokens, start));
+  start_location.filename = filename;
+
   current = start + 1;
   skip_whitespace(tokens, &current);
 
@@ -156,8 +162,11 @@ node_t read_expression_type_tuple(context_t ctx, vec_t tokens,
 
   /* Expect closing '>' */
   if (!_is_symbol(tokens, current, ">")) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         start_location, "missing '>' in tuple type expression");
+    ctx->error_count++;
     allocator_free(allocator, &element_types);
-    return NULL;
+    return cubec_ast_create_error(ctx, start_location);
   }
   current++;  /* skip '>' */
 

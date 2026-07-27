@@ -1304,6 +1304,10 @@ void context_evaluate_statement(context_t ctx, node_t stmt) {
   case CUBEC_NODE_STATEMENT_COMPTIME_IF:     _evaluate_comptime_if(ctx, (cubec_statement_comptime_if_t)stmt); break;
   case CUBEC_NODE_STATEMENT_COMPTIME_FOREACH: _evaluate_comptime_foreach(ctx, (cubec_statement_comptime_foreach_t)stmt); break;
   case CUBEC_NODE_STATEMENT_TEST:            _evaluate_test(ctx, (cubec_statement_test_t)stmt); break;
+  case CUBEC_NODE_STATEMENT_ERROR:
+  case CUBEC_NODE_ERROR:
+    /* Parse error — diagnostic already recorded. Nothing to evaluate. */
+    break;
   default: break;
   }
 }

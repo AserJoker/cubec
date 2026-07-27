@@ -1582,6 +1582,7 @@ semantic_type_t _check_expression(context_t ctx, node_t expr) {
   case CUBEC_NODE_EXPRESSION_SPREAD:     return _check_expr_spread(ctx, expr);
   case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION: return _check_expr_generic_instantiation(ctx, expr);
   case CUBEC_NODE_ERROR:
+  case CUBEC_NODE_STATEMENT_ERROR:
     /* Parse error — diagnostic already recorded. Return error type silently. */
     return ctx->error_type;
   case CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER:

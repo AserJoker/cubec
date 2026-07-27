@@ -20,7 +20,8 @@ enum _cubec_token_kind_t {
   CUBEC_TOKEN_SYMBOL,
   CUBEC_TOKEN_KEYWORD,
   CUBEC_TOKEN_STRING,
-  CUBEC_TOKEN_CHAR
+  CUBEC_TOKEN_CHAR,
+  CUBEC_TOKEN_ERROR
 };
 typedef enum _cubec_token_kind_t cubec_token_kind_t;
 token_t read_token(context_t ctx, position_t *position,

@@ -12,10 +12,12 @@
 #include "cubec/generic_param.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -270,6 +272,7 @@ node_t read_expression_function(context_t ctx, vec_t tokens,
     skip_whitespace(tokens, &current);
 
     return_type = read_expression_base(ctx, tokens, &current, filename);
+    if (node_is_error(return_type)) goto onerror;
     if (!return_type) {
       goto onerror;
     }
@@ -280,6 +283,7 @@ node_t read_expression_function(context_t ctx, vec_t tokens,
   token_t brace_or_semi = vec_get(tokens, current);
   if (token_is(brace_or_semi, CUBEC_TOKEN_SYMBOL, "{")) {
     body = read_statement_block(ctx, tokens, &current, filename);
+    if (node_is_error(body)) goto onerror;
     if (!body) {
       goto onerror;
     }
@@ -331,7 +335,7 @@ onerror:
   allocator_free(allocator, &captures);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------

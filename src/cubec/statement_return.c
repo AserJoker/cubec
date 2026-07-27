@@ -104,6 +104,9 @@ node_t read_statement_return(context_t ctx, vec_t tokens,
   /* 2. Parse optional expression (if not immediately followed by ';') */
   if (!_is_symbol(tokens, current, ";")) {
     expression = read_expression(ctx, tokens, &current, filename);
+    if (node_is_error(expression)) {
+      goto onerror;
+    }
     if (!expression) {
       goto onerror;
     }

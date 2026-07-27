@@ -5,6 +5,7 @@
 #include "cubec/function_argument.h"
 #include "cubec/generic_param.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/statement.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
@@ -323,7 +324,8 @@ TEST_F(dt_expression_function, missing_pipe) {
 
   size_t position = 0;
   node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -335,7 +337,8 @@ TEST_F(dt_expression_function, missing_close_pipe) {
 
   size_t position = 0;
   node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -347,7 +350,8 @@ TEST_F(dt_expression_function, missing_body) {
 
   size_t position = 0;
   node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }

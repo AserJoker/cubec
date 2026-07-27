@@ -1,12 +1,15 @@
 #include "cubec/expression_type_function.h"
 #include "core/allocator.h"
 #include "core/token.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/expression_spread.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -276,6 +279,7 @@ node_t read_expression_type_function(context_t ctx, vec_t tokens,
    * func(i32) -> A ? B : C → func(i32) -> ternary(A, B, C).
    * Use grouping for the alternative: (func(i32) -> A) ? B : C. */
   return_type = read_expression_base(ctx, tokens, &current, filename);
+  if (node_is_error(return_type)) goto onerror;
   if (!return_type) {
     goto onerror;
   }
@@ -303,5 +307,5 @@ onerror:
   allocator_free(allocator, &return_type);
   allocator_free(allocator, &parameters);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }

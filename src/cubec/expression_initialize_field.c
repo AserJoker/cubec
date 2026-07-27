@@ -6,8 +6,10 @@
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 static void _cubec_expression_initialize_field_init(
     cubec_expression_initialize_field_t self, allocator_t allocator,
@@ -124,7 +126,7 @@ onerror:
   allocator_free(allocator, &value);
   allocator_free(allocator, &field);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, dot_location);
 }
 
 /* --------------------------------------------------------------------------

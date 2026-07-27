@@ -4,15 +4,18 @@
 #include "core/token.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "cubec/ast_factory.h"
 #include "cubec/expression.h"
 #include "cubec/generic_param.h"
 #include "cubec/interface_method.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/statement_declaration_type.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -113,6 +116,7 @@ static node_t _read_associated_type(context_t ctx, vec_t tokens,
 
   /* Parse type name (required) */
   name = read_literal_identifier(ctx, tokens, &current, filename);
+  if (node_is_error(name)) goto onerror;
   if (!name) {
     goto cleanup;
   }
@@ -158,11 +162,12 @@ cleanup:
   allocator_free(allocator, &params);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
+  return NULL;
 onerror:
   allocator_free(allocator, &params);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
@@ -199,10 +204,12 @@ node_t read_expression_type_interface_body(context_t ctx, vec_t tokens,
 
     /* Try associated type: type <name> [<params>] ; */
     member = _read_associated_type(ctx, tokens, &current, filename);
+    if (node_is_error(member)) goto onerror;
 
     /* Try method signature: func <name> [<params>] (<args>) [: <type>] ; */
     if (!member) {
       member = read_interface_method(ctx, tokens, &current, filename);
+      if (node_is_error(member)) goto onerror;
     }
 
     if (!member) {
@@ -244,11 +251,12 @@ cleanup:
   allocator_free(allocator, &members);
   allocator_free(allocator, &generic_params);
   allocator_free(allocator, &node);
+  return NULL;
 onerror:
   allocator_free(allocator, &members);
   allocator_free(allocator, &generic_params);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
@@ -271,11 +279,14 @@ node_t read_expression_type_interface(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   node_t result = read_expression_type_interface_body(ctx, tokens, &current, filename, start_location);
+  if (node_is_error(result)) return result;
   if (result) {
     *position = current;
+    return result;
   }
-  return result;
 
-onerror:
-  return NULL;
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                       start_location, "invalid interface type expression");
+  ctx->error_count++;
+  return cubec_ast_create_error(ctx, start_location);
 }

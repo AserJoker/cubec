@@ -7,10 +7,12 @@
 #include "cubec/expression_initialize_field.h"
 #include "cubec/expression_spread.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 #include <stdbool.h>
 #include "engine/context.h"
+#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -262,10 +264,7 @@ onerror:
   allocator_free(allocator, &items);
   allocator_free(allocator, &type);
   allocator_free(allocator, &node);
-  /* Return NULL without re-throwing. The caller (read_atom) will clear
-   * g_error and try the next sub-parser. Re-throwing here would cascade
-   * the error and prevent other parsers from attempting a match. */
-  return NULL;
+  return cubec_ast_create_error(ctx, dot_location);
 }
 
 /* --------------------------------------------------------------------------

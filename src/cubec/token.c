@@ -19,6 +19,12 @@ static token_t create_eof_token(context_t ctx, location_t location) {
                           &(token_init_t){CUBEC_TOKEN_EOF, location});
 }
 
+static token_t create_error_token(context_t ctx, location_t location) {
+  allocator_t allocator = ctx->allocator;
+  return allocator_create(allocator, &g_token_type,
+                          &(token_init_t){CUBEC_TOKEN_ERROR, location});
+}
+
 static token_t create_identifier_token(context_t ctx,
                                        location_t location) {
   allocator_t allocator = ctx->allocator;
@@ -651,7 +657,25 @@ token_t read_token(context_t ctx, position_t *position,
     token = read_symbol_token(ctx, position, filename);
   }
   if (!token) {
-    return NULL;
+    /* Unrecognized character — create error token and skip 1 byte */
+    const char *start_offset = position->offset;
+    size_t byte_len = 1;
+    uint32_t code = read_unicode(position->offset, &byte_len);
+    (void)code;
+    position_t end_pos = {
+        .line = position->line,
+        .column = position->column + byte_len,
+        .offset = position->offset + byte_len,
+    };
+    location_t loc = {
+        .filename = filename,
+        .begin = {.line = position->line, .column = position->column,
+                  .offset = start_offset},
+        .end = {.line = end_pos.line, .column = end_pos.column,
+                .offset = end_pos.offset},
+    };
+    token = create_error_token(ctx, loc);
+    *position = end_pos;
   }
   return token;
 }
@@ -665,10 +689,16 @@ vec_t resolve_token_list(context_t ctx, const char *filename,
       .offset = source,
   };
   while (true) {
-    token_t token =
-        read_token(ctx, &position, filename);
+    token_t token = read_token(ctx, &position, filename);
     if (!token) goto onerror;
     vec_push(vec, token);
+    if (token_get_kind(token) == CUBEC_TOKEN_ERROR) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           *token_get_location(token),
+                           "unrecognized character");
+      ctx->error_count++;
+      continue;
+    }
     if (token_get_kind(token) == CUBEC_TOKEN_EOF) {
       break;
     }
