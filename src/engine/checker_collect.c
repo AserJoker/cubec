@@ -238,18 +238,16 @@ static void _collect_import(context_t ctx,
   const char *name = _checker_ident_str(node->module_name);
   if (!name) return;
 
-  const char *effective_name = node->alias ? _checker_ident_str(node->alias) : name;
-
-  if (scope_lookup_local(ctx->global_scope, effective_name)) {
+  if (scope_lookup_local(ctx->global_scope, name)) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                          node->super.location,
-                         "duplicate declaration of '%s'", effective_name);
+                         "duplicate declaration of '%s'", name);
     ctx->error_count++;
     return;
   }
 
   struct symbol *sym =
-      symbol_create(ctx->allocator, effective_name, SYMBOL_MODULE,
+      symbol_create(ctx->allocator, name, SYMBOL_MODULE,
                     node->super.location);
   sym->state = SYMBOL_NAME_KNOWN;
   scope_push_symbol(ctx->global_scope, sym);

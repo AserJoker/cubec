@@ -231,7 +231,7 @@ TEST_F(dt_module, import_export_struct_init) {
 }
 
 TEST_F(dt_module, import_export_struct_init_alias) {
-  /* Cross-module struct init with import alias: .alias::TypeName{.field = value} */
+  /* Cross-module struct init: .modulename::TypeName{.field = value} */
   const char *vec_src =
     "export type Vec2 = struct { x: f64; y: f64; };\n";
   char *vec_path = write_temp_file(temp_dir, "vec.cubec", vec_src);
@@ -240,8 +240,8 @@ TEST_F(dt_module, import_export_struct_init_alias) {
   char main_path[512];
   snprintf(main_path, sizeof(main_path), "%s/main.cubec", temp_dir);
   const char *main_src =
-    "import vec as v from \"./vec\";\n"
-    "var p = .v::Vec2{.x = 1.5, .y = 2.5};\n";
+    "import vec from \"./vec\";\n"
+    "var p = .vec::Vec2{.x = 1.5, .y = 2.5};\n";
 
   auto r = compile_file(ctx, main_path, main_src);
   ASSERT_NE(r.ctx, nullptr);
@@ -287,31 +287,6 @@ TEST_F(dt_module, non_exported_symbol_invisible) {
 }
 
 /* ===== import alias ===== */
-
-TEST_F(dt_module, import_alias) {
-  const char *vec_src =
-    "export type Vec2 = struct { x: f64; y: f64; };\n";
-  char *vec_path = write_temp_file(temp_dir, "vec.cubec", vec_src);
-  ASSERT_NE(vec_path, nullptr);
-
-  char main_path[512];
-  snprintf(main_path, sizeof(main_path), "%s/main.cubec", temp_dir);
-  const char *main_src =
-    "import vec as v from \"./vec\";\n"
-    "func use_vec(p: v::Vec2): void {}\n";
-
-  auto r = compile_file(ctx, main_path, main_src);
-  ASSERT_NE(r.ctx, nullptr);
-  EXPECT_EQ(context_get_error_count(r.ctx), 0);
-
-  /* Verify the alias works: 'v' should resolve to the module */
-  struct symbol *alias_sym = scope_lookup_local(r.ctx->global_scope, "v");
-  ASSERT_NE(alias_sym, nullptr);
-  EXPECT_EQ(alias_sym->kind, SYMBOL_MODULE);
-
-  compile_result_cleanup(&r, allocator);
-  free(vec_path);
-}
 
 /* ===== file not found ===== */
 

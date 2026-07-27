@@ -779,8 +779,7 @@ static void _evaluate_import(context_t ctx,
   const char *name = _checker_ident_str(node->module_name);
   if (!name) return;
 
-  const char *effective_name = node->alias ? _checker_ident_str(node->alias) : name;
-  struct symbol *sym = scope_lookup_local(ctx->global_scope, effective_name);
+  struct symbol *sym = scope_lookup_local(ctx->global_scope, name);
   if (!sym || sym->kind != SYMBOL_MODULE) return;
   if (sym->state == SYMBOL_EVALUATED) return;
 

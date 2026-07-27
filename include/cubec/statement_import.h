@@ -15,18 +15,16 @@ extern "C" {
  *
  * Syntax:
  *   import <module_name> from "<module_path>";
- *   import <module_name> as <alias> from "<module_path>";
  *
  * Examples:
  *   import std from "std";
- *   import vec as v from "std/vec";
+ *   import vec from "std/vec";
  *   import io from "./io";
  */
 struct _cubec_statement_import_t;
 struct _cubec_statement_import_t {
   struct _node_t super;
   node_t module_name; /**< Identifier node for the module name */
-  node_t alias;       /**< Optional identifier node for alias (NULL if no 'as') */
   node_t path;        /**< String literal node for the module path */
 };
 typedef struct _cubec_statement_import_t *cubec_statement_import_t;
@@ -37,13 +35,12 @@ struct _cubec_statement_import_init_t {
   location_t location;
   node_t parent;
   node_t module_name;
-  node_t alias;
   node_t path;
 };
 typedef struct _cubec_statement_import_init_t cubec_statement_import_init_t;
 
 /**
- * @brief Try to parse an import statement: import <name> [as <alias>] from "<path>" ;
+ * @brief Try to parse an import statement: import <name> from "<path>" ;
  * @param allocator The allocator to use
  * @param tokens The token list
  * @param position Current position in token list (updated on success)

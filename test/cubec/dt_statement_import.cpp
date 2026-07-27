@@ -32,31 +32,8 @@ TEST_F(dt_statement_import, simple_import) {
   cubec_statement_import_t imp = (cubec_statement_import_t)node;
   EXPECT_NE(imp->module_name, nullptr);
   EXPECT_EQ(imp->module_name->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_EQ(imp->alias, nullptr);
   EXPECT_NE(imp->path, nullptr);
   EXPECT_EQ(imp->path->kind, CUBEC_NODE_LITERAL_STRING);
-
-  allocator_free(allocator, &node);
-  allocator_free(allocator, &tokens);
-}
-
-/* ---- Import with alias: import vec as v from "std/vec"; ---- */
-
-TEST_F(dt_statement_import, import_with_alias) {
-  const char *source = "import vec as v from \"std/vec\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
-  ASSERT_NE(tokens, nullptr);
-
-  size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
-  ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_IMPORT);
-
-  cubec_statement_import_t imp = (cubec_statement_import_t)node;
-  EXPECT_NE(imp->module_name, nullptr);
-  EXPECT_NE(imp->alias, nullptr);
-  EXPECT_EQ(imp->alias->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_NE(imp->path, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -206,7 +183,7 @@ TEST_F(dt_statement_import, missing_path) {
 /* ---- Clone ---- */
 
 TEST_F(dt_statement_import, clone) {
-  const char *source = "import vec as v from \"std/vec\";";
+  const char *source = "import vec from \"std/vec\";";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -220,7 +197,6 @@ TEST_F(dt_statement_import, clone) {
 
   cubec_statement_import_t imp = (cubec_statement_import_t)cloned;
   EXPECT_NE(imp->module_name, nullptr);
-  EXPECT_NE(imp->alias, nullptr);
   EXPECT_NE(imp->path, nullptr);
 
   allocator_free(allocator, &cloned);
@@ -231,7 +207,7 @@ TEST_F(dt_statement_import, clone) {
 /* ---- Move ---- */
 
 TEST_F(dt_statement_import, move) {
-  const char *source = "import vec as v from \"std/vec\";";
+  const char *source = "import vec from \"std/vec\";";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -245,7 +221,6 @@ TEST_F(dt_statement_import, move) {
 
   cubec_statement_import_t imp = (cubec_statement_import_t)moved;
   EXPECT_NE(imp->module_name, nullptr);
-  EXPECT_NE(imp->alias, nullptr);
   EXPECT_NE(imp->path, nullptr);
 
   allocator_free(allocator, &moved);

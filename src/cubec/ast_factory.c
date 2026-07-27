@@ -326,7 +326,6 @@ bool cubec_node_replace(node_t old_node, node_t new_node) {
   case CUBEC_NODE_STATEMENT_IMPORT: {
     cubec_statement_import_t si = (cubec_statement_import_t)parent;
     return _replace_ptr(&si->module_name, old_node, new_node) ||
-           _replace_ptr(&si->alias, old_node, new_node) ||
            _replace_ptr(&si->path, old_node, new_node);
   }
   case CUBEC_NODE_STATEMENT_TEST: {

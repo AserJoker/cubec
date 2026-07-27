@@ -23,14 +23,12 @@ static void _cubec_statement_import_init(
   super_init.location = init->location;
   g_node_type.init(&self->super, allocator, &super_init);
   self->module_name = init->module_name;
-  self->alias = init->alias;
   self->path = init->path;
 }
 
 static void _cubec_statement_import_dispose(
     cubec_statement_import_t self, allocator_t allocator) {
   allocator_free(allocator, &self->path);
-  allocator_free(allocator, &self->alias);
   allocator_free(allocator, &self->module_name);
   g_node_type.dispose(&self->super, allocator);
 }
@@ -40,7 +38,6 @@ static void _cubec_statement_import_clone(
     cubec_statement_import_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->module_name = value_clone(allocator, another->module_name);
-  self->alias = value_clone(allocator, another->alias);
   self->path = value_clone(allocator, another->path);
   return;
 }
@@ -50,7 +47,6 @@ static void _cubec_statement_import_move(
     cubec_statement_import_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->module_name = value_move(allocator, another->module_name);
-  self->alias = value_move(allocator, another->alias);
   self->path = value_move(allocator, another->path);
   return;
 }
@@ -80,7 +76,6 @@ node_t read_statement_import(context_t ctx, vec_t tokens,
   size_t current = *position;
   cubec_statement_import_t node = NULL;
   node_t module_name = NULL;
-  node_t alias = NULL;
   node_t path = NULL;
   location_t start_location = {0};
 
@@ -102,20 +97,6 @@ node_t read_statement_import(context_t ctx, vec_t tokens,
   }
 
   skip_whitespace(tokens, &current);
-
-  /* Check for optional 'as' keyword */
-  if (_is_keyword(tokens, current, "as")) {
-    current++;
-    skip_whitespace(tokens, &current);
-
-    /* Parse alias (required after 'as') */
-    alias = read_literal_identifier(ctx, tokens, &current, filename);
-    if (!alias) {
-      goto cleanup;
-    }
-
-    skip_whitespace(tokens, &current);
-  }
 
   /* Expect 'from' keyword */
   if (!_is_keyword(tokens, current, "from")) {
@@ -155,7 +136,6 @@ node_t read_statement_import(context_t ctx, vec_t tokens,
       .location = loc,
       .parent = NULL,
       .module_name = module_name,
-      .alias = alias,
       .path = path,
   };
   node = allocator_create(allocator, &g_cubec_statement_import_type, &init);
@@ -164,12 +144,10 @@ node_t read_statement_import(context_t ctx, vec_t tokens,
 
 cleanup:
   allocator_free(allocator, &path);
-  allocator_free(allocator, &alias);
   allocator_free(allocator, &module_name);
   allocator_free(allocator, &node);
 onerror:
   allocator_free(allocator, &path);
-  allocator_free(allocator, &alias);
   allocator_free(allocator, &module_name);
   allocator_free(allocator, &node);
   return NULL;
@@ -177,18 +155,15 @@ onerror:
 
 node_t cubec_ast_create_import_stmt(context_t ctx, location_t loc,
                                     const char *module_name,
-                                    const char *alias, const char *path) {
+                                    const char *path) {
   allocator_t alloc = ctx->allocator;
   node_t mod_node = (module_name)
                         ? (node_t)_make_ident_node(ctx, loc, module_name)
                         : NULL;
-  node_t alias_node =
-      (alias) ? (node_t)_make_ident_node(ctx, loc, alias) : NULL;
   node_t path_node = (path) ? (node_t)_make_ident_node(ctx, loc, path)
                             : NULL;
   cubec_statement_import_init_t init = {.location = loc, .parent = NULL,
                                         .module_name = mod_node,
-                                        .alias = alias_node,
                                         .path = path_node};
   return (node_t)allocator_create(alloc, &g_cubec_statement_import_type,
                                   &init);

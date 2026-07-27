@@ -138,7 +138,7 @@ node_t cubec_ast_create_switch_stmt(context_t ctx, location_t loc,
                                     node_t cond, vec_t matches);
 node_t cubec_ast_create_import_stmt(context_t ctx, location_t loc,
                                     const char *module_name,
-                                    const char *alias, const char *path);
+                                    const char *path);
 node_t cubec_ast_create_test_stmt(context_t ctx, location_t loc,
                                   const char *name, node_t body);
 
