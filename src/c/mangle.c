@@ -15,9 +15,9 @@ static uint32_t fnv1a_32(const char *data, size_t len) {
 
 string_t mangle_module_hash(allocator_t allocator, const char *path) {
   uint32_t hash = fnv1a_32(path, strlen(path));
-  /* Take lower 16 bits as 4-char hex */
+  /* Take lower 16 bits as 4-char hex, prefix with 'm' to ensure valid C ident */
   char buf[8];
-  snprintf(buf, sizeof(buf), "%04x", hash & 0xFFFF);
+  snprintf(buf, sizeof(buf), "m%04x", hash & 0xFFFF);
   return allocator_create(allocator, &g_string_type,
                            &(string_init_t){.str = buf});
 }

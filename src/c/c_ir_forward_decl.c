@@ -8,6 +8,21 @@ c_ir_forward_decl_t c_ir_forward_decl_create(allocator_t allocator,
   node->source_loc = source_loc;
   node->name = allocator_create(allocator, &g_string_type,
                                  &(string_init_t){.str = name});
+  node->body = NULL;
+  return node;
+}
+
+c_ir_forward_decl_t c_ir_forward_decl_create_with_body(allocator_t allocator,
+                                                          const char *name,
+                                                          const char *body,
+                                                          location_t source_loc) {
+  c_ir_forward_decl_t node = allocator_alloc(allocator, sizeof(struct _c_ir_forward_decl_t));
+  node->kind = C_IR_FORWARD_DECL;
+  node->source_loc = source_loc;
+  node->name = allocator_create(allocator, &g_string_type,
+                                 &(string_init_t){.str = name});
+  node->body = allocator_create(allocator, &g_string_type,
+                                 &(string_init_t){.str = body});
   return node;
 }
 
@@ -15,5 +30,6 @@ void c_ir_forward_decl_dispose(allocator_t allocator, c_ir_forward_decl_t *node)
   if (!node || !*node) return;
   c_ir_forward_decl_t n = *node;
   allocator_free(allocator, &n->name);
+  if (n->body) allocator_free(allocator, &n->body);
   allocator_free(allocator, node);
 }

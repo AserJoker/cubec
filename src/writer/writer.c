@@ -520,11 +520,24 @@ void writer_write_unit(allocator_t allocator, c_ir_unit_t unit,
   size_t fwd_count = vec_get_size(unit->forward_decls);
   for (size_t i = 0; i < fwd_count; i++) {
     c_ir_forward_decl_t fwd = vec_get(unit->forward_decls, i);
-    string_concat(out_h, "typedef struct ");
-    string_concat(out_h, string_get(fwd->name));
-    string_concat(out_h, " ");
-    string_concat(out_h, string_get(fwd->name));
-    string_concat(out_h, ";\n");
+    const char *fwd_name = string_get(fwd->name);
+
+    if (fwd->body) {
+      /* Full struct definition */
+      string_concat(out_h, "typedef struct ");
+      string_concat(out_h, fwd_name);
+      string_concat(out_h, " {\n    ");
+      string_concat(out_h, string_get(fwd->body));
+      string_concat(out_h, "} ");
+      string_concat(out_h, fwd_name);
+      string_concat(out_h, ";\n");
+    } else {
+      string_concat(out_h, "typedef struct ");
+      string_concat(out_h, fwd_name);
+      string_concat(out_h, " ");
+      string_concat(out_h, fwd_name);
+      string_concat(out_h, ";\n");
+    }
   }
   if (fwd_count > 0) string_concat(out_h, "\n");
 
@@ -571,6 +584,13 @@ void writer_write_unit(allocator_t allocator, c_ir_unit_t unit,
     c_ir_function_decl_t decl = vec_get(unit->function_decls, i);
     write_function_decl(out_h, decl, &state);
   }
+
+  /* Builtin runtime helpers */
+  string_concat(out_h, "\n/* Builtin runtime helpers */\n");
+  string_concat(out_h, "static inline void panic(const char* _msg) {\n");
+  string_concat(out_h, "    fprintf(stderr, \"%s\", _msg);\n");
+  string_concat(out_h, "    abort();\n");
+  string_concat(out_h, "}\n");
 
   string_concat(out_h, "\n#endif /* ");
   string_concat(out_h, upper);
