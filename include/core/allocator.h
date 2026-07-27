@@ -27,7 +27,20 @@ typedef void (*dispose_fn_t)(allocator_t allocator, void *self);
 allocator_t create_allocator(alloc_fn_t alloc_fn, free_fn_t free_fn);
 
 /**
+ * @brief Create a new allocator with a memory budget limit.
+ *        When total allocated bytes exceed max_memory, allocator_alloc aborts
+ *        with a diagnostic message. Pass 0 for unlimited.
+ * @param alloc_fn Custom allocation function (NULL defaults to malloc)
+ * @param free_fn Custom free function (NULL defaults to free)
+ * @param max_memory Maximum total bytes allowed (0 = unlimited)
+ * @return A new allocator_t (never NULL; aborts on failure)
+ */
+allocator_t create_allocator_with_limit(alloc_fn_t alloc_fn, free_fn_t free_fn,
+                                        size_t max_memory);
+
+/**
  * @brief Destroy the allocator and report all unfreed memory. NULL-safe.
+ *        Traverses the chunk list and prints each leak to stderr.
  */
 void delete_allocator(allocator_t allocator);
 
@@ -86,6 +99,26 @@ void *value_clone(allocator_t allocator, void *another);
  * @return Moved value in the target allocator, or NULL if another is NULL.
  */
 void *value_move(allocator_t allocator, void *another);
+
+/**
+ * @brief Get total currently allocated bytes (net, after frees).
+ */
+size_t allocator_get_total(allocator_t self);
+
+/**
+ * @brief Get peak allocated bytes (high-water mark).
+ */
+size_t allocator_get_peak(allocator_t self);
+
+/**
+ * @brief Get total number of allocations made.
+ */
+size_t allocator_get_alloc_count(allocator_t self);
+
+/**
+ * @brief Get total number of frees made.
+ */
+size_t allocator_get_free_count(allocator_t self);
 #ifdef __cplusplus
 }
 #endif

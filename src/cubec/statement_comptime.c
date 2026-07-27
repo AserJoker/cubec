@@ -1,4 +1,5 @@
 #include "cubec/statement_comptime.h"
+#include "cubec/ast_factory.h"
 #include "core/allocator.h"
 #include "core/node.h"
 #include "core/token.h"
@@ -11,6 +12,7 @@
 #include "cubec/statement_declaration.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "cubec/node_error.h"
 #include "engine/context.h"
 
 /* ==========================================================================
@@ -179,23 +181,21 @@ static node_t _read_comptime_if(context_t ctx, vec_t tokens,
 
   /* 3. Parse condition expression */
   condition = read_expression(ctx, tokens, &current, filename);
-  if (!condition) {
-    goto cleanup;
-  }
+  if (node_is_error(condition)) return condition;
+  if (!condition) goto onerror;
   skip_whitespace(tokens, &current);
 
   /* 4. Expect ')' */
   if (!_is_symbol(tokens, current, ")")) {
-    goto cleanup;
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 5. Parse then branch (block) */
   then_branch = read_statement_block(ctx, tokens, &current, filename);
-  if (!then_branch) {
-    goto cleanup;
-  }
+  if (node_is_error(then_branch)) { allocator_free(allocator, &condition); return then_branch; }
+  if (!then_branch) goto onerror;
   skip_whitespace(tokens, &current);
 
   /* 6. Optional else clause */
@@ -206,15 +206,13 @@ static node_t _read_comptime_if(context_t ctx, vec_t tokens,
     if (_is_keyword(tokens, current, "if")) {
       /* else if — parse as nested comptime if */
       else_branch = _read_comptime_if(ctx, tokens, &current, filename, start_location);
-      if (!else_branch) {
-        goto cleanup;
-      }
+      if (node_is_error(else_branch)) { allocator_free(allocator, &condition); allocator_free(allocator, &then_branch); return else_branch; }
+      if (!else_branch) goto onerror;
     } else {
       /* else { } */
       else_branch = read_statement_block(ctx, tokens, &current, filename);
-      if (!else_branch) {
-        goto cleanup;
-      }
+      if (node_is_error(else_branch)) { allocator_free(allocator, &condition); allocator_free(allocator, &then_branch); return else_branch; }
+      if (!else_branch) goto onerror;
     }
   }
 
@@ -237,17 +235,12 @@ static node_t _read_comptime_if(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
-  allocator_free(allocator, &else_branch);
-  allocator_free(allocator, &then_branch);
-  allocator_free(allocator, &condition);
-  allocator_free(allocator, &node);
 onerror:
   allocator_free(allocator, &else_branch);
   allocator_free(allocator, &then_branch);
   allocator_free(allocator, &condition);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* ==========================================================================
@@ -287,9 +280,8 @@ static node_t _read_comptime_foreach(context_t ctx, vec_t tokens,
     skip_whitespace(tokens, &current);
 
     variable = read_literal_identifier(ctx, tokens, &current, filename);
-    if (!variable) {
-      goto cleanup;
-    }
+    if (node_is_error(variable)) return variable;
+    if (!variable) goto onerror;
     skip_whitespace(tokens, &current);
 
     /* Optional type annotation ': <type>' */
@@ -297,46 +289,42 @@ static node_t _read_comptime_foreach(context_t ctx, vec_t tokens,
       current++;
       skip_whitespace(tokens, &current);
       var_type = read_expression_type(ctx, tokens, &current, filename);
-      if (!var_type) {
-        goto cleanup;
-      }
+      if (node_is_error(var_type)) { allocator_free(allocator, &variable); return var_type; }
+      if (!var_type) goto onerror;
       skip_whitespace(tokens, &current);
     }
   } else {
     is_var_decl = false;
     variable = read_literal_identifier(ctx, tokens, &current, filename);
-    if (!variable) {
-      goto cleanup;
-    }
+    if (node_is_error(variable)) return variable;
+    if (!variable) goto onerror;
     skip_whitespace(tokens, &current);
   }
 
   /* 4. Expect 'of' keyword */
   if (!_is_keyword(tokens, current, "of")) {
-    goto cleanup;
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 5. Parse iterator expression */
   iterator = read_expression(ctx, tokens, &current, filename);
-  if (!iterator) {
-    goto cleanup;
-  }
+  if (node_is_error(iterator)) { allocator_free(allocator, &var_type); allocator_free(allocator, &variable); return iterator; }
+  if (!iterator) goto onerror;
   skip_whitespace(tokens, &current);
 
   /* 6. Expect ')' */
   if (!_is_symbol(tokens, current, ")")) {
-    goto cleanup;
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 7. Parse body (block) */
   body = read_statement_block(ctx, tokens, &current, filename);
-  if (!body) {
-    goto cleanup;
-  }
+  if (node_is_error(body)) { allocator_free(allocator, &iterator); allocator_free(allocator, &var_type); allocator_free(allocator, &variable); return body; }
+  if (!body) goto onerror;
 
   /* 8. Build location */
   location_t loc = start_location;
@@ -355,19 +343,13 @@ static node_t _read_comptime_foreach(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
-  allocator_free(allocator, &body);
-  allocator_free(allocator, &iterator);
-  allocator_free(allocator, &var_type);
-  allocator_free(allocator, &variable);
-  allocator_free(allocator, &node);
 onerror:
   allocator_free(allocator, &body);
   allocator_free(allocator, &iterator);
   allocator_free(allocator, &var_type);
   allocator_free(allocator, &variable);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 /* ==========================================================================
@@ -425,9 +407,14 @@ node_t read_statement_comptime(context_t ctx, vec_t tokens,
     goto onerror;
   }
 
+  /* Error propagation: sub-parser returned an Error node */
+  if (node_is_error(result)) return result;
+  /* NULL means sub-parser didn't recognize the pattern */
+  if (!result) goto onerror;
+
   *position = current;
   return result;
 
 onerror:
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }

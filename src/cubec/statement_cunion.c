@@ -12,6 +12,7 @@
 #include "cubec/struct_field.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "cubec/node_error.h"
 #include "engine/context.h"
 
 /* --------------------------------------------------------------------------
@@ -103,6 +104,7 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens,
     while (true) {
       skip_whitespace(tokens, &current);
       node_t dec = read_decorator(ctx, tokens, &current, filename);
+      if (node_is_error(dec)) return dec;
       if (!dec) break;
       if (!decorators) {
         decorators = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
@@ -111,9 +113,9 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens,
     }
   }
 
-  /* 1. Expect 'cunion' keyword */
+  /* 1. Expect 'cunion' keyword — if not present, return NULL (not our statement) */
   if (!_is_keyword(tokens, current, "cunion")) {
-    goto onerror;
+    return NULL;
   }
   token_t cunion_token = vec_get(tokens, current);
   location_t start_location = *token_get_location(cunion_token);
@@ -123,15 +125,14 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens,
 
   /* 2. Parse cunion name (required) */
   name = read_literal_identifier(ctx, tokens, &current, filename);
-  if (!name) {
-    goto cleanup;
-  }
+  if (node_is_error(name)) { allocator_free(allocator, &decorators); return name; }
+  if (!name) goto onerror;
 
   skip_whitespace(tokens, &current);
 
   /* 3. Expect '{' */
   if (!_is_symbol(tokens, current, "{")) {
-    goto cleanup;
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
@@ -140,6 +141,7 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens,
   fields = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, "}")) {
     node_t field = read_struct_field(ctx, tokens, &current, filename);
+    if (node_is_error(field)) { allocator_free(allocator, &decorators); allocator_free(allocator, &name); allocator_free(allocator, &fields); return field; }
     if (!field) {
       break;
     }
@@ -149,9 +151,7 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens,
 
   /* 5. Expect '}' */
   if (!_is_symbol(tokens, current, "}")) {
-    token_t tok = vec_get(tokens, current);
-    location_t *loc = token_get_location(tok);
-    goto cleanup;
+    goto onerror;
   }
   token_t close_brace = vec_get(tokens, current);
   current++;
@@ -175,17 +175,12 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
-  allocator_free(allocator, &decorators);
-  allocator_free(allocator, &fields);
-  allocator_free(allocator, &name);
-  allocator_free(allocator, &node);
 onerror:
   allocator_free(allocator, &decorators);
   allocator_free(allocator, &fields);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_cunion_stmt(context_t ctx, location_t loc,

@@ -16,6 +16,7 @@
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "cubec/node_error.h"
 #include "engine/context.h"
 
 /* --------------------------------------------------------------------------
@@ -162,6 +163,7 @@ node_t read_statement_function(context_t ctx, vec_t tokens,
     while (true) {
       skip_whitespace(tokens, &current);
       node_t dec = read_decorator(ctx, tokens, &current, filename);
+      if (node_is_error(dec)) return dec;
       if (!dec) break;
       if (!decorators) {
         decorators = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
@@ -249,6 +251,7 @@ node_t read_statement_function(context_t ctx, vec_t tokens,
 
   /* 4. Delegate to read_expression_function for the actual func parsing */
   expr_node = read_expression_function(ctx, tokens, &current, filename);
+  if (node_is_error(expr_node)) { allocator_free(allocator, &decorators); return expr_node; }
   if (!expr_node) goto onerror;
   cubec_expression_function_t func = (cubec_expression_function_t)expr_node;
 
@@ -310,7 +313,7 @@ onerror:
   allocator_free(allocator, &decorators);
   allocator_free(allocator, &expr_node);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_func_stmt(context_t ctx, location_t loc,

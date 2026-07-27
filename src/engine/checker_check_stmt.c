@@ -880,6 +880,7 @@ flow_state_t _check_statement(context_t ctx, node_t stmt,
     fs = flow_state_alive(ctx->allocator);
     break;
   case CUBEC_NODE_STATEMENT_ERROR:
+  case CUBEC_NODE_ERROR:
     /* Parse error recovery placeholder — skip, diagnostic already recorded. */
     fs = flow_state_alive(ctx->allocator);
     break;

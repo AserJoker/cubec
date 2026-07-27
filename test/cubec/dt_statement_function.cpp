@@ -3,6 +3,7 @@
 #include "cubec/function_argument.h"
 #include "cubec/generic_param.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/program.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
@@ -504,7 +505,8 @@ TEST_F(dt_statement_function, missing_name) {
 
   size_t position = 0;
   node_t node = read_statement_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -518,7 +520,8 @@ TEST_F(dt_statement_function, missing_open_paren) {
 
   size_t position = 0;
   node_t node = read_statement_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -532,7 +535,8 @@ TEST_F(dt_statement_function, missing_close_paren) {
 
   size_t position = 0;
   node_t node = read_statement_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -566,7 +570,8 @@ TEST_F(dt_statement_function, export_extern_conflict) {
 
   size_t position = 0;
   node_t node = read_statement_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -580,7 +585,8 @@ TEST_F(dt_statement_function, inline_extern_conflict) {
 
   size_t position = 0;
   node_t node = read_statement_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -594,7 +600,8 @@ TEST_F(dt_statement_function, c_variadic_non_extern) {
 
   size_t position = 0;
   node_t node = read_statement_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -815,7 +822,8 @@ TEST_F(dt_statement_function, builtin_extern_mutual_exclusion) {
 
   size_t position = 0;
   node_t node = read_statement_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -857,7 +865,8 @@ TEST_F(dt_statement_function, comptime_func_without_body_is_error) {
 
   size_t position = 0;
   node_t node = read_statement_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -913,7 +922,8 @@ TEST_F(dt_statement_function, builtin_comptime_func_mutual_exclusion) {
 
   size_t position = 0;
   node_t node = read_statement_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -927,7 +937,8 @@ TEST_F(dt_statement_function, extern_comptime_func_mutual_exclusion) {
 
   size_t position = 0;
   node_t node = read_statement_function(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }

@@ -3,6 +3,7 @@
 #include "cubec/declaration_variable.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -106,7 +107,8 @@ TEST_F(dt_statement_using, using_extern_conflict) {
 
   size_t position = 0;
   node_t node = read_statement(ctx, tokens, &position, "test.cubec");
-  ASSERT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -120,7 +122,8 @@ TEST_F(dt_statement_using, using_builtin_conflict) {
 
   size_t position = 0;
   node_t node = read_statement(ctx, tokens, &position, "test.cubec");
-  ASSERT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }
@@ -134,7 +137,8 @@ TEST_F(dt_statement_using, using_comptime_conflict) {
 
   size_t position = 0;
   node_t node = read_statement(ctx, tokens, &position, "test.cubec");
-  ASSERT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }

@@ -24,8 +24,18 @@ struct _allocator_t {
   free_fn_t free_fn;
   atomic_uint_fast64_t id;
   alloc_chunk_t chunks;
+  size_t total_allocated;
+  size_t peak_allocated;
+  size_t alloc_count;
+  size_t free_count;
+  size_t max_memory; /* 0 = unlimited */
 };
 allocator_t create_allocator(alloc_fn_t alloc_fn, free_fn_t free_fn) {
+  return create_allocator_with_limit(alloc_fn, free_fn, 0);
+}
+
+allocator_t create_allocator_with_limit(alloc_fn_t alloc_fn, free_fn_t free_fn,
+                                        size_t max_memory) {
   if (alloc_fn == NULL) {
     alloc_fn = malloc;
   }
@@ -40,11 +50,42 @@ allocator_t create_allocator(alloc_fn_t alloc_fn, free_fn_t free_fn) {
   self->free_fn = free_fn;
   self->id = 0;
   self->chunks = NULL;
+  self->total_allocated = 0;
+  self->peak_allocated = 0;
+  self->alloc_count = 0;
+  self->free_count = 0;
+  self->max_memory = max_memory;
   return self;
 }
 void delete_allocator(allocator_t self) {
   if (self == NULL) {
     return;
+  }
+  /* Report unfreed chunks (leaks) */
+  if (self->chunks != NULL) {
+    size_t leak_count = 0;
+    size_t leak_bytes = 0;
+    alloc_chunk_t chunk = self->chunks;
+    fprintf(stderr,
+            "\n=== ALLOCATOR LEAK REPORT ===\n"
+            "Total allocations: %zu, frees: %zu\n"
+            "Peak memory: %zu bytes (%.2f MB)\n"
+            "Still alive at destruction: ",
+            self->alloc_count, self->free_count, self->peak_allocated,
+            self->peak_allocated / (1024.0 * 1024.0));
+    while (chunk != NULL) {
+      leak_count++;
+      leak_bytes += chunk->size;
+      const char *type_name =
+          chunk->type ? chunk->type->name : "<raw>";
+      fprintf(stderr, "\n  LEAK #%zu: %zu bytes, type=%s, id=%" PRIu64,
+              leak_count, chunk->size, type_name, chunk->id);
+      chunk = chunk->next;
+    }
+    fprintf(stderr,
+            "\nLeaked: %zu chunks, %zu bytes (%.2f MB)\n"
+            "=== END LEAK REPORT ===\n\n",
+            leak_count, leak_bytes, leak_bytes / (1024.0 * 1024.0));
   }
   self->free_fn(self);
 }
@@ -57,6 +98,17 @@ static alloc_chunk_t value_get_chunk(void *data) {
 void *allocator_alloc(allocator_t self, size_t size) {
   if (size == 0) {
     return NULL;
+  }
+  /* Check memory budget */
+  if (self->max_memory > 0 &&
+      self->total_allocated + size > self->max_memory) {
+    fprintf(stderr,
+            "FATAL: allocator memory budget exceeded: %zu + %zu > %zu "
+            "(%.2f MB limit), alloc_count=%zu, free_count=%zu\n",
+            self->total_allocated, size, self->max_memory,
+            self->max_memory / (1024.0 * 1024.0),
+            self->alloc_count, self->free_count);
+    exit(99);
   }
   alloc_chunk_t chunk = self->alloc_fn(sizeof(struct _alloc_chunk_t) + size);
   if (chunk == NULL) {
@@ -72,6 +124,12 @@ void *allocator_alloc(allocator_t self, size_t size) {
   self->chunks = chunk;
   chunk->id = atomic_fetch_add(&self->id, 1);
   memset(&chunk->data[0], 0, size);
+  /* Update stats */
+  self->total_allocated += size;
+  self->alloc_count++;
+  if (self->total_allocated > self->peak_allocated) {
+    self->peak_allocated = self->total_allocated;
+  }
   return &chunk->data[0];
 }
 
@@ -101,6 +159,9 @@ void _allocator_free_impl(allocator_t self, void **data) {
   if (chunk->next) {
     chunk->next->last = chunk->last;
   }
+  /* Update stats */
+  self->total_allocated -= chunk->size;
+  self->free_count++;
   self->free_fn(chunk);
   *data = NULL;
 }
@@ -164,4 +225,20 @@ void *value_move(allocator_t allocator, void *another) {
     memset(another,0,chunk->size);
     return data;
   }
+}
+
+size_t allocator_get_total(allocator_t self) {
+  return self ? self->total_allocated : 0;
+}
+
+size_t allocator_get_peak(allocator_t self) {
+  return self ? self->peak_allocated : 0;
+}
+
+size_t allocator_get_alloc_count(allocator_t self) {
+  return self ? self->alloc_count : 0;
+}
+
+size_t allocator_get_free_count(allocator_t self) {
+  return self ? self->free_count : 0;
 }

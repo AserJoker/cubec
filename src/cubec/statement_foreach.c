@@ -12,6 +12,7 @@
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "cubec/node_error.h"
 #include "engine/context.h"
 
 /* --------------------------------------------------------------------------
@@ -137,9 +138,8 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens,
 
     /* Parse identifier */
     variable = read_literal_identifier(ctx, tokens, &current, filename);
-    if (!variable) {
-      goto cleanup;
-    }
+    if (node_is_error(variable)) return variable;
+    if (!variable) goto onerror;
     skip_whitespace(tokens, &current);
 
     /* Optional type annotation ': <type>' */
@@ -147,49 +147,43 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens,
       current++;
       skip_whitespace(tokens, &current);
       var_type = read_expression_type(ctx, tokens, &current, filename);
-      if (!var_type) {
-        goto cleanup;
-      }
+      if (node_is_error(var_type)) { allocator_free(allocator, &variable); return var_type; }
+      if (!var_type) goto onerror;
       skip_whitespace(tokens, &current);
     }
   } else {
     /* lvalue mode: foreach(<identifier> of <expr>) */
     is_var_decl = false;
     variable = read_literal_identifier(ctx, tokens, &current, filename);
-    if (!variable) {
-      goto cleanup;
-    }
+    if (node_is_error(variable)) return variable;
+    if (!variable) goto onerror;
     skip_whitespace(tokens, &current);
   }
 
   /* 4. Expect 'of' keyword */
   if (!_is_keyword(tokens, current, "of")) {
-    goto cleanup;
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 5. Parse iterator expression */
   iterator = read_expression(ctx, tokens, &current, filename);
-  if (!iterator) {
-    goto cleanup;
-  }
+  if (node_is_error(iterator)) { allocator_free(allocator, &var_type); allocator_free(allocator, &variable); return iterator; }
+  if (!iterator) goto onerror;
   skip_whitespace(tokens, &current);
 
   /* 6. Expect ')' */
   if (!_is_symbol(tokens, current, ")")) {
-    token_t tok = vec_get(tokens, current);
-    location_t *loc = token_get_location(tok);
-    goto cleanup;
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 7. Parse body (any statement, not just block) */
   body = read_statement(ctx, tokens, &current, filename);
-  if (!body) {
-    goto cleanup;
-  }
+  if (node_is_error(body)) { allocator_free(allocator, &iterator); allocator_free(allocator, &var_type); allocator_free(allocator, &variable); return body; }
+  if (!body) goto onerror;
 
   /* 8. Build location */
   location_t loc = start_location;
@@ -208,19 +202,13 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
-  allocator_free(allocator, &body);
-  allocator_free(allocator, &iterator);
-  allocator_free(allocator, &var_type);
-  allocator_free(allocator, &variable);
-  allocator_free(allocator, &node);
 onerror:
   allocator_free(allocator, &body);
   allocator_free(allocator, &iterator);
   allocator_free(allocator, &var_type);
   allocator_free(allocator, &variable);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_foreach_stmt(context_t ctx, location_t loc,

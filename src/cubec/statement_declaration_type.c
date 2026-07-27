@@ -13,6 +13,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "cubec/node_error.h"
 
 static void _cubec_statement_declaration_type_init(
     cubec_statement_declaration_type_t self, allocator_t allocator,
@@ -106,6 +107,7 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
     while (true) {
       skip_whitespace(tokens, &current);
       node_t dec = read_decorator(ctx, tokens, &current, filename);
+      if (node_is_error(dec)) return dec;
       if (!dec) break;
       if (!decorators) {
         decorators = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
@@ -156,9 +158,8 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
 
   /* 3. Parse type alias name (required) */
   name = read_literal_identifier(ctx, tokens, &current, filename);
-  if (!name) {
-    goto cleanup;
-  }
+  if (node_is_error(name)) { allocator_free(allocator, &decorators); return name; }
+  if (!name) goto onerror;
 
   skip_whitespace(tokens, &current);
 
@@ -173,8 +174,7 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
   if (!is_builtin) {
     token_t eq = vec_get(tokens, current);
     if (!eq || !token_is(eq, CUBEC_TOKEN_SYMBOL, "=")) {
-      location_t *loc = token_get_location(eq);
-      goto cleanup;
+      goto onerror;
     }
     current++;
 
@@ -182,9 +182,8 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
 
     /* Parse type expression (no comma/assignment — terminated by ';') */
     type_value = read_expression_base(ctx, tokens, &current, filename);
-    if (!type_value) {
-      goto cleanup;
-    }
+    if (node_is_error(type_value)) { allocator_free(allocator, &decorators); allocator_free(allocator, &params); allocator_free(allocator, &name); return type_value; }
+    if (!type_value) goto onerror;
 
     skip_whitespace(tokens, &current);
   }
@@ -192,8 +191,7 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
   /* 6. Expect ';' */
   token_t semi = vec_get(tokens, current);
   if (!semi || !token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
-    location_t *loc = token_get_location(semi);
-    goto cleanup;
+    goto onerror;
   }
   current++;
 
@@ -219,19 +217,13 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
-  allocator_free(allocator, &decorators);
-  allocator_free(allocator, &type_value);
-  allocator_free(allocator, &params);
-  allocator_free(allocator, &name);
-  allocator_free(allocator, &node);
 onerror:
   allocator_free(allocator, &decorators);
   allocator_free(allocator, &type_value);
   allocator_free(allocator, &params);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_type_alias(context_t ctx, location_t loc,

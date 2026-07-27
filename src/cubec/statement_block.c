@@ -75,6 +75,7 @@ node_t read_statement_block(context_t ctx, vec_t tokens,
   /* Parse statements until '}' */
   while (true) {
     skip_whitespace(tokens, &current);
+    size_t before = current;
 
     /* Check for '}' */
     token_t next = vec_get(tokens, current);
@@ -98,6 +99,7 @@ node_t read_statement_block(context_t ctx, vec_t tokens,
     /* Error node (CUBEC_NODE_ERROR or CUBEC_NODE_STATEMENT_ERROR) — push and continue */
     if (node_is_error(stmt)) {
       vec_push(statements, stmt);
+      if (current <= before) current = before + 1;
       continue;
     }
 

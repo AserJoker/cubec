@@ -3,6 +3,7 @@
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/node.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -142,7 +143,8 @@ TEST_F(dt_statement_expression, missing_semicolon_is_error) {
 
   size_t position = 0;
   node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
-  EXPECT_EQ(node, nullptr);
+  EXPECT_TRUE(node_is_error(node));
+  allocator_free(allocator, &node);
 
   allocator_free(allocator, &tokens);
 }

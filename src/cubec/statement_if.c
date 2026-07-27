@@ -11,6 +11,7 @@
 #include "cubec/statement.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "cubec/node_error.h"
 #include "engine/context.h"
 
 /* --------------------------------------------------------------------------
@@ -118,25 +119,21 @@ node_t read_statement_if(context_t ctx, vec_t tokens,
 
   /* 3. Parse condition expression */
   condition = read_expression(ctx, tokens, &current, filename);
-  if (!condition) {
-    goto cleanup;
-  }
+  if (node_is_error(condition)) return condition;
+  if (!condition) goto onerror;
   skip_whitespace(tokens, &current);
 
   /* 4. Expect ')' */
   if (!_is_symbol(tokens, current, ")")) {
-    token_t tok = vec_get(tokens, current);
-    location_t *loc = token_get_location(tok);
-    goto cleanup;
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 5. Parse then branch (any statement) */
   then_branch = read_statement(ctx, tokens, &current, filename);
-  if (!then_branch) {
-    goto cleanup;
-  }
+  if (node_is_error(then_branch)) { allocator_free(allocator, &condition); return then_branch; }
+  if (!then_branch) goto onerror;
   skip_whitespace(tokens, &current);
 
   /* 6. Optional else clause */
@@ -147,15 +144,13 @@ node_t read_statement_if(context_t ctx, vec_t tokens,
     if (_is_keyword(tokens, current, "if")) {
       /* else if — parse as nested if statement */
       else_branch = read_statement_if(ctx, tokens, &current, filename);
-      if (!else_branch) {
-        goto cleanup;
-      }
+      if (node_is_error(else_branch)) { allocator_free(allocator, &condition); allocator_free(allocator, &then_branch); return else_branch; }
+      if (!else_branch) goto onerror;
     } else {
       /* else <statement> */
       else_branch = read_statement(ctx, tokens, &current, filename);
-      if (!else_branch) {
-        goto cleanup;
-      }
+      if (node_is_error(else_branch)) { allocator_free(allocator, &condition); allocator_free(allocator, &then_branch); return else_branch; }
+      if (!else_branch) goto onerror;
     }
   }
 
@@ -178,17 +173,12 @@ node_t read_statement_if(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
-  allocator_free(allocator, &else_branch);
-  allocator_free(allocator, &then_branch);
-  allocator_free(allocator, &condition);
-  allocator_free(allocator, &node);
 onerror:
   allocator_free(allocator, &else_branch);
   allocator_free(allocator, &then_branch);
   allocator_free(allocator, &condition);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_if_stmt(context_t ctx, location_t loc,

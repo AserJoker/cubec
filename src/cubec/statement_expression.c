@@ -9,6 +9,7 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "cubec/node_error.h"
 
 static void _cubec_statement_expression_init(
     cubec_statement_expression_t self, allocator_t allocator,
@@ -61,16 +62,17 @@ node_t read_statement_expression(context_t ctx, vec_t tokens,
 
   /* Try to parse the expression */
   node_t expr = read_expression(ctx, tokens, &current, filename);
+  if (node_is_error(expr)) return expr;
   if (!expr) {
     return NULL;
   }
+  location_t start_location = expr->location;
 
   /* Expect semicolon after the expression */
   skip_whitespace(tokens, &current);
   token_t semi = vec_get(tokens, current);
   if (!token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
-    location_t *loc = token_get_location(semi);
-    goto cleanup;
+    goto onerror;
   }
 
   /* Build location spanning from expression start to semicolon */
@@ -95,10 +97,9 @@ node_t read_statement_expression(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
-  allocator_free(allocator, &expr);
 onerror:
-  return NULL;
+  allocator_free(allocator, &expr);
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_expr_stmt(context_t ctx, location_t loc,

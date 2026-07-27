@@ -15,6 +15,7 @@
 #include "cubec/statement_declaration_type.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "cubec/node_error.h"
 #include "engine/context.h"
 
 /* --------------------------------------------------------------------------
@@ -113,6 +114,7 @@ node_t read_statement_interface(context_t ctx, vec_t tokens,
     while (true) {
       skip_whitespace(tokens, &current);
       node_t dec = read_decorator(ctx, tokens, &current, filename);
+      if (node_is_error(dec)) return dec;
       if (!dec) break;
       if (!decorators) {
         decorators = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
@@ -145,18 +147,16 @@ node_t read_statement_interface(context_t ctx, vec_t tokens,
 
   /* 3. Parse interface name (required for statement form) */
   name = read_literal_identifier(ctx, tokens, &current, filename);
-  if (!name) {
-    goto cleanup;
-  }
+  if (node_is_error(name)) { allocator_free(allocator, &decorators); return name; }
+  if (!name) goto onerror;
 
   skip_whitespace(tokens, &current);
 
   /* 4. Delegate to read_expression_type_interface_body for [generic_params] { members }
    *    (interface keyword already consumed, pass start_location for span) */
   expr_node = read_expression_type_interface_body(ctx, tokens, &current, filename, start_location);
-  if (!expr_node) {
-    goto cleanup;
-  }
+  if (node_is_error(expr_node)) { allocator_free(allocator, &decorators); allocator_free(allocator, &name); return expr_node; }
+  if (!expr_node) goto onerror;
   cubec_expression_type_interface_t expr_iface = (cubec_expression_type_interface_t)expr_node;
 
   /* 5. Build location (use modifier start or interface keyword location) */
@@ -186,17 +186,12 @@ node_t read_statement_interface(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
-  allocator_free(allocator, &decorators);
-  allocator_free(allocator, &name);
-  allocator_free(allocator, &expr_node);
-  allocator_free(allocator, &node);
 onerror:
   allocator_free(allocator, &decorators);
   allocator_free(allocator, &name);
   allocator_free(allocator, &expr_node);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_iface_stmt(context_t ctx, location_t loc,

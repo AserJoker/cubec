@@ -11,6 +11,7 @@
 #include "cubec/statement.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "cubec/node_error.h"
 #include "engine/context.h"
 
 /* --------------------------------------------------------------------------
@@ -113,25 +114,21 @@ node_t read_statement_while(context_t ctx, vec_t tokens,
 
   /* 3. Parse condition */
   condition = read_expression(ctx, tokens, &current, filename);
-  if (!condition) {
-    goto cleanup;
-  }
+  if (node_is_error(condition)) return condition;
+  if (!condition) goto onerror;
   skip_whitespace(tokens, &current);
 
   /* 4. Expect ')' */
   if (!_is_symbol(tokens, current, ")")) {
-    token_t tok = vec_get(tokens, current);
-    location_t *loc = token_get_location(tok);
-    goto cleanup;
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 5. Parse body (any statement) */
   body = read_statement(ctx, tokens, &current, filename);
-  if (!body) {
-    goto cleanup;
-  }
+  if (node_is_error(body)) { allocator_free(allocator, &condition); return body; }
+  if (!body) goto onerror;
 
   /* 6. Build location */
   location_t loc = start_location;
@@ -147,15 +144,11 @@ node_t read_statement_while(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
-  allocator_free(allocator, &body);
-  allocator_free(allocator, &condition);
-  allocator_free(allocator, &node);
 onerror:
   allocator_free(allocator, &body);
   allocator_free(allocator, &condition);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_while_stmt(context_t ctx, location_t loc,

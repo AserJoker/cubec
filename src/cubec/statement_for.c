@@ -15,6 +15,7 @@
 #include "cubec/statement.h"
 #include "cubec/token.h"
 #include <inttypes.h>
+#include "cubec/node_error.h"
 #include "engine/context.h"
 
 /* --------------------------------------------------------------------------
@@ -135,9 +136,8 @@ node_t read_statement_for(context_t ctx, vec_t tokens,
       current++;
       skip_whitespace(tokens, &current);
       node_t declarator = read_declaration_variable(ctx, tokens, &current, filename);
-      if (!declarator) {
-        goto cleanup;
-      }
+      if (node_is_error(declarator)) return declarator;
+      if (!declarator) goto onerror;
       /* Wrap in statement_expression-like node: use statement_declaration pattern */
       /* Actually, just create a statement_declaration node without the ';' */
       cubec_statement_declaration_init_t decl_init = {
@@ -156,16 +156,15 @@ node_t read_statement_for(context_t ctx, vec_t tokens,
     } else {
       /* Parse as expression (including assignment) */
       init = read_expression_comma(ctx, tokens, &current, filename);
-      if (!init) {
-        goto cleanup;
-      }
+      if (node_is_error(init)) return init;
+      if (!init) goto onerror;
     }
   }
   skip_whitespace(tokens, &current);
 
   /* 4. Expect first ';' */
   if (!_is_symbol(tokens, current, ";")) {
-    goto cleanup;
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
@@ -173,15 +172,14 @@ node_t read_statement_for(context_t ctx, vec_t tokens,
   /* 5. Parse condition (optional, ends at ';') */
   if (!_is_symbol(tokens, current, ";")) {
     condition = read_expression_comma(ctx, tokens, &current, filename);
-    if (!condition) {
-      goto cleanup;
-    }
+    if (node_is_error(condition)) { allocator_free(allocator, &init); return condition; }
+    if (!condition) goto onerror;
   }
   skip_whitespace(tokens, &current);
 
   /* 6. Expect second ';' */
   if (!_is_symbol(tokens, current, ";")) {
-    goto cleanup;
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
@@ -189,24 +187,22 @@ node_t read_statement_for(context_t ctx, vec_t tokens,
   /* 7. Parse increment (optional, ends at ')') */
   if (!_is_symbol(tokens, current, ")")) {
     increment = read_expression_comma(ctx, tokens, &current, filename);
-    if (!increment) {
-      goto cleanup;
-    }
+    if (node_is_error(increment)) { allocator_free(allocator, &condition); allocator_free(allocator, &init); return increment; }
+    if (!increment) goto onerror;
   }
   skip_whitespace(tokens, &current);
 
   /* 8. Expect ')' */
   if (!_is_symbol(tokens, current, ")")) {
-    goto cleanup;
+    goto onerror;
   }
   current++;
   skip_whitespace(tokens, &current);
 
   /* 9. Parse body (any statement) */
   body = read_statement(ctx, tokens, &current, filename);
-  if (!body) {
-    goto cleanup;
-  }
+  if (node_is_error(body)) { allocator_free(allocator, &increment); allocator_free(allocator, &condition); allocator_free(allocator, &init); return body; }
+  if (!body) goto onerror;
 
   /* 10. Build location */
   location_t loc = start_location;
@@ -224,19 +220,13 @@ node_t read_statement_for(context_t ctx, vec_t tokens,
   *position = current;
   return &node->super;
 
-cleanup:
-  allocator_free(allocator, &body);
-  allocator_free(allocator, &increment);
-  allocator_free(allocator, &condition);
-  allocator_free(allocator, &init);
-  allocator_free(allocator, &node);
 onerror:
   allocator_free(allocator, &body);
   allocator_free(allocator, &increment);
   allocator_free(allocator, &condition);
   allocator_free(allocator, &init);
   allocator_free(allocator, &node);
-  return NULL;
+  return cubec_ast_create_error(ctx, start_location);
 }
 
 node_t cubec_ast_create_for_stmt(context_t ctx, location_t loc,
