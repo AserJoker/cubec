@@ -1,8 +1,8 @@
 #include "c/c_type.h"
 #include "c/mangle.h"
+#include "c/c_ir_unit.h"
 #include "engine/semantic_type.h"
 #include "engine/symbol.h"
-#include "engine/scope.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -13,11 +13,11 @@
  * The module_hash is needed for mangled type names.
  */
 c_type_t lower_type(allocator_t allocator, semantic_type_t type,
-                     const char *module_hash);
+                     const char *module_hash, c_ir_unit_t unit);
 
 /* Forward declaration for recursive types */
 static c_type_t lower_type_impl(allocator_t allocator, semantic_type_t type,
-                                  const char *module_hash) {
+                                  const char *module_hash, c_ir_unit_t unit) {
   if (!type) return c_type_primitive(allocator, "void");
 
   enum type_kind kind = semantic_type_get_kind(type);
@@ -48,45 +48,59 @@ static c_type_t lower_type_impl(allocator_t allocator, semantic_type_t type,
   /* Char */
   case TYPE_CHAR: return c_type_primitive(allocator, "uint8_t");
 
-  /* String — mapped to slice<u8> typedef */
+  /* String — mapped directly to const char* */
   case TYPE_STRING:
   case TYPE_STR: {
-    string_t name = mangle_name(allocator, module_hash, "string");
-    c_type_t t = c_type_primitive(allocator, string_get(name));
-    allocator_free(allocator, &name);
-    return t;
+    c_type_t char_type = c_type_primitive(allocator, "char");
+    c_type_t ptr = c_type_pointer(allocator, char_type);
+    c_type_const(allocator, ptr);
+    return ptr;
   }
 
   /* Pointer */
   case TYPE_POINTER: {
-    c_type_t base = lower_type_impl(allocator, impl->pointer.pointee, module_hash);
+    c_type_t base = lower_type_impl(allocator, impl->pointer.pointee, module_hash, unit);
     return c_type_pointer(allocator, base);
   }
 
-  /* Slice — typedef name */
+  /* Slice — typedef name, record for struct/typedef emission */
   case TYPE_SLICE: {
+    /* Recurse into element type first */
+    c_type_t elem_type = lower_type_impl(allocator, impl->slice.element, module_hash, unit);
+
     /* Generate: m3a7_slice_T — use element type's C name as suffix */
-    c_type_t elem_type = lower_type_impl(allocator, impl->slice.element, module_hash);
-    /* Build slice typedef name from element's left part */
-    char buf[128];
-    snprintf(buf, sizeof(buf), "%s_slice_%s", module_hash,
-             string_get(elem_type->left));
-    /* Replace spaces and * in name */
-    string_t name = allocator_create(allocator, &g_string_type,
-                                      &(string_init_t){.str = buf});
-    c_type_t t = c_type_primitive(allocator, string_get(name));
+    string_t elem_name = allocator_create(allocator, &g_string_type,
+                                           &(string_init_t){.str = ""});
+    string_concat(elem_name, string_get(elem_type->left));
+    if (elem_type->right && strlen(string_get(elem_type->right)) > 0) {
+      string_concat(elem_name, string_get(elem_type->right));
+    }
+    /* Sanitize: replace non-alphanumeric chars with _ */
+    char *raw = allocator_alloc(allocator, strlen(string_get(elem_name)) + 1);
+    {
+      const char *s = string_get(elem_name);
+      for (size_t i = 0; s[i]; i++) {
+        raw[i] = (s[i] >= 'a' && s[i] <= 'z') || (s[i] >= 'A' && s[i] <= 'Z') ||
+                 (s[i] >= '0' && s[i] <= '9') ? s[i] : '_';
+      }
+      raw[strlen(s)] = '\0';
+    }
+    char buf[256];
+    snprintf(buf, sizeof(buf), "%s_slice_%s", module_hash, raw);
+    allocator_free(allocator, &raw);
+    allocator_free(allocator, &elem_name);
+    c_type_t t = c_type_primitive(allocator, buf);
     c_type_dispose(allocator, &elem_type);
-    allocator_free(allocator, &name);
     return t;
   }
 
   /* Array */
   case TYPE_ARRAY: {
-    c_type_t base = lower_type_impl(allocator, impl->array.element, module_hash);
+    c_type_t base = lower_type_impl(allocator, impl->array.element, module_hash, unit);
     return c_type_array(allocator, base, impl->array.length);
   }
 
-  /* Struct / Union / CUnion — mangled typedef name */
+  /* Struct / Union / CUnion — mangled typedef name, record for emission */
   case TYPE_STRUCT:
   case TYPE_UNION:
   case TYPE_CUNION: {
@@ -103,7 +117,7 @@ static c_type_t lower_type_impl(allocator_t allocator, semantic_type_t type,
     return c_type_primitive(allocator, buf);
   }
 
-  /* Enum — mangled typedef name */
+  /* Enum — mangled typedef name, record for emission */
   case TYPE_ENUM: {
     const char *type_name = semantic_type_get_name(type);
     if (type_name) {
@@ -117,14 +131,14 @@ static c_type_t lower_type_impl(allocator_t allocator, semantic_type_t type,
 
   /* Function type — function pointer */
   case TYPE_FUNCTION: {
-    c_type_t ret = lower_type_impl(allocator, impl->function.return_type, module_hash);
+    c_type_t ret = lower_type_impl(allocator, impl->function.return_type, module_hash, unit);
     vec_t param_types = impl->function.params;
     vec_t c_param_types = allocator_create(allocator, &g_vec_type,
                                             &(vec_init_t){.auto_dispose = false});
     size_t param_count = param_types ? vec_get_size(param_types) : 0;
     for (size_t i = 0; i < param_count; i++) {
       semantic_type_t param = vec_get(param_types, i);
-      c_type_t c_param = lower_type_impl(allocator, param, module_hash);
+      c_type_t c_param = lower_type_impl(allocator, param, module_hash, unit);
       vec_push(c_param_types, c_param);
     }
     c_type_t t = c_type_function_ptr(allocator, ret, c_param_types,
@@ -141,7 +155,7 @@ static c_type_t lower_type_impl(allocator_t allocator, semantic_type_t type,
 
   /* Qualifier (const/volatile) */
   case TYPE_QUALIFIER: {
-    c_type_t base = lower_type_impl(allocator, impl->qualifier.base, module_hash);
+    c_type_t base = lower_type_impl(allocator, impl->qualifier.base, module_hash, unit);
     if (impl->qualifier.is_const) base = c_type_const(allocator, base);
     if (impl->qualifier.is_volatile) base = c_type_volatile(allocator, base);
     return base;
@@ -159,10 +173,10 @@ static c_type_t lower_type_impl(allocator_t allocator, semantic_type_t type,
     }
     /* Fallback: use template's name */
     return lower_type_impl(allocator, impl->generic_instance.generic_template,
-                            module_hash);
+                            module_hash, unit);
   }
 
-  /* Tuple — mapped to anonymous struct typedef */
+  /* Tuple — mapped to anonymous struct typedef, record for emission */
   case TYPE_TUPLE: {
     char buf[64];
     snprintf(buf, sizeof(buf), "%s_tuple_%zx", module_hash, impl->hash & 0xFFFF);
@@ -185,7 +199,7 @@ static c_type_t lower_type_impl(allocator_t allocator, semantic_type_t type,
   case TYPE_INTERFACE: return c_type_primitive(allocator, "void");
 
   /* Type-of-type */
-  case TYPE_TYPE: return lower_type_impl(allocator, impl->type_of.inner, module_hash);
+  case TYPE_TYPE: return lower_type_impl(allocator, impl->type_of.inner, module_hash, unit);
 
   /* Module — shouldn't appear as a type */
   case TYPE_MODULE: return c_type_primitive(allocator, "void*");
@@ -198,6 +212,6 @@ static c_type_t lower_type_impl(allocator_t allocator, semantic_type_t type,
 }
 
 c_type_t lower_type(allocator_t allocator, semantic_type_t type,
-                     const char *module_hash) {
-  return lower_type_impl(allocator, type, module_hash);
+                     const char *module_hash, c_ir_unit_t unit) {
+  return lower_type_impl(allocator, type, module_hash, unit);
 }

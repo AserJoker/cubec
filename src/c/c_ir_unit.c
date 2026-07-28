@@ -13,6 +13,8 @@ c_ir_unit_t c_ir_unit_create(allocator_t allocator, const char *filename,
                                      &(vec_init_t){.auto_dispose = false});
   node->forward_decls = allocator_create(allocator, &g_vec_type,
                                           &(vec_init_t){.auto_dispose = false});
+  node->struct_defs = allocator_create(allocator, &g_vec_type,
+                                        &(vec_init_t){.auto_dispose = false});
   node->typedefs = allocator_create(allocator, &g_vec_type,
                                      &(vec_init_t){.auto_dispose = false});
   node->enum_defs = allocator_create(allocator, &g_vec_type,
@@ -23,6 +25,8 @@ c_ir_unit_t c_ir_unit_create(allocator_t allocator, const char *filename,
                                            &(vec_init_t){.auto_dispose = false});
   node->function_defs = allocator_create(allocator, &g_vec_type,
                                           &(vec_init_t){.auto_dispose = false});
+  node->extern_decls = allocator_create(allocator, &g_vec_type,
+                                         &(vec_init_t){.auto_dispose = false});
   return node;
 }
 
@@ -33,10 +37,12 @@ void c_ir_unit_dispose(allocator_t allocator, c_ir_unit_t *unit) {
   allocator_free(allocator, &n->module_hash);
   c_ir_dispose_vec(allocator, &n->includes);
   c_ir_dispose_vec(allocator, &n->forward_decls);
+  c_ir_dispose_vec(allocator, &n->struct_defs);
   c_ir_dispose_vec(allocator, &n->typedefs);
   c_ir_dispose_vec(allocator, &n->enum_defs);
   c_ir_dispose_vec(allocator, &n->variable_decls);
   c_ir_dispose_vec(allocator, &n->function_decls);
   c_ir_dispose_vec(allocator, &n->function_defs);
+  c_ir_dispose_vec(allocator, &n->extern_decls);
   allocator_free(allocator, unit);
 }

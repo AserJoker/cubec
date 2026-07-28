@@ -188,6 +188,9 @@ static void _context_init(void *self, allocator_t allocator, void *arg) {
   strmap_init_t cb_init = {.value_auto_dispose = false};
   ctx->checked_bodies = (strmap_t)allocator_create(allocator, &g_strmap_type, &cb_init);
 
+  /* Init runtime collection (Pass 5) */
+  ctx->runtime = runtime_collection_create(allocator);
+
   /* Init project context (lazy-initialized on first non-relative import) */
   ctx->project_root = NULL;
   ctx->manifest_deps = NULL;
@@ -219,6 +222,8 @@ static void _context_dispose(void *self, allocator_t allocator) {
   allocator_free(allocator, &ctx->type_impl_cache);
   allocator_free(allocator, &ctx->type_name_table);
   allocator_free(allocator, &ctx->body_check_worklist);
+  runtime_collection_dispose(ctx->runtime, allocator);
+  ctx->runtime = NULL;
   allocator_free(allocator, &ctx->checked_bodies);
 
   /* Dispose all module entries (source buffers, resolved paths, tokens, programs) */

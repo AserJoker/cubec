@@ -1340,4 +1340,7 @@ void context_check_program(context_t ctx, node_t program) {
 
   /* Pass 3 + Pass 4: Body checking with worklist-driven generic monomorphization */
   context_check_all_bodies(ctx, program);
+
+  /* Pass 5: Runtime collection — demand-driven diffusion from entry points */
+  context_collect_runtime(ctx, program, false);
 }

@@ -9,6 +9,7 @@
 #include "engine/builtin.h"
 #include "engine/source.h"
 #include "engine/flow_state.h"
+#include "engine/runtime_collection.h"
 #include "core/strmap.h"
 #include <stddef.h>
 #ifdef __cplusplus
@@ -91,6 +92,9 @@ struct context {
   /* generic monomorphization worklist (Pass 4) */
   vec_t body_check_worklist;   /**< vec of body_check_entry_t* */
   strmap_t checked_bodies;     /**< cache key -> "1" (already body-checked) */
+
+  /* runtime collection (Pass 5) */
+  runtime_collection_t runtime; /**< demand-driven collection of runtime types/functions */
 
   /* instantiation safety counter (reset per context_create) */
   int instantiate_func_count;

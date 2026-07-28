@@ -23,6 +23,7 @@ c_ir_function_def_t c_ir_function_def_create(allocator_t allocator,
                                                 vec_t params,
                                                 bool is_static, bool is_inline,
                                                 bool is_hidden, bool is_artificial,
+                                                bool is_c_variadic,
                                                 c_ir_node_t body,
                                                 location_t source_loc) {
   c_ir_function_def_t node = allocator_alloc(allocator, sizeof(struct _c_ir_function_def_t));
@@ -36,6 +37,7 @@ c_ir_function_def_t c_ir_function_def_create(allocator_t allocator,
   node->is_inline = is_inline;
   node->is_hidden = is_hidden;
   node->is_artificial = is_artificial;
+  node->is_c_variadic = is_c_variadic;
   node->body = body;
   return node;
 }
@@ -64,6 +66,7 @@ c_ir_function_decl_t c_ir_function_decl_create(allocator_t allocator,
                                                   vec_t params,
                                                   bool is_static, bool is_inline,
                                                   bool is_hidden, bool is_artificial,
+                                                  bool is_c_variadic,
                                                   location_t source_loc) {
   c_ir_function_decl_t node = allocator_alloc(allocator, sizeof(struct _c_ir_function_decl_t));
   node->kind = C_IR_FUNCTION_DECL;
@@ -76,6 +79,7 @@ c_ir_function_decl_t c_ir_function_decl_create(allocator_t allocator,
   node->is_inline = is_inline;
   node->is_hidden = is_hidden;
   node->is_artificial = is_artificial;
+  node->is_c_variadic = is_c_variadic;
   return node;
 }
 

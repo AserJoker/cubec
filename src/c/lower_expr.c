@@ -38,13 +38,11 @@
 #include "cubec/expression_typeof.h"
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression_alignof.h"
-/* expression_try.h and expression_assert.h don't exist as standalone headers.
-   .? and .! are handled via expression_postfix_unary (reuses expression_binary_t). */
 #include "cubec/expression_postfix_unary.h"
 #include "cubec/expression_comma.h"
 #include "cubec/expression_spread.h"
-#include "cubec/expression_postfix_unary.h"
 #include "cubec/expression_function.h"
+#include "cubec/statement_function.h"
 #include "cubec/function_argument.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
@@ -55,15 +53,325 @@
 #include "engine/symbol.h"
 #include "engine/scope.h"
 #include "engine/context.h"
-#include "engine/checker_check_expr.h"
+#include "engine/resolver.h"
 #include "core/node.h"
 #include <string.h>
 
 /* Forward declarations */
 c_type_t lower_type(allocator_t allocator, semantic_type_t type,
-                     const char *module_hash);
+                     const char *module_hash, c_ir_unit_t unit);
 c_ir_node_t lower_stmt(allocator_t allocator, context_t ctx, node_t node,
-                        const char *module_hash, vec_t defer_stack);
+                        const char *module_hash, vec_t defer_stack, c_ir_unit_t unit);
+
+/* ===== Type inference for lower ===== */
+
+/**
+ * @brief Infer the semantic type of an expression node using lower's own scope chain.
+ *
+ * This replaces all context_check_expression calls in lower. It uses:
+ * - lower's scope chain for variable/function/type lookups
+ * - resolver_resolve_type for type expression nodes
+ * - recursive inference for compound expressions
+ */
+semantic_type_t lower_infer_type(allocator_t allocator, context_t ctx,
+                                   node_t node, const char *module_hash,
+                                   c_ir_unit_t unit) {
+  if (!node) return NULL;
+
+  switch (node->kind) {
+
+  /* Identifier → look up in lower's scope chain */
+  case CUBEC_NODE_LITERAL_IDENTIFIER: {
+    const char *name = string_get(((cubec_literal_identifier_t)node)->value);
+    struct symbol *sym = scope_lookup(ctx->current_scope, name);
+    if (!sym) return NULL;
+    switch (sym->kind) {
+    case SYMBOL_VARIABLE: return sym->variable.type;
+    case SYMBOL_FUNCTION: return sym->function.type;
+    case SYMBOL_TYPE:     return sym->type.type;
+    case SYMBOL_ENUM_ITEM: {
+      /* Enum item's type is the owning enum type */
+      return sym->enum_item.owning_type;
+    }
+    default: return NULL;
+    }
+  }
+
+  /* Member access (obj.field) → get host type, find field */
+  case CUBEC_NODE_EXPRESSION_MEMBER: {
+    cubec_expression_member_t n = (cubec_expression_member_t)node;
+    semantic_type_t host_type = lower_infer_type(allocator, ctx, n->host, module_hash, unit);
+    if (!host_type) return NULL;
+
+    /* Dereference pointer/qualifier wrapping */
+    enum type_kind k = semantic_type_get_kind(host_type);
+    while (k == TYPE_QUALIFIER) {
+      type_impl_t impl = semantic_type_get_impl(host_type);
+      host_type = impl->qualifier.base;
+      k = semantic_type_get_kind(host_type);
+    }
+    if (k == TYPE_POINTER) {
+      type_impl_t impl = semantic_type_get_impl(host_type);
+      host_type = impl->pointer.pointee;
+      k = semantic_type_get_kind(host_type);
+    }
+
+    /* Find field in struct type */
+    const char *field_name = string_get(n->field->value);
+    vec_t fields = NULL;
+    if (k == TYPE_STRUCT || k == TYPE_UNION || k == TYPE_CUNION) {
+      type_impl_t impl = semantic_type_get_impl(host_type);
+      fields = impl->struct_type.fields;
+    } else if (k == TYPE_GENERIC_INSTANCE) {
+      type_impl_t impl = semantic_type_get_impl(host_type);
+      fields = impl->generic_instance.fields;
+    } else if (k == TYPE_TUPLE) {
+      type_impl_t impl = semantic_type_get_impl(host_type);
+      fields = impl->tuple.fields;
+    }
+
+    if (fields) {
+      size_t count = vec_get_size(fields);
+      for (size_t i = 0; i < count; i++) {
+        struct symbol *f = vec_get(fields, i);
+        if (strcmp(f->name, field_name) == 0 && f->field.type) {
+          return f->field.type;
+        }
+      }
+    }
+    return NULL;
+  }
+
+  /* Dereference (.*) → get pointee type */
+  case CUBEC_NODE_EXPRESSION_DEREF: {
+    cubec_expression_binary_t n = (cubec_expression_binary_t)node;
+    semantic_type_t host_type = lower_infer_type(allocator, ctx, n->right, module_hash, unit);
+    if (!host_type) return NULL;
+    enum type_kind dk = semantic_type_get_kind(host_type);
+    if (dk == TYPE_POINTER) {
+      type_impl_t impl = semantic_type_get_impl(host_type);
+      return impl->pointer.pointee;
+    }
+    if (dk == TYPE_QUALIFIER) {
+      type_impl_t impl = semantic_type_get_impl(host_type);
+      semantic_type_t base = impl->qualifier.base;
+      if (base && semantic_type_get_kind(base) == TYPE_POINTER)
+        return base->impl->pointer.pointee;
+    }
+    return NULL;
+  }
+
+  /* Address-of (.&) → pointer to host type */
+  case CUBEC_NODE_EXPRESSION_ADDR: {
+    cubec_expression_binary_t n = (cubec_expression_binary_t)node;
+    semantic_type_t host_type = lower_infer_type(allocator, ctx, n->right, module_hash, unit);
+    if (!host_type) return NULL;
+    return semantic_type_create_pointer(allocator, host_type);
+  }
+
+  /* Try (.?) and Assert (.!) → unwrap union/Result to get inner value type */
+  case CUBEC_NODE_EXPRESSION_TRY:
+  case CUBEC_NODE_EXPRESSION_ASSERT: {
+    cubec_expression_binary_t n = (cubec_expression_binary_t)node;
+    return lower_infer_type(allocator, ctx, n->right, module_hash, unit);
+  }
+
+  /* Initialize list → type from n->type expression */
+  case CUBEC_NODE_EXPRESSION_INITIALIZE_LIST: {
+    cubec_expression_initialize_list_t n = (cubec_expression_initialize_list_t)node;
+    if (n->type) return resolver_resolve_type(ctx, n->type);
+    return NULL;
+  }
+
+  /* Sizeof → type of the inner expression */
+  case CUBEC_NODE_EXPRESSION_SIZEOF: {
+    cubec_expression_sizeof_t n = (cubec_expression_sizeof_t)node;
+    /* sizeof can take a type expression or a value expression */
+    if (n->expression) {
+      enum _cubec_node_kind_t ek = n->expression->kind;
+      /* Type expression nodes: use resolver */
+      if (ek == CUBEC_NODE_EXPRESSION_TYPE_STRUCT || ek == CUBEC_NODE_EXPRESSION_TYPE_UNION ||
+          ek == CUBEC_NODE_EXPRESSION_TYPE_ENUM || ek == CUBEC_NODE_EXPRESSION_TYPE_TUPLE ||
+          ek == CUBEC_NODE_EXPRESSION_TYPE_FUNCTION || ek == CUBEC_NODE_EXPRESSION_TYPE_INTERFACE ||
+          ek == CUBEC_NODE_DECLARATION_POINTER || ek == CUBEC_NODE_DECLARATION_SLICE ||
+          ek == CUBEC_NODE_DECLARATION_ARRAY || ek == CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER ||
+          ek == CUBEC_NODE_EXPRESSION_TYPEOF || ek == CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS ||
+          ek == CUBEC_NODE_LITERAL_IDENTIFIER) {
+        return resolver_resolve_type(ctx, n->expression);
+      }
+      /* Value expression: infer its type */
+      return lower_infer_type(allocator, ctx, n->expression, module_hash, unit);
+    }
+    return NULL;
+  }
+
+  /* Alignof → same as sizeof for type inference */
+  case CUBEC_NODE_EXPRESSION_ALIGNOF: {
+    cubec_expression_alignof_t n = (cubec_expression_alignof_t)node;
+    if (n->expression) {
+      enum _cubec_node_kind_t ek = n->expression->kind;
+      if (ek == CUBEC_NODE_EXPRESSION_TYPE_STRUCT || ek == CUBEC_NODE_EXPRESSION_TYPE_UNION ||
+          ek == CUBEC_NODE_EXPRESSION_TYPE_ENUM || ek == CUBEC_NODE_EXPRESSION_TYPE_TUPLE ||
+          ek == CUBEC_NODE_EXPRESSION_TYPE_FUNCTION || ek == CUBEC_NODE_EXPRESSION_TYPE_INTERFACE ||
+          ek == CUBEC_NODE_DECLARATION_POINTER || ek == CUBEC_NODE_DECLARATION_SLICE ||
+          ek == CUBEC_NODE_DECLARATION_ARRAY || ek == CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER ||
+          ek == CUBEC_NODE_EXPRESSION_TYPEOF || ek == CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS ||
+          ek == CUBEC_NODE_LITERAL_IDENTIFIER) {
+        return resolver_resolve_type(ctx, n->expression);
+      }
+      return lower_infer_type(allocator, ctx, n->expression, module_hash, unit);
+    }
+    return NULL;
+  }
+
+  /* Call → callee's return type */
+  case CUBEC_NODE_EXPRESSION_CALL: {
+    cubec_expression_call_t n = (cubec_expression_call_t)node;
+    /* Check if callee is a builtin that needs special handling */
+    if (n->callee && n->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+      const char *fn_name = string_get(((cubec_literal_identifier_t)n->callee)->value);
+      struct symbol *sym = scope_lookup(ctx->global_scope, fn_name);
+
+      if (sym && sym->is_builtin && sym->kind == SYMBOL_FUNCTION) {
+        /* makeSlice → construct Slice<elem> type */
+        if (strcmp(fn_name, "makeSlice") == 0 && n->arguments &&
+            vec_get_size(n->arguments) >= 1) {
+          semantic_type_t elem_type = resolver_resolve_type(ctx, vec_get(n->arguments, 0));
+          if (elem_type) {
+            return semantic_type_create_slice(allocator, elem_type);
+          }
+        }
+        /* cast → first argument type */
+        if (strcmp(fn_name, "cast") == 0 && n->arguments &&
+            vec_get_size(n->arguments) >= 1) {
+          return resolver_resolve_type(ctx, vec_get(n->arguments, 0));
+        }
+        /* unionIs → first argument type (the type being checked) */
+        if (strcmp(fn_name, "unionIs") == 0 && n->arguments &&
+            vec_get_size(n->arguments) >= 1) {
+          return resolver_resolve_type(ctx, vec_get(n->arguments, 0));
+        }
+      }
+
+      /* Regular function call → get return type from function symbol */
+      if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.type) {
+        type_impl_t impl = semantic_type_get_impl(sym->function.type);
+        return impl->function.return_type;
+      }
+    }
+
+    /* Generic instantiation as callee */
+    if (n->callee && n->callee->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
+      semantic_type_t callee_type = resolver_resolve_type(ctx, n->callee);
+      if (callee_type && semantic_type_get_kind(callee_type) == TYPE_FUNCTION) {
+        type_impl_t impl = semantic_type_get_impl(callee_type);
+        return impl->function.return_type;
+      }
+    }
+
+    /* Fallback: try to infer callee type */
+    semantic_type_t callee_type = lower_infer_type(allocator, ctx, n->callee, module_hash, unit);
+    if (callee_type && semantic_type_get_kind(callee_type) == TYPE_FUNCTION) {
+      type_impl_t impl = semantic_type_get_impl(callee_type);
+      return impl->function.return_type;
+    }
+    return NULL;
+  }
+
+  /* Slice expression → same type as host (should be a slice) */
+  case CUBEC_NODE_EXPRESSION_SLICE: {
+    cubec_expression_slice_t n = (cubec_expression_slice_t)node;
+    semantic_type_t host_type = lower_infer_type(allocator, ctx, n->host, module_hash, unit);
+    if (host_type) {
+      enum type_kind k = semantic_type_get_kind(host_type);
+      if (k == TYPE_SLICE) return host_type;
+      /* If host is a qualifier wrapping a slice */
+      if (k == TYPE_QUALIFIER) {
+        type_impl_t impl = semantic_type_get_impl(host_type);
+        if (impl->qualifier.base && semantic_type_get_kind(impl->qualifier.base) == TYPE_SLICE)
+          return impl->qualifier.base;
+      }
+    }
+    return NULL;
+  }
+
+  /* Generic instantiation → resolve via resolver */
+  case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION: {
+    return resolver_resolve_type(ctx, node);
+  }
+
+  /* Anonymous function → resolve via resolver */
+  case CUBEC_NODE_EXPRESSION_FUNCTION: {
+    return resolver_resolve_type(ctx, node);
+  }
+
+  /* Type expression nodes → use resolver */
+  case CUBEC_NODE_EXPRESSION_TYPE_STRUCT:
+  case CUBEC_NODE_EXPRESSION_TYPE_UNION:
+  case CUBEC_NODE_EXPRESSION_TYPE_ENUM:
+  case CUBEC_NODE_EXPRESSION_TYPE_TUPLE:
+  case CUBEC_NODE_EXPRESSION_TYPE_FUNCTION:
+  case CUBEC_NODE_EXPRESSION_TYPE_INTERFACE:
+  case CUBEC_NODE_EXPRESSION_TYPEOF:
+  case CUBEC_NODE_DECLARATION_POINTER:
+  case CUBEC_NODE_DECLARATION_SLICE:
+  case CUBEC_NODE_DECLARATION_ARRAY:
+  case CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER:
+  case CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS:
+    return resolver_resolve_type(ctx, node);
+
+  /* Binary / ternary / group → infer from structure */
+  case CUBEC_NODE_EXPRESSION_BINARY: {
+    cubec_expression_binary_t n = (cubec_expression_binary_t)node;
+    if (!n->left) {
+      /* Prefix unary: result type depends on operator */
+      const char *op = string_get(n->opt);
+      if (strcmp(op, ".*") == 0) {
+        /* Dereference */
+        semantic_type_t host = lower_infer_type(allocator, ctx, n->right, module_hash, unit);
+        if (host && semantic_type_get_kind(host) == TYPE_POINTER) {
+          type_impl_t impl = semantic_type_get_impl(host);
+          return impl->pointer.pointee;
+        }
+        return NULL;
+      }
+      if (strcmp(op, ".&") == 0) {
+        semantic_type_t host = lower_infer_type(allocator, ctx, n->right, module_hash, unit);
+        return host ? semantic_type_create_pointer(allocator, host) : NULL;
+      }
+      /* !, -, ~ → same type or bool */
+      return lower_infer_type(allocator, ctx, n->right, module_hash, unit);
+    }
+    /* Regular binary → right operand type (simplified; C rules are more nuanced) */
+    return lower_infer_type(allocator, ctx, n->right, module_hash, unit);
+  }
+
+  case CUBEC_NODE_EXPRESSION_TERNARY: {
+    cubec_expression_ternary_t n = (cubec_expression_ternary_t)node;
+    return lower_infer_type(allocator, ctx, n->consequent, module_hash, unit);
+  }
+
+  case CUBEC_NODE_EXPRESSION_GROUP: {
+    cubec_expression_group_t n = (cubec_expression_group_t)node;
+    return lower_infer_type(allocator, ctx, n->inner, module_hash, unit);
+  }
+
+  /* Assignment → type of left operand */
+  case CUBEC_NODE_EXPRESSION_ASSIGNMENT: {
+    cubec_expression_binary_t n = (cubec_expression_binary_t)node;
+    return lower_infer_type(allocator, ctx, n->left, module_hash, unit);
+  }
+
+  /* Comma → type of right operand */
+  case CUBEC_NODE_EXPRESSION_COMMA: {
+    cubec_expression_binary_t n = (cubec_expression_binary_t)node;
+    return lower_infer_type(allocator, ctx, n->right, module_hash, unit);
+  }
+
+  default:
+    return NULL;
+  }
+}
 
 /* Counter for anonymous function names */
 static int _anon_func_counter = 0;
@@ -102,18 +410,42 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
     cubec_literal_identifier_t n = (cubec_literal_identifier_t)node;
     const char *name = string_get(n->value);
 
-    /* Try to mangle based on scope symbol */
+    /* Resolve identifier from lower's own scope chain */
     struct symbol *sym = scope_lookup(ctx->current_scope, name);
+
     if (sym && (sym->kind == SYMBOL_FUNCTION || sym->kind == SYMBOL_VARIABLE ||
                 sym->kind == SYMBOL_TYPE || sym->kind == SYMBOL_ENUM_ITEM ||
                 sym->kind == SYMBOL_FIELD)) {
+      /* Extern functions and builtin functions keep their raw name */
+      if (sym->kind == SYMBOL_FUNCTION) {
+        cubec_statement_function_t fn_node =
+            (cubec_statement_function_t)sym->function.ast_node;
+        if (fn_node && (fn_node->is_extern || fn_node->is_builtin)) {
+          return (c_ir_node_t)c_ir_expr_ident_create(allocator, name, loc);
+        }
+        if (sym->is_builtin) {
+          return (c_ir_node_t)c_ir_expr_ident_create(allocator, name, loc);
+        }
+      }
+      /* Builtin variables also keep raw name */
+      if (sym->is_builtin) {
+        return (c_ir_node_t)c_ir_expr_ident_create(allocator, name, loc);
+      }
+      /* Local variables (not in global scope) keep their raw name */
+      if (sym->kind == SYMBOL_VARIABLE) {
+        struct symbol *global_sym = scope_lookup_local(ctx->global_scope, name);
+        if (global_sym != sym) {
+          return (c_ir_node_t)c_ir_expr_ident_create(allocator, name, loc);
+        }
+      }
+      /* Global symbols get mangled names */
       string_t mangled = mangle_name(allocator, module_hash, name);
       c_ir_node_t result = (c_ir_node_t)c_ir_expr_ident_create(
           allocator, string_get(mangled), loc);
       allocator_free(allocator, &mangled);
       return result;
     }
-    /* Local variable or unresolved — use raw name */
+    /* Unresolved — use raw name */
     return (c_ir_node_t)c_ir_expr_ident_create(allocator, name, loc);
   }
 
@@ -158,6 +490,14 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
   case CUBEC_NODE_EXPRESSION_ASSIGNMENT: {
     /* Assignment is a binary expression with =, +=, etc. */
     cubec_expression_binary_t n = (cubec_expression_binary_t)node;
+    /* Wildcard assignment: _ = expr → just the expression (discard value) */
+    if (n->left && n->left->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+      cubec_literal_identifier_t id = (cubec_literal_identifier_t)n->left;
+      if (strcmp(string_get(id->value), "_") == 0 &&
+          strcmp(string_get(n->opt), "=") == 0) {
+        return lower_expr(allocator, ctx, n->right, module_hash, unit);
+      }
+    }
     c_ir_node_t left = lower_expr(allocator, ctx, n->left, module_hash, unit);
     c_ir_node_t right = lower_expr(allocator, ctx, n->right, module_hash, unit);
     return (c_ir_node_t)c_ir_expr_binary_create(allocator, string_get(n->opt),
@@ -200,9 +540,9 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
 
         /* makeSlice → compound literal */
         if (strcmp(fn_name, "makeSlice") == 0 && count >= 3) {
-          semantic_type_t slice_type = context_check_expression(ctx, (node_t)n);
+          semantic_type_t slice_type = lower_infer_type(allocator, ctx, (node_t)n, module_hash, unit);
           c_type_t c_type = slice_type
-              ? lower_type(allocator, slice_type, module_hash)
+              ? lower_type(allocator, slice_type, module_hash, unit)
               : c_type_primitive(allocator, "void");
 
           vec_t fields = allocator_create(allocator, &g_vec_type,
@@ -238,9 +578,9 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
 
         /* cast → C cast expression */
         if (strcmp(fn_name, "cast") == 0 && count >= 2) {
-          semantic_type_t result_type = context_check_expression(ctx, (node_t)n);
+          semantic_type_t result_type = lower_infer_type(allocator, ctx, (node_t)n, module_hash, unit);
           c_type_t c_type = result_type
-              ? lower_type(allocator, result_type, module_hash)
+              ? lower_type(allocator, result_type, module_hash, unit)
               : c_type_primitive(allocator, "void");
           c_ir_node_t expr = lower_expr(allocator, ctx,
                                           vec_get(n->arguments, 1),
@@ -258,8 +598,8 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
               allocator, obj, "_tag", false, loc);
 
           /* Get the tag value from the type argument */
-          semantic_type_t check_type = context_check_expression(
-              ctx, vec_get(n->arguments, 0));
+          semantic_type_t check_type = lower_infer_type(
+              allocator, ctx, vec_get(n->arguments, 0), module_hash, unit);
           /* Use the type name as tag constant */
           const char *tag_name = check_type
               ? semantic_type_get_name(check_type) : "0";
@@ -325,12 +665,23 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
   /* ===== Member access ===== */
   case CUBEC_NODE_EXPRESSION_MEMBER: {
     cubec_expression_member_t n = (cubec_expression_member_t)node;
-    c_ir_node_t obj = lower_expr(allocator, ctx, n->host, module_hash, unit);
     const char *field = string_get(n->field->value);
 
-    /* Determine is_arrow from semantic type of host */
+    /* If the host is a dereference (.*), combine into arrow (->) access:
+     * pp.*.x → pp->x  instead of (*pp).x */
+    if (n->host && n->host->kind == CUBEC_NODE_EXPRESSION_DEREF) {
+      cubec_expression_binary_t deref_node = (cubec_expression_binary_t)n->host;
+      /* postfix unary deref: left=NULL, right=host */
+      c_ir_node_t obj = lower_expr(allocator, ctx, deref_node->right, module_hash, unit);
+      return (c_ir_node_t)c_ir_expr_member_create(allocator, obj, field, true, loc);
+    }
+
+    c_ir_node_t obj = lower_expr(allocator, ctx, n->host, module_hash, unit);
+
+    /* Determine is_arrow from inferred type of host expression */
     bool is_arrow = false;
-    semantic_type_t host_type = context_check_expression(ctx, n->host);
+    semantic_type_t host_type = lower_infer_type(allocator, ctx, n->host, module_hash, unit);
+
     if (host_type) {
       enum type_kind k = semantic_type_get_kind(host_type);
       if (k == TYPE_POINTER) {
@@ -371,10 +722,10 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
   /* ===== Initialize list (struct literal) ===== */
   case CUBEC_NODE_EXPRESSION_INITIALIZE_LIST: {
     cubec_expression_initialize_list_t n = (cubec_expression_initialize_list_t)node;
-    /* Resolve type from checker */
-    semantic_type_t init_type = context_check_expression(ctx, (node_t)n);
+    /* Resolve type via lower's own type inference */
+    semantic_type_t init_type = lower_infer_type(allocator, ctx, (node_t)n, module_hash, unit);
     c_type_t type = init_type
-        ? lower_type(allocator, init_type, module_hash)
+        ? lower_type(allocator, init_type, module_hash, unit)
         : c_type_primitive(allocator, "void");
     vec_t fields = allocator_create(allocator, &g_vec_type,
                                       &(vec_init_t){.auto_dispose = false});
@@ -405,18 +756,18 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
   /* ===== Sizeof / Alignof ===== */
   case CUBEC_NODE_EXPRESSION_SIZEOF: {
     cubec_expression_sizeof_t n = (cubec_expression_sizeof_t)node;
-    semantic_type_t sem_type = context_check_expression(ctx, (node_t)n);
+    semantic_type_t sem_type = lower_infer_type(allocator, ctx, (node_t)n, module_hash, unit);
     c_type_t type = sem_type
-        ? lower_type(allocator, sem_type, module_hash)
+        ? lower_type(allocator, sem_type, module_hash, unit)
         : c_type_primitive(allocator, "void");
     return (c_ir_node_t)c_ir_expr_sizeof_create(allocator, type, loc);
   }
 
   case CUBEC_NODE_EXPRESSION_ALIGNOF: {
     cubec_expression_alignof_t n = (cubec_expression_alignof_t)node;
-    semantic_type_t sem_type = context_check_expression(ctx, (node_t)n);
+    semantic_type_t sem_type = lower_infer_type(allocator, ctx, (node_t)n, module_hash, unit);
     c_type_t type = sem_type
-        ? lower_type(allocator, sem_type, module_hash)
+        ? lower_type(allocator, sem_type, module_hash, unit)
         : c_type_primitive(allocator, "void");
     return (c_ir_node_t)c_ir_expr_alignof_create(allocator, type, loc);
   }
@@ -429,14 +780,14 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
     c_ir_node_t host = lower_expr(allocator, ctx, n->right, module_hash, unit);
     if (!host) return NULL;
 
-    semantic_type_t host_type = context_check_expression(ctx, n->right);
+    semantic_type_t host_type = lower_infer_type(allocator, ctx, n->right, module_hash, unit);
 
     vec_t stmts = allocator_create(allocator, &g_vec_type,
                                      &(vec_init_t){.auto_dispose = false});
 
     /* Cache host in a temporary */
     c_type_t tmp_type = host_type
-        ? lower_type(allocator, host_type, module_hash)
+        ? lower_type(allocator, host_type, module_hash, unit)
         : c_type_primitive(allocator, "void");
     c_ir_node_t tmp_decl = (c_ir_node_t)c_ir_stmt_local_decl_create(
         allocator, tmp_type, "_try_val", host, loc);
@@ -487,13 +838,13 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
     c_ir_node_t host = lower_expr(allocator, ctx, n->right, module_hash, unit);
     if (!host) return NULL;
 
-    semantic_type_t host_type = context_check_expression(ctx, n->right);
+    semantic_type_t host_type = lower_infer_type(allocator, ctx, n->right, module_hash, unit);
 
     vec_t stmts = allocator_create(allocator, &g_vec_type,
                                      &(vec_init_t){.auto_dispose = false});
 
     c_type_t tmp_type = host_type
-        ? lower_type(allocator, host_type, module_hash)
+        ? lower_type(allocator, host_type, module_hash, unit)
         : c_type_primitive(allocator, "void");
     c_ir_node_t tmp_decl = (c_ir_node_t)c_ir_stmt_local_decl_create(
         allocator, tmp_type, "_assert_val", host, loc);
@@ -554,10 +905,10 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
         ? lower_expr(allocator, ctx, n->start, module_hash, unit)
         : (c_ir_node_t)c_ir_expr_numeric_create(allocator, "0", loc);
 
-    /* Resolve slice type from checker */
-    semantic_type_t slice_type_sema = context_check_expression(ctx, (node_t)n);
+    /* Resolve slice type via lower's type inference */
+    semantic_type_t slice_type_sema = lower_infer_type(allocator, ctx, (node_t)n, module_hash, unit);
     c_type_t slice_type = slice_type_sema
-        ? lower_type(allocator, slice_type_sema, module_hash)
+        ? lower_type(allocator, slice_type_sema, module_hash, unit)
         : c_type_primitive(allocator, "void");
 
     vec_t fields = allocator_create(allocator, &g_vec_type,
@@ -601,8 +952,8 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
     cubec_expression_generic_instantiation_t n =
         (cubec_expression_generic_instantiation_t)node;
 
-    /* Try to get the resolved type/function from checker */
-    semantic_type_t resolved_type = context_check_expression(ctx, (node_t)n);
+    /* Try to get the resolved type/function via lower's type inference */
+    semantic_type_t resolved_type = lower_infer_type(allocator, ctx, (node_t)n, module_hash, unit);
     if (resolved_type) {
       const char *type_name = semantic_type_get_name(resolved_type);
       if (type_name) {
@@ -633,8 +984,8 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
     string_t mangled_name = allocator_create(allocator, &g_string_type,
                                               &(string_init_t){.str = name_buf});
 
-    /* Get function type from checker */
-    semantic_type_t func_type = context_check_expression(ctx, (node_t)n);
+    /* Get function type via lower's type inference */
+    semantic_type_t func_type = lower_infer_type(allocator, ctx, (node_t)n, module_hash, unit);
 
     /* Build params */
     vec_t params = allocator_create(allocator, &g_vec_type,
@@ -643,12 +994,12 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
 
     if (func_type && semantic_type_get_kind(func_type) == TYPE_FUNCTION) {
       type_impl_t impl = semantic_type_get_impl(func_type);
-      ret_type = lower_type(allocator, impl->function.return_type, module_hash);
+      ret_type = lower_type(allocator, impl->function.return_type, module_hash, unit);
       size_t param_count = impl->function.params
           ? vec_get_size(impl->function.params) : 0;
       for (size_t j = 0; j < param_count; j++) {
         semantic_type_t pt = vec_get(impl->function.params, j);
-        c_type_t ct = lower_type(allocator, pt, module_hash);
+        c_type_t ct = lower_type(allocator, pt, module_hash, unit);
         const char *pn = "_";
         if (n->arguments && j < vec_get_size(n->arguments)) {
           cubec_function_argument_t arg = vec_get(n->arguments, j);
@@ -678,7 +1029,7 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
 
     /* Lower body */
     c_ir_node_t body = n->body
-        ? lower_stmt(allocator, ctx, n->body, module_hash, NULL)
+        ? lower_stmt(allocator, ctx, n->body, module_hash, NULL, unit)
         : NULL;
 
     /* Add static function definition to unit */
@@ -689,6 +1040,7 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
           false,  /* is_inline */
           true,   /* is_hidden — no_instrument_function */
           false,  /* is_artificial */
+          false,  /* is_c_variadic */
           body, loc);
       vec_push(unit->function_defs, def);
     } else {

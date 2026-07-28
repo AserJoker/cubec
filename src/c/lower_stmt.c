@@ -48,13 +48,33 @@
 #include "engine/symbol.h"
 #include "engine/scope.h"
 #include "engine/context.h"
-#include "engine/checker_check_expr.h"
+#include "engine/resolver.h"
 #include "core/node.h"
 #include <string.h>
 
+/* ===== Scope management helpers ===== */
+
+/**
+ * @brief Enter a new block scope, save/restore ctx->current_scope.
+ * Called at the start of block/for/if/while processing.
+ */
+static scope_t enter_scope(context_t ctx, location_t loc) {
+  scope_t saved = ctx->current_scope;
+  ctx->current_scope = scope_create(ctx->allocator, saved, SCOPE_BLOCK, loc);
+  vec_push(ctx->all_scopes, ctx->current_scope);
+  return saved;
+}
+
+static void leave_scope(context_t ctx, scope_t saved) {
+  ctx->current_scope = saved;
+}
+
 /* Forward declarations */
 c_type_t lower_type(allocator_t allocator, semantic_type_t type,
-                     const char *module_hash);
+                     const char *module_hash, c_ir_unit_t unit);
+semantic_type_t lower_infer_type(allocator_t allocator, context_t ctx,
+                                   node_t node, const char *module_hash,
+                                   c_ir_unit_t unit);
 c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
                         const char *module_hash, c_ir_unit_t unit);
 
@@ -63,7 +83,7 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
  * @param defer_stack  Vector of defer AST nodes (LIFO order), may be NULL
  */
 c_ir_node_t lower_stmt(allocator_t allocator, context_t ctx, node_t node,
-                        const char *module_hash, vec_t defer_stack) {
+                        const char *module_hash, vec_t defer_stack, c_ir_unit_t unit) {
   if (!node) return NULL;
 
   /* Error nodes — skip */
@@ -78,14 +98,16 @@ c_ir_node_t lower_stmt(allocator_t allocator, context_t ctx, node_t node,
   /* ===== Block ===== */
   case CUBEC_NODE_STATEMENT_BLOCK: {
     cubec_statement_block_t n = (cubec_statement_block_t)node;
+    scope_t saved = enter_scope(ctx, loc);
     vec_t stmts = allocator_create(allocator, &g_vec_type,
                                     &(vec_init_t){.auto_dispose = false});
     size_t count = n->statements ? vec_get_size(n->statements) : 0;
     for (size_t i = 0; i < count; i++) {
       node_t child = vec_get(n->statements, i);
-      c_ir_node_t c_child = lower_stmt(allocator, ctx, child, module_hash, defer_stack);
+      c_ir_node_t c_child = lower_stmt(allocator, ctx, child, module_hash, defer_stack, unit);
       if (c_child) vec_push(stmts, c_child);
     }
+    leave_scope(ctx, saved);
     return (c_ir_node_t)c_ir_stmt_block_create(allocator, stmts, loc);
   }
 
@@ -94,6 +116,11 @@ c_ir_node_t lower_stmt(allocator_t allocator, context_t ctx, node_t node,
     cubec_statement_expression_t n = (cubec_statement_expression_t)node;
     c_ir_node_t expr = lower_expr(allocator, ctx, n->expression, module_hash, NULL);
     if (!expr) return NULL;
+    /* If the expression is itself a C_IR_STMT_STMT_EXPR (e.g., from .? or .!),
+     * unwrap it to avoid double-wrapping as expression statement */
+    if (c_ir_get_kind(expr) == C_IR_STMT_STMT_EXPR) {
+      return expr;
+    }
     return (c_ir_node_t)c_ir_stmt_expr_create(allocator, expr, loc);
   }
 
@@ -112,8 +139,7 @@ c_ir_node_t lower_stmt(allocator_t allocator, context_t ctx, node_t node,
       for (size_t i = defer_count; i > 0; i--) {
         node_t defer_node = vec_get(defer_stack, i - 1);
         cubec_statement_defer_t d = (cubec_statement_defer_t)defer_node;
-        c_ir_node_t defer_body = lower_stmt(allocator, ctx, d->body,
-                                              module_hash, NULL);
+        c_ir_node_t defer_body = lower_stmt(allocator, ctx, d->body, module_hash, NULL, unit);
         if (defer_body) vec_push(stmts, defer_body);
       }
       c_ir_node_t ret = (c_ir_node_t)c_ir_stmt_return_create(allocator, value, loc);
@@ -128,9 +154,9 @@ c_ir_node_t lower_stmt(allocator_t allocator, context_t ctx, node_t node,
   case CUBEC_NODE_STATEMENT_IF: {
     cubec_statement_if_t n = (cubec_statement_if_t)node;
     c_ir_node_t cond = lower_expr(allocator, ctx, n->condition, module_hash, NULL);
-    c_ir_node_t then_b = lower_stmt(allocator, ctx, n->then_branch, module_hash, defer_stack);
+    c_ir_node_t then_b = lower_stmt(allocator, ctx, n->then_branch, module_hash, defer_stack, unit);
     c_ir_node_t else_b = n->else_branch
-        ? lower_stmt(allocator, ctx, n->else_branch, module_hash, defer_stack)
+        ? lower_stmt(allocator, ctx, n->else_branch, module_hash, defer_stack, unit)
         : NULL;
     return (c_ir_node_t)c_ir_stmt_if_create(allocator, cond, then_b, else_b, loc);
   }
@@ -139,14 +165,14 @@ c_ir_node_t lower_stmt(allocator_t allocator, context_t ctx, node_t node,
   case CUBEC_NODE_STATEMENT_WHILE: {
     cubec_statement_while_t n = (cubec_statement_while_t)node;
     c_ir_node_t cond = lower_expr(allocator, ctx, n->condition, module_hash, NULL);
-    c_ir_node_t body = lower_stmt(allocator, ctx, n->body, module_hash, defer_stack);
+    c_ir_node_t body = lower_stmt(allocator, ctx, n->body, module_hash, defer_stack, unit);
     return (c_ir_node_t)c_ir_stmt_while_create(allocator, cond, body, loc);
   }
 
   /* ===== Do-while ===== */
   case CUBEC_NODE_STATEMENT_DO_WHILE: {
     cubec_statement_do_while_t n = (cubec_statement_do_while_t)node;
-    c_ir_node_t body = lower_stmt(allocator, ctx, n->body, module_hash, defer_stack);
+    c_ir_node_t body = lower_stmt(allocator, ctx, n->body, module_hash, defer_stack, unit);
     c_ir_node_t cond = lower_expr(allocator, ctx, n->condition, module_hash, NULL);
     return (c_ir_node_t)c_ir_stmt_do_while_create(allocator, body, cond, loc);
   }
@@ -154,10 +180,10 @@ c_ir_node_t lower_stmt(allocator_t allocator, context_t ctx, node_t node,
   /* ===== For ===== */
   case CUBEC_NODE_STATEMENT_FOR: {
     cubec_statement_for_t n = (cubec_statement_for_t)node;
-    c_ir_node_t init = n->init ? lower_stmt(allocator, ctx, n->init, module_hash, defer_stack) : NULL;
+    c_ir_node_t init = n->init ? lower_stmt(allocator, ctx, n->init, module_hash, defer_stack, unit) : NULL;
     c_ir_node_t cond = n->condition ? lower_expr(allocator, ctx, n->condition, module_hash, NULL) : NULL;
     c_ir_node_t update = n->increment ? lower_expr(allocator, ctx, n->increment, module_hash, NULL) : NULL;
-    c_ir_node_t body = lower_stmt(allocator, ctx, n->body, module_hash, defer_stack);
+    c_ir_node_t body = lower_stmt(allocator, ctx, n->body, module_hash, defer_stack, unit);
     return (c_ir_node_t)c_ir_stmt_for_create(allocator, init, cond, update, body, loc);
   }
 
@@ -180,18 +206,47 @@ c_ir_node_t lower_stmt(allocator_t allocator, context_t ctx, node_t node,
     const char *name = string_get(
         ((cubec_literal_identifier_t)var->identifier)->value);
 
-    /* Resolve type: try scope_lookup first, then fall back to checker */
+    /* Resolve type using lower's own type inference:
+     * 1. Explicit type annotation (var x: T) via resolver_resolve_type
+     * 2. Scope lookup in lower's scope chain (for variables already registered)
+     * 3. Expression type inference via lower_infer_type
+     */
     c_type_t c_type = NULL;
     bool is_mutable = true;
+    semantic_type_t sem_type = NULL;
 
-    struct symbol *sym = scope_lookup(ctx->current_scope, name);
-    if (sym && sym->kind == SYMBOL_VARIABLE && sym->variable.type) {
-      c_type = lower_type(allocator, sym->variable.type, module_hash);
-      is_mutable = sym->variable.is_mutable;
-    } else if (var->expression) {
-      semantic_type_t expr_type = context_check_expression(ctx, var->expression);
-      if (expr_type) {
-        c_type = lower_type(allocator, expr_type, module_hash);
+    /* 1. Explicit type annotation */
+    if (var->type) {
+      sem_type = resolver_resolve_type(ctx, var->type);
+    }
+
+    /* 2. Scope lookup in lower's own scope chain */
+    if (!sem_type || sem_type->impl->kind == TYPE_ERROR) {
+      struct symbol *sym = scope_lookup(ctx->current_scope, name);
+      if (sym && sym->kind == SYMBOL_VARIABLE && sym->variable.type) {
+        sem_type = sym->variable.type;
+        is_mutable = sym->variable.is_mutable;
+      }
+    }
+
+    /* 3. Expression type inference via lower_infer_type */
+    if ((!sem_type || sem_type->impl->kind == TYPE_ERROR) && var->expression) {
+      sem_type = lower_infer_type(allocator, ctx, var->expression, module_hash, unit);
+    }
+
+    if (sem_type && sem_type->impl->kind != TYPE_ERROR) {
+      c_type = lower_type(allocator, sem_type, module_hash, unit);
+      /* Create a symbol and push into current scope so nested lookups find it.
+       * This handles shadowing: inner `var x:bool` gets its own symbol
+       * that shadows the outer `var x:i32`. */
+      struct symbol *existing = scope_lookup_local(ctx->current_scope, name);
+      if (!existing) {
+        struct symbol *sym = symbol_create(ctx->allocator, name, SYMBOL_VARIABLE, loc);
+        sym->variable.type = sem_type;
+        sym->variable.is_mutable = is_mutable;
+        sym->variable.is_comptime = false;
+        sym->state = SYMBOL_EVALUATED;
+        scope_push_symbol(ctx->current_scope, sym);
       }
     }
 
@@ -264,7 +319,7 @@ c_ir_node_t lower_stmt(allocator_t allocator, context_t ctx, node_t node,
 
     for (size_t i = match_count; i > 0; i--) {
       cubec_switch_match_t m = vec_get(n->matches, i - 1);
-      c_ir_node_t then = lower_stmt(allocator, ctx, m->body, module_hash, defer_stack);
+      c_ir_node_t then = lower_stmt(allocator, ctx, m->body, module_hash, defer_stack, unit);
       if (!then) then = (c_ir_node_t)c_ir_stmt_block_create(
           allocator,
           allocator_create(allocator, &g_vec_type,
@@ -380,7 +435,7 @@ c_ir_node_t lower_stmt(allocator_t allocator, context_t ctx, node_t node,
     vec_push(while_body_stmts, item_decl);
 
     /* body */
-    c_ir_node_t body = lower_stmt(allocator, ctx, n->body, module_hash, defer_stack);
+    c_ir_node_t body = lower_stmt(allocator, ctx, n->body, module_hash, defer_stack, unit);
     if (body) vec_push(while_body_stmts, body);
 
     c_ir_node_t while_body = (c_ir_node_t)c_ir_stmt_block_create(

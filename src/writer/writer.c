@@ -33,6 +33,22 @@
 #include <stdio.h>
 #include <string.h>
 
+/* ===== Path normalization ===== */
+
+/* Replace backslashes with forward slashes for C #include/#line portability.
+ * C compilers accept forward slashes on all platforms, but backslashes
+ * cause escape sequence issues in string literals. */
+static void write_escaped_path(string_t out, const char *path) {
+  for (const char *p = path; *p; p++) {
+    if (*p == '\\') {
+      string_concat(out, "/");
+    } else {
+      char buf[2] = {*p, '\0'};
+      string_concat(out, buf);
+    }
+  }
+}
+
 /* ===== #line directive tracking ===== */
 
 typedef struct _writer_state_t {
@@ -47,10 +63,13 @@ static void emit_line_directive(string_t out, location_t loc,
   if (state->current_file == NULL ||
       strcmp(loc.filename, state->current_file) != 0 ||
       (int)loc.begin.line != state->current_line) {
-    char buf[256];
-    snprintf(buf, sizeof(buf), "\n#line %zu \"%s\"\n",
-             loc.begin.line, loc.filename);
+    string_concat(out, "\n#line ");
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%zu", loc.begin.line);
     string_concat(out, buf);
+    string_concat(out, " \"");
+    write_escaped_path(out, loc.filename);
+    string_concat(out, "\"\n");
     state->current_file = loc.filename;
     state->current_line = (int)loc.begin.line;
   }
@@ -191,7 +210,9 @@ static void write_expr(string_t out, c_ir_node_t node, writer_state_t *state) {
   }
   case C_IR_EXPR_STRING: {
     c_ir_expr_string_t n = (c_ir_expr_string_t)node;
+    string_concat(out, "\"");
     string_concat(out, string_get(n->value));
+    string_concat(out, "\"");
     break;
   }
   case C_IR_EXPR_NUMERIC: {
@@ -426,7 +447,7 @@ static void write_stmt(string_t out, c_ir_node_t node, writer_state_t *state) {
 
 /* ===== Declaration writing ===== */
 
-static void write_function_params(string_t out, vec_t params) {
+static void write_function_params(string_t out, vec_t params, bool is_c_variadic) {
   string_concat(out, "(");
   size_t count = params ? vec_get_size(params) : 0;
   for (size_t i = 0; i < count; i++) {
@@ -434,7 +455,12 @@ static void write_function_params(string_t out, vec_t params) {
     if (i > 0) string_concat(out, ", ");
     write_type(out, param->type, string_get(param->name));
   }
-  if (count == 0) string_concat(out, "void");
+  if (is_c_variadic) {
+    if (count > 0) string_concat(out, ", ");
+    string_concat(out, "...");
+  } else if (count == 0) {
+    string_concat(out, "void");
+  }
   string_concat(out, ")");
 }
 
@@ -451,7 +477,7 @@ static void write_function_decl(string_t out, c_ir_function_decl_t decl,
   if (decl->is_static) string_concat(out, "static ");
   if (decl->is_inline) string_concat(out, "inline ");
   write_type(out, decl->return_type, string_get(decl->name));
-  write_function_params(out, decl->params);
+  write_function_params(out, decl->params, decl->is_c_variadic);
   string_concat(out, ";\n");
 }
 
@@ -463,7 +489,7 @@ static void write_function_def(string_t out, c_ir_function_def_t def,
   if (def->is_static) string_concat(out, "static ");
   if (def->is_inline) string_concat(out, "inline ");
   write_type(out, def->return_type, string_get(def->name));
-  write_function_params(out, def->params);
+  write_function_params(out, def->params, def->is_c_variadic);
   string_concat(out, " ");
   write_stmt(out, def->body, state);
   string_concat(out, "\n");
@@ -516,30 +542,33 @@ void writer_write_unit(allocator_t allocator, c_ir_unit_t unit,
   }
   string_concat(out_h, "\n");
 
-  /* Forward declarations */
+  /* Forward declarations (no body — just `typedef struct X X;`) */
   size_t fwd_count = vec_get_size(unit->forward_decls);
   for (size_t i = 0; i < fwd_count; i++) {
     c_ir_forward_decl_t fwd = vec_get(unit->forward_decls, i);
     const char *fwd_name = string_get(fwd->name);
 
-    if (fwd->body) {
-      /* Full struct definition */
-      string_concat(out_h, "typedef struct ");
-      string_concat(out_h, fwd_name);
-      string_concat(out_h, " {\n    ");
-      string_concat(out_h, string_get(fwd->body));
-      string_concat(out_h, "} ");
-      string_concat(out_h, fwd_name);
-      string_concat(out_h, ";\n");
-    } else {
-      string_concat(out_h, "typedef struct ");
-      string_concat(out_h, fwd_name);
-      string_concat(out_h, " ");
-      string_concat(out_h, fwd_name);
-      string_concat(out_h, ";\n");
-    }
+    string_concat(out_h, "typedef struct ");
+    string_concat(out_h, fwd_name);
+    string_concat(out_h, " ");
+    string_concat(out_h, fwd_name);
+    string_concat(out_h, ";\n");
   }
   if (fwd_count > 0) string_concat(out_h, "\n");
+
+  /* Struct body definitions (forward decls with body) */
+  size_t sd_count = vec_get_size(unit->struct_defs);
+  for (size_t i = 0; i < sd_count; i++) {
+    c_ir_forward_decl_t sd = vec_get(unit->struct_defs, i);
+    const char *sd_name = string_get(sd->name);
+
+    string_concat(out_h, "struct ");
+    string_concat(out_h, sd_name);
+    string_concat(out_h, " {\n    ");
+    string_concat(out_h, string_get(sd->body));
+    string_concat(out_h, "};\n");
+  }
+  if (sd_count > 0) string_concat(out_h, "\n");
 
   /* Typedefs */
   size_t td_count = vec_get_size(unit->typedefs);
@@ -588,7 +617,7 @@ void writer_write_unit(allocator_t allocator, c_ir_unit_t unit,
   /* Builtin runtime helpers */
   string_concat(out_h, "\n/* Builtin runtime helpers */\n");
   string_concat(out_h, "static inline void panic(const char* _msg) {\n");
-  string_concat(out_h, "    fprintf(stderr, \"%s\", _msg);\n");
+  string_concat(out_h, "    fprintf(stderr, \"%s\\n\", _msg);\n");
   string_concat(out_h, "    abort();\n");
   string_concat(out_h, "}\n");
 
@@ -597,9 +626,22 @@ void writer_write_unit(allocator_t allocator, c_ir_unit_t unit,
   string_concat(out_h, " */\n");
 
   /* ===== .c file ===== */
-  string_concat(out_c, "#include \"");
-  string_concat(out_c, string_get(unit->filename));
-  string_concat(out_c, ".h\"\n\n");
+  /* #include uses just the filename (without directory, without extension) since
+   * .h is in same dir. e.g., "demo/main.cubec" → #include "main.h" */
+  {
+    const char *fn = string_get(unit->filename);
+    const char *base = strrchr(fn, '/');
+    const char *base2 = strrchr(fn, '\\');
+    if (base2 && (!base || base2 > base)) base = base2;
+    const char *leaf = base ? base + 1 : fn;
+    /* Strip extension from leaf */
+    size_t leaf_len = strlen(leaf);
+    const char *dot = strrchr(leaf, '.');
+    if (dot) leaf_len = (size_t)(dot - leaf);
+    string_concat(out_c, "#include \"");
+    string_nconcat(out_c, leaf, leaf_len);
+    string_concat(out_c, ".h\"\n\n");
+  }
 
   /* Variable declarations */
   size_t var_count = vec_get_size(unit->variable_decls);
@@ -615,6 +657,17 @@ void writer_write_unit(allocator_t allocator, c_ir_unit_t unit,
     string_concat(out_c, ";\n");
   }
   if (var_count > 0) string_concat(out_c, "\n");
+
+  /* Extern function declarations (in .c only, not in .h) */
+  size_t ext_count = vec_get_size(unit->extern_decls);
+  for (size_t i = 0; i < ext_count; i++) {
+    c_ir_function_decl_t decl = vec_get(unit->extern_decls, i);
+    string_concat(out_c, "extern ");
+    write_type(out_c, decl->return_type, string_get(decl->name));
+    write_function_params(out_c, decl->params, decl->is_c_variadic);
+    string_concat(out_c, ";\n");
+  }
+  if (ext_count > 0) string_concat(out_c, "\n");
 
   /* Function definitions */
   size_t fn_def_count = vec_get_size(unit->function_defs);
