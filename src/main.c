@@ -11,6 +11,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#endif
 
 static char *read_file(const char *path, size_t *out_len) {
   FILE *f = fopen(path, "rb");
@@ -169,21 +174,36 @@ static int cmd_build(int argc, char *argv[]) {
                                       &(string_init_t){.str = NULL});
   writer_write_unit(allocator, unit, out_h, out_c);
 
-  /* Write .h file */
-  const char *base = filename;
-  const char *dot = strrchr(base, '.');
-  size_t base_len = dot ? (size_t)(dot - base) : strlen(base);
-  char *h_path = (char *)malloc(base_len + 3);
-  memcpy(h_path, base, base_len);
-  h_path[base_len] = '.';
-  h_path[base_len + 1] = 'h';
-  h_path[base_len + 2] = '\0';
+  /* Write .h/.c files to build/ directory */
+  /* Extract the base filename (strip directory and extension) */
+  const char *last_slash = strrchr(filename, '/');
+  const char *last_bslash = strrchr(filename, '\\');
+  const char *base_start = filename;
+  if (last_slash && last_slash + 1 > base_start) base_start = last_slash + 1;
+  if (last_bslash && last_bslash + 1 > base_start) base_start = last_bslash + 1;
+  const char *dot = strrchr(base_start, '.');
+  size_t base_len = dot ? (size_t)(dot - base_start) : strlen(base_start);
 
-  char *c_path = (char *)malloc(base_len + 3);
-  memcpy(c_path, base, base_len);
-  c_path[base_len] = '.';
-  c_path[base_len + 1] = 'c';
-  c_path[base_len + 2] = '\0';
+  char *h_path = (char *)malloc(6 + base_len + 3); /* "build/" + name + ".h" */
+  memcpy(h_path, "build/", 6);
+  memcpy(h_path + 6, base_start, base_len);
+  h_path[6 + base_len] = '.';
+  h_path[6 + base_len + 1] = 'h';
+  h_path[6 + base_len + 2] = '\0';
+
+  char *c_path = (char *)malloc(6 + base_len + 3);
+  memcpy(c_path, "build/", 6);
+  memcpy(c_path + 6, base_start, base_len);
+  c_path[6 + base_len] = '.';
+  c_path[6 + base_len + 1] = 'c';
+  c_path[6 + base_len + 2] = '\0';
+
+  /* Ensure build/ directory exists */
+#ifdef _WIN32
+  _mkdir("build");
+#else
+  mkdir("build", 0755);
+#endif
 
   FILE *hf = fopen(h_path, "w");
   if (hf) { fputs(string_get(out_h), hf); fclose(hf); }
@@ -221,7 +241,7 @@ int _main(int argc, char *argv[]) {
     return cmd_build(argc, argv);
   }
 
-  fprintf(stderr, "usage: cubecc <command> [args]\n");
+  fprintf(stderr, "usage: cubec <command> [args]\n");
   fprintf(stderr, "  test <file>.cubec       Run test blocks\n");
   fprintf(stderr, "  build <file>.cubec      Compile to C (executable by default)\n");
   fprintf(stderr, "    --library             Generate library (no C main entry)\n");

@@ -24,7 +24,6 @@ add_compile_definitions(_CRT_SECURE_NO_WARNINGS _GNU_SOURCE)
 # ===========================================================================
 # Build targets
 # ===========================================================================
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/third_party/cJSON)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/core SRC_CORE)
@@ -34,8 +33,8 @@ aux_source_directory(${PROJECT_SOURCE_DIR}/src/reader SRC_READER)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/cubec SRC_CUBEC)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/c SRC_C)
 set(SRC_CJSON ${PROJECT_SOURCE_DIR}/third_party/cJSON/cJSON.c)
-add_executable(cubecc ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_READER} ${SRC_WRITE} ${SRC_C} ${SRC_CJSON} ${PROJECT_SOURCE_DIR}/src/main.c ${PROJECT_SOURCE_DIR}/src/icu_data.c)
-target_link_libraries(cubecc PRIVATE
+add_executable(cubec ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_READER} ${SRC_WRITE} ${SRC_C} ${SRC_CJSON} ${PROJECT_SOURCE_DIR}/src/main.c ${PROJECT_SOURCE_DIR}/src/icu_data.c)
+target_link_libraries(cubec PRIVATE
     ICU::i18n
     ICU::uc
     ICU::data
@@ -66,6 +65,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "Windows")
         "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         message(STATUS "Compiler is Clang")
         target_link_libraries(cubec_test PRIVATE clang_rt.builtins-x86_64)
-        target_link_libraries(cubecc PRIVATE clang_rt.builtins-x86_64)
+        target_link_libraries(cubec PRIVATE clang_rt.builtins-x86_64)
     endif()
 endif()
