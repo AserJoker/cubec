@@ -42,6 +42,7 @@ struct cmd_parsed_t {
   int option_count;
   const char *const *positional;
   int positional_count;
+  bool help_requested;
 };
 
 /* Parse command line. Returns result; on failure subcommand == NULL */

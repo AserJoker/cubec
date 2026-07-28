@@ -395,6 +395,7 @@ c_ir_unit_t lower_program(allocator_t allocator, context_t ctx, node_t program,
   /* Create the compilation unit */
   location_t loc = program->location;
   c_ir_unit_t unit = c_ir_unit_create(allocator, filename, module_hash, loc);
+  unit->is_library = !generate_executable;
 
   /* Add standard includes */
   c_ir_node_t stdint_h = (c_ir_node_t)c_ir_include_create(

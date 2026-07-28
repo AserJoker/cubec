@@ -11,6 +11,7 @@
 #include "c/c_ir_unit.h"
 #include "writer/writer.h"
 #include "builder/pipeline.h"
+#include "builder/cubec_writer.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -173,6 +174,19 @@ static int cmd_build_run(const cmd_parsed_t *parsed) {
   }
 
   fprintf(stdout, "Generated: %s, %s\n", h_path, c_path);
+
+  /* Generate cubec interface file for library builds */
+  if (build_library) {
+    string_t iface = allocator_create(allocator, &g_string_type,
+                                        &(string_init_t){.str = NULL});
+    cubec_write_interface(allocator, program, iface);
+    char *cubec_path = build_path(build_dir, base_name, ".cubec");
+    if (write_file(cubec_path, string_get(iface)) == 0) {
+      fprintf(stdout, "Generated: %s\n", cubec_path);
+    }
+    free(cubec_path);
+    allocator_free(allocator, &iface);
+  }
 
   /* Build pipeline: compile .c → .o, then link */
   pipeline_t pipe = pipeline_create(build_dir, base_name, build_library);

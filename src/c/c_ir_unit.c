@@ -9,6 +9,7 @@ c_ir_unit_t c_ir_unit_create(allocator_t allocator, const char *filename,
                                      &(string_init_t){.str = filename});
   node->module_hash = allocator_create(allocator, &g_string_type,
                                         &(string_init_t){.str = module_hash});
+  node->is_library = false;
   node->includes = allocator_create(allocator, &g_vec_type,
                                      &(vec_init_t){.auto_dispose = false});
   node->forward_decls = allocator_create(allocator, &g_vec_type,

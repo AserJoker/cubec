@@ -24,6 +24,7 @@ cmd_parsed_t cmd_parse(const cmd_subcommand_t *cmds, int cmd_count,
   for (int i = 2; i < argc; i++) {
     if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
       result.subcommand = cmd;
+      result.help_requested = true;
       return result;
     }
   }
@@ -170,8 +171,8 @@ int cmd_dispatch(const cmd_subcommand_t *cmds, int cmd_count,
     return 1;
   }
 
-  /* Check if --help was requested (no options and no positionals = help-only) */
-  if (parsed.option_count == 0 && parsed.positional_count == 0) {
+  /* Check if --help was requested via --help/-h flag */
+  if (parsed.help_requested) {
     char buf[512];
     cmd_usage(parsed.subcommand, argv[0], buf, sizeof(buf));
     fprintf(stderr, "%s", buf);

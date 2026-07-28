@@ -15,6 +15,7 @@ struct _c_ir_unit_t {
   location_t source_loc;
   string_t filename;       /**< Module name without extension */
   string_t module_hash;    /**< Short hash prefix (e.g., "m3a7") */
+  bool is_library;         /**< true = generate library (export visibility) */
   vec_t includes;          /**< c_ir_node_t (C_IR_INCLUDE) */
   vec_t forward_decls;     /**< c_ir_node_t (C_IR_FORWARD_DECL) — forward decls only */
   vec_t struct_defs;       /**< c_ir_node_t (C_IR_FORWARD_DECL with body) — struct body definitions */
