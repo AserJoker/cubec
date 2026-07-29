@@ -2,14 +2,8 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
 #include "cubec/node_error.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 static void _cubec_statement_empty_init(cubec_statement_empty_t self,
                                         allocator_t allocator,

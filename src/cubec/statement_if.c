@@ -1,18 +1,12 @@
 #include "cubec/statement_if.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
-#include "cubec/expression.h"
-#include "cubec/node.h"
 #include "cubec/statement_block.h"
 #include "cubec/statement.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "cubec/node_error.h"
-#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move

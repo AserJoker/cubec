@@ -3,11 +3,8 @@
 #include "core/allocator.h"
 #include "core/icu_data.h"
 #include "engine/context.h"
-#include "engine/diagnostic.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 static char *read_file(const char *path, size_t *out_len) {

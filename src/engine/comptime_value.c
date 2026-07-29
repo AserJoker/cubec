@@ -1,10 +1,7 @@
 #include "engine/comptime_value.h"
 #include "engine/comptime_eval.h"
-#include "engine/symbol.h"
 #include "engine/type_layout.h"
 #include "engine/type_hash.h"
-#include "core/string.h"
-#include <stdlib.h>
 #include <string.h>
 
 /* ===== type vtable ===== */

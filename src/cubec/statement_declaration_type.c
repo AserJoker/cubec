@@ -1,18 +1,10 @@
 #include "cubec/statement_declaration_type.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
-#include "core/vec.h"
 #include "cubec/decorator.h"
-#include "cubec/expression.h"
 #include "cubec/generic_param.h"
-#include "cubec/literal_identifier.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
-#include "engine/context.h"
 #include "cubec/node_error.h"
 
 static void _cubec_statement_declaration_type_init(

@@ -1,8 +1,4 @@
 #include "cubec/node_error.h"
-#include "core/allocator.h"
-#include "core/node.h"
-#include "core/type.h"
-#include "cubec/node.h"
 #include "engine/context.h"
 
 static void _cubec_node_error_init(cubec_node_error_t self,

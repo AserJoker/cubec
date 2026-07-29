@@ -6,13 +6,6 @@
 #include "core/vec.h"
 #include "cubec/program.h"
 #include "cubec/token.h"
-#include "engine/context.h"
-#include "engine/scope.h"
-#include "engine/semantic_type.h"
-#include "engine/source.h"
-#include "engine/symbol.h"
-#include <cJSON.h>
-#include <stdlib.h>
 #include <string.h>
 
 /* Convert a cubec position (0-based) to LSP Position (0-based) — identity */

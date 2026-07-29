@@ -1,16 +1,9 @@
 #include "cubec/generic_param.h"
 #include "cubec/ast_factory_internal.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
 #include "cubec/ast_factory.h"
-#include "cubec/expression.h"
-#include "cubec/literal_identifier.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move

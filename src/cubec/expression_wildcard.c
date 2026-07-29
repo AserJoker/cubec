@@ -1,10 +1,6 @@
 #include "cubec/expression_wildcard.h"
-#include "cubec/expression.h"
-#include "core/allocator.h"
 #include "core/token.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
-#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move

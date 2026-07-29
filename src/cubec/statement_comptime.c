@@ -1,19 +1,13 @@
 #include "cubec/statement_comptime.h"
 #include "cubec/ast_factory.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
 #include "cubec/declaration_variable.h"
-#include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
-#include "cubec/node.h"
 #include "cubec/statement_block.h"
 #include "cubec/statement_declaration.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "cubec/node_error.h"
-#include "engine/context.h"
 
 /* ==========================================================================
  *  comptime if: comptime if(condition) { } [else { }]
@@ -359,6 +353,7 @@ onerror:
 node_t read_statement_comptime(context_t ctx, vec_t tokens,
                                 size_t *position, const char *filename) {
   allocator_t allocator = ctx->allocator;
+  (void)allocator;
   size_t current = *position;
 
   /* 1. Expect 'comptime' keyword */

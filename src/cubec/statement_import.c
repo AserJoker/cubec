@@ -2,17 +2,9 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
 #include "cubec/node_error.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
-#include "core/vec.h"
-#include "cubec/literal_identifier.h"
 #include "cubec/literal_string.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 static void _cubec_statement_import_init(
     cubec_statement_import_t self, allocator_t allocator,
@@ -102,8 +94,6 @@ node_t read_statement_import(context_t ctx, vec_t tokens,
 
   /* Expect 'from' keyword */
   if (!_is_keyword(tokens, current, "from")) {
-    token_t tok = vec_get(tokens, current);
-    location_t *loc = token_get_location(tok);
     goto onerror;
   }
   current++;
@@ -121,7 +111,6 @@ node_t read_statement_import(context_t ctx, vec_t tokens,
   /* Expect semicolon */
   token_t semi = vec_get(tokens, current);
   if (!semi || !token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
-    location_t *loc = token_get_location(semi);
     goto onerror;
   }
   current++;

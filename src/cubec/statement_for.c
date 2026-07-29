@@ -1,14 +1,9 @@
 #include "cubec/statement_for.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
 #include "cubec/declaration_variable.h"
-#include "cubec/expression.h"
 #include "cubec/expression_comma.h"
-#include "cubec/node.h"
 #include "cubec/statement_block.h"
 #include "cubec/statement_declaration.h"
 #include "cubec/statement_expression.h"
@@ -16,7 +11,6 @@
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "cubec/node_error.h"
-#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move

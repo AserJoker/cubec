@@ -1,7 +1,5 @@
 #include "core/vec.h"
 #include "core/allocator.h"
-#include "core/type.h"
-#include <stdbool.h>
 
 struct _vec_t {
   allocator_t allocator;
@@ -32,6 +30,7 @@ static void _vec_clone(vec_t self, allocator_t allocator, vec_t another) {
   }
 }
 static void _vec_move(vec_t self, allocator_t allocator, vec_t another) {
+  (void)allocator;
   self->auto_dispose = another->auto_dispose;
   self->capacity = another->capacity;
   self->size = another->size;

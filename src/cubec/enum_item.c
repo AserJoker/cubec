@@ -1,16 +1,9 @@
 #include "cubec/enum_item.h"
 #include "cubec/ast_factory_internal.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
 #include "cubec/ast_factory.h"
-#include "cubec/expression.h"
-#include "cubec/literal_identifier.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -92,7 +85,6 @@ node_t read_enum_item(context_t ctx, vec_t tokens,
   /* Optional ': <type>' */
   token_t colon_token = vec_get(tokens, current);
   if (colon_token && token_is(colon_token, CUBEC_TOKEN_SYMBOL, ":")) {
-    location_t colon_loc = *token_get_location(colon_token);
     current++;
     skip_whitespace(tokens, &current);
 
@@ -106,7 +98,6 @@ node_t read_enum_item(context_t ctx, vec_t tokens,
   /* Optional '= <value>' */
   token_t eq_token = vec_get(tokens, current);
   if (eq_token && token_is(eq_token, CUBEC_TOKEN_SYMBOL, "=")) {
-    location_t eq_loc = *token_get_location(eq_token);
     current++;
     skip_whitespace(tokens, &current);
 

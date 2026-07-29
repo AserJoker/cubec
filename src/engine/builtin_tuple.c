@@ -5,15 +5,10 @@
 
 #include "engine/builtin_tuple.h"
 #include "engine/comptime_eval_internal.h"
-#include "engine/symbol.h"
 #include "engine/type_hash.h"
-#include "engine/diagnostic.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/literal_numeric.h"
-#include "core/allocator.h"
-#include "core/string.h"
-#include "core/vec.h"
 
 /* ===== getTupleItem eval callback ===== */
 

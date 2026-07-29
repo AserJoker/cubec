@@ -1,7 +1,5 @@
 #include "engine/type_layout.h"
 #include "engine/symbol.h"
-#include "core/vec.h"
-#include <stddef.h>
 
 static size_t _align_up(size_t value, size_t alignment) {
   return (value + alignment - 1) & ~(alignment - 1);
@@ -346,6 +344,7 @@ void type_layout_compute(semantic_type_t type, size_t ptr_size) {
   case TYPE_GENERIC_VALUE:
   case TYPE_PACK_INDEX:
   case TYPE_WILDCARD:
+  case TYPE_MODULE:
     /* These are compile-time only types, no runtime representation */
     impl->size = 0;
     impl->alignment = 0;

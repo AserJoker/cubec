@@ -1,7 +1,4 @@
 #include "cubec/expression.h"
-#include "core/allocator.h"
-#include "core/node.h"
-#include "core/type.h"
 #include "cubec/token.h"
 #include "cubec/declaration_array.h"
 #include "cubec/declaration_pointer.h"
@@ -28,14 +25,12 @@
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression_alignof.h"
 #include "cubec/literal_char.h"
-#include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
 #include "cubec/literal_undefined.h"
 #include "cubec/expression_wildcard.h"
 #include "cubec/node_error.h"
 #include <inttypes.h>
-#include "engine/context.h"
 
 static void _cubec_expression_init(cubec_expression_t self,
                                    allocator_t allocator,

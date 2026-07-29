@@ -1,7 +1,4 @@
 #include "cubec/declaration.h"
-#include "core/allocator.h"
-#include "core/node.h"
-#include "engine/context.h"
 
 static void _cubec_declaration_init(cubec_declaration_t self,
                                     allocator_t allocator,

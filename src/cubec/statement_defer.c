@@ -2,18 +2,11 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
 #include "cubec/node_error.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
-#include "core/vec.h"
 #include "cubec/function_capture.h"
-#include "cubec/node.h"
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -139,8 +132,6 @@ node_t read_statement_defer(context_t ctx, vec_t tokens,
         skip_whitespace(tokens, &current);
         break;
       } else {
-        token_t tok = vec_get(tokens, current);
-        location_t *loc = token_get_location(tok);
         goto onerror;
       }
     }

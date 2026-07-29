@@ -1,16 +1,10 @@
 #include "cubec/expression_assignment.h"
 #include "cubec/node_error.h"
-#include "engine/diagnostic.h"
-#include "core/allocator.h"
-#include "core/string.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
-#include "cubec/expression.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move

@@ -1,7 +1,5 @@
 #include "engine/scope.h"
-#include "core/allocator.h"
 #include "core/string.h"
-#include "core/vec.h"
 #include <string.h>
 
 struct _scope_t {

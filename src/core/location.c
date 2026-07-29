@@ -1,5 +1,4 @@
 #include "core/location.h"
-#include "core/allocator.h"
 #include <string.h>
 
 char *location_get(location_t *loc, allocator_t allocator) {

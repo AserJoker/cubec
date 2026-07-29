@@ -1,12 +1,8 @@
 #include "cubec/expression_member.h"
-#include "core/allocator.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
-#include "cubec/literal_identifier.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
-#include "engine/context.h"
 
 static void _cubec_expression_member_init(cubec_expression_member_t self,
                                           allocator_t allocator,

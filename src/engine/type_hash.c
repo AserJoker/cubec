@@ -1,8 +1,6 @@
 #include "engine/type_hash.h"
 #include "engine/symbol.h"
 #include "engine/comptime_value.h"
-#include "core/strmap.h"
-#include "core/vec.h"
 #include <string.h>
 
 /* FNV-1a offset basis and prime for 64-bit */
@@ -200,6 +198,9 @@ static size_t _hash_type(semantic_type_t type) {
 
   case TYPE_WILDCARD:
     hash = _hash_combine(hash, (size_t)type->impl->wildcard.is_tuple);
+    break;
+
+  case TYPE_MODULE:
     break;
   }
 

@@ -1,7 +1,5 @@
 #include "builder/cubec_writer.h"
 
-#include "core/allocator.h"
-#include "core/vec.h"
 #include "cubec/node.h"
 #include "cubec/statement_function.h"
 #include "cubec/statement_declaration.h"

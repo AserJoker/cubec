@@ -1,6 +1,4 @@
 #include "writer/writer.h"
-#include "c/c_ir.h"
-#include "c/c_ir_unit.h"
 #include "c/c_ir_include.h"
 #include "c/c_ir_typedef.h"
 #include "c/c_ir_forward_decl.h"
@@ -29,7 +27,6 @@
 #include "c/c_ir_expr_alignof.h"
 #include "c/c_ir_expr_literal.h"
 #include "c/c_ir_expr_initializer.h"
-#include "c/c_type.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -496,8 +493,6 @@ static void write_function_def(string_t out, c_ir_function_def_t def,
 }
 
 /* ===== Top-level writing ===== */
-
-static const location_t NULL_LOC = {0};
 
 void writer_write_unit(allocator_t allocator, c_ir_unit_t unit,
                          string_t out_h, string_t out_c) {

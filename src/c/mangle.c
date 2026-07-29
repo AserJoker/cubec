@@ -1,6 +1,5 @@
 #include "c/mangle.h"
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
 
 /* FNV-1a hash — 32-bit */

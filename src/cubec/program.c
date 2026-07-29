@@ -2,17 +2,9 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
 #include "cubec/node_error.h"
-#include "core/allocator.h"
-#include "core/location.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
-#include "core/vec.h"
-#include "cubec/node.h"
 #include "cubec/statement.h"
 #include "cubec/token.h"
-#include "engine/context.h"
-#include <stdint.h>
 
 static void _cubec_program_node_init(cubec_program_node_t self,
                                      allocator_t allocator,

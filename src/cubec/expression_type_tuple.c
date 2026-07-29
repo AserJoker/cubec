@@ -1,19 +1,11 @@
 #include "cubec/expression_type_tuple.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
-#include "core/vec.h"
 #include "cubec/ast_factory.h"
-#include "cubec/expression.h"
 #include "cubec/expression_spread.h"
 #include "cubec/expression_wildcard.h"
-#include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <string.h>
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move

@@ -1,6 +1,4 @@
 #include "engine/symbol.h"
-#include "core/allocator.h"
-#include "core/vec.h"
 #include <string.h>
 
 static void _symbol_init(void *self, allocator_t allocator, void *arg) {

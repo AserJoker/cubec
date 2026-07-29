@@ -1,7 +1,4 @@
 #include "core/token.h"
-#include "core/allocator.h"
-#include "core/location.h"
-#include "core/type.h"
 struct _token_t {
   allocator_t allocator;
   uint32_t kind;
@@ -15,7 +12,10 @@ static void _token_init(token_t self, allocator_t allocator,
   self->location = init->location;
 }
 
-static void _token_dispose(token_t self, allocator_t allocator) {}
+static void _token_dispose(token_t self, allocator_t allocator) {
+  (void)self;
+  (void)allocator;
+}
 
 static void _token_clone(token_t self, allocator_t allocator, token_t another) {
   self->allocator = allocator;

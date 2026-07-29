@@ -1,16 +1,9 @@
 #include "cubec/expression_typeof.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
-#include "cubec/expression.h"
-#include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 static void _cubec_expression_typeof_init(cubec_expression_typeof_t self,
                                            allocator_t allocator,
@@ -66,7 +59,6 @@ node_t read_expression_typeof(context_t ctx, vec_t tokens,
   }
   location_t start_location = *token_get_location(typeof_token);
   start_location.filename = filename;
-  size_t typeof_start = current;
   current++;
 
   /* Expect '(' */

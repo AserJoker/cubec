@@ -3,12 +3,8 @@
 #include "core/allocator.h"
 #include "core/strmap.h"
 #include "engine/context.h"
-#include "engine/diagnostic.h"
-#include "engine/source.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include <cJSON.h>
-#include <stdlib.h>
 #include <string.h>
 
 /* Convert a cubec position (0-based) to LSP Position (0-based) — identity */

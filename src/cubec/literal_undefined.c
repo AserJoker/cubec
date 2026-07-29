@@ -1,13 +1,8 @@
 #include "cubec/literal_undefined.h"
 #include "cubec/ast_factory_internal.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
 #include "cubec/ast_factory.h"
-#include "cubec/literal.h"
 #include "cubec/token.h"
-#include "engine/context.h"
 
 static void _cubec_literal_undefined_init(cubec_literal_undefined_t self,
                                           allocator_t allocator,

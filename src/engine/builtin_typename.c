@@ -7,15 +7,10 @@
 
 #include "engine/builtin_typename.h"
 #include "engine/comptime_eval_internal.h"
-#include "engine/diagnostic.h"
 #include "engine/resolver.h"
 #include "engine/type_hash.h"
-#include "engine/checker_type_util.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_generic_instantiation.h"
-#include "cubec/literal_identifier.h"
-#include "core/allocator.h"
-#include "core/vec.h"
 
 /* ===== typename eval callback ===== */
 

@@ -1,15 +1,9 @@
 #include "cubec/expression_binary.h"
-#include "core/allocator.h"
-#include "core/string.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
-#include "cubec/expression.h"
-#include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -242,8 +236,6 @@ static cubec_expression_binary_t make_binary_node(context_t ctx,
  */
 static node_t read_unary(context_t ctx, vec_t tokens,
                          size_t *position, const char *filename) {
-  allocator_t allocator = ctx->allocator;
-  size_t current = *position;
   node_t node = read_expression_prefix(ctx, tokens, position, filename);
   if (node) {
     return node;
@@ -312,8 +304,6 @@ static node_t read_binary_rhs(context_t ctx, vec_t tokens,
 
 node_t read_expression_binary(context_t ctx, vec_t tokens,
                                size_t *position, const char *filename) {
-  allocator_t allocator = ctx->allocator;
-  size_t current = *position;
   node_t left = read_unary(ctx, tokens, position, filename);
   if (node_is_error(left)) return left;
   if (!left) {

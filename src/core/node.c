@@ -1,7 +1,4 @@
 #include "core/node.h"
-#include "core/allocator.h"
-#include "core/location.h"
-#include "core/type.h"
 
 static void _node_init(node_t self, allocator_t allocator, node_init_t *init) {
   if (init) {
@@ -15,14 +12,19 @@ static void _node_init(node_t self, allocator_t allocator, node_init_t *init) {
   }
   self->allocator = allocator;
 }
-static void _node_dispose(node_t self, allocator_t allocator) {}
+static void _node_dispose(node_t self, allocator_t allocator) {
+  (void)self;
+  (void)allocator;
+}
 
 static void _node_clone(node_t self, allocator_t allocator, node_t another) {
+  (void)allocator;
   self->kind = another->kind;
   self->location = another->location;
   self->parent = NULL;
 }
 static void _node_move(node_t self, allocator_t allocator, node_t another) {
+  (void)allocator;
   self->kind = another->kind;
   self->location = another->location;
   self->parent = NULL;

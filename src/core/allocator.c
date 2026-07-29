@@ -1,11 +1,6 @@
 #include "core/allocator.h"
-#include "core/type.h"
 #include <inttypes.h>
-#include <stdatomic.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #ifdef RUNNING_ON_VALGRIND
 #include <valgrind/valgrind.h>

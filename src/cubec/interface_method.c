@@ -1,19 +1,11 @@
 #include "cubec/interface_method.h"
 #include "cubec/ast_factory_internal.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
-#include "core/vec.h"
 #include "cubec/ast_factory.h"
-#include "cubec/expression.h"
 #include "cubec/function_argument.h"
 #include "cubec/generic_param.h"
-#include "cubec/literal_identifier.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -179,7 +171,6 @@ node_t read_interface_method(context_t ctx, vec_t tokens,
   /* 8. Expect ';' (method signature has no body) */
   token_t semi = vec_get(tokens, current);
   if (!token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
-    location_t *loc = token_get_location(semi);
     goto cleanup;
   }
   current++;

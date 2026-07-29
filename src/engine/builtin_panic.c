@@ -8,12 +8,8 @@
 
 #include "engine/builtin_panic.h"
 #include "engine/comptime_eval_internal.h"
-#include "engine/diagnostic.h"
 #include "engine/type_hash.h"
 #include "cubec/expression_call.h"
-#include "core/allocator.h"
-#include "core/string.h"
-#include "core/vec.h"
 
 /* ===== panic eval callback ===== */
 

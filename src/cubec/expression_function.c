@@ -1,23 +1,14 @@
 #include "cubec/expression_function.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
-#include "core/vec.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
-#include "cubec/expression.h"
 #include "cubec/function_argument.h"
 #include "cubec/function_capture.h"
 #include "cubec/generic_param.h"
-#include "cubec/literal_identifier.h"
-#include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -184,8 +175,6 @@ node_t read_expression_function(context_t ctx, vec_t tokens,
         skip_whitespace(tokens, &current);
         break;
       } else {
-        token_t tok = vec_get(tokens, current);
-        location_t *loc = token_get_location(tok);
         goto onerror;
       }
     }
@@ -215,7 +204,6 @@ node_t read_expression_function(context_t ctx, vec_t tokens,
   /* 4. Expect '(' */
   token_t open_paren = vec_get(tokens, current);
   if (!open_paren || !token_is(open_paren, CUBEC_TOKEN_SYMBOL, "(")) {
-    location_t *loc = token_get_location(open_paren);
     goto onerror;
   }
   current++;
@@ -251,7 +239,6 @@ node_t read_expression_function(context_t ctx, vec_t tokens,
       } else if (token_is(comma_or_close, CUBEC_TOKEN_SYMBOL, ")")) {
         break;
       } else {
-        location_t *loc = token_get_location(comma_or_close);
         goto onerror;
       }
     }
@@ -260,7 +247,6 @@ node_t read_expression_function(context_t ctx, vec_t tokens,
   /* 6. Expect ')' */
   token_t close_paren = vec_get(tokens, current);
   if (!close_paren || !token_is(close_paren, CUBEC_TOKEN_SYMBOL, ")")) {
-    location_t *loc = token_get_location(close_paren);
     goto onerror;
   }
   current++;
@@ -289,13 +275,11 @@ node_t read_expression_function(context_t ctx, vec_t tokens,
     }
   } else if (token_is(brace_or_semi, CUBEC_TOKEN_SYMBOL, ";")) {
     if (!name) {
-      location_t *loc = token_get_location(brace_or_semi);
       goto onerror;
     }
     current++;
     body = NULL;
   } else {
-    location_t *loc = token_get_location(brace_or_semi);
     if (name) {
       goto onerror;
     } else {

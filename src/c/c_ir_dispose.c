@@ -28,7 +28,6 @@
 #include "c/c_ir_expr_alignof.h"
 #include "c/c_ir_expr_literal.h"
 #include "c/c_ir_expr_initializer.h"
-#include <stdlib.h>
 
 void c_ir_dispose_vec(allocator_t allocator, vec_t *vec) {
   if (!vec || !*vec) return;

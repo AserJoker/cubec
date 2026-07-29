@@ -1,15 +1,10 @@
 #include "cubec/expression_ternary.h"
-#include "core/allocator.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
-#include "cubec/expression.h"
-#include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 /* Forward declaration for read_expression_binary */
 extern node_t read_expression_binary(context_t ctx, vec_t tokens,

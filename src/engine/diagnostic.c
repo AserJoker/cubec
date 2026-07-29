@@ -1,11 +1,6 @@
 #include "engine/diagnostic.h"
 #include "engine/source.h"
-#include "core/allocator.h"
-#include "core/string.h"
-#include "core/vec.h"
 #include <stdarg.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <string.h>
 
 /* ===== diagnostic_list ===== */

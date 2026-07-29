@@ -1,13 +1,8 @@
 #include "cubec/declaration_variable.h"
 #include "cubec/ast_factory_internal.h"
-#include "core/allocator.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
-#include "cubec/expression.h"
-#include "cubec/literal_identifier.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
-#include "engine/context.h"
 
 static void _cubec_declaration_variable_init(cubec_declaration_variable_t self,
                                              allocator_t allocator,

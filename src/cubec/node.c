@@ -1,7 +1,6 @@
 #include "cubec/node.h"
 #include "core/token.h"
 #include "cubec/token.h"
-#include "engine/context.h"
 
 void skip_whitespace(vec_t tokens, size_t *position) {
   size_t current = *position;

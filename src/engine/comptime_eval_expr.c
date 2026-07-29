@@ -2,18 +2,12 @@
 #include "engine/comptime_eval_binary.h"
 #include "engine/checker_check_expr.h"
 #include "engine/resolver.h"
-#include "engine/symbol.h"
 #include "engine/type_layout.h"
 #include "engine/type_hash.h"
-#include "core/allocator.h"
-#include "core/string.h"
-#include "core/strmap.h"
-#include "core/vec.h"
 #include <limits.h>
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
 #include "cubec/literal_char.h"
-#include "cubec/literal_identifier.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_ternary.h"
@@ -31,11 +25,8 @@
 #include "cubec/expression_comma.h"
 #include "cubec/expression_slice.h"
 #include "cubec/expression_generic_instantiation.h"
-#include "cubec/function_argument.h"
-#include "cubec/statement_function.h"
 #include <math.h>
 #include <string.h>
-#include <stdlib.h>
 
 /* --- literal evaluation --- */
 

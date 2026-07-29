@@ -1,6 +1,4 @@
 #include "c/lower.h"
-#include "c/c_ir.h"
-#include "c/c_type.h"
 #include "c/mangle.h"
 #include "c/c_ir_expr_binary.h"
 #include "c/c_ir_expr_unary.h"
@@ -21,7 +19,6 @@
 #include "c/c_ir_stmt_expr.h"
 #include "c/c_ir_stmt_block.h"
 #include "c/c_ir_function.h"
-#include "c/c_ir_unit.h"
 #include "cubec/node.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_call.h"
@@ -46,15 +43,8 @@
 #include "cubec/function_argument.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
-#include "cubec/literal_identifier.h"
 #include "cubec/literal_char.h"
-#include <stdio.h>
-#include "engine/semantic_type.h"
-#include "engine/symbol.h"
-#include "engine/scope.h"
-#include "engine/context.h"
 #include "engine/resolver.h"
-#include "core/node.h"
 #include <string.h>
 
 /* Forward declarations */

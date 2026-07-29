@@ -1,6 +1,5 @@
 #include "c/c_type.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 c_type_t c_type_create(allocator_t allocator, const char *left,

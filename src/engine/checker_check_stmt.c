@@ -6,19 +6,9 @@
 #include "engine/checker_collect.h"
 #include "engine/checker_evaluate.h"
 #include "engine/comptime_eval.h"
-#include "engine/comptime_value.h"
-#include "engine/diagnostic.h"
-#include "engine/flow_state.h"
 #include "engine/resolver.h"
-#include "engine/symbol.h"
 #include "engine/type_hash.h"
 #include "engine/type_layout.h"
-#include "engine/semantic_type.h"
-#include "core/allocator.h"
-#include "core/string.h"
-#include "core/strmap.h"
-#include "core/vec.h"
-#include "cubec/node.h"
 #include "cubec/program.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/statement_block.h"
@@ -47,17 +37,11 @@
 #include "cubec/statement_empty.h"
 #include "cubec/statement_declaration.h"
 #include "cubec/statement_comptime.h"
-#include "cubec/statement_function.h"
-#include "cubec/statement_struct.h"
-#include "cubec/statement_enum.h"
-#include "cubec/statement_union.h"
-#include "cubec/statement_cunion.h"
 #include "cubec/statement_interface.h"
 #include "cubec/statement_import.h"
 #include "cubec/statement_test.h"
 #include "cubec/switch_match.h"
 #include "cubec/declaration_variable.h"
-#include "cubec/function_argument.h"
 #include "cubec/expression_assignment.h"
 #include <string.h>
 
@@ -65,9 +49,6 @@
 
 flow_state_t _check_statement(context_t ctx, node_t stmt,
                                semantic_type_t return_type);
-static void _register_func_params(context_t ctx,
-                                    cubec_statement_function_t fn,
-                                    vec_t params);
 
 /* --- block --- */
 
@@ -1125,6 +1106,7 @@ static void _check_function_body(context_t ctx,
 
 static semantic_type_t _find_method_type(context_t ctx, semantic_type_t t,
                                           const char *mname) {
+  (void)ctx;
   if (!t) return NULL;
   size_t mcount = vec_get_size(t->instance_methods);
   for (size_t j = 0; j < mcount; j++) {

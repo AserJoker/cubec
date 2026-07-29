@@ -1,8 +1,5 @@
 #include "c/lower.h"
-#include "c/c_ir.h"
-#include "c/c_type.h"
 #include "c/mangle.h"
-#include "c/c_ir_unit.h"
 #include "c/c_ir_function.h"
 #include "c/c_ir_variable.h"
 #include "c/c_ir_enum.h"
@@ -44,12 +41,7 @@
 #include "cubec/expression_binary.h"
 #include "cubec/declaration_variable.h"
 #include "cubec/literal_identifier.h"
-#include "engine/semantic_type.h"
-#include "engine/symbol.h"
-#include "engine/scope.h"
-#include "engine/context.h"
 #include "engine/resolver.h"
-#include "core/node.h"
 #include <string.h>
 
 /* ===== Scope management helpers ===== */
@@ -310,9 +302,6 @@ c_ir_node_t lower_stmt(allocator_t allocator, context_t ctx, node_t node,
     /* Lower the switch condition and cache it in a local variable */
     c_ir_node_t cond_expr = lower_expr(allocator, ctx, n->condition, module_hash, NULL);
     if (!cond_expr) return NULL;
-
-    /* Use ident reference to cond for repeated comparisons */
-    c_ir_node_t cond = (c_ir_node_t)c_ir_expr_ident_create(allocator, "_switch_val", loc);
 
     /* Build if-else chain from last match to first (reverse) */
     c_ir_node_t else_branch = NULL;

@@ -8,8 +8,6 @@
 #include "engine/builtin_panic.h"
 #include "engine/builtin_typename.h"
 #include "engine/builtin_slice.h"
-#include "core/allocator.h"
-#include "core/vec.h"
 #include <string.h>
 
 /* ===== builtin_entry type ===== */

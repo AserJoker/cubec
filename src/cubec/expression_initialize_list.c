@@ -1,18 +1,12 @@
 #include "cubec/expression_initialize_list.h"
-#include "core/allocator.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
-#include "cubec/expression.h"
 #include "cubec/expression_initialize_field.h"
 #include "cubec/expression_spread.h"
-#include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include <stdbool.h>
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move

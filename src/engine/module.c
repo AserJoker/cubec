@@ -4,10 +4,7 @@
  */
 
 #include "engine/module.h"
-#include "core/strmap.h"
-#include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #ifdef _WIN32
 #include <io.h>
@@ -183,7 +180,6 @@ char *module_read_file(const char *path, size_t *out_len) {
 #define STAT_FUNC _stat
 typedef struct _stat stat_t;
 #else
-#include <sys/stat.h>
 #define STAT_FUNC stat
 typedef struct stat stat_t;
 #endif

@@ -2,15 +2,9 @@
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
 #include "cubec/node_error.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -94,8 +88,6 @@ node_t read_statement_break(context_t ctx, vec_t tokens,
 
   /* 2. Expect ';' */
   if (!_is_symbol(tokens, current, ";")) {
-    token_t tok = vec_get(tokens, current);
-    location_t *loc = token_get_location(tok);
     goto onerror;
   }
   token_t semi = vec_get(tokens, current);

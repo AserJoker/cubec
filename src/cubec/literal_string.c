@@ -1,18 +1,9 @@
 #include "cubec/literal_string.h"
 #include "cubec/ast_factory_internal.h"
-#include "core/allocator.h"
-#include "core/node.h"
-#include "core/string.h"
 #include "core/token.h"
-#include "core/type.h"
 #include "cubec/ast_factory.h"
-#include "cubec/literal.h"
-#include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
-#include <stdio.h>
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 static void _cubec_literal_string_init(cubec_literal_string_t self,
                                        allocator_t allocator,

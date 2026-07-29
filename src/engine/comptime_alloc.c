@@ -1,9 +1,5 @@
 #include "engine/comptime_alloc.h"
-#include "core/allocator.h"
-#include "core/string.h"
-#include "core/strmap.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 /* ===== helpers ===== */

@@ -1,21 +1,13 @@
 #include "cubec/expression_type_interface.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
-#include "core/vec.h"
 #include "cubec/ast_factory.h"
-#include "cubec/expression.h"
 #include "cubec/generic_param.h"
 #include "cubec/interface_method.h"
 #include "cubec/literal_identifier.h"
-#include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/statement_declaration_type.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -132,7 +124,6 @@ static node_t _read_associated_type(context_t ctx, vec_t tokens,
   /* Expect ';' */
   token_t semi = vec_get(tokens, current);
   if (!token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
-    location_t *loc = token_get_location(semi);
     goto cleanup;
   }
   current++;
@@ -222,8 +213,6 @@ node_t read_expression_type_interface_body(context_t ctx, vec_t tokens,
 
   /* 4. Expect '}' */
   if (!_is_symbol(tokens, current, "}")) {
-    token_t tok = vec_get(tokens, current);
-    location_t *loc = token_get_location(tok);
     goto cleanup;
   }
   token_t close_brace = vec_get(tokens, current);
@@ -265,7 +254,6 @@ onerror:
 
 node_t read_expression_type_interface(context_t ctx, vec_t tokens,
                                        size_t *position, const char *filename) {
-  allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
   /* Expect 'interface' keyword */

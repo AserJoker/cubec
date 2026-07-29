@@ -3,17 +3,12 @@
 #include "core/allocator.h"
 #include "core/icu_data.h"
 #include "engine/context.h"
-#include "engine/diagnostic.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
 #include "c/lower.h"
-#include "c/c_ir.h"
-#include "c/c_ir_unit.h"
 #include "writer/writer.h"
 #include "builder/pipeline.h"
 #include "builder/cubec_writer.h"
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
 #include <direct.h>

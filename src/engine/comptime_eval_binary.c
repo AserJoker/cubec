@@ -1,10 +1,5 @@
 #include "engine/comptime_eval_binary.h"
-#include "engine/comptime_eval_internal.h"
 #include "engine/resolver.h"
-#include "engine/symbol.h"
-#include "engine/checker_type_util.h"
-#include "core/string.h"
-#include "core/allocator.h"
 #include "cubec/expression_binary.h"
 #include <string.h>
 

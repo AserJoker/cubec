@@ -1,5 +1,4 @@
 #include "engine/flow_state.h"
-#include "core/vec.h"
 #include <string.h>
 
 flow_state_t flow_state_create(allocator_t allocator) {

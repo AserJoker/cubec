@@ -10,18 +10,9 @@
 #include "engine/checker_decorator.h"
 #include "engine/comptime_eval.h"
 #include "engine/comptime_eval_internal.h"
-#include "engine/comptime_value.h"
-#include "engine/diagnostic.h"
 #include "engine/resolver.h"
-#include "engine/symbol.h"
-#include "engine/semantic_type.h"
 #include "cubec/decorator.h"
 #include "cubec/expression_call.h"
-#include "cubec/literal_identifier.h"
-#include "core/allocator.h"
-#include "core/string.h"
-#include "core/vec.h"
-#include <stdio.h>
 #include <string.h>
 
 /* ===== helpers ===== */

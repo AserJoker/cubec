@@ -1,7 +1,4 @@
 #include "engine/comptime_eval.h"
-#include "core/allocator.h"
-#include "core/strmap.h"
-#include "core/vec.h"
 
 comptime_env_t comptime_env_create(allocator_t allocator, comptime_env_t parent) {
   comptime_env_t env =

@@ -1,14 +1,8 @@
 #include "cubec/declaration_array.h"
 #include "cubec/ast_factory_internal.h"
-#include "core/allocator.h"
-#include "core/location.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
-#include "cubec/expression.h"
-#include "cubec/literal_numeric.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
-#include "engine/context.h"
 
 static void _cubec_declaration_array_init(cubec_declaration_array_t self,
                                           allocator_t allocator,

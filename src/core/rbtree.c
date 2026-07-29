@@ -1,7 +1,5 @@
-﻿#include "core/rbtree.h"
+#include "core/rbtree.h"
 #include "core/allocator.h"
-#include <stdbool.h>
-#include <stdint.h>
 
 #define IS_BLACK(node) ((node) == NULL || (node)->is_red == false)
 #define IS_RED(node) ((node) != NULL && (node)->is_red == true)
@@ -36,6 +34,7 @@ static void _rbtree_init(rbtree_t self, allocator_t allocator,
 }
 
 static void _rbtree_dispose(rbtree_t self, allocator_t allocator) {
+  (void)allocator;
   rbtree_clear(self);
 }
 

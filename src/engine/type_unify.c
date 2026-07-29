@@ -9,11 +9,7 @@
  *   []i32 vs []?       → match slice structure, skip element check
  */
 #include "engine/checker_type_util.h"
-#include "engine/symbol.h"
 #include "engine/type_hash.h"
-#include "core/allocator.h"
-#include "core/strmap.h"
-#include "core/vec.h"
 #include <string.h>
 
 /* ===== internal: recursive unification ===== */
@@ -292,37 +288,6 @@ static bool _type_unify(semantic_type_t actual, semantic_type_t expected,
 }
 
 /* ===== internal: collect generic param names from a function type ===== */
-
-/**
- * Extracts generic parameter names from a function type's parameter types.
- * For each parameter that is TYPE_GENERIC_PARAM, records its name.
- * Returns a vec of const char* (names), parallel to the function params.
- */
-static vec_t _collect_generic_param_names(semantic_type_t func_type,
-                                          allocator_t allocator) {
-  vec_t params = func_type->impl->function.params;
-  size_t pcount = params ? vec_get_size(params) : 0;
-  vec_init_t vi = {.auto_dispose = false};
-  vec_t names = (vec_t)allocator_create(allocator, &g_vec_type, &vi);
-
-  /* Collect names from function params */
-  for (size_t i = 0; i < pcount; i++) {
-    semantic_type_t p = (semantic_type_t)vec_get(params, i);
-    if (p && p->impl->kind == TYPE_GENERIC_PARAM)
-      vec_push(names, (void *)p->impl->generic_param.name);
-    else
-      vec_push(names, NULL);
-  }
-
-  /* Also check return type */
-  semantic_type_t ret = func_type->impl->function.return_type;
-  if (ret && ret->impl->kind == TYPE_GENERIC_PARAM)
-    vec_push(names, (void *)ret->impl->generic_param.name);
-  else
-    vec_push(names, NULL);
-
-  return names;
-}
 
 /* ===== public API ===== */
 

@@ -4,7 +4,6 @@
 #include "core/allocator.h"
 #include "core/strmap.h"
 #include <cJSON.h>
-#include <stdlib.h>
 #include <string.h>
 
 #ifdef _WIN32

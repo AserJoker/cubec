@@ -1,8 +1,5 @@
 #include "engine/runtime_collection.h"
 #include "engine/context.h"
-#include "engine/scope.h"
-#include "engine/semantic_type.h"
-#include "engine/symbol.h"
 #include "engine/resolver.h"
 #include "cubec/node.h"
 #include "cubec/statement_block.h"
@@ -35,12 +32,6 @@
 #include "cubec/expression_typeof.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_comma.h"
-#include "cubec/literal_identifier.h"
-#include "core/allocator.h"
-#include "core/strmap.h"
-#include "core/string.h"
-#include "core/vec.h"
-#include <stdio.h>
 #include <string.h>
 
 /* ===== Pointer-to-string key helper ===== */
@@ -113,15 +104,6 @@ static bool add_variable(runtime_collection_t rc, struct symbol *sym) {
 /* ===== Type diffusion ===== */
 
 static void diffuse_type(runtime_collection_t rc, semantic_type_t type);
-
-static void diffuse_type_vec(runtime_collection_t rc, vec_t types) {
-  if (!types) return;
-  size_t count = vec_get_size(types);
-  for (size_t i = 0; i < count; i++) {
-    semantic_type_t t = vec_get(types, i);
-    diffuse_type(rc, t);
-  }
-}
 
 static void diffuse_type(runtime_collection_t rc, semantic_type_t type) {
   if (!type) return;
@@ -825,7 +807,7 @@ void context_collect_runtime(struct context *ctx, node_t program, bool generate_
    * Continue until stable. */
   size_t type_idx = 0;
   while (type_idx < vec_get_size(rc->type_worklist)) {
-    semantic_type_t type = vec_get(rc->type_worklist, type_idx);
+    semantic_type_t type __attribute__((unused)) = vec_get(rc->type_worklist, type_idx);
     type_idx++;
     /* diffuse_type already recurses when first added; the worklist
      * just tracks which types have been added. Methods from newly-added
@@ -836,7 +818,7 @@ void context_collect_runtime(struct context *ctx, node_t program, bool generate_
    * may reference new types. Continue until stable. */
   size_t func_idx = 0;
   while (func_idx < vec_get_size(rc->func_worklist)) {
-    struct symbol *sym = vec_get(rc->func_worklist, func_idx);
+    struct symbol *sym __attribute__((unused)) = vec_get(rc->func_worklist, func_idx);
     func_idx++;
     /* diffuse_function already handled type diffusion when first added.
      * But we need to check if any new types were added by this function
@@ -855,7 +837,7 @@ void context_collect_runtime(struct context *ctx, node_t program, bool generate_
     /* Re-process all types to pick up any methods from newly added types */
     for (size_t i = 0; i < vec_get_size(rc->runtime_types); i++) {
       semantic_type_t type = vec_get(rc->runtime_types, i);
-      type_impl_t impl = semantic_type_get_impl(type);
+      type_impl_t impl __attribute__((unused)) = semantic_type_get_impl(type);
       enum type_kind kind = semantic_type_get_kind(type);
 
       /* Collect methods from struct/union/cunion */

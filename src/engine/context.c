@@ -6,19 +6,14 @@
 #include "engine/checker_check_stmt.h"
 #include "engine/comptime_eval.h"
 #include "engine/resolver.h"
-#include "engine/symbol.h"
 #include "engine/type_hash.h"
 #include "engine/type_layout.h"
 #include "engine/module.h"
-#include "core/allocator.h"
-#include "core/string.h"
-#include "core/vec.h"
 #include "cubec/node.h"
 #include "cubec/program.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
-#include <stdlib.h>
 #include <string.h>
 #include "cubec/literal_char.h"
 #include "cubec/statement_struct.h"
@@ -72,7 +67,6 @@
 #include "cubec/interface_method.h"
 #include "cubec/generic_param.h"
 #include "cubec/decorator.h"
-#include <string.h>
 
 /* ===== builtin type registration ===== */
 

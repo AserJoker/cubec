@@ -1,8 +1,5 @@
 #include "c/lower.h"
-#include "c/c_ir.h"
-#include "c/c_type.h"
 #include "c/mangle.h"
-#include "c/c_ir_unit.h"
 #include "c/c_ir_function.h"
 #include "c/c_ir_variable.h"
 #include "c/c_ir_enum.h"
@@ -21,12 +18,6 @@
 #include "cubec/statement_defer.h"
 #include "cubec/function_argument.h"
 #include "cubec/literal_identifier.h"
-#include "engine/semantic_type.h"
-#include "engine/symbol.h"
-#include "engine/scope.h"
-#include "engine/context.h"
-#include "engine/runtime_collection.h"
-#include "core/node.h"
 #include <string.h>
 
 /* Forward declarations (defined in lower_expr.c and lower_stmt.c) */

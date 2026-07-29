@@ -1,8 +1,5 @@
 #include "engine/source.h"
 #include "core/allocator.h"
-#include "core/string.h"
-#include "core/vec.h"
-#include <stddef.h>
 #include <string.h>
 #include <threads.h>
 

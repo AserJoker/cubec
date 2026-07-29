@@ -1,6 +1,5 @@
 ﻿#include "core/string.h"
 #include "core/allocator.h"
-#include "core/type.h"
 #include <string.h>
 struct _string_t {
   allocator_t allocator;

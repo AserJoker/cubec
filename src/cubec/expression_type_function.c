@@ -1,15 +1,10 @@
 #include "cubec/expression_type_function.h"
-#include "core/allocator.h"
 #include "core/token.h"
 #include "cubec/ast_factory.h"
-#include "cubec/expression.h"
 #include "cubec/expression_spread.h"
-#include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -201,7 +196,6 @@ node_t read_expression_type_function(context_t ctx, vec_t tokens,
           } else if (token_is(comma_or_close, CUBEC_TOKEN_SYMBOL, ")")) {
             break;
           } else {
-            location_t *loc = token_get_location(comma_or_close);
             goto onerror;
           }
         } else {
@@ -236,7 +230,6 @@ node_t read_expression_type_function(context_t ctx, vec_t tokens,
       } else if (token_is(comma_or_close, CUBEC_TOKEN_SYMBOL, ")")) {
         break;
       } else {
-        location_t *loc = token_get_location(comma_or_close);
         goto onerror;
       }
     }

@@ -1,16 +1,9 @@
 #include "cubec/literal_identifier.h"
 #include "cubec/ast_factory_internal.h"
-#include "core/allocator.h"
-#include "core/node.h"
-#include "core/string.h"
 #include "core/token.h"
-#include "core/type.h"
 #include "cubec/ast_factory.h"
-#include "cubec/literal.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 static void _cubec_literal_identifier_init(cubec_literal_identifier_t self,
                                            allocator_t allocator,

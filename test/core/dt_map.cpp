@@ -266,8 +266,6 @@ TEST_F(dt_map, clone_with_value_clone) {
   void *orig_val2 = map_find(map, node2);
   ASSERT_NE(orig_val1, nullptr);
   ASSERT_NE(orig_val2, nullptr);
-  uint64_t orig_val1_id = value_get_id(orig_val1);
-  uint64_t orig_val2_id = value_get_id(orig_val2);
 
   map_t cloned = (map_t)value_clone(allocator, map);
   ASSERT_NE(cloned, nullptr);

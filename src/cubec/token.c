@@ -1,14 +1,5 @@
 #include "cubec/token.h"
-#include "core/allocator.h"
-#include "core/location.h"
-#include "core/position.h"
-#include "core/token.h"
-#include "core/vec.h"
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 #include <inttypes.h>
-#include <stddef.h>
-#include <stdlib.h>
 #include <unicode/uchar.h>
 #include <unicode/urename.h>
 #include <unicode/utypes.h>
@@ -626,7 +617,6 @@ static token_t read_eof_token(context_t ctx, position_t *position,
 
 token_t read_token(context_t ctx, position_t *position,
                    const char *filename) {
-  allocator_t allocator = ctx->allocator;
   token_t token = NULL;
   if (!token) {
     token = read_eof_token(ctx, position, filename);

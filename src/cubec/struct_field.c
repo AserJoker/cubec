@@ -1,16 +1,9 @@
 #include "cubec/struct_field.h"
 #include "cubec/ast_factory_internal.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
 #include "cubec/ast_factory.h"
-#include "cubec/expression.h"
-#include "cubec/literal_identifier.h"
-#include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -112,7 +105,6 @@ node_t read_struct_field(context_t ctx, vec_t tokens,
     /* Not a struct field — identifier not followed by ':' */
     goto cleanup;
   }
-  location_t colon_loc = *token_get_location(colon_token);
   current++;
   skip_whitespace(tokens, &current);
 
@@ -126,7 +118,6 @@ node_t read_struct_field(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
   token_t semi = vec_get(tokens, current);
   if (!token_is(semi, CUBEC_TOKEN_SYMBOL, ";")) {
-    location_t *loc = token_get_location(semi);
     goto cleanup;
   }
   current++;

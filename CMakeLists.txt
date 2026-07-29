@@ -17,9 +17,24 @@ include(${PROJECT_SOURCE_DIR}/cmake/icu.cmake)
 find_package(Threads REQUIRED)
 
 # ===========================================================================
-# Compile definitions
+# Compile definitions & warning flags
 # ===========================================================================
 add_compile_definitions(_CRT_SECURE_NO_WARNINGS _GNU_SOURCE)
+
+# Strict warning flags for C/C++
+add_compile_options(
+    -Wall -Wextra -Wpedantic
+    -Werror=unused-function
+    -Werror=unused-variable
+    -Werror=unused-value
+    -Werror=switch
+    -Wunused-parameter
+)
+# CXX-specific: suppress unused-parameter in gtest matchers
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>)
+
+# Optional: include-what-you-use for unused include detection
+# Build with: cmake -DCMAKE_C_INCLUDE_WHAT_YOU_USE="include-what-you-use" ..
 
 # ===========================================================================
 # Build targets
@@ -48,6 +63,8 @@ enable_testing()
 file(GLOB_RECURSE TEST_SOURCE ${PROJECT_SOURCE_DIR}/test/*.cpp)
 add_executable(cubec_test ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_READER} ${SRC_WRITE} ${SRC_C} ${SRC_CMD} ${SRC_BUILDER} ${SRC_LSP} ${SRC_CJSON} ${TEST_SOURCE} ${PROJECT_SOURCE_DIR}/src/icu_data.c)
 target_include_directories(cubec_test PUBLIC ${PROJECT_SOURCE_DIR}/test)
+# Relax unused-variable/unused-function for test code (gtest patterns)
+target_compile_options(cubec_test PRIVATE -Wno-unused-variable -Wno-unused-function)
 target_link_libraries(cubec_test PRIVATE
     ICU::i18n
     ICU::uc

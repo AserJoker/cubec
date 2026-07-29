@@ -1,6 +1,5 @@
 #include "core/list.h"
 #include "core/allocator.h"
-#include <stdbool.h>
 
 struct _list_t {
   allocator_t allocator;
@@ -48,6 +47,7 @@ static void _list_move(list_t self, allocator_t allocator, list_t another) {
 }
 
 static void _list_dispose(list_t self, allocator_t allocator) {
+  (void)allocator;
   list_clear(self);
 }
 

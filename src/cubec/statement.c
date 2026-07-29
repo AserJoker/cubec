@@ -27,8 +27,6 @@
 #include "cubec/node_error.h"
 #include "cubec/ast_factory.h"
 #include "cubec/token.h"
-#include "engine/context.h"
-#include "engine/diagnostic.h"
 
 /* ===== Error recovery: sync to next statement boundary ===== */
 

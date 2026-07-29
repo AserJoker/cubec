@@ -1,12 +1,9 @@
 #include "core/strmap.h"
 #include "core/allocator.h"
 #include "core/string.h"
-#include "core/type.h"
 #include "core/vec.h"
 #include "core/list.h"
 #include "core/rbtree.h"
-#include <stdbool.h>
-#include <stdint.h>
 #include <string.h>
 
 #define DEFAULT_BUCKET_COUNT 16

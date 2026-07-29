@@ -2,9 +2,6 @@
 #include "engine/type_hash.h"
 #include "engine/symbol.h"
 #include "engine/comptime_value.h"
-#include "core/allocator.h"
-#include "core/string.h"
-#include "core/vec.h"
 #include <stdio.h>
 #include <string.h>
 

@@ -1,23 +1,15 @@
 #include "cubec/statement_function.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/ast_factory.h"
-#include "core/allocator.h"
-#include "core/node.h"
 #include "core/token.h"
-#include "core/type.h"
-#include "core/vec.h"
 #include "cubec/decorator.h"
-#include "cubec/expression.h"
 #include "cubec/expression_function.h"
 #include "cubec/function_argument.h"
 #include "cubec/generic_param.h"
-#include "cubec/literal_identifier.h"
-#include "cubec/node.h"
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "cubec/node_error.h"
-#include "engine/context.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -134,11 +126,6 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   return location_is(token_get_location(token), keyword);
 }
 
-static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
-  token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
-}
 
 /* --------------------------------------------------------------------------
  *  Parser: read_statement_function

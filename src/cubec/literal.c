@@ -1,8 +1,4 @@
 #include "cubec/literal.h"
-#include "core/allocator.h"
-#include "core/type.h"
-#include "cubec/expression.h"
-#include "engine/context.h"
 
 static void _cubec_literal_init(cubec_literal_t self, allocator_t allocator,
                                 cubec_literal_init_t *init) {
