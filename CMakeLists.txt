@@ -28,10 +28,21 @@ add_compile_options(
     -Werror=unused-variable
     -Werror=unused-value
     -Werror=switch
-    -Wunused-parameter
+    -Wno-nested-anon-types
+    -Wno-c99-extensions
+    -Wno-c23-extensions
+    -Wno-zero-length-array
+    -Wno-deprecated-declarations
+    -Wno-missing-field-initializers
+    -Wno-sign-compare
+    -Wno-unused-parameter
+    -Wno-unused-label
 )
-# CXX-specific: suppress unused-parameter in gtest matchers
+# CXX-specific: suppress unused-parameter and character-conversion in gtest headers
 add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>)
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-character-conversion>)
+# Also suppress character-conversion in googletest (it triggers in gtest-printers.h)
+target_compile_options(gtest PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wno-character-conversion>)
 
 # Optional: include-what-you-use for unused include detection
 # Build with: cmake -DCMAKE_C_INCLUDE_WHAT_YOU_USE="include-what-you-use" ..
@@ -64,7 +75,8 @@ file(GLOB_RECURSE TEST_SOURCE ${PROJECT_SOURCE_DIR}/test/*.cpp)
 add_executable(cubec_test ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_READER} ${SRC_WRITE} ${SRC_C} ${SRC_CMD} ${SRC_BUILDER} ${SRC_LSP} ${SRC_CJSON} ${TEST_SOURCE} ${PROJECT_SOURCE_DIR}/src/icu_data.c)
 target_include_directories(cubec_test PUBLIC ${PROJECT_SOURCE_DIR}/test)
 # Relax unused-variable/unused-function for test code (gtest patterns)
-target_compile_options(cubec_test PRIVATE -Wno-unused-variable -Wno-unused-function)
+# Suppress character-conversion from googletest headers
+target_compile_options(cubec_test PRIVATE -Wno-unused-variable -Wno-unused-function -Wno-character-conversion)
 target_link_libraries(cubec_test PRIVATE
     ICU::i18n
     ICU::uc

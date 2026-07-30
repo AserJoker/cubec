@@ -658,7 +658,6 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
      the first param (self) is implicitly satisfied by &a (or p for pointers).
      Offset user arguments by 1 when matching against params. */
   bool is_member_call = false;
-  struct symbol *member_method_sym = NULL;
   if (call->callee->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
     cubec_expression_member_t mem = (cubec_expression_member_t)call->callee;
     semantic_type_t host_type = _check_expression(ctx, mem->host);
@@ -681,16 +680,13 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
           struct symbol *m = (struct symbol *)vec_get(receiver_type->instance_methods, i);
           if (m && m->name && strcmp(m->name, fname) == 0 && m->kind == SYMBOL_FUNCTION) {
             is_member_call = true;
-            member_method_sym = m;
 
             /* Build combined type_bindings for substitution */
             strmap_t combined_type_bindings = NULL;
-            size_t type_gp_count = 0;
 
             if (receiver_type->impl->kind == TYPE_GENERIC_INSTANCE) {
               /* Type-level bindings from the generic instance */
               strmap_t tbindings = receiver_type->impl->generic_instance.type_bindings;
-              type_gp_count = tbindings ? strmap_get_size(tbindings) : 0;
 
               strmap_init_t smi = {.value_auto_dispose = false};
               combined_type_bindings = (strmap_t)allocator_create(ctx->allocator, &g_strmap_type, &smi);

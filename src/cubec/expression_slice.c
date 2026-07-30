@@ -86,7 +86,6 @@ node_t read_expression_slice(context_t ctx, vec_t tokens,
   node_t start = NULL;
   node_t length = NULL;
   token_t open_bracket = NULL;
-  token_t colon = NULL;
   token_t peek = NULL;
 
   /* Expect '[' (caller ensures whitespace already skipped).
@@ -150,7 +149,6 @@ node_t read_expression_slice(context_t ctx, vec_t tokens,
   token_t tok = vec_get(tokens, current);
   if (token_is(tok, CUBEC_TOKEN_SYMBOL, ":")) {
     /* Slice starts with ':' — only length will be specified */
-    colon = tok;
     current++; /* Consumed ':' */
     skip_whitespace(tokens, &current);
 
@@ -176,7 +174,6 @@ node_t read_expression_slice(context_t ctx, vec_t tokens,
     if (!token_is(tok, CUBEC_TOKEN_SYMBOL, ":")) {
       goto onerror;
     }
-    colon = tok;
     current++; /* Consumed ':' */
     skip_whitespace(tokens, &current);
 

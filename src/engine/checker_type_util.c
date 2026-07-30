@@ -866,12 +866,11 @@ vec_t _resolve_generic_type_args(context_t ctx, vec_t arg_exprs,
 
     /* Check if this position corresponds to a value generic param */
     bool is_value_param = false;
-    semantic_type_t value_type = NULL;
     if (generic_params && i < vec_get_size(generic_params)) {
       cubec_generic_param_t gp = (cubec_generic_param_t)vec_get(generic_params, i);
       if (gp && gp->value_type) {
         is_value_param = true;
-        value_type = resolver_resolve_type(ctx, gp->value_type);
+        (void)resolver_resolve_type(ctx, gp->value_type);
       }
     }
 
