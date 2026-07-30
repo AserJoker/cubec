@@ -176,7 +176,8 @@ static void _collect_function(context_t ctx,
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_FUNCTION,
                     node->super.location);
-  sym->is_export = node->is_export;
+  sym->is_export = node->is_export || node->is_exportlib;
+  sym->is_exportlib = node->is_exportlib;
   sym->state = SYMBOL_NAME_KNOWN;
   scope_push_symbol(ctx->global_scope, sym);
 }
@@ -201,7 +202,8 @@ static void _collect_variable(context_t ctx,
   struct symbol *sym =
       symbol_create(ctx->allocator, name, SYMBOL_VARIABLE,
                     node->super.location);
-  sym->is_export = node->is_export;
+  sym->is_export = node->is_export || node->is_exportlib;
+  sym->is_exportlib = node->is_exportlib;
   sym->variable.is_comptime = node->is_comptime;
   sym->variable.is_mutable = true;
   scope_push_symbol(ctx->global_scope, sym);

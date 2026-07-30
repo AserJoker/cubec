@@ -30,6 +30,7 @@ typedef struct func_check_info {
   node_t ast_node;       /* original AST node (for comptime dispatch) */
   /* statement_function specific (not used by expression_function) */
   bool is_export;
+  bool is_exportlib;
   bool is_inline;
   bool is_extern;
   bool is_builtin;

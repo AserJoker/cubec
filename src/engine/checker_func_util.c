@@ -30,6 +30,7 @@ void func_check_info_from_statement(func_check_info_t *info,
   info->is_comptime = node->is_comptime;
   info->ast_node = (node_t)node;
   info->is_export = node->is_export;
+  info->is_exportlib = node->is_exportlib;
   info->is_inline = node->is_inline;
   info->is_extern = node->is_extern;
   info->is_builtin = node->is_builtin;

@@ -568,7 +568,7 @@ static const char *keywords[] = {
     "import",  "interface",
     "inline",  "of",  "pub",   "return",
     "struct",  "switch",  "test",     "cunion", "union", "using", "volatile", "while",
-    "extends", "as",      "is",      "typeof", "sizeof", "alignof", "builtin", "type", "undefined", "var", 0,
+    "extends", "as",      "is",      "typeof", "sizeof", "alignof", "builtin", "exportlib", "type", "undefined", "var", 0,
 };
 static token_t read_identifier_token(context_t ctx,
                                      position_t *position,

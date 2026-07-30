@@ -47,6 +47,7 @@ struct _cubec_statement_function_t;
 struct _cubec_statement_function_t {
   struct _node_t super;
   bool is_export;       /**< Whether this function is exported */
+  bool is_exportlib;    /**< Whether this function is exported with C ABI (no mangling) */
   bool is_inline;       /**< Whether this function is inline */
   bool is_extern;       /**< Whether this is an extern function (no body) */
   bool is_builtin;      /**< Whether this is a builtin function (compiler-provided, no body) */
@@ -68,6 +69,7 @@ struct _cubec_statement_function_init_t {
   location_t location;
   node_t parent;
   bool is_export;
+  bool is_exportlib;
   bool is_inline;
   bool is_extern;
   bool is_builtin;

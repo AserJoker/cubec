@@ -46,6 +46,7 @@ static bool _is_statement_keyword(token_t tok) {
          location_is(loc, "type") || location_is(loc, "defer") ||
          location_is(loc, "switch") || location_is(loc, "comptime") ||
          location_is(loc, "test") || location_is(loc, "export") ||
+         location_is(loc, "exportlib") ||
          location_is(loc, "extern") || location_is(loc, "inline");
 }
 

@@ -45,6 +45,7 @@ struct symbol {
   enum symbol_state state;       /**< Resolution state */
   bool is_builtin;               /**< true for builtin declarations */
   bool is_export;                /**< true for export declarations (cross-module visibility) */
+  bool is_exportlib;             /**< true for exportlib declarations (C ABI, no mangling) */
   location_t location;           /**< Declaration location */
   union {
     /* SYMBOL_VARIABLE */

@@ -406,6 +406,23 @@ static void _evaluate_function(context_t ctx,
     }
   }
 
+  /* exportlib: must have a body (definition, not just a declaration) */
+  if (info.is_exportlib && !info.body) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                         info.location,
+                         "exportlib function '%s' requires a body", name);
+    ctx->error_count++;
+  }
+
+  /* exportlib: globally unique symbol name within this compilation unit */
+  if (info.is_exportlib) {
+    /* scope_lookup_local finds symbols in the current scope only.
+     * Since sym was already pushed during collect, this would find itself.
+     * We need to check for a *different* exportlib symbol with the same name,
+     * which shouldn't happen because collect already rejects duplicates.
+     * Cross-module duplicate exportlib names will be caught by the linker. */
+  }
+
   /* Bind function in comptime env so it can be called at compile time.
      All non-extern non-generic functions with bodies are bound — comptime
      and non-comptime alike. Generic templates are instantiated on demand. */
@@ -640,6 +657,19 @@ static void _evaluate_variable(context_t ctx,
       ctx->error_count++;
     } else {
       sym->is_builtin = true;
+    }
+  }
+
+  /* exportlib: variable must have an initializer (definition, not declaration) */
+  if (node->is_exportlib && node->declarator &&
+      node->declarator->kind == CUBEC_NODE_DECLARATION_VARIABLE) {
+    cubec_declaration_variable_t dv =
+        (cubec_declaration_variable_t)node->declarator;
+    if (!dv->expression) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                           node->super.location,
+                           "exportlib variable '%s' requires an initializer", name);
+      ctx->error_count++;
     }
   }
 

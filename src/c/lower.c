@@ -245,7 +245,8 @@ static void emit_function_proto(allocator_t allocator, struct symbol *sym,
 
   const char *func_name;
   string_t mangled;
-  if (is_extern) {
+  if (is_extern || sym->is_exportlib) {
+    /* extern and exportlib: use raw symbol name (no mangling) */
     func_name = sym->name;
     mangled = NULL;
   } else {
@@ -254,7 +255,7 @@ static void emit_function_proto(allocator_t allocator, struct symbol *sym,
   }
 
   if (is_export) {
-    /* Export functions (including export extern) → declaration in .h */
+    /* Export functions (including exportlib/export extern) → declaration in .h */
     c_ir_node_t decl = (c_ir_node_t)c_ir_function_decl_create(
         allocator, ret_type, func_name, params,
         false, false, false, false, is_c_variadic, sym->location);
@@ -289,7 +290,7 @@ static void emit_function_def(allocator_t allocator, context_t ctx, struct symbo
 
   const char *func_name;
   string_t mangled;
-  if (is_extern) {
+  if (is_extern || sym->is_exportlib) {
     func_name = sym->name;
     mangled = NULL;
   } else {
@@ -358,15 +359,23 @@ static void emit_variable_decl(allocator_t allocator, struct symbol *sym,
   c_type_t c_type = lower_type(allocator, sym->variable.type, module_hash, unit);
   if (!sym->variable.is_mutable) c_type_const(allocator, c_type);
 
-  string_t mangled = mangle_name(allocator, module_hash, sym->name);
+  const char *var_name;
+  string_t mangled;
+  if (sym->is_exportlib) {
+    var_name = sym->name;
+    mangled = NULL;
+  } else {
+    mangled = mangle_name(allocator, module_hash, sym->name);
+    var_name = string_get(mangled);
+  }
   c_ir_node_t vd = (c_ir_node_t)c_ir_variable_decl_create(
-      allocator, c_type, string_get(mangled),
+      allocator, c_type, var_name,
       NULL,   /* init — TODO: from AST */
       !sym->is_export,  /* is_static */
       false,  /* is_extern */
       sym->location);
   vec_push(unit->variable_decls, vd);
-  allocator_free(allocator, &mangled);
+  if (mangled) allocator_free(allocator, &mangled);
 }
 
 /* ===== Main entry point ===== */

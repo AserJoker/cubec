@@ -45,6 +45,7 @@ struct _cubec_statement_declaration_t;
 struct _cubec_statement_declaration_t {
   struct _node_t super;
   bool is_export;     /**< Whether this declaration is exported */
+  bool is_exportlib;  /**< Whether this declaration is exported with C ABI (no mangling) */
   bool is_extern;     /**< Whether this is an extern variable (no initializer) */
   bool is_builtin;    /**< Whether this is a builtin variable (no initializer) */
   bool is_comptime;   /**< Whether this is a comptime variable (requires initializer) */
@@ -60,6 +61,7 @@ struct _cubec_statement_declaration_init_t {
   location_t location;
   node_t parent;
   bool is_export;
+  bool is_exportlib;
   bool is_extern;
   bool is_builtin;
   bool is_comptime;

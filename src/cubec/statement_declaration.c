@@ -18,6 +18,7 @@ static void _cubec_statement_declaration_init(
   super_init.location = init->location;
   g_node_type.init(&self->super, allocator, &super_init);
   self->is_export = init->is_export;
+  self->is_exportlib = init->is_exportlib;
   self->is_extern = init->is_extern;
   self->is_builtin = init->is_builtin;
   self->is_comptime = init->is_comptime;
@@ -38,6 +39,7 @@ static void _cubec_statement_declaration_clone(
     cubec_statement_declaration_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
+  self->is_exportlib = another->is_exportlib;
   self->is_extern = another->is_extern;
   self->is_builtin = another->is_builtin;
   self->is_comptime = another->is_comptime;
@@ -51,6 +53,7 @@ static void _cubec_statement_declaration_move(
     cubec_statement_declaration_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
+  self->is_exportlib = another->is_exportlib;
   self->is_extern = another->is_extern;
   self->is_builtin = another->is_builtin;
   self->is_comptime = another->is_comptime;
@@ -106,11 +109,22 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens,
     }
   }
 
-  /* 1. Parse optional modifiers: export / extern / builtin / comptime */
+  /* 1. Parse optional modifiers: export / exportlib / extern / builtin / comptime / using */
+  bool is_exportlib = false;
   while (true) {
     if (_is_keyword(tokens, current, "export")) {
       if (is_export) goto onerror;
       is_export = true;
+      if (start_location.begin.offset == 0) {
+        token_t tok = vec_get(tokens, current);
+        start_location = *token_get_location(tok);
+        start_location.filename = filename;
+      }
+      current++;
+      skip_whitespace(tokens, &current);
+    } else if (_is_keyword(tokens, current, "exportlib")) {
+      if (is_exportlib) goto onerror;
+      is_exportlib = true;
       if (start_location.begin.offset == 0) {
         token_t tok = vec_get(tokens, current);
         start_location = *token_get_location(tok);
@@ -164,20 +178,17 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens,
   }
 
   /* 2. Mutually exclusive check */
-  if (is_extern && is_export)
-    goto onerror;
-  if (is_extern && is_builtin)
-    goto onerror;
-  if (is_extern && is_comptime)
-    goto onerror;
-  if (is_builtin && is_comptime)
-    goto onerror;
-  if (is_using && is_extern)
-    goto onerror;
-  if (is_using && is_builtin)
-    goto onerror;
-  if (is_using && is_comptime)
-    goto onerror;
+  if (is_export && is_exportlib) goto onerror;
+  if (is_extern && is_export) goto onerror;
+  if (is_extern && is_exportlib) goto onerror;
+  if (is_extern && is_builtin) goto onerror;
+  if (is_extern && is_comptime) goto onerror;
+  if (is_builtin && is_comptime) goto onerror;
+  if (is_exportlib && is_builtin) goto onerror;
+  if (is_exportlib && is_comptime) goto onerror;
+  if (is_using && is_extern) goto onerror;
+  if (is_using && is_builtin) goto onerror;
+  if (is_using && is_comptime) goto onerror;
 
   /* 3. Expect 'var' keyword (skip if 'using' takes its place) */
   if (!is_using) {
@@ -238,6 +249,7 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens,
       .location = loc,
       .parent = NULL,
       .is_export = is_export,
+      .is_exportlib = is_exportlib,
       .is_extern = is_extern,
       .is_builtin = is_builtin,
       .is_comptime = is_comptime,
