@@ -216,6 +216,7 @@ static int32_t m3a7_add(int32_t a, int32_t b) {
 - allocator 由用户在源码中显式传递，编译器不自动注入
 - `export` → 不加 `static`
 - 非 export → 加 `static`
+- `exportlib` → 不加 `static`（隐含 export），函数名不做 mangling，直接使用 `sym->name`
 - `extern` → `extern` 声明，无 body
 - `builtin` → 映射到编译器内建函数或标准库实现
 - `inline` → `static inline`
@@ -466,13 +467,13 @@ allocator 由用户显式传递，编译器不隐式插入。
 - 错误传播方式由函数的返回类型决定（goto defer / 返回错误值）
 - 依赖 GCC/Clang 扩展，C 后端不追求严格标准 C 合规
 
-### 6.11 union 智能类型窄化
+### 6.11 `is` 运算符（union 类型窄化）
 
 类似 TypeScript 的 `is` 类型守卫，编译器追踪控制流中的 union 类型检查：
 
 ```c
 // Cubec:
-if (union_is[i32](result)) {
+if (result is i32) {
     var v = result.value;  // 无需检查 — 前文已验证
 }
 
@@ -496,11 +497,27 @@ int32_t v = ({
 ```
 
 - 编译器在语义分析阶段追踪 union 类型窄化状态
-- 已通过 `unionIs` / `if` / `.?` 等检查的路径 → 不生成运行时检查
+- 已通过 `is` / `if` / `.?` 等检查的路径 → 不生成运行时检查
 - 未检查的路径 → 生成运行时检查，非法则 panic
 - 类型窄化在分支合并时重置（类似 TDZ 追踪）
 
-### 6.12 typeof / sizeof / alignof
+### 6.12 元组下标
+
+元组下标 `t[N]` 在 C 后端映射为成员访问 `t._N`：
+
+```c
+// Cubec:
+var t: (i32, f64) = .(1, 3.14);
+var x = t[0];     // i32
+t[1] = 2.71;      // 赋值
+
+// C:
+m3a7_tuple_i32_f64 t = {.0 = 1, .1 = 3.14};
+int32_t x = t._0;
+t._1 = 2.71;
+```
+
+### 6.13 typeof / sizeof / alignof
 
 - `typeof(expr)` → 编译期求值，不生成 C 代码
 - `sizeof(T)` → `sizeof(C_type)`
@@ -521,10 +538,13 @@ int32_t v = ({
 | 结构体类型 `Point` | `m3a7_Point` | 模块hash + `_` + 类型名 |
 | 静态字段 `Point.origin` | `m3a7_Point_origin` | 模块hash + `_` + 类型 + `_` + 字段名 |
 | 嵌套函数（foo内第2个） | `m3a7_foo__2` | 模块hash + `_` + 父函数 + `__` + 编号 |
+| exportlib 函数 `foo` | `foo` | 不做 mangling，直接使用原名 |
+| exportlib 变量 `x` | `x` | 不做 mangling，直接使用原名 |
 
 - 模块hash：对模块路径计算短hash（4-6字符），如 `m3a7`、`bf01`
 - 同模块内名称冲突由编译器保证不存在
 - `__` 双下划线分隔嵌套编号，与单下划线 `_` 区分层级
+- `exportlib` 符号不做名称修饰，直接使用符号原名（C ABI 导出）
 
 ---
 

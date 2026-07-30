@@ -16,17 +16,21 @@ union Result[E, T] { value: T; error: E; }
 - `data` 是 cunion，所有字段 offset=0，size=max(fields.size)
 - `__` 前缀字段保留给编译器，用户不允许定义
 
-### 1.2 unionIs 类型检查
+### 1.2 `is` 类型检查
 
-`unionIs[T, U](u: U): bool` 检查 `u.__type__ == T的hash`：
+`is` 运算符检查 union 当前变体是否匹配指定类型，优先级 6（与 `==`/`!=`/`extends` 同级）：
 
 ```c
 var result = Result[string, i32]{ value: 42 };
-if (unionIs[i32](result)) {
+if (result is i32) {
     // result 当前持有 i32 变体
     var v = result.value;  // 安全访问
 }
 ```
+
+- `expr is Type` → 编译器生成 `expr.__type__ == HASH_Type` 检查
+- `is` 仅限 union 类型使用
+- 通过 `is` 检查后，编译器追踪类型窄化，后续访问变体字段无需额外运行时检查
 
 ### 1.3 .? 错误传播
 

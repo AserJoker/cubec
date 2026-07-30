@@ -144,6 +144,7 @@ g();
 - 标识符（变量名）
 - 成员访问（`expr.field`）
 - 解引用（`expr.*`）
+- 元组下标（`expr[const_index]`，当 expr 为 tuple/generic_instance 时）
 - 泛型实例化（`expr[index]`，如 `__get__` 返回 lvalue）
 
 ### 5.2 const lvalue 检查

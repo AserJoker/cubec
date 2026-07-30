@@ -6,11 +6,11 @@ Cubec 采用**去中心化**依赖管理，依赖来源可以是任何支持 Git
 
 Cubec 支持两种模式：
 - **单文件模式**：直接操作文件名，如 `cubec build test.cubec`、`cubec test test.cubec`、`cubec run test.cubec`
-- **项目模式**：自动读取目录下的 `manifest.json`，无需指定文件名
+- **项目模式**：自动读取目录下的 `cubec.json`，无需指定文件名
 
-## 2. 项目描述文件 manifest.json
+## 2. 项目描述文件 cubec.json
 
-项目根目录下存在 `manifest.json` 即视为 Cubec 项目，格式如下：
+项目根目录下存在 `cubec.json` 即视为 Cubec 项目，格式如下：
 
 ```json
 {
@@ -68,9 +68,9 @@ Cubec 支持两种模式：
 ### 3.2 解析优先级
 
 1. `std` 前缀 → `${CUBEC_HOME}/library/std/`
-2. 项目依赖（存在 manifest.json）→ 必须在 `deps` 中声明才可 import，从 `${PROJECT}/library/<dep_name>/` 解析。未声明的依赖即使目录存在也不可引用（报编译错误）
-3. 全局依赖 → `${CUBEC_HOME}/library/<dep_name>/`（无 manifest.json 时回退）
-4. **幽灵依赖禁止**：只能 import manifest.json 中声明的依赖，不允许 import 间接依赖
+2. 项目依赖（存在 cubec.json）→ 必须在 `deps` 中声明才可 import，从 `${PROJECT}/library/<dep_name>/` 解析。未声明的依赖即使目录存在也不可引用（报编译错误）
+3. 全局依赖 → `${CUBEC_HOME}/library/<dep_name>/`（无 cubec.json 时回退）
+4. **幽灵依赖禁止**：只能 import cubec.json 中声明的依赖，不允许 import 间接依赖
 
 ### 3.3 依赖存放位置
 
@@ -82,7 +82,7 @@ Cubec 支持两种模式：
 
 ### 3.4 依赖扁平化
 
-所有依赖（包括间接依赖）递归展开下载到工作项目的 `library/` 下。Cubec 要求依赖**扁平化管理**，但通过 manifest.json 声明限制，防止幽灵依赖。
+所有依赖（包括间接依赖）递归展开下载到工作项目的 `library/` 下。Cubec 要求依赖**扁平化管理**，但通过 cubec.json 声明限制，防止幽灵依赖。
 
 ### 3.5 循环依赖
 
@@ -91,7 +91,7 @@ Cubec 支持两种模式：
 ## 4. 依赖获取
 
 Cubec 编译器提供 `cubec fetch` 命令显式获取依赖（编译时不自动获取，依赖缺失则报错）：
-- 解析 manifest.json 中的 deps
+- 解析 cubec.json 中的 deps
 - 递归获取所有间接依赖
 - 将依赖 clone 到 `library/` 目录下
 - 如已存在且 md5 匹配则跳过
@@ -138,7 +138,7 @@ export { HashMap, HashSet } from "./hash";
 单文件模式下：
 - 可 `import` 依赖（从 `${CUBEC_HOME}/library/` 解析）
 - 不可 `export`（本身不能作为依赖引入）
-- 无 manifest.json，无项目级依赖管理
+- 无 cubec.json，无项目级依赖管理
 
 ## 8. 标准库
 
@@ -154,7 +154,7 @@ export { HashMap, HashSet } from "./hash";
 | `cubec build test.cubec` | 单文件构建 |
 | `cubec test test.cubec` | 单文件测试 |
 | `cubec run test.cubec` | 单文件运行 |
-| `cubec build` | 项目构建（读取 manifest.json） |
+| `cubec build` | 项目构建（读取 cubec.json） |
 | `cubec test` | 项目测试 |
 | `cubec fetch` | 获取项目依赖（手动） |
 | `cubec build --home /path` | 指定 CUBEC_HOME |

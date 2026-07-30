@@ -44,16 +44,16 @@
 
 标识符遵循 Unicode 标准（通过 ICU `u_isIDStart`/`u_isIDPart` 识别），支持非 ASCII 字符。
 
-**关键字（41个）**：
+**关键字（42个）**：
 
 | | | | | |
 |---|---|---|---|---|
 | `alignof` | `as` | `break` | `builtin` | `case` |
 | `comptime` | `const` | `continue` | `cunion` | `defer` |
-| `do` | `else` | `enum` | `export` | `extends` |
-| `extern` | `for` | `foreach` | `from` | `func` |
-| `if` | `import` | `in` | `inline` | `interface` |
-| `is` | `of` | `pub` | `return` |
+| `do` | `else` | `enum` | `export` | `exportlib` |
+| `extends` | `extern` | `for` | `foreach` | `from` |
+| `func` | `if` | `import` | `in` | `inline` |
+| `interface` | `is` | `of` | `pub` | `return` |
 | `sizeof` | `struct` | `switch` | `test` | `type` |
 | `typeof` | `union` | `using` | `var` | `volatile` |
 | `while` | | | | |
@@ -223,7 +223,7 @@ value.?     // Try/unwrap（安全地解包 Result/Option 类型）
 | 3 | `\|` | 左结合 |
 | 4 | `^` | 左结合 |
 | 5 | `&` | 左结合 |
-| 6 | `==` `!=` `extends` | 左结合 |
+| 6 | `==` `!=` `extends` `is` | 左结合 |
 | 7 | `<` `>` `<=` `>=` | 左结合 |
 | 8 | `<<` `>>` | 左结合 |
 | 9 | `+` `-` | 左结合 |
@@ -307,6 +307,19 @@ fn[a][b]                // 链式实例化
 ```
 
 > 与切片表达式的歧义通过 `:` 消解：`arr[0:10]` 是切片，`arr[0]` 是泛型实例化。单参数形式的最终语义留待语义分析阶段确定。
+
+**元组下标**：当 `expr[N]` 的 `expr` 解析为变量且类型为 tuple 或 generic_instance（带 fields），`[N]` 语义为编译期常量下标访问，返回对应字段的类型：
+
+```c
+var t: (i32, f64, string) = .(1, 3.14, "hello");
+var x = t[0];    // x: i32
+var y = t[2];    // y: string
+t[1] = 2.71;    // 赋值（lvalue）
+```
+
+- 下标必须是编译期常量整数表达式
+- 下标范围必须在 `[0, tuple_field_count)` 内
+- 元组字段按 `_0`, `_1`, `_2` ... 命名，下标 `N` 映射到字段 `_N`
 
 **参数包实例化**：泛型参数列表中的 `...Args` 可接收零个或多个类型实参：
 
@@ -703,11 +716,12 @@ interface Container[T] {
 | `comptime` | 声明级 + 语句 | var / func / if / for / block |
 | `inline` | 声明级 | func |
 | `export` | 声明级 | func / type / var |
+| `exportlib` | 声明级 | func / var |
 | `pub` | 字段级 | struct field |
 | `using` | 声明级 | var |
 
 ### 7.2 互斥矩阵
 
-`builtin`、`extern`、`comptime`、`using` 四者互斥，声明只能选其一。`inline` 必须有函数体，与 `builtin`（无体）和 `extern`（无体/外部体）天然互斥。`inline` + `comptime`：comptime 下忽略 inline。`export` 正交于所有其他修饰符。`pub` 仅修饰 struct 字段，与 `export` 职责不同。
+`builtin`、`extern`、`comptime`、`using` 四者互斥，声明只能选其一。`inline` 必须有函数体，与 `builtin`（无体）和 `extern`（无体/外部体）天然互斥。`inline` + `comptime`：comptime 下忽略 inline。`export` 正交于其他修饰符（除 `exportlib`，二者互斥）。`exportlib` 与所有其他修饰符互斥，隐含 `export` 语义。`pub` 仅修饰 struct 字段，与 `export` 职责不同。
 
 详见 `09-modifiers.md`。

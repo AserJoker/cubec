@@ -2,7 +2,7 @@
 
 ## 1. 总览
 
-Cubec 有 7 个修饰符，分为三类：
+Cubec 有 8 个修饰符，分为三类：
 
 | 修饰符 | 作用域 | 修饰目标 |
 |--------|--------|---------|
@@ -11,6 +11,7 @@ Cubec 有 7 个修饰符，分为三类：
 | `comptime` | 声明级 + 语句 | var / func / if / for / block |
 | `inline` | 声明级 | func |
 | `export` | 声明级 | func / type / var |
+| `exportlib` | 声明级 | func / var |
 | `pub` | 字段级 | struct field |
 | `using` | 声明级 | var |
 
@@ -42,7 +43,7 @@ builtin  × extern  × comptime  × using
 
 ### 2.3 export 规则
 
-`export` 正交于所有其他修饰符，可自由组合：
+`export` 正交于所有其他修饰符（除 `exportlib`），可自由组合：
 
 ```c
 export builtin func panic(): void
@@ -51,7 +52,29 @@ export inline func add(a: i32, b: i32): i32 { return a + b; }
 export using var f: File = .{};
 ```
 
-### 2.4 pub 规则
+`export` 与 `exportlib` 互斥（见 2.5）。
+
+### 2.4 exportlib 规则
+
+`exportlib` 与**所有其他修饰符**互斥：
+
+```
+exportlib × export × extern × builtin × comptime × inline × using
+```
+
+| 组合 | 结果 |
+|------|------|
+| exportlib + export | ✗ 互斥（exportlib 隐含 export） |
+| exportlib + extern | ✗ 互斥 |
+| exportlib + builtin | ✗ 互斥 |
+| exportlib + comptime | ✗ 互斥 |
+| exportlib + inline | ✗ 互斥 |
+| exportlib + using | ✗ 互斥 |
+
+- `exportlib` 隐含 `export` 语义（跨模块可见）
+- `exportlib` 只能修饰 `func` 和 `var`，不能修饰 struct/enum/union/interface/type
+
+### 2.5 pub 规则
 
 `pub` 仅修饰 struct 字段，与 `export` 职责不同，不冲突。
 
@@ -182,3 +205,22 @@ type Point = struct {
 - 访问控制框架已就位：`_is_field_accessible()` 在字段访问时检查可见性
 - 当前阶段（模块系统未实现）：所有字段在当前模块内均可访问
 - Phase 8 实现模块系统后：非 pub 字段从其他模块访问时报错
+
+---
+
+## 8. exportlib
+
+C ABI 导出修饰符，声明符号以 C ABI 方式导出（不做 name mangling），类似 C++ 的 `extern "C"`：
+
+```c
+exportlib func foo(): void {}
+exportlib var x: i32 = 42;
+```
+
+- **隐含 `export`**：exportlib 符号自动跨模块可见（`.h` 文件中声明）
+- **不做 name mangling**：C 代码中函数名为 `foo` 而非 `mXXXX_foo`，变量名为 `x` 而非 `static mXXXX_x`
+- **只能修饰 `func` 和 `var`**，不能修饰 struct/enum/union/interface/type
+- **全局唯一**：项目中不允许两个 exportlib 声明使用相同的符号名
+- **exportlib func 必须有 body**（定义而非声明；需要对接 C 函数声明用 `extern func`）
+- **exportlib var 必须有初始化器**（定义而非声明；需要对接 C 变量声明用 `extern var`）
+- 与 `export`、`extern`、`builtin`、`comptime`、`inline`、`using` 全部互斥
