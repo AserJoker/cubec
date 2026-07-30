@@ -15,7 +15,6 @@ Cubec 支持两种模式：
 ```json
 {
   "name": "my_project",
-  "version": "0.1.0",
   "deps": {
     "collections": {
       "url": "https://github.com/cubec-lang/collections",
@@ -36,7 +35,6 @@ Cubec 支持两种模式：
 | 字段 | 必填 | 说明 |
 |------|------|------|
 | `name` | 是 | 项目名称，作为依赖引入时的标识符 |
-| `version` | 是 | 项目版本号 |
 | `deps` | 否 | 依赖声明，key 为依赖名，value 为来源描述 |
 | `deps.<name>.url` | 是 | Git 仓库地址或 `file://` 本地路径 |
 | `deps.<name>.branch` | 否 | Git 分支或 tag，默认为默认分支 |
@@ -47,7 +45,7 @@ Cubec 支持两种模式：
 
 ### 版本管理策略
 
-采用 **Git branch/tag + md5 锁定**，不使用 semver 范围解析。用户通过 branch/tag 指定版本，md5 可选用于校验完整性。
+版本由 Git tag/branch 管理，不使用独立的 `version` 字段。依赖版本通过 `deps.<name>.branch` 指定 Git 分支或 tag，md5 可选用于校验完整性。
 
 ## 3. 依赖解析
 
