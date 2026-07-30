@@ -21,7 +21,6 @@ using ::testing::Test;
 /* ===== helpers ===== */
 
 #define BUILTIN_ASSERT "builtin func assert(cond: bool): void;\n"
-#define BUILTIN_UNIONIS "builtin func unionIs[T,K](v: K): bool;\n"
 
 struct compile_result {
   context_t ctx;
@@ -66,7 +65,7 @@ protected:
 
 TEST_F(dt_result_protocol, try_union_field_value) {
   /* u.value.? on a union where value is the active variant should return value */
-  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+  const char *src = BUILTIN_ASSERT
     "union Result { value: i32; err: str; }\n"
     "test \"try_field_value\" {\n"
     "  var r = .Result{.value = 42};\n"
@@ -81,7 +80,7 @@ TEST_F(dt_result_protocol, try_union_field_value) {
 
 TEST_F(dt_result_protocol, try_union_field_error_propagate) {
   /* u.value.? on a union where value is NOT active should propagate error */
-  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+  const char *src = BUILTIN_ASSERT
     "union Result { value: i32; err: str; }\n"
     "test \"try_field_error\" {\n"
     "  var r = .Result{.err = \"fail\"};\n"
@@ -95,7 +94,7 @@ TEST_F(dt_result_protocol, try_union_field_error_propagate) {
 
 TEST_F(dt_result_protocol, try_union_err_field_active) {
   /* u.err.? on a union where err IS active should return the err value */
-  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+  const char *src = BUILTIN_ASSERT
     "union Result { value: i32; err: str; }\n"
     "test \"try_err_field\" {\n"
     "  var r = .Result{.err = \"fail\"};\n"
@@ -110,7 +109,7 @@ TEST_F(dt_result_protocol, try_union_err_field_active) {
 
 TEST_F(dt_result_protocol, try_union_generic_field) {
   /* u.value.? on a generic union */
-  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+  const char *src = BUILTIN_ASSERT
     "union Result[V, E] { value: V; err: E; }\n"
     "test \"try_generic\" {\n"
     "  var r = .Result[i32, str]{.value = 42};\n"
@@ -127,7 +126,7 @@ TEST_F(dt_result_protocol, try_union_generic_field) {
 
 TEST_F(dt_result_protocol, assert_union_field_value) {
   /* u.value.! on a union where value is active should return value */
-  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+  const char *src = BUILTIN_ASSERT
     "union Result { value: i32; err: str; }\n"
     "test \"assert_field_value\" {\n"
     "  var r = .Result{.value = 42};\n"
@@ -142,7 +141,7 @@ TEST_F(dt_result_protocol, assert_union_field_value) {
 
 TEST_F(dt_result_protocol, assert_union_field_panic) {
   /* u.value.! on a union where value is NOT active should panic */
-  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+  const char *src = BUILTIN_ASSERT
     "union Result { value: i32; err: str; }\n"
     "test \"assert_field_panic\" {\n"
     "  var r = .Result{.err = \"fail\"};\n"
@@ -546,13 +545,13 @@ TEST_F(dt_result_protocol, pointer_autoderef_method) {
 TEST_F(dt_result_protocol, dot_bang_union_field_via_pointer) {
   /* self._err.! inside a method where self: *Result —
    * pointer auto-dereference must happen before union field check */
-  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+  const char *src = BUILTIN_ASSERT
     "union Result {\n"
     "  _err: str;\n"
     "  _value: i32;\n"
     "  func ofError(err: str): Result { return .Result{._err = err}; }\n"
     "  func ofValue(value: i32): Result { return .Result{._value = value}; }\n"
-    "  func isError(self: *Result): bool { return unionIs[str](self.*); }\n"
+    "  func isError(self: *Result): bool { return self.* is str; }\n"
     "  func error(self: *Result): str { return self._err.!; }\n"
     "  func value(self: *Result): i32 { return self._value.!; }\n"
     "}\n"
@@ -581,13 +580,13 @@ TEST_F(dt_result_protocol, dot_bang_union_field_via_pointer) {
 TEST_F(dt_result_protocol, dot_try_union_field_via_pointer) {
   /* self._value.? inside a method where self: *Result —
    * pointer auto-dereference for .? on union member */
-  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+  const char *src = BUILTIN_ASSERT
     "union Result {\n"
     "  _err: str;\n"
     "  _value: i32;\n"
     "  func ofError(err: str): Result { return .Result{._err = err}; }\n"
     "  func ofValue(value: i32): Result { return .Result{._value = value}; }\n"
-    "  func isError(self: *Result): bool { return unionIs[str](self.*); }\n"
+    "  func isError(self: *Result): bool { return self.* is str; }\n"
     "  func error(self: *Result): str { return self._err.!; }\n"
     "  func value(self: *Result): i32 { return self._value.!; }\n"
     "  func ofError(e: str): Result { return .Result{._err = e}; }\n"
@@ -621,13 +620,13 @@ TEST_F(dt_result_protocol, dot_try_union_field_via_pointer) {
 TEST_F(dt_result_protocol, full_result_protocol_via_pointer) {
   /* Complete test matching user's example: Result with .? propagation
    * through TestUnion function */
-  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+  const char *src = BUILTIN_ASSERT
     "union Result {\n"
     "  _err: str;\n"
     "  _value: i32;\n"
     "  func ofError(err: str): Result { return .Result{._err = err}; }\n"
     "  func ofValue(value: i32): Result { return .Result{._value = value}; }\n"
-    "  func isError(self: *Result): bool { return unionIs[str](self.*); }\n"
+    "  func isError(self: *Result): bool { return self.* is str; }\n"
     "  func error(self: *Result): str { return self._err.!; }\n"
     "  func value(self: *Result): i32 { return self._value.!; }\n"
     "}\n"
@@ -675,12 +674,12 @@ TEST_F(dt_result_protocol, union_field_direct_read_error) {
 
 TEST_F(dt_result_protocol, union_field_write_allowed) {
   /* Writing to union field (setting active variant) is allowed */
-  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+  const char *src = BUILTIN_ASSERT
     "union Result { value: i32; err: str; }\n"
     "test \"field_write\" {\n"
     "  var r = .Result{.value = 42};\n"
     "  r.err = \"fail\";\n"
-    "  assert(unionIs[str](r));\n"
+    "  assert(r is str);\n"
     "}\n";
   auto r = compile_source(ctx, src);
   ASSERT_NE(r.ctx, nullptr);
@@ -698,7 +697,7 @@ TEST_F(dt_result_protocol, union_field_write_allowed) {
 
 TEST_F(dt_result_protocol, union_field_dot_bang_allowed) {
   /* Using .! on union field is allowed */
-  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+  const char *src = BUILTIN_ASSERT
     "union Result { value: i32; err: str; }\n"
     "test \"dot_bang_ok\" {\n"
     "  var r = .Result{.value = 42};\n"
@@ -712,7 +711,7 @@ TEST_F(dt_result_protocol, union_field_dot_bang_allowed) {
 
 TEST_F(dt_result_protocol, union_method_access_allowed) {
   /* Method call on union is still allowed (not a field read) */
-  const char *src = BUILTIN_ASSERT BUILTIN_UNIONIS
+  const char *src = BUILTIN_ASSERT
     "union Val {\n"
     "  i_val: i32;\n"
     "  func as_int(self: *Val): i32 { return self.i_val.!; }\n"

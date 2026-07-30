@@ -2,8 +2,6 @@
 #include "engine/builtin_cast.h"
 #include "engine/builtin_debug.h"
 #include "engine/builtin_collection.h"
-#include "engine/builtin_tuple.h"
-#include "engine/builtin_union.h"
 #include "engine/builtin_string.h"
 #include "engine/builtin_panic.h"
 #include "engine/builtin_typename.h"
@@ -93,9 +91,7 @@ builtin_entry_t builtin_table_lookup(builtin_table_t table, const char *name) {
 void builtin_table_init_defaults(builtin_table_t table, struct context *ctx) {
   builtin_table_init_debug(table, ctx);
   builtin_table_init_collection(table, ctx);
-  builtin_table_init_tuple(table, ctx);
   builtin_table_init_cast(table, ctx);
-  builtin_table_init_union(table, ctx);
   builtin_table_init_string(table, ctx);
   builtin_table_init_panic(table, ctx);
   builtin_table_init_typename(table, ctx);

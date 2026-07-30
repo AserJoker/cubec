@@ -13,8 +13,6 @@ using ::testing::Test;
 /* ===== helpers ===== */
 
 #define BUILTIN_ASSERT "builtin func assert(condition: bool): void;\n"
-#define BUILTIN_GET "builtin func getTupleItem[N: u64, ...Args](tuple: <...Args>): Args[N];\n"
-#define BUILTIN_SET "builtin func setTupleItem[N: u64, ...Args](tuple: <...Args>, value: Args[N]): void;\n"
 
 struct compile_result {
   context_t ctx;
@@ -182,23 +180,31 @@ TEST_F(dt_builtin, tuple_init_list) {
   compile_result_cleanup(&r, allocator);
 }
 
-TEST_F(dt_builtin, tuple_getTupleItem) {
-  const char *src = BUILTIN_ASSERT BUILTIN_GET
+TEST_F(dt_builtin, tuple_subscript) {
+  const char *src = BUILTIN_ASSERT
     "test \"tuple_get\" {\n"
     "  var t: <i32, f64> = .<i32, f64>{1, 2.0};\n"
-    "  assert(getTupleItem[0](t) == 1);\n"
-    "  assert(getTupleItem[1](t) == 2.0);\n"
+    "  assert(t[0] == 1);\n"
+    "  assert(t[1] == 2.0);\n"
     "}\n";
   auto r = compile_source(ctx, src);
+  if (context_get_error_count(r.ctx) > 0) {
+    size_t dc = diagnostic_list_get_size(r.ctx->diagnostics);
+    for (size_t i = 0; i < dc; i++) {
+      struct diagnostic *d = diagnostic_list_get(r.ctx->diagnostics, i);
+      if (d && d->severity == DIAGNOSTIC_ERROR)
+        printf("  DIAG[%zu]: %s\n", i, d->message);
+    }
+  }
   EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
 TEST_F(dt_builtin, tuple_single_field) {
-  const char *src = BUILTIN_ASSERT BUILTIN_GET
+  const char *src = BUILTIN_ASSERT
     "test \"tuple_single\" {\n"
     "  var t: <i32> = .<i32>{42};\n"
-    "  assert(getTupleItem[0](t) == 42);\n"
+    "  assert(t[0] == 42);\n"
     "}\n";
   auto r = compile_source(ctx, src);
   EXPECT_EQ(context_get_error_count(r.ctx), 0);
@@ -206,12 +212,12 @@ TEST_F(dt_builtin, tuple_single_field) {
 }
 
 TEST_F(dt_builtin, tuple_three_fields) {
-  const char *src = BUILTIN_ASSERT BUILTIN_GET
+  const char *src = BUILTIN_ASSERT
     "test \"tuple_three\" {\n"
     "  var t: <i32, f64, bool> = .<i32, f64, bool>{1, 2.0, true};\n"
-    "  assert(getTupleItem[0](t) == 1);\n"
-    "  assert(getTupleItem[1](t) == 2.0);\n"
-    "  assert(getTupleItem[2](t) == true);\n"
+    "  assert(t[0] == 1);\n"
+    "  assert(t[1] == 2.0);\n"
+    "  assert(t[2] == true);\n"
     "}\n";
   auto r = compile_source(ctx, src);
   EXPECT_EQ(context_get_error_count(r.ctx), 0);
@@ -220,40 +226,60 @@ TEST_F(dt_builtin, tuple_three_fields) {
 
 TEST_F(dt_builtin, tuple_same_instantiation_dedup) {
   /* <i32, f64> used twice should be the same type */
-  const char *src = BUILTIN_ASSERT BUILTIN_GET
+  const char *src = BUILTIN_ASSERT
     "test \"tuple_dedup\" {\n"
     "  var t1: <i32, f64> = .<i32, f64>{1, 2.0};\n"
     "  var t2: <i32, f64> = .<i32, f64>{3, 4.0};\n"
-    "  assert(getTupleItem[0](t1) == 1);\n"
-    "  assert(getTupleItem[0](t2) == 3);\n"
+    "  assert(t1[0] == 1);\n"
+    "  assert(t2[0] == 3);\n"
     "}\n";
   auto r = compile_source(ctx, src);
   EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
-TEST_F(dt_builtin, tuple_subscript_error) {
-  /* t[0] should be an error — must use getTupleItem[0](t) */
+TEST_F(dt_builtin, tuple_subscript_out_of_range) {
+  /* Tuple subscript with out-of-range index should error */
   const char *src = BUILTIN_ASSERT
-    "test \"tuple_sub_err\" {\n"
+    "test \"tuple_sub_oob\" {\n"
     "  var t: <i32, f64> = .<i32, f64>{1, 2.0};\n"
-    "  t[0];\n"
+    "  t[5];\n"
     "}\n";
   auto r = compile_source(ctx, src);
   EXPECT_GT(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }
 
-TEST_F(dt_builtin, tuple_setTupleItem) {
-  /* setTupleItem modifies tuple field in-place */
-  const char *src = BUILTIN_ASSERT BUILTIN_GET BUILTIN_SET
-    "test \"tuple_set\" {\n"
-    "  var t: <i32, f64> = .<i32, f64>{1, 2.0};\n"
-    "  setTupleItem[0](t, 10);\n"
-    "  assert(getTupleItem[0](t) == 10);\n"
-    "  assert(getTupleItem[1](t) == 2.0);\n"
+TEST_F(dt_builtin, tuple_subscript_non_tuple) {
+  /* Subscript on non-tuple type should error */
+  const char *src = BUILTIN_ASSERT
+    "test \"tuple_sub_nontuple\" {\n"
+    "  var x: i32 = 5;\n"
+    "  x[0];\n"
     "}\n";
   auto r = compile_source(ctx, src);
+  EXPECT_GT(context_get_error_count(r.ctx), 0);
+  compile_result_cleanup(&r, allocator);
+}
+
+TEST_F(dt_builtin, tuple_subscript_assign) {
+  /* Tuple subscript assignment modifies field in-place */
+  const char *src = BUILTIN_ASSERT
+    "test \"tuple_set\" {\n"
+    "  var t: <i32, f64> = .<i32, f64>{1, 2.0};\n"
+    "  t[0] = 10;\n"
+    "  assert(t[0] == 10);\n"
+    "  assert(t[1] == 2.0);\n"
+    "}\n";
+  auto r = compile_source(ctx, src);
+  if (context_get_error_count(r.ctx) > 0) {
+    size_t dc = diagnostic_list_get_size(r.ctx->diagnostics);
+    for (size_t i = 0; i < dc; i++) {
+      struct diagnostic *d = diagnostic_list_get(r.ctx->diagnostics, i);
+      if (d && d->severity == DIAGNOSTIC_ERROR)
+        printf("  DIAG[%zu]: %s\n", i, d->message);
+    }
+  }
   EXPECT_EQ(context_get_error_count(r.ctx), 0);
   compile_result_cleanup(&r, allocator);
 }

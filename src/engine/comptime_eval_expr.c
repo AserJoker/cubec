@@ -24,6 +24,7 @@
 #include "cubec/expression_initialize_field.h"
 #include "cubec/expression_comma.h"
 #include "cubec/expression_slice.h"
+#include "cubec/expression_subscript.h"
 #include "cubec/expression_generic_instantiation.h"
 #include <math.h>
 #include <string.h>
@@ -375,6 +376,36 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, context_t ctx,
     return _eval_error_val(eval);
   }
 
+  /* subscript assignment: tuple[index] = rv */
+  if (asgn->left->kind == CUBEC_NODE_EXPRESSION_SUBSCRIPT) {
+    cubec_expression_subscript_t sub = (cubec_expression_subscript_t)asgn->left;
+    comptime_value_t host = _comptime_eval_expr(eval, ctx, sub->host);
+    if (_val_is_error(host)) return _eval_propagate_error(eval, host);
+
+    comptime_value_t idx_val = _comptime_eval_expr(eval, ctx, sub->index);
+    if (_val_is_error(idx_val)) return _eval_propagate_error(eval, idx_val);
+
+    if (host->kind == COMPTIME_VALUE_COMPOSITE) {
+      uint64_t idx = comptime_value_as_u64(idx_val);
+      semantic_type_t host_type = host->type;
+      semantic_type_t host_unq = semantic_type_strip_qualifier(host_type);
+      if (host_unq && host_unq->impl->kind == TYPE_TUPLE &&
+          host_unq->impl->tuple.fields) {
+        vec_t fields = host_unq->impl->tuple.fields;
+        if (idx < vec_get_size(fields)) {
+          struct symbol *f = (struct symbol *)vec_get(fields, (size_t)idx);
+          if (f && f->field.type) {
+            comptime_value_write_field(host, f->field.offset, f->field.type, rv, eval->allocator);
+            return _eval_temp(eval, comptime_value_read_field(host, f->field.offset,
+                                                             f->field.type, eval->allocator));
+          }
+        }
+      }
+    }
+
+    return _eval_error_val(eval);
+  }
+
   /* generic instantiation assignment: obj[key] = rv (__set__ magic method) */
   if (asgn->left->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
     cubec_expression_generic_instantiation_t gi =
@@ -393,6 +424,28 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, context_t ctx,
       comptime_value_t set_args[2] = { key_val ? key_val : rv, rv };
       _eval_method_call(eval, ctx, set_method, gi->callee, host, set_args, 2, node);
       return _eval_temp(eval, comptime_value_clone(eval->allocator, rv));
+    }
+
+    /* Tuple subscript assignment: t[N] = val */
+    if (host->kind == COMPTIME_VALUE_COMPOSITE && key_val) {
+      semantic_type_t host_unq = semantic_type_strip_qualifier(host->type);
+      if (host_unq && (host_unq->impl->kind == TYPE_TUPLE ||
+          (host_unq->impl->kind == TYPE_GENERIC_INSTANCE &&
+           host_unq->impl->generic_instance.fields))) {
+        uint64_t idx = comptime_value_as_u64(key_val);
+        vec_t fields = host_unq->impl->kind == TYPE_TUPLE
+            ? host_unq->impl->tuple.fields
+            : host_unq->impl->generic_instance.fields;
+        size_t fcount = fields ? vec_get_size(fields) : 0;
+        if (idx < fcount) {
+          struct symbol *f = (struct symbol *)vec_get(fields, (size_t)idx);
+          if (f && f->field.type) {
+            comptime_value_write_field(host, f->field.offset, f->field.type, rv, eval->allocator);
+            return _eval_temp(eval, comptime_value_clone(eval->allocator, rv));
+          }
+        }
+        return _eval_error_val(eval);
+      }
     }
 
     /* str[index] = char: compile-time string mutation */
@@ -2042,6 +2095,44 @@ static comptime_value_t _eval_slice(comptime_eval_t eval, context_t ctx,
   return _eval_error_val(eval);
 }
 
+static comptime_value_t _eval_subscript(comptime_eval_t eval, context_t ctx,
+                                         node_t node) {
+  cubec_expression_subscript_t sub = (cubec_expression_subscript_t)node;
+  comptime_value_t host = _comptime_eval_expr(eval, ctx, sub->host);
+  if (_val_is_error(host)) return _eval_propagate_error(eval, host);
+
+  comptime_value_t idx_val = _comptime_eval_expr(eval, ctx, sub->index);
+  if (_val_is_error(idx_val)) return _eval_propagate_error(eval, idx_val);
+
+  /* Host must be a tuple composite */
+  if (host->kind != COMPTIME_VALUE_COMPOSITE) {
+    return _eval_error_val(eval);
+  }
+
+  semantic_type_t host_type = host->type;
+  semantic_type_t host_unq = semantic_type_strip_qualifier(host_type);
+  if (!host_unq || host_unq->impl->kind != TYPE_TUPLE ||
+      !host_unq->impl->tuple.fields) {
+    return _eval_error_val(eval);
+  }
+
+  /* Get the index as a comptime integer */
+  uint64_t idx = comptime_value_as_u64(idx_val);
+  vec_t fields = host_unq->impl->tuple.fields;
+  size_t fcount = vec_get_size(fields);
+  if (idx >= fcount) {
+    return _eval_error_val(eval);
+  }
+
+  struct symbol *f = (struct symbol *)vec_get(fields, (size_t)idx);
+  if (!f || !f->field.type) {
+    return _eval_error_val(eval);
+  }
+
+  return _eval_temp(eval, comptime_value_read_field(host, f->field.offset,
+                                                     f->field.type, eval->allocator));
+}
+
 static comptime_value_t _eval_generic_inst(comptime_eval_t eval, context_t ctx,
                                             node_t node) {
   cubec_expression_generic_instantiation_t gi =
@@ -2057,6 +2148,32 @@ static comptime_value_t _eval_generic_inst(comptime_eval_t eval, context_t ctx,
   if (gi->callee) {
     comptime_value_t host_val = _comptime_eval_expr(eval, ctx, gi->callee);
     if (_val_is_error(host_val)) return _eval_propagate_error(eval, host_val);
+
+    /* Tuple subscript: t[N] — read field from tuple composite */
+    if (host_val->kind == COMPTIME_VALUE_COMPOSITE && gi->arguments &&
+        vec_get_size(gi->arguments) >= 1) {
+      semantic_type_t host_unq = semantic_type_strip_qualifier(host_val->type);
+      if (host_unq && (host_unq->impl->kind == TYPE_TUPLE ||
+          (host_unq->impl->kind == TYPE_GENERIC_INSTANCE &&
+           host_unq->impl->generic_instance.fields))) {
+        comptime_value_t key_val = _comptime_eval_expr(eval, ctx,
+            (node_t)vec_get(gi->arguments, 0));
+        if (_val_is_error(key_val)) return _eval_propagate_error(eval, key_val);
+        uint64_t idx = comptime_value_as_u64(key_val);
+        vec_t fields = host_unq->impl->kind == TYPE_TUPLE
+            ? host_unq->impl->tuple.fields
+            : host_unq->impl->generic_instance.fields;
+        size_t fcount = fields ? vec_get_size(fields) : 0;
+        if (idx < fcount) {
+          struct symbol *f = (struct symbol *)vec_get(fields, (size_t)idx);
+          if (f && f->field.type) {
+            comptime_value_t field_val = comptime_value_read_field(host_val, f->field.offset, f->field.type, eval->allocator);
+            if (field_val) return _eval_temp(eval, field_val);
+          }
+        }
+        return _eval_error_val(eval);
+      }
+    }
 
     /* str[index] → char */
     if (host_val->kind == COMPTIME_VALUE_STRING && gi->arguments &&
@@ -2145,6 +2262,8 @@ comptime_value_t _comptime_eval_expr(comptime_eval_t eval, context_t ctx,
     return _eval_assert_unwrap(eval, ctx, expr);
   case CUBEC_NODE_EXPRESSION_SLICE:
     return _eval_slice(eval, ctx, expr);
+  case CUBEC_NODE_EXPRESSION_SUBSCRIPT:
+    return _eval_subscript(eval, ctx, expr);
   case CUBEC_NODE_LITERAL_UNDEFINED:
     /* undefined is not directly evaluable — it only makes sense as an
      * initializer in a declaration (handled in comptime_eval_stmt).

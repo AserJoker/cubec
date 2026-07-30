@@ -1,5 +1,6 @@
 #include "engine/comptime_eval_binary.h"
 #include "engine/resolver.h"
+#include "engine/type_hash.h"
 #include "cubec/expression_binary.h"
 #include <string.h>
 
@@ -263,6 +264,24 @@ comptime_value_t _comptime_eval_binary(comptime_eval_t eval, context_t ctx,
     if (type_arg && constraint) {
       bool satisfies = _check_constraint_silent(ctx, type_arg, constraint);
       result = comptime_value_create_bool(eval->allocator, satisfies, ctx->builtin_bool);
+    }
+  }
+  /* is: union variant check — returns bool */
+  else if (strcmp(op, "is") == 0) {
+    /* Left operand must be a tagged union value */
+    if (lv->kind == COMPTIME_VALUE_COMPOSITE &&
+        comptime_value_is_tagged_union(lv)) {
+      /* Right operand is the target type — resolve from AST */
+      semantic_type_t target_type = resolver_resolve_type(ctx, bin->right);
+      if (target_type && target_type->impl->kind != TYPE_ERROR) {
+        type_hash_ensure(target_type);
+        uint64_t obj_tag = comptime_value_get_union_tag(lv);
+        bool is_match = (obj_tag == target_type->impl->hash);
+        result = comptime_value_create_bool(eval->allocator, is_match, ctx->builtin_bool);
+      }
+    } else {
+      /* Not a union value — error already reported by checker */
+      result = comptime_value_create_bool(eval->allocator, false, ctx->builtin_bool);
     }
   }
 

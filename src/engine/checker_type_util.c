@@ -91,6 +91,7 @@ bool _is_lvalue(node_t expr) {
   case CUBEC_NODE_EXPRESSION_MEMBER:
   case CUBEC_NODE_EXPRESSION_DEREF:
   case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION:
+  case CUBEC_NODE_EXPRESSION_SUBSCRIPT:
     return true;
   default:
     return false;

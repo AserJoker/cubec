@@ -173,13 +173,39 @@ semantic_type_t _check_generic_ident_callee(context_t ctx, node_t expr) {
   if (host_type->impl->kind == TYPE_STR)
     return ctx->builtin_char;
 
-  /* Tuple does not support [] subscript — use get[N](tuple) instead */
-  if (host_type->impl->kind == TYPE_GENERIC_INSTANCE &&
-      host_type->impl->generic_instance.fields) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                         "tuple indexing requires get[N](tuple), not tuple[N]");
-    ctx->error_count++;
-    return ctx->error_type;
+  /* Tuple subscript: callee is a tuple-typed variable */
+  if (host_type->impl->kind == TYPE_TUPLE ||
+      (host_type->impl->kind == TYPE_GENERIC_INSTANCE &&
+       host_type->impl->generic_instance.fields)) {
+    if (gi->arguments && vec_get_size(gi->arguments) == 1) {
+      node_t idx_node = (node_t)vec_get(gi->arguments, 0);
+      uint64_t idx = 0;
+      bool idx_valid = false;
+      if (idx_node->kind == CUBEC_NODE_LITERAL_NUMERIC) {
+        cubec_literal_numeric_t num = (cubec_literal_numeric_t)idx_node;
+        idx = strtoull(string_get(num->value), NULL, 10);
+        idx_valid = true;
+      }
+      if (!idx_valid) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                             "tuple subscript index must be a compile-time constant");
+        ctx->error_count++;
+        return ctx->error_type;
+      }
+      vec_t fields = host_type->impl->kind == TYPE_TUPLE
+          ? host_type->impl->tuple.fields
+          : host_type->impl->generic_instance.fields;
+      size_t fcount = fields ? vec_get_size(fields) : 0;
+      if (idx >= fcount) {
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                             "tuple index %llu out of range (tuple has %zu element%s)",
+                             (unsigned long long)idx, fcount, fcount == 1 ? "" : "s");
+        ctx->error_count++;
+        return ctx->error_type;
+      }
+      struct symbol *field = (struct symbol *)vec_get(fields, (size_t)idx);
+      return field ? field->field.type : ctx->error_type;
+    }
   }
 
   if (host_type->instance_methods) {

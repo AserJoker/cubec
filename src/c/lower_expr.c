@@ -28,6 +28,7 @@
 #include "cubec/expression_initialize_list.h"
 #include "cubec/expression_initialize_field.h"
 #include "cubec/expression_slice.h"
+#include "cubec/expression_subscript.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
@@ -44,8 +45,10 @@
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
 #include "cubec/literal_char.h"
+#include "cubec/literal_identifier.h"
 #include "engine/resolver.h"
 #include <string.h>
+#include <inttypes.h>
 
 /* Forward declarations */
 c_type_t lower_type(allocator_t allocator, semantic_type_t type,
@@ -166,6 +169,45 @@ semantic_type_t lower_infer_type(allocator_t allocator, context_t ctx,
     return lower_infer_type(allocator, ctx, n->right, module_hash, unit);
   }
 
+  /* Subscript (tuple[index]) → field type at the given index */
+  case CUBEC_NODE_EXPRESSION_SUBSCRIPT: {
+    cubec_expression_subscript_t n = (cubec_expression_subscript_t)node;
+    semantic_type_t host_type = lower_infer_type(allocator, ctx, n->host, module_hash, unit);
+    if (!host_type) return NULL;
+
+    /* Strip qualifier/pointer */
+    enum type_kind k = semantic_type_get_kind(host_type);
+    while (k == TYPE_QUALIFIER) {
+      type_impl_t impl = semantic_type_get_impl(host_type);
+      host_type = impl->qualifier.base;
+      k = semantic_type_get_kind(host_type);
+    }
+    if (k == TYPE_POINTER) {
+      type_impl_t impl = semantic_type_get_impl(host_type);
+      host_type = impl->pointer.pointee;
+      k = semantic_type_get_kind(host_type);
+    }
+
+    if (k != TYPE_TUPLE) return NULL;
+
+    /* Get the index as a comptime integer */
+    uint64_t idx = 0;
+    if (n->index->kind == CUBEC_NODE_LITERAL_NUMERIC) {
+      cubec_literal_numeric_t num = (cubec_literal_numeric_t)n->index;
+      idx = strtoull(string_get(num->value), NULL, 10);
+    } else {
+      return NULL;
+    }
+
+    type_impl_t impl = semantic_type_get_impl(host_type);
+    vec_t fields = impl->tuple.fields;
+    if (idx < vec_get_size(fields)) {
+      struct symbol *f = (struct symbol *)vec_get(fields, (size_t)idx);
+      if (f && f->field.type) return f->field.type;
+    }
+    return NULL;
+  }
+
   /* Initialize list → type from n->type expression */
   case CUBEC_NODE_EXPRESSION_INITIALIZE_LIST: {
     cubec_expression_initialize_list_t n = (cubec_expression_initialize_list_t)node;
@@ -236,11 +278,6 @@ semantic_type_t lower_infer_type(allocator_t allocator, context_t ctx,
             vec_get_size(n->arguments) >= 1) {
           return resolver_resolve_type(ctx, vec_get(n->arguments, 0));
         }
-        /* unionIs → first argument type (the type being checked) */
-        if (strcmp(fn_name, "unionIs") == 0 && n->arguments &&
-            vec_get_size(n->arguments) >= 1) {
-          return resolver_resolve_type(ctx, vec_get(n->arguments, 0));
-        }
       }
 
       /* Regular function call → get return type from function symbol */
@@ -285,9 +322,47 @@ semantic_type_t lower_infer_type(allocator_t allocator, context_t ctx,
     return NULL;
   }
 
-  /* Generic instantiation → resolve via resolver */
+  /* Generic instantiation → resolve via resolver, or subscript inference */
   case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION: {
-    return resolver_resolve_type(ctx, node);
+    semantic_type_t rt = resolver_resolve_type(ctx, node);
+    if (rt) return rt;
+    /* If resolver can't resolve (callee is a variable), treat as subscript */
+    {
+      cubec_expression_generic_instantiation_t gi =
+          (cubec_expression_generic_instantiation_t)node;
+      if (gi->callee && gi->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+        const char *name =
+            string_get(((cubec_literal_identifier_t)gi->callee)->value);
+        struct symbol *sym = name ? scope_lookup(ctx->current_scope, name) : NULL;
+        if (sym && sym->kind == SYMBOL_VARIABLE) {
+          semantic_type_t host_type = sym->variable.type;
+          if (host_type) {
+            semantic_type_t host_unq = semantic_type_strip_qualifier(host_type);
+            if (host_unq && (host_unq->impl->kind == TYPE_TUPLE ||
+                (host_unq->impl->kind == TYPE_GENERIC_INSTANCE &&
+                 host_unq->impl->generic_instance.fields))) {
+              /* Infer the field type from the tuple */
+              if (gi->arguments && vec_get_size(gi->arguments) >= 1) {
+                node_t idx_node = (node_t)vec_get(gi->arguments, 0);
+                if (idx_node->kind == CUBEC_NODE_LITERAL_NUMERIC) {
+                  cubec_literal_numeric_t num = (cubec_literal_numeric_t)idx_node;
+                  uint64_t idx = strtoull(string_get(num->value), NULL, 10);
+                  vec_t fields = host_unq->impl->kind == TYPE_TUPLE
+                      ? host_unq->impl->tuple.fields
+                      : host_unq->impl->generic_instance.fields;
+                  size_t fcount = fields ? vec_get_size(fields) : 0;
+                  if (idx < fcount) {
+                    struct symbol *f = (struct symbol *)vec_get(fields, (size_t)idx);
+                    return f ? f->field.type : NULL;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return NULL;
   }
 
   /* Anonymous function → resolve via resolver */
@@ -333,6 +408,14 @@ semantic_type_t lower_infer_type(allocator_t allocator, context_t ctx,
       return lower_infer_type(allocator, ctx, n->right, module_hash, unit);
     }
     /* Regular binary → right operand type (simplified; C rules are more nuanced) */
+    const char *op = string_get(n->opt);
+    if (strcmp(op, "is") == 0) {
+      /* is operator always returns bool */
+      return ctx->builtin_bool;
+    }
+    if (strcmp(op, "extends") == 0) {
+      return ctx->builtin_bool;
+    }
     return lower_infer_type(allocator, ctx, n->right, module_hash, unit);
   }
 
@@ -463,9 +546,33 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
       else if (strcmp(op, ".&") == 0) op = "&";
       return (c_ir_node_t)c_ir_expr_unary_create(allocator, op, operand, true, loc);
     }
+    const char *op = string_get(n->opt);
+
+    /* is: union variant check → obj._tag == Type_tag */
+    if (strcmp(op, "is") == 0) {
+      c_ir_node_t obj = lower_expr(allocator, ctx, n->left, module_hash, unit);
+      c_ir_node_t tag_access = (c_ir_node_t)c_ir_expr_member_create(
+          allocator, obj, "_tag", false, loc);
+
+      /* Resolve the target type from the right operand */
+      semantic_type_t check_type = resolver_resolve_type(ctx, n->right);
+      const char *tag_name = check_type
+          ? semantic_type_get_name(check_type) : "0";
+      string_t mangled_tag = mangle_name(allocator, module_hash, tag_name);
+      char tag_const_buf[128];
+      snprintf(tag_const_buf, sizeof(tag_const_buf), "%s_tag",
+               string_get(mangled_tag));
+      allocator_free(allocator, &mangled_tag);
+
+      c_ir_node_t tag_val = (c_ir_node_t)c_ir_expr_ident_create(
+          allocator, tag_const_buf, loc);
+      return (c_ir_node_t)c_ir_expr_binary_create(
+          allocator, "==", tag_access, tag_val, loc);
+    }
+
     c_ir_node_t left = lower_expr(allocator, ctx, n->left, module_hash, unit);
     c_ir_node_t right = lower_expr(allocator, ctx, n->right, module_hash, unit);
-    return (c_ir_node_t)c_ir_expr_binary_create(allocator, string_get(n->opt),
+    return (c_ir_node_t)c_ir_expr_binary_create(allocator, op,
                                                    left, right, loc);
   }
 
@@ -578,64 +685,11 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
           return (c_ir_node_t)c_ir_expr_cast_create(allocator, c_type, expr, loc);
         }
 
-        /* unionIs → _tag comparison */
-        if (strcmp(fn_name, "unionIs") == 0 && count >= 2) {
-          c_ir_node_t obj = lower_expr(allocator, ctx,
-                                         vec_get(n->arguments, 1),
-                                         module_hash, unit);
-          /* obj._tag == TYPE_TAG */
-          c_ir_node_t tag_access = (c_ir_node_t)c_ir_expr_member_create(
-              allocator, obj, "_tag", false, loc);
-
-          /* Get the tag value from the type argument */
-          semantic_type_t check_type = lower_infer_type(
-              allocator, ctx, vec_get(n->arguments, 0), module_hash, unit);
-          /* Use the type name as tag constant */
-          const char *tag_name = check_type
-              ? semantic_type_get_name(check_type) : "0";
-          string_t mangled_tag = mangle_name(allocator, module_hash, tag_name);
-          char tag_const_buf[128];
-          snprintf(tag_const_buf, sizeof(tag_const_buf), "%s_tag",
-                   string_get(mangled_tag));
-          allocator_free(allocator, &mangled_tag);
-
-          c_ir_node_t tag_val = (c_ir_node_t)c_ir_expr_ident_create(
-              allocator, tag_const_buf, loc);
-          return (c_ir_node_t)c_ir_expr_binary_create(
-              allocator, "==", tag_access, tag_val, loc);
-        }
-
         /* length/toString/typename — comptime, should be inlined by checker */
         if (strcmp(fn_name, "length") == 0 ||
             strcmp(fn_name, "toString") == 0 ||
             strcmp(fn_name, "typename") == 0) {
           /* These should be resolved at comptime; if not, fall through */
-        }
-
-        /* getTupleItem → struct member access .fieldN */
-        if (strcmp(fn_name, "getTupleItem") == 0 && count >= 2) {
-          c_ir_node_t obj = lower_expr(allocator, ctx,
-                                         vec_get(n->arguments, 1),
-                                         module_hash, unit);
-          /* Index is the first generic arg — use comptime value or placeholder */
-          const char *field_name = "_0"; /* placeholder */
-          return (c_ir_node_t)c_ir_expr_member_create(
-              allocator, obj, field_name, false, loc);
-        }
-
-        /* setTupleItem → assignment to struct member */
-        if (strcmp(fn_name, "setTupleItem") == 0 && count >= 3) {
-          c_ir_node_t obj = lower_expr(allocator, ctx,
-                                         vec_get(n->arguments, 1),
-                                         module_hash, unit);
-          c_ir_node_t val = lower_expr(allocator, ctx,
-                                         vec_get(n->arguments, 2),
-                                         module_hash, unit);
-          const char *field_name = "_0"; /* placeholder */
-          c_ir_node_t member = (c_ir_node_t)c_ir_expr_member_create(
-              allocator, obj, field_name, false, loc);
-          return (c_ir_node_t)c_ir_expr_binary_create(
-              allocator, "=", member, val, loc);
         }
       }
     }
@@ -935,6 +989,42 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
     return (c_ir_node_t)c_ir_expr_compound_create(allocator, slice_type, fields, loc);
   }
 
+  /* ===== Subscript (tuple[index]) → struct member access ===== */
+  case CUBEC_NODE_EXPRESSION_SUBSCRIPT: {
+    cubec_expression_subscript_t n = (cubec_expression_subscript_t)node;
+    c_ir_node_t obj = lower_expr(allocator, ctx, n->host, module_hash, unit);
+    if (!obj) return NULL;
+
+    /* Extract the comptime index value */
+    uint64_t idx = 0;
+    if (n->index->kind == CUBEC_NODE_LITERAL_NUMERIC) {
+      cubec_literal_numeric_t num = (cubec_literal_numeric_t)n->index;
+      idx = strtoull(string_get(num->value), NULL, 10);
+    }
+
+    /* Build the field name: _0, _1, _2, ... */
+    char field_buf[16];
+    snprintf(field_buf, sizeof(field_buf), "_%llu", (unsigned long long)idx);
+
+    /* Determine is_arrow from host type */
+    bool is_arrow = false;
+    semantic_type_t host_type = lower_infer_type(allocator, ctx, n->host, module_hash, unit);
+    if (host_type) {
+      enum type_kind k = semantic_type_get_kind(host_type);
+      if (k == TYPE_POINTER) {
+        is_arrow = true;
+      } else if (k == TYPE_QUALIFIER) {
+        type_impl_t impl = semantic_type_get_impl(host_type);
+        semantic_type_t base = impl->qualifier.base;
+        if (base && semantic_type_get_kind(base) == TYPE_POINTER)
+          is_arrow = true;
+      }
+    }
+
+    return (c_ir_node_t)c_ir_expr_member_create(allocator, obj, field_buf,
+                                                   is_arrow, loc);
+  }
+
   /* ===== Generic instantiation ===== */
   case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION: {
     /* Generic instantiation is resolved by checker to concrete type/function.
@@ -952,6 +1042,44 @@ c_ir_node_t lower_expr(allocator_t allocator, context_t ctx, node_t node,
             allocator, string_get(mangled), loc);
         allocator_free(allocator, &mangled);
         return result;
+      }
+    }
+
+    /* Subscript: callee is a variable (not type/function) — t[N] */
+    if (n->callee && n->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+      const char *callee_name =
+          string_get(((cubec_literal_identifier_t)n->callee)->value);
+      struct symbol *sym = callee_name ? scope_lookup(ctx->current_scope, callee_name) : NULL;
+      if (sym && sym->kind == SYMBOL_VARIABLE) {
+        /* Lower as tuple subscript */
+        c_ir_node_t obj = lower_expr(allocator, ctx, n->callee, module_hash, unit);
+        if (!obj) return NULL;
+        /* Determine field name from index */
+        if (n->arguments && vec_get_size(n->arguments) >= 1) {
+          node_t idx_node = (node_t)vec_get(n->arguments, 0);
+          if (idx_node->kind == CUBEC_NODE_LITERAL_NUMERIC) {
+            cubec_literal_numeric_t num = (cubec_literal_numeric_t)idx_node;
+            uint64_t idx = strtoull(string_get(num->value), NULL, 10);
+            char field_buf[16];
+            snprintf(field_buf, sizeof(field_buf), "_%" PRIu64, idx);
+            /* Determine is_arrow from host type */
+            bool is_arrow = false;
+            if (sym->variable.type) {
+              enum type_kind k = semantic_type_get_kind(sym->variable.type);
+              if (k == TYPE_POINTER) {
+                is_arrow = true;
+              } else if (k == TYPE_QUALIFIER) {
+                type_impl_t impl = semantic_type_get_impl(sym->variable.type);
+                semantic_type_t base = impl->qualifier.base;
+                if (base && semantic_type_get_kind(base) == TYPE_POINTER)
+                  is_arrow = true;
+              }
+            }
+            return (c_ir_node_t)c_ir_expr_member_create(allocator, obj, field_buf,
+                                                         is_arrow, loc);
+          }
+        }
+        return obj;
       }
     }
 

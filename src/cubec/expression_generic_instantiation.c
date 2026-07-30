@@ -3,6 +3,7 @@
 #include "cubec/ast_factory.h"
 #include "cubec/ast_factory_internal.h"
 #include "cubec/expression_spread.h"
+#include "cubec/expression_subscript.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 

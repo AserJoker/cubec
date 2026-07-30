@@ -23,6 +23,7 @@
 #include "cubec/expression_alignof.h"
 #include "cubec/expression_typeof.h"
 #include "cubec/expression_slice.h"
+#include "cubec/expression_subscript.h"
 #include "cubec/expression_initialize_list.h"
 #include "cubec/expression_initialize_field.h"
 #include "cubec/generic_param.h"
@@ -213,6 +214,26 @@ static semantic_type_t _check_expr_binary(context_t ctx, node_t expr) {
   /* extends: returns bool; actual constraint check in comptime eval */
   if (strcmp(op, "extends") == 0)
     return ctx->builtin_bool;
+
+  /* is: union variant check — expr is Type returns bool */
+  if (strcmp(op, "is") == 0) {
+    /* Left operand must be a union type */
+    semantic_type_t lt_unq = semantic_type_strip_qualifier(lt);
+    bool is_union = false;
+    if (lt_unq->impl->kind == TYPE_UNION) {
+      is_union = true;
+    } else if (lt_unq->impl->kind == TYPE_GENERIC_INSTANCE) {
+      semantic_type_t base = lt_unq->impl->generic_instance.generic_template;
+      if (base && base->impl->kind == TYPE_UNION) is_union = true;
+    }
+    if (!is_union) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                           "is operator requires a union type on the left, got '%s'",
+                           semantic_type_get_name(lt) ? semantic_type_get_name(lt) : "?");
+      ctx->error_count++;
+    }
+    return ctx->builtin_bool;
+  }
 
   return ctx->error_type;
 }
@@ -1410,6 +1431,57 @@ static semantic_type_t _check_expr_slice(context_t ctx, node_t expr) {
   return ctx->error_type;
 }
 
+static semantic_type_t _check_expr_subscript(context_t ctx, node_t expr) {
+  cubec_expression_subscript_t sub = (cubec_expression_subscript_t)expr;
+  semantic_type_t ht = _check_expression(ctx, sub->host);
+  if (ht->impl->kind == TYPE_ERROR) return ctx->error_type;
+
+  /* Check index expression */
+  semantic_type_t it = _check_expression(ctx, sub->index);
+
+  /* Host must be a tuple type */
+  semantic_type_t ht_unq = semantic_type_strip_qualifier(ht);
+  if (ht_unq->impl->kind != TYPE_TUPLE) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                         "subscript requires a tuple type, got '%s'",
+                         semantic_type_get_name(ht) ? semantic_type_get_name(ht) : "<anonymous>");
+    ctx->error_count++;
+    return ctx->error_type;
+  }
+
+  /* Index must be a comptime constant */
+  vec_t fields = ht_unq->impl->tuple.fields;
+  size_t fcount = fields ? vec_get_size(fields) : 0;
+
+  /* Try to get the comptime integer value of the index */
+  uint64_t idx = 0;
+  bool idx_valid = false;
+  if (sub->index->kind == CUBEC_NODE_LITERAL_NUMERIC) {
+    cubec_literal_numeric_t num = (cubec_literal_numeric_t)sub->index;
+    idx = strtoull(string_get(num->value), NULL, 10);
+    idx_valid = true;
+  }
+
+  if (!idx_valid) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                         "tuple subscript index must be a compile-time constant");
+    ctx->error_count++;
+    return ctx->error_type;
+  }
+
+  if (idx >= fcount) {
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                         "tuple index %llu out of range (tuple has %zu element%s)",
+                         (unsigned long long)idx, fcount, fcount == 1 ? "" : "s");
+    ctx->error_count++;
+    return ctx->error_type;
+  }
+
+  struct symbol *field = (struct symbol *)vec_get(fields, (size_t)idx);
+  (void)it;
+  return field ? field->field.type : ctx->error_type;
+}
+
 static semantic_type_t _check_expr_function(context_t ctx, node_t expr) {
   cubec_expression_function_t fn = (cubec_expression_function_t)expr;
 
@@ -1565,6 +1637,7 @@ semantic_type_t _check_expression(context_t ctx, node_t expr) {
   case CUBEC_NODE_EXPRESSION_ALIGNOF:    return _check_expr_alignof(ctx, expr);
   case CUBEC_NODE_EXPRESSION_TYPEOF:     return _check_expr_typeof(ctx, expr);
   case CUBEC_NODE_EXPRESSION_SLICE:      return _check_expr_slice(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_SUBSCRIPT:  return _check_expr_subscript(ctx, expr);
   case CUBEC_NODE_EXPRESSION_FUNCTION:   return _check_expr_function(ctx, expr);
   case CUBEC_NODE_EXPRESSION_INITIALIZE_LIST: return _check_expr_initialize_list(ctx, expr);
   case CUBEC_NODE_EXPRESSION_COMMA:      return _check_expr_comma(ctx, expr);

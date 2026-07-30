@@ -20,6 +20,7 @@
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_postfix_unary.h"
 #include "cubec/expression_slice.h"
+#include "cubec/expression_subscript.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/expression_typeof.h"
 #include "cubec/expression_sizeof.h"
@@ -315,6 +316,20 @@ node_t read_value(context_t ctx, vec_t tokens, size_t *position,
       }
       if (generic_instantiation_node) {
         node = generic_instantiation_node;
+        *position = current;
+        continue;
+      }
+
+      /* Try postfix: subscript <host>[<index>] — after generic instantiation
+       * (identifier[Type] is generic, expr[index] is subscript) */
+      node_t subscript_node =
+          read_expression_subscript(ctx, tokens, &current, filename, node);
+      if (node_is_error(subscript_node)) {
+        allocator_free(allocator, &node);
+        return subscript_node;
+      }
+      if (subscript_node) {
+        node = subscript_node;
         *position = current;
         continue;
       }

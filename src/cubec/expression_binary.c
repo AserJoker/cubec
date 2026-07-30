@@ -189,9 +189,10 @@ static const binary_op_entry_t binary_operators[] = {
  *        "extends" is a keyword binary operator at the same level as ==, !=.
  */
 static int get_binary_precedence(token_t tok) {
-  /* Check for 'extends' keyword binary operator */
+  /* Check for keyword binary operators */
   if (token_get_kind(tok) == CUBEC_TOKEN_KEYWORD) {
-    if (token_is(tok, CUBEC_TOKEN_KEYWORD, "extends")) {
+    if (token_is(tok, CUBEC_TOKEN_KEYWORD, "extends") ||
+        token_is(tok, CUBEC_TOKEN_KEYWORD, "is")) {
       return 6;  /* Same precedence as ==, != */
     }
     return 0;
