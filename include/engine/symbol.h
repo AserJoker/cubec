@@ -58,17 +58,23 @@ struct symbol {
 
     /* SYMBOL_FUNCTION */
     struct {
-      semantic_type_t type;      /**< Function type (NULL until resolved) */
+      semantic_type_t type;      /**< Function type (NULL until resolved). The "prototype" template. */
       bool is_comptime;          /**< comptime func */
       struct symbol *self_param; /**< Method self parameter (NULL for free functions) */
       node_t ast_node;           /**< AST node (cubec_statement_function_t) for comptime dispatch */
-      vec_t generic_params;     /**< vec of cubec_generic_param_t (NULL for non-generic) */
+      vec_t generic_params;      /**< vec of cubec_generic_param_t (NULL for non-generic, i.e. 0 type params) */
+      vec_t instances;           /**< vec of semantic_type_t — all instantiated versions.
+                                      Non-generic (N=0) gets 1 instance immediately at definition.
+                                      Generic (N>0) gets instances created lazily at call sites. */
     } function;
 
     /* SYMBOL_TYPE */
     struct {
-      semantic_type_t type;      /**< The semantic type (NULL until resolved) */
-      vec_t generic_params;     /**< vec of cubec_generic_param_t (NULL for non-generic) */
+      semantic_type_t type;      /**< The semantic type (NULL until resolved). The "prototype" template. */
+      vec_t generic_params;      /**< vec of cubec_generic_param_t (NULL for non-generic, i.e. 0 type params) */
+      vec_t instances;           /**< vec of semantic_type_t — all instantiated versions.
+                                      Non-generic (N=0) gets 1 instance immediately at definition.
+                                      Generic (N>0) gets instances created lazily at call sites. */
     } type;
 
     /* SYMBOL_MODULE */

@@ -1094,12 +1094,24 @@ static void _check_function_body(context_t ctx,
   struct symbol *sym = scope_lookup_local(ctx->global_scope, name);
   if (!sym || sym->kind != SYMBOL_FUNCTION || !sym->function.type) return;
 
-  /* Skip generic functions — they are checked during monomorphization */
+  /* All functions skip direct body check — unified instantiation model:
+     - Non-generic (0 type params): self-instantiated immediately below.
+     - Generic  (N type params): instantiated lazily at call sites. */
   if (sym->function.generic_params) return;
 
-  /* Enqueue for body checking */
-  _enqueue_body_check(ctx, sym, sym->function.type, NULL,
-                       ctx->current_scope, false, NULL);
+  /* Non-generic: self-instantiate with empty type bindings.
+     This creates the sole instance and enqueues body check.
+     (Comptime binding and decorator evaluation happen earlier in
+     _evaluate_function — they need to run before Pass 3 body check.) */
+  strmap_init_t smi = {.value_auto_dispose = false};
+  strmap_t empty_bindings = (strmap_t)allocator_create(ctx->allocator, &g_strmap_type, &smi);
+  semantic_type_t inst_type = _instantiate_function(ctx, sym, empty_bindings, (node_t)node);
+  if (inst_type && inst_type->impl->kind != TYPE_ERROR) {
+    _enqueue_body_check(ctx, sym, inst_type, empty_bindings,
+                         ctx->current_scope, false, NULL);
+  } else if (empty_bindings) {
+    allocator_free(ctx->allocator, &empty_bindings);
+  }
 }
 
 /* _register_func_params replaced by _register_func_params_from_info in checker_func_util.c */
@@ -1138,7 +1150,8 @@ static void _check_type_method_bodies(context_t ctx, const char *type_name,
     semantic_type_t mtype = _find_method_type(ctx, t, mname);
     if (!mtype) continue;
 
-    /* Skip generic methods — they are checked during monomorphization */
+    /* All methods skip direct body check — unified instantiation model.
+       Generic methods are instantiated lazily at call sites. */
     func_check_info_t info;
     func_check_info_from_statement(&info, mfn);
     if (info.generic_params) continue;
@@ -1157,8 +1170,17 @@ static void _check_type_method_bodies(context_t ctx, const char *type_name,
     }
     if (!msym) continue;
 
-    _enqueue_body_check(ctx, msym, mtype, NULL,
-                         ctx->global_scope, true, t);
+    /* Non-generic method: self-instantiate with empty type bindings.
+       This creates the sole instance and enqueues body check. */
+    strmap_init_t m_smi = {.value_auto_dispose = false};
+    strmap_t m_empty_bindings = (strmap_t)allocator_create(ctx->allocator, &g_strmap_type, &m_smi);
+    semantic_type_t m_inst_type = _instantiate_function(ctx, msym, m_empty_bindings, (node_t)member);
+    if (m_inst_type && m_inst_type->impl->kind != TYPE_ERROR) {
+      _enqueue_body_check(ctx, msym, m_inst_type, m_empty_bindings,
+                           ctx->global_scope, true, t);
+    } else if (m_empty_bindings) {
+      allocator_free(ctx->allocator, &m_empty_bindings);
+    }
   }
 }
 
@@ -1202,27 +1224,24 @@ void _enqueue_body_check(context_t ctx, struct symbol *func_sym,
                           semantic_type_t host_type) {
   const char *name = func_sym->name;
 
-  /* Generate dedup key — for non-generic, use name directly (no allocation) */
-  char *key = type_bindings
-      ? _generic_instance_cache_key(ctx, name, type_bindings)
-      : NULL;
-  const char *lookup_key = key ? key : name;
+  /* Record this instance on the function symbol's prototype.
+     All functions (including non-generic, N=0) go through this path. */
+  if (!func_sym->function.instances) {
+    vec_init_t vi = {.auto_dispose = false};
+    func_sym->function.instances = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+  }
+  vec_push(func_sym->function.instances, inst_type);
 
-  if (strmap_find(ctx->checked_bodies, lookup_key)) {
-    if (key) allocator_free(ctx->allocator, &key);
+  /* Generate dedup key — unified path (empty bindings produce name-only key) */
+  char *key = _generic_instance_cache_key(ctx, name, type_bindings);
+
+  if (strmap_find(ctx->checked_bodies, key)) {
+    allocator_free(ctx->allocator, &key);
     if (type_bindings) allocator_free(ctx->allocator, &type_bindings);
     return;
   }
-
-  /* For non-generic: use name (persistent) as key — no allocation needed.
-     For generic: use the heap-allocated key. */
-  if (key) {
-    strmap_insert(ctx->checked_bodies, key, (void *)(uintptr_t)1);
-    allocator_free(ctx->allocator, &key);
-  } else {
-    /* name is persistent (from symbol table), safe to use as key */
-    strmap_insert(ctx->checked_bodies, name, (void *)(uintptr_t)1);
-  }
+  strmap_insert(ctx->checked_bodies, key, (void *)(uintptr_t)1);
+  allocator_free(ctx->allocator, &key);
 
   body_check_entry_t *entry =
       allocator_alloc(ctx->allocator, sizeof(body_check_entry_t));
@@ -1249,9 +1268,10 @@ static void _check_body_from_entry(context_t ctx, body_check_entry_t *entry) {
       (cubec_statement_function_t)sym->function.ast_node;
   if (!fnode->body) goto done;
 
-  /* Create generic param bindings scope if type_bindings provided */
+  /* Create generic param bindings scope if type_bindings has entries.
+     N=0 (non-generic) passes empty strmap — no scope needed. */
   scope_t scope_root = entry->scope_root;
-  if (type_bindings) {
+  if (type_bindings && strmap_get_size(type_bindings) > 0) {
     scope_t generic_scope = scope_create(ctx->allocator, scope_root,
         SCOPE_BLOCK, fnode->super.location);
     vec_push(ctx->all_scopes, generic_scope);

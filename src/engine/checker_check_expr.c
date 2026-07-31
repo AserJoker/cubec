@@ -470,12 +470,15 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
                 if (sub_type && sub_type->impl->kind != TYPE_ERROR) {
                   callee_type = sub_type;
                   is_explicit_method_call = true;
-                  /* Copy for body check entry */
-                  _enqueue_body_check(ctx, m, sub_type, NULL,
+                  /* Pass bindings for body check — ownership transferred */
+                  _enqueue_body_check(ctx, m, sub_type, combined_bindings,
                       ctx->global_scope, true, receiver_type);
+                  combined_bindings = NULL; /* ownership transferred */
                 }
               }
-              allocator_free(ctx->allocator, &combined_bindings);
+              if (combined_bindings) {
+                allocator_free(ctx->allocator, &combined_bindings);
+              }
               break;
             }
           }
@@ -768,12 +771,13 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
               semantic_type_t sub_type = _substitute_type(ctx, m->function.type, combined_type_bindings);
               if (sub_type && sub_type->impl->kind != TYPE_ERROR) {
                 callee_type = sub_type;
-                /* Enqueue for body checking with empty vec (strmap ownership model TBD) */
-                _enqueue_body_check(ctx, m, sub_type, NULL,
+                /* Pass bindings for body check — ownership transferred */
+                _enqueue_body_check(ctx, m, sub_type, combined_type_bindings,
                     ctx->global_scope, true, receiver_type);
+                combined_type_bindings = NULL; /* ownership transferred */
               }
-              allocator_free(ctx->allocator, &combined_type_bindings);
-            } else if (combined_type_bindings) {
+            }
+            if (combined_type_bindings) {
               allocator_free(ctx->allocator, &combined_type_bindings);
             }
 

@@ -15,6 +15,12 @@ static void _symbol_dispose(void *self, allocator_t allocator) {
   if (sym->kind == SYMBOL_GENERIC_PARAM) {
     allocator_free(allocator, &sym->generic_param.constraints);
   }
+  if (sym->kind == SYMBOL_FUNCTION) {
+    allocator_free(allocator, &sym->function.instances);
+  }
+  if (sym->kind == SYMBOL_TYPE) {
+    allocator_free(allocator, &sym->type.instances);
+  }
 }
 
 type_t g_symbol_type = {

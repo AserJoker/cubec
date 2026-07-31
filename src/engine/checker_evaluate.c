@@ -424,8 +424,8 @@ static void _evaluate_function(context_t ctx,
   }
 
   /* Bind function in comptime env so it can be called at compile time.
-     All non-extern non-generic functions with bodies are bound — comptime
-     and non-comptime alike. Generic templates are instantiated on demand. */
+     Non-generic only — generic templates are monomorphized on demand
+     and carry no concrete type for compile-time evaluation. */
   if (!info.is_extern && info.body && !info.generic_params) {
     vec_t param_names = NULL;
     if (info.arguments) {
@@ -449,7 +449,7 @@ static void _evaluate_function(context_t ctx,
                             ctx->comptime_eval->valloc, name, fn_val);
   }
 
-  /* Evaluate decorators (skip for generic — evaluated at instantiation) */
+  /* Evaluate decorators (skip for generic — no concrete type available) */
   if (info.decorators && !info.generic_params)
     context_evaluate_decorators(ctx, info.decorators, DECORATOR_TARGET_FUNC,
                                 name, (node_t)node);
