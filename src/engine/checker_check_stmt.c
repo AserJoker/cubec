@@ -5,6 +5,7 @@
 #include "engine/checker_type_util.h"
 #include "engine/checker_collect.h"
 #include "engine/checker_evaluate.h"
+#include "engine/checker_summary.h"
 #include "engine/comptime_eval.h"
 #include "engine/resolver.h"
 #include "engine/type_hash.h"
@@ -1345,4 +1346,7 @@ void context_check_program(context_t ctx, node_t program) {
 
   /* Pass 5: Runtime collection — demand-driven diffusion from entry points */
   context_collect_runtime(ctx, program, false);
+
+  /* Pass 6: Compilation summary — count types/functions, detect dead code */
+  context_compute_summary(ctx);
 }

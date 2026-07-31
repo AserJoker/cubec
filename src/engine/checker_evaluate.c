@@ -40,6 +40,85 @@
 
 /* ===== Pass 2: Declaration Evaluation ===== */
 
+/** @brief Resolve and validate an implements clause for struct/union types.
+ *  Shared by _evaluate_struct and _evaluate_union (previously ~30 duplicated lines). */
+static void _resolve_implements_clause(context_t ctx, semantic_type_t t,
+                                        vec_t implements, bool is_generic,
+                                        node_t loc_node) {
+  if (!implements) return;
+
+  vec_t impl_vec = (vec_t)allocator_create(
+      ctx->allocator, &g_vec_type, &(vec_init_t){false});
+  size_t icount = vec_get_size(implements);
+  for (size_t i = 0; i < icount; i++) {
+    node_t iface_expr = (node_t)vec_get(implements, i);
+    semantic_type_t iface_type = resolver_resolve_type(ctx, iface_expr);
+    if (!iface_type || iface_type->impl->kind == TYPE_ERROR) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+          iface_expr->location,
+          "cannot resolve interface type in implement clause");
+      ctx->error_count++;
+      continue;
+    }
+    if (iface_type->impl->kind != TYPE_INTERFACE &&
+        !(iface_type->impl->kind == TYPE_GENERIC_INSTANCE &&
+          iface_type->impl->generic_instance.generic_template->impl->kind
+              == TYPE_INTERFACE)) {
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+          iface_expr->location,
+          "implement clause requires an interface type, got '%s'",
+          iface_type->name ? iface_type->name : "<anonymous>");
+      ctx->error_count++;
+      continue;
+    }
+    /* Skip constraint check for generic — verified at instantiation time */
+    if (!is_generic) {
+      _check_constraint(ctx, t, iface_type, loc_node);
+    }
+    vec_push(impl_vec, iface_type);
+  }
+  t->implements = impl_vec;
+}
+
+/** @brief Resolve fields (typedef for _evaluate_struct_like). */
+typedef void (*field_resolver_fn)(context_t ctx, semantic_type_t t, vec_t members);
+
+/** @brief Common body for struct/union evaluation.
+ *  Wraps generic-param registration, field resolution, member evaluation,
+ *  layout, hash, implements clause, and decorator evaluation. */
+static void _evaluate_struct_like(context_t ctx, struct symbol *sym,
+                                   semantic_type_t t,
+                                   vec_t generic_params, vec_t members,
+                                   vec_t implements, vec_t decorators,
+                                   const char *name, node_t ast_node,
+                                   field_resolver_fn resolve_fields) {
+  /* Generic: register params and store template */
+  if (generic_params) {
+    context_register_generic_params(ctx, generic_params);
+    sym->type.generic_params = generic_params;
+  }
+
+  /* Resolve fields and methods */
+  if (resolve_fields) resolve_fields(ctx, t, members);
+  {
+    size_t type_gp_count = generic_params ? vec_get_size(generic_params) : 0;
+    context_evaluate_struct_union_members(ctx, t, members, type_gp_count);
+  }
+
+  /* Skip layout for generic — sizes depend on concrete type args */
+  if (!generic_params) type_layout_compute(t, 8);
+  type_hash_ensure(t);
+  sym->state = SYMBOL_EVALUATED;
+
+  /* Verify implement clauses */
+  _resolve_implements_clause(ctx, t, implements, generic_params != NULL, ast_node);
+
+  /* Evaluate decorators (skip for generic — evaluated at instantiation) */
+  if (decorators && !generic_params)
+    context_evaluate_decorators(ctx, decorators, DECORATOR_TARGET_TYPE,
+                                name, ast_node);
+}
+
 semantic_type_t _check_expression(context_t ctx, node_t expr);
 
 /* _register_generic_params moved to checker_func_util.c as context_register_generic_params */
@@ -95,70 +174,14 @@ void context_evaluate_struct_union_members(context_t ctx, semantic_type_t t,
 static void _evaluate_struct(context_t ctx, cubec_statement_struct_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
-
   struct symbol *sym = scope_lookup_local(ctx->global_scope, name);
   if (!sym || sym->kind != SYMBOL_TYPE || !sym->type.type) return;
   if (sym->state == SYMBOL_EVALUATED) return;
 
-  semantic_type_t t = sym->type.type;
-
-  /* Generic struct: register generic params and store template */
-  if (node->generic_params) {
-    context_register_generic_params(ctx, node->generic_params);
-    sym->type.generic_params = node->generic_params;
-  }
-
-  /* Resolve fields and methods */
-  _resolve_struct_fields(ctx, t, node->members);
-  {
-    size_t type_gp_count = node->generic_params ? vec_get_size(node->generic_params) : 0;
-    context_evaluate_struct_union_members(ctx, t, node->members, type_gp_count);
-  }
-
-  /* Skip layout for generic — sizes depend on concrete type args */
-  if (!node->generic_params) type_layout_compute(t, 8);
-  type_hash_ensure(t);
-  sym->state = SYMBOL_EVALUATED;
-
-  /* Verify implement clauses (skip constraint check for generic — verified at instantiation) */
-  if (node->implements) {
-    vec_t impl_vec = (vec_t)allocator_create(
-        ctx->allocator, &g_vec_type, &(vec_init_t){false});
-    size_t icount = vec_get_size(node->implements);
-    for (size_t i = 0; i < icount; i++) {
-      node_t iface_expr = (node_t)vec_get(node->implements, i);
-      semantic_type_t iface_type = resolver_resolve_type(ctx, iface_expr);
-      if (!iface_type || iface_type->impl->kind == TYPE_ERROR) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-            iface_expr->location,
-            "cannot resolve interface type in implement clause");
-        ctx->error_count++;
-        continue;
-      }
-      if (iface_type->impl->kind != TYPE_INTERFACE &&
-          !(iface_type->impl->kind == TYPE_GENERIC_INSTANCE &&
-            iface_type->impl->generic_instance.generic_template->impl->kind
-                == TYPE_INTERFACE)) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-            iface_expr->location,
-            "implement clause requires an interface type, got '%s'",
-            iface_type->name ? iface_type->name : "<anonymous>");
-        ctx->error_count++;
-        continue;
-      }
-      /* Skip constraint check for generic — verified at instantiation time */
-      if (!node->generic_params) {
-        _check_constraint(ctx, t, iface_type, (node_t)node);
-      }
-      vec_push(impl_vec, iface_type);
-    }
-    t->implements = impl_vec;
-  }
-
-  /* Evaluate decorators (skip for generic — evaluated at instantiation) */
-  if (node->decorators && !node->generic_params)
-    context_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
-                                name, (node_t)node);
+  _evaluate_struct_like(ctx, sym, sym->type.type,
+                        node->generic_params, node->members,
+                        node->implements, node->decorators,
+                        name, (node_t)node, _resolve_struct_fields);
 }
 
 /* _evaluate_enum_items moved to checker_type_util.c as _resolve_enum_items */
@@ -189,70 +212,14 @@ static void _evaluate_enum(context_t ctx, cubec_statement_enum_t node) {
 static void _evaluate_union(context_t ctx, cubec_statement_union_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
-
   struct symbol *sym = scope_lookup_local(ctx->global_scope, name);
   if (!sym || sym->kind != SYMBOL_TYPE || !sym->type.type) return;
   if (sym->state == SYMBOL_EVALUATED) return;
 
-  semantic_type_t t = sym->type.type;
-
-  /* Generic union: register generic params and store template */
-  if (node->generic_params) {
-    context_register_generic_params(ctx, node->generic_params);
-    sym->type.generic_params = node->generic_params;
-  }
-
-  /* Resolve fields and methods */
-  _resolve_union_fields(ctx, t, node->members);
-  {
-    size_t type_gp_count = node->generic_params ? vec_get_size(node->generic_params) : 0;
-    context_evaluate_struct_union_members(ctx, t, node->members, type_gp_count);
-  }
-
-  /* Skip layout for generic — sizes depend on concrete type args */
-  if (!node->generic_params) type_layout_compute(t, 8);
-  type_hash_ensure(t);
-  sym->state = SYMBOL_EVALUATED;
-
-  /* Verify implement clauses (skip constraint check for generic — verified at instantiation) */
-  if (node->implements) {
-    vec_t impl_vec = (vec_t)allocator_create(
-        ctx->allocator, &g_vec_type, &(vec_init_t){false});
-    size_t icount = vec_get_size(node->implements);
-    for (size_t i = 0; i < icount; i++) {
-      node_t iface_expr = (node_t)vec_get(node->implements, i);
-      semantic_type_t iface_type = resolver_resolve_type(ctx, iface_expr);
-      if (!iface_type || iface_type->impl->kind == TYPE_ERROR) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-            iface_expr->location,
-            "cannot resolve interface type in implement clause");
-        ctx->error_count++;
-        continue;
-      }
-      if (iface_type->impl->kind != TYPE_INTERFACE &&
-          !(iface_type->impl->kind == TYPE_GENERIC_INSTANCE &&
-            iface_type->impl->generic_instance.generic_template->impl->kind
-                == TYPE_INTERFACE)) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-            iface_expr->location,
-            "implement clause requires an interface type, got '%s'",
-            iface_type->name ? iface_type->name : "<anonymous>");
-        ctx->error_count++;
-        continue;
-      }
-      /* Skip constraint check for generic — verified at instantiation time */
-      if (!node->generic_params) {
-        _check_constraint(ctx, t, iface_type, (node_t)node);
-      }
-      vec_push(impl_vec, iface_type);
-    }
-    t->implements = impl_vec;
-  }
-
-  /* Evaluate decorators (skip for generic — evaluated at instantiation) */
-  if (node->decorators && !node->generic_params)
-    context_evaluate_decorators(ctx, node->decorators, DECORATOR_TARGET_TYPE,
-                                name, (node_t)node);
+  _evaluate_struct_like(ctx, sym, sym->type.type,
+                        node->generic_params, node->members,
+                        node->implements, node->decorators,
+                        name, (node_t)node, _resolve_union_fields);
 }
 
 static void _evaluate_cunion(context_t ctx, cubec_statement_cunion_t node) {

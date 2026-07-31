@@ -51,6 +51,10 @@ static semantic_type_t _check_expr_literal_identifier(context_t ctx, node_t expr
     ctx->error_count++;
     return ctx->error_type;
   }
+
+  /* Track symbol usage for dead-code detection */
+  sym->use_count++;
+
   switch (sym->kind) {
   case SYMBOL_VARIABLE: {
     /* TDZ check: variable initialized with `= undefined` is in TDZ state.
@@ -1077,6 +1081,10 @@ static semantic_type_t _check_expr_namespace_access(context_t ctx, node_t expr) 
       ctx->error_count++;
       return ctx->error_type;
     }
+
+    /* Track usage for dead-code detection */
+    member->use_count++;
+
     switch (member->kind) {
     case SYMBOL_TYPE: return member->type.type ? member->type.type : ctx->error_type;
     case SYMBOL_FUNCTION: return member->function.type ? member->function.type : ctx->error_type;

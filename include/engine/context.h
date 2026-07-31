@@ -17,6 +17,28 @@ extern "C" {
 #endif
 
 /**
+ * @brief Compilation summary computed after all analysis passes.
+ *        Provides flat counts and dead-code information for lower passes
+ *        (C code generation) without re-walking the AST.
+ */
+typedef struct {
+  /* Flat (non-generic) counts — C-flattened form */
+  int total_types;             /**< Non-generic types (struct/enum/union/cunion/interface/alias) */
+  int total_functions;         /**< Non-generic functions (free + methods, excluding builtins) */
+  int total_methods;           /**< Instance + static methods */
+  int total_global_variables;  /**< Global variables (excluding builtins) */
+
+  /* Dead code — symbols with use_count == 0 */
+  int dead_functions;          /**< Free functions never called */
+  int dead_types;              /**< Types never referenced */
+  int dead_generic_templates;  /**< Generic function/type templates with 0 instantiations */
+
+  /* Generic instantiation counts */
+  int generic_func_instantiations;  /**< Total function monomorphizations */
+  int generic_type_instantiations;  /**< Total type monomorphizations */
+} compilation_summary_t;
+
+/**
  * @brief The semantic context.
  *        Owns all semantic analysis state: scopes, types, diagnostics.
  */
@@ -96,6 +118,9 @@ struct context {
   /* runtime collection (Pass 5) */
   runtime_collection_t runtime; /**< demand-driven collection of runtime types/functions */
 
+  /* compilation summary (computed after all passes) */
+  compilation_summary_t summary;
+
   /* instantiation safety counter (reset per context_create) */
   int instantiate_func_count;
 };
@@ -135,6 +160,7 @@ void context_dispose(context_t ctx);
  *        1. Declaration collection (register names)
  *        2. Type resolution (resolve type expressions)
  *        3. Body checking (check function bodies, expressions, statements)
+ *        4. Summary computation (count types, functions, detect dead code)
  *
  * @param ctx     The context.
  * @param program The program AST root node.
@@ -151,6 +177,13 @@ semantic_type_t context_check_expression(context_t ctx, node_t expr);
  * @brief Get the number of errors recorded.
  */
 int context_get_error_count(context_t ctx);
+
+/**
+ * @brief Compute compilation summary from fully-checked AST.
+ *        Counts types, functions, detects dead code, and stores
+ *        results in ctx->summary for use by lower passes.
+ */
+void context_compute_summary(context_t ctx);
 
 #ifdef __cplusplus
 }

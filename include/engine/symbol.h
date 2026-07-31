@@ -43,6 +43,7 @@ struct symbol {
   const char *name;              /**< Symbol name (not owned, points to AST or string_t) */
   enum symbol_kind kind;         /**< Symbol kind */
   enum symbol_state state;       /**< Resolution state */
+  int use_count;                 /**< How many times referenced during semantic checking (0 = dead code) */
   bool is_builtin;               /**< true for builtin declarations */
   bool is_export;                /**< true for export declarations (cross-module visibility) */
   bool is_exportlib;             /**< true for exportlib declarations (C ABI, no mangling) */

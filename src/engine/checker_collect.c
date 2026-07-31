@@ -24,140 +24,74 @@ static inline void _set_source_file(semantic_type_t t, const char *current_file)
   if (t) t->source_file = current_file;
 }
 
-static void _collect_struct(context_t ctx, cubec_statement_struct_t node) {
-  const char *name = _checker_ident_str(node->name);
-  if (!name) return;
-
+/*
+ * Unified type-declaration collector.
+ *
+ * Five type statements (struct/enum/union/cunion/interface) share the
+ * same pattern: check duplicate → create semantic_type → create symbol →
+ * push to scope + type_name_table.
+ *
+ * Differences are captured by kind, has_export (cunion lacks it), and
+ * set_interface_flag (interface sets is_interface=true).
+ */
+static void _collect_type_decl(context_t ctx, const char *name,
+                                enum type_kind kind, location_t loc,
+                                bool has_export, bool is_export,
+                                bool set_interface_flag) {
   if (scope_lookup_local(ctx->global_scope, name)) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                         node->super.location,
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, loc,
                          "duplicate declaration of '%s'", name);
     ctx->error_count++;
     return;
   }
 
-  semantic_type_t t =
-      semantic_type_create_named(ctx->allocator, name, TYPE_STRUCT);
+  semantic_type_t t = semantic_type_create_named(ctx->allocator, name, kind);
   _set_source_file(t, ctx->current_file);
+  if (set_interface_flag) t->is_interface = true;
   vec_push(ctx->all_types, t);
 
-  struct symbol *sym =
-      symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
+  struct symbol *sym = symbol_create(ctx->allocator, name, SYMBOL_TYPE, loc);
   sym->type.type = t;
-  sym->is_export = node->is_export;
+  if (has_export) sym->is_export = is_export;
   sym->state = SYMBOL_NAME_KNOWN;
   scope_push_symbol(ctx->global_scope, sym);
-
   strmap_insert(ctx->type_name_table, name, t);
+}
+
+static void _collect_struct(context_t ctx, cubec_statement_struct_t node) {
+  const char *name = _checker_ident_str(node->name);
+  if (!name) return;
+  _collect_type_decl(ctx, name, TYPE_STRUCT, node->super.location,
+                     true, node->is_export, false);
 }
 
 static void _collect_enum(context_t ctx, cubec_statement_enum_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
-
-  if (scope_lookup_local(ctx->global_scope, name)) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                         node->super.location,
-                         "duplicate declaration of '%s'", name);
-    ctx->error_count++;
-    return;
-  }
-
-  semantic_type_t t =
-      semantic_type_create_named(ctx->allocator, name, TYPE_ENUM);
-  _set_source_file(t, ctx->current_file);
-  vec_push(ctx->all_types, t);
-
-  struct symbol *sym =
-      symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
-  sym->type.type = t;
-  sym->is_export = node->is_export;
-  sym->state = SYMBOL_NAME_KNOWN;
-  scope_push_symbol(ctx->global_scope, sym);
-
-  strmap_insert(ctx->type_name_table, name, t);
+  _collect_type_decl(ctx, name, TYPE_ENUM, node->super.location,
+                     true, node->is_export, false);
 }
 
 static void _collect_union(context_t ctx, cubec_statement_union_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
-
-  if (scope_lookup_local(ctx->global_scope, name)) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                         node->super.location,
-                         "duplicate declaration of '%s'", name);
-    ctx->error_count++;
-    return;
-  }
-
-  semantic_type_t t =
-      semantic_type_create_named(ctx->allocator, name, TYPE_UNION);
-  _set_source_file(t, ctx->current_file);
-  vec_push(ctx->all_types, t);
-
-  struct symbol *sym =
-      symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
-  sym->type.type = t;
-  sym->is_export = node->is_export;
-  sym->state = SYMBOL_NAME_KNOWN;
-  scope_push_symbol(ctx->global_scope, sym);
-
-  strmap_insert(ctx->type_name_table, name, t);
+  _collect_type_decl(ctx, name, TYPE_UNION, node->super.location,
+                     true, node->is_export, false);
 }
 
 static void _collect_cunion(context_t ctx, cubec_statement_cunion_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
-
-  if (scope_lookup_local(ctx->global_scope, name)) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                         node->super.location,
-                         "duplicate declaration of '%s'", name);
-    ctx->error_count++;
-    return;
-  }
-
-  semantic_type_t t =
-      semantic_type_create_named(ctx->allocator, name, TYPE_CUNION);
-  _set_source_file(t, ctx->current_file);
-  vec_push(ctx->all_types, t);
-
-  struct symbol *sym =
-      symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
-  sym->type.type = t;
-  sym->state = SYMBOL_NAME_KNOWN;
-  scope_push_symbol(ctx->global_scope, sym);
-
-  strmap_insert(ctx->type_name_table, name, t);
+  _collect_type_decl(ctx, name, TYPE_CUNION, node->super.location,
+                     false, false, false);
 }
 
 static void _collect_interface(context_t ctx,
                                 cubec_statement_interface_t node) {
   const char *name = _checker_ident_str(node->name);
   if (!name) return;
-
-  if (scope_lookup_local(ctx->global_scope, name)) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                         node->super.location,
-                         "duplicate declaration of '%s'", name);
-    ctx->error_count++;
-    return;
-  }
-
-  semantic_type_t t =
-      semantic_type_create_named(ctx->allocator, name, TYPE_INTERFACE);
-  _set_source_file(t, ctx->current_file);
-  t->is_interface = true;
-  vec_push(ctx->all_types, t);
-
-  struct symbol *sym =
-      symbol_create(ctx->allocator, name, SYMBOL_TYPE, node->super.location);
-  sym->type.type = t;
-  sym->is_export = node->is_export;
-  sym->state = SYMBOL_NAME_KNOWN;
-  scope_push_symbol(ctx->global_scope, sym);
-
-  strmap_insert(ctx->type_name_table, name, t);
+  _collect_type_decl(ctx, name, TYPE_INTERFACE, node->super.location,
+                     true, node->is_export, true);
 }
 
 static void _collect_function(context_t ctx,
