@@ -55,14 +55,13 @@ include_directories(${PROJECT_SOURCE_DIR}/third_party/cJSON)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/core SRC_CORE)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/engine SRC_ENGINE)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/writer SRC_WRITE)
-aux_source_directory(${PROJECT_SOURCE_DIR}/src/reader SRC_READER)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/cubec SRC_CUBEC)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/c SRC_C)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/cmd SRC_CMD)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/builder SRC_BUILDER)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/lsp SRC_LSP)
 set(SRC_CJSON ${PROJECT_SOURCE_DIR}/third_party/cJSON/cJSON.c)
-add_executable(cubec ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_READER} ${SRC_WRITE} ${SRC_C} ${SRC_CMD} ${SRC_BUILDER} ${SRC_LSP} ${SRC_CJSON} ${PROJECT_SOURCE_DIR}/src/main.c ${PROJECT_SOURCE_DIR}/src/icu_data.c)
+add_executable(cubec ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_WRITE} ${SRC_C} ${SRC_CMD} ${SRC_BUILDER} ${SRC_LSP} ${SRC_CJSON} ${PROJECT_SOURCE_DIR}/src/main.c ${PROJECT_SOURCE_DIR}/src/icu_data.c)
 target_link_libraries(cubec PRIVATE
     ICU::i18n
     ICU::uc
@@ -72,7 +71,7 @@ target_link_libraries(cubec PRIVATE
 )
 enable_testing()
 file(GLOB_RECURSE TEST_SOURCE ${PROJECT_SOURCE_DIR}/test/*.cpp)
-add_executable(cubec_test ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_READER} ${SRC_WRITE} ${SRC_C} ${SRC_CMD} ${SRC_BUILDER} ${SRC_LSP} ${SRC_CJSON} ${TEST_SOURCE} ${PROJECT_SOURCE_DIR}/src/icu_data.c)
+add_executable(cubec_test ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_WRITE} ${SRC_C} ${SRC_CMD} ${SRC_BUILDER} ${SRC_LSP} ${SRC_CJSON} ${TEST_SOURCE} ${PROJECT_SOURCE_DIR}/src/icu_data.c)
 target_include_directories(cubec_test PUBLIC ${PROJECT_SOURCE_DIR}/test)
 # Relax unused-variable/unused-function for test code (gtest patterns)
 # Suppress character-conversion from googletest headers

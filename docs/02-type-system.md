@@ -45,13 +45,11 @@ struct type_impl {
 
 ```c
 enum type_kind {
-    TYPE_VOID,
-    TYPE_BOOL,
+    TYPE_VOID, TYPE_BOOL,
     TYPE_I8, TYPE_I16, TYPE_I32, TYPE_I64,
     TYPE_U8, TYPE_U16, TYPE_U32, TYPE_U64,
-    TYPE_F32, TYPE_F64,
-    TYPE_CHAR,
-    TYPE_STRING,
+    TYPE_F16, TYPE_F32, TYPE_F64,        // IEEE 754 binary16/32/64
+    TYPE_CHAR, TYPE_STRING, TYPE_STR,    // TYPE_STR: 编译期字符串（区别于运行时 TYPE_STRING）
     TYPE_POINTER,       // *T
     TYPE_SLICE,         // []T
     TYPE_ARRAY,         // [N]T
@@ -63,8 +61,15 @@ enum type_kind {
     TYPE_FUNCTION,
     TYPE_TYPE,          // type 本身（泛型参数 T: type）
     TYPE_QUALIFIER,     // const T / volatile T
-    TYPE_NIL,           // nil 类型
-    TYPE_ERROR,         // 错误占位类型
+    TYPE_GENERIC_INSTANCE,  // 泛型实例化后的具体类型
+    TYPE_GENERIC_PARAM,     // 泛型类型参数占位符（如 T）
+    TYPE_GENERIC_PACK,      // 参数包类型（如 Args）
+    TYPE_GENERIC_VALUE,     // 泛型值参数
+    TYPE_PACK_INDEX,        // 参数包索引
+    TYPE_TUPLE,             // 元组 (i32, f64)
+    TYPE_OPAQUE,            // 对标 C void*
+    TYPE_WILDCARD,          // ? 通配符类型
+    TYPE_NIL, TYPE_MODULE, TYPE_ERROR,
 };
 ```
 
@@ -112,6 +117,7 @@ Cubec 仅允许以下隐式转换：
 | `__set__` | `obj[key] = value` 索引写入 | `func __set__(self: *T, key: K, value: V): void` |
 | `__value__` | 值上下文自动拆箱 | `func __value__(self: *T): U` |
 | `__call__` | `obj(args)` 可调用 | `func __call__(self: *T, ...args): R` |
+| `__slice__` | `obj[start:len]` 切片操作 | `func __slice__(self: *T, start: i64, len: i64): U` |
 | `__dispose__` | `using` 声明作用域退出时自动调用 | `func __dispose__(self: *T): void` |
 
 ```c
