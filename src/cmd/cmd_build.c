@@ -5,9 +5,6 @@
 #include "engine/context.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
-#include "c/lower.h"
-#include "writer/writer.h"
-#include "builder/pipeline.h"
 #include "builder/cubec_writer.h"
 #include <string.h>
 #ifdef _WIN32
@@ -129,82 +126,33 @@ static int cmd_build_run(const cmd_parsed_t *parsed) {
     return 1;
   }
 
-  c_ir_unit_t unit = lower_program(allocator, ctx, program, !build_library);
-  if (!unit) {
-    fprintf(stderr, "error: lowering failed\n");
-    context_dispose(ctx);
-    allocator_free(allocator, &program);
-    allocator_free(allocator, &tokens);
-    free(source);
-    delete_allocator(allocator);
-    return 1;
-  }
-
-  string_t out_h = allocator_create(allocator, &g_string_type,
-                                      &(string_init_t){.str = NULL});
-  string_t out_c = allocator_create(allocator, &g_string_type,
-                                      &(string_init_t){.str = NULL});
-  writer_write_unit(allocator, unit, out_h, out_c);
-
-  char *base_name = extract_base_name(filename);
-  const char *build_dir = "out";
-  ensure_build_dir(build_dir);
-
-  char *h_path = build_path(build_dir, base_name, ".h");
-  char *c_path = build_path(build_dir, base_name, ".c");
-
-  if (write_file(h_path, string_get(out_h)) != 0 ||
-      write_file(c_path, string_get(out_c)) != 0) {
-    free(h_path); free(c_path); free(base_name);
-    c_ir_node_t unit_node = (c_ir_node_t)unit;
-    c_ir_dispose(allocator, &unit_node);
-    allocator_free(allocator, &out_h);
-    allocator_free(allocator, &out_c);
-    context_dispose(ctx);
-    allocator_free(allocator, &program);
-    allocator_free(allocator, &tokens);
-    free(source);
-    delete_allocator(allocator);
-    return 1;
-  }
-
-  fprintf(stdout, "Generated: %s, %s\n", h_path, c_path);
+  /* TODO: C backend not yet implemented.
+   * The desugar pass (checker_desugar) + new C lower will be added here. */
+  fprintf(stdout, "semantic check passed (no backend yet)\n");
 
   /* Generate cubec interface file for library builds */
   if (build_library) {
     string_t iface = allocator_create(allocator, &g_string_type,
                                         &(string_init_t){.str = NULL});
     cubec_write_interface(allocator, program, iface);
+    const char *build_dir = "out";
+    ensure_build_dir(build_dir);
+    char *base_name = extract_base_name(filename);
     char *cubec_path = build_path(build_dir, base_name, ".cubec");
     if (write_file(cubec_path, string_get(iface)) == 0) {
       fprintf(stdout, "Generated: %s\n", cubec_path);
     }
     free(cubec_path);
+    free(base_name);
     allocator_free(allocator, &iface);
   }
 
-  /* Build pipeline: compile .c → .o, then link */
-  pipeline_t pipe = pipeline_create(build_dir, base_name, build_library);
-  int ret = pipeline_compile(&pipe, c_path);
-  if (ret == 0) {
-    ret = pipeline_link(&pipe);
-  }
-  pipeline_dispose(&pipe);
-
-  free(h_path);
-  free(c_path);
-  free(base_name);
-
-  c_ir_node_t unit_node = (c_ir_node_t)unit;
-  c_ir_dispose(allocator, &unit_node);
-  allocator_free(allocator, &out_h);
-  allocator_free(allocator, &out_c);
   context_dispose(ctx);
   allocator_free(allocator, &program);
   allocator_free(allocator, &tokens);
   free(source);
   delete_allocator(allocator);
-  return ret;
+  return 0;
 }
 
 static const cmd_option_t build_options[] = {
