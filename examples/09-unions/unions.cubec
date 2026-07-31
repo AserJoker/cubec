@@ -1,0 +1,40 @@
+extern func printf(fmt: str, ...): i32;
+
+// Tagged Union：运行时带类型标签的联合体
+union Value {
+    int_val: i32;
+    float_val: f64;
+}
+
+// 泛型 Option（类似 Rust Option）
+union Option[T] {
+    value: T;
+    empty: void;
+}
+
+export func main(argv: []str): i32 {
+    // 创建 union 实例
+    var v = .Value{.int_val = 42};
+
+    // is 运算符：检查活跃变体类型
+    if (v is i32) {
+        var val: i32 = v.int_val.!;  // .! 断言解包：失败则 panic
+        _ = printf("int_val = %d\n", val);
+    }
+
+    // 切换变体
+    v.float_val = 3.14;
+    if (v is f64) {
+        var val: f64 = v.float_val.!;
+        _ = printf("float_val = %.2f\n", val);
+    }
+
+    // 泛型 Option
+    var o = .Option[i32]{.value = 100};
+    if (o is i32) {
+        var val: i32 = o.value.!;
+        _ = printf("Option contains: %d\n", val);
+    }
+
+    return 0;
+}

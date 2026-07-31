@@ -1,0 +1,6 @@
+extern func printf(fmt: str, ...): i32;
+
+export func main(argv: []str): i32 {
+    _ = printf("Hello, Cubec!\n");
+    return 0;
+}

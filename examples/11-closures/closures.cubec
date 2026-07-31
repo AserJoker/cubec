@@ -1,0 +1,40 @@
+extern func printf(fmt: str, ...): i32;
+
+export func main(argv: []str): i32 {
+    // 匿名函数（无捕获）
+    var double = func(x: i32): i32 {
+        return x * 2;
+    };
+    _ = printf("double(21) = %d\n", double(21));
+
+    // 匿名函数带捕获：func |captures| (params): ReturnType { body }
+    var base = 100;
+    var adder = func |base| (x: i32): i32 {
+        return base + x;
+    };
+    _ = printf("adder(42) = %d (captured base=%d)\n", adder(42), base);
+
+    // 按值捕获：闭包内修改不影响外部变量
+    var y = 10;
+    var modify = func |y| (): void {
+        y = y + 1;  // 修改捕获的副本
+    };
+    modify();
+    _ = printf("after modify(): outer y = %d (unchanged)\n", y);
+
+    // 通过捕获指针实现可变共享
+    var z: i32 = 5;
+    var zp: *i32 = z.&;
+    var inc = func |zp| (): void {
+        zp.* = zp.* + 1;  // 通过指针修改原始值
+    };
+    inc();
+    inc();
+    _ = printf("after inc() twice: z = %d\n", z);
+
+    // 立即调用
+    var result = func(x: i32): i32 { return x * 3; }(7);
+    _ = printf("immediately invoked: %d\n", result);
+
+    return 0;
+}

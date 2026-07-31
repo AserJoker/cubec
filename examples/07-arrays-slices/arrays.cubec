@@ -1,0 +1,28 @@
+extern func printf(fmt: str, ...): i32;
+
+// 数组类型：[N]T，编译期定长
+type Arr5 = [5]i32;
+
+// 切片类型：[]T，运行时动态视图
+type SliceI32 = []i32;
+
+export func main(argv: []str): i32 {
+    // 数组声明
+    var arr: [5]i32 = .[5]i32{10, 20, 30, 40, 50};
+
+    // 访问数组元素（注意：单下标 [i] 是泛型语法，切片用 [start:len]）
+    // var first = arr[0:1];  // 切片语法：取 arr 的前 1 个元素
+
+    // 使用 foreach 遍历（var 关键字声明循环变量）
+    foreach (var val of arr) {
+        _ = printf("element = %d\n", val);
+    }
+
+    // 多维数组
+    var matrix: [2][3]i32 = undefined;
+    // matrix[0][0] = 1; ...
+
+    _ = printf("Matrix is a [2][3]i32 type\n");
+
+    return 0;
+}

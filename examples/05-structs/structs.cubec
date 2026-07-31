@@ -1,0 +1,43 @@
+extern func printf(fmt: str, ...): i32;
+
+// 结构体定义与实例方法
+struct Point {
+    x: f64;
+    y: f64;
+
+    // 实例方法：self 始终是指针 *Point
+    func distance_from_origin(self: *Point): f64 {
+        return self.x * self.x + self.y * self.y;
+    }
+}
+
+struct Rectangle {
+    width: i32;
+    height: i32;
+
+    func area(self: *Rectangle): i32 {
+        return self.width * self.height;
+    }
+
+    func perimeter(self: *Rectangle): i32 {
+        return 2 * (self.width + self.height);
+    }
+}
+
+export func main(argv: []str): i32 {
+    // 创建结构体实例（初始化列表）
+    var p = .Point{.x = 3.0, .y = 4.0};
+    _ = printf("Point: x=%.1f, y=%.1f\n", p.x, p.y);
+
+    // 修改字段
+    p.x = 10.0;
+    _ = printf("Point after move: x=%.1f, y=%.1f\n", p.x, p.y);
+
+    // 方法调用：obj.method(args) → Rectangle::method(&obj, args)
+    var rect = .Rectangle{.width = 5, .height = 10};
+    _ = printf("Rectangle: %d x %d\n", rect.width, rect.height);
+    _ = printf("  area = %d\n", rect.area());
+    _ = printf("  perimeter = %d\n", rect.perimeter());
+
+    return 0;
+}

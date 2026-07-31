@@ -1,0 +1,44 @@
+extern func printf(fmt: str, ...): i32;
+
+// 普通函数
+func add(a: i32, b: i32): i32 {
+    return a + b;
+}
+
+// 多参数函数
+func average(a: i32, b: i32, c: i32): i32 {
+    return (a + b + c) / 3;
+}
+
+// 返回 bool 的函数
+func is_even(n: i32): bool {
+    return n % 2 == 0;
+}
+
+export func main(argv: []str): i32 {
+    var x: i32 = 10;
+    var y: i32 = 20;
+    var z: i32 = 30;
+
+    // 调用普通函数
+    var s = add(x, y);
+    _ = printf("add(%d, %d) = %d\n", x, y, s);
+
+    // 调用多参数函数
+    var avg = average(x, y, z);
+    _ = printf("average(%d, %d, %d) = %d\n", x, y, z, avg);
+
+    // 调用返回 bool 的函数
+    var n: i32 = 7;
+    if (is_even(n)) {
+        _ = printf("%d is even\n", n);
+    } else {
+        _ = printf("%d is odd\n", n);
+    }
+
+    // 嵌套函数调用
+    var result = add(add(x, y), z);
+    _ = printf("add(add(%d, %d), %d) = %d\n", x, y, z, result);
+
+    return 0;
+}

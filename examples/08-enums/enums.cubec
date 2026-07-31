@@ -1,0 +1,53 @@
+extern func printf(fmt: str, ...): i32;
+
+// 枚举定义：编译期常量，支持 TypeScript 风格的三种形式
+enum Color {
+    Red,
+    Green,
+    Blue,
+}
+
+// 带类型标注的枚举
+enum Status {
+    Ok: u8,
+    Error: u8,
+}
+
+// 带类型和值
+enum HttpCode {
+    OK: i32 = 200,
+    NotFound: i32 = 404,
+    ServerError: i32 = 500,
+}
+
+export func main(argv: []str): i32 {
+    // 通过枚举命名空间访问成员
+    var c: Color = Color.Red;
+    var s: Status = Status.Ok;
+    var code: HttpCode = HttpCode.OK;
+
+    // 枚举比较
+    if (c == Color.Red) {
+        _ = printf("Color is Red\n");
+    }
+
+    // switch 语句配合枚举
+    switch (c) {
+        case (Color.Red) -> {
+            _ = printf("It's Red!\n");
+        }
+        case (Color.Green) -> {
+            _ = printf("It's Green!\n");
+        }
+        case (Color.Blue) -> {
+            _ = printf("It's Blue!\n");
+        }
+        else -> {
+            _ = printf("Unknown color\n");
+        }
+    }
+
+    _ = printf("HttpCode.OK = %d\n", code);
+
+    return 0;
+}

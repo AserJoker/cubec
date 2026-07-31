@@ -1,0 +1,58 @@
+extern func printf(fmt: str, ...): i32;
+
+export func main(argv: []str): i32 {
+    // === if / else if / else ===
+    var score: i32 = 85;
+    if (score >= 90) {
+        _ = printf("Grade: A\n");
+    } else if (score >= 80) {
+        _ = printf("Grade: B\n");
+    } else if (score >= 70) {
+        _ = printf("Grade: C\n");
+    } else {
+        _ = printf("Grade: D\n");
+    }
+
+    // === for 循环（C 风格三段式）===
+    var sum: i32 = 0;
+    var i: i32 = 0;
+    for (i = 0; i < 10; i = i + 1) {
+        sum = sum + i;
+    }
+    _ = printf("sum of 0..9: %d\n", sum);
+
+    // === while 循环 ===
+    var count: i32 = 3;
+    while (count > 0) {
+        _ = printf("countdown: %d\n", count);
+        count = count - 1;
+    }
+
+    // === do-while 循环 ===
+    var n: i32 = 0;
+    do {
+        n = n + 1;
+    } while (n < 3);
+    _ = printf("do-while ran %d times\n", n);
+
+    // === defer 语句（作用域退出时逆序执行）===
+    {
+        defer {
+            _ = printf("defer: cleaned up\n");
+        }
+        _ = printf("inside block before defer\n");
+    }
+
+    // === break / continue ===
+    var found: i32 = -1;
+    var j: i32 = 0;
+    for (j = 0; j < 20; j = j + 1) {
+        if (j == 5) {
+            found = j;
+            break;
+        }
+    }
+    _ = printf("found at: %d\n", found);
+
+    return 0;
+}

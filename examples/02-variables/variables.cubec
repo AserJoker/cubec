@@ -1,0 +1,34 @@
+extern func printf(fmt: str, ...): i32;
+
+export func main(argv: []str): i32 {
+    // 基本类型变量声明
+    var a: i32 = 42;
+    var b: f64 = 3.14;
+    var c: bool = true;
+
+    // 变量赋值与修改
+    var x: i32 = 10;
+    var y: i32 = 20;
+    x = x + 5;
+
+    // 算术运算（类型推导正常）
+    var sum = a + x + y;
+    var product = x * y;
+    var quotient = y / x;
+    var remainder = y % x;
+
+    // 按位运算
+    var bits: i32 = a & 0x0F;
+    var shifted: i32 = a << 2;
+
+    // 比较运算
+    var is_greater: bool = sum > 100;
+    var is_equal: bool = a == 42;
+
+    _ = printf("sum: %d\n", sum);
+    _ = printf("product: %d, quotient: %d, remainder: %d\n",
+               product, quotient, remainder);
+    _ = printf("bits: %d, shifted: %d\n", bits, shifted);
+
+    return 0;
+}

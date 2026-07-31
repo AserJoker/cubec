@@ -1,0 +1,41 @@
+extern func printf(fmt: str, ...): i32;
+
+// 泛型函数：编译期单态化
+// identity[T](value: T): T — 返回原值
+func identity[T](value: T): T {
+    return value;
+}
+
+// max[T](a: T, b: T): T — 返回较大值
+func max[T](a: T, b: T): T {
+    if (a > b) {
+        return a;
+    }
+    return b;
+}
+
+// 泛型结构体
+struct Pair[A, B] {
+    first: A;
+    second: B;
+}
+
+export func main(argv: []str): i32 {
+    // 显式指定类型参数
+    var m1 = max(10, 20);  // 类型推断 T = i32
+    _ = printf("max(10, 20) = %d\n", m1);
+
+    // 显式指定类型参数
+    var id = identity[i32](42);
+    _ = printf("identity[i32](42) = %d\n", id);
+
+    // 类型推断
+    var m2 = max(3.14, 2.71);
+    _ = printf("max(3.14, 2.71) = %.2f\n", m2);
+
+    // 泛型结构体
+    var p = .Pair[i32, f64]{.first = 42, .second = 3.14};
+    _ = printf("Pair: (%d, %.2f)\n", p.first, p.second);
+
+    return 0;
+}

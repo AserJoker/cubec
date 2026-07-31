@@ -1,0 +1,32 @@
+extern func printf(fmt: str, ...): i32;
+
+// comptime var：编译期变量
+comptime var APP_NAME: str = "Cubec Demo";
+comptime var VERSION: i32 = 1;
+
+// comptime func：编译期函数
+comptime func compile_time_value(): i32 {
+    return 42 * 2;
+}
+
+// test 块：编译期测试
+test "math" {
+    var x: i32 = 1 + 2;
+    // assert(x == 3);
+}
+
+test "comptime_func" {
+    var v = compile_time_value();
+    // assert(v == 84);
+}
+
+export func main(argv: []str): i32 {
+    _ = printf("%s v%d\n", APP_NAME, VERSION);
+
+    // comptime if：编译期条件分支
+    comptime if (VERSION > 0) {
+        _ = printf("Running version %d\n", VERSION);
+    }
+
+    return 0;
+}

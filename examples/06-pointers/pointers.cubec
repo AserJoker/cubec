@@ -1,0 +1,40 @@
+extern func printf(fmt: str, ...): i32;
+
+// 辅助函数：通过指针交换两个值
+func swap(a: *i32, b: *i32): void {
+    var tmp: i32 = a.*;
+    a.* = b.*;
+    b.* = tmp;
+}
+
+export func main(argv: []str): i32 {
+    var x: i32 = 42;
+
+    // 取地址：后缀 .& 语法
+    var p: *i32 = x.&;
+    _ = printf("x = %d, p = <pointer to x>\n", x);
+
+    // 解引用：后缀 .* 语法
+    _ = printf("*p = %d\n", p.*);
+
+    // 通过指针修改值
+    p.* = 99;
+    _ = printf("after p.* = 99: x = %d\n", x);
+
+    // 多级指针
+    var pp: **i32 = p.&;
+    _ = printf("pp.* = <pointer to x: %d>\n", pp.*.*);
+
+    // 指针传递：swap
+    var a: i32 = 10;
+    var b: i32 = 20;
+    _ = printf("before swap: a = %d, b = %d\n", a, b);
+    swap(a.&, b.&);
+    _ = printf("after swap: a = %d, b = %d\n", a, b);
+
+    // nil 指针
+    var np: *i32 = nil;
+    _ = printf("nil pointer test: np is nil\n");
+
+    return 0;
+}
