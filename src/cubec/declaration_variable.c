@@ -1,12 +1,14 @@
 #include "cubec/declaration_variable.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
+#include "cubec/literal_identifier.h"
 #include "cubec/token.h"
 
-static void _cubec_declaration_variable_init(cubec_declaration_variable_t self,
-                                             allocator_t allocator,
-                                             cubec_declaration_variable_init_t *init) {
-  if (!init) return;
+static void
+_cubec_declaration_variable_init(cubec_declaration_variable_t self,
+                                 allocator_t allocator,
+                                 cubec_declaration_variable_init_t *init) {
+  if (!init)
+    return;
   cubec_declaration_init_t super_init = {
       .kind = CUBEC_NODE_DECLARATION_VARIABLE,
       .parent = NULL,
@@ -18,17 +20,19 @@ static void _cubec_declaration_variable_init(cubec_declaration_variable_t self,
   self->expression = init->expression;
 }
 
-static void _cubec_declaration_variable_dispose(cubec_declaration_variable_t self,
-                                                allocator_t allocator) {
+static void
+_cubec_declaration_variable_dispose(cubec_declaration_variable_t self,
+                                    allocator_t allocator) {
   allocator_free(allocator, &self->identifier);
   allocator_free(allocator, &self->type);
   allocator_free(allocator, &self->expression);
   g_cubec_declaration_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_declaration_variable_clone(cubec_declaration_variable_t self,
-                                              allocator_t allocator,
-                                              cubec_declaration_variable_t another) {
+static void
+_cubec_declaration_variable_clone(cubec_declaration_variable_t self,
+                                  allocator_t allocator,
+                                  cubec_declaration_variable_t another) {
   g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
   self->identifier = value_clone(allocator, another->identifier);
   self->type = value_clone(allocator, another->type);
@@ -41,9 +45,10 @@ cleanup:
   allocator_free(allocator, &self->expression);
 }
 
-static void _cubec_declaration_variable_move(cubec_declaration_variable_t self,
-                                             allocator_t allocator,
-                                             cubec_declaration_variable_t another) {
+static void
+_cubec_declaration_variable_move(cubec_declaration_variable_t self,
+                                 allocator_t allocator,
+                                 cubec_declaration_variable_t another) {
   g_cubec_declaration_type.move(&self->super, allocator, &another->super);
   self->identifier = value_move(allocator, another->identifier);
   self->type = value_move(allocator, another->type);
@@ -65,8 +70,8 @@ type_t g_cubec_declaration_variable_type = {
     .move = (type_move_fn_t)_cubec_declaration_variable_move,
 };
 
-node_t read_declaration_variable(context_t ctx, vec_t tokens,
-                                 size_t *position, const char *filename) {
+node_t read_declaration_variable(context_t ctx, vec_t tokens, size_t *position,
+                                 const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_declaration_variable_t node = NULL;
@@ -131,9 +136,11 @@ node_t read_declaration_variable(context_t ctx, vec_t tokens,
                               .type = type,
                               .expression = expression,
                           });
-  if (!node) goto cleanup_node;
+  if (!node)
+    goto cleanup_node;
 
-  /* Set location from start to end of expression (or type/identifier if no expression) */
+  /* Set location from start to end of expression (or type/identifier if no
+   * expression) */
   node->super.super.super.location = start_location;
   if (expression) {
     node->super.super.super.location.end = expression->location.end;
@@ -167,9 +174,11 @@ node_t cubec_ast_create_variable_decl(context_t ctx, location_t loc,
                                       node_t identifier, node_t type,
                                       node_t expression) {
   allocator_t alloc = ctx->allocator;
-      cubec_declaration_variable_init_t init = {
-      .location = loc, .parent = NULL, .identifier = identifier,
-      .type = type, .expression = expression};
+  cubec_declaration_variable_init_t init = {.location = loc,
+                                            .parent = NULL,
+                                            .identifier = identifier,
+                                            .type = type,
+                                            .expression = expression};
   return (node_t)allocator_create(alloc, &g_cubec_declaration_variable_type,
                                   &init);
 }

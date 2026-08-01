@@ -1,13 +1,11 @@
 #ifndef _H_CUBEC_CUBEC_DECLARATION_ARRAY_
 #define _H_CUBEC_CUBEC_DECLARATION_ARRAY_
-#include "core/allocator.h"
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/declaration.h"
-#include "cubec/expression.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -15,8 +13,8 @@ extern "C" {
 struct _cubec_declaration_array_t;
 struct _cubec_declaration_array_t {
   struct _cubec_declaration_t super;
-  node_t size;           /**< The array size expression */
-  node_t type;           /**< The underlying type */
+  node_t size; /**< The array size expression */
+  node_t type; /**< The underlying type */
 };
 typedef struct _cubec_declaration_array_t *cubec_declaration_array_t;
 
@@ -39,13 +37,11 @@ typedef struct _cubec_declaration_array_init_t cubec_declaration_array_init_t;
  * @return A new cubec_declaration_array_t node, or NULL if current token
  *         is not '[' followed by non-']' token.
  */
-node_t read_declaration_array(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename);
+node_t read_declaration_array(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename);
 
-/* Debug function to print tokens */
-void debug_print_tokens(vec_t tokens, size_t count);
-
-node_t cubec_ast_create_array_type(context_t ctx, location_t loc, node_t size, node_t base);
+node_t cubec_ast_create_array_type(context_t ctx, location_t loc, node_t size,
+                                   node_t base);
 
 #ifdef __cplusplus
 }

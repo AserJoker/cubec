@@ -1,9 +1,7 @@
 #include "cubec/statement_comptime.h"
 #include "core/token.h"
-#include "cubec/declaration_variable.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/statement_block.h"
-#include "cubec/statement_declaration.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "cubec/node_error.h"

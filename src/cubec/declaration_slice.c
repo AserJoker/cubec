@@ -1,12 +1,13 @@
 #include "cubec/declaration_slice.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
 #include "cubec/token.h"
 
-static void _cubec_declaration_slice_init(cubec_declaration_slice_t self,
-                                          allocator_t allocator,
-                                          cubec_declaration_slice_init_t *init) {
-  if (!init) return;
+static void
+_cubec_declaration_slice_init(cubec_declaration_slice_t self,
+                              allocator_t allocator,
+                              cubec_declaration_slice_init_t *init) {
+  if (!init)
+    return;
   cubec_declaration_init_t super_init = {
       .kind = CUBEC_NODE_DECLARATION_SLICE,
       .parent = NULL,
@@ -56,13 +57,15 @@ type_t g_cubec_declaration_slice_type = {
  */
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
-node_t read_declaration_slice(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename) {
+node_t read_declaration_slice(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_declaration_slice_t node = NULL;
@@ -78,7 +81,8 @@ node_t read_declaration_slice(context_t ctx, vec_t tokens,
   }
   current++;
 
-  /* Expect ']' immediately after '[' - no whitespace, comments, or newlines allowed */
+  /* Expect ']' immediately after '[' - no whitespace, comments, or newlines
+   * allowed */
   token_t close_bracket = vec_get(tokens, current);
   if (!token_is(close_bracket, CUBEC_TOKEN_SYMBOL, "]")) {
     return NULL;
@@ -91,7 +95,8 @@ node_t read_declaration_slice(context_t ctx, vec_t tokens,
   /* Skip whitespace before parsing qualifiers */
   skip_whitespace(tokens, &current);
 
-  /* Check for optional 'const' and 'volatile' qualifiers (any order, may repeat) */
+  /* Check for optional 'const' and 'volatile' qualifiers (any order, may
+   * repeat) */
   while (true) {
     if (_is_keyword(tokens, current, "const")) {
       is_const = true;
@@ -127,7 +132,8 @@ node_t read_declaration_slice(context_t ctx, vec_t tokens,
                               .is_const = is_const,
                               .is_volatile = is_volatile,
                           });
-  if (!node) goto onerror;
+  if (!node)
+    goto onerror;
 
   /* Set location from start to end of type */
   node->super.super.super.location = start_location;
@@ -146,14 +152,11 @@ onerror:
  *  Factory: cubec_ast_create_slice_type
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_slice_type(context_t ctx, location_t loc,
-                                   node_t base, bool is_const,
-                                   bool is_volatile) {
+node_t cubec_ast_create_slice_type(context_t ctx, location_t loc, node_t base,
+                                   bool is_const, bool is_volatile) {
   allocator_t alloc = ctx->allocator;
-                                         cubec_declaration_slice_init_t init = {
-                                         .type = base,
-                                         .is_const = is_const,
-                                         .is_volatile = is_volatile};
+  cubec_declaration_slice_init_t init = {
+      .type = base, .is_const = is_const, .is_volatile = is_volatile};
   return (node_t)allocator_create(alloc, &g_cubec_declaration_slice_type,
                                   &init);
 }

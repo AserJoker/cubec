@@ -1,6 +1,5 @@
 #ifndef _H_CUBEC_CUBEC_SWITCH_MATCH_
 #define _H_CUBEC_CUBEC_SWITCH_MATCH_
-#include "core/allocator.h"
 #include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"

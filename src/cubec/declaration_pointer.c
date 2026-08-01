@@ -1,12 +1,13 @@
 #include "cubec/declaration_pointer.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
 #include "cubec/token.h"
 
-static void _cubec_declaration_pointer_init(cubec_declaration_pointer_t self,
-                                            allocator_t allocator,
-                                            cubec_declaration_pointer_init_t *init) {
-  if (!init) return;
+static void
+_cubec_declaration_pointer_init(cubec_declaration_pointer_t self,
+                                allocator_t allocator,
+                                cubec_declaration_pointer_init_t *init) {
+  if (!init)
+    return;
   cubec_declaration_init_t super_init = {
       .kind = CUBEC_NODE_DECLARATION_POINTER,
       .parent = NULL,
@@ -24,18 +25,20 @@ static void _cubec_declaration_pointer_dispose(cubec_declaration_pointer_t self,
   g_cubec_declaration_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_declaration_pointer_clone(cubec_declaration_pointer_t self,
-                                             allocator_t allocator,
-                                             cubec_declaration_pointer_t another) {
+static void
+_cubec_declaration_pointer_clone(cubec_declaration_pointer_t self,
+                                 allocator_t allocator,
+                                 cubec_declaration_pointer_t another) {
   g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
   self->type = value_clone(allocator, another->type);
   self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
 }
 
-static void _cubec_declaration_pointer_move(cubec_declaration_pointer_t self,
-                                            allocator_t allocator,
-                                            cubec_declaration_pointer_t another) {
+static void
+_cubec_declaration_pointer_move(cubec_declaration_pointer_t self,
+                                allocator_t allocator,
+                                cubec_declaration_pointer_t another) {
   g_cubec_declaration_type.move(&self->super, allocator, &another->super);
   self->type = value_move(allocator, another->type);
   self->is_const = another->is_const;
@@ -56,13 +59,15 @@ type_t g_cubec_declaration_pointer_type = {
  */
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
-node_t read_declaration_pointer(context_t ctx, vec_t tokens,
-                                size_t *position, const char *filename) {
+node_t read_declaration_pointer(context_t ctx, vec_t tokens, size_t *position,
+                                const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_declaration_pointer_t node = NULL;
@@ -83,7 +88,8 @@ node_t read_declaration_pointer(context_t ctx, vec_t tokens,
   /* Skip whitespace after '*' */
   skip_whitespace(tokens, &current);
 
-  /* Check for optional 'const' and 'volatile' qualifiers (any order, may repeat) */
+  /* Check for optional 'const' and 'volatile' qualifiers (any order, may
+   * repeat) */
   while (true) {
     if (_is_keyword(tokens, current, "const")) {
       is_const = true;
@@ -105,8 +111,8 @@ node_t read_declaration_pointer(context_t ctx, vec_t tokens,
    * contexts like function parameter lists).
    * The pointer declaration greedily consumes the type expression including
    * ternary: *a ? b : c → pointer(ternary(a, b, c)).
-   * Use grouping for the alternative: (* a) ? b : c → ternary(pointer(a), b, c).
-   * Namespace access binds tighter: *std::vec::Vec → *(std::vec::Vec). */
+   * Use grouping for the alternative: (* a) ? b : c → ternary(pointer(a), b,
+   * c). Namespace access binds tighter: *std::vec::Vec → *(std::vec::Vec). */
   type = read_expression_base(ctx, tokens, &current, filename);
   if (!type) {
     goto onerror;
@@ -118,7 +124,8 @@ node_t read_declaration_pointer(context_t ctx, vec_t tokens,
                               .is_const = is_const,
                               .is_volatile = is_volatile,
                           });
-  if (!node) goto onerror;
+  if (!node)
+    goto onerror;
 
   /* Set location from start to end of type */
   node->super.super.super.location = start_location;
@@ -137,14 +144,11 @@ onerror:
  *  Factory: cubec_ast_create_pointer_type
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_pointer_type(context_t ctx, location_t loc,
-                                     node_t base, bool is_const,
-                                     bool is_volatile) {
+node_t cubec_ast_create_pointer_type(context_t ctx, location_t loc, node_t base,
+                                     bool is_const, bool is_volatile) {
   allocator_t alloc = ctx->allocator;
-                                           cubec_declaration_pointer_init_t init = {
-                                           .type = base,
-                                           .is_const = is_const,
-                                           .is_volatile = is_volatile};
+  cubec_declaration_pointer_init_t init = {
+      .type = base, .is_const = is_const, .is_volatile = is_volatile};
   return (node_t)allocator_create(alloc, &g_cubec_declaration_pointer_type,
                                   &init);
 }

@@ -3,9 +3,6 @@
 #include "core/token.h"
 #include "cubec/decorator.h"
 #include "cubec/expression_type_interface.h"
-#include "cubec/generic_param.h"
-#include "cubec/interface_method.h"
-#include "cubec/statement_declaration_type.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 #include "cubec/node_error.h"

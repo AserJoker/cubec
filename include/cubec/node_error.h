@@ -1,6 +1,5 @@
 #ifndef _H_CUBEC_CUBEC_NODE_ERROR_
 #define _H_CUBEC_CUBEC_NODE_ERROR_
-#include "core/allocator.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"

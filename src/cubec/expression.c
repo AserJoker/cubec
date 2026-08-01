@@ -1,5 +1,4 @@
 #include "cubec/expression.h"
-#include "cubec/token.h"
 #include "cubec/declaration_array.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"

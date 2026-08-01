@@ -1,13 +1,11 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_ASSIGNMENT_
 #define _H_CUBEC_CUBEC_EXPRESSION_ASSIGNMENT_
-#include "core/allocator.h"
 #include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #ifdef __cplusplus
 extern "C" {

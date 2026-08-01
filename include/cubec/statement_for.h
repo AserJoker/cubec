@@ -1,6 +1,5 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_FOR_
 #define _H_CUBEC_CUBEC_STATEMENT_FOR_
-#include "core/allocator.h"
 #include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"

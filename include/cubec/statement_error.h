@@ -1,10 +1,9 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_ERROR_
 #define _H_CUBEC_CUBEC_STATEMENT_ERROR_
-#include "core/allocator.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
-#include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

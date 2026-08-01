@@ -1,6 +1,5 @@
 #ifndef _H_CUBEC_CUBEC_TOKEN_
 #define _H_CUBEC_CUBEC_TOKEN_
-#include "core/allocator.h"
 #include "core/position.h"
 #include "core/vec.h"
 #ifdef __cplusplus

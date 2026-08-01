@@ -1,9 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_LITERAL_
 #define _H_CUBEC_CUBEC_LITERAL_
-#include "core/allocator.h"
 #include "core/location.h"
 #include "core/type.h"
-#include "core/vec.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #ifdef __cplusplus

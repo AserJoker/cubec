@@ -1,13 +1,11 @@
 #ifndef _H_CUBEC_CUBEC_DECLARATION_SLICE_
 #define _H_CUBEC_CUBEC_DECLARATION_SLICE_
-#include "core/allocator.h"
 #include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/declaration.h"
-#include "cubec/expression.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

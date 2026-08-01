@@ -1,12 +1,13 @@
 #include "cubec/declaration_array.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
 #include "cubec/token.h"
 
-static void _cubec_declaration_array_init(cubec_declaration_array_t self,
-                                          allocator_t allocator,
-                                          cubec_declaration_array_init_t *init) {
-  if (!init) return;
+static void
+_cubec_declaration_array_init(cubec_declaration_array_t self,
+                              allocator_t allocator,
+                              cubec_declaration_array_init_t *init) {
+  if (!init)
+    return;
   cubec_declaration_init_t super_init = {
       .kind = CUBEC_NODE_DECLARATION_ARRAY,
       .parent = NULL,
@@ -59,8 +60,8 @@ type_t g_cubec_declaration_array_type = {
     .move = (type_move_fn_t)_cubec_declaration_array_move,
 };
 
-node_t read_declaration_array(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename) {
+node_t read_declaration_array(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_declaration_array_t node = NULL;
@@ -101,7 +102,8 @@ node_t read_declaration_array(context_t ctx, vec_t tokens,
   token_t close_bracket = vec_get(tokens, current);
   if (!token_is(close_bracket, CUBEC_TOKEN_SYMBOL, "]")) {
     /* Not an array declaration — restore position and return NULL.
-       This allows the caller to try other parsers (e.g. [0; 64] is not valid). */
+       This allows the caller to try other parsers (e.g. [0; 64] is not valid).
+     */
     allocator_free(allocator, &size);
     *position = current;
     return NULL;
@@ -111,8 +113,9 @@ node_t read_declaration_array(context_t ctx, vec_t tokens,
   /* Parse the underlying type using read_expression_type (greedy).
    * The array declaration greedily consumes the full type expression,
    * including ternary: [N]a ? b : c → array(ternary(a, b, c)).
-   * Use grouping for the alternative: ([N] a) ? b : c → ternary(array(a), b, c).
-   * Namespace access binds tighter: [N]std::vec::Vec → [N](std::vec::Vec). */
+   * Use grouping for the alternative: ([N] a) ? b : c → ternary(array(a), b,
+   * c). Namespace access binds tighter: [N]std::vec::Vec → [N](std::vec::Vec).
+   */
   skip_whitespace(tokens, &current);
   type = read_expression_base(ctx, tokens, &current, filename);
   if (!type) {
@@ -124,7 +127,8 @@ node_t read_declaration_array(context_t ctx, vec_t tokens,
                               .size = size,
                               .type = type,
                           });
-  if (!node) goto onerror;
+  if (!node)
+    goto onerror;
 
   /* Set location from start to end of type */
   node->super.super.super.location = start_location;
@@ -144,11 +148,10 @@ onerror:
  *  Factory: cubec_ast_create_array_type
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_array_type(context_t ctx, location_t loc,
-                                   node_t size, node_t base) {
+node_t cubec_ast_create_array_type(context_t ctx, location_t loc, node_t size,
+                                   node_t base) {
   allocator_t alloc = ctx->allocator;
-                                         cubec_declaration_array_init_t init = {
-                                         .size = size, .type = base};
+  cubec_declaration_array_init_t init = {.size = size, .type = base};
   return (node_t)allocator_create(alloc, &g_cubec_declaration_array_type,
                                   &init);
 }

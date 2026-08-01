@@ -2,7 +2,6 @@
 
 #include "builder/cubec_writer.h"
 #include "core/allocator.h"
-#include "core/icu_data.h"
 #include "cubec/program.h"
 #include "cubec/token.h"
 #include "engine/context.h"
