@@ -1,6 +1,5 @@
 #include "cubec/expression_postfix_unary.h"
 #include "core/token.h"
-#include "cubec/ast_create_helpers.h"
 #include "cubec/token.h"
 #include <string.h>
 
@@ -11,7 +10,8 @@
 static void _cubec_expression_postfix_unary_init(
     cubec_expression_postfix_unary_t self, allocator_t allocator,
     cubec_expression_postfix_unary_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
 
   cubec_expression_init_t super_init = {
       .kind = init->kind,
@@ -24,7 +24,6 @@ static void _cubec_expression_postfix_unary_init(
   self->left = NULL;
   self->right = init->host;
   self->opt = init->opt;
-
 }
 
 static void
@@ -116,8 +115,8 @@ node_t read_expression_postfix_unary(context_t ctx, vec_t tokens,
   const char *op_text = NULL;
   size_t op_len = 0;
   cubec_node_kind_t kind = CUBEC_NODE_EXPRESSION_TRY;
-  if (second_len == 1 &&
-      (*second_op == '&' || *second_op == '*' || *second_op == '?' || *second_op == '!')) {
+  if (second_len == 1 && (*second_op == '&' || *second_op == '*' ||
+                          *second_op == '?' || *second_op == '!')) {
     op_text = second_op;
     op_len = second_len;
   } else {
@@ -162,42 +161,58 @@ onerror:
  *  Factory: cubec_ast_create_deref / addr / try / assert
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_deref(context_t ctx, location_t loc,
-                              node_t host) {
+node_t cubec_ast_create_deref(context_t ctx, location_t loc, node_t host) {
   allocator_t alloc = ctx->allocator;
-  string_t op_str = _make_string(ctx, ".*");
+  string_t op_str =
+      allocator_create(alloc, &g_string_type, &(string_init_t){.str = ".*"});
   cubec_expression_postfix_unary_init_t init = {
-      .location = loc, .parent = NULL, .host = host, .opt = op_str,
-      .kind = CUBEC_NODE_EXPRESSION_DEREF};
+      .location = loc,
+      .parent = NULL,
+      .host = host,
+      .opt = op_str,
+      .kind = CUBEC_NODE_EXPRESSION_DEREF,
+  };
   return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
                                   &init);
 }
 
 node_t cubec_ast_create_addr(context_t ctx, location_t loc, node_t host) {
   allocator_t alloc = ctx->allocator;
-  string_t op_str = _make_string(ctx, ".&");
-  cubec_expression_postfix_unary_init_t init = {
-      .location = loc, .parent = NULL, .host = host, .opt = op_str,
-      .kind = CUBEC_NODE_EXPRESSION_ADDR};
+  string_t op_str =
+      allocator_create(alloc, &g_string_type, &(string_init_t){.str = ".&"});
+  cubec_expression_postfix_unary_init_t init = {.location = loc,
+                                                .parent = NULL,
+                                                .host = host,
+                                                .opt = op_str,
+                                                .kind =
+                                                    CUBEC_NODE_EXPRESSION_ADDR};
   return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
                                   &init);
 }
 
 node_t cubec_ast_create_try(context_t ctx, location_t loc, node_t host) {
   allocator_t alloc = ctx->allocator;
-  string_t op_str = _make_string(ctx, ".?");
-  cubec_expression_postfix_unary_init_t init = {
-      .location = loc, .parent = NULL, .host = host, .opt = op_str,
-      .kind = CUBEC_NODE_EXPRESSION_TRY};
+  string_t op_str =
+      allocator_create(alloc, &g_string_type, &(string_init_t){.str = ".?"});
+  cubec_expression_postfix_unary_init_t init = {.location = loc,
+                                                .parent = NULL,
+                                                .host = host,
+                                                .opt = op_str,
+                                                .kind =
+                                                    CUBEC_NODE_EXPRESSION_TRY};
   return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
                                   &init);
 }
 
 node_t cubec_ast_create_assert(context_t ctx, location_t loc, node_t host) {
   allocator_t alloc = ctx->allocator;
-  string_t op_str = _make_string(ctx, ".!");
+  string_t op_str =
+      allocator_create(alloc, &g_string_type, &(string_init_t){.str = ".!"});
   cubec_expression_postfix_unary_init_t init = {
-      .location = loc, .parent = NULL, .host = host, .opt = op_str,
+      .location = loc,
+      .parent = NULL,
+      .host = host,
+      .opt = op_str,
       .kind = CUBEC_NODE_EXPRESSION_ASSERT};
   return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
                                   &init);

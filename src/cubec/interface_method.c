@@ -1,8 +1,9 @@
 #include "cubec/interface_method.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
 #include "cubec/function_argument.h"
 #include "cubec/generic_param.h"
+#include "cubec/literal_identifier.h"
+#include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 
@@ -10,10 +11,11 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_interface_method_init(
-    cubec_interface_method_t self, allocator_t allocator,
-    cubec_interface_method_init_t *init) {
-  if (!init) return;
+static void _cubec_interface_method_init(cubec_interface_method_t self,
+                                         allocator_t allocator,
+                                         cubec_interface_method_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_INTERFACE_METHOD,
       .parent = NULL,
@@ -26,8 +28,8 @@ static void _cubec_interface_method_init(
   self->return_type = init->return_type;
 }
 
-static void _cubec_interface_method_dispose(
-    cubec_interface_method_t self, allocator_t allocator) {
+static void _cubec_interface_method_dispose(cubec_interface_method_t self,
+                                            allocator_t allocator) {
   allocator_free(allocator, &self->return_type);
   allocator_free(allocator, &self->arguments);
   allocator_free(allocator, &self->generic_params);
@@ -35,9 +37,9 @@ static void _cubec_interface_method_dispose(
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_interface_method_clone(
-    cubec_interface_method_t self, allocator_t allocator,
-    cubec_interface_method_t another) {
+static void _cubec_interface_method_clone(cubec_interface_method_t self,
+                                          allocator_t allocator,
+                                          cubec_interface_method_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->name = value_clone(allocator, another->name);
   self->generic_params = another->generic_params
@@ -50,18 +52,17 @@ static void _cubec_interface_method_clone(
   return;
 }
 
-static void _cubec_interface_method_move(
-    cubec_interface_method_t self, allocator_t allocator,
-    cubec_interface_method_t another) {
+static void _cubec_interface_method_move(cubec_interface_method_t self,
+                                         allocator_t allocator,
+                                         cubec_interface_method_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->name = value_move(allocator, another->name);
   self->generic_params = another->generic_params
                              ? value_move(allocator, another->generic_params)
                              : NULL;
   self->arguments = value_move(allocator, another->arguments);
-  self->return_type = another->return_type
-                          ? value_move(allocator, another->return_type)
-                          : NULL;
+  self->return_type =
+      another->return_type ? value_move(allocator, another->return_type) : NULL;
   return;
 }
 
@@ -80,14 +81,17 @@ type_t g_cubec_interface_method_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -95,8 +99,8 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_interface_method
  * -------------------------------------------------------------------------- */
 
-node_t read_interface_method(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename) {
+node_t read_interface_method(context_t ctx, vec_t tokens, size_t *position,
+                             const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t name = NULL;
@@ -190,7 +194,8 @@ node_t read_interface_method(context_t ctx, vec_t tokens,
       .return_type = return_type,
   };
   node = allocator_create(allocator, &g_cubec_interface_method_type, &init);
-  if (!node) goto cleanup;
+  if (!node)
+    goto cleanup;
   *position = current;
   return &node->super;
 
@@ -217,10 +222,13 @@ node_t cubec_ast_create_iface_method(context_t ctx, location_t loc,
                                      const char *name, vec_t args,
                                      node_t return_type) {
   allocator_t alloc = ctx->allocator;
-  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
+  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
   cubec_interface_method_init_t init = {
-      .location = loc, .name = (node_t)name_node, .generic_params = NULL,
-      .arguments = args, .return_type = return_type};
-  return (node_t)allocator_create(alloc, &g_cubec_interface_method_type,
-                                  &init);
+      .location = loc,
+      .name = name_node,
+      .generic_params = NULL,
+      .arguments = args,
+      .return_type = return_type,
+  };
+  return (node_t)allocator_create(alloc, &g_cubec_interface_method_type, &init);
 }

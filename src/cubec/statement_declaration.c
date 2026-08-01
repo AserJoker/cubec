@@ -1,15 +1,17 @@
 #include "cubec/statement_declaration.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
-#include "cubec/decorator.h"
 #include "cubec/declaration_variable.h"
-#include "cubec/token.h"
+#include "cubec/decorator.h"
+#include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
+#include "cubec/token.h"
 
-static void _cubec_statement_declaration_init(
-    cubec_statement_declaration_t self, allocator_t allocator,
-    cubec_statement_declaration_init_t *init) {
-  if (!init) return;
+static void
+_cubec_statement_declaration_init(cubec_statement_declaration_t self,
+                                  allocator_t allocator,
+                                  cubec_statement_declaration_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_DECLARATION,
       .parent = NULL,
@@ -26,16 +28,18 @@ static void _cubec_statement_declaration_init(
   self->decorators = init->decorators;
 }
 
-static void _cubec_statement_declaration_dispose(
-    cubec_statement_declaration_t self, allocator_t allocator) {
+static void
+_cubec_statement_declaration_dispose(cubec_statement_declaration_t self,
+                                     allocator_t allocator) {
   allocator_free(allocator, &self->decorators);
   allocator_free(allocator, &self->declarator);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_statement_declaration_clone(
-    cubec_statement_declaration_t self, allocator_t allocator,
-    cubec_statement_declaration_t another) {
+static void
+_cubec_statement_declaration_clone(cubec_statement_declaration_t self,
+                                   allocator_t allocator,
+                                   cubec_statement_declaration_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->is_exportlib = another->is_exportlib;
@@ -47,9 +51,10 @@ static void _cubec_statement_declaration_clone(
   return;
 }
 
-static void _cubec_statement_declaration_move(
-    cubec_statement_declaration_t self, allocator_t allocator,
-    cubec_statement_declaration_t another) {
+static void
+_cubec_statement_declaration_move(cubec_statement_declaration_t self,
+                                  allocator_t allocator,
+                                  cubec_statement_declaration_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->is_exportlib = another->is_exportlib;
@@ -75,13 +80,15 @@ type_t g_cubec_statement_declaration_type = {
  */
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
-node_t read_statement_declaration(context_t ctx, vec_t tokens,
-                                  size_t *position, const char *filename) {
+node_t read_statement_declaration(context_t ctx, vec_t tokens, size_t *position,
+                                  const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_statement_declaration_t node = NULL;
@@ -99,20 +106,25 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens,
     while (true) {
       skip_whitespace(tokens, &current);
       node_t dec = read_decorator(ctx, tokens, &current, filename);
-      if (node_is_error(dec)) return dec;
-      if (!dec) break;
+      if (node_is_error(dec))
+        return dec;
+      if (!dec)
+        break;
       if (!decorators) {
-        decorators = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+        decorators =
+            allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
       }
       vec_push(decorators, dec);
     }
   }
 
-  /* 1. Parse optional modifiers: export / exportlib / extern / builtin / comptime / using */
+  /* 1. Parse optional modifiers: export / exportlib / extern / builtin /
+   * comptime / using */
   bool is_exportlib = false;
   while (true) {
     if (_is_keyword(tokens, current, "export")) {
-      if (is_export) goto onerror;
+      if (is_export)
+        goto onerror;
       is_export = true;
       if (start_location.begin.offset == 0) {
         token_t tok = vec_get(tokens, current);
@@ -122,7 +134,8 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens,
       current++;
       skip_whitespace(tokens, &current);
     } else if (_is_keyword(tokens, current, "exportlib")) {
-      if (is_exportlib) goto onerror;
+      if (is_exportlib)
+        goto onerror;
       is_exportlib = true;
       if (start_location.begin.offset == 0) {
         token_t tok = vec_get(tokens, current);
@@ -132,7 +145,8 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens,
       current++;
       skip_whitespace(tokens, &current);
     } else if (_is_keyword(tokens, current, "extern")) {
-      if (is_extern) goto onerror;
+      if (is_extern)
+        goto onerror;
       is_extern = true;
       if (start_location.begin.offset == 0) {
         token_t tok = vec_get(tokens, current);
@@ -142,7 +156,8 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens,
       current++;
       skip_whitespace(tokens, &current);
     } else if (_is_keyword(tokens, current, "builtin")) {
-      if (is_builtin) goto onerror;
+      if (is_builtin)
+        goto onerror;
       is_builtin = true;
       if (start_location.begin.offset == 0) {
         token_t tok = vec_get(tokens, current);
@@ -152,7 +167,8 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens,
       current++;
       skip_whitespace(tokens, &current);
     } else if (_is_keyword(tokens, current, "comptime")) {
-      if (is_comptime) goto onerror;
+      if (is_comptime)
+        goto onerror;
       is_comptime = true;
       if (start_location.begin.offset == 0) {
         token_t tok = vec_get(tokens, current);
@@ -162,7 +178,8 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens,
       current++;
       skip_whitespace(tokens, &current);
     } else if (_is_keyword(tokens, current, "using")) {
-      if (is_using) goto onerror;
+      if (is_using)
+        goto onerror;
       is_using = true;
       if (start_location.begin.offset == 0) {
         token_t tok = vec_get(tokens, current);
@@ -177,17 +194,28 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens,
   }
 
   /* 2. Mutually exclusive check */
-  if (is_export && is_exportlib) goto onerror;
-  if (is_extern && is_export) goto onerror;
-  if (is_extern && is_exportlib) goto onerror;
-  if (is_extern && is_builtin) goto onerror;
-  if (is_extern && is_comptime) goto onerror;
-  if (is_builtin && is_comptime) goto onerror;
-  if (is_exportlib && is_builtin) goto onerror;
-  if (is_exportlib && is_comptime) goto onerror;
-  if (is_using && is_extern) goto onerror;
-  if (is_using && is_builtin) goto onerror;
-  if (is_using && is_comptime) goto onerror;
+  if (is_export && is_exportlib)
+    goto onerror;
+  if (is_extern && is_export)
+    goto onerror;
+  if (is_extern && is_exportlib)
+    goto onerror;
+  if (is_extern && is_builtin)
+    goto onerror;
+  if (is_extern && is_comptime)
+    goto onerror;
+  if (is_builtin && is_comptime)
+    goto onerror;
+  if (is_exportlib && is_builtin)
+    goto onerror;
+  if (is_exportlib && is_comptime)
+    goto onerror;
+  if (is_using && is_extern)
+    goto onerror;
+  if (is_using && is_builtin)
+    goto onerror;
+  if (is_using && is_comptime)
+    goto onerror;
 
   /* 3. Expect 'var' keyword (skip if 'using' takes its place) */
   if (!is_using) {
@@ -205,8 +233,12 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens,
 
   /* 4. Parse single declarator */
   declarator = read_declaration_variable(ctx, tokens, &current, filename);
-  if (node_is_error(declarator)) { allocator_free(allocator, &decorators); return declarator; }
-  if (!declarator) goto onerror;
+  if (node_is_error(declarator)) {
+    allocator_free(allocator, &decorators);
+    return declarator;
+  }
+  if (!declarator)
+    goto onerror;
 
   /* 5. Validate: extern/builtin declarations must not have initializer */
   if (is_extern || is_builtin) {
@@ -256,7 +288,8 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens,
       .declarator = declarator,
       .decorators = decorators,
   };
-  node = allocator_create(allocator, &g_cubec_statement_declaration_type, &init);
+  node =
+      allocator_create(allocator, &g_cubec_statement_declaration_type, &init);
   *position = current;
   return &node->super;
 
@@ -273,16 +306,26 @@ node_t cubec_ast_create_var_decl_stmt(context_t ctx, location_t loc,
                                       bool is_extern, bool is_builtin,
                                       bool is_comptime, bool is_using) {
   allocator_t alloc = ctx->allocator;
-  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
+  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
   cubec_declaration_variable_init_t dv_init = {
-      .location = loc, .parent = NULL, .identifier = (node_t)name_node,
-      .type = type, .expression = expr};
+      .location = loc,
+      .parent = NULL,
+      .identifier = name_node,
+      .type = type,
+      .expression = expr,
+  };
   node_t decl_node = (node_t)allocator_create(
       alloc, &g_cubec_declaration_variable_type, &dv_init);
   cubec_statement_declaration_init_t sd_init = {
-      .location = loc, .parent = NULL, .is_export = is_export,
-      .is_extern = is_extern, .is_builtin = is_builtin,
-      .is_comptime = is_comptime, .is_using = is_using, .declarator = decl_node};
+      .location = loc,
+      .parent = NULL,
+      .is_export = is_export,
+      .is_extern = is_extern,
+      .is_builtin = is_builtin,
+      .is_comptime = is_comptime,
+      .is_using = is_using,
+      .declarator = decl_node,
+  };
   return (node_t)allocator_create(alloc, &g_cubec_statement_declaration_type,
                                   &sd_init);
 }

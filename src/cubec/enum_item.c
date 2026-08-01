@@ -1,6 +1,6 @@
 #include "cubec/enum_item.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
+#include "cubec/literal_identifier.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 
@@ -8,10 +8,10 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_enum_item_init(cubec_enum_item_t self,
-                                   allocator_t allocator,
-                                   cubec_enum_item_init_t *init) {
-  if (!init) return;
+static void _cubec_enum_item_init(cubec_enum_item_t self, allocator_t allocator,
+                                  cubec_enum_item_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_ENUM_ITEM,
       .parent = NULL,
@@ -24,7 +24,7 @@ static void _cubec_enum_item_init(cubec_enum_item_t self,
 }
 
 static void _cubec_enum_item_dispose(cubec_enum_item_t self,
-                                      allocator_t allocator) {
+                                     allocator_t allocator) {
   allocator_free(allocator, &self->value);
   allocator_free(allocator, &self->type);
   allocator_free(allocator, &self->name);
@@ -32,8 +32,8 @@ static void _cubec_enum_item_dispose(cubec_enum_item_t self,
 }
 
 static void _cubec_enum_item_clone(cubec_enum_item_t self,
-                                    allocator_t allocator,
-                                    cubec_enum_item_t another) {
+                                   allocator_t allocator,
+                                   cubec_enum_item_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->name = value_clone(allocator, another->name);
   self->type = another->type ? value_clone(allocator, another->type) : NULL;
@@ -41,9 +41,8 @@ static void _cubec_enum_item_clone(cubec_enum_item_t self,
   return;
 }
 
-static void _cubec_enum_item_move(cubec_enum_item_t self,
-                                   allocator_t allocator,
-                                   cubec_enum_item_t another) {
+static void _cubec_enum_item_move(cubec_enum_item_t self, allocator_t allocator,
+                                  cubec_enum_item_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->name = value_move(allocator, another->name);
   self->type = another->type ? value_move(allocator, another->type) : NULL;
@@ -64,8 +63,8 @@ type_t g_cubec_enum_item_type = {
  *  Parser: read_enum_item — <identifier> [: <type>] [= <value>]
  * -------------------------------------------------------------------------- */
 
-node_t read_enum_item(context_t ctx, vec_t tokens,
-                       size_t *position, const char *filename) {
+node_t read_enum_item(context_t ctx, vec_t tokens, size_t *position,
+                      const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t name = NULL;
@@ -125,7 +124,8 @@ node_t read_enum_item(context_t ctx, vec_t tokens,
       .value = value_expr,
   };
   node = allocator_create(allocator, &g_cubec_enum_item_type, &init);
-  if (!node) goto cleanup;
+  if (!node)
+    goto cleanup;
   *position = current;
   return &node->super;
 
@@ -142,12 +142,13 @@ cleanup:
  * -------------------------------------------------------------------------- */
 
 node_t cubec_ast_create_enum_item(context_t ctx, location_t loc,
-                                  const char *name, node_t type,
-                                  node_t value) {
+                                  const char *name, node_t type, node_t value) {
   allocator_t alloc = ctx->allocator;
-  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
-  cubec_enum_item_init_t init = {.location = loc, .parent = NULL,
-                                 .name = (node_t)name_node, .type = type,
+  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  cubec_enum_item_init_t init = {.location = loc,
+                                 .parent = NULL,
+                                 .name = (node_t)name_node,
+                                 .type = type,
                                  .value = value};
   return (node_t)allocator_create(alloc, &g_cubec_enum_item_type, &init);
 }

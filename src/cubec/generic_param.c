@@ -1,6 +1,7 @@
 #include "cubec/generic_param.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
+#include "cubec/literal_identifier.h"
+#include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 
@@ -8,10 +9,11 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_generic_param_init(
-    cubec_generic_param_t self, allocator_t allocator,
-    cubec_generic_param_init_t *init) {
-  if (!init) return;
+static void _cubec_generic_param_init(cubec_generic_param_t self,
+                                      allocator_t allocator,
+                                      cubec_generic_param_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_GENERIC_PARAM,
       .parent = NULL,
@@ -24,39 +26,36 @@ static void _cubec_generic_param_init(
   self->is_rest = init->is_rest;
 }
 
-static void _cubec_generic_param_dispose(
-    cubec_generic_param_t self, allocator_t allocator) {
+static void _cubec_generic_param_dispose(cubec_generic_param_t self,
+                                         allocator_t allocator) {
   allocator_free(allocator, &self->value_type);
   allocator_free(allocator, &self->constraints);
   allocator_free(allocator, &self->name);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_generic_param_clone(
-    cubec_generic_param_t self, allocator_t allocator,
-    cubec_generic_param_t another) {
+static void _cubec_generic_param_clone(cubec_generic_param_t self,
+                                       allocator_t allocator,
+                                       cubec_generic_param_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->name = value_clone(allocator, another->name);
   self->constraints = another->constraints
                           ? value_clone(allocator, another->constraints)
                           : NULL;
-  self->value_type = another->value_type
-                         ? value_clone(allocator, another->value_type)
-                         : NULL;
+  self->value_type =
+      another->value_type ? value_clone(allocator, another->value_type) : NULL;
   self->is_rest = another->is_rest;
 }
 
-static void _cubec_generic_param_move(
-    cubec_generic_param_t self, allocator_t allocator,
-    cubec_generic_param_t another) {
+static void _cubec_generic_param_move(cubec_generic_param_t self,
+                                      allocator_t allocator,
+                                      cubec_generic_param_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->name = value_move(allocator, another->name);
-  self->constraints = another->constraints
-                          ? value_move(allocator, another->constraints)
-                          : NULL;
-  self->value_type = another->value_type
-                         ? value_move(allocator, another->value_type)
-                         : NULL;
+  self->constraints =
+      another->constraints ? value_move(allocator, another->constraints) : NULL;
+  self->value_type =
+      another->value_type ? value_move(allocator, another->value_type) : NULL;
   self->is_rest = another->is_rest;
 }
 
@@ -75,14 +74,17 @@ type_t g_cubec_generic_param_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -90,9 +92,10 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Helper: parse a single generic parameter
  * -------------------------------------------------------------------------- */
 
-static cubec_generic_param_t _parse_one_generic_param(
-    context_t ctx, vec_t tokens, size_t *current,
-    const char *filename) {
+static cubec_generic_param_t _parse_one_generic_param(context_t ctx,
+                                                      vec_t tokens,
+                                                      size_t *current,
+                                                      const char *filename) {
   allocator_t allocator = ctx->allocator;
 
   node_t name = NULL;
@@ -129,7 +132,8 @@ static cubec_generic_param_t _parse_one_generic_param(
     while (token_is(vec_get(tokens, *current), CUBEC_TOKEN_SYMBOL, "&")) {
       (*current)++;
       skip_whitespace(tokens, current);
-      node_t next = read_type_expression_primary(ctx, tokens, current, filename);
+      node_t next =
+          read_type_expression_primary(ctx, tokens, current, filename);
       if (!next) {
         goto fail;
       }
@@ -149,24 +153,29 @@ static cubec_generic_param_t _parse_one_generic_param(
   }
 
   cubec_generic_param_t param = NULL;
-  param = allocator_create(allocator, &g_cubec_generic_param_type, &(cubec_generic_param_init_t){
-      .name = name, .constraints = constraints, .value_type = value_type, .is_rest = is_rest,
-  });
+  param = allocator_create(allocator, &g_cubec_generic_param_type,
+                           &(cubec_generic_param_init_t){
+                               .name = name,
+                               .constraints = constraints,
+                               .value_type = value_type,
+                               .is_rest = is_rest,
+                           });
 
   return param;
 
-fail:       allocator_free(allocator, &value_type);
-            allocator_free(allocator, &constraints);
-            allocator_free(allocator, &name);
-            return NULL;
+fail:
+  allocator_free(allocator, &value_type);
+  allocator_free(allocator, &constraints);
+  allocator_free(allocator, &name);
+  return NULL;
 }
 
 /* --------------------------------------------------------------------------
  *  Parser: read_generic_params
  * -------------------------------------------------------------------------- */
 
-vec_t read_generic_params(context_t ctx, vec_t tokens,
-                          size_t *position, const char *filename) {
+vec_t read_generic_params(context_t ctx, vec_t tokens, size_t *position,
+                          const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   vec_t params = NULL;
@@ -184,7 +193,8 @@ vec_t read_generic_params(context_t ctx, vec_t tokens,
   params = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
 
   /* Parse first param (required) */
-  cubec_generic_param_t param = _parse_one_generic_param(ctx, tokens, &current, filename);
+  cubec_generic_param_t param =
+      _parse_one_generic_param(ctx, tokens, &current, filename);
   if (!param) {
     goto cleanup_params;
   }
@@ -231,11 +241,13 @@ node_t cubec_ast_create_generic_param(context_t ctx, location_t loc,
                                       const char *name, vec_t constraints,
                                       node_t value_type, bool is_rest) {
   allocator_t alloc = ctx->allocator;
-  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
-  cubec_generic_param_init_t init = {.location = loc,
-                                     .name = (node_t)name_node,
-                                     .constraints = constraints,
-                                     .value_type = value_type,
-                                     .is_rest = is_rest};
+  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  cubec_generic_param_init_t init = {
+      .location = loc,
+      .name = name_node,
+      .constraints = constraints,
+      .value_type = value_type,
+      .is_rest = is_rest,
+  };
   return (node_t)allocator_create(alloc, &g_cubec_generic_param_type, &init);
 }

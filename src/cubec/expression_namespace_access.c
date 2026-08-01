@@ -1,12 +1,12 @@
 #include "cubec/expression_namespace_access.h"
 #include "core/token.h"
-#include "cubec/ast_create_helpers.h"
 #include "cubec/token.h"
 
 static void _cubec_expression_namespace_access_init(
     cubec_expression_namespace_access_t self, allocator_t allocator,
     cubec_expression_namespace_access_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS,
       .parent = NULL,
@@ -30,7 +30,8 @@ static void _cubec_expression_namespace_access_clone(
     cubec_expression_namespace_access_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->host = value_clone(allocator, another->host);
-  self->field = (cubec_literal_identifier_t)value_clone(allocator, another->field);
+  self->field =
+      (cubec_literal_identifier_t)value_clone(allocator, another->field);
   return;
 
 cleanup:
@@ -43,7 +44,8 @@ static void _cubec_expression_namespace_access_move(
     cubec_expression_namespace_access_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->host = value_move(allocator, another->host);
-  self->field = (cubec_literal_identifier_t)value_move(allocator, another->field);
+  self->field =
+      (cubec_literal_identifier_t)value_move(allocator, another->field);
   return;
 
 cleanup:
@@ -84,10 +86,10 @@ node_t read_expression_namespace_access(context_t ctx, vec_t tokens,
   field = (cubec_literal_identifier_t)field_node;
 
   node = allocator_create(allocator, &g_cubec_expression_namespace_access_type,
-                       &(cubec_expression_namespace_access_init_t){
-                           .host = host,
-                           .field = field,
-                       });
+                          &(cubec_expression_namespace_access_init_t){
+                              .host = host,
+                              .field = field,
+                          });
   location_t *loc = token_get_location(colon_colon_token);
   node->super.super.location = *loc;
   node->super.super.location.filename = filename;
@@ -108,9 +110,13 @@ onerror:
 node_t cubec_ast_create_namespace_access(context_t ctx, location_t loc,
                                          node_t host, const char *field) {
   allocator_t alloc = ctx->allocator;
-      cubec_expression_namespace_access_init_t init = {
-      .location = loc, .parent = NULL, .host = host,
-      .field = _make_ident_node(ctx, loc, field)};
+  cubec_expression_namespace_access_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .host = host,
+      .field = (cubec_literal_identifier_t)cubec_ast_create_identifier(ctx, loc,
+                                                                       field),
+  };
   return (node_t)allocator_create(
       alloc, &g_cubec_expression_namespace_access_type, &init);
 }

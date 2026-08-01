@@ -1,6 +1,7 @@
 #include "cubec/function_argument.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
+#include "cubec/literal_identifier.h"
+#include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 
@@ -8,10 +9,12 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_function_argument_init(
-    cubec_function_argument_t self, allocator_t allocator,
-    cubec_function_argument_init_t *init) {
-  if (!init) return;
+static void
+_cubec_function_argument_init(cubec_function_argument_t self,
+                              allocator_t allocator,
+                              cubec_function_argument_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_FUNCTION_ARGUMENT,
       .parent = NULL,
@@ -23,32 +26,28 @@ static void _cubec_function_argument_init(
   self->is_rest = init->is_rest;
 }
 
-static void _cubec_function_argument_dispose(
-    cubec_function_argument_t self, allocator_t allocator) {
+static void _cubec_function_argument_dispose(cubec_function_argument_t self,
+                                             allocator_t allocator) {
   allocator_free(allocator, &self->type);
   allocator_free(allocator, &self->identifier);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_function_argument_clone(
-    cubec_function_argument_t self, allocator_t allocator,
-    cubec_function_argument_t another) {
+static void _cubec_function_argument_clone(cubec_function_argument_t self,
+                                           allocator_t allocator,
+                                           cubec_function_argument_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->identifier = value_clone(allocator, another->identifier);
-  self->type = another->type
-                   ? value_clone(allocator, another->type)
-                   : NULL;
+  self->type = another->type ? value_clone(allocator, another->type) : NULL;
   self->is_rest = another->is_rest;
 }
 
-static void _cubec_function_argument_move(
-    cubec_function_argument_t self, allocator_t allocator,
-    cubec_function_argument_t another) {
+static void _cubec_function_argument_move(cubec_function_argument_t self,
+                                          allocator_t allocator,
+                                          cubec_function_argument_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->identifier = value_move(allocator, another->identifier);
-  self->type = another->type
-                   ? value_move(allocator, another->type)
-                   : NULL;
+  self->type = another->type ? value_move(allocator, another->type) : NULL;
   self->is_rest = another->is_rest;
 }
 
@@ -67,7 +66,8 @@ type_t g_cubec_function_argument_type = {
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -75,8 +75,8 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_function_argument
  * -------------------------------------------------------------------------- */
 
-node_t read_function_argument(context_t ctx, vec_t tokens,
-                               size_t *position, const char *filename) {
+node_t read_function_argument(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t identifier = NULL;
@@ -117,7 +117,8 @@ node_t read_function_argument(context_t ctx, vec_t tokens,
 
   /* 5. Build location */
   location_t *start_loc = token_get_location(first);
-  location_t *end_loc = type ? &((node_t)type)->location : token_get_location(vec_get(tokens, current - 1));
+  location_t *end_loc = type ? &((node_t)type)->location
+                             : token_get_location(vec_get(tokens, current - 1));
   location_t loc = {
       .begin = start_loc->begin,
       .end = end_loc->end,
@@ -127,13 +128,14 @@ node_t read_function_argument(context_t ctx, vec_t tokens,
   /* 6. Create node */
   cubec_function_argument_t arg = NULL;
   arg = allocator_create(allocator, &g_cubec_function_argument_type,
-      &(cubec_function_argument_init_t){
-          .location = loc,
-          .identifier = identifier,
-          .type = type,
-          .is_rest = is_rest,
-      });
-  if (!arg) goto fail;
+                         &(cubec_function_argument_init_t){
+                             .location = loc,
+                             .identifier = identifier,
+                             .type = type,
+                             .is_rest = is_rest,
+                         });
+  if (!arg)
+    goto fail;
 
   *position = current;
   return (node_t)&arg->super;
@@ -151,10 +153,12 @@ fail:
 node_t cubec_ast_create_func_arg(context_t ctx, location_t loc,
                                  const char *name, node_t type) {
   allocator_t alloc = ctx->allocator;
-  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
-  cubec_function_argument_init_t init = {.location = loc,
-                                         .identifier = (node_t)name_node,
-                                         .type = type};
+  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  cubec_function_argument_init_t init = {
+      .location = loc,
+      .identifier = name_node,
+      .type = type,
+  };
   return (node_t)allocator_create(alloc, &g_cubec_function_argument_type,
                                   &init);
 }

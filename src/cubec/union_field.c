@@ -1,6 +1,7 @@
 #include "cubec/union_field.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
+#include "cubec/literal_identifier.h"
+#include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 
@@ -9,9 +10,10 @@
  * -------------------------------------------------------------------------- */
 
 static void _cubec_union_field_init(cubec_union_field_t self,
-                                      allocator_t allocator,
-                                      cubec_union_field_init_t *init) {
-  if (!init) return;
+                                    allocator_t allocator,
+                                    cubec_union_field_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_UNION_FIELD,
       .parent = NULL,
@@ -23,15 +25,15 @@ static void _cubec_union_field_init(cubec_union_field_t self,
 }
 
 static void _cubec_union_field_dispose(cubec_union_field_t self,
-                                         allocator_t allocator) {
+                                       allocator_t allocator) {
   allocator_free(allocator, &self->type);
   allocator_free(allocator, &self->name);
   g_node_type.dispose(&self->super, allocator);
 }
 
 static void _cubec_union_field_clone(cubec_union_field_t self,
-                                       allocator_t allocator,
-                                       cubec_union_field_t another) {
+                                     allocator_t allocator,
+                                     cubec_union_field_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->name = value_clone(allocator, another->name);
   self->type = value_clone(allocator, another->type);
@@ -39,8 +41,8 @@ static void _cubec_union_field_clone(cubec_union_field_t self,
 }
 
 static void _cubec_union_field_move(cubec_union_field_t self,
-                                      allocator_t allocator,
-                                      cubec_union_field_t another) {
+                                    allocator_t allocator,
+                                    cubec_union_field_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->name = value_move(allocator, another->name);
   self->type = value_move(allocator, another->type);
@@ -60,8 +62,8 @@ type_t g_cubec_union_field_type = {
  *  Parser: read_union_field — <identifier> : <type> ;
  * -------------------------------------------------------------------------- */
 
-node_t read_union_field(context_t ctx, vec_t tokens,
-                          size_t *position, const char *filename) {
+node_t read_union_field(context_t ctx, vec_t tokens, size_t *position,
+                        const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t name = NULL;
@@ -114,7 +116,8 @@ node_t read_union_field(context_t ctx, vec_t tokens,
       .type = type_expr,
   };
   node = allocator_create(allocator, &g_cubec_union_field_type, &init);
-  if (!node) goto cleanup;
+  if (!node)
+    goto cleanup;
   *position = current;
   return &node->super;
 
@@ -132,8 +135,12 @@ cleanup:
 node_t cubec_ast_create_union_field(context_t ctx, location_t loc,
                                     const char *name, node_t type) {
   allocator_t alloc = ctx->allocator;
-  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
-  cubec_union_field_init_t init = {.location = loc, .parent = NULL,
-                                   .name = (node_t)name_node, .type = type};
+  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  cubec_union_field_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .name = name_node,
+      .type = type,
+  };
   return (node_t)allocator_create(alloc, &g_cubec_union_field_type, &init);
 }

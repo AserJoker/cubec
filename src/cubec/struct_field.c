@@ -1,6 +1,7 @@
 #include "cubec/struct_field.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
+#include "cubec/literal_identifier.h"
+#include "cubec/node.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 
@@ -9,9 +10,10 @@
  * -------------------------------------------------------------------------- */
 
 static void _cubec_struct_field_init(cubec_struct_field_t self,
-                                      allocator_t allocator,
-                                      cubec_struct_field_init_t *init) {
-  if (!init) return;
+                                     allocator_t allocator,
+                                     cubec_struct_field_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STRUCT_FIELD,
       .parent = NULL,
@@ -24,15 +26,15 @@ static void _cubec_struct_field_init(cubec_struct_field_t self,
 }
 
 static void _cubec_struct_field_dispose(cubec_struct_field_t self,
-                                         allocator_t allocator) {
+                                        allocator_t allocator) {
   allocator_free(allocator, &self->type);
   allocator_free(allocator, &self->name);
   g_node_type.dispose(&self->super, allocator);
 }
 
 static void _cubec_struct_field_clone(cubec_struct_field_t self,
-                                       allocator_t allocator,
-                                       cubec_struct_field_t another) {
+                                      allocator_t allocator,
+                                      cubec_struct_field_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->is_pub = another->is_pub;
   self->name = value_clone(allocator, another->name);
@@ -41,8 +43,8 @@ static void _cubec_struct_field_clone(cubec_struct_field_t self,
 }
 
 static void _cubec_struct_field_move(cubec_struct_field_t self,
-                                      allocator_t allocator,
-                                      cubec_struct_field_t another) {
+                                     allocator_t allocator,
+                                     cubec_struct_field_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->is_pub = another->is_pub;
   self->name = value_move(allocator, another->name);
@@ -65,8 +67,10 @@ type_t g_cubec_struct_field_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
@@ -74,8 +78,8 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
  *  Parser: read_struct_field — [pub] <identifier> : <type> ;
  * -------------------------------------------------------------------------- */
 
-node_t read_struct_field(context_t ctx, vec_t tokens,
-                          size_t *position, const char *filename) {
+node_t read_struct_field(context_t ctx, vec_t tokens, size_t *position,
+                         const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   bool is_pub = false;
@@ -144,7 +148,8 @@ node_t read_struct_field(context_t ctx, vec_t tokens,
       .type = type_expr,
   };
   node = allocator_create(allocator, &g_cubec_struct_field_type, &init);
-  if (!node) goto cleanup;
+  if (!node)
+    goto cleanup;
   *position = current;
   return &node->super;
 
@@ -163,9 +168,13 @@ node_t cubec_ast_create_struct_field(context_t ctx, location_t loc,
                                      const char *name, node_t type,
                                      bool is_pub) {
   allocator_t alloc = ctx->allocator;
-  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
-  cubec_struct_field_init_t init = {.location = loc, .parent = NULL,
-                                    .is_pub = is_pub, .name = (node_t)name_node,
-                                    .type = type};
+  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  cubec_struct_field_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .is_pub = is_pub,
+      .name = name_node,
+      .type = type,
+  };
   return (node_t)allocator_create(alloc, &g_cubec_struct_field_type, &init);
 }

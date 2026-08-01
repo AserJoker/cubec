@@ -1,14 +1,15 @@
 #include "cubec/statement_import.h"
-#include "cubec/ast_create_helpers.h"
-#include "cubec/node_error.h"
 #include "core/token.h"
+#include "cubec/literal_identifier.h"
 #include "cubec/literal_string.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 
-static void _cubec_statement_import_init(
-    cubec_statement_import_t self, allocator_t allocator,
-    cubec_statement_import_init_t *init) {
-  if (!init) return;
+static void _cubec_statement_import_init(cubec_statement_import_t self,
+                                         allocator_t allocator,
+                                         cubec_statement_import_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_IMPORT,
       .parent = NULL,
@@ -19,25 +20,25 @@ static void _cubec_statement_import_init(
   self->path = init->path;
 }
 
-static void _cubec_statement_import_dispose(
-    cubec_statement_import_t self, allocator_t allocator) {
+static void _cubec_statement_import_dispose(cubec_statement_import_t self,
+                                            allocator_t allocator) {
   allocator_free(allocator, &self->path);
   allocator_free(allocator, &self->module_name);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_statement_import_clone(
-    cubec_statement_import_t self, allocator_t allocator,
-    cubec_statement_import_t another) {
+static void _cubec_statement_import_clone(cubec_statement_import_t self,
+                                          allocator_t allocator,
+                                          cubec_statement_import_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->module_name = value_clone(allocator, another->module_name);
   self->path = value_clone(allocator, another->path);
   return;
 }
 
-static void _cubec_statement_import_move(
-    cubec_statement_import_t self, allocator_t allocator,
-    cubec_statement_import_t another) {
+static void _cubec_statement_import_move(cubec_statement_import_t self,
+                                         allocator_t allocator,
+                                         cubec_statement_import_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->module_name = value_move(allocator, another->module_name);
   self->path = value_move(allocator, another->path);
@@ -58,13 +59,15 @@ type_t g_cubec_statement_import_type = {
  */
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
-node_t read_statement_import(context_t ctx, vec_t tokens,
-                             size_t *position, const char *filename) {
+node_t read_statement_import(context_t ctx, vec_t tokens, size_t *position,
+                             const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_statement_import_t node = NULL;
@@ -133,8 +136,8 @@ node_t read_statement_import(context_t ctx, vec_t tokens,
   return &node->super;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid import statement");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid import statement");
   ctx->error_count++;
   allocator_free(allocator, &path);
   allocator_free(allocator, &module_name);
@@ -143,17 +146,15 @@ onerror:
 }
 
 node_t cubec_ast_create_import_stmt(context_t ctx, location_t loc,
-                                    const char *module_name,
-                                    const char *path) {
+                                    const char *module_name, const char *path) {
   allocator_t alloc = ctx->allocator;
-  node_t mod_node = (module_name)
-                        ? (node_t)_make_ident_node(ctx, loc, module_name)
-                        : NULL;
-  node_t path_node = (path) ? (node_t)_make_ident_node(ctx, loc, path)
-                            : NULL;
-  cubec_statement_import_init_t init = {.location = loc, .parent = NULL,
+  node_t mod_node =
+      (module_name) ? cubec_ast_create_identifier(ctx, loc, module_name) : NULL;
+  node_t path_node =
+      (path) ? cubec_ast_create_identifier(ctx, loc, path) : NULL;
+  cubec_statement_import_init_t init = {.location = loc,
+                                        .parent = NULL,
                                         .module_name = mod_node,
                                         .path = path_node};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_import_type,
-                                  &init);
+  return (node_t)allocator_create(alloc, &g_cubec_statement_import_type, &init);
 }

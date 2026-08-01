@@ -1,19 +1,19 @@
 #include "cubec/statement_test.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
+#include "cubec/node_error.h"
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "cubec/node_error.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_statement_test_init(
-    cubec_statement_test_t self, allocator_t allocator,
-    cubec_statement_test_init_t *init) {
-  if (!init) return;
+static void _cubec_statement_test_init(cubec_statement_test_t self,
+                                       allocator_t allocator,
+                                       cubec_statement_test_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_TEST,
       .parent = NULL,
@@ -24,25 +24,25 @@ static void _cubec_statement_test_init(
   self->body = init->body;
 }
 
-static void _cubec_statement_test_dispose(
-    cubec_statement_test_t self, allocator_t allocator) {
+static void _cubec_statement_test_dispose(cubec_statement_test_t self,
+                                          allocator_t allocator) {
   allocator_free(allocator, &self->body);
   allocator_free(allocator, &self->name);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_statement_test_clone(
-    cubec_statement_test_t self, allocator_t allocator,
-    cubec_statement_test_t another) {
+static void _cubec_statement_test_clone(cubec_statement_test_t self,
+                                        allocator_t allocator,
+                                        cubec_statement_test_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->name = (string_t)value_clone(allocator, another->name);
   self->body = value_clone(allocator, another->body);
   return;
 }
 
-static void _cubec_statement_test_move(
-    cubec_statement_test_t self, allocator_t allocator,
-    cubec_statement_test_t another) {
+static void _cubec_statement_test_move(cubec_statement_test_t self,
+                                       allocator_t allocator,
+                                       cubec_statement_test_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->name = (string_t)value_move(allocator, another->name);
   self->body = value_move(allocator, another->body);
@@ -64,8 +64,10 @@ type_t g_cubec_statement_test_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
@@ -73,8 +75,8 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
  *  Parser: read_statement_test — test "name" { }
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_test(context_t ctx, vec_t tokens,
-                            size_t *position, const char *filename) {
+node_t read_statement_test(context_t ctx, vec_t tokens, size_t *position,
+                           const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   string_t name = NULL;
@@ -97,14 +99,19 @@ node_t read_statement_test(context_t ctx, vec_t tokens,
     goto onerror;
   }
   name = allocator_create(allocator, &g_string_type, NULL);
-  string_nconcat(name, token_get_string(name_token), token_get_string_length(name_token));
+  string_nconcat(name, token_get_string(name_token),
+                 token_get_string_length(name_token));
   current++;
   skip_whitespace(tokens, &current);
 
   /* 3. Parse body (block) */
   body = read_statement_block(ctx, tokens, &current, filename);
-  if (node_is_error(body)) { allocator_free(allocator, &name); return body; }
-  if (!body) goto onerror;
+  if (node_is_error(body)) {
+    allocator_free(allocator, &name);
+    return body;
+  }
+  if (!body)
+    goto onerror;
 
   /* 4. Build location */
   location_t loc = start_location;
@@ -130,9 +137,9 @@ onerror:
 node_t cubec_ast_create_test_stmt(context_t ctx, location_t loc,
                                   const char *name, node_t body) {
   allocator_t alloc = ctx->allocator;
-  string_t name_str = _make_string(ctx, name);
-  cubec_statement_test_init_t init = {.location = loc, .parent = NULL,
-                                      .name = name_str, .body = body};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_test_type,
-                                  &init);
+  string_t name_str =
+      allocator_create(alloc, &g_string_type, &(string_init_t){.str = name});
+  cubec_statement_test_init_t init = {
+      .location = loc, .parent = NULL, .name = name_str, .body = body};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_test_type, &init);
 }

@@ -1,6 +1,7 @@
 #include "cubec/expression_binary.h"
+#include "core/allocator.h"
+#include "core/string.h"
 #include "core/token.h"
-#include "cubec/ast_create_helpers.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 
@@ -8,10 +9,12 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_expression_binary_init(cubec_expression_binary_t self,
-                                          allocator_t allocator,
-                                          cubec_expression_binary_init_t *init) {
-  if (!init) return;
+static void
+_cubec_expression_binary_init(cubec_expression_binary_t self,
+                              allocator_t allocator,
+                              cubec_expression_binary_init_t *init) {
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_BINARY,
       .parent = NULL,
@@ -77,15 +80,18 @@ type_t g_cubec_expression_binary_type = {
 
 /** Set of supported prefix operator strings. */
 static const char *prefix_operators[] = {
-    "!", "+", "-", "~",
+    "!",
+    "+",
+    "-",
+    "~",
 };
 
 static bool is_prefix_operator_token(token_t tok) {
   if (token_get_kind(tok) != CUBEC_TOKEN_SYMBOL) {
     return false;
   }
-  for (size_t i = 0;
-       i < sizeof(prefix_operators) / sizeof(prefix_operators[0]); i++) {
+  for (size_t i = 0; i < sizeof(prefix_operators) / sizeof(prefix_operators[0]);
+       i++) {
     if (token_is(tok, CUBEC_TOKEN_SYMBOL, prefix_operators[i])) {
       return true;
     }
@@ -94,11 +100,11 @@ static bool is_prefix_operator_token(token_t tok) {
 }
 
 /* Forward declaration: parse unary (prefix + value), used by prefix parser */
-static node_t read_unary(context_t ctx, vec_t tokens,
-                         size_t *position, const char *filename);
+static node_t read_unary(context_t ctx, vec_t tokens, size_t *position,
+                         const char *filename);
 
-node_t read_expression_prefix(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename) {
+node_t read_expression_prefix(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_binary_t node = NULL;
@@ -126,7 +132,10 @@ node_t read_expression_prefix(context_t ctx, vec_t tokens,
 
   /* Parse operand via read_unary (prefix unary binds tighter than binary) */
   right = read_unary(ctx, tokens, &current, filename);
-  if (node_is_error(right)) { allocator_free(allocator, &opt); return right; }
+  if (node_is_error(right)) {
+    allocator_free(allocator, &opt);
+    return right;
+  }
   if (!right) {
     goto onerror;
   }
@@ -145,8 +154,8 @@ node_t read_expression_prefix(context_t ctx, vec_t tokens,
   return (node_t)node;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid prefix expression");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid prefix expression");
   ctx->error_count++;
   allocator_free(allocator, &opt);
   allocator_free(allocator, &right);
@@ -163,24 +172,18 @@ onerror:
  *        Lower precedence value = binds looser.
  */
 typedef struct {
-  const char *text;    /**< Operator string (e.g. "*", "+", "<=") */
-  int precedence;      /**< Precedence level (1=loosest for ||, 10=tightest for * / %) */
+  const char *text; /**< Operator string (e.g. "*", "+", "<=") */
+  int precedence;   /**< Precedence level (1=loosest for ||, 10=tightest for * /
+                       %) */
 } binary_op_entry_t;
 
 /** Sorted by descending precedence (tightest first) for readability.
  *  Note: "extends" is a keyword binary operator (same precedence as ==, !=)
  *  handled separately in get_binary_precedence(). */
 static const binary_op_entry_t binary_operators[] = {
-    {"*", 10},  {"/", 10},  {"%", 10},
-    {"+", 9},   {"-", 9},
-    {"<<", 8},  {">>", 8},
-    {"<", 7},   {">", 7},   {"<=", 7},  {">=", 7},
-    {"==", 6},  {"!=", 6},
-    {"&", 5},
-    {"^", 4},
-    {"|", 3},
-    {"&&", 2},
-    {"||", 1},
+    {"*", 10}, {"/", 10}, {"%", 10}, {"+", 9},  {"-", 9},  {"<<", 8},
+    {">>", 8}, {"<", 7},  {">", 7},  {"<=", 7}, {">=", 7}, {"==", 6},
+    {"!=", 6}, {"&", 5},  {"^", 4},  {"|", 3},  {"&&", 2}, {"||", 1},
 };
 
 /**
@@ -192,15 +195,15 @@ static int get_binary_precedence(token_t tok) {
   if (token_get_kind(tok) == CUBEC_TOKEN_KEYWORD) {
     if (token_is(tok, CUBEC_TOKEN_KEYWORD, "extends") ||
         token_is(tok, CUBEC_TOKEN_KEYWORD, "is")) {
-      return 6;  /* Same precedence as ==, != */
+      return 6; /* Same precedence as ==, != */
     }
     return 0;
   }
   if (token_get_kind(tok) != CUBEC_TOKEN_SYMBOL) {
     return 0;
   }
-  for (size_t i = 0;
-       i < sizeof(binary_operators) / sizeof(binary_operators[0]); i++) {
+  for (size_t i = 0; i < sizeof(binary_operators) / sizeof(binary_operators[0]);
+       i++) {
     if (token_is(tok, CUBEC_TOKEN_SYMBOL, binary_operators[i].text)) {
       return binary_operators[i].precedence;
     }
@@ -211,19 +214,18 @@ static int get_binary_precedence(token_t tok) {
 /**
  * @brief Make a binary-expression AST node.
  */
-static cubec_expression_binary_t make_binary_node(context_t ctx,
-                                                   node_t left, node_t right,
-                                                   string_t opt,
-                                                   token_t op_token,
-                                                   const char *filename) {
+static cubec_expression_binary_t make_binary_node(context_t ctx, node_t left,
+                                                  node_t right, string_t opt,
+                                                  token_t op_token,
+                                                  const char *filename) {
   allocator_t allocator = ctx->allocator;
-  cubec_expression_binary_t node = allocator_create(
-      allocator, &g_cubec_expression_binary_type,
-      &(cubec_expression_binary_init_t){
-          .left = left,
-          .right = right,
-          .opt = opt,
-      });
+  cubec_expression_binary_t node =
+      allocator_create(allocator, &g_cubec_expression_binary_type,
+                       &(cubec_expression_binary_init_t){
+                           .left = left,
+                           .right = right,
+                           .opt = opt,
+                       });
   location_t *loc = token_get_location(op_token);
   node->super.super.location = *loc;
   node->super.super.location.filename = filename;
@@ -234,8 +236,8 @@ static cubec_expression_binary_t make_binary_node(context_t ctx,
  * @brief Parse unary operand: tries prefix unary first, then value (atom +
  *        postfix). Does NOT handle binary infix operators.
  */
-static node_t read_unary(context_t ctx, vec_t tokens,
-                         size_t *position, const char *filename) {
+static node_t read_unary(context_t ctx, vec_t tokens, size_t *position,
+                         const char *filename) {
   node_t node = read_expression_prefix(ctx, tokens, position, filename);
   if (node) {
     return node;
@@ -249,16 +251,17 @@ static node_t read_unary(context_t ctx, vec_t tokens,
  *        Continues parsing right-hand operands while the next token is a
  *        binary operator whose precedence >= @p min_precedence.
  */
-static node_t read_binary_rhs(context_t ctx, vec_t tokens,
-                               size_t *position, const char *filename,
-                               node_t left, int min_precedence) {
+static node_t read_binary_rhs(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename, node_t left,
+                              int min_precedence) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
   while (true) {
     skip_whitespace(tokens, &current);
     /* Update position so caller gets correct offset when we break.
-     * After skipping whitespace, current points to the next meaningful token. */
+     * After skipping whitespace, current points to the next meaningful token.
+     */
     *position = current;
 
     token_t op_token = vec_get(tokens, current);
@@ -281,7 +284,10 @@ static node_t read_binary_rhs(context_t ctx, vec_t tokens,
     /* Parse right operand via read_unary (no binary yet) */
     skip_whitespace(tokens, &current);
     node_t right = read_unary(ctx, tokens, &current, filename);
-    if (node_is_error(right)) { allocator_free(allocator, &opt); return right; }
+    if (node_is_error(right)) {
+      allocator_free(allocator, &opt);
+      return right;
+    }
     if (!right) {
       allocator_free(allocator, &opt);
       break;
@@ -291,21 +297,20 @@ static node_t read_binary_rhs(context_t ctx, vec_t tokens,
      * (left-associative: use prec + 1 so equal-precedence on right
      *  won't steal the operand; right-associative would use prec). */
     skip_whitespace(tokens, &current);
-    right = read_binary_rhs(ctx, tokens, &current, filename, right,
-                            prec + 1);
+    right = read_binary_rhs(ctx, tokens, &current, filename, right, prec + 1);
 
-    left = (node_t)make_binary_node(ctx, left, right, opt, op_token,
-                                    filename);
+    left = (node_t)make_binary_node(ctx, left, right, opt, op_token, filename);
     *position = current;
   }
 
   return left;
 }
 
-node_t read_expression_binary(context_t ctx, vec_t tokens,
-                               size_t *position, const char *filename) {
+node_t read_expression_binary(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename) {
   node_t left = read_unary(ctx, tokens, position, filename);
-  if (node_is_error(left)) return left;
+  if (node_is_error(left))
+    return left;
   if (!left) {
     return NULL;
   }
@@ -319,12 +324,15 @@ node_t read_expression_binary(context_t ctx, vec_t tokens,
  *  Factory: cubec_ast_create_binary
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_binary(context_t ctx, location_t loc,
-                               const char *op, node_t left, node_t right) {
+node_t cubec_ast_create_binary(context_t ctx, location_t loc, const char *op,
+                               node_t left, node_t right) {
   allocator_t alloc = ctx->allocator;
-  string_t op_str = _make_string(ctx, op);
-  cubec_expression_binary_init_t init = {.location = loc, .parent = NULL,
-                                         .left = left, .right = right,
+  string_t op_str =
+      allocator_create(alloc, &g_string_type, &(string_init_t){.str = op});
+  cubec_expression_binary_init_t init = {.location = loc,
+                                         .parent = NULL,
+                                         .left = left,
+                                         .right = right,
                                          .opt = op_str};
   return (node_t)allocator_create(alloc, &g_cubec_expression_binary_type,
                                   &init);

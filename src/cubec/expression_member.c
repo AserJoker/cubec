@@ -1,12 +1,13 @@
 #include "cubec/expression_member.h"
 #include "core/token.h"
-#include "cubec/ast_create_helpers.h"
 #include "cubec/token.h"
 
-static void _cubec_expression_member_init(cubec_expression_member_t self,
-                                          allocator_t allocator,
-                                          cubec_expression_member_init_t *init) {
-  if (!init) return;
+static void
+_cubec_expression_member_init(cubec_expression_member_t self,
+                              allocator_t allocator,
+                              cubec_expression_member_init_t *init) {
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_MEMBER,
       .parent = NULL,
@@ -30,7 +31,8 @@ static void _cubec_expression_member_clone(cubec_expression_member_t self,
                                            cubec_expression_member_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->host = value_clone(allocator, another->host);
-  self->field = (cubec_literal_identifier_t)value_clone(allocator, another->field);
+  self->field =
+      (cubec_literal_identifier_t)value_clone(allocator, another->field);
   return;
 
 cleanup:
@@ -61,9 +63,8 @@ type_t g_cubec_expression_member_type = {
     .move = (type_move_fn_t)_cubec_expression_member_move,
 };
 
-node_t read_expression_member(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename,
-                              node_t host) {
+node_t read_expression_member(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename, node_t host) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_member_t node = NULL;
@@ -78,8 +79,7 @@ node_t read_expression_member(context_t ctx, vec_t tokens,
 
   /* Expect identifier after '.' */
   skip_whitespace(tokens, &current);
-  node_t field_node =
-      read_literal_identifier(ctx, tokens, &current, filename);
+  node_t field_node = read_literal_identifier(ctx, tokens, &current, filename);
   if (!field_node) {
     return NULL;
   }
@@ -107,12 +107,16 @@ onerror:
  *  Factory: cubec_ast_create_member
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_member(context_t ctx, location_t loc,
-                               node_t host, const char *field) {
+node_t cubec_ast_create_member(context_t ctx, location_t loc, node_t host,
+                               const char *field) {
   allocator_t alloc = ctx->allocator;
-      cubec_expression_member_init_t init = {
-      .location = loc, .parent = NULL, .host = host,
-      .field = _make_ident_node(ctx, loc, field)};
+  cubec_expression_member_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .host = host,
+      .field = (cubec_literal_identifier_t)cubec_ast_create_identifier(ctx, loc,
+                                                                       field),
+  };
   return (node_t)allocator_create(alloc, &g_cubec_expression_member_type,
                                   &init);
 }

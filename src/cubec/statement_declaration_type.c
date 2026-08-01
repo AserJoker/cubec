@@ -1,15 +1,16 @@
 #include "cubec/statement_declaration_type.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
 #include "cubec/decorator.h"
 #include "cubec/generic_param.h"
-#include "cubec/token.h"
+#include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
+#include "cubec/token.h"
 
 static void _cubec_statement_declaration_type_init(
     cubec_statement_declaration_type_t self, allocator_t allocator,
     cubec_statement_declaration_type_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_DECLARATION_TYPE,
       .parent = NULL,
@@ -41,9 +42,8 @@ static void _cubec_statement_declaration_type_clone(
   self->is_builtin = another->is_builtin;
   self->name = value_clone(allocator, another->name);
   self->params = value_clone(allocator, another->params);
-  self->type_value = another->type_value
-                         ? value_clone(allocator, another->type_value)
-                         : NULL;
+  self->type_value =
+      another->type_value ? value_clone(allocator, another->type_value) : NULL;
   return;
 }
 
@@ -55,9 +55,8 @@ static void _cubec_statement_declaration_type_move(
   self->is_builtin = another->is_builtin;
   self->name = value_move(allocator, another->name);
   self->params = value_move(allocator, another->params);
-  self->type_value = another->type_value
-                         ? value_move(allocator, another->type_value)
-                         : NULL;
+  self->type_value =
+      another->type_value ? value_move(allocator, another->type_value) : NULL;
   return;
 }
 
@@ -75,8 +74,10 @@ type_t g_cubec_statement_decltype = {
  */
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
@@ -98,10 +99,13 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
     while (true) {
       skip_whitespace(tokens, &current);
       node_t dec = read_decorator(ctx, tokens, &current, filename);
-      if (node_is_error(dec)) return dec;
-      if (!dec) break;
+      if (node_is_error(dec))
+        return dec;
+      if (!dec)
+        break;
       if (!decorators) {
-        decorators = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+        decorators =
+            allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
       }
       vec_push(decorators, dec);
     }
@@ -110,7 +114,8 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
   /* 1. Parse optional modifiers: export / builtin */
   while (true) {
     if (_is_keyword(tokens, current, "export")) {
-      if (is_export) goto onerror;
+      if (is_export)
+        goto onerror;
       is_export = true;
       if (start_location.begin.offset == 0) {
         token_t tok = vec_get(tokens, current);
@@ -120,7 +125,8 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
       current++;
       skip_whitespace(tokens, &current);
     } else if (_is_keyword(tokens, current, "builtin")) {
-      if (is_builtin) goto onerror;
+      if (is_builtin)
+        goto onerror;
       is_builtin = true;
       if (start_location.begin.offset == 0) {
         token_t tok = vec_get(tokens, current);
@@ -149,8 +155,12 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
 
   /* 3. Parse type alias name (required) */
   name = read_literal_identifier(ctx, tokens, &current, filename);
-  if (node_is_error(name)) { allocator_free(allocator, &decorators); return name; }
-  if (!name) goto onerror;
+  if (node_is_error(name)) {
+    allocator_free(allocator, &decorators);
+    return name;
+  }
+  if (!name)
+    goto onerror;
 
   skip_whitespace(tokens, &current);
 
@@ -161,7 +171,8 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
     skip_whitespace(tokens, &current);
   }
 
-  /* 5. Parse optional '= type_expression' (required for non-builtin, absent for builtin) */
+  /* 5. Parse optional '= type_expression' (required for non-builtin, absent for
+   * builtin) */
   if (!is_builtin) {
     token_t eq = vec_get(tokens, current);
     if (!eq || !token_is(eq, CUBEC_TOKEN_SYMBOL, "=")) {
@@ -173,8 +184,14 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
 
     /* Parse type expression (no comma/assignment — terminated by ';') */
     type_value = read_expression_base(ctx, tokens, &current, filename);
-    if (node_is_error(type_value)) { allocator_free(allocator, &decorators); allocator_free(allocator, &params); allocator_free(allocator, &name); return type_value; }
-    if (!type_value) goto onerror;
+    if (node_is_error(type_value)) {
+      allocator_free(allocator, &decorators);
+      allocator_free(allocator, &params);
+      allocator_free(allocator, &name);
+      return type_value;
+    }
+    if (!type_value)
+      goto onerror;
 
     skip_whitespace(tokens, &current);
   }
@@ -221,11 +238,15 @@ node_t cubec_ast_create_type_alias(context_t ctx, location_t loc,
                                    const char *name, node_t type_value,
                                    bool is_export, bool is_builtin) {
   allocator_t alloc = ctx->allocator;
-  cubec_literal_identifier_t name_node = _make_ident_node(ctx, loc, name);
+  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
   cubec_statement_declaration_type_init_t init = {
-      .location = loc, .parent = NULL, .is_export = is_export,
-      .is_builtin = is_builtin, .name = (node_t)name_node, .params = NULL,
-      .type_value = type_value};
-  return (node_t)allocator_create(
-      alloc, &g_cubec_statement_decltype, &init);
+      .location = loc,
+      .parent = NULL,
+      .is_export = is_export,
+      .is_builtin = is_builtin,
+      .name = name_node,
+      .params = NULL,
+      .type_value = type_value,
+  };
+  return (node_t)allocator_create(alloc, &g_cubec_statement_decltype, &init);
 }

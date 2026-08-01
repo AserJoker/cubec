@@ -1,13 +1,14 @@
 #include "cubec/literal_identifier.h"
-#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 
-static void _cubec_literal_identifier_init(cubec_literal_identifier_t self,
-                                           allocator_t allocator,
-                                           cubec_literal_identifier_init_t *init) {
-  if (!init) return;
+static void
+_cubec_literal_identifier_init(cubec_literal_identifier_t self,
+                               allocator_t allocator,
+                               cubec_literal_identifier_init_t *init) {
+  if (!init)
+    return;
   cubec_literal_init_t super_init = {
       .kind = CUBEC_NODE_LITERAL_IDENTIFIER,
       .parent = NULL,
@@ -30,9 +31,10 @@ static void _cubec_literal_identifier_dispose(cubec_literal_identifier_t self,
   g_cubec_literal_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_literal_identifier_clone(cubec_literal_identifier_t self,
-                                            allocator_t allocator,
-                                            cubec_literal_identifier_t another) {
+static void
+_cubec_literal_identifier_clone(cubec_literal_identifier_t self,
+                                allocator_t allocator,
+                                cubec_literal_identifier_t another) {
   g_cubec_literal_type.clone(&self->super, allocator, &another->super);
   self->value = value_clone(allocator, another->value);
 }
@@ -53,8 +55,8 @@ type_t g_cubec_literal_identifier_type = {
     .move = (type_move_fn_t)_cubec_literal_identifier_move,
 };
 
-node_t read_literal_identifier(context_t ctx, vec_t tokens,
-                               size_t *position, const char *filename) {
+node_t read_literal_identifier(context_t ctx, vec_t tokens, size_t *position,
+                               const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
@@ -74,7 +76,8 @@ node_t read_literal_identifier(context_t ctx, vec_t tokens,
   };
   cubec_literal_identifier_t node = NULL;
   node = allocator_create(allocator, &g_cubec_literal_identifier_type, &init);
-  if (!node) goto onerror;
+  if (!node)
+    goto onerror;
   node_t node_base = (node_t)node;
   node_base->location.filename = filename;
 
@@ -86,8 +89,8 @@ node_t read_literal_identifier(context_t ctx, vec_t tokens,
   *position = current;
   return node_base;
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid identifier");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid identifier");
   ctx->error_count++;
   allocator_free(allocator, &node);
   return cubec_ast_create_error(ctx, start_location);
@@ -95,5 +98,8 @@ onerror:
 
 node_t cubec_ast_create_identifier(context_t ctx, location_t loc,
                                    const char *name) {
-  return (node_t)_make_ident_node(ctx, loc, name);
+  allocator_t alloc = ctx->allocator;
+  cubec_literal_identifier_init_t init = {
+      .location = loc, .parent = NULL, .value = name};
+  return allocator_create(alloc, &g_cubec_literal_identifier_type, &init);
 }
