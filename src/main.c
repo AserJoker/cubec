@@ -2,7 +2,6 @@
 #include "core/env.h"
 #include "core/icu_data.h"
 #include "cmd/cmd_build.h"
-#include "cmd/cmd_lsp.h"
 #include "cmd/cmd_test.h"
 
 static cmd_subcommand_t commands[3];
@@ -12,7 +11,6 @@ int _main(int argc, char *argv[]) {
   env_init();
   commands[0] = cmd_build_def;
   commands[1] = cmd_test_def;
-  commands[2] = cmd_lsp_def;
   int ret = cmd_dispatch(commands, 3, argc, argv);
   env_dispose();
   return ret;
