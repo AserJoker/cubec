@@ -6,6 +6,7 @@
 #include "cubec/token.h"
 #include "cubec/program.h"
 #include "builder/cubec_writer.h"
+#include "writer/cubec_ast_writer.h"
 #include <string.h>
 #ifdef _WIN32
 #include <direct.h>
@@ -113,6 +114,21 @@ static int cmd_build_run(const cmd_parsed_t *parsed) {
     return 1;
   }
 
+  /* --dump-ast: serialize AST back to Cubec source (before checks) */
+  if (cmd_get_option(parsed, "--dump-ast") != NULL) {
+    string_t out = allocator_create(allocator, &g_string_type,
+                                    &(string_init_t){.str = NULL});
+    cubec_ast_write(allocator, program, out);
+    fprintf(stdout, "%s", string_get(out));
+    allocator_free(allocator, &out);
+    context_dispose(ctx);
+    allocator_free(allocator, &program);
+    allocator_free(allocator, &tokens);
+    free(source);
+    delete_allocator(allocator);
+    return 0;
+  }
+
   context_check_program(ctx, program);
   diagnostic_list_emit(ctx->diagnostics, ctx->sources);
 
@@ -157,6 +173,7 @@ static int cmd_build_run(const cmd_parsed_t *parsed) {
 
 static const cmd_option_t build_options[] = {
   {"--library", "-l", "Generate library (no C main entry)", false},
+  {"--dump-ast", NULL, "Dump desugared AST as Cubec source to stdout", false},
   {NULL, NULL, NULL, false},
 };
 
@@ -164,7 +181,7 @@ const cmd_subcommand_t cmd_build_def = {
   .name = "build",
   .help = "Compile to C and build executable/library",
   .options = build_options,
-  .option_count = 1,
+  .option_count = 2,
   .min_positional = 1,
   .max_positional = 1,
   .run = cmd_build_run,
