@@ -1,10 +1,9 @@
+#include "cubec/statement_function.h"
 #include "engine/context.h"
 #include "engine/checker_collect.h"
-#include "engine/checker_func_util.h"
 #include "engine/checker_type_util.h"
 #include "engine/resolver.h"
 #include "cubec/program.h"
-#include "cubec/literal_identifier.h"
 #include "cubec/statement_struct.h"
 #include "cubec/statement_enum.h"
 #include "cubec/statement_union.h"
@@ -15,7 +14,6 @@
 #include "cubec/statement_import.h"
 #include "cubec/statement_export_from.h"
 #include "cubec/declaration_variable.h"
-#include "cubec/generic_param.h"
 
 /* _register_generic_params moved to checker_func_util.c as context_register_generic_params */
 

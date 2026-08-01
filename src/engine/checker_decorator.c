@@ -12,7 +12,6 @@
 #include "engine/comptime_eval_internal.h"
 #include "engine/resolver.h"
 #include "cubec/decorator.h"
-#include "cubec/expression_call.h"
 #include <string.h>
 
 /* ===== helpers ===== */

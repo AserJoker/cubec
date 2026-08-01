@@ -7,11 +7,8 @@
 #include "engine/resolver.h"
 #include "engine/type_hash.h"
 #include "engine/type_layout.h"
-#include "engine/comptime_value.h"
 #include "engine/comptime_eval_internal.h"
 #include "cubec/literal_numeric.h"
-#include "cubec/literal_string.h"
-#include "cubec/literal_char.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/expression_postfix_unary.h"
@@ -31,7 +28,6 @@
 #include "cubec/expression_spread.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_generic_instantiation.h"
-#include "cubec/expression_type_qualifier.h"
 #include <string.h>
 
 /* ===== expression checker sub-functions ===== */

@@ -18,7 +18,6 @@
 #include "cubec/statement_block.h"
 #include "cubec/program.h"
 #include "cubec/literal_string.h"
-#include "cubec/literal_numeric.h"
 #include "cubec/statement_struct.h"
 #include "cubec/statement_enum.h"
 #include "cubec/statement_union.h"
@@ -29,12 +28,7 @@
 #include "cubec/statement_import.h"
 #include "cubec/statement_export_from.h"
 #include "cubec/statement_comptime.h"
-#include "cubec/struct_field.h"
-#include "cubec/enum_item.h"
-#include "cubec/union_field.h"
 #include "cubec/interface_method.h"
-#include "cubec/generic_param.h"
-#include "cubec/decorator.h"
 #include "cubec/declaration_variable.h"
 #include <string.h>
 

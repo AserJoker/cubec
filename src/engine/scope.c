@@ -1,5 +1,4 @@
 #include "engine/scope.h"
-#include "core/string.h"
 #include <string.h>
 
 struct _scope_t {

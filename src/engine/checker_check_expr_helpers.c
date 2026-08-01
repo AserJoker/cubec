@@ -5,15 +5,10 @@
 #include "engine/resolver.h"
 #include "engine/type_hash.h"
 #include "cubec/node.h"
-#include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/expression_generic_instantiation.h"
-#include "cubec/expression_initialize_list.h"
 #include "cubec/expression_initialize_field.h"
-#include "cubec/expression_spread.h"
 #include "cubec/expression_assignment.h"
-#include "cubec/expression_function.h"
-#include "cubec/function_argument.h"
 #include "cubec/generic_param.h"
 #include <string.h>
 

@@ -1,8 +1,6 @@
 #include "engine/comptime_eval_internal.h"
 #include "engine/resolver.h"
 #include "cubec/declaration_variable.h"
-#include "cubec/expression_binary.h"
-#include "cubec/expression_function.h"
 #include "cubec/function_capture.h"
 #include "cubec/statement_block.h"
 #include "cubec/statement_if.h"
@@ -11,16 +9,12 @@
 #include "cubec/statement_return.h"
 #include "cubec/statement_foreach.h"
 #include "cubec/statement_declaration.h"
-#include "cubec/statement_break.h"
-#include "cubec/statement_continue.h"
-#include "cubec/statement_empty.h"
 #include "cubec/statement_defer.h"
 #include "cubec/statement_switch.h"
 #include "cubec/statement_expression.h"
 #include "cubec/statement_comptime.h"
 #include "cubec/statement_do_while.h"
 #include "cubec/switch_match.h"
-#include "cubec/literal_undefined.h"
 #include <string.h>
 
 /* --- cleanup execution (defer + using dispose) --- */

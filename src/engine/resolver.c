@@ -1,14 +1,11 @@
 #include "engine/resolver.h"
 #include "engine/resolver_types.h"
 #include "engine/checker_type_util.h"
-#include "engine/comptime_value.h"
 #include "engine/type_hash.h"
 #include "cubec/node.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_wildcard.h"
 #include "cubec/expression_spread.h"
-#include "cubec/literal_identifier.h"
-#include "cubec/generic_param.h"
 
 /* ===== resolver_resolve_type (dispatcher) ===== */
 

@@ -1,5 +1,4 @@
 #include "engine/semantic_type.h"
-#include "engine/type_hash.h"
 #include "engine/symbol.h"
 #include "engine/comptime_value.h"
 #include <stdio.h>

@@ -1,5 +1,4 @@
 #include "engine/comptime_eval.h"
-#include "engine/comptime_eval_internal.h"
 
 comptime_eval_t comptime_eval_create(allocator_t allocator) {
   comptime_eval_t eval =
