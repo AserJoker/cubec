@@ -1,6 +1,5 @@
 #include "cubec/expression_type_interface.h"
 #include "core/token.h"
-#include "cubec/ast_factory.h"
 #include "cubec/generic_param.h"
 #include "cubec/interface_method.h"
 #include "cubec/literal_identifier.h"

@@ -23,6 +23,8 @@ struct _cubec_statement_error_init_t {
 };
 typedef struct _cubec_statement_error_init_t cubec_statement_error_init_t;
 
+node_t cubec_ast_create_error_stmt(context_t ctx, location_t loc);
+
 #ifdef __cplusplus
 }
 #endif

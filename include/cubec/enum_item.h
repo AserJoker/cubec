@@ -57,6 +57,8 @@ typedef struct _cubec_enum_item_init_t cubec_enum_item_init_t;
 node_t read_enum_item(context_t ctx, vec_t tokens,
                        size_t *position, const char *filename);
 
+node_t cubec_ast_create_enum_item(context_t ctx, location_t loc, const char *name, node_t type, node_t value);
+
 #ifdef __cplusplus
 }
 #endif

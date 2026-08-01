@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_AST_FACTORY_INTERNAL_
-#define _H_CUBEC_AST_FACTORY_INTERNAL_
+#ifndef _H_CUBEC_AST_CREATE_HELPERS_
+#define _H_CUBEC_AST_CREATE_HELPERS_
 #include "core/allocator.h"
 #include "core/location.h"
 #include "core/string.h"

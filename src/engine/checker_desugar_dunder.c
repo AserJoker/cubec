@@ -12,7 +12,6 @@
  *   - using var scope exit: → insert __dispose__(&var) at scope exits
  */
 #include "engine/checker_desugar_util.h"
-#include "cubec/ast_factory.h"
 #include "cubec/statement_expression.h"
 #include "cubec/statement_block.h"
 #include "cubec/statement_if.h"
@@ -27,6 +26,9 @@
 #include "cubec/expression_binary.h"
 #include "cubec/declaration_variable.h"
 #include "cubec/node.h"
+#include "cubec/expression_call.h"
+#include "cubec/expression_postfix_unary.h"
+#include "cubec/literal_identifier.h"
 
 /**
  * @brief Transform subscript expressions into dunder calls.

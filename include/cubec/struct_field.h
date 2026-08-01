@@ -59,6 +59,8 @@ typedef struct _cubec_struct_field_init_t cubec_struct_field_init_t;
 node_t read_struct_field(context_t ctx, vec_t tokens,
                           size_t *position, const char *filename);
 
+node_t cubec_ast_create_struct_field(context_t ctx, location_t loc, const char *name, node_t type, bool is_pub);
+
 #ifdef __cplusplus
 }
 #endif

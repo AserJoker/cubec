@@ -1,7 +1,6 @@
 #include "cubec/expression_group.h"
 #include "core/token.h"
-#include "cubec/ast_factory.h"
-#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_create_helpers.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 

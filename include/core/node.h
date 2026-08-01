@@ -8,6 +8,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+/** @brief Forward declaration to avoid pulling engine/context.h */
+typedef struct context *context_t;
 /**
  * @brief Base class for all AST nodes.
  *        Subclasses embed this struct as a `super` field for single inheritance.

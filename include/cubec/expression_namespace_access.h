@@ -47,6 +47,8 @@ node_t read_expression_namespace_access(context_t ctx, vec_t tokens,
                                         size_t *position, const char *filename,
                                         node_t host);
 
+node_t cubec_ast_create_namespace_access(context_t ctx, location_t loc, node_t host, const char *field);
+
 #ifdef __cplusplus
 }
 #endif

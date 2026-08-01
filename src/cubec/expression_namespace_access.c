@@ -1,7 +1,6 @@
 #include "cubec/expression_namespace_access.h"
 #include "core/token.h"
-#include "cubec/ast_factory.h"
-#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_create_helpers.h"
 #include "cubec/token.h"
 
 static void _cubec_expression_namespace_access_init(

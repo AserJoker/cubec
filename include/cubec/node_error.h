@@ -33,6 +33,8 @@ static inline bool node_is_ok(node_t node) {
   return node && !node_is_error(node);
 }
 
+node_t cubec_ast_create_error(context_t ctx, location_t loc);
+
 #ifdef __cplusplus
 }
 #endif

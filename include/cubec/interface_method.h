@@ -60,6 +60,8 @@ typedef struct _cubec_interface_method_init_t cubec_interface_method_init_t;
 node_t read_interface_method(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename);
 
+node_t cubec_ast_create_iface_method(context_t ctx, location_t loc, const char *name, vec_t args, node_t return_type);
+
 #ifdef __cplusplus
 }
 #endif

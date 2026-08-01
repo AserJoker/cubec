@@ -51,6 +51,8 @@ typedef struct _cubec_switch_match_init_t cubec_switch_match_init_t;
 node_t read_switch_match(context_t ctx, vec_t tokens,
                           size_t *position, const char *filename);
 
+node_t cubec_ast_create_switch_match(context_t ctx, location_t loc, bool is_else, vec_t values, node_t body);
+
 #ifdef __cplusplus
 }
 #endif

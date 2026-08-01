@@ -1,6 +1,5 @@
 #include "cubec/statement_function.h"
-#include "cubec/ast_factory_internal.h"
-#include "cubec/ast_factory.h"
+#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
 #include "cubec/decorator.h"
 #include "cubec/expression_function.h"

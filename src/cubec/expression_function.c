@@ -1,7 +1,6 @@
 #include "cubec/expression_function.h"
 #include "core/token.h"
-#include "cubec/ast_factory.h"
-#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_create_helpers.h"
 #include "cubec/function_argument.h"
 #include "cubec/function_capture.h"
 #include "cubec/generic_param.h"

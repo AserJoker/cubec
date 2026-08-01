@@ -57,6 +57,8 @@ typedef struct _cubec_statement_if_init_t cubec_statement_if_init_t;
 node_t read_statement_if(context_t ctx, vec_t tokens,
                           size_t *position, const char *filename);
 
+node_t cubec_ast_create_if_stmt(context_t ctx, location_t loc, node_t cond, node_t then_branch, node_t else_branch);
+
 #ifdef __cplusplus
 }
 #endif

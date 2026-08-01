@@ -67,6 +67,8 @@ typedef struct _cubec_statement_struct_init_t cubec_statement_struct_init_t;
 node_t read_statement_struct(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename);
 
+node_t cubec_ast_create_struct_stmt(context_t ctx, location_t loc, const char *name, vec_t members, bool is_export, vec_t implements);
+
 #ifdef __cplusplus
 }
 #endif

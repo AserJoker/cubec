@@ -45,6 +45,8 @@ typedef struct _cubec_function_capture_init_t cubec_function_capture_init_t;
 node_t read_function_capture(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename);
 
+node_t cubec_ast_create_func_capture(context_t ctx, location_t loc, const char *name);
+
 #ifdef __cplusplus
 }
 #endif

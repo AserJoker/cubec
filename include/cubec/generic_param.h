@@ -64,6 +64,8 @@ typedef struct _cubec_generic_param_init_t cubec_generic_param_init_t;
 vec_t read_generic_params(context_t ctx, vec_t tokens,
                           size_t *position, const char *filename);
 
+node_t cubec_ast_create_generic_param(context_t ctx, location_t loc, const char *name, vec_t constraints, node_t value_type, bool is_rest);
+
 #ifdef __cplusplus
 }
 #endif

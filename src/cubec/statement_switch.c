@@ -1,6 +1,5 @@
 #include "cubec/statement_switch.h"
-#include "cubec/ast_factory_internal.h"
-#include "cubec/ast_factory.h"
+#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
 #include "cubec/statement_block.h"
 #include "cubec/switch_match.h"

@@ -97,6 +97,8 @@ typedef struct _cubec_statement_function_init_t cubec_statement_function_init_t;
 node_t read_statement_function(context_t ctx, vec_t tokens,
                                 size_t *position, const char *filename);
 
+node_t cubec_ast_create_func_stmt(context_t ctx, location_t loc, const char *name, vec_t args, node_t return_type, node_t body, bool is_export, bool is_inline, bool is_extern, bool is_builtin, bool is_comptime, bool is_c_variadic);
+
 #ifdef __cplusplus
 }
 #endif

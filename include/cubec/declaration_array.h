@@ -45,6 +45,8 @@ node_t read_declaration_array(context_t ctx, vec_t tokens,
 /* Debug function to print tokens */
 void debug_print_tokens(vec_t tokens, size_t count);
 
+node_t cubec_ast_create_array_type(context_t ctx, location_t loc, node_t size, node_t base);
+
 #ifdef __cplusplus
 }
 #endif

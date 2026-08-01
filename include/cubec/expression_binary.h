@@ -52,6 +52,8 @@ node_t read_expression_prefix(context_t ctx, vec_t tokens,
 node_t read_expression_binary(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename);
 
+node_t cubec_ast_create_binary(context_t ctx, location_t loc, const char *op, node_t left, node_t right);
+
 #ifdef __cplusplus
 }
 #endif

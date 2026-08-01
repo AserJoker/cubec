@@ -8,7 +8,6 @@
  *   - Validate that ALL remaining nodes belong to the simplified subset.
  */
 #include "engine/checker_desugar_util.h"
-#include "cubec/ast_factory.h"
 #include "cubec/statement_block.h"
 #include "cubec/statement_if.h"
 #include "cubec/statement_while.h"
@@ -24,6 +23,7 @@
 #include "cubec/literal_undefined.h"
 #include "cubec/switch_match.h"
 #include "cubec/node.h"
+#include "cubec/expression_initialize_list.h"
 #include <stdio.h>
 
 /** @brief Check if a node kind is valid for the simplified C output. */

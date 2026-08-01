@@ -57,6 +57,8 @@ typedef struct _cubec_statement_foreach_init_t cubec_statement_foreach_init_t;
 node_t read_statement_foreach(context_t ctx, vec_t tokens,
                                size_t *position, const char *filename);
 
+node_t cubec_ast_create_foreach_stmt(context_t ctx, location_t loc, bool is_var_decl, node_t variable, node_t var_type, node_t iterator, node_t body);
+
 #ifdef __cplusplus
 }
 #endif

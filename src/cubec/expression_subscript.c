@@ -1,8 +1,8 @@
 #include "cubec/expression_subscript.h"
 #include "core/token.h"
-#include "cubec/ast_factory.h"
-#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_create_helpers.h"
 #include "cubec/token.h"
+#include "cubec/node_error.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move

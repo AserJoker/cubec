@@ -1,7 +1,6 @@
 #include "cubec/literal_undefined.h"
-#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
-#include "cubec/ast_factory.h"
 #include "cubec/token.h"
 
 static void _cubec_literal_undefined_init(cubec_literal_undefined_t self,

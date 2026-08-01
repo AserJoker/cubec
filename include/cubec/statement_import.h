@@ -51,6 +51,8 @@ typedef struct _cubec_statement_import_init_t cubec_statement_import_init_t;
 node_t read_statement_import(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename);
 
+node_t cubec_ast_create_import_stmt(context_t ctx, location_t loc, const char *module_name, const char *path);
+
 #ifdef __cplusplus
 }
 #endif

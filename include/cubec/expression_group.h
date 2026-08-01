@@ -35,6 +35,8 @@ typedef struct _cubec_expression_group_init_t cubec_expression_group_init_t;
 node_t read_expression_group(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename);
 
+node_t cubec_ast_create_group(context_t ctx, location_t loc, node_t inner);
+
 #ifdef __cplusplus
 }
 #endif

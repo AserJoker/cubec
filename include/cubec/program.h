@@ -24,6 +24,8 @@ struct _cubec_program_node_init_t {
 typedef struct _cubec_program_node_init_t cubec_program_node_init_t;
 node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
                          const char *filename);
+node_t cubec_ast_create_program(context_t ctx, location_t loc, vec_t statements);
+
 #ifdef __cplusplus
 }
 #endif

@@ -51,6 +51,8 @@ typedef struct _cubec_statement_for_init_t cubec_statement_for_init_t;
 node_t read_statement_for(context_t ctx, vec_t tokens,
                            size_t *position, const char *filename);
 
+node_t cubec_ast_create_for_stmt(context_t ctx, location_t loc, node_t init, node_t cond, node_t incr, node_t body);
+
 #ifdef __cplusplus
 }
 #endif

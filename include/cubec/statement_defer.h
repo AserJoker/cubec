@@ -49,6 +49,8 @@ typedef struct _cubec_statement_defer_init_t cubec_statement_defer_init_t;
 node_t read_statement_defer(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename);
 
+node_t cubec_ast_create_defer_stmt(context_t ctx, location_t loc, vec_t captures, node_t body);
+
 #ifdef __cplusplus
 }
 #endif

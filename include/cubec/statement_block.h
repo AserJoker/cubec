@@ -39,6 +39,8 @@ typedef struct _cubec_statement_block_init_t
 node_t read_statement_block(context_t ctx, vec_t tokens,
                             size_t *position, const char *filename);
 
+node_t cubec_ast_create_block(context_t ctx, location_t loc, vec_t statements);
+
 #ifdef __cplusplus
 }
 #endif

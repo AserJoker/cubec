@@ -45,6 +45,8 @@ typedef struct _cubec_statement_do_while_init_t cubec_statement_do_while_init_t;
 node_t read_statement_do_while(context_t ctx, vec_t tokens,
                                 size_t *position, const char *filename);
 
+node_t cubec_ast_create_do_while_stmt(context_t ctx, location_t loc, node_t body, node_t cond);
+
 #ifdef __cplusplus
 }
 #endif

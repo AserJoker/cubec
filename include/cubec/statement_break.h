@@ -38,6 +38,8 @@ typedef struct _cubec_statement_break_init_t cubec_statement_break_init_t;
 node_t read_statement_break(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename);
 
+node_t cubec_ast_create_break_stmt(context_t ctx, location_t loc);
+
 #ifdef __cplusplus
 }
 #endif

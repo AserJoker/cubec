@@ -1,7 +1,6 @@
 #include "cubec/declaration_variable.h"
-#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_create_helpers.h"
 #include "core/token.h"
-#include "cubec/ast_factory.h"
 #include "cubec/token.h"
 
 static void _cubec_declaration_variable_init(cubec_declaration_variable_t self,

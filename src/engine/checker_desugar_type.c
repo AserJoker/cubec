@@ -14,7 +14,6 @@
  *   3. Transforms tag union statements into struct + cunion pairs.
  */
 #include "engine/checker_desugar_util.h"
-#include "cubec/ast_factory.h"
 #include "cubec/expression_type_tuple.h"
 #include "cubec/declaration_slice.h"
 #include "cubec/statement_function.h"
@@ -30,6 +29,8 @@
 #include "cubec/function_argument.h"
 #include "cubec/switch_match.h"
 #include "cubec/node.h"
+#include "cubec/declaration_pointer.h"
+#include "cubec/statement_cunion.h"
 #include <stdio.h>
 #include <string.h>
 

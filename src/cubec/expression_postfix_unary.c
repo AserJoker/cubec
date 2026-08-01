@@ -1,7 +1,6 @@
 #include "cubec/expression_postfix_unary.h"
 #include "core/token.h"
-#include "cubec/ast_factory.h"
-#include "cubec/ast_factory_internal.h"
+#include "cubec/ast_create_helpers.h"
 #include "cubec/token.h"
 #include <string.h>
 

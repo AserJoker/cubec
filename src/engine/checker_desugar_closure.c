@@ -11,7 +11,6 @@
  *     * With captures → fat pointer struct init (future enhancement)
  */
 #include "engine/checker_desugar_util.h"
-#include "cubec/ast_factory.h"
 #include "cubec/statement_expression.h"
 #include "cubec/statement_block.h"
 #include "cubec/statement_if.h"
@@ -26,6 +25,9 @@
 #include "cubec/function_capture.h"
 #include "cubec/switch_match.h"
 #include "cubec/node.h"
+#include "cubec/declaration_pointer.h"
+#include "cubec/expression_postfix_unary.h"
+#include "cubec/literal_identifier.h"
 #include <stdio.h>
 
 void desugar_pass5_closure(context_t ctx, vec_t statements) {

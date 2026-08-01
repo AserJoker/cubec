@@ -44,6 +44,8 @@ typedef struct _cubec_declaration_pointer_init_t cubec_declaration_pointer_init_
 node_t read_declaration_pointer(context_t ctx, vec_t tokens,
                                 size_t *position, const char *filename);
 
+node_t cubec_ast_create_pointer_type(context_t ctx, location_t loc, node_t base, bool is_const, bool is_volatile);
+
 #ifdef __cplusplus
 }
 #endif

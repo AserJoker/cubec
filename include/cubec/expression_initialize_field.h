@@ -42,6 +42,8 @@ typedef struct _cubec_expression_initialize_field_init_t cubec_expression_initia
 node_t read_expression_initialize_field(context_t ctx, vec_t tokens,
                                         size_t *position, const char *filename);
 
+node_t cubec_ast_create_initialize_field(context_t ctx, location_t loc, const char *name, node_t value);
+
 #ifdef __cplusplus
 }
 #endif

@@ -9,7 +9,6 @@
 #include "engine/comptime_value.h"
 #include "engine/symbol.h"
 #include "engine/diagnostic.h"
-#include "cubec/ast_factory.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
 #include "common/test_common.h"

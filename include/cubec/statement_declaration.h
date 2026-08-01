@@ -83,6 +83,8 @@ typedef struct _cubec_statement_declaration_init_t cubec_statement_declaration_i
 node_t read_statement_declaration(context_t ctx, vec_t tokens,
                                   size_t *position, const char *filename);
 
+node_t cubec_ast_create_var_decl_stmt(context_t ctx, location_t loc, const char *name, node_t type, node_t expr, bool is_export, bool is_extern, bool is_builtin, bool is_comptime, bool is_using);
+
 #ifdef __cplusplus
 }
 #endif

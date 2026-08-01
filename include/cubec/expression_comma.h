@@ -40,6 +40,8 @@ typedef struct _cubec_expression_comma_init_t cubec_expression_comma_init_t;
 node_t read_expression_comma(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename);
 
+node_t cubec_ast_create_comma(context_t ctx, location_t loc, node_t left, node_t right);
+
 #ifdef __cplusplus
 }
 #endif

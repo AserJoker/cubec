@@ -1,6 +1,5 @@
 #include "cubec/expression_type_union.h"
 #include "core/token.h"
-#include "cubec/ast_factory.h"
 #include "cubec/expression_spread.h"
 #include "cubec/generic_param.h"
 #include "cubec/node_error.h"

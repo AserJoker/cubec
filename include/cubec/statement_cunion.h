@@ -58,6 +58,8 @@ typedef struct _cubec_statement_cunion_init_t cubec_statement_cunion_init_t;
 node_t read_statement_cunion(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename);
 
+node_t cubec_ast_create_cunion_stmt(context_t ctx, location_t loc, const char *name, vec_t fields);
+
 #ifdef __cplusplus
 }
 #endif

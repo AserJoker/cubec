@@ -59,6 +59,8 @@ node_t read_literal_numeric(context_t ctx, vec_t tokens, size_t *position,
 
 const char *cubec_literal_numeric_type_to_string(cubec_literal_numeric_type_t type);
 
+node_t cubec_ast_create_numeric(context_t ctx, location_t loc, const char *value, cubec_literal_numeric_kind_t kind, cubec_literal_numeric_type_t ntype);
+
 #ifdef __cplusplus
 }
 #endif

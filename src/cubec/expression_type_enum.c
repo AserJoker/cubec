@@ -1,6 +1,5 @@
 #include "cubec/expression_type_enum.h"
 #include "core/token.h"
-#include "cubec/ast_factory.h"
 #include "cubec/enum_item.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"

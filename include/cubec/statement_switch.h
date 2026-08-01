@@ -49,6 +49,8 @@ typedef struct _cubec_statement_switch_init_t cubec_statement_switch_init_t;
 node_t read_statement_switch(context_t ctx, vec_t tokens,
                               size_t *position, const char *filename);
 
+node_t cubec_ast_create_switch_stmt(context_t ctx, location_t loc, node_t cond, vec_t matches);
+
 #ifdef __cplusplus
 }
 #endif

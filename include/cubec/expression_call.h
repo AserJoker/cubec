@@ -49,6 +49,8 @@ node_t read_expression_call(context_t ctx, vec_t tokens,
                             size_t *position, const char *filename,
                             node_t callee);
 
+node_t cubec_ast_create_call(context_t ctx, location_t loc, node_t callee, vec_t args);
+
 #ifdef __cplusplus
 }
 #endif

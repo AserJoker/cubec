@@ -25,8 +25,8 @@
 #include "cubec/statement_test.h"
 #include "cubec/statement_export_from.h"
 #include "cubec/node_error.h"
-#include "cubec/ast_factory.h"
 #include "cubec/token.h"
+#include "cubec/statement_error.h"
 
 /* ===== Error recovery: sync to next statement boundary ===== */
 

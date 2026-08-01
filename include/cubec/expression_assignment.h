@@ -67,6 +67,8 @@ typedef struct _cubec_expression_assignment_init_t
 node_t read_expression_assignment(context_t ctx, vec_t tokens,
                                   size_t *position, const char *filename);
 
+node_t cubec_ast_create_assignment(context_t ctx, location_t loc, const char *op, node_t lvalue, node_t rvalue);
+
 #ifdef __cplusplus
 }
 #endif

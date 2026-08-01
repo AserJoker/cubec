@@ -66,6 +66,8 @@ typedef struct _cubec_statement_union_init_t cubec_statement_union_init_t;
 node_t read_statement_union(context_t ctx, vec_t tokens,
                              size_t *position, const char *filename);
 
+node_t cubec_ast_create_union_stmt(context_t ctx, location_t loc, const char *name, vec_t members, bool is_export, vec_t implements);
+
 #ifdef __cplusplus
 }
 #endif
