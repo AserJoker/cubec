@@ -1,10 +1,11 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_CONTINUE_
 #define _H_CUBEC_CUBEC_STATEMENT_CONTINUE_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -34,10 +35,12 @@ typedef struct _cubec_statement_continue_init_t cubec_statement_continue_init_t;
 /**
  * @brief Try to parse a continue statement.
  */
-node_t read_statement_continue(context_t ctx, vec_t tokens,
-                                size_t *position, const char *filename);
+node_t read_statement_continue(context_t ctx, vec_t tokens, size_t *position,
+                               const char *filename);
 
-node_t cubec_ast_create_continue_stmt(context_t ctx, location_t loc);
+node_t create_statement_continue(context_t ctx, location_t loc);
+
+void write_statement_continue(writer_t writer, node_t stmt);
 
 #ifdef __cplusplus
 }

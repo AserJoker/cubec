@@ -1,12 +1,12 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_POSTFIX_UNARY_
 #define _H_CUBEC_CUBEC_EXPRESSION_POSTFIX_UNARY_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/expression_binary.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -36,7 +36,8 @@ typedef struct _cubec_expression_postfix_unary_init_t
     cubec_expression_postfix_unary_init_t;
 
 /**
- * @brief Try to parse postfix unary expression: <value>.? or <value>.! or <value>.* or <value>.&
+ * @brief Try to parse postfix unary expression: <value>.? or <value>.! or
+ * <value>.* or <value>.&
  *        - .?  is try operator (two tokens: . + ?)
  *        - .!  is assert/panic operator (two tokens: . + !)
  *        - .*  is deref (two tokens)
@@ -49,10 +50,10 @@ node_t read_expression_postfix_unary(context_t ctx, vec_t tokens,
                                      size_t *position, const char *filename,
                                      node_t host);
 
-node_t cubec_ast_create_deref(context_t ctx, location_t loc, node_t host);
-node_t cubec_ast_create_addr(context_t ctx, location_t loc, node_t host);
-node_t cubec_ast_create_try(context_t ctx, location_t loc, node_t host);
-node_t cubec_ast_create_assert(context_t ctx, location_t loc, node_t host);
+node_t create_expression_deref(context_t ctx, location_t loc, node_t host);
+node_t create_expression_addr(context_t ctx, location_t loc, node_t host);
+node_t create_expression_try(context_t ctx, location_t loc, node_t host);
+node_t create_expression_assert(context_t ctx, location_t loc, node_t host);
 
 #ifdef __cplusplus
 }

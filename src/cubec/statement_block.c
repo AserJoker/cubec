@@ -112,7 +112,7 @@ node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
                              "unexpected token");
         ctx->error_count++;
         current++;
-        stmt = cubec_ast_create_error_stmt(ctx, loc);
+        stmt = create_statement_error(ctx, loc);
         vec_push(statements, stmt);
       } else {
         break; /* No more tokens */
@@ -149,20 +149,20 @@ node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
   return &node->super;
 }
 
-node_t cubec_ast_create_block(context_t ctx, location_t loc, vec_t statements) {
+node_t create_statement_block(context_t ctx, location_t loc, vec_t statements) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_block_init_t init = {.statements = statements};
   return (node_t)allocator_create(alloc, &g_cubec_statement_block_type, &init);
 }
 
-void cubec_ast_write_block_stmt(writer_t writer, node_t stmt) {
+void write_statement_block(writer_t writer, node_t stmt) {
   cubec_statement_block_t block = (cubec_statement_block_t)stmt;
   writer_append(writer, "{");
   if (vec_get_size(block->statements)) {
     writer_newline(writer, 1);
     for (size_t i = 0; i < vec_get_size(block->statements); i++) {
       node_t stmt = vec_get(block->statements, i);
-      cubec_ast_write_statement(writer, stmt);
+      write_statement(writer, stmt);
     }
     writer_newline(writer, -1);
   }

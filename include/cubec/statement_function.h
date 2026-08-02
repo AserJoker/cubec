@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_FUNCTION_
 #define _H_CUBEC_CUBEC_STATEMENT_FUNCTION_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,17 +13,22 @@ extern "C" {
  * @brief AST node for function declaration statement.
  *
  * Syntax:
- *   [export] [inline] func <name> [<generic_params>] (<params>) [: <return_type>] { <body> } | ;
- *   [extern] func <name> [<generic_params>] (<params>) [: <return_type>] ;
- *   [builtin] func <name> [<generic_params>] (<params>) [: <return_type>] ;
- *   [comptime] func <name> [<generic_params>] (<params>) [: <return_type>] { <body> }
+ *   [export] [inline] func <name> [<generic_params>] (<params>) [:
+ * <return_type>] { <body> } | ; [extern] func <name> [<generic_params>]
+ * (<params>) [: <return_type>] ; [builtin] func <name> [<generic_params>]
+ * (<params>) [: <return_type>] ; [comptime] func <name> [<generic_params>]
+ * (<params>) [: <return_type>] { <body> }
  *
  * Modifiers:
- * - export: function is exported from the module (source-level, compatible with inline/builtin/comptime)
+ * - export: function is exported from the module (source-level, compatible with
+ * inline/builtin/comptime)
  * - inline: function is inlined (like C static inline)
- * - extern: function has no body, declared for external linkage (mutually exclusive with export/inline/builtin/comptime)
- * - builtin: function is compiler-provided, no body (mutually exclusive with extern/comptime)
- * - comptime: function is compile-time evaluated, requires body (mutually exclusive with extern/builtin)
+ * - extern: function has no body, declared for external linkage (mutually
+ * exclusive with export/inline/builtin/comptime)
+ * - builtin: function is compiler-provided, no body (mutually exclusive with
+ * extern/comptime)
+ * - comptime: function is compile-time evaluated, requires body (mutually
+ * exclusive with extern/builtin)
  *
  * Return type is optional (omitted = void).
  * Body is optional (NULL for extern/interface functions, ending with ';').
@@ -45,20 +50,23 @@ extern "C" {
 struct _cubec_statement_function_t;
 struct _cubec_statement_function_t {
   struct _node_t super;
-  bool is_export;       /**< Whether this function is exported */
-  bool is_exportlib;    /**< Whether this function is exported with C ABI (no mangling) */
-  bool is_inline;       /**< Whether this function is inline */
-  bool is_extern;       /**< Whether this is an extern function (no body) */
-  bool is_builtin;      /**< Whether this is a builtin function (compiler-provided, no body) */
-  bool is_comptime;     /**< Whether this is a comptime function (requires body) */
+  bool is_export;    /**< Whether this function is exported */
+  bool is_exportlib; /**< Whether this function is exported with C ABI (no
+                        mangling) */
+  bool is_inline;    /**< Whether this function is inline */
+  bool is_extern;    /**< Whether this is an extern function (no body) */
+  bool is_builtin;   /**< Whether this is a builtin function (compiler-provided,
+                        no body) */
+  bool is_comptime;  /**< Whether this is a comptime function (requires body) */
   bool is_c_variadic;   /**< Whether this function has C-style variadic '...' */
   node_t name;          /**< Identifier node for the function name */
   vec_t generic_params; /**< Vector of cubec_generic_param_t (may be NULL) */
   vec_t arguments;      /**< Vector of cubec_function_argument_t */
   node_t return_type;   /**< Return type expression (may be NULL = void) */
-  node_t body;          /**< Block statement node (may be NULL for extern/interface) */
-  vec_t decorators;     /**< Vector of cubec_decorator_t (may be NULL) */
-  vec_t captures;       /**< Vector of cubec_function_capture_t (nullable, auto_dispose) */
+  node_t body; /**< Block statement node (may be NULL for extern/interface) */
+  vec_t decorators; /**< Vector of cubec_decorator_t (may be NULL) */
+  vec_t captures;   /**< Vector of cubec_function_capture_t (nullable,
+                       auto_dispose) */
 };
 typedef struct _cubec_statement_function_t *cubec_statement_function_t;
 
@@ -91,12 +99,17 @@ typedef struct _cubec_statement_function_init_t cubec_statement_function_init_t;
  * @param position Current position in token list (updated on success).
  * @param filename The source filename for error reporting.
  * @return A new cubec_statement_function_t node, or NULL if current token
- *         is not a function declaration prefix (export/inline/extern/builtin/comptime/func).
+ *         is not a function declaration prefix
+ * (export/inline/extern/builtin/comptime/func).
  */
-node_t read_statement_function(context_t ctx, vec_t tokens,
-                                size_t *position, const char *filename);
+node_t read_statement_function(context_t ctx, vec_t tokens, size_t *position,
+                               const char *filename);
 
-node_t cubec_ast_create_func_stmt(context_t ctx, location_t loc, const char *name, vec_t args, node_t return_type, node_t body, bool is_export, bool is_inline, bool is_extern, bool is_builtin, bool is_comptime, bool is_c_variadic);
+node_t create_statement_func(context_t ctx, location_t loc, const char *name,
+                             vec_t args, node_t return_type, node_t body,
+                             bool is_export, bool is_inline, bool is_extern,
+                             bool is_builtin, bool is_comptime,
+                             bool is_c_variadic);
 
 #ifdef __cplusplus
 }

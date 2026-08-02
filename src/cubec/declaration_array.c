@@ -145,11 +145,11 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_array_type
+ *  Factory: create_declaration_array
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_array_type(context_t ctx, location_t loc, node_t size,
-                                   node_t base) {
+node_t create_declaration_array(context_t ctx, location_t loc, node_t size,
+                                node_t base) {
   allocator_t alloc = ctx->allocator;
   cubec_declaration_array_init_t init = {.size = size, .type = base};
   return (node_t)allocator_create(alloc, &g_cubec_declaration_array_type,

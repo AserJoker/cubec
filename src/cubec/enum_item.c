@@ -138,13 +138,13 @@ cleanup:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_enum_item
+ *  Factory: create_enum_item
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_enum_item(context_t ctx, location_t loc,
-                                  const char *name, node_t type, node_t value) {
+node_t create_enum_item(context_t ctx, location_t loc, const char *name,
+                        node_t type, node_t value) {
   allocator_t alloc = ctx->allocator;
-  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_enum_item_init_t init = {.location = loc,
                                  .parent = NULL,
                                  .name = (node_t)name_node,

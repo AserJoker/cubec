@@ -6,7 +6,8 @@
 static void _cubec_literal_char_init(cubec_literal_char_t self,
                                      allocator_t allocator,
                                      cubec_literal_char_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   cubec_literal_init_t super_init = {
       .kind = CUBEC_NODE_LITERAL_CHAR,
       .parent = NULL,
@@ -48,8 +49,8 @@ type_t g_cubec_literal_char_type = {
     .move = (type_move_fn_t)_cubec_literal_char_move,
 };
 
-node_t read_literal_char(context_t ctx, vec_t tokens,
-                         size_t *position, const char *filename) {
+node_t read_literal_char(context_t ctx, vec_t tokens, size_t *position,
+                         const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
@@ -75,7 +76,8 @@ node_t read_literal_char(context_t ctx, vec_t tokens,
   };
   cubec_literal_char_t node =
       allocator_create(allocator, &g_cubec_literal_char_type, &init);
-  if (!node) goto onerror;
+  if (!node)
+    goto onerror;
   node_t node_base = (node_t)node;
   node_base->location.filename = filename;
   current++;
@@ -83,16 +85,16 @@ node_t read_literal_char(context_t ctx, vec_t tokens,
   *position = current;
   return node_base;
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid character literal");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid character literal");
   ctx->error_count++;
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_char(context_t ctx, location_t loc, char value) {
+node_t create_literal_char(context_t ctx, location_t loc, char value) {
   allocator_t alloc = ctx->allocator;
-  cubec_literal_char_init_t init = {.location = loc, .parent = NULL,
-                                    .value = value};
+  cubec_literal_char_init_t init = {
+      .location = loc, .parent = NULL, .value = value};
   return (node_t)allocator_create(alloc, &g_cubec_literal_char_type, &init);
 }

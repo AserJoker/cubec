@@ -158,10 +158,10 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_deref / addr / try / assert
+ *  Factory: create_expression_deref / addr / try / assert
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_deref(context_t ctx, location_t loc, node_t host) {
+node_t create_expression_deref(context_t ctx, location_t loc, node_t host) {
   allocator_t alloc = ctx->allocator;
   string_t op_str =
       allocator_create(alloc, &g_string_type, &(string_init_t){.str = ".*"});
@@ -176,7 +176,7 @@ node_t cubec_ast_create_deref(context_t ctx, location_t loc, node_t host) {
                                   &init);
 }
 
-node_t cubec_ast_create_addr(context_t ctx, location_t loc, node_t host) {
+node_t create_expression_addr(context_t ctx, location_t loc, node_t host) {
   allocator_t alloc = ctx->allocator;
   string_t op_str =
       allocator_create(alloc, &g_string_type, &(string_init_t){.str = ".&"});
@@ -190,7 +190,7 @@ node_t cubec_ast_create_addr(context_t ctx, location_t loc, node_t host) {
                                   &init);
 }
 
-node_t cubec_ast_create_try(context_t ctx, location_t loc, node_t host) {
+node_t create_expression_try(context_t ctx, location_t loc, node_t host) {
   allocator_t alloc = ctx->allocator;
   string_t op_str =
       allocator_create(alloc, &g_string_type, &(string_init_t){.str = ".?"});
@@ -204,7 +204,7 @@ node_t cubec_ast_create_try(context_t ctx, location_t loc, node_t host) {
                                   &init);
 }
 
-node_t cubec_ast_create_assert(context_t ctx, location_t loc, node_t host) {
+node_t create_expression_assert(context_t ctx, location_t loc, node_t host) {
   allocator_t alloc = ctx->allocator;
   string_t op_str =
       allocator_create(alloc, &g_string_type, &(string_init_t){.str = ".!"});

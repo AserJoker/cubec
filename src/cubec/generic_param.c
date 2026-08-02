@@ -234,14 +234,14 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_generic_param
+ *  Factory: create_generic_param
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_generic_param(context_t ctx, location_t loc,
-                                      const char *name, vec_t constraints,
-                                      node_t value_type, bool is_rest) {
+node_t create_generic_param(context_t ctx, location_t loc, const char *name,
+                            vec_t constraints, node_t value_type,
+                            bool is_rest) {
   allocator_t alloc = ctx->allocator;
-  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_generic_param_init_t init = {
       .location = loc,
       .name = name_node,

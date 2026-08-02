@@ -1,40 +1,42 @@
-#include "engine/context.h"
 #include "engine/checker_check_expr.h"
+#include "cubec/expression_alignof.h"
+#include "cubec/expression_assignment.h"
+#include "cubec/expression_binary.h"
+#include "cubec/expression_call.h"
+#include "cubec/expression_comma.h"
+#include "cubec/expression_generic_instantiation.h"
+#include "cubec/expression_group.h"
+#include "cubec/expression_initialize_list.h"
+#include "cubec/expression_member.h"
+#include "cubec/expression_namespace_access.h"
+#include "cubec/expression_postfix_unary.h"
+#include "cubec/expression_sizeof.h"
+#include "cubec/expression_slice.h"
+#include "cubec/expression_spread.h"
+#include "cubec/expression_subscript.h"
+#include "cubec/expression_ternary.h"
+#include "cubec/expression_typeof.h"
+#include "cubec/generic_param.h"
+#include "cubec/initialize_field.h"
+#include "cubec/literal_numeric.h"
 #include "engine/checker_check_expr_helpers.h"
 #include "engine/checker_check_stmt.h"
 #include "engine/checker_func_util.h"
 #include "engine/checker_type_util.h"
+#include "engine/comptime_eval_internal.h"
+#include "engine/context.h"
 #include "engine/resolver.h"
 #include "engine/type_hash.h"
 #include "engine/type_layout.h"
-#include "engine/comptime_eval_internal.h"
-#include "cubec/literal_numeric.h"
-#include "cubec/expression_binary.h"
-#include "cubec/expression_assignment.h"
-#include "cubec/expression_postfix_unary.h"
-#include "cubec/expression_call.h"
-#include "cubec/expression_member.h"
-#include "cubec/expression_ternary.h"
-#include "cubec/expression_group.h"
-#include "cubec/expression_sizeof.h"
-#include "cubec/expression_alignof.h"
-#include "cubec/expression_typeof.h"
-#include "cubec/expression_slice.h"
-#include "cubec/expression_subscript.h"
-#include "cubec/expression_initialize_list.h"
-#include "cubec/expression_initialize_field.h"
-#include "cubec/generic_param.h"
-#include "cubec/expression_comma.h"
-#include "cubec/expression_spread.h"
-#include "cubec/expression_namespace_access.h"
-#include "cubec/expression_generic_instantiation.h"
 #include <string.h>
 
 /* ===== expression checker sub-functions ===== */
 
-static semantic_type_t _check_expr_literal_identifier(context_t ctx, node_t expr) {
+static semantic_type_t _check_expr_literal_identifier(context_t ctx,
+                                                      node_t expr) {
   const char *name = _checker_ident_str(expr);
-  if (!name) return ctx->error_type;
+  if (!name)
+    return ctx->error_type;
 
   /* Boolean literals are syntax, not identifiers */
   if (strcmp(name, "true") == 0 || strcmp(name, "false") == 0)
@@ -59,37 +61,47 @@ static semantic_type_t _check_expr_literal_identifier(context_t ctx, node_t expr
     if (sym->state == SYMBOL_TDZ) {
       if (!ctx->current_flow || flow_state_is_tdz(ctx->current_flow, name)) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                             "use of variable '%s' before initialization", name);
+                             "use of variable '%s' before initialization",
+                             name);
         ctx->error_count++;
         return ctx->error_type;
       }
     }
     return sym->variable.type ? sym->variable.type : ctx->error_type;
   }
-  case SYMBOL_FUNCTION: return sym->function.type ? sym->function.type : ctx->error_type;
-  case SYMBOL_ENUM_ITEM: return sym->enum_item.owning_type;
-  case SYMBOL_TYPE: return sym->type.type ? sym->type.type : ctx->error_type;
+  case SYMBOL_FUNCTION:
+    return sym->function.type ? sym->function.type : ctx->error_type;
+  case SYMBOL_ENUM_ITEM:
+    return sym->enum_item.owning_type;
+  case SYMBOL_TYPE:
+    return sym->type.type ? sym->type.type : ctx->error_type;
   case SYMBOL_GENERIC_PARAM:
     if (sym->generic_param.value_type)
       return sym->generic_param.value_type;
     if (sym->generic_param.constraints) {
-      semantic_type_t first = (semantic_type_t)vec_get(sym->generic_param.constraints, 0);
-      if (first) return first;
+      semantic_type_t first =
+          (semantic_type_t)vec_get(sym->generic_param.constraints, 0);
+      if (first)
+        return first;
     }
     return ctx->error_type;
   case SYMBOL_MODULE: {
-    /* Return a TYPE_MODULE nominal type for namespace access (module::member) */
-    semantic_type_t mt = semantic_type_create_named(ctx->allocator, name, TYPE_MODULE);
+    /* Return a TYPE_MODULE nominal type for namespace access (module::member)
+     */
+    semantic_type_t mt =
+        semantic_type_create_named(ctx->allocator, name, TYPE_MODULE);
     type_layout_compute(mt, 8);
     type_hash_ensure(mt);
     vec_push(ctx->all_types, mt);
     return mt;
   }
-  default: return ctx->error_type;
+  default:
+    return ctx->error_type;
   }
 }
 
-static semantic_type_t _check_expr_literal_undefined(context_t ctx, node_t expr) {
+static semantic_type_t _check_expr_literal_undefined(context_t ctx,
+                                                     node_t expr) {
   /* undefined is only valid as a variable initializer (handled in
    * _check_stmt_declaration).  Using it as a standalone expression
    * is an error — it has no type of its own. */
@@ -103,12 +115,12 @@ static semantic_type_t _check_expr_prefix_unary(context_t ctx, node_t expr) {
   cubec_expression_binary_t bin = (cubec_expression_binary_t)expr;
   const char *op = string_get(bin->opt);
   semantic_type_t rt = _check_expression(ctx, bin->right);
-  if (rt->impl->kind == TYPE_ERROR) return ctx->error_type;
+  if (rt->impl->kind == TYPE_ERROR)
+    return ctx->error_type;
 
   if (strcmp(op, "!") == 0) {
     if (!_is_bool_type(rt)) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                           expr->location,
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                            "operator '!' requires bool operand");
       ctx->error_count++;
     }
@@ -116,8 +128,7 @@ static semantic_type_t _check_expr_prefix_unary(context_t ctx, node_t expr) {
   }
   if (strcmp(op, "-") == 0) {
     if (!_is_numeric_type(rt)) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                           expr->location,
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                            "operator '-' requires numeric operand");
       ctx->error_count++;
     }
@@ -125,8 +136,7 @@ static semantic_type_t _check_expr_prefix_unary(context_t ctx, node_t expr) {
   }
   if (strcmp(op, "~") == 0) {
     if (!_is_integer_type(rt)) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                           expr->location,
+      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                            "operator '~' requires integer operand");
       ctx->error_count++;
     }
@@ -139,7 +149,8 @@ static semantic_type_t _check_expr_binary(context_t ctx, node_t expr) {
   cubec_expression_binary_t bin = (cubec_expression_binary_t)expr;
   const char *op = string_get(bin->opt);
 
-  if (!bin->left) return _check_expr_prefix_unary(ctx, expr);
+  if (!bin->left)
+    return _check_expr_prefix_unary(ctx, expr);
 
   semantic_type_t lt = _check_expression(ctx, bin->left);
   semantic_type_t rt = _check_expression(ctx, bin->right);
@@ -193,9 +204,11 @@ static semantic_type_t _check_expr_binary(context_t ctx, node_t expr) {
         }
       }
     }
-    if (!_is_comparable_type(effective_lt) || !_is_comparable_type(effective_rt)) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                           "comparison operator '%s' requires comparable operands", op);
+    if (!_is_comparable_type(effective_lt) ||
+        !_is_comparable_type(effective_rt)) {
+      diagnostic_list_push(
+          ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+          "comparison operator '%s' requires comparable operands", op);
       ctx->error_count++;
     }
     return ctx->builtin_bool;
@@ -224,12 +237,14 @@ static semantic_type_t _check_expr_binary(context_t ctx, node_t expr) {
       is_union = true;
     } else if (lt_unq->impl->kind == TYPE_GENERIC_INSTANCE) {
       semantic_type_t base = lt_unq->impl->generic_instance.generic_template;
-      if (base && base->impl->kind == TYPE_UNION) is_union = true;
+      if (base && base->impl->kind == TYPE_UNION)
+        is_union = true;
     }
     if (!is_union) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                           "is operator requires a union type on the left, got '%s'",
-                           semantic_type_get_name(lt) ? semantic_type_get_name(lt) : "?");
+      diagnostic_list_push(
+          ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+          "is operator requires a union type on the left, got '%s'",
+          semantic_type_get_name(lt) ? semantic_type_get_name(lt) : "?");
       ctx->error_count++;
     }
     return ctx->builtin_bool;
@@ -239,8 +254,10 @@ static semantic_type_t _check_expr_binary(context_t ctx, node_t expr) {
 }
 
 /* Check if an lvalue expression refers to a const-qualified location */
-static bool _is_const_lvalue(context_t ctx, node_t expr, semantic_type_t expr_type) {
-  if (!expr || !expr_type) return false;
+static bool _is_const_lvalue(context_t ctx, node_t expr,
+                             semantic_type_t expr_type) {
+  if (!expr || !expr_type)
+    return false;
 
   switch (expr->kind) {
   case CUBEC_NODE_LITERAL_IDENTIFIER:
@@ -250,12 +267,14 @@ static bool _is_const_lvalue(context_t ctx, node_t expr, semantic_type_t expr_ty
     cubec_expression_member_t mem = (cubec_expression_member_t)expr;
     semantic_type_t host_type = _check_expression(ctx, mem->host);
     /* If host is const, the field is const */
-    if (semantic_type_is_const(host_type)) return true;
+    if (semantic_type_is_const(host_type))
+      return true;
     /* For pointer.field, check if pointee is const */
     semantic_type_t host_unq = semantic_type_strip_qualifier(host_type);
     if (host_unq->impl->kind == TYPE_POINTER) {
       semantic_type_t pointee = host_unq->impl->pointer.pointee;
-      if (semantic_type_is_const(pointee)) return true;
+      if (semantic_type_is_const(pointee))
+        return true;
     }
     return semantic_type_is_const(expr_type);
   }
@@ -266,7 +285,8 @@ static bool _is_const_lvalue(context_t ctx, node_t expr, semantic_type_t expr_ty
     semantic_type_t ptr_unq = semantic_type_strip_qualifier(ptr_type);
     if (ptr_unq->impl->kind == TYPE_POINTER) {
       semantic_type_t pointee = ptr_unq->impl->pointer.pointee;
-      if (semantic_type_is_const(pointee)) return true;
+      if (semantic_type_is_const(pointee))
+        return true;
     }
     return semantic_type_is_const(expr_type);
   }
@@ -299,7 +319,8 @@ static semantic_type_t _check_expr_assignment(context_t ctx, node_t expr) {
    * the lvalue — the assignment itself eliminates the TDZ state. */
   if (asgn->left && asgn->left->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
     const char *lname = _checker_ident_str(asgn->left);
-    if (lname && ctx->current_flow && flow_state_is_tdz(ctx->current_flow, lname)) {
+    if (lname && ctx->current_flow &&
+        flow_state_is_tdz(ctx->current_flow, lname)) {
       flow_state_remove_tdz(ctx->current_flow, lname);
     }
   }
@@ -316,7 +337,8 @@ static semantic_type_t _check_expr_assignment(context_t ctx, node_t expr) {
      We still need to validate __set__ for the assignment. */
   if (asgn->left->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
     semantic_type_t result = _check_assign_generic_lhs(ctx, expr, lt, rt);
-    if (result) return result;
+    if (result)
+      return result;
   }
 
   if (lt->impl->kind == TYPE_ERROR || rt->impl->kind == TYPE_ERROR)
@@ -351,20 +373,23 @@ static semantic_type_t _check_expr_assignment(context_t ctx, node_t expr) {
 static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
   cubec_expression_call_t call = (cubec_expression_call_t)expr;
   semantic_type_t callee_type = NULL;
-  bool is_explicit_method_call = false;  /* obj.method[T](args) — skip self in arg check */
+  bool is_explicit_method_call =
+      false; /* obj.method[T](args) — skip self in arg check */
 
   /* assert() is only allowed inside test blocks */
   {
     const char *callee_name = NULL;
     if (call->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER)
       callee_name = _checker_ident_str(call->callee);
-    else if (call->callee->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
+    else if (call->callee->kind ==
+             CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
       cubec_expression_generic_instantiation_t gi =
           (cubec_expression_generic_instantiation_t)call->callee;
       if (gi->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER)
         callee_name = _checker_ident_str(gi->callee);
     }
-    if (callee_name && strcmp(callee_name, "assert") == 0 && !ctx->in_test_block) {
+    if (callee_name && strcmp(callee_name, "assert") == 0 &&
+        !ctx->in_test_block) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                            "assert can only be used inside test blocks");
       ctx->error_count++;
@@ -372,7 +397,8 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
     }
   }
 
-  /* Check if callee is a direct reference to a generic function (needs type inference) */
+  /* Check if callee is a direct reference to a generic function (needs type
+   * inference) */
   struct symbol *generic_func_sym = NULL;
   strmap_t explicit_bindings = NULL;
 
@@ -381,28 +407,33 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
     struct symbol *sym = name ? scope_lookup(ctx->current_scope, name) : NULL;
     if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.generic_params)
       generic_func_sym = sym;
-  } else if (call->callee->kind == CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
+  } else if (call->callee->kind ==
+             CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION) {
     cubec_expression_generic_instantiation_t gi =
         (cubec_expression_generic_instantiation_t)call->callee;
     if (gi->callee->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
-      /* Generic function with explicit type args (e.g. unionIs[i32](r), cast[*i32](x)).
-         Only set generic_func_sym if not all generic params are explicitly provided —
-         the remaining ones need inference from call arguments.
-         If all params are bound, _check_generic_ident_callee handles instantiation. */
+      /* Generic function with explicit type args (e.g. unionIs[i32](r),
+         cast[*i32](x)). Only set generic_func_sym if not all generic params are
+         explicitly provided — the remaining ones need inference from call
+         arguments. If all params are bound, _check_generic_ident_callee handles
+         instantiation. */
       const char *name = _checker_ident_str(gi->callee);
       struct symbol *sym = name ? scope_lookup(ctx->current_scope, name) : NULL;
       if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.generic_params) {
-        strmap_t partial_bindings = _resolve_generic_type_bindings_pack(ctx, gi->arguments,
-            sym->function.generic_params);
+        strmap_t partial_bindings = _resolve_generic_type_bindings_pack(
+            ctx, gi->arguments, sym->function.generic_params);
         /* Check if all generic params are covered by the explicit bindings */
         vec_t gp = sym->function.generic_params;
         size_t gp_count = gp ? vec_get_size(gp) : 0;
         bool all_bound = true;
         for (size_t gi_idx = 0; gi_idx < gp_count; gi_idx++) {
-          cubec_generic_param_t gp_node = (cubec_generic_param_t)(void *)vec_get(gp, gi_idx);
-          const char *gp_name = gp_node ? _checker_ident_str(gp_node->name) : NULL;
+          cubec_generic_param_t gp_node =
+              (cubec_generic_param_t)(void *)vec_get(gp, gi_idx);
+          const char *gp_name =
+              gp_node ? _checker_ident_str(gp_node->name) : NULL;
           if (gp_name && !strmap_find(partial_bindings, gp_name)) {
-            /* Unbound pack with no explicit args → empty expansion, still "bound" */
+            /* Unbound pack with no explicit args → empty expansion, still
+             * "bound" */
             if (gp_node && gp_node->is_rest &&
                 (!gi->arguments || vec_get_size(gi->arguments) == 0))
               continue;
@@ -414,7 +445,8 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
           explicit_bindings = partial_bindings;
           partial_bindings = NULL; /* ownership transferred */
         }
-        if (partial_bindings) allocator_free(ctx->allocator, &partial_bindings);
+        if (partial_bindings)
+          allocator_free(ctx->allocator, &partial_bindings);
       }
     } else if (gi->callee->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
       /* obj.method[T](args) — generic method with explicit type args.
@@ -435,23 +467,28 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
         if (receiver_type->instance_methods) {
           size_t mc = vec_get_size(receiver_type->instance_methods);
           for (size_t mi = 0; mi < mc; mi++) {
-            struct symbol *m = (struct symbol *)vec_get(receiver_type->instance_methods, mi);
+            struct symbol *m =
+                (struct symbol *)vec_get(receiver_type->instance_methods, mi);
             if (m && m->name && strcmp(m->name, fname) == 0 &&
                 m->kind == SYMBOL_FUNCTION && m->function.generic_params) {
               /* Resolve explicit method-level type args with pack coalescing */
-              strmap_t method_bindings = _resolve_generic_type_bindings_pack(ctx,
-                  gi->arguments, m->function.generic_params);
+              strmap_t method_bindings = _resolve_generic_type_bindings_pack(
+                  ctx, gi->arguments, m->function.generic_params);
 
-              /* Build combined type_bindings: [type_level..., method_level...] */
+              /* Build combined type_bindings: [type_level..., method_level...]
+               */
               strmap_init_t smi = {.value_auto_dispose = false};
-              strmap_t combined_bindings = (strmap_t)allocator_create(ctx->allocator, &g_strmap_type, &smi);
+              strmap_t combined_bindings = (strmap_t)allocator_create(
+                  ctx->allocator, &g_strmap_type, &smi);
               if (receiver_type->impl->kind == TYPE_GENERIC_INSTANCE) {
-                strmap_t tbindings = receiver_type->impl->generic_instance.type_bindings;
+                strmap_t tbindings =
+                    receiver_type->impl->generic_instance.type_bindings;
                 if (tbindings) {
                   strmap_iter_t iter = strmap_iter_first(tbindings);
                   const char *bname = NULL;
                   while ((bname = strmap_iter_next(&iter)) != NULL) {
-                    strmap_insert(combined_bindings, bname, strmap_find(tbindings, bname));
+                    strmap_insert(combined_bindings, bname,
+                                  strmap_find(tbindings, bname));
                   }
                 }
               }
@@ -459,20 +496,22 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
                 strmap_iter_t iter = strmap_iter_first(method_bindings);
                 const char *bname = NULL;
                 while ((bname = strmap_iter_next(&iter)) != NULL) {
-                  strmap_insert(combined_bindings, bname, strmap_find(method_bindings, bname));
+                  strmap_insert(combined_bindings, bname,
+                                strmap_find(method_bindings, bname));
                 }
                 allocator_free(ctx->allocator, &method_bindings);
               }
 
               /* Substitute and set callee_type */
               if (strmap_get_size(combined_bindings) > 0) {
-                semantic_type_t sub_type = _substitute_type(ctx, m->function.type, combined_bindings);
+                semantic_type_t sub_type =
+                    _substitute_type(ctx, m->function.type, combined_bindings);
                 if (sub_type && sub_type->impl->kind != TYPE_ERROR) {
                   callee_type = sub_type;
                   is_explicit_method_call = true;
                   /* Pass bindings for body check — ownership transferred */
                   _enqueue_body_check(ctx, m, sub_type, combined_bindings,
-                      ctx->global_scope, true, receiver_type);
+                                      ctx->global_scope, true, receiver_type);
                   combined_bindings = NULL; /* ownership transferred */
                 }
               }
@@ -490,7 +529,8 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
   /* obj.method[T](args) may have already set callee_type above */
   if (!callee_type)
     callee_type = _check_expression(ctx, call->callee);
-  if (callee_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+  if (callee_type->impl->kind == TYPE_ERROR)
+    return ctx->error_type;
 
   if (callee_type->impl->kind != TYPE_FUNCTION) {
     /* Check for __call__ magic method */
@@ -498,7 +538,8 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
     if (callee_type->instance_methods) {
       size_t mc = vec_get_size(callee_type->instance_methods);
       for (size_t i = 0; i < mc; i++) {
-        struct symbol *s = (struct symbol *)vec_get(callee_type->instance_methods, i);
+        struct symbol *s =
+            (struct symbol *)vec_get(callee_type->instance_methods, i);
         if (s && s->name && strcmp(s->name, "__call__") == 0 &&
             s->kind == SYMBOL_FUNCTION && s->function.type) {
           call_method = s;
@@ -511,7 +552,8 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
       vec_t params = call_fn_type->impl->function.params;
       size_t param_count = params ? vec_get_size(params) : 0;
       /* Skip first param (self); check remaining against user args */
-      size_t user_arg_count = call->arguments ? vec_get_size(call->arguments) : 0;
+      size_t user_arg_count =
+          call->arguments ? vec_get_size(call->arguments) : 0;
       for (size_t i = 0; i < user_arg_count; i++) {
         node_t arg = (node_t)vec_get(call->arguments, i);
         semantic_type_t at = _check_expression(ctx, arg);
@@ -519,11 +561,11 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
         if (pidx < param_count && at->impl->kind != TYPE_ERROR) {
           semantic_type_t pt = (semantic_type_t)vec_get(params, pidx);
           if (!semantic_type_can_implicit_convert(at, pt)) {
-            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg->location,
-                "argument %zu: cannot convert '%s' to '%s'",
-                i + 1,
-                at->name ? at->name : "<anonymous>",
-                pt->name ? pt->name : "<anonymous>");
+            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+                                 arg->location,
+                                 "argument %zu: cannot convert '%s' to '%s'",
+                                 i + 1, at->name ? at->name : "<anonymous>",
+                                 pt->name ? pt->name : "<anonymous>");
             ctx->error_count++;
           }
         }
@@ -543,7 +585,8 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
   if (generic_func_sym) {
     /* Collect argument types */
     vec_init_t atvi = {.auto_dispose = false};
-    vec_t arg_types = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &atvi);
+    vec_t arg_types =
+        (vec_t)allocator_create(ctx->allocator, &g_vec_type, &atvi);
     for (size_t i = 0; i < arg_count; i++) {
       node_t arg = (node_t)vec_get(call->arguments, i);
       semantic_type_t at = _check_expression(ctx, arg);
@@ -551,9 +594,10 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
     }
 
     /* Infer type args — returns strmap_t (name → concrete type) */
-    strmap_t type_bindings_gf = _infer_type_args_from_call(ctx,
-        generic_func_sym->function.type, arg_types, explicit_bindings);
-    if (explicit_bindings) allocator_free(ctx->allocator, &explicit_bindings);
+    strmap_t type_bindings_gf = _infer_type_args_from_call(
+        ctx, generic_func_sym->function.type, arg_types, explicit_bindings);
+    if (explicit_bindings)
+      allocator_free(ctx->allocator, &explicit_bindings);
     explicit_bindings = NULL;
 
     /* Check for unresolved generic params */
@@ -561,19 +605,23 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
     size_t gcount = gp ? vec_get_size(gp) : 0;
     if (type_bindings_gf) {
       for (size_t i = 0; i < gcount; i++) {
-        cubec_generic_param_t gp_node = (cubec_generic_param_t)(void *)vec_get(gp, i);
-        const char *gp_name = gp_node ? _checker_ident_str(gp_node->name) : NULL;
-        if (!gp_name) continue;
-        semantic_type_t ta = (semantic_type_t)strmap_find(type_bindings_gf, gp_name);
+        cubec_generic_param_t gp_node =
+            (cubec_generic_param_t)(void *)vec_get(gp, i);
+        const char *gp_name =
+            gp_node ? _checker_ident_str(gp_node->name) : NULL;
+        if (!gp_name)
+          continue;
+        semantic_type_t ta =
+            (semantic_type_t)strmap_find(type_bindings_gf, gp_name);
         if (!ta) {
           diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                                expr->location,
-                               "cannot infer generic parameter '%s'",
-                               gp_name);
+                               "cannot infer generic parameter '%s'", gp_name);
           ctx->error_count++;
         } else if (ta->impl->kind == TYPE_GENERIC_PACK &&
                    vec_get_size(ta->impl->generic_pack.expanded_types) == 0) {
-          /* Pack parameter with empty expansion: not an error (empty pack is valid) */
+          /* Pack parameter with empty expansion: not an error (empty pack is
+           * valid) */
         }
       }
     }
@@ -581,18 +629,20 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
     /* Instantiate the function */
     if (type_bindings_gf) {
       /* Check generic param constraints */
-      _check_generic_param_constraints(ctx, generic_func_sym->function.generic_params,
-          type_bindings_gf, expr);
+      _check_generic_param_constraints(
+          ctx, generic_func_sym->function.generic_params, type_bindings_gf,
+          expr);
 
-      semantic_type_t inst_type = _instantiate_function(ctx, generic_func_sym,
-          type_bindings_gf, expr);
+      semantic_type_t inst_type =
+          _instantiate_function(ctx, generic_func_sym, type_bindings_gf, expr);
       if (inst_type->impl->kind != TYPE_ERROR) {
         callee_type = inst_type;
         _enqueue_body_check(ctx, generic_func_sym, inst_type, type_bindings_gf,
-            ctx->global_scope, false, NULL);
+                            ctx->global_scope, false, NULL);
         type_bindings_gf = NULL; /* ownership transferred */
       }
-      if (type_bindings_gf) allocator_free(ctx->allocator, &type_bindings_gf);
+      if (type_bindings_gf)
+        allocator_free(ctx->allocator, &type_bindings_gf);
     }
 
     allocator_free(ctx->allocator, &arg_types);
@@ -604,8 +654,8 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
 
     if (!is_variadic && arg_count != param_count) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                           "expected %zu arguments, got %zu",
-                           param_count, arg_count);
+                           "expected %zu arguments, got %zu", param_count,
+                           arg_count);
       ctx->error_count++;
     }
 
@@ -618,8 +668,7 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
           diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                                arg->location,
                                "argument %zu: cannot convert '%s' to '%s'",
-                               i + 1,
-                               at->name ? at->name : "<anonymous>",
+                               i + 1, at->name ? at->name : "<anonymous>",
                                pt->name ? pt->name : "<anonymous>");
           ctx->error_count++;
         }
@@ -636,13 +685,14 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
         semantic_type_t return_type = callee_type->impl->function.return_type;
         node_t arg0 = (node_t)vec_get(call->arguments, 0);
         semantic_type_t arg_type = _check_expression(ctx, arg0);
-        if (return_type->impl->kind != TYPE_ERROR && arg_type->impl->kind != TYPE_ERROR) {
+        if (return_type->impl->kind != TYPE_ERROR &&
+            arg_type->impl->kind != TYPE_ERROR) {
           if (!semantic_type_can_explicit_cast(arg_type, return_type)) {
-            diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                                 expr->location,
-                                 "cannot cast '%s' to '%s'",
-                                 arg_type->name ? arg_type->name : "<anonymous>",
-                                 return_type->name ? return_type->name : "<anonymous>");
+            diagnostic_list_push(
+                ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                "cannot cast '%s' to '%s'",
+                arg_type->name ? arg_type->name : "<anonymous>",
+                return_type->name ? return_type->name : "<anonymous>");
             ctx->error_count++;
           }
         }
@@ -680,8 +730,10 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
       if (receiver_type->instance_methods) {
         size_t mc = vec_get_size(receiver_type->instance_methods);
         for (size_t i = 0; i < mc; i++) {
-          struct symbol *m = (struct symbol *)vec_get(receiver_type->instance_methods, i);
-          if (m && m->name && strcmp(m->name, fname) == 0 && m->kind == SYMBOL_FUNCTION) {
+          struct symbol *m =
+              (struct symbol *)vec_get(receiver_type->instance_methods, i);
+          if (m && m->name && strcmp(m->name, fname) == 0 &&
+              m->kind == SYMBOL_FUNCTION) {
             is_member_call = true;
 
             /* Build combined type_bindings for substitution */
@@ -689,15 +741,18 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
 
             if (receiver_type->impl->kind == TYPE_GENERIC_INSTANCE) {
               /* Type-level bindings from the generic instance */
-              strmap_t tbindings = receiver_type->impl->generic_instance.type_bindings;
+              strmap_t tbindings =
+                  receiver_type->impl->generic_instance.type_bindings;
 
               strmap_init_t smi = {.value_auto_dispose = false};
-              combined_type_bindings = (strmap_t)allocator_create(ctx->allocator, &g_strmap_type, &smi);
+              combined_type_bindings = (strmap_t)allocator_create(
+                  ctx->allocator, &g_strmap_type, &smi);
               if (tbindings) {
                 strmap_iter_t iter = strmap_iter_first(tbindings);
                 const char *bname = NULL;
                 while ((bname = strmap_iter_next(&iter)) != NULL) {
-                  strmap_insert(combined_type_bindings, bname, strmap_find(tbindings, bname));
+                  strmap_insert(combined_type_bindings, bname,
+                                strmap_find(tbindings, bname));
                 }
               }
             }
@@ -712,11 +767,13 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
                  func_params[i], so we must include the self arg to keep
                  alignment correct. */
               vec_init_t atvi = {.auto_dispose = false};
-              vec_t all_arg_types = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &atvi);
+              vec_t all_arg_types =
+                  (vec_t)allocator_create(ctx->allocator, &g_vec_type, &atvi);
               /* Prepend self type: pointer to receiver */
               semantic_type_t self_type = host_type;
               if (host_type->impl->kind != TYPE_POINTER) {
-                self_type = semantic_type_create_pointer(ctx->allocator, host_type);
+                self_type =
+                    semantic_type_create_pointer(ctx->allocator, host_type);
                 vec_push(ctx->all_types, self_type);
               }
               vec_push(all_arg_types, self_type);
@@ -727,20 +784,20 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
               }
 
               /* Infer method-level type args from the template method type */
-              strmap_t method_bindings = _infer_type_args_from_call(ctx,
-                  m->function.type, all_arg_types, NULL);
+              strmap_t method_bindings = _infer_type_args_from_call(
+                  ctx, m->function.type, all_arg_types, NULL);
 
               /* Check for unresolved method-level generic params */
               if (method_bindings && method_gp) {
                 for (size_t mi = 0; mi < method_gcount; mi++) {
                   cubec_generic_param_t gp_node =
                       (cubec_generic_param_t)(void *)vec_get(method_gp, mi);
-                  const char *gp_name = gp_node ? _checker_ident_str(gp_node->name) : NULL;
+                  const char *gp_name =
+                      gp_node ? _checker_ident_str(gp_node->name) : NULL;
                   if (gp_name && !strmap_find(method_bindings, gp_name)) {
-                    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                                         expr->location,
-                                         "cannot infer generic parameter '%s'",
-                                         gp_name);
+                    diagnostic_list_push(
+                        ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+                        "cannot infer generic parameter '%s'", gp_name);
                     ctx->error_count++;
                   }
                 }
@@ -749,13 +806,15 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
               /* Merge method-level bindings into combined_type_bindings */
               if (!combined_type_bindings) {
                 strmap_init_t smi2 = {.value_auto_dispose = false};
-                combined_type_bindings = (strmap_t)allocator_create(ctx->allocator, &g_strmap_type, &smi2);
+                combined_type_bindings = (strmap_t)allocator_create(
+                    ctx->allocator, &g_strmap_type, &smi2);
               }
               if (method_bindings) {
                 strmap_iter_t iter = strmap_iter_first(method_bindings);
                 const char *bname = NULL;
                 while ((bname = strmap_iter_next(&iter)) != NULL) {
-                  strmap_insert(combined_type_bindings, bname, strmap_find(method_bindings, bname));
+                  strmap_insert(combined_type_bindings, bname,
+                                strmap_find(method_bindings, bname));
                 }
                 allocator_free(ctx->allocator, &method_bindings);
               }
@@ -766,14 +825,17 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
             /* Substitute method type with combined type_bindings.
                For methods on TYPE_GENERIC_INSTANCE, we always substitute
                (even non-generic methods) because the template method type
-               contains TYPE_GENERIC_PARAM references (from the type-level params). */
-            if (combined_type_bindings && strmap_get_size(combined_type_bindings) > 0) {
-              semantic_type_t sub_type = _substitute_type(ctx, m->function.type, combined_type_bindings);
+               contains TYPE_GENERIC_PARAM references (from the type-level
+               params). */
+            if (combined_type_bindings &&
+                strmap_get_size(combined_type_bindings) > 0) {
+              semantic_type_t sub_type = _substitute_type(
+                  ctx, m->function.type, combined_type_bindings);
               if (sub_type && sub_type->impl->kind != TYPE_ERROR) {
                 callee_type = sub_type;
                 /* Pass bindings for body check — ownership transferred */
                 _enqueue_body_check(ctx, m, sub_type, combined_type_bindings,
-                    ctx->global_scope, true, receiver_type);
+                                    ctx->global_scope, true, receiver_type);
                 combined_type_bindings = NULL; /* ownership transferred */
               }
             }
@@ -781,7 +843,8 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
               allocator_free(ctx->allocator, &combined_type_bindings);
             }
 
-            /* For non-generic methods on plain structs, set callee_type from symbol */
+            /* For non-generic methods on plain structs, set callee_type from
+             * symbol */
             if (!callee_type && m->function.type) {
               callee_type = m->function.type;
             }
@@ -818,7 +881,8 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
           expected_self = host_type;
         } else {
           /* Object host: self param should be *typeof(host) */
-          expected_self = semantic_type_create_pointer(ctx->allocator, host_type);
+          expected_self =
+              semantic_type_create_pointer(ctx->allocator, host_type);
           vec_push(ctx->all_types, expected_self);
         }
         if (self_param->impl->kind != TYPE_POINTER ||
@@ -840,8 +904,7 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
             diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                                  arg->location,
                                  "argument %zu: cannot convert '%s' to '%s'",
-                                 i + 1,
-                                 at->name ? at->name : "<anonymous>",
+                                 i + 1, at->name ? at->name : "<anonymous>",
                                  pt->name ? pt->name : "<anonymous>");
             ctx->error_count++;
           }
@@ -851,9 +914,11 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
     }
   }
 
-  /* For obj.method[T](args), callee_type includes self — skip it in arg check */
+  /* For obj.method[T](args), callee_type includes self — skip it in arg check
+   */
   size_t param_offset = is_explicit_method_call ? 1 : 0;
-  size_t effective_param_count = param_count > param_offset ? param_count - param_offset : 0;
+  size_t effective_param_count =
+      param_count > param_offset ? param_count - param_offset : 0;
 
   if (!is_variadic && arg_count != effective_param_count) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
@@ -869,10 +934,8 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
     if (pidx < param_count && at->impl->kind != TYPE_ERROR) {
       semantic_type_t pt = (semantic_type_t)vec_get(params, pidx);
       if (!semantic_type_can_implicit_convert(at, pt)) {
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                             arg->location,
-                             "argument %zu: cannot convert '%s' to '%s'",
-                             i + 1,
+        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, arg->location,
+                             "argument %zu: cannot convert '%s' to '%s'", i + 1,
                              at->name ? at->name : "<anonymous>",
                              pt->name ? pt->name : "<anonymous>");
         ctx->error_count++;
@@ -886,13 +949,14 @@ static semantic_type_t _check_expr_call(context_t ctx, node_t expr) {
 /* Check if a struct field is accessible from the current context.
    Currently all code is in the same module, so only pub matters for future
    cross-module access. When module system is implemented, this will check
-   whether the accessing scope is in the same module as the struct definition. */
-static bool _is_field_accessible(context_t ctx,
-                                  struct symbol *field_sym,
-                                  semantic_type_t owner_type) {
+   whether the accessing scope is in the same module as the struct definition.
+ */
+static bool _is_field_accessible(context_t ctx, struct symbol *field_sym,
+                                 semantic_type_t owner_type) {
   if (!field_sym->field.is_pub) {
     /* Check if the owner type is from a different module.
-       If source_file differs from current_file, access is denied for non-pub fields. */
+       If source_file differs from current_file, access is denied for non-pub
+       fields. */
     if (owner_type && owner_type->source_file && ctx->current_file) {
       if (strcmp(owner_type->source_file, ctx->current_file) != 0) {
         return false;
@@ -905,10 +969,12 @@ static bool _is_field_accessible(context_t ctx,
 static semantic_type_t _check_expr_member(context_t ctx, node_t expr) {
   cubec_expression_member_t mem = (cubec_expression_member_t)expr;
   semantic_type_t host_type = _check_expression(ctx, mem->host);
-  if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+  if (host_type->impl->kind == TYPE_ERROR)
+    return ctx->error_type;
 
   const char *fname = _checker_ident_str((node_t)mem->field);
-  if (!fname) return ctx->error_type;
+  if (!fname)
+    return ctx->error_type;
 
   /* Determine the effective host type (strip qualifier wrapper, deref pointers)
      and whether const should propagate to field access results */
@@ -929,8 +995,7 @@ static semantic_type_t _check_expr_member(context_t ctx, node_t expr) {
       if (f && f->name && strcmp(f->name, fname) == 0) {
         if (!_is_field_accessible(ctx, f, effective_host)) {
           diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                               expr->location,
-                               "field '%s' is private", fname);
+                               expr->location, "field '%s' is private", fname);
           ctx->error_count++;
           return ctx->error_type;
         }
@@ -939,15 +1004,16 @@ static semantic_type_t _check_expr_member(context_t ctx, node_t expr) {
         if (is_union && !ctx->in_assignment_lhs) {
           diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                                expr->location,
-                               "cannot directly access union field '%s'; use '%s.?' or '%s.!' instead",
+                               "cannot directly access union field '%s'; use "
+                               "'%s.?' or '%s.!' instead",
                                fname, fname, fname);
           ctx->error_count++;
           return ctx->error_type;
         }
         semantic_type_t ft = f->field.type;
         if (host_is_const && !semantic_type_is_const(ft)) {
-          semantic_type_t cft = semantic_type_create_qualifier(
-              ctx->allocator, ft, true, false);
+          semantic_type_t cft =
+              semantic_type_create_qualifier(ctx->allocator, ft, true, false);
           type_hash_ensure(cft);
           vec_push(ctx->all_types, cft);
           return cft;
@@ -958,7 +1024,8 @@ static semantic_type_t _check_expr_member(context_t ctx, node_t expr) {
     /* Methods don't need const propagation — they are function values */
     size_t mcount = vec_get_size(effective_host->instance_methods);
     for (size_t i = 0; i < mcount; i++) {
-      struct symbol *m = (struct symbol *)vec_get(effective_host->instance_methods, i);
+      struct symbol *m =
+          (struct symbol *)vec_get(effective_host->instance_methods, i);
       if (m && m->name && strcmp(m->name, fname) == 0)
         return m->function.type;
     }
@@ -980,8 +1047,8 @@ static semantic_type_t _check_expr_member(context_t ctx, node_t expr) {
         if (f && f->name && strcmp(f->name, fname) == 0) {
           if (!_is_field_accessible(ctx, f, pointee_unq)) {
             diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                                 expr->location,
-                                 "field '%s' is private", fname);
+                                 expr->location, "field '%s' is private",
+                                 fname);
             ctx->error_count++;
             return ctx->error_type;
           }
@@ -990,15 +1057,16 @@ static semantic_type_t _check_expr_member(context_t ctx, node_t expr) {
           if (is_union && !ctx->in_assignment_lhs) {
             diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                                  expr->location,
-                                 "cannot directly access union field '%s'; use '%s.?' or '%s.!' instead",
+                                 "cannot directly access union field '%s'; use "
+                                 "'%s.?' or '%s.!' instead",
                                  fname, fname, fname);
             ctx->error_count++;
             return ctx->error_type;
           }
           semantic_type_t ft = f->field.type;
           if (pointee_is_const && !semantic_type_is_const(ft)) {
-            semantic_type_t cft = semantic_type_create_qualifier(
-                ctx->allocator, ft, true, false);
+            semantic_type_t cft =
+                semantic_type_create_qualifier(ctx->allocator, ft, true, false);
             type_hash_ensure(cft);
             vec_push(ctx->all_types, cft);
             return cft;
@@ -1008,7 +1076,8 @@ static semantic_type_t _check_expr_member(context_t ctx, node_t expr) {
       }
       size_t mcount = vec_get_size(pointee_unq->instance_methods);
       for (size_t i = 0; i < mcount; i++) {
-        struct symbol *m = (struct symbol *)vec_get(pointee_unq->instance_methods, i);
+        struct symbol *m =
+            (struct symbol *)vec_get(pointee_unq->instance_methods, i);
         if (m && m->name && strcmp(m->name, fname) == 0)
           return m->function.type;
       }
@@ -1044,11 +1113,13 @@ static semantic_type_t _check_expr_member(context_t ctx, node_t expr) {
   return ctx->error_type;
 }
 
-static semantic_type_t _check_expr_namespace_access(context_t ctx, node_t expr) {
+static semantic_type_t _check_expr_namespace_access(context_t ctx,
+                                                    node_t expr) {
   cubec_expression_namespace_access_t ns =
       (cubec_expression_namespace_access_t)expr;
   semantic_type_t host_type = _check_expression(ctx, ns->host);
-  if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+  if (host_type->impl->kind == TYPE_ERROR)
+    return ctx->error_type;
 
   /* Module scope access: module_name::member */
   if (host_type->impl->kind == TYPE_MODULE) {
@@ -1056,7 +1127,8 @@ static semantic_type_t _check_expr_namespace_access(context_t ctx, node_t expr) 
     struct symbol *mod_sym = scope_lookup(ctx->current_scope, mod_name);
     if (!mod_sym || mod_sym->kind != SYMBOL_MODULE) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                           "module '%s' not found", mod_name ? mod_name : "<unknown>");
+                           "module '%s' not found",
+                           mod_name ? mod_name : "<unknown>");
       ctx->error_count++;
       return ctx->error_type;
     }
@@ -1068,12 +1140,13 @@ static semantic_type_t _check_expr_namespace_access(context_t ctx, node_t expr) 
       return ctx->error_type;
     }
     const char *fname = _checker_ident_str((node_t)ns->field);
-    if (!fname) return ctx->error_type;
+    if (!fname)
+      return ctx->error_type;
     struct symbol *member = scope_lookup_local(mod_scope, fname);
     if (!member || !member->is_export) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                           "module '%s' has no exported member '%s'",
-                           mod_name, fname);
+                           "module '%s' has no exported member '%s'", mod_name,
+                           fname);
       ctx->error_count++;
       return ctx->error_type;
     }
@@ -1082,21 +1155,27 @@ static semantic_type_t _check_expr_namespace_access(context_t ctx, node_t expr) 
     member->use_count++;
 
     switch (member->kind) {
-    case SYMBOL_TYPE: return member->type.type ? member->type.type : ctx->error_type;
-    case SYMBOL_FUNCTION: return member->function.type ? member->function.type : ctx->error_type;
-    case SYMBOL_VARIABLE: return member->variable.type ? member->variable.type : ctx->error_type;
-    case SYMBOL_ENUM_ITEM: return member->enum_item.owning_type;
+    case SYMBOL_TYPE:
+      return member->type.type ? member->type.type : ctx->error_type;
+    case SYMBOL_FUNCTION:
+      return member->function.type ? member->function.type : ctx->error_type;
+    case SYMBOL_VARIABLE:
+      return member->variable.type ? member->variable.type : ctx->error_type;
+    case SYMBOL_ENUM_ITEM:
+      return member->enum_item.owning_type;
     default:
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                           "module '%s' member '%s' is not a type, function, or variable",
-                           mod_name, fname);
+      diagnostic_list_push(
+          ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+          "module '%s' member '%s' is not a type, function, or variable",
+          mod_name, fname);
       ctx->error_count++;
       return ctx->error_type;
     }
   }
 
   const char *fname = _checker_ident_str((node_t)ns->field);
-  if (!fname) return ctx->error_type;
+  if (!fname)
+    return ctx->error_type;
 
   size_t sfcount = vec_get_size(host_type->static_fields);
   for (size_t i = 0; i < sfcount; i++) {
@@ -1107,13 +1186,15 @@ static semantic_type_t _check_expr_namespace_access(context_t ctx, node_t expr) 
   /* All methods are in instance_methods; :: is unified namespace access */
   size_t imcount = vec_get_size(host_type->instance_methods);
   for (size_t i = 0; i < imcount; i++) {
-    struct symbol *im = (struct symbol *)vec_get(host_type->instance_methods, i);
+    struct symbol *im =
+        (struct symbol *)vec_get(host_type->instance_methods, i);
     if (im && im->name && strcmp(im->name, fname) == 0)
       return im->function.type;
   }
   size_t atcount = vec_get_size(host_type->associated_types);
   for (size_t i = 0; i < atcount; i++) {
-    struct symbol *at = (struct symbol *)vec_get(host_type->associated_types, i);
+    struct symbol *at =
+        (struct symbol *)vec_get(host_type->associated_types, i);
     if (at && at->name && strcmp(at->name, fname) == 0)
       return at->type.type;
   }
@@ -1138,10 +1219,10 @@ static semantic_type_t _check_expr_namespace_access(context_t ctx, node_t expr) 
 }
 
 static semantic_type_t _check_expr_deref(context_t ctx, node_t expr) {
-  cubec_expression_postfix_unary_t pf =
-      (cubec_expression_postfix_unary_t)expr;
+  cubec_expression_postfix_unary_t pf = (cubec_expression_postfix_unary_t)expr;
   semantic_type_t host_type = _check_expression(ctx, pf->right);
-  if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+  if (host_type->impl->kind == TYPE_ERROR)
+    return ctx->error_type;
 
   /* Strip qualifier wrapper (e.g. const *T) to find the underlying pointer */
   semantic_type_t unqualified = semantic_type_strip_qualifier(host_type);
@@ -1155,10 +1236,10 @@ static semantic_type_t _check_expr_deref(context_t ctx, node_t expr) {
 }
 
 static semantic_type_t _check_expr_addr(context_t ctx, node_t expr) {
-  cubec_expression_postfix_unary_t pf =
-      (cubec_expression_postfix_unary_t)expr;
+  cubec_expression_postfix_unary_t pf = (cubec_expression_postfix_unary_t)expr;
   semantic_type_t host_type = _check_expression(ctx, pf->right);
-  if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+  if (host_type->impl->kind == TYPE_ERROR)
+    return ctx->error_type;
 
   if (!_is_lvalue(pf->right)) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
@@ -1171,14 +1252,14 @@ static semantic_type_t _check_expr_addr(context_t ctx, node_t expr) {
 }
 
 static semantic_type_t _check_expr_try(context_t ctx, node_t expr) {
-  cubec_expression_postfix_unary_t pf =
-      (cubec_expression_postfix_unary_t)expr;
+  cubec_expression_postfix_unary_t pf = (cubec_expression_postfix_unary_t)expr;
 
   /* .? on union member access: u.a.? — check if a is the active variant */
   if (pf->right->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
     cubec_expression_member_t mem = (cubec_expression_member_t)pf->right;
     semantic_type_t host_type = _check_expression(ctx, mem->host);
-    if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+    if (host_type->impl->kind == TYPE_ERROR)
+      return ctx->error_type;
 
     /* Auto-deref pointer: self.field.? where self: *T */
     if (host_type->impl->kind == TYPE_POINTER)
@@ -1196,12 +1277,16 @@ static semantic_type_t _check_expr_try(context_t ctx, node_t expr) {
 
     if (fields) {
       const char *fname = _checker_ident_str((node_t)mem->field);
-      if (!fname) return ctx->error_type;
+      if (!fname)
+        return ctx->error_type;
       struct symbol *found = NULL;
       size_t fc = vec_get_size(fields);
       for (size_t i = 0; i < fc; i++) {
         struct symbol *f = (struct symbol *)vec_get(fields, i);
-        if (f && f->name && strcmp(f->name, fname) == 0) { found = f; break; }
+        if (f && f->name && strcmp(f->name, fname) == 0) {
+          found = f;
+          break;
+        }
       }
       if (!found) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
@@ -1215,15 +1300,18 @@ static semantic_type_t _check_expr_try(context_t ctx, node_t expr) {
   }
 
   semantic_type_t host_type = _check_expression(ctx, pf->right);
-  if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+  if (host_type->impl->kind == TYPE_ERROR)
+    return ctx->error_type;
 
   /* .? on Result protocol: isError() + value() + error() */
   struct symbol *is_err_fn = _find_magic_method(host_type, "isError");
   struct symbol *val_fn = _find_magic_method(host_type, "value");
   struct symbol *err_fn = _find_magic_method(host_type, "error");
   if (is_err_fn && val_fn) {
-    semantic_type_t val_ret = val_fn->function.type
-        ? val_fn->function.type->impl->function.return_type : NULL;
+    semantic_type_t val_ret =
+        val_fn->function.type
+            ? val_fn->function.type->impl->function.return_type
+            : NULL;
     if (!val_ret) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                            ".? value() has no return type");
@@ -1243,21 +1331,22 @@ static semantic_type_t _check_expr_try(context_t ctx, node_t expr) {
   if (host_type->impl->kind == TYPE_POINTER)
     return host_type->impl->pointer.pointee;
 
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                       ".? requires a pointer, union field access, or Result type");
+  diagnostic_list_push(
+      ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+      ".? requires a pointer, union field access, or Result type");
   ctx->error_count++;
   return ctx->error_type;
 }
 
 static semantic_type_t _check_expr_assert(context_t ctx, node_t expr) {
-  cubec_expression_postfix_unary_t pf =
-      (cubec_expression_postfix_unary_t)expr;
+  cubec_expression_postfix_unary_t pf = (cubec_expression_postfix_unary_t)expr;
 
   /* .! on union member access: u.a.! — assert a is the active variant */
   if (pf->right->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
     cubec_expression_member_t mem = (cubec_expression_member_t)pf->right;
     semantic_type_t host_type = _check_expression(ctx, mem->host);
-    if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+    if (host_type->impl->kind == TYPE_ERROR)
+      return ctx->error_type;
 
     /* Auto-deref pointer: self.field.! where self: *T */
     if (host_type->impl->kind == TYPE_POINTER)
@@ -1275,12 +1364,16 @@ static semantic_type_t _check_expr_assert(context_t ctx, node_t expr) {
 
     if (fields) {
       const char *fname = _checker_ident_str((node_t)mem->field);
-      if (!fname) return ctx->error_type;
+      if (!fname)
+        return ctx->error_type;
       struct symbol *found = NULL;
       size_t fc = vec_get_size(fields);
       for (size_t i = 0; i < fc; i++) {
         struct symbol *f = (struct symbol *)vec_get(fields, i);
-        if (f && f->name && strcmp(f->name, fname) == 0) { found = f; break; }
+        if (f && f->name && strcmp(f->name, fname) == 0) {
+          found = f;
+          break;
+        }
       }
       if (!found) {
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
@@ -1294,15 +1387,18 @@ static semantic_type_t _check_expr_assert(context_t ctx, node_t expr) {
   }
 
   semantic_type_t host_type = _check_expression(ctx, pf->right);
-  if (host_type->impl->kind == TYPE_ERROR) return ctx->error_type;
+  if (host_type->impl->kind == TYPE_ERROR)
+    return ctx->error_type;
 
   /* .! on Result protocol: isError() + value() + error() */
   struct symbol *is_err_fn = _find_magic_method(host_type, "isError");
   struct symbol *val_fn = _find_magic_method(host_type, "value");
   struct symbol *err_fn = _find_magic_method(host_type, "error");
   if (is_err_fn && val_fn) {
-    semantic_type_t val_ret = val_fn->function.type
-        ? val_fn->function.type->impl->function.return_type : NULL;
+    semantic_type_t val_ret =
+        val_fn->function.type
+            ? val_fn->function.type->impl->function.return_type
+            : NULL;
     if (!val_ret) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                            ".! value() has no return type");
@@ -1322,8 +1418,9 @@ static semantic_type_t _check_expr_assert(context_t ctx, node_t expr) {
   if (host_type->impl->kind == TYPE_POINTER)
     return host_type->impl->pointer.pointee;
 
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                       ".! requires a pointer, union field access, or Result type");
+  diagnostic_list_push(
+      ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+      ".! requires a pointer, union field access, or Result type");
   ctx->error_count++;
   return ctx->error_type;
 }
@@ -1351,14 +1448,17 @@ static semantic_type_t _check_expr_sizeof(context_t ctx, node_t expr) {
   cubec_expression_sizeof_t sz = (cubec_expression_sizeof_t)expr;
   /* Try resolver_resolve_type for type expressions (sizeof(i32)),
    * fall back to _check_expression for value expressions (sizeof(x)).
-   * Clear resolver error if it fails — _check_expression handles the fallback. */
+   * Clear resolver error if it fails — _check_expression handles the fallback.
+   */
   size_t err_before = ctx->error_count;
   semantic_type_t t = resolver_resolve_type(ctx, sz->expression);
   if (!t || t->impl->kind == TYPE_ERROR) {
-    if (ctx->error_count > err_before) ctx->error_count = err_before;
+    if (ctx->error_count > err_before)
+      ctx->error_count = err_before;
     t = _check_expression(ctx, sz->expression);
   }
-  if (!t || t->impl->kind == TYPE_ERROR) return ctx->error_type;
+  if (!t || t->impl->kind == TYPE_ERROR)
+    return ctx->error_type;
   if (semantic_type_is_incomplete(t)) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "sizeof of incomplete type");
@@ -1374,10 +1474,12 @@ static semantic_type_t _check_expr_alignof(context_t ctx, node_t expr) {
   size_t err_before = ctx->error_count;
   semantic_type_t t = resolver_resolve_type(ctx, al->expression);
   if (!t || t->impl->kind == TYPE_ERROR) {
-    if (ctx->error_count > err_before) ctx->error_count = err_before;
+    if (ctx->error_count > err_before)
+      ctx->error_count = err_before;
     t = _check_expression(ctx, al->expression);
   }
-  if (!t || t->impl->kind == TYPE_ERROR) return ctx->error_type;
+  if (!t || t->impl->kind == TYPE_ERROR)
+    return ctx->error_type;
   if (semantic_type_is_incomplete(t)) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "alignof of incomplete type");
@@ -1402,14 +1504,17 @@ static semantic_type_t _check_expr_typeof(context_t ctx, node_t expr) {
 static semantic_type_t _check_expr_slice(context_t ctx, node_t expr) {
   cubec_expression_slice_t sl = (cubec_expression_slice_t)expr;
   semantic_type_t ht = _check_expression(ctx, sl->host);
-  if (ht->impl->kind == TYPE_ERROR) return ctx->error_type;
+  if (ht->impl->kind == TYPE_ERROR)
+    return ctx->error_type;
 
-  if (sl->start) _check_expression(ctx, sl->start);
-  if (sl->length) _check_expression(ctx, sl->length);
+  if (sl->start)
+    _check_expression(ctx, sl->start);
+  if (sl->length)
+    _check_expression(ctx, sl->length);
 
   if (ht->impl->kind == TYPE_ARRAY) {
-    semantic_type_t st = semantic_type_create_slice(ctx->allocator,
-                                       ht->impl->array.element);
+    semantic_type_t st =
+        semantic_type_create_slice(ctx->allocator, ht->impl->array.element);
     vec_push(ctx->all_types, st);
     return st;
   }
@@ -1438,7 +1543,8 @@ static semantic_type_t _check_expr_slice(context_t ctx, node_t expr) {
 static semantic_type_t _check_expr_subscript(context_t ctx, node_t expr) {
   cubec_expression_subscript_t sub = (cubec_expression_subscript_t)expr;
   semantic_type_t ht = _check_expression(ctx, sub->host);
-  if (ht->impl->kind == TYPE_ERROR) return ctx->error_type;
+  if (ht->impl->kind == TYPE_ERROR)
+    return ctx->error_type;
 
   /* Check index expression */
   semantic_type_t it = _check_expression(ctx, sub->index);
@@ -1448,7 +1554,8 @@ static semantic_type_t _check_expr_subscript(context_t ctx, node_t expr) {
   if (ht_unq->impl->kind != TYPE_TUPLE) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "subscript requires a tuple type, got '%s'",
-                         semantic_type_get_name(ht) ? semantic_type_get_name(ht) : "<anonymous>");
+                         semantic_type_get_name(ht) ? semantic_type_get_name(ht)
+                                                    : "<anonymous>");
     ctx->error_count++;
     return ctx->error_type;
   }
@@ -1467,16 +1574,18 @@ static semantic_type_t _check_expr_subscript(context_t ctx, node_t expr) {
   }
 
   if (!idx_valid) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                         "tuple subscript index must be a compile-time constant");
+    diagnostic_list_push(
+        ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+        "tuple subscript index must be a compile-time constant");
     ctx->error_count++;
     return ctx->error_type;
   }
 
   if (idx >= fcount) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
-                         "tuple index %llu out of range (tuple has %zu element%s)",
-                         (unsigned long long)idx, fcount, fcount == 1 ? "" : "s");
+    diagnostic_list_push(
+        ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
+        "tuple index %llu out of range (tuple has %zu element%s)",
+        (unsigned long long)idx, fcount, fcount == 1 ? "" : "s");
     ctx->error_count++;
     return ctx->error_type;
   }
@@ -1492,15 +1601,14 @@ static semantic_type_t _check_expr_function(context_t ctx, node_t expr) {
   func_check_info_t info;
   func_check_info_from_expression(&info, fn);
 
-  return _process_function(ctx, &info, &(func_context_t){
-      .symbol_scope = NULL,
-      .defer_body = false,
-      .is_method = false,
-      .host_type = NULL,
-      .use_child_scope = false,
-      .pre_existing_sym = NULL,
-      .symbol_state = SYMBOL_EVALUATED
-  });
+  return _process_function(ctx, &info,
+                           &(func_context_t){.symbol_scope = NULL,
+                                             .defer_body = false,
+                                             .is_method = false,
+                                             .host_type = NULL,
+                                             .use_child_scope = false,
+                                             .pre_existing_sym = NULL,
+                                             .symbol_state = SYMBOL_EVALUATED});
 }
 
 static semantic_type_t _check_expr_initialize_list(context_t ctx, node_t expr) {
@@ -1510,12 +1618,12 @@ static semantic_type_t _check_expr_initialize_list(context_t ctx, node_t expr) {
   if (il->type) {
     /* Explicit type: .Type{...} */
     semantic_type_t t = resolver_resolve_type(ctx, il->type);
-    if (t->impl->kind == TYPE_ERROR) return ctx->error_type;
+    if (t->impl->kind == TYPE_ERROR)
+      return ctx->error_type;
 
     if (_is_struct_like(t) || t->impl->kind == TYPE_TUPLE) {
-      vec_t fields = t->impl->kind == TYPE_TUPLE
-          ? t->impl->tuple.fields
-          : _get_struct_fields(t);
+      vec_t fields = t->impl->kind == TYPE_TUPLE ? t->impl->tuple.fields
+                                                 : _get_struct_fields(t);
       size_t fcount = fields ? vec_get_size(fields) : 0;
       size_t icount = il->items ? vec_get_size(il->items) : 0;
       if (il->is_field)
@@ -1531,8 +1639,8 @@ static semantic_type_t _check_expr_initialize_list(context_t ctx, node_t expr) {
   /* Anonymous: infer type from content */
   if (il->is_field && il->items && vec_get_size(il->items) > 0) {
     /* Named fields → anonymous struct */
-    semantic_type_t anon = semantic_type_create_named(ctx->allocator, NULL,
-                                                       TYPE_STRUCT);
+    semantic_type_t anon =
+        semantic_type_create_named(ctx->allocator, NULL, TYPE_STRUCT);
     vec_init_t vi = {.auto_dispose = true};
     anon->impl->struct_type.fields =
         (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
@@ -1540,15 +1648,14 @@ static semantic_type_t _check_expr_initialize_list(context_t ctx, node_t expr) {
     size_t icount = vec_get_size(il->items);
     for (size_t i = 0; i < icount; i++) {
       node_t item = (node_t)vec_get(il->items, i);
-      if (item->kind != CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD) continue;
-      cubec_expression_initialize_field_t f =
-          (cubec_expression_initialize_field_t)item;
+      if (item->kind != CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD)
+        continue;
+      cubec_initialize_field_t f = (cubec_initialize_field_t)item;
       const char *fname = _checker_ident_str((node_t)f->field);
-      semantic_type_t ftype = f->value
-          ? _check_expression(ctx, f->value)
-          : ctx->error_type;
-      struct symbol *fsym = symbol_create(ctx->allocator, fname, SYMBOL_FIELD,
-                                          item->location);
+      semantic_type_t ftype =
+          f->value ? _check_expression(ctx, f->value) : ctx->error_type;
+      struct symbol *fsym =
+          symbol_create(ctx->allocator, fname, SYMBOL_FIELD, item->location);
       fsym->field.type = ftype;
       fsym->field.index = i;
       fsym->field.is_pub = true;
@@ -1562,23 +1669,23 @@ static semantic_type_t _check_expr_initialize_list(context_t ctx, node_t expr) {
     /* Positional fields → tuple */
     size_t icount = vec_get_size(il->items);
     vec_init_t vi = {.auto_dispose = false};
-    vec_t elem_types = (vec_t)allocator_create(ctx->allocator, &g_vec_type,
-                                                &vi);
+    vec_t elem_types =
+        (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
     for (size_t i = 0; i < icount; i++) {
       node_t item = (node_t)vec_get(il->items, i);
       semantic_type_t et = _check_expression(ctx, item);
       vec_push(elem_types, et);
     }
-    semantic_type_t tuple = semantic_type_create_tuple(ctx->allocator,
-                                                        elem_types);
+    semantic_type_t tuple =
+        semantic_type_create_tuple(ctx->allocator, elem_types);
     type_layout_compute(tuple, 8);
     type_hash_ensure(tuple);
     vec_push(ctx->all_types, tuple);
     return tuple;
   } else {
     /* Empty .{} → empty struct */
-    semantic_type_t empty = semantic_type_create_named(ctx->allocator, NULL,
-                                                        TYPE_STRUCT);
+    semantic_type_t empty =
+        semantic_type_create_named(ctx->allocator, NULL, TYPE_STRUCT);
     vec_init_t vi = {.auto_dispose = true};
     empty->impl->struct_type.fields =
         (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
@@ -1600,7 +1707,8 @@ static semantic_type_t _check_expr_spread(context_t ctx, node_t expr) {
   return _check_expression(ctx, sp->value);
 }
 
-static semantic_type_t _check_expr_generic_instantiation(context_t ctx, node_t expr) {
+static semantic_type_t _check_expr_generic_instantiation(context_t ctx,
+                                                         node_t expr) {
   cubec_expression_generic_instantiation_t gi =
       (cubec_expression_generic_instantiation_t)expr;
 
@@ -1619,34 +1727,61 @@ static semantic_type_t _check_expr_generic_instantiation(context_t ctx, node_t e
 /* ===== dispatch ===== */
 
 semantic_type_t _check_expression(context_t ctx, node_t expr) {
-  if (!expr) return ctx->error_type;
+  if (!expr)
+    return ctx->error_type;
   switch (expr->kind) {
-  case CUBEC_NODE_LITERAL_NUMERIC:       return _check_literal_numeric(ctx, expr);
-  case CUBEC_NODE_LITERAL_STRING:        return ctx->builtin_str;
-  case CUBEC_NODE_LITERAL_CHAR:          return ctx->builtin_char;
-  case CUBEC_NODE_LITERAL_IDENTIFIER:    return _check_expr_literal_identifier(ctx, expr);
-  case CUBEC_NODE_LITERAL_UNDEFINED:    return _check_expr_literal_undefined(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_BINARY:     return _check_expr_binary(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_ASSIGNMENT: return _check_expr_assignment(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_CALL:       return _check_expr_call(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_MEMBER:     return _check_expr_member(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS: return _check_expr_namespace_access(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_DEREF:      return _check_expr_deref(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_ADDR:       return _check_expr_addr(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_TRY:        return _check_expr_try(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_ASSERT:     return _check_expr_assert(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_TERNARY:    return _check_expr_ternary(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_GROUP:      return _check_expr_group(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_SIZEOF:     return _check_expr_sizeof(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_ALIGNOF:    return _check_expr_alignof(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_TYPEOF:     return _check_expr_typeof(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_SLICE:      return _check_expr_slice(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_SUBSCRIPT:  return _check_expr_subscript(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_FUNCTION:   return _check_expr_function(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_INITIALIZE_LIST: return _check_expr_initialize_list(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_COMMA:      return _check_expr_comma(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_SPREAD:     return _check_expr_spread(ctx, expr);
-  case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION: return _check_expr_generic_instantiation(ctx, expr);
+  case CUBEC_NODE_LITERAL_NUMERIC:
+    return _check_literal_numeric(ctx, expr);
+  case CUBEC_NODE_LITERAL_STRING:
+    return ctx->builtin_str;
+  case CUBEC_NODE_LITERAL_CHAR:
+    return ctx->builtin_char;
+  case CUBEC_NODE_LITERAL_IDENTIFIER:
+    return _check_expr_literal_identifier(ctx, expr);
+  case CUBEC_NODE_LITERAL_UNDEFINED:
+    return _check_expr_literal_undefined(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_BINARY:
+    return _check_expr_binary(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_ASSIGNMENT:
+    return _check_expr_assignment(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_CALL:
+    return _check_expr_call(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_MEMBER:
+    return _check_expr_member(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS:
+    return _check_expr_namespace_access(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_DEREF:
+    return _check_expr_deref(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_ADDR:
+    return _check_expr_addr(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_TRY:
+    return _check_expr_try(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_ASSERT:
+    return _check_expr_assert(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_TERNARY:
+    return _check_expr_ternary(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_GROUP:
+    return _check_expr_group(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_SIZEOF:
+    return _check_expr_sizeof(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_ALIGNOF:
+    return _check_expr_alignof(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_TYPEOF:
+    return _check_expr_typeof(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_SLICE:
+    return _check_expr_slice(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_SUBSCRIPT:
+    return _check_expr_subscript(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_FUNCTION:
+    return _check_expr_function(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_INITIALIZE_LIST:
+    return _check_expr_initialize_list(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_COMMA:
+    return _check_expr_comma(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_SPREAD:
+    return _check_expr_spread(ctx, expr);
+  case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION:
+    return _check_expr_generic_instantiation(ctx, expr);
   case CUBEC_NODE_ERROR:
   case CUBEC_NODE_STATEMENT_ERROR:
     /* Parse error — diagnostic already recorded. Return error type silently. */
@@ -1660,7 +1795,8 @@ semantic_type_t _check_expression(context_t ctx, node_t expr) {
   case CUBEC_NODE_EXPRESSION_TYPE_FUNCTION:
   case CUBEC_NODE_EXPRESSION_WILDCARD:
     return resolver_resolve_type(ctx, expr);
-  default: return ctx->error_type;
+  default:
+    return ctx->error_type;
   }
 }
 

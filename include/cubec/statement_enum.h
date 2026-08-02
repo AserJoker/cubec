@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_ENUM_
 #define _H_CUBEC_CUBEC_STATEMENT_ENUM_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -28,9 +28,9 @@ extern "C" {
 struct _cubec_statement_enum_t;
 struct _cubec_statement_enum_t {
   struct _node_t super;
-  bool is_export;  /**< Whether this enum is exported */
-  node_t name;     /**< Identifier node for the enum name */
-  vec_t items;     /**< Vector of cubec_enum_item_t (auto_dispose=true) */
+  bool is_export;   /**< Whether this enum is exported */
+  node_t name;      /**< Identifier node for the enum name */
+  vec_t items;      /**< Vector of cubec_enum_item_t (auto_dispose=true) */
   vec_t decorators; /**< Vector of cubec_decorator_t (may be NULL) */
 };
 typedef struct _cubec_statement_enum_t *cubec_statement_enum_t;
@@ -56,10 +56,11 @@ typedef struct _cubec_statement_enum_init_t cubec_statement_enum_init_t;
  * @return A new cubec_statement_enum_t node, or NULL if current token
  *         is not an enum declaration prefix (export/enum).
  */
-node_t read_statement_enum(context_t ctx, vec_t tokens,
-                            size_t *position, const char *filename);
+node_t read_statement_enum(context_t ctx, vec_t tokens, size_t *position,
+                           const char *filename);
 
-node_t cubec_ast_create_enum_stmt(context_t ctx, location_t loc, const char *name, vec_t items, bool is_export);
+node_t create_statement_enum(context_t ctx, location_t loc, const char *name,
+                             vec_t items, bool is_export);
 
 #ifdef __cplusplus
 }

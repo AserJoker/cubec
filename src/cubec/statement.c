@@ -394,30 +394,39 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                          "invalid statement");
     ctx->error_count++;
-    return cubec_ast_create_error_stmt(ctx, start_location);
+    return create_statement_error(ctx, start_location);
   }
 
   return NULL;
 }
-void cubec_ast_write_statement(writer_t wr, node_t stmt) {
+void write_statement(writer_t wr, node_t stmt) {
   switch (stmt->kind) {
   case CUBEC_NODE_STATEMENT_IMPORT:
-    cubec_ast_write_import_stmt(wr, stmt);
+    write_statement_import(wr, stmt);
     break;
   case CUBEC_NODE_STATEMENT_EXPORT_FROM:
-    cubec_ast_write_export_from(wr, stmt);
+    write_statement_export_from(wr, stmt);
     break;
   case CUBEC_NODE_STATEMENT_EMPTY:
-    cubec_ast_write_empty_stmt(wr, stmt);
+    write_statement_empty(wr, stmt);
     break;
   case CUBEC_NODE_STATEMENT_BLOCK:
-    cubec_ast_write_block_stmt(wr, stmt);
+    write_statement_block(wr, stmt);
     break;
   case CUBEC_NODE_STATEMENT_TEST:
-    cubec_ast_write_test_stmt(wr, stmt);
+    write_statement_test(wr, stmt);
     break;
   case CUBEC_NODE_STATEMENT_DEFER:
-    cubec_ast_write_defer_stmt(wr, stmt);
+    write_statement_defer(wr, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_BREAK:
+    write_statement_break(wr, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_CONTINUE:
+    write_statement_continue(wr, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_EXPRESSION:
+    write_statement_expression(wr, stmt);
     break;
     // TODO: statement writer
   }

@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_STRUCT_FIELD_
 #define _H_CUBEC_CUBEC_STRUCT_FIELD_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,9 +29,9 @@ extern "C" {
 struct _cubec_struct_field_t;
 struct _cubec_struct_field_t {
   struct _node_t super;
-  bool is_pub;    /**< Whether this field is public */
-  node_t name;    /**< Identifier node for the field name */
-  node_t type;    /**< Type expression for the field type */
+  bool is_pub; /**< Whether this field is public */
+  node_t name; /**< Identifier node for the field name */
+  node_t type; /**< Type expression for the field type */
 };
 typedef struct _cubec_struct_field_t *cubec_struct_field_t;
 
@@ -55,10 +55,11 @@ typedef struct _cubec_struct_field_init_t cubec_struct_field_init_t;
  * @return A new cubec_struct_field_t node, or NULL if current tokens
  *         don't match the field pattern.
  */
-node_t read_struct_field(context_t ctx, vec_t tokens,
-                          size_t *position, const char *filename);
+node_t read_struct_field(context_t ctx, vec_t tokens, size_t *position,
+                         const char *filename);
 
-node_t cubec_ast_create_struct_field(context_t ctx, location_t loc, const char *name, node_t type, bool is_pub);
+node_t create_struct_field(context_t ctx, location_t loc, const char *name,
+                           node_t type, bool is_pub);
 
 #ifdef __cplusplus
 }

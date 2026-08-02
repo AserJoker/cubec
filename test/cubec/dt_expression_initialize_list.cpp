@@ -1,13 +1,13 @@
+#include "common/test_common.h"
 #include "cubec/expression.h"
-#include "cubec/expression_initialize_field.h"
 #include "cubec/expression_initialize_list.h"
+#include "cubec/initialize_field.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
 #include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
-#include "common/test_common.h"
 #include <gtest/gtest.h>
 
 using ::testing::Test;
@@ -30,7 +30,8 @@ TEST_F(dt_expression_initialize_list, anonymous_empty) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   EXPECT_EQ(list->type, nullptr);
   EXPECT_EQ(vec_get_size(list->items), 0);
   EXPECT_EQ(list->is_field, false);
@@ -50,7 +51,8 @@ TEST_F(dt_expression_initialize_list, typed_empty) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   ASSERT_NE(list->type, nullptr);
   EXPECT_EQ(list->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
   EXPECT_EQ(vec_get_size(list->items), 0);
@@ -70,20 +72,21 @@ TEST_F(dt_expression_initialize_list, typed_field_items) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   ASSERT_NE(list->type, nullptr);
   EXPECT_EQ(list->is_field, true);
   EXPECT_EQ(vec_get_size(list->items), 2);
 
   /* First field: .x = 1 */
-  cubec_expression_initialize_field_t f0 =
-      (cubec_expression_initialize_field_t)vec_get(list->items, 0);
+  cubec_initialize_field_t f0 =
+      (cubec_initialize_field_t)vec_get(list->items, 0);
   EXPECT_STREQ(string_get(f0->field->value), "x");
   EXPECT_EQ(f0->value->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
   /* Second field: .y = 2 */
-  cubec_expression_initialize_field_t f1 =
-      (cubec_expression_initialize_field_t)vec_get(list->items, 1);
+  cubec_initialize_field_t f1 =
+      (cubec_initialize_field_t)vec_get(list->items, 1);
   EXPECT_STREQ(string_get(f1->field->value), "y");
   EXPECT_EQ(f1->value->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -102,7 +105,8 @@ TEST_F(dt_expression_initialize_list, typed_positional_items) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   ASSERT_NE(list->type, nullptr);
   EXPECT_EQ(list->is_field, false);
   EXPECT_EQ(vec_get_size(list->items), 3);
@@ -127,7 +131,8 @@ TEST_F(dt_expression_initialize_list, anonymous_field_items) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   EXPECT_EQ(list->type, nullptr);
   EXPECT_EQ(list->is_field, true);
   EXPECT_EQ(vec_get_size(list->items), 2);
@@ -147,7 +152,8 @@ TEST_F(dt_expression_initialize_list, anonymous_positional_items) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   EXPECT_EQ(list->type, nullptr);
   EXPECT_EQ(list->is_field, false);
   EXPECT_EQ(vec_get_size(list->items), 3);
@@ -167,7 +173,8 @@ TEST_F(dt_expression_initialize_list, nested_initialize_list_as_expression) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   EXPECT_EQ(list->type, nullptr);
   EXPECT_EQ(list->is_field, false);
   EXPECT_EQ(vec_get_size(list->items), 1);
@@ -176,7 +183,8 @@ TEST_F(dt_expression_initialize_list, nested_initialize_list_as_expression) {
   node_t item = (node_t)vec_get(list->items, 0);
   EXPECT_EQ(item->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t inner = (cubec_expression_initialize_list_t)item;
+  cubec_expression_initialize_list_t inner =
+      (cubec_expression_initialize_list_t)item;
   ASSERT_NE(inner->type, nullptr);
   EXPECT_EQ(inner->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
   EXPECT_EQ(vec_get_size(inner->items), 0);
@@ -196,13 +204,14 @@ TEST_F(dt_expression_initialize_list, field_vs_expression_disambiguation) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   EXPECT_EQ(list->is_field, true);
   EXPECT_EQ(vec_get_size(list->items), 1);
 
   /* The item should be an initialize_field */
-  cubec_expression_initialize_field_t f =
-      (cubec_expression_initialize_field_t)vec_get(list->items, 0);
+  cubec_initialize_field_t f =
+      (cubec_initialize_field_t)vec_get(list->items, 0);
   EXPECT_STREQ(string_get(f->field->value), "Test");
   EXPECT_EQ(f->value->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -251,7 +260,8 @@ TEST_F(dt_expression_initialize_list, trailing_comma_is_allowed) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   EXPECT_EQ(vec_get_size(list->items), 1);
 
   allocator_free(allocator, &node);
@@ -300,7 +310,8 @@ TEST_F(dt_expression_initialize_list, clone) {
   ASSERT_NE(cloned, nullptr);
   EXPECT_EQ(cloned->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)cloned;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)cloned;
   ASSERT_NE(list->type, nullptr);
   EXPECT_EQ(list->is_field, true);
   EXPECT_EQ(vec_get_size(list->items), 2);
@@ -340,7 +351,8 @@ TEST_F(dt_expression_initialize_list, single_positional_item) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   EXPECT_EQ(list->is_field, false);
   EXPECT_EQ(vec_get_size(list->items), 1);
 
@@ -359,7 +371,8 @@ TEST_F(dt_expression_initialize_list, single_field_item) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   EXPECT_EQ(list->is_field, true);
   EXPECT_EQ(vec_get_size(list->items), 1);
 
@@ -374,8 +387,10 @@ TEST_F(dt_expression_initialize_list, no_dot_returns_null) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  /* Should not parse as initialize_list; read_expression will try other paths */
-  node_t node = read_expression_initialize_list(ctx, tokens, &position, "test.cubec");
+  /* Should not parse as initialize_list; read_expression will try other paths
+   */
+  node_t node =
+      read_expression_initialize_list(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -388,13 +403,15 @@ TEST_F(dt_expression_initialize_list, dot_identifier_no_brace_returns_null) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_list(ctx, tokens, &position, "test.cubec");
+  node_t node =
+      read_expression_initialize_list(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
 }
 
-/* ---- Anonymous with nested typed initialize_list and field in same list ---- */
+/* ---- Anonymous with nested typed initialize_list and field in same list ----
+ */
 TEST_F(dt_expression_initialize_list, nested_typed_with_fields) {
   const char *source = ".{.Inner{.a = 1}}";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -405,7 +422,8 @@ TEST_F(dt_expression_initialize_list, nested_typed_with_fields) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t outer = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t outer =
+      (cubec_expression_initialize_list_t)node;
   EXPECT_EQ(outer->type, nullptr);
   EXPECT_EQ(outer->is_field, false);
   EXPECT_EQ(vec_get_size(outer->items), 1);
@@ -414,7 +432,8 @@ TEST_F(dt_expression_initialize_list, nested_typed_with_fields) {
   node_t inner_item = (node_t)vec_get(outer->items, 0);
   EXPECT_EQ(inner_item->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t inner = (cubec_expression_initialize_list_t)inner_item;
+  cubec_expression_initialize_list_t inner =
+      (cubec_expression_initialize_list_t)inner_item;
   ASSERT_NE(inner->type, nullptr);
   EXPECT_EQ(inner->is_field, true);
   EXPECT_EQ(vec_get_size(inner->items), 1);
@@ -434,7 +453,8 @@ TEST_F(dt_expression_initialize_list, typed_namespace_access_type) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   ASSERT_NE(list->type, nullptr);
   /* Type should be a namespace access expression */
   EXPECT_EQ(list->type->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
@@ -456,7 +476,8 @@ TEST_F(dt_expression_initialize_list, typed_generic_instantiation) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   ASSERT_NE(list->type, nullptr);
   /* Type should be a generic instantiation expression */
   EXPECT_EQ(list->type->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
@@ -478,7 +499,8 @@ TEST_F(dt_expression_initialize_list, typed_pointer_type) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
-  cubec_expression_initialize_list_t list = (cubec_expression_initialize_list_t)node;
+  cubec_expression_initialize_list_t list =
+      (cubec_expression_initialize_list_t)node;
   ASSERT_NE(list->type, nullptr);
   /* Type should be a pointer declaration */
   EXPECT_EQ(list->type->kind, CUBEC_NODE_DECLARATION_POINTER);

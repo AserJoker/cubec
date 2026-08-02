@@ -6,17 +6,18 @@
  */
 
 #include "engine/builtin_typename.h"
+#include "cubec/expression_call.h"
+#include "cubec/expression_generic_instantiation.h"
 #include "engine/comptime_eval_internal.h"
 #include "engine/resolver.h"
 #include "engine/type_hash.h"
-#include "cubec/expression_call.h"
-#include "cubec/expression_generic_instantiation.h"
+
 
 /* ===== typename eval callback ===== */
 
 struct comptime_value *builtin_typename_eval(struct comptime_eval *eval,
-                                              struct context *ctx, node_t node,
-                                              struct builtin_entry *be) {
+                                             struct context *ctx, node_t node,
+                                             struct builtin_entry *be) {
   (void)be;
   cubec_expression_call_t call = (cubec_expression_call_t)node;
 
@@ -34,11 +35,14 @@ struct comptime_value *builtin_typename_eval(struct comptime_eval *eval,
         if (!target_type || target_type->impl->kind == TYPE_ERROR) {
           vec_t gp = NULL;
           const char *name = _checker_ident_str(gi->callee);
-          struct symbol *sym = name ? scope_lookup(ctx->current_scope, name) : NULL;
-          if (sym && sym->kind == SYMBOL_FUNCTION && sym->function.generic_params) {
+          struct symbol *sym =
+              name ? scope_lookup(ctx->current_scope, name) : NULL;
+          if (sym && sym->kind == SYMBOL_FUNCTION &&
+              sym->function.generic_params) {
             gp = sym->function.generic_params;
           }
-          vec_t resolved_args = _resolve_generic_type_args(ctx, gi->arguments, gp);
+          vec_t resolved_args =
+              _resolve_generic_type_args(ctx, gi->arguments, gp);
           if (resolved_args && vec_get_size(resolved_args) >= 1) {
             target_type = (semantic_type_t)vec_get(resolved_args, 0);
           }
@@ -50,24 +54,23 @@ struct comptime_value *builtin_typename_eval(struct comptime_eval *eval,
   }
 
   if (!target_type) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                         node->location,
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
                          "typename: could not resolve type argument");
     ctx->error_count++;
     return _eval_error_val(eval);
   }
 
   const char *type_name = target_type->name ? target_type->name : "<anonymous>";
-  return _eval_temp(eval, comptime_value_create_string(
-      eval->allocator, type_name, ctx->builtin_str));
+  return _eval_temp(eval, comptime_value_create_literal_string(
+                              eval->allocator, type_name, ctx->builtin_str));
 }
 
 /* ===== init ===== */
 
 void builtin_table_init_typename(builtin_table_t table, struct context *ctx) {
   /* builtin func typename[T](): str */
-  semantic_type_t t_param = semantic_type_create_generic_param(
-      ctx->allocator, "T", NULL, false);
+  semantic_type_t t_param =
+      semantic_type_create_generic_param(ctx->allocator, "T", NULL, false);
   type_hash_ensure(t_param);
   vec_push(ctx->all_types, t_param);
 
@@ -79,5 +82,6 @@ void builtin_table_init_typename(builtin_table_t table, struct context *ctx) {
       ctx->allocator, ctx->builtin_str, params, false);
   type_hash_ensure(typename_type);
   vec_push(ctx->all_types, typename_type);
-  builtin_table_register(table, "typename", typename_type, builtin_typename_eval);
+  builtin_table_register(table, "typename", typename_type,
+                         builtin_typename_eval);
 }

@@ -7,7 +7,8 @@
 static void _cubec_literal_numeric_init(cubec_literal_numeric_t self,
                                         allocator_t allocator,
                                         cubec_literal_numeric_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   cubec_literal_init_t super_init = {
       .kind = CUBEC_NODE_LITERAL_NUMERIC,
       .parent = NULL,
@@ -59,8 +60,8 @@ type_t g_cubec_literal_numeric_type = {
     .move = (type_move_fn_t)_cubec_literal_numeric_move,
 };
 
-const char *cubec_literal_numeric_type_to_string(
-    cubec_literal_numeric_type_t type) {
+const char *
+cubec_literal_numeric_type_to_string(cubec_literal_numeric_type_t type) {
   switch (type) {
   case CUBEC_LITERAL_NUMERIC_TYPE_I8:
     return "i8";
@@ -90,7 +91,7 @@ const char *cubec_literal_numeric_type_to_string(
 }
 
 static cubec_literal_numeric_type_t parse_type_suffix(const char *suffix,
-                                                       size_t len) {
+                                                      size_t len) {
   if (len == 2 && strncmp(suffix, "i8", 2) == 0)
     return CUBEC_LITERAL_NUMERIC_TYPE_I8;
   if (len == 3 && strncmp(suffix, "i16", 3) == 0)
@@ -124,8 +125,8 @@ static bool is_float_token(const char *value, size_t len) {
   return false;
 }
 
-node_t read_literal_numeric(context_t ctx, vec_t tokens,
-                            size_t *position, const char *filename) {
+node_t read_literal_numeric(context_t ctx, vec_t tokens, size_t *position,
+                            const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
@@ -141,10 +142,11 @@ node_t read_literal_numeric(context_t ctx, vec_t tokens,
   const char *token_str = token_get_string(first_token);
   size_t token_len = token_get_string_length(first_token);
 
-  cubec_literal_numeric_kind_t kind =
-      is_float_token(token_str, token_len) ? CUBEC_LITERAL_NUMERIC_KIND_FLOAT
-                                           : CUBEC_LITERAL_NUMERIC_KIND_INTEGER;
-  cubec_literal_numeric_type_t numeric_type = CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT;
+  cubec_literal_numeric_kind_t kind = is_float_token(token_str, token_len)
+                                          ? CUBEC_LITERAL_NUMERIC_KIND_FLOAT
+                                          : CUBEC_LITERAL_NUMERIC_KIND_INTEGER;
+  cubec_literal_numeric_type_t numeric_type =
+      CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT;
   cubec_literal_numeric_init_t init = {
       .location = *location,
       .parent = NULL,
@@ -154,7 +156,8 @@ node_t read_literal_numeric(context_t ctx, vec_t tokens,
   };
   cubec_literal_numeric_t node =
       allocator_create(allocator, &g_cubec_literal_numeric_type, &init);
-  if (!node) goto onerror;
+  if (!node)
+    goto onerror;
   node_t node_base = (node_t)node;
   node_base->location.filename = filename;
 
@@ -179,20 +182,18 @@ node_t read_literal_numeric(context_t ctx, vec_t tokens,
   *position = current;
   return node_base;
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid numeric literal");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid numeric literal");
   ctx->error_count++;
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_numeric(context_t ctx, location_t loc,
-                                const char *value,
-                                cubec_literal_numeric_kind_t kind,
-                                cubec_literal_numeric_type_t ntype) {
+node_t create_literal_numeric(context_t ctx, location_t loc, const char *value,
+                              cubec_literal_numeric_kind_t kind,
+                              cubec_literal_numeric_type_t ntype) {
   allocator_t alloc = ctx->allocator;
-                                       cubec_literal_numeric_init_t init = {
-                                       .value = value, .kind = kind,
-                                       .numeric_type = ntype};
+  cubec_literal_numeric_init_t init = {
+      .value = value, .kind = kind, .numeric_type = ntype};
   return (node_t)allocator_create(alloc, &g_cubec_literal_numeric_type, &init);
 }

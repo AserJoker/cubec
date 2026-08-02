@@ -7,10 +7,12 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_expression_spread_init(cubec_expression_spread_t self,
-                                          allocator_t allocator,
-                                          cubec_expression_spread_init_t *init) {
-  if (!init) return;
+static void
+_cubec_expression_spread_init(cubec_expression_spread_t self,
+                              allocator_t allocator,
+                              cubec_expression_spread_init_t *init) {
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_SPREAD,
       .parent = NULL,
@@ -54,8 +56,8 @@ type_t g_cubec_expression_spread_type = {
  *  Parser: read_expression_spread
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_spread(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename) {
+node_t read_expression_spread(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_spread_t node = NULL;
@@ -72,9 +74,9 @@ node_t read_expression_spread(context_t ctx, vec_t tokens,
 
   /* Expect a value expression after the spread operator */
   skip_whitespace(tokens, &current);
-  value =
-      read_expression_base(ctx, tokens, &current, filename);
-  if (node_is_error(value)) return value;
+  value = read_expression_base(ctx, tokens, &current, filename);
+  if (node_is_error(value))
+    return value;
   if (!value) {
     goto onerror;
   }
@@ -94,23 +96,21 @@ node_t read_expression_spread(context_t ctx, vec_t tokens,
   return (node_t)node;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid spread expression");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid spread expression");
   ctx->error_count++;
   allocator_free(allocator, &value);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_spread
+ *  Factory: create_expression_spread
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_spread(context_t ctx, location_t loc,
-                               node_t value) {
+node_t create_expression_spread(context_t ctx, location_t loc, node_t value) {
   allocator_t alloc = ctx->allocator;
-                                         cubec_expression_spread_init_t init = {
-                                         .value = value};
+  cubec_expression_spread_init_t init = {.value = value};
   return (node_t)allocator_create(alloc, &g_cubec_expression_spread_type,
                                   &init);
 }

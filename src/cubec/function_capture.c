@@ -5,7 +5,6 @@
 #include "cubec/token.h"
 #include <inttypes.h>
 
-
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
@@ -102,13 +101,13 @@ fail:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_func_capture
+ *  Factory: create_function_capture
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_func_capture(context_t ctx, location_t loc,
-                                     const char *name) {
+node_t create_function_capture(context_t ctx, location_t loc,
+                               const char *name) {
   allocator_t alloc = ctx->allocator;
-  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_function_capture_init_t init = {
       .location = loc,
       .identifier = name_node,

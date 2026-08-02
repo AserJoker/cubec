@@ -27,9 +27,9 @@ typedef struct _cubec_statement_empty_init_t cubec_statement_empty_init_t;
 node_t read_statement_empty(context_t ctx, vec_t tokens, size_t *position,
                             const char *filename);
 
-node_t cubec_ast_create_empty_stmt(context_t ctx, location_t loc);
+node_t create_statement_empty(context_t ctx, location_t loc);
 
-void cubec_ast_write_empty_stmt(writer_t writer, node_t node);
+void write_statement_empty(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

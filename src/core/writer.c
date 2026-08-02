@@ -91,6 +91,9 @@ void writer_newline(writer_t self, int32_t indent) {
   line_t line = allocator_create(self->allocator, &g_line_type, &li);
   vec_push(self->lines, line);
 }
+string_t writer_get_current_line(writer_t self) {
+  return ((line_t)vec_get(self->lines, vec_get_size(self->lines) - 1))->text;
+}
 string_t writer_get_string(writer_t self) {
   string_t str = allocator_create(self->allocator, &g_string_type, NULL);
   size_t indent = 0;

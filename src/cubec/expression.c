@@ -2,40 +2,42 @@
 #include "cubec/declaration_array.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
+#include "cubec/expression_alignof.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_comma.h"
 #include "cubec/expression_function.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_initialize_list.h"
-#include "cubec/expression_type_qualifier.h"
-#include "cubec/expression_type_tuple.h"
-#include "cubec/expression_type_function.h"
-#include "cubec/expression_type_interface.h"
-#include "cubec/expression_type_struct.h"
-#include "cubec/expression_type_enum.h"
-#include "cubec/expression_type_union.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_postfix_unary.h"
+#include "cubec/expression_sizeof.h"
 #include "cubec/expression_slice.h"
 #include "cubec/expression_subscript.h"
 #include "cubec/expression_ternary.h"
+#include "cubec/expression_type_enum.h"
+#include "cubec/expression_type_function.h"
+#include "cubec/expression_type_interface.h"
+#include "cubec/expression_type_qualifier.h"
+#include "cubec/expression_type_struct.h"
+#include "cubec/expression_type_tuple.h"
+#include "cubec/expression_type_union.h"
 #include "cubec/expression_typeof.h"
-#include "cubec/expression_sizeof.h"
-#include "cubec/expression_alignof.h"
+#include "cubec/expression_wildcard.h"
 #include "cubec/literal_char.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
 #include "cubec/literal_undefined.h"
-#include "cubec/expression_wildcard.h"
+#include "cubec/node.h"
 #include "cubec/node_error.h"
 #include <inttypes.h>
 
 static void _cubec_expression_init(cubec_expression_t self,
                                    allocator_t allocator,
                                    cubec_expression_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = init->kind,
       .parent = NULL,
@@ -77,7 +79,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try initialize list: .<type>{<items>} or .{<items>}
   result = read_expression_initialize_list(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -85,7 +88,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try typeof: typeof(<expression>) — compile-time type computation
   result = read_expression_typeof(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -93,7 +97,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try sizeof: sizeof(<expression>) — compile-time size computation
   result = read_expression_sizeof(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -101,7 +106,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try alignof: alignof(<expression>) — compile-time alignment computation
   result = read_expression_alignof(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -114,7 +120,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
   // type_function returns NULL (without THROW) when it detects the expression
   // form (named params or ':' instead of '->').
   result = read_expression_type_function(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -122,7 +129,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try interface type: interface[generic_params] { members }
   result = read_expression_type_interface(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -130,7 +138,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try struct type: struct[generic_params] { members }
   result = read_expression_type_struct(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -138,7 +147,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try enum type: enum { items }
   result = read_expression_type_enum(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -146,15 +156,18 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try union type: union[generic_params] { fields }
   result = read_expression_type_union(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
   }
 
-  // Try anonymous function: func |captures| [generic_params] (params) -> type { body }
+  // Try anonymous function: func |captures| [generic_params] (params) -> type {
+  // body }
   result = read_expression_function(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -162,7 +175,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try grouped expression: ( expr )
   result = read_expression_group(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -170,7 +184,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try type qualifier: const/volatile <type> — prefix type modifications
   result = read_expression_type_qualifier(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -178,7 +193,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try tuple type: <type1, type2, ...> — prefix type expression
   result = read_expression_type_tuple(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -187,7 +203,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
   // Try pointer declaration: * [const] [volatile] <type>
   // Note: * in atom position is always a pointer (not deref — deref uses .*)
   result = read_declaration_pointer(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -195,7 +212,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try slice declaration: [] [const] [volatile] <type>
   result = read_declaration_slice(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -203,7 +221,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try array declaration: [ <expr> ] [const] [volatile] <type>
   result = read_declaration_array(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -211,7 +230,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try string literal
   result = read_literal_string(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -219,7 +239,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try numeric literal
   result = read_literal_numeric(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -227,7 +248,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try undefined literal
   result = read_literal_undefined(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -235,7 +257,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try identifier
   result = read_literal_identifier(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -243,7 +266,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try char literal
   result = read_literal_char(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -251,7 +275,8 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try wildcard type: ? (in type context, e.g. []? or *?)
   result = read_expression_wildcard(ctx, tokens, &current, filename);
-  if (node_is_error(result)) return result;
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
@@ -266,8 +291,10 @@ node_t read_value(context_t ctx, vec_t tokens, size_t *position,
   node_t node = NULL;
 
   node = read_atom(ctx, tokens, position, filename);
-  if (!node) return NULL;
-  if (node_is_error(node)) return node;
+  if (!node)
+    return NULL;
+  if (node_is_error(node))
+    return node;
 
   if (node) {
     size_t current = *position;
@@ -277,8 +304,7 @@ node_t read_value(context_t ctx, vec_t tokens, size_t *position,
 
       /* Try postfix: function call <callee>(<args>) */
       node_t call_node =
-          read_expression_call(ctx, tokens, &current, filename,
-                                         node);
+          read_expression_call(ctx, tokens, &current, filename, node);
       if (node_is_error(call_node)) {
         allocator_free(allocator, &node);
         return call_node;
@@ -293,8 +319,7 @@ node_t read_value(context_t ctx, vec_t tokens, size_t *position,
        * generic instantiation because arr[0:10] would otherwise be incorrectly
        * parsed as generic with argument "0" followed by ":" error */
       node_t slice_node =
-          read_expression_slice(ctx, tokens, &current, filename,
-                                          node);
+          read_expression_slice(ctx, tokens, &current, filename, node);
       if (node_is_error(slice_node)) {
         allocator_free(allocator, &node);
         return slice_node;
@@ -306,9 +331,8 @@ node_t read_value(context_t ctx, vec_t tokens, size_t *position,
       }
 
       /* Try postfix: generic instantiation <callee>[<args>] */
-      node_t generic_instantiation_node =
-          read_expression_generic_instantiation(
-                        ctx, tokens, &current, filename, node);
+      node_t generic_instantiation_node = read_expression_generic_instantiation(
+          ctx, tokens, &current, filename, node);
       if (node_is_error(generic_instantiation_node)) {
         allocator_free(allocator, &node);
         return generic_instantiation_node;
@@ -335,8 +359,8 @@ node_t read_value(context_t ctx, vec_t tokens, size_t *position,
 
       /* Try postfix: unary deref/addr <value>.+ or <value>.& (MUST be before
        * member access since .* and .& also start with '.') */
-      node_t postfix_unary_node = read_expression_postfix_unary(ctx, tokens, &current,
-                                                 filename, node);
+      node_t postfix_unary_node =
+          read_expression_postfix_unary(ctx, tokens, &current, filename, node);
       if (node_is_error(postfix_unary_node)) {
         allocator_free(allocator, &node);
         return postfix_unary_node;
@@ -349,8 +373,7 @@ node_t read_value(context_t ctx, vec_t tokens, size_t *position,
 
       /* Try postfix: member access <host>.<field> */
       node_t member_node =
-          read_expression_member(ctx, tokens, &current,
-                                                    filename, node);
+          read_expression_member(ctx, tokens, &current, filename, node);
       if (node_is_error(member_node)) {
         allocator_free(allocator, &node);
         return member_node;
@@ -362,8 +385,8 @@ node_t read_value(context_t ctx, vec_t tokens, size_t *position,
       }
 
       /* Try postfix: namespace access <host>::<field> */
-      node_t namespace_node = read_expression_namespace_access(ctx, tokens, &current,
-                                                    filename, node);
+      node_t namespace_node = read_expression_namespace_access(
+          ctx, tokens, &current, filename, node);
       if (node_is_error(namespace_node)) {
         allocator_free(allocator, &node);
         return namespace_node;
@@ -384,18 +407,19 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
   node_t node = NULL;
   size_t current = *position;
 
-  /* Try namespace access (::), generic instantiation, pointer/slice/array declaration,
-   * and grouping. Uses :: for namespace navigation (e.g. std::vec::Vec)
-   * and . is NOT used in type expressions (only in normal expressions for
-   * member access). This ensures:
-   *   *std::vec::Vec → *(std::vec::Vec) — pointer to namespaced type
+  /* Try namespace access (::), generic instantiation, pointer/slice/array
+   * declaration, and grouping. Uses :: for namespace navigation (e.g.
+   * std::vec::Vec) and . is NOT used in type expressions (only in normal
+   * expressions for member access). This ensures: *std::vec::Vec →
+   * *(std::vec::Vec) — pointer to namespaced type
    *   []i32 → slice of i32
    *   Vec[i32]::Element → nested type in generic instantiation
    */
 
   /* Try grouped expression: ( expression ) */
   node = read_expression_group(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
@@ -403,7 +427,8 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
 
   /* Try typeof: typeof(<expression>) — compile-time type computation */
   node = read_expression_typeof(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
@@ -411,7 +436,8 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
 
   /* Try sizeof: sizeof(<expression>) — compile-time size computation */
   node = read_expression_sizeof(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
@@ -419,7 +445,8 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
 
   /* Try alignof: alignof(<expression>) — compile-time alignment computation */
   node = read_expression_alignof(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
@@ -427,7 +454,8 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
 
   /* Try function type expression: func(type_list) -> type */
   node = read_expression_type_function(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
@@ -435,35 +463,40 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
 
   /* Try interface type expression: interface[generic_params] { members } */
   node = read_expression_type_interface(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
   }
   /* Try struct type expression: struct[generic_params] { members } */
   node = read_expression_type_struct(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
   }
   /* Try enum type expression: enum { items } */
   node = read_expression_type_enum(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
   }
   /* Try union type expression: union[generic_params] { fields } */
   node = read_expression_type_union(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
   }
   /* Try type qualifier expression (prefix form: const/volatile <type>) */
   node = read_expression_type_qualifier(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
@@ -471,7 +504,8 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
 
   /* Try tuple type expression (prefix form: <type1, type2, ...>) */
   node = read_expression_type_tuple(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
@@ -479,15 +513,18 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
 
   /* Try pointer declaration (prefix form: * [const] [volatile] <type>) */
   node = read_declaration_pointer(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
   }
 
-  /* Try array declaration (prefix form: [ <expr> ] [const] [volatile] <type>) */
+  /* Try array declaration (prefix form: [ <expr> ] [const] [volatile] <type>)
+   */
   node = read_declaration_array(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
@@ -495,7 +532,8 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
 
   /* Try slice declaration (prefix form: [] [const] [volatile] <type>) */
   node = read_declaration_slice(ctx, tokens, &current, filename);
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
   if (node) {
     *position = current;
     return node;
@@ -505,7 +543,8 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
   if (!node) {
     node = read_literal_identifier(ctx, tokens, &current, filename);
   }
-  if (node_is_error(node)) return node;
+  if (node_is_error(node))
+    return node;
 
   if (!node) {
     return NULL;
@@ -519,8 +558,7 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
 
     /* Try postfix: namespace access <host>::<field> */
     node_t namespace_node =
-        read_expression_namespace_access(ctx, tokens,
-                                         &current, filename, node);
+        read_expression_namespace_access(ctx, tokens, &current, filename, node);
     if (node_is_error(namespace_node)) {
       allocator_free(ctx->allocator, &node);
       return namespace_node;
@@ -532,9 +570,8 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
     }
 
     /* Try postfix: generic instantiation <callee>[<args>] */
-    node_t generic_node =
-        read_expression_generic_instantiation(ctx, tokens,
-                                              &current, filename, node);
+    node_t generic_node = read_expression_generic_instantiation(
+        ctx, tokens, &current, filename, node);
     if (node_is_error(generic_node)) {
       allocator_free(ctx->allocator, &node);
       return generic_node;
@@ -564,9 +601,8 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
   return node;
 }
 
-
-node_t read_expression_type(context_t ctx, vec_t tokens,
-                            size_t *position, const char *filename) {
+node_t read_expression_type(context_t ctx, vec_t tokens, size_t *position,
+                            const char *filename) {
   /* handles all type and value constructs since read_atom() includes:
    * - Type-only: pointer/slice/array/const/volatile/func type
    * - Value: typeof/sizeof/alignof/identifiers/literals/groups/functions
@@ -576,8 +612,8 @@ node_t read_expression_type(context_t ctx, vec_t tokens,
   return read_expression(ctx, tokens, position, filename);
 }
 
-node_t read_expression_base(context_t ctx, vec_t tokens,
-                            size_t *position, const char *filename) {
+node_t read_expression_base(context_t ctx, vec_t tokens, size_t *position,
+                            const char *filename) {
   /* Used as the "inner" parser by read_expression_assignment for rvalue
    * and by read_expression_type for type contexts. */
   return read_expression_ternary(ctx, tokens, position, filename);
@@ -588,4 +624,13 @@ node_t read_expression(context_t ctx, vec_t tokens, size_t *position,
   /* read_expression_comma internally tries assignment then ternary,
    * so this single call covers the entire expression grammar. */
   return read_expression_comma(ctx, tokens, position, filename);
+}
+
+void write_expression(writer_t writer, node_t expr) {
+  switch (expr->kind) {
+  case CUBEC_NODE_EXPRESSION_COMMA:
+    write_expression_comma(writer, expr);
+    break;
+    // TODO: expressions
+  }
 }

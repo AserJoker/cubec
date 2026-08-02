@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CUBEC_NODE_ERROR_
-#define _H_CUBEC_CUBEC_NODE_ERROR_
+#ifndef _H_CUBEC_CUBEC_ERROR_
+#define _H_CUBEC_CUBEC_ERROR_
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -32,7 +32,7 @@ static inline bool node_is_ok(node_t node) {
   return node && !node_is_error(node);
 }
 
-node_t cubec_ast_create_error(context_t ctx, location_t loc);
+node_t create_error(context_t ctx, location_t loc);
 
 #ifdef __cplusplus
 }

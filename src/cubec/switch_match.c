@@ -10,10 +10,11 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_switch_match_init(
-    cubec_switch_match_t self, allocator_t allocator,
-    cubec_switch_match_init_t *init) {
-  if (!init) return;
+static void _cubec_switch_match_init(cubec_switch_match_t self,
+                                     allocator_t allocator,
+                                     cubec_switch_match_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_SWITCH_MATCH,
       .parent = NULL,
@@ -25,29 +26,31 @@ static void _cubec_switch_match_init(
   self->body = init->body;
 }
 
-static void _cubec_switch_match_dispose(
-    cubec_switch_match_t self, allocator_t allocator) {
+static void _cubec_switch_match_dispose(cubec_switch_match_t self,
+                                        allocator_t allocator) {
   allocator_free(allocator, &self->body);
   allocator_free(allocator, &self->values);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_switch_match_clone(
-    cubec_switch_match_t self, allocator_t allocator,
-    cubec_switch_match_t another) {
+static void _cubec_switch_match_clone(cubec_switch_match_t self,
+                                      allocator_t allocator,
+                                      cubec_switch_match_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->is_else = another->is_else;
-  self->values = another->values ? value_clone(allocator, another->values) : NULL;
+  self->values =
+      another->values ? value_clone(allocator, another->values) : NULL;
   self->body = value_clone(allocator, another->body);
   return;
 }
 
-static void _cubec_switch_match_move(
-    cubec_switch_match_t self, allocator_t allocator,
-    cubec_switch_match_t another) {
+static void _cubec_switch_match_move(cubec_switch_match_t self,
+                                     allocator_t allocator,
+                                     cubec_switch_match_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->is_else = another->is_else;
-  self->values = another->values ? value_move(allocator, another->values) : NULL;
+  self->values =
+      another->values ? value_move(allocator, another->values) : NULL;
   self->body = value_move(allocator, another->body);
   return;
 }
@@ -67,14 +70,17 @@ type_t g_cubec_switch_match_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -82,8 +88,8 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_switch_match — case(v1, v2) -> { } | else -> { }
  * -------------------------------------------------------------------------- */
 
-node_t read_switch_match(context_t ctx, vec_t tokens,
-                          size_t *position, const char *filename) {
+node_t read_switch_match(context_t ctx, vec_t tokens, size_t *position,
+                         const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   vec_t values = NULL;
@@ -170,7 +176,8 @@ node_t read_switch_match(context_t ctx, vec_t tokens,
       .body = body,
   };
   node = allocator_create(allocator, &g_cubec_switch_match_type, &init);
-  if (!node) goto cleanup;
+  if (!node)
+    goto cleanup;
   *position = current;
   return &node->super;
 
@@ -186,15 +193,13 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_switch_match
+ *  Factory: create_switch_match
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_switch_match(context_t ctx, location_t loc,
-                                     bool is_else, vec_t values,
-                                     node_t body) {
+node_t create_switch_match(context_t ctx, location_t loc, bool is_else,
+                           vec_t values, node_t body) {
   allocator_t alloc = ctx->allocator;
-                                    cubec_switch_match_init_t init = {
-                                    .is_else = is_else, .values = values,
-                                    .body = body};
+  cubec_switch_match_init_t init = {
+      .is_else = is_else, .values = values, .body = body};
   return (node_t)allocator_create(alloc, &g_cubec_switch_match_type, &init);
 }

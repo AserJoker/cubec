@@ -1,5 +1,7 @@
 #include "cubec/expression_comma.h"
 #include "core/token.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -11,7 +13,8 @@
 static void _cubec_expression_comma_init(cubec_expression_comma_t self,
                                          allocator_t allocator,
                                          cubec_expression_comma_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_COMMA,
       .parent = NULL,
@@ -69,8 +72,8 @@ type_t g_cubec_expression_comma_type = {
  *  Parser: read_expression_comma
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_comma(context_t ctx, vec_t tokens,
-                             size_t *position, const char *filename) {
+node_t read_expression_comma(context_t ctx, vec_t tokens, size_t *position,
+                             const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t left = NULL;
@@ -81,11 +84,13 @@ node_t read_expression_comma(context_t ctx, vec_t tokens,
    * follows the value, read_expression_assignment returns NULL and we
    * fall through to read_expression_base which handles ternary/binary. */
   left = read_expression_assignment(ctx, tokens, &current, filename);
-  if (node_is_error(left)) return left;
+  if (node_is_error(left))
+    return left;
   if (!left) {
     left = read_expression_base(ctx, tokens, &current, filename);
   }
-  if (node_is_error(left)) return left;
+  if (node_is_error(left))
+    return left;
   if (!left) {
     return NULL;
   }
@@ -104,7 +109,8 @@ node_t read_expression_comma(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* Parse right operand: recursively call self for right-associativity
-   * This allows comma expressions like a, b, c to parse as comma(a, comma(b, c)) */
+   * This allows comma expressions like a, b, c to parse as comma(a, comma(b,
+   * c)) */
   right = read_expression_comma(ctx, tokens, &current, filename);
   if (node_is_error(right)) {
     allocator_free(allocator, &left);
@@ -117,33 +123,38 @@ node_t read_expression_comma(context_t ctx, vec_t tokens,
 
   /* Create comma node */
   node = allocator_create(allocator, &g_cubec_expression_comma_type,
-                                    &(cubec_expression_comma_init_t){
-                                        .left = left,
-                                        .right = right,
-                                    });
+                          &(cubec_expression_comma_init_t){
+                              .left = left,
+                              .right = right,
+                          });
 
   *position = current;
   return (node_t)node;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid comma expression");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid comma expression");
   ctx->error_count++;
   allocator_free(allocator, &right);
   allocator_free(allocator, &left);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_comma
+ *  Factory: create_expression_comma
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_comma(context_t ctx, location_t loc,
-                              node_t left, node_t right) {
+node_t create_expression_comma(context_t ctx, location_t loc, node_t left,
+                               node_t right) {
   allocator_t alloc = ctx->allocator;
-                                        cubec_expression_comma_init_t init = {
-                                        .left = left, .right = right};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_comma_type,
-                                  &init);
+  cubec_expression_comma_init_t init = {.left = left, .right = right};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_comma_type, &init);
+}
+
+void write_expression_comma(writer_t writer, node_t expr) {
+  cubec_expression_comma_t comma = (cubec_expression_comma_t)expr;
+  write_expression(writer, comma->left);
+  writer_append(writer, ", ");
+  write_expression(writer, comma->right);
 }

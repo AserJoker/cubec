@@ -111,16 +111,15 @@ onerror:
                        "invalid string literal");
   ctx->error_count++;
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_string(context_t ctx, location_t loc,
-                               const char *value) {
+node_t create_literal_string(context_t ctx, location_t loc, const char *value) {
   allocator_t alloc = ctx->allocator;
   cubec_literal_string_init_t init = {.value = value};
   return (node_t)allocator_create(alloc, &g_cubec_literal_string_type, &init);
 }
-void cubec_ast_write_string(writer_t writer, node_t node) {
+void write_literal_string(writer_t writer, node_t node) {
   cubec_literal_string_t str = (cubec_literal_string_t)node;
   writer_append(writer, "\"");
   writer_append(writer, string_get(str->value));

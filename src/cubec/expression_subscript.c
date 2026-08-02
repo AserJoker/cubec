@@ -1,16 +1,19 @@
 #include "cubec/expression_subscript.h"
 #include "core/token.h"
-#include "cubec/token.h"
 #include "cubec/node_error.h"
+#include "cubec/token.h"
+
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_expression_subscript_init(cubec_expression_subscript_t self,
-                                              allocator_t allocator,
-                                              cubec_expression_subscript_init_t *init) {
-  if (!init) return;
+static void
+_cubec_expression_subscript_init(cubec_expression_subscript_t self,
+                                 allocator_t allocator,
+                                 cubec_expression_subscript_init_t *init) {
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_SUBSCRIPT,
       .parent = NULL,
@@ -22,16 +25,18 @@ static void _cubec_expression_subscript_init(cubec_expression_subscript_t self,
   self->index = init->index;
 }
 
-static void _cubec_expression_subscript_dispose(cubec_expression_subscript_t self,
-                                                 allocator_t allocator) {
+static void
+_cubec_expression_subscript_dispose(cubec_expression_subscript_t self,
+                                    allocator_t allocator) {
   allocator_free(allocator, &self->host);
   allocator_free(allocator, &self->index);
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_expression_subscript_clone(cubec_expression_subscript_t self,
-                                               allocator_t allocator,
-                                               cubec_expression_subscript_t another) {
+static void
+_cubec_expression_subscript_clone(cubec_expression_subscript_t self,
+                                  allocator_t allocator,
+                                  cubec_expression_subscript_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->host = value_clone(allocator, another->host);
   self->index = value_clone(allocator, another->index);
@@ -42,9 +47,10 @@ cleanup:
   allocator_free(allocator, &self->host);
 }
 
-static void _cubec_expression_subscript_move(cubec_expression_subscript_t self,
-                                              allocator_t allocator,
-                                              cubec_expression_subscript_t another) {
+static void
+_cubec_expression_subscript_move(cubec_expression_subscript_t self,
+                                 allocator_t allocator,
+                                 cubec_expression_subscript_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->host = value_move(allocator, another->host);
   self->index = value_move(allocator, another->index);
@@ -68,9 +74,8 @@ type_t g_cubec_expression_subscript_type = {
  *  Parser: read_expression_subscript
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_subscript(context_t ctx, vec_t tokens,
-                                 size_t *position, const char *filename,
-                                 node_t host) {
+node_t read_expression_subscript(context_t ctx, vec_t tokens, size_t *position,
+                                 const char *filename, node_t host) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_subscript_t node = NULL;
@@ -91,11 +96,13 @@ node_t read_expression_subscript(context_t ctx, vec_t tokens,
     bool found_colon = false;
     while (true) {
       token_t tok = vec_get(tokens, lookahead);
-      if (!tok) break;
+      if (!tok)
+        break;
       if (token_is(tok, CUBEC_TOKEN_SYMBOL, "[")) {
         depth++;
       } else if (token_is(tok, CUBEC_TOKEN_SYMBOL, "]")) {
-        if (depth == 0) break;
+        if (depth == 0)
+          break;
         depth--;
       } else if (token_is(tok, CUBEC_TOKEN_SYMBOL, ":")) {
         found_colon = true;
@@ -148,12 +155,13 @@ node_t read_expression_subscript(context_t ctx, vec_t tokens,
 
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       open_bracket ? *token_get_location(open_bracket) : (location_t){0},
+                       open_bracket ? *token_get_location(open_bracket)
+                                    : (location_t){0},
                        "invalid subscript expression");
   ctx->error_count++;
   allocator_free(allocator, &index);
   /* host ownership: caller (read_value) owns it and will clean up */
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx,
-      open_bracket ? *token_get_location(open_bracket) : (location_t){0});
+  return create_error(ctx, open_bracket ? *token_get_location(open_bracket)
+                                        : (location_t){0});
 }

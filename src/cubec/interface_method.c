@@ -215,14 +215,13 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_iface_method
+ *  Factory: create_interface_method
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_iface_method(context_t ctx, location_t loc,
-                                     const char *name, vec_t args,
-                                     node_t return_type) {
+node_t create_interface_method(context_t ctx, location_t loc, const char *name,
+                               vec_t args, node_t return_type) {
   allocator_t alloc = ctx->allocator;
-  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_interface_method_init_t init = {
       .location = loc,
       .name = name_node,

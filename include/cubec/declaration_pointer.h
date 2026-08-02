@@ -1,11 +1,11 @@
 #ifndef _H_CUBEC_CUBEC_DECLARATION_POINTER_
 #define _H_CUBEC_CUBEC_DECLARATION_POINTER_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/declaration.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,9 +13,9 @@ extern "C" {
 struct _cubec_declaration_pointer_t;
 struct _cubec_declaration_pointer_t {
   struct _cubec_declaration_t super;
-  node_t type;           /**< The underlying type */
-  bool is_const;         /**< Whether const qualifier is present */
-  bool is_volatile;      /**< Whether volatile qualifier is present */
+  node_t type;      /**< The underlying type */
+  bool is_const;    /**< Whether const qualifier is present */
+  bool is_volatile; /**< Whether volatile qualifier is present */
 };
 typedef struct _cubec_declaration_pointer_t *cubec_declaration_pointer_t;
 
@@ -28,7 +28,8 @@ struct _cubec_declaration_pointer_init_t {
   bool is_const;
   bool is_volatile;
 };
-typedef struct _cubec_declaration_pointer_init_t cubec_declaration_pointer_init_t;
+typedef struct _cubec_declaration_pointer_init_t
+    cubec_declaration_pointer_init_t;
 
 /**
  * @brief Try to parse a pointer declaration: * [const] [volatile] <type>
@@ -39,10 +40,11 @@ typedef struct _cubec_declaration_pointer_init_t cubec_declaration_pointer_init_
  * @return A new cubec_declaration_pointer_t node, or NULL if current token
  *         is not '*'.
  */
-node_t read_declaration_pointer(context_t ctx, vec_t tokens,
-                                size_t *position, const char *filename);
+node_t read_declaration_pointer(context_t ctx, vec_t tokens, size_t *position,
+                                const char *filename);
 
-node_t cubec_ast_create_pointer_type(context_t ctx, location_t loc, node_t base, bool is_const, bool is_volatile);
+node_t create_declaration_pointer(context_t ctx, location_t loc, node_t base,
+                                  bool is_const, bool is_volatile);
 
 #ifdef __cplusplus
 }

@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_SWITCH_MATCH_
 #define _H_CUBEC_CUBEC_SWITCH_MATCH_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,9 +27,9 @@ extern "C" {
 struct _cubec_switch_match_t;
 struct _cubec_switch_match_t {
   struct _node_t super;
-  bool is_else;     /**< Whether this is the else (default) arm */
-  vec_t values;     /**< Match value expressions (auto_dispose, empty for else) */
-  node_t body;      /**< Block statement (required) */
+  bool is_else; /**< Whether this is the else (default) arm */
+  vec_t values; /**< Match value expressions (auto_dispose, empty for else) */
+  node_t body;  /**< Block statement (required) */
 };
 typedef struct _cubec_switch_match_t *cubec_switch_match_t;
 
@@ -47,10 +47,11 @@ typedef struct _cubec_switch_match_init_t cubec_switch_match_init_t;
 /**
  * @brief Try to parse a switch match arm (case or else).
  */
-node_t read_switch_match(context_t ctx, vec_t tokens,
-                          size_t *position, const char *filename);
+node_t read_switch_match(context_t ctx, vec_t tokens, size_t *position,
+                         const char *filename);
 
-node_t cubec_ast_create_switch_match(context_t ctx, location_t loc, bool is_else, vec_t values, node_t body);
+node_t create_switch_match(context_t ctx, location_t loc, bool is_else,
+                           vec_t values, node_t body);
 
 #ifdef __cplusplus
 }

@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_INTERFACE_
 #define _H_CUBEC_CUBEC_STATEMENT_INTERFACE_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -20,7 +20,8 @@ extern "C" {
  *
  * Members inside the body:
  * - Associated type: type <name> [<generic_params>] ;
- * - Method signature: func <name> [<generic_params>] (<params>) [: <return_type>] ;
+ * - Method signature: func <name> [<generic_params>] (<params>) [:
+ * <return_type>] ;
  *
  * Members are stored as a vec_t of mixed node types:
  * - cubec_statement_declaration_type_t (for associated type declarations)
@@ -61,7 +62,8 @@ struct _cubec_statement_interface_init_t {
   vec_t members;
   vec_t decorators;
 };
-typedef struct _cubec_statement_interface_init_t cubec_statement_interface_init_t;
+typedef struct _cubec_statement_interface_init_t
+    cubec_statement_interface_init_t;
 
 /**
  * @brief Try to parse an interface declaration statement.
@@ -72,10 +74,12 @@ typedef struct _cubec_statement_interface_init_t cubec_statement_interface_init_
  * @return A new cubec_statement_interface_t node, or NULL if current token
  *         is not an interface declaration prefix (export/interface).
  */
-node_t read_statement_interface(context_t ctx, vec_t tokens,
-                                 size_t *position, const char *filename);
+node_t read_statement_interface(context_t ctx, vec_t tokens, size_t *position,
+                                const char *filename);
 
-node_t cubec_ast_create_iface_stmt(context_t ctx, location_t loc, const char *name, vec_t members, bool is_export);
+node_t create_statement_interface(context_t ctx, location_t loc,
+                                  const char *name, vec_t members,
+                                  bool is_export);
 
 #ifdef __cplusplus
 }

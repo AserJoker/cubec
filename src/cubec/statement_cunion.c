@@ -189,13 +189,13 @@ onerror:
   allocator_free(allocator, &fields);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_cunion_stmt(context_t ctx, location_t loc,
-                                    const char *name, vec_t fields) {
+node_t create_statement_cunion(context_t ctx, location_t loc, const char *name,
+                               vec_t fields) {
   allocator_t alloc = ctx->allocator;
-  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_statement_cunion_init_t init = {
       .location = loc,
       .parent = NULL,

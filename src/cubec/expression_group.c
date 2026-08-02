@@ -10,7 +10,8 @@
 static void _cubec_expression_group_init(cubec_expression_group_t self,
                                          allocator_t allocator,
                                          cubec_expression_group_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_GROUP,
       .parent = NULL,
@@ -54,8 +55,8 @@ type_t g_cubec_expression_group_type = {
  *  Parser: read_expression_group
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_group(context_t ctx, vec_t tokens,
-                             size_t *position, const char *filename) {
+node_t read_expression_group(context_t ctx, vec_t tokens, size_t *position,
+                             const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_group_t node = NULL;
@@ -72,9 +73,9 @@ node_t read_expression_group(context_t ctx, vec_t tokens,
 
   /* Parse inner expression */
   skip_whitespace(tokens, &current);
-  inner =
-      read_expression(ctx, tokens, &current, filename);
-  if (node_is_error(inner)) return inner;
+  inner = read_expression(ctx, tokens, &current, filename);
+  if (node_is_error(inner))
+    return inner;
   if (!inner) {
     goto onerror;
   }
@@ -99,23 +100,20 @@ node_t read_expression_group(context_t ctx, vec_t tokens,
   return (node_t)node;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid grouped expression");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid grouped expression");
   ctx->error_count++;
   allocator_free(allocator, &inner);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_group
+ *  Factory: create_expression_group
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_group(context_t ctx, location_t loc,
-                              node_t inner) {
+node_t create_expression_group(context_t ctx, location_t loc, node_t inner) {
   allocator_t alloc = ctx->allocator;
-                                        cubec_expression_group_init_t init = {
-                                        .inner = inner};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_group_type,
-                                  &init);
+  cubec_expression_group_init_t init = {.inner = inner};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_group_type, &init);
 }

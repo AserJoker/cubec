@@ -1,8 +1,8 @@
 #include "cubec/expression_call.h"
 #include "core/token.h"
 #include "cubec/expression_spread.h"
-#include "cubec/token.h"
 #include "cubec/node_error.h"
+#include "cubec/token.h"
 #include <inttypes.h>
 
 /* --------------------------------------------------------------------------
@@ -10,9 +10,10 @@
  * -------------------------------------------------------------------------- */
 
 static void _cubec_expression_call_init(cubec_expression_call_t self,
-                                         allocator_t allocator,
-                                         cubec_expression_call_init_t *init) {
-  if (!init) return;
+                                        allocator_t allocator,
+                                        cubec_expression_call_init_t *init) {
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_CALL,
       .parent = NULL,
@@ -26,22 +27,23 @@ static void _cubec_expression_call_init(cubec_expression_call_t self,
     /* Take ownership of the caller's arguments vec directly */
     self->arguments = init->arguments;
   } else {
-    /* If no arguments vec was provided (e.g. clone path), create an empty one */
+    /* If no arguments vec was provided (e.g. clone path), create an empty one
+     */
     self->arguments =
         allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   }
 }
 
 static void _cubec_expression_call_dispose(cubec_expression_call_t self,
-                                            allocator_t allocator) {
+                                           allocator_t allocator) {
   allocator_free(allocator, &self->callee);
   allocator_free(allocator, &self->arguments);
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
 static void _cubec_expression_call_clone(cubec_expression_call_t self,
-                                          allocator_t allocator,
-                                          cubec_expression_call_t another) {
+                                         allocator_t allocator,
+                                         cubec_expression_call_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->callee = value_clone(allocator, another->callee);
   self->arguments = value_clone(allocator, another->arguments);
@@ -53,8 +55,8 @@ cleanup:
 }
 
 static void _cubec_expression_call_move(cubec_expression_call_t self,
-                                         allocator_t allocator,
-                                         cubec_expression_call_t another) {
+                                        allocator_t allocator,
+                                        cubec_expression_call_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->callee = value_move(allocator, another->callee);
 
@@ -84,9 +86,8 @@ type_t g_cubec_expression_call_type = {
  *  Parser: read_expression_call
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_call(context_t ctx, vec_t tokens,
-                             size_t *position, const char *filename,
-                             node_t callee) {
+node_t read_expression_call(context_t ctx, vec_t tokens, size_t *position,
+                            const char *filename, node_t callee) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_call_t node = NULL;
@@ -100,8 +101,7 @@ node_t read_expression_call(context_t ctx, vec_t tokens,
   }
   current++; /* Consumed '(' — committed to parsing a call from here */
 
-  arguments =
-      allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+  arguments = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
 
   /* Parse comma-separated arguments */
   bool expect_comma = false;
@@ -120,11 +120,9 @@ node_t read_expression_call(context_t ctx, vec_t tokens,
     }
 
     /* Parse one argument: try spread first, then regular expression */
-    node_t arg =
-        read_expression_spread(ctx, tokens, &current, filename);
+    node_t arg = read_expression_spread(ctx, tokens, &current, filename);
     if (!arg) {
-      arg =
-          read_expression_base(ctx, tokens, &current, filename);
+      arg = read_expression_base(ctx, tokens, &current, filename);
     }
     if (!arg) {
       goto onerror;
@@ -167,7 +165,8 @@ node_t read_expression_call(context_t ctx, vec_t tokens,
 
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       open_paren ? *token_get_location(open_paren) : (location_t){0},
+                       open_paren ? *token_get_location(open_paren)
+                                  : (location_t){0},
                        "invalid function call syntax");
   ctx->error_count++;
   /* autodispose=true: freeing arguments also frees all its elements */
@@ -175,20 +174,17 @@ onerror:
   /* NOTE: callee is NOT freed here — the caller (read_value) still owns the
    *       pointer and will clean it up when the error propagates */
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx,
-      open_paren ? *token_get_location(open_paren) : (location_t){0});
+  return create_error(ctx, open_paren ? *token_get_location(open_paren)
+                                      : (location_t){0});
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_call
+ *  Factory: create_expression_call
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_call(context_t ctx, location_t loc,
-                             node_t callee, vec_t args) {
+node_t create_expression_call(context_t ctx, location_t loc, node_t callee,
+                              vec_t args) {
   allocator_t alloc = ctx->allocator;
-                                       cubec_expression_call_init_t init = {
-                                       .callee = callee,
-                                       .arguments = args};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_call_type,
-                                  &init);
+  cubec_expression_call_init_t init = {.callee = callee, .arguments = args};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_call_type, &init);
 }

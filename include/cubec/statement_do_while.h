@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_DO_WHILE_
 #define _H_CUBEC_CUBEC_STATEMENT_DO_WHILE_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -23,8 +23,8 @@ extern "C" {
 struct _cubec_statement_do_while_t;
 struct _cubec_statement_do_while_t {
   struct _node_t super;
-  node_t body;       /**< Block statement (required) */
-  node_t condition;  /**< Condition expression (required) */
+  node_t body;      /**< Block statement (required) */
+  node_t condition; /**< Condition expression (required) */
 };
 typedef struct _cubec_statement_do_while_t *cubec_statement_do_while_t;
 
@@ -41,10 +41,11 @@ typedef struct _cubec_statement_do_while_init_t cubec_statement_do_while_init_t;
 /**
  * @brief Try to parse a do-while statement.
  */
-node_t read_statement_do_while(context_t ctx, vec_t tokens,
-                                size_t *position, const char *filename);
+node_t read_statement_do_while(context_t ctx, vec_t tokens, size_t *position,
+                               const char *filename);
 
-node_t cubec_ast_create_do_while_stmt(context_t ctx, location_t loc, node_t body, node_t cond);
+node_t create_statement_do_while(context_t ctx, location_t loc, node_t body,
+                                 node_t cond);
 
 #ifdef __cplusplus
 }

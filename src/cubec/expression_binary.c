@@ -160,7 +160,7 @@ onerror:
   allocator_free(allocator, &opt);
   allocator_free(allocator, &right);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
@@ -321,11 +321,11 @@ node_t read_expression_binary(context_t ctx, vec_t tokens, size_t *position,
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_binary
+ *  Factory: create_expression_binary
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_binary(context_t ctx, location_t loc, const char *op,
-                               node_t left, node_t right) {
+node_t create_expression_binary(context_t ctx, location_t loc, const char *op,
+                                node_t left, node_t right) {
   allocator_t alloc = ctx->allocator;
   string_t op_str =
       allocator_create(alloc, &g_string_type, &(string_init_t){.str = op});

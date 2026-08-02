@@ -1,12 +1,12 @@
 #ifndef _H_CUBEC_CUBEC_LITERAL_NUMERIC_
 #define _H_CUBEC_CUBEC_LITERAL_NUMERIC_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/literal.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -56,9 +56,12 @@ typedef struct _cubec_literal_numeric_init_t cubec_literal_numeric_init_t;
 node_t read_literal_numeric(context_t ctx, vec_t tokens, size_t *position,
                             const char *filename);
 
-const char *cubec_literal_numeric_type_to_string(cubec_literal_numeric_type_t type);
+const char *
+cubec_literal_numeric_type_to_string(cubec_literal_numeric_type_t type);
 
-node_t cubec_ast_create_numeric(context_t ctx, location_t loc, const char *value, cubec_literal_numeric_kind_t kind, cubec_literal_numeric_type_t ntype);
+node_t create_literal_numeric(context_t ctx, location_t loc, const char *value,
+                              cubec_literal_numeric_kind_t kind,
+                              cubec_literal_numeric_type_t ntype);
 
 #ifdef __cplusplus
 }

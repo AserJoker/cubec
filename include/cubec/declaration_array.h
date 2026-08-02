@@ -40,8 +40,8 @@ typedef struct _cubec_declaration_array_init_t cubec_declaration_array_init_t;
 node_t read_declaration_array(context_t ctx, vec_t tokens, size_t *position,
                               const char *filename);
 
-node_t cubec_ast_create_array_type(context_t ctx, location_t loc, node_t size,
-                                   node_t base);
+node_t create_declaration_array(context_t ctx, location_t loc, node_t size,
+                                node_t base);
 
 #ifdef __cplusplus
 }

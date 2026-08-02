@@ -179,16 +179,16 @@ onerror:
   allocator_free(allocator, &rvalue);
   allocator_free(allocator, &lvalue);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_assignment
+ *  Factory: create_expression_assignment
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_assignment(context_t ctx, location_t loc,
-                                   const char *op, node_t lvalue,
-                                   node_t rvalue) {
+node_t create_expression_assignment(context_t ctx, location_t loc,
+                                    const char *op, node_t lvalue,
+                                    node_t rvalue) {
   allocator_t alloc = ctx->allocator;
   string_t op_str =
       allocator_create(alloc, &g_string_type, &(string_init_t){.str = op});

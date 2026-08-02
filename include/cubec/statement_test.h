@@ -48,10 +48,10 @@ typedef struct _cubec_statement_test_init_t cubec_statement_test_init_t;
 node_t read_statement_test(context_t ctx, vec_t tokens, size_t *position,
                            const char *filename);
 
-node_t cubec_ast_create_test_stmt(context_t ctx, location_t loc,
-                                  const char *name, node_t body);
+node_t create_statement_test(context_t ctx, location_t loc, const char *name,
+                             node_t body);
 
-void cubec_ast_write_test_stmt(writer_t writer, node_t stmt);
+void write_statement_test(writer_t writer, node_t stmt);
 
 #ifdef __cplusplus
 }

@@ -231,14 +231,14 @@ onerror:
   allocator_free(allocator, &params);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_type_alias(context_t ctx, location_t loc,
-                                   const char *name, node_t type_value,
-                                   bool is_export, bool is_builtin) {
+node_t create_statement_declaration_type(context_t ctx, location_t loc,
+                                         const char *name, node_t type_value,
+                                         bool is_export, bool is_builtin) {
   allocator_t alloc = ctx->allocator;
-  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_statement_declaration_type_init_t init = {
       .location = loc,
       .parent = NULL,

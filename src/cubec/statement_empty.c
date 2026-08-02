@@ -3,7 +3,6 @@
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 
-
 static void _cubec_statement_empty_init(cubec_statement_empty_t self,
                                         allocator_t allocator,
                                         cubec_statement_empty_init_t *init) {
@@ -70,15 +69,16 @@ onerror:
                        "expected ';'");
   ctx->error_count++;
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_empty_stmt(context_t ctx, location_t loc) {
+node_t create_statement_empty(context_t ctx, location_t loc) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_empty_init_t init = {.location = loc, .parent = NULL};
   return (node_t)allocator_create(alloc, &g_cubec_statement_empty_type, &init);
 }
 
-void cubec_ast_write_empty_stmt(writer_t writer, node_t node) {
+void write_statement_empty(writer_t writer, node_t node) {
   writer_append(writer, ";");
+  writer_newline(writer, 0);
 }

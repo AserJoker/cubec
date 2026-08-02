@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_UNION_
 #define _H_CUBEC_CUBEC_STATEMENT_UNION_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,7 +13,8 @@ extern "C" {
  * @brief AST node for union declaration statement.
  *
  * Syntax:
- *   [export] union <name> [<generic_params>] [implement <iface1, iface2, ...>] { <members> }
+ *   [export] union <name> [<generic_params>] [implement <iface1, iface2, ...>]
+ * { <members> }
  *
  * Members can be:
  * - Fields: <name> : <type>
@@ -33,9 +34,10 @@ struct _cubec_statement_union_t {
   bool is_export;       /**< Whether this union is exported */
   node_t name;          /**< Identifier node for the union name */
   vec_t generic_params; /**< Vector of cubec_generic_param_t (may be NULL) */
-  vec_t implements;     /**< Vector of type expression nodes for implement clause (may be NULL) */
-  vec_t members;        /**< Vector of member nodes (auto_dispose=true) */
-  vec_t decorators;     /**< Vector of cubec_decorator_t (may be NULL) */
+  vec_t implements; /**< Vector of type expression nodes for implement clause
+                       (may be NULL) */
+  vec_t members;    /**< Vector of member nodes (auto_dispose=true) */
+  vec_t decorators; /**< Vector of cubec_decorator_t (may be NULL) */
 };
 typedef struct _cubec_statement_union_t *cubec_statement_union_t;
 
@@ -62,10 +64,11 @@ typedef struct _cubec_statement_union_init_t cubec_statement_union_init_t;
  * @return A new cubec_statement_union_t node, or NULL if current token
  *         is not a union declaration prefix (export/union).
  */
-node_t read_statement_union(context_t ctx, vec_t tokens,
-                             size_t *position, const char *filename);
+node_t read_statement_union(context_t ctx, vec_t tokens, size_t *position,
+                            const char *filename);
 
-node_t cubec_ast_create_union_stmt(context_t ctx, location_t loc, const char *name, vec_t members, bool is_export, vec_t implements);
+node_t create_statement_union(context_t ctx, location_t loc, const char *name,
+                              vec_t members, bool is_export, vec_t implements);
 
 #ifdef __cplusplus
 }

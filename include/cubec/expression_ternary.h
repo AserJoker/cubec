@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_TERNARY_
 #define _H_CUBEC_CUBEC_EXPRESSION_TERNARY_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "cubec/expression.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -30,17 +30,20 @@ struct _cubec_expression_ternary_init_t {
 typedef struct _cubec_expression_ternary_init_t cubec_expression_ternary_init_t;
 
 /**
- * @brief Try to parse a ternary (conditional) expression: cond ? consequent : alternate
+ * @brief Try to parse a ternary (conditional) expression: cond ? consequent :
+ * alternate
  * @param allocator The allocator to use for memory allocation
  * @param tokens The token vector
  * @param position Current position in the token stream (updated on success)
  * @param filename The source filename for error reporting
- * @return A new cubec_expression_ternary_t node, or the condition if no '?' follows
+ * @return A new cubec_expression_ternary_t node, or the condition if no '?'
+ * follows
  */
-node_t read_expression_ternary(context_t ctx, vec_t tokens,
-                               size_t *position, const char *filename);
+node_t read_expression_ternary(context_t ctx, vec_t tokens, size_t *position,
+                               const char *filename);
 
-node_t cubec_ast_create_ternary(context_t ctx, location_t loc, node_t cond, node_t then_branch, node_t else_branch);
+node_t create_expression_ternary(context_t ctx, location_t loc, node_t cond,
+                                 node_t then_branch, node_t else_branch);
 
 #ifdef __cplusplus
 }

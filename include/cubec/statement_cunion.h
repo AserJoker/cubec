@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_CUNION_
 #define _H_CUBEC_CUBEC_STATEMENT_CUNION_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -28,8 +28,8 @@ extern "C" {
 struct _cubec_statement_cunion_t;
 struct _cubec_statement_cunion_t {
   struct _node_t super;
-  node_t name;   /**< Identifier node for the cunion name */
-  vec_t fields;  /**< Vector of cubec_struct_field_t (auto_dispose=true) */
+  node_t name;      /**< Identifier node for the cunion name */
+  vec_t fields;     /**< Vector of cubec_struct_field_t (auto_dispose=true) */
   vec_t decorators; /**< Vector of cubec_decorator_t (may be NULL) */
 };
 typedef struct _cubec_statement_cunion_t *cubec_statement_cunion_t;
@@ -54,10 +54,11 @@ typedef struct _cubec_statement_cunion_init_t cubec_statement_cunion_init_t;
  * @return A new cubec_statement_cunion_t node, or NULL if current token
  *         is not 'cunion' keyword.
  */
-node_t read_statement_cunion(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename);
+node_t read_statement_cunion(context_t ctx, vec_t tokens, size_t *position,
+                             const char *filename);
 
-node_t cubec_ast_create_cunion_stmt(context_t ctx, location_t loc, const char *name, vec_t fields);
+node_t create_statement_cunion(context_t ctx, location_t loc, const char *name,
+                               vec_t fields);
 
 #ifdef __cplusplus
 }

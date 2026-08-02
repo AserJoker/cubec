@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_FOR_
 #define _H_CUBEC_CUBEC_STATEMENT_FOR_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,10 +25,10 @@ extern "C" {
 struct _cubec_statement_for_t;
 struct _cubec_statement_for_t {
   struct _node_t super;
-  node_t init;       /**< Init statement/expression (nullable) */
-  node_t condition;  /**< Condition expression (nullable) */
-  node_t increment;  /**< Increment expression (nullable) */
-  node_t body;       /**< Block statement (required) */
+  node_t init;      /**< Init statement/expression (nullable) */
+  node_t condition; /**< Condition expression (nullable) */
+  node_t increment; /**< Increment expression (nullable) */
+  node_t body;      /**< Block statement (required) */
 };
 typedef struct _cubec_statement_for_t *cubec_statement_for_t;
 
@@ -47,10 +47,11 @@ typedef struct _cubec_statement_for_init_t cubec_statement_for_init_t;
 /**
  * @brief Try to parse a for statement.
  */
-node_t read_statement_for(context_t ctx, vec_t tokens,
-                           size_t *position, const char *filename);
+node_t read_statement_for(context_t ctx, vec_t tokens, size_t *position,
+                          const char *filename);
 
-node_t cubec_ast_create_for_stmt(context_t ctx, location_t loc, node_t init, node_t cond, node_t incr, node_t body);
+node_t create_statement_for(context_t ctx, location_t loc, node_t init,
+                            node_t cond, node_t incr, node_t body);
 
 #ifdef __cplusplus
 }

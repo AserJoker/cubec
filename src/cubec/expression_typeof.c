@@ -3,10 +3,12 @@
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 
-static void _cubec_expression_typeof_init(cubec_expression_typeof_t self,
-                                           allocator_t allocator,
-                                           cubec_expression_typeof_init_t *init) {
-  if (!init) return;
+static void
+_cubec_expression_typeof_init(cubec_expression_typeof_t self,
+                              allocator_t allocator,
+                              cubec_expression_typeof_init_t *init) {
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_TYPEOF,
       .location = init->location,
@@ -16,21 +18,21 @@ static void _cubec_expression_typeof_init(cubec_expression_typeof_t self,
 }
 
 static void _cubec_expression_typeof_dispose(cubec_expression_typeof_t self,
-                                              allocator_t allocator) {
+                                             allocator_t allocator) {
   allocator_free(allocator, &self->expression);
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
 static void _cubec_expression_typeof_clone(cubec_expression_typeof_t self,
-                                            allocator_t allocator,
-                                            cubec_expression_typeof_t another) {
+                                           allocator_t allocator,
+                                           cubec_expression_typeof_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->expression = value_clone(allocator, another->expression);
 }
 
 static void _cubec_expression_typeof_move(cubec_expression_typeof_t self,
-                                           allocator_t allocator,
-                                           cubec_expression_typeof_t another) {
+                                          allocator_t allocator,
+                                          cubec_expression_typeof_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->expression = value_move(allocator, another->expression);
 }
@@ -44,8 +46,8 @@ type_t g_cubec_expression_typeof_type = {
     .move = (type_move_fn_t)_cubec_expression_typeof_move,
 };
 
-node_t read_expression_typeof(context_t ctx, vec_t tokens,
-                               size_t *position, const char *filename) {
+node_t read_expression_typeof(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t expr = NULL;
@@ -69,7 +71,8 @@ node_t read_expression_typeof(context_t ctx, vec_t tokens,
 
   /* Parse the inner expression */
   expr = read_expression(ctx, tokens, &current, filename);
-  if (node_is_error(expr)) return expr;
+  if (node_is_error(expr))
+    return expr;
   if (!expr) {
     goto onerror;
   }
@@ -103,19 +106,18 @@ node_t read_expression_typeof(context_t ctx, vec_t tokens,
 
 cleanup:
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid typeof expression");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid typeof expression");
   ctx->error_count++;
   allocator_free(allocator, &expr);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_typeof
+ *  Factory: create_expression_typeof
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_typeof(context_t ctx, location_t loc,
-                               node_t expr) {
+node_t create_expression_typeof(context_t ctx, location_t loc, node_t expr) {
   allocator_t alloc = ctx->allocator;
   cubec_expression_typeof_init_t init = {.expression = expr};
   return (node_t)allocator_create(alloc, &g_cubec_expression_typeof_type,

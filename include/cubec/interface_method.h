@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_INTERFACE_METHOD_
 #define _H_CUBEC_CUBEC_INTERFACE_METHOD_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -56,10 +56,11 @@ typedef struct _cubec_interface_method_init_t cubec_interface_method_init_t;
  * @return A new cubec_interface_method_t node, or NULL if current token
  *         is not a 'func' keyword.
  */
-node_t read_interface_method(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename);
+node_t read_interface_method(context_t ctx, vec_t tokens, size_t *position,
+                             const char *filename);
 
-node_t cubec_ast_create_iface_method(context_t ctx, location_t loc, const char *name, vec_t args, node_t return_type);
+node_t create_interface_method(context_t ctx, location_t loc, const char *name,
+                               vec_t args, node_t return_type);
 
 #ifdef __cplusplus
 }

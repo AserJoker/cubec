@@ -143,16 +143,15 @@ onerror:
   allocator_free(allocator, &path);
   allocator_free(allocator, &module_name);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_import_stmt(context_t ctx, location_t loc,
-                                    const char *module_name, const char *path) {
+node_t create_statement_import(context_t ctx, location_t loc,
+                               const char *module_name, const char *path) {
   allocator_t alloc = ctx->allocator;
   node_t mod_node =
-      (module_name) ? cubec_ast_create_identifier(ctx, loc, module_name) : NULL;
-  node_t path_node =
-      (path) ? cubec_ast_create_identifier(ctx, loc, path) : NULL;
+      (module_name) ? create_literal_identifier(ctx, loc, module_name) : NULL;
+  node_t path_node = (path) ? create_literal_identifier(ctx, loc, path) : NULL;
   cubec_statement_import_init_t init = {.location = loc,
                                         .parent = NULL,
                                         .module_name = mod_node,
@@ -160,11 +159,12 @@ node_t cubec_ast_create_import_stmt(context_t ctx, location_t loc,
   return (node_t)allocator_create(alloc, &g_cubec_statement_import_type, &init);
 }
 
-void cubec_ast_write_import_stmt(writer_t writer, node_t node) {
+void write_statement_import(writer_t writer, node_t node) {
   cubec_statement_import_t import = (cubec_statement_import_t)node;
   writer_append(writer, "import ");
-  cubec_ast_write_identifier(writer, import->module_name);
+  write_literal_identifier(writer, import->module_name);
   writer_append(writer, " from ");
-  cubec_ast_write_string(writer, import->path);
+  write_literal_string(writer, import->path);
   writer_append(writer, ";");
+  writer_newline(writer, 0);
 }

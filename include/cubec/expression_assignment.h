@@ -1,12 +1,12 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_ASSIGNMENT_
 #define _H_CUBEC_CUBEC_EXPRESSION_ASSIGNMENT_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/expression_binary.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,9 +37,9 @@ extern type_t g_cubec_expression_assignment_type;
 struct _cubec_expression_assignment_init_t {
   location_t location;
   node_t parent;
-  node_t lvalue;        /**< Left-hand side (must be an lvalue) */
-  node_t rvalue;        /**< Right-hand side expression */
-  string_t opt;         /**< Operator string (e.g. "=", "+=", "-=") */
+  node_t lvalue; /**< Left-hand side (must be an lvalue) */
+  node_t rvalue; /**< Right-hand side expression */
+  string_t opt;  /**< Operator string (e.g. "=", "+=", "-=") */
 };
 typedef struct _cubec_expression_assignment_init_t
     cubec_expression_assignment_init_t;
@@ -62,10 +62,12 @@ typedef struct _cubec_expression_assignment_init_t
  * @return A new cubec_expression_assignment_t node, or the value node if
  *         no assignment operator follows
  */
-node_t read_expression_assignment(context_t ctx, vec_t tokens,
-                                  size_t *position, const char *filename);
+node_t read_expression_assignment(context_t ctx, vec_t tokens, size_t *position,
+                                  const char *filename);
 
-node_t cubec_ast_create_assignment(context_t ctx, location_t loc, const char *op, node_t lvalue, node_t rvalue);
+node_t create_expression_assignment(context_t ctx, location_t loc,
+                                    const char *op, node_t lvalue,
+                                    node_t rvalue);
 
 #ifdef __cplusplus
 }

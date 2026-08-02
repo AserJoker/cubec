@@ -13,10 +13,12 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_expression_function_init(
-    cubec_expression_function_t self, allocator_t allocator,
-    cubec_expression_function_init_t *init) {
-  if (!init) return;
+static void
+_cubec_expression_function_init(cubec_expression_function_t self,
+                                allocator_t allocator,
+                                cubec_expression_function_init_t *init) {
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_FUNCTION,
       .location = init->location,
@@ -32,8 +34,8 @@ static void _cubec_expression_function_init(
   self->is_c_variadic = init->is_c_variadic;
 }
 
-static void _cubec_expression_function_dispose(
-    cubec_expression_function_t self, allocator_t allocator) {
+static void _cubec_expression_function_dispose(cubec_expression_function_t self,
+                                               allocator_t allocator) {
   allocator_free(allocator, &self->body);
   allocator_free(allocator, &self->return_type);
   allocator_free(allocator, &self->arguments);
@@ -43,16 +45,14 @@ static void _cubec_expression_function_dispose(
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_expression_function_clone(
-    cubec_expression_function_t self, allocator_t allocator,
-    cubec_expression_function_t another) {
+static void
+_cubec_expression_function_clone(cubec_expression_function_t self,
+                                 allocator_t allocator,
+                                 cubec_expression_function_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->name = another->name
-                   ? value_clone(allocator, another->name)
-                   : NULL;
-  self->captures = another->captures
-                       ? value_clone(allocator, another->captures)
-                       : NULL;
+  self->name = another->name ? value_clone(allocator, another->name) : NULL;
+  self->captures =
+      another->captures ? value_clone(allocator, another->captures) : NULL;
   self->generic_params = another->generic_params
                              ? value_clone(allocator, another->generic_params)
                              : NULL;
@@ -60,33 +60,26 @@ static void _cubec_expression_function_clone(
   self->return_type = another->return_type
                           ? value_clone(allocator, another->return_type)
                           : NULL;
-  self->body = another->body
-                   ? value_clone(allocator, another->body)
-                   : NULL;
+  self->body = another->body ? value_clone(allocator, another->body) : NULL;
   self->is_c_variadic = another->is_c_variadic;
   return;
 }
 
-static void _cubec_expression_function_move(
-    cubec_expression_function_t self, allocator_t allocator,
-    cubec_expression_function_t another) {
+static void
+_cubec_expression_function_move(cubec_expression_function_t self,
+                                allocator_t allocator,
+                                cubec_expression_function_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->name = another->name
-                   ? value_move(allocator, another->name)
-                   : NULL;
-  self->captures = another->captures
-                       ? value_move(allocator, another->captures)
-                       : NULL;
+  self->name = another->name ? value_move(allocator, another->name) : NULL;
+  self->captures =
+      another->captures ? value_move(allocator, another->captures) : NULL;
   self->generic_params = another->generic_params
                              ? value_move(allocator, another->generic_params)
                              : NULL;
   self->arguments = value_move(allocator, another->arguments);
-  self->return_type = another->return_type
-                          ? value_move(allocator, another->return_type)
-                          : NULL;
-  self->body = another->body
-                   ? value_move(allocator, another->body)
-                   : NULL;
+  self->return_type =
+      another->return_type ? value_move(allocator, another->return_type) : NULL;
+  self->body = another->body ? value_move(allocator, another->body) : NULL;
   self->is_c_variadic = another->is_c_variadic;
   return;
 }
@@ -106,14 +99,17 @@ type_t g_cubec_expression_function_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -121,8 +117,8 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_expression_function
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_function(context_t ctx, vec_t tokens,
-                                 size_t *position, const char *filename) {
+node_t read_expression_function(context_t ctx, vec_t tokens, size_t *position,
+                                const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t name = NULL;
@@ -146,8 +142,10 @@ node_t read_expression_function(context_t ctx, vec_t tokens,
 
   /* 2. Parse name or capture list after 'func' */
   if (_is_symbol(tokens, current, "||")) {
-    /* Empty capture list: || (tokenized as single || due to lexer longest-match) */
-    /* captures remains NULL — empty captures is semantically equivalent to no captures */
+    /* Empty capture list: || (tokenized as single || due to lexer
+     * longest-match) */
+    /* captures remains NULL — empty captures is semantically equivalent to no
+     * captures */
     current++;
     skip_whitespace(tokens, &current);
   } else if (_is_symbol(tokens, current, "|")) {
@@ -214,7 +212,8 @@ node_t read_expression_function(context_t ctx, vec_t tokens,
   if (_is_symbol(tokens, current, ")")) {
     /* no parameters */
   } else {
-    /* Parse parameters (read_function_argument handles ... prefix for pack params) */
+    /* Parse parameters (read_function_argument handles ... prefix for pack
+     * params) */
     while (true) {
       node_t arg = read_function_argument(ctx, tokens, &current, filename);
       if (!arg) {
@@ -257,7 +256,8 @@ node_t read_expression_function(context_t ctx, vec_t tokens,
     skip_whitespace(tokens, &current);
 
     return_type = read_expression_base(ctx, tokens, &current, filename);
-    if (node_is_error(return_type)) goto onerror;
+    if (node_is_error(return_type))
+      goto onerror;
     if (!return_type) {
       goto onerror;
     }
@@ -268,7 +268,8 @@ node_t read_expression_function(context_t ctx, vec_t tokens,
   token_t brace_or_semi = vec_get(tokens, current);
   if (token_is(brace_or_semi, CUBEC_TOKEN_SYMBOL, "{")) {
     body = read_statement_block(ctx, tokens, &current, filename);
-    if (node_is_error(body)) goto onerror;
+    if (node_is_error(body))
+      goto onerror;
     if (!body) {
       goto onerror;
     }
@@ -287,7 +288,8 @@ node_t read_expression_function(context_t ctx, vec_t tokens,
   }
 
   /* 9. Build location */
-  location_t *end_loc = body ? &body->location : token_get_location(brace_or_semi);
+  location_t *end_loc =
+      body ? &body->location : token_get_location(brace_or_semi);
   location_t loc = {
       .begin = start_location.begin,
       .end = end_loc->end,
@@ -318,24 +320,27 @@ onerror:
   allocator_free(allocator, &captures);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_function_expr
+ *  Factory: create_expression_function
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_function_expr(context_t ctx, location_t loc,
-                                      node_t name, vec_t captures,
-                                      vec_t generic_params, vec_t args,
-                                      node_t return_type, node_t body,
-                                      bool is_c_variadic) {
+node_t create_expression_function(context_t ctx, location_t loc, node_t name,
+                                  vec_t captures, vec_t generic_params,
+                                  vec_t args, node_t return_type, node_t body,
+                                  bool is_c_variadic) {
   allocator_t alloc = ctx->allocator;
-      cubec_expression_function_init_t init = {
-      .location = loc, .parent = NULL, .name = name,
-      .captures = captures, .generic_params = generic_params,
-      .arguments = args, .return_type = return_type, .body = body,
-      .is_c_variadic = is_c_variadic};
+  cubec_expression_function_init_t init = {.location = loc,
+                                           .parent = NULL,
+                                           .name = name,
+                                           .captures = captures,
+                                           .generic_params = generic_params,
+                                           .arguments = args,
+                                           .return_type = return_type,
+                                           .body = body,
+                                           .is_c_variadic = is_c_variadic};
   return (node_t)allocator_create(alloc, &g_cubec_expression_function_type,
                                   &init);
 }

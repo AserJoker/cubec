@@ -45,18 +45,38 @@ typedef struct comptime_env *comptime_env_t;
  */
 struct comptime_value {
   enum comptime_value_kind kind;
-  semantic_type_t type;     /**< Semantic type of this value */
+  semantic_type_t type; /**< Semantic type of this value */
   union {
     bool bool_val;
-    struct { int64_t s; uint64_t u; uint8_t width; bool is_signed; } int_val;
-    struct { double value; uint8_t width; } float_val;
+    struct {
+      int64_t s;
+      uint64_t u;
+      uint8_t width;
+      bool is_signed;
+    } int_val;
+    struct {
+      double value;
+      uint8_t width;
+    } float_val;
     char char_val;
     string_t string_val;
     semantic_type_t type_val;
-    struct { uint64_t addr; } pointer;
-    struct { uint8_t *data; size_t data_size; semantic_type_t element_type; } composite;
-    struct { comptime_env_t captured_env; node_t body; vec_t param_names; } function;
-    struct { vec_t elements; } pack;
+    struct {
+      uint64_t addr;
+    } pointer;
+    struct {
+      uint8_t *data;
+      size_t data_size;
+      semantic_type_t element_type;
+    } composite;
+    struct {
+      comptime_env_t captured_env;
+      node_t body;
+      vec_t param_names;
+    } function;
+    struct {
+      vec_t elements;
+    } pack;
   };
 };
 
@@ -70,33 +90,33 @@ extern type_t g_comptime_value_type;
 comptime_value_t comptime_value_create_nil(allocator_t allocator,
                                            semantic_type_t type);
 comptime_value_t comptime_value_create_bool(allocator_t allocator, bool val,
-                                           semantic_type_t type);
-comptime_value_t comptime_value_create_int(allocator_t allocator,
-                                           int64_t sval, uint64_t uval,
-                                           uint8_t width, bool is_signed,
-                                           semantic_type_t type);
-comptime_value_t comptime_value_create_float(allocator_t allocator,
-                                             double val, uint8_t width,
-                                             semantic_type_t type);
-comptime_value_t comptime_value_create_char(allocator_t allocator, char val,
                                             semantic_type_t type);
-comptime_value_t comptime_value_create_string(allocator_t allocator,
-                                              const char *val,
-                                              semantic_type_t type);
+comptime_value_t comptime_value_create_int(allocator_t allocator, int64_t sval,
+                                           uint64_t uval, uint8_t width,
+                                           bool is_signed,
+                                           semantic_type_t type);
+comptime_value_t comptime_value_create_float(allocator_t allocator, double val,
+                                             uint8_t width,
+                                             semantic_type_t type);
+comptime_value_t comptime_value_create_literal_char(allocator_t allocator,
+                                                    char val,
+                                                    semantic_type_t type);
+comptime_value_t comptime_value_create_literal_string(allocator_t allocator,
+                                                      const char *val,
+                                                      semantic_type_t type);
 comptime_value_t comptime_value_create_type(allocator_t allocator,
                                             semantic_type_t val);
 comptime_value_t comptime_value_create_pointer(allocator_t allocator,
                                                uint64_t addr,
                                                semantic_type_t type);
 comptime_value_t comptime_value_create_composite(allocator_t allocator,
-                                                  semantic_type_t type,
-                                                  semantic_type_t element_type,
-                                                  size_t data_size);
+                                                 semantic_type_t type,
+                                                 semantic_type_t element_type,
+                                                 size_t data_size);
 comptime_value_t comptime_value_create_function(allocator_t allocator,
-                                                 comptime_env_t env,
-                                                 node_t body,
-                                                 vec_t param_names,
-                                                 semantic_type_t type);
+                                                comptime_env_t env, node_t body,
+                                                vec_t param_names,
+                                                semantic_type_t type);
 comptime_value_t comptime_value_create_error(allocator_t allocator);
 comptime_value_t comptime_value_create_fatal(allocator_t allocator);
 comptime_value_t comptime_value_create_pack(allocator_t allocator,
@@ -110,12 +130,14 @@ bool comptime_value_equals(comptime_value_t a, comptime_value_t b);
 comptime_value_t comptime_value_clone(allocator_t allocator,
                                       comptime_value_t src);
 
-/** @brief Get the C string from a STRING value. Returns NULL for non-string kinds. */
+/** @brief Get the C string from a STRING value. Returns NULL for non-string
+ * kinds. */
 const char *comptime_value_get_string(comptime_value_t val);
 
 /* ===== mutation (field/index access for composite) ===== */
 
-/** @brief Read a field value from composite's raw data at given offset. Returns owned value. */
+/** @brief Read a field value from composite's raw data at given offset. Returns
+ * owned value. */
 comptime_value_t comptime_value_read_field(comptime_value_t composite,
                                            size_t offset,
                                            semantic_type_t field_type,
@@ -123,11 +145,9 @@ comptime_value_t comptime_value_read_field(comptime_value_t composite,
 
 /** @brief Write a field value into composite's raw data at given offset.
  *  field_type is used for implicit conversion and to determine write size. */
-bool comptime_value_write_field(comptime_value_t composite,
-                                size_t offset,
+bool comptime_value_write_field(comptime_value_t composite, size_t offset,
                                 semantic_type_t field_type,
-                                comptime_value_t value,
-                                allocator_t allocator);
+                                comptime_value_t value, allocator_t allocator);
 
 /** @brief Get a field value by name (struct). Returns owned value. */
 comptime_value_t comptime_value_get_field(comptime_value_t composite,
@@ -136,26 +156,22 @@ comptime_value_t comptime_value_get_field(comptime_value_t composite,
 
 /** @brief Set a field value by name (struct). */
 bool comptime_value_set_field(comptime_value_t composite,
-                              const char *field_name,
-                              comptime_value_t value,
+                              const char *field_name, comptime_value_t value,
                               allocator_t allocator);
 
 /** @brief Get an array element by index. Returns owned value. */
 comptime_value_t comptime_value_get_index(comptime_value_t composite,
-                                          size_t index,
-                                          allocator_t allocator);
+                                          size_t index, allocator_t allocator);
 
 /** @brief Set an array element by index. */
-bool comptime_value_set_index(comptime_value_t composite,
-                              size_t index,
-                              comptime_value_t value,
-                              allocator_t allocator);
+bool comptime_value_set_index(comptime_value_t composite, size_t index,
+                              comptime_value_t value, allocator_t allocator);
 
 /* ===== conversions ===== */
 
-int64_t  comptime_value_as_i64(comptime_value_t val);
+int64_t comptime_value_as_i64(comptime_value_t val);
 uint64_t comptime_value_as_u64(comptime_value_t val);
-double   comptime_value_as_f64(comptime_value_t val);
+double comptime_value_as_f64(comptime_value_t val);
 
 /* ===== union tag helpers ===== */
 

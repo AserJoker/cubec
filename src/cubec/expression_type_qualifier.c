@@ -10,7 +10,8 @@
 static void _cubec_expression_type_qualifier_init(
     cubec_expression_type_qualifier_t self, allocator_t allocator,
     cubec_expression_type_qualifier_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER,
       .parent = NULL,
@@ -23,8 +24,9 @@ static void _cubec_expression_type_qualifier_init(
   self->is_volatile = init->is_volatile;
 }
 
-static void _cubec_expression_type_qualifier_dispose(
-    cubec_expression_type_qualifier_t self, allocator_t allocator) {
+static void
+_cubec_expression_type_qualifier_dispose(cubec_expression_type_qualifier_t self,
+                                         allocator_t allocator) {
   allocator_free(allocator, &self->type);
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
@@ -74,7 +76,8 @@ node_t read_expression_type_qualifier(context_t ctx, vec_t tokens,
   /* Consume one or more const/volatile keywords */
   while (true) {
     token_t kw = vec_get(tokens, current);
-    if (!kw || token_get_kind(kw) != CUBEC_TOKEN_KEYWORD) break;
+    if (!kw || token_get_kind(kw) != CUBEC_TOKEN_KEYWORD)
+      break;
     if (token_is(kw, CUBEC_TOKEN_KEYWORD, "const")) {
       if (first == _Q_NONE) {
         start_loc = *token_get_location(kw);
@@ -100,12 +103,14 @@ node_t read_expression_type_qualifier(context_t ctx, vec_t tokens,
     break;
   }
 
-  if (first == _Q_NONE) return NULL;
+  if (first == _Q_NONE)
+    return NULL;
   start_loc.filename = filename;
 
   /* Parse the underlying type using read_expression_base (greedy). */
   node_t type = read_expression_base(ctx, tokens, &current, filename);
-  if (node_is_error(type)) return type;
+  if (node_is_error(type))
+    return type;
   if (!type) {
     goto onerror;
   }
@@ -119,58 +124,68 @@ node_t read_expression_type_qualifier(context_t ctx, vec_t tokens,
     location_t loc = start_loc;
     loc.end = result->location.end;
     loc.filename = filename;
-    result = allocator_create(allocator, &g_cubec_expression_type_qualifier_type,
-                         &(cubec_expression_type_qualifier_init_t){
-                             .location = loc, .type = result,
-                             .is_const = true, .is_volatile = false});
+    result = allocator_create(
+        allocator, &g_cubec_expression_type_qualifier_type,
+        &(cubec_expression_type_qualifier_init_t){.location = loc,
+                                                  .type = result,
+                                                  .is_const = true,
+                                                  .is_volatile = false});
   } else if (second == _Q_VOLATILE) {
     location_t loc = start_loc;
     loc.end = result->location.end;
     loc.filename = filename;
-    result = allocator_create(allocator, &g_cubec_expression_type_qualifier_type,
-                         &(cubec_expression_type_qualifier_init_t){
-                             .location = loc, .type = result,
-                             .is_const = false, .is_volatile = true});
+    result = allocator_create(
+        allocator, &g_cubec_expression_type_qualifier_type,
+        &(cubec_expression_type_qualifier_init_t){.location = loc,
+                                                  .type = result,
+                                                  .is_const = false,
+                                                  .is_volatile = true});
   }
   if (first == _Q_CONST) {
     location_t loc = start_loc;
     loc.end = result->location.end;
     loc.filename = filename;
-    result = allocator_create(allocator, &g_cubec_expression_type_qualifier_type,
-                         &(cubec_expression_type_qualifier_init_t){
-                             .location = loc, .type = result,
-                             .is_const = true, .is_volatile = false});
+    result = allocator_create(
+        allocator, &g_cubec_expression_type_qualifier_type,
+        &(cubec_expression_type_qualifier_init_t){.location = loc,
+                                                  .type = result,
+                                                  .is_const = true,
+                                                  .is_volatile = false});
   } else if (first == _Q_VOLATILE) {
     location_t loc = start_loc;
     loc.end = result->location.end;
     loc.filename = filename;
-    result = allocator_create(allocator, &g_cubec_expression_type_qualifier_type,
-                         &(cubec_expression_type_qualifier_init_t){
-                             .location = loc, .type = result,
-                             .is_const = false, .is_volatile = true});
+    result = allocator_create(
+        allocator, &g_cubec_expression_type_qualifier_type,
+        &(cubec_expression_type_qualifier_init_t){.location = loc,
+                                                  .type = result,
+                                                  .is_const = false,
+                                                  .is_volatile = true});
   }
 
   *position = current;
   return result;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_loc, "invalid type qualifier expression");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_loc,
+                       "invalid type qualifier expression");
   ctx->error_count++;
-  return cubec_ast_create_error(ctx, start_loc);
+  return create_error(ctx, start_loc);
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_type_qualifier
+ *  Factory: create_expression_type_qualifier
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_type_qualifier(context_t ctx, location_t loc,
-                                       node_t base, bool is_const,
-                                       bool is_volatile) {
+node_t create_expression_type_qualifier(context_t ctx, location_t loc,
+                                        node_t base, bool is_const,
+                                        bool is_volatile) {
   allocator_t alloc = ctx->allocator;
-  cubec_expression_type_qualifier_init_t init = {
-      .location = loc, .parent = NULL, .type = base,
-      .is_const = is_const, .is_volatile = is_volatile};
+  cubec_expression_type_qualifier_init_t init = {.location = loc,
+                                                 .parent = NULL,
+                                                 .type = base,
+                                                 .is_const = is_const,
+                                                 .is_volatile = is_volatile};
   return (node_t)allocator_create(
       alloc, &g_cubec_expression_type_qualifier_type, &init);
 }

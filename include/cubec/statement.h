@@ -22,7 +22,7 @@ extern "C" {
 node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
                       const char *filename);
 
-void cubec_ast_write_statement(writer_t wr, node_t stmt);
+void write_statement(writer_t wr, node_t stmt);
 
 #ifdef __cplusplus
 }

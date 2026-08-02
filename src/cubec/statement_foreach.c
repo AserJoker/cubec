@@ -1,19 +1,21 @@
 #include "cubec/statement_foreach.h"
 #include "core/token.h"
 #include "cubec/literal_identifier.h"
+#include "cubec/node_error.h"
 #include "cubec/statement.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "cubec/node_error.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_statement_foreach_init(
-    cubec_statement_foreach_t self, allocator_t allocator,
-    cubec_statement_foreach_init_t *init) {
-  if (!init) return;
+static void
+_cubec_statement_foreach_init(cubec_statement_foreach_t self,
+                              allocator_t allocator,
+                              cubec_statement_foreach_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_FOREACH,
       .parent = NULL,
@@ -27,8 +29,8 @@ static void _cubec_statement_foreach_init(
   self->body = init->body;
 }
 
-static void _cubec_statement_foreach_dispose(
-    cubec_statement_foreach_t self, allocator_t allocator) {
+static void _cubec_statement_foreach_dispose(cubec_statement_foreach_t self,
+                                             allocator_t allocator) {
   allocator_free(allocator, &self->body);
   allocator_free(allocator, &self->iterator);
   allocator_free(allocator, &self->var_type);
@@ -36,9 +38,9 @@ static void _cubec_statement_foreach_dispose(
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_statement_foreach_clone(
-    cubec_statement_foreach_t self, allocator_t allocator,
-    cubec_statement_foreach_t another) {
+static void _cubec_statement_foreach_clone(cubec_statement_foreach_t self,
+                                           allocator_t allocator,
+                                           cubec_statement_foreach_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->is_var_decl = another->is_var_decl;
   self->variable = value_clone(allocator, another->variable);
@@ -48,9 +50,9 @@ static void _cubec_statement_foreach_clone(
   return;
 }
 
-static void _cubec_statement_foreach_move(
-    cubec_statement_foreach_t self, allocator_t allocator,
-    cubec_statement_foreach_t another) {
+static void _cubec_statement_foreach_move(cubec_statement_foreach_t self,
+                                          allocator_t allocator,
+                                          cubec_statement_foreach_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->is_var_decl = another->is_var_decl;
   self->variable = value_move(allocator, another->variable);
@@ -75,14 +77,17 @@ type_t g_cubec_statement_foreach_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -92,8 +97,8 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *    foreach(var <identifier>[:<type>] of <expr>) <stmt>
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_foreach(context_t ctx, vec_t tokens,
-                               size_t *position, const char *filename) {
+node_t read_statement_foreach(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t variable = NULL;
@@ -129,8 +134,10 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens,
 
     /* Parse identifier */
     variable = read_literal_identifier(ctx, tokens, &current, filename);
-    if (node_is_error(variable)) return variable;
-    if (!variable) goto onerror;
+    if (node_is_error(variable))
+      return variable;
+    if (!variable)
+      goto onerror;
     skip_whitespace(tokens, &current);
 
     /* Optional type annotation ': <type>' */
@@ -138,16 +145,22 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens,
       current++;
       skip_whitespace(tokens, &current);
       var_type = read_expression_type(ctx, tokens, &current, filename);
-      if (node_is_error(var_type)) { allocator_free(allocator, &variable); return var_type; }
-      if (!var_type) goto onerror;
+      if (node_is_error(var_type)) {
+        allocator_free(allocator, &variable);
+        return var_type;
+      }
+      if (!var_type)
+        goto onerror;
       skip_whitespace(tokens, &current);
     }
   } else {
     /* lvalue mode: foreach(<identifier> of <expr>) */
     is_var_decl = false;
     variable = read_literal_identifier(ctx, tokens, &current, filename);
-    if (node_is_error(variable)) return variable;
-    if (!variable) goto onerror;
+    if (node_is_error(variable))
+      return variable;
+    if (!variable)
+      goto onerror;
     skip_whitespace(tokens, &current);
   }
 
@@ -160,8 +173,13 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens,
 
   /* 5. Parse iterator expression */
   iterator = read_expression(ctx, tokens, &current, filename);
-  if (node_is_error(iterator)) { allocator_free(allocator, &var_type); allocator_free(allocator, &variable); return iterator; }
-  if (!iterator) goto onerror;
+  if (node_is_error(iterator)) {
+    allocator_free(allocator, &var_type);
+    allocator_free(allocator, &variable);
+    return iterator;
+  }
+  if (!iterator)
+    goto onerror;
   skip_whitespace(tokens, &current);
 
   /* 6. Expect ')' */
@@ -173,8 +191,14 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens,
 
   /* 7. Parse body (any statement, not just block) */
   body = read_statement(ctx, tokens, &current, filename);
-  if (node_is_error(body)) { allocator_free(allocator, &iterator); allocator_free(allocator, &var_type); allocator_free(allocator, &variable); return body; }
-  if (!body) goto onerror;
+  if (node_is_error(body)) {
+    allocator_free(allocator, &iterator);
+    allocator_free(allocator, &var_type);
+    allocator_free(allocator, &variable);
+    return body;
+  }
+  if (!body)
+    goto onerror;
 
   /* 8. Build location */
   location_t loc = start_location;
@@ -199,18 +223,20 @@ onerror:
   allocator_free(allocator, &var_type);
   allocator_free(allocator, &variable);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_foreach_stmt(context_t ctx, location_t loc,
-                                     bool is_var_decl, node_t variable,
-                                     node_t var_type, node_t iterator,
-                                     node_t body) {
+node_t create_statement_foreach(context_t ctx, location_t loc, bool is_var_decl,
+                                node_t variable, node_t var_type,
+                                node_t iterator, node_t body) {
   allocator_t alloc = ctx->allocator;
-      cubec_statement_foreach_init_t init = {
-      .location = loc, .parent = NULL, .is_var_decl = is_var_decl,
-      .variable = variable, .var_type = var_type,
-      .iterator = iterator, .body = body};
+  cubec_statement_foreach_init_t init = {.location = loc,
+                                         .parent = NULL,
+                                         .is_var_decl = is_var_decl,
+                                         .variable = variable,
+                                         .var_type = var_type,
+                                         .iterator = iterator,
+                                         .body = body};
   return (node_t)allocator_create(alloc, &g_cubec_statement_foreach_type,
                                   &init);
 }

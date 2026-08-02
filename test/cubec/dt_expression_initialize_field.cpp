@@ -1,12 +1,12 @@
+#include "common/test_common.h"
 #include "cubec/expression.h"
-#include "cubec/expression_initialize_field.h"
+#include "cubec/initialize_field.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
 #include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
-#include "common/test_common.h"
 #include <gtest/gtest.h>
 
 using ::testing::Test;
@@ -24,11 +24,11 @@ TEST_F(dt_expression_initialize_field, basic_initialize_field) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD);
 
-  cubec_expression_initialize_field_t field = (cubec_expression_initialize_field_t)node;
+  cubec_initialize_field_t field = (cubec_initialize_field_t)node;
   ASSERT_NE(field->field, nullptr);
   EXPECT_STREQ(string_get(field->field->value), "name");
 
@@ -45,11 +45,11 @@ TEST_F(dt_expression_initialize_field, string_value) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD);
 
-  cubec_expression_initialize_field_t field = (cubec_expression_initialize_field_t)node;
+  cubec_initialize_field_t field = (cubec_initialize_field_t)node;
   EXPECT_STREQ(string_get(field->field->value), "field");
   ASSERT_NE(field->value, nullptr);
   EXPECT_EQ(field->value->kind, CUBEC_NODE_LITERAL_STRING);
@@ -64,11 +64,11 @@ TEST_F(dt_expression_initialize_field, identifier_value) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD);
 
-  cubec_expression_initialize_field_t field = (cubec_expression_initialize_field_t)node;
+  cubec_initialize_field_t field = (cubec_initialize_field_t)node;
   EXPECT_STREQ(string_get(field->field->value), "x");
   ASSERT_NE(field->value, nullptr);
   EXPECT_EQ(field->value->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
@@ -83,11 +83,11 @@ TEST_F(dt_expression_initialize_field, with_spaces) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD);
 
-  cubec_expression_initialize_field_t field = (cubec_expression_initialize_field_t)node;
+  cubec_initialize_field_t field = (cubec_initialize_field_t)node;
   EXPECT_STREQ(string_get(field->field->value), "field");
 
   allocator_free(allocator, &node);
@@ -100,11 +100,11 @@ TEST_F(dt_expression_initialize_field, binary_expression_value) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD);
 
-  cubec_expression_initialize_field_t field = (cubec_expression_initialize_field_t)node;
+  cubec_initialize_field_t field = (cubec_initialize_field_t)node;
   EXPECT_STREQ(string_get(field->field->value), "result");
   ASSERT_NE(field->value, nullptr);
   EXPECT_EQ(field->value->kind, CUBEC_NODE_EXPRESSION_BINARY);
@@ -119,7 +119,7 @@ TEST_F(dt_expression_initialize_field, no_dot_returns_null) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -131,7 +131,7 @@ TEST_F(dt_expression_initialize_field, no_equals_returns_null) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -143,7 +143,7 @@ TEST_F(dt_expression_initialize_field, missing_identifier_after_dot) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -156,7 +156,7 @@ TEST_F(dt_expression_initialize_field, numeric_after_dot_is_not_identifier) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -169,14 +169,14 @@ TEST_F(dt_expression_initialize_field, clone) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t original = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t original = read_initialize_field(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(original, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, original);
   ASSERT_NE(cloned, nullptr);
   EXPECT_EQ(cloned->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD);
 
-  cubec_expression_initialize_field_t field = (cubec_expression_initialize_field_t)cloned;
+  cubec_initialize_field_t field = (cubec_initialize_field_t)cloned;
   EXPECT_STREQ(string_get(field->field->value), "name");
   EXPECT_EQ(field->value->kind, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -191,13 +191,14 @@ TEST_F(dt_expression_initialize_field, move) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t original = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t original = read_initialize_field(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(original, nullptr);
 
   node_t moved = (node_t)value_move(allocator, original);
   ASSERT_NE(moved, nullptr);
   EXPECT_EQ(moved->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD);
-  /* value_move transfers ownership but does not NULL the source for typed objects */
+  /* value_move transfers ownership but does not NULL the source for typed
+   * objects */
 
   allocator_free(allocator, &moved);
   allocator_free(allocator, &original);
@@ -210,11 +211,11 @@ TEST_F(dt_expression_initialize_field, nested_expression_in_value) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD);
 
-  cubec_expression_initialize_field_t field = (cubec_expression_initialize_field_t)node;
+  cubec_initialize_field_t field = (cubec_initialize_field_t)node;
   EXPECT_STREQ(string_get(field->field->value), "field");
   ASSERT_NE(field->value, nullptr);
   EXPECT_EQ(field->value->kind, CUBEC_NODE_EXPRESSION_BINARY);
@@ -229,7 +230,7 @@ TEST_F(dt_expression_initialize_field, consume_all_tokens) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   /* Verify the position moved past the = and value tokens */

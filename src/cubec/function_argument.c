@@ -147,13 +147,13 @@ fail:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_func_arg
+ *  Factory: create_function_argument
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_func_arg(context_t ctx, location_t loc,
-                                 const char *name, node_t type) {
+node_t create_function_argument(context_t ctx, location_t loc, const char *name,
+                                node_t type) {
   allocator_t alloc = ctx->allocator;
-  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_function_argument_init_t init = {
       .location = loc,
       .identifier = name_node,

@@ -93,17 +93,17 @@ onerror:
                        "invalid identifier");
   ctx->error_count++;
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_identifier(context_t ctx, location_t loc,
-                                   const char *name) {
+node_t create_literal_identifier(context_t ctx, location_t loc,
+                                 const char *name) {
   allocator_t alloc = ctx->allocator;
   cubec_literal_identifier_init_t init = {
       .location = loc, .parent = NULL, .value = name};
   return allocator_create(alloc, &g_cubec_literal_identifier_type, &init);
 }
-void cubec_ast_write_identifier(writer_t writer, node_t node) {
+void write_literal_identifier(writer_t writer, node_t node) {
   cubec_literal_identifier_t identifier = (cubec_literal_identifier_t)node;
   writer_append(writer, string_get(identifier->value));
 }

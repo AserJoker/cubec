@@ -194,10 +194,10 @@ onerror:
   allocator_free(allocator, &names);
   allocator_free(allocator, &path);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-void cubec_ast_write_export_from(writer_t writer, node_t node) {
+void write_statement_export_from(writer_t writer, node_t node) {
   cubec_statement_export_from_t export_from =
       (cubec_statement_export_from_t)node;
   writer_append(writer, "export ");
@@ -209,11 +209,12 @@ void cubec_ast_write_export_from(writer_t writer, node_t node) {
       if (i > 0) {
         writer_append(writer, ", ");
       }
-      cubec_ast_write_identifier(writer, vec_get(export_from->names, i));
+      write_literal_identifier(writer, vec_get(export_from->names, i));
     }
     writer_append(writer, "}");
   }
   writer_append(writer, " from ");
-  cubec_ast_write_string(writer, export_from->path);
+  write_literal_string(writer, export_from->path);
   writer_append(writer, ";");
+  writer_newline(writer, 0);
 }

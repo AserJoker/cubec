@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_SLICE_
 #define _H_CUBEC_CUBEC_EXPRESSION_SLICE_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "cubec/expression.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12,9 +12,9 @@ extern "C" {
 struct _cubec_expression_slice_t;
 struct _cubec_expression_slice_t {
   struct _cubec_expression_t super;
-  node_t host;    /**< The expression being sliced */
-  node_t start;   /**< Start index expression (may be NULL if omitted) */
-  node_t length;  /**< Length expression (may be NULL if omitted) */
+  node_t host;   /**< The expression being sliced */
+  node_t start;  /**< Start index expression (may be NULL if omitted) */
+  node_t length; /**< Length expression (may be NULL if omitted) */
 };
 typedef struct _cubec_expression_slice_t *cubec_expression_slice_t;
 
@@ -46,11 +46,11 @@ typedef struct _cubec_expression_slice_init_t cubec_expression_slice_init_t;
  * @return A new cubec_expression_slice_t node, or NULL if the next token
  *         is not '[' (position is NOT advanced on NULL return).
  */
-node_t read_expression_slice(context_t ctx, vec_t tokens,
-                             size_t *position, const char *filename,
-                             node_t host);
+node_t read_expression_slice(context_t ctx, vec_t tokens, size_t *position,
+                             const char *filename, node_t host);
 
-node_t cubec_ast_create_slice_expr(context_t ctx, location_t loc, node_t host, node_t start, node_t length);
+node_t create_expression_slice(context_t ctx, location_t loc, node_t host,
+                               node_t start, node_t length);
 
 #ifdef __cplusplus
 }

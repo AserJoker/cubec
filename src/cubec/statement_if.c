@@ -1,19 +1,20 @@
 #include "cubec/statement_if.h"
 #include "core/token.h"
 #include "cubec/expression.h"
+#include "cubec/node_error.h"
 #include "cubec/statement.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "cubec/node_error.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_statement_if_init(
-    cubec_statement_if_t self, allocator_t allocator,
-    cubec_statement_if_init_t *init) {
-  if (!init) return;
+static void _cubec_statement_if_init(cubec_statement_if_t self,
+                                     allocator_t allocator,
+                                     cubec_statement_if_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_IF,
       .parent = NULL,
@@ -25,31 +26,34 @@ static void _cubec_statement_if_init(
   self->else_branch = init->else_branch;
 }
 
-static void _cubec_statement_if_dispose(
-    cubec_statement_if_t self, allocator_t allocator) {
+static void _cubec_statement_if_dispose(cubec_statement_if_t self,
+                                        allocator_t allocator) {
   allocator_free(allocator, &self->else_branch);
   allocator_free(allocator, &self->then_branch);
   allocator_free(allocator, &self->condition);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_statement_if_clone(
-    cubec_statement_if_t self, allocator_t allocator,
-    cubec_statement_if_t another) {
+static void _cubec_statement_if_clone(cubec_statement_if_t self,
+                                      allocator_t allocator,
+                                      cubec_statement_if_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->condition = value_clone(allocator, another->condition);
   self->then_branch = value_clone(allocator, another->then_branch);
-  self->else_branch = another->else_branch ? value_clone(allocator, another->else_branch) : NULL;
+  self->else_branch = another->else_branch
+                          ? value_clone(allocator, another->else_branch)
+                          : NULL;
   return;
 }
 
-static void _cubec_statement_if_move(
-    cubec_statement_if_t self, allocator_t allocator,
-    cubec_statement_if_t another) {
+static void _cubec_statement_if_move(cubec_statement_if_t self,
+                                     allocator_t allocator,
+                                     cubec_statement_if_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->condition = value_move(allocator, another->condition);
   self->then_branch = value_move(allocator, another->then_branch);
-  self->else_branch = another->else_branch ? value_move(allocator, another->else_branch) : NULL;
+  self->else_branch =
+      another->else_branch ? value_move(allocator, another->else_branch) : NULL;
   return;
 }
 
@@ -68,14 +72,17 @@ type_t g_cubec_statement_if_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -83,8 +90,8 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_if — if(condition) { } [else { } | else if(...)]
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_if(context_t ctx, vec_t tokens,
-                          size_t *position, const char *filename) {
+node_t read_statement_if(context_t ctx, vec_t tokens, size_t *position,
+                         const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t condition = NULL;
@@ -111,8 +118,10 @@ node_t read_statement_if(context_t ctx, vec_t tokens,
 
   /* 3. Parse condition expression */
   condition = read_expression(ctx, tokens, &current, filename);
-  if (node_is_error(condition)) return condition;
-  if (!condition) goto onerror;
+  if (node_is_error(condition))
+    return condition;
+  if (!condition)
+    goto onerror;
   skip_whitespace(tokens, &current);
 
   /* 4. Expect ')' */
@@ -124,8 +133,12 @@ node_t read_statement_if(context_t ctx, vec_t tokens,
 
   /* 5. Parse then branch (any statement) */
   then_branch = read_statement(ctx, tokens, &current, filename);
-  if (node_is_error(then_branch)) { allocator_free(allocator, &condition); return then_branch; }
-  if (!then_branch) goto onerror;
+  if (node_is_error(then_branch)) {
+    allocator_free(allocator, &condition);
+    return then_branch;
+  }
+  if (!then_branch)
+    goto onerror;
   skip_whitespace(tokens, &current);
 
   /* 6. Optional else clause */
@@ -136,13 +149,23 @@ node_t read_statement_if(context_t ctx, vec_t tokens,
     if (_is_keyword(tokens, current, "if")) {
       /* else if — parse as nested if statement */
       else_branch = read_statement_if(ctx, tokens, &current, filename);
-      if (node_is_error(else_branch)) { allocator_free(allocator, &condition); allocator_free(allocator, &then_branch); return else_branch; }
-      if (!else_branch) goto onerror;
+      if (node_is_error(else_branch)) {
+        allocator_free(allocator, &condition);
+        allocator_free(allocator, &then_branch);
+        return else_branch;
+      }
+      if (!else_branch)
+        goto onerror;
     } else {
       /* else <statement> */
       else_branch = read_statement(ctx, tokens, &current, filename);
-      if (node_is_error(else_branch)) { allocator_free(allocator, &condition); allocator_free(allocator, &then_branch); return else_branch; }
-      if (!else_branch) goto onerror;
+      if (node_is_error(else_branch)) {
+        allocator_free(allocator, &condition);
+        allocator_free(allocator, &then_branch);
+        return else_branch;
+      }
+      if (!else_branch)
+        goto onerror;
     }
   }
 
@@ -170,15 +193,16 @@ onerror:
   allocator_free(allocator, &then_branch);
   allocator_free(allocator, &condition);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_if_stmt(context_t ctx, location_t loc,
-                                node_t cond, node_t then_branch,
-                                node_t else_branch) {
+node_t create_statement_if(context_t ctx, location_t loc, node_t cond,
+                           node_t then_branch, node_t else_branch) {
   allocator_t alloc = ctx->allocator;
-      cubec_statement_if_init_t init = {
-      .location = loc, .parent = NULL, .condition = cond,
-      .then_branch = then_branch, .else_branch = else_branch};
+  cubec_statement_if_init_t init = {.location = loc,
+                                    .parent = NULL,
+                                    .condition = cond,
+                                    .then_branch = then_branch,
+                                    .else_branch = else_branch};
   return (node_t)allocator_create(alloc, &g_cubec_statement_if_type, &init);
 }

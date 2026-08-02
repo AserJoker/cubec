@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_DECORATOR_
 #define _H_CUBEC_CUBEC_DECORATOR_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,7 +26,7 @@ extern "C" {
 struct _cubec_decorator_t;
 struct _cubec_decorator_t {
   struct _node_t super;
-  node_t expression;   /**< Compile-time expression (identifier or call) */
+  node_t expression; /**< Compile-time expression (identifier or call) */
 };
 typedef struct _cubec_decorator_t *cubec_decorator_t;
 
@@ -42,10 +42,10 @@ typedef struct _cubec_decorator_init_t cubec_decorator_init_t;
 /**
  * @brief Try to parse a decorator: [[expression]]
  */
-node_t read_decorator(context_t ctx, vec_t tokens,
-                       size_t *position, const char *filename);
+node_t read_decorator(context_t ctx, vec_t tokens, size_t *position,
+                      const char *filename);
 
-node_t cubec_ast_create_decorator(context_t ctx, location_t loc, node_t expr);
+node_t create_decorator(context_t ctx, location_t loc, node_t expr);
 
 #ifdef __cplusplus
 }

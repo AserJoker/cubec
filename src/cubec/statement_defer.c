@@ -167,17 +167,17 @@ onerror:
   allocator_free(allocator, &body);
   allocator_free(allocator, &captures);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_defer_stmt(context_t ctx, location_t loc,
-                                   vec_t captures, node_t body) {
+node_t create_statement_defer(context_t ctx, location_t loc, vec_t captures,
+                              node_t body) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_defer_init_t init = {.captures = captures, .body = body};
   return (node_t)allocator_create(alloc, &g_cubec_statement_defer_type, &init);
 }
 
-void cubec_ast_write_defer_stmt(writer_t writer, node_t node) {
+void write_statement_defer(writer_t writer, node_t node) {
   cubec_statement_defer_t defer = (cubec_statement_defer_t)node;
   writer_append(writer, "defer ");
   if (defer->captures && vec_get_size(defer->captures)) {
@@ -186,9 +186,9 @@ void cubec_ast_write_defer_stmt(writer_t writer, node_t node) {
       if (idx != 0) {
         writer_append(writer, ", ");
       }
-      cubec_ast_write_identifier(writer, vec_get(defer->captures, idx));
+      write_literal_identifier(writer, vec_get(defer->captures, idx));
     }
     writer_append(writer, "|");
   }
-  cubec_ast_write_block_stmt(writer, defer->body);
+  write_statement_block(writer, defer->body);
 }

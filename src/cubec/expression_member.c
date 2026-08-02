@@ -104,18 +104,18 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_member
+ *  Factory: create_expression_member
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_member(context_t ctx, location_t loc, node_t host,
-                               const char *field) {
+node_t create_expression_member(context_t ctx, location_t loc, node_t host,
+                                const char *field) {
   allocator_t alloc = ctx->allocator;
   cubec_expression_member_init_t init = {
       .location = loc,
       .parent = NULL,
       .host = host,
-      .field = (cubec_literal_identifier_t)cubec_ast_create_identifier(ctx, loc,
-                                                                       field),
+      .field = (cubec_literal_identifier_t)create_literal_identifier(ctx, loc,
+                                                                     field),
   };
   return (node_t)allocator_create(alloc, &g_cubec_expression_member_type,
                                   &init);

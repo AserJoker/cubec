@@ -1,12 +1,12 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_NAMESPACE_ACCESS_
 #define _H_CUBEC_CUBEC_EXPRESSION_NAMESPACE_ACCESS_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,8 +14,9 @@ extern "C" {
 struct _cubec_expression_namespace_access_t;
 struct _cubec_expression_namespace_access_t {
   struct _cubec_expression_t super;
-  node_t host;                          /**< The left-hand expression */
-  cubec_literal_identifier_t field;     /**< The namespace/type name (identifier literal) */
+  node_t host; /**< The left-hand expression */
+  cubec_literal_identifier_t
+      field; /**< The namespace/type name (identifier literal) */
 };
 typedef struct _cubec_expression_namespace_access_t
     *cubec_expression_namespace_access_t;
@@ -32,7 +33,8 @@ typedef struct _cubec_expression_namespace_access_init_t
     cubec_expression_namespace_access_init_t;
 
 /**
- * @brief Try to parse a namespace/type-member access expression: \c ::identifier
+ * @brief Try to parse a namespace/type-member access expression: \c
+ * ::identifier
  *
  * Used for namespace navigation (std::vec::Vec) and type member access
  * (Vec::create, File::open). The :: operator is the type-level accessor,
@@ -46,7 +48,8 @@ node_t read_expression_namespace_access(context_t ctx, vec_t tokens,
                                         size_t *position, const char *filename,
                                         node_t host);
 
-node_t cubec_ast_create_namespace_access(context_t ctx, location_t loc, node_t host, const char *field);
+node_t create_expression_namespace_access(context_t ctx, location_t loc,
+                                          node_t host, const char *field);
 
 #ifdef __cplusplus
 }

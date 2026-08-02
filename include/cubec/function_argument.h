@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_FUNCTION_ARGUMENT_
 #define _H_CUBEC_CUBEC_FUNCTION_ARGUMENT_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -24,7 +24,7 @@ struct _cubec_function_argument_t {
   struct _node_t super;
   node_t identifier; /**< Literal identifier for the parameter name */
   node_t type;       /**< Type expression (may be NULL if omitted) */
-  bool is_rest;      /**< True if this parameter uses ... prefix (pack parameter) */
+  bool is_rest; /**< True if this parameter uses ... prefix (pack parameter) */
 };
 typedef struct _cubec_function_argument_t *cubec_function_argument_t;
 
@@ -47,10 +47,11 @@ typedef struct _cubec_function_argument_init_t cubec_function_argument_init_t;
  * @return A new cubec_function_argument_t node, or NULL if current token
  *         is not an identifier.
  */
-node_t read_function_argument(context_t ctx, vec_t tokens,
-                               size_t *position, const char *filename);
+node_t read_function_argument(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename);
 
-node_t cubec_ast_create_func_arg(context_t ctx, location_t loc, const char *name, node_t type);
+node_t create_function_argument(context_t ctx, location_t loc, const char *name,
+                                node_t type);
 
 #ifdef __cplusplus
 }

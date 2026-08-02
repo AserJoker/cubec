@@ -12,7 +12,8 @@
 static void _cubec_expression_type_function_init(
     cubec_expression_type_function_t self, allocator_t allocator,
     cubec_expression_type_function_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_TYPE_FUNCTION,
       .parent = NULL,
@@ -25,8 +26,9 @@ static void _cubec_expression_type_function_init(
   self->is_c_variadic = init->is_c_variadic;
 }
 
-static void _cubec_expression_type_function_dispose(
-    cubec_expression_type_function_t self, allocator_t allocator) {
+static void
+_cubec_expression_type_function_dispose(cubec_expression_type_function_t self,
+                                        allocator_t allocator) {
   allocator_free(allocator, &self->return_type);
   allocator_free(allocator, &self->parameters);
   g_cubec_expression_type.dispose(&self->super, allocator);
@@ -48,14 +50,14 @@ cleanup:
   allocator_free(allocator, &self->return_type);
 }
 
-static void _cubec_expression_type_function_move(
-    cubec_expression_type_function_t self, allocator_t allocator,
-    cubec_expression_type_function_t another) {
+static void
+_cubec_expression_type_function_move(cubec_expression_type_function_t self,
+                                     allocator_t allocator,
+                                     cubec_expression_type_function_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->parameters = value_move(allocator, another->parameters);
-  self->return_type = another->return_type
-                          ? value_move(allocator, another->return_type)
-                          : NULL;
+  self->return_type =
+      another->return_type ? value_move(allocator, another->return_type) : NULL;
   self->is_c_variadic = another->is_c_variadic;
   return;
 
@@ -79,14 +81,17 @@ type_t g_cubec_expression_type_function_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -108,7 +113,8 @@ node_t read_expression_type_function(context_t ctx, vec_t tokens,
     return NULL;
   }
   token_t func_token = vec_get(tokens, current);
-  if (!func_token) return NULL;
+  if (!func_token)
+    return NULL;
   location_t start_location = *token_get_location(func_token);
   start_location.filename = filename;
   current++;
@@ -126,8 +132,8 @@ node_t read_expression_type_function(context_t ctx, vec_t tokens,
 
   /* 3. Parse parameter list (type-only, no names).
    * Function type parameters are just types: func(i32, f64) -> bool.
-   * Function expression parameters have names: func(x: i32, y: f64): bool { ... }.
-   * If we encounter a named parameter pattern (identifier followed by ':'),
+   * Function expression parameters have names: func(x: i32, y: f64): bool { ...
+   * }. If we encounter a named parameter pattern (identifier followed by ':'),
    * this is a function expression, not a function type — return NULL. */
   parameters = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
 
@@ -162,7 +168,7 @@ node_t read_expression_type_function(context_t ctx, vec_t tokens,
       /* Check for pack spread (...) or C-style variadic */
       if (_is_symbol(tokens, current, "...")) {
         size_t save_pos = current;
-        current++;  /* skip '...' */
+        current++; /* skip '...' */
         skip_whitespace(tokens, &current);
         /* If next token can be a type expression, it's a pack spread */
         node_t inner = read_expression_base(ctx, tokens, &current, filename);
@@ -180,7 +186,8 @@ node_t read_expression_type_function(context_t ctx, vec_t tokens,
             spread_init.location.begin = dot_loc->begin;
             spread_init.location.filename = filename;
           }
-          node_t spread = allocator_create(allocator, &g_cubec_expression_spread_type, &spread_init);
+          node_t spread = allocator_create(
+              allocator, &g_cubec_expression_spread_type, &spread_init);
           vec_push(parameters, spread);
           skip_whitespace(tokens, &current);
 
@@ -200,7 +207,7 @@ node_t read_expression_type_function(context_t ctx, vec_t tokens,
         } else {
           /* C-style variadic with no named params */
           is_c_variadic = true;
-          current = save_pos + 1;  /* past the '...' */
+          current = save_pos + 1; /* past the '...' */
           skip_whitespace(tokens, &current);
           break;
         }
@@ -257,7 +264,8 @@ node_t read_expression_type_function(context_t ctx, vec_t tokens,
   if (!_is_symbol(tokens, current, "->")) {
     location_t *loc = NULL;
     token_t tok = vec_get(tokens, current);
-    if (tok) loc = token_get_location(tok);
+    if (tok)
+      loc = token_get_location(tok);
     if (loc) {
       goto onerror;
     } else {
@@ -271,7 +279,8 @@ node_t read_expression_type_function(context_t ctx, vec_t tokens,
    * func(i32) -> A ? B : C → func(i32) -> ternary(A, B, C).
    * Use grouping for the alternative: (func(i32) -> A) ? B : C. */
   return_type = read_expression_base(ctx, tokens, &current, filename);
-  if (node_is_error(return_type)) goto onerror;
+  if (node_is_error(return_type))
+    goto onerror;
   if (!return_type) {
     goto onerror;
   }
@@ -285,12 +294,12 @@ node_t read_expression_type_function(context_t ctx, vec_t tokens,
 
   /* 8. Create node */
   node = allocator_create(allocator, &g_cubec_expression_type_function_type,
-                                    &(cubec_expression_type_function_init_t){
-                                        .location = loc,
-                                        .parameters = parameters,
-                                        .return_type = return_type,
-                                        .is_c_variadic = is_c_variadic,
-                                    });
+                          &(cubec_expression_type_function_init_t){
+                              .location = loc,
+                              .parameters = parameters,
+                              .return_type = return_type,
+                              .is_c_variadic = is_c_variadic,
+                          });
 
   *position = current;
   return (node_t)node;
@@ -299,5 +308,5 @@ onerror:
   allocator_free(allocator, &return_type);
   allocator_free(allocator, &parameters);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }

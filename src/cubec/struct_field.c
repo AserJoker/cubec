@@ -161,14 +161,13 @@ cleanup:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_struct_field
+ *  Factory: create_struct_field
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_struct_field(context_t ctx, location_t loc,
-                                     const char *name, node_t type,
-                                     bool is_pub) {
+node_t create_struct_field(context_t ctx, location_t loc, const char *name,
+                           node_t type, bool is_pub) {
   allocator_t alloc = ctx->allocator;
-  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_struct_field_init_t init = {
       .location = loc,
       .parent = NULL,

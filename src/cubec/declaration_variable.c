@@ -167,12 +167,12 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_variable_decl
+ *  Factory: create_declaration_variable
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_variable_decl(context_t ctx, location_t loc,
-                                      node_t identifier, node_t type,
-                                      node_t expression) {
+node_t create_declaration_variable(context_t ctx, location_t loc,
+                                   node_t identifier, node_t type,
+                                   node_t expression) {
   allocator_t alloc = ctx->allocator;
   cubec_declaration_variable_init_t init = {.location = loc,
                                             .parent = NULL,

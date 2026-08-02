@@ -95,7 +95,7 @@ node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
                            "unexpected token at top level");
       ctx->error_count++;
       current++;
-      statement = cubec_ast_create_error_stmt(ctx, loc);
+      statement = create_statement_error(ctx, loc);
       vec_push(node->statements, statement);
       continue;
     }
@@ -116,18 +116,17 @@ onerror:
   return NULL;
 }
 
-node_t cubec_ast_create_program(context_t ctx, location_t loc,
-                                vec_t statements) {
+node_t create_program(context_t ctx, location_t loc, vec_t statements) {
   allocator_t alloc = ctx->allocator;
   cubec_program_node_init_t init = {.statements = statements};
   return (node_t)allocator_create(alloc, &g_cubec_program_node_type, &init);
 }
 
-void cubec_ast_write_program(writer_t writer, node_t node) {
+void write_program(writer_t writer, node_t node) {
   cubec_program_node_t program = (cubec_program_node_t)node;
   for (size_t idx = 0; idx < vec_get_size(program->statements); idx++) {
     node_t statement = vec_get(program->statements, idx);
-    cubec_ast_write_statement(writer, statement);
+    write_statement(writer, statement);
     writer_newline(writer, 0);
   }
 }

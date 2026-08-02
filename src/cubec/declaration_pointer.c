@@ -141,11 +141,11 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_pointer_type
+ *  Factory: create_declaration_pointer
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_pointer_type(context_t ctx, location_t loc, node_t base,
-                                     bool is_const, bool is_volatile) {
+node_t create_declaration_pointer(context_t ctx, location_t loc, node_t base,
+                                  bool is_const, bool is_volatile) {
   allocator_t alloc = ctx->allocator;
   cubec_declaration_pointer_init_t init = {
       .type = base, .is_const = is_const, .is_volatile = is_volatile};

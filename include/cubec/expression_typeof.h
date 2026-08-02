@@ -1,11 +1,11 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_TYPEOF_
 #define _H_CUBEC_CUBEC_EXPRESSION_TYPEOF_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,7 +13,8 @@ extern "C" {
 struct _cubec_expression_typeof_t;
 struct _cubec_expression_typeof_t {
   struct _cubec_expression_t super;
-  node_t expression; /**< The expression whose type is computed at compile time */
+  node_t
+      expression; /**< The expression whose type is computed at compile time */
 };
 typedef struct _cubec_expression_typeof_t *cubec_expression_typeof_t;
 
@@ -24,8 +25,7 @@ struct _cubec_expression_typeof_init_t {
   node_t parent;
   node_t expression;
 };
-typedef struct _cubec_expression_typeof_init_t
-    cubec_expression_typeof_init_t;
+typedef struct _cubec_expression_typeof_init_t cubec_expression_typeof_init_t;
 
 /**
  * @brief Try to parse a typeof expression: \c typeof(<expression>)
@@ -39,10 +39,10 @@ typedef struct _cubec_expression_typeof_init_t
  * @return A new cubec_expression_typeof_t node, or NULL if the current token
  *         is not the \c typeof keyword.
  */
-node_t read_expression_typeof(context_t ctx, vec_t tokens,
-                               size_t *position, const char *filename);
+node_t read_expression_typeof(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename);
 
-node_t cubec_ast_create_typeof(context_t ctx, location_t loc, node_t expr);
+node_t create_expression_typeof(context_t ctx, location_t loc, node_t expr);
 
 #ifdef __cplusplus
 }

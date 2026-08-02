@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_STRUCT_
 #define _H_CUBEC_CUBEC_STATEMENT_STRUCT_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,7 +13,8 @@ extern "C" {
  * @brief AST node for struct declaration statement.
  *
  * Syntax:
- *   [export] struct <name> [<generic_params>] [implement <iface1, iface2, ...>] { <members> }
+ *   [export] struct <name> [<generic_params>] [implement <iface1, iface2, ...>]
+ * { <members> }
  *
  * Members can be:
  * - Instance fields: [pub] <name> : <type> ;
@@ -34,9 +35,10 @@ struct _cubec_statement_struct_t {
   bool is_export;       /**< Whether this struct is exported */
   node_t name;          /**< Identifier node for the struct name */
   vec_t generic_params; /**< Vector of cubec_generic_param_t (may be NULL) */
-  vec_t implements;     /**< Vector of type expression nodes for implement clause (may be NULL) */
-  vec_t members;        /**< Vector of member nodes (auto_dispose=true) */
-  vec_t decorators;     /**< Vector of cubec_decorator_t (may be NULL) */
+  vec_t implements; /**< Vector of type expression nodes for implement clause
+                       (may be NULL) */
+  vec_t members;    /**< Vector of member nodes (auto_dispose=true) */
+  vec_t decorators; /**< Vector of cubec_decorator_t (may be NULL) */
 };
 typedef struct _cubec_statement_struct_t *cubec_statement_struct_t;
 
@@ -63,10 +65,11 @@ typedef struct _cubec_statement_struct_init_t cubec_statement_struct_init_t;
  * @return A new cubec_statement_struct_t node, or NULL if current token
  *         is not a struct declaration prefix (export/struct).
  */
-node_t read_statement_struct(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename);
+node_t read_statement_struct(context_t ctx, vec_t tokens, size_t *position,
+                             const char *filename);
 
-node_t cubec_ast_create_struct_stmt(context_t ctx, location_t loc, const char *name, vec_t members, bool is_export, vec_t implements);
+node_t create_statement_struct(context_t ctx, location_t loc, const char *name,
+                               vec_t members, bool is_export, vec_t implements);
 
 #ifdef __cplusplus
 }

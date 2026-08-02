@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_FUNCTION_CAPTURE_
 #define _H_CUBEC_CUBEC_FUNCTION_CAPTURE_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -20,7 +20,7 @@ extern "C" {
 struct _cubec_function_capture_t;
 struct _cubec_function_capture_t {
   struct _node_t super;
-  node_t identifier;  /**< Literal identifier for the capture name */
+  node_t identifier; /**< Literal identifier for the capture name */
 };
 typedef struct _cubec_function_capture_t *cubec_function_capture_t;
 
@@ -41,10 +41,10 @@ typedef struct _cubec_function_capture_init_t cubec_function_capture_init_t;
  * @return A new cubec_function_capture_t node, or NULL if current token
  *         is not an identifier.
  */
-node_t read_function_capture(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename);
+node_t read_function_capture(context_t ctx, vec_t tokens, size_t *position,
+                             const char *filename);
 
-node_t cubec_ast_create_func_capture(context_t ctx, location_t loc, const char *name);
+node_t create_function_capture(context_t ctx, location_t loc, const char *name);
 
 #ifdef __cplusplus
 }

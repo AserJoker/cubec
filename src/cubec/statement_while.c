@@ -1,19 +1,20 @@
 #include "cubec/statement_while.h"
 #include "core/token.h"
 #include "cubec/expression.h"
+#include "cubec/node_error.h"
 #include "cubec/statement.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-#include "cubec/node_error.h"
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_statement_while_init(
-    cubec_statement_while_t self, allocator_t allocator,
-    cubec_statement_while_init_t *init) {
-  if (!init) return;
+static void _cubec_statement_while_init(cubec_statement_while_t self,
+                                        allocator_t allocator,
+                                        cubec_statement_while_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_WHILE,
       .parent = NULL,
@@ -24,25 +25,25 @@ static void _cubec_statement_while_init(
   self->body = init->body;
 }
 
-static void _cubec_statement_while_dispose(
-    cubec_statement_while_t self, allocator_t allocator) {
+static void _cubec_statement_while_dispose(cubec_statement_while_t self,
+                                           allocator_t allocator) {
   allocator_free(allocator, &self->body);
   allocator_free(allocator, &self->condition);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_statement_while_clone(
-    cubec_statement_while_t self, allocator_t allocator,
-    cubec_statement_while_t another) {
+static void _cubec_statement_while_clone(cubec_statement_while_t self,
+                                         allocator_t allocator,
+                                         cubec_statement_while_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->condition = value_clone(allocator, another->condition);
   self->body = value_clone(allocator, another->body);
   return;
 }
 
-static void _cubec_statement_while_move(
-    cubec_statement_while_t self, allocator_t allocator,
-    cubec_statement_while_t another) {
+static void _cubec_statement_while_move(cubec_statement_while_t self,
+                                        allocator_t allocator,
+                                        cubec_statement_while_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->condition = value_move(allocator, another->condition);
   self->body = value_move(allocator, another->body);
@@ -64,14 +65,17 @@ type_t g_cubec_statement_while_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -79,8 +83,8 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_while — while(condition) { }
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_while(context_t ctx, vec_t tokens,
-                             size_t *position, const char *filename) {
+node_t read_statement_while(context_t ctx, vec_t tokens, size_t *position,
+                            const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t condition = NULL;
@@ -106,8 +110,10 @@ node_t read_statement_while(context_t ctx, vec_t tokens,
 
   /* 3. Parse condition */
   condition = read_expression(ctx, tokens, &current, filename);
-  if (node_is_error(condition)) return condition;
-  if (!condition) goto onerror;
+  if (node_is_error(condition))
+    return condition;
+  if (!condition)
+    goto onerror;
   skip_whitespace(tokens, &current);
 
   /* 4. Expect ')' */
@@ -119,8 +125,12 @@ node_t read_statement_while(context_t ctx, vec_t tokens,
 
   /* 5. Parse body (any statement) */
   body = read_statement(ctx, tokens, &current, filename);
-  if (node_is_error(body)) { allocator_free(allocator, &condition); return body; }
-  if (!body) goto onerror;
+  if (node_is_error(body)) {
+    allocator_free(allocator, &condition);
+    return body;
+  }
+  if (!body)
+    goto onerror;
 
   /* 6. Build location */
   location_t loc = start_location;
@@ -140,14 +150,12 @@ onerror:
   allocator_free(allocator, &body);
   allocator_free(allocator, &condition);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_while_stmt(context_t ctx, location_t loc,
-                                   node_t cond, node_t body) {
+node_t create_create_while(context_t ctx, location_t loc, node_t cond,
+                           node_t body) {
   allocator_t alloc = ctx->allocator;
-                                       cubec_statement_while_init_t init = {
-                                       .condition = cond, .body = body};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_while_type,
-                                  &init);
+  cubec_statement_while_init_t init = {.condition = cond, .body = body};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_while_type, &init);
 }

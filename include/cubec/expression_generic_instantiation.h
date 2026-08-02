@@ -1,11 +1,11 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_GENERIC_INSTANTIATION_
 #define _H_CUBEC_CUBEC_EXPRESSION_GENERIC_INSTANTIATION_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,9 +13,9 @@ extern "C" {
 struct _cubec_expression_generic_instantiation_t;
 struct _cubec_expression_generic_instantiation_t {
   struct _cubec_expression_t super;
-  node_t callee;        /**< The expression being instantiated */
-  vec_t arguments;      /**< vec_t of generic argument expression nodes (may
-                              contain spread expressions) */
+  node_t callee;   /**< The expression being instantiated */
+  vec_t arguments; /**< vec_t of generic argument expression nodes (may
+                         contain spread expressions) */
 };
 typedef struct _cubec_expression_generic_instantiation_t
     *cubec_expression_generic_instantiation_t;
@@ -26,13 +26,14 @@ struct _cubec_expression_generic_instantiation_init_t {
   location_t location;
   node_t parent;
   node_t callee;
-  vec_t arguments;      /**< Already-parsed arguments vec (transferred to node) */
+  vec_t arguments; /**< Already-parsed arguments vec (transferred to node) */
 };
 typedef struct _cubec_expression_generic_instantiation_init_t
     cubec_expression_generic_instantiation_init_t;
 
 /**
- * @brief Try to parse a generic-instantiation expression: \c callee[arg1, arg2, ...]
+ * @brief Try to parse a generic-instantiation expression: \c callee[arg1, arg2,
+ * ...]
  *
  * Called from \c read_value as a postfix operator after the callee has been
  * parsed. Checks for \c '[' at the current position, then parses a
@@ -51,7 +52,8 @@ node_t read_expression_generic_instantiation(context_t ctx, vec_t tokens,
                                              const char *filename,
                                              node_t callee);
 
-node_t cubec_ast_create_generic_instantiation(context_t ctx, location_t loc, node_t callee, vec_t args);
+node_t create_expression_generic_instantiation(context_t ctx, location_t loc,
+                                               node_t callee, vec_t args);
 
 #ifdef __cplusplus
 }

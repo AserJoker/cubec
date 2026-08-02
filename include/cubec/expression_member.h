@@ -1,12 +1,12 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_MEMBER_
 #define _H_CUBEC_CUBEC_EXPRESSION_MEMBER_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,8 +14,8 @@ extern "C" {
 struct _cubec_expression_member_t;
 struct _cubec_expression_member_t {
   struct _cubec_expression_t super;
-  node_t host;                          /**< The left-hand expression */
-  cubec_literal_identifier_t field;     /**< The field name (identifier literal) */
+  node_t host;                      /**< The left-hand expression */
+  cubec_literal_identifier_t field; /**< The field name (identifier literal) */
 };
 typedef struct _cubec_expression_member_t *cubec_expression_member_t;
 
@@ -35,11 +35,11 @@ typedef struct _cubec_expression_member_init_t cubec_expression_member_init_t;
  * @return A new cubec_expression_member_t node, or NULL if the current
  *         token is not \c '.'.
  */
-node_t read_expression_member(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename,
-                              node_t host);
+node_t read_expression_member(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename, node_t host);
 
-node_t cubec_ast_create_member(context_t ctx, location_t loc, node_t host, const char *field);
+node_t create_expression_member(context_t ctx, location_t loc, node_t host,
+                                const char *field);
 
 #ifdef __cplusplus
 }

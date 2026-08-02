@@ -133,11 +133,11 @@ onerror:
   allocator_free(allocator, &body);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_test_stmt(context_t ctx, location_t loc,
-                                  const char *name, node_t body) {
+node_t create_statement_test(context_t ctx, location_t loc, const char *name,
+                             node_t body) {
   allocator_t alloc = ctx->allocator;
   string_t name_str =
       allocator_create(alloc, &g_string_type, &(string_init_t){.str = name});
@@ -146,10 +146,10 @@ node_t cubec_ast_create_test_stmt(context_t ctx, location_t loc,
   return (node_t)allocator_create(alloc, &g_cubec_statement_test_type, &init);
 }
 
-void cubec_ast_write_test_stmt(writer_t writer, node_t stmt) {
+void write_statement_test(writer_t writer, node_t stmt) {
   cubec_statement_test_t test = (cubec_statement_test_t)stmt;
   writer_append(writer, "test \"");
   writer_append(writer, string_get(test->name));
   writer_append(writer, "\" ");
-  cubec_ast_write_block_stmt(writer, test->body);
+  write_statement_block(writer, test->body);
 }

@@ -1,13 +1,16 @@
 #include "cubec/statement_expression.h"
 #include "core/token.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
-#include "cubec/token.h"
 #include "cubec/node_error.h"
+#include "cubec/token.h"
 
-static void _cubec_statement_expression_init(
-    cubec_statement_expression_t self, allocator_t allocator,
-    cubec_statement_expression_init_t *init) {
-  if (!init) return;
+static void
+_cubec_statement_expression_init(cubec_statement_expression_t self,
+                                 allocator_t allocator,
+                                 cubec_statement_expression_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_EXPRESSION,
       .parent = NULL,
@@ -17,23 +20,26 @@ static void _cubec_statement_expression_init(
   self->expression = init->expression;
 }
 
-static void _cubec_statement_expression_dispose(
-    cubec_statement_expression_t self, allocator_t allocator) {
+static void
+_cubec_statement_expression_dispose(cubec_statement_expression_t self,
+                                    allocator_t allocator) {
   allocator_free(allocator, &self->expression);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_statement_expression_clone(
-    cubec_statement_expression_t self, allocator_t allocator,
-    cubec_statement_expression_t another) {
+static void
+_cubec_statement_expression_clone(cubec_statement_expression_t self,
+                                  allocator_t allocator,
+                                  cubec_statement_expression_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->expression = value_clone(allocator, another->expression);
   return;
 }
 
-static void _cubec_statement_expression_move(
-    cubec_statement_expression_t self, allocator_t allocator,
-    cubec_statement_expression_t another) {
+static void
+_cubec_statement_expression_move(cubec_statement_expression_t self,
+                                 allocator_t allocator,
+                                 cubec_statement_expression_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->expression = value_move(allocator, another->expression);
   return;
@@ -48,14 +54,15 @@ type_t g_cubec_statement_expression_type = {
     .move = (type_move_fn_t)_cubec_statement_expression_move,
 };
 
-node_t read_statement_expression(context_t ctx, vec_t tokens,
-                                 size_t *position, const char *filename) {
+node_t read_statement_expression(context_t ctx, vec_t tokens, size_t *position,
+                                 const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
   /* Try to parse the expression */
   node_t expr = read_expression(ctx, tokens, &current, filename);
-  if (node_is_error(expr)) return expr;
+  if (node_is_error(expr))
+    return expr;
   if (!expr) {
     return NULL;
   }
@@ -92,14 +99,19 @@ node_t read_statement_expression(context_t ctx, vec_t tokens,
 
 onerror:
   allocator_free(allocator, &expr);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_expr_stmt(context_t ctx, location_t loc,
-                                  node_t expr) {
+node_t create_statement_expression(context_t ctx, location_t loc, node_t expr) {
   allocator_t alloc = ctx->allocator;
-                                            cubec_statement_expression_init_t init = {
-                                            .expression = expr};
+  cubec_statement_expression_init_t init = {.expression = expr};
   return (node_t)allocator_create(alloc, &g_cubec_statement_expression_type,
                                   &init);
+}
+
+void write_statement_expression(writer_t writer, node_t stmt) {
+  cubec_statement_expression_t expr = (cubec_statement_expression_t)stmt;
+  write_expression(writer, expr->expression);
+  writer_append(writer, ";");
+  writer_newline(writer, 0);
 }

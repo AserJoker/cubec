@@ -9,10 +9,10 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_decorator_init(
-    cubec_decorator_t self, allocator_t allocator,
-    cubec_decorator_init_t *init) {
-  if (!init) return;
+static void _cubec_decorator_init(cubec_decorator_t self, allocator_t allocator,
+                                  cubec_decorator_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_DECORATOR,
       .parent = NULL,
@@ -22,23 +22,22 @@ static void _cubec_decorator_init(
   self->expression = init->expression;
 }
 
-static void _cubec_decorator_dispose(
-    cubec_decorator_t self, allocator_t allocator) {
+static void _cubec_decorator_dispose(cubec_decorator_t self,
+                                     allocator_t allocator) {
   allocator_free(allocator, &self->expression);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_decorator_clone(
-    cubec_decorator_t self, allocator_t allocator,
-    cubec_decorator_t another) {
+static void _cubec_decorator_clone(cubec_decorator_t self,
+                                   allocator_t allocator,
+                                   cubec_decorator_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->expression = value_clone(allocator, another->expression);
   return;
 }
 
-static void _cubec_decorator_move(
-    cubec_decorator_t self, allocator_t allocator,
-    cubec_decorator_t another) {
+static void _cubec_decorator_move(cubec_decorator_t self, allocator_t allocator,
+                                  cubec_decorator_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->expression = value_move(allocator, another->expression);
   return;
@@ -59,7 +58,8 @@ type_t g_cubec_decorator_type = {
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -69,7 +69,8 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *        Also handles call syntax: keyword(args).
  */
 static node_t _read_keyword_as_identifier(context_t ctx, vec_t tokens,
-                                           size_t *position, const char *filename) {
+                                          size_t *position,
+                                          const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   token_t tok = vec_get(tokens, current);
@@ -83,8 +84,10 @@ static node_t _read_keyword_as_identifier(context_t ctx, vec_t tokens,
       .parent = NULL,
       .value = NULL,
   };
-  cubec_literal_identifier_t id_node = allocator_create(allocator, &g_cubec_literal_identifier_type, &id_init);
-  if (!id_node) goto onerror;
+  cubec_literal_identifier_t id_node =
+      allocator_create(allocator, &g_cubec_literal_identifier_type, &id_init);
+  if (!id_node)
+    goto onerror;
   const char *token_str = token_get_string(tok);
   size_t token_len = token_get_string_length(tok);
   string_nconcat(id_node->value, token_str, token_len);
@@ -94,7 +97,8 @@ static node_t _read_keyword_as_identifier(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* Try call syntax: keyword(args) — e.g., [[deprecated("reason")]] */
-  node_t call = read_expression_call(ctx, tokens, &current, filename, expression);
+  node_t call =
+      read_expression_call(ctx, tokens, &current, filename, expression);
   if (call) {
     expression = call;
   }
@@ -111,8 +115,8 @@ onerror:
  *  Parser: read_decorator — [[expression]]
  * -------------------------------------------------------------------------- */
 
-node_t read_decorator(context_t ctx, vec_t tokens,
-                       size_t *position, const char *filename) {
+node_t read_decorator(context_t ctx, vec_t tokens, size_t *position,
+                      const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t expression = NULL;
@@ -139,7 +143,8 @@ node_t read_decorator(context_t ctx, vec_t tokens,
   current++;
   skip_whitespace(tokens, &current);
 
-  /* 2. Parse expression — try keyword-as-identifier first, then normal expression */
+  /* 2. Parse expression — try keyword-as-identifier first, then normal
+   * expression */
   expression = _read_keyword_as_identifier(ctx, tokens, &current, filename);
   if (!expression) {
     expression = read_expression(ctx, tokens, &current, filename);
@@ -172,7 +177,8 @@ node_t read_decorator(context_t ctx, vec_t tokens,
       .expression = expression,
   };
   node = allocator_create(allocator, &g_cubec_decorator_type, &init);
-  if (!node) goto onerror;
+  if (!node)
+    goto onerror;
   *position = current;
   return &node->super;
 
@@ -186,13 +192,11 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_decorator
+ *  Factory: create_decorator
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_decorator(context_t ctx, location_t loc,
-                                  node_t expr) {
+node_t create_decorator(context_t ctx, location_t loc, node_t expr) {
   allocator_t alloc = ctx->allocator;
-                                 cubec_decorator_init_t init = {
-                                 .expression = expr};
+  cubec_decorator_init_t init = {.expression = expr};
   return (node_t)allocator_create(alloc, &g_cubec_decorator_type, &init);
 }

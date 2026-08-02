@@ -1,7 +1,7 @@
 #include "cubec/statement_return.h"
+#include "core/token.h"
 #include "cubec/expression.h"
 #include "cubec/node_error.h"
-#include "core/token.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 
@@ -9,10 +9,11 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_statement_return_init(
-    cubec_statement_return_t self, allocator_t allocator,
-    cubec_statement_return_init_t *init) {
-  if (!init) return;
+static void _cubec_statement_return_init(cubec_statement_return_t self,
+                                         allocator_t allocator,
+                                         cubec_statement_return_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_RETURN,
       .parent = NULL,
@@ -22,28 +23,26 @@ static void _cubec_statement_return_init(
   self->expression = init->expression;
 }
 
-static void _cubec_statement_return_dispose(
-    cubec_statement_return_t self, allocator_t allocator) {
+static void _cubec_statement_return_dispose(cubec_statement_return_t self,
+                                            allocator_t allocator) {
   allocator_free(allocator, &self->expression);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_statement_return_clone(
-    cubec_statement_return_t self, allocator_t allocator,
-    cubec_statement_return_t another) {
+static void _cubec_statement_return_clone(cubec_statement_return_t self,
+                                          allocator_t allocator,
+                                          cubec_statement_return_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->expression = another->expression
-                         ? value_clone(allocator, another->expression)
-                         : NULL;
+  self->expression =
+      another->expression ? value_clone(allocator, another->expression) : NULL;
 }
 
-static void _cubec_statement_return_move(
-    cubec_statement_return_t self, allocator_t allocator,
-    cubec_statement_return_t another) {
+static void _cubec_statement_return_move(cubec_statement_return_t self,
+                                         allocator_t allocator,
+                                         cubec_statement_return_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->expression = another->expression
-                         ? value_move(allocator, another->expression)
-                         : NULL;
+  self->expression =
+      another->expression ? value_move(allocator, another->expression) : NULL;
 }
 
 type_t g_cubec_statement_return_type = {
@@ -61,14 +60,17 @@ type_t g_cubec_statement_return_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -76,8 +78,8 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_return
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_return(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename) {
+node_t read_statement_return(context_t ctx, vec_t tokens, size_t *position,
+                             const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t expression = NULL;
@@ -113,7 +115,8 @@ node_t read_statement_return(context_t ctx, vec_t tokens,
   current++;
 
   /* 4. Build location */
-  location_t *end_loc = expression ? &expression->location : token_get_location(semi);
+  location_t *end_loc =
+      expression ? &expression->location : token_get_location(semi);
   location_t loc = {
       .begin = start_location.begin,
       .end = end_loc->end,
@@ -131,19 +134,16 @@ node_t read_statement_return(context_t ctx, vec_t tokens,
   return &node->super;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid return statement");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid return statement");
   ctx->error_count++;
   allocator_free(allocator, &expression);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_return_stmt(context_t ctx, location_t loc,
-                                    node_t expr) {
+node_t create_statement_return(context_t ctx, location_t loc, node_t expr) {
   allocator_t alloc = ctx->allocator;
-                                        cubec_statement_return_init_t init = {
-                                        .expression = expr};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_return_type,
-                                  &init);
+  cubec_statement_return_init_t init = {.expression = expr};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_return_type, &init);
 }

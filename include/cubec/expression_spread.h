@@ -1,11 +1,11 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_SPREAD_
 #define _H_CUBEC_CUBEC_EXPRESSION_SPREAD_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -31,15 +31,16 @@ typedef struct _cubec_expression_spread_init_t cubec_expression_spread_init_t;
  *
  * This is NOT part of the normal expression parsing tree.
  * It is explicitly called in contexts that support spread syntax
- * (function call arguments, function parameter lists, struct initializers, etc.).
+ * (function call arguments, function parameter lists, struct initializers,
+ * etc.).
  *
  * @return A new cubec_expression_spread_t node, or NULL if the current
  *         token is not three consecutive '.' symbols.
  */
-node_t read_expression_spread(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename);
+node_t read_expression_spread(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename);
 
-node_t cubec_ast_create_spread(context_t ctx, location_t loc, node_t value);
+node_t create_expression_spread(context_t ctx, location_t loc, node_t value);
 
 #ifdef __cplusplus
 }

@@ -15,7 +15,8 @@
 static void _cubec_expression_type_interface_init(
     cubec_expression_type_interface_t self, allocator_t allocator,
     cubec_expression_type_interface_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_TYPE_INTERFACE,
       .parent = NULL,
@@ -27,8 +28,9 @@ static void _cubec_expression_type_interface_init(
   self->members = init->members;
 }
 
-static void _cubec_expression_type_interface_dispose(
-    cubec_expression_type_interface_t self, allocator_t allocator) {
+static void
+_cubec_expression_type_interface_dispose(cubec_expression_type_interface_t self,
+                                         allocator_t allocator) {
   allocator_free(allocator, &self->members);
   allocator_free(allocator, &self->generic_params);
   g_cubec_expression_type.dispose(&self->super, allocator);
@@ -71,14 +73,17 @@ type_t g_cubec_expression_type_interface_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -88,7 +93,7 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  * -------------------------------------------------------------------------- */
 
 static node_t _read_associated_type(context_t ctx, vec_t tokens,
-                                     size_t *position, const char *filename) {
+                                    size_t *position, const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   node_t name = NULL;
@@ -107,7 +112,8 @@ static node_t _read_associated_type(context_t ctx, vec_t tokens,
 
   /* Parse type name (required) */
   name = read_literal_identifier(ctx, tokens, &current, filename);
-  if (node_is_error(name)) goto onerror;
+  if (node_is_error(name))
+    goto onerror;
   if (!name) {
     goto cleanup;
   }
@@ -157,7 +163,7 @@ onerror:
   allocator_free(allocator, &params);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
@@ -166,8 +172,9 @@ onerror:
  * -------------------------------------------------------------------------- */
 
 node_t read_expression_type_interface_body(context_t ctx, vec_t tokens,
-                                             size_t *position, const char *filename,
-                                             location_t start_location) {
+                                           size_t *position,
+                                           const char *filename,
+                                           location_t start_location) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   vec_t generic_params = NULL;
@@ -194,12 +201,14 @@ node_t read_expression_type_interface_body(context_t ctx, vec_t tokens,
 
     /* Try associated type: type <name> [<params>] ; */
     member = _read_associated_type(ctx, tokens, &current, filename);
-    if (node_is_error(member)) goto onerror;
+    if (node_is_error(member))
+      goto onerror;
 
     /* Try method signature: func <name> [<params>] (<args>) [: <type>] ; */
     if (!member) {
       member = read_interface_method(ctx, tokens, &current, filename);
-      if (node_is_error(member)) goto onerror;
+      if (node_is_error(member))
+        goto onerror;
     }
 
     if (!member) {
@@ -231,7 +240,8 @@ node_t read_expression_type_interface_body(context_t ctx, vec_t tokens,
       .generic_params = generic_params,
       .members = members,
   };
-  node = allocator_create(allocator, &g_cubec_expression_type_interface_type, &init);
+  node = allocator_create(allocator, &g_cubec_expression_type_interface_type,
+                          &init);
   *position = current;
   return (node_t)&node->super;
 
@@ -244,7 +254,7 @@ onerror:
   allocator_free(allocator, &members);
   allocator_free(allocator, &generic_params);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
@@ -252,7 +262,7 @@ onerror:
  * -------------------------------------------------------------------------- */
 
 node_t read_expression_type_interface(context_t ctx, vec_t tokens,
-                                       size_t *position, const char *filename) {
+                                      size_t *position, const char *filename) {
   size_t current = *position;
 
   /* Expect 'interface' keyword */
@@ -265,15 +275,17 @@ node_t read_expression_type_interface(context_t ctx, vec_t tokens,
   current++;
   skip_whitespace(tokens, &current);
 
-  node_t result = read_expression_type_interface_body(ctx, tokens, &current, filename, start_location);
-  if (node_is_error(result)) return result;
+  node_t result = read_expression_type_interface_body(ctx, tokens, &current,
+                                                      filename, start_location);
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
   }
 
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid interface type expression");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid interface type expression");
   ctx->error_count++;
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }

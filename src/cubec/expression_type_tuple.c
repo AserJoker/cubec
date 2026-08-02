@@ -10,10 +10,12 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_expression_type_tuple_init(
-    cubec_expression_type_tuple_t self, allocator_t allocator,
-    cubec_expression_type_tuple_init_t *init) {
-  if (!init) return;
+static void
+_cubec_expression_type_tuple_init(cubec_expression_type_tuple_t self,
+                                  allocator_t allocator,
+                                  cubec_expression_type_tuple_init_t *init) {
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_TYPE_TUPLE,
       .parent = NULL,
@@ -24,25 +26,28 @@ static void _cubec_expression_type_tuple_init(
   self->element_types = init->element_types;
 }
 
-static void _cubec_expression_type_tuple_dispose(
-    cubec_expression_type_tuple_t self, allocator_t allocator) {
+static void
+_cubec_expression_type_tuple_dispose(cubec_expression_type_tuple_t self,
+                                     allocator_t allocator) {
   allocator_free(allocator, &self->element_types);
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_expression_type_tuple_clone(
-    cubec_expression_type_tuple_t self, allocator_t allocator,
-    cubec_expression_type_tuple_t another) {
+static void
+_cubec_expression_type_tuple_clone(cubec_expression_type_tuple_t self,
+                                   allocator_t allocator,
+                                   cubec_expression_type_tuple_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->element_types = another->element_types
-                           ? value_clone(allocator, another->element_types)
-                           : NULL;
+                            ? value_clone(allocator, another->element_types)
+                            : NULL;
   return;
 }
 
-static void _cubec_expression_type_tuple_move(
-    cubec_expression_type_tuple_t self, allocator_t allocator,
-    cubec_expression_type_tuple_t another) {
+static void
+_cubec_expression_type_tuple_move(cubec_expression_type_tuple_t self,
+                                  allocator_t allocator,
+                                  cubec_expression_type_tuple_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->element_types = another->element_types;
   another->element_types = NULL;
@@ -63,7 +68,8 @@ type_t g_cubec_expression_type_tuple_type = {
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -71,8 +77,8 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_expression_type_tuple
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_type_tuple(context_t ctx, vec_t tokens,
-                                    size_t *position, const char *filename) {
+node_t read_expression_type_tuple(context_t ctx, vec_t tokens, size_t *position,
+                                  const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   /* In a type context, '<' starts a tuple type expression.
@@ -84,7 +90,8 @@ node_t read_expression_type_tuple(context_t ctx, vec_t tokens,
   */
   size_t start = *position;
 
-  if (!_is_symbol(tokens, start, "<")) return NULL;
+  if (!_is_symbol(tokens, start, "<"))
+    return NULL;
 
   location_t start_location = *token_get_location(vec_get(tokens, start));
   start_location.filename = filename;
@@ -116,7 +123,8 @@ node_t read_expression_type_tuple(context_t ctx, vec_t tokens,
     size_t after_q = current + 1;
     skip_whitespace(tokens, &after_q);
     if (_is_symbol(tokens, after_q, ">")) {
-      /* <?> — return a wildcard node representing "any tuple type" constraint */
+      /* <?> — return a wildcard node representing "any tuple type" constraint
+       */
       current = after_q + 1;
       cubec_expression_wildcard_t wnode =
           (cubec_expression_wildcard_t)allocator_create(
@@ -142,24 +150,26 @@ node_t read_expression_type_tuple(context_t ctx, vec_t tokens,
     if (!elem) {
       elem = read_type_expression_primary(ctx, tokens, &current, filename);
     }
-    if (!elem) break;
+    if (!elem)
+      break;
 
     vec_push(element_types, elem);
     skip_whitespace(tokens, &current);
 
-    if (!_is_symbol(tokens, current, ",")) break;
-    current++;  /* skip ',' */
+    if (!_is_symbol(tokens, current, ","))
+      break;
+    current++; /* skip ',' */
   }
 
   /* Expect closing '>' */
   if (!_is_symbol(tokens, current, ">")) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                         start_location, "missing '>' in tuple type expression");
+    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                         "missing '>' in tuple type expression");
     ctx->error_count++;
     allocator_free(allocator, &element_types);
-    return cubec_ast_create_error(ctx, start_location);
+    return create_error(ctx, start_location);
   }
-  current++;  /* skip '>' */
+  current++; /* skip '>' */
 
   /* Create the node */
   location_t loc = *token_get_location(vec_get(tokens, start));

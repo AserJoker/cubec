@@ -334,17 +334,16 @@ onerror:
   allocator_free(allocator, &decorators);
   allocator_free(allocator, &expr_node);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_func_stmt(context_t ctx, location_t loc,
-                                  const char *name, vec_t args,
-                                  node_t return_type, node_t body,
-                                  bool is_export, bool is_inline,
-                                  bool is_extern, bool is_builtin,
-                                  bool is_comptime, bool is_c_variadic) {
+node_t create_statement_func(context_t ctx, location_t loc, const char *name,
+                             vec_t args, node_t return_type, node_t body,
+                             bool is_export, bool is_inline, bool is_extern,
+                             bool is_builtin, bool is_comptime,
+                             bool is_c_variadic) {
   allocator_t alloc = ctx->allocator;
-  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_statement_function_init_t init = {
       .location = loc,
       .parent = NULL,

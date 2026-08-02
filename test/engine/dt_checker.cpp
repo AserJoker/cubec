@@ -1,33 +1,28 @@
-#include "engine/checker_evaluate.h"
-#include "engine/checker_collect.h"
-#include "engine/symbol.h"
-#include "engine/semantic_type.h"
-#include "engine/type_hash.h"
-#include "cubec/statement_block.h"
-#include "cubec/statement_function.h"
 #include "common/test_common.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/enum_item.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_function.h"
-#include "cubec/expression_initialize_field.h"
 #include "cubec/expression_initialize_list.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_postfix_unary.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/function_argument.h"
+#include "cubec/initialize_field.h"
 #include "cubec/interface_method.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
 #include "cubec/node.h"
 #include "cubec/program.h"
+#include "cubec/statement_block.h"
 #include "cubec/statement_break.h"
 #include "cubec/statement_cunion.h"
 #include "cubec/statement_declaration.h"
 #include "cubec/statement_declaration_type.h"
 #include "cubec/statement_enum.h"
+#include "cubec/statement_function.h"
 #include "cubec/statement_interface.h"
 #include "cubec/statement_return.h"
 #include "cubec/statement_struct.h"
@@ -35,16 +30,21 @@
 #include "cubec/statement_while.h"
 #include "cubec/struct_field.h"
 #include "cubec/union_field.h"
+#include "engine/checker_collect.h"
+#include "engine/checker_evaluate.h"
+#include "engine/semantic_type.h"
+#include "engine/symbol.h"
+#include "engine/type_hash.h"
 #include <gtest/gtest.h>
+
 
 using ::testing::Test;
 
 /* ===== helpers ===== */
 
 static location_t test_loc() {
-  static location_t loc = {.filename = "<test>",
-                            .begin = {1, 1, NULL},
-                            .end = {1, 1, NULL}};
+  static location_t loc = {
+      .filename = "<test>", .begin = {1, 1, NULL}, .end = {1, 1, NULL}};
   return loc;
 }
 
@@ -142,11 +142,11 @@ TEST_F(dt_checker, builtin_type_sizes) {
 
 TEST_F(dt_checker, pass2_struct_basic_debug) {
   /* Minimal: just create checker + empty struct */
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(ctx, T, "Point",
-                   cubec_ast_create_vec(ctx, true), false, NULL));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_struct(ctx, T, "Point",
+                                          create_vec(ctx, true), false, NULL));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -161,16 +161,19 @@ TEST_F(dt_checker, pass2_struct_basic_debug) {
 
 TEST_F(dt_checker, pass2_struct_basic) {
   /* struct Point { x: f64; y: f64; } */
-  vec_t members = cubec_ast_create_vec(ctx, true);
-  vec_push(members, cubec_ast_create_struct_field(ctx, T, "x",
-                   cubec_ast_create_identifier(ctx, T, "f64"), false));
-  vec_push(members, cubec_ast_create_struct_field(ctx, T, "y",
-                   cubec_ast_create_identifier(ctx, T, "f64"), false));
+  vec_t members = create_vec(ctx, true);
+  vec_push(members,
+           create_struct_field(
+               ctx, T, "x", create_literal_identifier(ctx, T, "f64"), false));
+  vec_push(members,
+           create_struct_field(
+               ctx, T, "y", create_literal_identifier(ctx, T, "f64"), false));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(ctx, T, "Point", members, false, NULL));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_struct(ctx, T, "Point", members, false, NULL));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -212,15 +215,15 @@ TEST_F(dt_checker, pass2_struct_basic) {
 
 TEST_F(dt_checker, pass2_enum_basic) {
   /* enum Color { Red, Green, Blue } */
-  vec_t items = cubec_ast_create_vec(ctx, true);
-  vec_push(items, cubec_ast_create_enum_item(ctx, T, "Red", NULL, NULL));
-  vec_push(items, cubec_ast_create_enum_item(ctx, T, "Green", NULL, NULL));
-  vec_push(items, cubec_ast_create_enum_item(ctx, T, "Blue", NULL, NULL));
+  vec_t items = create_vec(ctx, true);
+  vec_push(items, create_enum_item(ctx, T, "Red", NULL, NULL));
+  vec_push(items, create_enum_item(ctx, T, "Green", NULL, NULL));
+  vec_push(items, create_enum_item(ctx, T, "Blue", NULL, NULL));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_enum_stmt(ctx, T, "Color", items, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_enum(ctx, T, "Color", items, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -259,16 +262,19 @@ TEST_F(dt_checker, pass2_enum_basic) {
 
 TEST_F(dt_checker, pass2_union_basic) {
   /* union Value { int_val: i64; flt_val: f64; } */
-  vec_t members = cubec_ast_create_vec(ctx, true);
-  vec_push(members, cubec_ast_create_union_field(ctx, T, "int_val",
-                   cubec_ast_create_identifier(ctx, T, "i64")));
-  vec_push(members, cubec_ast_create_union_field(ctx, T, "flt_val",
-                   cubec_ast_create_identifier(ctx, T, "f64")));
+  vec_t members = create_vec(ctx, true);
+  vec_push(members,
+           create_union_field(ctx, T, "int_val",
+                              create_literal_identifier(ctx, T, "i64")));
+  vec_push(members,
+           create_union_field(ctx, T, "flt_val",
+                              create_literal_identifier(ctx, T, "f64")));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_union_stmt(ctx, T, "Value", members, false, NULL));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_union(ctx, T, "Value", members, false, NULL));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -293,16 +299,18 @@ TEST_F(dt_checker, pass2_union_basic) {
 
 TEST_F(dt_checker, pass2_cunion_basic) {
   /* cunion Data { a: i32; b: f64; } */
-  vec_t fields = cubec_ast_create_vec(ctx, true);
-  vec_push(fields, cubec_ast_create_struct_field(ctx, T, "a",
-                   cubec_ast_create_identifier(ctx, T, "i32"), false));
-  vec_push(fields, cubec_ast_create_struct_field(ctx, T, "b",
-                   cubec_ast_create_identifier(ctx, T, "f64"), false));
+  vec_t fields = create_vec(ctx, true);
+  vec_push(fields, create_struct_field(ctx, T, "a",
+                                       create_literal_identifier(ctx, T, "i32"),
+                                       false));
+  vec_push(fields, create_struct_field(ctx, T, "b",
+                                       create_literal_identifier(ctx, T, "f64"),
+                                       false));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_cunion_stmt(ctx, T, "Data", fields));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_cunion(ctx, T, "Data", fields));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -324,18 +332,19 @@ TEST_F(dt_checker, pass2_cunion_basic) {
 
 TEST_F(dt_checker, pass2_function_basic) {
   /* func add(a: i32, b: i32): i32 {} */
-  vec_t args = cubec_ast_create_vec(ctx, true);
-  vec_push(args, cubec_ast_create_func_arg(ctx, T, "a",
-                   cubec_ast_create_identifier(ctx, T, "i32")));
-  vec_push(args, cubec_ast_create_func_arg(ctx, T, "b",
-                   cubec_ast_create_identifier(ctx, T, "i32")));
+  vec_t args = create_vec(ctx, true);
+  vec_push(args, create_function_argument(
+                     ctx, T, "a", create_literal_identifier(ctx, T, "i32")));
+  vec_push(args, create_function_argument(
+                     ctx, T, "b", create_literal_identifier(ctx, T, "i32")));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "add", args,
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   NULL, false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "add", args,
+                                 create_literal_identifier(ctx, T, "i32"), NULL,
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -364,15 +373,15 @@ TEST_F(dt_checker, pass2_function_basic) {
 
 TEST_F(dt_checker, pass2_variable_typed) {
   /* var x: i32 = 42 */
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_var_decl_stmt(ctx, T, "x",
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   cubec_ast_create_numeric(ctx, T, "42",
-                     CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                     CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                   false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_declaration(
+                      ctx, T, "x", create_literal_identifier(ctx, T, "i32"),
+                      create_literal_numeric(
+                          ctx, T, "42", CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                          CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
+                      false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -390,14 +399,15 @@ TEST_F(dt_checker, pass2_variable_typed) {
 
 TEST_F(dt_checker, pass2_variable_inferred_literal) {
   /* var n = 42 — type inferred as i32 */
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_var_decl_stmt(ctx, T, "n", NULL,
-                   cubec_ast_create_numeric(ctx, T, "42",
-                     CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                     CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                   false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_declaration(
+                      ctx, T, "n", NULL,
+                      create_literal_numeric(
+                          ctx, T, "42", CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                          CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
+                      false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -413,12 +423,12 @@ TEST_F(dt_checker, pass2_variable_inferred_literal) {
 
 TEST_F(dt_checker, pass2_type_alias) {
   /* type MyInt = i32 */
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_type_alias(ctx, T, "MyInt",
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_declaration_type(
+                      ctx, T, "MyInt", create_literal_identifier(ctx, T, "i32"),
+                      false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -435,13 +445,13 @@ TEST_F(dt_checker, pass2_type_alias) {
 
 TEST_F(dt_checker, pass2_duplicate_continues) {
   /* Two structs with same name — Pass 1 errors, Pass 2 skips */
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(ctx, T, "Foo",
-                   cubec_ast_create_vec(ctx, true), false, NULL));
-  vec_push(stmts, cubec_ast_create_struct_stmt(ctx, T, "Foo",
-                   cubec_ast_create_vec(ctx, true), false, NULL));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_struct(ctx, T, "Foo", create_vec(ctx, true),
+                                          false, NULL));
+  vec_push(stmts, create_statement_struct(ctx, T, "Foo", create_vec(ctx, true),
+                                          false, NULL));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -459,12 +469,12 @@ TEST_F(dt_checker, pass2_duplicate_continues) {
 
 TEST_F(dt_checker, pass2_incomplete_type_in_var) {
   /* Use void as value type — void is incomplete, should produce an error */
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_var_decl_stmt(ctx, T, "x",
-                   cubec_ast_create_identifier(ctx, T, "void"),
-                   NULL, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_declaration(
+                      ctx, T, "x", create_literal_identifier(ctx, T, "void"),
+                      NULL, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -478,20 +488,23 @@ TEST_F(dt_checker, pass2_incomplete_type_in_var) {
 TEST_F(dt_checker, pass2_function_with_custom_types) {
   /* struct Point { x: f64; y: f64; }
      func origin(): Point {} */
-  vec_t members = cubec_ast_create_vec(ctx, true);
-  vec_push(members, cubec_ast_create_struct_field(ctx, T, "x",
-                   cubec_ast_create_identifier(ctx, T, "f64"), false));
-  vec_push(members, cubec_ast_create_struct_field(ctx, T, "y",
-                   cubec_ast_create_identifier(ctx, T, "f64"), false));
+  vec_t members = create_vec(ctx, true);
+  vec_push(members,
+           create_struct_field(
+               ctx, T, "x", create_literal_identifier(ctx, T, "f64"), false));
+  vec_push(members,
+           create_struct_field(
+               ctx, T, "y", create_literal_identifier(ctx, T, "f64"), false));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(ctx, T, "Point", members, false, NULL));
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "origin",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "Point"),
-                   NULL, false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_struct(ctx, T, "Point", members, false, NULL));
+  vec_push(stmts, create_statement_func(
+                      ctx, T, "origin", create_vec(ctx, true),
+                      create_literal_identifier(ctx, T, "Point"), NULL, false,
+                      false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -515,14 +528,15 @@ TEST_F(dt_checker, pass2_function_with_custom_types) {
 /* ===== numeric suffix inference tests ===== */
 
 TEST_F(dt_checker, pass2_numeric_suffix_i64) {
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_var_decl_stmt(ctx, T, "x", NULL,
-                   cubec_ast_create_numeric(ctx, T, "42",
-                     CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                     CUBEC_LITERAL_NUMERIC_TYPE_I64),
-                   false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_declaration(
+                      ctx, T, "x", NULL,
+                      create_literal_numeric(ctx, T, "42",
+                                             CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                                             CUBEC_LITERAL_NUMERIC_TYPE_I64),
+                      false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -536,14 +550,15 @@ TEST_F(dt_checker, pass2_numeric_suffix_i64) {
 }
 
 TEST_F(dt_checker, pass2_numeric_suffix_f32) {
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_var_decl_stmt(ctx, T, "pi", NULL,
-                   cubec_ast_create_numeric(ctx, T, "3.14",
-                     CUBEC_LITERAL_NUMERIC_KIND_FLOAT,
-                     CUBEC_LITERAL_NUMERIC_TYPE_F32),
-                   false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_declaration(
+                      ctx, T, "pi", NULL,
+                      create_literal_numeric(ctx, T, "3.14",
+                                             CUBEC_LITERAL_NUMERIC_KIND_FLOAT,
+                                             CUBEC_LITERAL_NUMERIC_TYPE_F32),
+                      false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -557,14 +572,15 @@ TEST_F(dt_checker, pass2_numeric_suffix_f32) {
 }
 
 TEST_F(dt_checker, pass2_numeric_default_float) {
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_var_decl_stmt(ctx, T, "d", NULL,
-                   cubec_ast_create_numeric(ctx, T, "2.0",
-                     CUBEC_LITERAL_NUMERIC_KIND_FLOAT,
-                     CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                   false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_declaration(
+                      ctx, T, "d", NULL,
+                      create_literal_numeric(
+                          ctx, T, "2.0", CUBEC_LITERAL_NUMERIC_KIND_FLOAT,
+                          CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
+                      false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -578,14 +594,15 @@ TEST_F(dt_checker, pass2_numeric_default_float) {
 }
 
 TEST_F(dt_checker, pass2_numeric_default_int) {
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_var_decl_stmt(ctx, T, "n", NULL,
-                   cubec_ast_create_numeric(ctx, T, "7",
-                     CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                     CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                   false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_declaration(
+                      ctx, T, "n", NULL,
+                      create_literal_numeric(
+                          ctx, T, "7", CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                          CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
+                      false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -599,14 +616,15 @@ TEST_F(dt_checker, pass2_numeric_default_int) {
 }
 
 TEST_F(dt_checker, pass2_numeric_suffix_u8) {
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_var_decl_stmt(ctx, T, "byte", NULL,
-                   cubec_ast_create_numeric(ctx, T, "255",
-                     CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                     CUBEC_LITERAL_NUMERIC_TYPE_U8),
-                   false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_declaration(
+                      ctx, T, "byte", NULL,
+                      create_literal_numeric(ctx, T, "255",
+                                             CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                                             CUBEC_LITERAL_NUMERIC_TYPE_U8),
+                      false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -623,19 +641,21 @@ TEST_F(dt_checker, pass2_numeric_suffix_u8) {
 
 TEST_F(dt_checker, pass2_struct_method) {
   /* struct Counter { val: i32; func get(): i32 {} } */
-  vec_t members = cubec_ast_create_vec(ctx, true);
-  vec_push(members, cubec_ast_create_struct_field(ctx, T, "val",
-                   cubec_ast_create_identifier(ctx, T, "i32"), false));
-  vec_t args = cubec_ast_create_vec(ctx, true);
-  vec_push(members, cubec_ast_create_func_stmt(ctx, T, "get",
-                   args,
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   NULL, false, false, false, false, false, false));
+  vec_t members = create_vec(ctx, true);
+  vec_push(members,
+           create_struct_field(
+               ctx, T, "val", create_literal_identifier(ctx, T, "i32"), false));
+  vec_t args = create_vec(ctx, true);
+  vec_push(members,
+           create_statement_func(ctx, T, "get", args,
+                                 create_literal_identifier(ctx, T, "i32"), NULL,
+                                 false, false, false, false, false, false));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(ctx, T, "Counter", members, false, NULL));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_struct(ctx, T, "Counter", members, false, NULL));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -661,15 +681,17 @@ TEST_F(dt_checker, pass2_struct_method) {
 
 TEST_F(dt_checker, pass2_struct_static_field) {
   /* struct Config { var count: i32; } */
-  vec_t members = cubec_ast_create_vec(ctx, true);
-  vec_push(members, cubec_ast_create_var_decl_stmt(ctx, T, "count",
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   NULL, false, false, false, false, false));
+  vec_t members = create_vec(ctx, true);
+  vec_push(members,
+           create_statement_declaration(
+               ctx, T, "count", create_literal_identifier(ctx, T, "i32"), NULL,
+               false, false, false, false, false));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(ctx, T, "Config", members, false, NULL));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_struct(ctx, T, "Config", members, false, NULL));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -692,19 +714,21 @@ TEST_F(dt_checker, pass2_struct_static_field) {
 
 TEST_F(dt_checker, pass2_interface_associated_type) {
   /* interface Hashable { type Key; func hash(key: Key): u64; } */
-  vec_t members = cubec_ast_create_vec(ctx, true);
-  vec_push(members, cubec_ast_create_type_alias(ctx, T, "Key", NULL, false, false));
-  vec_t args = cubec_ast_create_vec(ctx, true);
-  vec_push(args, cubec_ast_create_func_arg(ctx, T, "key",
-                   cubec_ast_create_identifier(ctx, T, "Key")));
-  vec_push(members, cubec_ast_create_iface_method(ctx, T, "hash",
-                   args,
-                   cubec_ast_create_identifier(ctx, T, "u64")));
+  vec_t members = create_vec(ctx, true);
+  vec_push(members, create_statement_declaration_type(ctx, T, "Key", NULL,
+                                                      false, false));
+  vec_t args = create_vec(ctx, true);
+  vec_push(args, create_function_argument(
+                     ctx, T, "key", create_literal_identifier(ctx, T, "Key")));
+  vec_push(members,
+           create_interface_method(ctx, T, "hash", args,
+                                   create_literal_identifier(ctx, T, "u64")));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_iface_stmt(ctx, T, "Hashable", members, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_interface(ctx, T, "Hashable", members, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -730,20 +754,21 @@ TEST_F(dt_checker, pass2_interface_associated_type) {
 
 TEST_F(dt_checker, pass3_return_typed) {
   /* func f(): i32 { return 42; } */
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_numeric(ctx, T, "42",
-                     CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                     CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT)));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts, create_statement_return(
+                           ctx, T,
+                           create_literal_numeric(
+                               ctx, T, "42", CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                               CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT)));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true),
+                                 create_literal_identifier(ctx, T, "i32"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -754,18 +779,18 @@ TEST_F(dt_checker, pass3_return_typed) {
 
 TEST_F(dt_checker, pass3_return_mismatch) {
   /* func f(): i32 { return "hello"; } — type mismatch */
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_string(ctx, T, "hello")));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts, create_statement_return(
+                           ctx, T, create_literal_string(ctx, T, "hello")));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true),
+                                 create_literal_identifier(ctx, T, "i32"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -776,16 +801,16 @@ TEST_F(dt_checker, pass3_return_mismatch) {
 
 TEST_F(dt_checker, pass3_return_void) {
   /* func f() { return; } — bare return in void function */
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T, NULL));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts, create_statement_return(ctx, T, NULL));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true), NULL,
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true), NULL,
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -796,24 +821,27 @@ TEST_F(dt_checker, pass3_return_void) {
 
 TEST_F(dt_checker, pass3_binary_arithmetic) {
   /* func f(): i32 { return 1 + 2; } */
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_binary(ctx, T, "+",
-                     cubec_ast_create_numeric(ctx, T, "1",
-                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                       CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                     cubec_ast_create_numeric(ctx, T, "2",
-                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts,
+           create_statement_return(
+               ctx, T,
+               create_expression_binary(
+                   ctx, T, "+",
+                   create_literal_numeric(ctx, T, "1",
+                                          CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                                          CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
+                   create_literal_numeric(
+                       ctx, T, "2", CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                        CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT))));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true),
+                                 create_literal_identifier(ctx, T, "i32"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -824,24 +852,27 @@ TEST_F(dt_checker, pass3_binary_arithmetic) {
 
 TEST_F(dt_checker, pass3_binary_comparison) {
   /* func f(): bool { return 1 < 2; } */
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_binary(ctx, T, "<",
-                     cubec_ast_create_numeric(ctx, T, "1",
-                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                       CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                     cubec_ast_create_numeric(ctx, T, "2",
-                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts,
+           create_statement_return(
+               ctx, T,
+               create_expression_binary(
+                   ctx, T, "<",
+                   create_literal_numeric(ctx, T, "1",
+                                          CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                                          CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
+                   create_literal_numeric(
+                       ctx, T, "2", CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                        CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT))));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "bool"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true),
+                                 create_literal_identifier(ctx, T, "bool"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -852,39 +883,42 @@ TEST_F(dt_checker, pass3_binary_comparison) {
 
 TEST_F(dt_checker, pass3_call_basic) {
   /* func add(a: i32, b: i32): i32 {} func f(): i32 { return add(1, 2); } */
-  vec_t add_args = cubec_ast_create_vec(ctx, true);
-  vec_push(add_args, cubec_ast_create_func_arg(ctx, T, "a",
-                   cubec_ast_create_identifier(ctx, T, "i32")));
-  vec_push(add_args, cubec_ast_create_func_arg(ctx, T, "b",
-                   cubec_ast_create_identifier(ctx, T, "i32")));
+  vec_t add_args = create_vec(ctx, true);
+  vec_push(add_args,
+           create_function_argument(ctx, T, "a",
+                                    create_literal_identifier(ctx, T, "i32")));
+  vec_push(add_args,
+           create_function_argument(ctx, T, "b",
+                                    create_literal_identifier(ctx, T, "i32")));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "add",
-                   add_args,
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   NULL, false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "add", add_args,
+                                 create_literal_identifier(ctx, T, "i32"), NULL,
+                                 false, false, false, false, false, false));
 
-  vec_t call_args = cubec_ast_create_vec(ctx, true);
-  vec_push(call_args, cubec_ast_create_numeric(ctx, T, "1",
-                    CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                    CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT));
-  vec_push(call_args, cubec_ast_create_numeric(ctx, T, "2",
-                    CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                    CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT));
+  vec_t call_args = create_vec(ctx, true);
+  vec_push(call_args, create_literal_numeric(
+                          ctx, T, "1", CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                          CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT));
+  vec_push(call_args, create_literal_numeric(
+                          ctx, T, "2", CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                          CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT));
 
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_call(ctx, T,
-                     cubec_ast_create_identifier(ctx, T, "add"),
-                     call_args)));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts, create_statement_return(
+                           ctx, T,
+                           create_expression_call(
+                               ctx, T, create_literal_identifier(ctx, T, "add"),
+                               call_args)));
 
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true),
+                                 create_literal_identifier(ctx, T, "i32"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -895,25 +929,29 @@ TEST_F(dt_checker, pass3_call_basic) {
 
 TEST_F(dt_checker, pass3_member_access) {
   /* struct Point { x: f64; func get_x(): f64 { return self.x; } } */
-  vec_t method_args = cubec_ast_create_vec(ctx, true);
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_member(ctx, T,
-                     cubec_ast_create_identifier(ctx, T, "self"), "x")));
+  vec_t method_args = create_vec(ctx, true);
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts,
+           create_statement_return(
+               ctx, T,
+               create_expression_member(
+                   ctx, T, create_literal_identifier(ctx, T, "self"), "x")));
 
-  vec_t members = cubec_ast_create_vec(ctx, true);
-  vec_push(members, cubec_ast_create_struct_field(ctx, T, "x",
-                   cubec_ast_create_identifier(ctx, T, "f64"), false));
-  vec_push(members, cubec_ast_create_func_stmt(ctx, T, "get_x",
-                   method_args,
-                   cubec_ast_create_identifier(ctx, T, "f64"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_t members = create_vec(ctx, true);
+  vec_push(members,
+           create_struct_field(
+               ctx, T, "x", create_literal_identifier(ctx, T, "f64"), false));
+  vec_push(members,
+           create_statement_func(ctx, T, "get_x", method_args,
+                                 create_literal_identifier(ctx, T, "f64"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(ctx, T, "Point", members, false, NULL));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_struct(ctx, T, "Point", members, false, NULL));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -925,23 +963,27 @@ TEST_F(dt_checker, pass3_member_access) {
 
 TEST_F(dt_checker, pass3_deref_addr) {
   /* func f(): i32 { var x: i32 = 42; return *(&x); } */
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_var_decl_stmt(ctx, T, "x",
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   NULL, false, false, false, false, false));
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_deref(ctx, T,
-                     cubec_ast_create_addr(ctx, T,
-                       cubec_ast_create_identifier(ctx, T, "x")))));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts,
+           create_statement_declaration(
+               ctx, T, "x", create_literal_identifier(ctx, T, "i32"), NULL,
+               false, false, false, false, false));
+  vec_push(body_stmts,
+           create_statement_return(
+               ctx, T,
+               create_expression_deref(
+                   ctx, T,
+                   create_expression_addr(
+                       ctx, T, create_literal_identifier(ctx, T, "x")))));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true),
+                                 create_literal_identifier(ctx, T, "i32"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -952,25 +994,27 @@ TEST_F(dt_checker, pass3_deref_addr) {
 
 TEST_F(dt_checker, pass3_ternary) {
   /* func f(): i32 { return true ? 1 : 2; } */
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_ternary(ctx, T,
-                     cubec_ast_create_identifier(ctx, T, "true"),
-                     cubec_ast_create_numeric(ctx, T, "1",
-                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                       CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                     cubec_ast_create_numeric(ctx, T, "2",
-                       CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts,
+           create_statement_return(
+               ctx, T,
+               create_expression_ternary(
+                   ctx, T, create_literal_identifier(ctx, T, "true"),
+                   create_literal_numeric(ctx, T, "1",
+                                          CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                                          CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
+                   create_literal_numeric(
+                       ctx, T, "2", CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
                        CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT))));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true),
+                                 create_literal_identifier(ctx, T, "i32"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -981,19 +1025,22 @@ TEST_F(dt_checker, pass3_ternary) {
 
 TEST_F(dt_checker, pass3_local_var) {
   /* func f() { var x: i32 = 42; } */
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_var_decl_stmt(ctx, T, "x",
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   cubec_ast_create_numeric(ctx, T, "42", CUBEC_LITERAL_NUMERIC_KIND_INTEGER, CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
-                   false, false, false, false, false));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts,
+           create_statement_declaration(
+               ctx, T, "x", create_literal_identifier(ctx, T, "i32"),
+               create_literal_numeric(ctx, T, "42",
+                                      CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                                      CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
+               false, false, false, false, false));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true), NULL,
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true), NULL,
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -1004,24 +1051,25 @@ TEST_F(dt_checker, pass3_local_var) {
 
 TEST_F(dt_checker, pass3_break_in_loop) {
   /* func f() { while (true) { break; } } */
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_break_stmt(ctx, T));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts, create_statement_break(ctx, T));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true), NULL,
-                   cubec_ast_create_block(ctx, T, cubec_ast_create_vec(ctx, true)),
-                   false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_func(
+                      ctx, T, "f", create_vec(ctx, true), NULL,
+                      create_statement_block(ctx, T, create_vec(ctx, true)),
+                      false, false, false, false, false, false));
 
   /* Add while inside the block */
   cubec_statement_block_t outer_block =
-      (cubec_statement_block_t)((cubec_statement_function_t)vec_get(stmts, 0))->body;
+      (cubec_statement_block_t)((cubec_statement_function_t)vec_get(stmts, 0))
+          ->body;
   vec_push(outer_block->statements,
-           cubec_ast_create_while_stmt(ctx, T,
-             cubec_ast_create_identifier(ctx, T, "true"),
-             cubec_ast_create_block(ctx, T, body_stmts)));
+           create_create_while(ctx, T,
+                               create_literal_identifier(ctx, T, "true"),
+                               create_statement_block(ctx, T, body_stmts)));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -1032,16 +1080,16 @@ TEST_F(dt_checker, pass3_break_in_loop) {
 
 TEST_F(dt_checker, pass3_break_outside_loop) {
   /* func f() { break; } */
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_break_stmt(ctx, T));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts, create_statement_break(ctx, T));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true), NULL,
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true), NULL,
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -1055,38 +1103,37 @@ TEST_F(dt_checker, pass3_break_outside_loop) {
 TEST_F(dt_checker, pass3_anonymous_function) {
   /* func f(): i32 { var fn = func(): i32 { return 1; }; return fn(); } */
   /* anonymous function body */
-  vec_t anon_body = cubec_ast_create_vec(ctx, true);
-  vec_push(anon_body, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_numeric(ctx, T, "1",
-                     CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                     CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT)));
+  vec_t anon_body = create_vec(ctx, true);
+  vec_push(anon_body, create_statement_return(
+                          ctx, T,
+                          create_literal_numeric(
+                              ctx, T, "1", CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                              CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT)));
 
   /* create anonymous function expression */
-  node_t anon_fn = cubec_ast_create_function_expr(ctx, T,
-                   NULL,
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   cubec_ast_create_block(ctx, T, anon_body),
-                   false);
+  node_t anon_fn = create_expression_function(
+      ctx, T, NULL, create_vec(ctx, true), create_vec(ctx, true),
+      create_vec(ctx, true), create_literal_identifier(ctx, T, "i32"),
+      create_statement_block(ctx, T, anon_body), false);
 
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_var_decl_stmt(ctx, T, "fn", NULL,
-                   anon_fn, false, false, false, false, false));
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_call(ctx, T,
-                     cubec_ast_create_identifier(ctx, T, "fn"),
-                     cubec_ast_create_vec(ctx, true))));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts,
+           create_statement_declaration(ctx, T, "fn", NULL, anon_fn, false,
+                                        false, false, false, false));
+  vec_push(body_stmts, create_statement_return(
+                           ctx, T,
+                           create_expression_call(
+                               ctx, T, create_literal_identifier(ctx, T, "fn"),
+                               create_vec(ctx, true))));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true),
+                                 create_literal_identifier(ctx, T, "i32"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -1098,39 +1145,46 @@ TEST_F(dt_checker, pass3_anonymous_function) {
 TEST_F(dt_checker, pass3_init_list_field) {
   /* struct Point { x: f64; y: f64; }
      func f(): Point { return Point { x: 1.0, y: 2.0 }; } */
-  vec_t fields = cubec_ast_create_vec(ctx, true);
-  vec_push(fields, cubec_ast_create_struct_field(ctx, T, "x",
-                   cubec_ast_create_identifier(ctx, T, "f64"), false));
-  vec_push(fields, cubec_ast_create_struct_field(ctx, T, "y",
-                   cubec_ast_create_identifier(ctx, T, "f64"), false));
+  vec_t fields = create_vec(ctx, true);
+  vec_push(fields, create_struct_field(ctx, T, "x",
+                                       create_literal_identifier(ctx, T, "f64"),
+                                       false));
+  vec_push(fields, create_struct_field(ctx, T, "y",
+                                       create_literal_identifier(ctx, T, "f64"),
+                                       false));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(ctx, T, "Point", fields, false, NULL));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_struct(ctx, T, "Point", fields, false, NULL));
 
   /* initialize list with named fields */
-  vec_t init_items = cubec_ast_create_vec(ctx, true);
-  vec_push(init_items, cubec_ast_create_initialize_field(ctx, T, "x",
-                   cubec_ast_create_numeric(ctx, T, "1.0",
-                     CUBEC_LITERAL_NUMERIC_KIND_FLOAT,
-                     CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT)));
-  vec_push(init_items, cubec_ast_create_initialize_field(ctx, T, "y",
-                   cubec_ast_create_numeric(ctx, T, "2.0",
-                     CUBEC_LITERAL_NUMERIC_KIND_FLOAT,
-                     CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT)));
+  vec_t init_items = create_vec(ctx, true);
+  vec_push(init_items, create_initialize_field(
+                           ctx, T, "x",
+                           create_literal_numeric(
+                               ctx, T, "1.0", CUBEC_LITERAL_NUMERIC_KIND_FLOAT,
+                               CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT)));
+  vec_push(init_items, create_initialize_field(
+                           ctx, T, "y",
+                           create_literal_numeric(
+                               ctx, T, "2.0", CUBEC_LITERAL_NUMERIC_KIND_FLOAT,
+                               CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT)));
 
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_initialize_list(ctx, T,
-                     cubec_ast_create_identifier(ctx, T, "Point"),
-                     init_items, true)));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts,
+           create_statement_return(
+               ctx, T,
+               create_expression_initialize_list(
+                   ctx, T, create_literal_identifier(ctx, T, "Point"),
+                   init_items, true)));
 
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "Point"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true),
+                                 create_literal_identifier(ctx, T, "Point"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -1141,30 +1195,34 @@ TEST_F(dt_checker, pass3_init_list_field) {
 
 TEST_F(dt_checker, pass3_init_list_field_mismatch) {
   /* struct Point { x: f64; } func f(): Point { return Point { x: "bad" }; } */
-  vec_t fields = cubec_ast_create_vec(ctx, true);
-  vec_push(fields, cubec_ast_create_struct_field(ctx, T, "x",
-                   cubec_ast_create_identifier(ctx, T, "f64"), false));
+  vec_t fields = create_vec(ctx, true);
+  vec_push(fields, create_struct_field(ctx, T, "x",
+                                       create_literal_identifier(ctx, T, "f64"),
+                                       false));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(ctx, T, "Point", fields, false, NULL));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_struct(ctx, T, "Point", fields, false, NULL));
 
-  vec_t init_items = cubec_ast_create_vec(ctx, true);
-  vec_push(init_items, cubec_ast_create_initialize_field(ctx, T, "x",
-                   cubec_ast_create_string(ctx, T, "bad")));
+  vec_t init_items = create_vec(ctx, true);
+  vec_push(init_items, create_initialize_field(
+                           ctx, T, "x", create_literal_string(ctx, T, "bad")));
 
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_initialize_list(ctx, T,
-                     cubec_ast_create_identifier(ctx, T, "Point"),
-                     init_items, true)));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts,
+           create_statement_return(
+               ctx, T,
+               create_expression_initialize_list(
+                   ctx, T, create_literal_identifier(ctx, T, "Point"),
+                   init_items, true)));
 
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "Point"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true),
+                                 create_literal_identifier(ctx, T, "Point"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -1176,36 +1234,40 @@ TEST_F(dt_checker, pass3_init_list_field_mismatch) {
 TEST_F(dt_checker, pass3_init_list_positional) {
   /* struct Pair { first: i32; second: i32; }
      func f(): Pair { return Pair { 1, 2 }; } */
-  vec_t fields = cubec_ast_create_vec(ctx, true);
-  vec_push(fields, cubec_ast_create_struct_field(ctx, T, "first",
-                   cubec_ast_create_identifier(ctx, T, "i32"), false));
-  vec_push(fields, cubec_ast_create_struct_field(ctx, T, "second",
-                   cubec_ast_create_identifier(ctx, T, "i32"), false));
+  vec_t fields = create_vec(ctx, true);
+  vec_push(fields, create_struct_field(ctx, T, "first",
+                                       create_literal_identifier(ctx, T, "i32"),
+                                       false));
+  vec_push(fields, create_struct_field(ctx, T, "second",
+                                       create_literal_identifier(ctx, T, "i32"),
+                                       false));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_struct_stmt(ctx, T, "Pair", fields, false, NULL));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts, create_statement_struct(ctx, T, "Pair", fields, false, NULL));
 
-  vec_t init_items = cubec_ast_create_vec(ctx, true);
-  vec_push(init_items, cubec_ast_create_numeric(ctx, T, "1",
-                     CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                     CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT));
-  vec_push(init_items, cubec_ast_create_numeric(ctx, T, "2",
-                     CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
-                     CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT));
+  vec_t init_items = create_vec(ctx, true);
+  vec_push(init_items, create_literal_numeric(
+                           ctx, T, "1", CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                           CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT));
+  vec_push(init_items, create_literal_numeric(
+                           ctx, T, "2", CUBEC_LITERAL_NUMERIC_KIND_INTEGER,
+                           CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT));
 
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_initialize_list(ctx, T,
-                     cubec_ast_create_identifier(ctx, T, "Pair"),
-                     init_items, false)));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts,
+           create_statement_return(
+               ctx, T,
+               create_expression_initialize_list(
+                   ctx, T, create_literal_identifier(ctx, T, "Pair"),
+                   init_items, false)));
 
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "Pair"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true),
+                                 create_literal_identifier(ctx, T, "Pair"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
@@ -1216,31 +1278,36 @@ TEST_F(dt_checker, pass3_init_list_positional) {
 
 TEST_F(dt_checker, pass3_deref_pointer) {
   /* func f(): i32 { var x: i32 = 42; var p: *i32 = &x; return *p; } */
-  vec_t body_stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(body_stmts, cubec_ast_create_var_decl_stmt(ctx, T, "x",
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   NULL, false, false, false, false, false));
-  vec_push(body_stmts, cubec_ast_create_var_decl_stmt(ctx, T, "p",
-                   cubec_ast_create_pointer_type(ctx, T,
-                     cubec_ast_create_identifier(ctx, T, "i32"),
-                     false, false),
-                   NULL, false, false, false, false, false));
-  vec_push(body_stmts, cubec_ast_create_return_stmt(ctx, T,
-                   cubec_ast_create_deref(ctx, T,
-                     cubec_ast_create_identifier(ctx, T, "p"))));
+  vec_t body_stmts = create_vec(ctx, true);
+  vec_push(body_stmts,
+           create_statement_declaration(
+               ctx, T, "x", create_literal_identifier(ctx, T, "i32"), NULL,
+               false, false, false, false, false));
+  vec_push(body_stmts, create_statement_declaration(
+                           ctx, T, "p",
+                           create_declaration_pointer(
+                               ctx, T, create_literal_identifier(ctx, T, "i32"),
+                               false, false),
+                           NULL, false, false, false, false, false));
+  vec_push(body_stmts,
+           create_statement_return(
+               ctx, T,
+               create_expression_deref(
+                   ctx, T, create_literal_identifier(ctx, T, "p"))));
 
-  vec_t stmts = cubec_ast_create_vec(ctx, true);
-  vec_push(stmts, cubec_ast_create_func_stmt(ctx, T, "f",
-                   cubec_ast_create_vec(ctx, true),
-                   cubec_ast_create_identifier(ctx, T, "i32"),
-                   cubec_ast_create_block(ctx, T, body_stmts),
-                   false, false, false, false, false, false));
+  vec_t stmts = create_vec(ctx, true);
+  vec_push(stmts,
+           create_statement_func(ctx, T, "f", create_vec(ctx, true),
+                                 create_literal_identifier(ctx, T, "i32"),
+                                 create_statement_block(ctx, T, body_stmts),
+                                 false, false, false, false, false, false));
 
-  node_t prog = cubec_ast_create_program(ctx, T, stmts);
+  node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
-  /* x has no initializer so it'll error, but deref of pointer should not crash */
+  /* x has no initializer so it'll error, but deref of pointer should not crash
+   */
   context_dispose(checker);
   allocator_free(allocator, &prog);
 }

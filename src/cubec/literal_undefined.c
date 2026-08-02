@@ -5,7 +5,8 @@
 static void _cubec_literal_undefined_init(cubec_literal_undefined_t self,
                                           allocator_t allocator,
                                           cubec_literal_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   g_cubec_literal_type.init(&self->super, allocator, init);
 }
 
@@ -39,8 +40,8 @@ type_t g_cubec_literal_undefined_type = {
     .move = (type_move_fn_t)_cubec_literal_undefined_move,
 };
 
-node_t read_literal_undefined(context_t ctx, vec_t tokens,
-                               size_t *position, const char *filename) {
+node_t read_literal_undefined(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
@@ -68,9 +69,10 @@ onerror:
   return NULL;
 }
 
-node_t cubec_ast_create_undefined(context_t ctx, location_t loc) {
+node_t create_literal_undefined(context_t ctx, location_t loc) {
   allocator_t alloc = ctx->allocator;
-  cubec_literal_init_t init = {.kind = CUBEC_NODE_LITERAL_UNDEFINED,
-                                .location = loc, .parent = NULL};
-  return (node_t)allocator_create(alloc, &g_cubec_literal_undefined_type, &init);
+  cubec_literal_init_t init = {
+      .kind = CUBEC_NODE_LITERAL_UNDEFINED, .location = loc, .parent = NULL};
+  return (node_t)allocator_create(alloc, &g_cubec_literal_undefined_type,
+                                  &init);
 }

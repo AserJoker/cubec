@@ -16,31 +16,30 @@ static token_t create_error_token(context_t ctx, location_t location) {
                           &(token_init_t){CUBEC_TOKEN_ERROR, location});
 }
 
-static token_t create_identifier_token(context_t ctx,
-                                       location_t location) {
+static token_t create_literal_identifier_token(context_t ctx,
+                                               location_t location) {
   allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_IDENTIFIER, location});
 }
-static token_t create_keyword_token(context_t ctx,
-                                    location_t location) {
+static token_t create_keyword_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_KEYWORD, location});
 }
-static token_t create_numeric_token(context_t ctx,
-                                    location_t location) {
+static token_t create_literal_numeric_token(context_t ctx,
+                                            location_t location) {
   allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_NUMERIC, location});
 }
-static token_t create_string_token(context_t ctx, location_t location) {
+static token_t create_literal_string_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_STRING, location});
 }
 
-static token_t create_char_token(context_t ctx, location_t location) {
+static token_t create_literal_char_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_CHAR, location});
@@ -51,14 +50,12 @@ static token_t create_symbol_token(context_t ctx, location_t location) {
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_SYMBOL, location});
 }
-static token_t create_whitespace_token(context_t ctx,
-                                       location_t location) {
+static token_t create_whitespace_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_WHITESPACE, location});
 }
-static token_t create_comment_token(context_t ctx,
-                                    location_t location) {
+static token_t create_comment_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
   return allocator_create(allocator, &g_token_type,
                           &(token_init_t){CUBEC_TOKEN_COMMENT, location});
@@ -150,10 +147,11 @@ static uint32_t read_unicode(const char *source, size_t *length) {
 }
 
 static const char *symbols[] = {
-    "&&=", "||=", "...", "==", "!=", ">>=", "<<=", "->", ">>", "<<", "+=", "-=", "*=",
-    "/=",  "%=",  "&=",  "|=", "^=", "~=",  "&&",  "||", ">=", "<=", "=",  "!",
-    "+",   "-",   "*",   "/",  "&",  "|",   "^",   "?",  ",",  ".",  "<",  ">",
-    ";",   "::",  ":",   "%",   "[",  "]",  "{",   "}",   "(",  ")",  "~",  0,
+    "&&=", "||=", "...", "==", "!=", ">>=", "<<=", "->", ">>", "<<",
+    "+=",  "-=",  "*=",  "/=", "%=", "&=",  "|=",  "^=", "~=", "&&",
+    "||",  ">=",  "<=",  "=",  "!",  "+",   "-",   "*",  "/",  "&",
+    "|",   "^",   "?",   ",",  ".",  "<",   ">",   ";",  "::", ":",
+    "%",   "[",   "]",   "{",  "}",  "(",   ")",   "~",  0,
 };
 
 static token_t read_symbol_token(context_t ctx, position_t *position,
@@ -176,13 +174,12 @@ static token_t read_symbol_token(context_t ctx, position_t *position,
   if (!symbols[idx]) {
     return NULL;
   }
-  token_t token = create_symbol_token(
-      ctx, (location_t){filename, *position, current});
+  token_t token =
+      create_symbol_token(ctx, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
-static token_t read_whitespace_token(context_t ctx,
-                                     position_t *position,
+static token_t read_whitespace_token(context_t ctx, position_t *position,
                                      const char *filename) {
   position_t current = *position;
   size_t length = 0;
@@ -200,8 +197,8 @@ static token_t read_whitespace_token(context_t ctx,
   } else {
     return NULL;
   }
-  token_t token = create_whitespace_token(
-      ctx, (location_t){filename, *position, current});
+  token_t token =
+      create_whitespace_token(ctx, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
@@ -222,8 +219,8 @@ static token_t read_comment_token(context_t ctx, position_t *position,
       current.offset += length;
       current.column += length;
     }
-    token_t token = create_comment_token(
-        ctx, (location_t){filename, *position, current});
+    token_t token =
+        create_comment_token(ctx, (location_t){filename, *position, current});
     *position = current;
     return token;
   } else {
@@ -231,8 +228,7 @@ static token_t read_comment_token(context_t ctx, position_t *position,
   }
 }
 
-static token_t read_multiline_comment_token(context_t ctx,
-                                            position_t *position,
+static token_t read_multiline_comment_token(context_t ctx, position_t *position,
                                             const char *filename) {
   position_t current = *position;
   if (*current.offset == '/' && *(current.offset + 1) == '*') {
@@ -373,7 +369,7 @@ static token_t read_numeric_token(context_t ctx, position_t *position,
   } else {
     return NULL;
   }
-  token_t token = create_numeric_token(
+  token_t token = create_literal_numeric_token(
       ctx, (location_t){filename, *position, current});
   *position = current;
   return token;
@@ -450,7 +446,7 @@ static token_t read_string_token(context_t ctx, position_t *position,
       current.offset++;
     }
   }
-  token_t token = create_string_token(
+  token_t token = create_literal_string_token(
       ctx, (location_t){filename, *position, current});
   *position = current;
   return token;
@@ -556,22 +552,22 @@ static token_t read_char_token(context_t ctx, position_t *position,
   }
   current.offset++;
   current.column++;
-  token_t token =
-      create_char_token(ctx, (location_t){filename, *position, current});
+  token_t token = create_literal_char_token(
+      ctx, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
 static const char *keywords[] = {
-    "break",   "case",    "comptime", "const", "continue", "defer",
-    "do",      "else",     "enum",  "export",   "extern",
-    "for",     "foreach", "from",     "func",     "if",    "implement",
-    "import",  "interface",
-    "inline",  "of",  "pub",   "return",
-    "struct",  "switch",  "test",     "cunion", "union", "using", "volatile", "while",
-    "extends", "as",      "is",      "typeof", "sizeof", "alignof", "builtin", "exportlib", "type", "undefined", "var", 0,
+    "break",     "case",    "comptime",  "const",  "continue",  "defer",
+    "do",        "else",    "enum",      "export", "extern",    "for",
+    "foreach",   "from",    "func",      "if",     "implement", "import",
+    "interface", "inline",  "of",        "pub",    "return",    "struct",
+    "switch",    "test",    "cunion",    "union",  "using",     "volatile",
+    "while",     "extends", "as",        "is",     "typeof",    "sizeof",
+    "alignof",   "builtin", "exportlib", "type",   "undefined", "var",
+    0,
 };
-static token_t read_identifier_token(context_t ctx,
-                                     position_t *position,
+static token_t read_identifier_token(context_t ctx, position_t *position,
                                      const char *filename) {
   position_t current = *position;
   size_t length = 0;
@@ -599,7 +595,7 @@ static token_t read_identifier_token(context_t ctx,
       }
     }
     if (!token) {
-      token = create_identifier_token(ctx, location);
+      token = create_literal_identifier_token(ctx, location);
     }
     *position = current;
     return token;
@@ -611,12 +607,10 @@ static token_t read_eof_token(context_t ctx, position_t *position,
   if (*position->offset) {
     return NULL;
   }
-  return create_eof_token(ctx,
-                          (location_t){filename, *position, *position});
+  return create_eof_token(ctx, (location_t){filename, *position, *position});
 }
 
-token_t read_token(context_t ctx, position_t *position,
-                   const char *filename) {
+token_t read_token(context_t ctx, position_t *position, const char *filename) {
   token_t token = NULL;
   if (!token) {
     token = read_eof_token(ctx, position, filename);
@@ -634,8 +628,7 @@ token_t read_token(context_t ctx, position_t *position,
     token = read_comment_token(ctx, position, filename);
   }
   if (!token) {
-    token =
-        read_multiline_comment_token(ctx, position, filename);
+    token = read_multiline_comment_token(ctx, position, filename);
   }
   if (!token) {
     token = read_whitespace_token(ctx, position, filename);
@@ -659,9 +652,11 @@ token_t read_token(context_t ctx, position_t *position,
     };
     location_t loc = {
         .filename = filename,
-        .begin = {.line = position->line, .column = position->column,
+        .begin = {.line = position->line,
+                  .column = position->column,
                   .offset = start_offset},
-        .end = {.line = end_pos.line, .column = end_pos.column,
+        .end = {.line = end_pos.line,
+                .column = end_pos.column,
                 .offset = end_pos.offset},
     };
     token = create_error_token(ctx, loc);
@@ -680,7 +675,8 @@ vec_t resolve_token_list(context_t ctx, const char *filename,
   };
   while (true) {
     token_t token = read_token(ctx, &position, filename);
-    if (!token) goto onerror;
+    if (!token)
+      goto onerror;
     vec_push(vec, token);
     if (token_get_kind(token) == CUBEC_TOKEN_ERROR) {
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,

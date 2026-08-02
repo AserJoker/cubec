@@ -4,7 +4,8 @@
 static void _cubec_node_error_init(cubec_node_error_t self,
                                    allocator_t allocator,
                                    cubec_node_error_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_ERROR,
       .parent = NULL,
@@ -39,7 +40,7 @@ type_t g_cubec_node_error_type = {
     .move = (type_move_fn_t)_cubec_node_error_move,
 };
 
-node_t cubec_ast_create_error(context_t ctx, location_t loc) {
+node_t create_error(context_t ctx, location_t loc) {
   allocator_t alloc = ctx->allocator;
   cubec_node_error_init_t init = {.location = loc, .parent = NULL};
   return (node_t)allocator_create(alloc, &g_cubec_node_error_type, &init);

@@ -1,11 +1,11 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_INITIALIZE_LIST_
 #define _H_CUBEC_CUBEC_EXPRESSION_INITIALIZE_LIST_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -15,9 +15,11 @@ struct _cubec_expression_initialize_list_t {
   struct _cubec_expression_t super;
   node_t type;   /**< Optional type expression (NULL for anonymous .{...}) */
   vec_t items;   /**< vec_t of items — all initialize_field or all expression */
-  bool is_field; /**< true = items are initialize_field; false = positional expressions */
+  bool is_field; /**< true = items are initialize_field; false = positional
+                    expressions */
 };
-typedef struct _cubec_expression_initialize_list_t *cubec_expression_initialize_list_t;
+typedef struct _cubec_expression_initialize_list_t
+    *cubec_expression_initialize_list_t;
 
 extern type_t g_cubec_expression_initialize_list_type;
 
@@ -28,10 +30,12 @@ struct _cubec_expression_initialize_list_init_t {
   vec_t items;
   bool is_field;
 };
-typedef struct _cubec_expression_initialize_list_init_t cubec_expression_initialize_list_init_t;
+typedef struct _cubec_expression_initialize_list_init_t
+    cubec_expression_initialize_list_init_t;
 
 /**
- * @brief Try to parse an initialize list expression: \c .<type>{<items>} or \c .{<items>}
+ * @brief Try to parse an initialize list expression: \c .<type>{<items>} or \c
+ * .{<items>}
  *
  * Called from \c read_atom as a primary expression. Checks for \c '.' at the
  * current position, then looks ahead for \c '{' (anonymous) or identifier
@@ -46,7 +50,9 @@ typedef struct _cubec_expression_initialize_list_init_t cubec_expression_initial
 node_t read_expression_initialize_list(context_t ctx, vec_t tokens,
                                        size_t *position, const char *filename);
 
-node_t cubec_ast_create_initialize_list(context_t ctx, location_t loc, node_t type, vec_t items, bool is_field);
+node_t create_expression_initialize_list(context_t ctx, location_t loc,
+                                         node_t type, vec_t items,
+                                         bool is_field);
 
 #ifdef __cplusplus
 }

@@ -31,10 +31,9 @@ typedef struct _cubec_literal_string_init_t cubec_literal_string_init_t;
 node_t read_literal_string(context_t ctx, vec_t tokens, size_t *position,
                            const char *filename);
 
-node_t cubec_ast_create_string(context_t ctx, location_t loc,
-                               const char *value);
+node_t create_literal_string(context_t ctx, location_t loc, const char *value);
 
-void cubec_ast_write_string(writer_t writer, node_t node);
+void write_literal_string(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

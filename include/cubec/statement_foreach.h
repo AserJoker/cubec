@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_FOREACH_
 #define _H_CUBEC_CUBEC_STATEMENT_FOREACH_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,11 +29,11 @@ extern "C" {
 struct _cubec_statement_foreach_t;
 struct _cubec_statement_foreach_t {
   struct _node_t super;
-  bool is_var_decl;  /**< true = "var name[:type]", false = lvalue */
-  node_t variable;   /**< Identifier node for the loop variable */
-  node_t var_type;   /**< Optional type annotation (NULL if none) */
-  node_t iterator;   /**< Iterator expression */
-  node_t body;       /**< Body statement */
+  bool is_var_decl; /**< true = "var name[:type]", false = lvalue */
+  node_t variable;  /**< Identifier node for the loop variable */
+  node_t var_type;  /**< Optional type annotation (NULL if none) */
+  node_t iterator;  /**< Iterator expression */
+  node_t body;      /**< Body statement */
 };
 typedef struct _cubec_statement_foreach_t *cubec_statement_foreach_t;
 
@@ -53,10 +53,12 @@ typedef struct _cubec_statement_foreach_init_t cubec_statement_foreach_init_t;
 /**
  * @brief Try to parse a foreach statement.
  */
-node_t read_statement_foreach(context_t ctx, vec_t tokens,
-                               size_t *position, const char *filename);
+node_t read_statement_foreach(context_t ctx, vec_t tokens, size_t *position,
+                              const char *filename);
 
-node_t cubec_ast_create_foreach_stmt(context_t ctx, location_t loc, bool is_var_decl, node_t variable, node_t var_type, node_t iterator, node_t body);
+node_t create_statement_foreach(context_t ctx, location_t loc, bool is_var_decl,
+                                node_t variable, node_t var_type,
+                                node_t iterator, node_t body);
 
 #ifdef __cplusplus
 }

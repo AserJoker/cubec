@@ -12,10 +12,12 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_expression_type_struct_init(
-    cubec_expression_type_struct_t self, allocator_t allocator,
-    cubec_expression_type_struct_init_t *init) {
-  if (!init) return;
+static void
+_cubec_expression_type_struct_init(cubec_expression_type_struct_t self,
+                                   allocator_t allocator,
+                                   cubec_expression_type_struct_init_t *init) {
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_TYPE_STRUCT,
       .parent = NULL,
@@ -27,16 +29,18 @@ static void _cubec_expression_type_struct_init(
   self->members = init->members;
 }
 
-static void _cubec_expression_type_struct_dispose(
-    cubec_expression_type_struct_t self, allocator_t allocator) {
+static void
+_cubec_expression_type_struct_dispose(cubec_expression_type_struct_t self,
+                                      allocator_t allocator) {
   allocator_free(allocator, &self->members);
   allocator_free(allocator, &self->generic_params);
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_expression_type_struct_clone(
-    cubec_expression_type_struct_t self, allocator_t allocator,
-    cubec_expression_type_struct_t another) {
+static void
+_cubec_expression_type_struct_clone(cubec_expression_type_struct_t self,
+                                    allocator_t allocator,
+                                    cubec_expression_type_struct_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
                              ? value_clone(allocator, another->generic_params)
@@ -45,9 +49,10 @@ static void _cubec_expression_type_struct_clone(
   return;
 }
 
-static void _cubec_expression_type_struct_move(
-    cubec_expression_type_struct_t self, allocator_t allocator,
-    cubec_expression_type_struct_t another) {
+static void
+_cubec_expression_type_struct_move(cubec_expression_type_struct_t self,
+                                   allocator_t allocator,
+                                   cubec_expression_type_struct_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
                              ? value_move(allocator, another->generic_params)
@@ -71,14 +76,17 @@ type_t g_cubec_expression_type_struct_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -88,9 +96,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  * -------------------------------------------------------------------------- */
 
 node_t read_expression_type_struct_body(context_t ctx, vec_t tokens,
-                                         size_t *position, const char *filename,
-                                         location_t start_location,
-                                         vec_t *out_implements) {
+                                        size_t *position, const char *filename,
+                                        location_t start_location,
+                                        vec_t *out_implements) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   vec_t generic_params = NULL;
@@ -108,8 +116,10 @@ node_t read_expression_type_struct_body(context_t ctx, vec_t tokens,
   if (out_implements && _is_keyword(tokens, current, "implement")) {
     current++;
     skip_whitespace(tokens, &current);
-    node_t iface_expr = read_type_expression_primary(ctx, tokens, &current, filename);
-    if (node_is_error(iface_expr)) goto onerror;
+    node_t iface_expr =
+        read_type_expression_primary(ctx, tokens, &current, filename);
+    if (node_is_error(iface_expr))
+      goto onerror;
     if (!iface_expr) {
       goto cleanup;
     }
@@ -119,8 +129,10 @@ node_t read_expression_type_struct_body(context_t ctx, vec_t tokens,
     while (_is_symbol(tokens, current, ",")) {
       current++;
       skip_whitespace(tokens, &current);
-      iface_expr = read_type_expression_primary(ctx, tokens, &current, filename);
-      if (node_is_error(iface_expr)) goto onerror;
+      iface_expr =
+          read_type_expression_primary(ctx, tokens, &current, filename);
+      if (node_is_error(iface_expr))
+        goto onerror;
       if (!iface_expr) {
         goto cleanup;
       }
@@ -145,7 +157,8 @@ node_t read_expression_type_struct_body(context_t ctx, vec_t tokens,
     token_t tok = vec_get(tokens, current);
     if (token_is(tok, CUBEC_TOKEN_SYMBOL, "...")) {
       member = read_expression_spread(ctx, tokens, &current, filename);
-      if (node_is_error(member)) goto onerror;
+      if (node_is_error(member))
+        goto onerror;
       if (!member) {
         break;
       }
@@ -161,13 +174,15 @@ node_t read_expression_type_struct_body(context_t ctx, vec_t tokens,
     /* Try struct field: [pub] <identifier> : <type> ; */
     if (!member) {
       member = read_struct_field(ctx, tokens, &current, filename);
-      if (node_is_error(member)) goto onerror;
+      if (node_is_error(member))
+        goto onerror;
     }
 
     /* Try statement (var, type, func, struct, interface, etc.) */
     if (!member) {
       member = read_statement(ctx, tokens, &current, filename);
-      if (node_is_error(member)) goto onerror;
+      if (node_is_error(member))
+        goto onerror;
     }
 
     if (!member) {
@@ -199,8 +214,10 @@ node_t read_expression_type_struct_body(context_t ctx, vec_t tokens,
       .generic_params = generic_params,
       .members = members,
   };
-  node = allocator_create(allocator, &g_cubec_expression_type_struct_type, &init);
-  if (out_implements) *out_implements = implements;
+  node =
+      allocator_create(allocator, &g_cubec_expression_type_struct_type, &init);
+  if (out_implements)
+    *out_implements = implements;
   *position = current;
   return (node_t)&node->super;
 
@@ -215,7 +232,7 @@ onerror:
   allocator_free(allocator, &members);
   allocator_free(allocator, &generic_params);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
 /* --------------------------------------------------------------------------
@@ -223,7 +240,7 @@ onerror:
  * -------------------------------------------------------------------------- */
 
 node_t read_expression_type_struct(context_t ctx, vec_t tokens,
-                                    size_t *position, const char *filename) {
+                                   size_t *position, const char *filename) {
   allocator_t allocator = ctx->allocator;
   (void)allocator;
   size_t current = *position;
@@ -238,15 +255,17 @@ node_t read_expression_type_struct(context_t ctx, vec_t tokens,
   current++;
   skip_whitespace(tokens, &current);
 
-  node_t result = read_expression_type_struct_body(ctx, tokens, &current, filename, start_location, NULL);
-  if (node_is_error(result)) return result;
+  node_t result = read_expression_type_struct_body(
+      ctx, tokens, &current, filename, start_location, NULL);
+  if (node_is_error(result))
+    return result;
   if (result) {
     *position = current;
     return result;
   }
 
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid struct type expression");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid struct type expression");
   ctx->error_count++;
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }

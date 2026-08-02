@@ -11,6 +11,7 @@ struct _writer_t;
 typedef struct _writer_t *writer_t;
 void writer_append(writer_t self, const char *line);
 void writer_newline(writer_t self, int32_t indent);
+string_t writer_get_current_line(writer_t self);
 string_t writer_get_string(writer_t self);
 
 #ifdef __cplusplus

@@ -1,11 +1,11 @@
 #ifndef _H_CUBEC_CUBEC_LITERAL_CHAR_
 #define _H_CUBEC_CUBEC_LITERAL_CHAR_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
 #include "cubec/literal.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,7 +29,7 @@ typedef struct _cubec_literal_char_init_t cubec_literal_char_init_t;
 node_t read_literal_char(context_t ctx, vec_t tokens, size_t *position,
                          const char *filename);
 
-node_t cubec_ast_create_char(context_t ctx, location_t loc, char value);
+node_t create_literal_char(context_t ctx, location_t loc, char value);
 
 #ifdef __cplusplus
 }

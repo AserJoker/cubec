@@ -1,7 +1,7 @@
 #include "cubec/expression_slice.h"
 #include "core/token.h"
-#include "cubec/token.h"
 #include "cubec/node_error.h"
+#include "cubec/token.h"
 #include <inttypes.h>
 
 /* --------------------------------------------------------------------------
@@ -9,9 +9,10 @@
  * -------------------------------------------------------------------------- */
 
 static void _cubec_expression_slice_init(cubec_expression_slice_t self,
-                                          allocator_t allocator,
-                                          cubec_expression_slice_init_t *init) {
-  if (!init) return;
+                                         allocator_t allocator,
+                                         cubec_expression_slice_init_t *init) {
+  if (!init)
+    return;
   cubec_expression_init_t super_init = {
       .kind = CUBEC_NODE_EXPRESSION_SLICE,
       .parent = NULL,
@@ -26,7 +27,7 @@ static void _cubec_expression_slice_init(cubec_expression_slice_t self,
 }
 
 static void _cubec_expression_slice_dispose(cubec_expression_slice_t self,
-                                             allocator_t allocator) {
+                                            allocator_t allocator) {
   allocator_free(allocator, &self->host);
   allocator_free(allocator, &self->start);
   allocator_free(allocator, &self->length);
@@ -34,8 +35,8 @@ static void _cubec_expression_slice_dispose(cubec_expression_slice_t self,
 }
 
 static void _cubec_expression_slice_clone(cubec_expression_slice_t self,
-                                           allocator_t allocator,
-                                           cubec_expression_slice_t another) {
+                                          allocator_t allocator,
+                                          cubec_expression_slice_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->host = value_clone(allocator, another->host);
   self->start = value_clone(allocator, another->start);
@@ -49,8 +50,8 @@ cleanup:
 }
 
 static void _cubec_expression_slice_move(cubec_expression_slice_t self,
-                                          allocator_t allocator,
-                                          cubec_expression_slice_t another) {
+                                         allocator_t allocator,
+                                         cubec_expression_slice_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->host = value_move(allocator, another->host);
   self->start = value_move(allocator, another->start);
@@ -76,9 +77,8 @@ type_t g_cubec_expression_slice_type = {
  *  Parser: read_expression_slice
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_slice(context_t ctx, vec_t tokens,
-                              size_t *position, const char *filename,
-                              node_t host) {
+node_t read_expression_slice(context_t ctx, vec_t tokens, size_t *position,
+                             const char *filename, node_t host) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_slice_t node = NULL;
@@ -101,7 +101,8 @@ node_t read_expression_slice(context_t ctx, vec_t tokens,
     size_t lookahead = current + 1; /* skip '[' itself */
     skip_whitespace(tokens, &lookahead);
 
-    /* Quick check: if next token is ':', it's definitely a slice (length-only) */
+    /* Quick check: if next token is ':', it's definitely a slice (length-only)
+     */
     token_t tok = vec_get(tokens, lookahead);
     if (token_is(tok, CUBEC_TOKEN_SYMBOL, ":")) {
       /* Confirmed: this is a slice starting with [:length] */
@@ -115,19 +116,22 @@ node_t read_expression_slice(context_t ctx, vec_t tokens,
       size_t expr_depth = 0;
       while (true) {
         tok = vec_get(tokens, lookahead);
-        if (!tok) break;
+        if (!tok)
+          break;
 
         /* Track bracket depth for potential generic args */
         if (token_is(tok, CUBEC_TOKEN_SYMBOL, "[")) {
           expr_depth++;
         } else if (token_is(tok, CUBEC_TOKEN_SYMBOL, "]")) {
-          if (expr_depth == 0) break; /* End of this bracket group */
+          if (expr_depth == 0)
+            break; /* End of this bracket group */
           expr_depth--;
         } else if (token_is(tok, CUBEC_TOKEN_SYMBOL, ":")) {
           found_colon = true;
           break;
         } else if (token_is(tok, CUBEC_TOKEN_SYMBOL, ",")) {
-          if (expr_depth == 0) break; /* Comma in generic args */
+          if (expr_depth == 0)
+            break; /* Comma in generic args */
         }
         lookahead++;
       }
@@ -215,28 +219,26 @@ node_t read_expression_slice(context_t ctx, vec_t tokens,
 
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       open_bracket ? *token_get_location(open_bracket) : (location_t){0},
+                       open_bracket ? *token_get_location(open_bracket)
+                                    : (location_t){0},
                        "invalid slice expression syntax");
   ctx->error_count++;
   allocator_free(allocator, &start);
   allocator_free(allocator, &length);
   /* host ownership: caller (read_value) owns it and will clean up */
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx,
-      open_bracket ? *token_get_location(open_bracket) : (location_t){0});
+  return create_error(ctx, open_bracket ? *token_get_location(open_bracket)
+                                        : (location_t){0});
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: cubec_ast_create_slice_expr
+ *  Factory: create_expression_slice
  * -------------------------------------------------------------------------- */
 
-node_t cubec_ast_create_slice_expr(context_t ctx, location_t loc,
-                                   node_t host, node_t start,
-                                   node_t length) {
+node_t create_expression_slice(context_t ctx, location_t loc, node_t host,
+                               node_t start, node_t length) {
   allocator_t alloc = ctx->allocator;
-                                        cubec_expression_slice_init_t init = {
-                                        .host = host, .start = start,
-                                        .length = length};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_slice_type,
-                                  &init);
+  cubec_expression_slice_init_t init = {
+      .host = host, .start = start, .length = length};
+  return (node_t)allocator_create(alloc, &g_cubec_expression_slice_type, &init);
 }

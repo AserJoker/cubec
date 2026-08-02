@@ -1,10 +1,10 @@
 #ifndef _H_CUBEC_CUBEC_ENUM_ITEM_
 #define _H_CUBEC_CUBEC_ENUM_ITEM_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,9 +27,9 @@ extern "C" {
 struct _cubec_enum_item_t;
 struct _cubec_enum_item_t {
   struct _node_t super;
-  node_t name;   /**< Identifier node for the item name (required) */
-  node_t type;   /**< Type expression (nullable, inferred when omitted) */
-  node_t value;  /**< Value expression (nullable, auto-increment when omitted) */
+  node_t name;  /**< Identifier node for the item name (required) */
+  node_t type;  /**< Type expression (nullable, inferred when omitted) */
+  node_t value; /**< Value expression (nullable, auto-increment when omitted) */
 };
 typedef struct _cubec_enum_item_t *cubec_enum_item_t;
 
@@ -53,10 +53,11 @@ typedef struct _cubec_enum_item_init_t cubec_enum_item_init_t;
  * @return A new cubec_enum_item_t node, or NULL if current tokens
  *         don't match the item pattern.
  */
-node_t read_enum_item(context_t ctx, vec_t tokens,
-                       size_t *position, const char *filename);
+node_t read_enum_item(context_t ctx, vec_t tokens, size_t *position,
+                      const char *filename);
 
-node_t cubec_ast_create_enum_item(context_t ctx, location_t loc, const char *name, node_t type, node_t value);
+node_t create_enum_item(context_t ctx, location_t loc, const char *name,
+                        node_t type, node_t value);
 
 #ifdef __cplusplus
 }

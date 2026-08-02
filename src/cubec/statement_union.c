@@ -207,14 +207,13 @@ onerror:
   allocator_free(allocator, &name);
   allocator_free(allocator, &expr_node);
   allocator_free(allocator, &node);
-  return cubec_ast_create_error(ctx, start_location);
+  return create_error(ctx, start_location);
 }
 
-node_t cubec_ast_create_union_stmt(context_t ctx, location_t loc,
-                                   const char *name, vec_t members,
-                                   bool is_export, vec_t implements) {
+node_t create_statement_union(context_t ctx, location_t loc, const char *name,
+                              vec_t members, bool is_export, vec_t implements) {
   allocator_t alloc = ctx->allocator;
-  node_t name_node = cubec_ast_create_identifier(ctx, loc, name);
+  node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_statement_union_init_t init = {
       .location = loc,
       .parent = NULL,
