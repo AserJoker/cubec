@@ -144,7 +144,7 @@ TEST_F(dt_checker, pass2_struct_basic_debug) {
   /* Minimal: just create checker + empty struct */
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts, create_statement_struct(ctx, T, "Point",
-                                          create_vec(ctx, true), false, NULL));
+                                          create_vec(ctx, true), false, NULL, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -171,7 +171,7 @@ TEST_F(dt_checker, pass2_struct_basic) {
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,
-           create_statement_struct(ctx, T, "Point", members, false, NULL));
+           create_statement_struct(ctx, T, "Point", members, false, NULL, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -221,7 +221,7 @@ TEST_F(dt_checker, pass2_enum_basic) {
   vec_push(items, create_enum_item(ctx, T, "Blue", NULL, NULL));
 
   vec_t stmts = create_vec(ctx, true);
-  vec_push(stmts, create_statement_enum(ctx, T, "Color", items, false));
+  vec_push(stmts, create_statement_enum(ctx, T, "Color", items, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -272,7 +272,7 @@ TEST_F(dt_checker, pass2_union_basic) {
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,
-           create_statement_union(ctx, T, "Value", members, false, NULL));
+           create_statement_union(ctx, T, "Value", members, false, NULL, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -308,7 +308,7 @@ TEST_F(dt_checker, pass2_cunion_basic) {
                                        false));
 
   vec_t stmts = create_vec(ctx, true);
-  vec_push(stmts, create_statement_cunion(ctx, T, "Data", fields));
+  vec_push(stmts, create_statement_cunion(ctx, T, "Data", fields, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -342,7 +342,7 @@ TEST_F(dt_checker, pass2_function_basic) {
   vec_push(stmts,
            create_statement_func(ctx, T, "add", args,
                                  create_literal_identifier(ctx, T, "i32"), NULL,
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -398,7 +398,7 @@ TEST_F(dt_checker, pass2_variable_typed) {
 }
 
 TEST_F(dt_checker, pass2_variable_inferred_literal) {
-  /* var n = 42 — type inferred as i32 */
+  /* var n = 42 鈥?type inferred as i32 */
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts, create_statement_declaration(
                       ctx, T, "n", NULL,
@@ -426,7 +426,7 @@ TEST_F(dt_checker, pass2_type_alias) {
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts, create_statement_declaration_type(
                       ctx, T, "MyInt", create_literal_identifier(ctx, T, "i32"),
-                      false, false));
+                      false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -444,12 +444,12 @@ TEST_F(dt_checker, pass2_type_alias) {
 }
 
 TEST_F(dt_checker, pass2_duplicate_continues) {
-  /* Two structs with same name — Pass 1 errors, Pass 2 skips */
+  /* Two structs with same name 鈥?Pass 1 errors, Pass 2 skips */
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts, create_statement_struct(ctx, T, "Foo", create_vec(ctx, true),
-                                          false, NULL));
+                                          false, NULL, NULL));
   vec_push(stmts, create_statement_struct(ctx, T, "Foo", create_vec(ctx, true),
-                                          false, NULL));
+                                          false, NULL, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -468,7 +468,7 @@ TEST_F(dt_checker, pass2_duplicate_continues) {
 }
 
 TEST_F(dt_checker, pass2_incomplete_type_in_var) {
-  /* Use void as value type — void is incomplete, should produce an error */
+  /* Use void as value type 鈥?void is incomplete, should produce an error */
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts, create_statement_declaration(
                       ctx, T, "x", create_literal_identifier(ctx, T, "void"),
@@ -498,11 +498,11 @@ TEST_F(dt_checker, pass2_function_with_custom_types) {
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,
-           create_statement_struct(ctx, T, "Point", members, false, NULL));
+           create_statement_struct(ctx, T, "Point", members, false, NULL, NULL));
   vec_push(stmts, create_statement_func(
                       ctx, T, "origin", create_vec(ctx, true),
                       create_literal_identifier(ctx, T, "Point"), NULL, false,
-                      false, false, false, false, false));
+                      false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -649,11 +649,11 @@ TEST_F(dt_checker, pass2_struct_method) {
   vec_push(members,
            create_statement_func(ctx, T, "get", args,
                                  create_literal_identifier(ctx, T, "i32"), NULL,
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,
-           create_statement_struct(ctx, T, "Counter", members, false, NULL));
+           create_statement_struct(ctx, T, "Counter", members, false, NULL, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -689,7 +689,7 @@ TEST_F(dt_checker, pass2_struct_static_field) {
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,
-           create_statement_struct(ctx, T, "Config", members, false, NULL));
+           create_statement_struct(ctx, T, "Config", members, false, NULL, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -716,7 +716,7 @@ TEST_F(dt_checker, pass2_interface_associated_type) {
   /* interface Hashable { type Key; func hash(key: Key): u64; } */
   vec_t members = create_vec(ctx, true);
   vec_push(members, create_statement_declaration_type(ctx, T, "Key", NULL,
-                                                      false, false));
+                                                      false, false, NULL));
   vec_t args = create_vec(ctx, true);
   vec_push(args, create_function_argument(
                      ctx, T, "key", create_literal_identifier(ctx, T, "Key")));
@@ -726,7 +726,7 @@ TEST_F(dt_checker, pass2_interface_associated_type) {
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,
-           create_statement_interface(ctx, T, "Hashable", members, false));
+           create_statement_interface(ctx, T, "Hashable", members, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -766,7 +766,7 @@ TEST_F(dt_checker, pass3_return_typed) {
            create_statement_func(ctx, T, "f", create_vec(ctx, true),
                                  create_literal_identifier(ctx, T, "i32"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -778,7 +778,7 @@ TEST_F(dt_checker, pass3_return_typed) {
 }
 
 TEST_F(dt_checker, pass3_return_mismatch) {
-  /* func f(): i32 { return "hello"; } — type mismatch */
+  /* func f(): i32 { return "hello"; } 鈥?type mismatch */
   vec_t body_stmts = create_vec(ctx, true);
   vec_push(body_stmts, create_statement_return(
                            ctx, T, create_literal_string(ctx, T, "hello")));
@@ -788,7 +788,7 @@ TEST_F(dt_checker, pass3_return_mismatch) {
            create_statement_func(ctx, T, "f", create_vec(ctx, true),
                                  create_literal_identifier(ctx, T, "i32"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -800,7 +800,7 @@ TEST_F(dt_checker, pass3_return_mismatch) {
 }
 
 TEST_F(dt_checker, pass3_return_void) {
-  /* func f() { return; } — bare return in void function */
+  /* func f() { return; } 鈥?bare return in void function */
   vec_t body_stmts = create_vec(ctx, true);
   vec_push(body_stmts, create_statement_return(ctx, T, NULL));
 
@@ -808,7 +808,7 @@ TEST_F(dt_checker, pass3_return_void) {
   vec_push(stmts,
            create_statement_func(ctx, T, "f", create_vec(ctx, true), NULL,
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -839,7 +839,7 @@ TEST_F(dt_checker, pass3_binary_arithmetic) {
            create_statement_func(ctx, T, "f", create_vec(ctx, true),
                                  create_literal_identifier(ctx, T, "i32"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -870,7 +870,7 @@ TEST_F(dt_checker, pass3_binary_comparison) {
            create_statement_func(ctx, T, "f", create_vec(ctx, true),
                                  create_literal_identifier(ctx, T, "bool"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -895,7 +895,7 @@ TEST_F(dt_checker, pass3_call_basic) {
   vec_push(stmts,
            create_statement_func(ctx, T, "add", add_args,
                                  create_literal_identifier(ctx, T, "i32"), NULL,
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   vec_t call_args = create_vec(ctx, true);
   vec_push(call_args, create_literal_numeric(
@@ -916,7 +916,7 @@ TEST_F(dt_checker, pass3_call_basic) {
            create_statement_func(ctx, T, "f", create_vec(ctx, true),
                                  create_literal_identifier(ctx, T, "i32"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -945,17 +945,17 @@ TEST_F(dt_checker, pass3_member_access) {
            create_statement_func(ctx, T, "get_x", method_args,
                                  create_literal_identifier(ctx, T, "f64"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,
-           create_statement_struct(ctx, T, "Point", members, false, NULL));
+           create_statement_struct(ctx, T, "Point", members, false, NULL, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
-  /* 'self' is not automatically registered — this will error as undeclared.
+  /* 'self' is not automatically registered 鈥?this will error as undeclared.
      That's expected for now. Just ensure no crash. */
   context_dispose(checker);
   allocator_free(allocator, &prog);
@@ -971,17 +971,19 @@ TEST_F(dt_checker, pass3_deref_addr) {
   vec_push(body_stmts,
            create_statement_return(
                ctx, T,
-               create_expression_deref(
-                   ctx, T,
-                   create_expression_addr(
-                       ctx, T, create_literal_identifier(ctx, T, "x")))));
+              create_expression_postfix_unary(
+                  ctx, T,
+                  create_expression_postfix_unary(
+                      ctx, T, create_literal_identifier(ctx, T, "x"),
+                      CUBEC_NODE_EXPRESSION_ADDR),
+                  CUBEC_NODE_EXPRESSION_DEREF)));
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,
            create_statement_func(ctx, T, "f", create_vec(ctx, true),
                                  create_literal_identifier(ctx, T, "i32"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -1012,13 +1014,13 @@ TEST_F(dt_checker, pass3_ternary) {
            create_statement_func(ctx, T, "f", create_vec(ctx, true),
                                  create_literal_identifier(ctx, T, "i32"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
-  /* 'true' is not a builtin identifier — it'll error. Just ensure no crash. */
+  /* 'true' is not a builtin identifier 鈥?it'll error. Just ensure no crash. */
   context_dispose(checker);
   allocator_free(allocator, &prog);
 }
@@ -1038,7 +1040,7 @@ TEST_F(dt_checker, pass3_local_var) {
   vec_push(stmts,
            create_statement_func(ctx, T, "f", create_vec(ctx, true), NULL,
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -1058,7 +1060,7 @@ TEST_F(dt_checker, pass3_break_in_loop) {
   vec_push(stmts, create_statement_func(
                       ctx, T, "f", create_vec(ctx, true), NULL,
                       create_statement_block(ctx, T, create_vec(ctx, true)),
-                      false, false, false, false, false, false));
+                      false, false, false, false, false, false, NULL));
 
   /* Add while inside the block */
   cubec_statement_block_t outer_block =
@@ -1073,7 +1075,7 @@ TEST_F(dt_checker, pass3_break_in_loop) {
   context_t checker = context_create(allocator);
   context_check_program(checker, prog);
 
-  /* 'true' is undeclared — but break is in a loop so no break error */
+  /* 'true' is undeclared 鈥?but break is in a loop so no break error */
   context_dispose(checker);
   allocator_free(allocator, &prog);
 }
@@ -1087,7 +1089,7 @@ TEST_F(dt_checker, pass3_break_outside_loop) {
   vec_push(stmts,
            create_statement_func(ctx, T, "f", create_vec(ctx, true), NULL,
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -1131,7 +1133,7 @@ TEST_F(dt_checker, pass3_anonymous_function) {
            create_statement_func(ctx, T, "f", create_vec(ctx, true),
                                  create_literal_identifier(ctx, T, "i32"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -1155,7 +1157,7 @@ TEST_F(dt_checker, pass3_init_list_field) {
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,
-           create_statement_struct(ctx, T, "Point", fields, false, NULL));
+           create_statement_struct(ctx, T, "Point", fields, false, NULL, NULL));
 
   /* initialize list with named fields */
   vec_t init_items = create_vec(ctx, true);
@@ -1182,7 +1184,7 @@ TEST_F(dt_checker, pass3_init_list_field) {
            create_statement_func(ctx, T, "f", create_vec(ctx, true),
                                  create_literal_identifier(ctx, T, "Point"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -1202,7 +1204,7 @@ TEST_F(dt_checker, pass3_init_list_field_mismatch) {
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,
-           create_statement_struct(ctx, T, "Point", fields, false, NULL));
+           create_statement_struct(ctx, T, "Point", fields, false, NULL, NULL));
 
   vec_t init_items = create_vec(ctx, true);
   vec_push(init_items, create_initialize_field(
@@ -1220,7 +1222,7 @@ TEST_F(dt_checker, pass3_init_list_field_mismatch) {
            create_statement_func(ctx, T, "f", create_vec(ctx, true),
                                  create_literal_identifier(ctx, T, "Point"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -1243,7 +1245,7 @@ TEST_F(dt_checker, pass3_init_list_positional) {
                                        false));
 
   vec_t stmts = create_vec(ctx, true);
-  vec_push(stmts, create_statement_struct(ctx, T, "Pair", fields, false, NULL));
+  vec_push(stmts, create_statement_struct(ctx, T, "Pair", fields, false, NULL, NULL));
 
   vec_t init_items = create_vec(ctx, true);
   vec_push(init_items, create_literal_numeric(
@@ -1265,7 +1267,7 @@ TEST_F(dt_checker, pass3_init_list_positional) {
            create_statement_func(ctx, T, "f", create_vec(ctx, true),
                                  create_literal_identifier(ctx, T, "Pair"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);
@@ -1292,15 +1294,16 @@ TEST_F(dt_checker, pass3_deref_pointer) {
   vec_push(body_stmts,
            create_statement_return(
                ctx, T,
-               create_expression_deref(
-                   ctx, T, create_literal_identifier(ctx, T, "p"))));
+              create_expression_postfix_unary(
+                  ctx, T, create_literal_identifier(ctx, T, "p"),
+                  CUBEC_NODE_EXPRESSION_DEREF)));
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,
            create_statement_func(ctx, T, "f", create_vec(ctx, true),
                                  create_literal_identifier(ctx, T, "i32"),
                                  create_statement_block(ctx, T, body_stmts),
-                                 false, false, false, false, false, false));
+                                 false, false, false, false, false, false, NULL));
 
   node_t prog = create_program(ctx, T, stmts);
   context_t checker = context_create(allocator);

@@ -60,7 +60,7 @@ static node_t create_builtin_assert(context_t ctx) {
   vec_push(args, param);
   return create_statement_func(ctx, T, "assert", args,
                                create_literal_identifier(ctx, T, "void"), NULL,
-                               false, false, false, true, false, false);
+                               false, false, false, true, false, false, NULL);
 }
 
 class dt_comptime_eval : public CubecTest {
@@ -484,7 +484,7 @@ TEST_F(dt_comptime_eval, function_call) {
 
   node_t ret_type = create_literal_identifier(checker, T, "i32");
   node_t fn = create_statement_func(checker, T, "double", args, ret_type, body,
-                                    false, false, false, false, false, false);
+                                    false, false, false, false, false, false, NULL);
 
   vec_t stmts = create_vec(checker, true);
   vec_push(stmts, fn);
@@ -524,7 +524,7 @@ TEST_F(dt_comptime_eval, function_call) {
 TEST_F(dt_comptime_eval, comptime_block_executes) {
   context_t checker = context_create(allocator);
 
-  /* comptime { } — empty comptime block */
+  /* comptime { } 鈥?empty comptime block */
   vec_t empty_vec = create_vec(checker, true);
   node_t block = create_statement_block(checker, T, empty_vec);
   comptime_signal_t sig =
@@ -868,7 +868,7 @@ TEST_F(dt_comptime_eval, composite_field_assign) {
   EXPECT_EQ(x_field->int_val.s, 99);
   allocator_free(allocator, &x_field);
   allocator_free(allocator, &asgn);
-  /* Dispose checker first — comptime values reference pt_type via comp->type,
+  /* Dispose checker first 鈥?comptime values reference pt_type via comp->type,
      so pt_type must remain valid until comptime_allocator_dispose runs. */
   context_dispose(checker);
   allocator_free(allocator, &pt_type);
@@ -1071,7 +1071,7 @@ TEST_F(dt_comptime_eval, test_block_calls_function) {
   node_t ret_type = create_literal_identifier(ctx, T, "i32");
   node_t fn =
       create_statement_func(ctx, T, "double", fn_args, ret_type, fn_body, false,
-                            false, false, false, false, false);
+                            false, false, false, false, false, NULL);
 
   /* assert(double(21) == 42) */
   node_t arg21 =
@@ -1113,7 +1113,7 @@ TEST_F(dt_comptime_eval, test_block_calls_function) {
 }
 
 TEST_F(dt_comptime_eval, test_block_failure_isolation) {
-  /* Two tests: first fails, second passes — error_count should be 1 (not abort)
+  /* Two tests: first fails, second passes 鈥?error_count should be 1 (not abort)
    */
   /* test "fail" { assert(false); } test "pass" { assert(true); } */
 
