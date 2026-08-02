@@ -1,10 +1,11 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_EMPTY_
 #define _H_CUBEC_CUBEC_STATEMENT_EMPTY_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,6 +28,8 @@ node_t read_statement_empty(context_t ctx, vec_t tokens, size_t *position,
                             const char *filename);
 
 node_t cubec_ast_create_empty_stmt(context_t ctx, location_t loc);
+
+void cubec_ast_write_empty_stmt(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

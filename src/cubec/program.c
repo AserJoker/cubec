@@ -1,14 +1,16 @@
 #include "cubec/program.h"
-#include "cubec/node_error.h"
 #include "core/token.h"
+#include "core/writer.h"
+#include "cubec/node_error.h"
 #include "cubec/statement.h"
-#include "cubec/token.h"
 #include "cubec/statement_error.h"
+#include "cubec/token.h"
 
 static void _cubec_program_node_init(cubec_program_node_t self,
                                      allocator_t allocator,
                                      cubec_program_node_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_PROGRAM,
       .parent = NULL,
@@ -55,14 +57,16 @@ node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   token_t begin = vec_get(tokens, current);
-  if (!begin) goto onerror;
+  if (!begin)
+    goto onerror;
   cubec_program_node_init_t init = {
       .location = *token_get_location(begin),
       .parent = NULL,
   };
   cubec_program_node_t node =
       allocator_create(allocator, &g_cubec_program_node_type, &init);
-  if (!node) goto onerror;
+  if (!node)
+    goto onerror;
 
   while (true) {
     skip_whitespace(tokens, &current);
@@ -77,7 +81,8 @@ node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
     node_t statement = read_statement(ctx, tokens, &current, filename);
 
     if (node_is_error(statement)) {
-      /* Error node — push as placeholder, recovery already done by read_statement */
+      /* Error node — push as placeholder, recovery already done by
+       * read_statement */
       vec_push(node->statements, statement);
       continue;
     }
@@ -99,7 +104,8 @@ node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
   }
 
   token_t end = vec_get(tokens, current);
-  if (!end) goto onerror;
+  if (!end)
+    goto onerror;
   node->super.location.begin = token_get_location(begin)->begin;
   node->super.location.end = token_get_location(end)->begin;
   node->super.location.filename = filename;
@@ -113,7 +119,15 @@ onerror:
 node_t cubec_ast_create_program(context_t ctx, location_t loc,
                                 vec_t statements) {
   allocator_t alloc = ctx->allocator;
-                                    cubec_program_node_init_t init = {
-                                    .statements = statements};
+  cubec_program_node_init_t init = {.statements = statements};
   return (node_t)allocator_create(alloc, &g_cubec_program_node_type, &init);
+}
+
+void cubec_ast_write_program(writer_t writer, node_t node) {
+  cubec_program_node_t program = (cubec_program_node_t)node;
+  for (size_t idx = 0; idx < vec_get_size(program->statements); idx++) {
+    node_t statement = vec_get(program->statements, idx);
+    cubec_ast_write_statement(writer, statement);
+    writer_newline(writer, 0);
+  }
 }

@@ -1,16 +1,20 @@
 #include "cubec/statement_export_from.h"
-#include "cubec/literal_identifier.h"
-#include "cubec/node_error.h"
 #include "core/token.h"
+#include "core/vec.h"
+#include "core/writer.h"
+#include "cubec/literal_identifier.h"
 #include "cubec/literal_string.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
 
 /* ===== lifecycle ===== */
 
-static void _cubec_statement_export_from_init(
-    cubec_statement_export_from_t self, allocator_t allocator,
-    cubec_statement_export_from_init_t *init) {
-  if (!init) return;
+static void
+_cubec_statement_export_from_init(cubec_statement_export_from_t self,
+                                  allocator_t allocator,
+                                  cubec_statement_export_from_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_EXPORT_FROM,
       .parent = NULL,
@@ -22,16 +26,18 @@ static void _cubec_statement_export_from_init(
   self->names = init->names;
 }
 
-static void _cubec_statement_export_from_dispose(
-    cubec_statement_export_from_t self, allocator_t allocator) {
+static void
+_cubec_statement_export_from_dispose(cubec_statement_export_from_t self,
+                                     allocator_t allocator) {
   allocator_free(allocator, &self->names);
   allocator_free(allocator, &self->path);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_statement_export_from_clone(
-    cubec_statement_export_from_t self, allocator_t allocator,
-    cubec_statement_export_from_t another) {
+static void
+_cubec_statement_export_from_clone(cubec_statement_export_from_t self,
+                                   allocator_t allocator,
+                                   cubec_statement_export_from_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->path = value_clone(allocator, another->path);
   self->is_star = another->is_star;
@@ -39,9 +45,10 @@ static void _cubec_statement_export_from_clone(
   return;
 }
 
-static void _cubec_statement_export_from_move(
-    cubec_statement_export_from_t self, allocator_t allocator,
-    cubec_statement_export_from_t another) {
+static void
+_cubec_statement_export_from_move(cubec_statement_export_from_t self,
+                                  allocator_t allocator,
+                                  cubec_statement_export_from_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->path = value_move(allocator, another->path);
   self->is_star = another->is_star;
@@ -62,15 +69,17 @@ type_t g_cubec_statement_export_from_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 /* ===== parser ===== */
 
-node_t read_statement_export_from(context_t ctx, vec_t tokens,
-                                  size_t *position, const char *filename) {
+node_t read_statement_export_from(context_t ctx, vec_t tokens, size_t *position,
+                                  const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_statement_export_from_t node = NULL;
@@ -91,7 +100,8 @@ node_t read_statement_export_from(context_t ctx, vec_t tokens,
 
   /* Check next token: '*' or '{' */
   token_t next = vec_get(tokens, current);
-  if (!next) return NULL;
+  if (!next)
+    return NULL;
 
   bool is_star = false;
   if (token_is(next, CUBEC_TOKEN_SYMBOL, "*")) {
@@ -105,7 +115,7 @@ node_t read_statement_export_from(context_t ctx, vec_t tokens,
     skip_whitespace(tokens, &current);
 
     names = allocator_create(allocator, &g_vec_type,
-                         &(vec_init_t){.auto_dispose = true});
+                             &(vec_init_t){.auto_dispose = true});
     /* Read comma-separated identifiers */
     while (true) {
       skip_whitespace(tokens, &current);
@@ -172,16 +182,38 @@ node_t read_statement_export_from(context_t ctx, vec_t tokens,
       .is_star = is_star,
       .names = names,
   };
-  node = allocator_create(allocator, &g_cubec_statement_export_from_type, &init);
+  node =
+      allocator_create(allocator, &g_cubec_statement_export_from_type, &init);
   *position = current;
   return &node->super;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid export from statement");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid export from statement");
   ctx->error_count++;
   allocator_free(allocator, &names);
   allocator_free(allocator, &path);
   allocator_free(allocator, &node);
   return cubec_ast_create_error(ctx, start_location);
+}
+
+void cubec_ast_write_export_from(writer_t writer, node_t node) {
+  cubec_statement_export_from_t export_from =
+      (cubec_statement_export_from_t)node;
+  writer_append(writer, "export ");
+  if (export_from->is_star) {
+    writer_append(writer, "*");
+  } else {
+    writer_append(writer, "{");
+    for (size_t i = 0; i < vec_get_size(export_from->names); i++) {
+      if (i > 0) {
+        writer_append(writer, ", ");
+      }
+      cubec_ast_write_identifier(writer, vec_get(export_from->names, i));
+    }
+    writer_append(writer, "}");
+  }
+  writer_append(writer, " from ");
+  cubec_ast_write_string(writer, export_from->path);
+  writer_append(writer, ";");
 }

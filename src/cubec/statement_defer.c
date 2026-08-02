@@ -1,7 +1,10 @@
 #include "cubec/statement_defer.h"
-#include "cubec/node_error.h"
 #include "core/token.h"
+#include "core/vec.h"
+#include "core/writer.h"
 #include "cubec/function_capture.h"
+#include "cubec/literal_identifier.h"
+#include "cubec/node_error.h"
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -10,10 +13,11 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_statement_defer_init(
-    cubec_statement_defer_t self, allocator_t allocator,
-    cubec_statement_defer_init_t *init) {
-  if (!init) return;
+static void _cubec_statement_defer_init(cubec_statement_defer_t self,
+                                        allocator_t allocator,
+                                        cubec_statement_defer_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_DEFER,
       .parent = NULL,
@@ -24,31 +28,29 @@ static void _cubec_statement_defer_init(
   self->body = init->body;
 }
 
-static void _cubec_statement_defer_dispose(
-    cubec_statement_defer_t self, allocator_t allocator) {
+static void _cubec_statement_defer_dispose(cubec_statement_defer_t self,
+                                           allocator_t allocator) {
   allocator_free(allocator, &self->body);
   allocator_free(allocator, &self->captures);
   g_node_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_statement_defer_clone(
-    cubec_statement_defer_t self, allocator_t allocator,
-    cubec_statement_defer_t another) {
+static void _cubec_statement_defer_clone(cubec_statement_defer_t self,
+                                         allocator_t allocator,
+                                         cubec_statement_defer_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->captures = another->captures
-                       ? value_clone(allocator, another->captures)
-                       : NULL;
+  self->captures =
+      another->captures ? value_clone(allocator, another->captures) : NULL;
   self->body = value_clone(allocator, another->body);
   return;
 }
 
-static void _cubec_statement_defer_move(
-    cubec_statement_defer_t self, allocator_t allocator,
-    cubec_statement_defer_t another) {
+static void _cubec_statement_defer_move(cubec_statement_defer_t self,
+                                        allocator_t allocator,
+                                        cubec_statement_defer_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->captures = another->captures
-                       ? value_move(allocator, another->captures)
-                       : NULL;
+  self->captures =
+      another->captures ? value_move(allocator, another->captures) : NULL;
   self->body = value_move(allocator, another->body);
   return;
 }
@@ -68,14 +70,17 @@ type_t g_cubec_statement_defer_type = {
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
-  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD) return false;
+  if (!token)
+    return false;
+  if (token_get_kind(token) != CUBEC_TOKEN_KEYWORD)
+    return false;
   return location_is(token_get_location(token), keyword);
 }
 
 static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
   token_t token = vec_get(tokens, position);
-  if (!token) return false;
+  if (!token)
+    return false;
   return token_is(token, CUBEC_TOKEN_SYMBOL, symbol);
 }
 
@@ -83,8 +88,8 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_defer — defer [|captures|] { }
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_defer(context_t ctx, vec_t tokens,
-                             size_t *position, const char *filename) {
+node_t read_statement_defer(context_t ctx, vec_t tokens, size_t *position,
+                            const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   vec_t captures = NULL;
@@ -156,8 +161,8 @@ node_t read_statement_defer(context_t ctx, vec_t tokens,
   return &node->super;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid defer statement");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid defer statement");
   ctx->error_count++;
   allocator_free(allocator, &body);
   allocator_free(allocator, &captures);
@@ -168,8 +173,22 @@ onerror:
 node_t cubec_ast_create_defer_stmt(context_t ctx, location_t loc,
                                    vec_t captures, node_t body) {
   allocator_t alloc = ctx->allocator;
-                                       cubec_statement_defer_init_t init = {
-                                       .captures = captures, .body = body};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_defer_type,
-                                  &init);
+  cubec_statement_defer_init_t init = {.captures = captures, .body = body};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_defer_type, &init);
+}
+
+void cubec_ast_write_defer_stmt(writer_t writer, node_t node) {
+  cubec_statement_defer_t defer = (cubec_statement_defer_t)node;
+  writer_append(writer, "defer ");
+  if (defer->captures && vec_get_size(defer->captures)) {
+    writer_append(writer, "|");
+    for (size_t idx = 0; idx < vec_get_size(defer->captures); idx++) {
+      if (idx != 0) {
+        writer_append(writer, ", ");
+      }
+      cubec_ast_write_identifier(writer, vec_get(defer->captures, idx));
+    }
+    writer_append(writer, "|");
+  }
+  cubec_ast_write_block_stmt(writer, defer->body);
 }

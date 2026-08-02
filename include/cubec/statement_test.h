@@ -1,11 +1,12 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_TEST_
 #define _H_CUBEC_CUBEC_STATEMENT_TEST_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,8 +27,8 @@ extern "C" {
 struct _cubec_statement_test_t;
 struct _cubec_statement_test_t {
   struct _node_t super;
-  string_t name;     /**< Test name (required) */
-  node_t body;       /**< Block statement (required) */
+  string_t name; /**< Test name (required) */
+  node_t body;   /**< Block statement (required) */
 };
 typedef struct _cubec_statement_test_t *cubec_statement_test_t;
 
@@ -44,10 +45,13 @@ typedef struct _cubec_statement_test_init_t cubec_statement_test_init_t;
 /**
  * @brief Try to parse a test block statement.
  */
-node_t read_statement_test(context_t ctx, vec_t tokens,
-                            size_t *position, const char *filename);
+node_t read_statement_test(context_t ctx, vec_t tokens, size_t *position,
+                           const char *filename);
 
-node_t cubec_ast_create_test_stmt(context_t ctx, location_t loc, const char *name, node_t body);
+node_t cubec_ast_create_test_stmt(context_t ctx, location_t loc,
+                                  const char *name, node_t body);
+
+void cubec_ast_write_test_stmt(writer_t writer, node_t stmt);
 
 #ifdef __cplusplus
 }

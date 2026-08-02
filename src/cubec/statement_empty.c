@@ -1,12 +1,14 @@
 #include "cubec/statement_empty.h"
-#include "cubec/node_error.h"
 #include "core/token.h"
+#include "cubec/node_error.h"
 #include "cubec/token.h"
+
 
 static void _cubec_statement_empty_init(cubec_statement_empty_t self,
                                         allocator_t allocator,
                                         cubec_statement_empty_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_EMPTY,
       .parent = NULL,
@@ -64,8 +66,8 @@ node_t read_statement_empty(context_t ctx, vec_t tokens, size_t *position,
   *position = current;
   return &node->super;
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "expected ';'");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "expected ';'");
   ctx->error_count++;
   allocator_free(allocator, &node);
   return cubec_ast_create_error(ctx, start_location);
@@ -74,6 +76,9 @@ onerror:
 node_t cubec_ast_create_empty_stmt(context_t ctx, location_t loc) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_empty_init_t init = {.location = loc, .parent = NULL};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_empty_type,
-                                  &init);
+  return (node_t)allocator_create(alloc, &g_cubec_statement_empty_type, &init);
+}
+
+void cubec_ast_write_empty_stmt(writer_t writer, node_t node) {
+  writer_append(writer, ";");
 }

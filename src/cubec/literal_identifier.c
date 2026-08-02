@@ -103,3 +103,7 @@ node_t cubec_ast_create_identifier(context_t ctx, location_t loc,
       .location = loc, .parent = NULL, .value = name};
   return allocator_create(alloc, &g_cubec_literal_identifier_type, &init);
 }
+void cubec_ast_write_identifier(writer_t writer, node_t node) {
+  cubec_literal_identifier_t identifier = (cubec_literal_identifier_t)node;
+  writer_append(writer, string_get(identifier->value));
+}

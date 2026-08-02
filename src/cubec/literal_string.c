@@ -1,12 +1,15 @@
 #include "cubec/literal_string.h"
+#include "core/string.h"
 #include "core/token.h"
+#include "core/writer.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 
 static void _cubec_literal_string_init(cubec_literal_string_t self,
                                        allocator_t allocator,
                                        cubec_literal_string_init_t *init) {
-  if (!init) return;
+  if (!init)
+    return;
   cubec_literal_init_t super_init = {
       .kind = CUBEC_NODE_LITERAL_STRING,
       .parent = NULL,
@@ -73,7 +76,8 @@ node_t read_literal_string(context_t ctx, vec_t tokens, size_t *position,
   };
   cubec_literal_string_t node =
       allocator_create(allocator, &g_cubec_literal_string_type, &init);
-  if (!node) goto onerror;
+  if (!node)
+    goto onerror;
   node_t node_base = (node_t)node;
   node_base->location.filename = filename;
 
@@ -103,8 +107,8 @@ node_t read_literal_string(context_t ctx, vec_t tokens, size_t *position,
   *position = current;
   return node_base;
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
-                       start_location, "invalid string literal");
+  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+                       "invalid string literal");
   ctx->error_count++;
   allocator_free(allocator, &node);
   return cubec_ast_create_error(ctx, start_location);
@@ -115,4 +119,10 @@ node_t cubec_ast_create_string(context_t ctx, location_t loc,
   allocator_t alloc = ctx->allocator;
   cubec_literal_string_init_t init = {.value = value};
   return (node_t)allocator_create(alloc, &g_cubec_literal_string_type, &init);
+}
+void cubec_ast_write_string(writer_t writer, node_t node) {
+  cubec_literal_string_t str = (cubec_literal_string_t)node;
+  writer_append(writer, "\"");
+  writer_append(writer, string_get(str->value));
+  writer_append(writer, "\"");
 }

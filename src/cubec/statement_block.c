@@ -1,14 +1,17 @@
 #include "cubec/statement_block.h"
-#include "cubec/node_error.h"
 #include "core/token.h"
+#include "core/vec.h"
+#include "core/writer.h"
+#include "cubec/node_error.h"
 #include "cubec/statement.h"
-#include "cubec/token.h"
 #include "cubec/statement_error.h"
+#include "cubec/token.h"
 
 static void _cubec_statement_block_init(cubec_statement_block_t self,
-                                         allocator_t allocator,
-                                         cubec_statement_block_init_t *init) {
-  if (!init) return;
+                                        allocator_t allocator,
+                                        cubec_statement_block_init_t *init) {
+  if (!init)
+    return;
   node_init_t super_init = {
       .kind = CUBEC_NODE_STATEMENT_BLOCK,
       .parent = NULL,
@@ -19,22 +22,22 @@ static void _cubec_statement_block_init(cubec_statement_block_t self,
 }
 
 static void _cubec_statement_block_dispose(cubec_statement_block_t self,
-                                            allocator_t allocator) {
+                                           allocator_t allocator) {
   allocator_free(allocator, &self->statements);
   g_node_type.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_block_clone(cubec_statement_block_t self,
-                                          allocator_t allocator,
-                                          cubec_statement_block_t another) {
+                                         allocator_t allocator,
+                                         cubec_statement_block_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->statements = value_clone(allocator, another->statements);
   return;
 }
 
 static void _cubec_statement_block_move(cubec_statement_block_t self,
-                                         allocator_t allocator,
-                                         cubec_statement_block_t another) {
+                                        allocator_t allocator,
+                                        cubec_statement_block_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->statements = value_move(allocator, another->statements);
   return;
@@ -49,8 +52,8 @@ type_t g_cubec_statement_block_type = {
     .move = (type_move_fn_t)_cubec_statement_block_move,
 };
 
-node_t read_statement_block(context_t ctx, vec_t tokens,
-                            size_t *position, const char *filename) {
+node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
+                            const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
 
@@ -89,10 +92,12 @@ node_t read_statement_block(context_t ctx, vec_t tokens,
     /* Try to parse a statement */
     node_t stmt = read_statement(ctx, tokens, &current, filename);
 
-    /* Error node (CUBEC_NODE_ERROR or CUBEC_NODE_STATEMENT_ERROR) — push and continue */
+    /* Error node (CUBEC_NODE_ERROR or CUBEC_NODE_STATEMENT_ERROR) — push and
+     * continue */
     if (node_is_error(stmt)) {
       vec_push(statements, stmt);
-      if (current <= before) current = before + 1;
+      if (current <= before)
+        current = before + 1;
       continue;
     }
 
@@ -110,7 +115,7 @@ node_t read_statement_block(context_t ctx, vec_t tokens,
         stmt = cubec_ast_create_error_stmt(ctx, loc);
         vec_push(statements, stmt);
       } else {
-        break;  /* No more tokens */
+        break; /* No more tokens */
       }
       continue;
     }
@@ -122,7 +127,7 @@ node_t read_statement_block(context_t ctx, vec_t tokens,
   location_t *start_loc = token_get_location(lbrace);
   location_t loc = {
       .begin = start_loc->begin,
-      .end = start_loc->begin,  /* fallback */
+      .end = start_loc->begin, /* fallback */
       .filename = filename,
   };
   /* Try to get end from the '}' or last consumed token */
@@ -144,11 +149,23 @@ node_t read_statement_block(context_t ctx, vec_t tokens,
   return &node->super;
 }
 
-node_t cubec_ast_create_block(context_t ctx, location_t loc,
-                              vec_t statements) {
+node_t cubec_ast_create_block(context_t ctx, location_t loc, vec_t statements) {
   allocator_t alloc = ctx->allocator;
-                                       cubec_statement_block_init_t init = {
-                                       .statements = statements};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_block_type,
-                                  &init);
+  cubec_statement_block_init_t init = {.statements = statements};
+  return (node_t)allocator_create(alloc, &g_cubec_statement_block_type, &init);
+}
+
+void cubec_ast_write_block_stmt(writer_t writer, node_t stmt) {
+  cubec_statement_block_t block = (cubec_statement_block_t)stmt;
+  writer_append(writer, "{");
+  if (vec_get_size(block->statements)) {
+    writer_newline(writer, 1);
+    for (size_t i = 0; i < vec_get_size(block->statements); i++) {
+      node_t stmt = vec_get(block->statements, i);
+      cubec_ast_write_statement(writer, stmt);
+    }
+    writer_newline(writer, -1);
+  }
+  writer_append(writer, "}");
+  writer_newline(writer, 0);
 }

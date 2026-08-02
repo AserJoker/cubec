@@ -1,12 +1,13 @@
 #ifndef _H_CUBEC_CUBEC_LITERAL_IDENTIFIER_
 #define _H_CUBEC_CUBEC_LITERAL_IDENTIFIER_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "cubec/literal.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -30,7 +31,10 @@ typedef struct _cubec_literal_identifier_init_t cubec_literal_identifier_init_t;
 node_t read_literal_identifier(context_t ctx, vec_t tokens, size_t *position,
                                const char *filename);
 
-node_t cubec_ast_create_identifier(context_t ctx, location_t loc, const char *name);
+node_t cubec_ast_create_identifier(context_t ctx, location_t loc,
+                                   const char *name);
+
+void cubec_ast_write_identifier(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

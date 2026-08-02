@@ -1,10 +1,12 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_EXPORT_FROM_
 #define _H_CUBEC_CUBEC_STATEMENT_EXPORT_FROM_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
+#include "engine/context.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -23,9 +25,9 @@ extern "C" {
 struct _cubec_statement_export_from_t;
 struct _cubec_statement_export_from_t {
   struct _node_t super;
-  node_t path;     /**< String literal node for the module path */
-  bool is_star;    /**< true = export *, false = export { names } */
-  vec_t names;     /**< vec of identifier nodes (NULL when is_star) */
+  node_t path;  /**< String literal node for the module path */
+  bool is_star; /**< true = export *, false = export { names } */
+  vec_t names;  /**< vec of identifier nodes (NULL when is_star) */
 };
 typedef struct _cubec_statement_export_from_t *cubec_statement_export_from_t;
 
@@ -38,7 +40,8 @@ struct _cubec_statement_export_from_init_t {
   bool is_star;
   vec_t names;
 };
-typedef struct _cubec_statement_export_from_init_t cubec_statement_export_from_init_t;
+typedef struct _cubec_statement_export_from_init_t
+    cubec_statement_export_from_init_t;
 
 /**
  * @brief Try to parse a re-export statement: export * from "path" ;
@@ -50,8 +53,10 @@ typedef struct _cubec_statement_export_from_init_t cubec_statement_export_from_i
  * @return A new cubec_statement_export_from_t node, or NULL if current token
  *         is not 'export' followed by '*' or '{'.
  */
-node_t read_statement_export_from(context_t ctx, vec_t tokens,
-                                  size_t *position, const char *filename);
+node_t read_statement_export_from(context_t ctx, vec_t tokens, size_t *position,
+                                  const char *filename);
+
+void cubec_ast_write_export_from(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

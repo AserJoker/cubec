@@ -1,10 +1,11 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_DEFER_
 #define _H_CUBEC_CUBEC_STATEMENT_DEFER_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
+#include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,8 +28,9 @@ extern "C" {
 struct _cubec_statement_defer_t;
 struct _cubec_statement_defer_t {
   struct _node_t super;
-  vec_t captures;    /**< Vector of cubec_function_capture_t (nullable, auto_dispose) */
-  node_t body;       /**< Block statement (required) */
+  vec_t captures; /**< Vector of cubec_function_capture_t (nullable,
+                     auto_dispose) */
+  node_t body;    /**< Block statement (required) */
 };
 typedef struct _cubec_statement_defer_t *cubec_statement_defer_t;
 
@@ -45,10 +47,13 @@ typedef struct _cubec_statement_defer_init_t cubec_statement_defer_init_t;
 /**
  * @brief Try to parse a defer statement.
  */
-node_t read_statement_defer(context_t ctx, vec_t tokens,
-                             size_t *position, const char *filename);
+node_t read_statement_defer(context_t ctx, vec_t tokens, size_t *position,
+                            const char *filename);
 
-node_t cubec_ast_create_defer_stmt(context_t ctx, location_t loc, vec_t captures, node_t body);
+node_t cubec_ast_create_defer_stmt(context_t ctx, location_t loc,
+                                   vec_t captures, node_t body);
+
+void cubec_ast_write_defer_stmt(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }
