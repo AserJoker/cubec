@@ -93,9 +93,11 @@ void writer_newline(writer_t self, int32_t indent) {
 }
 string_t writer_get_string(writer_t self) {
   string_t str = allocator_create(self->allocator, &g_string_type, NULL);
+  size_t indent = 0;
   for (size_t idx = 0; idx < vec_get_size(self->lines); idx++) {
     line_t line = vec_get(self->lines, idx);
-    for (int32_t i = 0; i < line->indent; i++) {
+    indent += line->indent;
+    for (int32_t i = 0; i < indent; i++) {
       string_concat(str, "  ");
     }
     string_concat(str, string_get(line->text));
