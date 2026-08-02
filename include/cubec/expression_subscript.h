@@ -46,6 +46,9 @@ node_t read_expression_subscript(context_t ctx, vec_t tokens,
                                  size_t *position, const char *filename,
                                  node_t host);
 
+node_t create_expression_subscript(context_t ctx, location_t loc, node_t host,
+                                   node_t index);
+
 #ifdef __cplusplus
 }
 #endif

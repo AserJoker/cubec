@@ -77,6 +77,14 @@ typedef struct _cubec_statement_comptime_foreach_init_t
 node_t read_statement_comptime(context_t ctx, vec_t tokens,
                                 size_t *position, const char *filename);
 
+node_t create_statement_comptime_if(context_t ctx, location_t loc,
+                                    node_t condition, node_t then_branch,
+                                    node_t else_branch);
+node_t create_statement_comptime_foreach(context_t ctx, location_t loc,
+                                         bool is_var_decl, node_t variable,
+                                         node_t var_type, node_t iterator,
+                                         node_t body);
+
 #ifdef __cplusplus
 }
 #endif

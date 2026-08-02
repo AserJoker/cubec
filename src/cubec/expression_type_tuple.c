@@ -186,3 +186,19 @@ node_t read_expression_type_tuple(context_t ctx, vec_t tokens, size_t *position,
   *position = current;
   return (node_t)node;
 }
+
+/* --------------------------------------------------------------------------
+ *  Factory: create_expression_type_tuple
+ * -------------------------------------------------------------------------- */
+
+node_t create_expression_type_tuple(context_t ctx, location_t loc,
+                                    vec_t element_types) {
+  allocator_t alloc = ctx->allocator;
+  cubec_expression_type_tuple_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .element_types = element_types,
+  };
+  return (node_t)allocator_create(alloc, &g_cubec_expression_type_tuple_type,
+                                  &init);
+}

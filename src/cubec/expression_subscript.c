@@ -165,3 +165,20 @@ onerror:
   return create_error(ctx, open_bracket ? *token_get_location(open_bracket)
                                         : (location_t){0});
 }
+
+/* --------------------------------------------------------------------------
+ *  Factory: create_expression_subscript
+ * -------------------------------------------------------------------------- */
+
+node_t create_expression_subscript(context_t ctx, location_t loc, node_t host,
+                                   node_t index) {
+  allocator_t alloc = ctx->allocator;
+  cubec_expression_subscript_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .host = host,
+      .index = index,
+  };
+  return (node_t)allocator_create(alloc, &g_cubec_expression_subscript_type,
+                                  &init);
+}

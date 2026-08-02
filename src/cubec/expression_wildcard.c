@@ -74,3 +74,19 @@ node_t read_expression_wildcard(context_t ctx, vec_t tokens,
   *position = current;
   return (node_t)node;
 }
+
+/* --------------------------------------------------------------------------
+ *  Factory: create_expression_wildcard
+ * -------------------------------------------------------------------------- */
+
+node_t create_expression_wildcard(context_t ctx, location_t loc,
+                                   bool is_tuple) {
+  allocator_t alloc = ctx->allocator;
+  cubec_expression_wildcard_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .is_tuple = is_tuple,
+  };
+  return (node_t)allocator_create(alloc, &g_cubec_expression_wildcard_type,
+                                  &init);
+}

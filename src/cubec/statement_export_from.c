@@ -197,6 +197,24 @@ onerror:
   return create_error(ctx, start_location);
 }
 
+/* --------------------------------------------------------------------------
+ *  Factory: create_statement_export_from
+ * -------------------------------------------------------------------------- */
+
+node_t create_statement_export_from(context_t ctx, location_t loc, node_t path,
+                                    bool is_star, vec_t names) {
+  allocator_t alloc = ctx->allocator;
+  cubec_statement_export_from_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .path = path,
+      .is_star = is_star,
+      .names = names,
+  };
+  return (node_t)allocator_create(alloc, &g_cubec_statement_export_from_type,
+                                  &init);
+}
+
 void write_statement_export_from(writer_t writer, node_t node) {
   cubec_statement_export_from_t export_from =
       (cubec_statement_export_from_t)node;

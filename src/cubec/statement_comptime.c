@@ -466,3 +466,45 @@ node_t read_statement_comptime(context_t ctx, vec_t tokens, size_t *position,
 onerror:
   return create_error(ctx, start_location);
 }
+
+/* --------------------------------------------------------------------------
+ *  Factory: create_statement_comptime_if
+ * -------------------------------------------------------------------------- */
+
+node_t create_statement_comptime_if(context_t ctx, location_t loc,
+                                    node_t condition, node_t then_branch,
+                                    node_t else_branch) {
+  allocator_t alloc = ctx->allocator;
+  cubec_statement_comptime_if_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .condition = condition,
+      .then_branch = then_branch,
+      .else_branch = else_branch,
+  };
+  return (node_t)allocator_create(alloc, &g_cubec_statement_comptime_if_type,
+                                  &init);
+}
+
+/* --------------------------------------------------------------------------
+ *  Factory: create_statement_comptime_foreach
+ * -------------------------------------------------------------------------- */
+
+node_t create_statement_comptime_foreach(context_t ctx, location_t loc,
+                                         bool is_var_decl, node_t variable,
+                                         node_t var_type, node_t iterator,
+                                         node_t body) {
+  allocator_t alloc = ctx->allocator;
+  cubec_statement_comptime_foreach_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .is_var_decl = is_var_decl,
+      .variable = variable,
+      .var_type = var_type,
+      .iterator = iterator,
+      .body = body,
+  };
+  return (node_t)allocator_create(alloc,
+                                  &g_cubec_statement_comptime_foreach_type,
+                                  &init);
+}

@@ -236,7 +236,8 @@ onerror:
 
 node_t create_statement_declaration_type(context_t ctx, location_t loc,
                                          const char *name, node_t type_value,
-                                         bool is_export, bool is_builtin) {
+                                         bool is_export, bool is_builtin,
+                                         vec_t decorators) {
   allocator_t alloc = ctx->allocator;
   node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_statement_declaration_type_init_t init = {
@@ -247,6 +248,7 @@ node_t create_statement_declaration_type(context_t ctx, location_t loc,
       .name = name_node,
       .params = NULL,
       .type_value = type_value,
+      .decorators = decorators,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_decltype, &init);
 }

@@ -58,7 +58,7 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens, size_t *position,
                              const char *filename);
 
 node_t create_statement_cunion(context_t ctx, location_t loc, const char *name,
-                               vec_t fields);
+                               vec_t fields, vec_t decorators);
 
 #ifdef __cplusplus
 }

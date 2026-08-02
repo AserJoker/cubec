@@ -109,7 +109,7 @@ node_t create_statement_func(context_t ctx, location_t loc, const char *name,
                              vec_t args, node_t return_type, node_t body,
                              bool is_export, bool is_inline, bool is_extern,
                              bool is_builtin, bool is_comptime,
-                             bool is_c_variadic);
+                             bool is_c_variadic, vec_t decorators);
 
 #ifdef __cplusplus
 }

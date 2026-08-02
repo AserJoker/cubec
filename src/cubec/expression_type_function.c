@@ -310,3 +310,22 @@ onerror:
   allocator_free(allocator, &node);
   return create_error(ctx, start_location);
 }
+
+/* --------------------------------------------------------------------------
+ *  Factory: create_expression_type_function
+ * -------------------------------------------------------------------------- */
+
+node_t create_expression_type_function(context_t ctx, location_t loc,
+                                       vec_t parameters, node_t return_type,
+                                       bool is_c_variadic) {
+  allocator_t alloc = ctx->allocator;
+  cubec_expression_type_function_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .parameters = parameters,
+      .return_type = return_type,
+      .is_c_variadic = is_c_variadic,
+  };
+  return (node_t)allocator_create(alloc,
+                                  &g_cubec_expression_type_function_type, &init);
+}

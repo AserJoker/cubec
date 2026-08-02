@@ -211,7 +211,8 @@ onerror:
 }
 
 node_t create_statement_union(context_t ctx, location_t loc, const char *name,
-                              vec_t members, bool is_export, vec_t implements) {
+                              vec_t members, bool is_export, vec_t implements,
+                              vec_t decorators) {
   allocator_t alloc = ctx->allocator;
   node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_statement_union_init_t init = {
@@ -222,6 +223,7 @@ node_t create_statement_union(context_t ctx, location_t loc, const char *name,
       .generic_params = NULL,
       .implements = implements,
       .members = members,
+      .decorators = decorators,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_union_type, &init);
 }

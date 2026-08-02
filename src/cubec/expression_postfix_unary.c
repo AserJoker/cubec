@@ -158,62 +158,38 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: create_expression_deref / addr / try / assert
+ *  Factory: create_expression_postfix_unary
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_deref(context_t ctx, location_t loc, node_t host) {
+node_t create_expression_postfix_unary(context_t ctx, location_t loc,
+                                       node_t host, cubec_node_kind_t kind) {
   allocator_t alloc = ctx->allocator;
-  string_t op_str =
-      allocator_create(alloc, &g_string_type, &(string_init_t){.str = ".*"});
+  const char *op_str = NULL;
+  switch (kind) {
+  case CUBEC_NODE_EXPRESSION_DEREF:
+    op_str = ".*";
+    break;
+  case CUBEC_NODE_EXPRESSION_ADDR:
+    op_str = ".&";
+    break;
+  case CUBEC_NODE_EXPRESSION_TRY:
+    op_str = ".?";
+    break;
+  case CUBEC_NODE_EXPRESSION_ASSERT:
+    op_str = ".!";
+    break;
+  default:
+    return NULL;
+  }
+  string_t opt =
+      allocator_create(alloc, &g_string_type, &(string_init_t){.str = op_str});
   cubec_expression_postfix_unary_init_t init = {
       .location = loc,
       .parent = NULL,
       .host = host,
-      .opt = op_str,
-      .kind = CUBEC_NODE_EXPRESSION_DEREF,
+      .opt = opt,
+      .kind = kind,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
-                                  &init);
-}
-
-node_t create_expression_addr(context_t ctx, location_t loc, node_t host) {
-  allocator_t alloc = ctx->allocator;
-  string_t op_str =
-      allocator_create(alloc, &g_string_type, &(string_init_t){.str = ".&"});
-  cubec_expression_postfix_unary_init_t init = {.location = loc,
-                                                .parent = NULL,
-                                                .host = host,
-                                                .opt = op_str,
-                                                .kind =
-                                                    CUBEC_NODE_EXPRESSION_ADDR};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
-                                  &init);
-}
-
-node_t create_expression_try(context_t ctx, location_t loc, node_t host) {
-  allocator_t alloc = ctx->allocator;
-  string_t op_str =
-      allocator_create(alloc, &g_string_type, &(string_init_t){.str = ".?"});
-  cubec_expression_postfix_unary_init_t init = {.location = loc,
-                                                .parent = NULL,
-                                                .host = host,
-                                                .opt = op_str,
-                                                .kind =
-                                                    CUBEC_NODE_EXPRESSION_TRY};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
-                                  &init);
-}
-
-node_t create_expression_assert(context_t ctx, location_t loc, node_t host) {
-  allocator_t alloc = ctx->allocator;
-  string_t op_str =
-      allocator_create(alloc, &g_string_type, &(string_init_t){.str = ".!"});
-  cubec_expression_postfix_unary_init_t init = {
-      .location = loc,
-      .parent = NULL,
-      .host = host,
-      .opt = op_str,
-      .kind = CUBEC_NODE_EXPRESSION_ASSERT};
   return (node_t)allocator_create(alloc, &g_cubec_expression_postfix_unary_type,
                                   &init);
 }

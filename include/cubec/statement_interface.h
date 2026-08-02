@@ -79,7 +79,7 @@ node_t read_statement_interface(context_t ctx, vec_t tokens, size_t *position,
 
 node_t create_statement_interface(context_t ctx, location_t loc,
                                   const char *name, vec_t members,
-                                  bool is_export);
+                                  bool is_export, vec_t decorators);
 
 #ifdef __cplusplus
 }

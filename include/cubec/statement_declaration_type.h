@@ -75,7 +75,8 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
 
 node_t create_statement_declaration_type(context_t ctx, location_t loc,
                                          const char *name, node_t type_value,
-                                         bool is_export, bool is_builtin);
+                                         bool is_export, bool is_builtin,
+                                         vec_t decorators);
 
 #ifdef __cplusplus
 }

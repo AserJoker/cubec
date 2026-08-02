@@ -341,13 +341,14 @@ node_t create_statement_func(context_t ctx, location_t loc, const char *name,
                              vec_t args, node_t return_type, node_t body,
                              bool is_export, bool is_inline, bool is_extern,
                              bool is_builtin, bool is_comptime,
-                             bool is_c_variadic) {
+                             bool is_c_variadic, vec_t decorators) {
   allocator_t alloc = ctx->allocator;
   node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_statement_function_init_t init = {
       .location = loc,
       .parent = NULL,
       .is_export = is_export,
+      .is_exportlib = false,
       .is_inline = is_inline,
       .is_extern = is_extern,
       .is_builtin = is_builtin,
@@ -358,6 +359,8 @@ node_t create_statement_func(context_t ctx, location_t loc, const char *name,
       .arguments = args,
       .return_type = return_type,
       .body = body,
+      .decorators = decorators,
+      .captures = NULL,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_function_type,
                                   &init);

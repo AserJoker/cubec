@@ -192,7 +192,7 @@ onerror:
 }
 
 node_t create_statement_enum(context_t ctx, location_t loc, const char *name,
-                             vec_t items, bool is_export) {
+                             vec_t items, bool is_export, vec_t decorators) {
   allocator_t alloc = ctx->allocator;
   node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_statement_enum_init_t init = {
@@ -201,6 +201,7 @@ node_t create_statement_enum(context_t ctx, location_t loc, const char *name,
       .is_export = is_export,
       .name = name_node,
       .items = items,
+      .decorators = decorators,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_enum_type, &init);
 }

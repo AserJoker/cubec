@@ -60,7 +60,7 @@ node_t read_statement_enum(context_t ctx, vec_t tokens, size_t *position,
                            const char *filename);
 
 node_t create_statement_enum(context_t ctx, location_t loc, const char *name,
-                             vec_t items, bool is_export);
+                             vec_t items, bool is_export, vec_t decorators);
 
 #ifdef __cplusplus
 }

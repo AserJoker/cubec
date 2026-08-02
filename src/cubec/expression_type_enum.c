@@ -186,3 +186,18 @@ node_t read_expression_type_enum(context_t ctx, vec_t tokens, size_t *position,
   ctx->error_count++;
   return create_error(ctx, start_location);
 }
+
+/* --------------------------------------------------------------------------
+ *  Factory: create_expression_type_enum
+ * -------------------------------------------------------------------------- */
+
+node_t create_expression_type_enum(context_t ctx, location_t loc, vec_t items) {
+  allocator_t alloc = ctx->allocator;
+  cubec_expression_type_enum_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .items = items,
+  };
+  return (node_t)allocator_create(alloc, &g_cubec_expression_type_enum_type,
+                                  &init);
+}

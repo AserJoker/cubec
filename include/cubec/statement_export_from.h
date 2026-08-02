@@ -56,6 +56,9 @@ typedef struct _cubec_statement_export_from_init_t
 node_t read_statement_export_from(context_t ctx, vec_t tokens, size_t *position,
                                   const char *filename);
 
+node_t create_statement_export_from(context_t ctx, location_t loc, node_t path,
+                                    bool is_star, vec_t names);
+
 void write_statement_export_from(writer_t writer, node_t node);
 
 #ifdef __cplusplus

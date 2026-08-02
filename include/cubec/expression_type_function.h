@@ -57,6 +57,10 @@ typedef struct _cubec_expression_type_function_init_t cubec_expression_type_func
 node_t read_expression_type_function(context_t ctx, vec_t tokens,
                                      size_t *position, const char *filename);
 
+node_t create_expression_type_function(context_t ctx, location_t loc,
+                                       vec_t parameters, node_t return_type,
+                                       bool is_c_variadic);
+
 #ifdef __cplusplus
 }
 #endif

@@ -50,10 +50,8 @@ node_t read_expression_postfix_unary(context_t ctx, vec_t tokens,
                                      size_t *position, const char *filename,
                                      node_t host);
 
-node_t create_expression_deref(context_t ctx, location_t loc, node_t host);
-node_t create_expression_addr(context_t ctx, location_t loc, node_t host);
-node_t create_expression_try(context_t ctx, location_t loc, node_t host);
-node_t create_expression_assert(context_t ctx, location_t loc, node_t host);
+node_t create_expression_postfix_unary(context_t ctx, location_t loc, node_t host,
+                                       cubec_node_kind_t kind);
 
 #ifdef __cplusplus
 }

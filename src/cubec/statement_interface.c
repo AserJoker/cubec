@@ -208,7 +208,7 @@ onerror:
 
 node_t create_statement_interface(context_t ctx, location_t loc,
                                   const char *name, vec_t members,
-                                  bool is_export) {
+                                  bool is_export, vec_t decorators) {
   allocator_t alloc = ctx->allocator;
   node_t name_node = create_literal_identifier(ctx, loc, name);
   cubec_statement_interface_init_t init = {
@@ -218,6 +218,7 @@ node_t create_statement_interface(context_t ctx, location_t loc,
       .name = name_node,
       .generic_params = NULL,
       .members = members,
+      .decorators = decorators,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_interface_type,
                                   &init);

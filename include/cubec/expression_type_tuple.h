@@ -47,6 +47,9 @@ typedef struct _cubec_expression_type_tuple_init_t cubec_expression_type_tuple_i
 node_t read_expression_type_tuple(context_t ctx, vec_t tokens,
                                     size_t *position, const char *filename);
 
+node_t create_expression_type_tuple(context_t ctx, location_t loc,
+                                    vec_t element_types);
+
 #ifdef __cplusplus
 }
 #endif

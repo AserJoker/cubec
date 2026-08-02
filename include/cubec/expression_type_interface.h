@@ -80,6 +80,9 @@ node_t read_expression_type_interface_body(context_t ctx, vec_t tokens,
                                             size_t *position, const char *filename,
                                             location_t start_location);
 
+node_t create_expression_type_interface(context_t ctx, location_t loc,
+                                        vec_t generic_params, vec_t members);
+
 #ifdef __cplusplus
 }
 #endif

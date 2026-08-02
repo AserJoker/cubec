@@ -269,3 +269,20 @@ node_t read_expression_type_struct(context_t ctx, vec_t tokens,
   ctx->error_count++;
   return create_error(ctx, start_location);
 }
+
+/* --------------------------------------------------------------------------
+ *  Factory: create_expression_type_struct
+ * -------------------------------------------------------------------------- */
+
+node_t create_expression_type_struct(context_t ctx, location_t loc,
+                                     vec_t generic_params, vec_t members) {
+  allocator_t alloc = ctx->allocator;
+  cubec_expression_type_struct_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .generic_params = generic_params,
+      .members = members,
+  };
+  return (node_t)allocator_create(alloc, &g_cubec_expression_type_struct_type,
+                                  &init);
+}

@@ -73,6 +73,8 @@ node_t read_expression_type_enum_body(context_t ctx, vec_t tokens,
                                        size_t *position, const char *filename,
                                        location_t start_location);
 
+node_t create_expression_type_enum(context_t ctx, location_t loc, vec_t items);
+
 #ifdef __cplusplus
 }
 #endif

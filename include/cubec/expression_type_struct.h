@@ -83,6 +83,9 @@ node_t read_expression_type_struct_body(context_t ctx, vec_t tokens,
                                          location_t start_location,
                                          vec_t *out_implements);
 
+node_t create_expression_type_struct(context_t ctx, location_t loc,
+                                     vec_t generic_params, vec_t members);
+
 #ifdef __cplusplus
 }
 #endif
