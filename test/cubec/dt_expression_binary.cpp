@@ -1,6 +1,8 @@
 #include "cubec/expression.h"
 #include "cubec/expression_binary.h"
-#include "cubec/expression_postfix_unary.h"
+#include "cubec/expression_addr.h"
+#include "cubec/expression_deref.h"
+#include "cubec/expression_try.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_typeof.h"
@@ -94,10 +96,9 @@ TEST_F(dt_expression_binary, prefix_address) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_ADDR);
 
-  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
-  EXPECT_STREQ(string_get(bin->opt), ".&");
-  ASSERT_NE(bin->right, nullptr);
-  EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  cubec_expression_addr_t addr = (cubec_expression_addr_t)node;
+  ASSERT_NE(addr->host, nullptr);
+  EXPECT_EQ(addr->host->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -114,10 +115,9 @@ TEST_F(dt_expression_binary, prefix_deref) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_DEREF);
 
-  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
-  EXPECT_STREQ(string_get(bin->opt), ".*");
-  ASSERT_NE(bin->right, nullptr);
-  EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  cubec_expression_deref_t deref = (cubec_expression_deref_t)node;
+  ASSERT_NE(deref->host, nullptr);
+  EXPECT_EQ(deref->host->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -134,10 +134,9 @@ TEST_F(dt_expression_binary, postfix_try) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TRY);
 
-  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
-  EXPECT_STREQ(string_get(bin->opt), ".?");
-  ASSERT_NE(bin->right, nullptr);
-  EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  cubec_expression_try_t tryexpr = (cubec_expression_try_t)node;
+  ASSERT_NE(tryexpr->host, nullptr);
+  EXPECT_EQ(tryexpr->host->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -154,10 +153,9 @@ TEST_F(dt_expression_binary, postfix_try_with_member_access) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TRY);
 
-  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
-  EXPECT_STREQ(string_get(bin->opt), ".?");
-  ASSERT_NE(bin->right, nullptr);
-  EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_MEMBER);
+  cubec_expression_try_t tryexpr = (cubec_expression_try_t)node;
+  ASSERT_NE(tryexpr->host, nullptr);
+  EXPECT_EQ(tryexpr->host->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -174,10 +172,9 @@ TEST_F(dt_expression_binary, postfix_try_with_call) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TRY);
 
-  cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
-  EXPECT_STREQ(string_get(bin->opt), ".?");
-  ASSERT_NE(bin->right, nullptr);
-  EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_CALL);
+  cubec_expression_try_t tryexpr = (cubec_expression_try_t)node;
+  ASSERT_NE(tryexpr->host, nullptr);
+  EXPECT_EQ(tryexpr->host->kind, CUBEC_NODE_EXPRESSION_CALL);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -759,9 +756,8 @@ TEST_F(dt_expression_binary, prefix_deref_then_add) {
   /* left: ptr.* (postfix deref) */
   ASSERT_NE(add->left, nullptr);
   EXPECT_EQ(add->left->kind, CUBEC_NODE_EXPRESSION_DEREF);
-  cubec_expression_binary_t deref = (cubec_expression_binary_t)add->left;
-  EXPECT_STREQ(string_get(deref->opt), ".*");
-  EXPECT_EQ(deref->left, nullptr);
+  cubec_expression_deref_t deref = (cubec_expression_deref_t)add->left;
+  ASSERT_NE(deref->host, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -786,9 +782,8 @@ TEST_F(dt_expression_binary, prefix_addr_then_binary_and) {
 
   /* left: postfix addr x.& */
   EXPECT_EQ(bin->left->kind, CUBEC_NODE_EXPRESSION_ADDR);
-  cubec_expression_binary_t postfix = (cubec_expression_binary_t)bin->left;
-  EXPECT_STREQ(string_get(postfix->opt), ".&");
-  EXPECT_EQ(postfix->left, nullptr);
+  cubec_expression_addr_t addr = (cubec_expression_addr_t)bin->left;
+  ASSERT_NE(addr->host, nullptr);
 
   /* right: mask (identifier) */
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);

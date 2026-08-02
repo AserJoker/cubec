@@ -6,7 +6,9 @@
 #include "cubec/expression_function.h"
 #include "cubec/expression_initialize_list.h"
 #include "cubec/expression_member.h"
-#include "cubec/expression_postfix_unary.h"
+#include "cubec/expression_addr.h"
+#include "cubec/expression_deref.h"
+#include "cubec/expression_try.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/function_argument.h"
 #include "cubec/initialize_field.h"
@@ -971,12 +973,10 @@ TEST_F(dt_checker, pass3_deref_addr) {
   vec_push(body_stmts,
            create_statement_return(
                ctx, T,
-              create_expression_postfix_unary(
+              create_expression_deref(
                   ctx, T,
-                  create_expression_postfix_unary(
-                      ctx, T, create_literal_identifier(ctx, T, "x"),
-                      CUBEC_NODE_EXPRESSION_ADDR),
-                  CUBEC_NODE_EXPRESSION_DEREF)));
+                  create_expression_addr(
+                      ctx, T, create_literal_identifier(ctx, T, "x")))));
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,
@@ -1294,9 +1294,8 @@ TEST_F(dt_checker, pass3_deref_pointer) {
   vec_push(body_stmts,
            create_statement_return(
                ctx, T,
-              create_expression_postfix_unary(
-                  ctx, T, create_literal_identifier(ctx, T, "p"),
-                  CUBEC_NODE_EXPRESSION_DEREF)));
+              create_expression_deref(
+                  ctx, T, create_literal_identifier(ctx, T, "p"))));
 
   vec_t stmts = create_vec(ctx, true);
   vec_push(stmts,

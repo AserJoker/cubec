@@ -28,6 +28,10 @@
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression_alignof.h"
+#include "cubec/expression_addr.h"
+#include "cubec/expression_assert.h"
+#include "cubec/expression_deref.h"
+#include "cubec/expression_try.h"
 #include "cubec/expression_typeof.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_comma.h"
@@ -582,15 +586,15 @@ static void diffuse_expr(runtime_collection_t rc, struct context *ctx, node_t no
 
   /* Dereference (postfix .*) */
   case CUBEC_NODE_EXPRESSION_DEREF: {
-    cubec_expression_binary_t n = (cubec_expression_binary_t)node;
-    if (n->left) diffuse_expr(rc, ctx, n->left);
+    cubec_expression_deref_t n = (cubec_expression_deref_t)node;
+    if (n->host) diffuse_expr(rc, ctx, n->host);
     break;
   }
 
   /* Address-of (postfix .&) */
   case CUBEC_NODE_EXPRESSION_ADDR: {
-    cubec_expression_binary_t n = (cubec_expression_binary_t)node;
-    if (n->left) diffuse_expr(rc, ctx, n->left);
+    cubec_expression_addr_t n = (cubec_expression_addr_t)node;
+    if (n->host) diffuse_expr(rc, ctx, n->host);
     break;
   }
 
@@ -619,15 +623,15 @@ static void diffuse_expr(runtime_collection_t rc, struct context *ctx, node_t no
 
   /* Try (.?) */
   case CUBEC_NODE_EXPRESSION_TRY: {
-    cubec_expression_binary_t n = (cubec_expression_binary_t)node;
-    if (n->left) diffuse_expr(rc, ctx, n->left);
+    cubec_expression_try_t n = (cubec_expression_try_t)node;
+    if (n->host) diffuse_expr(rc, ctx, n->host);
     break;
   }
 
   /* Assert (.!) */
   case CUBEC_NODE_EXPRESSION_ASSERT: {
-    cubec_expression_binary_t n = (cubec_expression_binary_t)node;
-    if (n->left) diffuse_expr(rc, ctx, n->left);
+    cubec_expression_assert_t n = (cubec_expression_assert_t)node;
+    if (n->host) diffuse_expr(rc, ctx, n->host);
     break;
   }
 

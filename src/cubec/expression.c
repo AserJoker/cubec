@@ -11,7 +11,10 @@
 #include "cubec/expression_initialize_list.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
-#include "cubec/expression_postfix_unary.h"
+#include "cubec/expression_addr.h"
+#include "cubec/expression_assert.h"
+#include "cubec/expression_deref.h"
+#include "cubec/expression_try.h"
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression_slice.h"
 #include "cubec/expression_subscript.h"
@@ -357,10 +360,19 @@ node_t read_value(context_t ctx, vec_t tokens, size_t *position,
         continue;
       }
 
-      /* Try postfix: unary deref/addr <value>.+ or <value>.& (MUST be before
-       * member access since .* and .& also start with '.') */
+      /* Try postfix: unary deref/addr/try/assert (MUST be before
+       * member access since dot-asterisk/dot-amp/dot-qmark/dot-bang also start with '.') */
       node_t postfix_unary_node =
-          read_expression_postfix_unary(ctx, tokens, &current, filename, node);
+          read_expression_addr(ctx, tokens, &current, filename, node);
+      if (!postfix_unary_node)
+        postfix_unary_node =
+            read_expression_deref(ctx, tokens, &current, filename, node);
+      if (!postfix_unary_node)
+        postfix_unary_node =
+            read_expression_try(ctx, tokens, &current, filename, node);
+      if (!postfix_unary_node)
+        postfix_unary_node =
+            read_expression_assert(ctx, tokens, &current, filename, node);
       if (node_is_error(postfix_unary_node)) {
         allocator_free(allocator, &node);
         return postfix_unary_node;

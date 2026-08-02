@@ -1,7 +1,10 @@
+#include "cubec/expression_addr.h"
 #include "cubec/expression_alignof.h"
+#include "cubec/expression_assert.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/expression_call.h"
 #include "cubec/expression_comma.h"
+#include "cubec/expression_deref.h"
 #include "cubec/expression_function.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
@@ -13,6 +16,7 @@
 #include "cubec/expression_spread.h"
 #include "cubec/expression_subscript.h"
 #include "cubec/expression_ternary.h"
+#include "cubec/expression_try.h"
 #include "cubec/expression_typeof.h"
 #include "cubec/function_capture.h"
 #include "cubec/initialize_field.h"
@@ -370,8 +374,8 @@ static comptime_value_t _eval_assignment(comptime_eval_t eval, context_t ctx,
 
   /* deref assignment: *ptr = rv */
   if (asgn->left->kind == CUBEC_NODE_EXPRESSION_DEREF) {
-    cubec_expression_binary_t deref = (cubec_expression_binary_t)asgn->left;
-    comptime_value_t ptr = _comptime_eval_expr(eval, ctx, deref->right);
+    cubec_expression_deref_t deref = (cubec_expression_deref_t)asgn->left;
+    comptime_value_t ptr = _comptime_eval_expr(eval, ctx, deref->host);
     if (!ptr || ptr->kind != COMPTIME_VALUE_POINTER)
       return _eval_error_val(eval);
 
@@ -1952,11 +1956,11 @@ static comptime_value_t _propagate_error_value(comptime_eval_t eval,
 
 static comptime_value_t _eval_try(comptime_eval_t eval, context_t ctx,
                                   node_t node) {
-  cubec_expression_binary_t pf = (cubec_expression_binary_t)node;
+  cubec_expression_try_t pf = (cubec_expression_try_t)node;
 
   /* .? on union member access: u.a.? — check if a is the active variant */
-  if (pf->right->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
-    cubec_expression_member_t mem = (cubec_expression_member_t)pf->right;
+  if (pf->host->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
+    cubec_expression_member_t mem = (cubec_expression_member_t)pf->host;
     comptime_value_t host_val = _comptime_eval_expr(eval, ctx, mem->host);
     if (_val_is_error(host_val))
       return _eval_propagate_error(eval, host_val);
@@ -2032,7 +2036,7 @@ static comptime_value_t _eval_try(comptime_eval_t eval, context_t ctx,
     /* Host is not a tagged union — fall through */
   }
 
-  comptime_value_t val = _comptime_eval_expr(eval, ctx, pf->right);
+  comptime_value_t val = _comptime_eval_expr(eval, ctx, pf->host);
   if (_val_is_error(val))
     return _eval_propagate_error(eval, val);
 
@@ -2044,7 +2048,7 @@ static comptime_value_t _eval_try(comptime_eval_t eval, context_t ctx,
     if (is_err_fn && val_fn && err_fn) {
       /* Call isError() */
       comptime_value_t is_err_result = _eval_method_call(
-          eval, ctx, is_err_fn, pf->right, val, NULL, 0, (node_t)pf);
+          eval, ctx, is_err_fn, pf->host, val, NULL, 0, (node_t)pf);
       if (_val_is_error(is_err_result))
         return _eval_error_val(eval);
       bool is_error = (is_err_result->kind == COMPTIME_VALUE_BOOL &&
@@ -2052,7 +2056,7 @@ static comptime_value_t _eval_try(comptime_eval_t eval, context_t ctx,
       if (is_error) {
         /* Propagate error: call error() and try ofError propagation */
         comptime_value_t err_result = _eval_method_call(
-            eval, ctx, err_fn, pf->right, val, NULL, 0, (node_t)pf);
+            eval, ctx, err_fn, pf->host, val, NULL, 0, (node_t)pf);
         if (err_result) {
           /* Try ofError propagation first */
           _propagate_error_value(eval, ctx, node, err_result);
@@ -2085,7 +2089,7 @@ static comptime_value_t _eval_try(comptime_eval_t eval, context_t ctx,
       }
       /* Not error — call value() */
       comptime_value_t value_result = _eval_method_call(
-          eval, ctx, val_fn, pf->right, val, NULL, 0, (node_t)pf);
+          eval, ctx, val_fn, pf->host, val, NULL, 0, (node_t)pf);
       return value_result ? value_result : _eval_error_val(eval);
     }
   }
@@ -2112,11 +2116,11 @@ static comptime_value_t _eval_try(comptime_eval_t eval, context_t ctx,
 
 static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, context_t ctx,
                                             node_t node) {
-  cubec_expression_binary_t pf = (cubec_expression_binary_t)node;
+  cubec_expression_assert_t pf = (cubec_expression_assert_t)node;
 
   /* .! on union member access: u.a.! — assert a is the active variant */
-  if (pf->right->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
-    cubec_expression_member_t mem = (cubec_expression_member_t)pf->right;
+  if (pf->host->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
+    cubec_expression_member_t mem = (cubec_expression_member_t)pf->host;
     comptime_value_t host_val = _comptime_eval_expr(eval, ctx, mem->host);
     if (_val_is_error(host_val))
       return _eval_propagate_error(eval, host_val);
@@ -2181,7 +2185,7 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, context_t ctx,
     /* Host is not a tagged union — fall through */
   }
 
-  comptime_value_t val = _comptime_eval_expr(eval, ctx, pf->right);
+  comptime_value_t val = _comptime_eval_expr(eval, ctx, pf->host);
   if (_val_is_error(val))
     return _eval_propagate_error(eval, val);
 
@@ -2193,7 +2197,7 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, context_t ctx,
     if (is_err_fn && val_fn && err_fn) {
       /* Call isError() */
       comptime_value_t is_err_result = _eval_method_call(
-          eval, ctx, is_err_fn, pf->right, val, NULL, 0, (node_t)pf);
+          eval, ctx, is_err_fn, pf->host, val, NULL, 0, (node_t)pf);
       if (_val_is_error(is_err_result))
         return _eval_error_val(eval);
       bool is_error = (is_err_result->kind == COMPTIME_VALUE_BOOL &&
@@ -2201,7 +2205,7 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, context_t ctx,
       if (is_error) {
         /* Panic: call error() and emit panic diagnostic */
         comptime_value_t err_result = _eval_method_call(
-            eval, ctx, err_fn, pf->right, val, NULL, 0, (node_t)pf);
+            eval, ctx, err_fn, pf->host, val, NULL, 0, (node_t)pf);
         char err_buf[256];
         const char *err_desc = "unknown error";
         if (err_result) {
@@ -2222,7 +2226,7 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, context_t ctx,
       }
       /* Not error — call value() */
       comptime_value_t value_result = _eval_method_call(
-          eval, ctx, val_fn, pf->right, val, NULL, 0, (node_t)pf);
+          eval, ctx, val_fn, pf->host, val, NULL, 0, (node_t)pf);
       return value_result ? value_result : _eval_error_val(eval);
     }
   }
@@ -2255,8 +2259,8 @@ static comptime_value_t _eval_assert_unwrap(comptime_eval_t eval, context_t ctx,
 
 static comptime_value_t _eval_deref(comptime_eval_t eval, context_t ctx,
                                     node_t node) {
-  cubec_expression_binary_t deref = (cubec_expression_binary_t)node;
-  comptime_value_t val = _comptime_eval_expr(eval, ctx, deref->right);
+  cubec_expression_deref_t deref = (cubec_expression_deref_t)node;
+  comptime_value_t val = _comptime_eval_expr(eval, ctx, deref->host);
   if (!val || val->kind != COMPTIME_VALUE_POINTER)
     return _eval_error_val(eval);
   comptime_value_t pointed =
@@ -2272,13 +2276,13 @@ static comptime_value_t _eval_deref(comptime_eval_t eval, context_t ctx,
 
 static comptime_value_t _eval_addr(comptime_eval_t eval, context_t ctx,
                                    node_t node) {
-  cubec_expression_binary_t addr = (cubec_expression_binary_t)node;
-  comptime_value_t val = _comptime_eval_expr(eval, ctx, addr->right);
+  cubec_expression_addr_t addr = (cubec_expression_addr_t)node;
+  comptime_value_t val = _comptime_eval_expr(eval, ctx, addr->host);
   if (!val)
     return _eval_error_val(eval);
 
-  if (addr->right->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
-    const char *name = _eval_ident_str(addr->right);
+  if (addr->host->kind == CUBEC_NODE_LITERAL_IDENTIFIER) {
+    const char *name = _eval_ident_str(addr->host);
     uint64_t a = comptime_env_lookup_addr(eval->current_env, name);
     if (a) {
       /* Directly use the addr from env — no clone! Pointer references the

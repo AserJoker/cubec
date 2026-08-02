@@ -9,7 +9,10 @@
 #include "cubec/expression_initialize_list.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
-#include "cubec/expression_postfix_unary.h"
+#include "cubec/expression_addr.h"
+#include "cubec/expression_assert.h"
+#include "cubec/expression_deref.h"
+#include "cubec/expression_try.h"
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression_slice.h"
 #include "cubec/expression_spread.h"
@@ -280,8 +283,8 @@ static bool _is_const_lvalue(context_t ctx, node_t expr,
   }
 
   case CUBEC_NODE_EXPRESSION_DEREF: {
-    cubec_expression_binary_t deref = (cubec_expression_binary_t)expr;
-    semantic_type_t ptr_type = _check_expression(ctx, deref->right);
+    cubec_expression_deref_t deref = (cubec_expression_deref_t)expr;
+    semantic_type_t ptr_type = _check_expression(ctx, deref->host);
     semantic_type_t ptr_unq = semantic_type_strip_qualifier(ptr_type);
     if (ptr_unq->impl->kind == TYPE_POINTER) {
       semantic_type_t pointee = ptr_unq->impl->pointer.pointee;
@@ -1219,8 +1222,8 @@ static semantic_type_t _check_expr_namespace_access(context_t ctx,
 }
 
 static semantic_type_t _check_expr_deref(context_t ctx, node_t expr) {
-  cubec_expression_postfix_unary_t pf = (cubec_expression_postfix_unary_t)expr;
-  semantic_type_t host_type = _check_expression(ctx, pf->right);
+  cubec_expression_deref_t pf = (cubec_expression_deref_t)expr;
+  semantic_type_t host_type = _check_expression(ctx, pf->host);
   if (host_type->impl->kind == TYPE_ERROR)
     return ctx->error_type;
 
@@ -1236,12 +1239,12 @@ static semantic_type_t _check_expr_deref(context_t ctx, node_t expr) {
 }
 
 static semantic_type_t _check_expr_addr(context_t ctx, node_t expr) {
-  cubec_expression_postfix_unary_t pf = (cubec_expression_postfix_unary_t)expr;
-  semantic_type_t host_type = _check_expression(ctx, pf->right);
+  cubec_expression_addr_t pf = (cubec_expression_addr_t)expr;
+  semantic_type_t host_type = _check_expression(ctx, pf->host);
   if (host_type->impl->kind == TYPE_ERROR)
     return ctx->error_type;
 
-  if (!_is_lvalue(pf->right)) {
+  if (!_is_lvalue(pf->host)) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, expr->location,
                          "cannot take address of non-lvalue");
     ctx->error_count++;
@@ -1252,11 +1255,11 @@ static semantic_type_t _check_expr_addr(context_t ctx, node_t expr) {
 }
 
 static semantic_type_t _check_expr_try(context_t ctx, node_t expr) {
-  cubec_expression_postfix_unary_t pf = (cubec_expression_postfix_unary_t)expr;
+  cubec_expression_try_t pf = (cubec_expression_try_t)expr;
 
   /* .? on union member access: u.a.? — check if a is the active variant */
-  if (pf->right->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
-    cubec_expression_member_t mem = (cubec_expression_member_t)pf->right;
+  if (pf->host->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
+    cubec_expression_member_t mem = (cubec_expression_member_t)pf->host;
     semantic_type_t host_type = _check_expression(ctx, mem->host);
     if (host_type->impl->kind == TYPE_ERROR)
       return ctx->error_type;
@@ -1299,7 +1302,7 @@ static semantic_type_t _check_expr_try(context_t ctx, node_t expr) {
     /* Host is not a union — fall through to check full operand */
   }
 
-  semantic_type_t host_type = _check_expression(ctx, pf->right);
+  semantic_type_t host_type = _check_expression(ctx, pf->host);
   if (host_type->impl->kind == TYPE_ERROR)
     return ctx->error_type;
 
@@ -1339,11 +1342,11 @@ static semantic_type_t _check_expr_try(context_t ctx, node_t expr) {
 }
 
 static semantic_type_t _check_expr_assert(context_t ctx, node_t expr) {
-  cubec_expression_postfix_unary_t pf = (cubec_expression_postfix_unary_t)expr;
+  cubec_expression_assert_t pf = (cubec_expression_assert_t)expr;
 
   /* .! on union member access: u.a.! — assert a is the active variant */
-  if (pf->right->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
-    cubec_expression_member_t mem = (cubec_expression_member_t)pf->right;
+  if (pf->host->kind == CUBEC_NODE_EXPRESSION_MEMBER) {
+    cubec_expression_member_t mem = (cubec_expression_member_t)pf->host;
     semantic_type_t host_type = _check_expression(ctx, mem->host);
     if (host_type->impl->kind == TYPE_ERROR)
       return ctx->error_type;
@@ -1386,7 +1389,7 @@ static semantic_type_t _check_expr_assert(context_t ctx, node_t expr) {
     /* Host is not a union — fall through to check full operand */
   }
 
-  semantic_type_t host_type = _check_expression(ctx, pf->right);
+  semantic_type_t host_type = _check_expression(ctx, pf->host);
   if (host_type->impl->kind == TYPE_ERROR)
     return ctx->error_type;
 

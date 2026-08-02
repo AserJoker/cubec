@@ -159,7 +159,7 @@ node_t (core/node.h)
         ├── cubec_expression_function_t (cubec/expression_function.h)  # func [name] |captures| [generic](params): type { body } | ;
         ├── cubec_expression_generic_instantiation_t (cubec/expression_generic_instantiation.h)
         ├── cubec_expression_group_t (cubec/expression_group.h)
-        ├── cubec_expression_initialize_field_t (cubec/expression_initialize_field.h)  # .field = value
+        ├── cubec_initialize_field_t (cubec/initialize_field.h)  # .field = value
         ├── cubec_expression_initialize_list_t (cubec/expression_initialize_list.h)  # .<type>{items}
         ├── cubec_expression_member_t (cubec/expression_member.h)
         ├── cubec_expression_namespace_access_t (cubec/expression_namespace_access.h)  # host::field
@@ -203,7 +203,7 @@ node_t (core/node.h)
         ├── cubec_expression_function_t (cubec/expression_function.h)  # func [name] |captures| [generic](params): type { body } | ;
         ├── cubec_expression_generic_instantiation_t (cubec/expression_generic_instantiation.h)
         ├── cubec_expression_group_t (cubec/expression_group.h)
-        ├── cubec_expression_initialize_field_t (cubec/expression_initialize_field.h)  # .field = value
+        ├── cubec_initialize_field_t (cubec/initialize_field.h)  # .field = value
         ├── cubec_expression_initialize_list_t (cubec/expression_initialize_list.h)  # .<type>{items}
         ├── cubec_expression_member_t (cubec/expression_member.h)
         ├── cubec_expression_namespace_access_t (cubec/expression_namespace_access.h)  # host::field
@@ -234,6 +234,7 @@ node_t (core/node.h)
 ## Core Data Structures
 
 ### vec_t — Dynamic Array
+
 - Like `std::vector<void*>`
 - Operations: push, pop, get, set, insert, remove, resize
 - Capacity starts at 0, first resize → 8, then doubles
@@ -242,6 +243,7 @@ node_t (core/node.h)
 - Supports `auto_dispose` mode
 
 ### list_t — Doubly-Linked List
+
 - Standard doubly-linked list with head/tail pointers
 - **Indexed insert**: `list_insert(idx, data)` — O(n), traverse from nearer end
 - **Iterator operations** (O(1)): `list_iter_get`/`list_iter_set`/`list_iter_remove` — direct node access, preferred API pattern
@@ -251,6 +253,7 @@ node_t (core/node.h)
 - Supports clone/move, `auto_dispose` mode
 
 ### rbtree_t — Red-Black Tree
+
 - Complete RB-tree with uint64_t keys
 - Standard operations: insert, find, remove, clear
 - Left/right rotation, insert fixup, delete fixup all implemented
@@ -258,6 +261,7 @@ node_t (core/node.h)
 - Supports auto_dispose
 
 ### map_t — Dictionary/Map
+
 - Implemented as two `vec_t` (keys + values) + index
 - Small scale (< 16 entries): hash table (16 buckets, chaining)
 - Large scale (>= 16 entries): auto-converts to red-black tree index (irreversible)
@@ -266,6 +270,7 @@ node_t (core/node.h)
 - Provides `map_iter_t`
 
 ### string_t — Dynamic String
+
 - Like `std::string`, null-terminated
 - Initial capacity 1, doubles on expansion
 - Operations: get, set, concat, nconcat (fixed-length)
@@ -273,12 +278,14 @@ node_t (core/node.h)
 - Move transfers data pointer, leaves source with empty 8-byte buffer
 
 ### position_t / location_t
+
 - `position_t`: line, column, offset pointer
 - `location_t`: filename + begin/end positions
 - `location_get`: extracts source text between begin/end offsets via `memcpy` + explicit `\0` termination
 - `location_is`: compares location text to a string via `strncmp` **plus length check** (`str[length] == '\0'`) to prevent prefix-only matches (e.g., single-char `b` would previously match keyword `break`)
 
 ### token_t / node_t (Base Classes)
+
 - `token_t`: allocator, kind (uint32_t), location
 - `node_t`: allocator, kind (uint32_t), location, parent pointer
 
@@ -298,12 +305,14 @@ node_t (core/node.h)
 ## Lexer (src/cubec/token.c, ~675 lines)
 
 ### Token Types (9 kinds)
+
 - `WHITESPACE`, `EOF`, `COMMENT` (`//`), `MULTILINE_COMMENT` (`/* */`)
 - `IDENTIFIER`, `NUMERIC`, `SYMBOL`, `KEYWORD`, `STRING`, `CHAR`
 
 Note: `...` (ellipsis/spread) is tokenized as a `SYMBOL` with text `"..."`, relying on the symbols table's longest-match ordering (placed among the 3-character symbols: `&&=`, `||=`, `...`).
 
 ### Key Functions
+
 - `read_unicode` — UTF-8 decoder (1-4 bytes), returns Unicode codepoint
 - `read_symbol_token` — Longest match ordered by token length: 3-char (`&&=`, `||=`, `...`), 2-char (`==`, `!=`, `>>`, `<<`, `+=`, ...), 1-char (`=`, `!`, `+`, ...). The `...` operator is placed among the 3-character symbols so it matches before the single `.`.
 - `read_whitespace_token` — Uses ICU `u_isWhitespace`
@@ -317,9 +326,11 @@ Note: `...` (ellipsis/spread) is tokenized as a `SYMBOL` with text `"..."`, rely
 - `resolve_token_list` — Complete lexer entry point, returns token vector
 
 ### Keywords (38 total)
+
 `as`, `alignof`, `break`, `builtin`, `case`, `comptime`, `const`, `continue`, `defer`, `do`, `else`, `enum`, `export`, `extends`, `extern`, `for`, `foreach`, `from`, `func`, `if`, `import`, `in`, `inline`, `interface`, `is`, `of`, `pub`, `return`, `sizeof`, `struct`, `switch`, `test`, `type`, `typeof`, `union`, `using`, `var`, `volatile`, `while`
 
 ### Known Issue
+
 Whitespace tokens are sometimes incorrectly marked as `SYMBOL` (documented as "bug" in tests).
 
 ## Complete Token Pipeline
@@ -449,8 +460,8 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_expression_slice` (expression_slice.c) — Parses slice expression `host[start:length]`. Called from `read_value` as a postfix operator with `host` already parsed. Format: `host[start:length]` where `start` and `length` are both optional (at least `:` must be present). If `[` doesn't follow, returns NULL gracefully. If `[]` (empty brackets), throws error. Uses `read_expression` for parsing start/length expressions. Supports chained slices `arr[1:2][0:1]` and mixing with calls and member access: `arr[0:1].field`, `getArr()[1:]`. Node fields: `host`, `start`, `length` (start/length may be NULL if omitted).
 - `read_atom` (expression.c) — Parses in order: `read_expression_initialize_list` → `read_expression_typeof` → `read_expression_sizeof` → `read_expression_alignof` → `read_expression_type_function` → `read_expression_function` → `read_expression_group` → `read_expression_type_qualifier` → `read_declaration_pointer` → `read_declaration_slice` → `read_declaration_array` → `read_literal_string` → `read_literal_numeric` → `read_literal_identifier` → `read_literal_char`. Type and value expressions share a unified parsing path: `read_expression_type` delegates directly to `read_expression`. Composite types (pointer/slice/array/qualifier/function type) greedily consume their inner type expression, including ternary. Use grouping `()` to prevent greedy consumption.
 - `read_expression_group` (expression_group.c) — Parses parenthesized expression `( expr )`. Returns `cubec_expression_group_t` wrapping the inner expression. Tried first in `read_atom` so `(a + b)` is parsed as a group wrapping a binary expression.
-- `read_expression_initialize_list` (expression_initialize_list.c) — Parses initialize list expression `.<type>{<items>}` or `.{<items>}`. Called from `read_atom` as a primary expression (tried before `read_expression_group`). Checks for `.` at current position, then looks ahead: `.` + `{` → anonymous (type=NULL), `.` + type expression + `{` → typed. Type is parsed via `read_expression_type` (supports member access, generic instantiation, pointer, etc.). Items are comma-separated and must be homogeneous: either all `initialize_field` (`.name = value`) or all positional expressions — mixing is an error. First item determines mode: tries `read_expression_initialize_field` first; if that fails, falls back to `read_expression`. In field mode, non-field items cause error; in positional mode, field-like items cause error. Disambiguation: `.{.Test{}}` is positional (`.Test{}` is a nested initialize_list expression), `.{.Test=123}` is field mode (`.Test=123` has `=`). THROW errors on: trailing comma, unclosed `}`, mixed field/positional items. Returns `cubec_expression_initialize_list_t` with `type` (nullable node_t), `items` (vec_t with auto_dispose=true), `is_field` (bool). Supports postfix chaining: `.Vec{1,2}.field`, and binary context: `1 + .Vec{1,2}`.
-- `read_expression_initialize_field` (expression_initialize_field.c) — Parses initialize field expression `.identifier = expression`. Used inside `read_expression_initialize_list` to parse individual field items. Checks for `.` followed by identifier followed by `=`. Returns NULL if the `.` + identifier + `=` pattern is not matched (not an error — allows caller to try positional expression parsing). Returns `cubec_expression_initialize_field_t` with `field` (cubec_literal_identifier_t) and `value` (node_t).
+- `read_expression_initialize_list` (expression_initialize_list.c) — Parses initialize list expression `.<type>{<items>}` or `.{<items>}`. Called from `read_atom` as a primary expression (tried before `read_expression_group`). Checks for `.` at current position, then looks ahead: `.` + `{` → anonymous (type=NULL), `.` + type expression + `{` → typed. Type is parsed via `read_expression_type` (supports member access, generic instantiation, pointer, etc.). Items are comma-separated and must be homogeneous: either all `initialize_field` (`.name = value`) or all positional expressions — mixing is an error. First item determines mode: tries `read_initialize_field` first; if that fails, falls back to `read_expression`. In field mode, non-field items cause error; in positional mode, field-like items cause error. Disambiguation: `.{.Test{}}` is positional (`.Test{}` is a nested initialize_list expression), `.{.Test=123}` is field mode (`.Test=123` has `=`). THROW errors on: trailing comma, unclosed `}`, mixed field/positional items. Returns `cubec_expression_initialize_list_t` with `type` (nullable node_t), `items` (vec_t with auto_dispose=true), `is_field` (bool). Supports postfix chaining: `.Vec{1,2}.field`, and binary context: `1 + .Vec{1,2}`.
+- `read_initialize_field` (expression_initialize_field.c) — Parses initialize field expression `.identifier = expression`. Used inside `read_expression_initialize_list` to parse individual field items. Checks for `.` followed by identifier followed by `=`. Returns NULL if the `.` + identifier + `=` pattern is not matched (not an error — allows caller to try positional expression parsing). Returns `cubec_initialize_field_t` with `field` (cubec_literal_identifier_t) and `value` (node_t).
 - `read_generic_params` (generic_param.c) — Parses generic parameter list `[param1, param2, ...]`. Supports four forms: simple (`T`), constrained (`T extends Numeric`), value generic (`N: u64`), and rest param (`...Args`). Rest param is detected by checking for `...` symbol before reading identifier; if detected, `is_rest` is set to `true`. Constraint and value types are parsed via `read_expression_type` (greedy — consumes ternary). Parameters are comma-separated within `[]`. Pack params must be last; only one pack param allowed. Returns a vec of `cubec_generic_param_t`. Ownership: params vec is created with `auto_dispose=true`; caller takes ownership.
 - `read_expression_spread` (expression_spread.c) — Parses spread operator `...<expr>`. Returns `cubec_expression_spread_t` wrapping the spread value. **Standalone function** — NOT called from `read_atom`/`read_value`/`read_expression`. Designed to be explicitly invoked by callers that support spread syntax (e.g., function arguments, struct initializers). Uses `read_expression` for the value so `...a + b` spreads the entire binary expression `a + b`.
 - `read_expression_ternary` (expression_ternary.c) — Parses ternary/conditional expression `condition ? consequent : alternate`. Uses precedence climbing via `read_expression_binary` for the condition. Falls back gracefully if `?` is not found (returns condition as-is). Recursively calls `read_expression` for consequent and alternate to handle nested ternaries naturally. Full lifecycle: init/dispose/clone/move. Node fields: `condition`, `consequent`, `alternate`.
@@ -479,6 +490,7 @@ read_expression_namespace_access      # host::field (类型成员访问/命名�
 - `read_expression_typeof` (expression_typeof.c) — Parses compile-time type computation expression `typeof(<expression>)`. Available in both type expression context (via `read_type_expression_primary`) and value expression context (via `read_atom`). In type expressions, `typeof(x)` can be used as pointer/slice/array base type: `*typeof(x)`, `[]typeof(x)`. In value expressions, `typeof(x)` is an atom that supports full postfix chaining: `.field` (member access), `::method` (namespace access), `[i32]` (generic instantiation), `()` (call). The inner expression is parsed via `read_expression`. Returns `cubec_expression_typeof_t` with `expression` field. Returns NULL if the current token is not the `typeof` keyword. THROW errors on missing `(`, missing `)`, or missing inner expression.
 
 ### Not Yet Implemented
+
 All statement and declaration types have parser implementations, including `comptime` blocks/if/for.
 
 ## Semantic Analysis Engine (src/engine/)
@@ -500,6 +512,7 @@ Two-layer representation: `semantic_type_t` wraps AST type nodes with semantic i
 **Opaque type** (`TYPE_OPAQUE`): A type-erased pointer-like type analogous to C's `void*`. Layout: `size = sizeof(void*)`, `alignment = alignof(void*)`. Any pointer or slice type can implicitly convert to opaque. Opaque cannot implicitly convert to any other type. Registered as `builtin_opaque` in the checker. Not directly constructible via literals; typically obtained from pointer-to-opaque conversion.
 
 **Anonymous initialize_list type inference**: Initialize lists without an explicit type (`.{...}`) are context-independent semantic units that infer their type from their contents:
+
 - Named fields `.{.x=1, .y=2}` → anonymous `struct { x: i32, y: i32 }`
 - Positional fields `.{1, 2.0}` → tuple `<i32, f64>`
 - Empty `.{}` → empty struct
@@ -507,6 +520,7 @@ Two-layer representation: `semantic_type_t` wraps AST type nodes with semantic i
 - Struct-like→struct-like: anonymous struct can implicitly convert to named struct or generic instance if field names and types match pairwise
 
 **Implicit conversion rules** (`semantic_type_can_implicit_convert`):
+
 1. Same type → true
 2. Qualifier strip: `T → const T`, `T → volatile T`, `T → const volatile T` (recursive)
 3. Pointer conversion: only qualifier addition on pointee (`*T → *const T`), pointee types must be structurally equivalent
@@ -517,12 +531,13 @@ Two-layer representation: `semantic_type_t` wraps AST type nodes with semantic i
 8. Pointer/slice → opaque
 9. Struct-like → struct-like (field name + type matching, supports TYPE_STRUCT/UNION/CUNION/GENERIC_INSTANCE)
 
-**NOT allowed implicitly** (per design doc): int→float, []T→*T, [N]T→[]T. These require explicit `cast[]()`.
+**NOT allowed implicitly** (per design doc): int→float, []T→\*T, [N]T→[]T. These require explicit `cast[]()`.
 
 **Array/slice decay** (`semantic_type_can_decay`): returns false — no implicit array-to-slice or array-to-pointer decay.
 
 **Explicit cast rules** (`semantic_type_can_explicit_cast`):
 All implicit conversions plus:
+
 1. Numeric: float→int (truncation), int→float, int narrowing, float narrowing, bool↔int, enum↔int, char↔int
 2. Pointer: opaque→pointer, pointer→int, *Small→*Big downcast (struct pointer, prefix field match)
 3. Container: array→tuple (element size+alignment layout-compatible)
@@ -540,6 +555,7 @@ Chain-of-responsibility scope model. `scope_lookup` returns `SYMBOL_NAME_KNOWN` 
 Dynamic registry (`builtin.h`/`builtin.c`) mapping names to `builtin_entry` (name + type + eval_call callback). No enum dispatch IDs — each builtin entry carries an `eval_call` function pointer for comptime evaluation. `builtin.c` contains only the mechanism (table create/dispose/register/lookup); `builtin_table_init_defaults()` dispatches to per-module init functions. **Builtin function declarations must come from standard library source code** (using `builtin func` syntax), NOT auto-registered to `global_scope` by the compiler. This ensures proper module affiliation and version decoupling. Builtin declarations go through normal checker flow (type resolution, generic param handling) then are validated against the table: unknown builtin → error, signature mismatch → error, match → `sym->is_builtin = true`. Comptime eval uses `callee_sym->is_builtin` + `eval_call` callback instead of hardcoded name checks or switch/case dispatch.
 
 **Module split**:
+
 - `builtin_debug.c/h` — `assert` (type creation + `builtin_assert_eval` callback). **assert is only allowed inside test blocks**; calling it elsewhere is an error. On failure, assert reports the error but does NOT abort the block — subsequent statements continue executing (test-local failure).
 - `builtin_panic.c/h` — `panic(msg: str): void` (type creation + `builtin_panic_eval` callback). **panic is unrecoverable** — it propagates `COMPTIME_VALUE_FATAL` which triggers `COMPTIME_SIGNAL_FATAL`, sets `ctx->fatal_error`, and aborts all further compilation. No subsequent declarations or statements are evaluated.
 - `builtin_collection.c/h` — `length` (type creation + `builtin_length_eval` callback)
@@ -584,12 +600,14 @@ Generic function/type method bodies are type-checked via a worklist algorithm:
 - Explicit type args (`obj.method[U](args)`) handled via `CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION` with member callee
 
 **Data structures** (in `struct checker`):
+
 - `body_check_worklist` (vec of `body_check_entry_t*`) — pending body checks
 - `checked_bodies` (strmap) — cache key → "1" for deduplication
 
 **`body_check_entry_t`**: `{ func_sym, inst_type, type_args, scope_root, is_method, host_type }`
 
 **Key files**:
+
 - `checker_check_stmt.c`: `_enqueue_body_check`, `_check_body_from_entry`, `checker_check_all_bodies`
 - `checker_check_expr.c`: generic call → enqueue after instantiation, member call desugaring with method-level generic inference
 - `checker_check_expr_helpers.c`: `_check_generic_ident_callee` → enqueue after explicit instantiation
@@ -638,11 +656,11 @@ Chain-of-responsibility scope model with `strmap_t` bindings (value_auto_dispose
 
 `COMPTIME_SIGNAL_NONE/RETURN/BREAK/CONTINUE/ERROR`. Signal propagates through statement execution, handled by caller (e.g., function call extracts return value, loop handles break/continue).
 
-### Expression Evaluation (_eval_expr)
+### Expression Evaluation (\_eval_expr)
 
 Covers: literal numeric/string/char/identifier, binary ops (10 precedence levels), prefix unary (!/-/~), assignment (incl. composite field writeback), function call, member access, namespace access, ternary, group, sizeof/alignof/typeof, function closure, initialize list, comma, slice (string + array), deref (`*`), addr (`&`), type nodes.
 
-### Statement Execution (_exec_stmt)
+### Statement Execution (\_exec_stmt)
 
 Covers: block (with scope), expression, return, if, while, do-while, for, foreach, declaration, function, break, continue, empty, defer, switch, comptime if/foreach. Type declaration nodes are skipped (handled by checker_evaluate).
 
@@ -657,30 +675,34 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 
 ## Build System
 
-| Setting | Value |
-|---------|-------|
-| CMake minimum | 3.12 |
-| C standard | C11 (GNU extensions enabled via CMake default) |
-| C++ standard | C++20 |
-| Toolchain | vcpkg (conditional, only if `VCPKG_ROOT` env set) |
+| Setting         | Value                                                     |
+| --------------- | --------------------------------------------------------- |
+| CMake minimum   | 3.12                                                      |
+| C standard      | C11 (GNU extensions enabled via CMake default)            |
+| C++ standard    | C++20                                                     |
+| Toolchain       | vcpkg (conditional, only if `VCPKG_ROOT` env set)         |
 | Compile defines | MSVC: `_CRT_SECURE_NO_WARNINGS`; Linux/GCC: `_GNU_SOURCE` |
-| External deps | ICU (i18n, uc, data, io), Google Test, Threads |
-| Output dir | `${PROJECT_SOURCE_DIR}` (project root) |
+| External deps   | ICU (i18n, uc, data, io), Google Test, Threads            |
+| Output dir      | `${PROJECT_SOURCE_DIR}` (project root)                    |
 
 ### Cross-Platform Support
+
 - Windows + MSVC/Clang: fully supported, Clang needs `clang_rt.builtins-x86_64`
 - Linux + GCC: supported (requires glibc >= 2.28 for `<threads.h>`)
 - `Threads::Threads` linked on all platforms (provides `-pthread` on Linux)
 
 ### Build Targets
+
 1. **cubecc** — Compiler executable (links `src/core/`, `src/engine/`, `src/cubec/`, `src/reader/`, `src/writer/`, `src/c/` + `src/main.c`). Note: `reader/`, `writer/`, `c/` directories don't exist yet — future modules for source reading, code generation, and C backend.
-2. **cubec_test** — Test executable (links all source files + test/*.cpp, depends on GTest)
+2. **cubec_test** — Test executable (links all source files + test/\*.cpp, depends on GTest)
 
 ### Platform-Specific Linking
+
 - Windows + Clang: extra link `clang_rt.builtins-x86_64`
 - Linux + GCC: `-pthread` via `Threads::Threads`
 
 ### ICU Data Handling
+
 - ICU common data stored as binary `third_party/icudt74l.dat` (~30MB, under Git 100MB limit)
 - At **build time**, CMake converts `.dat` → C byte array via `cmake/bin_to_c.ps1` (Windows) or `xxd` (Unix)
 - Generated file written to `build/icu_data_gen.c` (not tracked by Git, auto-regenerated only when `.dat` changes)
@@ -693,6 +715,7 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 - Total: 1611 test cases
 
 ### Core Tests
+
 - `dt_allocator.cpp` (12 cases) — create/destroy, alloc/free, zero-size, NULL-free, multi-alloc, type create, value introspection, clone, move
 - `dt_vec.cpp` (20 cases) — create/resize, push/get, pop, set, insert, remove, resize, get_data, initial capacity + 10 iterator cases (iteration, empty, get, set, remove, remove_first, remove_last, remove_exhausted, traverse_remove_all, single_element)
 - `dt_list.cpp` (20 cases) — full list operations using iterator-based get/set/remove; no indexed access APIs
@@ -703,11 +726,12 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 - `dt_token.cpp` (56 cases) — all token types, all 41 keywords, all numeric formats, all escape sequences, comments, symbols
 
 ### Cubec Tests
+
 - `dt_literal_char.cpp` (5 cases)
 - `dt_literal_identifier.cpp` (5 cases)
 - `dt_literal_numeric.cpp` (11 cases) — integer/float parsing, base prefixes (hex/oct/bin), type suffixes (i8~u64, f32/f64), scientific notation
 - `dt_literal_string.cpp` (12 cases)
-- `dt_expression_binary.cpp` (40 cases) — 4 prefix unary operators (!/+/-/~), chained prefix (!!x, --n), prefix+member (!obj.field), 18 binary operators across 10 precedence levels, 4 precedence interaction tests, 3 postfix unary interaction tests (ptr.*, x.&, binary with postfix), 2 whitespace handling, 1 member+binary, 1 full chain
+- `dt_expression_binary.cpp` (40 cases) — 4 prefix unary operators (!/+/-/~), chained prefix (!!x, --n), prefix+member (!obj.field), 18 binary operators across 10 precedence levels, 4 precedence interaction tests, 3 postfix unary interaction tests (ptr.\*, x.&, binary with postfix), 2 whitespace handling, 1 member+binary, 1 full chain
 - `dt_expression_group.cpp` (13 cases) — basic parenthesized expression, group with binary inner, empty group error, unclosed group error, nested groups, group with identifier, group as LHS of binary, non-group returns NULL
 - `dt_expression_member.cpp` (8 cases) — single member access, chained access, consume all tokens, member on string literal, error on missing dot, error on non-identifier field, not a member (no dot), empty source
 - `dt_expression_namespace_access.cpp` (11 cases) — single namespace access (`std::vec`), chained (`std::vec::Vec`), spaces, namespace+generic (`std::vec::Vec[i32]`), static member access (`std::Vec::create`), in normal expression (`a + std::Vec::create() + b`), mixed `::`+`.` (`std::Vec::new().field`), in type expression (`*std::vec::Vec`), consume all tokens, clone, move
@@ -739,6 +763,7 @@ Covers: block (with scope), expression, return, if, while, do-while, for, foreac
 - `dt_generic_inference.cpp` (25 cases) — generic type inference from call arguments: single i32/f64 inference, two-param inference, same-param consistency, pointer/slice param inference, mismatch error, unresolved param error, constraint interface pass/fail, constraint structural pass/fail, constraint generic instance, constraint pointer, constraint wildcard skips, infer with constraint pass/fail, <?> tuple wildcard pass/multi_elem/fail_int/fail_struct/fail_pointer/empty_tuple
 
 ### Engine Tests
+
 - `dt_undefined.cpp` (9 cases) — undefined literal: typed undefined init, no-type error, standalone expr error, var-no-init error, extern-no-init ok, builtin-no-init ok, TDZ use before assign, assign-then-use, pointer type undefined
 - `dt_flow_state.cpp` (11 cases) — flow_state unit tests: create/dispose, mark_returned/broke/continued, tdz_add/remove, merge_both_alive/returned/one_returned, merge_tdz_union/both_assigned/one_assigned
 - `dt_flow_unreachable.cpp` (5 cases) — unreachable code detection: after return/break/continue, reachable after if-return, only first unreachable warned
@@ -798,11 +823,11 @@ All declarations within a module are **not exported by default**. Only declarati
 
 ### Path Resolution Rules (Node.js ES Module Style)
 
-| Path Format | Rule |
-|-------------|------|
-| `./xxx` | Relative path (relative to current file's directory) |
-| `../xxx` | Relative path (parent directory) |
-| `xxx` | Logical path (resolved from project root or module base path) |
+| Path Format | Rule                                                          |
+| ----------- | ------------------------------------------------------------- |
+| `./xxx`     | Relative path (relative to current file's directory)          |
+| `../xxx`    | Relative path (parent directory)                              |
+| `xxx`       | Logical path (resolved from project root or module base path) |
 
 **Examples**:
 
@@ -817,10 +842,10 @@ import vec from "std/vec";      // Logical path → std/vec.cubec
 
 `import xxx from "path";` looks for `path.cubec` as the module entry.
 
-| import statement | Lookup file |
-|------------------|-------------|
-| `import x from "foo";` | `foo.cubec` |
-| `import x from "./bar";` | `./bar.cubec` |
+| import statement           | Lookup file     |
+| -------------------------- | --------------- |
+| `import x from "foo";`     | `foo.cubec`     |
+| `import x from "./bar";`   | `./bar.cubec`   |
 | `import x from "foo/bar";` | `foo/bar.cubec` |
 
 ### Import Renaming
@@ -860,12 +885,14 @@ export struct SomeType { ref: *a.SomeType }     // ✅ OK: struct definition
 实现顺序：enum → union → cunion → if → while → for → foreach → switch → break/continue → defer → test → decorator → comptime
 
 ### enum 枚举声明
+
 - TypeScript 风格，编译期常量，不支持泛型
 - `[export] enum <name> { <item> [: <type>] [= <value>], ... }` — 类型和值均可省略
 - 匿名 enum 类型表达式：`enum { A: u8 = 1 }`
 - 节点：CUBEC_NODE_STATEMENT_ENUM, CUBEC_NODE_DECLARATION_ENUM, CUBEC_NODE_ENUM_ITEM
 
 ### union 联合体声明
+
 - Tagged union，运行时布局：`[tag: u64][data: max_field_size]`，字段 offset = 8（tag 在 offset 0-7）
 - `__type__` 不是真实字段，对 Cubec 开发者不可见；tag 存储活跃变体的 type hash
 - 初始化语法：具名 `.field = expr`（前导点和等号），位置初始化只取第一个字段
@@ -874,17 +901,21 @@ export struct SomeType { ref: *a.SomeType }     // ✅ OK: struct definition
 - `[export] union <name> [<generic_params>] { <field>: <type>, ... }`
 
 ### cunion C 风格联合体
+
 - C 兼容，字段用分号分隔，无 tag 字节，size = max_field_size
 - `cunion <name> { <field>: <type>; ... }`
 - 不支持泛型、export、匿名类型表达式
 
 ### if 条件语句
+
 - `if(condition) { } else if(condition) { } else { }` — 条件必须括号
 
 ### for 循环
+
 - C 风格三段式：`for(init; condition; increment) { }`
 
 ### foreach 迭代器循环
+
 - `foreach(<lvalue>|var <identifier>[:<type>] of <expression>) <statement>` — 迭代器遍历
 - 使用 `of` 关键字（非 `:`）分隔迭代变量与迭代器，避免与类型注解歧义
 - 两种模式：
@@ -895,30 +926,37 @@ export struct SomeType { ref: *a.SomeType }     // ✅ OK: struct definition
 - 仅支持迭代器协议（对象含 `next()` 方法返回 `{value, done}`），不直接支持数组/切片/字符串
 
 ### while / do-while 循环
+
 - `while(condition) { }` — 条件必须括号
 - `do { } while(condition);` — 括号+分号结尾
 
 ### switch 分支语句
+
 - `switch(value) { case(a, b) -> { }, else -> { } }` — 括号+逗号分隔多值
 - `->` 连接 case 和 body（需新增词法 token）
 - 支持表达式形式（有返回值，类似 Rust match）
 
 ### defer 延迟执行
+
 - `defer expr();` 和 `defer { }` 两种形式
 
 ### break / continue
+
 - 仅简单形式 `break;` / `continue;`，不支持标签
 
 ### test 测试块
+
 - `test "name" { }` — 仅顶层使用，名称必须
 
 ### decorator 装饰器
+
 - `[[expr]]` C++11 attribute 风格，内部是编译期表达式，求值后必须是符合要求的函数
 - 多个叠加：`[[inline]] [[export]] func foo() { }`
 - 可修饰：func、struct/enum/union、type、var
 - 闭包语义：函数装饰器将原函数保存为 `__original_<name>`，symbol 指向装饰器返回的函数；变量装饰器 inline 展开；类型装饰器原地修改
 
 ### comptime 编译时求值
+
 - `comptime if(condition) { } else { }` — 独立 AST 节点，条件必须编译期求值为 bool，未采取分支不做类型检查
 - `comptime foreach(item of iter) { }` — 编译期迭代器展开，支持 `var` 和类型注解
 
@@ -928,24 +966,24 @@ Cubec 的泛型机制基于**"推导 + 鸭子类型"**范式，采用编译期�
 
 ### 设计原则
 
-| 原则 | 说明 |
-|------|------|
-| 推导优先 | 泛型参数从函数实参类型自动推导，推导失败则编译报错（除非显式指定） |
-| 鸭子类型 | 约束校验基于结构兼容性（A 是否具备 B 的操作），非继承链检查 |
-| 无重载 | 函数名对应唯一实现，无重载决议，降低复杂度 |
-| `[]` 语法 | 统一使用方括号，解析阶段即可区分泛型与比较运算符 |
-| 显式传递 | 推导失败时支持显式类型实参：`parse[i32]("42")` |
+| 原则      | 说明                                                               |
+| --------- | ------------------------------------------------------------------ |
+| 推导优先  | 泛型参数从函数实参类型自动推导，推导失败则编译报错（除非显式指定） |
+| 鸭子类型  | 约束校验基于结构兼容性（A 是否具备 B 的操作），非继承链检查        |
+| 无重载    | 函数名对应唯一实现，无重载决议，降低复杂度                         |
+| `[]` 语法 | 统一使用方括号，解析阶段即可区分泛型与比较运算符                   |
+| 显式传递  | 推导失败时支持显式类型实参：`parse[i32]("42")`                     |
 
 ### 各类型泛型支持总览
 
-| 类型 | 泛型支持 | 推导 | 语义 |
-|------|----------|------|------|
-| struct | ✅ 支持 `struct Vec[T] { ... }` | ❌ 不支持推导（无构造函数，显式写 `Vec[i32]{}`） | 编译期模板实例化 |
-| enum | ❌ 不支持泛型 | — | TypeScript 风格：编译期常量，成员可指定类型和值 |
-| union | ✅ 支持 `union Option[T] { value: T, tag: u64 }` | — | Rust 风格：tagged union，字段+逗号分隔 |
-| cunion | ❌ 不支持泛型 | — | C 风格：字段重叠存储，分号分隔，无 tag |
-| interface | ✅ 支持 | — | Go/TypeScript 风格：仅存方法签名，结构型 / duck typing |
-| func | ✅ 支持 | ✅ 支持从实参推导 | 泛型函数 |
+| 类型      | 泛型支持                                         | 推导                                             | 语义                                                   |
+| --------- | ------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------ |
+| struct    | ✅ 支持 `struct Vec[T] { ... }`                  | ❌ 不支持推导（无构造函数，显式写 `Vec[i32]{}`） | 编译期模板实例化                                       |
+| enum      | ❌ 不支持泛型                                    | —                                                | TypeScript 风格：编译期常量，成员可指定类型和值        |
+| union     | ✅ 支持 `union Option[T] { value: T, tag: u64 }` | —                                                | Rust 风格：tagged union，字段+逗号分隔                 |
+| cunion    | ❌ 不支持泛型                                    | —                                                | C 风格：字段重叠存储，分号分隔，无 tag                 |
+| interface | ✅ 支持                                          | —                                                | Go/TypeScript 风格：仅存方法签名，结构型 / duck typing |
+| func      | ✅ 支持                                          | ✅ 支持从实参推导                                | 泛型函数                                               |
 
 ### 泛型规则总览（16 条）
 
@@ -965,7 +1003,6 @@ func[T extends Printable & Serializable](x: T): str
 type Variadic[...Args] = i32
 func[T extends Numeric, ...Rest](first: T, rest: Rest): T
 ```
-
 
 #### 2. 无重载 + 鸭子类型 = 低复杂度
 
@@ -1046,6 +1083,7 @@ func wrap[R, ...Args](fn: func(...Args) -> R): func(...Args) -> R {
 ```
 
 参数包以 `...` 作为前缀，后跟标识符。解析器在读取 identifier 之前先检测 `...` 符号，检测到则设置 `is_rest = true`。规则：
+
 - 参数包必须是泛型参数列表的最后一个参数
 - 不允许出现多个参数包
 - 参数包可带 `extends` 约束，每个展开的类型都必须满足
@@ -1055,6 +1093,7 @@ func wrap[R, ...Args](fn: func(...Args) -> R): func(...Args) -> R {
 - 空泛型实参列表 `foo[]()` 表示零展开
 
 语义表示：
+
 - 类型层：`semantic_type_t` 中 `TYPE_GENERIC_PACK`，含 `element_types` 向量
 - 值层：`comptime_value_t` 中 `COMPTIME_VALUE_PACK`，含 `elements` 向量
 - AST 层：`cubec_generic_param_t` 的 `is_rest`、`cubec_function_argument_t` 的 `is_rest`
@@ -1114,6 +1153,7 @@ comptime var data = read_file("config.json")  // 编译期 IO
 `builtin` 是声明前缀修饰符，表示实现由编译器提供。支持三种声明类别：
 
 **语法**：
+
 ```c
 builtin type Name[T extends constraint?];    // 编译器内建类型变换，无 body
 builtin var Name: Type;                       // 编译期内建常量，无初始化
@@ -1121,22 +1161,23 @@ builtin func Name(params): Type;             // 编译器内联函数，无函�
 ```
 
 **组合规则**：
+
 - `export builtin` — 正交组合，内建且导出
 - `extern builtin` — 互斥，语义冲突
 - 无 body — builtin 声明全部无实现体
 
 **内置类型变换指令**：
 
-| builtin | 约束 | 结果 |
-|---------|------|------|
-| `RemoveConst[T extends const?]` | 带 const | 剥离 const |
-| `RemoveVolatile[T extends volatile?]` | 带 volatile | 剥离 volatile |
-| `Pointer[T]` | 任意类型 | `*T` |
-| `Slice[T]` | 任意类型 | `[]T` |
-| `RemovePointer[T extends *?]` | 指针 | 解引用 |
-| `RemoveSlice[T extends []?]` | 切片 | 解切片 |
-| `ReturnType[F extends func]` | 函数类型 | 返回类型 |
-| `SizeOf[T]` | 任意类型 | `u64`（编译期值） |
+| builtin                               | 约束        | 结果              |
+| ------------------------------------- | ----------- | ----------------- |
+| `RemoveConst[T extends const?]`       | 带 const    | 剥离 const        |
+| `RemoveVolatile[T extends volatile?]` | 带 volatile | 剥离 volatile     |
+| `Pointer[T]`                          | 任意类型    | `*T`              |
+| `Slice[T]`                            | 任意类型    | `[]T`             |
+| `RemovePointer[T extends *?]`         | 指针        | 解引用            |
+| `RemoveSlice[T extends []?]`          | 切片        | 解切片            |
+| `ReturnType[F extends func]`          | 函数类型    | 返回类型          |
+| `SizeOf[T]`                           | 任意类型    | `u64`（编译期值） |
 
 **内置变量**：
 
