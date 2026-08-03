@@ -1,11 +1,13 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_CALLABLE_
 #define _H_CUBEC_CUBEC_EXPRESSION_CALLABLE_
-#include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
+#include "engine/context.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -28,9 +30,10 @@ extern "C" {
 struct _cubec_expression_callable_t;
 struct _cubec_expression_callable_t {
   struct _cubec_expression_t super;
-  vec_t parameters;        /**< Vector of node_t type expressions (auto_dispose) */
-  node_t return_type;      /**< Return type expression (nullable = void) */
-  bool is_c_variadic;      /**< Whether this function type has C-style variadic '...' */
+  vec_t parameters;   /**< Vector of node_t type expressions (auto_dispose) */
+  node_t return_type; /**< Return type expression (nullable = void) */
+  bool is_c_variadic; /**< Whether this function type has C-style variadic '...'
+                       */
 };
 typedef struct _cubec_expression_callable_t *cubec_expression_callable_t;
 
@@ -43,7 +46,8 @@ struct _cubec_expression_callable_init_t {
   node_t return_type;
   bool is_c_variadic;
 };
-typedef struct _cubec_expression_callable_init_t cubec_expression_callable_init_t;
+typedef struct _cubec_expression_callable_init_t
+    cubec_expression_callable_init_t;
 
 /**
  * @brief Try to parse a function type expression: func(type_list) -> type
@@ -54,12 +58,13 @@ typedef struct _cubec_expression_callable_init_t cubec_expression_callable_init_
  * @return A new cubec_expression_callable_t node, or NULL if current token
  *         is not 'func' keyword.
  */
-node_t read_expression_callable(context_t ctx, vec_t tokens,
-                                     size_t *position, const char *filename);
+node_t read_expression_callable(context_t ctx, vec_t tokens, size_t *position,
+                                const char *filename);
 
 node_t create_expression_callable(context_t ctx, location_t loc,
-                                       vec_t parameters, node_t return_type,
-                                       bool is_c_variadic);
+                                  vec_t parameters, node_t return_type,
+                                  bool is_c_variadic);
+void write_expression_callable(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

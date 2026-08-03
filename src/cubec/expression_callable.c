@@ -1,5 +1,8 @@
 #include "cubec/expression_callable.h"
 #include "core/token.h"
+#include "core/vec.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/expression_spread.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -9,9 +12,10 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_expression_callable_init(
-    cubec_expression_callable_t self, allocator_t allocator,
-    cubec_expression_callable_init_t *init) {
+static void
+_cubec_expression_callable_init(cubec_expression_callable_t self,
+                                allocator_t allocator,
+                                cubec_expression_callable_init_t *init) {
   if (!init)
     return;
   cubec_expression_init_t super_init = {
@@ -26,17 +30,17 @@ static void _cubec_expression_callable_init(
   self->is_c_variadic = init->is_c_variadic;
 }
 
-static void
-_cubec_expression_callable_dispose(cubec_expression_callable_t self,
-                                        allocator_t allocator) {
+static void _cubec_expression_callable_dispose(cubec_expression_callable_t self,
+                                               allocator_t allocator) {
   allocator_free(allocator, &self->return_type);
   allocator_free(allocator, &self->parameters);
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_expression_callable_clone(
-    cubec_expression_callable_t self, allocator_t allocator,
-    cubec_expression_callable_t another) {
+static void
+_cubec_expression_callable_clone(cubec_expression_callable_t self,
+                                 allocator_t allocator,
+                                 cubec_expression_callable_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->parameters = value_clone(allocator, another->parameters);
   self->return_type = another->return_type
@@ -52,8 +56,8 @@ cleanup:
 
 static void
 _cubec_expression_callable_move(cubec_expression_callable_t self,
-                                     allocator_t allocator,
-                                     cubec_expression_callable_t another) {
+                                allocator_t allocator,
+                                cubec_expression_callable_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->parameters = value_move(allocator, another->parameters);
   self->return_type =
@@ -99,8 +103,8 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_expression_callable
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_callable(context_t ctx, vec_t tokens,
-                                     size_t *position, const char *filename) {
+node_t read_expression_callable(context_t ctx, vec_t tokens, size_t *position,
+                                const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   vec_t parameters = NULL;
@@ -316,8 +320,8 @@ onerror:
  * -------------------------------------------------------------------------- */
 
 node_t create_expression_callable(context_t ctx, location_t loc,
-                                       vec_t parameters, node_t return_type,
-                                       bool is_c_variadic) {
+                                  vec_t parameters, node_t return_type,
+                                  bool is_c_variadic) {
   allocator_t alloc = ctx->allocator;
   cubec_expression_callable_init_t init = {
       .location = loc,
@@ -326,6 +330,23 @@ node_t create_expression_callable(context_t ctx, location_t loc,
       .return_type = return_type,
       .is_c_variadic = is_c_variadic,
   };
-  return (node_t)allocator_create(alloc,
-                                  &g_cubec_expression_callable_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_expression_callable_type,
+                                  &init);
+}
+
+void write_expression_callable(writer_t writer, node_t node) {
+  cubec_expression_callable_t expr = (cubec_expression_callable_t)node;
+  writer_append(writer, "func(");
+  for (size_t idx = 0; idx < vec_get_size(expr->parameters); idx++) {
+    if (idx != 0) {
+      writer_append(writer, ", ");
+    }
+    node_t param = vec_get(expr->parameters, idx);
+    write_expression(writer, param);
+  }
+  if (expr->is_c_variadic) {
+    writer_append(writer, ", ...");
+  }
+  writer_append(writer, ")->");
+  write_expression(writer, expr->return_type);
 }

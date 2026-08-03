@@ -1,5 +1,7 @@
 #include "cubec/declaration_pointer.h"
 #include "core/token.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/token.h"
 
 static void
@@ -151,4 +153,16 @@ node_t create_declaration_pointer(context_t ctx, location_t loc, node_t base,
       .type = base, .is_const = is_const, .is_volatile = is_volatile};
   return (node_t)allocator_create(alloc, &g_cubec_declaration_pointer_type,
                                   &init);
+}
+
+void write_declaration_pointer(writer_t writer, node_t node) {
+  cubec_declaration_pointer_t pointer = (cubec_declaration_pointer_t)node;
+  writer_append(writer, "*");
+  if (pointer->is_const) {
+    writer_append(writer, "const ");
+  }
+  if (pointer->is_volatile) {
+    writer_append(writer, "volatile ");
+  }
+  write_expression(writer, pointer->type);
 }

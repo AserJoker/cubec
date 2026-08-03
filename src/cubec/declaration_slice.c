@@ -1,5 +1,7 @@
 #include "cubec/declaration_slice.h"
 #include "core/token.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/token.h"
 
 static void
@@ -159,4 +161,15 @@ node_t create_declaration_slice(context_t ctx, location_t loc, node_t base,
       .type = base, .is_const = is_const, .is_volatile = is_volatile};
   return (node_t)allocator_create(alloc, &g_cubec_declaration_slice_type,
                                   &init);
+}
+void write_declaration_slice(writer_t writer, node_t node) {
+  cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
+  writer_append(writer, "[]");
+  if (slice->is_const) {
+    writer_append(writer, "const ");
+  }
+  if (slice->is_volatile) {
+    writer_append(writer, "volatile ");
+  }
+  write_expression(writer, slice->type);
 }

@@ -1,5 +1,8 @@
 #include "cubec/expression_call.h"
 #include "core/token.h"
+#include "core/vec.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/expression_spread.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -187,4 +190,18 @@ node_t create_expression_call(context_t ctx, location_t loc, node_t callee,
   allocator_t alloc = ctx->allocator;
   cubec_expression_call_init_t init = {.callee = callee, .arguments = args};
   return (node_t)allocator_create(alloc, &g_cubec_expression_call_type, &init);
+}
+
+void write_expression_call(writer_t writer, node_t node) {
+  cubec_expression_call_t expr = (cubec_expression_call_t)node;
+  write_expression(writer, expr->callee);
+  writer_append(writer, "(");
+  for (size_t idx = 0; idx < vec_get_size(expr->arguments); idx++) {
+    if (idx != 0) {
+      writer_append(writer, ", ");
+    }
+    node_t arg = vec_get(expr->arguments, idx);
+    write_expression(writer, arg);
+  }
+  writer_append(writer, ")");
 }

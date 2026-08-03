@@ -9,10 +9,9 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void
-_cubec_expression_enum_init(cubec_expression_enum_t self,
-                                 allocator_t allocator,
-                                 cubec_expression_enum_init_t *init) {
+static void _cubec_expression_enum_init(cubec_expression_enum_t self,
+                                        allocator_t allocator,
+                                        cubec_expression_enum_init_t *init) {
   if (!init)
     return;
   cubec_expression_init_t super_init = {
@@ -25,26 +24,23 @@ _cubec_expression_enum_init(cubec_expression_enum_t self,
   self->items = init->items;
 }
 
-static void
-_cubec_expression_enum_dispose(cubec_expression_enum_t self,
-                                    allocator_t allocator) {
+static void _cubec_expression_enum_dispose(cubec_expression_enum_t self,
+                                           allocator_t allocator) {
   allocator_free(allocator, &self->items);
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
-static void
-_cubec_expression_enum_clone(cubec_expression_enum_t self,
-                                  allocator_t allocator,
-                                  cubec_expression_enum_t another) {
+static void _cubec_expression_enum_clone(cubec_expression_enum_t self,
+                                         allocator_t allocator,
+                                         cubec_expression_enum_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->items = value_clone(allocator, another->items);
   return;
 }
 
-static void
-_cubec_expression_enum_move(cubec_expression_enum_t self,
-                                 allocator_t allocator,
-                                 cubec_expression_enum_t another) {
+static void _cubec_expression_enum_move(cubec_expression_enum_t self,
+                                        allocator_t allocator,
+                                        cubec_expression_enum_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->items = value_move(allocator, another->items);
   return;
@@ -84,9 +80,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *            { items }
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_enum_body(context_t ctx, vec_t tokens,
-                                      size_t *position, const char *filename,
-                                      location_t start_location) {
+node_t read_expression_enum_body(context_t ctx, vec_t tokens, size_t *position,
+                                 const char *filename,
+                                 location_t start_location) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   vec_t items = NULL;
@@ -159,7 +155,7 @@ onerror:
  * -------------------------------------------------------------------------- */
 
 node_t read_expression_enum(context_t ctx, vec_t tokens, size_t *position,
-                                 const char *filename) {
+                            const char *filename) {
   size_t current = *position;
 
   /* Expect 'enum' keyword */
@@ -172,8 +168,8 @@ node_t read_expression_enum(context_t ctx, vec_t tokens, size_t *position,
   current++;
   skip_whitespace(tokens, &current);
 
-  node_t result = read_expression_enum_body(ctx, tokens, &current,
-                                                 filename, start_location);
+  node_t result = read_expression_enum_body(ctx, tokens, &current, filename,
+                                            start_location);
   if (node_is_error(result))
     return result;
   if (result) {
@@ -198,6 +194,5 @@ node_t create_expression_enum(context_t ctx, location_t loc, vec_t items) {
       .parent = NULL,
       .items = items,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_expression_enum_type,
-                                  &init);
+  return (node_t)allocator_create(alloc, &g_cubec_expression_enum_type, &init);
 }

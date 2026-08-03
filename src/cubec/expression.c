@@ -5,28 +5,29 @@
 #include "cubec/expression_addr.h"
 #include "cubec/expression_alignof.h"
 #include "cubec/expression_assert.h"
+#include "cubec/expression_assignment.h"
 #include "cubec/expression_call.h"
+#include "cubec/expression_callable.h"
 #include "cubec/expression_comma.h"
 #include "cubec/expression_deref.h"
+#include "cubec/expression_enum.h"
 #include "cubec/expression_function.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_initialize_list.h"
+#include "cubec/expression_interface.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
+#include "cubec/expression_qualifier.h"
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression_slice.h"
+#include "cubec/expression_struct.h"
 #include "cubec/expression_subscript.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/expression_try.h"
-#include "cubec/expression_enum.h"
-#include "cubec/expression_callable.h"
-#include "cubec/expression_interface.h"
-#include "cubec/expression_qualifier.h"
-#include "cubec/expression_struct.h"
 #include "cubec/expression_tuple.h"
-#include "cubec/expression_union.h"
 #include "cubec/expression_typeof.h"
+#include "cubec/expression_union.h"
 #include "cubec/expression_wildcard.h"
 #include "cubec/literal_char.h"
 #include "cubec/literal_numeric.h"
@@ -35,7 +36,6 @@
 #include "cubec/node.h"
 #include "cubec/node_error.h"
 #include <inttypes.h>
-
 
 static void _cubec_expression_init(cubec_expression_t self,
                                    allocator_t allocator,
@@ -647,6 +647,36 @@ void write_expression(writer_t writer, node_t expr) {
     break;
   case CUBEC_NODE_DECLARATION_ARRAY:
     write_declaration_array(writer, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_POINTER:
+    write_declaration_pointer(writer, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_SLICE:
+    write_declaration_slice(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_ADDR:
+    write_expression_addr(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_ALIGNOF:
+    write_expression_alignof(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_ASSERT:
+    write_expression_assert(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_ASSIGNMENT:
+    write_expression_assigment(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_BINARY:
+    write_expression_binary(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_CALL:
+    write_expression_call(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_CALLABLE:
+    write_expression_callable(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_DEREF:
+    write_expression_deref(writer, expr);
     break;
     // TODO: expressions
   }

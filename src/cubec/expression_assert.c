@@ -1,6 +1,7 @@
 #include "cubec/expression_assert.h"
 #include "core/token.h"
-#include "cubec/node_error.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/token.h"
 #include <string.h>
 
@@ -10,8 +11,8 @@
 
 static void
 _cubec_expression_assert_init(cubec_expression_assert_t self,
-                               allocator_t allocator,
-                               cubec_expression_assert_init_t *init) {
+                              allocator_t allocator,
+                              cubec_expression_assert_init_t *init) {
   if (!init)
     return;
 
@@ -116,4 +117,10 @@ node_t create_expression_assert(context_t ctx, location_t loc, node_t host) {
   };
   return (node_t)allocator_create(alloc, &g_cubec_expression_assert_type,
                                   &init);
+}
+
+void write_expression_assert(writer_t writer, node_t node) {
+  cubec_expression_assert_t expr = (cubec_expression_assert_t)node;
+  write_expression(writer, expr->host);
+  writer_append(writer, ".!");
 }

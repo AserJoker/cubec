@@ -1,6 +1,7 @@
 #include "cubec/expression_addr.h"
 #include "core/token.h"
-#include "cubec/node_error.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/token.h"
 #include <string.h>
 
@@ -114,4 +115,10 @@ node_t create_expression_addr(context_t ctx, location_t loc, node_t host) {
       .host = host,
   };
   return (node_t)allocator_create(alloc, &g_cubec_expression_addr_type, &init);
+}
+
+void write_expression_addr(writer_t writer, node_t node) {
+  cubec_expression_addr_t addr = (cubec_expression_addr_t)node;
+  write_expression(writer, addr->host);
+  writer_append(writer, ".&");
 }

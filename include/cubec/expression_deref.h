@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -40,6 +41,8 @@ node_t read_expression_deref(context_t ctx, vec_t tokens, size_t *position,
                              const char *filename, node_t host);
 
 node_t create_expression_deref(context_t ctx, location_t loc, node_t host);
+
+void write_expression_deref(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

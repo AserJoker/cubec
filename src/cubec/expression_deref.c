@@ -1,6 +1,7 @@
 #include "cubec/expression_deref.h"
 #include "core/token.h"
-#include "cubec/node_error.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/token.h"
 #include <string.h>
 
@@ -8,10 +9,9 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void
-_cubec_expression_deref_init(cubec_expression_deref_t self,
-                              allocator_t allocator,
-                              cubec_expression_deref_init_t *init) {
+static void _cubec_expression_deref_init(cubec_expression_deref_t self,
+                                         allocator_t allocator,
+                                         cubec_expression_deref_init_t *init) {
   if (!init)
     return;
 
@@ -115,4 +115,10 @@ node_t create_expression_deref(context_t ctx, location_t loc, node_t host) {
       .host = host,
   };
   return (node_t)allocator_create(alloc, &g_cubec_expression_deref_type, &init);
+}
+
+void write_expression_deref(writer_t writer, node_t node) {
+  cubec_expression_deref_t expr = (cubec_expression_deref_t)node;
+  write_expression(writer, expr->host);
+  writer_append(writer, ".*");
 }
