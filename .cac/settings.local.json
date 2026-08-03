@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git mv:*)",
+      "Bash(cmake -B build)",
+      "Bash(./build/cubec_test.exe --gtest_filter=\"*expression*\")",
+      "Bash(./build/cubec_test.exe)",
+      "Bash(cmake -B D:/projects/cubec/build)",
+      "Bash(cmake --build build --target cubec)",
+      "Bash(cmake --build build)",
+      "Bash(ninja)",
+      "Bash(cmake -B build -G Ninja)",
+      "Bash(ctest --test-dir build)",
+      "Bash(ctest --test-dir build --output-on-failure)",
+      "Bash(git add:*)",
+      "Bash(find src/cubec -type f -name \"*.c\" -exec sed -i '/ctx->error_count++/d' {} +)",
+      "Bash(find src/engine -name \"*.c\" ! -name \"context.c\" -type f -delete)",
+      "Bash(find include/engine -name \"*.h\" ! -name \"context.h\" -type f -delete)",
+      "Bash(cmake --build D:/projects/cubec/build)",
+      "Bash(git commit:*)"
+    ]
+  }
+}

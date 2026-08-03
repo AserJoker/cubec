@@ -224,7 +224,6 @@ onerror:
                        open_bracket ? *token_get_location(open_bracket)
                                     : (location_t){0},
                        "invalid slice expression syntax");
-  ctx->error_count++;
   allocator_free(allocator, &start);
   allocator_free(allocator, &length);
   /* host ownership: caller (read_value) owns it and will clean up */

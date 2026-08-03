@@ -171,7 +171,6 @@ onerror:
                        open_paren ? *token_get_location(open_paren)
                                   : (location_t){0},
                        "invalid function call syntax");
-  ctx->error_count++;
   /* autodispose=true: freeing arguments also frees all its elements */
   allocator_free(allocator, &arguments);
   /* NOTE: callee is NOT freed here — the caller (read_value) still owns the

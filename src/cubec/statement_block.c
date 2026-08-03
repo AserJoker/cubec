@@ -85,7 +85,6 @@ node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                            *token_get_location(lbrace),
                            "unterminated block (missing '}')");
-      ctx->error_count++;
       break;
     }
 
@@ -110,7 +109,6 @@ node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
         loc.filename = filename;
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, loc,
                              "unexpected token");
-        ctx->error_count++;
         current++;
         stmt = create_statement_error(ctx, loc);
         vec_push(statements, stmt);

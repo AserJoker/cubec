@@ -170,7 +170,6 @@ node_t read_declaration_qualifier(context_t ctx, vec_t tokens,
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_loc,
                        "invalid type qualifier expression");
-  ctx->error_count++;
   return create_error(ctx, start_loc);
 }
 

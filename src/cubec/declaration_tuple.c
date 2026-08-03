@@ -166,7 +166,6 @@ node_t read_declaration_tuple(context_t ctx, vec_t tokens, size_t *position,
   if (!_is_symbol(tokens, current, ">")) {
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                          "missing '>' in tuple type expression");
-    ctx->error_count++;
     allocator_free(allocator, &element_types);
     return create_error(ctx, start_location);
   }

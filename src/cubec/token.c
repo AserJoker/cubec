@@ -242,7 +242,6 @@ static token_t read_multiline_comment_token(context_t ctx, position_t *position,
         diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                              (location_t){filename, *position, current},
                              "unterminated multiline comment");
-        ctx->error_count++;
         token_t token = create_multiline_comment_token(
             ctx, (location_t){filename, *position, current});
         *position = current;
@@ -682,7 +681,6 @@ vec_t resolve_token_list(context_t ctx, const char *filename,
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
                            *token_get_location(token),
                            "unrecognized character");
-      ctx->error_count++;
       continue;
     }
     if (token_get_kind(token) == CUBEC_TOKEN_EOF) {

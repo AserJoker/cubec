@@ -87,7 +87,6 @@ node_t read_literal_char(context_t ctx, vec_t tokens, size_t *position,
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                        "invalid character literal");
-  ctx->error_count++;
   allocator_free(allocator, &node);
   return create_error(ctx, start_location);
 }

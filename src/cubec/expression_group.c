@@ -102,7 +102,6 @@ node_t read_expression_group(context_t ctx, vec_t tokens, size_t *position,
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                        "invalid grouped expression");
-  ctx->error_count++;
   allocator_free(allocator, &inner);
   allocator_free(allocator, &node);
   return create_error(ctx, start_location);

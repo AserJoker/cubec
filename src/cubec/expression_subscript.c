@@ -160,7 +160,6 @@ onerror:
                        open_bracket ? *token_get_location(open_bracket)
                                     : (location_t){0},
                        "invalid subscript expression");
-  ctx->error_count++;
   allocator_free(allocator, &index);
   /* host ownership: caller (read_value) owns it and will clean up */
   allocator_free(allocator, &node);

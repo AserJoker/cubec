@@ -393,7 +393,6 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
     *position = sync_pos;
     diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                          "invalid statement");
-    ctx->error_count++;
     return create_statement_error(ctx, start_location);
   }
 

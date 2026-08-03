@@ -158,7 +158,6 @@ node_t read_expression_prefix(context_t ctx, vec_t tokens, size_t *position,
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                        "invalid prefix expression");
-  ctx->error_count++;
   allocator_free(allocator, &opt);
   allocator_free(allocator, &right);
   allocator_free(allocator, &node);

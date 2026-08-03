@@ -67,7 +67,6 @@ node_t read_statement_empty(context_t ctx, vec_t tokens, size_t *position,
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                        "expected ';'");
-  ctx->error_count++;
   allocator_free(allocator, &node);
   return create_error(ctx, start_location);
 }

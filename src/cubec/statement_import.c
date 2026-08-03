@@ -139,7 +139,6 @@ node_t read_statement_import(context_t ctx, vec_t tokens, size_t *position,
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                        "invalid import statement");
-  ctx->error_count++;
   allocator_free(allocator, &path);
   allocator_free(allocator, &module_name);
   allocator_free(allocator, &node);

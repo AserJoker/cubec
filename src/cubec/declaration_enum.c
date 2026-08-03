@@ -180,7 +180,6 @@ node_t read_declaration_enum(context_t ctx, vec_t tokens, size_t *position,
 
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                        "invalid enum type expression");
-  ctx->error_count++;
   return create_error(ctx, start_location);
 }
 

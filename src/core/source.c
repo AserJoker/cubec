@@ -1,4 +1,4 @@
-#include "engine/source.h"
+#include "core/source.h"
 #include "core/allocator.h"
 #include <string.h>
 #include <threads.h>
@@ -11,7 +11,6 @@ static void compute_line_offsets(struct source_entry *entry,
   const char *data = string_get(entry->content);
   size_t len = string_get_length(entry->content);
 
-  /* line 1 always starts at offset 0 */
   size_t offset = 0;
   vec_push(entry->line_offsets, (void *)offset);
 
@@ -31,17 +30,11 @@ const char *source_entry_get_line(struct source_entry *entry, size_t line) {
   const char *data = string_get(entry->content);
   size_t len = string_get_length(entry->content);
 
-  /* find end of line (excluding newline) */
   size_t end = start;
   while (end < len && data[end] != '\n' && data[end] != '\r') {
     end++;
   }
 
-  /* temporarily null-terminate the line by writing into the string buffer.
-   * This is safe because string_t's internal buffer always has extra capacity
-   * beyond len, and we restore the character after use.
-   * However, we cannot modify the buffer since string_t is supposed to be
-   * immutable after set. Instead, we use a thread-local static buffer. */
   static thread_local char line_buf[4096];
   size_t line_len = end - start;
   if (line_len >= sizeof(line_buf)) {
@@ -60,7 +53,7 @@ size_t source_entry_get_line_count(struct source_entry *entry) {
 
 struct _source_cache_t {
   allocator_t allocator;
-  strmap_t entries; /* filename -> source_entry* */
+  strmap_t entries;
 };
 
 static void _source_cache_init(source_cache_t self, allocator_t allocator,
@@ -73,13 +66,12 @@ static void _source_cache_init(source_cache_t self, allocator_t allocator,
 }
 
 static void _source_cache_dispose(source_cache_t self, allocator_t allocator) {
-  /* strmap auto_dispose will free each source_entry */
   allocator_free(allocator, &self->entries);
 }
 
 type_t g_source_cache_type = {
     .size = sizeof(struct _source_cache_t),
-    .name = "cubec.engine.source_cache",
+    .name = "cubec.core.source_cache",
     .init = (type_init_fn_t)_source_cache_init,
     .dispose = (type_dispose_fn_t)_source_cache_dispose,
 };
@@ -105,7 +97,7 @@ static void _source_entry_dispose(void *self, allocator_t allocator) {
 
 static type_t g_source_entry_type = {
     .size = sizeof(struct source_entry),
-    .name = "cubec.engine.source_entry",
+    .name = "cubec.core.source_entry",
     .init = (type_init_fn_t)_source_entry_init,
     .dispose = (type_dispose_fn_t)_source_entry_dispose,
 };
@@ -114,19 +106,16 @@ struct source_entry *source_cache_load(source_cache_t self,
                                        const char *filename,
                                        const char *content,
                                        bool take_ownership) {
-  /* check if already loaded */
   struct source_entry *existing =
       (struct source_entry *)strmap_find(self->entries, filename);
   if (existing) {
     return existing;
   }
 
-  /* create new entry */
   struct source_entry *entry = (struct source_entry *)allocator_create(
       self->allocator, &g_source_entry_type, NULL);
 
   if (take_ownership) {
-    /* move content into the string_t */
     string_set(entry->content, content);
   } else {
     string_set(entry->content, content);

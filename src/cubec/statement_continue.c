@@ -117,7 +117,6 @@ node_t read_statement_continue(context_t ctx, vec_t tokens, size_t *position,
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                        "expected ';' after 'continue'");
-  ctx->error_count++;
   return create_error(ctx, start_location);
 }
 

@@ -93,7 +93,6 @@ node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
       loc.filename = filename;
       diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, loc,
                            "unexpected token at top level");
-      ctx->error_count++;
       current++;
       statement = create_statement_error(ctx, loc);
       vec_push(node->statements, statement);

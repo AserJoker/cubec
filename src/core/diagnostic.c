@@ -1,5 +1,5 @@
-#include "engine/diagnostic.h"
-#include "engine/source.h"
+#include "core/diagnostic.h"
+#include "core/source.h"
 #include <stdarg.h>
 #include <string.h>
 
@@ -24,7 +24,6 @@ static void _diagnostic_list_init(diagnostic_list_t self, allocator_t allocator,
 
 static void _diagnostic_list_dispose(diagnostic_list_t self,
                                      allocator_t allocator) {
-  /* free each diagnostic's notes vec */
   size_t size = vec_get_size(self->diagnostics);
   for (size_t i = 0; i < size; i++) {
     struct diagnostic *d = (struct diagnostic *)vec_get(self->diagnostics, i);
@@ -41,7 +40,6 @@ static void _diagnostic_list_clone(diagnostic_list_t self, allocator_t allocator
       (vec_t)allocator_create(allocator, &g_vec_type, &vec_init);
   self->output = another->output;
   self->error_count = another->error_count;
-  /* deep-clone each diagnostic */
   size_t size = vec_get_size(another->diagnostics);
   for (size_t i = 0; i < size; i++) {
     struct diagnostic *src = (struct diagnostic *)vec_get(another->diagnostics, i);
@@ -54,7 +52,7 @@ static void _diagnostic_list_clone(diagnostic_list_t self, allocator_t allocator
 
 type_t g_diagnostic_list_type = {
     .size = sizeof(struct _diagnostic_list_t),
-    .name = "cubec.engine.diagnostic_list",
+    .name = "cubec.core.diagnostic_list",
     .init = (type_init_fn_t)_diagnostic_list_init,
     .dispose = (type_dispose_fn_t)_diagnostic_list_dispose,
     .clone = (type_clone_fn_t)_diagnostic_list_clone,
@@ -146,14 +144,11 @@ static void format_location(FILE *out, location_t *loc) {
 
 static void emit_diagnostic(FILE *out, struct diagnostic *d,
                             source_cache_t sources) {
-  /* header line: severity: message */
   fprintf(out, "%s: %s\n", severity_str(d->severity), d->message);
 
-  /* location line */
   format_location(out, &d->primary);
   fprintf(out, "\n");
 
-  /* source line + caret */
   if (sources && d->primary.filename) {
     struct source_entry *entry =
         source_cache_find(sources, d->primary.filename);
@@ -162,7 +157,6 @@ static void emit_diagnostic(FILE *out, struct diagnostic *d,
       const char *src_line = source_entry_get_line(entry, line);
       size_t line_count = source_entry_get_line_count(entry);
 
-      /* compute line number width */
       int width = 1;
       size_t tmp = line_count;
       while (tmp >= 10) {
@@ -170,13 +164,9 @@ static void emit_diagnostic(FILE *out, struct diagnostic *d,
         width++;
       }
 
-      /* blank line with ruler */
       fprintf(out, " %*s |\n", width, "");
-
-      /* source line */
       fprintf(out, " %*zu | %s\n", width, line, src_line);
 
-      /* caret line */
       fprintf(out, " %*s | ", width, "");
       size_t col = d->primary.begin.column + 1;
       size_t span_len = 1;
@@ -193,7 +183,6 @@ static void emit_diagnostic(FILE *out, struct diagnostic *d,
     }
   }
 
-  /* notes */
   size_t note_count = vec_get_size(d->notes);
   for (size_t i = 0; i < note_count; i++) {
     struct diagnostic_note *note =
@@ -217,7 +206,6 @@ void diagnostic_list_emit(diagnostic_list_t self, source_cache_t sources) {
 }
 
 void diagnostic_list_clear(diagnostic_list_t self) {
-  /* free each diagnostic's notes vec */
   size_t size = vec_get_size(self->diagnostics);
   for (size_t i = 0; i < size; i++) {
     struct diagnostic *d = (struct diagnostic *)vec_get(self->diagnostics, i);

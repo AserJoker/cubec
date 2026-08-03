@@ -137,7 +137,6 @@ node_t read_statement_return(context_t ctx, vec_t tokens, size_t *position,
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                        "invalid return statement");
-  ctx->error_count++;
   allocator_free(allocator, &expression);
   allocator_free(allocator, &node);
   return create_error(ctx, start_location);

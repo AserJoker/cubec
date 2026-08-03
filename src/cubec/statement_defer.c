@@ -163,7 +163,6 @@ node_t read_statement_defer(context_t ctx, vec_t tokens, size_t *position,
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                        "invalid defer statement");
-  ctx->error_count++;
   allocator_free(allocator, &body);
   allocator_free(allocator, &captures);
   allocator_free(allocator, &node);

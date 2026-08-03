@@ -267,7 +267,6 @@ node_t read_declaration_struct(context_t ctx, vec_t tokens,
 
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                        "invalid struct type expression");
-  ctx->error_count++;
   return create_error(ctx, start_location);
 }
 

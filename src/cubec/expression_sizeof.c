@@ -110,7 +110,6 @@ cleanup:
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                        "invalid sizeof expression");
-  ctx->error_count++;
   allocator_free(allocator, &expr);
   return create_error(ctx, start_location);
 }

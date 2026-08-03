@@ -190,7 +190,6 @@ node_t read_statement_export_from(context_t ctx, vec_t tokens, size_t *position,
 onerror:
   diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
                        "invalid export from statement");
-  ctx->error_count++;
   allocator_free(allocator, &names);
   allocator_free(allocator, &path);
   allocator_free(allocator, &node);
