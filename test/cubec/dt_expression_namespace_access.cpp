@@ -1,3 +1,5 @@
+#include "core/string.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_member.h"
@@ -262,6 +264,24 @@ TEST_F(dt_expression_namespace_access, move) {
   EXPECT_STREQ(string_get(((cubec_literal_identifier_t)ns->host)->value), "std");
 
   allocator_free(allocator, &moved);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_namespace_access, write_namespace_access) {
+  const char *source = "A::b";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_expression(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "A::b");
+
+  allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

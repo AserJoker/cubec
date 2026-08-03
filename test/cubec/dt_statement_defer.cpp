@@ -1,3 +1,5 @@
+#include "core/string.h"
+#include "core/writer.h"
 #include "cubec/statement_defer.h"
 #include "cubec/node.h"
 #include "cubec/statement.h"
@@ -164,5 +166,21 @@ TEST_F(dt_statement_defer, non_defer_returns_null) {
   node_t node = read_statement_defer(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_statement_defer, write_defer_empty_block) {
+  const char *source = "defer { }";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_statement(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "defer {\n}\n");
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

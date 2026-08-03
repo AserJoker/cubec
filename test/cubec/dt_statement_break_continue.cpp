@@ -1,3 +1,5 @@
+#include "core/string.h"
+#include "core/writer.h"
 #include "cubec/statement_break.h"
 #include "cubec/statement_continue.h"
 #include "cubec/node.h"
@@ -96,6 +98,26 @@ TEST_F(dt_statement_break, non_break_returns_null) {
 }
 
 /* ==========================================================================
+ *  Write round-trip tests
+ * ========================================================================== */
+
+TEST_F(dt_statement_break, write_break) {
+  const char *source = "break;";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_statement(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "break;\n");
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ==========================================================================
  *  continue statement
  * ========================================================================== */
 
@@ -179,5 +201,21 @@ TEST_F(dt_statement_continue, non_continue_returns_null) {
   node_t node = read_statement_continue(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_statement_continue, write_continue) {
+  const char *source = "continue;";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_statement(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "continue;\n");
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

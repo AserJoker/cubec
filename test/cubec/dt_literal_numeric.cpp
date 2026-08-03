@@ -1,6 +1,9 @@
 #include "cubec/literal_numeric.h"
 #include "cubec/node.h"
+#include "cubec/expression.h"
 #include "cubec/token.h"
+#include "core/string.h"
+#include "core/writer.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -222,4 +225,58 @@ TEST_F(dt_literal_numeric, type_to_string) {
                "f64");
   EXPECT_STREQ(cubec_literal_numeric_type_to_string(CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT),
                "");
+}
+
+TEST_F(dt_literal_numeric, write_integer) {
+  const char *source = "42";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_expression(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "42");
+
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_literal_numeric, write_hex_integer) {
+  const char *source = "0xFF";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_expression(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "0xFF");
+
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_literal_numeric, write_float_with_f32_suffix) {
+  const char *source = "3.14f32";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_literal_numeric(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_expression(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "3.14f32");
+
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
 }

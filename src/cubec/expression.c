@@ -9,27 +9,26 @@
 #include "cubec/expression_call.h"
 #include "cubec/declaration_callable.h"
 #include "cubec/expression_comma.h"
-#include "cubec/expression_deref.h"
 #include "cubec/declaration_enum.h"
+#include "cubec/declaration_interface.h"
+#include "cubec/declaration_qualifier.h"
+#include "cubec/declaration_struct.h"
+#include "cubec/declaration_tuple.h"
+#include "cubec/declaration_union.h"
+#include "cubec/expression_deref.h"
 #include "cubec/expression_function.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_initialize_list.h"
-#include "cubec/initialize_field.h"
-#include "cubec/declaration_interface.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
-#include "cubec/declaration_qualifier.h"
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression_slice.h"
 #include "cubec/expression_spread.h"
-#include "cubec/declaration_struct.h"
 #include "cubec/expression_subscript.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/expression_try.h"
-#include "cubec/declaration_tuple.h"
 #include "cubec/expression_typeof.h"
-#include "cubec/declaration_union.h"
 #include "cubec/expression_wildcard.h"
 #include "cubec/literal_char.h"
 #include "cubec/literal_numeric.h"
@@ -748,6 +747,9 @@ void write_expression(writer_t writer, node_t expr) {
     break;
   case CUBEC_NODE_EXPRESSION_GROUP:
     write_expression_group(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_MEMBER:
+    write_expression_member(writer, expr);
     break;
   case CUBEC_NODE_EXPRESSION_INITIALIZE_LIST:
     write_expression_initialize_list(writer, expr);

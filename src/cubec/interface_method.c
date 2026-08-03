@@ -255,5 +255,4 @@ void write_interface_method(writer_t writer, node_t node) {
     write_expression(writer, method->return_type);
   }
   writer_append(writer, ";");
-  writer_newline(writer, 0);
 }

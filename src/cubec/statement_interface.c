@@ -3,6 +3,7 @@
 #include "core/writer.h"
 #include "cubec/decorator.h"
 #include "cubec/declaration_interface.h"
+#include "cubec/interface_method.h"
 #include "cubec/expression.h"
 #include "cubec/generic_param.h"
 #include "cubec/literal_identifier.h"
@@ -251,9 +252,12 @@ void write_statement_interface(writer_t writer, node_t node) {
   if (vec_get_size(stmt->members)) {
     writer_newline(writer, 1);
     for (size_t i = 0; i < vec_get_size(stmt->members); i++) {
-      write_statement(writer, vec_get(stmt->members, i));
+      if (i != 0) writer_newline(writer, 0);
+      write_interface_method(writer, vec_get(stmt->members, i));
     }
     writer_newline(writer, -1);
+  } else {
+    writer_newline(writer, 0);
   }
   writer_append(writer, "}");
   writer_newline(writer, 0);

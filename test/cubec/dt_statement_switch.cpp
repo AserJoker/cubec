@@ -1,3 +1,5 @@
+#include "core/string.h"
+#include "core/writer.h"
 #include "cubec/statement_switch.h"
 #include "cubec/switch_match.h"
 #include "cubec/node.h"
@@ -196,6 +198,26 @@ TEST_F(dt_statement_switch, case_with_expression) {
   EXPECT_EQ(vec_get_size(m0->values), 1);
   EXPECT_EQ(((node_t)vec_get(m0->values, 0))->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+/* ==========================================================================
+ *  Write round-trip tests
+ * ========================================================================== */
+
+TEST_F(dt_statement_switch, write_empty_switch) {
+  const char *source = "switch(x) { }";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_statement(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "switch (x) {\n}\n");
+  allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

@@ -6,6 +6,8 @@
 #include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
+#include "core/string.h"
+#include "core/writer.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -570,6 +572,24 @@ TEST_F(dt_expression_assignment, assignment_with_generic_instantiation_lvalue) {
   EXPECT_EQ(assign->left->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
   EXPECT_EQ(assign->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_assignment, write_simple_assignment) {
+  const char *source = "a = b";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_expression_assignment(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_expression(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "a = b");
+
+  allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

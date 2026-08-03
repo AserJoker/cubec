@@ -1,3 +1,5 @@
+#include "core/string.h"
+#include "core/writer.h"
 #include "cubec/statement.h"
 #include "cubec/statement_struct.h"
 #include "cubec/struct_field.h"
@@ -471,6 +473,22 @@ TEST_F(dt_statement_struct, no_implement) {
   cubec_statement_struct_t struct_node = (cubec_statement_struct_t)node;
   EXPECT_EQ(struct_node->implements, nullptr);
 
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_statement_struct, write_empty_struct) {
+  const char *source = "struct Empty { }";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_statement(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "struct Empty {\n}\n");
+  allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

@@ -1,3 +1,5 @@
+#include "core/string.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_member.h"
 #include "cubec/literal_identifier.h"
@@ -181,6 +183,24 @@ TEST_F(dt_expression_member, member_on_string) {
   EXPECT_EQ(member->host->kind, CUBEC_NODE_LITERAL_STRING);
   EXPECT_STREQ(string_get(member->field->value), "len");
 
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_member, write_member) {
+  const char *source = "a.b";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_expression(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "a.b");
+
+  allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

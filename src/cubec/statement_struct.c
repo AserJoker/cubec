@@ -8,6 +8,7 @@
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
 #include "cubec/statement.h"
+#include "cubec/struct_field.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 
@@ -264,9 +265,12 @@ void write_statement_struct(writer_t writer, node_t node) {
   if (vec_get_size(stmt->members)) {
     writer_newline(writer, 1);
     for (size_t i = 0; i < vec_get_size(stmt->members); i++) {
-      write_statement(writer, vec_get(stmt->members, i));
+      if (i != 0) writer_newline(writer, 0);
+      write_struct_field(writer, vec_get(stmt->members, i));
     }
     writer_newline(writer, -1);
+  } else {
+    writer_newline(writer, 0);
   }
   writer_append(writer, "}");
   writer_newline(writer, 0);

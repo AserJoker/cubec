@@ -232,6 +232,8 @@ void write_statement_enum(writer_t writer, node_t node) {
     }
     writer_append(writer, ",");
     writer_newline(writer, -1);
+  } else {
+    writer_newline(writer, 0);
   }
   writer_append(writer, "}");
   writer_newline(writer, 0);

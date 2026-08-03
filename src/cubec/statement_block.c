@@ -1,4 +1,5 @@
 #include "cubec/statement_block.h"
+#include "core/string.h"
 #include "core/token.h"
 #include "core/vec.h"
 #include "core/writer.h"
@@ -162,7 +163,17 @@ void write_statement_block(writer_t writer, node_t stmt) {
       node_t stmt = vec_get(block->statements, i);
       write_statement(writer, stmt);
     }
-    writer_newline(writer, -1);
+    /* After the loop, the last statement may have left us on an empty line
+       (from its trailing writer_newline). If so, apply the indent change
+       to that existing empty line instead of creating a new one. */
+    string_t current = writer_get_current_line(writer);
+    if (string_get_length(current) == 0) {
+      writer_dedent_current_line(writer, -1);
+    } else {
+      writer_newline(writer, -1);
+    }
+  } else {
+    writer_newline(writer, 0);
   }
   writer_append(writer, "}");
   writer_newline(writer, 0);

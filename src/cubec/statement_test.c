@@ -148,8 +148,8 @@ node_t create_statement_test(context_t ctx, location_t loc, const char *name,
 
 void write_statement_test(writer_t writer, node_t stmt) {
   cubec_statement_test_t test = (cubec_statement_test_t)stmt;
-  writer_append(writer, "test \"");
+  writer_append(writer, "test ");
   writer_append(writer, string_get(test->name));
-  writer_append(writer, "\" ");
+  writer_append(writer, " ");
   write_statement_block(writer, test->body);
 }

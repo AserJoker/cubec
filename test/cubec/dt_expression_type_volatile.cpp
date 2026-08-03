@@ -1,5 +1,6 @@
 #include "cubec/expression.h"
 #include "cubec/declaration_array.h"
+#include "core/writer.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
 #include "cubec/expression_generic_instantiation.h"
@@ -403,5 +404,23 @@ TEST_F(dt_expression_type_volatile, move) {
   EXPECT_EQ(result->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &moved);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_type_volatile, write_volatile_type) {
+  const char *source = "volatile i32";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_expression(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "volatile i32");
+
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

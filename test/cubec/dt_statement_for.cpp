@@ -1,3 +1,5 @@
+#include "core/string.h"
+#include "core/writer.h"
 #include "cubec/statement_for.h"
 #include "cubec/statement_foreach.h"
 #include "cubec/node.h"
@@ -319,5 +321,41 @@ TEST_F(dt_statement_foreach, non_foreach_returns_null) {
   node_t node = read_statement_foreach(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
+  allocator_free(allocator, &tokens);
+}
+
+/* ==========================================================================
+ *  Write round-trip tests
+ * ========================================================================== */
+
+TEST_F(dt_statement_for, write_simple_for) {
+  const char *source = "for(var i = 0; i < 10; i = i + 1) { }";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_statement(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "for (var i = 0; i < 10; i = i + 1) {\n}\n");
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_statement_foreach, write_simple_foreach) {
+  const char *source = "foreach(item of items) { }";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_statement(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "foreach (item of items) {\n}\n");
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

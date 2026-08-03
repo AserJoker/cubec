@@ -91,6 +91,12 @@ void writer_newline(writer_t self, int32_t indent) {
   line_t line = allocator_create(self->allocator, &g_line_type, &li);
   vec_push(self->lines, line);
 }
+
+void writer_dedent_current_line(writer_t self, int32_t delta) {
+  size_t size = vec_get_size(self->lines);
+  line_t line = vec_get(self->lines, size - 1);
+  line->indent += delta;
+}
 string_t writer_get_current_line(writer_t self) {
   return ((line_t)vec_get(self->lines, vec_get_size(self->lines) - 1))->text;
 }
@@ -100,11 +106,15 @@ string_t writer_get_string(writer_t self) {
   for (size_t idx = 0; idx < vec_get_size(self->lines); idx++) {
     line_t line = vec_get(self->lines, idx);
     indent += line->indent;
-    for (int32_t i = 0; i < indent; i++) {
-      string_concat(str, "  ");
+    if (string_get_length(line->text) > 0) {
+      for (int32_t i = 0; i < indent; i++) {
+        string_concat(str, "  ");
+      }
     }
     string_concat(str, string_get(line->text));
-    string_concat(str, "\n");
+    if (idx + 1 < vec_get_size(self->lines)) {
+      string_concat(str, "\n");
+    }
   }
   return str;
 }

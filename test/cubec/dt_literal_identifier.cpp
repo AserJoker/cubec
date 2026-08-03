@@ -1,6 +1,9 @@
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
+#include "cubec/expression.h"
 #include "cubec/token.h"
+#include "core/string.h"
+#include "core/writer.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -85,5 +88,23 @@ TEST_F(dt_literal_identifier, parse_string_returns_null) {
   node_t node = read_literal_identifier(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_literal_identifier, write_foo) {
+  const char *source = "foo";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_literal_identifier(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_expression(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "foo");
+
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

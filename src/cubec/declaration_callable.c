@@ -347,6 +347,6 @@ void write_declaration_callable(writer_t writer, node_t node) {
   if (expr->is_c_variadic) {
     writer_append(writer, ", ...");
   }
-  writer_append(writer, ")->");
+  writer_append(writer, ") -> ");
   write_expression(writer, expr->return_type);
 }

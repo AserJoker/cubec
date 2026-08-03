@@ -200,7 +200,4 @@ node_t create_literal_numeric(context_t ctx, location_t loc, const char *value,
 void write_literal_numeric(writer_t writer, node_t node) {
   cubec_literal_numeric_t num = (cubec_literal_numeric_t)node;
   writer_append(writer, string_get(num->value));
-  if (num->numeric_type != CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT) {
-    writer_append(writer, cubec_literal_numeric_type_to_string(num->numeric_type));
-  }
 }

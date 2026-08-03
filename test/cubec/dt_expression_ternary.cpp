@@ -1,3 +1,5 @@
+#include "core/string.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_ternary.h"
@@ -170,6 +172,24 @@ TEST_F(dt_expression_ternary, ternary_with_complex_alternate) {
   cubec_expression_ternary_t ternary = (cubec_expression_ternary_t)node;
   EXPECT_EQ(ternary->alternate->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_ternary, write_ternary) {
+  const char *source = "a ? b : c";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_expression(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "a ? b : c");
+
+  allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

@@ -196,11 +196,15 @@ void write_statement_switch(writer_t writer, node_t node) {
   writer_append(writer, "switch (");
   write_expression(writer, stmt->condition);
   writer_append(writer, ") {");
-  writer_newline(writer, 1);
-  for (size_t i = 0; i < vec_get_size(stmt->matches); i++) {
-    write_switch_match(writer, vec_get(stmt->matches, i));
+  if (vec_get_size(stmt->matches)) {
+    writer_newline(writer, 1);
+    for (size_t i = 0; i < vec_get_size(stmt->matches); i++) {
+      write_switch_match(writer, vec_get(stmt->matches, i));
+    }
+    writer_newline(writer, -1);
+  } else {
+    writer_newline(writer, 0);
   }
-  writer_newline(writer, -1);
   writer_append(writer, "}");
   writer_newline(writer, 0);
 }

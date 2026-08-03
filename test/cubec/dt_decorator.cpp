@@ -1,6 +1,9 @@
 #include "cubec/decorator.h"
+#include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
+#include "core/string.h"
+#include "core/writer.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -118,5 +121,41 @@ TEST_F(dt_decorator, single_bracket_not_decorator) {
   node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_decorator, write_simple_identifier) {
+  const char *source = "[[test]]";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_decorator(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "[[test]]");
+
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_decorator, write_call_decorator) {
+  const char *source = R"([[deprecated("use new_api instead")]])";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_decorator(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, R"([[deprecated("use new_api instead")]])");
+
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

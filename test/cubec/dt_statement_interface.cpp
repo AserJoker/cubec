@@ -1,3 +1,5 @@
+#include "core/string.h"
+#include "core/writer.h"
 #include "cubec/statement.h"
 #include "cubec/statement_interface.h"
 #include "cubec/interface_method.h"
@@ -434,6 +436,22 @@ TEST_F(dt_statement_interface, interface_type_member_with_generic) {
   ASSERT_NE(type_decl->params, nullptr);
   EXPECT_EQ(vec_get_size(type_decl->params), 1);
 
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_statement_interface, write_empty_interface) {
+  const char *source = "interface Foo { }";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_statement(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "interface Foo {\n}\n");
+  allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

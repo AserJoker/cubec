@@ -1,3 +1,5 @@
+#include "core/string.h"
+#include "core/writer.h"
 #include "cubec/statement_cunion.h"
 #include "cubec/struct_field.h"
 #include "cubec/literal_identifier.h"
@@ -219,5 +221,21 @@ TEST_F(dt_statement_cunion, non_cunion_returns_null) {
   node_t node = read_statement_cunion(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_statement_cunion, write_cunion) {
+  const char *source = "cunion Data { int_val: i32; }";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_statement(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "cunion Data {\n  int_val: i32;\n}\n");
+  allocator_free(allocator, &writer);
+  allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

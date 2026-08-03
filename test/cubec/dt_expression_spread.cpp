@@ -1,3 +1,5 @@
+#include "core/string.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_group.h"
@@ -268,6 +270,24 @@ TEST_F(dt_expression_spread, spread_with_prefix) {
   /* ptr.* is a postfix deref node */
   EXPECT_EQ(spread->value->kind, CUBEC_NODE_EXPRESSION_DEREF);
 
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_expression_spread, write_spread) {
+  const char *source = "...items";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_expression_spread(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_expression(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "...items");
+
+  allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

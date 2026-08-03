@@ -1,3 +1,5 @@
+#include "core/string.h"
+#include "core/writer.h"
 #include "cubec/statement_union.h"
 #include "cubec/union_field.h"
 #include "cubec/generic_param.h"
@@ -297,6 +299,22 @@ TEST_F(dt_statement_union, no_implement) {
   cubec_statement_union_t union_node = (cubec_statement_union_t)node;
   EXPECT_EQ(union_node->implements, nullptr);
 
+  allocator_free(allocator, &node);
+  allocator_free(allocator, &tokens);
+}
+
+TEST_F(dt_statement_union, write_empty_union) {
+  const char *source = "union Empty { }";
+  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  ASSERT_NE(tokens, nullptr);
+  size_t position = 0;
+  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  ASSERT_NE(node, nullptr);
+  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
+  write_statement(writer, node);
+  const char *output = string_get(writer_get_string(writer));
+  EXPECT_STREQ(output, "union Empty {\n}\n");
+  allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

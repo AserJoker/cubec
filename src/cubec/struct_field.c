@@ -187,5 +187,4 @@ void write_struct_field(writer_t writer, node_t node) {
   writer_append(writer, ": ");
   write_expression(writer, field->type);
   writer_append(writer, ";");
-  writer_newline(writer, 0);
 }
