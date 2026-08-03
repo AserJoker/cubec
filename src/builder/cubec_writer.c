@@ -15,9 +15,9 @@
 #include "cubec/generic_param.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_generic_instantiation.h"
-#include "cubec/expression_type_function.h"
-#include "cubec/expression_type_tuple.h"
-#include "cubec/expression_type_qualifier.h"
+#include "cubec/expression_callable.h"
+#include "cubec/expression_tuple.h"
+#include "cubec/expression_qualifier.h"
 #include <string.h>
 
 /* Forward declarations */
@@ -104,9 +104,9 @@ static void write_type_expr(allocator_t allocator, string_t out, node_t type) {
       string_concat(out, "]");
       break;
     }
-    case CUBEC_NODE_EXPRESSION_TYPE_FUNCTION: {
-      cubec_expression_type_function_t ft =
-          (cubec_expression_type_function_t)type;
+    case CUBEC_NODE_EXPRESSION_CALLABLE: {
+      cubec_expression_callable_t ft =
+          (cubec_expression_callable_t)type;
       string_concat(out, "func(");
       if (ft->parameters) {
         size_t pc = vec_get_size(ft->parameters);
@@ -127,9 +127,9 @@ static void write_type_expr(allocator_t allocator, string_t out, node_t type) {
       }
       break;
     }
-    case CUBEC_NODE_EXPRESSION_TYPE_TUPLE: {
-      cubec_expression_type_tuple_t tt =
-          (cubec_expression_type_tuple_t)type;
+    case CUBEC_NODE_EXPRESSION_TUPLE: {
+      cubec_expression_tuple_t tt =
+          (cubec_expression_tuple_t)type;
       string_concat(out, "<");
       if (tt->element_types) {
         size_t ec = vec_get_size(tt->element_types);
@@ -141,9 +141,9 @@ static void write_type_expr(allocator_t allocator, string_t out, node_t type) {
       string_concat(out, ">");
       break;
     }
-    case CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER: {
-      cubec_expression_type_qualifier_t tq =
-          (cubec_expression_type_qualifier_t)type;
+    case CUBEC_NODE_EXPRESSION_QUALIFIER: {
+      cubec_expression_qualifier_t tq =
+          (cubec_expression_qualifier_t)type;
       if (tq->is_const) string_concat(out, "const ");
       if (tq->is_volatile) string_concat(out, "volatile ");
       write_type_expr(allocator, out, tq->type);

@@ -3,7 +3,7 @@
 #include "cubec/expression_ternary.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_namespace_access.h"
-#include "cubec/expression_type_qualifier.h"
+#include "cubec/expression_qualifier.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/expression_group.h"
 #include "cubec/literal_identifier.h"

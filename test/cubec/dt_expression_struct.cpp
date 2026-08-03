@@ -1,9 +1,9 @@
 #include "cubec/expression.h"
-#include "cubec/expression_type_struct.h"
+#include "cubec/expression_struct.h"
 #include "cubec/struct_field.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
-#include "cubec/expression_type_qualifier.h"
+#include "cubec/expression_qualifier.h"
 #include "cubec/statement_declaration.h"
 #include "cubec/generic_param.h"
 #include "cubec/node.h"
@@ -13,7 +13,7 @@
 
 using ::testing::Test;
 
-class dt_expression_type_struct : public CubecTest {
+class dt_expression_struct : public CubecTest {
 protected:
   test_context test_context_instance;
   allocator_t allocator = test_context_instance.allocator;
@@ -25,7 +25,7 @@ protected:
  * ========================================================================== */
 
 /* Simple: struct { } */
-TEST_F(dt_expression_type_struct, simple_empty) {
+TEST_F(dt_expression_struct, simple_empty) {
   const char *source = "struct { }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -33,10 +33,10 @@ TEST_F(dt_expression_type_struct, simple_empty) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_STRUCT);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_STRUCT);
 
-  cubec_expression_type_struct_t struct_node =
-      (cubec_expression_type_struct_t)node;
+  cubec_expression_struct_t struct_node =
+      (cubec_expression_struct_t)node;
   EXPECT_EQ(struct_node->generic_params, nullptr);
   ASSERT_NE(struct_node->members, nullptr);
   EXPECT_EQ(vec_get_size(struct_node->members), 0);
@@ -46,7 +46,7 @@ TEST_F(dt_expression_type_struct, simple_empty) {
 }
 
 /* struct with instance field: struct { x: i32; } */
-TEST_F(dt_expression_type_struct, with_instance_field) {
+TEST_F(dt_expression_struct, with_instance_field) {
   const char *source = "struct { x: i32; }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -54,10 +54,10 @@ TEST_F(dt_expression_type_struct, with_instance_field) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_STRUCT);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_STRUCT);
 
-  cubec_expression_type_struct_t struct_node =
-      (cubec_expression_type_struct_t)node;
+  cubec_expression_struct_t struct_node =
+      (cubec_expression_struct_t)node;
   ASSERT_NE(struct_node->members, nullptr);
   EXPECT_EQ(vec_get_size(struct_node->members), 1);
 
@@ -69,7 +69,7 @@ TEST_F(dt_expression_type_struct, with_instance_field) {
 }
 
 /* struct with pub field */
-TEST_F(dt_expression_type_struct, with_pub_field) {
+TEST_F(dt_expression_struct, with_pub_field) {
   const char *source = "struct { pub x: i32; y: f64; }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -78,8 +78,8 @@ TEST_F(dt_expression_type_struct, with_pub_field) {
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  cubec_expression_type_struct_t struct_node =
-      (cubec_expression_type_struct_t)node;
+  cubec_expression_struct_t struct_node =
+      (cubec_expression_struct_t)node;
   ASSERT_NE(struct_node->members, nullptr);
   EXPECT_EQ(vec_get_size(struct_node->members), 2);
 
@@ -98,7 +98,7 @@ TEST_F(dt_expression_type_struct, with_pub_field) {
 }
 
 /* struct with static var and instance field */
-TEST_F(dt_expression_type_struct, with_static_var_and_field) {
+TEST_F(dt_expression_struct, with_static_var_and_field) {
   const char *source = "struct { var count: i32 = 0; x: f64; }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -107,8 +107,8 @@ TEST_F(dt_expression_type_struct, with_static_var_and_field) {
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  cubec_expression_type_struct_t struct_node =
-      (cubec_expression_type_struct_t)node;
+  cubec_expression_struct_t struct_node =
+      (cubec_expression_struct_t)node;
   ASSERT_NE(struct_node->members, nullptr);
   EXPECT_EQ(vec_get_size(struct_node->members), 2);
 
@@ -129,7 +129,7 @@ TEST_F(dt_expression_type_struct, with_static_var_and_field) {
  * ========================================================================== */
 
 /* struct[T] { data: *T; } */
-TEST_F(dt_expression_type_struct, generic) {
+TEST_F(dt_expression_struct, generic) {
   const char *source = "struct[T] { data: *T; }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -137,10 +137,10 @@ TEST_F(dt_expression_type_struct, generic) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_STRUCT);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_STRUCT);
 
-  cubec_expression_type_struct_t struct_node =
-      (cubec_expression_type_struct_t)node;
+  cubec_expression_struct_t struct_node =
+      (cubec_expression_struct_t)node;
   ASSERT_NE(struct_node->generic_params, nullptr);
   EXPECT_EQ(vec_get_size(struct_node->generic_params), 1);
 
@@ -153,7 +153,7 @@ TEST_F(dt_expression_type_struct, generic) {
  * ========================================================================== */
 
 /* Pointer to struct: *struct { x: i32; } */
-TEST_F(dt_expression_type_struct, pointer_to_struct) {
+TEST_F(dt_expression_struct, pointer_to_struct) {
   const char *source = "*struct { x: i32; }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -165,14 +165,14 @@ TEST_F(dt_expression_type_struct, pointer_to_struct) {
 
   cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
   ASSERT_NE(ptr->type, nullptr);
-  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_TYPE_STRUCT);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_STRUCT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
 /* Slice of struct: []struct { x: i32; } */
-TEST_F(dt_expression_type_struct, slice_of_struct) {
+TEST_F(dt_expression_struct, slice_of_struct) {
   const char *source = "[]struct { x: i32; }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -184,14 +184,14 @@ TEST_F(dt_expression_type_struct, slice_of_struct) {
 
   cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
   ASSERT_NE(slice->type, nullptr);
-  EXPECT_EQ(slice->type->kind, CUBEC_NODE_EXPRESSION_TYPE_STRUCT);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_EXPRESSION_STRUCT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
 /* Const struct: const struct { x: i32; } */
-TEST_F(dt_expression_type_struct, const_struct) {
+TEST_F(dt_expression_struct, const_struct) {
   const char *source = "const struct { x: i32; }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -199,12 +199,12 @@ TEST_F(dt_expression_type_struct, const_struct) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_QUALIFIER);
 
-  cubec_expression_type_qualifier_t qual =
-      (cubec_expression_type_qualifier_t)node;
+  cubec_expression_qualifier_t qual =
+      (cubec_expression_qualifier_t)node;
   ASSERT_NE(qual->type, nullptr);
-  EXPECT_EQ(qual->type->kind, CUBEC_NODE_EXPRESSION_TYPE_STRUCT);
+  EXPECT_EQ(qual->type->kind, CUBEC_NODE_EXPRESSION_STRUCT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -214,7 +214,7 @@ TEST_F(dt_expression_type_struct, const_struct) {
  *  Token consumption
  * ========================================================================== */
 
-TEST_F(dt_expression_type_struct, consume_all_tokens) {
+TEST_F(dt_expression_struct, consume_all_tokens) {
   const char *source = "struct { x: i32; }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -236,13 +236,13 @@ TEST_F(dt_expression_type_struct, consume_all_tokens) {
  *  Non-struct returns NULL
  * ========================================================================== */
 
-TEST_F(dt_expression_type_struct, non_struct_returns_null) {
+TEST_F(dt_expression_struct, non_struct_returns_null) {
   const char *source = "i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type_struct(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_struct(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -252,7 +252,7 @@ TEST_F(dt_expression_type_struct, non_struct_returns_null) {
  *  Clone and move
  * ========================================================================== */
 
-TEST_F(dt_expression_type_struct, clone) {
+TEST_F(dt_expression_struct, clone) {
   const char *source = "struct { x: i32; y: f64; }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -263,10 +263,10 @@ TEST_F(dt_expression_type_struct, clone) {
 
   node_t cloned = (node_t)value_clone(allocator, node);
   ASSERT_NE(cloned, nullptr);
-  EXPECT_EQ(cloned->kind, CUBEC_NODE_EXPRESSION_TYPE_STRUCT);
+  EXPECT_EQ(cloned->kind, CUBEC_NODE_EXPRESSION_STRUCT);
 
-  cubec_expression_type_struct_t copy =
-      (cubec_expression_type_struct_t)cloned;
+  cubec_expression_struct_t copy =
+      (cubec_expression_struct_t)cloned;
   ASSERT_NE(copy->members, nullptr);
   EXPECT_EQ(vec_get_size(copy->members), 2);
 
@@ -275,7 +275,7 @@ TEST_F(dt_expression_type_struct, clone) {
   allocator_free(allocator, &tokens);
 }
 
-TEST_F(dt_expression_type_struct, move) {
+TEST_F(dt_expression_struct, move) {
   const char *source = "struct { x: i32; }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -286,10 +286,10 @@ TEST_F(dt_expression_type_struct, move) {
 
   node_t moved = (node_t)value_move(allocator, node);
   ASSERT_NE(moved, nullptr);
-  EXPECT_EQ(moved->kind, CUBEC_NODE_EXPRESSION_TYPE_STRUCT);
+  EXPECT_EQ(moved->kind, CUBEC_NODE_EXPRESSION_STRUCT);
 
-  cubec_expression_type_struct_t result =
-      (cubec_expression_type_struct_t)moved;
+  cubec_expression_struct_t result =
+      (cubec_expression_struct_t)moved;
   ASSERT_NE(result->members, nullptr);
 
   allocator_free(allocator, &node);
@@ -301,7 +301,7 @@ TEST_F(dt_expression_type_struct, move) {
  *  Via read_atom / read_expression
  * ========================================================================== */
 
-TEST_F(dt_expression_type_struct, via_read_atom) {
+TEST_F(dt_expression_struct, via_read_atom) {
   const char *source = "struct { x: i32; }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -309,13 +309,13 @@ TEST_F(dt_expression_type_struct, via_read_atom) {
   size_t position = 0;
   node_t node = read_atom(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_STRUCT);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_STRUCT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
 
-TEST_F(dt_expression_type_struct, via_read_expression) {
+TEST_F(dt_expression_struct, via_read_expression) {
   const char *source = "struct { }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -323,7 +323,7 @@ TEST_F(dt_expression_type_struct, via_read_expression) {
   size_t position = 0;
   node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPE_STRUCT);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_STRUCT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

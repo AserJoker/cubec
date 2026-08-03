@@ -1,4 +1,4 @@
-#include "cubec/expression_type_tuple.h"
+#include "cubec/expression_tuple.h"
 #include "core/token.h"
 #include "cubec/expression_spread.h"
 #include "cubec/expression_wildcard.h"
@@ -11,13 +11,13 @@
  * -------------------------------------------------------------------------- */
 
 static void
-_cubec_expression_type_tuple_init(cubec_expression_type_tuple_t self,
+_cubec_expression_tuple_init(cubec_expression_tuple_t self,
                                   allocator_t allocator,
-                                  cubec_expression_type_tuple_init_t *init) {
+                                  cubec_expression_tuple_init_t *init) {
   if (!init)
     return;
   cubec_expression_init_t super_init = {
-      .kind = CUBEC_NODE_EXPRESSION_TYPE_TUPLE,
+      .kind = CUBEC_NODE_EXPRESSION_TUPLE,
       .parent = NULL,
   };
   super_init.location = init->location;
@@ -27,16 +27,16 @@ _cubec_expression_type_tuple_init(cubec_expression_type_tuple_t self,
 }
 
 static void
-_cubec_expression_type_tuple_dispose(cubec_expression_type_tuple_t self,
+_cubec_expression_tuple_dispose(cubec_expression_tuple_t self,
                                      allocator_t allocator) {
   allocator_free(allocator, &self->element_types);
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
 static void
-_cubec_expression_type_tuple_clone(cubec_expression_type_tuple_t self,
+_cubec_expression_tuple_clone(cubec_expression_tuple_t self,
                                    allocator_t allocator,
-                                   cubec_expression_type_tuple_t another) {
+                                   cubec_expression_tuple_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->element_types = another->element_types
                             ? value_clone(allocator, another->element_types)
@@ -45,21 +45,21 @@ _cubec_expression_type_tuple_clone(cubec_expression_type_tuple_t self,
 }
 
 static void
-_cubec_expression_type_tuple_move(cubec_expression_type_tuple_t self,
+_cubec_expression_tuple_move(cubec_expression_tuple_t self,
                                   allocator_t allocator,
-                                  cubec_expression_type_tuple_t another) {
+                                  cubec_expression_tuple_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->element_types = another->element_types;
   another->element_types = NULL;
 }
 
-type_t g_cubec_expression_type_tuple_type = {
-    .size = sizeof(struct _cubec_expression_type_tuple_t),
-    .name = "cubec.expression_type_tuple",
-    .init = (type_init_fn_t)_cubec_expression_type_tuple_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_type_tuple_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_type_tuple_clone,
-    .move = (type_move_fn_t)_cubec_expression_type_tuple_move,
+type_t g_cubec_expression_tuple_type = {
+    .size = sizeof(struct _cubec_expression_tuple_t),
+    .name = "cubec.expression_tuple",
+    .init = (type_init_fn_t)_cubec_expression_tuple_init,
+    .dispose = (type_dispose_fn_t)_cubec_expression_tuple_dispose,
+    .clone = (type_clone_fn_t)_cubec_expression_tuple_clone,
+    .move = (type_move_fn_t)_cubec_expression_tuple_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -74,10 +74,10 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
 }
 
 /* --------------------------------------------------------------------------
- *  Parser: read_expression_type_tuple
+ *  Parser: read_expression_tuple
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_type_tuple(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_tuple(context_t ctx, vec_t tokens, size_t *position,
                                   const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
@@ -106,14 +106,14 @@ node_t read_expression_type_tuple(context_t ctx, vec_t tokens, size_t *position,
     vec_t element_types = (vec_t)allocator_create(allocator, &g_vec_type, &vi);
     location_t loc = *token_get_location(vec_get(tokens, start));
     loc.filename = filename;
-    cubec_expression_type_tuple_init_t init = {
+    cubec_expression_tuple_init_t init = {
         .location = loc,
         .parent = NULL,
         .element_types = element_types,
     };
-    cubec_expression_type_tuple_t node =
-        (cubec_expression_type_tuple_t)allocator_create(
-            allocator, &g_cubec_expression_type_tuple_type, &init);
+    cubec_expression_tuple_t node =
+        (cubec_expression_tuple_t)allocator_create(
+            allocator, &g_cubec_expression_tuple_type, &init);
     *position = current;
     return (node_t)node;
   }
@@ -174,31 +174,31 @@ node_t read_expression_type_tuple(context_t ctx, vec_t tokens, size_t *position,
   /* Create the node */
   location_t loc = *token_get_location(vec_get(tokens, start));
   loc.filename = filename;
-  cubec_expression_type_tuple_init_t init = {
+  cubec_expression_tuple_init_t init = {
       .location = loc,
       .parent = NULL,
       .element_types = element_types,
   };
-  cubec_expression_type_tuple_t node =
-      (cubec_expression_type_tuple_t)allocator_create(
-          allocator, &g_cubec_expression_type_tuple_type, &init);
+  cubec_expression_tuple_t node =
+      (cubec_expression_tuple_t)allocator_create(
+          allocator, &g_cubec_expression_tuple_type, &init);
 
   *position = current;
   return (node_t)node;
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: create_expression_type_tuple
+ *  Factory: create_expression_tuple
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_type_tuple(context_t ctx, location_t loc,
+node_t create_expression_tuple(context_t ctx, location_t loc,
                                     vec_t element_types) {
   allocator_t alloc = ctx->allocator;
-  cubec_expression_type_tuple_init_t init = {
+  cubec_expression_tuple_init_t init = {
       .location = loc,
       .parent = NULL,
       .element_types = element_types,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_expression_type_tuple_type,
+  return (node_t)allocator_create(alloc, &g_cubec_expression_tuple_type,
                                   &init);
 }

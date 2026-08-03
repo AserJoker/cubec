@@ -1,4 +1,4 @@
-#include "cubec/expression_type_interface.h"
+#include "cubec/expression_interface.h"
 #include "core/token.h"
 #include "cubec/generic_param.h"
 #include "cubec/interface_method.h"
@@ -12,13 +12,13 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_expression_type_interface_init(
-    cubec_expression_type_interface_t self, allocator_t allocator,
-    cubec_expression_type_interface_init_t *init) {
+static void _cubec_expression_interface_init(
+    cubec_expression_interface_t self, allocator_t allocator,
+    cubec_expression_interface_init_t *init) {
   if (!init)
     return;
   cubec_expression_init_t super_init = {
-      .kind = CUBEC_NODE_EXPRESSION_TYPE_INTERFACE,
+      .kind = CUBEC_NODE_EXPRESSION_INTERFACE,
       .parent = NULL,
   };
   super_init.location = init->location;
@@ -29,16 +29,16 @@ static void _cubec_expression_type_interface_init(
 }
 
 static void
-_cubec_expression_type_interface_dispose(cubec_expression_type_interface_t self,
+_cubec_expression_interface_dispose(cubec_expression_interface_t self,
                                          allocator_t allocator) {
   allocator_free(allocator, &self->members);
   allocator_free(allocator, &self->generic_params);
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_expression_type_interface_clone(
-    cubec_expression_type_interface_t self, allocator_t allocator,
-    cubec_expression_type_interface_t another) {
+static void _cubec_expression_interface_clone(
+    cubec_expression_interface_t self, allocator_t allocator,
+    cubec_expression_interface_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
                              ? value_clone(allocator, another->generic_params)
@@ -47,9 +47,9 @@ static void _cubec_expression_type_interface_clone(
   return;
 }
 
-static void _cubec_expression_type_interface_move(
-    cubec_expression_type_interface_t self, allocator_t allocator,
-    cubec_expression_type_interface_t another) {
+static void _cubec_expression_interface_move(
+    cubec_expression_interface_t self, allocator_t allocator,
+    cubec_expression_interface_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
                              ? value_move(allocator, another->generic_params)
@@ -58,13 +58,13 @@ static void _cubec_expression_type_interface_move(
   return;
 }
 
-type_t g_cubec_expression_type_interface_type = {
-    .name = "cubec.cubec.expression_type_interface",
-    .size = sizeof(struct _cubec_expression_type_interface_t),
-    .init = (type_init_fn_t)_cubec_expression_type_interface_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_type_interface_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_type_interface_clone,
-    .move = (type_move_fn_t)_cubec_expression_type_interface_move,
+type_t g_cubec_expression_interface_type = {
+    .name = "cubec.cubec.expression_interface",
+    .size = sizeof(struct _cubec_expression_interface_t),
+    .init = (type_init_fn_t)_cubec_expression_interface_init,
+    .dispose = (type_dispose_fn_t)_cubec_expression_interface_dispose,
+    .clone = (type_clone_fn_t)_cubec_expression_interface_clone,
+    .move = (type_move_fn_t)_cubec_expression_interface_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -171,7 +171,7 @@ onerror:
  *            [generic_params] { members }
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_type_interface_body(context_t ctx, vec_t tokens,
+node_t read_expression_interface_body(context_t ctx, vec_t tokens,
                                            size_t *position,
                                            const char *filename,
                                            location_t start_location) {
@@ -179,7 +179,7 @@ node_t read_expression_type_interface_body(context_t ctx, vec_t tokens,
   size_t current = *position;
   vec_t generic_params = NULL;
   vec_t members = NULL;
-  cubec_expression_type_interface_t node = NULL;
+  cubec_expression_interface_t node = NULL;
 
   /* 1. Parse optional generic parameters */
   generic_params = read_generic_params(ctx, tokens, &current, filename);
@@ -234,13 +234,13 @@ node_t read_expression_type_interface_body(context_t ctx, vec_t tokens,
       .filename = filename,
   };
 
-  cubec_expression_type_interface_init_t init = {
+  cubec_expression_interface_init_t init = {
       .location = loc,
       .parent = NULL,
       .generic_params = generic_params,
       .members = members,
   };
-  node = allocator_create(allocator, &g_cubec_expression_type_interface_type,
+  node = allocator_create(allocator, &g_cubec_expression_interface_type,
                           &init);
   *position = current;
   return (node_t)&node->super;
@@ -258,10 +258,10 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Parser: read_expression_type_interface — entry point for type expressions
+ *  Parser: read_expression_interface — entry point for type expressions
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_type_interface(context_t ctx, vec_t tokens,
+node_t read_expression_interface(context_t ctx, vec_t tokens,
                                       size_t *position, const char *filename) {
   size_t current = *position;
 
@@ -275,7 +275,7 @@ node_t read_expression_type_interface(context_t ctx, vec_t tokens,
   current++;
   skip_whitespace(tokens, &current);
 
-  node_t result = read_expression_type_interface_body(ctx, tokens, &current,
+  node_t result = read_expression_interface_body(ctx, tokens, &current,
                                                       filename, start_location);
   if (node_is_error(result))
     return result;
@@ -291,19 +291,19 @@ node_t read_expression_type_interface(context_t ctx, vec_t tokens,
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: create_expression_type_interface
+ *  Factory: create_expression_interface
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_type_interface(context_t ctx, location_t loc,
+node_t create_expression_interface(context_t ctx, location_t loc,
                                         vec_t generic_params, vec_t members) {
   allocator_t alloc = ctx->allocator;
-  cubec_expression_type_interface_init_t init = {
+  cubec_expression_interface_init_t init = {
       .location = loc,
       .parent = NULL,
       .generic_params = generic_params,
       .members = members,
   };
   return (node_t)allocator_create(alloc,
-                                  &g_cubec_expression_type_interface_type,
+                                  &g_cubec_expression_interface_type,
                                   &init);
 }

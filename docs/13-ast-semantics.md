@@ -116,7 +116,7 @@ func |capture_list| [generic_params] (params) [: return_type] { body }
 
 ### 2.6 const/volatile 限定符
 
-- 合并为 `expression_type_qualifier` 节点，含 `is_const` + `is_volatile` 双标志
+- 合并为 `expression_qualifier` 节点，含 `is_const` + `is_volatile` 双标志
 - 指针 const 映射：`*const T` → `POINTER(QUALIFIER(const, T))`，`const *T` → `QUALIFIER(const, POINTER(T))`
 - Const 传播：成员访问、解引用、赋值的 const 检查
 - `is_mutable = !semantic_type_is_const(var_type)`

@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CUBEC_EXPRESSION_TYPE_FUNCTION_
-#define _H_CUBEC_CUBEC_EXPRESSION_TYPE_FUNCTION_
+#ifndef _H_CUBEC_CUBEC_EXPRESSION_CALLABLE_
+#define _H_CUBEC_CUBEC_EXPRESSION_CALLABLE_
 #include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
@@ -25,25 +25,25 @@ extern "C" {
  *   func() -> i32               // no params, returns i32
  *   func(i32, ...) -> void      // C-style variadic
  */
-struct _cubec_expression_type_function_t;
-struct _cubec_expression_type_function_t {
+struct _cubec_expression_callable_t;
+struct _cubec_expression_callable_t {
   struct _cubec_expression_t super;
   vec_t parameters;        /**< Vector of node_t type expressions (auto_dispose) */
   node_t return_type;      /**< Return type expression (nullable = void) */
   bool is_c_variadic;      /**< Whether this function type has C-style variadic '...' */
 };
-typedef struct _cubec_expression_type_function_t *cubec_expression_type_function_t;
+typedef struct _cubec_expression_callable_t *cubec_expression_callable_t;
 
-extern type_t g_cubec_expression_type_function_type;
+extern type_t g_cubec_expression_callable_type;
 
-struct _cubec_expression_type_function_init_t {
+struct _cubec_expression_callable_init_t {
   location_t location;
   node_t parent;
   vec_t parameters;
   node_t return_type;
   bool is_c_variadic;
 };
-typedef struct _cubec_expression_type_function_init_t cubec_expression_type_function_init_t;
+typedef struct _cubec_expression_callable_init_t cubec_expression_callable_init_t;
 
 /**
  * @brief Try to parse a function type expression: func(type_list) -> type
@@ -51,13 +51,13 @@ typedef struct _cubec_expression_type_function_init_t cubec_expression_type_func
  * @param tokens The token list.
  * @param position Current position in token list (updated on success).
  * @param filename The source filename for error reporting.
- * @return A new cubec_expression_type_function_t node, or NULL if current token
+ * @return A new cubec_expression_callable_t node, or NULL if current token
  *         is not 'func' keyword.
  */
-node_t read_expression_type_function(context_t ctx, vec_t tokens,
+node_t read_expression_callable(context_t ctx, vec_t tokens,
                                      size_t *position, const char *filename);
 
-node_t create_expression_type_function(context_t ctx, location_t loc,
+node_t create_expression_callable(context_t ctx, location_t loc,
                                        vec_t parameters, node_t return_type,
                                        bool is_c_variadic);
 

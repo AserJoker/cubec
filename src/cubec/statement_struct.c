@@ -1,7 +1,7 @@
 #include "cubec/statement_struct.h"
 #include "core/token.h"
 #include "cubec/decorator.h"
-#include "cubec/expression_type_struct.h"
+#include "cubec/expression_struct.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -93,7 +93,7 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
 }
 
 /* --------------------------------------------------------------------------
- *  Parser: read_statement_struct — delegates to read_expression_type_struct
+ *  Parser: read_statement_struct — delegates to read_expression_struct
  * -------------------------------------------------------------------------- */
 
 node_t read_statement_struct(context_t ctx, vec_t tokens, size_t *position,
@@ -158,10 +158,10 @@ node_t read_statement_struct(context_t ctx, vec_t tokens, size_t *position,
 
   skip_whitespace(tokens, &current);
 
-  /* 4. Delegate to read_expression_type_struct_body for [generic_params] {
+  /* 4. Delegate to read_expression_struct_body for [generic_params] {
    * members } (struct keyword already consumed, pass start_location for span)
    */
-  expr_node = read_expression_type_struct_body(ctx, tokens, &current, filename,
+  expr_node = read_expression_struct_body(ctx, tokens, &current, filename,
                                                start_location, &implements);
   if (node_is_error(expr_node)) {
     allocator_free(allocator, &decorators);
@@ -171,8 +171,8 @@ node_t read_statement_struct(context_t ctx, vec_t tokens, size_t *position,
   }
   if (!expr_node)
     goto onerror;
-  cubec_expression_type_struct_t expr_struct =
-      (cubec_expression_type_struct_t)expr_node;
+  cubec_expression_struct_t expr_struct =
+      (cubec_expression_struct_t)expr_node;
 
   /* 5. Build location (use modifier start or struct keyword location) */
   location_t loc = expr_node->location;
@@ -181,7 +181,7 @@ node_t read_statement_struct(context_t ctx, vec_t tokens, size_t *position,
   }
 
   /* 6. Create statement_struct node, transferring ownership from
-   * expression_type_struct */
+   * expression_struct */
   cubec_statement_struct_init_t init = {
       .location = loc,
       .parent = NULL,

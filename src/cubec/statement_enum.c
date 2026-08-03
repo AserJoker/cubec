@@ -1,7 +1,7 @@
 #include "cubec/statement_enum.h"
 #include "core/token.h"
 #include "cubec/decorator.h"
-#include "cubec/expression_type_enum.h"
+#include "cubec/expression_enum.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -79,7 +79,7 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
 }
 
 /* --------------------------------------------------------------------------
- *  Parser: read_statement_enum — delegates to read_expression_type_enum
+ *  Parser: read_statement_enum — delegates to read_expression_enum
  * -------------------------------------------------------------------------- */
 
 node_t read_statement_enum(context_t ctx, vec_t tokens, size_t *position,
@@ -143,9 +143,9 @@ node_t read_statement_enum(context_t ctx, vec_t tokens, size_t *position,
 
   skip_whitespace(tokens, &current);
 
-  /* 4. Delegate to read_expression_type_enum_body for { items }
+  /* 4. Delegate to read_expression_enum_body for { items }
    *    (enum keyword already consumed, pass start_location for span) */
-  expr_node = read_expression_type_enum_body(ctx, tokens, &current, filename,
+  expr_node = read_expression_enum_body(ctx, tokens, &current, filename,
                                              start_location);
   if (node_is_error(expr_node)) {
     allocator_free(allocator, &decorators);
@@ -154,8 +154,8 @@ node_t read_statement_enum(context_t ctx, vec_t tokens, size_t *position,
   }
   if (!expr_node)
     goto onerror;
-  cubec_expression_type_enum_t expr_enum =
-      (cubec_expression_type_enum_t)expr_node;
+  cubec_expression_enum_t expr_enum =
+      (cubec_expression_enum_t)expr_node;
 
   /* 5. Build location (use modifier start or enum keyword location) */
   location_t loc = expr_node->location;
@@ -164,7 +164,7 @@ node_t read_statement_enum(context_t ctx, vec_t tokens, size_t *position,
   }
 
   /* 6. Create statement_enum node, transferring ownership from
-   * expression_type_enum */
+   * expression_enum */
   cubec_statement_enum_init_t init = {
       .location = loc,
       .parent = NULL,

@@ -26,25 +26,25 @@ semantic_type_t resolver_resolve_type(context_t ctx, node_t node) {
   case CUBEC_NODE_DECLARATION_ARRAY:
     return _resolve_type_array(ctx, node);
 
-  case CUBEC_NODE_EXPRESSION_TYPE_QUALIFIER:
+  case CUBEC_NODE_EXPRESSION_QUALIFIER:
     return _resolve_type_qualifier(ctx, node);
 
-  case CUBEC_NODE_EXPRESSION_TYPE_STRUCT:
+  case CUBEC_NODE_EXPRESSION_STRUCT:
     return _resolve_type_struct(ctx, node);
 
-  case CUBEC_NODE_EXPRESSION_TYPE_TUPLE:
+  case CUBEC_NODE_EXPRESSION_TUPLE:
     return _resolve_type_tuple(ctx, node);
 
-  case CUBEC_NODE_EXPRESSION_TYPE_ENUM:
+  case CUBEC_NODE_EXPRESSION_ENUM:
     return _resolve_type_enum(ctx, node);
 
-  case CUBEC_NODE_EXPRESSION_TYPE_UNION:
+  case CUBEC_NODE_EXPRESSION_UNION:
     return _resolve_type_union(ctx, node);
 
-  case CUBEC_NODE_EXPRESSION_TYPE_INTERFACE:
+  case CUBEC_NODE_EXPRESSION_INTERFACE:
     return _resolve_type_interface(ctx, node);
 
-  case CUBEC_NODE_EXPRESSION_TYPE_FUNCTION:
+  case CUBEC_NODE_EXPRESSION_CALLABLE:
     return _resolve_type_function(ctx, node);
 
   case CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS:

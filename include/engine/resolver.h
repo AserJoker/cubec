@@ -21,12 +21,12 @@ typedef struct context *context_t;
  *        - declaration_pointer: create pointer type
  *        - declaration_slice: create slice type
  *        - declaration_array: create array type
- *        - expression_type_qualifier: create const/volatile qualifier
- *        - expression_type_struct: create anonymous struct type
- *        - expression_type_union: create anonymous union type
- *        - expression_type_enum: create anonymous enum type
- *        - expression_type_interface: create interface type
- *        - expression_type_function: create function type
+ *        - expression_qualifier: create const/volatile qualifier
+ *        - expression_struct: create anonymous struct type
+ *        - expression_union: create anonymous union type
+ *        - expression_enum: create anonymous enum type
+ *        - expression_interface: create interface type
+ *        - expression_callable: create function type
  *        - expression_namespace_access: resolve left::right
  *        - expression_typeof: typeof type
  *

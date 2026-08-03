@@ -1,4 +1,4 @@
-#include "cubec/expression_type_function.h"
+#include "cubec/expression_callable.h"
 #include "core/token.h"
 #include "cubec/expression_spread.h"
 #include "cubec/node_error.h"
@@ -9,13 +9,13 @@
  *  Lifecycle: init / dispose / clone / move
  * -------------------------------------------------------------------------- */
 
-static void _cubec_expression_type_function_init(
-    cubec_expression_type_function_t self, allocator_t allocator,
-    cubec_expression_type_function_init_t *init) {
+static void _cubec_expression_callable_init(
+    cubec_expression_callable_t self, allocator_t allocator,
+    cubec_expression_callable_init_t *init) {
   if (!init)
     return;
   cubec_expression_init_t super_init = {
-      .kind = CUBEC_NODE_EXPRESSION_TYPE_FUNCTION,
+      .kind = CUBEC_NODE_EXPRESSION_CALLABLE,
       .parent = NULL,
   };
   super_init.location = init->location;
@@ -27,16 +27,16 @@ static void _cubec_expression_type_function_init(
 }
 
 static void
-_cubec_expression_type_function_dispose(cubec_expression_type_function_t self,
+_cubec_expression_callable_dispose(cubec_expression_callable_t self,
                                         allocator_t allocator) {
   allocator_free(allocator, &self->return_type);
   allocator_free(allocator, &self->parameters);
   g_cubec_expression_type.dispose(&self->super, allocator);
 }
 
-static void _cubec_expression_type_function_clone(
-    cubec_expression_type_function_t self, allocator_t allocator,
-    cubec_expression_type_function_t another) {
+static void _cubec_expression_callable_clone(
+    cubec_expression_callable_t self, allocator_t allocator,
+    cubec_expression_callable_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->parameters = value_clone(allocator, another->parameters);
   self->return_type = another->return_type
@@ -51,9 +51,9 @@ cleanup:
 }
 
 static void
-_cubec_expression_type_function_move(cubec_expression_type_function_t self,
+_cubec_expression_callable_move(cubec_expression_callable_t self,
                                      allocator_t allocator,
-                                     cubec_expression_type_function_t another) {
+                                     cubec_expression_callable_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->parameters = value_move(allocator, another->parameters);
   self->return_type =
@@ -66,13 +66,13 @@ cleanup:
   allocator_free(allocator, &self->return_type);
 }
 
-type_t g_cubec_expression_type_function_type = {
-    .name = "cubec.cubec.expression_type_function",
-    .size = sizeof(struct _cubec_expression_type_function_t),
-    .init = (type_init_fn_t)_cubec_expression_type_function_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_type_function_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_type_function_clone,
-    .move = (type_move_fn_t)_cubec_expression_type_function_move,
+type_t g_cubec_expression_callable_type = {
+    .name = "cubec.cubec.expression_callable",
+    .size = sizeof(struct _cubec_expression_callable_t),
+    .init = (type_init_fn_t)_cubec_expression_callable_init,
+    .dispose = (type_dispose_fn_t)_cubec_expression_callable_dispose,
+    .clone = (type_clone_fn_t)_cubec_expression_callable_clone,
+    .move = (type_move_fn_t)_cubec_expression_callable_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -96,17 +96,17 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
 }
 
 /* --------------------------------------------------------------------------
- *  Parser: read_expression_type_function
+ *  Parser: read_expression_callable
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_type_function(context_t ctx, vec_t tokens,
+node_t read_expression_callable(context_t ctx, vec_t tokens,
                                      size_t *position, const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   vec_t parameters = NULL;
   node_t return_type = NULL;
   bool is_c_variadic = false;
-  cubec_expression_type_function_t node = NULL;
+  cubec_expression_callable_t node = NULL;
 
   /* 1. Expect 'func' keyword */
   if (!_is_keyword(tokens, current, "func")) {
@@ -293,8 +293,8 @@ node_t read_expression_type_function(context_t ctx, vec_t tokens,
   };
 
   /* 8. Create node */
-  node = allocator_create(allocator, &g_cubec_expression_type_function_type,
-                          &(cubec_expression_type_function_init_t){
+  node = allocator_create(allocator, &g_cubec_expression_callable_type,
+                          &(cubec_expression_callable_init_t){
                               .location = loc,
                               .parameters = parameters,
                               .return_type = return_type,
@@ -312,14 +312,14 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: create_expression_type_function
+ *  Factory: create_expression_callable
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_type_function(context_t ctx, location_t loc,
+node_t create_expression_callable(context_t ctx, location_t loc,
                                        vec_t parameters, node_t return_type,
                                        bool is_c_variadic) {
   allocator_t alloc = ctx->allocator;
-  cubec_expression_type_function_init_t init = {
+  cubec_expression_callable_init_t init = {
       .location = loc,
       .parent = NULL,
       .parameters = parameters,
@@ -327,5 +327,5 @@ node_t create_expression_type_function(context_t ctx, location_t loc,
       .is_c_variadic = is_c_variadic,
   };
   return (node_t)allocator_create(alloc,
-                                  &g_cubec_expression_type_function_type, &init);
+                                  &g_cubec_expression_callable_type, &init);
 }

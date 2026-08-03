@@ -1,7 +1,7 @@
 #include "cubec/statement_union.h"
 #include "core/token.h"
 #include "cubec/decorator.h"
-#include "cubec/expression_type_union.h"
+#include "cubec/expression_union.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -93,7 +93,7 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
 }
 
 /* --------------------------------------------------------------------------
- *  Parser: read_statement_union — delegates to read_expression_type_union
+ *  Parser: read_statement_union — delegates to read_expression_union
  * -------------------------------------------------------------------------- */
 
 node_t read_statement_union(context_t ctx, vec_t tokens, size_t *position,
@@ -158,9 +158,9 @@ node_t read_statement_union(context_t ctx, vec_t tokens, size_t *position,
 
   skip_whitespace(tokens, &current);
 
-  /* 4. Delegate to read_expression_type_union_body for [generic_params] {
+  /* 4. Delegate to read_expression_union_body for [generic_params] {
    * members } */
-  expr_node = read_expression_type_union_body(ctx, tokens, &current, filename,
+  expr_node = read_expression_union_body(ctx, tokens, &current, filename,
                                               start_location, &implements);
   if (node_is_error(expr_node)) {
     allocator_free(allocator, &decorators);
@@ -170,8 +170,8 @@ node_t read_statement_union(context_t ctx, vec_t tokens, size_t *position,
   }
   if (!expr_node)
     goto onerror;
-  cubec_expression_type_union_t expr_union =
-      (cubec_expression_type_union_t)expr_node;
+  cubec_expression_union_t expr_union =
+      (cubec_expression_union_t)expr_node;
 
   /* 5. Build location */
   location_t loc = expr_node->location;
