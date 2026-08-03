@@ -7,13 +7,13 @@
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
 #include "cubec/declaration_array.h"
-#include "cubec/expression_qualifier.h"
-#include "cubec/expression_struct.h"
-#include "cubec/expression_tuple.h"
-#include "cubec/expression_enum.h"
-#include "cubec/expression_union.h"
-#include "cubec/expression_interface.h"
-#include "cubec/expression_callable.h"
+#include "cubec/declaration_qualifier.h"
+#include "cubec/declaration_struct.h"
+#include "cubec/declaration_tuple.h"
+#include "cubec/declaration_enum.h"
+#include "cubec/declaration_union.h"
+#include "cubec/declaration_interface.h"
+#include "cubec/declaration_callable.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_typeof.h"
 #include "cubec/struct_field.h"
@@ -190,8 +190,8 @@ semantic_type_t _resolve_type_array(context_t ctx, node_t node) {
 }
 
 semantic_type_t _resolve_type_qualifier(context_t ctx, node_t node) {
-  cubec_expression_qualifier_t q =
-      (cubec_expression_qualifier_t)node;
+  cubec_declaration_qualifier_t q =
+      (cubec_declaration_qualifier_t)node;
   semantic_type_t base = resolver_resolve_type(ctx, q->type);
   if (base->impl->kind == TYPE_ERROR) return ctx->error_type;
 
@@ -203,8 +203,8 @@ semantic_type_t _resolve_type_qualifier(context_t ctx, node_t node) {
 }
 
 semantic_type_t _resolve_type_struct(context_t ctx, node_t node) {
-  cubec_expression_struct_t st =
-      (cubec_expression_struct_t)node;
+  cubec_declaration_struct_t st =
+      (cubec_declaration_struct_t)node;
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, NULL, TYPE_STRUCT);
   vec_push(ctx->all_types, t);
@@ -240,8 +240,8 @@ semantic_type_t _resolve_type_struct(context_t ctx, node_t node) {
 }
 
 semantic_type_t _resolve_type_tuple(context_t ctx, node_t node) {
-  cubec_expression_tuple_t tt =
-      (cubec_expression_tuple_t)node;
+  cubec_declaration_tuple_t tt =
+      (cubec_declaration_tuple_t)node;
 
   vec_init_t vi = {.auto_dispose = false};
   vec_t element_types = (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
@@ -263,8 +263,8 @@ semantic_type_t _resolve_type_tuple(context_t ctx, node_t node) {
 }
 
 semantic_type_t _resolve_type_enum(context_t ctx, node_t node) {
-  cubec_expression_enum_t en =
-      (cubec_expression_enum_t)node;
+  cubec_declaration_enum_t en =
+      (cubec_declaration_enum_t)node;
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, NULL, TYPE_ENUM);
   vec_push(ctx->all_types, t);
@@ -314,8 +314,8 @@ semantic_type_t _resolve_type_enum(context_t ctx, node_t node) {
 }
 
 semantic_type_t _resolve_type_union(context_t ctx, node_t node) {
-  cubec_expression_union_t un =
-      (cubec_expression_union_t)node;
+  cubec_declaration_union_t un =
+      (cubec_declaration_union_t)node;
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, NULL, TYPE_UNION);
   vec_push(ctx->all_types, t);
@@ -351,8 +351,8 @@ semantic_type_t _resolve_type_union(context_t ctx, node_t node) {
 }
 
 semantic_type_t _resolve_type_interface(context_t ctx, node_t node) {
-  cubec_expression_interface_t iface =
-      (cubec_expression_interface_t)node;
+  cubec_declaration_interface_t iface =
+      (cubec_declaration_interface_t)node;
   semantic_type_t t =
       semantic_type_create_named(ctx->allocator, NULL, TYPE_INTERFACE);
   t->is_interface = true;
@@ -385,8 +385,8 @@ semantic_type_t _resolve_type_interface(context_t ctx, node_t node) {
 }
 
 semantic_type_t _resolve_type_function(context_t ctx, node_t node) {
-  cubec_expression_callable_t ft =
-      (cubec_expression_callable_t)node;
+  cubec_declaration_callable_t ft =
+      (cubec_declaration_callable_t)node;
 
   semantic_type_t ret_type = ft->return_type
       ? resolver_resolve_type(ctx, ft->return_type)

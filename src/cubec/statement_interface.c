@@ -1,7 +1,7 @@
 #include "cubec/statement_interface.h"
 #include "core/token.h"
 #include "cubec/decorator.h"
-#include "cubec/expression_interface.h"
+#include "cubec/declaration_interface.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -91,7 +91,7 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
 
 /* --------------------------------------------------------------------------
  *  Parser: read_statement_interface — delegates to
- * read_expression_interface
+ * read_declaration_interface
  * -------------------------------------------------------------------------- */
 
 node_t read_statement_interface(context_t ctx, vec_t tokens, size_t *position,
@@ -155,10 +155,10 @@ node_t read_statement_interface(context_t ctx, vec_t tokens, size_t *position,
 
   skip_whitespace(tokens, &current);
 
-  /* 4. Delegate to read_expression_interface_body for [generic_params] {
+  /* 4. Delegate to read_declaration_interface_body for [generic_params] {
    * members } (interface keyword already consumed, pass start_location for
    * span) */
-  expr_node = read_expression_interface_body(ctx, tokens, &current,
+  expr_node = read_declaration_interface_body(ctx, tokens, &current,
                                                   filename, start_location);
   if (node_is_error(expr_node)) {
     allocator_free(allocator, &decorators);
@@ -167,8 +167,8 @@ node_t read_statement_interface(context_t ctx, vec_t tokens, size_t *position,
   }
   if (!expr_node)
     goto onerror;
-  cubec_expression_interface_t expr_iface =
-      (cubec_expression_interface_t)expr_node;
+  cubec_declaration_interface_t expr_iface =
+      (cubec_declaration_interface_t)expr_node;
 
   /* 5. Build location (use modifier start or interface keyword location) */
   location_t loc = expr_node->location;
@@ -177,7 +177,7 @@ node_t read_statement_interface(context_t ctx, vec_t tokens, size_t *position,
   }
 
   /* 6. Create statement_interface node, transferring ownership from
-   * expression_interface */
+   * declaration_interface */
   cubec_statement_interface_init_t init = {
       .location = loc,
       .parent = NULL,

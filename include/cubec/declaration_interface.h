@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CUBEC_EXPRESSION_INTERFACE_
-#define _H_CUBEC_CUBEC_EXPRESSION_INTERFACE_
+#ifndef _H_CUBEC_CUBEC_DECLARATION_INTERFACE_
+#define _H_CUBEC_CUBEC_DECLARATION_INTERFACE_
 #include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
@@ -32,23 +32,23 @@ extern "C" {
  *   func foo(x: interface { func bar(): i32; }): void;
  *   var handler: interface { func run(); } = ...;
  */
-struct _cubec_expression_interface_t;
-struct _cubec_expression_interface_t {
+struct _cubec_declaration_interface_t;
+struct _cubec_declaration_interface_t {
   struct _cubec_expression_t super;
   vec_t generic_params; /**< Vector of cubec_generic_param_t (may be NULL) */
   vec_t members;        /**< Vector of member nodes (auto_dispose=true) */
 };
-typedef struct _cubec_expression_interface_t *cubec_expression_interface_t;
+typedef struct _cubec_declaration_interface_t *cubec_declaration_interface_t;
 
-extern type_t g_cubec_expression_interface_type;
+extern type_t g_cubec_declaration_interface_type;
 
-struct _cubec_expression_interface_init_t {
+struct _cubec_declaration_interface_init_t {
   location_t location;
   node_t parent;
   vec_t generic_params;
   vec_t members;
 };
-typedef struct _cubec_expression_interface_init_t cubec_expression_interface_init_t;
+typedef struct _cubec_declaration_interface_init_t cubec_declaration_interface_init_t;
 
 /**
  * @brief Try to parse an anonymous interface type expression.
@@ -56,16 +56,16 @@ typedef struct _cubec_expression_interface_init_t cubec_expression_interface_ini
  * @param tokens The token list.
  * @param position Current position in token list (updated on success).
  * @param filename The source filename for error reporting.
- * @return A new cubec_expression_interface_t node, or NULL if current token
+ * @return A new cubec_declaration_interface_t node, or NULL if current token
  *         is not 'interface' keyword.
  */
-node_t read_expression_interface(context_t ctx, vec_t tokens,
+node_t read_declaration_interface(context_t ctx, vec_t tokens,
                                        size_t *position, const char *filename);
 
 /**
  * @brief Parse interface body after 'interface' keyword has been consumed.
  *
- * Parses [generic_params] { members } and returns an expression_interface
+ * Parses [generic_params] { members } and returns an declaration_interface
  * node. Used by read_statement_interface for delegation — the statement parser
  * consumes 'export' + 'interface' + name, then delegates body parsing here.
  *
@@ -74,13 +74,13 @@ node_t read_expression_interface(context_t ctx, vec_t tokens,
  * @param position Current position in token list (updated on success).
  * @param filename The source filename for error reporting.
  * @param start_location Location of the 'interface' keyword (for error span).
- * @return A new cubec_expression_interface_t node, or NULL on error.
+ * @return A new cubec_declaration_interface_t node, or NULL on error.
  */
-node_t read_expression_interface_body(context_t ctx, vec_t tokens,
+node_t read_declaration_interface_body(context_t ctx, vec_t tokens,
                                             size_t *position, const char *filename,
                                             location_t start_location);
 
-node_t create_expression_interface(context_t ctx, location_t loc,
+node_t create_declaration_interface(context_t ctx, location_t loc,
                                         vec_t generic_params, vec_t members);
 
 #ifdef __cplusplus

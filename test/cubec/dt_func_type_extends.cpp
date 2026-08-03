@@ -1,7 +1,7 @@
 #include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_group.h"
-#include "cubec/expression_callable.h"
+#include "cubec/declaration_callable.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/expression_typeof.h"
 #include "cubec/literal_identifier.h"
@@ -33,7 +33,7 @@ TEST_F(test_func_type_extends, typeof_eq_func_type) {
 
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
   EXPECT_EQ(bin->left->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
-  EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_CALLABLE);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -56,11 +56,11 @@ TEST_F(test_func_type_extends, typeof_eq_func_type_ternary) {
 
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
   EXPECT_EQ(bin->left->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
-  EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_CALLABLE);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
   /* The function type's return type is a ternary */
-  cubec_expression_callable_t func =
-      (cubec_expression_callable_t)bin->right;
+  cubec_declaration_callable_t func =
+      (cubec_declaration_callable_t)bin->right;
   ASSERT_NE(func->return_type, nullptr);
   EXPECT_EQ(func->return_type->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 

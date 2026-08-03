@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CUBEC_EXPRESSION_STRUCT_
-#define _H_CUBEC_CUBEC_EXPRESSION_STRUCT_
+#ifndef _H_CUBEC_CUBEC_DECLARATION_STRUCT_
+#define _H_CUBEC_CUBEC_DECLARATION_STRUCT_
 #include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
@@ -35,23 +35,23 @@ extern "C" {
  *   struct[T] { var data: *T; var len: u64; }
  *   type Pair[A, B] = struct { first: A; second: B; }
  */
-struct _cubec_expression_struct_t;
-struct _cubec_expression_struct_t {
+struct _cubec_declaration_struct_t;
+struct _cubec_declaration_struct_t {
   struct _cubec_expression_t super;
   vec_t generic_params; /**< Vector of cubec_generic_param_t (may be NULL) */
   vec_t members;        /**< Vector of member nodes (auto_dispose=true) */
 };
-typedef struct _cubec_expression_struct_t *cubec_expression_struct_t;
+typedef struct _cubec_declaration_struct_t *cubec_declaration_struct_t;
 
-extern type_t g_cubec_expression_struct_type;
+extern type_t g_cubec_declaration_struct_type;
 
-struct _cubec_expression_struct_init_t {
+struct _cubec_declaration_struct_init_t {
   location_t location;
   node_t parent;
   vec_t generic_params;
   vec_t members;
 };
-typedef struct _cubec_expression_struct_init_t cubec_expression_struct_init_t;
+typedef struct _cubec_declaration_struct_init_t cubec_declaration_struct_init_t;
 
 /**
  * @brief Try to parse an anonymous struct type expression.
@@ -59,16 +59,16 @@ typedef struct _cubec_expression_struct_init_t cubec_expression_struct_init_t;
  * @param tokens The token list.
  * @param position Current position in token list (updated on success).
  * @param filename The source filename for error reporting.
- * @return A new cubec_expression_struct_t node, or NULL if current token
+ * @return A new cubec_declaration_struct_t node, or NULL if current token
  *         is not 'struct' keyword.
  */
-node_t read_expression_struct(context_t ctx, vec_t tokens,
+node_t read_declaration_struct(context_t ctx, vec_t tokens,
                                     size_t *position, const char *filename);
 
 /**
  * @brief Parse struct body after 'struct' keyword has been consumed.
  *
- * Parses [generic_params] { members } and returns an expression_struct
+ * Parses [generic_params] { members } and returns an declaration_struct
  * node. Used by read_statement_struct for delegation.
  *
  * @param allocator The allocator to use.
@@ -76,14 +76,14 @@ node_t read_expression_struct(context_t ctx, vec_t tokens,
  * @param position Current position in token list (updated on success).
  * @param filename The source filename for error reporting.
  * @param start_location Location of the 'struct' keyword (for error span).
- * @return A new cubec_expression_struct_t node, or NULL on error.
+ * @return A new cubec_declaration_struct_t node, or NULL on error.
  */
-node_t read_expression_struct_body(context_t ctx, vec_t tokens,
+node_t read_declaration_struct_body(context_t ctx, vec_t tokens,
                                          size_t *position, const char *filename,
                                          location_t start_location,
                                          vec_t *out_implements);
 
-node_t create_expression_struct(context_t ctx, location_t loc,
+node_t create_declaration_struct(context_t ctx, location_t loc,
                                      vec_t generic_params, vec_t members);
 
 #ifdef __cplusplus

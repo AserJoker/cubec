@@ -1,4 +1,4 @@
-#include "cubec/expression_union.h"
+#include "cubec/declaration_union.h"
 #include "core/token.h"
 #include "cubec/expression_spread.h"
 #include "cubec/generic_param.h"
@@ -13,13 +13,13 @@
  * -------------------------------------------------------------------------- */
 
 static void
-_cubec_expression_union_init(cubec_expression_union_t self,
+_cubec_declaration_union_init(cubec_declaration_union_t self,
                                   allocator_t allocator,
-                                  cubec_expression_union_init_t *init) {
+                                  cubec_declaration_union_init_t *init) {
   if (!init)
     return;
   cubec_expression_init_t super_init = {
-      .kind = CUBEC_NODE_EXPRESSION_UNION,
+      .kind = CUBEC_NODE_DECLARATION_UNION,
       .parent = NULL,
   };
   super_init.location = init->location;
@@ -30,7 +30,7 @@ _cubec_expression_union_init(cubec_expression_union_t self,
 }
 
 static void
-_cubec_expression_union_dispose(cubec_expression_union_t self,
+_cubec_declaration_union_dispose(cubec_declaration_union_t self,
                                      allocator_t allocator) {
   allocator_free(allocator, &self->members);
   allocator_free(allocator, &self->generic_params);
@@ -38,9 +38,9 @@ _cubec_expression_union_dispose(cubec_expression_union_t self,
 }
 
 static void
-_cubec_expression_union_clone(cubec_expression_union_t self,
+_cubec_declaration_union_clone(cubec_declaration_union_t self,
                                    allocator_t allocator,
-                                   cubec_expression_union_t another) {
+                                   cubec_declaration_union_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
                              ? value_clone(allocator, another->generic_params)
@@ -50,9 +50,9 @@ _cubec_expression_union_clone(cubec_expression_union_t self,
 }
 
 static void
-_cubec_expression_union_move(cubec_expression_union_t self,
+_cubec_declaration_union_move(cubec_declaration_union_t self,
                                   allocator_t allocator,
-                                  cubec_expression_union_t another) {
+                                  cubec_declaration_union_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
                              ? value_move(allocator, another->generic_params)
@@ -61,13 +61,13 @@ _cubec_expression_union_move(cubec_expression_union_t self,
   return;
 }
 
-type_t g_cubec_expression_union_type = {
-    .name = "cubec.cubec.expression_union",
-    .size = sizeof(struct _cubec_expression_union_t),
-    .init = (type_init_fn_t)_cubec_expression_union_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_union_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_union_clone,
-    .move = (type_move_fn_t)_cubec_expression_union_move,
+type_t g_cubec_declaration_union_type = {
+    .name = "cubec.cubec.declaration_union",
+    .size = sizeof(struct _cubec_declaration_union_t),
+    .init = (type_init_fn_t)_cubec_declaration_union_init,
+    .dispose = (type_dispose_fn_t)_cubec_declaration_union_dispose,
+    .clone = (type_clone_fn_t)_cubec_declaration_union_clone,
+    .move = (type_move_fn_t)_cubec_declaration_union_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -95,7 +95,7 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *            [generic_params] { members }
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_union_body(context_t ctx, vec_t tokens,
+node_t read_declaration_union_body(context_t ctx, vec_t tokens,
                                        size_t *position, const char *filename,
                                        location_t start_location,
                                        vec_t *out_implements) {
@@ -104,7 +104,7 @@ node_t read_expression_union_body(context_t ctx, vec_t tokens,
   vec_t generic_params = NULL;
   vec_t members = NULL;
   vec_t implements = NULL;
-  cubec_expression_union_t node = NULL;
+  cubec_declaration_union_t node = NULL;
 
   /* 1. Parse optional generic parameters */
   generic_params = read_generic_params(ctx, tokens, &current, filename);
@@ -210,14 +210,14 @@ node_t read_expression_union_body(context_t ctx, vec_t tokens,
       .filename = filename,
   };
 
-  cubec_expression_union_init_t init = {
+  cubec_declaration_union_init_t init = {
       .location = loc,
       .parent = NULL,
       .generic_params = generic_params,
       .members = members,
   };
   node =
-      allocator_create(allocator, &g_cubec_expression_union_type, &init);
+      allocator_create(allocator, &g_cubec_declaration_union_type, &init);
   if (out_implements)
     *out_implements = implements;
   *position = current;
@@ -238,10 +238,10 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Parser: read_expression_union — entry point for type expressions
+ *  Parser: read_declaration_union — entry point for type expressions
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_union(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_union(context_t ctx, vec_t tokens, size_t *position,
                                   const char *filename) {
   allocator_t allocator = ctx->allocator;
   (void)allocator;
@@ -257,7 +257,7 @@ node_t read_expression_union(context_t ctx, vec_t tokens, size_t *position,
   current++;
   skip_whitespace(tokens, &current);
 
-  node_t result = read_expression_union_body(
+  node_t result = read_declaration_union_body(
       ctx, tokens, &current, filename, start_location, NULL);
   if (node_is_error(result))
     return result;
@@ -273,18 +273,18 @@ node_t read_expression_union(context_t ctx, vec_t tokens, size_t *position,
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: create_expression_union
+ *  Factory: create_declaration_union
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_union(context_t ctx, location_t loc,
+node_t create_declaration_union(context_t ctx, location_t loc,
                                     vec_t generic_params, vec_t members) {
   allocator_t alloc = ctx->allocator;
-  cubec_expression_union_init_t init = {
+  cubec_declaration_union_init_t init = {
       .location = loc,
       .parent = NULL,
       .generic_params = generic_params,
       .members = members,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_expression_union_type,
+  return (node_t)allocator_create(alloc, &g_cubec_declaration_union_type,
                                   &init);
 }

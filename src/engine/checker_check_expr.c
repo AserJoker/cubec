@@ -1789,13 +1789,13 @@ semantic_type_t _check_expression(context_t ctx, node_t expr) {
   case CUBEC_NODE_STATEMENT_ERROR:
     /* Parse error — diagnostic already recorded. Return error type silently. */
     return ctx->error_type;
-  case CUBEC_NODE_EXPRESSION_QUALIFIER:
-  case CUBEC_NODE_EXPRESSION_STRUCT:
-  case CUBEC_NODE_EXPRESSION_TUPLE:
-  case CUBEC_NODE_EXPRESSION_ENUM:
-  case CUBEC_NODE_EXPRESSION_UNION:
-  case CUBEC_NODE_EXPRESSION_INTERFACE:
-  case CUBEC_NODE_EXPRESSION_CALLABLE:
+  case CUBEC_NODE_DECLARATION_QUALIFIER:
+  case CUBEC_NODE_DECLARATION_STRUCT:
+  case CUBEC_NODE_DECLARATION_TUPLE:
+  case CUBEC_NODE_DECLARATION_ENUM:
+  case CUBEC_NODE_DECLARATION_UNION:
+  case CUBEC_NODE_DECLARATION_INTERFACE:
+  case CUBEC_NODE_DECLARATION_CALLABLE:
   case CUBEC_NODE_EXPRESSION_WILDCARD:
     return resolver_resolve_type(ctx, expr);
   default:

@@ -7,27 +7,27 @@
 #include "cubec/expression_assert.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/expression_call.h"
-#include "cubec/expression_callable.h"
+#include "cubec/declaration_callable.h"
 #include "cubec/expression_comma.h"
 #include "cubec/expression_deref.h"
-#include "cubec/expression_enum.h"
+#include "cubec/declaration_enum.h"
 #include "cubec/expression_function.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_initialize_list.h"
-#include "cubec/expression_interface.h"
+#include "cubec/declaration_interface.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
-#include "cubec/expression_qualifier.h"
+#include "cubec/declaration_qualifier.h"
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression_slice.h"
-#include "cubec/expression_struct.h"
+#include "cubec/declaration_struct.h"
 #include "cubec/expression_subscript.h"
 #include "cubec/expression_ternary.h"
 #include "cubec/expression_try.h"
-#include "cubec/expression_tuple.h"
+#include "cubec/declaration_tuple.h"
 #include "cubec/expression_typeof.h"
-#include "cubec/expression_union.h"
+#include "cubec/declaration_union.h"
 #include "cubec/expression_wildcard.h"
 #include "cubec/literal_char.h"
 #include "cubec/literal_numeric.h"
@@ -123,7 +123,7 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
   // type and has no body; the expression form uses ':' and has a body.
   // type_function returns NULL (without THROW) when it detects the expression
   // form (named params or ':' instead of '->').
-  result = read_expression_callable(ctx, tokens, &current, filename);
+  result = read_declaration_callable(ctx, tokens, &current, filename);
   if (node_is_error(result))
     return result;
   if (result) {
@@ -132,7 +132,7 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
   }
 
   // Try interface type: interface[generic_params] { members }
-  result = read_expression_interface(ctx, tokens, &current, filename);
+  result = read_declaration_interface(ctx, tokens, &current, filename);
   if (node_is_error(result))
     return result;
   if (result) {
@@ -141,7 +141,7 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
   }
 
   // Try struct type: struct[generic_params] { members }
-  result = read_expression_struct(ctx, tokens, &current, filename);
+  result = read_declaration_struct(ctx, tokens, &current, filename);
   if (node_is_error(result))
     return result;
   if (result) {
@@ -150,7 +150,7 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
   }
 
   // Try enum type: enum { items }
-  result = read_expression_enum(ctx, tokens, &current, filename);
+  result = read_declaration_enum(ctx, tokens, &current, filename);
   if (node_is_error(result))
     return result;
   if (result) {
@@ -159,7 +159,7 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
   }
 
   // Try union type: union[generic_params] { fields }
-  result = read_expression_union(ctx, tokens, &current, filename);
+  result = read_declaration_union(ctx, tokens, &current, filename);
   if (node_is_error(result))
     return result;
   if (result) {
@@ -187,7 +187,7 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
   }
 
   // Try type qualifier: const/volatile <type> — prefix type modifications
-  result = read_expression_qualifier(ctx, tokens, &current, filename);
+  result = read_declaration_qualifier(ctx, tokens, &current, filename);
   if (node_is_error(result))
     return result;
   if (result) {
@@ -196,7 +196,7 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
   }
 
   // Try tuple type: <type1, type2, ...> — prefix type expression
-  result = read_expression_tuple(ctx, tokens, &current, filename);
+  result = read_declaration_tuple(ctx, tokens, &current, filename);
   if (node_is_error(result))
     return result;
   if (result) {
@@ -467,7 +467,7 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
   }
 
   /* Try function type expression: func(type_list) -> type */
-  node = read_expression_callable(ctx, tokens, &current, filename);
+  node = read_declaration_callable(ctx, tokens, &current, filename);
   if (node_is_error(node))
     return node;
   if (node) {
@@ -476,7 +476,7 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
   }
 
   /* Try interface type expression: interface[generic_params] { members } */
-  node = read_expression_interface(ctx, tokens, &current, filename);
+  node = read_declaration_interface(ctx, tokens, &current, filename);
   if (node_is_error(node))
     return node;
   if (node) {
@@ -484,7 +484,7 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
     return node;
   }
   /* Try struct type expression: struct[generic_params] { members } */
-  node = read_expression_struct(ctx, tokens, &current, filename);
+  node = read_declaration_struct(ctx, tokens, &current, filename);
   if (node_is_error(node))
     return node;
   if (node) {
@@ -492,7 +492,7 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
     return node;
   }
   /* Try enum type expression: enum { items } */
-  node = read_expression_enum(ctx, tokens, &current, filename);
+  node = read_declaration_enum(ctx, tokens, &current, filename);
   if (node_is_error(node))
     return node;
   if (node) {
@@ -500,7 +500,7 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
     return node;
   }
   /* Try union type expression: union[generic_params] { fields } */
-  node = read_expression_union(ctx, tokens, &current, filename);
+  node = read_declaration_union(ctx, tokens, &current, filename);
   if (node_is_error(node))
     return node;
   if (node) {
@@ -508,7 +508,7 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
     return node;
   }
   /* Try type qualifier expression (prefix form: const/volatile <type>) */
-  node = read_expression_qualifier(ctx, tokens, &current, filename);
+  node = read_declaration_qualifier(ctx, tokens, &current, filename);
   if (node_is_error(node))
     return node;
   if (node) {
@@ -517,7 +517,7 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
   }
 
   /* Try tuple type expression (prefix form: <type1, type2, ...>) */
-  node = read_expression_tuple(ctx, tokens, &current, filename);
+  node = read_declaration_tuple(ctx, tokens, &current, filename);
   if (node_is_error(node))
     return node;
   if (node) {
@@ -672,8 +672,8 @@ void write_expression(writer_t writer, node_t expr) {
   case CUBEC_NODE_EXPRESSION_CALL:
     write_expression_call(writer, expr);
     break;
-  case CUBEC_NODE_EXPRESSION_CALLABLE:
-    write_expression_callable(writer, expr);
+  case CUBEC_NODE_DECLARATION_CALLABLE:
+    write_declaration_callable(writer, expr);
     break;
   case CUBEC_NODE_EXPRESSION_DEREF:
     write_expression_deref(writer, expr);
