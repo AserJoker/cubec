@@ -13,7 +13,7 @@
 #include "cubec/statement_empty.h"
 #include "cubec/statement_enum.h"
 #include "cubec/statement_error.h"
-#include "cubec/statement_export_from.h"
+#include "cubec/statement_export.h"
 #include "cubec/statement_expression.h"
 #include "cubec/statement_for.h"
 #include "cubec/statement_foreach.h"
@@ -295,7 +295,7 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
   /* Try export-from statement (export * from "..."; / export { ... } from
    * "...";) */
   current = *position;
-  node = read_statement_export_from(ctx, tokens, &current, filename);
+  node = read_statement_export(ctx, tokens, &current, filename);
   if (node_is_error(node)) {
     allocator_free(ctx->allocator, &node);
     had_error = true;
@@ -403,8 +403,8 @@ void write_statement(writer_t wr, node_t stmt) {
   case CUBEC_NODE_STATEMENT_IMPORT:
     write_statement_import(wr, stmt);
     break;
-  case CUBEC_NODE_STATEMENT_EXPORT_FROM:
-    write_statement_export_from(wr, stmt);
+  case CUBEC_NODE_STATEMENT_EXPORT:
+    write_statement_export(wr, stmt);
     break;
   case CUBEC_NODE_STATEMENT_EMPTY:
     write_statement_empty(wr, stmt);

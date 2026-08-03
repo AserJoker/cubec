@@ -1,4 +1,4 @@
-#include "cubec/statement_export_from.h"
+#include "cubec/statement_export.h"
 #include "core/token.h"
 #include "core/vec.h"
 #include "core/writer.h"
@@ -10,13 +10,13 @@
 /* ===== lifecycle ===== */
 
 static void
-_cubec_statement_export_from_init(cubec_statement_export_from_t self,
+_cubec_statement_export_init(cubec_statement_export_t self,
                                   allocator_t allocator,
-                                  cubec_statement_export_from_init_t *init) {
+                                  cubec_statement_export_init_t *init) {
   if (!init)
     return;
   node_init_t super_init = {
-      .kind = CUBEC_NODE_STATEMENT_EXPORT_FROM,
+      .kind = CUBEC_NODE_STATEMENT_EXPORT,
       .parent = NULL,
   };
   super_init.location = init->location;
@@ -27,7 +27,7 @@ _cubec_statement_export_from_init(cubec_statement_export_from_t self,
 }
 
 static void
-_cubec_statement_export_from_dispose(cubec_statement_export_from_t self,
+_cubec_statement_export_dispose(cubec_statement_export_t self,
                                      allocator_t allocator) {
   allocator_free(allocator, &self->names);
   allocator_free(allocator, &self->path);
@@ -35,9 +35,9 @@ _cubec_statement_export_from_dispose(cubec_statement_export_from_t self,
 }
 
 static void
-_cubec_statement_export_from_clone(cubec_statement_export_from_t self,
+_cubec_statement_export_clone(cubec_statement_export_t self,
                                    allocator_t allocator,
-                                   cubec_statement_export_from_t another) {
+                                   cubec_statement_export_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->path = value_clone(allocator, another->path);
   self->is_star = another->is_star;
@@ -46,9 +46,9 @@ _cubec_statement_export_from_clone(cubec_statement_export_from_t self,
 }
 
 static void
-_cubec_statement_export_from_move(cubec_statement_export_from_t self,
+_cubec_statement_export_move(cubec_statement_export_t self,
                                   allocator_t allocator,
-                                  cubec_statement_export_from_t another) {
+                                  cubec_statement_export_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->path = value_move(allocator, another->path);
   self->is_star = another->is_star;
@@ -56,13 +56,13 @@ _cubec_statement_export_from_move(cubec_statement_export_from_t self,
   return;
 }
 
-type_t g_cubec_statement_export_from_type = {
-    .name = "cubec.cubec.statement_export_from",
-    .size = sizeof(struct _cubec_statement_export_from_t),
-    .init = (type_init_fn_t)_cubec_statement_export_from_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_export_from_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_export_from_clone,
-    .move = (type_move_fn_t)_cubec_statement_export_from_move,
+type_t g_cubec_statement_export_type = {
+    .name = "cubec.cubec.statement_export",
+    .size = sizeof(struct _cubec_statement_export_t),
+    .init = (type_init_fn_t)_cubec_statement_export_init,
+    .dispose = (type_dispose_fn_t)_cubec_statement_export_dispose,
+    .clone = (type_clone_fn_t)_cubec_statement_export_clone,
+    .move = (type_move_fn_t)_cubec_statement_export_move,
 };
 
 /* ===== helpers ===== */
@@ -78,11 +78,11 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
 
 /* ===== parser ===== */
 
-node_t read_statement_export_from(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_export(context_t ctx, vec_t tokens, size_t *position,
                                   const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
-  cubec_statement_export_from_t node = NULL;
+  cubec_statement_export_t node = NULL;
   node_t path = NULL;
   vec_t names = NULL;
   location_t start_location = {0};
@@ -175,7 +175,7 @@ node_t read_statement_export_from(context_t ctx, vec_t tokens, size_t *position,
       .filename = filename,
   };
 
-  cubec_statement_export_from_init_t init = {
+  cubec_statement_export_init_t init = {
       .location = loc,
       .parent = NULL,
       .path = path,
@@ -183,7 +183,7 @@ node_t read_statement_export_from(context_t ctx, vec_t tokens, size_t *position,
       .names = names,
   };
   node =
-      allocator_create(allocator, &g_cubec_statement_export_from_type, &init);
+      allocator_create(allocator, &g_cubec_statement_export_type, &init);
   *position = current;
   return &node->super;
 
@@ -197,41 +197,41 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: create_statement_export_from
+ *  Factory: create_statement_export
  * -------------------------------------------------------------------------- */
 
-node_t create_statement_export_from(context_t ctx, location_t loc, node_t path,
+node_t create_statement_export(context_t ctx, location_t loc, node_t path,
                                     bool is_star, vec_t names) {
   allocator_t alloc = ctx->allocator;
-  cubec_statement_export_from_init_t init = {
+  cubec_statement_export_init_t init = {
       .location = loc,
       .parent = NULL,
       .path = path,
       .is_star = is_star,
       .names = names,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_statement_export_from_type,
+  return (node_t)allocator_create(alloc, &g_cubec_statement_export_type,
                                   &init);
 }
 
-void write_statement_export_from(writer_t writer, node_t node) {
-  cubec_statement_export_from_t export_from =
-      (cubec_statement_export_from_t)node;
+void write_statement_export(writer_t writer, node_t node) {
+  cubec_statement_export_t export_node =
+      (cubec_statement_export_t)node;
   writer_append(writer, "export ");
-  if (export_from->is_star) {
+  if (export_node->is_star) {
     writer_append(writer, "*");
   } else {
     writer_append(writer, "{");
-    for (size_t i = 0; i < vec_get_size(export_from->names); i++) {
+    for (size_t i = 0; i < vec_get_size(export_node->names); i++) {
       if (i > 0) {
         writer_append(writer, ", ");
       }
-      write_literal_identifier(writer, vec_get(export_from->names, i));
+      write_literal_identifier(writer, vec_get(export_node->names, i));
     }
     writer_append(writer, "}");
   }
   writer_append(writer, " from ");
-  write_literal_string(writer, export_from->path);
+  write_literal_string(writer, export_node->path);
   writer_append(writer, ";");
   writer_newline(writer, 0);
 }

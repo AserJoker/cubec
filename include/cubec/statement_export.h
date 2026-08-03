@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CUBEC_STATEMENT_EXPORT_FROM_
-#define _H_CUBEC_CUBEC_STATEMENT_EXPORT_FROM_
+#ifndef _H_CUBEC_CUBEC_STATEMENT_EXPORT_
+#define _H_CUBEC_CUBEC_STATEMENT_EXPORT_
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -22,26 +22,26 @@ extern "C" {
  *   export * from "std/vec";
  *   export { Vec, Map } from "std/collections";
  */
-struct _cubec_statement_export_from_t;
-struct _cubec_statement_export_from_t {
+struct _cubec_statement_export_t;
+struct _cubec_statement_export_t {
   struct _node_t super;
   node_t path;  /**< String literal node for the module path */
   bool is_star; /**< true = export *, false = export { names } */
   vec_t names;  /**< vec of identifier nodes (NULL when is_star) */
 };
-typedef struct _cubec_statement_export_from_t *cubec_statement_export_from_t;
+typedef struct _cubec_statement_export_t *cubec_statement_export_t;
 
-extern type_t g_cubec_statement_export_from_type;
+extern type_t g_cubec_statement_export_type;
 
-struct _cubec_statement_export_from_init_t {
+struct _cubec_statement_export_init_t {
   location_t location;
   node_t parent;
   node_t path;
   bool is_star;
   vec_t names;
 };
-typedef struct _cubec_statement_export_from_init_t
-    cubec_statement_export_from_init_t;
+typedef struct _cubec_statement_export_init_t
+    cubec_statement_export_init_t;
 
 /**
  * @brief Try to parse a re-export statement: export * from "path" ;
@@ -50,16 +50,16 @@ typedef struct _cubec_statement_export_from_init_t
  * @param tokens The token list
  * @param position Current position in token list (updated on success)
  * @param filename The source filename for error reporting
- * @return A new cubec_statement_export_from_t node, or NULL if current token
+ * @return A new cubec_statement_export_t node, or NULL if current token
  *         is not 'export' followed by '*' or '{'.
  */
-node_t read_statement_export_from(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_export(context_t ctx, vec_t tokens, size_t *position,
                                   const char *filename);
 
-node_t create_statement_export_from(context_t ctx, location_t loc, node_t path,
+node_t create_statement_export(context_t ctx, location_t loc, node_t path,
                                     bool is_star, vec_t names);
 
-void write_statement_export_from(writer_t writer, node_t node);
+void write_statement_export(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }
