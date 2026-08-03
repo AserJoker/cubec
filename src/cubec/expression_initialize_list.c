@@ -280,3 +280,30 @@ node_t create_expression_initialize_list(context_t ctx, location_t loc,
   return (node_t)allocator_create(
       alloc, &g_cubec_expression_initialize_list_type, &init);
 }
+
+void write_expression_initialize_list(writer_t writer, node_t node) {
+  cubec_expression_initialize_list_t init = (cubec_expression_initialize_list_t)node;
+  writer_append(writer, ".");
+  if (init->type) {
+    write_expression(writer, init->type);
+  }
+  writer_append(writer, "{");
+  if (vec_get_size(init->items)) {
+    writer_newline(writer, 1);
+    for (size_t i = 0; i < vec_get_size(init->items); i++) {
+      if (i != 0) {
+        writer_append(writer, ",");
+        writer_newline(writer, 0);
+      }
+      node_t item = vec_get(init->items, i);
+      if (init->is_field) {
+        write_initialize_field(writer, item);
+      } else {
+        write_expression(writer, item);
+      }
+    }
+    writer_append(writer, ",");
+    writer_newline(writer, -1);
+  }
+  writer_append(writer, "}");
+}

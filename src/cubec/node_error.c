@@ -45,3 +45,8 @@ node_t create_error(context_t ctx, location_t loc) {
   cubec_node_error_init_t init = {.location = loc, .parent = NULL};
   return (node_t)allocator_create(alloc, &g_cubec_node_error_type, &init);
 }
+
+void write_node_error(writer_t writer, node_t node) {
+  (void)node;
+  writer_append(writer, "/* error */");
+}

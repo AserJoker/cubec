@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -52,6 +53,8 @@ node_t read_function_argument(context_t ctx, vec_t tokens, size_t *position,
 
 node_t create_function_argument(context_t ctx, location_t loc, const char *name,
                                 node_t type);
+
+void write_function_argument(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

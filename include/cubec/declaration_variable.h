@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "cubec/declaration.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -48,6 +49,8 @@ node_t read_declaration_variable(context_t ctx, vec_t tokens, size_t *position,
 node_t create_declaration_variable(context_t ctx, location_t loc,
                                    node_t identifier, node_t type,
                                    node_t expression);
+
+void write_declaration_variable(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

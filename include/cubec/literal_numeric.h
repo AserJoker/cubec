@@ -5,6 +5,7 @@
 #include "core/string.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "cubec/literal.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -62,6 +63,8 @@ cubec_literal_numeric_type_to_string(cubec_literal_numeric_type_t type);
 node_t create_literal_numeric(context_t ctx, location_t loc, const char *value,
                               cubec_literal_numeric_kind_t kind,
                               cubec_literal_numeric_type_t ntype);
+
+void write_literal_numeric(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

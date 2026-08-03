@@ -3,6 +3,7 @@
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
+#include "core/writer.h"
 #include "cubec/node.h"
 #include <stdbool.h>
 #ifdef __cplusplus
@@ -33,6 +34,8 @@ static inline bool node_is_ok(node_t node) {
 }
 
 node_t create_error(context_t ctx, location_t loc);
+
+void write_node_error(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

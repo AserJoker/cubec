@@ -120,3 +120,10 @@ node_t create_expression_member(context_t ctx, location_t loc, node_t host,
   return (node_t)allocator_create(alloc, &g_cubec_expression_member_type,
                                   &init);
 }
+
+void write_expression_member(writer_t writer, node_t node) {
+  cubec_expression_member_t member = (cubec_expression_member_t)node;
+  write_expression(writer, member->host);
+  writer_append(writer, ".");
+  write_expression(writer, (node_t)member->field);
+}

@@ -114,3 +114,8 @@ node_t create_function_capture(context_t ctx, location_t loc,
   };
   return (node_t)allocator_create(alloc, &g_cubec_function_capture_type, &init);
 }
+
+void write_function_capture(writer_t writer, node_t node) {
+  cubec_function_capture_t cap = (cubec_function_capture_t)node;
+  write_expression(writer, cap->identifier);
+}

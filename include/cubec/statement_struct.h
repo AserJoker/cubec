@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -71,6 +72,8 @@ node_t read_statement_struct(context_t ctx, vec_t tokens, size_t *position,
 node_t create_statement_struct(context_t ctx, location_t loc, const char *name,
                                vec_t members, bool is_export, vec_t implements,
                                vec_t decorators);
+
+void write_statement_struct(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

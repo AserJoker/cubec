@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -67,6 +68,8 @@ vec_t read_generic_params(context_t ctx, vec_t tokens, size_t *position,
 
 node_t create_generic_param(context_t ctx, location_t loc, const char *name,
                             vec_t constraints, node_t value_type, bool is_rest);
+
+void write_generic_param(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

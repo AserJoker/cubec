@@ -253,7 +253,7 @@ void _check_init_list_named_fields(context_t ctx, node_t expr,
                                    size_t fcount, size_t icount, vec_t items) {
   for (size_t i = 0; i < icount; i++) {
     node_t item = (node_t)vec_get(items, i);
-    if (item->kind != CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD)
+    if (item->kind != CUBEC_NODE_INITIALIZE_LIST_FIELD)
       continue;
     cubec_initialize_field_t f = (cubec_initialize_field_t)item;
     const char *fname = _checker_ident_str((node_t)f->field);

@@ -5,6 +5,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
 #ifdef __cplusplus
 extern "C" {
@@ -74,6 +75,8 @@ node_t read_declaration_enum_body(context_t ctx, vec_t tokens,
                                        location_t start_location);
 
 node_t create_declaration_enum(context_t ctx, location_t loc, vec_t items);
+
+void write_declaration_enum(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

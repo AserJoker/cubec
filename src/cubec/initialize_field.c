@@ -10,7 +10,7 @@ static void _cubec_initialize_field_init(cubec_initialize_field_t self,
   if (!init)
     return;
   cubec_expression_init_t super_init = {
-      .kind = CUBEC_NODE_EXPRESSION_INITIALIZE_FIELD,
+      .kind = CUBEC_NODE_INITIALIZE_LIST_FIELD,
       .parent = NULL,
   };
   super_init.location = init->location;
@@ -139,4 +139,12 @@ node_t create_initialize_field(context_t ctx, location_t loc, const char *name,
       .value = value,
   };
   return (node_t)allocator_create(alloc, &g_cubec_initialize_field_type, &init);
+}
+
+void write_initialize_field(writer_t writer, node_t node) {
+  cubec_initialize_field_t field = (cubec_initialize_field_t)node;
+  writer_append(writer, ".");
+  write_expression(writer, (node_t)field->field);
+  writer_append(writer, " = ");
+  write_expression(writer, field->value);
 }

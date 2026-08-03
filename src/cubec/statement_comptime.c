@@ -1,7 +1,10 @@
 #include "cubec/statement_comptime.h"
 #include "core/token.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
+#include "cubec/statement.h"
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -507,4 +510,31 @@ node_t create_statement_comptime_foreach(context_t ctx, location_t loc,
   return (node_t)allocator_create(alloc,
                                   &g_cubec_statement_comptime_foreach_type,
                                   &init);
+}
+
+void write_statement_comptime_if(writer_t writer, node_t node) {
+  cubec_statement_comptime_if_t stmt = (cubec_statement_comptime_if_t)node;
+  writer_append(writer, "comptime if (");
+  write_expression(writer, stmt->condition);
+  writer_append(writer, ") ");
+  write_statement(writer, stmt->then_branch);
+  if (stmt->else_branch) {
+    writer_append(writer, " else ");
+    write_statement(writer, stmt->else_branch);
+  }
+}
+
+void write_statement_comptime_foreach(writer_t writer, node_t node) {
+  cubec_statement_comptime_foreach_t stmt = (cubec_statement_comptime_foreach_t)node;
+  writer_append(writer, "comptime foreach (");
+  if (stmt->is_var_decl) writer_append(writer, "var ");
+  write_expression(writer, stmt->variable);
+  if (stmt->var_type) {
+    writer_append(writer, ": ");
+    write_expression(writer, stmt->var_type);
+  }
+  writer_append(writer, " of ");
+  write_expression(writer, stmt->iterator);
+  writer_append(writer, ") ");
+  write_statement(writer, stmt->body);
 }

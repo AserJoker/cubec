@@ -5,6 +5,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
 #ifdef __cplusplus
 extern "C" {
@@ -49,6 +50,8 @@ node_t read_declaration_tuple(context_t ctx, vec_t tokens,
 
 node_t create_declaration_tuple(context_t ctx, location_t loc,
                                     vec_t element_types);
+
+void write_declaration_tuple(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

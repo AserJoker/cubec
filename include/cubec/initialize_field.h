@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
 #include "engine/context.h"
@@ -44,6 +45,8 @@ node_t read_initialize_field(context_t ctx, vec_t tokens, size_t *position,
 
 node_t create_initialize_field(context_t ctx, location_t loc, const char *name,
                                node_t value);
+
+void write_initialize_field(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

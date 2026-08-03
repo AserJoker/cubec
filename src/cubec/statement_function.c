@@ -1,9 +1,15 @@
 #include "cubec/statement_function.h"
 #include "core/token.h"
+#include "core/writer.h"
 #include "cubec/decorator.h"
+#include "cubec/expression.h"
 #include "cubec/expression_function.h"
+#include "cubec/function_argument.h"
+#include "cubec/function_capture.h"
+#include "cubec/generic_param.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
+#include "cubec/statement.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 
@@ -364,4 +370,57 @@ node_t create_statement_func(context_t ctx, location_t loc, const char *name,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_function_type,
                                   &init);
+}
+
+void write_statement_function(writer_t writer, node_t node) {
+  cubec_statement_function_t func = (cubec_statement_function_t)node;
+  if (func->decorators) {
+    for (size_t i = 0; i < vec_get_size(func->decorators); i++) {
+      write_decorator(writer, vec_get(func->decorators, i));
+      writer_newline(writer, 0);
+    }
+  }
+  if (func->is_export) writer_append(writer, "export ");
+  if (func->is_exportlib) writer_append(writer, "exportlib ");
+  if (func->is_inline) writer_append(writer, "inline ");
+  if (func->is_extern) writer_append(writer, "extern ");
+  if (func->is_builtin) writer_append(writer, "builtin ");
+  if (func->is_comptime) writer_append(writer, "comptime ");
+  writer_append(writer, "func");
+  if (func->captures) {
+    writer_append(writer, "|");
+    for (size_t i = 0; i < vec_get_size(func->captures); i++) {
+      if (i != 0) writer_append(writer, ", ");
+      write_function_capture(writer, vec_get(func->captures, i));
+    }
+    writer_append(writer, "|");
+  }
+  writer_append(writer, " ");
+  write_expression(writer, func->name);
+  if (func->generic_params) {
+    writer_append(writer, "[");
+    for (size_t i = 0; i < vec_get_size(func->generic_params); i++) {
+      if (i != 0) writer_append(writer, ", ");
+      write_generic_param(writer, vec_get(func->generic_params, i));
+    }
+    writer_append(writer, "]");
+  }
+  writer_append(writer, "(");
+  for (size_t i = 0; i < vec_get_size(func->arguments); i++) {
+    if (i != 0) writer_append(writer, ", ");
+    write_function_argument(writer, vec_get(func->arguments, i));
+  }
+  if (func->is_c_variadic) writer_append(writer, ", ...");
+  writer_append(writer, ")");
+  if (func->return_type) {
+    writer_append(writer, ": ");
+    write_expression(writer, func->return_type);
+  }
+  if (func->body) {
+    writer_append(writer, " ");
+    write_statement(writer, func->body);
+  } else {
+    writer_append(writer, ";");
+    writer_newline(writer, 0);
+  }
 }

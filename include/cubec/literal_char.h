@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "cubec/literal.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -30,6 +31,8 @@ node_t read_literal_char(context_t ctx, vec_t tokens, size_t *position,
                          const char *filename);
 
 node_t create_literal_char(context_t ctx, location_t loc, char value);
+
+void write_literal_char(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

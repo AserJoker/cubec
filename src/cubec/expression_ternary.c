@@ -1,5 +1,7 @@
 #include "cubec/expression_ternary.h"
 #include "core/token.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -183,4 +185,17 @@ node_t create_expression_ternary(context_t ctx, location_t loc, node_t cond,
                                           .alternate = else_branch};
   return (node_t)allocator_create(alloc, &g_cubec_expression_ternary_type,
                                   &init);
+}
+
+/* --------------------------------------------------------------------------
+ *  Writer: write_expression_ternary
+ * -------------------------------------------------------------------------- */
+
+void write_expression_ternary(writer_t writer, node_t node) {
+  cubec_expression_ternary_t ternary = (cubec_expression_ternary_t)node;
+  write_expression(writer, ternary->condition);
+  writer_append(writer, " ? ");
+  write_expression(writer, ternary->consequent);
+  writer_append(writer, " : ");
+  write_expression(writer, ternary->alternate);
 }

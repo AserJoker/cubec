@@ -1,6 +1,8 @@
 #include "cubec/statement_for.h"
 #include "core/token.h"
+#include "core/writer.h"
 #include "cubec/declaration_variable.h"
+#include "cubec/expression.h"
 #include "cubec/expression_comma.h"
 #include "cubec/node_error.h"
 #include "cubec/statement.h"
@@ -259,4 +261,26 @@ node_t create_statement_for(context_t ctx, location_t loc, node_t init_node,
                                      .increment = incr,
                                      .body = body};
   return (node_t)allocator_create(alloc, &g_cubec_statement_for_type, &init);
+}
+
+void write_statement_for(writer_t writer, node_t node) {
+  cubec_statement_for_t stmt = (cubec_statement_for_t)node;
+  writer_append(writer, "for (");
+  if (stmt->init) {
+    if (stmt->init->kind == CUBEC_NODE_STATEMENT_DECLARATION) {
+      cubec_statement_declaration_t init =
+          (cubec_statement_declaration_t)stmt->init;
+      if (init->is_using) writer_append(writer, "using ");
+      else writer_append(writer, "var ");
+      write_declaration_variable(writer, init->declarator);
+    } else {
+      write_expression(writer, stmt->init);
+    }
+  }
+  writer_append(writer, "; ");
+  if (stmt->condition) write_expression(writer, stmt->condition);
+  writer_append(writer, "; ");
+  if (stmt->increment) write_expression(writer, stmt->increment);
+  writer_append(writer, ") ");
+  write_statement(writer, stmt->body);
 }

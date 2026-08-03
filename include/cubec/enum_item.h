@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -58,6 +59,8 @@ node_t read_enum_item(context_t ctx, vec_t tokens, size_t *position,
 
 node_t create_enum_item(context_t ctx, location_t loc, const char *name,
                         node_t type, node_t value);
+
+void write_enum_item(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
 #include "engine/context.h"
@@ -50,6 +51,8 @@ node_t read_expression_namespace_access(context_t ctx, vec_t tokens,
 
 node_t create_expression_namespace_access(context_t ctx, location_t loc,
                                           node_t host, const char *field);
+
+void write_expression_namespace_access(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

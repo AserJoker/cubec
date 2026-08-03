@@ -1,5 +1,6 @@
 #include "cubec/statement_return.h"
 #include "core/token.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -146,4 +147,15 @@ node_t create_statement_return(context_t ctx, location_t loc, node_t expr) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_return_init_t init = {.expression = expr};
   return (node_t)allocator_create(alloc, &g_cubec_statement_return_type, &init);
+}
+
+void write_statement_return(writer_t writer, node_t node) {
+  cubec_statement_return_t stmt = (cubec_statement_return_t)node;
+  writer_append(writer, "return");
+  if (stmt->expression) {
+    writer_append(writer, " ");
+    write_expression(writer, stmt->expression);
+  }
+  writer_append(writer, ";");
+  writer_newline(writer, 0);
 }

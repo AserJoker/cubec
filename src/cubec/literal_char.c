@@ -98,3 +98,11 @@ node_t create_literal_char(context_t ctx, location_t loc, char value) {
       .location = loc, .parent = NULL, .value = value};
   return (node_t)allocator_create(alloc, &g_cubec_literal_char_type, &init);
 }
+
+void write_literal_char(writer_t writer, node_t node) {
+  cubec_literal_char_t ch = (cubec_literal_char_t)node;
+  writer_append(writer, "'");
+  char buf[2] = {ch->value, '\0'};
+  writer_append(writer, buf);
+  writer_append(writer, "'");
+}

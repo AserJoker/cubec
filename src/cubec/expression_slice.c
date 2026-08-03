@@ -1,5 +1,7 @@
 #include "cubec/expression_slice.h"
 #include "core/token.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -241,4 +243,18 @@ node_t create_expression_slice(context_t ctx, location_t loc, node_t host,
   cubec_expression_slice_init_t init = {
       .host = host, .start = start, .length = length};
   return (node_t)allocator_create(alloc, &g_cubec_expression_slice_type, &init);
+}
+
+/* --------------------------------------------------------------------------
+ *  Writer: write_expression_slice
+ * -------------------------------------------------------------------------- */
+
+void write_expression_slice(writer_t writer, node_t node) {
+  cubec_expression_slice_t slice = (cubec_expression_slice_t)node;
+  write_expression(writer, slice->host);
+  writer_append(writer, "[");
+  if (slice->start) write_expression(writer, slice->start);
+  writer_append(writer, ":");
+  if (slice->length) write_expression(writer, slice->length);
+  writer_append(writer, "]");
 }

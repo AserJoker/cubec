@@ -1,10 +1,13 @@
 #include "cubec/expression_function.h"
 #include "core/token.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/function_argument.h"
 #include "cubec/function_capture.h"
 #include "cubec/generic_param.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
+#include "cubec/statement.h"
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -343,4 +346,52 @@ node_t create_expression_function(context_t ctx, location_t loc, node_t name,
                                            .is_c_variadic = is_c_variadic};
   return (node_t)allocator_create(alloc, &g_cubec_expression_function_type,
                                   &init);
+}
+
+/* --------------------------------------------------------------------------
+ *  Writer: write_expression_function
+ * -------------------------------------------------------------------------- */
+
+void write_expression_function(writer_t writer, node_t node) {
+  cubec_expression_function_t expr = (cubec_expression_function_t)node;
+  writer_append(writer, "func");
+  if (expr->captures) {
+    writer_append(writer, "|");
+    for (size_t i = 0; i < vec_get_size(expr->captures); i++) {
+      if (i != 0) writer_append(writer, ", ");
+      write_function_capture(writer, vec_get(expr->captures, i));
+    }
+    writer_append(writer, "|");
+  }
+  if (expr->name) {
+    writer_append(writer, " ");
+    write_expression(writer, expr->name);
+  }
+  if (expr->generic_params) {
+    writer_append(writer, "[");
+    for (size_t i = 0; i < vec_get_size(expr->generic_params); i++) {
+      if (i != 0) writer_append(writer, ", ");
+      write_generic_param(writer, vec_get(expr->generic_params, i));
+    }
+    writer_append(writer, "]");
+  }
+  writer_append(writer, "(");
+  for (size_t i = 0; i < vec_get_size(expr->arguments); i++) {
+    if (i != 0) writer_append(writer, ", ");
+    write_function_argument(writer, vec_get(expr->arguments, i));
+  }
+  if (expr->is_c_variadic) {
+    writer_append(writer, ", ...");
+  }
+  writer_append(writer, ")");
+  if (expr->return_type) {
+    writer_append(writer, ": ");
+    write_expression(writer, expr->return_type);
+  }
+  if (expr->body) {
+    writer_append(writer, " ");
+    write_statement(writer, expr->body);
+  } else {
+    writer_append(writer, ";");
+  }
 }

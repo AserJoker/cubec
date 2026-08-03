@@ -162,3 +162,15 @@ node_t create_function_argument(context_t ctx, location_t loc, const char *name,
   return (node_t)allocator_create(alloc, &g_cubec_function_argument_type,
                                   &init);
 }
+
+void write_function_argument(writer_t writer, node_t node) {
+  cubec_function_argument_t arg = (cubec_function_argument_t)node;
+  if (arg->is_rest) {
+    writer_append(writer, "...");
+  }
+  write_expression(writer, arg->identifier);
+  if (arg->type) {
+    writer_append(writer, ": ");
+    write_expression(writer, arg->type);
+  }
+}

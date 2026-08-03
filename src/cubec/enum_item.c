@@ -152,3 +152,16 @@ node_t create_enum_item(context_t ctx, location_t loc, const char *name,
                                  .value = value};
   return (node_t)allocator_create(alloc, &g_cubec_enum_item_type, &init);
 }
+
+void write_enum_item(writer_t writer, node_t node) {
+  cubec_enum_item_t item = (cubec_enum_item_t)node;
+  write_expression(writer, item->name);
+  if (item->type) {
+    writer_append(writer, ": ");
+    write_expression(writer, item->type);
+  }
+  if (item->value) {
+    writer_append(writer, " = ");
+    write_expression(writer, item->value);
+  }
+}

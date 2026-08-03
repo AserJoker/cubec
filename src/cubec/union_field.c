@@ -144,3 +144,12 @@ node_t create_union_field(context_t ctx, location_t loc, const char *name,
   };
   return (node_t)allocator_create(alloc, &g_cubec_union_field_type, &init);
 }
+
+void write_union_field(writer_t writer, node_t node) {
+  cubec_union_field_t field = (cubec_union_field_t)node;
+  write_expression(writer, field->name);
+  writer_append(writer, ": ");
+  write_expression(writer, field->type);
+  writer_append(writer, ";");
+  writer_newline(writer, 0);
+}

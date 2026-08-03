@@ -117,3 +117,10 @@ node_t create_expression_group(context_t ctx, location_t loc, node_t inner) {
   cubec_expression_group_init_t init = {.inner = inner};
   return (node_t)allocator_create(alloc, &g_cubec_expression_group_type, &init);
 }
+
+void write_expression_group(writer_t writer, node_t node) {
+  cubec_expression_group_t group = (cubec_expression_group_t)node;
+  writer_append(writer, "(");
+  write_expression(writer, group->inner);
+  writer_append(writer, ")");
+}

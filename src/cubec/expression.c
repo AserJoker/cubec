@@ -15,12 +15,14 @@
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_initialize_list.h"
+#include "cubec/initialize_field.h"
 #include "cubec/declaration_interface.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/declaration_qualifier.h"
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression_slice.h"
+#include "cubec/expression_spread.h"
 #include "cubec/declaration_struct.h"
 #include "cubec/expression_subscript.h"
 #include "cubec/expression_ternary.h"
@@ -678,6 +680,80 @@ void write_expression(writer_t writer, node_t expr) {
   case CUBEC_NODE_EXPRESSION_DEREF:
     write_expression_deref(writer, expr);
     break;
-    // TODO: expressions
+  case CUBEC_NODE_EXPRESSION_FUNCTION:
+    write_expression_function(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION:
+    write_expression_generic_instantiation(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS:
+    write_expression_namespace_access(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_SIZEOF:
+    write_expression_sizeof(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_SLICE:
+    write_expression_slice(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_SPREAD:
+    write_expression_spread(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_SUBSCRIPT:
+    write_expression_subscript(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_TERNARY:
+    write_expression_ternary(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_TRY:
+    write_expression_try(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_TYPEOF:
+    write_expression_typeof(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_WILDCARD:
+    write_expression_wildcard(writer, expr);
+    break;
+  case CUBEC_NODE_LITERAL_CHAR:
+    write_literal_char(writer, expr);
+    break;
+  case CUBEC_NODE_LITERAL_IDENTIFIER:
+    write_literal_identifier(writer, expr);
+    break;
+  case CUBEC_NODE_LITERAL_NUMERIC:
+    write_literal_numeric(writer, expr);
+    break;
+  case CUBEC_NODE_LITERAL_STRING:
+    write_literal_string(writer, expr);
+    break;
+  case CUBEC_NODE_LITERAL_UNDEFINED:
+    write_literal_undefined(writer, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_QUALIFIER:
+    write_declaration_qualifier(writer, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_ENUM:
+    write_declaration_enum(writer, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_UNION:
+    write_declaration_union(writer, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_INTERFACE:
+    write_declaration_interface(writer, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_STRUCT:
+    write_declaration_struct(writer, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_TUPLE:
+    write_declaration_tuple(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_GROUP:
+    write_expression_group(writer, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_INITIALIZE_LIST:
+    write_expression_initialize_list(writer, expr);
+    break;
+  case CUBEC_NODE_ERROR:
+    write_node_error(writer, expr);
+    break;
   }
 }

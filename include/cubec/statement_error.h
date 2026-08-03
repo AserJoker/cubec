@@ -3,6 +3,7 @@
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
+#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -23,6 +24,8 @@ struct _cubec_statement_error_init_t {
 typedef struct _cubec_statement_error_init_t cubec_statement_error_init_t;
 
 node_t create_statement_error(context_t ctx, location_t loc);
+
+void write_statement_error(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

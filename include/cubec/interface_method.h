@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -61,6 +62,8 @@ node_t read_interface_method(context_t ctx, vec_t tokens, size_t *position,
 
 node_t create_interface_method(context_t ctx, location_t loc, const char *name,
                                vec_t args, node_t return_type);
+
+void write_interface_method(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

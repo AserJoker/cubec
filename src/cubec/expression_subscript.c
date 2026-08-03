@@ -1,5 +1,7 @@
 #include "cubec/expression_subscript.h"
 #include "core/token.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 
@@ -181,4 +183,16 @@ node_t create_expression_subscript(context_t ctx, location_t loc, node_t host,
   };
   return (node_t)allocator_create(alloc, &g_cubec_expression_subscript_type,
                                   &init);
+}
+
+/* --------------------------------------------------------------------------
+ *  Writer: write_expression_subscript
+ * -------------------------------------------------------------------------- */
+
+void write_expression_subscript(writer_t writer, node_t node) {
+  cubec_expression_subscript_t sub = (cubec_expression_subscript_t)node;
+  write_expression(writer, sub->host);
+  writer_append(writer, "[");
+  write_expression(writer, sub->index);
+  writer_append(writer, "]");
 }

@@ -1,9 +1,13 @@
 #include "cubec/statement_struct.h"
 #include "core/token.h"
+#include "core/writer.h"
 #include "cubec/decorator.h"
 #include "cubec/declaration_struct.h"
+#include "cubec/expression.h"
+#include "cubec/generic_param.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
+#include "cubec/statement.h"
 #include "cubec/token.h"
 #include <inttypes.h>
 
@@ -228,4 +232,42 @@ node_t create_statement_struct(context_t ctx, location_t loc, const char *name,
       .decorators = decorators,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_struct_type, &init);
+}
+
+void write_statement_struct(writer_t writer, node_t node) {
+  cubec_statement_struct_t stmt = (cubec_statement_struct_t)node;
+  if (stmt->decorators) {
+    for (size_t i = 0; i < vec_get_size(stmt->decorators); i++) {
+      write_decorator(writer, vec_get(stmt->decorators, i));
+      writer_newline(writer, 0);
+    }
+  }
+  if (stmt->is_export) writer_append(writer, "export ");
+  writer_append(writer, "struct ");
+  write_expression(writer, stmt->name);
+  if (stmt->generic_params) {
+    writer_append(writer, "[");
+    for (size_t i = 0; i < vec_get_size(stmt->generic_params); i++) {
+      if (i != 0) writer_append(writer, ", ");
+      write_generic_param(writer, vec_get(stmt->generic_params, i));
+    }
+    writer_append(writer, "]");
+  }
+  if (stmt->implements) {
+    writer_append(writer, " implement ");
+    for (size_t i = 0; i < vec_get_size(stmt->implements); i++) {
+      if (i != 0) writer_append(writer, ", ");
+      write_expression(writer, vec_get(stmt->implements, i));
+    }
+  }
+  writer_append(writer, " {");
+  if (vec_get_size(stmt->members)) {
+    writer_newline(writer, 1);
+    for (size_t i = 0; i < vec_get_size(stmt->members); i++) {
+      write_statement(writer, vec_get(stmt->members, i));
+    }
+    writer_newline(writer, -1);
+  }
+  writer_append(writer, "}");
+  writer_newline(writer, 0);
 }

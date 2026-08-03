@@ -1,9 +1,11 @@
 #include "cubec/declaration_interface.h"
 #include "core/token.h"
+#include "core/writer.h"
 #include "cubec/generic_param.h"
 #include "cubec/interface_method.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
+#include "cubec/statement.h"
 #include "cubec/statement_declaration_type.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -306,4 +308,30 @@ node_t create_declaration_interface(context_t ctx, location_t loc,
   return (node_t)allocator_create(alloc,
                                   &g_cubec_declaration_interface_type,
                                   &init);
+}
+
+/* --------------------------------------------------------------------------
+ *  Writer: write_declaration_interface
+ * -------------------------------------------------------------------------- */
+
+void write_declaration_interface(writer_t writer, node_t node) {
+  cubec_declaration_interface_t iface = (cubec_declaration_interface_t)node;
+  writer_append(writer, "interface");
+  if (iface->generic_params) {
+    writer_append(writer, "[");
+    for (size_t i = 0; i < vec_get_size(iface->generic_params); i++) {
+      if (i != 0) writer_append(writer, ", ");
+      write_generic_param(writer, vec_get(iface->generic_params, i));
+    }
+    writer_append(writer, "]");
+  }
+  writer_append(writer, " {");
+  if (vec_get_size(iface->members)) {
+    writer_newline(writer, 1);
+    for (size_t i = 0; i < vec_get_size(iface->members); i++) {
+      write_statement(writer, vec_get(iface->members, i));
+    }
+    writer_newline(writer, -1);
+  }
+  writer_append(writer, "}");
 }

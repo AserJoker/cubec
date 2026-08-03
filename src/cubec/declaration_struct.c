@@ -1,5 +1,6 @@
 #include "cubec/declaration_struct.h"
 #include "core/token.h"
+#include "core/writer.h"
 #include "cubec/expression_spread.h"
 #include "cubec/generic_param.h"
 #include "cubec/node_error.h"
@@ -285,4 +286,30 @@ node_t create_declaration_struct(context_t ctx, location_t loc,
   };
   return (node_t)allocator_create(alloc, &g_cubec_declaration_struct_type,
                                   &init);
+}
+
+/* --------------------------------------------------------------------------
+ *  Writer: write_declaration_struct
+ * -------------------------------------------------------------------------- */
+
+void write_declaration_struct(writer_t writer, node_t node) {
+  cubec_declaration_struct_t st = (cubec_declaration_struct_t)node;
+  writer_append(writer, "struct");
+  if (st->generic_params) {
+    writer_append(writer, "[");
+    for (size_t i = 0; i < vec_get_size(st->generic_params); i++) {
+      if (i != 0) writer_append(writer, ", ");
+      write_generic_param(writer, vec_get(st->generic_params, i));
+    }
+    writer_append(writer, "]");
+  }
+  writer_append(writer, " {");
+  if (vec_get_size(st->members)) {
+    writer_newline(writer, 1);
+    for (size_t i = 0; i < vec_get_size(st->members); i++) {
+      write_statement(writer, vec_get(st->members, i));
+    }
+    writer_newline(writer, -1);
+  }
+  writer_append(writer, "}");
 }

@@ -1,5 +1,7 @@
 #include "cubec/expression_try.h"
 #include "core/token.h"
+#include "core/writer.h"
+#include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <string.h>
@@ -114,4 +116,14 @@ node_t create_expression_try(context_t ctx, location_t loc, node_t host) {
       .host = host,
   };
   return (node_t)allocator_create(alloc, &g_cubec_expression_try_type, &init);
+}
+
+/* --------------------------------------------------------------------------
+ *  Writer: write_expression_try
+ * -------------------------------------------------------------------------- */
+
+void write_expression_try(writer_t writer, node_t node) {
+  cubec_expression_try_t expr = (cubec_expression_try_t)node;
+  write_expression(writer, expr->host);
+  writer_append(writer, ".?");
 }

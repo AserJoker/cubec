@@ -5,6 +5,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
 #ifdef __cplusplus
 extern "C" {
@@ -83,6 +84,8 @@ node_t read_declaration_union_body(context_t ctx, vec_t tokens,
 
 node_t create_declaration_union(context_t ctx, location_t loc,
                                     vec_t generic_params, vec_t members);
+
+void write_declaration_union(writer_t writer, node_t node);
 
 #ifdef __cplusplus
 }

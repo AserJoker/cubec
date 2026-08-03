@@ -1,5 +1,6 @@
 #include "cubec/statement_while.h"
 #include "core/token.h"
+#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/statement.h"
@@ -158,4 +159,12 @@ node_t create_create_while(context_t ctx, location_t loc, node_t cond,
   allocator_t alloc = ctx->allocator;
   cubec_statement_while_init_t init = {.condition = cond, .body = body};
   return (node_t)allocator_create(alloc, &g_cubec_statement_while_type, &init);
+}
+
+void write_statement_while(writer_t writer, node_t node) {
+  cubec_statement_while_t stmt = (cubec_statement_while_t)node;
+  writer_append(writer, "while (");
+  write_expression(writer, stmt->condition);
+  writer_append(writer, ") ");
+  write_statement(writer, stmt->body);
 }
