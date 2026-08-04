@@ -95,7 +95,7 @@ static int format_run(const cmd_parsed_t *parsed) {
   }
 
   /* 5. Create module with compiled results */
-  module_t mod = module_create(allocator, input_path, source, tokens, program);
+  module_t mod = module_create(allocator, ctx->global_scope, input_path, source, tokens, program);
   /* source & tokens ownership now belongs to module */
 
   /* 6. Emit */

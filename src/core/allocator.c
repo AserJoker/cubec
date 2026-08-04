@@ -142,9 +142,10 @@ void _allocator_free_impl(allocator_t self, void **data) {
     return;
   }
   alloc_chunk_t chunk = value_get_chunk(*data);
-  if (chunk->type && chunk->type->dispose) {
-    chunk->type->dispose(*data, self);
-  }
+
+  /* Unlink from the allocator's chunk list BEFORE calling dispose,
+     because dispose may free sub-allocations that are also in the list,
+     which would invalidate chunk->last / chunk->next. */
   if (chunk == self->chunks) {
     self->chunks = self->chunks->next;
   }
@@ -154,6 +155,11 @@ void _allocator_free_impl(allocator_t self, void **data) {
   if (chunk->next) {
     chunk->next->last = chunk->last;
   }
+
+  if (chunk->type && chunk->type->dispose) {
+    chunk->type->dispose(*data, self);
+  }
+
   /* Update stats */
   self->total_allocated -= chunk->size;
   self->free_count++;
