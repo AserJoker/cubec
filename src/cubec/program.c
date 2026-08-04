@@ -1,7 +1,7 @@
 #include "cubec/program.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/node_error.h"
 #include "cubec/statement.h"
 #include "cubec/statement_error.h"
@@ -120,15 +120,6 @@ node_t create_program(context_t ctx, location_t loc, vec_t statements) {
   allocator_t alloc = ctx->allocator;
   cubec_program_node_init_t init = {.statements = statements};
   return (node_t)allocator_create(alloc, &g_cubec_program_node_type, &init);
-}
-
-void write_program(writer_t writer, node_t node) {
-  cubec_program_node_t program = (cubec_program_node_t)node;
-  for (size_t idx = 0; idx < vec_get_size(program->statements); idx++) {
-    node_t statement = vec_get(program->statements, idx);
-    write_statement(writer, statement);
-    writer_newline(writer, 0);
-  }
 }
 
 void emit_program(emit_context_t ctx, node_t node) {

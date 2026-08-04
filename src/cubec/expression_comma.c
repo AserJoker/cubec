@@ -1,7 +1,7 @@
 #include "cubec/expression_comma.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/node_error.h"
@@ -150,13 +150,6 @@ node_t create_expression_comma(context_t ctx, location_t loc, node_t left,
   allocator_t alloc = ctx->allocator;
   cubec_expression_comma_init_t init = {.left = left, .right = right};
   return (node_t)allocator_create(alloc, &g_cubec_expression_comma_type, &init);
-}
-
-void write_expression_comma(writer_t writer, node_t expr) {
-  cubec_expression_comma_t comma = (cubec_expression_comma_t)expr;
-  write_expression(writer, comma->left);
-  writer_append(writer, ", ");
-  write_expression(writer, comma->right);
 }
 
 void emit_expression_comma(emit_context_t ctx, node_t node) {

@@ -4,7 +4,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "engine/context.h"
 
@@ -64,7 +63,6 @@ node_t read_declaration_callable(context_t ctx, vec_t tokens, size_t *position,
 node_t create_declaration_callable(context_t ctx, location_t loc,
                                   vec_t parameters, node_t return_type,
                                   bool is_c_variadic);
-void write_declaration_callable(writer_t writer, node_t node);
 
 void emit_declaration_callable(emit_context_t ctx, node_t node);
 

@@ -1,7 +1,7 @@
 #include "cubec/declaration_tuple.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/expression_spread.h"
 #include "cubec/expression_wildcard.h"
 #include "cubec/node_error.h"
@@ -207,16 +207,6 @@ node_t create_declaration_tuple(context_t ctx, location_t loc,
 /* --------------------------------------------------------------------------
  *  Writer: write_declaration_tuple
  * -------------------------------------------------------------------------- */
-
-void write_declaration_tuple(writer_t writer, node_t node) {
-  cubec_declaration_tuple_t tuple = (cubec_declaration_tuple_t)node;
-  writer_append(writer, "<");
-  for (size_t i = 0; i < vec_get_size(tuple->element_types); i++) {
-    if (i != 0) writer_append(writer, ", ");
-    write_expression(writer, vec_get(tuple->element_types, i));
-  }
-  writer_append(writer, ">");
-}
 
 void emit_declaration_tuple(emit_context_t ctx, node_t node) {
   cubec_declaration_tuple_t tuple = (cubec_declaration_tuple_t)node;

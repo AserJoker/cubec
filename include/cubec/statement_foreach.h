@@ -5,7 +5,6 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -62,7 +61,6 @@ node_t create_statement_foreach(context_t ctx, location_t loc, bool is_var_decl,
                                 node_t variable, node_t var_type,
                                 node_t iterator, node_t body);
 
-void write_statement_foreach(writer_t writer, node_t node);
 
 void emit_statement_foreach(emit_context_t ctx, node_t node);
 

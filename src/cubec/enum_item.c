@@ -1,6 +1,7 @@
 #include "cubec/enum_item.h"
 #include "core/emit_context.h"
 #include "core/token.h"
+#include "core/token_writer.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -152,19 +153,6 @@ node_t create_enum_item(context_t ctx, location_t loc, const char *name,
                                  .type = type,
                                  .value = value};
   return (node_t)allocator_create(alloc, &g_cubec_enum_item_type, &init);
-}
-
-void write_enum_item(writer_t writer, node_t node) {
-  cubec_enum_item_t item = (cubec_enum_item_t)node;
-  write_expression(writer, item->name);
-  if (item->type) {
-    writer_append(writer, ": ");
-    write_expression(writer, item->type);
-  }
-  if (item->value) {
-    writer_append(writer, " = ");
-    write_expression(writer, item->value);
-  }
 }
 
 void emit_enum_item(emit_context_t ctx, node_t node) {

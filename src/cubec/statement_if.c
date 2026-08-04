@@ -1,6 +1,5 @@
 #include "cubec/statement_if.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/statement.h"
@@ -206,18 +205,6 @@ node_t create_statement_if(context_t ctx, location_t loc, node_t cond,
                                     .then_branch = then_branch,
                                     .else_branch = else_branch};
   return (node_t)allocator_create(alloc, &g_cubec_statement_if_type, &init);
-}
-
-void write_statement_if(writer_t writer, node_t node) {
-  cubec_statement_if_t stmt = (cubec_statement_if_t)node;
-  writer_append(writer, "if (");
-  write_expression(writer, stmt->condition);
-  writer_append(writer, ") ");
-  write_statement(writer, stmt->then_branch);
-  if (stmt->else_branch) {
-    writer_append(writer, " else ");
-    write_statement(writer, stmt->else_branch);
-  }
 }
 
 void emit_statement_if(emit_context_t ctx, node_t node) {

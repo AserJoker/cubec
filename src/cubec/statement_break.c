@@ -1,7 +1,6 @@
 #include "cubec/statement_break.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -120,11 +119,6 @@ node_t create_statement_break(context_t ctx, location_t loc) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_break_init_t init = {.location = loc, .parent = NULL};
   return (node_t)allocator_create(alloc, &g_cubec_statement_break_type, &init);
-}
-
-void write_statement_break(writer_t writer, node_t node) {
-  writer_append(writer, "break;");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_break(emit_context_t ctx, node_t node) {

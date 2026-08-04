@@ -5,7 +5,6 @@
 #include "core/string.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -55,7 +54,6 @@ node_t read_expression_binary(context_t ctx, vec_t tokens, size_t *position,
 node_t create_expression_binary(context_t ctx, location_t loc, const char *op,
                                 node_t left, node_t right);
 
-void write_expression_binary(writer_t writer, node_t node);
 
 void emit_expression_binary(emit_context_t ctx, node_t node);
 

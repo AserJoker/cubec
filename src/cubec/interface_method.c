@@ -1,6 +1,7 @@
 #include "cubec/interface_method.h"
 #include "core/emit_context.h"
 #include "core/token.h"
+#include "core/token_writer.h"
 #include "cubec/function_argument.h"
 #include "cubec/generic_param.h"
 #include "cubec/literal_identifier.h"
@@ -231,31 +232,6 @@ node_t create_interface_method(context_t ctx, location_t loc, const char *name,
       .return_type = return_type,
   };
   return (node_t)allocator_create(alloc, &g_cubec_interface_method_type, &init);
-}
-
-void write_interface_method(writer_t writer, node_t node) {
-  cubec_interface_method_t method = (cubec_interface_method_t)node;
-  writer_append(writer, "func ");
-  write_expression(writer, method->name);
-  if (method->generic_params) {
-    writer_append(writer, "[");
-    for (size_t i = 0; i < vec_get_size(method->generic_params); i++) {
-      if (i != 0) writer_append(writer, ", ");
-      write_generic_param(writer, vec_get(method->generic_params, i));
-    }
-    writer_append(writer, "]");
-  }
-  writer_append(writer, "(");
-  for (size_t i = 0; i < vec_get_size(method->arguments); i++) {
-    if (i != 0) writer_append(writer, ", ");
-    write_function_argument(writer, vec_get(method->arguments, i));
-  }
-  writer_append(writer, ")");
-  if (method->return_type) {
-    writer_append(writer, ": ");
-    write_expression(writer, method->return_type);
-  }
-  writer_append(writer, ";");
 }
 
 void emit_interface_method(emit_context_t ctx, node_t node) {

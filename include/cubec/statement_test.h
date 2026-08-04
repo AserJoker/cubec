@@ -6,7 +6,6 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -52,7 +51,6 @@ node_t read_statement_test(context_t ctx, vec_t tokens, size_t *position,
 node_t create_statement_test(context_t ctx, location_t loc, const char *name,
                              node_t body);
 
-void write_statement_test(writer_t writer, node_t stmt);
 
 void emit_statement_test(emit_context_t ctx, node_t stmt);
 

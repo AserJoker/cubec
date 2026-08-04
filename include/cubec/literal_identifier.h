@@ -6,7 +6,6 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "cubec/literal.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -35,7 +34,6 @@ node_t read_literal_identifier(context_t ctx, vec_t tokens, size_t *position,
 node_t create_literal_identifier(context_t ctx, location_t loc,
                                  const char *name);
 
-void write_literal_identifier(writer_t writer, node_t node);
 
 void emit_literal_identifier(emit_context_t ctx, node_t node);
 

@@ -18,6 +18,7 @@ extern "C" {
 struct _emit_context_t {
   allocator_t allocator;
   vec_t source_tokens;     /**< Source token list from lexing */
+  bool owns_source_tokens; /**< Whether we own source_tokens */
   size_t source_token_idx; /**< Current scan position in source_tokens */
   vec_t output_tokens;     /**< Output token list (vec_t of token_t) */
   vec_t string_table;      /**< String table (vec_t of string_t) */
@@ -31,6 +32,7 @@ typedef struct _emit_context_t *emit_context_t;
  * @param source_tokens  The source token list (must outlive this context).
  */
 emit_context_t emit_context_create(allocator_t allocator, vec_t source_tokens);
+
 
 /**
  * @brief Dispose an emit context and all its resources.

@@ -1,7 +1,6 @@
 #include "cubec/statement_enum.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/decorator.h"
 #include "cubec/declaration_enum.h"
 #include "cubec/enum_item.h"
@@ -208,36 +207,6 @@ node_t create_statement_enum(context_t ctx, location_t loc, const char *name,
       .decorators = decorators,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_enum_type, &init);
-}
-
-void write_statement_enum(writer_t writer, node_t node) {
-  cubec_statement_enum_t stmt = (cubec_statement_enum_t)node;
-  if (stmt->decorators) {
-    for (size_t i = 0; i < vec_get_size(stmt->decorators); i++) {
-      write_decorator(writer, vec_get(stmt->decorators, i));
-      writer_newline(writer, 0);
-    }
-  }
-  if (stmt->is_export) writer_append(writer, "export ");
-  writer_append(writer, "enum ");
-  write_expression(writer, stmt->name);
-  writer_append(writer, " {");
-  if (vec_get_size(stmt->items)) {
-    writer_newline(writer, 1);
-    for (size_t i = 0; i < vec_get_size(stmt->items); i++) {
-      if (i != 0) {
-        writer_append(writer, ",");
-        writer_newline(writer, 0);
-      }
-      write_enum_item(writer, vec_get(stmt->items, i));
-    }
-    writer_append(writer, ",");
-    writer_newline(writer, -1);
-  } else {
-    writer_newline(writer, 0);
-  }
-  writer_append(writer, "}");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_enum(emit_context_t ctx, node_t node) {

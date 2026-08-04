@@ -2,7 +2,7 @@
 #include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 
@@ -118,12 +118,6 @@ node_t create_literal_string(context_t ctx, location_t loc, const char *value) {
   allocator_t alloc = ctx->allocator;
   cubec_literal_string_init_t init = {.value = value};
   return (node_t)allocator_create(alloc, &g_cubec_literal_string_type, &init);
-}
-void write_literal_string(writer_t writer, node_t node) {
-  cubec_literal_string_t str = (cubec_literal_string_t)node;
-  writer_append(writer, "\"");
-  writer_append(writer, string_get(str->value));
-  writer_append(writer, "\"");
 }
 
 void emit_literal_string(emit_context_t ctx, node_t node) {

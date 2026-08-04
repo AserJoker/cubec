@@ -1,7 +1,6 @@
 #include "cubec/statement_import.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_string.h"
 #include "cubec/node_error.h"
@@ -157,16 +156,6 @@ node_t create_statement_import(context_t ctx, location_t loc,
                                         .module_name = mod_node,
                                         .path = path_node};
   return (node_t)allocator_create(alloc, &g_cubec_statement_import_type, &init);
-}
-
-void write_statement_import(writer_t writer, node_t node) {
-  cubec_statement_import_t import = (cubec_statement_import_t)node;
-  writer_append(writer, "import ");
-  write_literal_identifier(writer, import->module_name);
-  writer_append(writer, " from ");
-  write_literal_string(writer, import->path);
-  writer_append(writer, ";");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_import(emit_context_t ctx, node_t node) {

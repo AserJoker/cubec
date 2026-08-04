@@ -5,7 +5,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -44,7 +43,6 @@ node_t read_expression_comma(context_t ctx, vec_t tokens, size_t *position,
 node_t create_expression_comma(context_t ctx, location_t loc, node_t left,
                                node_t right);
 
-void write_expression_comma(writer_t writer, node_t expr);
 
 void emit_expression_comma(emit_context_t ctx, node_t node);
 

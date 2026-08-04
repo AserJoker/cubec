@@ -2,7 +2,6 @@
 #include "core/emit_context.h"
 #include "core/token.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "cubec/function_capture.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
@@ -175,22 +174,6 @@ node_t create_statement_defer(context_t ctx, location_t loc, vec_t captures,
   allocator_t alloc = ctx->allocator;
   cubec_statement_defer_init_t init = {.captures = captures, .body = body};
   return (node_t)allocator_create(alloc, &g_cubec_statement_defer_type, &init);
-}
-
-void write_statement_defer(writer_t writer, node_t node) {
-  cubec_statement_defer_t defer = (cubec_statement_defer_t)node;
-  writer_append(writer, "defer ");
-  if (defer->captures && vec_get_size(defer->captures)) {
-    writer_append(writer, "|");
-    for (size_t idx = 0; idx < vec_get_size(defer->captures); idx++) {
-      if (idx != 0) {
-        writer_append(writer, ", ");
-      }
-      write_literal_identifier(writer, vec_get(defer->captures, idx));
-    }
-    writer_append(writer, "|");
-  }
-  write_statement_block(writer, defer->body);
 }
 
 void emit_statement_defer(emit_context_t ctx, node_t node) {

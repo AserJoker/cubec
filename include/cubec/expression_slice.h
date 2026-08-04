@@ -4,7 +4,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -54,7 +53,6 @@ node_t read_expression_slice(context_t ctx, vec_t tokens, size_t *position,
 node_t create_expression_slice(context_t ctx, location_t loc, node_t host,
                                node_t start, node_t length);
 
-void write_expression_slice(writer_t writer, node_t node);
 
 void emit_expression_slice(emit_context_t ctx, node_t node);
 

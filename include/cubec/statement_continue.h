@@ -5,7 +5,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -41,7 +40,6 @@ node_t read_statement_continue(context_t ctx, vec_t tokens, size_t *position,
 
 node_t create_statement_continue(context_t ctx, location_t loc);
 
-void write_statement_continue(writer_t writer, node_t stmt);
 
 void emit_statement_continue(emit_context_t ctx, node_t node);
 

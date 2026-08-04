@@ -5,7 +5,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #ifdef __cplusplus
 extern "C" {
@@ -51,7 +50,6 @@ node_t read_expression_subscript(context_t ctx, vec_t tokens,
 node_t create_expression_subscript(context_t ctx, location_t loc, node_t host,
                                    node_t index);
 
-void write_expression_subscript(writer_t writer, node_t node);
 
 void emit_expression_subscript(emit_context_t ctx, node_t node);
 

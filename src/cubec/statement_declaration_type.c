@@ -1,7 +1,7 @@
 #include "cubec/statement_declaration_type.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/decorator.h"
 #include "cubec/expression.h"
 #include "cubec/generic_param.h"
@@ -254,34 +254,6 @@ node_t create_statement_declaration_type(context_t ctx, location_t loc,
       .decorators = decorators,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_decltype, &init);
-}
-
-void write_statement_declaration_type(writer_t writer, node_t node) {
-  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;
-  if (decl->decorators) {
-    for (size_t i = 0; i < vec_get_size(decl->decorators); i++) {
-      write_decorator(writer, vec_get(decl->decorators, i));
-      writer_newline(writer, 0);
-    }
-  }
-  if (decl->is_export) writer_append(writer, "export ");
-  if (decl->is_builtin) writer_append(writer, "builtin ");
-  writer_append(writer, "type ");
-  write_expression(writer, decl->name);
-  if (decl->params) {
-    writer_append(writer, "[");
-    for (size_t i = 0; i < vec_get_size(decl->params); i++) {
-      if (i != 0) writer_append(writer, ", ");
-      write_generic_param(writer, vec_get(decl->params, i));
-    }
-    writer_append(writer, "]");
-  }
-  if (decl->type_value) {
-    writer_append(writer, " = ");
-    write_expression(writer, decl->type_value);
-  }
-  writer_append(writer, ";");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_declaration_type(emit_context_t ctx, node_t node) {

@@ -5,7 +5,6 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -43,7 +42,6 @@ node_t read_expression_addr(context_t ctx, vec_t tokens, size_t *position,
 
 node_t create_expression_addr(context_t ctx, location_t loc, node_t host);
 
-void write_expression_addr(writer_t writer, node_t node);
 
 void emit_expression_addr(emit_context_t ctx, node_t node);
 

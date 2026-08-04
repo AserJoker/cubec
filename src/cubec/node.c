@@ -3,7 +3,6 @@
 #include "core/token.h"
 #include "cubec/token.h"
 
-
 void skip_whitespace(vec_t tokens, size_t *position) {
   size_t current = *position;
   while (true) {

@@ -2,7 +2,6 @@
 #include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/node_error.h"
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
@@ -145,14 +144,6 @@ node_t create_statement_test(context_t ctx, location_t loc, const char *name,
   cubec_statement_test_init_t init = {
       .location = loc, .parent = NULL, .name = name_str, .body = body};
   return (node_t)allocator_create(alloc, &g_cubec_statement_test_type, &init);
-}
-
-void write_statement_test(writer_t writer, node_t stmt) {
-  cubec_statement_test_t test = (cubec_statement_test_t)stmt;
-  writer_append(writer, "test ");
-  writer_append(writer, string_get(test->name));
-  writer_append(writer, " ");
-  write_statement_block(writer, test->body);
 }
 
 void emit_statement_test(emit_context_t ctx, node_t stmt) {

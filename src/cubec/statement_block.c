@@ -3,7 +3,6 @@
 #include "core/string.h"
 #include "core/token.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "cubec/node_error.h"
 #include "cubec/statement.h"
 #include "cubec/statement_error.h"
@@ -153,31 +152,6 @@ node_t create_statement_block(context_t ctx, location_t loc, vec_t statements) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_block_init_t init = {.statements = statements};
   return (node_t)allocator_create(alloc, &g_cubec_statement_block_type, &init);
-}
-
-void write_statement_block(writer_t writer, node_t stmt) {
-  cubec_statement_block_t block = (cubec_statement_block_t)stmt;
-  writer_append(writer, "{");
-  if (vec_get_size(block->statements)) {
-    writer_newline(writer, 1);
-    for (size_t i = 0; i < vec_get_size(block->statements); i++) {
-      node_t stmt = vec_get(block->statements, i);
-      write_statement(writer, stmt);
-    }
-    /* After the loop, the last statement may have left us on an empty line
-       (from its trailing writer_newline). If so, apply the indent change
-       to that existing empty line instead of creating a new one. */
-    string_t current = writer_get_current_line(writer);
-    if (string_get_length(current) == 0) {
-      writer_dedent_current_line(writer, -1);
-    } else {
-      writer_newline(writer, -1);
-    }
-  } else {
-    writer_newline(writer, 0);
-  }
-  writer_append(writer, "}");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_block(emit_context_t ctx, node_t stmt) {

@@ -3,9 +3,10 @@
 #include "cubec/expression.h"
 #include "cubec/token.h"
 #include "core/string.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
+#include "core/emit_context.h"
 
 using ::testing::Test;
 
@@ -214,12 +215,14 @@ TEST_F(dt_literal_string, write_simple_string) {
   node_t node = read_literal_string(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
-  write_expression(writer, node);
-  string_t result = writer_get_string(writer); const char *output = string_get(result);
+  emit_context_t ectx = emit_context_create(allocator, tokens);
+  emit_expression(ectx, node);
+  string_t result = token_writer_render(allocator, ectx->output_tokens);
+  emit_context_dispose(ectx);
+  const char *output = string_get(result);
   EXPECT_STREQ(output, "\"hello\"");
 
-  allocator_free(allocator, &result); allocator_free(allocator, &writer);
+  allocator_free(allocator, &result);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

@@ -1,6 +1,7 @@
 #include "cubec/decorator.h"
 #include "core/emit_context.h"
 #include "core/token.h"
+#include "core/token_writer.h"
 #include "cubec/expression_call.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/token.h"
@@ -200,13 +201,6 @@ node_t create_decorator(context_t ctx, location_t loc, node_t expr) {
   allocator_t alloc = ctx->allocator;
   cubec_decorator_init_t init = {.expression = expr};
   return (node_t)allocator_create(alloc, &g_cubec_decorator_type, &init);
-}
-
-void write_decorator(writer_t writer, node_t node) {
-  cubec_decorator_t dec = (cubec_decorator_t)node;
-  writer_append(writer, "[[");
-  write_expression(writer, dec->expression);
-  writer_append(writer, "]]");
 }
 
 void emit_decorator(emit_context_t ctx, node_t node) {

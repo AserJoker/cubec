@@ -1,5 +1,5 @@
 #include "core/string.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/declaration_enum.h"
 #include "cubec/enum_item.h"
@@ -10,6 +10,7 @@
 #include "cubec/token.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
+#include "core/emit_context.h"
 
 using ::testing::Test;
 
@@ -246,11 +247,13 @@ TEST_F(dt_declaration_enum, write_empty_enum) {
   size_t position = 0;
   node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
-  write_expression(writer, node);
-  string_t result = writer_get_string(writer); const char *output = string_get(result);
+  emit_context_t ectx = emit_context_create(allocator, tokens);
+  emit_expression(ectx, node);
+  string_t result = token_writer_render(allocator, ectx->output_tokens);
+  emit_context_dispose(ectx);
+  const char *output = string_get(result);
   EXPECT_STREQ(output, "enum {}");
-  allocator_free(allocator, &result); allocator_free(allocator, &writer);
+  allocator_free(allocator, &result);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

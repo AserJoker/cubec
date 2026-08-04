@@ -1,5 +1,6 @@
 #include "cubec/expression.h"
 #include "core/emit_context.h"
+#include "core/token_writer.h"
 #include "cubec/declaration_array.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
@@ -640,125 +641,6 @@ node_t read_expression(context_t ctx, vec_t tokens, size_t *position,
   /* read_expression_comma internally tries assignment then ternary,
    * so this single call covers the entire expression grammar. */
   return read_expression_comma(ctx, tokens, position, filename);
-}
-
-void write_expression(writer_t writer, node_t expr) {
-  switch (expr->kind) {
-  case CUBEC_NODE_EXPRESSION_COMMA:
-    write_expression_comma(writer, expr);
-    break;
-  case CUBEC_NODE_DECLARATION_ARRAY:
-    write_declaration_array(writer, expr);
-    break;
-  case CUBEC_NODE_DECLARATION_POINTER:
-    write_declaration_pointer(writer, expr);
-    break;
-  case CUBEC_NODE_DECLARATION_SLICE:
-    write_declaration_slice(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_ADDR:
-    write_expression_addr(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_ALIGNOF:
-    write_expression_alignof(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_ASSERT:
-    write_expression_assert(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_ASSIGNMENT:
-    write_expression_assigment(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_BINARY:
-    write_expression_binary(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_CALL:
-    write_expression_call(writer, expr);
-    break;
-  case CUBEC_NODE_DECLARATION_CALLABLE:
-    write_declaration_callable(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_DEREF:
-    write_expression_deref(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_FUNCTION:
-    write_expression_function(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION:
-    write_expression_generic_instantiation(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS:
-    write_expression_namespace_access(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_SIZEOF:
-    write_expression_sizeof(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_SLICE:
-    write_expression_slice(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_SPREAD:
-    write_expression_spread(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_SUBSCRIPT:
-    write_expression_subscript(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_TERNARY:
-    write_expression_ternary(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_TRY:
-    write_expression_try(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_TYPEOF:
-    write_expression_typeof(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_WILDCARD:
-    write_expression_wildcard(writer, expr);
-    break;
-  case CUBEC_NODE_LITERAL_CHAR:
-    write_literal_char(writer, expr);
-    break;
-  case CUBEC_NODE_LITERAL_IDENTIFIER:
-    write_literal_identifier(writer, expr);
-    break;
-  case CUBEC_NODE_LITERAL_NUMERIC:
-    write_literal_numeric(writer, expr);
-    break;
-  case CUBEC_NODE_LITERAL_STRING:
-    write_literal_string(writer, expr);
-    break;
-  case CUBEC_NODE_LITERAL_UNDEFINED:
-    write_literal_undefined(writer, expr);
-    break;
-  case CUBEC_NODE_DECLARATION_QUALIFIER:
-    write_declaration_qualifier(writer, expr);
-    break;
-  case CUBEC_NODE_DECLARATION_ENUM:
-    write_declaration_enum(writer, expr);
-    break;
-  case CUBEC_NODE_DECLARATION_UNION:
-    write_declaration_union(writer, expr);
-    break;
-  case CUBEC_NODE_DECLARATION_INTERFACE:
-    write_declaration_interface(writer, expr);
-    break;
-  case CUBEC_NODE_DECLARATION_STRUCT:
-    write_declaration_struct(writer, expr);
-    break;
-  case CUBEC_NODE_DECLARATION_TUPLE:
-    write_declaration_tuple(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_GROUP:
-    write_expression_group(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_MEMBER:
-    write_expression_member(writer, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_INITIALIZE_LIST:
-    write_expression_initialize_list(writer, expr);
-    break;
-  case CUBEC_NODE_ERROR:
-    write_node_error(writer, expr);
-    break;
-  }
 }
 
 /* --------------------------------------------------------------------------

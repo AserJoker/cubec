@@ -1,12 +1,12 @@
 #include "cubec/expression_initialize_list.h"
 #include "core/emit_context.h"
+#include "core/token_writer.h"
 #include "core/token.h"
 #include "cubec/expression_spread.h"
 #include "cubec/initialize_field.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <inttypes.h>
-
 
 /* --------------------------------------------------------------------------
  *  Lifecycle: init / dispose / clone / move
@@ -282,33 +282,6 @@ node_t create_expression_initialize_list(context_t ctx, location_t loc,
       alloc, &g_cubec_expression_initialize_list_type, &init);
 }
 
-void write_expression_initialize_list(writer_t writer, node_t node) {
-  cubec_expression_initialize_list_t init = (cubec_expression_initialize_list_t)node;
-  writer_append(writer, ".");
-  if (init->type) {
-    write_expression(writer, init->type);
-  }
-  writer_append(writer, "{");
-  if (vec_get_size(init->items)) {
-    writer_newline(writer, 1);
-    for (size_t i = 0; i < vec_get_size(init->items); i++) {
-      if (i != 0) {
-        writer_append(writer, ",");
-        writer_newline(writer, 0);
-      }
-      node_t item = vec_get(init->items, i);
-      if (init->is_field) {
-        write_initialize_field(writer, item);
-      } else {
-        write_expression(writer, item);
-      }
-    }
-    writer_append(writer, ",");
-    writer_newline(writer, -1);
-  }
-  writer_append(writer, "}");
-}
-
 void emit_expression_initialize_list(emit_context_t ctx, node_t node) {
   cubec_expression_initialize_list_t init = (cubec_expression_initialize_list_t)node;
   recover_comments_to(ctx, node->location.begin.offset);
@@ -318,8 +291,8 @@ void emit_expression_initialize_list(emit_context_t ctx, node_t node) {
   }
   emit_symbol(ctx, "{");
   if (vec_get_size(init->items)) {
-    emit_newline(ctx);
     emit_indent(ctx, +1);
+    emit_newline(ctx);
     for (size_t i = 0; i < vec_get_size(init->items); i++) {
       recover_comments_to(ctx, ((node_t)vec_get(init->items, i))->location.begin.offset);
       if (init->is_field) {
@@ -328,9 +301,12 @@ void emit_expression_initialize_list(emit_context_t ctx, node_t node) {
         emit_expression(ctx, vec_get(init->items, i));
       }
       emit_symbol(ctx, ",");
-      emit_newline(ctx);
+      if (i + 1 < vec_get_size(init->items)) {
+        emit_newline(ctx);
+      }
     }
     emit_indent(ctx, -1);
+    emit_newline(ctx);
   }
   emit_symbol(ctx, "}");
 }

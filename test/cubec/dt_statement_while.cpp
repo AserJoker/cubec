@@ -1,11 +1,12 @@
 #include "core/string.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/statement_while.h"
 #include "cubec/node.h"
 #include "cubec/statement.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
+#include "core/emit_context.h"
 
 using ::testing::Test;
 
@@ -106,12 +107,15 @@ TEST_F(dt_statement_while, write_while_break) {
   node_t node = read_statement(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
-  write_statement(writer, node);
-  string_t result = writer_get_string(writer); const char *output = string_get(result);
+  emit_context_t ectx = emit_context_create(allocator, tokens);
+  emit_statement(ectx, node);
+  emit_newline(ectx);
+  string_t result = token_writer_render(allocator, ectx->output_tokens);
+  emit_context_dispose(ectx);
+  const char *output = string_get(result);
   EXPECT_STREQ(output, "while (x) break;\n");
 
-  allocator_free(allocator, &result); allocator_free(allocator, &writer);
+  allocator_free(allocator, &result);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

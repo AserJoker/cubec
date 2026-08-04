@@ -78,11 +78,6 @@ node_t create_literal_undefined(context_t ctx, location_t loc) {
                                   &init);
 }
 
-void write_literal_undefined(writer_t writer, node_t node) {
-  (void)node;
-  writer_append(writer, "undefined");
-}
-
 void emit_literal_undefined(emit_context_t ctx, node_t node) {
   recover_comments_to(ctx, node->location.begin.offset);
   emit_keyword(ctx, "undefined");

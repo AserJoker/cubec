@@ -1,7 +1,6 @@
 #include "cubec/statement_expression.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -108,13 +107,6 @@ node_t create_statement_expression(context_t ctx, location_t loc, node_t expr) {
   cubec_statement_expression_init_t init = {.expression = expr};
   return (node_t)allocator_create(alloc, &g_cubec_statement_expression_type,
                                   &init);
-}
-
-void write_statement_expression(writer_t writer, node_t stmt) {
-  cubec_statement_expression_t expr = (cubec_statement_expression_t)stmt;
-  write_expression(writer, expr->expression);
-  writer_append(writer, ";");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_expression(emit_context_t ctx, node_t node) {

@@ -1,7 +1,7 @@
 #include "cubec/declaration_variable.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/token.h"
@@ -189,19 +189,6 @@ node_t create_declaration_variable(context_t ctx, location_t loc,
 /* --------------------------------------------------------------------------
  *  Writer: write_declaration_variable
  * -------------------------------------------------------------------------- */
-
-void write_declaration_variable(writer_t writer, node_t node) {
-  cubec_declaration_variable_t var = (cubec_declaration_variable_t)node;
-  write_expression(writer, var->identifier);
-  if (var->type) {
-    writer_append(writer, ": ");
-    write_expression(writer, var->type);
-  }
-  if (var->expression) {
-    writer_append(writer, " = ");
-    write_expression(writer, var->expression);
-  }
-}
 
 /* --------------------------------------------------------------------------
  *  Emit: emit_declaration_variable

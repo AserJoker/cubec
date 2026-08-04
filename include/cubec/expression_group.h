@@ -5,7 +5,6 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -38,7 +37,6 @@ node_t read_expression_group(context_t ctx, vec_t tokens, size_t *position,
 
 node_t create_expression_group(context_t ctx, location_t loc, node_t inner);
 
-void write_expression_group(writer_t writer, node_t node);
 
 void emit_expression_group(emit_context_t ctx, node_t node);
 

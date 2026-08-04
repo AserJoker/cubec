@@ -5,7 +5,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -79,7 +78,6 @@ node_t create_expression_function(context_t ctx, location_t loc, node_t name,
                                   vec_t args, node_t return_type, node_t body,
                                   bool is_c_variadic);
 
-void write_expression_function(writer_t writer, node_t node);
 
 void emit_expression_function(emit_context_t ctx, node_t node);
 

@@ -1,9 +1,9 @@
 #include "cubec/expression_binary.h"
 #include "core/allocator.h"
 #include "core/emit_context.h"
+#include "core/token_writer.h"
 #include "core/string.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -338,17 +338,6 @@ node_t create_expression_binary(context_t ctx, location_t loc, const char *op,
                                          .opt = op_str};
   return (node_t)allocator_create(alloc, &g_cubec_expression_binary_type,
                                   &init);
-}
-
-void write_expression_binary(writer_t writer, node_t node) {
-  cubec_expression_binary_t expr = (cubec_expression_binary_t)node;
-  if (expr->left) {
-    write_expression(writer, expr->left);
-    writer_append(writer, " ");
-  }
-  writer_append(writer, string_get(expr->opt));
-  writer_append(writer, " ");
-  write_expression(writer, expr->right);
 }
 
 void emit_expression_binary(emit_context_t ctx, node_t node) {

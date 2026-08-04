@@ -1,6 +1,7 @@
 #include "cubec/function_capture.h"
 #include "core/emit_context.h"
 #include "core/token.h"
+#include "core/token_writer.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -114,11 +115,6 @@ node_t create_function_capture(context_t ctx, location_t loc,
       .identifier = name_node,
   };
   return (node_t)allocator_create(alloc, &g_cubec_function_capture_type, &init);
-}
-
-void write_function_capture(writer_t writer, node_t node) {
-  cubec_function_capture_t cap = (cubec_function_capture_t)node;
-  write_expression(writer, cap->identifier);
 }
 
 void emit_function_capture(emit_context_t ctx, node_t node) {

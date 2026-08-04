@@ -1,7 +1,6 @@
 #include "cubec/statement_cunion.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/decorator.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
@@ -207,31 +206,6 @@ node_t create_statement_cunion(context_t ctx, location_t loc, const char *name,
       .decorators = decorators,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_cunion_type, &init);
-}
-
-void write_statement_cunion(writer_t writer, node_t node) {
-  cubec_statement_cunion_t stmt = (cubec_statement_cunion_t)node;
-  if (stmt->decorators) {
-    for (size_t i = 0; i < vec_get_size(stmt->decorators); i++) {
-      write_decorator(writer, vec_get(stmt->decorators, i));
-      writer_newline(writer, 0);
-    }
-  }
-  writer_append(writer, "cunion ");
-  write_expression(writer, stmt->name);
-  writer_append(writer, " {");
-  if (vec_get_size(stmt->fields)) {
-    writer_newline(writer, 1);
-    for (size_t i = 0; i < vec_get_size(stmt->fields); i++) {
-      if (i != 0) writer_newline(writer, 0);
-      write_struct_field(writer, vec_get(stmt->fields, i));
-    }
-    writer_newline(writer, -1);
-  } else {
-    writer_newline(writer, 0);
-  }
-  writer_append(writer, "}");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_cunion(emit_context_t ctx, node_t node) {

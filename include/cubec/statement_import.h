@@ -5,7 +5,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -55,7 +54,6 @@ node_t read_statement_import(context_t ctx, vec_t tokens, size_t *position,
 node_t create_statement_import(context_t ctx, location_t loc,
                                const char *module_name, const char *path);
 
-void write_statement_import(writer_t writer, node_t node);
 
 void emit_statement_import(emit_context_t ctx, node_t node);
 

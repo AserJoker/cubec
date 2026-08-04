@@ -3,9 +3,10 @@
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include "core/string.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
+#include "core/emit_context.h"
 
 using ::testing::Test;
 
@@ -132,12 +133,14 @@ TEST_F(dt_decorator, write_simple_identifier) {
   node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
-  write_decorator(writer, node);
-  string_t result = writer_get_string(writer); const char *output = string_get(result);
+  emit_context_t ectx = emit_context_create(allocator, tokens);
+  emit_decorator(ectx, node);
+  string_t result = token_writer_render(allocator, ectx->output_tokens);
+  emit_context_dispose(ectx);
+  const char *output = string_get(result);
   EXPECT_STREQ(output, "[[test]]");
 
-  allocator_free(allocator, &result); allocator_free(allocator, &writer);
+  allocator_free(allocator, &result);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
@@ -150,12 +153,14 @@ TEST_F(dt_decorator, write_call_decorator) {
   node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
-  write_decorator(writer, node);
-  string_t result = writer_get_string(writer); const char *output = string_get(result);
+  emit_context_t ectx = emit_context_create(allocator, tokens);
+  emit_decorator(ectx, node);
+  string_t result = token_writer_render(allocator, ectx->output_tokens);
+  emit_context_dispose(ectx);
+  const char *output = string_get(result);
   EXPECT_STREQ(output, R"([[deprecated("use new_api instead")]])");
 
-  allocator_free(allocator, &result); allocator_free(allocator, &writer);
+  allocator_free(allocator, &result);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

@@ -1,7 +1,7 @@
 #include "core/emit_context.h"
+#include "core/token_writer.h"
 #include "cubec/expression_alignof.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -125,13 +125,6 @@ node_t create_expression_alignof(context_t ctx, location_t loc, node_t expr) {
   cubec_expression_alignof_init_t init = {.expression = expr};
   return (node_t)allocator_create(alloc, &g_cubec_expression_alignof_type,
                                   &init);
-}
-
-void write_expression_alignof(writer_t writer, node_t node) {
-  cubec_expression_alignof_t expr = (cubec_expression_alignof_t)node;
-  writer_append(writer, "alignof(");
-  write_expression(writer, expr->expression);
-  writer_append(writer, ")");
 }
 
 void emit_expression_alignof(emit_context_t ctx, node_t node) {

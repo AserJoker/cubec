@@ -5,7 +5,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #ifdef __cplusplus
 extern "C" {
@@ -84,7 +83,6 @@ node_t read_declaration_interface_body(context_t ctx, vec_t tokens,
 node_t create_declaration_interface(context_t ctx, location_t loc,
                                         vec_t generic_params, vec_t members);
 
-void write_declaration_interface(writer_t writer, node_t node);
 
 void emit_declaration_interface(emit_context_t ctx, node_t node);
 

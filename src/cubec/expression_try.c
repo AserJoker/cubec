@@ -1,7 +1,7 @@
 #include "core/emit_context.h"
+#include "core/token_writer.h"
 #include "cubec/expression_try.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -122,12 +122,6 @@ node_t create_expression_try(context_t ctx, location_t loc, node_t host) {
 /* --------------------------------------------------------------------------
  *  Writer: write_expression_try
  * -------------------------------------------------------------------------- */
-
-void write_expression_try(writer_t writer, node_t node) {
-  cubec_expression_try_t expr = (cubec_expression_try_t)node;
-  write_expression(writer, expr->host);
-  writer_append(writer, ".?");
-}
 
 void emit_expression_try(emit_context_t ctx, node_t node) {
   cubec_expression_try_t expr = (cubec_expression_try_t)node;

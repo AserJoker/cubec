@@ -44,7 +44,6 @@ node_t read_expression_assert(context_t ctx, vec_t tokens, size_t *position,
 
 node_t create_expression_assert(context_t ctx, location_t loc, node_t host);
 
-void write_expression_assert(writer_t writer, node_t node);
 
 void emit_expression_assert(emit_context_t ctx, node_t node);
 

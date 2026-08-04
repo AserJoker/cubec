@@ -5,7 +5,6 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -48,7 +47,6 @@ node_t read_function_capture(context_t ctx, vec_t tokens, size_t *position,
 
 node_t create_function_capture(context_t ctx, location_t loc, const char *name);
 
-void write_function_capture(writer_t writer, node_t node);
 
 void emit_function_capture(emit_context_t ctx, node_t node);
 

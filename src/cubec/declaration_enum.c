@@ -1,7 +1,7 @@
 #include "cubec/declaration_enum.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/enum_item.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -201,24 +201,6 @@ node_t create_declaration_enum(context_t ctx, location_t loc, vec_t items) {
 /* --------------------------------------------------------------------------
  *  Writer: write_declaration_enum
  * -------------------------------------------------------------------------- */
-
-void write_declaration_enum(writer_t writer, node_t node) {
-  cubec_declaration_enum_t en = (cubec_declaration_enum_t)node;
-  writer_append(writer, "enum {");
-  if (vec_get_size(en->items)) {
-    writer_newline(writer, 1);
-    for (size_t i = 0; i < vec_get_size(en->items); i++) {
-      if (i != 0) {
-        writer_append(writer, ",");
-        writer_newline(writer, 0);
-      }
-      write_enum_item(writer, vec_get(en->items, i));
-    }
-    writer_append(writer, ",");
-    writer_newline(writer, -1);
-  }
-  writer_append(writer, "}");
-}
 
 void emit_declaration_enum(emit_context_t ctx, node_t node) {
   cubec_declaration_enum_t en = (cubec_declaration_enum_t)node;

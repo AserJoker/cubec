@@ -6,7 +6,6 @@
 #include "core/string.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "cubec/expression_binary.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -71,7 +70,6 @@ node_t create_expression_assignment(context_t ctx, location_t loc,
                                     const char *op, node_t lvalue,
                                     node_t rvalue);
 
-void write_expression_assigment(writer_t writer, node_t node);
 
 void emit_expression_assignment(emit_context_t ctx, node_t node);
 

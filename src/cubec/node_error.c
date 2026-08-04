@@ -1,4 +1,6 @@
 #include "cubec/node_error.h"
+#include "core/emit_context.h"
+#include "core/token_writer.h"
 #include "engine/context.h"
 
 static void _cubec_node_error_init(cubec_node_error_t self,
@@ -46,7 +48,8 @@ node_t create_error(context_t ctx, location_t loc) {
   return (node_t)allocator_create(alloc, &g_cubec_node_error_type, &init);
 }
 
-void write_node_error(writer_t writer, node_t node) {
+void emit_node_error(emit_context_t ctx, node_t node) {
   (void)node;
-  writer_append(writer, "/* error */");
+  emit_symbol(ctx, "/* error */");
 }
+

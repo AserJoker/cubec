@@ -1,7 +1,6 @@
 #include "cubec/statement_declaration.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/declaration_variable.h"
 #include "cubec/decorator.h"
 #include "cubec/literal_identifier.h"
@@ -330,26 +329,6 @@ node_t create_statement_declaration(context_t ctx, location_t loc,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_declaration_type,
                                   &sd_init);
-}
-
-void write_statement_declaration(writer_t writer, node_t node) {
-  cubec_statement_declaration_t decl = (cubec_statement_declaration_t)node;
-  if (decl->decorators) {
-    for (size_t i = 0; i < vec_get_size(decl->decorators); i++) {
-      write_decorator(writer, vec_get(decl->decorators, i));
-      writer_newline(writer, 0);
-    }
-  }
-  if (decl->is_export) writer_append(writer, "export ");
-  if (decl->is_exportlib) writer_append(writer, "exportlib ");
-  if (decl->is_extern) writer_append(writer, "extern ");
-  if (decl->is_builtin) writer_append(writer, "builtin ");
-  if (decl->is_comptime) writer_append(writer, "comptime ");
-  if (decl->is_using) writer_append(writer, "using ");
-  else writer_append(writer, "var ");
-  write_declaration_variable(writer, decl->declarator);
-  writer_append(writer, ";");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_declaration(emit_context_t ctx, node_t node) {

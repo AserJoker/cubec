@@ -1,7 +1,6 @@
 #include "cubec/statement_switch.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/switch_match.h"
@@ -190,24 +189,6 @@ node_t create_statement_switch(context_t ctx, location_t loc, node_t cond,
   allocator_t alloc = ctx->allocator;
   cubec_statement_switch_init_t init = {.condition = cond, .matches = matches};
   return (node_t)allocator_create(alloc, &g_cubec_statement_switch_type, &init);
-}
-
-void write_statement_switch(writer_t writer, node_t node) {
-  cubec_statement_switch_t stmt = (cubec_statement_switch_t)node;
-  writer_append(writer, "switch (");
-  write_expression(writer, stmt->condition);
-  writer_append(writer, ") {");
-  if (vec_get_size(stmt->matches)) {
-    writer_newline(writer, 1);
-    for (size_t i = 0; i < vec_get_size(stmt->matches); i++) {
-      write_switch_match(writer, vec_get(stmt->matches, i));
-    }
-    writer_newline(writer, -1);
-  } else {
-    writer_newline(writer, 0);
-  }
-  writer_append(writer, "}");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_switch(emit_context_t ctx, node_t node) {

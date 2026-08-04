@@ -6,7 +6,6 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "cubec/literal.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -34,7 +33,6 @@ node_t read_literal_string(context_t ctx, vec_t tokens, size_t *position,
 
 node_t create_literal_string(context_t ctx, location_t loc, const char *value);
 
-void write_literal_string(writer_t writer, node_t node);
 
 void emit_literal_string(emit_context_t ctx, node_t node);
 

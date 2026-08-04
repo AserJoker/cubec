@@ -1,4 +1,5 @@
 #include "core/emit_context.h"
+#include "core/token_writer.h"
 #include "cubec/expression_group.h"
 #include "core/token.h"
 #include "cubec/node_error.h"
@@ -116,13 +117,6 @@ node_t create_expression_group(context_t ctx, location_t loc, node_t inner) {
   allocator_t alloc = ctx->allocator;
   cubec_expression_group_init_t init = {.inner = inner};
   return (node_t)allocator_create(alloc, &g_cubec_expression_group_type, &init);
-}
-
-void write_expression_group(writer_t writer, node_t node) {
-  cubec_expression_group_t group = (cubec_expression_group_t)node;
-  writer_append(writer, "(");
-  write_expression(writer, group->inner);
-  writer_append(writer, ")");
 }
 
 void emit_expression_group(emit_context_t ctx, node_t node) {

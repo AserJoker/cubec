@@ -4,7 +4,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "cubec/declaration.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -47,7 +46,6 @@ node_t read_declaration_pointer(context_t ctx, vec_t tokens, size_t *position,
 node_t create_declaration_pointer(context_t ctx, location_t loc, node_t base,
                                   bool is_const, bool is_volatile);
 
-void write_declaration_pointer(writer_t writer, node_t node);
 
 void emit_declaration_pointer(emit_context_t ctx, node_t node);
 

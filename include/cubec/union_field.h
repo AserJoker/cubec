@@ -5,7 +5,6 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -59,7 +58,6 @@ node_t read_union_field(context_t ctx, vec_t tokens, size_t *position,
 node_t create_union_field(context_t ctx, location_t loc, const char *name,
                           node_t type);
 
-void write_union_field(writer_t writer, node_t node);
 
 void emit_union_field(emit_context_t ctx, node_t node);
 

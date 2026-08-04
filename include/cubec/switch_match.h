@@ -5,7 +5,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -55,7 +54,6 @@ node_t read_switch_match(context_t ctx, vec_t tokens, size_t *position,
 node_t create_switch_match(context_t ctx, location_t loc, bool is_else,
                            vec_t values, node_t body);
 
-void write_switch_match(writer_t writer, node_t node);
 
 void emit_switch_match(emit_context_t ctx, node_t node);
 

@@ -5,7 +5,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -100,7 +99,6 @@ node_t create_statement_declaration(context_t ctx, location_t loc,
                                     bool is_builtin, bool is_comptime,
                                     bool is_using);
 
-void write_statement_declaration(writer_t writer, node_t node);
 
 void emit_statement_declaration(emit_context_t ctx, node_t node);
 

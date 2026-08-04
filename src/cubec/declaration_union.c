@@ -1,7 +1,7 @@
 #include "cubec/declaration_union.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/expression_spread.h"
 #include "cubec/generic_param.h"
 #include "cubec/node_error.h"
@@ -293,28 +293,6 @@ node_t create_declaration_union(context_t ctx, location_t loc,
 /* --------------------------------------------------------------------------
  *  Writer: write_declaration_union
  * -------------------------------------------------------------------------- */
-
-void write_declaration_union(writer_t writer, node_t node) {
-  cubec_declaration_union_t un = (cubec_declaration_union_t)node;
-  writer_append(writer, "union");
-  if (un->generic_params) {
-    writer_append(writer, "[");
-    for (size_t i = 0; i < vec_get_size(un->generic_params); i++) {
-      if (i != 0) writer_append(writer, ", ");
-      write_generic_param(writer, vec_get(un->generic_params, i));
-    }
-    writer_append(writer, "]");
-  }
-  writer_append(writer, " {");
-  if (vec_get_size(un->members)) {
-    writer_newline(writer, 1);
-    for (size_t i = 0; i < vec_get_size(un->members); i++) {
-      write_statement(writer, vec_get(un->members, i));
-    }
-    writer_newline(writer, -1);
-  }
-  writer_append(writer, "}");
-}
 
 void emit_declaration_union(emit_context_t ctx, node_t node) {
   cubec_declaration_union_t un = (cubec_declaration_union_t)node;

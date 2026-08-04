@@ -206,22 +206,6 @@ node_t create_switch_match(context_t ctx, location_t loc, bool is_else,
   return (node_t)allocator_create(alloc, &g_cubec_switch_match_type, &init);
 }
 
-void write_switch_match(writer_t writer, node_t node) {
-  cubec_switch_match_t match = (cubec_switch_match_t)node;
-  if (match->is_else) {
-    writer_append(writer, "else");
-  } else {
-    writer_append(writer, "case(");
-    for (size_t i = 0; i < vec_get_size(match->values); i++) {
-      if (i != 0) writer_append(writer, ", ");
-      write_expression(writer, vec_get(match->values, i));
-    }
-    writer_append(writer, ")");
-  }
-  writer_append(writer, " -> ");
-  write_statement(writer, match->body);
-}
-
 void emit_switch_match(emit_context_t ctx, node_t node) {
   cubec_switch_match_t match = (cubec_switch_match_t)node;
   recover_comments_to(ctx, node->location.begin.offset);

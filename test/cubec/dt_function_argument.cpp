@@ -1,12 +1,13 @@
 #include "common/test_common.h"
 #include "core/string.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/function_argument.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <gtest/gtest.h>
+#include "core/emit_context.h"
 
 using ::testing::Test;
 
@@ -77,12 +78,14 @@ TEST_F(dt_function_argument, write_name_only) {
   node_t node = read_function_argument(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
-  write_function_argument(writer, node);
-  string_t result = writer_get_string(writer); const char *output = string_get(result);
+  emit_context_t ectx = emit_context_create(allocator, tokens);
+  emit_function_argument(ectx, node);
+  string_t result = token_writer_render(allocator, ectx->output_tokens);
+  emit_context_dispose(ectx);
+  const char *output = string_get(result);
   EXPECT_STREQ(output, "a");
 
-  allocator_free(allocator, &result); allocator_free(allocator, &writer);
+  allocator_free(allocator, &result);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
@@ -95,12 +98,14 @@ TEST_F(dt_function_argument, write_name_with_type) {
   node_t node = read_function_argument(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
-  write_function_argument(writer, node);
-  string_t result = writer_get_string(writer); const char *output = string_get(result);
+  emit_context_t ectx = emit_context_create(allocator, tokens);
+  emit_function_argument(ectx, node);
+  string_t result = token_writer_render(allocator, ectx->output_tokens);
+  emit_context_dispose(ectx);
+  const char *output = string_get(result);
   EXPECT_STREQ(output, "a: i32");
 
-  allocator_free(allocator, &result); allocator_free(allocator, &writer);
+  allocator_free(allocator, &result);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

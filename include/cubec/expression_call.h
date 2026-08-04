@@ -5,7 +5,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -52,7 +51,6 @@ node_t read_expression_call(context_t ctx, vec_t tokens, size_t *position,
 node_t create_expression_call(context_t ctx, location_t loc, node_t callee,
                               vec_t args);
 
-void write_expression_call(writer_t writer, node_t node);
 
 void emit_expression_call(emit_context_t ctx, node_t node);
 

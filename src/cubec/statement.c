@@ -1,5 +1,6 @@
 #include "cubec/statement.h"
 #include "core/emit_context.h"
+#include "core/token_writer.h"
 #include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/statement_block.h"
@@ -398,91 +399,6 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
   }
 
   return NULL;
-}
-void write_statement(writer_t wr, node_t stmt) {
-  switch (stmt->kind) {
-  case CUBEC_NODE_STATEMENT_IMPORT:
-    write_statement_import(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_EXPORT:
-    write_statement_export(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_EMPTY:
-    write_statement_empty(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_BLOCK:
-    write_statement_block(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_TEST:
-    write_statement_test(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_DEFER:
-    write_statement_defer(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_BREAK:
-    write_statement_break(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_CONTINUE:
-    write_statement_continue(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_EXPRESSION:
-    write_statement_expression(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_DECLARATION:
-    write_statement_declaration(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_DECLARATION_TYPE:
-    write_statement_declaration_type(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_FUNCTION:
-    write_statement_function(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_IF:
-    write_statement_if(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_WHILE:
-    write_statement_while(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_DO_WHILE:
-    write_statement_do_while(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_FOR:
-    write_statement_for(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_FOREACH:
-    write_statement_foreach(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_SWITCH:
-    write_statement_switch(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_RETURN:
-    write_statement_return(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_COMPTIME_IF:
-    write_statement_comptime_if(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_COMPTIME_FOREACH:
-    write_statement_comptime_foreach(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_STRUCT:
-    write_statement_struct(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_ENUM:
-    write_statement_enum(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_UNION:
-    write_statement_union(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_CUNION:
-    write_statement_cunion(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_INTERFACE:
-    write_statement_interface(wr, stmt);
-    break;
-  case CUBEC_NODE_STATEMENT_ERROR:
-    write_statement_error(wr, stmt);
-    break;
-  }
 }
 
 /* --------------------------------------------------------------------------

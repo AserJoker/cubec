@@ -40,6 +40,7 @@ emit_context_t emit_context_create(allocator_t allocator, vec_t source_tokens) {
   emit_context_t ctx = allocator_alloc(allocator, sizeof(struct _emit_context_t));
   ctx->allocator = allocator;
   ctx->source_tokens = source_tokens;
+  ctx->owns_source_tokens = false;
   ctx->source_token_idx = 0;
   ctx->output_tokens =
       allocator_create(allocator, &g_vec_type, &(vec_init_t){.auto_dispose = true});
@@ -53,6 +54,9 @@ void emit_context_dispose(emit_context_t ctx) {
   /* output_tokens and string_table are auto_dispose, freed via vec */
   allocator_free(ctx->allocator, &ctx->string_table);
   allocator_free(ctx->allocator, &ctx->output_tokens);
+  if (ctx->owns_source_tokens) {
+    allocator_free(ctx->allocator, &ctx->source_tokens);
+  }
   allocator_free(ctx->allocator, &ctx);
 }
 

@@ -5,7 +5,6 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -73,7 +72,6 @@ node_t create_statement_union(context_t ctx, location_t loc, const char *name,
                               vec_t members, bool is_export, vec_t implements,
                               vec_t decorators);
 
-void write_statement_union(writer_t writer, node_t node);
 
 void emit_statement_union(emit_context_t ctx, node_t node);
 

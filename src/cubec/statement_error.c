@@ -1,6 +1,6 @@
 #include "cubec/statement_error.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/node.h"
 #include "engine/context.h"
 
@@ -47,12 +47,6 @@ node_t create_statement_error(context_t ctx, location_t loc) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_error_init_t init = {.location = loc, .parent = NULL};
   return (node_t)allocator_create(alloc, &g_cubec_statement_error_type, &init);
-}
-
-void write_statement_error(writer_t writer, node_t node) {
-  (void)node;
-  writer_append(writer, "/* error */");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_error(emit_context_t ctx, node_t node) {

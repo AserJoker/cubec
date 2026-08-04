@@ -5,7 +5,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -54,7 +53,6 @@ node_t read_statement_defer(context_t ctx, vec_t tokens, size_t *position,
 node_t create_statement_defer(context_t ctx, location_t loc, vec_t captures,
                               node_t body);
 
-void write_statement_defer(writer_t writer, node_t node);
 
 void emit_statement_defer(emit_context_t ctx, node_t node);
 

@@ -1,7 +1,7 @@
 #include "core/emit_context.h"
+#include "core/token_writer.h"
 #include "cubec/expression_slice.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -248,16 +248,6 @@ node_t create_expression_slice(context_t ctx, location_t loc, node_t host,
 /* --------------------------------------------------------------------------
  *  Writer: write_expression_slice
  * -------------------------------------------------------------------------- */
-
-void write_expression_slice(writer_t writer, node_t node) {
-  cubec_expression_slice_t slice = (cubec_expression_slice_t)node;
-  write_expression(writer, slice->host);
-  writer_append(writer, "[");
-  if (slice->start) write_expression(writer, slice->start);
-  writer_append(writer, ":");
-  if (slice->length) write_expression(writer, slice->length);
-  writer_append(writer, "]");
-}
 
 void emit_expression_slice(emit_context_t ctx, node_t node) {
   cubec_expression_slice_t slice = (cubec_expression_slice_t)node;

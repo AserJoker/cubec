@@ -1,7 +1,7 @@
 #include "cubec/declaration_qualifier.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 
@@ -194,13 +194,6 @@ node_t create_declaration_qualifier(context_t ctx, location_t loc,
 /* --------------------------------------------------------------------------
  *  Writer: write_declaration_qualifier
  * -------------------------------------------------------------------------- */
-
-void write_declaration_qualifier(writer_t writer, node_t node) {
-  cubec_declaration_qualifier_t qual = (cubec_declaration_qualifier_t)node;
-  if (qual->is_const) writer_append(writer, "const ");
-  if (qual->is_volatile) writer_append(writer, "volatile ");
-  write_expression(writer, qual->type);
-}
 
 void emit_declaration_qualifier(emit_context_t ctx, node_t node) {
   cubec_declaration_qualifier_t qual = (cubec_declaration_qualifier_t)node;

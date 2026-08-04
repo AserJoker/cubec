@@ -5,7 +5,6 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -80,7 +79,6 @@ node_t create_statement_declaration_type(context_t ctx, location_t loc,
                                          bool is_export, bool is_builtin,
                                          vec_t decorators);
 
-void write_statement_declaration_type(writer_t writer, node_t node);
 
 void emit_statement_declaration_type(emit_context_t ctx, node_t node);
 

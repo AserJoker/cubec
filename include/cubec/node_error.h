@@ -1,9 +1,9 @@
 #ifndef _H_CUBEC_CUBEC_ERROR_
 #define _H_CUBEC_CUBEC_ERROR_
+#include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
-#include "core/writer.h"
 #include "cubec/node.h"
 #include <stdbool.h>
 #ifdef __cplusplus
@@ -35,7 +35,7 @@ static inline bool node_is_ok(node_t node) {
 
 node_t create_error(context_t ctx, location_t loc);
 
-void write_node_error(writer_t writer, node_t node);
+void emit_node_error(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

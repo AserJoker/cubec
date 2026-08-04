@@ -1,6 +1,7 @@
 #include "cubec/generic_param.h"
 #include "core/emit_context.h"
 #include "core/token.h"
+#include "core/token_writer.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -251,24 +252,6 @@ node_t create_generic_param(context_t ctx, location_t loc, const char *name,
       .is_rest = is_rest,
   };
   return (node_t)allocator_create(alloc, &g_cubec_generic_param_type, &init);
-}
-
-void write_generic_param(writer_t writer, node_t node) {
-  cubec_generic_param_t param = (cubec_generic_param_t)node;
-  if (param->is_rest) {
-    writer_append(writer, "...");
-  }
-  write_expression(writer, param->name);
-  if (param->constraints) {
-    writer_append(writer, " extends ");
-    for (size_t i = 0; i < vec_get_size(param->constraints); i++) {
-      if (i != 0) writer_append(writer, " & ");
-      write_expression(writer, vec_get(param->constraints, i));
-    }
-  } else if (param->value_type) {
-    writer_append(writer, ": ");
-    write_expression(writer, param->value_type);
-  }
 }
 
 void emit_generic_param(emit_context_t ctx, node_t node) {

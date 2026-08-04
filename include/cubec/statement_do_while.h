@@ -5,7 +5,6 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -49,7 +48,6 @@ node_t read_statement_do_while(context_t ctx, vec_t tokens, size_t *position,
 node_t create_statement_do_while(context_t ctx, location_t loc, node_t body,
                                  node_t cond);
 
-void write_statement_do_while(writer_t writer, node_t node);
 
 void emit_statement_do_while(emit_context_t ctx, node_t node);
 

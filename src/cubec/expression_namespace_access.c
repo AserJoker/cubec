@@ -1,7 +1,7 @@
 #include "core/emit_context.h"
+#include "core/token_writer.h"
 #include "cubec/expression_namespace_access.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/token.h"
 
@@ -127,13 +127,6 @@ node_t create_expression_namespace_access(context_t ctx, location_t loc,
 /* --------------------------------------------------------------------------
  *  Writer: write_expression_namespace_access
  * -------------------------------------------------------------------------- */
-
-void write_expression_namespace_access(writer_t writer, node_t node) {
-  cubec_expression_namespace_access_t access = (cubec_expression_namespace_access_t)node;
-  write_expression(writer, access->host);
-  writer_append(writer, "::");
-  write_expression(writer, (node_t)access->field);
-}
 
 void emit_expression_namespace_access(emit_context_t ctx, node_t node) {
   cubec_expression_namespace_access_t access = (cubec_expression_namespace_access_t)node;

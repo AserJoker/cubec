@@ -1,6 +1,7 @@
 #include "cubec/union_field.h"
 #include "core/emit_context.h"
 #include "core/token.h"
+#include "core/token_writer.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -144,14 +145,6 @@ node_t create_union_field(context_t ctx, location_t loc, const char *name,
       .type = type,
   };
   return (node_t)allocator_create(alloc, &g_cubec_union_field_type, &init);
-}
-
-void write_union_field(writer_t writer, node_t node) {
-  cubec_union_field_t field = (cubec_union_field_t)node;
-  write_expression(writer, field->name);
-  writer_append(writer, ": ");
-  write_expression(writer, field->type);
-  writer_append(writer, ";");
 }
 
 void emit_union_field(emit_context_t ctx, node_t node) {

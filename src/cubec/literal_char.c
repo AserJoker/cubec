@@ -99,17 +99,9 @@ node_t create_literal_char(context_t ctx, location_t loc, char value) {
   return (node_t)allocator_create(alloc, &g_cubec_literal_char_type, &init);
 }
 
-void write_literal_char(writer_t writer, node_t node) {
-  cubec_literal_char_t ch = (cubec_literal_char_t)node;
-  writer_append(writer, "'");
-  char buf[2] = {ch->value, '\0'};
-  writer_append(writer, buf);
-  writer_append(writer, "'");
-}
-
 void emit_literal_char(emit_context_t ctx, node_t node) {
   cubec_literal_char_t ch = (cubec_literal_char_t)node;
   recover_comments_to(ctx, node->location.begin.offset);
-  char buf[2] = {ch->value, '\0'};
+  char buf[4] = {'\'', ch->value, '\'', '\0'};
   emit_char_literal(ctx, buf);
 }

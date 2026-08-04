@@ -5,7 +5,6 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -61,7 +60,6 @@ node_t read_statement_if(context_t ctx, vec_t tokens, size_t *position,
 node_t create_statement_if(context_t ctx, location_t loc, node_t cond,
                            node_t then_branch, node_t else_branch);
 
-void write_statement_if(writer_t writer, node_t node);
 
 void emit_statement_if(emit_context_t ctx, node_t node);
 

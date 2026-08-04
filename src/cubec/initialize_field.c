@@ -1,5 +1,6 @@
 #include "core/emit_context.h"
 #include "core/token.h"
+#include "core/token_writer.h"
 #include "cubec/initialize_field.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
@@ -140,14 +141,6 @@ node_t create_initialize_field(context_t ctx, location_t loc, const char *name,
       .value = value,
   };
   return (node_t)allocator_create(alloc, &g_cubec_initialize_field_type, &init);
-}
-
-void write_initialize_field(writer_t writer, node_t node) {
-  cubec_initialize_field_t field = (cubec_initialize_field_t)node;
-  writer_append(writer, ".");
-  write_expression(writer, (node_t)field->field);
-  writer_append(writer, " = ");
-  write_expression(writer, field->value);
 }
 
 void emit_initialize_field(emit_context_t ctx, node_t node) {

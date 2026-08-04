@@ -2,7 +2,6 @@
 #include "core/emit_context.h"
 #include "core/token.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_string.h"
 #include "cubec/node_error.h"
@@ -213,28 +212,6 @@ node_t create_statement_export(context_t ctx, location_t loc, node_t path,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_export_type,
                                   &init);
-}
-
-void write_statement_export(writer_t writer, node_t node) {
-  cubec_statement_export_t export_node =
-      (cubec_statement_export_t)node;
-  writer_append(writer, "export ");
-  if (export_node->is_star) {
-    writer_append(writer, "*");
-  } else {
-    writer_append(writer, "{");
-    for (size_t i = 0; i < vec_get_size(export_node->names); i++) {
-      if (i > 0) {
-        writer_append(writer, ", ");
-      }
-      write_literal_identifier(writer, vec_get(export_node->names, i));
-    }
-    writer_append(writer, "}");
-  }
-  writer_append(writer, " from ");
-  write_literal_string(writer, export_node->path);
-  writer_append(writer, ";");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_export(emit_context_t ctx, node_t node) {

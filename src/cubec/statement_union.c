@@ -1,7 +1,6 @@
 #include "cubec/statement_union.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/decorator.h"
 #include "cubec/declaration_union.h"
 #include "cubec/union_field.h"
@@ -232,47 +231,6 @@ node_t create_statement_union(context_t ctx, location_t loc, const char *name,
       .decorators = decorators,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_union_type, &init);
-}
-
-void write_statement_union(writer_t writer, node_t node) {
-  cubec_statement_union_t stmt = (cubec_statement_union_t)node;
-  if (stmt->decorators) {
-    for (size_t i = 0; i < vec_get_size(stmt->decorators); i++) {
-      write_decorator(writer, vec_get(stmt->decorators, i));
-      writer_newline(writer, 0);
-    }
-  }
-  if (stmt->is_export) writer_append(writer, "export ");
-  writer_append(writer, "union ");
-  write_expression(writer, stmt->name);
-  if (stmt->generic_params) {
-    writer_append(writer, "[");
-    for (size_t i = 0; i < vec_get_size(stmt->generic_params); i++) {
-      if (i != 0) writer_append(writer, ", ");
-      write_generic_param(writer, vec_get(stmt->generic_params, i));
-    }
-    writer_append(writer, "]");
-  }
-  if (stmt->implements) {
-    writer_append(writer, " implement ");
-    for (size_t i = 0; i < vec_get_size(stmt->implements); i++) {
-      if (i != 0) writer_append(writer, ", ");
-      write_expression(writer, vec_get(stmt->implements, i));
-    }
-  }
-  writer_append(writer, " {");
-  if (vec_get_size(stmt->members)) {
-    writer_newline(writer, 1);
-    for (size_t i = 0; i < vec_get_size(stmt->members); i++) {
-      if (i != 0) writer_newline(writer, 0);
-      write_union_field(writer, vec_get(stmt->members, i));
-    }
-    writer_newline(writer, -1);
-  } else {
-    writer_newline(writer, 0);
-  }
-  writer_append(writer, "}");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_union(emit_context_t ctx, node_t node) {

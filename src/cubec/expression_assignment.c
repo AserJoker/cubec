@@ -1,9 +1,9 @@
 #include "cubec/expression_assignment.h"
 #include "core/emit_context.h"
+#include "core/token_writer.h"
 #include "core/allocator.h"
 #include "core/string.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -201,14 +201,6 @@ node_t create_expression_assignment(context_t ctx, location_t loc,
                                              .opt = op_str};
   return (node_t)allocator_create(alloc, &g_cubec_expression_assignment_type,
                                   &init);
-}
-void write_expression_assigment(writer_t writer, node_t node) {
-  cubec_expression_assignment_t expr = (cubec_expression_assignment_t)node;
-  write_expression(writer, expr->left);
-  writer_append(writer, " ");
-  writer_append(writer, string_get(expr->opt));
-  writer_append(writer, " ");
-  write_expression(writer, expr->right);
 }
 
 void emit_expression_assignment(emit_context_t ctx, node_t node) {

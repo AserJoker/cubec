@@ -1,7 +1,6 @@
 #include "cubec/statement_continue.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -126,11 +125,6 @@ node_t create_statement_continue(context_t ctx, location_t loc) {
   cubec_statement_continue_init_t init = {.location = loc, .parent = NULL};
   return (node_t)allocator_create(alloc, &g_cubec_statement_continue_type,
                                   &init);
-}
-
-void write_statement_continue(writer_t writer, node_t stmt) {
-  writer_append(writer, "continue;");
-  writer_newline(writer, 0);
 }
 
 void emit_statement_continue(emit_context_t ctx, node_t node) {

@@ -1,7 +1,7 @@
 #include "cubec/expression_generic_instantiation.h"
 #include "core/emit_context.h"
 #include "core/token.h"
-#include "core/writer.h"
+#include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_spread.h"
 #include "cubec/literal_identifier.h"
@@ -216,17 +216,6 @@ node_t create_expression_generic_instantiation(context_t ctx, location_t loc,
 /* --------------------------------------------------------------------------
  *  Writer: write_expression_generic_instantiation
  * -------------------------------------------------------------------------- */
-
-void write_expression_generic_instantiation(writer_t writer, node_t node) {
-  cubec_expression_generic_instantiation_t expr = (cubec_expression_generic_instantiation_t)node;
-  write_expression(writer, expr->callee);
-  writer_append(writer, "[");
-  for (size_t i = 0; i < vec_get_size(expr->arguments); i++) {
-    if (i != 0) writer_append(writer, ", ");
-    write_expression(writer, vec_get(expr->arguments, i));
-  }
-  writer_append(writer, "]");
-}
 
 void emit_expression_generic_instantiation(emit_context_t ctx, node_t node) {
   cubec_expression_generic_instantiation_t expr = (cubec_expression_generic_instantiation_t)node;

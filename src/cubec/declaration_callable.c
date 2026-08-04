@@ -1,8 +1,8 @@
 #include "cubec/declaration_callable.h"
 #include "core/emit_context.h"
 #include "core/token.h"
+#include "core/token_writer.h"
 #include "core/vec.h"
-#include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_spread.h"
 #include "cubec/node_error.h"
@@ -333,23 +333,6 @@ node_t create_declaration_callable(context_t ctx, location_t loc,
   };
   return (node_t)allocator_create(alloc, &g_cubec_declaration_callable_type,
                                   &init);
-}
-
-void write_declaration_callable(writer_t writer, node_t node) {
-  cubec_declaration_callable_t expr = (cubec_declaration_callable_t)node;
-  writer_append(writer, "func(");
-  for (size_t idx = 0; idx < vec_get_size(expr->parameters); idx++) {
-    if (idx != 0) {
-      writer_append(writer, ", ");
-    }
-    node_t param = vec_get(expr->parameters, idx);
-    write_expression(writer, param);
-  }
-  if (expr->is_c_variadic) {
-    writer_append(writer, ", ...");
-  }
-  writer_append(writer, ") -> ");
-  write_expression(writer, expr->return_type);
 }
 
 void emit_declaration_callable(emit_context_t ctx, node_t node) {
