@@ -57,6 +57,8 @@ node_t create_expression_binary(context_t ctx, location_t loc, const char *op,
 
 void write_expression_binary(writer_t writer, node_t node);
 
+void emit_expression_binary(emit_context_t ctx, node_t node);
+
 #ifdef __cplusplus
 }
 #endif

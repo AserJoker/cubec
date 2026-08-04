@@ -1,4 +1,5 @@
 #include "cubec/declaration_struct.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/expression_spread.h"
@@ -311,4 +312,34 @@ void write_declaration_struct(writer_t writer, node_t node) {
     writer_newline(writer, -1);
   }
   writer_append(writer, "}");
+}
+
+void emit_declaration_struct(emit_context_t ctx, node_t node) {
+  cubec_declaration_struct_t st = (cubec_declaration_struct_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "struct");
+  if (st->generic_params) {
+    emit_symbol(ctx, "[");
+    for (size_t i = 0; i < vec_get_size(st->generic_params); i++) {
+      if (i != 0) {
+        emit_symbol(ctx, ",");
+        emit_space(ctx);
+      }
+      emit_generic_param(ctx, vec_get(st->generic_params, i));
+    }
+    emit_symbol(ctx, "]");
+  }
+  emit_space(ctx);
+  emit_symbol(ctx, "{");
+  if (vec_get_size(st->members)) {
+    emit_newline(ctx);
+    emit_indent(ctx, +1);
+    for (size_t i = 0; i < vec_get_size(st->members); i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(st->members, i))->location.begin.offset);
+      emit_statement(ctx, vec_get(st->members, i));
+      emit_newline(ctx);
+    }
+    emit_indent(ctx, -1);
+  }
+  emit_symbol(ctx, "}");
 }

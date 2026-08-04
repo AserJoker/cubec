@@ -1,4 +1,5 @@
 #include "cubec/statement_declaration.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/declaration_variable.h"
@@ -349,4 +350,45 @@ void write_statement_declaration(writer_t writer, node_t node) {
   write_declaration_variable(writer, decl->declarator);
   writer_append(writer, ";");
   writer_newline(writer, 0);
+}
+
+void emit_statement_declaration(emit_context_t ctx, node_t node) {
+  cubec_statement_declaration_t decl = (cubec_statement_declaration_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  if (decl->decorators) {
+    for (size_t i = 0; i < vec_get_size(decl->decorators); i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(decl->decorators, i))->location.begin.offset);
+      emit_decorator(ctx, vec_get(decl->decorators, i));
+      emit_newline(ctx);
+    }
+  }
+  if (decl->is_export) {
+    emit_keyword(ctx, "export");
+    emit_space(ctx);
+  }
+  if (decl->is_exportlib) {
+    emit_keyword(ctx, "exportlib");
+    emit_space(ctx);
+  }
+  if (decl->is_extern) {
+    emit_keyword(ctx, "extern");
+    emit_space(ctx);
+  }
+  if (decl->is_builtin) {
+    emit_keyword(ctx, "builtin");
+    emit_space(ctx);
+  }
+  if (decl->is_comptime) {
+    emit_keyword(ctx, "comptime");
+    emit_space(ctx);
+  }
+  if (decl->is_using) {
+    emit_keyword(ctx, "using");
+    emit_space(ctx);
+  } else {
+    emit_keyword(ctx, "var");
+    emit_space(ctx);
+  }
+  emit_declaration_variable(ctx, decl->declarator);
+  emit_symbol(ctx, ";");
 }

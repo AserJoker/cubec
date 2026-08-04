@@ -1,5 +1,6 @@
 #include "cubec/expression_binary.h"
 #include "core/allocator.h"
+#include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token.h"
 #include "core/writer.h"
@@ -348,4 +349,21 @@ void write_expression_binary(writer_t writer, node_t node) {
   writer_append(writer, string_get(expr->opt));
   writer_append(writer, " ");
   write_expression(writer, expr->right);
+}
+
+void emit_expression_binary(emit_context_t ctx, node_t node) {
+  cubec_expression_binary_t expr = (cubec_expression_binary_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  if (expr->left) {
+    emit_expression(ctx, expr->left);
+    emit_space(ctx);
+  }
+  /* Operator string: emit each character via emit_symbol for token tracking */
+  {
+    const char *s = string_get(expr->opt);
+    /* Most binary operators are 1-2 chars; use emit_symbol for each */
+    emit_symbol(ctx, s);
+  }
+  emit_space(ctx);
+  emit_expression(ctx, expr->right);
 }

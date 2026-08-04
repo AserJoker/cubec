@@ -102,10 +102,10 @@ TEST_F(dt_statement_do_while, write_do_while) {
 
   writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
   write_statement(writer, node);
-  const char *output = string_get(writer_get_string(writer));
+  string_t result = writer_get_string(writer); const char *output = string_get(result);
   EXPECT_STREQ(output, "do {\n  break;\n}\nwhile (x);\n");
 
-  allocator_free(allocator, &writer);
+  allocator_free(allocator, &result); allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

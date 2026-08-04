@@ -1,4 +1,5 @@
 #include "cubec/statement_interface.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/decorator.h"
@@ -261,4 +262,53 @@ void write_statement_interface(writer_t writer, node_t node) {
   }
   writer_append(writer, "}");
   writer_newline(writer, 0);
+}
+
+void emit_statement_interface(emit_context_t ctx, node_t node) {
+  cubec_statement_interface_t stmt = (cubec_statement_interface_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  if (stmt->decorators) {
+    for (size_t i = 0; i < vec_get_size(stmt->decorators); i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(stmt->decorators, i))->location.begin.offset);
+      emit_decorator(ctx, vec_get(stmt->decorators, i));
+      emit_newline(ctx);
+    }
+  }
+  if (stmt->is_export) {
+    emit_keyword(ctx, "export");
+    emit_space(ctx);
+  }
+  emit_keyword(ctx, "interface");
+  emit_space(ctx);
+  emit_expression(ctx, stmt->name);
+  if (stmt->generic_params) {
+    emit_symbol(ctx, "[");
+    for (size_t i = 0; i < vec_get_size(stmt->generic_params); i++) {
+      if (i != 0) {
+        emit_symbol(ctx, ",");
+        emit_space(ctx);
+      }
+      emit_generic_param(ctx, vec_get(stmt->generic_params, i));
+    }
+    emit_symbol(ctx, "]");
+  }
+  emit_space(ctx);
+  emit_symbol(ctx, "{");
+  if (vec_get_size(stmt->members)) {
+    emit_indent(ctx, +1);
+    emit_newline(ctx);
+    size_t count = vec_get_size(stmt->members);
+    for (size_t i = 0; i < count; i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(stmt->members, i))->location.begin.offset);
+      emit_interface_method(ctx, vec_get(stmt->members, i));
+      if (i + 1 < count) {
+        emit_newline(ctx);
+      }
+    }
+    emit_indent(ctx, -1);
+    emit_newline(ctx);
+  } else {
+    emit_newline(ctx);
+  }
+  emit_symbol(ctx, "}");
 }

@@ -1,3 +1,4 @@
+#include "core/emit_context.h"
 #include "cubec/expression_group.h"
 #include "core/token.h"
 #include "cubec/node_error.h"
@@ -122,4 +123,12 @@ void write_expression_group(writer_t writer, node_t node) {
   writer_append(writer, "(");
   write_expression(writer, group->inner);
   writer_append(writer, ")");
+}
+
+void emit_expression_group(emit_context_t ctx, node_t node) {
+  cubec_expression_group_t group = (cubec_expression_group_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_symbol(ctx, "(");
+  emit_expression(ctx, group->inner);
+  emit_symbol(ctx, ")");
 }

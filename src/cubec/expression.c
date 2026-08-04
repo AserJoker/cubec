@@ -1,4 +1,5 @@
 #include "cubec/expression.h"
+#include "core/emit_context.h"
 #include "cubec/declaration_array.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
@@ -756,6 +757,129 @@ void write_expression(writer_t writer, node_t expr) {
     break;
   case CUBEC_NODE_ERROR:
     write_node_error(writer, expr);
+    break;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ *  Emit dispatcher: emit_expression
+ * -------------------------------------------------------------------------- */
+
+void emit_expression(emit_context_t ctx, node_t expr) {
+  switch (expr->kind) {
+  case CUBEC_NODE_LITERAL_IDENTIFIER:
+    emit_literal_identifier(ctx, expr);
+    break;
+  case CUBEC_NODE_LITERAL_NUMERIC:
+    emit_literal_numeric(ctx, expr);
+    break;
+  case CUBEC_NODE_LITERAL_STRING:
+    emit_literal_string(ctx, expr);
+    break;
+  case CUBEC_NODE_LITERAL_CHAR:
+    emit_literal_char(ctx, expr);
+    break;
+  case CUBEC_NODE_LITERAL_UNDEFINED:
+    emit_literal_undefined(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_COMMA:
+    emit_expression_comma(ctx, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_ARRAY:
+    emit_declaration_array(ctx, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_POINTER:
+    emit_declaration_pointer(ctx, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_SLICE:
+    emit_declaration_slice(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_ADDR:
+    emit_expression_addr(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_ALIGNOF:
+    emit_expression_alignof(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_ASSERT:
+    emit_expression_assert(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_ASSIGNMENT:
+    emit_expression_assignment(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_BINARY:
+    emit_expression_binary(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_CALL:
+    emit_expression_call(ctx, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_CALLABLE:
+    emit_declaration_callable(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_DEREF:
+    emit_expression_deref(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_FUNCTION:
+    emit_expression_function(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION:
+    emit_expression_generic_instantiation(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS:
+    emit_expression_namespace_access(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_SIZEOF:
+    emit_expression_sizeof(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_SLICE:
+    emit_expression_slice(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_SPREAD:
+    emit_expression_spread(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_SUBSCRIPT:
+    emit_expression_subscript(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_TERNARY:
+    emit_expression_ternary(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_TRY:
+    emit_expression_try(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_TYPEOF:
+    emit_expression_typeof(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_WILDCARD:
+    emit_expression_wildcard(ctx, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_QUALIFIER:
+    emit_declaration_qualifier(ctx, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_ENUM:
+    emit_declaration_enum(ctx, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_UNION:
+    emit_declaration_union(ctx, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_INTERFACE:
+    emit_declaration_interface(ctx, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_STRUCT:
+    emit_declaration_struct(ctx, expr);
+    break;
+  case CUBEC_NODE_DECLARATION_TUPLE:
+    emit_declaration_tuple(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_GROUP:
+    emit_expression_group(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_MEMBER:
+    emit_expression_member(ctx, expr);
+    break;
+  case CUBEC_NODE_EXPRESSION_INITIALIZE_LIST:
+    emit_expression_initialize_list(ctx, expr);
+    break;
+  case CUBEC_NODE_ERROR:
+    /* TODO: emit_node_error */
     break;
   }
 }

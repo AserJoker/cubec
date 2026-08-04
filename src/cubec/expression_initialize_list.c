@@ -1,4 +1,5 @@
 #include "cubec/expression_initialize_list.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/expression_spread.h"
 #include "cubec/initialize_field.h"
@@ -306,4 +307,30 @@ void write_expression_initialize_list(writer_t writer, node_t node) {
     writer_newline(writer, -1);
   }
   writer_append(writer, "}");
+}
+
+void emit_expression_initialize_list(emit_context_t ctx, node_t node) {
+  cubec_expression_initialize_list_t init = (cubec_expression_initialize_list_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_symbol(ctx, ".");
+  if (init->type) {
+    emit_expression(ctx, init->type);
+  }
+  emit_symbol(ctx, "{");
+  if (vec_get_size(init->items)) {
+    emit_newline(ctx);
+    emit_indent(ctx, +1);
+    for (size_t i = 0; i < vec_get_size(init->items); i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(init->items, i))->location.begin.offset);
+      if (init->is_field) {
+        emit_initialize_field(ctx, vec_get(init->items, i));
+      } else {
+        emit_expression(ctx, vec_get(init->items, i));
+      }
+      emit_symbol(ctx, ",");
+      emit_newline(ctx);
+    }
+    emit_indent(ctx, -1);
+  }
+  emit_symbol(ctx, "}");
 }

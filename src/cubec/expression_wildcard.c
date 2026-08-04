@@ -1,3 +1,4 @@
+#include "core/emit_context.h"
 #include "cubec/expression_wildcard.h"
 #include "core/token.h"
 #include "core/writer.h"
@@ -102,5 +103,15 @@ void write_expression_wildcard(writer_t writer, node_t node) {
     writer_append(writer, "<?>");
   } else {
     writer_append(writer, "?");
+  }
+}
+
+void emit_expression_wildcard(emit_context_t ctx, node_t node) {
+  cubec_expression_wildcard_t w = (cubec_expression_wildcard_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  if (w->is_tuple) {
+    emit_symbol(ctx, "<?>");
+  } else {
+    emit_symbol(ctx, "?");
   }
 }

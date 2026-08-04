@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/emit_context.h"
 #include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -59,6 +60,8 @@ node_t create_union_field(context_t ctx, location_t loc, const char *name,
                           node_t type);
 
 void write_union_field(writer_t writer, node_t node);
+
+void emit_union_field(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

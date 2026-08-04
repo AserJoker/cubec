@@ -1,5 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_BREAK_
 #define _H_CUBEC_CUBEC_STATEMENT_BREAK_
+#include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -41,6 +42,9 @@ node_t read_statement_break(context_t ctx, vec_t tokens, size_t *position,
 node_t create_statement_break(context_t ctx, location_t loc);
 
 void write_statement_break(writer_t writer, node_t node);
+
+void emit_statement_break(emit_context_t ctx, node_t node);
+
 #ifdef __cplusplus
 }
 #endif

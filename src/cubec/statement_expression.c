@@ -1,4 +1,5 @@
 #include "cubec/statement_expression.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/expression.h"
@@ -114,4 +115,11 @@ void write_statement_expression(writer_t writer, node_t stmt) {
   write_expression(writer, expr->expression);
   writer_append(writer, ";");
   writer_newline(writer, 0);
+}
+
+void emit_statement_expression(emit_context_t ctx, node_t node) {
+  cubec_statement_expression_t expr = (cubec_statement_expression_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_expression(ctx, expr->expression);
+  emit_symbol(ctx, ";");
 }

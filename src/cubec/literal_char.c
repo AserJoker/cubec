@@ -1,4 +1,5 @@
 #include "cubec/literal_char.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -104,4 +105,11 @@ void write_literal_char(writer_t writer, node_t node) {
   char buf[2] = {ch->value, '\0'};
   writer_append(writer, buf);
   writer_append(writer, "'");
+}
+
+void emit_literal_char(emit_context_t ctx, node_t node) {
+  cubec_literal_char_t ch = (cubec_literal_char_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  char buf[2] = {ch->value, '\0'};
+  emit_char_literal(ctx, buf);
 }

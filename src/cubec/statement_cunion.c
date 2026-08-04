@@ -1,4 +1,5 @@
 #include "cubec/statement_cunion.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/decorator.h"
@@ -231,4 +232,38 @@ void write_statement_cunion(writer_t writer, node_t node) {
   }
   writer_append(writer, "}");
   writer_newline(writer, 0);
+}
+
+void emit_statement_cunion(emit_context_t ctx, node_t node) {
+  cubec_statement_cunion_t stmt = (cubec_statement_cunion_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  if (stmt->decorators) {
+    for (size_t i = 0; i < vec_get_size(stmt->decorators); i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(stmt->decorators, i))->location.begin.offset);
+      emit_decorator(ctx, vec_get(stmt->decorators, i));
+      emit_newline(ctx);
+    }
+  }
+  emit_keyword(ctx, "cunion");
+  emit_space(ctx);
+  emit_expression(ctx, stmt->name);
+  emit_space(ctx);
+  emit_symbol(ctx, "{");
+  if (vec_get_size(stmt->fields)) {
+    emit_indent(ctx, +1);
+    emit_newline(ctx);
+    size_t count = vec_get_size(stmt->fields);
+    for (size_t i = 0; i < count; i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(stmt->fields, i))->location.begin.offset);
+      emit_struct_field(ctx, vec_get(stmt->fields, i));
+      if (i + 1 < count) {
+        emit_newline(ctx);
+      }
+    }
+    emit_indent(ctx, -1);
+    emit_newline(ctx);
+  } else {
+    emit_newline(ctx);
+  }
+  emit_symbol(ctx, "}");
 }

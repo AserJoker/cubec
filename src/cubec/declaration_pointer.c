@@ -1,4 +1,5 @@
 #include "cubec/declaration_pointer.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/expression.h"
@@ -165,4 +166,19 @@ void write_declaration_pointer(writer_t writer, node_t node) {
     writer_append(writer, "volatile ");
   }
   write_expression(writer, pointer->type);
+}
+
+void emit_declaration_pointer(emit_context_t ctx, node_t node) {
+  cubec_declaration_pointer_t pointer = (cubec_declaration_pointer_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_symbol(ctx, "*");
+  if (pointer->is_const) {
+    emit_keyword(ctx, "const");
+    emit_space(ctx);
+  }
+  if (pointer->is_volatile) {
+    emit_keyword(ctx, "volatile");
+    emit_space(ctx);
+  }
+  emit_expression(ctx, pointer->type);
 }

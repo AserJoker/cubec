@@ -1,4 +1,5 @@
 #include "cubec/statement_continue.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/node_error.h"
@@ -130,4 +131,10 @@ node_t create_statement_continue(context_t ctx, location_t loc) {
 void write_statement_continue(writer_t writer, node_t stmt) {
   writer_append(writer, "continue;");
   writer_newline(writer, 0);
+}
+
+void emit_statement_continue(emit_context_t ctx, node_t node) {
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "continue");
+  emit_symbol(ctx, ";");
 }

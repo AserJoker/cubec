@@ -1,4 +1,5 @@
 #include "cubec/decorator.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/expression_call.h"
 #include "cubec/literal_identifier.h"
@@ -206,4 +207,12 @@ void write_decorator(writer_t writer, node_t node) {
   writer_append(writer, "[[");
   write_expression(writer, dec->expression);
   writer_append(writer, "]]");
+}
+
+void emit_decorator(emit_context_t ctx, node_t node) {
+  cubec_decorator_t dec = (cubec_decorator_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_symbol(ctx, "[[");
+  emit_expression(ctx, dec->expression);
+  emit_symbol(ctx, "]]");
 }

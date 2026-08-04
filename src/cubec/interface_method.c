@@ -1,4 +1,5 @@
 #include "cubec/interface_method.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/function_argument.h"
 #include "cubec/generic_param.h"
@@ -255,4 +256,38 @@ void write_interface_method(writer_t writer, node_t node) {
     write_expression(writer, method->return_type);
   }
   writer_append(writer, ";");
+}
+
+void emit_interface_method(emit_context_t ctx, node_t node) {
+  cubec_interface_method_t method = (cubec_interface_method_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "func");
+  emit_space(ctx);
+  emit_expression(ctx, method->name);
+  if (method->generic_params) {
+    emit_symbol(ctx, "[");
+    for (size_t i = 0; i < vec_get_size(method->generic_params); i++) {
+      if (i != 0) {
+        emit_symbol(ctx, ",");
+        emit_space(ctx);
+      }
+      emit_generic_param(ctx, vec_get(method->generic_params, i));
+    }
+    emit_symbol(ctx, "]");
+  }
+  emit_symbol(ctx, "(");
+  for (size_t i = 0; i < vec_get_size(method->arguments); i++) {
+    if (i != 0) {
+      emit_symbol(ctx, ",");
+      emit_space(ctx);
+    }
+    emit_function_argument(ctx, vec_get(method->arguments, i));
+  }
+  emit_symbol(ctx, ")");
+  if (method->return_type) {
+    emit_symbol(ctx, ":");
+    emit_space(ctx);
+    emit_expression(ctx, method->return_type);
+  }
+  emit_symbol(ctx, ";");
 }

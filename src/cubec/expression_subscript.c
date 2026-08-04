@@ -1,3 +1,4 @@
+#include "core/emit_context.h"
 #include "cubec/expression_subscript.h"
 #include "core/token.h"
 #include "core/writer.h"
@@ -194,4 +195,13 @@ void write_expression_subscript(writer_t writer, node_t node) {
   writer_append(writer, "[");
   write_expression(writer, sub->index);
   writer_append(writer, "]");
+}
+
+void emit_expression_subscript(emit_context_t ctx, node_t node) {
+  cubec_expression_subscript_t sub = (cubec_expression_subscript_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_expression(ctx, sub->host);
+  emit_symbol(ctx, "[");
+  emit_expression(ctx, sub->index);
+  emit_symbol(ctx, "]");
 }

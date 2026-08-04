@@ -188,3 +188,18 @@ void write_statement_do_while(writer_t writer, node_t node) {
   writer_append(writer, ");");
   writer_newline(writer, 0);
 }
+
+void emit_statement_do_while(emit_context_t ctx, node_t node) {
+  cubec_statement_do_while_t stmt = (cubec_statement_do_while_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "do");
+  emit_space(ctx);
+  emit_statement(ctx, stmt->body);
+  emit_space(ctx);
+  emit_keyword(ctx, "while");
+  emit_space(ctx);
+  emit_symbol(ctx, "(");
+  emit_expression(ctx, stmt->condition);
+  emit_symbol(ctx, ")");
+  emit_symbol(ctx, ";");
+}

@@ -1,4 +1,5 @@
 #include "cubec/struct_field.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -187,4 +188,18 @@ void write_struct_field(writer_t writer, node_t node) {
   writer_append(writer, ": ");
   write_expression(writer, field->type);
   writer_append(writer, ";");
+}
+
+void emit_struct_field(emit_context_t ctx, node_t node) {
+  cubec_struct_field_t field = (cubec_struct_field_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  if (field->is_pub) {
+    emit_keyword(ctx, "pub");
+    emit_space(ctx);
+  }
+  emit_expression(ctx, field->name);
+  emit_symbol(ctx, ":");
+  emit_space(ctx);
+  emit_expression(ctx, field->type);
+  emit_symbol(ctx, ";");
 }

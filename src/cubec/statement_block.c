@@ -1,4 +1,5 @@
 #include "cubec/statement_block.h"
+#include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token.h"
 #include "core/vec.h"
@@ -177,4 +178,27 @@ void write_statement_block(writer_t writer, node_t stmt) {
   }
   writer_append(writer, "}");
   writer_newline(writer, 0);
+}
+
+void emit_statement_block(emit_context_t ctx, node_t stmt) {
+  cubec_statement_block_t block = (cubec_statement_block_t)stmt;
+  recover_comments_to(ctx, stmt->location.begin.offset);
+  emit_symbol(ctx, "{");
+  if (vec_get_size(block->statements)) {
+    emit_indent(ctx, +1);
+    emit_newline(ctx);
+    size_t count = vec_get_size(block->statements);
+    for (size_t i = 0; i < count; i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(block->statements, i))->location.begin.offset);
+      emit_statement(ctx, vec_get(block->statements, i));
+      if (i + 1 < count) {
+        emit_newline(ctx);
+      }
+    }
+    emit_indent(ctx, -1);
+    emit_newline(ctx);
+  } else {
+    emit_newline(ctx);
+  }
+  emit_symbol(ctx, "}");
 }

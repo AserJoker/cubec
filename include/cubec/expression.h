@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/emit_context.h"
 #include "core/writer.h"
 #include "cubec/node.h"
 #include "engine/context.h"
@@ -63,6 +64,8 @@ node_t read_expression(context_t ctx, vec_t tokens, size_t *position,
                        const char *filename);
 
 void write_expression(writer_t writer, node_t expr);
+
+void emit_expression(emit_context_t ctx, node_t expr);
 
 #ifdef __cplusplus
 }

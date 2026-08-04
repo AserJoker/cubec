@@ -53,6 +53,8 @@ node_t create_declaration_tuple(context_t ctx, location_t loc,
 
 void write_declaration_tuple(writer_t writer, node_t node);
 
+void emit_declaration_tuple(emit_context_t ctx, node_t node);
+
 #ifdef __cplusplus
 }
 #endif

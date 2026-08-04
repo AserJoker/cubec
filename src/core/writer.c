@@ -46,7 +46,7 @@ struct _writer_t {
 };
 static void writer_init(writer_t self, allocator_t allocator, void *init) {
   (void)(init);
-  self->lines = allocator_create(allocator, &g_vec_type, NULL);
+  self->lines = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
   self->allocator = allocator;
   line_init_t li = {
       .indent = 0,

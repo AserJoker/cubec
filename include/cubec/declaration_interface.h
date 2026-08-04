@@ -86,6 +86,8 @@ node_t create_declaration_interface(context_t ctx, location_t loc,
 
 void write_declaration_interface(writer_t writer, node_t node);
 
+void emit_declaration_interface(emit_context_t ctx, node_t node);
+
 #ifdef __cplusplus
 }
 #endif

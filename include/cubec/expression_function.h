@@ -1,5 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_FUNCTION_
 #define _H_CUBEC_CUBEC_EXPRESSION_FUNCTION_
+#include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -79,6 +80,8 @@ node_t create_expression_function(context_t ctx, location_t loc, node_t name,
                                   bool is_c_variadic);
 
 void write_expression_function(writer_t writer, node_t node);
+
+void emit_expression_function(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

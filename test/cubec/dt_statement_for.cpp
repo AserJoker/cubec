@@ -337,9 +337,9 @@ TEST_F(dt_statement_for, write_simple_for) {
   ASSERT_NE(node, nullptr);
   writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
   write_statement(writer, node);
-  const char *output = string_get(writer_get_string(writer));
+  string_t result = writer_get_string(writer); const char *output = string_get(result);
   EXPECT_STREQ(output, "for (var i = 0; i < 10; i = i + 1) {\n}\n");
-  allocator_free(allocator, &writer);
+  allocator_free(allocator, &result); allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
@@ -353,9 +353,9 @@ TEST_F(dt_statement_foreach, write_simple_foreach) {
   ASSERT_NE(node, nullptr);
   writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
   write_statement(writer, node);
-  const char *output = string_get(writer_get_string(writer));
+  string_t result = writer_get_string(writer); const char *output = string_get(result);
   EXPECT_STREQ(output, "foreach (item of items) {\n}\n");
-  allocator_free(allocator, &writer);
+  allocator_free(allocator, &result); allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

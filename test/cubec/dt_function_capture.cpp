@@ -58,10 +58,10 @@ TEST_F(dt_function_capture, write_basic) {
 
   writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
   write_function_capture(writer, node);
-  const char *output = string_get(writer_get_string(writer));
+  string_t result = writer_get_string(writer); const char *output = string_get(result);
   EXPECT_STREQ(output, "x");
 
-  allocator_free(allocator, &writer);
+  allocator_free(allocator, &result); allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

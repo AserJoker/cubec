@@ -1,4 +1,5 @@
 #include "cubec/expression_generic_instantiation.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/expression.h"
@@ -225,4 +226,19 @@ void write_expression_generic_instantiation(writer_t writer, node_t node) {
     write_expression(writer, vec_get(expr->arguments, i));
   }
   writer_append(writer, "]");
+}
+
+void emit_expression_generic_instantiation(emit_context_t ctx, node_t node) {
+  cubec_expression_generic_instantiation_t expr = (cubec_expression_generic_instantiation_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_expression(ctx, expr->callee);
+  emit_symbol(ctx, "[");
+  for (size_t i = 0; i < vec_get_size(expr->arguments); i++) {
+    if (i != 0) {
+      emit_symbol(ctx, ",");
+      emit_space(ctx);
+    }
+    emit_expression(ctx, vec_get(expr->arguments, i));
+  }
+  emit_symbol(ctx, "]");
 }

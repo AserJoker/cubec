@@ -1,4 +1,5 @@
 #include "cubec/statement_return.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/expression.h"
@@ -157,4 +158,15 @@ void write_statement_return(writer_t writer, node_t node) {
   }
   writer_append(writer, ";");
   writer_newline(writer, 0);
+}
+
+void emit_statement_return(emit_context_t ctx, node_t node) {
+  cubec_statement_return_t stmt = (cubec_statement_return_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "return");
+  if (stmt->expression) {
+    emit_space(ctx);
+    emit_expression(ctx, stmt->expression);
+  }
+  emit_symbol(ctx, ";");
 }

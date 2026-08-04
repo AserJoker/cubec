@@ -1,5 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_CONTINUE_
 #define _H_CUBEC_CUBEC_STATEMENT_CONTINUE_
+#include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -41,6 +42,8 @@ node_t read_statement_continue(context_t ctx, vec_t tokens, size_t *position,
 node_t create_statement_continue(context_t ctx, location_t loc);
 
 void write_statement_continue(writer_t writer, node_t stmt);
+
+void emit_statement_continue(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

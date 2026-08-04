@@ -1,4 +1,5 @@
 #include "cubec/statement_break.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/node_error.h"
@@ -124,4 +125,10 @@ node_t create_statement_break(context_t ctx, location_t loc) {
 void write_statement_break(writer_t writer, node_t node) {
   writer_append(writer, "break;");
   writer_newline(writer, 0);
+}
+
+void emit_statement_break(emit_context_t ctx, node_t node) {
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "break");
+  emit_symbol(ctx, ";");
 }

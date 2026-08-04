@@ -1,5 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_ASSIGNMENT_
 #define _H_CUBEC_CUBEC_EXPRESSION_ASSIGNMENT_
+#include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
@@ -71,6 +72,8 @@ node_t create_expression_assignment(context_t ctx, location_t loc,
                                     node_t rvalue);
 
 void write_expression_assigment(writer_t writer, node_t node);
+
+void emit_expression_assignment(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

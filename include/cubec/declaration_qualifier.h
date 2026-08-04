@@ -49,6 +49,8 @@ node_t create_declaration_qualifier(context_t ctx, location_t loc,
 
 void write_declaration_qualifier(writer_t writer, node_t node);
 
+void emit_declaration_qualifier(emit_context_t ctx, node_t node);
+
 #ifdef __cplusplus
 }
 #endif

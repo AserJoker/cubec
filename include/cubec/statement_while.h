@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/emit_context.h"
 #include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -49,6 +50,8 @@ node_t create_create_while(context_t ctx, location_t loc, node_t cond,
                            node_t body);
 
 void write_statement_while(writer_t writer, node_t node);
+
+void emit_statement_while(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

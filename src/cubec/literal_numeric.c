@@ -1,4 +1,5 @@
 #include "cubec/literal_numeric.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -200,4 +201,10 @@ node_t create_literal_numeric(context_t ctx, location_t loc, const char *value,
 void write_literal_numeric(writer_t writer, node_t node) {
   cubec_literal_numeric_t num = (cubec_literal_numeric_t)node;
   writer_append(writer, string_get(num->value));
+}
+
+void emit_literal_numeric(emit_context_t ctx, node_t node) {
+  cubec_literal_numeric_t num = (cubec_literal_numeric_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_numeric(ctx, string_get(num->value));
 }

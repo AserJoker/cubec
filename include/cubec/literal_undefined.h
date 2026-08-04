@@ -3,6 +3,7 @@
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
+#include "core/emit_context.h"
 #include "core/writer.h"
 #include "cubec/literal.h"
 #include "engine/context.h"
@@ -23,6 +24,8 @@ node_t read_literal_undefined(context_t ctx, vec_t tokens, size_t *position,
 node_t create_literal_undefined(context_t ctx, location_t loc);
 
 void write_literal_undefined(writer_t writer, node_t node);
+
+void emit_literal_undefined(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

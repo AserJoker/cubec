@@ -1,3 +1,4 @@
+#include "core/emit_context.h"
 #include "cubec/expression_spread.h"
 #include "core/token.h"
 #include "core/writer.h"
@@ -124,4 +125,11 @@ void write_expression_spread(writer_t writer, node_t node) {
   cubec_expression_spread_t spread = (cubec_expression_spread_t)node;
   writer_append(writer, "...");
   write_expression(writer, spread->value);
+}
+
+void emit_expression_spread(emit_context_t ctx, node_t node) {
+  cubec_expression_spread_t spread = (cubec_expression_spread_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_symbol(ctx, "...");
+  emit_expression(ctx, spread->value);
 }

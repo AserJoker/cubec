@@ -284,3 +284,34 @@ void write_statement_for(writer_t writer, node_t node) {
   writer_append(writer, ") ");
   write_statement(writer, stmt->body);
 }
+
+void emit_statement_for(emit_context_t ctx, node_t node) {
+  cubec_statement_for_t stmt = (cubec_statement_for_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "for");
+  emit_space(ctx);
+  emit_symbol(ctx, "(");
+  if (stmt->init) {
+    if (stmt->init->kind == CUBEC_NODE_STATEMENT_DECLARATION) {
+      cubec_statement_declaration_t init =
+          (cubec_statement_declaration_t)stmt->init;
+      if (init->is_using)
+        emit_keyword(ctx, "using");
+      else
+        emit_keyword(ctx, "var");
+      emit_space(ctx);
+      emit_declaration_variable(ctx, init->declarator);
+    } else {
+      emit_expression(ctx, stmt->init);
+    }
+  }
+  emit_symbol(ctx, ";");
+  emit_space(ctx);
+  if (stmt->condition) emit_expression(ctx, stmt->condition);
+  emit_symbol(ctx, ";");
+  emit_space(ctx);
+  if (stmt->increment) emit_expression(ctx, stmt->increment);
+  emit_symbol(ctx, ")");
+  emit_space(ctx);
+  emit_statement(ctx, stmt->body);
+}

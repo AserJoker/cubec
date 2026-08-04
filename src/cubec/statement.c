@@ -1,4 +1,5 @@
 #include "cubec/statement.h"
+#include "core/emit_context.h"
 #include "cubec/node.h"
 #include "cubec/node_error.h"
 #include "cubec/statement_block.h"
@@ -480,6 +481,96 @@ void write_statement(writer_t wr, node_t stmt) {
     break;
   case CUBEC_NODE_STATEMENT_ERROR:
     write_statement_error(wr, stmt);
+    break;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ *  Emit dispatcher: emit_statement
+ * -------------------------------------------------------------------------- */
+
+void emit_statement(emit_context_t ctx, node_t stmt) {
+  switch (stmt->kind) {
+  case CUBEC_NODE_STATEMENT_IMPORT:
+    emit_statement_import(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_EXPORT:
+    emit_statement_export(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_EMPTY:
+    emit_statement_empty(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_BLOCK:
+    emit_statement_block(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_TEST:
+    emit_statement_test(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_DEFER:
+    emit_statement_defer(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_BREAK:
+    emit_statement_break(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_CONTINUE:
+    emit_statement_continue(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_EXPRESSION:
+    emit_statement_expression(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_DECLARATION:
+    emit_statement_declaration(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_DECLARATION_TYPE:
+    emit_statement_declaration_type(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_FUNCTION:
+    emit_statement_function(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_IF:
+    emit_statement_if(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_WHILE:
+    emit_statement_while(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_DO_WHILE:
+    emit_statement_do_while(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_FOR:
+    emit_statement_for(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_FOREACH:
+    emit_statement_foreach(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_SWITCH:
+    emit_statement_switch(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_RETURN:
+    emit_statement_return(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_COMPTIME_IF:
+    emit_statement_comptime_if(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_COMPTIME_FOREACH:
+    emit_statement_comptime_foreach(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_STRUCT:
+    emit_statement_struct(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_ENUM:
+    emit_statement_enum(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_UNION:
+    emit_statement_union(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_CUNION:
+    emit_statement_cunion(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_INTERFACE:
+    emit_statement_interface(ctx, stmt);
+    break;
+  case CUBEC_NODE_STATEMENT_ERROR:
+    emit_statement_error(ctx, stmt);
     break;
   }
 }

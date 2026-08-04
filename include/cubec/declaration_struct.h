@@ -89,6 +89,8 @@ node_t create_declaration_struct(context_t ctx, location_t loc,
 
 void write_declaration_struct(writer_t writer, node_t node);
 
+void emit_declaration_struct(emit_context_t ctx, node_t node);
+
 #ifdef __cplusplus
 }
 #endif

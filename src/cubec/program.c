@@ -1,4 +1,5 @@
 #include "cubec/program.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/node_error.h"
@@ -127,5 +128,15 @@ void write_program(writer_t writer, node_t node) {
     node_t statement = vec_get(program->statements, idx);
     write_statement(writer, statement);
     writer_newline(writer, 0);
+  }
+}
+
+void emit_program(emit_context_t ctx, node_t node) {
+  cubec_program_node_t program = (cubec_program_node_t)node;
+  for (size_t idx = 0; idx < vec_get_size(program->statements); idx++) {
+    node_t statement = vec_get(program->statements, idx);
+    recover_comments_to(ctx, statement->location.begin.offset);
+    emit_statement(ctx, statement);
+    emit_newline(ctx);
   }
 }

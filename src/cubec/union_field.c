@@ -1,4 +1,5 @@
 #include "cubec/union_field.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -151,4 +152,14 @@ void write_union_field(writer_t writer, node_t node) {
   writer_append(writer, ": ");
   write_expression(writer, field->type);
   writer_append(writer, ";");
+}
+
+void emit_union_field(emit_context_t ctx, node_t node) {
+  cubec_union_field_t field = (cubec_union_field_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_expression(ctx, field->name);
+  emit_symbol(ctx, ":");
+  emit_space(ctx);
+  emit_expression(ctx, field->type);
+  emit_symbol(ctx, ";");
 }

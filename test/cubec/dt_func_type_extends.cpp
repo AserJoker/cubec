@@ -102,9 +102,9 @@ TEST_F(test_func_type_extends, write_func_type_eq) {
   ASSERT_NE(node, nullptr);
   writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
   write_expression(writer, node);
-  const char *output = string_get(writer_get_string(writer));
+  string_t result = writer_get_string(writer); const char *output = string_get(result);
   EXPECT_STREQ(output, "typeof(fn) == func(i32) -> i32");
-  allocator_free(allocator, &writer);
+  allocator_free(allocator, &result); allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

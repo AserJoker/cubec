@@ -1,4 +1,5 @@
 #include "cubec/declaration_enum.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/enum_item.h"
@@ -217,4 +218,24 @@ void write_declaration_enum(writer_t writer, node_t node) {
     writer_newline(writer, -1);
   }
   writer_append(writer, "}");
+}
+
+void emit_declaration_enum(emit_context_t ctx, node_t node) {
+  cubec_declaration_enum_t en = (cubec_declaration_enum_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "enum");
+  emit_space(ctx);
+  emit_symbol(ctx, "{");
+  if (vec_get_size(en->items)) {
+    emit_newline(ctx);
+    emit_indent(ctx, +1);
+    for (size_t i = 0; i < vec_get_size(en->items); i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(en->items, i))->location.begin.offset);
+      emit_enum_item(ctx, vec_get(en->items, i));
+      emit_symbol(ctx, ",");
+      emit_newline(ctx);
+    }
+    emit_indent(ctx, -1);
+  }
+  emit_symbol(ctx, "}");
 }

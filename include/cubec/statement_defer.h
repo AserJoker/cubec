@@ -1,5 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_DEFER_
 #define _H_CUBEC_CUBEC_STATEMENT_DEFER_
+#include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -54,6 +55,8 @@ node_t create_statement_defer(context_t ctx, location_t loc, vec_t captures,
                               node_t body);
 
 void write_statement_defer(writer_t writer, node_t node);
+
+void emit_statement_defer(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

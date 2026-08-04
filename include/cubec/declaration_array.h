@@ -46,6 +46,8 @@ node_t create_declaration_array(context_t ctx, location_t loc, node_t size,
 
 void write_declaration_array(writer_t writer, node_t node);
 
+void emit_declaration_array(emit_context_t ctx, node_t node);
+
 #ifdef __cplusplus
 }
 #endif

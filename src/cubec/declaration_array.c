@@ -1,4 +1,5 @@
 #include "cubec/declaration_array.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/expression.h"
@@ -164,4 +165,13 @@ void write_declaration_array(writer_t writer, node_t node) {
   write_expression(writer, arr->size);
   writer_append(writer, "]");
   write_expression(writer, arr->type);
+}
+
+void emit_declaration_array(emit_context_t ctx, node_t node) {
+  cubec_declaration_array_t arr = (cubec_declaration_array_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_symbol(ctx, "[");
+  emit_expression(ctx, arr->size);
+  emit_symbol(ctx, "]");
+  emit_expression(ctx, arr->type);
 }

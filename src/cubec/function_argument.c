@@ -1,4 +1,5 @@
 #include "cubec/function_argument.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -172,5 +173,19 @@ void write_function_argument(writer_t writer, node_t node) {
   if (arg->type) {
     writer_append(writer, ": ");
     write_expression(writer, arg->type);
+  }
+}
+
+void emit_function_argument(emit_context_t ctx, node_t node) {
+  cubec_function_argument_t arg = (cubec_function_argument_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  if (arg->is_rest) {
+    emit_symbol(ctx, "...");
+  }
+  emit_expression(ctx, arg->identifier);
+  if (arg->type) {
+    emit_symbol(ctx, ":");
+    emit_space(ctx);
+    emit_expression(ctx, arg->type);
   }
 }

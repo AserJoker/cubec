@@ -1,3 +1,4 @@
+#include "core/emit_context.h"
 #include "cubec/expression_member.h"
 #include "core/token.h"
 #include "cubec/token.h"
@@ -126,4 +127,12 @@ void write_expression_member(writer_t writer, node_t node) {
   write_expression(writer, member->host);
   writer_append(writer, ".");
   write_expression(writer, (node_t)member->field);
+}
+
+void emit_expression_member(emit_context_t ctx, node_t node) {
+  cubec_expression_member_t member = (cubec_expression_member_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_expression(ctx, member->host);
+  emit_symbol(ctx, ".");
+  emit_expression(ctx, (node_t)member->field);
 }

@@ -1,5 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_EXPORT_
 #define _H_CUBEC_CUBEC_STATEMENT_EXPORT_
+#include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -60,6 +61,8 @@ node_t create_statement_export(context_t ctx, location_t loc, node_t path,
                                     bool is_star, vec_t names);
 
 void write_statement_export(writer_t writer, node_t node);
+
+void emit_statement_export(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

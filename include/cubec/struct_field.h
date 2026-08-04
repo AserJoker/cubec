@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/emit_context.h"
 #include "core/writer.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -63,6 +64,8 @@ node_t create_struct_field(context_t ctx, location_t loc, const char *name,
                            node_t type, bool is_pub);
 
 void write_struct_field(writer_t writer, node_t node);
+
+void emit_struct_field(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

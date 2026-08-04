@@ -1,4 +1,5 @@
 #include "cubec/generic_param.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -267,5 +268,31 @@ void write_generic_param(writer_t writer, node_t node) {
   } else if (param->value_type) {
     writer_append(writer, ": ");
     write_expression(writer, param->value_type);
+  }
+}
+
+void emit_generic_param(emit_context_t ctx, node_t node) {
+  cubec_generic_param_t param = (cubec_generic_param_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  if (param->is_rest) {
+    emit_symbol(ctx, "...");
+  }
+  emit_expression(ctx, param->name);
+  if (param->constraints) {
+    emit_space(ctx);
+    emit_keyword(ctx, "extends");
+    emit_space(ctx);
+    for (size_t i = 0; i < vec_get_size(param->constraints); i++) {
+      if (i != 0) {
+        emit_space(ctx);
+        emit_symbol(ctx, "&");
+        emit_space(ctx);
+      }
+      emit_expression(ctx, vec_get(param->constraints, i));
+    }
+  } else if (param->value_type) {
+    emit_symbol(ctx, ":");
+    emit_space(ctx);
+    emit_expression(ctx, param->value_type);
   }
 }

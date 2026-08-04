@@ -1,4 +1,5 @@
 #include "cubec/declaration_slice.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/expression.h"
@@ -172,4 +173,20 @@ void write_declaration_slice(writer_t writer, node_t node) {
     writer_append(writer, "volatile ");
   }
   write_expression(writer, slice->type);
+}
+
+void emit_declaration_slice(emit_context_t ctx, node_t node) {
+  cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_symbol(ctx, "[");
+  emit_symbol(ctx, "]");
+  if (slice->is_const) {
+    emit_keyword(ctx, "const");
+    emit_space(ctx);
+  }
+  if (slice->is_volatile) {
+    emit_keyword(ctx, "volatile");
+    emit_space(ctx);
+  }
+  emit_expression(ctx, slice->type);
 }

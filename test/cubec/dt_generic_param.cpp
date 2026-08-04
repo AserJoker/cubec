@@ -102,10 +102,10 @@ TEST_F(dt_generic_param, write_simple) {
 
   writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
   write_generic_param(writer, param);
-  const char *output = string_get(writer_get_string(writer));
+  string_t result = writer_get_string(writer); const char *output = string_get(result);
   EXPECT_STREQ(output, "T");
 
-  allocator_free(allocator, &writer);
+  allocator_free(allocator, &result); allocator_free(allocator, &writer);
   allocator_free(allocator, &params);
   allocator_free(allocator, &tokens);
 }
@@ -122,10 +122,10 @@ TEST_F(dt_generic_param, write_with_constraint) {
 
   writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
   write_generic_param(writer, param);
-  const char *output = string_get(writer_get_string(writer));
+  string_t result = writer_get_string(writer); const char *output = string_get(result);
   EXPECT_STREQ(output, "T extends Hashable");
 
-  allocator_free(allocator, &writer);
+  allocator_free(allocator, &result); allocator_free(allocator, &writer);
   allocator_free(allocator, &params);
   allocator_free(allocator, &tokens);
 }
@@ -142,10 +142,10 @@ TEST_F(dt_generic_param, write_value_param) {
 
   writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
   write_generic_param(writer, param);
-  const char *output = string_get(writer_get_string(writer));
+  string_t result = writer_get_string(writer); const char *output = string_get(result);
   EXPECT_STREQ(output, "N: u64");
 
-  allocator_free(allocator, &writer);
+  allocator_free(allocator, &result); allocator_free(allocator, &writer);
   allocator_free(allocator, &params);
   allocator_free(allocator, &tokens);
 }

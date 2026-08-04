@@ -1,5 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_DECLARATION_
 #define _H_CUBEC_CUBEC_STATEMENT_DECLARATION_
+#include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -100,6 +101,8 @@ node_t create_statement_declaration(context_t ctx, location_t loc,
                                     bool is_using);
 
 void write_statement_declaration(writer_t writer, node_t node);
+
+void emit_statement_declaration(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

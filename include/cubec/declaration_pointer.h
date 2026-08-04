@@ -49,6 +49,8 @@ node_t create_declaration_pointer(context_t ctx, location_t loc, node_t base,
 
 void write_declaration_pointer(writer_t writer, node_t node);
 
+void emit_declaration_pointer(emit_context_t ctx, node_t node);
+
 #ifdef __cplusplus
 }
 #endif

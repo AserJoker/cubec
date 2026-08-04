@@ -1,3 +1,4 @@
+#include "core/emit_context.h"
 #include "cubec/expression_typeof.h"
 #include "core/token.h"
 #include "core/writer.h"
@@ -134,4 +135,13 @@ void write_expression_typeof(writer_t writer, node_t node) {
   writer_append(writer, "typeof(");
   write_expression(writer, expr->expression);
   writer_append(writer, ")");
+}
+
+void emit_expression_typeof(emit_context_t ctx, node_t node) {
+  cubec_expression_typeof_t expr = (cubec_expression_typeof_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "typeof");
+  emit_symbol(ctx, "(");
+  emit_expression(ctx, expr->expression);
+  emit_symbol(ctx, ")");
 }

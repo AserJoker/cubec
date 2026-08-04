@@ -4,6 +4,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/emit_context.h"
 #include "core/writer.h"
 #include "cubec/declaration.h"
 #include "engine/context.h"
@@ -51,6 +52,8 @@ node_t create_declaration_variable(context_t ctx, location_t loc,
                                    node_t expression);
 
 void write_declaration_variable(writer_t writer, node_t node);
+
+void emit_declaration_variable(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

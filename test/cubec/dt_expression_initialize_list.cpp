@@ -523,10 +523,10 @@ TEST_F(dt_expression_initialize_list, write_typed_init) {
 
   writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
   write_expression(writer, node);
-  const char *output = string_get(writer_get_string(writer));
+  string_t result = writer_get_string(writer); const char *output = string_get(result);
   EXPECT_STREQ(output, "/* error */");
 
-  allocator_free(allocator, &writer);
+  allocator_free(allocator, &result); allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }
@@ -541,10 +541,10 @@ TEST_F(dt_expression_initialize_list, write_untyped_init) {
 
   writer_t writer = (writer_t)allocator_create(allocator, &g_writer_type, NULL);
   write_expression(writer, node);
-  const char *output = string_get(writer_get_string(writer));
+  string_t result = writer_get_string(writer); const char *output = string_get(result);
   EXPECT_STREQ(output, ".{\n  .x = 1,\n}");
 
-  allocator_free(allocator, &writer);
+  allocator_free(allocator, &result); allocator_free(allocator, &writer);
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
 }

@@ -1,4 +1,5 @@
 #include "cubec/statement_declaration_type.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/decorator.h"
@@ -281,4 +282,45 @@ void write_statement_declaration_type(writer_t writer, node_t node) {
   }
   writer_append(writer, ";");
   writer_newline(writer, 0);
+}
+
+void emit_statement_declaration_type(emit_context_t ctx, node_t node) {
+  cubec_statement_declaration_type_t decl = (cubec_statement_declaration_type_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  if (decl->decorators) {
+    for (size_t i = 0; i < vec_get_size(decl->decorators); i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(decl->decorators, i))->location.begin.offset);
+      emit_decorator(ctx, vec_get(decl->decorators, i));
+      emit_newline(ctx);
+    }
+  }
+  if (decl->is_export) {
+    emit_keyword(ctx, "export");
+    emit_space(ctx);
+  }
+  if (decl->is_builtin) {
+    emit_keyword(ctx, "builtin");
+    emit_space(ctx);
+  }
+  emit_keyword(ctx, "type");
+  emit_space(ctx);
+  emit_expression(ctx, decl->name);
+  if (decl->params) {
+    emit_symbol(ctx, "[");
+    for (size_t i = 0; i < vec_get_size(decl->params); i++) {
+      if (i != 0) {
+        emit_symbol(ctx, ",");
+        emit_space(ctx);
+      }
+      emit_generic_param(ctx, vec_get(decl->params, i));
+    }
+    emit_symbol(ctx, "]");
+  }
+  if (decl->type_value) {
+    emit_space(ctx);
+    emit_symbol(ctx, "=");
+    emit_space(ctx);
+    emit_expression(ctx, decl->type_value);
+  }
+  emit_symbol(ctx, ";");
 }

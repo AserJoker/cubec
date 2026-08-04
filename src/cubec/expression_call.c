@@ -1,4 +1,5 @@
 #include "cubec/expression_call.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/vec.h"
 #include "core/writer.h"
@@ -203,4 +204,19 @@ void write_expression_call(writer_t writer, node_t node) {
     write_expression(writer, arg);
   }
   writer_append(writer, ")");
+}
+
+void emit_expression_call(emit_context_t ctx, node_t node) {
+  cubec_expression_call_t expr = (cubec_expression_call_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_expression(ctx, expr->callee);
+  emit_symbol(ctx, "(");
+  for (size_t idx = 0; idx < vec_get_size(expr->arguments); idx++) {
+    if (idx != 0) {
+      emit_symbol(ctx, ",");
+      emit_space(ctx);
+    }
+    emit_expression(ctx, vec_get(expr->arguments, idx));
+  }
+  emit_symbol(ctx, ")");
 }

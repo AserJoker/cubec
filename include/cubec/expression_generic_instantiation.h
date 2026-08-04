@@ -1,5 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_GENERIC_INSTANTIATION_
 #define _H_CUBEC_CUBEC_EXPRESSION_GENERIC_INSTANTIATION_
+#include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -57,6 +58,8 @@ node_t create_expression_generic_instantiation(context_t ctx, location_t loc,
                                                node_t callee, vec_t args);
 
 void write_expression_generic_instantiation(writer_t writer, node_t node);
+
+void emit_expression_generic_instantiation(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

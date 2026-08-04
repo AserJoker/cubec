@@ -1,4 +1,5 @@
 #include "cubec/literal_identifier.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -105,4 +106,10 @@ node_t create_literal_identifier(context_t ctx, location_t loc,
 void write_literal_identifier(writer_t writer, node_t node) {
   cubec_literal_identifier_t identifier = (cubec_literal_identifier_t)node;
   writer_append(writer, string_get(identifier->value));
+}
+
+void emit_literal_identifier(emit_context_t ctx, node_t node) {
+  cubec_literal_identifier_t identifier = (cubec_literal_identifier_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_identifier(ctx, string_get(identifier->value));
 }

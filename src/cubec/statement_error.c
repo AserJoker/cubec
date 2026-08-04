@@ -1,4 +1,5 @@
 #include "cubec/statement_error.h"
+#include "core/emit_context.h"
 #include "core/writer.h"
 #include "cubec/node.h"
 #include "engine/context.h"
@@ -52,4 +53,24 @@ void write_statement_error(writer_t writer, node_t node) {
   (void)node;
   writer_append(writer, "/* error */");
   writer_newline(writer, 0);
+}
+
+void emit_statement_error(emit_context_t ctx, node_t node) {
+  /* Clone source tokens within the error node's location range verbatim */
+  size_t idx = ctx->source_token_idx;
+  size_t count = vec_get_size(ctx->source_tokens);
+  while (idx < count) {
+    token_t tok = vec_get(ctx->source_tokens, idx);
+    if (!tok)
+      break;
+    location_t *loc = token_get_location(tok);
+    if (!loc || loc->begin.offset >= node->location.end.offset)
+      break;
+    /* Clone all token types (including whitespace/comments) to preserve
+     * original source text verbatim */
+    token_t cloned = (token_t)value_clone(ctx->allocator, tok);
+    vec_push(ctx->output_tokens, cloned);
+    idx++;
+  }
+  ctx->source_token_idx = idx;
 }

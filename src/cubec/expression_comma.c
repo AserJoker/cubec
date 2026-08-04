@@ -1,4 +1,5 @@
 #include "cubec/expression_comma.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/expression.h"
@@ -156,4 +157,13 @@ void write_expression_comma(writer_t writer, node_t expr) {
   write_expression(writer, comma->left);
   writer_append(writer, ", ");
   write_expression(writer, comma->right);
+}
+
+void emit_expression_comma(emit_context_t ctx, node_t node) {
+  cubec_expression_comma_t comma = (cubec_expression_comma_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_expression(ctx, comma->left);
+  emit_symbol(ctx, ",");
+  emit_space(ctx);
+  emit_expression(ctx, comma->right);
 }

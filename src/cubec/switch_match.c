@@ -1,4 +1,5 @@
 #include "cubec/switch_match.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
@@ -219,4 +220,27 @@ void write_switch_match(writer_t writer, node_t node) {
   }
   writer_append(writer, " -> ");
   write_statement(writer, match->body);
+}
+
+void emit_switch_match(emit_context_t ctx, node_t node) {
+  cubec_switch_match_t match = (cubec_switch_match_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  if (match->is_else) {
+    emit_keyword(ctx, "else");
+  } else {
+    emit_keyword(ctx, "case");
+    emit_symbol(ctx, "(");
+    for (size_t i = 0; i < vec_get_size(match->values); i++) {
+      if (i != 0) {
+        emit_symbol(ctx, ",");
+        emit_space(ctx);
+      }
+      emit_expression(ctx, vec_get(match->values, i));
+    }
+    emit_symbol(ctx, ")");
+  }
+  emit_space(ctx);
+  emit_symbol(ctx, "->");
+  emit_space(ctx);
+  emit_statement(ctx, match->body);
 }

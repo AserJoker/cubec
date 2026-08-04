@@ -1,3 +1,4 @@
+#include "core/emit_context.h"
 #include "cubec/expression_addr.h"
 #include "core/token.h"
 #include "core/writer.h"
@@ -121,4 +122,11 @@ void write_expression_addr(writer_t writer, node_t node) {
   cubec_expression_addr_t addr = (cubec_expression_addr_t)node;
   write_expression(writer, addr->host);
   writer_append(writer, ".&");
+}
+
+void emit_expression_addr(emit_context_t ctx, node_t node) {
+  cubec_expression_addr_t addr = (cubec_expression_addr_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_expression(ctx, addr->host);
+  emit_symbol(ctx, ".&");
 }

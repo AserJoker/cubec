@@ -47,6 +47,8 @@ node_t create_declaration_slice(context_t ctx, location_t loc, node_t base,
                                 bool is_const, bool is_volatile);
 void write_declaration_slice(writer_t writer, node_t node);
 
+void emit_declaration_slice(emit_context_t ctx, node_t node);
+
 #ifdef __cplusplus
 }
 #endif

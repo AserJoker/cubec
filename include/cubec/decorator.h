@@ -5,6 +5,7 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/writer.h"
+#include "core/emit_context.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -49,6 +50,8 @@ node_t read_decorator(context_t ctx, vec_t tokens, size_t *position,
 node_t create_decorator(context_t ctx, location_t loc, node_t expr);
 
 void write_decorator(writer_t writer, node_t node);
+
+void emit_decorator(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

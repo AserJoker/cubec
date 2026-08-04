@@ -1,4 +1,5 @@
 #include "cubec/literal_string.h"
+#include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token.h"
 #include "core/writer.h"
@@ -123,4 +124,12 @@ void write_literal_string(writer_t writer, node_t node) {
   writer_append(writer, "\"");
   writer_append(writer, string_get(str->value));
   writer_append(writer, "\"");
+}
+
+void emit_literal_string(emit_context_t ctx, node_t node) {
+  cubec_literal_string_t str = (cubec_literal_string_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_symbol(ctx, "\"");
+  emit_string_literal(ctx, string_get(str->value));
+  emit_symbol(ctx, "\"");
 }

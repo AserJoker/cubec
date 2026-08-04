@@ -5,6 +5,7 @@
 #include "core/type.h"
 #include "core/vec.h"
 #include "core/writer.h"
+#include "core/emit_context.h"
 #include "engine/context.h"
 #ifdef __cplusplus
 extern "C" {
@@ -61,6 +62,8 @@ node_t create_enum_item(context_t ctx, location_t loc, const char *name,
                         node_t type, node_t value);
 
 void write_enum_item(writer_t writer, node_t node);
+
+void emit_enum_item(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

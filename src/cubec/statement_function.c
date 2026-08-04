@@ -1,4 +1,5 @@
 #include "cubec/statement_function.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/decorator.h"
@@ -422,5 +423,93 @@ void write_statement_function(writer_t writer, node_t node) {
   } else {
     writer_append(writer, ";");
     writer_newline(writer, 0);
+  }
+}
+
+void emit_statement_function(emit_context_t ctx, node_t node) {
+  cubec_statement_function_t func = (cubec_statement_function_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  if (func->decorators) {
+    for (size_t i = 0; i < vec_get_size(func->decorators); i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(func->decorators, i))->location.begin.offset);
+      emit_decorator(ctx, vec_get(func->decorators, i));
+      emit_newline(ctx);
+    }
+  }
+  if (func->is_export) {
+    emit_keyword(ctx, "export");
+    emit_space(ctx);
+  }
+  if (func->is_exportlib) {
+    emit_keyword(ctx, "exportlib");
+    emit_space(ctx);
+  }
+  if (func->is_inline) {
+    emit_keyword(ctx, "inline");
+    emit_space(ctx);
+  }
+  if (func->is_extern) {
+    emit_keyword(ctx, "extern");
+    emit_space(ctx);
+  }
+  if (func->is_builtin) {
+    emit_keyword(ctx, "builtin");
+    emit_space(ctx);
+  }
+  if (func->is_comptime) {
+    emit_keyword(ctx, "comptime");
+    emit_space(ctx);
+  }
+  emit_keyword(ctx, "func");
+  if (func->captures) {
+    emit_symbol(ctx, "|");
+    for (size_t i = 0; i < vec_get_size(func->captures); i++) {
+      if (i != 0) {
+        emit_symbol(ctx, ",");
+        emit_space(ctx);
+      }
+      emit_function_capture(ctx, vec_get(func->captures, i));
+    }
+    emit_symbol(ctx, "|");
+  }
+  emit_space(ctx);
+  emit_expression(ctx, func->name);
+  if (func->generic_params) {
+    emit_symbol(ctx, "[");
+    for (size_t i = 0; i < vec_get_size(func->generic_params); i++) {
+      if (i != 0) {
+        emit_symbol(ctx, ",");
+        emit_space(ctx);
+      }
+      emit_generic_param(ctx, vec_get(func->generic_params, i));
+    }
+    emit_symbol(ctx, "]");
+  }
+  emit_symbol(ctx, "(");
+  for (size_t i = 0; i < vec_get_size(func->arguments); i++) {
+    if (i != 0) {
+      emit_symbol(ctx, ",");
+      emit_space(ctx);
+    }
+    emit_function_argument(ctx, vec_get(func->arguments, i));
+  }
+  if (func->is_c_variadic) {
+    if (vec_get_size(func->arguments) > 0) {
+      emit_symbol(ctx, ",");
+      emit_space(ctx);
+    }
+    emit_symbol(ctx, "...");
+  }
+  emit_symbol(ctx, ")");
+  if (func->return_type) {
+    emit_symbol(ctx, ":");
+    emit_space(ctx);
+    emit_expression(ctx, func->return_type);
+  }
+  if (func->body) {
+    emit_space(ctx);
+    emit_statement(ctx, func->body);
+  } else {
+    emit_symbol(ctx, ";");
   }
 }

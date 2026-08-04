@@ -1,3 +1,4 @@
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/initialize_field.h"
 #include "cubec/literal_identifier.h"
@@ -147,4 +148,15 @@ void write_initialize_field(writer_t writer, node_t node) {
   write_expression(writer, (node_t)field->field);
   writer_append(writer, " = ");
   write_expression(writer, field->value);
+}
+
+void emit_initialize_field(emit_context_t ctx, node_t node) {
+  cubec_initialize_field_t field = (cubec_initialize_field_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_symbol(ctx, ".");
+  emit_expression(ctx, (node_t)field->field);
+  emit_space(ctx);
+  emit_symbol(ctx, "=");
+  emit_space(ctx);
+  emit_expression(ctx, field->value);
 }

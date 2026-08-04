@@ -1,4 +1,5 @@
 #include "cubec/statement_import.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/literal_identifier.h"
@@ -166,4 +167,17 @@ void write_statement_import(writer_t writer, node_t node) {
   write_literal_string(writer, import->path);
   writer_append(writer, ";");
   writer_newline(writer, 0);
+}
+
+void emit_statement_import(emit_context_t ctx, node_t node) {
+  cubec_statement_import_t import = (cubec_statement_import_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "import");
+  emit_space(ctx);
+  emit_literal_identifier(ctx, import->module_name);
+  emit_space(ctx);
+  emit_keyword(ctx, "from");
+  emit_space(ctx);
+  emit_literal_string(ctx, import->path);
+  emit_symbol(ctx, ";");
 }

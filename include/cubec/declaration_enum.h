@@ -78,6 +78,8 @@ node_t create_declaration_enum(context_t ctx, location_t loc, vec_t items);
 
 void write_declaration_enum(writer_t writer, node_t node);
 
+void emit_declaration_enum(emit_context_t ctx, node_t node);
+
 #ifdef __cplusplus
 }
 #endif

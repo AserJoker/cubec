@@ -1,4 +1,5 @@
 #include "cubec/statement_switch.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/expression.h"
@@ -207,4 +208,33 @@ void write_statement_switch(writer_t writer, node_t node) {
   }
   writer_append(writer, "}");
   writer_newline(writer, 0);
+}
+
+void emit_statement_switch(emit_context_t ctx, node_t node) {
+  cubec_statement_switch_t stmt = (cubec_statement_switch_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "switch");
+  emit_space(ctx);
+  emit_symbol(ctx, "(");
+  emit_expression(ctx, stmt->condition);
+  emit_symbol(ctx, ")");
+  emit_space(ctx);
+  emit_symbol(ctx, "{");
+  if (vec_get_size(stmt->matches)) {
+    emit_indent(ctx, +1);
+    emit_newline(ctx);
+    size_t count = vec_get_size(stmt->matches);
+    for (size_t i = 0; i < count; i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(stmt->matches, i))->location.begin.offset);
+      emit_switch_match(ctx, vec_get(stmt->matches, i));
+      if (i + 1 < count) {
+        emit_newline(ctx);
+      }
+    }
+    emit_indent(ctx, -1);
+    emit_newline(ctx);
+  } else {
+    emit_newline(ctx);
+  }
+  emit_symbol(ctx, "}");
 }

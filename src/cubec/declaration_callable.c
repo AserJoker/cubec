@@ -1,4 +1,5 @@
 #include "cubec/declaration_callable.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/vec.h"
 #include "core/writer.h"
@@ -349,4 +350,28 @@ void write_declaration_callable(writer_t writer, node_t node) {
   }
   writer_append(writer, ") -> ");
   write_expression(writer, expr->return_type);
+}
+
+void emit_declaration_callable(emit_context_t ctx, node_t node) {
+  cubec_declaration_callable_t expr = (cubec_declaration_callable_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "func");
+  emit_symbol(ctx, "(");
+  for (size_t idx = 0; idx < vec_get_size(expr->parameters); idx++) {
+    if (idx != 0) {
+      emit_symbol(ctx, ",");
+      emit_space(ctx);
+    }
+    emit_expression(ctx, vec_get(expr->parameters, idx));
+  }
+  if (expr->is_c_variadic) {
+    emit_symbol(ctx, ",");
+    emit_space(ctx);
+    emit_symbol(ctx, "...");
+  }
+  emit_symbol(ctx, ")");
+  emit_space(ctx);
+  emit_symbol(ctx, "->");
+  emit_space(ctx);
+  emit_expression(ctx, expr->return_type);
 }

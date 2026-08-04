@@ -1,5 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_COMMA_
 #define _H_CUBEC_CUBEC_EXPRESSION_COMMA_
+#include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -44,6 +45,8 @@ node_t create_expression_comma(context_t ctx, location_t loc, node_t left,
                                node_t right);
 
 void write_expression_comma(writer_t writer, node_t expr);
+
+void emit_expression_comma(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

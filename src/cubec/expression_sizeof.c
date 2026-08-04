@@ -1,3 +1,4 @@
+#include "core/emit_context.h"
 #include "cubec/expression_sizeof.h"
 #include "core/token.h"
 #include "core/writer.h"
@@ -134,4 +135,13 @@ void write_expression_sizeof(writer_t writer, node_t node) {
   writer_append(writer, "sizeof(");
   write_expression(writer, expr->expression);
   writer_append(writer, ")");
+}
+
+void emit_expression_sizeof(emit_context_t ctx, node_t node) {
+  cubec_expression_sizeof_t expr = (cubec_expression_sizeof_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "sizeof");
+  emit_symbol(ctx, "(");
+  emit_expression(ctx, expr->expression);
+  emit_symbol(ctx, ")");
 }

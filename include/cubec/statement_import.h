@@ -1,5 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_IMPORT_
 #define _H_CUBEC_CUBEC_STATEMENT_IMPORT_
+#include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -55,6 +56,8 @@ node_t create_statement_import(context_t ctx, location_t loc,
                                const char *module_name, const char *path);
 
 void write_statement_import(writer_t writer, node_t node);
+
+void emit_statement_import(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

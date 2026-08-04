@@ -66,6 +66,8 @@ node_t create_declaration_callable(context_t ctx, location_t loc,
                                   bool is_c_variadic);
 void write_declaration_callable(writer_t writer, node_t node);
 
+void emit_declaration_callable(emit_context_t ctx, node_t node);
+
 #ifdef __cplusplus
 }
 #endif

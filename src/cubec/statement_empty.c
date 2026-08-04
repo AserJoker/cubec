@@ -1,4 +1,5 @@
 #include "cubec/statement_empty.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
@@ -80,4 +81,9 @@ node_t create_statement_empty(context_t ctx, location_t loc) {
 void write_statement_empty(writer_t writer, node_t node) {
   writer_append(writer, ";");
   writer_newline(writer, 0);
+}
+
+void emit_statement_empty(emit_context_t ctx, node_t node) {
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_symbol(ctx, ";");
 }

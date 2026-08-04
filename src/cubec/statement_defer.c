@@ -1,4 +1,5 @@
 #include "cubec/statement_defer.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/vec.h"
 #include "core/writer.h"
@@ -190,4 +191,23 @@ void write_statement_defer(writer_t writer, node_t node) {
     writer_append(writer, "|");
   }
   write_statement_block(writer, defer->body);
+}
+
+void emit_statement_defer(emit_context_t ctx, node_t node) {
+  cubec_statement_defer_t defer = (cubec_statement_defer_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "defer");
+  emit_space(ctx);
+  if (defer->captures && vec_get_size(defer->captures)) {
+    emit_symbol(ctx, "|");
+    for (size_t idx = 0; idx < vec_get_size(defer->captures); idx++) {
+      if (idx != 0) {
+        emit_symbol(ctx, ",");
+        emit_space(ctx);
+      }
+      emit_function_capture(ctx, vec_get(defer->captures, idx));
+    }
+    emit_symbol(ctx, "|");
+  }
+  emit_statement_block(ctx, defer->body);
 }

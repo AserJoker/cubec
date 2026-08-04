@@ -1,4 +1,5 @@
 #include "cubec/declaration_tuple.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/expression_spread.h"
@@ -215,4 +216,18 @@ void write_declaration_tuple(writer_t writer, node_t node) {
     write_expression(writer, vec_get(tuple->element_types, i));
   }
   writer_append(writer, ">");
+}
+
+void emit_declaration_tuple(emit_context_t ctx, node_t node) {
+  cubec_declaration_tuple_t tuple = (cubec_declaration_tuple_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_symbol(ctx, "<");
+  for (size_t i = 0; i < vec_get_size(tuple->element_types); i++) {
+    if (i != 0) {
+      emit_symbol(ctx, ",");
+      emit_space(ctx);
+    }
+    emit_expression(ctx, vec_get(tuple->element_types, i));
+  }
+  emit_symbol(ctx, ">");
 }

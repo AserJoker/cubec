@@ -1,4 +1,5 @@
 #include "cubec/expression_assignment.h"
+#include "core/emit_context.h"
 #include "core/allocator.h"
 #include "core/string.h"
 #include "core/token.h"
@@ -208,4 +209,14 @@ void write_expression_assigment(writer_t writer, node_t node) {
   writer_append(writer, string_get(expr->opt));
   writer_append(writer, " ");
   write_expression(writer, expr->right);
+}
+
+void emit_expression_assignment(emit_context_t ctx, node_t node) {
+  cubec_expression_assignment_t expr = (cubec_expression_assignment_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_expression(ctx, expr->left);
+  emit_space(ctx);
+  emit_symbol(ctx, string_get(expr->opt));
+  emit_space(ctx);
+  emit_expression(ctx, expr->right);
 }

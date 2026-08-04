@@ -5,6 +5,7 @@
 #include "core/node.h"
 #include "core/type.h"
 #include "core/vec.h"
+#include "core/emit_context.h"
 #include "core/writer.h"
 #ifdef __cplusplus
 extern "C" {
@@ -88,6 +89,9 @@ node_t create_statement_comptime_foreach(context_t ctx, location_t loc,
 
 void write_statement_comptime_if(writer_t writer, node_t node);
 void write_statement_comptime_foreach(writer_t writer, node_t node);
+
+void emit_statement_comptime_if(emit_context_t ctx, node_t node);
+void emit_statement_comptime_foreach(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

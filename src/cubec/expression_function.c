@@ -1,8 +1,12 @@
 #include "cubec/expression_function.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/writer.h"
 #include "cubec/expression.h"
 #include "cubec/function_argument.h"
+#include "cubec/function_capture.h"
+#include "cubec/generic_param.h"
+#include "cubec/statement.h"
 #include "cubec/function_capture.h"
 #include "cubec/generic_param.h"
 #include "cubec/literal_identifier.h"
@@ -393,5 +397,62 @@ void write_expression_function(writer_t writer, node_t node) {
     write_statement(writer, expr->body);
   } else {
     writer_append(writer, ";");
+  }
+}
+
+void emit_expression_function(emit_context_t ctx, node_t node) {
+  cubec_expression_function_t expr = (cubec_expression_function_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "func");
+  if (expr->captures) {
+    emit_symbol(ctx, "|");
+    for (size_t i = 0; i < vec_get_size(expr->captures); i++) {
+      if (i != 0) {
+        emit_symbol(ctx, ",");
+        emit_space(ctx);
+      }
+      emit_function_capture(ctx, vec_get(expr->captures, i));
+    }
+    emit_symbol(ctx, "|");
+  }
+  if (expr->name) {
+    emit_space(ctx);
+    emit_expression(ctx, expr->name);
+  }
+  if (expr->generic_params) {
+    emit_symbol(ctx, "[");
+    for (size_t i = 0; i < vec_get_size(expr->generic_params); i++) {
+      if (i != 0) {
+        emit_symbol(ctx, ",");
+        emit_space(ctx);
+      }
+      emit_generic_param(ctx, vec_get(expr->generic_params, i));
+    }
+    emit_symbol(ctx, "]");
+  }
+  emit_symbol(ctx, "(");
+  for (size_t i = 0; i < vec_get_size(expr->arguments); i++) {
+    if (i != 0) {
+      emit_symbol(ctx, ",");
+      emit_space(ctx);
+    }
+    emit_function_argument(ctx, vec_get(expr->arguments, i));
+  }
+  if (expr->is_c_variadic) {
+    emit_symbol(ctx, ",");
+    emit_space(ctx);
+    emit_symbol(ctx, "...");
+  }
+  emit_symbol(ctx, ")");
+  if (expr->return_type) {
+    emit_symbol(ctx, ":");
+    emit_space(ctx);
+    emit_expression(ctx, expr->return_type);
+  }
+  if (expr->body) {
+    emit_space(ctx);
+    emit_statement(ctx, expr->body);
+  } else {
+    emit_symbol(ctx, ";");
   }
 }

@@ -1,4 +1,5 @@
 #include "cubec/statement_test.h"
+#include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token.h"
 #include "core/writer.h"
@@ -152,4 +153,14 @@ void write_statement_test(writer_t writer, node_t stmt) {
   writer_append(writer, string_get(test->name));
   writer_append(writer, " ");
   write_statement_block(writer, test->body);
+}
+
+void emit_statement_test(emit_context_t ctx, node_t stmt) {
+  cubec_statement_test_t test = (cubec_statement_test_t)stmt;
+  recover_comments_to(ctx, stmt->location.begin.offset);
+  emit_keyword(ctx, "test");
+  emit_space(ctx);
+  emit_string_literal(ctx, string_get(test->name));
+  emit_space(ctx);
+  emit_statement_block(ctx, test->body);
 }

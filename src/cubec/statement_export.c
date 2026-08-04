@@ -1,4 +1,5 @@
 #include "cubec/statement_export.h"
+#include "core/emit_context.h"
 #include "core/token.h"
 #include "core/vec.h"
 #include "core/writer.h"
@@ -234,4 +235,29 @@ void write_statement_export(writer_t writer, node_t node) {
   write_literal_string(writer, export_node->path);
   writer_append(writer, ";");
   writer_newline(writer, 0);
+}
+
+void emit_statement_export(emit_context_t ctx, node_t node) {
+  cubec_statement_export_t export_node = (cubec_statement_export_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "export");
+  emit_space(ctx);
+  if (export_node->is_star) {
+    emit_symbol(ctx, "*");
+  } else {
+    emit_symbol(ctx, "{");
+    for (size_t i = 0; i < vec_get_size(export_node->names); i++) {
+      if (i > 0) {
+        emit_symbol(ctx, ",");
+        emit_space(ctx);
+      }
+      emit_literal_identifier(ctx, vec_get(export_node->names, i));
+    }
+    emit_symbol(ctx, "}");
+  }
+  emit_space(ctx);
+  emit_keyword(ctx, "from");
+  emit_space(ctx);
+  emit_literal_string(ctx, export_node->path);
+  emit_symbol(ctx, ";");
 }

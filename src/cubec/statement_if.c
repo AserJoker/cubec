@@ -219,3 +219,22 @@ void write_statement_if(writer_t writer, node_t node) {
     write_statement(writer, stmt->else_branch);
   }
 }
+
+void emit_statement_if(emit_context_t ctx, node_t node) {
+  cubec_statement_if_t stmt = (cubec_statement_if_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "if");
+  emit_space(ctx);
+  emit_symbol(ctx, "(");
+  emit_expression(ctx, stmt->condition);
+  emit_symbol(ctx, ")");
+  emit_space(ctx);
+  emit_statement(ctx, stmt->then_branch);
+  if (stmt->else_branch) {
+    emit_space(ctx);
+    recover_comments_to(ctx, stmt->else_branch->location.begin.offset);
+    emit_keyword(ctx, "else");
+    emit_space(ctx);
+    emit_statement(ctx, stmt->else_branch);
+  }
+}

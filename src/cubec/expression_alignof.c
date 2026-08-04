@@ -1,3 +1,4 @@
+#include "core/emit_context.h"
 #include "cubec/expression_alignof.h"
 #include "core/token.h"
 #include "core/writer.h"
@@ -131,4 +132,13 @@ void write_expression_alignof(writer_t writer, node_t node) {
   writer_append(writer, "alignof(");
   write_expression(writer, expr->expression);
   writer_append(writer, ")");
+}
+
+void emit_expression_alignof(emit_context_t ctx, node_t node) {
+  cubec_expression_alignof_t expr = (cubec_expression_alignof_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_keyword(ctx, "alignof");
+  emit_symbol(ctx, "(");
+  emit_expression(ctx, expr->expression);
+  emit_symbol(ctx, ")");
 }

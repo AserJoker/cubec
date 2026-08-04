@@ -1,5 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_WILDCARD_
 #define _H_CUBEC_CUBEC_EXPRESSION_WILDCARD_
+#include "core/emit_context.h"
 #include "core/writer.h"
 #include "cubec/expression.h"
 #ifdef __cplusplus
@@ -43,6 +44,8 @@ node_t read_expression_wildcard(context_t ctx, vec_t tokens,
 node_t create_expression_wildcard(context_t ctx, location_t loc, bool is_tuple);
 
 void write_expression_wildcard(writer_t writer, node_t node);
+
+void emit_expression_wildcard(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

@@ -1,5 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_INITIALIZE_LIST_
 #define _H_CUBEC_CUBEC_EXPRESSION_INITIALIZE_LIST_
+#include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/type.h"
@@ -56,6 +57,8 @@ node_t create_expression_initialize_list(context_t ctx, location_t loc,
                                          bool is_field);
 
 void write_expression_initialize_list(writer_t writer, node_t node);
+
+void emit_expression_initialize_list(emit_context_t ctx, node_t node);
 
 #ifdef __cplusplus
 }

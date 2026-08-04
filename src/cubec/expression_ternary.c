@@ -1,3 +1,4 @@
+#include "core/emit_context.h"
 #include "cubec/expression_ternary.h"
 #include "core/token.h"
 #include "core/writer.h"
@@ -198,4 +199,18 @@ void write_expression_ternary(writer_t writer, node_t node) {
   write_expression(writer, ternary->consequent);
   writer_append(writer, " : ");
   write_expression(writer, ternary->alternate);
+}
+
+void emit_expression_ternary(emit_context_t ctx, node_t node) {
+  cubec_expression_ternary_t ternary = (cubec_expression_ternary_t)node;
+  recover_comments_to(ctx, node->location.begin.offset);
+  emit_expression(ctx, ternary->condition);
+  emit_space(ctx);
+  emit_symbol(ctx, "?");
+  emit_space(ctx);
+  emit_expression(ctx, ternary->consequent);
+  emit_space(ctx);
+  emit_symbol(ctx, ":");
+  emit_space(ctx);
+  emit_expression(ctx, ternary->alternate);
 }
