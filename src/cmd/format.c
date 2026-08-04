@@ -6,6 +6,7 @@
 #include "cubec/program.h"
 #include "cubec/token.h"
 #include "engine/context.h"
+#include "engine/module.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -86,17 +87,22 @@ static int format_run(const cmd_parsed_t *parsed) {
   node_t program = read_program_node(ctx, tokens, &pos, input_path);
   if (!program) {
     fprintf(stderr, "error: failed to parse '%s'\n", input_path);
-    free(source);
+    allocator_free(allocator, &tokens);
     context_dispose(ctx);
     delete_allocator(allocator);
+    free(source);
     return 1;
   }
 
-  /* 5. Emit */
-  emit_context_t ectx = emit_context_create(allocator, tokens);
-  emit_program(ectx, program);
+  /* 5. Create module with compiled results */
+  module_t mod = module_create(allocator, input_path, source, tokens, program);
+  /* source & tokens ownership now belongs to module */
 
-  /* 6. Render */
+  /* 6. Emit */
+  emit_context_t ectx = emit_context_create(allocator, mod->tokens);
+  emit_program(ectx, mod->program);
+
+  /* 7. Render */
   string_t output = token_writer_render(allocator, ectx->output_tokens);
   const char *output_str = string_get(output);
   size_t output_len = string_get_length(output);
@@ -104,7 +110,6 @@ static int format_run(const cmd_parsed_t *parsed) {
   int exit_code = 0;
 
   if (check_flag) {
-    /* --check: compare and return 1 if formatting differs */
     if (output_len != src_len || memcmp(output_str, source, src_len) != 0) {
       exit_code = 1;
     }
@@ -119,11 +124,9 @@ static int format_run(const cmd_parsed_t *parsed) {
   /* Cleanup */
   allocator_free(allocator, &output);
   emit_context_dispose(ectx);
-  allocator_free(allocator, &tokens);
-  allocator_free(allocator, &program);
+  module_dispose(mod);
   context_dispose(ctx);
   delete_allocator(allocator);
-  free(source);
   return exit_code;
 }
 

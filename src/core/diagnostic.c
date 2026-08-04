@@ -1,5 +1,6 @@
 #include "core/diagnostic.h"
-#include "core/source.h"
+#include "engine/context.h"
+#include "engine/module.h"
 #include <stdarg.h>
 #include <string.h>
 
@@ -143,43 +144,71 @@ static void format_location(FILE *out, location_t *loc) {
 }
 
 static void emit_diagnostic(FILE *out, struct diagnostic *d,
-                            source_cache_t sources) {
+                            struct context *ctx) {
   fprintf(out, "%s: %s\n", severity_str(d->severity), d->message);
 
   format_location(out, &d->primary);
   fprintf(out, "\n");
 
-  if (sources && d->primary.filename) {
-    struct source_entry *entry =
-        source_cache_find(sources, d->primary.filename);
-    if (entry) {
-      size_t line = d->primary.begin.line + 1;
-      const char *src_line = source_entry_get_line(entry, line);
-      size_t line_count = source_entry_get_line_count(entry);
+  if (ctx && d->primary.filename) {
+    module_t mod = context_get_module(ctx, d->primary.filename);
+    if (mod) {
+      const char *src = mod->source;
+      if (src) {
+        /* Compute source line from the module's source text */
+        size_t line = d->primary.begin.line + 1;
+        size_t line_start = 0;
+        size_t current_line = 1;
+        size_t src_len = strlen(src);
 
-      int width = 1;
-      size_t tmp = line_count;
-      while (tmp >= 10) {
-        tmp /= 10;
-        width++;
-      }
+        for (size_t i = 0; i < src_len && current_line < line; i++) {
+          if (src[i] == '\n') {
+            current_line++;
+            line_start = i + 1;
+          }
+        }
 
-      fprintf(out, " %*s |\n", width, "");
-      fprintf(out, " %*zu | %s\n", width, line, src_line);
+        size_t line_end = line_start;
+        while (line_end < src_len && src[line_end] != '\n' && src[line_end] != '\r') {
+          line_end++;
+        }
 
-      fprintf(out, " %*s | ", width, "");
-      size_t col = d->primary.begin.column + 1;
-      size_t span_len = 1;
-      if (d->primary.end.offset > d->primary.begin.offset) {
-        span_len = (size_t)(d->primary.end.offset - d->primary.begin.offset);
+        /* Count total lines for width calculation */
+        size_t line_count = 1;
+        for (size_t i = 0; i < src_len; i++) {
+          if (src[i] == '\n') line_count++;
+        }
+
+        int width = 1;
+        size_t tmp = line_count;
+        while (tmp >= 10) {
+          tmp /= 10;
+          width++;
+        }
+
+        size_t line_len = line_end - line_start;
+        if (line_len >= 4096) line_len = 4095;
+        char line_buf[4096];
+        memcpy(line_buf, src + line_start, line_len);
+        line_buf[line_len] = '\0';
+
+        fprintf(out, " %*s |\n", width, "");
+        fprintf(out, " %*zu | %s\n", width, line, line_buf);
+
+        fprintf(out, " %*s | ", width, "");
+        size_t col = d->primary.begin.column + 1;
+        size_t span_len = 1;
+        if (d->primary.end.offset > d->primary.begin.offset) {
+          span_len = (size_t)(d->primary.end.offset - d->primary.begin.offset);
+        }
+        for (size_t i = 1; i < col; i++) {
+          fprintf(out, " ");
+        }
+        for (size_t i = 0; i < span_len; i++) {
+          fprintf(out, "^");
+        }
+        fprintf(out, "\n");
       }
-      for (size_t i = 1; i < col; i++) {
-        fprintf(out, " ");
-      }
-      for (size_t i = 0; i < span_len; i++) {
-        fprintf(out, "^");
-      }
-      fprintf(out, "\n");
     }
   }
 
@@ -197,11 +226,11 @@ static void emit_diagnostic(FILE *out, struct diagnostic *d,
   fprintf(out, "\n");
 }
 
-void diagnostic_list_emit(diagnostic_list_t self, source_cache_t sources) {
+void diagnostic_list_emit(diagnostic_list_t self, struct context *ctx) {
   size_t size = vec_get_size(self->diagnostics);
   for (size_t i = 0; i < size; i++) {
     struct diagnostic *d = (struct diagnostic *)vec_get(self->diagnostics, i);
-    emit_diagnostic(self->output, d, sources);
+    emit_diagnostic(self->output, d, ctx);
   }
 }
 

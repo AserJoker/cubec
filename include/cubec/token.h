@@ -6,7 +6,8 @@
 extern "C" {
 #endif
 #include "core/token.h"
-#include "engine/context.h"
+struct context;
+typedef struct context *context_t;
 #include <stddef.h>
 #include <stdint.h>
 enum _cubec_token_kind_t {

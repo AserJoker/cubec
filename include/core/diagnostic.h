@@ -49,8 +49,8 @@ struct diagnostic *diagnostic_list_push(diagnostic_list_t self,
 void diagnostic_list_push_note(diagnostic_list_t self, location_t location,
                                const char *fmt, ...);
 
-typedef struct _source_cache_t *source_cache_fwd_t;
-void diagnostic_list_emit(diagnostic_list_t self, source_cache_fwd_t sources);
+struct context;
+void diagnostic_list_emit(diagnostic_list_t self, struct context *ctx);
 
 void diagnostic_list_clear(diagnostic_list_t self);
 
