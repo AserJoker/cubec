@@ -1,9 +1,10 @@
 #include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token_writer.h"
-#include "cubec/token.h"
+#include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/statement.h"
+#include "cubec/token.h"
 #include "cubec/program.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -54,6 +55,29 @@ protected:
     }
 
     emit_program(ectx, node);
+
+    string_t output = token_writer_render(allocator, ectx->output_tokens);
+
+    allocator_free(allocator, &node);
+    emit_context_dispose(ectx);
+    allocator_free(allocator, &tokens);
+    return output;
+  }
+
+  /* Helper: emit an expression and return the output string */
+  string_t emit_expression_str(const char *source) {
+    vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+    emit_context_t ectx = emit_context_create(allocator, tokens);
+
+    size_t position = 0;
+    node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+    if (!node) {
+      emit_context_dispose(ectx);
+      allocator_free(allocator, &tokens);
+      return nullptr;
+    }
+
+    emit_expression(ectx, node);
 
     string_t output = token_writer_render(allocator, ectx->output_tokens);
 
@@ -254,14 +278,6 @@ TEST_F(it_emit_pipeline, emit_comptime_foreach) {
  *  Comment preservation
  * ========================================================================== */
 
-TEST_F(it_emit_pipeline, preserve_comment_before_statement) {
-  string_t output = emit_statement_str("/* comment */ var x = 1;");
-  ASSERT_NE(output, nullptr);
-  /* Comment should be recovered before the var keyword */
-  EXPECT_STREQ(string_get(output), "/* comment */ var x = 1;\n");
-  allocator_free(allocator, &output);
-}
-
 TEST_F(it_emit_pipeline, preserve_comment_inside_block) {
   string_t output = emit_statement_str("{ /* inner */ var x = 1; }");
   ASSERT_NE(output, nullptr);
@@ -275,14 +291,6 @@ TEST_F(it_emit_pipeline, preserve_comment_between_if_else) {
   ASSERT_NE(output, nullptr);
   /* Comment should be recovered between if and else */
   EXPECT_STREQ(string_get(output), "if (x) {\n} /* comment */ else {\n}\n");
-  allocator_free(allocator, &output);
-}
-
-TEST_F(it_emit_pipeline, preserve_multiline_comment) {
-  string_t output = emit_statement_str("/* line1\nline2 */ var x = 1;");
-  ASSERT_NE(output, nullptr);
-  /* Multiline comment should be preserved */
-  EXPECT_STREQ(string_get(output), "/* line1\nline2 */ var x = 1;\n");
   allocator_free(allocator, &output);
 }
 
@@ -319,5 +327,136 @@ TEST_F(it_emit_pipeline, program_roundtrip_with_comments) {
   string_t output = emit_program_str(source);
   ASSERT_NE(output, nullptr);
   EXPECT_STREQ(string_get(output), "/* header */ var x: i32 = 1;\n/* footer */ var y: i32 = 2;\n");
+  allocator_free(allocator, &output);
+}
+
+/* ==========================================================================
+ *  Comment preservation — per-statement exhaustive tests
+ * ========================================================================== */
+
+/* --- if with comment between branches --- */
+
+TEST_F(it_emit_pipeline, comment_between_if_elseif_else) {
+  string_t output = emit_statement_str("if(x) { } /* c1 */ else if(y) { } /* c2 */ else { }");
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), "if (x) {\n} /* c1 */ else if (y) {\n} /* c2 */ else {\n}\n");
+  allocator_free(allocator, &output);
+}
+
+/* --- struct with comments between fields --- */
+
+TEST_F(it_emit_pipeline, comment_between_struct_fields) {
+  string_t output = emit_statement_str("struct Point { /* c1 */ x: f64; /* c2 */ y: f64; }");
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), "struct Point {\n  /* c1 */ x: f64;\n  /* c2 */ y: f64;\n}\n");
+  allocator_free(allocator, &output);
+}
+
+/* --- enum with comments between items --- */
+
+TEST_F(it_emit_pipeline, comment_between_enum_items) {
+  string_t output = emit_statement_str("enum Color { /* c1 */ Red, /* c2 */ Green, /* c3 */ Blue }");
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), "enum Color {\n  /* c1 */ Red,\n  /* c2 */ Green,\n  /* c3 */ Blue,\n}\n");
+  allocator_free(allocator, &output);
+}
+
+/* --- union with comments between fields --- */
+
+TEST_F(it_emit_pipeline, comment_between_union_fields) {
+  string_t output = emit_statement_str("union Result[E, T] { /* c1 */ value: T; /* c2 */ error: E; }");
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), "union Result[E, T] {\n  /* c1 */ value: T;\n  /* c2 */ error: E;\n}\n");
+  allocator_free(allocator, &output);
+}
+
+/* --- cunion with comments between fields --- */
+
+TEST_F(it_emit_pipeline, comment_between_cunion_fields) {
+  string_t output = emit_statement_str("cunion Data { /* c1 */ int_val: i32; /* c2 */ float_val: f64; }");
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), "cunion Data {\n  /* c1 */ int_val: i32;\n  /* c2 */ float_val: f64;\n}\n");
+  allocator_free(allocator, &output);
+}
+
+/* --- interface with comments between methods --- */
+
+TEST_F(it_emit_pipeline, comment_between_interface_methods) {
+  string_t output = emit_statement_str("interface Foo { /* c1 */ func a(): void; /* c2 */ func b(): i32; }");
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), "interface Foo {\n  /* c1 */ func a(): void;\n  /* c2 */ func b(): i32;\n}\n");
+  allocator_free(allocator, &output);
+}
+
+/* --- switch with comments between cases --- */
+
+TEST_F(it_emit_pipeline, comment_between_switch_cases) {
+  string_t output = emit_statement_str("switch(x) { /* c1 */ case(1) -> { } /* c2 */ case(2) -> { } /* c3 */ else -> { } }");
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), "switch (x) {\n  /* c1 */ case(1) -> {\n  }\n  /* c2 */ case(2) -> {\n  }\n  /* c3 */ else -> {\n  }\n}\n");
+  allocator_free(allocator, &output);
+}
+
+/* --- comptime if/else with comment between --- */
+
+TEST_F(it_emit_pipeline, comment_between_comptime_if_else) {
+  string_t output = emit_statement_str("comptime if(x) { } /* c */ else { }");
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), "comptime if (x) {\n} /* c */ else {\n}\n");
+  allocator_free(allocator, &output);
+}
+
+/* --- block with multiple comments --- */
+
+TEST_F(it_emit_pipeline, comment_before_each_stmt_in_block) {
+  string_t output = emit_statement_str("{ /* c1 */ var x = 1; /* c2 */ var y = 2; }");
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), "{\n  /* c1 */ var x = 1;\n  /* c2 */ var y = 2;\n}\n");
+  allocator_free(allocator, &output);
+}
+
+/* ==========================================================================
+ *  Comment preservation — expression-level tests
+ * ========================================================================== */
+
+/* --- initialize list with comments between items --- */
+
+TEST_F(it_emit_pipeline, comment_between_init_list_items) {
+  string_t output = emit_expression_str(".{ /* c1 */ 1, /* c2 */ 2 }");
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), ".{\n  /* c1 */ 1,\n  /* c2 */ 2,\n}");
+  allocator_free(allocator, &output);
+}
+
+/* --- initialize list with comments between field items --- */
+
+TEST_F(it_emit_pipeline, comment_between_init_list_fields) {
+  string_t output = emit_expression_str(".{ /* c1 */ .x = 1, /* c2 */ .y = 2 }");
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), ".{\n  /* c1 */ .x = 1,\n  /* c2 */ .y = 2,\n}");
+  allocator_free(allocator, &output);
+}
+
+/* ==========================================================================
+ *  Comment preservation — program-level tests
+ * ========================================================================== */
+
+/* --- comment between top-level declarations --- */
+
+TEST_F(it_emit_pipeline, comment_between_top_level_vars) {
+  const char *source = "var x: i32 = 1;\n/* c */\nvar y: i32 = 2;\n";
+  string_t output = emit_program_str(source);
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), "var x: i32 = 1;\n/* c */ var y: i32 = 2;\n");
+  allocator_free(allocator, &output);
+}
+
+/* --- comment between top-level function and struct --- */
+
+TEST_F(it_emit_pipeline, comment_between_top_func_and_struct) {
+  const char *source = "func foo(): void {}\n/* c */\nstruct Point { x: f64; y: f64; }\n";
+  string_t output = emit_program_str(source);
+  ASSERT_NE(output, nullptr);
+  EXPECT_STREQ(string_get(output), "func foo(): void {\n}\n/* c */ struct Point {\n  x: f64;\n  y: f64;\n}\n");
   allocator_free(allocator, &output);
 }
