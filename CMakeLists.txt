@@ -52,12 +52,13 @@ target_compile_options(gtest PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wno-character-co
 # ===========================================================================
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/third_party/cJSON)
+aux_source_directory(${PROJECT_SOURCE_DIR}/src/cmd SRC_CMD)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/core SRC_CORE)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/engine SRC_ENGINE)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/cubec SRC_CUBEC)
 aux_source_directory(${PROJECT_SOURCE_DIR}/src/builder SRC_BUILDER)
 set(SRC_CJSON ${PROJECT_SOURCE_DIR}/third_party/cJSON/cJSON.c)
-add_executable(cubec ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_BUILDER} ${SRC_CJSON} ${PROJECT_SOURCE_DIR}/src/main.c ${PROJECT_SOURCE_DIR}/src/icu_data.c)
+add_executable(cubec ${SRC_CMD} ${SRC_CORE} ${SRC_ENGINE} ${SRC_CUBEC} ${SRC_BUILDER} ${SRC_CJSON} ${PROJECT_SOURCE_DIR}/src/main.c ${PROJECT_SOURCE_DIR}/src/icu_data.c)
 target_link_libraries(cubec PRIVATE
     ICU::i18n
     ICU::uc
