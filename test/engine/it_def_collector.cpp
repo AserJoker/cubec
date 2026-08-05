@@ -74,9 +74,9 @@ TEST_F(it_def_collector, var_def) {
   module_dispose(mod);
 }
 
-/* ---- struct def ---- */
+/* ---- struct def with generic params ---- */
 
-TEST_F(it_def_collector, struct_def) {
+TEST_F(it_def_collector, struct_def_no_generic) {
   const char *source = "struct Point { x: f64; y: f64; }";
   module_t mod = parse_and_collect(source, "test.cubec");
 
@@ -84,9 +84,36 @@ TEST_F(it_def_collector, struct_def) {
   ASSERT_NE(name, nullptr);
   ASSERT_NE(name->ref, nullptr);
 
-  def_t def = (def_t)name->ref;
-  EXPECT_EQ(def->kind, DEF_STRUCT);
-  EXPECT_NE(def->node, nullptr);
+  struct_def_t def = (struct_def_t)name->ref;
+  EXPECT_EQ(def->super.kind, DEF_STRUCT);
+  ASSERT_NE(def->params, nullptr);
+  EXPECT_EQ(strmap_get_size(def->params), 0);
+  EXPECT_EQ(def->implements, nullptr);
+  EXPECT_EQ(def->members, nullptr);
+
+  module_dispose(mod);
+}
+
+TEST_F(it_def_collector, struct_def_with_generic) {
+  const char *source = "struct Container[T] { value: T; }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  struct_def_t def = (struct_def_t)find_name(mod, "Container")->ref;
+  ASSERT_NE(def->params, nullptr);
+  EXPECT_EQ(strmap_get_size(def->params), 1);
+  ASSERT_NE(strmap_find(def->params, "T"), nullptr);
+
+  module_dispose(mod);
+}
+
+TEST_F(it_def_collector, struct_def_multi_generic) {
+  const char *source = "struct Map[K, V] { key: K; val: V; }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  struct_def_t def = (struct_def_t)find_name(mod, "Map")->ref;
+  EXPECT_EQ(strmap_get_size(def->params), 2);
+  ASSERT_NE(strmap_find(def->params, "K"), nullptr);
+  ASSERT_NE(strmap_find(def->params, "V"), nullptr);
 
   module_dispose(mod);
 }
@@ -110,34 +137,67 @@ TEST_F(it_def_collector, enum_def) {
 
 /* ---- union def ---- */
 
-TEST_F(it_def_collector, union_def) {
+TEST_F(it_def_collector, union_def_no_generic) {
+  const char *source = "union Option { value: i32; empty: void; }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  union_def_t def = (union_def_t)find_name(mod, "Option")->ref;
+  EXPECT_EQ(def->super.kind, DEF_UNION);
+  ASSERT_NE(def->params, nullptr);
+  EXPECT_EQ(strmap_get_size(def->params), 0);
+  EXPECT_EQ(def->implements, nullptr);
+  EXPECT_EQ(def->members, nullptr);
+
+  module_dispose(mod);
+}
+
+TEST_F(it_def_collector, union_def_with_generic) {
   const char *source = "union Option[T] { value: T; empty: void; }";
   module_t mod = parse_and_collect(source, "test.cubec");
 
-  name_t name = find_name(mod, "Option");
-  ASSERT_NE(name, nullptr);
-  ASSERT_NE(name->ref, nullptr);
+  union_def_t def = (union_def_t)find_name(mod, "Option")->ref;
+  ASSERT_NE(def->params, nullptr);
+  EXPECT_EQ(strmap_get_size(def->params), 1);
+  ASSERT_NE(strmap_find(def->params, "T"), nullptr);
 
-  def_t def = (def_t)name->ref;
-  EXPECT_EQ(def->kind, DEF_UNION);
-  EXPECT_NE(def->node, nullptr);
+  module_dispose(mod);
+}
+
+TEST_F(it_def_collector, union_def_multi_generic) {
+  const char *source = "union Either[A, B] { left: A; right: B; }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  union_def_t def = (union_def_t)find_name(mod, "Either")->ref;
+  EXPECT_EQ(strmap_get_size(def->params), 2);
+  ASSERT_NE(strmap_find(def->params, "A"), nullptr);
+  ASSERT_NE(strmap_find(def->params, "B"), nullptr);
 
   module_dispose(mod);
 }
 
 /* ---- interface def ---- */
 
-TEST_F(it_def_collector, interface_def) {
+TEST_F(it_def_collector, interface_def_no_generic) {
   const char *source = "interface Printable { func to_string(self): string; }";
   module_t mod = parse_and_collect(source, "test.cubec");
 
-  name_t name = find_name(mod, "Printable");
-  ASSERT_NE(name, nullptr);
-  ASSERT_NE(name->ref, nullptr);
+  interface_def_t def = (interface_def_t)find_name(mod, "Printable")->ref;
+  EXPECT_EQ(def->super.kind, DEF_INTERFACE);
+  ASSERT_NE(def->params, nullptr);
+  EXPECT_EQ(strmap_get_size(def->params), 0);
+  EXPECT_EQ(def->members, nullptr);
 
-  def_t def = (def_t)name->ref;
-  EXPECT_EQ(def->kind, DEF_INTERFACE);
-  EXPECT_NE(def->node, nullptr);
+  module_dispose(mod);
+}
+
+TEST_F(it_def_collector, interface_def_with_generic) {
+  const char *source = "interface Container[T] { func get(self): T; }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  interface_def_t def = (interface_def_t)find_name(mod, "Container")->ref;
+  ASSERT_NE(def->params, nullptr);
+  EXPECT_EQ(strmap_get_size(def->params), 1);
+  ASSERT_NE(strmap_find(def->params, "T"), nullptr);
 
   module_dispose(mod);
 }

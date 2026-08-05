@@ -63,25 +63,30 @@ struct _func_def_t {
 typedef struct _struct_def_t *struct_def_t;
 struct _struct_def_t {
   struct _def_t super;
-  /* TODO: generic_params, implements, members */
+  strmap_t params;     /* owned: param name → param_def_t */
+  vec_t implements;    /* NULL for now, filled next stage */
+  vec_t members;       /* NULL for now, filled next stage */
 };
 
 typedef struct _union_def_t *union_def_t;
 struct _union_def_t {
   struct _def_t super;
-  /* TODO: generic_params, implements, members */
+  strmap_t params;     /* owned: param name → param_def_t */
+  vec_t implements;    /* NULL for now, filled next stage */
+  vec_t members;       /* NULL for now, filled next stage */
 };
 
 typedef struct _enum_def_t *enum_def_t;
 struct _enum_def_t {
   struct _def_t super;
-  /* TODO: items */
+  vec_t items;         /* NULL for now, filled next stage */
 };
 
 typedef struct _interface_def_t *interface_def_t;
 struct _interface_def_t {
   struct _def_t super;
-  /* TODO: generic_params, members */
+  strmap_t params;     /* owned: param name → param_def_t */
+  vec_t members;       /* NULL for now, filled next stage */
 };
 
 typedef struct _type_alias_def_t *type_alias_def_t;
@@ -107,7 +112,7 @@ struct _namespace_def_t {
 typedef struct _cunion_def_t *cunion_def_t;
 struct _cunion_def_t {
   struct _def_t super;
-  /* TODO: members */
+  vec_t members;       /* NULL for now, filled next stage */
 };
 
 #ifdef __cplusplus

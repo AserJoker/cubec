@@ -60,12 +60,20 @@ static func_def_t _create_func_def(allocator_t allocator, node_t node) {
   return def;
 }
 
+static strmap_t _create_params_strmap(allocator_t allocator) {
+  strmap_init_t sm_init = {.value_auto_dispose = true};
+  return (strmap_t)allocator_create(allocator, &g_strmap_type, &sm_init);
+}
+
 static struct_def_t _create_struct_def(allocator_t allocator, node_t node) {
   struct_def_t def =
       (struct_def_t)allocator_alloc(allocator, sizeof(struct _struct_def_t));
   def->super.allocator = allocator;
   def->super.kind = DEF_STRUCT;
   def->super.node = node;
+  def->params = _create_params_strmap(allocator);
+  def->implements = NULL;
+  def->members = NULL;
   return def;
 }
 
@@ -75,6 +83,9 @@ static union_def_t _create_union_def(allocator_t allocator, node_t node) {
   def->super.allocator = allocator;
   def->super.kind = DEF_UNION;
   def->super.node = node;
+  def->params = _create_params_strmap(allocator);
+  def->implements = NULL;
+  def->members = NULL;
   return def;
 }
 
@@ -84,6 +95,7 @@ static enum_def_t _create_enum_def(allocator_t allocator, node_t node) {
   def->super.allocator = allocator;
   def->super.kind = DEF_ENUM;
   def->super.node = node;
+  def->items = NULL;
   return def;
 }
 
@@ -94,6 +106,8 @@ static interface_def_t _create_interface_def(allocator_t allocator,
   def->super.allocator = allocator;
   def->super.kind = DEF_INTERFACE;
   def->super.node = node;
+  def->params = _create_params_strmap(allocator);
+  def->members = NULL;
   return def;
 }
 
@@ -110,10 +124,8 @@ static type_alias_def_t _create_type_alias_def(allocator_t allocator,
   def->super.allocator = allocator;
   def->super.kind = DEF_TYPE_ALIAS;
   def->super.node = node;
-  strmap_init_t sm_init = {.value_auto_dispose = true};
-  def->params = (strmap_t)allocator_create(allocator, &g_strmap_type, &sm_init);
+  def->params = _create_params_strmap(allocator);
   def->type_value = NULL;
-  def->is_builtin = is_builtin;
   def->is_builtin = is_builtin;
   return def;
 }
@@ -144,6 +156,7 @@ static cunion_def_t _create_cunion_def(allocator_t allocator, node_t node) {
   def->super.allocator = allocator;
   def->super.kind = DEF_CUNION;
   def->super.node = node;
+  def->members = NULL;
   return def;
 }
 
@@ -157,6 +170,23 @@ static void _bind_definition(scope_t scope, const char *name_str, def_t def) {
   name_t name = (name_t)strmap_find(scope->names, name_str);
   if (name)
     name->ref = def;
+}
+
+/** Extract generic param names from AST vec into def's params strmap. */
+static void _extract_generic_params(allocator_t allocator, vec_t ast_params,
+                                    strmap_t out_params) {
+  if (!ast_params)
+    return;
+  size_t count = vec_get_size(ast_params);
+  for (size_t i = 0; i < count; i++) {
+    node_t param_node = (node_t)vec_get(ast_params, i);
+    cubec_generic_param_t gp = (cubec_generic_param_t)param_node;
+    const char *param_name = _get_identifier_name(gp->name);
+    if (param_name) {
+      param_def_t pd = _create_param_def(allocator);
+      strmap_insert(out_params, param_name, pd);
+    }
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -198,6 +228,7 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
     if (!name_str)
       break;
     struct_def_t def = _create_struct_def(ctx->allocator, stmt);
+    _extract_generic_params(ctx->allocator, s->generic_params, def->params);
     _bind_definition(scope, name_str, &def->super);
     break;
   }
@@ -209,6 +240,7 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
     if (!name_str)
       break;
     union_def_t def = _create_union_def(ctx->allocator, stmt);
+    _extract_generic_params(ctx->allocator, u->generic_params, def->params);
     _bind_definition(scope, name_str, &def->super);
     break;
   }
@@ -231,6 +263,7 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
     if (!name_str)
       break;
     interface_def_t def = _create_interface_def(ctx->allocator, stmt);
+    _extract_generic_params(ctx->allocator, iface->generic_params, def->params);
     _bind_definition(scope, name_str, &def->super);
     break;
   }
