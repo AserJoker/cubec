@@ -147,21 +147,11 @@ static void _bind_definition(scope_t scope, const char *name_str, def_t def) {
     name->ref = def;
 }
 
-static void _bind_export(module_t mod, const char *name_str, def_t def) {
-  name_t name = (name_t)strmap_find(mod->exports, name_str);
-  if (name)
-    name->ref = def;
-}
-
 /* --------------------------------------------------------------------------
  *  Statement-level definition collection
  * -------------------------------------------------------------------------- */
 
 static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
-  module_t mod = (scope->kind == SCOPE_MODULE && scope->owner)
-                     ? (module_t)scope->owner
-                     : NULL;
-
   switch (stmt->kind) {
   /* var / const */
   case CUBEC_NODE_STATEMENT_DECLARATION: {
@@ -175,8 +165,6 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
       break;
     var_def_t def = _create_var_def(ctx->allocator, stmt);
     _bind_definition(scope, name_str, &def->super);
-    if (mod && decl->is_export)
-      _bind_export(mod, name_str, &def->super);
     break;
   }
 
@@ -188,8 +176,6 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
       break;
     func_def_t def = _create_func_def(ctx->allocator, stmt);
     _bind_definition(scope, name_str, &def->super);
-    if (mod && func->is_export)
-      _bind_export(mod, name_str, &def->super);
     break;
   }
 
@@ -201,8 +187,6 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
       break;
     struct_def_t def = _create_struct_def(ctx->allocator, stmt);
     _bind_definition(scope, name_str, &def->super);
-    if (mod && s->is_export)
-      _bind_export(mod, name_str, &def->super);
     break;
   }
 
@@ -214,8 +198,6 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
       break;
     union_def_t def = _create_union_def(ctx->allocator, stmt);
     _bind_definition(scope, name_str, &def->super);
-    if (mod && u->is_export)
-      _bind_export(mod, name_str, &def->super);
     break;
   }
 
@@ -227,8 +209,6 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
       break;
     enum_def_t def = _create_enum_def(ctx->allocator, stmt);
     _bind_definition(scope, name_str, &def->super);
-    if (mod && e->is_export)
-      _bind_export(mod, name_str, &def->super);
     break;
   }
 
@@ -240,8 +220,6 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
       break;
     interface_def_t def = _create_interface_def(ctx->allocator, stmt);
     _bind_definition(scope, name_str, &def->super);
-    if (mod && iface->is_export)
-      _bind_export(mod, name_str, &def->super);
     break;
   }
 
@@ -265,8 +243,6 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
       break;
     type_alias_def_t def = _create_type_alias_def(ctx->allocator, stmt);
     _bind_definition(scope, name_str, &def->super);
-    if (mod && t->is_export)
-      _bind_export(mod, name_str, &def->super);
     break;
   }
 
@@ -287,11 +263,9 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
     break;
   }
 
-  /* export */
+  /* export — just ensure dependency module has been def-collected */
   case CUBEC_NODE_STATEMENT_EXPORT: {
     cubec_statement_export_t exp = (cubec_statement_export_t)stmt;
-    if (!mod)
-      break;
     const char *mod_path = _get_string_value(exp->path);
     if (!mod_path)
       break;
@@ -300,27 +274,6 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
       break;
     if (dep_mod->state < MODULE_RESOLVED)
       def_collector_run(ctx, dep_mod);
-    /* Copy def refs from dependency exports into current module's exports */
-    if (exp->is_star) {
-      strmap_iter_t it = strmap_iter_first(dep_mod->exports);
-      const char *key;
-      while ((key = strmap_iter_next(&it)) != NULL) {
-        name_t dep_name = (name_t)strmap_find(dep_mod->exports, key);
-        if (dep_name && dep_name->ref)
-          _bind_export(mod, key, (def_t)dep_name->ref);
-      }
-    } else {
-      size_t name_count = vec_get_size(exp->names);
-      for (size_t i = 0; i < name_count; i++) {
-        node_t name_node = (node_t)vec_get(exp->names, i);
-        const char *exp_name = _get_identifier_name(name_node);
-        if (!exp_name)
-          continue;
-        name_t dep_name = (name_t)strmap_find(dep_mod->exports, exp_name);
-        if (dep_name && dep_name->ref)
-          _bind_export(mod, exp_name, (def_t)dep_name->ref);
-      }
-    }
     break;
   }
 

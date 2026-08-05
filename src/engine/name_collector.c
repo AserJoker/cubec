@@ -79,18 +79,21 @@ static bool _scope_insert_name(context_t ctx, scope_t scope, node_t node,
   return true;
 }
 
-/** Insert a name into a module's export table. Returns true on success. */
-static bool _module_export_name(context_t ctx, module_t mod, node_t node,
-                                const char *name_str, enum name_kind kind,
-                                void *ref) {
+/** Insert a reference to an existing name into a module's export table.
+ *  Does NOT create a new name_t — reuses the one from scope->names. */
+static void _module_export_name(context_t ctx, module_t mod, node_t node,
+                                const char *name_str) {
   name_t existing = (name_t)strmap_find(mod->exports, name_str);
   if (existing) {
     _report_error(ctx, node, "duplicate export of '%s'", name_str);
-    return false;
+    return;
   }
-  name_t name = name_create(mod->allocator, kind, ref);
-  strmap_insert(mod->exports, name_str, name);
-  return true;
+  name_t scope_name = (name_t)strmap_find(mod->root_scope->names, name_str);
+  if (!scope_name) {
+    _report_error(ctx, node, "cannot export undeclared name '%s'", name_str);
+    return;
+  }
+  strmap_insert(mod->exports, name_str, scope_name);
 }
 
 /* --------------------------------------------------------------------------
@@ -130,7 +133,7 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_VARIABLE, NULL))
       break;
     if (mod && decl->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_VARIABLE, NULL);
+      _module_export_name(ctx, mod, stmt, name_str);
     break;
   }
 
@@ -146,7 +149,7 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_FUNCTION, NULL))
       break;
     if (mod && func->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_FUNCTION, NULL);
+      _module_export_name(ctx, mod, stmt, name_str);
     break;
   }
 
@@ -162,7 +165,7 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
       break;
     if (mod && s->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, NULL);
+      _module_export_name(ctx, mod, stmt, name_str);
     /* TODO: recurse into struct members for method/type collection */
     break;
   }
@@ -177,7 +180,7 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
       break;
     if (mod && u->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, NULL);
+      _module_export_name(ctx, mod, stmt, name_str);
     /* TODO: recurse into union members for method/type collection */
     break;
   }
@@ -192,7 +195,7 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
       break;
     if (mod && e->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, NULL);
+      _module_export_name(ctx, mod, stmt, name_str);
     break;
   }
   case CUBEC_NODE_STATEMENT_INTERFACE: {
@@ -206,7 +209,7 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
       break;
     if (mod && iface->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, NULL);
+      _module_export_name(ctx, mod, stmt, name_str);
     /* TODO: recurse into interface members for method/type collection */
     break;
   }
@@ -230,7 +233,7 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
       break;
     if (mod && t->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, NULL);
+      _module_export_name(ctx, mod, stmt, name_str);
     break;
   }
 
@@ -283,14 +286,14 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
       break;
     }
     name_collector_run(ctx, dep_mod);
-    /* Copy exported names from dependency into current module's exports */
+    /* Re-export: reference the same name_t objects from dep_mod */
     if (exp->is_star) {
       /* export * — re-export all */
       strmap_iter_t it = strmap_iter_first(dep_mod->exports);
       const char *key;
       while ((key = strmap_iter_next(&it)) != NULL) {
-        name_t value = (name_t)strmap_find(dep_mod->exports, key);
-        _module_export_name(ctx, mod, stmt, key, value->kind, NULL);
+        name_t dep_name = (name_t)strmap_find(dep_mod->exports, key);
+        strmap_insert(mod->exports, key, dep_name);
       }
     } else {
       /* export { name1, name2 } — re-export only listed names */
@@ -306,7 +309,7 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
                         exp_name, mod_path);
           continue;
         }
-        _module_export_name(ctx, mod, stmt, exp_name, dep_name->kind, NULL);
+        strmap_insert(mod->exports, exp_name, dep_name);
       }
     }
     break;

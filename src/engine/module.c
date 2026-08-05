@@ -43,7 +43,7 @@ module_t module_create(allocator_t allocator, scope_t parent_scope,
   mod->program = program;
   /* scope_create already calls scope_add_child(parent_scope, scope) */
   mod->root_scope = scope_create(allocator, SCOPE_MODULE, parent_scope, mod);
-  strmap_init_t sm_init = {.value_auto_dispose = true};
+  strmap_init_t sm_init = {.value_auto_dispose = false};
   mod->exports = (strmap_t)allocator_create(allocator, &g_strmap_type, &sm_init);
   return mod;
 }
