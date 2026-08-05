@@ -28,6 +28,7 @@ struct _module_t {
   vec_t tokens;          /* owned token list (auto-dispose vec) */
   node_t program;        /* owned AST root node */
   scope_t root_scope;    /* owned: module root scope */
+  strmap_t exports;      /* exported names: symbol name → name_t */
   int state;             /* module processing state (enum module_state) */
 };
 

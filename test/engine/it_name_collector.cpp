@@ -257,3 +257,101 @@ TEST_F(it_name_collector, context_import_caches_by_abs_path) {
   module_t mod2 = context_import(ctx, tmp_path);
   EXPECT_EQ(mod1, mod2); /* same pointer, cached */
 }
+
+/* ---- Export: exported func appears in module exports ---- */
+
+TEST_F(it_name_collector, export_function) {
+  const char *source = "export func add(a: i32, b: i32): i32 { return a + b; }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "add");
+  ASSERT_NE(name, nullptr);
+  EXPECT_EQ(name->kind, NAME_FUNCTION);
+
+  /* Also check exports table */
+  name_t exported = (name_t)strmap_find(mod->exports, "add");
+  ASSERT_NE(exported, nullptr);
+  EXPECT_EQ(exported->kind, NAME_FUNCTION);
+
+  module_dispose(mod);
+}
+
+/* ---- Export: exported struct appears in module exports ---- */
+
+TEST_F(it_name_collector, export_struct) {
+  const char *source = "export struct Point { x: f64; y: f64; }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t exported = (name_t)strmap_find(mod->exports, "Point");
+  ASSERT_NE(exported, nullptr);
+  EXPECT_EQ(exported->kind, NAME_TYPE);
+
+  module_dispose(mod);
+}
+
+/* ---- Export: non-exported name does NOT appear in exports ---- */
+
+TEST_F(it_name_collector, non_exported_not_in_exports) {
+  const char *source =
+      "func internal(): void {}\n"
+      "export func api(): void {}\n";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  /* internal is in scope names but not in exports */
+  name_t scope_name = find_name(mod, "internal");
+  ASSERT_NE(scope_name, nullptr);
+  name_t exported_internal = (name_t)strmap_find(mod->exports, "internal");
+  EXPECT_EQ(exported_internal, nullptr);
+
+  /* api is in both scope names and exports */
+  name_t exported_api = (name_t)strmap_find(mod->exports, "api");
+  ASSERT_NE(exported_api, nullptr);
+  EXPECT_EQ(exported_api->kind, NAME_FUNCTION);
+
+  module_dispose(mod);
+}
+
+/* ---- Export: re-export from dependency (export *) ---- */
+
+TEST_F(it_name_collector, re_export_star) {
+  /* Create a dependency module file */
+  const char *dep_path = "/tmp/cubec_reexport_dep.cubec";
+  FILE *f = fopen(dep_path, "w");
+  ASSERT_NE(f, nullptr);
+  fputs("export func dep_func(): void {}", f);
+  fclose(f);
+
+  const char *source = "export * from \"/tmp/cubec_reexport_dep.cubec\";";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t exported = (name_t)strmap_find(mod->exports, "dep_func");
+  ASSERT_NE(exported, nullptr);
+  EXPECT_EQ(exported->kind, NAME_FUNCTION);
+
+  module_dispose(mod);
+}
+
+/* ---- Export: re-export selected names from dependency ---- */
+
+TEST_F(it_name_collector, re_export_selected_names) {
+  /* Create a dependency module file */
+  const char *dep_path = "/tmp/cubec_reexport_sel_dep.cubec";
+  FILE *f = fopen(dep_path, "w");
+  ASSERT_NE(f, nullptr);
+  fputs("export func foo(): void {}\nexport func bar(): void {}", f);
+  fclose(f);
+
+  const char *source = "export { foo } from \"/tmp/cubec_reexport_sel_dep.cubec\";";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  /* foo is re-exported */
+  name_t exported_foo = (name_t)strmap_find(mod->exports, "foo");
+  ASSERT_NE(exported_foo, nullptr);
+  EXPECT_EQ(exported_foo->kind, NAME_FUNCTION);
+
+  /* bar is NOT re-exported (not in the export list) */
+  name_t exported_bar = (name_t)strmap_find(mod->exports, "bar");
+  EXPECT_EQ(exported_bar, nullptr);
+
+  module_dispose(mod);
+}

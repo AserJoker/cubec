@@ -12,12 +12,14 @@ static void _module_init(void *self, allocator_t allocator, void *arg) {
   mod->tokens = NULL;
   mod->program = NULL;
   mod->root_scope = NULL;
+  mod->exports = NULL;
   mod->state = MODULE_NEW;
 }
 
 static void _module_dispose(void *self, allocator_t allocator) {
   module_t mod = (module_t)self;
   allocator_free(allocator, &mod->root_scope);
+  allocator_free(allocator, &mod->exports);
   allocator_free(allocator, &mod->program);
   allocator_free(allocator, &mod->tokens);
   free(mod->source);
@@ -41,6 +43,8 @@ module_t module_create(allocator_t allocator, scope_t parent_scope,
   mod->program = program;
   /* scope_create already calls scope_add_child(parent_scope, scope) */
   mod->root_scope = scope_create(allocator, SCOPE_MODULE, parent_scope, mod);
+  strmap_init_t sm_init = {.value_auto_dispose = true};
+  mod->exports = (strmap_t)allocator_create(allocator, &g_strmap_type, &sm_init);
   return mod;
 }
 
