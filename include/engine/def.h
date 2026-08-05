@@ -44,6 +44,16 @@ typedef struct _def_t *def_t;
 struct _module_t;
 typedef struct _module_t *module_t;
 
+/* --------------------------------------------------------------------------
+ *  Generic parameter definition (placeholder for now)
+ * -------------------------------------------------------------------------- */
+
+typedef struct _param_def_t *param_def_t;
+struct _param_def_t {
+  allocator_t allocator;
+  /* TODO: next stage fills: constraints, value_type, is_rest */
+};
+
 typedef struct _func_def_t *func_def_t;
 struct _func_def_t {
   struct _def_t super;
@@ -77,7 +87,9 @@ struct _interface_def_t {
 typedef struct _type_alias_def_t *type_alias_def_t;
 struct _type_alias_def_t {
   struct _def_t super;
-  /* TODO: generic_params, type_value */
+  strmap_t params;     /* owned: param name → param_def_t (empty for now) */
+  node_t type_value;   /* NULL in this stage, filled later */
+  bool is_builtin;
 };
 
 typedef struct _var_def_t *var_def_t;

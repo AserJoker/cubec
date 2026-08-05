@@ -1,5 +1,6 @@
 #include "engine/scope.h"
 #include "engine/name.h"
+#include "engine/def.h"
 
 static void _scope_init(void *self, allocator_t allocator, void *arg) {
   (void)arg;
@@ -14,7 +15,7 @@ static void _scope_init(void *self, allocator_t allocator, void *arg) {
   strmap_init_t sm_init = {.value_auto_dispose = true};
   scope->names = (strmap_t)allocator_create(allocator, &g_strmap_type, &sm_init);
 
-  vec_init_t defs_init = {.auto_dispose = true};
+  vec_init_t defs_init = {.auto_dispose = false};
   scope->defs = (vec_t)allocator_create(allocator, &g_vec_type, &defs_init);
 
   vec_init_t defer_init = {.auto_dispose = false};
@@ -32,6 +33,17 @@ static void _scope_dispose(void *self, allocator_t allocator) {
   /* Free all children */
   while (vec_get_size(scope->children) != 0) {
     allocator_free(allocator, vec_get(scope->children, 0));
+  }
+  /* Free owned def objects and their internal resources */
+  size_t def_count = vec_get_size(scope->defs);
+  for (size_t i = 0; i < def_count; i++) {
+    def_t def = (def_t)vec_get(scope->defs, i);
+    /* Release def-owned sub-objects based on kind */
+    if (def->kind == DEF_TYPE_ALIAS) {
+      type_alias_def_t ta = (type_alias_def_t)def;
+      allocator_free(allocator, &ta->params);
+    }
+    allocator_free(allocator, &def);
   }
   allocator_free(allocator, &scope->defs);
   allocator_free(allocator, &scope->defers);

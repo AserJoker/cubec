@@ -161,7 +161,7 @@ TEST_F(it_def_collector, cunion_def) {
 
 /* ---- type alias def ---- */
 
-TEST_F(it_def_collector, type_alias_def) {
+TEST_F(it_def_collector, type_alias_def_no_generic) {
   const char *source = "type MyInt = i32;";
   module_t mod = parse_and_collect(source, "test.cubec");
 
@@ -172,6 +172,44 @@ TEST_F(it_def_collector, type_alias_def) {
   def_t def = (def_t)name->ref;
   EXPECT_EQ(def->kind, DEF_TYPE_ALIAS);
   EXPECT_NE(def->node, nullptr);
+
+  type_alias_def_t ta = (type_alias_def_t)def;
+  EXPECT_EQ(ta->type_value, nullptr);
+  EXPECT_FALSE(ta->is_builtin);
+  ASSERT_NE(ta->params, nullptr);
+  EXPECT_EQ(strmap_get_size(ta->params), 0);
+
+  module_dispose(mod);
+}
+
+TEST_F(it_def_collector, type_alias_def_with_generic) {
+  const char *source = "type Vec3[T] = Vec[Vec[Vec[T]]];";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "Vec3");
+  ASSERT_NE(name, nullptr);
+  ASSERT_NE(name->ref, nullptr);
+
+  type_alias_def_t ta = (type_alias_def_t)name->ref;
+  ASSERT_NE(ta->params, nullptr);
+  EXPECT_EQ(strmap_get_size(ta->params), 1);
+  param_def_t pd = (param_def_t)strmap_find(ta->params, "T");
+  ASSERT_NE(pd, nullptr);
+
+  module_dispose(mod);
+}
+
+TEST_F(it_def_collector, type_alias_def_multi_generic) {
+  const char *source = "type Pair[A, B] = struct { first: A; second: B; };";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "Pair");
+  ASSERT_NE(name, nullptr);
+
+  type_alias_def_t ta = (type_alias_def_t)name->ref;
+  EXPECT_EQ(strmap_get_size(ta->params), 2);
+  ASSERT_NE(strmap_find(ta->params, "A"), nullptr);
+  ASSERT_NE(strmap_find(ta->params, "B"), nullptr);
 
   module_dispose(mod);
 }

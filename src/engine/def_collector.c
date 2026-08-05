@@ -18,6 +18,7 @@
 #include "cubec/statement_interface.h"
 #include "cubec/statement_cunion.h"
 #include "cubec/statement_declaration_type.h"
+#include "cubec/generic_param.h"
 #include "cubec/statement_import.h"
 #include "cubec/statement_export.h"
 #include "cubec/declaration_variable.h"
@@ -96,13 +97,24 @@ static interface_def_t _create_interface_def(allocator_t allocator,
   return def;
 }
 
+static param_def_t _create_param_def(allocator_t allocator) {
+  param_def_t p = (param_def_t)allocator_alloc(allocator, sizeof(struct _param_def_t));
+  p->allocator = allocator;
+  return p;
+}
+
 static type_alias_def_t _create_type_alias_def(allocator_t allocator,
-                                               node_t node) {
+                                               node_t node, bool is_builtin) {
   type_alias_def_t def = (type_alias_def_t)allocator_alloc(
       allocator, sizeof(struct _type_alias_def_t));
   def->super.allocator = allocator;
   def->super.kind = DEF_TYPE_ALIAS;
   def->super.node = node;
+  strmap_init_t sm_init = {.value_auto_dispose = true};
+  def->params = (strmap_t)allocator_create(allocator, &g_strmap_type, &sm_init);
+  def->type_value = NULL;
+  def->is_builtin = is_builtin;
+  def->is_builtin = is_builtin;
   return def;
 }
 
@@ -241,7 +253,21 @@ static void _collect_definition(context_t ctx, scope_t scope, node_t stmt) {
     const char *name_str = _get_identifier_name(t->name);
     if (!name_str)
       break;
-    type_alias_def_t def = _create_type_alias_def(ctx->allocator, stmt);
+    type_alias_def_t def = _create_type_alias_def(ctx->allocator, stmt,
+                                                   t->is_builtin);
+    /* Extract generic param names into params strmap */
+    if (t->params) {
+      size_t param_count = vec_get_size(t->params);
+      for (size_t i = 0; i < param_count; i++) {
+        node_t param_node = (node_t)vec_get(t->params, i);
+        cubec_generic_param_t gp = (cubec_generic_param_t)param_node;
+        const char *param_name = _get_identifier_name(gp->name);
+        if (param_name) {
+          param_def_t pd = _create_param_def(ctx->allocator);
+          strmap_insert(def->params, param_name, pd);
+        }
+      }
+    }
     _bind_definition(scope, name_str, &def->super);
     break;
   }
