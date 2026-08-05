@@ -148,10 +148,17 @@ TEST_F(it_name_collector, cunion_name) {
 /* ---- Collect import as namespace ---- */
 
 TEST_F(it_name_collector, import_namespace) {
-  const char *source = "import std from \"std\";";
+  /* Create a dependency module file */
+  const char *dep_path = "/tmp/cubec_import_ns_dep.cubec";
+  FILE *f = fopen(dep_path, "w");
+  ASSERT_NE(f, nullptr);
+  fputs("func helper(): void {}", f);
+  fclose(f);
+
+  const char *source = "import dep from \"/tmp/cubec_import_ns_dep.cubec\";";
   module_t mod = parse_and_collect(source, "test.cubec");
 
-  name_t name = find_name(mod, "std");
+  name_t name = find_name(mod, "dep");
   ASSERT_NE(name, nullptr);
   EXPECT_EQ(name->kind, NAME_NAMESPACE);
 
@@ -203,20 +210,22 @@ TEST_F(it_name_collector, name_ref_points_to_ast_node) {
   module_dispose(mod);
 }
 
-/* ---- Duplicate names: last wins (strmap semantics) ---- */
+/* ---- Duplicate names: error ---- */
 
-TEST_F(it_name_collector, duplicate_name_last_wins) {
+TEST_F(it_name_collector, duplicate_name_error) {
   const char *source =
       "func foo(): void {}\n"
       "func foo(): i32 { return 1; }\n";
   module_t mod = parse_and_collect(source, "test.cubec");
 
+  /* Second declaration should produce a duplicate error */
+  EXPECT_GT(context_get_error_count(ctx), 0);
+
+  /* First declaration should still be in scope (not overwritten) */
   name_t name = find_name(mod, "foo");
   ASSERT_NE(name, nullptr);
-  /* Should point to the second function (strmap replaces on duplicate key) */
   node_t node = (node_t)name->ref;
-  cubec_statement_function_t func = (cubec_statement_function_t)node;
-  ASSERT_NE(func->return_type, nullptr);
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FUNCTION);
 
   module_dispose(mod);
 }
@@ -352,6 +361,31 @@ TEST_F(it_name_collector, re_export_selected_names) {
   /* bar is NOT re-exported (not in the export list) */
   name_t exported_bar = (name_t)strmap_find(mod->exports, "bar");
   EXPECT_EQ(exported_bar, nullptr);
+
+  module_dispose(mod);
+}
+
+/* ---- Diagnostic: import with bare module name is an error ---- */
+
+TEST_F(it_name_collector, import_bare_module_name_error) {
+  const char *source = "import std from \"std\";";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  EXPECT_GT(context_get_error_count(ctx), 0);
+
+  module_dispose(mod);
+}
+
+/* ---- Diagnostic: import non-existent file is an error ---- */
+
+TEST_F(it_name_collector, import_nonexistent_file_error) {
+  const char *source = "import foo from \"/tmp/cubec_nonexistent.cubec\";";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  EXPECT_GT(context_get_error_count(ctx), 0);
+  /* foo should not be registered as a namespace */
+  name_t name = find_name(mod, "foo");
+  EXPECT_EQ(name, nullptr);
 
   module_dispose(mod);
 }

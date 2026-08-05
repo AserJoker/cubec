@@ -91,20 +91,35 @@ static char *_read_file(const char *path, size_t *out_len) {
 /**
  * @brief Resolve an import path to an absolute file path.
  *
- * - Paths starting with "./" or "../" are relative to the importing module's
- *   directory (derived from the current root_scope's owner module).
- * - Other paths are resolved against the current working directory (or
- *   future: module search paths).
+ * - Relative paths (starting with "./" or "../") are resolved relative to the
+ *   importing module's directory.
+ * - Absolute paths are used as-is.
+ * - Bare module names (e.g., "std") are NOT supported yet — they require
+ *   package/library search paths which will be handled later.
  *
  * @param ctx         Compiler context
- * @param import_path Import path from source (e.g., "std", "./io")
+ * @param import_path Import path from source (e.g., "./io", "/abs/path")
  * @return Malloc'd absolute path string, or NULL on failure
  */
 static char *_resolve_import_path(context_t ctx, const char *import_path) {
+  if (!import_path || import_path[0] == '\0')
+    return NULL;
+
   /* Check if path is relative (starts with ./ or ../) */
   bool is_relative =
       (import_path[0] == '.' &&
        (import_path[1] == '/' || (import_path[1] == '.' && import_path[2] == '/')));
+
+  /* Check if path is absolute */
+  bool is_absolute = (import_path[0] == '/' || import_path[0] == '\\'
+#ifdef _WIN32
+                      || (import_path[0] && import_path[1] == ':')
+#endif
+  );
+
+  /* Bare module names (e.g., "std") are not supported */
+  if (!is_relative && !is_absolute)
+    return NULL;
 
   char *resolved = NULL;
 
@@ -137,9 +152,7 @@ static char *_resolve_import_path(context_t ctx, const char *import_path) {
   }
 
   if (!resolved) {
-    /* Bare module names (e.g., "std") are not resolved here — that requires
-       package/library search paths which will be handled later. For now,
-       treat the import_path as a file path and append .cubec extension. */
+    /* Absolute path — append .cubec extension if missing */
     size_t path_len = strlen(import_path);
     bool has_ext = (path_len > 6 && strcmp(import_path + path_len - 6, ".cubec") == 0);
     size_t ext_len = has_ext ? 0 : 6;
