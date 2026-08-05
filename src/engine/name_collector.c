@@ -127,10 +127,10 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     const char *name_str = _get_identifier_name(var->identifier);
     if (!name_str)
       break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_VARIABLE, stmt))
+    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_VARIABLE, NULL))
       break;
     if (mod && decl->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_VARIABLE, stmt);
+      _module_export_name(ctx, mod, stmt, name_str, NAME_VARIABLE, NULL);
     break;
   }
 
@@ -143,10 +143,10 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     const char *name_str = _get_identifier_name(func->name);
     if (!name_str)
       break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_FUNCTION, stmt))
+    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_FUNCTION, NULL))
       break;
     if (mod && func->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_FUNCTION, stmt);
+      _module_export_name(ctx, mod, stmt, name_str, NAME_FUNCTION, NULL);
     break;
   }
 
@@ -159,10 +159,10 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     const char *name_str = _get_identifier_name(s->name);
     if (!name_str)
       break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, stmt))
+    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
       break;
     if (mod && s->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, stmt);
+      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, NULL);
     /* TODO: recurse into struct members for method/type collection */
     break;
   }
@@ -174,10 +174,10 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     const char *name_str = _get_identifier_name(u->name);
     if (!name_str)
       break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, stmt))
+    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
       break;
     if (mod && u->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, stmt);
+      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, NULL);
     /* TODO: recurse into union members for method/type collection */
     break;
   }
@@ -189,10 +189,10 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     const char *name_str = _get_identifier_name(e->name);
     if (!name_str)
       break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, stmt))
+    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
       break;
     if (mod && e->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, stmt);
+      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, NULL);
     break;
   }
   case CUBEC_NODE_STATEMENT_INTERFACE: {
@@ -203,10 +203,10 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     const char *name_str = _get_identifier_name(iface->name);
     if (!name_str)
       break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, stmt))
+    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
       break;
     if (mod && iface->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, stmt);
+      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, NULL);
     /* TODO: recurse into interface members for method/type collection */
     break;
   }
@@ -215,7 +215,7 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     const char *name_str = _get_identifier_name(cu->name);
     if (!name_str)
       break;
-    _scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, stmt);
+    _scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL);
     break;
   }
   case CUBEC_NODE_STATEMENT_DECLARATION_TYPE: {
@@ -227,10 +227,10 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     const char *name_str = _get_identifier_name(t->name);
     if (!name_str)
       break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, stmt))
+    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
       break;
     if (mod && t->is_export)
-      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, stmt);
+      _module_export_name(ctx, mod, stmt, name_str, NAME_TYPE, NULL);
     break;
   }
 
@@ -259,13 +259,9 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
       break;
     }
     /* Recursively run name collection on the dependency if not done */
-    if (dep_mod->state == MODULE_NEW) {
-      dep_mod->state = MODULE_COLLECTING;
-      name_collector_run(ctx, dep_mod);
-      dep_mod->state = MODULE_COLLECTED;
-    }
+    name_collector_run(ctx, dep_mod);
     /* Register the module as a namespace in the current scope */
-    _scope_insert_name(ctx, scope, stmt, mod_name, NAME_NAMESPACE, dep_mod);
+    _scope_insert_name(ctx, scope, stmt, mod_name, NAME_NAMESPACE, NULL);
     break;
   }
 
@@ -286,11 +282,7 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
       _report_error(ctx, stmt, "cannot export from module '%s'", mod_path);
       break;
     }
-    if (dep_mod->state == MODULE_NEW) {
-      dep_mod->state = MODULE_COLLECTING;
-      name_collector_run(ctx, dep_mod);
-      dep_mod->state = MODULE_COLLECTED;
-    }
+    name_collector_run(ctx, dep_mod);
     /* Copy exported names from dependency into current module's exports */
     if (exp->is_star) {
       /* export * — re-export all */
@@ -298,7 +290,7 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
       const char *key;
       while ((key = strmap_iter_next(&it)) != NULL) {
         name_t value = (name_t)strmap_find(dep_mod->exports, key);
-        _module_export_name(ctx, mod, stmt, key, value->kind, value->ref);
+        _module_export_name(ctx, mod, stmt, key, value->kind, NULL);
       }
     } else {
       /* export { name1, name2 } — re-export only listed names */
@@ -314,8 +306,7 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
                         exp_name, mod_path);
           continue;
         }
-        _module_export_name(ctx, mod, stmt, exp_name, dep_name->kind,
-                            dep_name->ref);
+        _module_export_name(ctx, mod, stmt, exp_name, dep_name->kind, NULL);
       }
     }
     break;
@@ -333,6 +324,10 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
 void name_collector_run(context_t ctx, module_t mod) {
   if (!mod || !mod->program)
     return;
+  if (mod->state >= MODULE_COLLECTED)
+    return;
+
+  mod->state = MODULE_COLLECTING;
 
   cubec_program_node_t program = (cubec_program_node_t)mod->program;
   scope_t scope = mod->root_scope;
@@ -344,4 +339,6 @@ void name_collector_run(context_t ctx, module_t mod) {
     node_t stmt = vec_get(program->statements, i);
     _collect_statement(ctx, scope, stmt, is_static_scope);
   }
+
+  mod->state = MODULE_COLLECTED;
 }

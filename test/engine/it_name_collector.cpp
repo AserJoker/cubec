@@ -195,17 +195,16 @@ TEST_F(it_name_collector, mixed_declarations) {
   module_dispose(mod);
 }
 
-/* ---- name ref points to the AST node ---- */
+/* ---- name ref is NULL before def collection ---- */
 
-TEST_F(it_name_collector, name_ref_points_to_ast_node) {
+TEST_F(it_name_collector, name_ref_is_null_before_def_collection) {
   const char *source = "func foo(): void {}";
   module_t mod = parse_and_collect(source, "test.cubec");
 
   name_t name = find_name(mod, "foo");
   ASSERT_NE(name, nullptr);
-  ASSERT_NE(name->ref, nullptr);
-  node_t node = (node_t)name->ref;
-  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FUNCTION);
+  /* ref is NULL — it will be set by def_collector */
+  EXPECT_EQ(name->ref, nullptr);
 
   module_dispose(mod);
 }
@@ -224,8 +223,7 @@ TEST_F(it_name_collector, duplicate_name_error) {
   /* First declaration should still be in scope (not overwritten) */
   name_t name = find_name(mod, "foo");
   ASSERT_NE(name, nullptr);
-  node_t node = (node_t)name->ref;
-  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FUNCTION);
+  EXPECT_EQ(name->ref, nullptr);
 
   module_dispose(mod);
 }

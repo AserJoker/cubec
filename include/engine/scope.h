@@ -24,6 +24,7 @@ struct _scope_t {
   struct _scope_t *parent; /* parent scope */
   vec_t children;          /* child scopes (auto-dispose vec) */
   strmap_t names;          /* name table: text → name_t */
+  vec_t defs;              /* owned: def objects created by def_collector */
   vec_t defers;            /* defer entries (empty for now) */
   void *owner;             /* borrowing pointer to owning object (module/function) */
 };

@@ -17,7 +17,8 @@ enum module_state {
   MODULE_NEW,        /**< Not yet processed */
   MODULE_COLLECTING, /**< Name collection in progress */
   MODULE_COLLECTED,  /**< Name collection complete */
-  MODULE_RESOLVED,   /**< Definition resolution complete */
+  MODULE_RESOLVING,  /**< Definition collection in progress */
+  MODULE_RESOLVED,   /**< Definition collection complete */
   MODULE_CHECKED,    /**< Type checking complete */
 };
 
