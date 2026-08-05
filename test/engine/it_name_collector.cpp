@@ -231,12 +231,14 @@ TEST_F(it_name_collector, context_import_creates_module) {
   fputs("func hello(): void {}", f);
   fclose(f);
 
-  /* context_import owns the module — do NOT call module_dispose */
+  /* context_import loads the module; name collection is separate */
   module_t mod = context_import(ctx, tmp_path);
   ASSERT_NE(mod, nullptr);
   EXPECT_NE(mod->program, nullptr);
 
-  /* Name collection should have run */
+  /* Run name collection explicitly */
+  name_collector_run(ctx, mod);
+
   name_t name = (name_t)strmap_find(mod->root_scope->names, "hello");
   ASSERT_NE(name, nullptr);
   EXPECT_EQ(name->kind, NAME_FUNCTION);

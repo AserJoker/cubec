@@ -149,20 +149,40 @@ static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
     break;
   }
 
-  /* import — register module namespace */
+  /* import — load dependency module and register namespace */
   case CUBEC_NODE_STATEMENT_IMPORT: {
     cubec_statement_import_t imp = (cubec_statement_import_t)stmt;
     const char *mod_name = _get_identifier_name(imp->module_name);
-    /* TODO: resolve and process dependency module, then register namespace */
-    if (mod_name) {
-      _scope_insert_name(scope, mod_name, NAME_NAMESPACE, stmt);
+    const char *mod_path = _get_string_value(imp->path);
+    if (mod_name && mod_path) {
+      /* Import the dependency module (read → tokenize → parse → create) */
+      module_t dep_mod = context_import(ctx, mod_path);
+      if (dep_mod) {
+        /* Recursively run name collection on the dependency if not done */
+        if (dep_mod->state == MODULE_NEW) {
+          dep_mod->state = MODULE_COLLECTING;
+          name_collector_run(ctx, dep_mod);
+          dep_mod->state = MODULE_COLLECTED;
+        }
+      }
+      /* Register the module as a namespace in the current scope */
+      _scope_insert_name(scope, mod_name, NAME_NAMESPACE, dep_mod);
     }
     break;
   }
 
-  /* export — mark name as exported (handled later in full checker) */
+  /* export — load dependency module but don't register names in this scope */
   case CUBEC_NODE_STATEMENT_EXPORT: {
-    /* TODO: handle re-export */
+    cubec_statement_export_t exp = (cubec_statement_export_t)stmt;
+    const char *mod_path = _get_string_value(exp->path);
+    if (mod_path) {
+      module_t dep_mod = context_import(ctx, mod_path);
+      if (dep_mod && dep_mod->state == MODULE_NEW) {
+        dep_mod->state = MODULE_COLLECTING;
+        name_collector_run(ctx, dep_mod);
+        dep_mod->state = MODULE_COLLECTED;
+      }
+    }
     break;
   }
 

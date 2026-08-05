@@ -40,9 +40,9 @@ module_t context_get_module(context_t ctx, const char *abs_path);
 /**
  * @brief Import a module by its import path (as written in source).
  *
- * Pipeline: resolve path → read file → tokenize → parse AST → create module
- *           → name collect. Results are cached; repeated imports return the
- *           existing module.
+ * Pipeline: resolve path → read file → tokenize → parse AST → create module.
+ * Results are cached; repeated imports return the existing module.
+ * Name collection is NOT performed here — it is a separate phase.
  *
  * Path resolution:
  *   - Relative paths ("./io", "../utils") resolve relative to the importing

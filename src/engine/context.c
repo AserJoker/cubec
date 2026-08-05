@@ -1,6 +1,5 @@
 #include "engine/context.h"
 #include "engine/module.h"
-#include "engine/name_collector.h"
 #include "engine/scope.h"
 #include "cubec/program.h"
 #include "cubec/token.h"
@@ -212,10 +211,7 @@ module_t context_import(context_t ctx, const char *import_path) {
   module_t mod = module_create(ctx->allocator, ctx->global_scope, abs_path,
                                source, tokens, program);
 
-  /* 7. Run name collection */
-  name_collector_run(ctx, mod);
-
-  /* 8. Register in modules map (strmap with value_auto_dispose=true) */
+  /* 7. Register in modules map (strmap with value_auto_dispose=true) */
   strmap_insert(ctx->modules, abs_path, mod);
 
   free(abs_path);
