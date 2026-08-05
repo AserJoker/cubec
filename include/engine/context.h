@@ -55,6 +55,14 @@ module_t context_get_module(context_t ctx, const char *abs_path);
  */
 module_t context_import(context_t ctx, const char *import_path);
 
+/* Scope stack */
+
+/** Set root_scope and current_scope to the given scope. */
+void context_push_scope(context_t ctx, scope_t scope);
+
+/** Restore current_scope to its parent. */
+void context_pop_scope(context_t ctx);
+
 #ifdef __cplusplus
 }
 #endif

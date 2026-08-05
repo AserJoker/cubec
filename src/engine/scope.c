@@ -1,4 +1,5 @@
 #include "engine/scope.h"
+#include "engine/name.h"
 
 static void _scope_init(void *self, allocator_t allocator, void *arg) {
   (void)arg;
@@ -76,4 +77,15 @@ void scope_remove_child(struct _scope_t *parent, scope_t child) {
 
 void scope_dispose(scope_t scope) {
   allocator_free(scope->allocator, &scope);
+}
+
+name_t scope_lookup(scope_t scope, const char *name_str) {
+  if (!scope || !name_str)
+    return NULL;
+  for (scope_t s = scope; s; s = s->parent) {
+    name_t name = (name_t)strmap_find(s->names, name_str);
+    if (name)
+      return name;
+  }
+  return NULL;
 }

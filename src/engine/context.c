@@ -230,3 +230,20 @@ module_t context_import(context_t ctx, const char *import_path) {
   free(abs_path);
   return mod;
 }
+
+/* ------------------------------------------------------------------
+ *  Scope stack
+ * ------------------------------------------------------------------ */
+
+void context_push_scope(context_t ctx, scope_t scope) {
+  if (!ctx || !scope)
+    return;
+  ctx->root_scope = scope;
+  ctx->current_scope = scope;
+}
+
+void context_pop_scope(context_t ctx) {
+  if (!ctx || !ctx->current_scope)
+    return;
+  ctx->current_scope = ctx->current_scope->parent;
+}

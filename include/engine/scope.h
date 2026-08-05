@@ -37,6 +37,15 @@ void scope_add_child(struct _scope_t *parent, scope_t child);
 void scope_remove_child(struct _scope_t *parent, scope_t child);
 void scope_dispose(scope_t scope);
 
+/**
+ * @brief Look up a name by walking up the scope chain.
+ * @param scope    Starting scope
+ * @param name_str Name to look up
+ * @return name_t if found, NULL if not found in any ancestor
+ */
+struct _name_t;
+struct _name_t *scope_lookup(scope_t scope, const char *name_str);
+
 #ifdef __cplusplus
 }
 #endif
