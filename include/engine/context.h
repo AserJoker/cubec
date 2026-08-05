@@ -9,10 +9,19 @@
 extern "C" {
 #endif
 
+struct _module_t;
+typedef struct _module_t *module_t;
+
+struct _scope_t;
+typedef struct _scope_t *scope_t;
+
 struct context {
   allocator_t allocator;
   diagnostic_list_t diagnostics;
-  strmap_t modules;    /* absolute path (string key) → module_t */
+  strmap_t modules;      /* absolute path (string key) → module_t */
+  scope_t global_scope;  /* owned: global scope */
+  scope_t root_scope;    /* borrowed: current module's root scope */
+  scope_t current_scope; /* borrowed: current traversal position */
 };
 
 typedef struct context *context_t;
@@ -26,9 +35,6 @@ void context_dispose(context_t ctx);
 int context_get_error_count(context_t ctx);
 
 /* Module registry */
-struct _module_t;
-typedef struct _module_t *module_t;
-
 module_t context_get_module(context_t ctx, const char *abs_path);
 
 #ifdef __cplusplus

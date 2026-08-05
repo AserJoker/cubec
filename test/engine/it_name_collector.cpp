@@ -1,0 +1,222 @@
+#include "core/strmap.h"
+#include "core/string.h"
+#include "core/token_writer.h"
+#include "cubec/node.h"
+#include "cubec/program.h"
+#include "cubec/token.h"
+#include "cubec/statement_function.h"
+#include "engine/name.h"
+#include "engine/name_collector.h"
+#include "engine/module.h"
+#include "engine/scope.h"
+#include "common/test_common.h"
+#include <gtest/gtest.h>
+
+using ::testing::Test;
+
+class it_name_collector : public CubecTest {
+protected:
+  test_context test_context_instance;
+  allocator_t allocator = test_context_instance.allocator;
+  context_t ctx = test_context_instance.ctx;
+
+  /** Parse source and run name collection, returning the module. */
+  module_t parse_and_collect(const char *source, const char *filename) {
+    /* module_create takes ownership of source (calls free), so strdup it */
+    char *owned_source = strdup(source);
+    vec_t tokens = resolve_token_list(ctx, filename, owned_source);
+    EXPECT_NE(tokens, nullptr);
+    size_t pos = 0;
+    node_t program = read_program_node(ctx, tokens, &pos, filename);
+    EXPECT_NE(program, nullptr);
+    module_t mod =
+        module_create(allocator, ctx->global_scope, filename, owned_source, tokens, program);
+    name_collector_run(ctx, mod);
+    return mod;
+  }
+
+  /** Look up a name in the module's root scope. */
+  name_t find_name(module_t mod, const char *name_str) {
+    return (name_t)strmap_find(mod->root_scope->names, name_str);
+  }
+};
+
+/* ---- Collect function names ---- */
+
+TEST_F(it_name_collector, function_name) {
+  const char *source = "func add(a: i32, b: i32): i32 { return a + b; }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "add");
+  ASSERT_NE(name, nullptr);
+  EXPECT_EQ(name->kind, NAME_FUNCTION);
+
+  module_dispose(mod);
+}
+
+/* ---- Collect variable names (static scope) ---- */
+
+TEST_F(it_name_collector, variable_name) {
+  const char *source = "var x: i32 = 42;";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "x");
+  ASSERT_NE(name, nullptr);
+  EXPECT_EQ(name->kind, NAME_VARIABLE);
+
+  module_dispose(mod);
+}
+
+/* ---- Collect struct names ---- */
+
+TEST_F(it_name_collector, struct_name) {
+  const char *source = "struct Point { x: f64; y: f64; }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "Point");
+  ASSERT_NE(name, nullptr);
+  EXPECT_EQ(name->kind, NAME_TYPE);
+
+  module_dispose(mod);
+}
+
+/* ---- Collect enum names ---- */
+
+TEST_F(it_name_collector, enum_name) {
+  const char *source = "enum Color { Red, Green, Blue }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "Color");
+  ASSERT_NE(name, nullptr);
+  EXPECT_EQ(name->kind, NAME_TYPE);
+
+  module_dispose(mod);
+}
+
+/* ---- Collect type alias names ---- */
+
+TEST_F(it_name_collector, type_alias_name) {
+  const char *source = "type MyInt = i32;";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "MyInt");
+  ASSERT_NE(name, nullptr);
+  EXPECT_EQ(name->kind, NAME_TYPE);
+
+  module_dispose(mod);
+}
+
+/* ---- Collect union names ---- */
+
+TEST_F(it_name_collector, union_name) {
+  const char *source = "union Option[T] { value: T; empty: void; }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "Option");
+  ASSERT_NE(name, nullptr);
+  EXPECT_EQ(name->kind, NAME_TYPE);
+
+  module_dispose(mod);
+}
+
+/* ---- Collect interface names ---- */
+
+TEST_F(it_name_collector, interface_name) {
+  const char *source = "interface Printable { func to_string(self): string; }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "Printable");
+  ASSERT_NE(name, nullptr);
+  EXPECT_EQ(name->kind, NAME_TYPE);
+
+  module_dispose(mod);
+}
+
+/* ---- Collect cunion names ---- */
+
+TEST_F(it_name_collector, cunion_name) {
+  const char *source = "cunion Data { int_val: i32; float_val: f64; }";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "Data");
+  ASSERT_NE(name, nullptr);
+  EXPECT_EQ(name->kind, NAME_TYPE);
+
+  module_dispose(mod);
+}
+
+/* ---- Collect import as namespace ---- */
+
+TEST_F(it_name_collector, import_namespace) {
+  const char *source = "import std from \"std\";";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "std");
+  ASSERT_NE(name, nullptr);
+  EXPECT_EQ(name->kind, NAME_NAMESPACE);
+
+  module_dispose(mod);
+}
+
+/* ---- Mixed declarations ---- */
+
+TEST_F(it_name_collector, mixed_declarations) {
+  const char *source =
+      "var count: i32 = 0;\n"
+      "func inc(): void { count = count + 1; }\n"
+      "struct Point { x: f64; y: f64; }\n"
+      "type Vec3[T] = Point;\n";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t n_count = find_name(mod, "count");
+  name_t n_inc = find_name(mod, "inc");
+  name_t n_point = find_name(mod, "Point");
+  name_t n_vec3 = find_name(mod, "Vec3");
+
+  ASSERT_NE(n_count, nullptr);
+  EXPECT_EQ(n_count->kind, NAME_VARIABLE);
+
+  ASSERT_NE(n_inc, nullptr);
+  EXPECT_EQ(n_inc->kind, NAME_FUNCTION);
+
+  ASSERT_NE(n_point, nullptr);
+  EXPECT_EQ(n_point->kind, NAME_TYPE);
+
+  ASSERT_NE(n_vec3, nullptr);
+  EXPECT_EQ(n_vec3->kind, NAME_TYPE);
+
+  module_dispose(mod);
+}
+
+/* ---- name ref points to the AST node ---- */
+
+TEST_F(it_name_collector, name_ref_points_to_ast_node) {
+  const char *source = "func foo(): void {}";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "foo");
+  ASSERT_NE(name, nullptr);
+  ASSERT_NE(name->ref, nullptr);
+  node_t node = (node_t)name->ref;
+  EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FUNCTION);
+
+  module_dispose(mod);
+}
+
+/* ---- Duplicate names: last wins (strmap semantics) ---- */
+
+TEST_F(it_name_collector, duplicate_name_last_wins) {
+  const char *source =
+      "func foo(): void {}\n"
+      "func foo(): i32 { return 1; }\n";
+  module_t mod = parse_and_collect(source, "test.cubec");
+
+  name_t name = find_name(mod, "foo");
+  ASSERT_NE(name, nullptr);
+  /* Should point to the second function (strmap replaces on duplicate key) */
+  node_t node = (node_t)name->ref;
+  cubec_statement_function_t func = (cubec_statement_function_t)node;
+  ASSERT_NE(func->return_type, nullptr);
+
+  module_dispose(mod);
+}
