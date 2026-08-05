@@ -1,6 +1,11 @@
 #include "engine/context.h"
 #include "engine/module.h"
+#include "engine/name_collector.h"
 #include "engine/scope.h"
+#include "cubec/program.h"
+#include "cubec/token.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static void _context_init(void *self, allocator_t allocator, void *arg) {
@@ -25,8 +30,10 @@ static void _context_init(void *self, allocator_t allocator, void *arg) {
 static void _context_dispose(void *self, allocator_t allocator) {
   context_t ctx = (context_t)self;
   (void)allocator;
-  allocator_free(allocator, &ctx->global_scope);
+  /* Free modules first — module_dispose removes root_scope from global_scope's
+   * children, so global_scope must still be alive at this point. */
   allocator_free(allocator, &ctx->modules);
+  allocator_free(allocator, &ctx->global_scope);
   allocator_free(allocator, &ctx->diagnostics);
 }
 
@@ -52,4 +59,165 @@ int context_get_error_count(context_t ctx) {
 
 module_t context_get_module(context_t ctx, const char *abs_path) {
   return (module_t)strmap_find(ctx->modules, abs_path);
+}
+
+/* ------------------------------------------------------------------
+ *  File I/O helper
+ * ------------------------------------------------------------------ */
+
+static char *_read_file(const char *path, size_t *out_len) {
+  FILE *f = fopen(path, "rb");
+  if (!f)
+    return NULL;
+  fseek(f, 0, SEEK_END);
+  long len = ftell(f);
+  fseek(f, 0, SEEK_SET);
+  char *buf = malloc((size_t)len + 1);
+  if (!buf) {
+    fclose(f);
+    return NULL;
+  }
+  size_t n = fread(buf, 1, (size_t)len, f);
+  buf[n] = '\0';
+  fclose(f);
+  if (out_len)
+    *out_len = n;
+  return buf;
+}
+
+/* ------------------------------------------------------------------
+ *  Path resolution
+ * ------------------------------------------------------------------ */
+
+/**
+ * @brief Resolve an import path to an absolute file path.
+ *
+ * - Paths starting with "./" or "../" are relative to the importing module's
+ *   directory (derived from the current root_scope's owner module).
+ * - Other paths are resolved against the current working directory (or
+ *   future: module search paths).
+ *
+ * @param ctx         Compiler context
+ * @param import_path Import path from source (e.g., "std", "./io")
+ * @return Malloc'd absolute path string, or NULL on failure
+ */
+static char *_resolve_import_path(context_t ctx, const char *import_path) {
+  /* Check if path is relative (starts with ./ or ../) */
+  bool is_relative =
+      (import_path[0] == '.' &&
+       (import_path[1] == '/' || (import_path[1] == '.' && import_path[2] == '/')));
+
+  char *resolved = NULL;
+
+  if (is_relative) {
+    /* Resolve relative to the importing module's directory */
+    if (ctx->root_scope && ctx->root_scope->owner) {
+      module_t current_mod = (module_t)ctx->root_scope->owner;
+      const char *current_file = current_mod->filename;
+      if (current_file) {
+        /* Find last '/' to get directory */
+        const char *last_slash = strrchr(current_file, '/');
+#ifdef _WIN32
+        const char *last_backslash = strrchr(current_file, '\\');
+        if (!last_slash || (last_backslash && last_backslash > last_slash))
+          last_slash = last_backslash;
+#endif
+        if (last_slash) {
+          size_t dir_len = (size_t)(last_slash - current_file) + 1;
+          size_t path_len = strlen(import_path);
+          resolved = malloc(dir_len + path_len + 1);
+          if (!resolved)
+            return NULL;
+          memcpy(resolved, current_file, dir_len);
+          memcpy(resolved + dir_len, import_path, path_len);
+          resolved[dir_len + path_len] = '\0';
+        }
+      }
+    }
+    /* Fallback: treat as relative to cwd */
+  }
+
+  if (!resolved) {
+    /* Bare module names (e.g., "std") are not resolved here — that requires
+       package/library search paths which will be handled later. For now,
+       treat the import_path as a file path and append .cubec extension. */
+    size_t path_len = strlen(import_path);
+    bool has_ext = (path_len > 6 && strcmp(import_path + path_len - 6, ".cubec") == 0);
+    size_t ext_len = has_ext ? 0 : 6;
+    resolved = malloc(path_len + ext_len + 1);
+    if (!resolved)
+      return NULL;
+    memcpy(resolved, import_path, path_len);
+    if (!has_ext) {
+      memcpy(resolved + path_len, ".cubec", 6);
+    }
+    resolved[path_len + ext_len] = '\0';
+  }
+
+  /* Normalize to absolute path */
+#ifdef _WIN32
+  char abs_buf[_MAX_PATH];
+  char *abs = _fullpath(abs_buf, resolved, _MAX_PATH);
+  char *result = abs ? strdup(abs) : NULL;
+#else
+  char *result = realpath(resolved, NULL);
+#endif
+  free(resolved);
+  return result;
+}
+
+/* ------------------------------------------------------------------
+ *  context_import
+ * ------------------------------------------------------------------ */
+
+module_t context_import(context_t ctx, const char *import_path) {
+  /* 1. Resolve import path to absolute file path */
+  char *abs_path = _resolve_import_path(ctx, import_path);
+  if (!abs_path)
+    return NULL;
+
+  /* 2. Check cache */
+  module_t existing = context_get_module(ctx, abs_path);
+  if (existing) {
+    free(abs_path);
+    return existing;
+  }
+
+  /* 3. Read source file */
+  char *source = _read_file(abs_path, NULL);
+  if (!source) {
+    free(abs_path);
+    return NULL;
+  }
+
+  /* 4. Tokenize */
+  vec_t tokens = resolve_token_list(ctx, abs_path, source);
+  if (!tokens) {
+    free(source);
+    free(abs_path);
+    return NULL;
+  }
+
+  /* 5. Parse to AST */
+  size_t pos = 0;
+  node_t program = read_program_node(ctx, tokens, &pos, abs_path);
+  if (!program) {
+    allocator_free(ctx->allocator, &tokens);
+    free(source);
+    free(abs_path);
+    return NULL;
+  }
+
+  /* 6. Create module (takes ownership of source, tokens, program) */
+  module_t mod = module_create(ctx->allocator, ctx->global_scope, abs_path,
+                               source, tokens, program);
+
+  /* 7. Run name collection */
+  name_collector_run(ctx, mod);
+
+  /* 8. Register in modules map (strmap with value_auto_dispose=true) */
+  strmap_insert(ctx->modules, abs_path, mod);
+
+  free(abs_path);
+  return mod;
 }

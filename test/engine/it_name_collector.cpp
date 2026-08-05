@@ -220,3 +220,38 @@ TEST_F(it_name_collector, duplicate_name_last_wins) {
 
   module_dispose(mod);
 }
+
+/* ---- context_import ---- */
+
+TEST_F(it_name_collector, context_import_creates_module) {
+  /* Write a temporary file to import */
+  const char *tmp_path = "/tmp/cubec_import_test.cubec";
+  FILE *f = fopen(tmp_path, "w");
+  ASSERT_NE(f, nullptr);
+  fputs("func hello(): void {}", f);
+  fclose(f);
+
+  /* context_import owns the module — do NOT call module_dispose */
+  module_t mod = context_import(ctx, tmp_path);
+  ASSERT_NE(mod, nullptr);
+  EXPECT_NE(mod->program, nullptr);
+
+  /* Name collection should have run */
+  name_t name = (name_t)strmap_find(mod->root_scope->names, "hello");
+  ASSERT_NE(name, nullptr);
+  EXPECT_EQ(name->kind, NAME_FUNCTION);
+}
+
+TEST_F(it_name_collector, context_import_caches_by_abs_path) {
+  const char *tmp_path = "/tmp/cubec_import_test.cubec";
+  FILE *f = fopen(tmp_path, "w");
+  ASSERT_NE(f, nullptr);
+  fputs("func hello(): void {}", f);
+  fclose(f);
+
+  module_t mod1 = context_import(ctx, tmp_path);
+  ASSERT_NE(mod1, nullptr);
+
+  module_t mod2 = context_import(ctx, tmp_path);
+  EXPECT_EQ(mod1, mod2); /* same pointer, cached */
+}

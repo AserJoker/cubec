@@ -37,6 +37,24 @@ int context_get_error_count(context_t ctx);
 /* Module registry */
 module_t context_get_module(context_t ctx, const char *abs_path);
 
+/**
+ * @brief Import a module by its import path (as written in source).
+ *
+ * Pipeline: resolve path → read file → tokenize → parse AST → create module
+ *           → name collect. Results are cached; repeated imports return the
+ *           existing module.
+ *
+ * Path resolution:
+ *   - Relative paths ("./io", "../utils") resolve relative to the importing
+ *     module's directory (derived from ctx->root_scope->owner).
+ *   - Bare names ("std", "std/vec") resolve against the module search paths.
+ *
+ * @param ctx         Compiler context
+ * @param import_path Import path as written in source (e.g., "std", "./io")
+ * @return The imported module, or NULL on failure
+ */
+module_t context_import(context_t ctx, const char *import_path);
+
 #ifdef __cplusplus
 }
 #endif
