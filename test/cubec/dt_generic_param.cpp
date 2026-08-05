@@ -1,15 +1,12 @@
 #include "common/test_common.h"
+#include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token_writer.h"
-#include "cubec/expression.h"
 #include "cubec/generic_param.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
 #include <gtest/gtest.h>
-#include "core/emit_context.h"
-
-using ::testing::Test;
 
 class dt_generic_param : public CubecTest {
 protected:

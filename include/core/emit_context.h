@@ -1,7 +1,6 @@
 #ifndef _H_CUBEC_CORE_EMIT_CONTEXT_
 #define _H_CUBEC_CORE_EMIT_CONTEXT_
-#include "core/string.h"
-#include "core/token.h"
+#include "core/allocator.h"
 #include "core/vec.h"
 #ifdef __cplusplus
 extern "C" {

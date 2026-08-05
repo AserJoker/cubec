@@ -1,18 +1,14 @@
+#include "common/test_common.h"
+#include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token_writer.h"
-#include "cubec/statement_union.h"
-#include "cubec/union_field.h"
-#include "cubec/generic_param.h"
-#include "cubec/literal_identifier.h"
 #include "cubec/node.h"
 #include "cubec/program.h"
 #include "cubec/statement.h"
+#include "cubec/statement_union.h"
 #include "cubec/token.h"
-#include "common/test_common.h"
+#include "cubec/union_field.h"
 #include <gtest/gtest.h>
-#include "core/emit_context.h"
-
-using ::testing::Test;
 
 class dt_statement_union : public CubecTest {
 protected:

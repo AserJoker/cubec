@@ -1,6 +1,5 @@
 #ifndef _H_CUBEC_ENGINE_NAME_COLLECTOR_
 #define _H_CUBEC_ENGINE_NAME_COLLECTOR_
-#include "core/allocator.h"
 #include "engine/context.h"
 #include "engine/module.h"
 #ifdef __cplusplus

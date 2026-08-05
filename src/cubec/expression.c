@@ -1,6 +1,5 @@
 #include "cubec/expression.h"
 #include "core/emit_context.h"
-#include "core/token_writer.h"
 #include "cubec/declaration_array.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"

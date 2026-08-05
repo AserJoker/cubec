@@ -1,18 +1,14 @@
+#include "common/test_common.h"
+#include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token_writer.h"
-#include "cubec/expression.h"
 #include "cubec/declaration_enum.h"
-#include "cubec/enum_item.h"
 #include "cubec/declaration_pointer.h"
-#include "cubec/declaration_slice.h"
-#include "cubec/declaration_qualifier.h"
+#include "cubec/enum_item.h"
+#include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
-#include "common/test_common.h"
 #include <gtest/gtest.h>
-#include "core/emit_context.h"
-
-using ::testing::Test;
 
 class dt_declaration_enum : public CubecTest {
 protected:
@@ -36,8 +32,7 @@ TEST_F(dt_declaration_enum, simple_empty) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ENUM);
 
-  cubec_declaration_enum_t enum_node =
-      (cubec_declaration_enum_t)node;
+  cubec_declaration_enum_t enum_node = (cubec_declaration_enum_t)node;
   ASSERT_NE(enum_node->items, nullptr);
   EXPECT_EQ(vec_get_size(enum_node->items), 0);
 
@@ -56,14 +51,12 @@ TEST_F(dt_declaration_enum, with_items) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ENUM);
 
-  cubec_declaration_enum_t enum_node =
-      (cubec_declaration_enum_t)node;
+  cubec_declaration_enum_t enum_node = (cubec_declaration_enum_t)node;
   ASSERT_NE(enum_node->items, nullptr);
   EXPECT_EQ(vec_get_size(enum_node->items), 3);
 
   /* Check first item */
-  cubec_enum_item_t item0 =
-      (cubec_enum_item_t)vec_get(enum_node->items, 0);
+  cubec_enum_item_t item0 = (cubec_enum_item_t)vec_get(enum_node->items, 0);
   EXPECT_EQ(item0->super.kind, CUBEC_NODE_ENUM_ITEM);
   ASSERT_NE(item0->name, nullptr);
   EXPECT_EQ(item0->type, nullptr);
@@ -84,13 +77,11 @@ TEST_F(dt_declaration_enum, with_type_and_value) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ENUM);
 
-  cubec_declaration_enum_t enum_node =
-      (cubec_declaration_enum_t)node;
+  cubec_declaration_enum_t enum_node = (cubec_declaration_enum_t)node;
   ASSERT_NE(enum_node->items, nullptr);
   EXPECT_EQ(vec_get_size(enum_node->items), 1);
 
-  cubec_enum_item_t item0 =
-      (cubec_enum_item_t)vec_get(enum_node->items, 0);
+  cubec_enum_item_t item0 = (cubec_enum_item_t)vec_get(enum_node->items, 0);
   ASSERT_NE(item0->type, nullptr);
   ASSERT_NE(item0->value, nullptr);
 
@@ -176,8 +167,7 @@ TEST_F(dt_declaration_enum, clone) {
   ASSERT_NE(cloned, nullptr);
   EXPECT_EQ(cloned->kind, CUBEC_NODE_DECLARATION_ENUM);
 
-  cubec_declaration_enum_t copy =
-      (cubec_declaration_enum_t)cloned;
+  cubec_declaration_enum_t copy = (cubec_declaration_enum_t)cloned;
   ASSERT_NE(copy->items, nullptr);
   EXPECT_EQ(vec_get_size(copy->items), 2);
 
@@ -199,8 +189,7 @@ TEST_F(dt_declaration_enum, move) {
   ASSERT_NE(moved, nullptr);
   EXPECT_EQ(moved->kind, CUBEC_NODE_DECLARATION_ENUM);
 
-  cubec_declaration_enum_t result =
-      (cubec_declaration_enum_t)moved;
+  cubec_declaration_enum_t result = (cubec_declaration_enum_t)moved;
   ASSERT_NE(result->items, nullptr);
 
   allocator_free(allocator, &node);
