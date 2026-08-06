@@ -2,6 +2,7 @@
 
 #include "cubec/node.h"
 #include "cubec/statement_function.h"
+#include "cubec/declaration_function.h"
 #include "cubec/statement_declaration.h"
 #include "cubec/statement_struct.h"
 #include "cubec/statement_enum.h"
@@ -176,15 +177,16 @@ static void write_function_args(allocator_t allocator, string_t out, vec_t args)
 
 static void write_extern_function(allocator_t allocator, string_t out,
                                    cubec_statement_function_t fn) {
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
   string_concat(out, "extern func ");
-  string_concat(out, get_id_name(fn->name));
-  if (fn->generic_params) {
-    write_generic_params(allocator, out, fn->generic_params);
+  string_concat(out, get_id_name(decl->name));
+  if (decl->generic_params) {
+    write_generic_params(allocator, out, decl->generic_params);
   }
-  write_function_args(allocator, out, fn->arguments);
-  if (fn->return_type) {
+  write_function_args(allocator, out, decl->arguments);
+  if (decl->return_type) {
     string_concat(out, ": ");
-    write_type_expr(allocator, out, fn->return_type);
+    write_type_expr(allocator, out, decl->return_type);
   }
   string_concat(out, ";\n");
 }

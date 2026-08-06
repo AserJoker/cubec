@@ -17,7 +17,7 @@
 #include "cubec/declaration_tuple.h"
 #include "cubec/declaration_union.h"
 #include "cubec/expression_deref.h"
-#include "cubec/expression_function.h"
+#include "cubec/declaration_function.h"
 #include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_initialize_list.h"
@@ -171,7 +171,7 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try anonymous function: func |captures| [generic_params] (params) -> type {
   // body }
-  result = read_expression_function(ctx, tokens, &current, filename);
+  result = read_declaration_function(ctx, tokens, &current, filename);
   if (node_is_error(result))
     return result;
   if (result) {
@@ -699,8 +699,8 @@ void emit_expression(emit_context_t ctx, node_t expr) {
   case CUBEC_NODE_EXPRESSION_DEREF:
     emit_expression_deref(ctx, expr);
     break;
-  case CUBEC_NODE_EXPRESSION_FUNCTION:
-    emit_expression_function(ctx, expr);
+  case CUBEC_NODE_DECLARATION_FUNCTION:
+    emit_declaration_function(ctx, expr);
     break;
   case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION:
     emit_expression_generic_instantiation(ctx, expr);

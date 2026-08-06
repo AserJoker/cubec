@@ -1,12 +1,9 @@
 #include "cubec/statement_function.h"
 #include "core/emit_context.h"
 #include "core/token.h"
+#include "cubec/declaration_function.h"
 #include "cubec/decorator.h"
 #include "cubec/expression.h"
-#include "cubec/expression_function.h"
-#include "cubec/function_argument.h"
-#include "cubec/function_capture.h"
-#include "cubec/generic_param.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
 #include "cubec/statement.h"
@@ -31,29 +28,14 @@ _cubec_statement_function_init(cubec_statement_function_t self,
   g_node_type.init(&self->super, allocator, &super_init);
   self->is_export = init->is_export;
   self->is_exportlib = init->is_exportlib;
-  self->is_inline = init->is_inline;
-  self->is_extern = init->is_extern;
-  self->is_builtin = init->is_builtin;
-  self->is_comptime = init->is_comptime;
-  self->is_c_variadic = init->is_c_variadic;
-  self->name = init->name;
-  self->generic_params = init->generic_params;
-  self->arguments = init->arguments;
-  self->return_type = init->return_type;
-  self->body = init->body;
+  self->declarator = init->declarator;
   self->decorators = init->decorators;
-  self->captures = init->captures;
 }
 
 static void _cubec_statement_function_dispose(cubec_statement_function_t self,
                                               allocator_t allocator) {
-  allocator_free(allocator, &self->captures);
   allocator_free(allocator, &self->decorators);
-  allocator_free(allocator, &self->body);
-  allocator_free(allocator, &self->return_type);
-  allocator_free(allocator, &self->arguments);
-  allocator_free(allocator, &self->generic_params);
-  allocator_free(allocator, &self->name);
+  allocator_free(allocator, &self->declarator);
   g_node_type.dispose(&self->super, allocator);
 }
 
@@ -64,22 +46,9 @@ _cubec_statement_function_clone(cubec_statement_function_t self,
   g_node_type.clone(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->is_exportlib = another->is_exportlib;
-  self->is_inline = another->is_inline;
-  self->is_extern = another->is_extern;
-  self->is_builtin = another->is_builtin;
-  self->is_comptime = another->is_comptime;
-  self->is_c_variadic = another->is_c_variadic;
-  self->name = value_clone(allocator, another->name);
-  self->generic_params = another->generic_params
-                             ? value_clone(allocator, another->generic_params)
-                             : NULL;
-  self->arguments = value_clone(allocator, another->arguments);
-  self->return_type = another->return_type
-                          ? value_clone(allocator, another->return_type)
-                          : NULL;
-  self->body = another->body ? value_clone(allocator, another->body) : NULL;
-  self->captures =
-      another->captures ? value_clone(allocator, another->captures) : NULL;
+  self->declarator = another->declarator ? value_clone(allocator, another->declarator) : NULL;
+  self->decorators =
+      another->decorators ? value_clone(allocator, another->decorators) : NULL;
   return;
 }
 
@@ -89,21 +58,9 @@ static void _cubec_statement_function_move(cubec_statement_function_t self,
   g_node_type.move(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->is_exportlib = another->is_exportlib;
-  self->is_inline = another->is_inline;
-  self->is_extern = another->is_extern;
-  self->is_builtin = another->is_builtin;
-  self->is_comptime = another->is_comptime;
-  self->is_c_variadic = another->is_c_variadic;
-  self->name = value_move(allocator, another->name);
-  self->generic_params = another->generic_params
-                             ? value_move(allocator, another->generic_params)
-                             : NULL;
-  self->arguments = value_move(allocator, another->arguments);
-  self->return_type =
-      another->return_type ? value_move(allocator, another->return_type) : NULL;
-  self->body = another->body ? value_move(allocator, another->body) : NULL;
-  self->captures =
-      another->captures ? value_move(allocator, another->captures) : NULL;
+  self->declarator = another->declarator ? value_move(allocator, another->declarator) : NULL;
+  self->decorators =
+      another->decorators ? value_move(allocator, another->decorators) : NULL;
   return;
 }
 
@@ -117,7 +74,7 @@ type_t g_cubec_statement_function_type = {
 };
 
 /* --------------------------------------------------------------------------
- *  Helper: check keyword / symbol
+ *  Helper: check keyword
  * -------------------------------------------------------------------------- */
 
 static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
@@ -143,7 +100,7 @@ node_t read_statement_function(context_t ctx, vec_t tokens, size_t *position,
   bool is_builtin = false;
   bool is_comptime = false;
   location_t start_location = {0};
-  node_t expr_node = NULL;
+  node_t decl_node = NULL;
   cubec_statement_function_t node = NULL;
   vec_t decorators = NULL;
 
@@ -264,73 +221,53 @@ node_t read_statement_function(context_t ctx, vec_t tokens, size_t *position,
     goto onerror;
   /* inline + comptime: comptime takes precedence; ignore inline silently */
 
-  /* 3. Expect 'func' keyword */
-  if (!_is_keyword(tokens, current, "func")) {
-    goto onerror;
-  }
-
-  /* 4. Delegate to read_expression_function for the actual func parsing */
-  expr_node = read_expression_function(ctx, tokens, &current, filename);
-  if (node_is_error(expr_node)) {
+  /* 3. Delegate to read_declaration_function for the actual func parsing */
+  decl_node = read_declaration_function(ctx, tokens, &current, filename);
+  if (node_is_error(decl_node)) {
     allocator_free(allocator, &decorators);
-    return expr_node;
+    return decl_node;
   }
-  if (!expr_node)
+  if (!decl_node)
     goto onerror;
-  cubec_expression_function_t func = (cubec_expression_function_t)expr_node;
+
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)decl_node;
+
+  /* 4. Transfer modifiers from statement-level into the declaration */
+  decl->is_inline = is_inline;
+  decl->is_extern = is_extern;
+  decl->is_builtin = is_builtin;
+  decl->is_comptime = is_comptime;
 
   /* 5. Validate: statement functions must have a name */
-  if (!func->name) {
+  if (!decl->name) {
     goto onerror;
   }
 
-  /* 7. Validate: C-style variadic only in extern functions */
-  if (func->is_c_variadic && !is_extern) {
+  /* 6. Validate: C-style variadic only in extern functions */
+  if (decl->is_c_variadic && !is_extern) {
     goto onerror;
   }
 
-  /* 7b. Validate: comptime functions must have a body */
-  if (is_comptime && !func->body) {
+  /* 7. Validate: comptime functions must have a body */
+  if (is_comptime && !decl->body) {
     goto onerror;
   }
 
   /* 8. Build location (use modifier start or func node location) */
-  location_t loc = expr_node->location;
+  location_t loc = decl_node->location;
   if (start_location.begin.offset != 0) {
     loc.begin = start_location.begin;
   }
 
-  /* 9. Create statement_function node, transferring ownership from
-   * expression_function */
+  /* 9. Create statement_function node */
   cubec_statement_function_init_t init = {
       .location = loc,
       .parent = NULL,
       .is_export = is_export,
       .is_exportlib = is_exportlib,
-      .is_inline = is_inline,
-      .is_extern = is_extern,
-      .is_builtin = is_builtin,
-      .is_comptime = is_comptime,
-      .is_c_variadic = func->is_c_variadic,
-      .name = func->name,
-      .generic_params = func->generic_params,
-      .arguments = func->arguments,
-      .return_type = func->return_type,
-      .body = func->body,
+      .declarator = decl_node,
       .decorators = decorators,
-      .captures = func->captures,
   };
-
-  /* Nullify fields in expression_function to prevent double-free during dispose
-   */
-  func->name = NULL;
-  func->generic_params = NULL;
-  func->arguments = NULL;
-  func->return_type = NULL;
-  func->body = NULL;
-  func->captures = NULL;
-
-  allocator_free(allocator, &expr_node);
 
   node = allocator_create(allocator, &g_cubec_statement_function_type, &init);
   *position = current;
@@ -338,7 +275,7 @@ node_t read_statement_function(context_t ctx, vec_t tokens, size_t *position,
 
 onerror:
   allocator_free(allocator, &decorators);
-  allocator_free(allocator, &expr_node);
+  allocator_free(allocator, &decl_node);
   allocator_free(allocator, &node);
   return create_error(ctx, start_location);
 }
@@ -350,112 +287,40 @@ node_t create_statement_func(context_t ctx, location_t loc, const char *name,
                              bool is_c_variadic, vec_t decorators) {
   allocator_t alloc = ctx->allocator;
   node_t name_node = create_literal_identifier(ctx, loc, name);
+  node_t decl = create_declaration_function(ctx, loc, name_node, NULL, NULL,
+                                            args, return_type, body, is_inline,
+                                            is_extern, is_builtin, is_comptime,
+                                            is_c_variadic);
   cubec_statement_function_init_t init = {
       .location = loc,
       .parent = NULL,
       .is_export = is_export,
       .is_exportlib = false,
-      .is_inline = is_inline,
-      .is_extern = is_extern,
-      .is_builtin = is_builtin,
-      .is_comptime = is_comptime,
-      .is_c_variadic = is_c_variadic,
-      .name = name_node,
-      .generic_params = NULL,
-      .arguments = args,
-      .return_type = return_type,
-      .body = body,
+      .declarator = decl,
       .decorators = decorators,
-      .captures = NULL,
   };
   return (node_t)allocator_create(alloc, &g_cubec_statement_function_type,
                                   &init);
 }
 
 void emit_statement_function(emit_context_t ctx, node_t node) {
-  cubec_statement_function_t func = (cubec_statement_function_t)node;
+  cubec_statement_function_t stmt = (cubec_statement_function_t)node;
   recover_comments_to(ctx, node->location.begin.offset);
-  if (func->decorators) {
-    for (size_t i = 0; i < vec_get_size(func->decorators); i++) {
-      recover_comments_to(ctx, ((node_t)vec_get(func->decorators, i))->location.begin.offset);
-      emit_decorator(ctx, vec_get(func->decorators, i));
+  if (stmt->decorators) {
+    for (size_t i = 0; i < vec_get_size(stmt->decorators); i++) {
+      recover_comments_to(ctx, ((node_t)vec_get(stmt->decorators, i))->location.begin.offset);
+      emit_decorator(ctx, vec_get(stmt->decorators, i));
       emit_newline(ctx);
     }
   }
-  if (func->is_export) {
+  if (stmt->is_export) {
     emit_keyword(ctx, "export");
     emit_space(ctx);
   }
-  if (func->is_exportlib) {
+  if (stmt->is_exportlib) {
     emit_keyword(ctx, "exportlib");
     emit_space(ctx);
   }
-  if (func->is_inline) {
-    emit_keyword(ctx, "inline");
-    emit_space(ctx);
-  }
-  if (func->is_extern) {
-    emit_keyword(ctx, "extern");
-    emit_space(ctx);
-  }
-  if (func->is_builtin) {
-    emit_keyword(ctx, "builtin");
-    emit_space(ctx);
-  }
-  if (func->is_comptime) {
-    emit_keyword(ctx, "comptime");
-    emit_space(ctx);
-  }
-  emit_keyword(ctx, "func");
-  if (func->captures) {
-    emit_symbol(ctx, "|");
-    for (size_t i = 0; i < vec_get_size(func->captures); i++) {
-      if (i != 0) {
-        emit_symbol(ctx, ",");
-        emit_space(ctx);
-      }
-      emit_function_capture(ctx, vec_get(func->captures, i));
-    }
-    emit_symbol(ctx, "|");
-  }
-  emit_space(ctx);
-  emit_expression(ctx, func->name);
-  if (func->generic_params) {
-    emit_symbol(ctx, "[");
-    for (size_t i = 0; i < vec_get_size(func->generic_params); i++) {
-      if (i != 0) {
-        emit_symbol(ctx, ",");
-        emit_space(ctx);
-      }
-      emit_generic_param(ctx, vec_get(func->generic_params, i));
-    }
-    emit_symbol(ctx, "]");
-  }
-  emit_symbol(ctx, "(");
-  for (size_t i = 0; i < vec_get_size(func->arguments); i++) {
-    if (i != 0) {
-      emit_symbol(ctx, ",");
-      emit_space(ctx);
-    }
-    emit_function_argument(ctx, vec_get(func->arguments, i));
-  }
-  if (func->is_c_variadic) {
-    if (vec_get_size(func->arguments) > 0) {
-      emit_symbol(ctx, ",");
-      emit_space(ctx);
-    }
-    emit_symbol(ctx, "...");
-  }
-  emit_symbol(ctx, ")");
-  if (func->return_type) {
-    emit_symbol(ctx, ":");
-    emit_space(ctx);
-    emit_expression(ctx, func->return_type);
-  }
-  if (func->body) {
-    emit_space(ctx);
-    emit_statement(ctx, func->body);
-  } else {
-    emit_symbol(ctx, ";");
-  }
+  /* Delegate the rest to declaration_function emit */
+  emit_declaration_function(ctx, stmt->declarator);
 }

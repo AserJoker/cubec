@@ -16,7 +16,7 @@ enum name_kind {
 struct _name_t {
   allocator_t allocator;
   enum name_kind kind;
-  void *ref; /* borrowing reference to the actual object */
+  void *ref; /* borrowing: points to type_t/value_t/function_t/namespace_t */
 };
 
 typedef struct _name_t *name_t;

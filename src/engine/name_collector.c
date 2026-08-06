@@ -1,6 +1,10 @@
 #include "engine/name_collector.h"
 #include "engine/name.h"
 #include "engine/scope.h"
+#include "engine/stype.h"
+#include "engine/value.h"
+#include "engine/function.h"
+#include "engine/namespace.h"
 #include "core/diagnostic.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -13,6 +17,7 @@
 #include "cubec/literal_identifier.h"
 #include "cubec/literal_string.h"
 #include "cubec/statement_declaration.h"
+#include "cubec/declaration_function.h"
 #include "cubec/statement_function.h"
 #include "cubec/statement_struct.h"
 #include "cubec/statement_union.h"
@@ -96,225 +101,298 @@ static void _module_export_name(context_t ctx, module_t mod, node_t node,
   strmap_insert(mod->exports, name_str, scope_name);
 }
 
-/* --------------------------------------------------------------------------
- *  Statement-level name collection
- * -------------------------------------------------------------------------- */
-
-/**
- * @brief Collect names from a single top-level statement node.
- *
- * For static scopes (module, type): collects var/const, func, type names.
- * For non-static scopes: collects only func and type names (no variable
- * hoisting).
- */
-static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
-                               bool is_static_scope) {
-  /* Get the owning module for export registration (NULL for non-module scopes) */
+/** Check that export is used at module scope. Returns the owning module,
+ *  or NULL if not at module scope (and reports an error if is_export). */
+static module_t _check_export_scope(context_t ctx, scope_t scope,
+                                    node_t node, bool is_export) {
   module_t mod = (scope->kind == SCOPE_MODULE && scope->owner)
                      ? (module_t)scope->owner
                      : NULL;
+  if (is_export && !mod)
+    _report_error(ctx, node, "'export' can only be used at module scope");
+  return mod;
+}
 
+/* --------------------------------------------------------------------------
+ *  Semantic object creation helpers
+ * -------------------------------------------------------------------------- */
+
+/** Create a value_t, register it in scope, and return it as ref. */
+static void *_create_value(scope_t scope, node_t decl_node,
+                           bool is_export, bool is_exportlib, bool is_extern,
+                           bool is_builtin, bool is_comptime, bool is_using) {
+  value_t val = value_create(scope->allocator, decl_node, is_export, is_exportlib,
+                             is_extern, is_builtin, is_comptime, is_using);
+  vec_push(scope->values, (void *)val);
+  return (void *)val;
+}
+
+/** Create a function_t, register it in scope, and return it as ref. */
+static void *_create_function(scope_t scope, node_t decl_node,
+                              bool is_export, bool is_exportlib, bool is_inline,
+                              bool is_extern, bool is_builtin, bool is_comptime,
+                              bool is_c_variadic) {
+  function_t func = function_create(scope->allocator, decl_node, is_export,
+                                    is_exportlib, is_inline, is_extern,
+                                    is_builtin, is_comptime, is_c_variadic);
+  vec_push(scope->functions, (void *)func);
+  return (void *)func;
+}
+
+/** Create a stype_t, register it in context (global), and return it as ref. */
+static void *_create_type(context_t ctx, enum type_kind_t kind, node_t decl_node) {
+  stype_t type = stype_create(ctx->allocator, kind, decl_node);
+  vec_push(ctx->types, (void *)type);
+  return (void *)type;
+}
+
+/** Create a namespace_t, register it in scope, and return it as ref. */
+static void *_create_namespace(scope_t scope, node_t decl_node) {
+  namespace_t ns = namespace_create(scope->allocator, decl_node);
+  vec_push(scope->namespaces, (void *)ns);
+  return (void *)ns;
+}
+
+/* --------------------------------------------------------------------------
+ *  Per-statement-type collection functions
+ * -------------------------------------------------------------------------- */
+
+static void _collect_var_declaration(context_t ctx, scope_t scope,
+                                     node_t stmt) {
+  cubec_statement_declaration_t decl = (cubec_statement_declaration_t)stmt;
+  module_t mod = _check_export_scope(ctx, scope, stmt, decl->is_export);
+  if (!decl->declarator)
+    return;
+  cubec_declaration_variable_t var =
+      (cubec_declaration_variable_t)decl->declarator;
+  const char *name_str = _get_identifier_name(var->identifier);
+  if (!name_str)
+    return;
+  /* node points to the declaration (declarator), not the statement wrapper */
+  void *ref = _create_value(scope, decl->declarator, decl->is_export,
+                            decl->is_exportlib, decl->is_extern,
+                            decl->is_builtin, decl->is_comptime, decl->is_using);
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_VARIABLE, ref))
+    return;
+  if (mod && decl->is_export)
+    _module_export_name(ctx, mod, stmt, name_str);
+}
+
+static void _collect_function_declaration(context_t ctx, scope_t scope,
+                                         node_t stmt) {
+  cubec_statement_function_t func = (cubec_statement_function_t)stmt;
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)func->declarator;
+  module_t mod = _check_export_scope(ctx, scope, stmt, func->is_export);
+  const char *name_str = _get_identifier_name(decl->name);
+  if (!name_str)
+    return;
+  /* For functions, node points to the declaration (declarator), not the statement wrapper */
+  void *ref = _create_function(scope, func->declarator, func->is_export,
+                               func->is_exportlib, decl->is_inline,
+                               decl->is_extern, decl->is_builtin,
+                               decl->is_comptime, decl->is_c_variadic);
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_FUNCTION, ref))
+    return;
+  if (mod && func->is_export)
+    _module_export_name(ctx, mod, stmt, name_str);
+}
+
+static void _collect_struct_declaration(context_t ctx, scope_t scope,
+                                       node_t stmt) {
+  cubec_statement_struct_t s = (cubec_statement_struct_t)stmt;
+  module_t mod = _check_export_scope(ctx, scope, stmt, s->is_export);
+  const char *name_str = _get_identifier_name(s->name);
+  if (!name_str)
+    return;
+  void *ref = _create_type(ctx, TYPE_STRUCT, stmt);
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, ref))
+    return;
+  if (mod && s->is_export)
+    _module_export_name(ctx, mod, stmt, name_str);
+  /* TODO: recurse into struct members for method/type collection */
+}
+
+static void _collect_union_declaration(context_t ctx, scope_t scope,
+                                      node_t stmt) {
+  cubec_statement_union_t u = (cubec_statement_union_t)stmt;
+  module_t mod = _check_export_scope(ctx, scope, stmt, u->is_export);
+  const char *name_str = _get_identifier_name(u->name);
+  if (!name_str)
+    return;
+  void *ref = _create_type(ctx, TYPE_UNION, stmt);
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, ref))
+    return;
+  if (mod && u->is_export)
+    _module_export_name(ctx, mod, stmt, name_str);
+  /* TODO: recurse into union members for method/type collection */
+}
+
+static void _collect_enum_declaration(context_t ctx, scope_t scope,
+                                     node_t stmt) {
+  cubec_statement_enum_t e = (cubec_statement_enum_t)stmt;
+  module_t mod = _check_export_scope(ctx, scope, stmt, e->is_export);
+  const char *name_str = _get_identifier_name(e->name);
+  if (!name_str)
+    return;
+  void *ref = _create_type(ctx, TYPE_ENUM, stmt);
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, ref))
+    return;
+  if (mod && e->is_export)
+    _module_export_name(ctx, mod, stmt, name_str);
+}
+
+static void _collect_interface_declaration(context_t ctx, scope_t scope,
+                                          node_t stmt) {
+  cubec_statement_interface_t iface = (cubec_statement_interface_t)stmt;
+  module_t mod = _check_export_scope(ctx, scope, stmt, iface->is_export);
+  const char *name_str = _get_identifier_name(iface->name);
+  if (!name_str)
+    return;
+  void *ref = _create_type(ctx, TYPE_INTERFACE, stmt);
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, ref))
+    return;
+  if (mod && iface->is_export)
+    _module_export_name(ctx, mod, stmt, name_str);
+  /* TODO: recurse into interface members for method/type collection */
+}
+
+static void _collect_cunion_declaration(context_t ctx, scope_t scope,
+                                       node_t stmt) {
+  cubec_statement_cunion_t cu = (cubec_statement_cunion_t)stmt;
+  const char *name_str = _get_identifier_name(cu->name);
+  if (!name_str)
+    return;
+  void *ref = _create_type(ctx, TYPE_CUNION, stmt);
+  _scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, ref);
+}
+
+static void _collect_type_alias_declaration(context_t ctx, scope_t scope,
+                                           node_t stmt) {
+  cubec_statement_declaration_type_t t =
+      (cubec_statement_declaration_type_t)stmt;
+  module_t mod = _check_export_scope(ctx, scope, stmt, t->is_export);
+  const char *name_str = _get_identifier_name(t->name);
+  if (!name_str)
+    return;
+  void *ref = _create_type(ctx, TYPE_TYPE_ALIAS, stmt);
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, ref))
+    return;
+  if (mod && t->is_export)
+    _module_export_name(ctx, mod, stmt, name_str);
+}
+
+static void _collect_import_statement(context_t ctx, scope_t scope,
+                                     node_t stmt) {
+  if (scope->kind != SCOPE_MODULE) {
+    _report_error(ctx, stmt, "'import' can only be used at module scope");
+    return;
+  }
+  cubec_statement_import_t imp = (cubec_statement_import_t)stmt;
+  const char *mod_name = _get_identifier_name(imp->module_name);
+  const char *mod_path = _get_string_value(imp->path);
+  if (!mod_name) {
+    _report_error(ctx, stmt, "import statement is missing module name");
+    return;
+  }
+  if (!mod_path) {
+    _report_error(ctx, stmt, "import statement is missing module path");
+    return;
+  }
+  module_t dep_mod = context_import(ctx, mod_path);
+  if (!dep_mod) {
+    _report_error(ctx, stmt, "cannot import module '%s' from '%s'",
+                  mod_name, mod_path);
+    return;
+  }
+  name_collector_run(ctx, dep_mod);
+  void *ref = _create_namespace(scope, stmt);
+  _scope_insert_name(ctx, scope, stmt, mod_name, NAME_NAMESPACE, ref);
+}
+
+static void _collect_export_statement(context_t ctx, scope_t scope,
+                                     node_t stmt) {
+  module_t mod = (scope->kind == SCOPE_MODULE && scope->owner)
+                     ? (module_t)scope->owner
+                     : NULL;
+  if (!mod) {
+    _report_error(ctx, stmt, "'export' statement can only be used at module scope");
+    return;
+  }
+  cubec_statement_export_t exp = (cubec_statement_export_t)stmt;
+  const char *mod_path = _get_string_value(exp->path);
+  if (!mod_path) {
+    _report_error(ctx, stmt, "export statement is missing module path");
+    return;
+  }
+  module_t dep_mod = context_import(ctx, mod_path);
+  if (!dep_mod) {
+    _report_error(ctx, stmt, "cannot export from module '%s'", mod_path);
+    return;
+  }
+  name_collector_run(ctx, dep_mod);
+  if (exp->is_star) {
+    strmap_iter_t it = strmap_iter_first(dep_mod->exports);
+    const char *key;
+    while ((key = strmap_iter_next(&it)) != NULL) {
+      name_t dep_name = (name_t)strmap_find(dep_mod->exports, key);
+      strmap_insert(mod->exports, key, dep_name);
+    }
+  } else {
+    size_t name_count = vec_get_size(exp->names);
+    for (size_t i = 0; i < name_count; i++) {
+      node_t name_node = (node_t)vec_get(exp->names, i);
+      const char *exp_name = _get_identifier_name(name_node);
+      if (!exp_name)
+        continue;
+      name_t dep_name = (name_t)strmap_find(dep_mod->exports, exp_name);
+      if (!dep_name) {
+        _report_error(ctx, name_node, "'%s' is not exported by '%s'",
+                      exp_name, mod_path);
+        continue;
+      }
+      strmap_insert(mod->exports, exp_name, dep_name);
+    }
+  }
+}
+
+/* --------------------------------------------------------------------------
+ *  Statement dispatcher
+ * -------------------------------------------------------------------------- */
+
+static void _collect_statement(context_t ctx, scope_t scope, node_t stmt,
+                               bool is_static_scope) {
   switch (stmt->kind) {
-  /* var / const declarations — only in static scopes */
-  case CUBEC_NODE_STATEMENT_DECLARATION: {
-    if (!is_static_scope)
-      break;
-    cubec_statement_declaration_t decl = (cubec_statement_declaration_t)stmt;
-    if (decl->is_export && !mod) {
-      _report_error(ctx, stmt, "'export' can only be used at module scope");
-    }
-    if (!decl->declarator)
-      break;
-    cubec_declaration_variable_t var =
-        (cubec_declaration_variable_t)decl->declarator;
-    const char *name_str = _get_identifier_name(var->identifier);
-    if (!name_str)
-      break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_VARIABLE, NULL))
-      break;
-    if (mod && decl->is_export)
-      _module_export_name(ctx, mod, stmt, name_str);
+  case CUBEC_NODE_STATEMENT_DECLARATION:
+    if (is_static_scope)
+      _collect_var_declaration(ctx, scope, stmt);
     break;
-  }
-
-  /* func declarations */
-  case CUBEC_NODE_STATEMENT_FUNCTION: {
-    cubec_statement_function_t func = (cubec_statement_function_t)stmt;
-    if (func->is_export && !mod) {
-      _report_error(ctx, stmt, "'export' can only be used at module scope");
-    }
-    const char *name_str = _get_identifier_name(func->name);
-    if (!name_str)
-      break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_FUNCTION, NULL))
-      break;
-    if (mod && func->is_export)
-      _module_export_name(ctx, mod, stmt, name_str);
+  case CUBEC_NODE_STATEMENT_FUNCTION:
+    _collect_function_declaration(ctx, scope, stmt);
     break;
-  }
-
-  /* type declarations: struct, union, enum, interface, type alias, cunion */
-  case CUBEC_NODE_STATEMENT_STRUCT: {
-    cubec_statement_struct_t s = (cubec_statement_struct_t)stmt;
-    if (s->is_export && !mod) {
-      _report_error(ctx, stmt, "'export' can only be used at module scope");
-    }
-    const char *name_str = _get_identifier_name(s->name);
-    if (!name_str)
-      break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
-      break;
-    if (mod && s->is_export)
-      _module_export_name(ctx, mod, stmt, name_str);
-    /* TODO: recurse into struct members for method/type collection */
+  case CUBEC_NODE_STATEMENT_STRUCT:
+    _collect_struct_declaration(ctx, scope, stmt);
     break;
-  }
-  case CUBEC_NODE_STATEMENT_UNION: {
-    cubec_statement_union_t u = (cubec_statement_union_t)stmt;
-    if (u->is_export && !mod) {
-      _report_error(ctx, stmt, "'export' can only be used at module scope");
-    }
-    const char *name_str = _get_identifier_name(u->name);
-    if (!name_str)
-      break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
-      break;
-    if (mod && u->is_export)
-      _module_export_name(ctx, mod, stmt, name_str);
-    /* TODO: recurse into union members for method/type collection */
+  case CUBEC_NODE_STATEMENT_UNION:
+    _collect_union_declaration(ctx, scope, stmt);
     break;
-  }
-  case CUBEC_NODE_STATEMENT_ENUM: {
-    cubec_statement_enum_t e = (cubec_statement_enum_t)stmt;
-    if (e->is_export && !mod) {
-      _report_error(ctx, stmt, "'export' can only be used at module scope");
-    }
-    const char *name_str = _get_identifier_name(e->name);
-    if (!name_str)
-      break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
-      break;
-    if (mod && e->is_export)
-      _module_export_name(ctx, mod, stmt, name_str);
+  case CUBEC_NODE_STATEMENT_ENUM:
+    _collect_enum_declaration(ctx, scope, stmt);
     break;
-  }
-  case CUBEC_NODE_STATEMENT_INTERFACE: {
-    cubec_statement_interface_t iface = (cubec_statement_interface_t)stmt;
-    if (iface->is_export && !mod) {
-      _report_error(ctx, stmt, "'export' can only be used at module scope");
-    }
-    const char *name_str = _get_identifier_name(iface->name);
-    if (!name_str)
-      break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
-      break;
-    if (mod && iface->is_export)
-      _module_export_name(ctx, mod, stmt, name_str);
-    /* TODO: recurse into interface members for method/type collection */
+  case CUBEC_NODE_STATEMENT_INTERFACE:
+    _collect_interface_declaration(ctx, scope, stmt);
     break;
-  }
-  case CUBEC_NODE_STATEMENT_CUNION: {
-    cubec_statement_cunion_t cu = (cubec_statement_cunion_t)stmt;
-    const char *name_str = _get_identifier_name(cu->name);
-    if (!name_str)
-      break;
-    _scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL);
+  case CUBEC_NODE_STATEMENT_CUNION:
+    _collect_cunion_declaration(ctx, scope, stmt);
     break;
-  }
-  case CUBEC_NODE_STATEMENT_DECLARATION_TYPE: {
-    cubec_statement_declaration_type_t t =
-        (cubec_statement_declaration_type_t)stmt;
-    if (t->is_export && !mod) {
-      _report_error(ctx, stmt, "'export' can only be used at module scope");
-    }
-    const char *name_str = _get_identifier_name(t->name);
-    if (!name_str)
-      break;
-    if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
-      break;
-    if (mod && t->is_export)
-      _module_export_name(ctx, mod, stmt, name_str);
+  case CUBEC_NODE_STATEMENT_DECLARATION_TYPE:
+    _collect_type_alias_declaration(ctx, scope, stmt);
     break;
-  }
-
-  /* import — load dependency module and register namespace */
-  case CUBEC_NODE_STATEMENT_IMPORT: {
-    cubec_statement_import_t imp = (cubec_statement_import_t)stmt;
-    if (scope->kind != SCOPE_MODULE) {
-      _report_error(ctx, stmt, "'import' can only be used at module scope");
-      break;
-    }
-    const char *mod_name = _get_identifier_name(imp->module_name);
-    const char *mod_path = _get_string_value(imp->path);
-    if (!mod_name) {
-      _report_error(ctx, stmt, "import statement is missing module name");
-      break;
-    }
-    if (!mod_path) {
-      _report_error(ctx, stmt, "import statement is missing module path");
-      break;
-    }
-    /* Import the dependency module (read → tokenize → parse → create) */
-    module_t dep_mod = context_import(ctx, mod_path);
-    if (!dep_mod) {
-      _report_error(ctx, stmt, "cannot import module '%s' from '%s'",
-                    mod_name, mod_path);
-      break;
-    }
-    /* Recursively run name collection on the dependency if not done */
-    name_collector_run(ctx, dep_mod);
-    /* Register the module as a namespace in the current scope */
-    _scope_insert_name(ctx, scope, stmt, mod_name, NAME_NAMESPACE, NULL);
+  case CUBEC_NODE_STATEMENT_IMPORT:
+    _collect_import_statement(ctx, scope, stmt);
     break;
-  }
-
-  /* export — re-export names from dependency module */
-  case CUBEC_NODE_STATEMENT_EXPORT: {
-    cubec_statement_export_t exp = (cubec_statement_export_t)stmt;
-    if (!mod) {
-      _report_error(ctx, stmt, "'export' statement can only be used at module scope");
-      break;
-    }
-    const char *mod_path = _get_string_value(exp->path);
-    if (!mod_path) {
-      _report_error(ctx, stmt, "export statement is missing module path");
-      break;
-    }
-    module_t dep_mod = context_import(ctx, mod_path);
-    if (!dep_mod) {
-      _report_error(ctx, stmt, "cannot export from module '%s'", mod_path);
-      break;
-    }
-    name_collector_run(ctx, dep_mod);
-    /* Re-export: reference the same name_t objects from dep_mod */
-    if (exp->is_star) {
-      /* export * — re-export all */
-      strmap_iter_t it = strmap_iter_first(dep_mod->exports);
-      const char *key;
-      while ((key = strmap_iter_next(&it)) != NULL) {
-        name_t dep_name = (name_t)strmap_find(dep_mod->exports, key);
-        strmap_insert(mod->exports, key, dep_name);
-      }
-    } else {
-      /* export { name1, name2 } — re-export only listed names */
-      size_t name_count = vec_get_size(exp->names);
-      for (size_t i = 0; i < name_count; i++) {
-        node_t name_node = (node_t)vec_get(exp->names, i);
-        const char *exp_name = _get_identifier_name(name_node);
-        if (!exp_name)
-          continue;
-        name_t dep_name = (name_t)strmap_find(dep_mod->exports, exp_name);
-        if (!dep_name) {
-          _report_error(ctx, name_node, "'%s' is not exported by '%s'",
-                        exp_name, mod_path);
-          continue;
-        }
-        strmap_insert(mod->exports, exp_name, dep_name);
-      }
-    }
+  case CUBEC_NODE_STATEMENT_EXPORT:
+    _collect_export_statement(ctx, scope, stmt);
     break;
-  }
-
   default:
     break;
   }

@@ -14,6 +14,15 @@ static void _scope_init(void *self, allocator_t allocator, void *arg) {
   strmap_init_t sm_init = {.value_auto_dispose = true};
   scope->names = (strmap_t)allocator_create(allocator, &g_strmap_type, &sm_init);
 
+  vec_init_t values_init = {.auto_dispose = true};
+  scope->values = (vec_t)allocator_create(allocator, &g_vec_type, &values_init);
+
+  vec_init_t functions_init = {.auto_dispose = true};
+  scope->functions = (vec_t)allocator_create(allocator, &g_vec_type, &functions_init);
+
+  vec_init_t namespaces_init = {.auto_dispose = true};
+  scope->namespaces = (vec_t)allocator_create(allocator, &g_vec_type, &namespaces_init);
+
   vec_init_t defer_init = {.auto_dispose = false};
   scope->defers = (vec_t)allocator_create(allocator, &g_vec_type, &defer_init);
 
@@ -31,6 +40,9 @@ static void _scope_dispose(void *self, allocator_t allocator) {
     allocator_free(allocator, vec_get(scope->children, 0));
   }
   allocator_free(allocator, &scope->defers);
+  allocator_free(allocator, &scope->namespaces);
+  allocator_free(allocator, &scope->functions);
+  allocator_free(allocator, &scope->values);
   allocator_free(allocator, &scope->names);
   allocator_free(allocator, &scope->children);
 }

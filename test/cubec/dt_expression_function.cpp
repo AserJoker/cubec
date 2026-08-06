@@ -1,7 +1,7 @@
 #include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
-#include "cubec/expression_function.h"
+#include "cubec/declaration_function.h"
 #include "cubec/expression_call.h"
 #include "cubec/function_capture.h"
 #include "cubec/function_argument.h"
@@ -24,7 +24,7 @@ protected:
 };
 
 /* ==========================================================================
- *  Basic parsing
+ *  Basic parsing (anonymous functions via read_declaration_function)
  * ========================================================================== */
 
 TEST_F(dt_expression_function, no_captures_no_params) {
@@ -33,11 +33,11 @@ TEST_F(dt_expression_function, no_captures_no_params) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_FUNCTION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_FUNCTION);
 
-  cubec_expression_function_t fn = (cubec_expression_function_t)node;
+  cubec_declaration_function_t fn = (cubec_declaration_function_t)node;
   EXPECT_EQ(fn->captures, nullptr);
   EXPECT_EQ(fn->generic_params, nullptr);
   EXPECT_NE(fn->arguments, nullptr);
@@ -55,10 +55,10 @@ TEST_F(dt_expression_function, simple_captures) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  cubec_expression_function_t fn = (cubec_expression_function_t)node;
+  cubec_declaration_function_t fn = (cubec_declaration_function_t)node;
   EXPECT_NE(fn->captures, nullptr);
   EXPECT_EQ(vec_get_size(fn->captures), 2);
 
@@ -79,10 +79,10 @@ TEST_F(dt_expression_function, empty_captures_with_params) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  cubec_expression_function_t fn = (cubec_expression_function_t)node;
+  cubec_declaration_function_t fn = (cubec_declaration_function_t)node;
   EXPECT_EQ(fn->captures, nullptr);
   EXPECT_EQ(vec_get_size(fn->arguments), 1);
   EXPECT_NE(fn->return_type, nullptr);
@@ -101,10 +101,10 @@ TEST_F(dt_expression_function, generic_with_captures) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  cubec_expression_function_t fn = (cubec_expression_function_t)node;
+  cubec_declaration_function_t fn = (cubec_declaration_function_t)node;
   EXPECT_NE(fn->captures, nullptr);
   EXPECT_NE(fn->generic_params, nullptr);
   EXPECT_EQ(vec_get_size(fn->generic_params), 1);
@@ -119,10 +119,10 @@ TEST_F(dt_expression_function, generic_no_captures) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  cubec_expression_function_t fn = (cubec_expression_function_t)node;
+  cubec_declaration_function_t fn = (cubec_declaration_function_t)node;
   EXPECT_EQ(fn->captures, nullptr);
   EXPECT_NE(fn->generic_params, nullptr);
 
@@ -140,10 +140,10 @@ TEST_F(dt_expression_function, with_params) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  cubec_expression_function_t fn = (cubec_expression_function_t)node;
+  cubec_declaration_function_t fn = (cubec_declaration_function_t)node;
   EXPECT_EQ(vec_get_size(fn->arguments), 2);
 
   allocator_free(allocator, &node);
@@ -156,10 +156,10 @@ TEST_F(dt_expression_function, no_return_type) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  cubec_expression_function_t fn = (cubec_expression_function_t)node;
+  cubec_declaration_function_t fn = (cubec_declaration_function_t)node;
   EXPECT_EQ(fn->return_type, nullptr);
 
   allocator_free(allocator, &node);
@@ -172,10 +172,10 @@ TEST_F(dt_expression_function, complex_return_type) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  cubec_expression_function_t fn = (cubec_expression_function_t)node;
+  cubec_declaration_function_t fn = (cubec_declaration_function_t)node;
   EXPECT_NE(fn->return_type, nullptr);
 
   allocator_free(allocator, &node);
@@ -188,10 +188,10 @@ TEST_F(dt_expression_function, no_params) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  cubec_expression_function_t fn = (cubec_expression_function_t)node;
+  cubec_declaration_function_t fn = (cubec_declaration_function_t)node;
   EXPECT_EQ(vec_get_size(fn->arguments), 0);
   EXPECT_NE(fn->return_type, nullptr);
 
@@ -255,14 +255,14 @@ TEST_F(dt_expression_function, clone) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
   ASSERT_NE(cloned, nullptr);
-  EXPECT_EQ(cloned->kind, CUBEC_NODE_EXPRESSION_FUNCTION);
+  EXPECT_EQ(cloned->kind, CUBEC_NODE_DECLARATION_FUNCTION);
 
-  cubec_expression_function_t fn = (cubec_expression_function_t)cloned;
+  cubec_declaration_function_t fn = (cubec_declaration_function_t)cloned;
   EXPECT_NE(fn->arguments, nullptr);
   EXPECT_NE(fn->return_type, nullptr);
   EXPECT_NE(fn->body, nullptr);
@@ -278,13 +278,13 @@ TEST_F(dt_expression_function, clone_with_captures) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)value_clone(allocator, node);
   ASSERT_NE(cloned, nullptr);
 
-  cubec_expression_function_t fn = (cubec_expression_function_t)cloned;
+  cubec_declaration_function_t fn = (cubec_declaration_function_t)cloned;
   EXPECT_NE(fn->captures, nullptr);
   EXPECT_EQ(vec_get_size(fn->captures), 2);
 
@@ -299,14 +299,14 @@ TEST_F(dt_expression_function, move) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)value_move(allocator, node);
   ASSERT_NE(moved, nullptr);
-  EXPECT_EQ(moved->kind, CUBEC_NODE_EXPRESSION_FUNCTION);
+  EXPECT_EQ(moved->kind, CUBEC_NODE_DECLARATION_FUNCTION);
 
-  cubec_expression_function_t fn = (cubec_expression_function_t)moved;
+  cubec_declaration_function_t fn = (cubec_declaration_function_t)moved;
   EXPECT_NE(fn->captures, nullptr);
   EXPECT_NE(fn->arguments, nullptr);
   EXPECT_NE(fn->body, nullptr);
@@ -326,7 +326,7 @@ TEST_F(dt_expression_function, missing_pipe) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -339,7 +339,7 @@ TEST_F(dt_expression_function, missing_close_pipe) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -352,7 +352,7 @@ TEST_F(dt_expression_function, missing_body) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -365,7 +365,7 @@ TEST_F(dt_expression_function, not_func_returns_null) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -383,7 +383,7 @@ TEST_F(dt_expression_function, via_read_expression) {
   size_t position = 0;
   node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_FUNCTION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_FUNCTION);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -395,7 +395,7 @@ TEST_F(dt_expression_function, consume_all_tokens) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(position, vec_get_size(tokens) - 1);
 
@@ -408,7 +408,7 @@ TEST_F(dt_expression_function, write_closure) {
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression_function(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_function(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

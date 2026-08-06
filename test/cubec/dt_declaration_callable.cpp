@@ -383,7 +383,7 @@ TEST_F(dt_declaration_callable, non_func_returns_null) {
  *  Error cases
  * -------------------------------------------------------------------------- */
 
-/* Missing open paren: func i32) -> i32 — falls back to expression_function which also fails */
+/* Missing open paren: func i32) -> i32 — falls back to declaration_function which also fails */
 TEST_F(dt_declaration_callable, missing_open_paren_returns_null) {
   const char *source = "func i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);

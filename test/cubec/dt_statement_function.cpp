@@ -2,6 +2,7 @@
 #include "core/token_writer.h"
 #include "cubec/statement.h"
 #include "cubec/statement_function.h"
+#include "cubec/declaration_function.h"
 #include "cubec/function_argument.h"
 #include "cubec/generic_param.h"
 #include "cubec/node.h"
@@ -38,17 +39,18 @@ TEST_F(dt_statement_function, basic_function) {
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FUNCTION);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
   EXPECT_FALSE(fn->is_export);
-  EXPECT_FALSE(fn->is_inline);
-  EXPECT_FALSE(fn->is_extern);
-  EXPECT_FALSE(fn->is_c_variadic);
-  EXPECT_NE(fn->name, nullptr);
-  EXPECT_EQ(fn->name->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_EQ(fn->generic_params, nullptr);
-  EXPECT_NE(fn->arguments, nullptr);
-  EXPECT_EQ(vec_get_size(fn->arguments), 2);
-  EXPECT_NE(fn->return_type, nullptr);
-  EXPECT_NE(fn->body, nullptr);
+  EXPECT_FALSE(decl->is_inline);
+  EXPECT_FALSE(decl->is_extern);
+  EXPECT_FALSE(decl->is_c_variadic);
+  EXPECT_NE(decl->name, nullptr);
+  EXPECT_EQ(decl->name->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  EXPECT_EQ(decl->generic_params, nullptr);
+  EXPECT_NE(decl->arguments, nullptr);
+  EXPECT_EQ(vec_get_size(decl->arguments), 2);
+  EXPECT_NE(decl->return_type, nullptr);
+  EXPECT_NE(decl->body, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -67,10 +69,11 @@ TEST_F(dt_statement_function, no_params) {
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FUNCTION);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_NE(fn->arguments, nullptr);
-  EXPECT_EQ(vec_get_size(fn->arguments), 0);
-  EXPECT_EQ(fn->return_type, nullptr);
-  EXPECT_NE(fn->body, nullptr);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_NE(decl->arguments, nullptr);
+  EXPECT_EQ(vec_get_size(decl->arguments), 0);
+  EXPECT_EQ(decl->return_type, nullptr);
+  EXPECT_NE(decl->body, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -88,8 +91,9 @@ TEST_F(dt_statement_function, no_return_type) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_EQ(fn->return_type, nullptr);
-  EXPECT_NE(fn->body, nullptr);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_EQ(decl->return_type, nullptr);
+  EXPECT_NE(decl->body, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -107,9 +111,10 @@ TEST_F(dt_statement_function, single_param) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_EQ(vec_get_size(fn->arguments), 1);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_EQ(vec_get_size(decl->arguments), 1);
 
-  cubec_function_argument_t arg = (cubec_function_argument_t)vec_get(fn->arguments, 0);
+  cubec_function_argument_t arg = (cubec_function_argument_t)vec_get(decl->arguments, 0);
   EXPECT_EQ(arg->super.kind, CUBEC_NODE_FUNCTION_ARGUMENT);
   EXPECT_NE(arg->identifier, nullptr);
   EXPECT_NE(arg->type, nullptr);
@@ -130,7 +135,8 @@ TEST_F(dt_statement_function, multiple_params) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_EQ(vec_get_size(fn->arguments), 3);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_EQ(vec_get_size(decl->arguments), 3);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -152,10 +158,11 @@ TEST_F(dt_statement_function, generic_single_param) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_NE(fn->generic_params, nullptr);
-  EXPECT_EQ(vec_get_size(fn->generic_params), 1);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_NE(decl->generic_params, nullptr);
+  EXPECT_EQ(vec_get_size(decl->generic_params), 1);
 
-  cubec_generic_param_t param = (cubec_generic_param_t)vec_get(fn->generic_params, 0);
+  cubec_generic_param_t param = (cubec_generic_param_t)vec_get(decl->generic_params, 0);
   EXPECT_EQ(param->super.kind, CUBEC_NODE_GENERIC_PARAM);
   EXPECT_NE(param->name, nullptr);
 
@@ -175,16 +182,17 @@ TEST_F(dt_statement_function, generic_multiple_params) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_NE(fn->generic_params, nullptr);
-  EXPECT_EQ(vec_get_size(fn->generic_params), 2);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_NE(decl->generic_params, nullptr);
+  EXPECT_EQ(vec_get_size(decl->generic_params), 2);
 
   /* First: T extends Numeric */
-  cubec_generic_param_t param0 = (cubec_generic_param_t)vec_get(fn->generic_params, 0);
+  cubec_generic_param_t param0 = (cubec_generic_param_t)vec_get(decl->generic_params, 0);
   EXPECT_NE(param0->constraints, nullptr);
   EXPECT_EQ(param0->value_type, nullptr);
 
   /* Second: N: u64 */
-  cubec_generic_param_t param1 = (cubec_generic_param_t)vec_get(fn->generic_params, 1);
+  cubec_generic_param_t param1 = (cubec_generic_param_t)vec_get(decl->generic_params, 1);
   EXPECT_EQ(param1->constraints, nullptr);
   EXPECT_NE(param1->value_type, nullptr);
 
@@ -204,10 +212,11 @@ TEST_F(dt_statement_function, generic_rest_param) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_NE(fn->generic_params, nullptr);
-  EXPECT_EQ(vec_get_size(fn->generic_params), 1);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_NE(decl->generic_params, nullptr);
+  EXPECT_EQ(vec_get_size(decl->generic_params), 1);
 
-  cubec_generic_param_t param = (cubec_generic_param_t)vec_get(fn->generic_params, 0);
+  cubec_generic_param_t param = (cubec_generic_param_t)vec_get(decl->generic_params, 0);
   EXPECT_TRUE(param->is_rest);
 
   allocator_free(allocator, &node);
@@ -230,9 +239,10 @@ TEST_F(dt_statement_function, export_function) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
   EXPECT_TRUE(fn->is_export);
-  EXPECT_FALSE(fn->is_inline);
-  EXPECT_FALSE(fn->is_extern);
+  EXPECT_FALSE(decl->is_inline);
+  EXPECT_FALSE(decl->is_extern);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -250,9 +260,10 @@ TEST_F(dt_statement_function, inline_function) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
   EXPECT_FALSE(fn->is_export);
-  EXPECT_TRUE(fn->is_inline);
-  EXPECT_FALSE(fn->is_extern);
+  EXPECT_TRUE(decl->is_inline);
+  EXPECT_FALSE(decl->is_extern);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -270,10 +281,11 @@ TEST_F(dt_statement_function, no_modifier) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
   EXPECT_FALSE(fn->is_export);
-  EXPECT_FALSE(fn->is_inline);
-  EXPECT_FALSE(fn->is_extern);
-  EXPECT_FALSE(fn->is_c_variadic);
+  EXPECT_FALSE(decl->is_inline);
+  EXPECT_FALSE(decl->is_extern);
+  EXPECT_FALSE(decl->is_c_variadic);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -295,10 +307,11 @@ TEST_F(dt_statement_function, extern_function) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_TRUE(fn->is_extern);
-  EXPECT_EQ(fn->body, nullptr);
-  EXPECT_NE(fn->return_type, nullptr);
-  EXPECT_EQ(vec_get_size(fn->arguments), 1);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_TRUE(decl->is_extern);
+  EXPECT_EQ(decl->body, nullptr);
+  EXPECT_NE(decl->return_type, nullptr);
+  EXPECT_EQ(vec_get_size(decl->arguments), 1);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -316,10 +329,11 @@ TEST_F(dt_statement_function, extern_c_variadic) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_TRUE(fn->is_extern);
-  EXPECT_TRUE(fn->is_c_variadic);
-  EXPECT_EQ(fn->body, nullptr);
-  EXPECT_EQ(vec_get_size(fn->arguments), 1);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_TRUE(decl->is_extern);
+  EXPECT_TRUE(decl->is_c_variadic);
+  EXPECT_EQ(decl->body, nullptr);
+  EXPECT_EQ(vec_get_size(decl->arguments), 1);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -337,10 +351,11 @@ TEST_F(dt_statement_function, extern_no_params) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_TRUE(fn->is_extern);
-  EXPECT_EQ(fn->body, nullptr);
-  EXPECT_EQ(vec_get_size(fn->arguments), 0);
-  EXPECT_FALSE(fn->is_c_variadic);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_TRUE(decl->is_extern);
+  EXPECT_EQ(decl->body, nullptr);
+  EXPECT_EQ(vec_get_size(decl->arguments), 0);
+  EXPECT_FALSE(decl->is_c_variadic);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -362,9 +377,10 @@ TEST_F(dt_statement_function, param_pointer_type) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_EQ(vec_get_size(fn->arguments), 1);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_EQ(vec_get_size(decl->arguments), 1);
 
-  cubec_function_argument_t arg = (cubec_function_argument_t)vec_get(fn->arguments, 0);
+  cubec_function_argument_t arg = (cubec_function_argument_t)vec_get(decl->arguments, 0);
   EXPECT_NE(arg->type, nullptr);
 
   allocator_free(allocator, &node);
@@ -383,9 +399,10 @@ TEST_F(dt_statement_function, param_slice_type) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_EQ(vec_get_size(fn->arguments), 1);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_EQ(vec_get_size(decl->arguments), 1);
 
-  cubec_function_argument_t arg = (cubec_function_argument_t)vec_get(fn->arguments, 0);
+  cubec_function_argument_t arg = (cubec_function_argument_t)vec_get(decl->arguments, 0);
   EXPECT_NE(arg->type, nullptr);
 
   allocator_free(allocator, &node);
@@ -404,9 +421,10 @@ TEST_F(dt_statement_function, param_generic_type) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_EQ(vec_get_size(fn->arguments), 1);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_EQ(vec_get_size(decl->arguments), 1);
 
-  cubec_function_argument_t arg = (cubec_function_argument_t)vec_get(fn->arguments, 0);
+  cubec_function_argument_t arg = (cubec_function_argument_t)vec_get(decl->arguments, 0);
   EXPECT_NE(arg->type, nullptr);
 
   allocator_free(allocator, &node);
@@ -425,9 +443,10 @@ TEST_F(dt_statement_function, param_no_type) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_EQ(vec_get_size(fn->arguments), 1);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_EQ(vec_get_size(decl->arguments), 1);
 
-  cubec_function_argument_t arg = (cubec_function_argument_t)vec_get(fn->arguments, 0);
+  cubec_function_argument_t arg = (cubec_function_argument_t)vec_get(decl->arguments, 0);
   EXPECT_NE(arg->identifier, nullptr);
   EXPECT_EQ(arg->type, nullptr);
 
@@ -451,8 +470,9 @@ TEST_F(dt_statement_function, empty_body) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_NE(fn->body, nullptr);
-  EXPECT_EQ(fn->body->kind, CUBEC_NODE_STATEMENT_BLOCK);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_NE(decl->body, nullptr);
+  EXPECT_EQ(decl->body->kind, CUBEC_NODE_STATEMENT_BLOCK);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -470,7 +490,8 @@ TEST_F(dt_statement_function, body_with_statements) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_NE(fn->body, nullptr);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_NE(decl->body, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -488,8 +509,9 @@ TEST_F(dt_statement_function, no_body_semicolon) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_EQ(fn->body, nullptr);
-  EXPECT_NE(fn->return_type, nullptr);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_EQ(decl->body, nullptr);
+  EXPECT_NE(decl->return_type, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -556,9 +578,10 @@ TEST_F(dt_statement_function, export_inline_combined) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
   EXPECT_EQ(fn->is_export, true);
-  EXPECT_EQ(fn->is_inline, true);
-  EXPECT_EQ(fn->is_extern, false);
+  EXPECT_EQ(decl->is_inline, true);
+  EXPECT_EQ(decl->is_extern, false);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -629,11 +652,12 @@ TEST_F(dt_statement_function, clone) {
   EXPECT_EQ(cloned->kind, CUBEC_NODE_STATEMENT_FUNCTION);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)cloned;
-  EXPECT_NE(fn->name, nullptr);
-  EXPECT_NE(fn->arguments, nullptr);
-  EXPECT_EQ(vec_get_size(fn->arguments), 2);
-  EXPECT_NE(fn->return_type, nullptr);
-  EXPECT_NE(fn->body, nullptr);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_NE(decl->name, nullptr);
+  EXPECT_NE(decl->arguments, nullptr);
+  EXPECT_EQ(vec_get_size(decl->arguments), 2);
+  EXPECT_NE(decl->return_type, nullptr);
+  EXPECT_NE(decl->body, nullptr);
 
   allocator_free(allocator, &cloned);
   allocator_free(allocator, &node);
@@ -655,8 +679,9 @@ TEST_F(dt_statement_function, clone_generic) {
   ASSERT_NE(cloned, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)cloned;
-  EXPECT_NE(fn->generic_params, nullptr);
-  EXPECT_EQ(vec_get_size(fn->generic_params), 1);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_NE(decl->generic_params, nullptr);
+  EXPECT_EQ(vec_get_size(decl->generic_params), 1);
 
   allocator_free(allocator, &cloned);
   allocator_free(allocator, &node);
@@ -679,10 +704,11 @@ TEST_F(dt_statement_function, move) {
   EXPECT_EQ(moved->kind, CUBEC_NODE_STATEMENT_FUNCTION);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)moved;
-  EXPECT_NE(fn->name, nullptr);
-  EXPECT_NE(fn->arguments, nullptr);
-  EXPECT_NE(fn->return_type, nullptr);
-  EXPECT_NE(fn->body, nullptr);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_NE(decl->name, nullptr);
+  EXPECT_NE(decl->arguments, nullptr);
+  EXPECT_NE(decl->return_type, nullptr);
+  EXPECT_NE(decl->body, nullptr);
 
   allocator_free(allocator, &moved);
   allocator_free(allocator, &node);
@@ -704,8 +730,9 @@ TEST_F(dt_statement_function, clone_extern) {
   ASSERT_NE(cloned, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)cloned;
-  EXPECT_TRUE(fn->is_extern);
-  EXPECT_EQ(fn->body, nullptr);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_TRUE(decl->is_extern);
+  EXPECT_EQ(decl->body, nullptr);
 
   allocator_free(allocator, &cloned);
   allocator_free(allocator, &node);
@@ -785,11 +812,12 @@ TEST_F(dt_statement_function, builtin_func) {
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FUNCTION);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_TRUE(fn->is_builtin);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_TRUE(decl->is_builtin);
   EXPECT_FALSE(fn->is_export);
-  EXPECT_FALSE(fn->is_extern);
-  EXPECT_FALSE(fn->is_inline);
-  EXPECT_EQ(fn->body, nullptr);
+  EXPECT_FALSE(decl->is_extern);
+  EXPECT_FALSE(decl->is_inline);
+  EXPECT_EQ(decl->body, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -808,9 +836,10 @@ TEST_F(dt_statement_function, export_builtin_func) {
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FUNCTION);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
   EXPECT_TRUE(fn->is_export);
-  EXPECT_TRUE(fn->is_builtin);
-  EXPECT_FALSE(fn->is_extern);
+  EXPECT_TRUE(decl->is_builtin);
+  EXPECT_FALSE(decl->is_extern);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -848,12 +877,13 @@ TEST_F(dt_statement_function, comptime_func) {
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_FUNCTION);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_TRUE(fn->is_comptime);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_TRUE(decl->is_comptime);
   EXPECT_FALSE(fn->is_export);
-  EXPECT_FALSE(fn->is_extern);
-  EXPECT_FALSE(fn->is_builtin);
-  EXPECT_FALSE(fn->is_inline);
-  EXPECT_NE(fn->body, nullptr);
+  EXPECT_FALSE(decl->is_extern);
+  EXPECT_FALSE(decl->is_builtin);
+  EXPECT_FALSE(decl->is_inline);
+  EXPECT_NE(decl->body, nullptr);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -886,10 +916,11 @@ TEST_F(dt_statement_function, export_comptime_func) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
   EXPECT_TRUE(fn->is_export);
-  EXPECT_TRUE(fn->is_comptime);
-  EXPECT_FALSE(fn->is_extern);
-  EXPECT_FALSE(fn->is_builtin);
+  EXPECT_TRUE(decl->is_comptime);
+  EXPECT_FALSE(decl->is_extern);
+  EXPECT_FALSE(decl->is_builtin);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -907,10 +938,11 @@ TEST_F(dt_statement_function, inline_comptime_func) {
   ASSERT_NE(node, nullptr);
 
   cubec_statement_function_t fn = (cubec_statement_function_t)node;
-  EXPECT_TRUE(fn->is_inline);
-  EXPECT_TRUE(fn->is_comptime);
-  EXPECT_FALSE(fn->is_extern);
-  EXPECT_FALSE(fn->is_builtin);
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)fn->declarator;
+  EXPECT_TRUE(decl->is_inline);
+  EXPECT_TRUE(decl->is_comptime);
+  EXPECT_FALSE(decl->is_extern);
+  EXPECT_FALSE(decl->is_builtin);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

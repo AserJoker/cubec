@@ -4,6 +4,7 @@
 #include "core/diagnostic.h"
 #include "core/strmap.h"
 #include "core/type.h"
+#include "core/vec.h"
 #include <stddef.h>
 #ifdef __cplusplus
 extern "C" {
@@ -22,6 +23,7 @@ struct context {
   scope_t global_scope;  /* owned: global scope */
   scope_t root_scope;    /* borrowed: current module's root scope */
   scope_t current_scope; /* borrowed: current traversal position */
+  vec_t types;           /* owned: global type_t registry (auto-dispose) */
 };
 
 typedef struct context *context_t;

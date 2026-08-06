@@ -24,6 +24,9 @@ static void _context_init(void *self, allocator_t allocator, void *arg) {
   ctx->global_scope = scope_create(allocator, SCOPE_GLOBAL, NULL, NULL);
   ctx->root_scope = NULL;
   ctx->current_scope = NULL;
+
+  vec_init_t types_init = {.auto_dispose = true};
+  ctx->types = (vec_t)allocator_create(allocator, &g_vec_type, &types_init);
 }
 
 static void _context_dispose(void *self, allocator_t allocator) {
@@ -32,6 +35,7 @@ static void _context_dispose(void *self, allocator_t allocator) {
   /* Free modules first — module_dispose removes root_scope from global_scope's
    * children, so global_scope must still be alive at this point. */
   allocator_free(allocator, &ctx->modules);
+  allocator_free(allocator, &ctx->types);
   allocator_free(allocator, &ctx->global_scope);
   allocator_free(allocator, &ctx->diagnostics);
 }

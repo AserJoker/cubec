@@ -1,4 +1,4 @@
-#include "cubec/expression_function.h"
+#include "cubec/declaration_function.h"
 #include "core/emit_context.h"
 #include "core/token.h"
 #include "core/token_writer.h"
@@ -7,11 +7,8 @@
 #include "cubec/function_capture.h"
 #include "cubec/generic_param.h"
 #include "cubec/statement.h"
-#include "cubec/function_capture.h"
-#include "cubec/generic_param.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node_error.h"
-#include "cubec/statement.h"
 #include "cubec/statement_block.h"
 #include "cubec/token.h"
 #include <inttypes.h>
@@ -21,42 +18,47 @@
  * -------------------------------------------------------------------------- */
 
 static void
-_cubec_expression_function_init(cubec_expression_function_t self,
-                                allocator_t allocator,
-                                cubec_expression_function_init_t *init) {
+_cubec_declaration_function_init(cubec_declaration_function_t self,
+                                 allocator_t allocator,
+                                 cubec_declaration_function_init_t *init) {
   if (!init)
     return;
-  cubec_expression_init_t super_init = {
-      .kind = CUBEC_NODE_EXPRESSION_FUNCTION,
-      .location = init->location,
+  cubec_declaration_init_t super_init = {
+      .kind = CUBEC_NODE_DECLARATION_FUNCTION,
       .parent = NULL,
   };
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  super_init.location = init->location;
+  g_cubec_declaration_type.init(&self->super, allocator, &super_init);
   self->name = init->name;
   self->captures = init->captures;
   self->generic_params = init->generic_params;
   self->arguments = init->arguments;
   self->return_type = init->return_type;
   self->body = init->body;
+  self->is_inline = init->is_inline;
+  self->is_extern = init->is_extern;
+  self->is_builtin = init->is_builtin;
+  self->is_comptime = init->is_comptime;
   self->is_c_variadic = init->is_c_variadic;
 }
 
-static void _cubec_expression_function_dispose(cubec_expression_function_t self,
-                                               allocator_t allocator) {
+static void
+_cubec_declaration_function_dispose(cubec_declaration_function_t self,
+                                    allocator_t allocator) {
   allocator_free(allocator, &self->body);
   allocator_free(allocator, &self->return_type);
   allocator_free(allocator, &self->arguments);
   allocator_free(allocator, &self->generic_params);
   allocator_free(allocator, &self->captures);
   allocator_free(allocator, &self->name);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_declaration_type.dispose(&self->super, allocator);
 }
 
 static void
-_cubec_expression_function_clone(cubec_expression_function_t self,
-                                 allocator_t allocator,
-                                 cubec_expression_function_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+_cubec_declaration_function_clone(cubec_declaration_function_t self,
+                                  allocator_t allocator,
+                                  cubec_declaration_function_t another) {
+  g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
   self->name = another->name ? value_clone(allocator, another->name) : NULL;
   self->captures =
       another->captures ? value_clone(allocator, another->captures) : NULL;
@@ -68,15 +70,19 @@ _cubec_expression_function_clone(cubec_expression_function_t self,
                           ? value_clone(allocator, another->return_type)
                           : NULL;
   self->body = another->body ? value_clone(allocator, another->body) : NULL;
+  self->is_inline = another->is_inline;
+  self->is_extern = another->is_extern;
+  self->is_builtin = another->is_builtin;
+  self->is_comptime = another->is_comptime;
   self->is_c_variadic = another->is_c_variadic;
   return;
 }
 
 static void
-_cubec_expression_function_move(cubec_expression_function_t self,
-                                allocator_t allocator,
-                                cubec_expression_function_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+_cubec_declaration_function_move(cubec_declaration_function_t self,
+                                 allocator_t allocator,
+                                 cubec_declaration_function_t another) {
+  g_cubec_declaration_type.move(&self->super, allocator, &another->super);
   self->name = another->name ? value_move(allocator, another->name) : NULL;
   self->captures =
       another->captures ? value_move(allocator, another->captures) : NULL;
@@ -87,17 +93,21 @@ _cubec_expression_function_move(cubec_expression_function_t self,
   self->return_type =
       another->return_type ? value_move(allocator, another->return_type) : NULL;
   self->body = another->body ? value_move(allocator, another->body) : NULL;
+  self->is_inline = another->is_inline;
+  self->is_extern = another->is_extern;
+  self->is_builtin = another->is_builtin;
+  self->is_comptime = another->is_comptime;
   self->is_c_variadic = another->is_c_variadic;
   return;
 }
 
-type_t g_cubec_expression_function_type = {
-    .name = "cubec.cubec.expression_function",
-    .size = sizeof(struct _cubec_expression_function_t),
-    .init = (type_init_fn_t)_cubec_expression_function_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_function_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_function_clone,
-    .move = (type_move_fn_t)_cubec_expression_function_move,
+type_t g_cubec_declaration_function_type = {
+    .name = "cubec.cubec.declaration_function",
+    .size = sizeof(struct _cubec_declaration_function_t),
+    .init = (type_init_fn_t)_cubec_declaration_function_init,
+    .dispose = (type_dispose_fn_t)_cubec_declaration_function_dispose,
+    .clone = (type_clone_fn_t)_cubec_declaration_function_clone,
+    .move = (type_move_fn_t)_cubec_declaration_function_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -121,10 +131,10 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
 }
 
 /* --------------------------------------------------------------------------
- *  Parser: read_expression_function
+ *  Parser: read_declaration_function
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_function(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_function(context_t ctx, vec_t tokens, size_t *position,
                                 const char *filename) {
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
@@ -135,7 +145,7 @@ node_t read_expression_function(context_t ctx, vec_t tokens, size_t *position,
   node_t return_type = NULL;
   node_t body = NULL;
   bool is_c_variadic = false;
-  cubec_expression_function_t node = NULL;
+  cubec_declaration_function_t node = NULL;
 
   /* 1. Expect 'func' keyword */
   if (!_is_keyword(tokens, current, "func")) {
@@ -287,11 +297,7 @@ node_t read_expression_function(context_t ctx, vec_t tokens, size_t *position,
     current++;
     body = NULL;
   } else {
-    if (name) {
-      goto onerror;
-    } else {
-      goto onerror;
-    }
+    goto onerror;
   }
 
   /* 9. Build location */
@@ -304,7 +310,7 @@ node_t read_expression_function(context_t ctx, vec_t tokens, size_t *position,
   };
 
   /* 10. Create node */
-  cubec_expression_function_init_t init = {
+  cubec_declaration_function_init_t init = {
       .location = loc,
       .parent = NULL,
       .name = name,
@@ -313,9 +319,13 @@ node_t read_expression_function(context_t ctx, vec_t tokens, size_t *position,
       .arguments = arguments,
       .return_type = return_type,
       .body = body,
+      .is_inline = false,
+      .is_extern = false,
+      .is_builtin = false,
+      .is_comptime = false,
       .is_c_variadic = is_c_variadic,
   };
-  node = allocator_create(allocator, &g_cubec_expression_function_type, &init);
+  node = allocator_create(allocator, &g_cubec_declaration_function_type, &init);
   *position = current;
   return (node_t)&node->super;
 
@@ -331,83 +341,108 @@ onerror:
 }
 
 /* --------------------------------------------------------------------------
- *  Factory: create_expression_function
+ *  Factory: create_declaration_function
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_function(context_t ctx, location_t loc, node_t name,
-                                  vec_t captures, vec_t generic_params,
-                                  vec_t args, node_t return_type, node_t body,
-                                  bool is_c_variadic) {
+node_t create_declaration_function(context_t ctx, location_t loc, node_t name,
+                                   vec_t captures, vec_t generic_params,
+                                   vec_t args, node_t return_type, node_t body,
+                                   bool is_inline, bool is_extern,
+                                   bool is_builtin, bool is_comptime,
+                                   bool is_c_variadic) {
   allocator_t alloc = ctx->allocator;
-  cubec_expression_function_init_t init = {.location = loc,
-                                           .parent = NULL,
-                                           .name = name,
-                                           .captures = captures,
-                                           .generic_params = generic_params,
-                                           .arguments = args,
-                                           .return_type = return_type,
-                                           .body = body,
-                                           .is_c_variadic = is_c_variadic};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_function_type,
+  cubec_declaration_function_init_t init = {
+      .location = loc,
+      .parent = NULL,
+      .name = name,
+      .captures = captures,
+      .generic_params = generic_params,
+      .arguments = args,
+      .return_type = return_type,
+      .body = body,
+      .is_inline = is_inline,
+      .is_extern = is_extern,
+      .is_builtin = is_builtin,
+      .is_comptime = is_comptime,
+      .is_c_variadic = is_c_variadic};
+  return (node_t)allocator_create(alloc, &g_cubec_declaration_function_type,
                                   &init);
 }
 
 /* --------------------------------------------------------------------------
- *  Writer: write_expression_function
+ *  Emit: emit_declaration_function
  * -------------------------------------------------------------------------- */
 
-void emit_expression_function(emit_context_t ctx, node_t node) {
-  cubec_expression_function_t expr = (cubec_expression_function_t)node;
+void emit_declaration_function(emit_context_t ctx, node_t node) {
+  cubec_declaration_function_t decl = (cubec_declaration_function_t)node;
   recover_comments_to(ctx, node->location.begin.offset);
+  if (decl->is_inline) {
+    emit_keyword(ctx, "inline");
+    emit_space(ctx);
+  }
+  if (decl->is_extern) {
+    emit_keyword(ctx, "extern");
+    emit_space(ctx);
+  }
+  if (decl->is_builtin) {
+    emit_keyword(ctx, "builtin");
+    emit_space(ctx);
+  }
+  if (decl->is_comptime) {
+    emit_keyword(ctx, "comptime");
+    emit_space(ctx);
+  }
   emit_keyword(ctx, "func");
-  if (expr->captures) {
+  if (decl->captures) {
     emit_symbol(ctx, "|");
-    for (size_t i = 0; i < vec_get_size(expr->captures); i++) {
+    for (size_t i = 0; i < vec_get_size(decl->captures); i++) {
       if (i != 0) {
         emit_symbol(ctx, ",");
         emit_space(ctx);
       }
-      emit_function_capture(ctx, vec_get(expr->captures, i));
+      emit_function_capture(ctx, vec_get(decl->captures, i));
     }
     emit_symbol(ctx, "|");
   }
-  if (expr->name) {
+  if (decl->name) {
     emit_space(ctx);
-    emit_expression(ctx, expr->name);
+    emit_expression(ctx, decl->name);
   }
-  if (expr->generic_params) {
+  if (decl->generic_params) {
     emit_symbol(ctx, "[");
-    for (size_t i = 0; i < vec_get_size(expr->generic_params); i++) {
+    for (size_t i = 0; i < vec_get_size(decl->generic_params); i++) {
       if (i != 0) {
         emit_symbol(ctx, ",");
         emit_space(ctx);
       }
-      emit_generic_param(ctx, vec_get(expr->generic_params, i));
+      emit_generic_param(ctx, vec_get(decl->generic_params, i));
     }
     emit_symbol(ctx, "]");
   }
   emit_symbol(ctx, "(");
-  for (size_t i = 0; i < vec_get_size(expr->arguments); i++) {
+  for (size_t i = 0; i < vec_get_size(decl->arguments); i++) {
     if (i != 0) {
       emit_symbol(ctx, ",");
       emit_space(ctx);
     }
-    emit_function_argument(ctx, vec_get(expr->arguments, i));
+    emit_function_argument(ctx, vec_get(decl->arguments, i));
   }
-  if (expr->is_c_variadic) {
-    emit_symbol(ctx, ",");
-    emit_space(ctx);
+  if (decl->is_c_variadic) {
+    if (vec_get_size(decl->arguments) > 0) {
+      emit_symbol(ctx, ",");
+      emit_space(ctx);
+    }
     emit_symbol(ctx, "...");
   }
   emit_symbol(ctx, ")");
-  if (expr->return_type) {
+  if (decl->return_type) {
     emit_symbol(ctx, ":");
     emit_space(ctx);
-    emit_expression(ctx, expr->return_type);
+    emit_expression(ctx, decl->return_type);
   }
-  if (expr->body) {
+  if (decl->body) {
     emit_space(ctx);
-    emit_statement(ctx, expr->body);
+    emit_statement(ctx, decl->body);
   } else {
     emit_symbol(ctx, ";");
   }
