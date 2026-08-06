@@ -203,7 +203,7 @@ TEST_F(it_name_collector, name_ref_is_null_before_def_collection) {
 
   name_t name = find_name(mod, "foo");
   ASSERT_NE(name, nullptr);
-  /* ref is NULL — it will be set by def_collector */
+  /* ref is NULL — not yet resolved */
   EXPECT_EQ(name->ref, nullptr);
 
   module_dispose(mod);
