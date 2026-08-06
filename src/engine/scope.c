@@ -34,37 +34,7 @@ static void _scope_dispose(void *self, allocator_t allocator) {
   while (vec_get_size(scope->children) != 0) {
     allocator_free(allocator, vec_get(scope->children, 0));
   }
-  /* Free owned def objects and their internal resources */
-  size_t def_count = vec_get_size(scope->defs);
-  for (size_t i = 0; i < def_count; i++) {
-    def_t def = (def_t)vec_get(scope->defs, i);
-    /* Release def-owned sub-objects based on kind */
-    switch (def->kind) {
-    case DEF_TYPE_ALIAS: {
-      type_alias_def_t ta = (type_alias_def_t)def;
-      allocator_free(allocator, &ta->params);
-      break;
-    }
-    case DEF_STRUCT: {
-      struct_def_t s = (struct_def_t)def;
-      allocator_free(allocator, &s->params);
-      break;
-    }
-    case DEF_UNION: {
-      union_def_t u = (union_def_t)def;
-      allocator_free(allocator, &u->params);
-      break;
-    }
-    case DEF_INTERFACE: {
-      interface_def_t iface = (interface_def_t)def;
-      allocator_free(allocator, &iface->params);
-      break;
-    }
-    default:
-      break;
-    }
-    allocator_free(allocator, &def);
-  }
+  /* Free owned def objects (TODO: populate when def_collector is implemented) */
   allocator_free(allocator, &scope->defs);
   allocator_free(allocator, &scope->defers);
   allocator_free(allocator, &scope->names);
