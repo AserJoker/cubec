@@ -7,7 +7,7 @@ void nil_type_register(context_t ctx) {
      Register in ctx->types for lifetime management, but do NOT insert into
      global_scope->names. */
   stype_t type = stype_create_primitive(ctx->allocator, TYPE_NIL, "nil", 8, 8);
-  vec_push(ctx->types, (void *)type);
+  rbtree_insert(ctx->types, type->instance.hash, (void *)type);
   ctx->t_nil = type;
 }
 

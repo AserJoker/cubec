@@ -592,9 +592,9 @@ TEST_F(it_name_collector, types_stored_in_context) {
       "enum Color { Red, Green, Blue }\n";
   module_t mod = parse_and_collect(source, "test.cubec");
 
-  /* context should have 2 stype_t objects */
-  size_t type_count = vec_get_size(ctx->types);
-  EXPECT_GE(type_count, (size_t)2);
+  /* context should have 2 stype_t objects (plus primitives) */
+  size_t type_count = rbtree_get_size(ctx->types);
+  EXPECT_GE(type_count, (size_t)2 + 16); /* 16 primitive types */
 
   module_dispose(mod);
 }

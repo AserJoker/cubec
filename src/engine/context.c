@@ -32,8 +32,8 @@ static void _context_init(void *self, allocator_t allocator, void *arg) {
   ctx->root_scope = NULL;
   ctx->current_scope = NULL;
 
-  vec_init_t types_init = {.auto_dispose = true};
-  ctx->types = (vec_t)allocator_create(allocator, &g_vec_type, &types_init);
+ rbtree_init_t types_init = {.auto_dispose = true};
+  ctx->types = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &types_init);
 
   void_type_register(ctx);
   bool_type_register(ctx);

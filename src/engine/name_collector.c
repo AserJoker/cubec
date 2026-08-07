@@ -6,6 +6,7 @@
 #include "engine/function.h"
 #include "engine/namespace.h"
 #include "core/diagnostic.h"
+#include "core/rbtree.h"
 #include "core/string.h"
 #include "core/strmap.h"
 #include "core/vec.h"
@@ -142,7 +143,12 @@ static void *_create_function(scope_t scope, node_t decl_node,
 /** Create a stype_t, register it in context (global), and return it as ref. */
 static void *_create_type(context_t ctx, enum type_kind_t kind, node_t decl_node) {
   stype_t type = stype_create(ctx->allocator, kind, decl_node);
-  vec_push(ctx->types, (void *)type);
+  /* Named types get a temporary hash from the node pointer.
+     The real structural hash is computed during type resolution (phase 2). */
+  uint64_t temp_hash = stype_compute_primitive_hash(kind);
+  temp_hash = stype_hash_mix_u64(temp_hash, (uint64_t)(uintptr_t)decl_node);
+  type->instance.hash = temp_hash;
+  rbtree_insert(ctx->types, type->instance.hash, (void *)type);
   return (void *)type;
 }
 

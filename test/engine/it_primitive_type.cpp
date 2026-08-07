@@ -320,6 +320,26 @@ TEST_F(it_primitive_type, comptime_value_type_points_to_stype) {
   comptime_value_dispose(bval);
 }
 
+TEST_F(it_primitive_type, rbtree_lookup_by_hash) {
+  /* Verify we can find a primitive type by its hash via rbtree */
+  stype_t i32 = ctx->t_i32;
+  void *found = rbtree_find(ctx->types, i32->instance.hash);
+  ASSERT_NE(found, nullptr);
+  EXPECT_EQ((stype_t)found, i32);
+}
+
+TEST_F(it_primitive_type, rbtree_all_primitives_findable) {
+  stype_t types[] = {ctx->t_void, ctx->t_bool, ctx->t_i8, ctx->t_i16,
+                     ctx->t_i32, ctx->t_i64, ctx->t_u8, ctx->t_u16,
+                     ctx->t_u32, ctx->t_u64, ctx->t_f16, ctx->t_f32,
+                     ctx->t_f64, ctx->t_char, ctx->t_str, ctx->t_nil};
+  for (int i = 0; i < 16; i++) {
+    void *found = rbtree_find(ctx->types, types[i]->instance.hash);
+    ASSERT_NE(found, nullptr) << "type not found in rbtree: " << types[i]->instance.name;
+    EXPECT_EQ((stype_t)found, types[i]);
+  }
+}
+
 TEST_F(it_primitive_type, all_basic_types_registered) {
   const char *names[] = {"void", "bool", "char", "str"};
   for (int i = 0; i < 4; i++) {

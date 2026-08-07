@@ -118,6 +118,12 @@ void stype_dispose(stype_t type);
 uint64_t stype_compute_primitive_hash(enum type_kind_t kind);
 
 /**
+ * @brief FNV-1a: mix a uint64_t value into an existing hash.
+ * Useful for computing temporary hashes from node pointers, etc.
+ */
+uint64_t stype_hash_mix_u64(uint64_t hash, uint64_t val);
+
+/**
  * @brief Compute hash for a struct/union type from field layout.
  * @param kind             TYPE_STRUCT or TYPE_UNION
  * @param field_names      vec of const char* field names (borrowed)

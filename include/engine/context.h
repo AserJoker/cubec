@@ -2,6 +2,7 @@
 #define _H_CUBEC_ENGINE_CONTEXT_
 #include "core/allocator.h"
 #include "core/diagnostic.h"
+#include "core/rbtree.h"
 #include "core/strmap.h"
 #include "core/type.h"
 #include "core/vec.h"
@@ -26,7 +27,7 @@ struct context {
   scope_t global_scope;  /* owned: global scope */
   scope_t root_scope;    /* borrowed: current module's root scope */
   scope_t current_scope; /* borrowed: current traversal position */
-  vec_t types;           /* owned: global type_t registry (auto-dispose) */
+  rbtree_t types;        /* owned: hash(uint64_t) → stype_t (auto-dispose) */
 
   /* Primitive type singletons — borrowing pointers into ctx->types */
   stype_t t_void;

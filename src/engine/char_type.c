@@ -6,7 +6,7 @@
 
 void char_type_register(context_t ctx) {
   stype_t type = stype_create_primitive(ctx->allocator, TYPE_CHAR, "char", 1, 1);
-  vec_push(ctx->types, (void *)type);
+  rbtree_insert(ctx->types, type->instance.hash, (void *)type);
   name_t name = name_create(ctx->allocator, NAME_TYPE, (void *)type);
   strmap_insert(ctx->global_scope->names, "char", name);
   ctx->t_char = type;

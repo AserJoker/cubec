@@ -15,7 +15,7 @@ static uint64_t fnv1a_byte(uint64_t hash, uint8_t byte) {
   return (hash ^ byte) * FNV_PRIME;
 }
 
-static uint64_t fnv1a_u64(uint64_t hash, uint64_t val) {
+uint64_t stype_hash_mix_u64(uint64_t hash, uint64_t val) {
   for (int i = 0; i < 8; i++)
     hash = fnv1a_byte(hash, (uint8_t)(val >> (i * 8)));
   return hash;
@@ -29,21 +29,21 @@ static uint64_t fnv1a_string(uint64_t hash, const char *str) {
 }
 
 uint64_t stype_compute_primitive_hash(enum type_kind_t kind) {
-  return fnv1a_u64(fnv1a_init(), (uint64_t)kind);
+  return stype_hash_mix_u64(fnv1a_init(), (uint64_t)kind);
 }
 
 uint64_t stype_compute_struct_hash(enum type_kind_t kind, vec_t field_names,
                                    vec_t field_type_hashes) {
-  uint64_t h = fnv1a_u64(fnv1a_init(), (uint64_t)kind);
+  uint64_t h = stype_hash_mix_u64(fnv1a_init(), (uint64_t)kind);
   size_t n = field_names ? vec_get_size(field_names) : 0;
   size_t th_n = field_type_hashes ? vec_get_size(field_type_hashes) : 0;
-  h = fnv1a_u64(h, n);
+  h = stype_hash_mix_u64(h, n);
   for (size_t i = 0; i < n; i++) {
     const char *name = (const char *)vec_get(field_names, i);
     h = fnv1a_string(h, name);
     if (i < th_n) {
       uint64_t th = (uint64_t)(uintptr_t)vec_get(field_type_hashes, i);
-      h = fnv1a_u64(h, th);
+      h = stype_hash_mix_u64(h, th);
     }
   }
   return h;
@@ -51,11 +51,11 @@ uint64_t stype_compute_struct_hash(enum type_kind_t kind, vec_t field_names,
 
 uint64_t stype_compute_composite_hash(enum type_kind_t kind,
                                       vec_t component_type_hashes) {
-  uint64_t h = fnv1a_u64(fnv1a_init(), (uint64_t)kind);
+  uint64_t h = stype_hash_mix_u64(fnv1a_init(), (uint64_t)kind);
   size_t n = component_type_hashes ? vec_get_size(component_type_hashes) : 0;
   for (size_t i = 0; i < n; i++) {
     uint64_t th = (uint64_t)(uintptr_t)vec_get(component_type_hashes, i);
-    h = fnv1a_u64(h, th);
+    h = stype_hash_mix_u64(h, th);
   }
   return h;
 }

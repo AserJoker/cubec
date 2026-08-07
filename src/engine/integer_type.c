@@ -25,7 +25,7 @@ void integer_types_register(context_t ctx) {
                                           _integer_types[i].name,
                                           _integer_types[i].size,
                                           _integer_types[i].align);
-    vec_push(ctx->types, (void *)type);
+    rbtree_insert(ctx->types, type->instance.hash, (void *)type);
     name_t name = name_create(allocator, NAME_TYPE, (void *)type);
     strmap_insert(scope->names, _integer_types[i].name, name);
     switch (_integer_types[i].kind) {

@@ -5,7 +5,7 @@
 
 void void_type_register(context_t ctx) {
   stype_t type = stype_create_primitive(ctx->allocator, TYPE_VOID, "void", 0, 0);
-  vec_push(ctx->types, (void *)type);
+  rbtree_insert(ctx->types, type->instance.hash, (void *)type);
   name_t name = name_create(ctx->allocator, NAME_TYPE, (void *)type);
   strmap_insert(ctx->global_scope->names, "void", name);
   ctx->t_void = type;
