@@ -62,6 +62,7 @@ struct stype_instance_header_t {
   uint64_t hash;       /**< structural hash for duck-typing compatibility */
   uint64_t size;       /**< byte size */
   uint64_t align;      /**< alignment requirement */
+  enum type_kind_t kind; /**< actual type kind (may differ from stype->type_kind for type_alias instances) */
 };
 typedef struct stype_instance_header_t stype_instance_header_t;
 

@@ -3,7 +3,6 @@
 
 #include "engine/stype.h"
 #include "engine/context.h"
-#include "engine/comptime_value.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -11,20 +10,8 @@ extern "C" {
 void char_type_register(context_t ctx);
 stype_t char_type_get(context_t ctx);
 
-/** @brief Create a char comptime value (stored as uint64_t). */
-comptime_value_t char_type_create_value(context_t ctx, uint64_t val);
-
-/** @brief Extract char value. Returns 0 if not COMPTIME_VALUE_INT or wrong type. */
-uint64_t char_type_get_value(comptime_value_t val);
-
-/** @brief Dispose a char comptime value. */
-void char_type_dispose_value(comptime_value_t val);
-
-/** @brief Clone a char comptime value. */
-comptime_value_t char_type_clone_value(allocator_t allocator, comptime_value_t val);
-
-/** @brief Compute structural hash of a char comptime value. */
-uint64_t char_type_hash_value(comptime_value_t val);
+/** @brief Hash a char value — interprets data as uint8_t. */
+uint64_t char_type_hash_value(stype_t type, uint64_t type_hash, const void *data);
 
 #ifdef __cplusplus
 }

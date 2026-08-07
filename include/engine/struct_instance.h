@@ -4,7 +4,7 @@
 #include "core/allocator.h"
 #include "core/strmap.h"
 #include "core/vec.h"
-#include "engine/comptime_value.h"
+#include "engine/context.h"
 #include "engine/struct_field.h"
 #include "engine/stype.h"
 #ifdef __cplusplus
@@ -42,11 +42,8 @@ struct_instance_t struct_instance_create(allocator_t allocator,
 
 void struct_instance_dispose(struct_instance_t inst);
 
-/* ---- Struct comptime value operations ---- */
-
-void struct_instance_dispose_value(comptime_value_t val);
-comptime_value_t struct_instance_clone_value(allocator_t allocator, comptime_value_t val);
-uint64_t struct_instance_hash_value(comptime_value_t val);
+/** @brief Hash a struct value — iterates fields at their offsets, recursing into each. */
+uint64_t struct_instance_hash_value(context_t ctx, stype_t type, uint64_t type_hash, const void *data);
 
 #ifdef __cplusplus
 }

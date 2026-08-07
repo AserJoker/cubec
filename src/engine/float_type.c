@@ -45,53 +45,14 @@ stype_t float_type_get(context_t ctx, enum type_kind_t kind) {
   }
 }
 
-comptime_value_t float_type_create_value(context_t ctx, enum type_kind_t kind, double val) {
-  stype_t type = float_type_get(ctx, kind);
-  comptime_float_t v = allocator_alloc(ctx->allocator, sizeof(struct _comptime_float_t));
-  v->header.allocator = ctx->allocator;
-  v->header.kind = COMPTIME_VALUE_FLOAT;
-  v->header.type = type;
-  v->value = val;
-  return (comptime_value_t)v;
-}
-
-double float_type_get_value(comptime_value_t val) {
-  if (!val || val->kind != COMPTIME_VALUE_FLOAT)
-    return 0.0;
-  return ((comptime_float_t)val)->value;
+uint64_t float_type_hash_value(stype_t type, uint64_t type_hash, const void *data) {
+  if (!data) return type_hash;
+  /* Read the IEEE 754 bit representation according to its size */
+  uint64_t bits = 0;
+  memcpy(&bits, data, type->instance.size);
+  return stype_hash_mix_u64(type_hash, bits);
 }
 
 bool type_kind_is_float(enum type_kind_t kind) {
   return kind == TYPE_F16 || kind == TYPE_F32 || kind == TYPE_F64;
-}
-
-void float_type_dispose_value(comptime_value_t val) {
-  if (!val || val->kind != COMPTIME_VALUE_FLOAT)
-    return;
-  allocator_free(val->allocator, &val);
-}
-
-comptime_value_t float_type_clone_value(allocator_t allocator,
-                                        comptime_value_t val) {
-  if (!val || val->kind != COMPTIME_VALUE_FLOAT)
-    return NULL;
-  comptime_float_t src = (comptime_float_t)val;
-  comptime_float_t dst = allocator_alloc(allocator, sizeof(struct _comptime_float_t));
-  dst->header = src->header;
-  dst->header.allocator = allocator;
-  dst->value = src->value;
-  return (comptime_value_t)dst;
-}
-
-uint64_t float_type_hash_value(comptime_value_t val) {
-  if (!val || val->kind != COMPTIME_VALUE_FLOAT)
-    return 0;
-  comptime_float_t v = (comptime_float_t)val;
-  uint64_t h = stype_compute_primitive_hash((enum type_kind_t)v->header.kind);
-  if (v->header.type)
-    h = stype_hash_mix_u64(h, v->header.type->instance.hash);
-  uint64_t bits;
-  memcpy(&bits, &v->value, sizeof(bits));
-  h = stype_hash_mix_u64(h, bits);
-  return h;
 }

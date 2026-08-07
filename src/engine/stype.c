@@ -86,6 +86,7 @@ static void _stype_init(void *self, allocator_t allocator, void *arg) {
   type->instance.hash = 0;
   type->instance.size = 0;
   type->instance.align = 0;
+  type->instance.kind = TYPE_STRUCT;
   type->type_kind = TYPE_STRUCT;
   type->params = NULL;
   type->implements = NULL;
@@ -113,6 +114,7 @@ stype_t stype_create(allocator_t allocator, enum type_kind_t kind, node_t node) 
   type->header.kind = DEF_TYPE;
   type->header.node = node;
   type->type_kind = kind;
+  type->instance.kind = kind;
   return type;
 }
 

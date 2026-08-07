@@ -1,4 +1,5 @@
 #include "engine/enum_instance.h"
+#include "engine/value.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -9,6 +10,7 @@ static void _enum_instance_init(void *self, allocator_t allocator, void *arg) {
   inst->instance.hash = 0;
   inst->instance.size = 0;
   inst->instance.align = 0;
+  inst->instance.kind = TYPE_ENUM;
   inst->allocator = allocator;
   inst->variant_names = NULL;
   inst->variant_values = NULL;
@@ -31,9 +33,9 @@ static void _enum_instance_dispose(void *self, allocator_t allocator) {
   if (inst->variant_values) {
     size_t n = vec_get_size(inst->variant_values);
     for (size_t i = 0; i < n; i++) {
-      comptime_value_t val = (comptime_value_t)vec_get(inst->variant_values, i);
+      value_t val = (value_t)vec_get(inst->variant_values, i);
       if (val)
-        comptime_value_dispose(val);
+        allocator_free(inst->allocator, &val);
     }
     allocator_free(inst->allocator, &inst->variant_values);
   }
@@ -60,6 +62,7 @@ enum_instance_t enum_instance_create(allocator_t allocator,
   inst->instance.hash = hash;
   inst->instance.size = size;
   inst->instance.align = align;
+  inst->instance.kind = TYPE_ENUM;
   inst->variant_names = variant_names;
   inst->variant_values = variant_values;
   inst->underlying_type = underlying_type;
@@ -68,4 +71,12 @@ enum_instance_t enum_instance_create(allocator_t allocator,
 
 void enum_instance_dispose(enum_instance_t inst) {
   allocator_free(inst->allocator, &inst);
+}
+
+uint64_t enum_instance_hash_value(stype_t type, uint64_t type_hash, const void *data) {
+  if (!data) return type_hash;
+  /* Enum value is stored as the underlying integer type */
+  uint64_t val = 0;
+  memcpy(&val, data, type->instance.size);
+  return stype_hash_mix_u64(type_hash, val);
 }

@@ -7,7 +7,16 @@
 #include "engine/nil_type.h"
 #include "engine/integer_type.h"
 #include "engine/float_type.h"
-#include "engine/comptime_value.h"
+#include "engine/pointer_type.h"
+#include "engine/tuple_type.h"
+#include "engine/array_type.h"
+#include "engine/slice_type.h"
+#include "engine/callable_type.h"
+#include "engine/struct_instance.h"
+#include "engine/union_instance.h"
+#include "engine/cunion_instance.h"
+#include "engine/enum_instance.h"
+#include "engine/value.h"
 #include "engine/scope.h"
 #include "core/rbtree.h"
 #include "core/vec.h"
@@ -35,8 +44,11 @@ static void _context_init(void *self, allocator_t allocator, void *arg) {
   ctx->root_scope = NULL;
   ctx->current_scope = NULL;
 
- rbtree_init_t types_init = {.auto_dispose = true};
+  rbtree_init_t types_init = {.auto_dispose = true};
   ctx->types = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &types_init);
+
+  rbtree_init_t strings_init = {.auto_dispose = true};
+  ctx->strings = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &strings_init);
 
   void_type_register(ctx);
   bool_type_register(ctx);
@@ -54,6 +66,7 @@ static void _context_dispose(void *self, allocator_t allocator) {
    * children, so global_scope must still be alive at this point. */
   allocator_free(allocator, &ctx->modules);
   allocator_free(allocator, &ctx->types);
+  allocator_free(allocator, &ctx->strings);
   allocator_free(allocator, &ctx->global_scope);
   allocator_free(allocator, &ctx->diagnostics);
 }
@@ -275,54 +288,54 @@ void context_pop_scope(context_t ctx) {
  * ------------------------------------------------------------------ */
 
 /**
- * @brief Ensure a type has its implements rbtree initialized.
+ * @brief Ensure a generic type has its implements rbtree initialized.
  *
- * Non-generic types get a single default instance keyed by type->instance.hash.
- * Generic types get instances added as they are instantiated.
+ * Non-generic types do not need an implements rbtree — they have a single
+ * instance keyed by type->instance.hash. Only generic types need to track
+ * multiple instances.
  */
 static void _ensure_implements(context_t ctx, stype_t type) {
+  if (!type->params)
+    return; /* non-generic types don't need implements */
   if (type->implements)
     return;
   rbtree_init_t rbi = {.auto_dispose = true};
   type->implements =
       (rbtree_t)allocator_create(ctx->allocator, &g_rbtree_type, &rbi);
-
-  /* Non-generic types: insert default instance keyed by type's own hash */
-  if (!type->params) {
-    rbtree_insert(type->implements, type->instance.hash, (void *)(uintptr_t)1);
-  }
 }
 
 /**
  * @brief Instantiate a generic type with the given args.
  *
- * Computes instance hash from generic_args, looks up in type->implements
- * rbtree. Creates a new instance entry if not found.
+ * Computes instance hash from generic_args (vec of value_t),
+ * looks up in type->implements rbtree.
+ * Creates a new instance entry if not found.
  *
  * For non-generic types, returns type->instance.hash (the default instance).
  *
  * @return The instance hash.
  */
 static uint64_t _instantiate(context_t ctx, stype_t type, vec_t generic_args) {
-  _ensure_implements(ctx, type);
-
   /* Non-generic types: return the default instance hash */
   if (!type->params)
     return type->instance.hash;
+
+  _ensure_implements(ctx, type);
 
   /* Generic type without args: return the template hash */
   if (!generic_args)
     return type->instance.hash;
 
-  /* Build generic_arg_hashes from comptime_value_t args */
+  /* Build generic_arg_hashes from value_t args */
   vec_init_t vi = {.auto_dispose = false};
   vec_t generic_arg_hashes =
       (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
 
   size_t n = vec_get_size(generic_args);
   for (size_t i = 0; i < n; i++) {
-    comptime_value_t arg = (comptime_value_t)vec_get(generic_args, i);
-    uint64_t arg_hash = comptime_value_hash(arg);
+    value_t arg = (value_t)vec_get(generic_args, i);
+    uint64_t arg_hash = value_data_hash((context_t)ctx, arg->stype, arg->type_hash,
+                                        arg->data);
     vec_push(generic_arg_hashes, (void *)(uintptr_t)arg_hash);
   }
 
@@ -344,16 +357,23 @@ static uint64_t _instantiate(context_t ctx, stype_t type, vec_t generic_args) {
 }
 
 value_t context_create_value(context_t ctx, stype_t type, vec_t generic_args,
-                             comptime_value_t data,
+                             const void *data,
                              bool is_export, bool is_exportlib, bool is_extern,
                              bool is_builtin, bool is_comptime, bool is_using) {
   /* Ensure instance exists (instantiate generic if needed) */
-  _instantiate(ctx, type, generic_args);
+  uint64_t type_hash = _instantiate(ctx, type, generic_args);
 
   value_t val = value_create(ctx->allocator, NULL, is_export, is_exportlib,
                              is_extern, is_builtin, is_comptime, is_using);
   val->stype = type;
-  val->data = data; /* borrowing */
+  val->type_hash = type_hash;
+
+  /* Copy source data into owned raw buffer */
+  if (data && type->instance.size > 0) {
+    val->data = allocator_alloc(ctx->allocator, (size_t)type->instance.size);
+    memcpy(val->data, data, (size_t)type->instance.size);
+  }
+
   return val;
 }
 
@@ -362,37 +382,93 @@ value_t context_create_value(context_t ctx, stype_t type, vec_t generic_args,
  * ------------------------------------------------------------------ */
 
 value_t context_create_int_value(context_t ctx, stype_t type, uint64_t val) {
-  comptime_value_t data = integer_type_create_value(ctx, type->type_kind, val);
-  return context_create_value(ctx, type, NULL, data, false, false, false,
-                              false, false, false);
+  return context_create_value(ctx, type, NULL, &val,
+                              false, false, false, false, false, false);
 }
 
 value_t context_create_float_value(context_t ctx, stype_t type, double val) {
-  comptime_value_t data = float_type_create_value(ctx, type->type_kind, val);
-  return context_create_value(ctx, type, NULL, data, false, false, false,
-                              false, false, false);
+  return context_create_value(ctx, type, NULL, &val,
+                              false, false, false, false, false, false);
 }
 
 value_t context_create_bool_value(context_t ctx, stype_t type, bool val) {
-  comptime_value_t data = bool_type_create_value(ctx, val);
-  return context_create_value(ctx, type, NULL, data, false, false, false,
-                              false, false, false);
+  return context_create_value(ctx, type, NULL, &val,
+                              false, false, false, false, false, false);
 }
 
 value_t context_create_char_value(context_t ctx, stype_t type, uint8_t val) {
-  comptime_value_t data = char_type_create_value(ctx, val);
-  return context_create_value(ctx, type, NULL, data, false, false, false,
-                              false, false, false);
+  return context_create_value(ctx, type, NULL, &val,
+                              false, false, false, false, false, false);
 }
 
 value_t context_create_str_value(context_t ctx, stype_t type, const char *val) {
-  comptime_value_t data = str_type_create_value_cstr(ctx, val);
-  return context_create_value(ctx, type, NULL, data, false, false, false,
-                              false, false, false);
+  /* String values store a string_id (uint64_t) in the raw buffer.
+   * The actual string is interned in ctx->strings rbtree. */
+  (void)val; /* TODO: implement context_intern_string */
+  uint64_t string_id = 0;
+  return context_create_value(ctx, type, NULL, &string_id,
+                              false, false, false, false, false, false);
 }
 
 value_t context_create_nil_value(context_t ctx, stype_t type) {
-  comptime_value_t data = nil_type_create_value(ctx);
-  return context_create_value(ctx, type, NULL, data, false, false, false,
-                              false, false, false);
+  return context_create_value(ctx, type, NULL, NULL,
+                              false, false, false, false, false, false);
+}
+
+/* ------------------------------------------------------------------
+ *  Value data hash — dispatches to per-type hash_value implementations
+ * ------------------------------------------------------------------ */
+
+uint64_t value_data_hash(context_t ctx, stype_t type, uint64_t type_hash,
+                         const void *data) {
+  if (!type) return 0;
+
+  switch (type->type_kind) {
+  case TYPE_VOID:
+    return void_type_hash_value(type, type_hash, data);
+  case TYPE_BOOL:
+    return bool_type_hash_value(type, type_hash, data);
+  case TYPE_CHAR:
+    return char_type_hash_value(type, type_hash, data);
+  case TYPE_I8:
+  case TYPE_I16:
+  case TYPE_I32:
+  case TYPE_I64:
+  case TYPE_U8:
+  case TYPE_U16:
+  case TYPE_U32:
+  case TYPE_U64:
+    return integer_type_hash_value(type, type_hash, data);
+  case TYPE_F16:
+  case TYPE_F32:
+  case TYPE_F64:
+    return float_type_hash_value(type, type_hash, data);
+  case TYPE_STR:
+    return str_type_hash_value(ctx, type, type_hash, data);
+  case TYPE_NIL:
+    return nil_type_hash_value(type, type_hash, data);
+  case TYPE_POINTER:
+    return pointer_type_hash_value(type, type_hash, data);
+  case TYPE_TUPLE:
+    return tuple_type_hash_value(ctx, type, type_hash, data);
+  case TYPE_ARRAY:
+    return array_type_hash_value(ctx, type, type_hash, data);
+  case TYPE_SLICE:
+    return slice_type_hash_value(type, type_hash, data);
+  case TYPE_CALLABLE:
+    return callable_type_hash_value(type, type_hash, data);
+  case TYPE_STRUCT:
+    return struct_instance_hash_value(ctx, type, type_hash, data);
+  case TYPE_UNION:
+    return union_instance_hash_value(ctx, type, type_hash, data);
+  case TYPE_CUNION:
+    return cunion_instance_hash_value(type, type_hash, data);
+  case TYPE_ENUM:
+    return enum_instance_hash_value(type, type_hash, data);
+  case TYPE_INTERFACE:
+  case TYPE_TYPE_ALIAS:
+    return type_hash;
+  }
+
+  return type_hash;
 }

@@ -56,49 +56,12 @@ stype_t integer_type_get(context_t ctx, enum type_kind_t kind) {
   }
 }
 
-comptime_value_t integer_type_create_value(context_t ctx, enum type_kind_t kind, uint64_t val) {
-  stype_t type = integer_type_get(ctx, kind);
-  comptime_int_t v = allocator_alloc(ctx->allocator, sizeof(struct _comptime_int_t));
-  v->header.allocator = ctx->allocator;
-  v->header.kind = COMPTIME_VALUE_INT;
-  v->header.type = type;
-  v->value = val;
-  return (comptime_value_t)v;
-}
-
-uint64_t integer_type_get_value(comptime_value_t val) {
-  if (!val || val->kind != COMPTIME_VALUE_INT)
-    return 0;
-  return ((comptime_int_t)val)->value;
-}
-
-void integer_type_dispose_value(comptime_value_t val) {
-  if (!val || val->kind != COMPTIME_VALUE_INT)
-    return;
-  allocator_free(val->allocator, &val);
-}
-
-comptime_value_t integer_type_clone_value(allocator_t allocator,
-                                          comptime_value_t val) {
-  if (!val || val->kind != COMPTIME_VALUE_INT)
-    return NULL;
-  comptime_int_t src = (comptime_int_t)val;
-  comptime_int_t dst = allocator_alloc(allocator, sizeof(struct _comptime_int_t));
-  dst->header = src->header;
-  dst->header.allocator = allocator;
-  dst->value = src->value;
-  return (comptime_value_t)dst;
-}
-
-uint64_t integer_type_hash_value(comptime_value_t val) {
-  if (!val || val->kind != COMPTIME_VALUE_INT)
-    return 0;
-  comptime_int_t v = (comptime_int_t)val;
-  uint64_t h = stype_compute_primitive_hash((enum type_kind_t)v->header.kind);
-  if (v->header.type)
-    h = stype_hash_mix_u64(h, v->header.type->instance.hash);
-  h = stype_hash_mix_u64(h, v->value);
-  return h;
+uint64_t integer_type_hash_value(stype_t type, uint64_t type_hash, const void *data) {
+  if (!data) return type_hash;
+  /* Read the integer value according to its size */
+  uint64_t val = 0;
+  memcpy(&val, data, type->instance.size);
+  return stype_hash_mix_u64(type_hash, val);
 }
 
 bool type_kind_is_integer(enum type_kind_t kind) {

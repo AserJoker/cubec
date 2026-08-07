@@ -3,7 +3,6 @@
 
 #include "core/allocator.h"
 #include "core/vec.h"
-#include "engine/comptime_value.h"
 #include "engine/union_field.h"
 #include "engine/stype.h"
 #ifdef __cplusplus
@@ -12,9 +11,6 @@ extern "C" {
 
 /**
  * @brief C-union instance — a concrete instantiation of a cunion stype_t.
- *
- * C-unions are C ABI compatible and cannot be generic.
- * Only has fields (no member/method maps — C unions don't have those).
  */
 struct _cunion_instance_t {
   stype_instance_header_t instance;
@@ -33,11 +29,8 @@ cunion_instance_t cunion_instance_create(allocator_t allocator,
 
 void cunion_instance_dispose(cunion_instance_t inst);
 
-/* ---- C-union comptime value operations ---- */
-
-void cunion_instance_dispose_value(comptime_value_t val);
-comptime_value_t cunion_instance_clone_value(allocator_t allocator, comptime_value_t val);
-uint64_t cunion_instance_hash_value(comptime_value_t val);
+/** @brief Hash a cunion value — hashes raw bytes (no tag, like C union). */
+uint64_t cunion_instance_hash_value(stype_t type, uint64_t type_hash, const void *data);
 
 #ifdef __cplusplus
 }

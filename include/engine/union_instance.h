@@ -4,7 +4,7 @@
 #include "core/allocator.h"
 #include "core/strmap.h"
 #include "core/vec.h"
-#include "engine/comptime_value.h"
+#include "engine/context.h"
 #include "engine/union_field.h"
 #include "engine/stype.h"
 #ifdef __cplusplus
@@ -16,10 +16,6 @@ typedef struct _function_t *function_t;
 
 /**
  * @brief Union instance — a concrete instantiation of a union stype_t.
- *
- * fields is owned (vec of union_field_t, ordered by declaration).
- * members is owned (strmap: name → union_field_t, borrowing from fields).
- * methods is owned (strmap: name → function_t, borrowing).
  */
 struct _union_instance_t {
   stype_instance_header_t instance;
@@ -42,11 +38,8 @@ union_instance_t union_instance_create(allocator_t allocator,
 
 void union_instance_dispose(union_instance_t inst);
 
-/* ---- Union comptime value operations ---- */
-
-void union_instance_dispose_value(comptime_value_t val);
-comptime_value_t union_instance_clone_value(allocator_t allocator, comptime_value_t val);
-uint64_t union_instance_hash_value(comptime_value_t val);
+/** @brief Hash a union value — reads tag, then hashes active variant. */
+uint64_t union_instance_hash_value(context_t ctx, stype_t type, uint64_t type_hash, const void *data);
 
 #ifdef __cplusplus
 }

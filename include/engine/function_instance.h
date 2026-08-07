@@ -4,7 +4,6 @@
 #include "core/allocator.h"
 #include "core/node.h"
 #include "core/vec.h"
-#include "engine/comptime_value.h"
 #include "engine/stype.h"
 #ifdef __cplusplus
 extern "C" {
@@ -12,9 +11,6 @@ extern "C" {
 
 /**
  * @brief Function instance — a concrete instantiation of a function_t template.
- *
- * Non-generic functions have a single instance (hash=0 in function_t.implements).
- * Generic functions have one instance per set of concrete type arguments.
  *
  * arguments and return_type are borrowing (point into context->types).
  * body is borrowing (points into the AST).
@@ -46,12 +42,6 @@ function_instance_t function_instance_create(allocator_t allocator,
 
 /** @brief Dispose a function_instance_t and its owned sub-objects. */
 void function_instance_dispose(function_instance_t inst);
-
-/* ---- Function comptime value operations ---- */
-
-void function_instance_dispose_value(comptime_value_t val);
-comptime_value_t function_instance_clone_value(allocator_t allocator, comptime_value_t val);
-uint64_t function_instance_hash_value(comptime_value_t val);
 
 #ifdef __cplusplus
 }

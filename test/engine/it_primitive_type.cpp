@@ -8,6 +8,8 @@
 #include "engine/name.h"
 #include "engine/scope.h"
 #include "engine/stype.h"
+#include "engine/context.h"
+#include "engine/value.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -221,104 +223,79 @@ TEST_F(it_primitive_type, different_kind_different_hash) {
   EXPECT_NE(hu32, hf32);
 }
 
-/* ---- comptime_value create / extract ---- */
+/* ---- value creation with raw buffer ---- */
 
-TEST_F(it_primitive_type, integer_create_and_get_value) {
-  comptime_value_t val = integer_type_create_value(ctx, TYPE_I32, 42);
+TEST_F(it_primitive_type, create_int_value) {
+  value_t val = context_create_int_value(ctx, ctx->t_i32, 42);
   ASSERT_NE(val, nullptr);
-  EXPECT_EQ(val->kind, COMPTIME_VALUE_INT);
-  EXPECT_EQ(integer_type_get_value(val), 42);
-  comptime_value_dispose(val);
+  EXPECT_EQ(val->stype, ctx->t_i32);
+  EXPECT_NE(val->data, nullptr);
+  /* Read back the raw bytes */
+  int32_t raw;
+  memcpy(&raw, val->data, sizeof(int32_t));
+  EXPECT_EQ(raw, 42);
+  allocator_free(allocator, &val);
 }
 
-TEST_F(it_primitive_type, integer_negative_value) {
-  comptime_value_t val = integer_type_create_value(ctx, TYPE_I32, (uint64_t)-1);
-  EXPECT_EQ(integer_type_get_value(val), (uint64_t)-1);
-  comptime_value_dispose(val);
-}
-
-TEST_F(it_primitive_type, integer_u64_max) {
-  comptime_value_t val = integer_type_create_value(ctx, TYPE_U64, UINT64_MAX);
-  EXPECT_EQ(integer_type_get_value(val), UINT64_MAX);
-  comptime_value_dispose(val);
-}
-
-TEST_F(it_primitive_type, float_create_and_get_value) {
-  comptime_value_t val = float_type_create_value(ctx, TYPE_F64, 3.14);
+TEST_F(it_primitive_type, create_i64_value) {
+  value_t val = context_create_int_value(ctx, ctx->t_i64, (uint64_t)-1);
   ASSERT_NE(val, nullptr);
-  EXPECT_EQ(val->kind, COMPTIME_VALUE_FLOAT);
-  EXPECT_DOUBLE_EQ(float_type_get_value(val), 3.14);
-  comptime_value_dispose(val);
+  uint64_t raw;
+  memcpy(&raw, val->data, sizeof(uint64_t));
+  EXPECT_EQ(raw, (uint64_t)-1);
+  allocator_free(allocator, &val);
 }
 
-TEST_F(it_primitive_type, bool_create_and_get_value) {
-  comptime_value_t val_true = bool_type_create_value(ctx, true);
+TEST_F(it_primitive_type, create_float_value) {
+  value_t val = context_create_float_value(ctx, ctx->t_f64, 3.14);
+  ASSERT_NE(val, nullptr);
+  EXPECT_EQ(val->stype, ctx->t_f64);
+  double raw;
+  memcpy(&raw, val->data, sizeof(double));
+  EXPECT_DOUBLE_EQ(raw, 3.14);
+  allocator_free(allocator, &val);
+}
+
+TEST_F(it_primitive_type, create_bool_value) {
+  value_t val_true = context_create_bool_value(ctx, ctx->t_bool, true);
   ASSERT_NE(val_true, nullptr);
-  EXPECT_EQ(val_true->kind, COMPTIME_VALUE_BOOL);
-  EXPECT_TRUE(bool_type_get_value(val_true));
+  bool raw;
+  memcpy(&raw, val_true->data, sizeof(bool));
+  EXPECT_TRUE(raw);
 
-  comptime_value_t val_false = bool_type_create_value(ctx, false);
-  EXPECT_FALSE(bool_type_get_value(val_false));
+  value_t val_false = context_create_bool_value(ctx, ctx->t_bool, false);
+  memcpy(&raw, val_false->data, sizeof(bool));
+  EXPECT_FALSE(raw);
 
-  comptime_value_dispose(val_true);
-  comptime_value_dispose(val_false);
+  allocator_free(allocator, &val_true);
+  allocator_free(allocator, &val_false);
 }
 
-TEST_F(it_primitive_type, char_create_and_get_value) {
-  comptime_value_t val = char_type_create_value(ctx, 'A');
+TEST_F(it_primitive_type, create_char_value) {
+  value_t val = context_create_char_value(ctx, ctx->t_char, 'A');
   ASSERT_NE(val, nullptr);
-  EXPECT_EQ(val->kind, COMPTIME_VALUE_INT);
-  EXPECT_EQ(char_type_get_value(val), 'A');
-  comptime_value_dispose(val);
+  uint8_t raw;
+  memcpy(&raw, val->data, sizeof(uint8_t));
+  EXPECT_EQ(raw, 'A');
+  allocator_free(allocator, &val);
 }
 
-TEST_F(it_primitive_type, str_create_and_get_value) {
-  comptime_value_t val = str_type_create_value_cstr(ctx, "hello");
+TEST_F(it_primitive_type, create_nil_value) {
+  value_t val = context_create_nil_value(ctx, ctx->t_nil);
   ASSERT_NE(val, nullptr);
-  EXPECT_EQ(val->kind, COMPTIME_VALUE_STRING);
-  string_t s = str_type_get_value(val);
-  ASSERT_NE(s, nullptr);
-  EXPECT_STREQ(string_get(s), "hello");
-  comptime_value_dispose(val);
+  EXPECT_EQ(val->stype, ctx->t_nil);
+  /* nil data is NULL (no payload) */
+  EXPECT_EQ(val->data, nullptr);
+  allocator_free(allocator, &val);
 }
 
-TEST_F(it_primitive_type, nil_create_value) {
-  comptime_value_t val = nil_type_create_value(ctx);
-  ASSERT_NE(val, nullptr);
-  EXPECT_EQ(val->kind, COMPTIME_VALUE_NIL);
-  comptime_value_dispose(val);
+TEST_F(it_primitive_type, value_type_hash_for_primitive) {
+  value_t val = context_create_int_value(ctx, ctx->t_i32, 0);
+  EXPECT_EQ(val->type_hash, ctx->t_i32->instance.hash);
+  allocator_free(allocator, &val);
 }
 
-TEST_F(it_primitive_type, comptime_value_clone_int) {
-  comptime_value_t val = integer_type_create_value(ctx, TYPE_I32, 99);
-  comptime_value_t cloned = comptime_value_clone(ctx->allocator, val);
-  ASSERT_NE(cloned, nullptr);
-  EXPECT_EQ(cloned->kind, COMPTIME_VALUE_INT);
-  EXPECT_EQ(integer_type_get_value(cloned), 99);
-  comptime_value_dispose(cloned);
-  comptime_value_dispose(val);
-}
-
-TEST_F(it_primitive_type, comptime_value_clone_string) {
-  comptime_value_t val = str_type_create_value_cstr(ctx, "test");
-  comptime_value_t cloned = comptime_value_clone(ctx->allocator, val);
-  ASSERT_NE(cloned, nullptr);
-  string_t s = str_type_get_value(cloned);
-  ASSERT_NE(s, nullptr);
-  EXPECT_STREQ(string_get(s), "test");
-  comptime_value_dispose(cloned);
-  comptime_value_dispose(val);
-}
-
-TEST_F(it_primitive_type, comptime_value_type_points_to_stype) {
-  comptime_value_t val = integer_type_create_value(ctx, TYPE_I32, 0);
-  EXPECT_EQ(comptime_value_get_type(val), ctx->t_i32);
-  comptime_value_dispose(val);
-
-  comptime_value_t bval = bool_type_create_value(ctx, true);
-  EXPECT_EQ(comptime_value_get_type(bval), ctx->t_bool);
-  comptime_value_dispose(bval);
-}
+/* ---- rbtree lookup ---- */
 
 TEST_F(it_primitive_type, rbtree_lookup_by_hash) {
   /* Verify we can find a primitive type by its hash via rbtree */

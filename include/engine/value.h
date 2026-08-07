@@ -4,7 +4,6 @@
 #include "core/allocator.h"
 #include "core/node.h"
 #include "engine/def.h"
-#include "engine/comptime_value.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,12 +15,15 @@ typedef struct _stype_t *stype_t;
  * @brief Value binding — represents a variable/constant declaration.
  *
  * Owned by scope_t. Borrowed by name_t.ref.
- * stype and data are NULL after phase 1; filled during phase 2.
+ * stype is NULL after phase 1; filled during phase 2.
+ * data is a raw buffer following C memory layout (malloc'd, type->instance.size bytes).
+ * Strings and functions are borrowing references within the buffer.
  */
 struct _value_t {
   def_t header;
-  stype_t stype;              /* value's type (NULL in phase 1) */
-  comptime_value_t data;      /* comptime eval result, borrowing (NULL in phase 1) */
+  stype_t stype;         /* value's type template (NULL in phase 1) */
+  uint64_t type_hash;    /* instance hash within stype (distinguishes generic instances) */
+  void *data;            /* raw data buffer following C layout (owned, nullable) */
   bool is_export;
   bool is_exportlib;
   bool is_extern;

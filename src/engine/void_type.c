@@ -14,3 +14,9 @@ void void_type_register(context_t ctx) {
 stype_t void_type_get(context_t ctx) {
   return ctx->t_void;
 }
+
+uint64_t void_type_hash_value(stype_t type, uint64_t type_hash, const void *data) {
+  (void)type;
+  (void)data;
+  return type_hash;
+}

@@ -3,7 +3,6 @@
 
 #include "engine/stype.h"
 #include "engine/context.h"
-#include "engine/comptime_value.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -11,23 +10,8 @@ extern "C" {
 void str_type_register(context_t ctx);
 stype_t str_type_get(context_t ctx);
 
-/** @brief Create a str comptime value (takes ownership of string). */
-comptime_value_t str_type_create_value(context_t ctx, string_t val);
-
-/** @brief Create a str comptime value from C string (copied). */
-comptime_value_t str_type_create_value_cstr(context_t ctx, const char *val);
-
-/** @brief Extract string value (borrowing). Returns NULL if not COMPTIME_VALUE_STRING. */
-string_t str_type_get_value(comptime_value_t val);
-
-/** @brief Dispose a str comptime value. */
-void str_type_dispose_value(comptime_value_t val);
-
-/** @brief Clone a str comptime value. */
-comptime_value_t str_type_clone_value(allocator_t allocator, comptime_value_t val);
-
-/** @brief Compute structural hash of a str comptime value. */
-uint64_t str_type_hash_value(comptime_value_t val);
+/** @brief Hash a string value — looks up string_id in context string table. */
+uint64_t str_type_hash_value(context_t ctx, stype_t type, uint64_t type_hash, const void *data);
 
 #ifdef __cplusplus
 }
