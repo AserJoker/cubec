@@ -3,6 +3,7 @@
 
 #include "core/allocator.h"
 #include "core/node.h"
+#include "core/rbtree.h"
 #include "core/vec.h"
 #include "engine/def.h"
 #ifdef __cplusplus
@@ -78,7 +79,7 @@ struct _stype_t {
   stype_instance_header_t instance;  /**< instance header: name, size, align */
   enum type_kind_t type_kind;
   vec_t params;     /* generic params (nullable, NULL for non-generic) */
-  vec_t implements; /* type-erased instance array (nullable) */
+  rbtree_t implements; /* hash(uint64_t) → instance (auto-dispose, nullable) */
 };
 
 typedef struct _stype_t *stype_t;

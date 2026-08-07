@@ -3,6 +3,7 @@
 
 #include "core/allocator.h"
 #include "core/node.h"
+#include "core/rbtree.h"
 #include "core/vec.h"
 #include "engine/def.h"
 #ifdef __cplusplus
@@ -30,7 +31,7 @@ struct _function_t {
   bool is_comptime;
   bool is_c_variadic;
   vec_t params;     /* generic params (nullable) */
-  vec_t implements; /* function_instance_t array (nullable) */
+  rbtree_t implements; /* hash(uint64_t) → function_instance_t (auto-dispose, nullable) */
 };
 
 typedef struct _function_t *function_t;
