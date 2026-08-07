@@ -47,7 +47,7 @@ TEST_F(it_primitive_type, lookup_char) {
   ASSERT_NE(name, nullptr);
   stype_t type = (stype_t)name->ref;
   EXPECT_EQ(type->type_kind, TYPE_CHAR);
-  EXPECT_EQ(type->instance.size, 4);
+  EXPECT_EQ(type->instance.size, 1);
 }
 
 TEST_F(it_primitive_type, lookup_str) {

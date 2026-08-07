@@ -4,7 +4,7 @@
 #include "core/strmap.h"
 
 void char_type_register(context_t ctx) {
-  stype_t type = stype_create_primitive(ctx->allocator, TYPE_CHAR, "char", 4, 4);
+  stype_t type = stype_create_primitive(ctx->allocator, TYPE_CHAR, "char", 1, 1);
   vec_push(ctx->types, (void *)type);
   name_t name = name_create(ctx->allocator, NAME_TYPE, (void *)type);
   strmap_insert(ctx->global_scope->names, "char", name);
