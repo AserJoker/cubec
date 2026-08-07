@@ -18,6 +18,15 @@ comptime_value_t integer_type_create_value(context_t ctx, enum type_kind_t kind,
 /** @brief Extract integer value. Returns 0 if not COMPTIME_VALUE_INT. */
 uint64_t integer_type_get_value(comptime_value_t val);
 
+/** @brief Dispose an integer comptime value. */
+void integer_type_dispose_value(comptime_value_t val);
+
+/** @brief Clone an integer comptime value. */
+comptime_value_t integer_type_clone_value(allocator_t allocator, comptime_value_t val);
+
+/** @brief Compute structural hash of an integer comptime value. */
+uint64_t integer_type_hash_value(comptime_value_t val);
+
 #ifdef __cplusplus
 }
 #endif

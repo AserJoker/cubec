@@ -125,13 +125,23 @@ uint64_t stype_compute_primitive_hash(enum type_kind_t kind);
 uint64_t stype_hash_mix_u64(uint64_t hash, uint64_t val);
 
 /**
- * @brief Compute hash for a struct/union type from field layout.
- * @param kind             TYPE_STRUCT or TYPE_UNION
- * @param field_names      vec of const char* field names (borrowed)
- * @param field_type_hashes vec of uint64_t (as uintptr_t) field type hashes
+ * @brief Compute hash for a named type (struct/union/enum/interface/cunion).
+ *
+ * Includes generic argument hashes so that different instantiations of
+ * the same generic type produce different hashes:
+ *   Test[i32, 1] ≠ Test[i32, 2]
+ *
+ * @param kind               Type kind (TYPE_STRUCT, TYPE_UNION, etc.)
+ * @param generic_arg_hashes vec of uint64_t (as uintptr_t) generic arg hashes
+ *                           (NULL for non-generic types)
+ * @param field_names        vec of const char* field names (borrowed, may be NULL)
+ * @param field_type_hashes  vec of uint64_t (as uintptr_t) field type hashes
+ *                           (may be NULL)
  */
-uint64_t stype_compute_struct_hash(enum type_kind_t kind, vec_t field_names,
-                                   vec_t field_type_hashes);
+uint64_t stype_compute_named_type_hash(enum type_kind_t kind,
+                                       vec_t generic_arg_hashes,
+                                       vec_t field_names,
+                                       vec_t field_type_hashes);
 
 /**
  * @brief Compute hash for a composite type (pointer/array/slice/tuple/callable).

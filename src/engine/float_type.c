@@ -64,3 +64,34 @@ double float_type_get_value(comptime_value_t val) {
 bool type_kind_is_float(enum type_kind_t kind) {
   return kind == TYPE_F16 || kind == TYPE_F32 || kind == TYPE_F64;
 }
+
+void float_type_dispose_value(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_FLOAT)
+    return;
+  allocator_free(val->allocator, &val);
+}
+
+comptime_value_t float_type_clone_value(allocator_t allocator,
+                                        comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_FLOAT)
+    return NULL;
+  comptime_float_t src = (comptime_float_t)val;
+  comptime_float_t dst = allocator_alloc(allocator, sizeof(struct _comptime_float_t));
+  dst->header = src->header;
+  dst->header.allocator = allocator;
+  dst->value = src->value;
+  return (comptime_value_t)dst;
+}
+
+uint64_t float_type_hash_value(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_FLOAT)
+    return 0;
+  comptime_float_t v = (comptime_float_t)val;
+  uint64_t h = stype_compute_primitive_hash((enum type_kind_t)v->header.kind);
+  if (v->header.type)
+    h = stype_hash_mix_u64(h, v->header.type->instance.hash);
+  uint64_t bits;
+  memcpy(&bits, &v->value, sizeof(bits));
+  h = stype_hash_mix_u64(h, bits);
+  return h;
+}

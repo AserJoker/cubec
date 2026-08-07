@@ -4,6 +4,7 @@
 #include "core/strmap.h"
 #include "core/string.h"
 #include "core/type.h"
+#include <string.h>
 
 void str_type_register(context_t ctx) {
   stype_t type = stype_create_primitive(ctx->allocator, TYPE_STR, "str", 0, 0);
@@ -36,4 +37,44 @@ string_t str_type_get_value(comptime_value_t val) {
   if (!val || val->kind != COMPTIME_VALUE_STRING)
     return NULL;
   return ((comptime_string_t)val)->value;
+}
+
+void str_type_dispose_value(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_STRING)
+    return;
+  comptime_string_t v = (comptime_string_t)val;
+  if (v->value)
+    allocator_free(val->allocator, &v->value);
+  allocator_free(val->allocator, &val);
+}
+
+comptime_value_t str_type_clone_value(allocator_t allocator,
+                                      comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_STRING)
+    return NULL;
+  comptime_string_t src = (comptime_string_t)val;
+  comptime_string_t dst = allocator_alloc(allocator, sizeof(struct _comptime_string_t));
+  dst->header = src->header;
+  dst->header.allocator = allocator;
+  dst->value = src->value ? (string_t)value_clone(allocator, (void *)src->value) : NULL;
+  return (comptime_value_t)dst;
+}
+
+uint64_t str_type_hash_value(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_STRING)
+    return 0;
+  comptime_string_t v = (comptime_string_t)val;
+  uint64_t h = stype_compute_primitive_hash(TYPE_STR);
+  if (v->header.type)
+    h = stype_hash_mix_u64(h, v->header.type->instance.hash);
+  if (v->value) {
+    const char *s = string_get(v->value);
+    if (s) {
+      size_t len = strlen(s);
+      h = stype_hash_mix_u64(h, len);
+      for (size_t i = 0; i < len; i++)
+        h = stype_hash_mix_u64(h, (uint64_t)(uint8_t)s[i]);
+    }
+  }
+  return h;
 }

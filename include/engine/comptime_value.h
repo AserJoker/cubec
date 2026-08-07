@@ -99,6 +99,9 @@ void comptime_value_dispose(comptime_value_t val);
 /** @brief Clone a comptime value (deep copy). */
 comptime_value_t comptime_value_clone(allocator_t allocator, comptime_value_t val);
 
+/** @brief Compute structural hash of a comptime value. */
+uint64_t comptime_value_hash(comptime_value_t val);
+
 /* --------------------------------------------------------------------------
  *  Type-safe downcast helpers
  * -------------------------------------------------------------------------- */

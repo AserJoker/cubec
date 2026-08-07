@@ -32,9 +32,21 @@ uint64_t stype_compute_primitive_hash(enum type_kind_t kind) {
   return stype_hash_mix_u64(fnv1a_init(), (uint64_t)kind);
 }
 
-uint64_t stype_compute_struct_hash(enum type_kind_t kind, vec_t field_names,
-                                   vec_t field_type_hashes) {
+uint64_t stype_compute_named_type_hash(enum type_kind_t kind,
+                                       vec_t generic_arg_hashes,
+                                       vec_t field_names,
+                                       vec_t field_type_hashes) {
   uint64_t h = stype_hash_mix_u64(fnv1a_init(), (uint64_t)kind);
+
+  /* Mix generic argument hashes */
+  size_t ga_n = generic_arg_hashes ? vec_get_size(generic_arg_hashes) : 0;
+  h = stype_hash_mix_u64(h, ga_n);
+  for (size_t i = 0; i < ga_n; i++) {
+    uint64_t gh = (uint64_t)(uintptr_t)vec_get(generic_arg_hashes, i);
+    h = stype_hash_mix_u64(h, gh);
+  }
+
+  /* Mix field layout */
   size_t n = field_names ? vec_get_size(field_names) : 0;
   size_t th_n = field_type_hashes ? vec_get_size(field_type_hashes) : 0;
   h = stype_hash_mix_u64(h, n);

@@ -17,6 +17,15 @@ comptime_value_t char_type_create_value(context_t ctx, uint64_t val);
 /** @brief Extract char value. Returns 0 if not COMPTIME_VALUE_INT or wrong type. */
 uint64_t char_type_get_value(comptime_value_t val);
 
+/** @brief Dispose a char comptime value. */
+void char_type_dispose_value(comptime_value_t val);
+
+/** @brief Clone a char comptime value. */
+comptime_value_t char_type_clone_value(allocator_t allocator, comptime_value_t val);
+
+/** @brief Compute structural hash of a char comptime value. */
+uint64_t char_type_hash_value(comptime_value_t val);
+
 #ifdef __cplusplus
 }
 #endif

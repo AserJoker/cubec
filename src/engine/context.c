@@ -7,7 +7,10 @@
 #include "engine/nil_type.h"
 #include "engine/integer_type.h"
 #include "engine/float_type.h"
+#include "engine/comptime_value.h"
 #include "engine/scope.h"
+#include "core/rbtree.h"
+#include "core/vec.h"
 #include "cubec/program.h"
 #include "cubec/token.h"
 #include <stdio.h>
@@ -265,4 +268,131 @@ void context_pop_scope(context_t ctx) {
   if (!ctx || !ctx->current_scope)
     return;
   ctx->current_scope = ctx->current_scope->parent;
+}
+
+/* ------------------------------------------------------------------
+ *  Value creation with generic instantiation
+ * ------------------------------------------------------------------ */
+
+/**
+ * @brief Ensure a type has its implements rbtree initialized.
+ *
+ * Non-generic types get a single default instance keyed by type->instance.hash.
+ * Generic types get instances added as they are instantiated.
+ */
+static void _ensure_implements(context_t ctx, stype_t type) {
+  if (type->implements)
+    return;
+  rbtree_init_t rbi = {.auto_dispose = true};
+  type->implements =
+      (rbtree_t)allocator_create(ctx->allocator, &g_rbtree_type, &rbi);
+
+  /* Non-generic types: insert default instance keyed by type's own hash */
+  if (!type->params) {
+    rbtree_insert(type->implements, type->instance.hash, (void *)(uintptr_t)1);
+  }
+}
+
+/**
+ * @brief Instantiate a generic type with the given args.
+ *
+ * Computes instance hash from generic_args, looks up in type->implements
+ * rbtree. Creates a new instance entry if not found.
+ *
+ * For non-generic types, returns type->instance.hash (the default instance).
+ *
+ * @return The instance hash.
+ */
+static uint64_t _instantiate(context_t ctx, stype_t type, vec_t generic_args) {
+  _ensure_implements(ctx, type);
+
+  /* Non-generic types: return the default instance hash */
+  if (!type->params)
+    return type->instance.hash;
+
+  /* Generic type without args: return the template hash */
+  if (!generic_args)
+    return type->instance.hash;
+
+  /* Build generic_arg_hashes from comptime_value_t args */
+  vec_init_t vi = {.auto_dispose = false};
+  vec_t generic_arg_hashes =
+      (vec_t)allocator_create(ctx->allocator, &g_vec_type, &vi);
+
+  size_t n = vec_get_size(generic_args);
+  for (size_t i = 0; i < n; i++) {
+    comptime_value_t arg = (comptime_value_t)vec_get(generic_args, i);
+    uint64_t arg_hash = comptime_value_hash(arg);
+    vec_push(generic_arg_hashes, (void *)(uintptr_t)arg_hash);
+  }
+
+  /* Compute instance hash */
+  uint64_t instance_hash =
+      stype_compute_named_type_hash(type->type_kind, generic_arg_hashes,
+                                    NULL, NULL);
+  allocator_free(ctx->allocator, &generic_arg_hashes);
+
+  /* Check if already instantiated */
+  void *existing = rbtree_find(type->implements, instance_hash);
+  if (existing)
+    return instance_hash;
+
+  /* Create new instance stub — field layout filled during type resolution */
+  rbtree_insert(type->implements, instance_hash, (void *)(uintptr_t)1);
+
+  return instance_hash;
+}
+
+value_t context_create_value(context_t ctx, stype_t type, vec_t generic_args,
+                             comptime_value_t data,
+                             bool is_export, bool is_exportlib, bool is_extern,
+                             bool is_builtin, bool is_comptime, bool is_using) {
+  /* Ensure instance exists (instantiate generic if needed) */
+  _instantiate(ctx, type, generic_args);
+
+  value_t val = value_create(ctx->allocator, NULL, is_export, is_exportlib,
+                             is_extern, is_builtin, is_comptime, is_using);
+  val->stype = type;
+  val->data = data; /* borrowing */
+  return val;
+}
+
+/* ------------------------------------------------------------------
+ *  Per-kind convenience wrappers
+ * ------------------------------------------------------------------ */
+
+value_t context_create_int_value(context_t ctx, stype_t type, uint64_t val) {
+  comptime_value_t data = integer_type_create_value(ctx, type->type_kind, val);
+  return context_create_value(ctx, type, NULL, data, false, false, false,
+                              false, false, false);
+}
+
+value_t context_create_float_value(context_t ctx, stype_t type, double val) {
+  comptime_value_t data = float_type_create_value(ctx, type->type_kind, val);
+  return context_create_value(ctx, type, NULL, data, false, false, false,
+                              false, false, false);
+}
+
+value_t context_create_bool_value(context_t ctx, stype_t type, bool val) {
+  comptime_value_t data = bool_type_create_value(ctx, val);
+  return context_create_value(ctx, type, NULL, data, false, false, false,
+                              false, false, false);
+}
+
+value_t context_create_char_value(context_t ctx, stype_t type, uint8_t val) {
+  comptime_value_t data = char_type_create_value(ctx, val);
+  return context_create_value(ctx, type, NULL, data, false, false, false,
+                              false, false, false);
+}
+
+value_t context_create_str_value(context_t ctx, stype_t type, const char *val) {
+  comptime_value_t data = str_type_create_value_cstr(ctx, val);
+  return context_create_value(ctx, type, NULL, data, false, false, false,
+                              false, false, false);
+}
+
+value_t context_create_nil_value(context_t ctx, stype_t type) {
+  comptime_value_t data = nil_type_create_value(ctx);
+  return context_create_value(ctx, type, NULL, data, false, false, false,
+                              false, false, false);
 }

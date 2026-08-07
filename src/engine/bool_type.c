@@ -30,3 +30,32 @@ bool bool_type_get_value(comptime_value_t val) {
     return false;
   return ((comptime_bool_t)val)->value;
 }
+
+void bool_type_dispose_value(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_BOOL)
+    return;
+  allocator_free(val->allocator, &val);
+}
+
+comptime_value_t bool_type_clone_value(allocator_t allocator,
+                                       comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_BOOL)
+    return NULL;
+  comptime_bool_t src = (comptime_bool_t)val;
+  comptime_bool_t dst = allocator_alloc(allocator, sizeof(struct _comptime_bool_t));
+  dst->header = src->header;
+  dst->header.allocator = allocator;
+  dst->value = src->value;
+  return (comptime_value_t)dst;
+}
+
+uint64_t bool_type_hash_value(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_BOOL)
+    return 0;
+  comptime_bool_t v = (comptime_bool_t)val;
+  uint64_t h = stype_compute_primitive_hash((enum type_kind_t)v->header.kind);
+  if (v->header.type)
+    h = stype_hash_mix_u64(h, v->header.type->instance.hash);
+  h = stype_hash_mix_u64(h, (uint64_t)v->value);
+  return h;
+}

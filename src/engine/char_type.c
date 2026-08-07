@@ -31,3 +31,34 @@ uint64_t char_type_get_value(comptime_value_t val) {
     return 0;
   return ((comptime_int_t)val)->value;
 }
+
+void char_type_dispose_value(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_INT || !val->type ||
+      val->type->type_kind != TYPE_CHAR)
+    return;
+  allocator_free(val->allocator, &val);
+}
+
+comptime_value_t char_type_clone_value(allocator_t allocator,
+                                       comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_INT || !val->type ||
+      val->type->type_kind != TYPE_CHAR)
+    return NULL;
+  comptime_int_t src = (comptime_int_t)val;
+  comptime_int_t dst = allocator_alloc(allocator, sizeof(struct _comptime_int_t));
+  dst->header = src->header;
+  dst->header.allocator = allocator;
+  dst->value = src->value;
+  return (comptime_value_t)dst;
+}
+
+uint64_t char_type_hash_value(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_INT || !val->type ||
+      val->type->type_kind != TYPE_CHAR)
+    return 0;
+  comptime_int_t v = (comptime_int_t)val;
+  uint64_t h = stype_compute_primitive_hash(TYPE_CHAR);
+  h = stype_hash_mix_u64(h, v->header.type->instance.hash);
+  h = stype_hash_mix_u64(h, v->value);
+  return h;
+}

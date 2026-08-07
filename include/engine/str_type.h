@@ -20,6 +20,15 @@ comptime_value_t str_type_create_value_cstr(context_t ctx, const char *val);
 /** @brief Extract string value (borrowing). Returns NULL if not COMPTIME_VALUE_STRING. */
 string_t str_type_get_value(comptime_value_t val);
 
+/** @brief Dispose a str comptime value. */
+void str_type_dispose_value(comptime_value_t val);
+
+/** @brief Clone a str comptime value. */
+comptime_value_t str_type_clone_value(allocator_t allocator, comptime_value_t val);
+
+/** @brief Compute structural hash of a str comptime value. */
+uint64_t str_type_hash_value(comptime_value_t val);
+
 #ifdef __cplusplus
 }
 #endif

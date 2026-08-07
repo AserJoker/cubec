@@ -18,6 +18,15 @@ comptime_value_t float_type_create_value(context_t ctx, enum type_kind_t kind, d
 /** @brief Extract float value. Returns 0.0 if not COMPTIME_VALUE_FLOAT. */
 double float_type_get_value(comptime_value_t val);
 
+/** @brief Dispose a float comptime value. */
+void float_type_dispose_value(comptime_value_t val);
+
+/** @brief Clone a float comptime value. */
+comptime_value_t float_type_clone_value(allocator_t allocator, comptime_value_t val);
+
+/** @brief Compute structural hash of a float comptime value. */
+uint64_t float_type_hash_value(comptime_value_t val);
+
 #ifdef __cplusplus
 }
 #endif
