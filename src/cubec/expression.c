@@ -34,6 +34,7 @@
 #include "cubec/literal_char.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
+#include "cubec/literal_nil.h"
 #include "cubec/literal_undefined.h"
 #include "cubec/node.h"
 #include "cubec/node_error.h"
@@ -245,6 +246,15 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
 
   // Try numeric literal
   result = read_literal_numeric(ctx, tokens, &current, filename);
+  if (node_is_error(result))
+    return result;
+  if (result) {
+    *position = current;
+    return result;
+  }
+
+  // Try nil literal
+  result = read_literal_nil(ctx, tokens, &current, filename);
   if (node_is_error(result))
     return result;
   if (result) {
@@ -659,6 +669,9 @@ void emit_expression(emit_context_t ctx, node_t expr) {
     break;
   case CUBEC_NODE_LITERAL_CHAR:
     emit_literal_char(ctx, expr);
+    break;
+  case CUBEC_NODE_LITERAL_NIL:
+    emit_literal_nil(ctx, expr);
     break;
   case CUBEC_NODE_LITERAL_UNDEFINED:
     emit_literal_undefined(ctx, expr);

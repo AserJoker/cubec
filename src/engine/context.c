@@ -1,5 +1,12 @@
 #include "engine/context.h"
 #include "engine/module.h"
+#include "engine/void_type.h"
+#include "engine/bool_type.h"
+#include "engine/char_type.h"
+#include "engine/str_type.h"
+#include "engine/nil_type.h"
+#include "engine/integer_type.h"
+#include "engine/float_type.h"
 #include "engine/scope.h"
 #include "cubec/program.h"
 #include "cubec/token.h"
@@ -27,6 +34,14 @@ static void _context_init(void *self, allocator_t allocator, void *arg) {
 
   vec_init_t types_init = {.auto_dispose = true};
   ctx->types = (vec_t)allocator_create(allocator, &g_vec_type, &types_init);
+
+  void_type_register(ctx);
+  bool_type_register(ctx);
+  char_type_register(ctx);
+  str_type_register(ctx);
+  nil_type_register(ctx);
+  integer_types_register(ctx);
+  float_types_register(ctx);
 }
 
 static void _context_dispose(void *self, allocator_t allocator) {

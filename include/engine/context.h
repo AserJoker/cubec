@@ -16,6 +16,9 @@ typedef struct _module_t *module_t;
 struct _scope_t;
 typedef struct _scope_t *scope_t;
 
+struct _stype_t;
+typedef struct _stype_t *stype_t;
+
 struct context {
   allocator_t allocator;
   diagnostic_list_t diagnostics;
@@ -24,6 +27,16 @@ struct context {
   scope_t root_scope;    /* borrowed: current module's root scope */
   scope_t current_scope; /* borrowed: current traversal position */
   vec_t types;           /* owned: global type_t registry (auto-dispose) */
+
+  /* Primitive type singletons — borrowing pointers into ctx->types */
+  stype_t t_void;
+  stype_t t_bool;
+  stype_t t_i8, t_i16, t_i32, t_i64;
+  stype_t t_u8, t_u16, t_u32, t_u64;
+  stype_t t_f16, t_f32, t_f64;
+  stype_t t_char;
+  stype_t t_str;
+  stype_t t_nil;
 };
 
 typedef struct context *context_t;
