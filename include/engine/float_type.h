@@ -3,22 +3,20 @@
 
 #include "engine/stype.h"
 #include "engine/context.h"
+#include "engine/comptime_value.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**
- * @brief Register float types (f16, f32, f64) into context's global scope.
- */
 void float_types_register(context_t ctx);
-
-/**
- * @brief Look up a float type by its type_kind_t.
- */
 stype_t float_type_get(context_t ctx, enum type_kind_t kind);
-
-/** @brief Check if a type_kind_t is a float type. */
 bool type_kind_is_float(enum type_kind_t kind);
+
+/** @brief Create a float comptime value. kind must be a float type_kind. */
+comptime_value_t float_type_create_value(context_t ctx, enum type_kind_t kind, double val);
+
+/** @brief Extract float value. Returns 0.0 if not COMPTIME_VALUE_FLOAT. */
+double float_type_get_value(comptime_value_t val);
 
 #ifdef __cplusplus
 }

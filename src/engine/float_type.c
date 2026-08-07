@@ -45,6 +45,22 @@ stype_t float_type_get(context_t ctx, enum type_kind_t kind) {
   }
 }
 
+comptime_value_t float_type_create_value(context_t ctx, enum type_kind_t kind, double val) {
+  stype_t type = float_type_get(ctx, kind);
+  comptime_float_t v = allocator_alloc(ctx->allocator, sizeof(struct _comptime_float_t));
+  v->header.allocator = ctx->allocator;
+  v->header.kind = COMPTIME_VALUE_FLOAT;
+  v->header.type = type;
+  v->value = val;
+  return (comptime_value_t)v;
+}
+
+double float_type_get_value(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_FLOAT)
+    return 0.0;
+  return ((comptime_float_t)val)->value;
+}
+
 bool type_kind_is_float(enum type_kind_t kind) {
   return kind == TYPE_F16 || kind == TYPE_F32 || kind == TYPE_F64;
 }

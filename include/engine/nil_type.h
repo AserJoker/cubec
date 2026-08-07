@@ -3,12 +3,16 @@
 
 #include "engine/stype.h"
 #include "engine/context.h"
+#include "engine/comptime_value.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 void nil_type_register(context_t ctx);
 stype_t nil_type_get(context_t ctx);
+
+/** @brief Create a nil comptime value. */
+comptime_value_t nil_type_create_value(context_t ctx);
 
 #ifdef __cplusplus
 }

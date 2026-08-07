@@ -3,26 +3,20 @@
 
 #include "engine/stype.h"
 #include "engine/context.h"
+#include "engine/comptime_value.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/**
- * @brief Register integer types (i8~i64, u8~u64) into context's global scope.
- *
- * Creates stype_t for each integer type with name/size/align,
- * pushes to ctx->types, and inserts into ctx->global_scope->names.
- */
 void integer_types_register(context_t ctx);
-
-/**
- * @brief Look up an integer type by its type_kind_t.
- * @return The stype_t, or NULL if kind is not an integer type.
- */
 stype_t integer_type_get(context_t ctx, enum type_kind_t kind);
-
-/** @brief Check if a type_kind_t is an integer type. */
 bool type_kind_is_integer(enum type_kind_t kind);
+
+/** @brief Create an integer comptime value. kind must be an integer type_kind. */
+comptime_value_t integer_type_create_value(context_t ctx, enum type_kind_t kind, uint64_t val);
+
+/** @brief Extract integer value. Returns 0 if not COMPTIME_VALUE_INT. */
+uint64_t integer_type_get_value(comptime_value_t val);
 
 #ifdef __cplusplus
 }

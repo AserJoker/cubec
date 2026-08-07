@@ -56,6 +56,22 @@ stype_t integer_type_get(context_t ctx, enum type_kind_t kind) {
   }
 }
 
+comptime_value_t integer_type_create_value(context_t ctx, enum type_kind_t kind, uint64_t val) {
+  stype_t type = integer_type_get(ctx, kind);
+  comptime_int_t v = allocator_alloc(ctx->allocator, sizeof(struct _comptime_int_t));
+  v->header.allocator = ctx->allocator;
+  v->header.kind = COMPTIME_VALUE_INT;
+  v->header.type = type;
+  v->value = val;
+  return (comptime_value_t)v;
+}
+
+uint64_t integer_type_get_value(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_INT)
+    return 0;
+  return ((comptime_int_t)val)->value;
+}
+
 bool type_kind_is_integer(enum type_kind_t kind) {
   return kind == TYPE_I8 || kind == TYPE_I16 || kind == TYPE_I32 ||
          kind == TYPE_I64 || kind == TYPE_U8 || kind == TYPE_U16 ||

@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 void void_type_register(context_t ctx);
-stype_t void_type_get(context_t ctx); /* returns ctx->t_void */
+stype_t void_type_get(context_t ctx);
 
 #ifdef __cplusplus
 }

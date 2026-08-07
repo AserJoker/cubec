@@ -4,6 +4,7 @@
 #include "core/allocator.h"
 #include "core/node.h"
 #include "engine/def.h"
+#include "engine/comptime_value.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -19,8 +20,8 @@ typedef struct _stype_t *stype_t;
  */
 struct _value_t {
   def_t header;
-  stype_t stype;      /* value's type (NULL in phase 1) */
-  void *data;         /* comptime eval result (NULL in phase 1) */
+  stype_t stype;              /* value's type (NULL in phase 1) */
+  comptime_value_t data;      /* comptime eval result, borrowing (NULL in phase 1) */
   bool is_export;
   bool is_exportlib;
   bool is_extern;
