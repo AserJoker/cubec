@@ -195,6 +195,32 @@ TEST_F(it_primitive_type, all_float_types_registered) {
   }
 }
 
+/* ---- structural hash ---- */
+
+TEST_F(it_primitive_type, primitive_hash_deterministic) {
+  stype_t i32 = ctx->t_i32;
+  stype_t f64 = ctx->t_f64;
+  EXPECT_NE(i32->instance.hash, 0);
+  EXPECT_NE(f64->instance.hash, 0);
+  EXPECT_NE(i32->instance.hash, f64->instance.hash);
+}
+
+TEST_F(it_primitive_type, same_kind_same_hash) {
+  uint64_t h1 = stype_compute_primitive_hash(TYPE_I32);
+  uint64_t h2 = stype_compute_primitive_hash(TYPE_I32);
+  EXPECT_EQ(h1, h2);
+  EXPECT_EQ(h1, ctx->t_i32->instance.hash);
+}
+
+TEST_F(it_primitive_type, different_kind_different_hash) {
+  uint64_t hi32 = stype_compute_primitive_hash(TYPE_I32);
+  uint64_t hu32 = stype_compute_primitive_hash(TYPE_U32);
+  uint64_t hf32 = stype_compute_primitive_hash(TYPE_F32);
+  EXPECT_NE(hi32, hu32);
+  EXPECT_NE(hi32, hf32);
+  EXPECT_NE(hu32, hf32);
+}
+
 TEST_F(it_primitive_type, all_basic_types_registered) {
   const char *names[] = {"void", "bool", "char", "str"};
   for (int i = 0; i < 4; i++) {

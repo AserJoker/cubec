@@ -49,9 +49,16 @@ enum type_kind_t {
  * Embedded as first field in stype_t for primitive types (no extra fields),
  * and as header in struct/enum/union/composite type instances.
  * name is owned (disposed with stype).
+ *
+ * hash is a structural hash used for duck-typing compatibility:
+ * two types are compatible iff their hashes match (collision → recursive compare).
+ * Primitive types: hash = type_kind value.
+ * Named types: hash = FNV-1a over {kind, field_names, field_type_hashes, generic_param_hashes}.
+ * Composite types: hash = FNV-1a over {kind, component_type_hashes}.
  */
 struct stype_instance_header_t {
   char *name;          /**< owned: type name (e.g. "i32", "MyStruct") */
+  uint64_t hash;       /**< structural hash for duck-typing compatibility */
   uint64_t size;       /**< byte size */
   uint64_t align;      /**< alignment requirement */
 };
@@ -99,6 +106,33 @@ stype_t stype_create_primitive(allocator_t allocator, enum type_kind_t kind,
 
 /** @brief Dispose a stype_t and its owned sub-objects. */
 void stype_dispose(stype_t type);
+
+/* --------------------------------------------------------------------------
+ *  Structural hash computation (FNV-1a based)
+ * -------------------------------------------------------------------------- */
+
+/**
+ * @brief Compute hash for a primitive type (just the kind).
+ * Primitive hashes are deterministic: hash(TYPE_I32) is always the same.
+ */
+uint64_t stype_compute_primitive_hash(enum type_kind_t kind);
+
+/**
+ * @brief Compute hash for a struct/union type from field layout.
+ * @param kind             TYPE_STRUCT or TYPE_UNION
+ * @param field_names      vec of const char* field names (borrowed)
+ * @param field_type_hashes vec of uint64_t (as uintptr_t) field type hashes
+ */
+uint64_t stype_compute_struct_hash(enum type_kind_t kind, vec_t field_names,
+                                   vec_t field_type_hashes);
+
+/**
+ * @brief Compute hash for a composite type (pointer/array/slice/tuple/callable).
+ * @param kind                  Composite type kind
+ * @param component_type_hashes vec of uint64_t (as uintptr_t) component hashes
+ */
+uint64_t stype_compute_composite_hash(enum type_kind_t kind,
+                                      vec_t component_type_hashes);
 
 #ifdef __cplusplus
 }
