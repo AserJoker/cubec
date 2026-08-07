@@ -51,3 +51,65 @@ stype_t array_type_get_or_create(context_t ctx, stype_t element_type,
 bool type_kind_is_array(enum type_kind_t kind) {
   return kind == TYPE_ARRAY;
 }
+
+/* ---- Array comptime value operations ---- */
+
+static void _dispose_value_vec(vec_t vec, allocator_t allocator) {
+  if (!vec) return;
+  size_t n = vec_get_size(vec);
+  for (size_t i = 0; i < n; i++)
+    comptime_value_dispose((comptime_value_t)vec_get(vec, i));
+  allocator_free(allocator, &vec);
+}
+
+static vec_t _clone_value_vec(allocator_t allocator, vec_t src) {
+  if (!src) return NULL;
+  vec_init_t vi = {.auto_dispose = true};
+  vec_t dst = (vec_t)allocator_create(allocator, &g_vec_type, &vi);
+  size_t n = vec_get_size(src);
+  for (size_t i = 0; i < n; i++) {
+    comptime_value_t f = comptime_value_clone(allocator, vec_get(src, i));
+    vec_push(dst, f);
+  }
+  return dst;
+}
+
+static uint64_t _hash_value_vec(vec_t vec) {
+  if (!vec) return 0;
+  uint64_t h = 0;
+  size_t n = vec_get_size(vec);
+  h = stype_hash_mix_u64(h, n);
+  for (size_t i = 0; i < n; i++) {
+    comptime_value_t f = (comptime_value_t)vec_get(vec, i);
+    h = stype_hash_mix_u64(h, comptime_value_hash(f));
+  }
+  return h;
+}
+
+void array_type_dispose_value(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_ARRAY) return;
+  comptime_array_t v = (comptime_array_t)val;
+  _dispose_value_vec(v->elements, val->allocator);
+  allocator_free(val->allocator, &val);
+}
+
+comptime_value_t array_type_clone_value(allocator_t allocator,
+                                        comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_ARRAY) return NULL;
+  comptime_array_t src = (comptime_array_t)val;
+  comptime_array_t dst = allocator_alloc(allocator, sizeof(struct _comptime_array_t));
+  dst->header = src->header;
+  dst->header.allocator = allocator;
+  dst->elements = _clone_value_vec(allocator, src->elements);
+  return (comptime_value_t)dst;
+}
+
+uint64_t array_type_hash_value(comptime_value_t val) {
+  if (!val || val->kind != COMPTIME_VALUE_ARRAY) return 0;
+  comptime_array_t v = (comptime_array_t)val;
+  uint64_t h = stype_compute_primitive_hash(TYPE_ARRAY);
+  if (val->type)
+    h = stype_hash_mix_u64(h, val->type->instance.hash);
+  h = stype_hash_mix_u64(h, _hash_value_vec(v->elements));
+  return h;
+}

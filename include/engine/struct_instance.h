@@ -2,55 +2,51 @@
 #define _H_CUBEC_ENGINE_STRUCT_INSTANCE_
 
 #include "core/allocator.h"
+#include "core/strmap.h"
 #include "core/vec.h"
+#include "engine/comptime_value.h"
+#include "engine/struct_field.h"
 #include "engine/stype.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct _function_t;
+typedef struct _function_t *function_t;
+
 /**
  * @brief Struct instance — a concrete instantiation of a struct stype_t.
  *
- * Non-generic structs have a single instance (hash=0 in stype_t.implements).
- * Generic structs have one instance per set of concrete type arguments.
- *
- * instance.name is owned (e.g. "MyStruct" or "MyStruct<i32>").
- * field_names is owned (vec of owned char* strings).
- * field_types is borrowing (vec of stype_t pointers into context->types).
- * field_offsets is owned (vec of uint64_t byte offsets, computed during layout).
+ * fields is owned (vec of struct_field_t, ordered by declaration/layout).
+ * members is owned (strmap: name → struct_field_t, borrowing from fields).
+ * methods is owned (strmap: name → function_t, borrowing).
  */
 struct _struct_instance_t {
-  stype_instance_header_t instance;  /* embedded header: name, hash, size, align */
+  stype_instance_header_t instance;
   allocator_t allocator;
-  vec_t field_names;    /* owned: vec of char* field names */
-  vec_t field_types;    /* borrowing: vec of stype_t field types */
-  vec_t field_offsets;  /* owned: vec of uint64_t byte offsets */
+  vec_t fields;      /* owned: vec of struct_field_t */
+  strmap_t members;  /* owned: name → struct_field_t (borrowing) */
+  strmap_t methods;  /* owned: name → function_t (borrowing) */
 };
 
 typedef struct _struct_instance_t *struct_instance_t;
 
-/**
- * @brief Create a struct_instance_t.
- * @param allocator      Allocator for this object
- * @param name           Instance name (copied, owned by instance)
- * @param hash           Structural hash for this instance
- * @param size           Byte size of this instance
- * @param align          Alignment of this instance
- * @param field_names    vec of char* field names (ownership transferred)
- * @param field_types    vec of stype_t field types (borrowing, may be NULL)
- * @param field_offsets  vec of uint64_t byte offsets (ownership transferred)
- */
 struct_instance_t struct_instance_create(allocator_t allocator,
                                          const char *name,
                                          uint64_t hash,
                                          uint64_t size,
                                          uint64_t align,
-                                         vec_t field_names,
-                                         vec_t field_types,
-                                         vec_t field_offsets);
+                                         vec_t fields,
+                                         strmap_t members,
+                                         strmap_t methods);
 
-/** @brief Dispose a struct_instance_t and its owned sub-objects. */
 void struct_instance_dispose(struct_instance_t inst);
+
+/* ---- Struct comptime value operations ---- */
+
+void struct_instance_dispose_value(comptime_value_t val);
+comptime_value_t struct_instance_clone_value(allocator_t allocator, comptime_value_t val);
+uint64_t struct_instance_hash_value(comptime_value_t val);
 
 #ifdef __cplusplus
 }

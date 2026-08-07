@@ -23,6 +23,12 @@ stype_t array_type_get_or_create(context_t ctx, stype_t element_type,
 /** @brief Check if a type_kind_t is an array type. */
 bool type_kind_is_array(enum type_kind_t kind);
 
+/* ---- Array comptime value operations ---- */
+
+void array_type_dispose_value(comptime_value_t val);
+comptime_value_t array_type_clone_value(allocator_t allocator, comptime_value_t val);
+uint64_t array_type_hash_value(comptime_value_t val);
+
 #ifdef __cplusplus
 }
 #endif

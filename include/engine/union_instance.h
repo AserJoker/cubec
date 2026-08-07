@@ -2,51 +2,51 @@
 #define _H_CUBEC_ENGINE_UNION_INSTANCE_
 
 #include "core/allocator.h"
+#include "core/strmap.h"
 #include "core/vec.h"
+#include "engine/comptime_value.h"
+#include "engine/union_field.h"
 #include "engine/stype.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct _function_t;
+typedef struct _function_t *function_t;
+
 /**
  * @brief Union instance — a concrete instantiation of a union stype_t.
  *
- * Non-generic unions have a single instance (hash=0 in stype_t.implements).
- * Generic unions have one instance per set of concrete type arguments.
- *
- * instance.name is owned.
- * field_names is owned (vec of owned char* strings).
- * field_types is borrowing (vec of stype_t pointers into context->types).
+ * fields is owned (vec of union_field_t, ordered by declaration).
+ * members is owned (strmap: name → union_field_t, borrowing from fields).
+ * methods is owned (strmap: name → function_t, borrowing).
  */
 struct _union_instance_t {
-  stype_instance_header_t instance;  /* embedded header: name, hash, size, align */
+  stype_instance_header_t instance;
   allocator_t allocator;
-  vec_t field_names;  /* owned: vec of char* field names */
-  vec_t field_types;  /* borrowing: vec of stype_t field types */
+  vec_t fields;      /* owned: vec of union_field_t */
+  strmap_t members;  /* owned: name → union_field_t (borrowing) */
+  strmap_t methods;  /* owned: name → function_t (borrowing) */
 };
 
 typedef struct _union_instance_t *union_instance_t;
 
-/**
- * @brief Create a union_instance_t.
- * @param allocator    Allocator for this object
- * @param name         Instance name (copied, owned by instance)
- * @param hash         Structural hash for this instance
- * @param size         Byte size of this instance
- * @param align        Alignment of this instance
- * @param field_names  vec of char* field names (ownership transferred)
- * @param field_types  vec of stype_t field types (borrowing, may be NULL)
- */
 union_instance_t union_instance_create(allocator_t allocator,
                                        const char *name,
                                        uint64_t hash,
                                        uint64_t size,
                                        uint64_t align,
-                                       vec_t field_names,
-                                       vec_t field_types);
+                                       vec_t fields,
+                                       strmap_t members,
+                                       strmap_t methods);
 
-/** @brief Dispose a union_instance_t and its owned sub-objects. */
 void union_instance_dispose(union_instance_t inst);
+
+/* ---- Union comptime value operations ---- */
+
+void union_instance_dispose_value(comptime_value_t val);
+comptime_value_t union_instance_clone_value(allocator_t allocator, comptime_value_t val);
+uint64_t union_instance_hash_value(comptime_value_t val);
 
 #ifdef __cplusplus
 }
