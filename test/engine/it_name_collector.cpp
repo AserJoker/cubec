@@ -30,7 +30,7 @@ protected:
     node_t program = read_program_node(ctx, tokens, &pos, filename);
     EXPECT_NE(program, nullptr);
     module_t mod =
-        module_create(allocator, ctx->global_scope, filename, owned_source, tokens, program);
+        module_create(allocator, vm_get_global_scope(ctx->vm), filename, owned_source, tokens, program);
     name_collector_run(ctx, mod);
     return mod;
   }

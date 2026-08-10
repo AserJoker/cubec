@@ -1,4 +1,5 @@
 #include "engine/context.h"
+#include "engine/vm.h"
 #include "engine/module.h"
 #include "engine/scope.h"
 #include "core/string.h"
@@ -14,15 +15,12 @@ static void _context_init(void *self, allocator_t allocator, void *arg) {
   memset(ctx, 0, sizeof(struct context));
   ctx->allocator = allocator;
 
+  ctx->vm = vm_create(allocator);
+
   diagnostic_list_init_t dl_init = {.output = NULL};
   ctx->diagnostics = (diagnostic_list_t)allocator_create(
       allocator, &g_diagnostic_list_class, &dl_init);
 
-  strmap_init_t sm_init = {.value_auto_dispose = true};
-  ctx->modules =
-      (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_init);
-
-  ctx->global_scope = scope_create(allocator, SCOPE_GLOBAL, NULL, NULL);
   ctx->root_scope = NULL;
   ctx->current_scope = NULL;
 }
@@ -30,8 +28,8 @@ static void _context_init(void *self, allocator_t allocator, void *arg) {
 static void _context_dispose(void *self, allocator_t allocator) {
   context_t ctx = (context_t)self;
   (void)allocator;
-  allocator_free(allocator, &ctx->modules);
-  allocator_free(allocator, &ctx->global_scope);
+  vm_dispose(ctx->vm, allocator);
+  ctx->vm = NULL;
   allocator_free(allocator, &ctx->diagnostics);
 }
 
@@ -56,7 +54,7 @@ int context_get_error_count(context_t ctx) {
 }
 
 module_t context_get_module(context_t ctx, const char *abs_path) {
-  return (module_t)strmap_find(ctx->modules, abs_path);
+  return vm_get_module(ctx->vm, abs_path);
 }
 
 /* ------------------------------------------------------------------
@@ -195,10 +193,10 @@ module_t context_import(context_t ctx, const char *import_path) {
     return NULL;
   }
 
-  module_t mod = module_create(ctx->allocator, ctx->global_scope, abs_path,
+  module_t mod = module_create(ctx->allocator, vm_get_global_scope(ctx->vm), abs_path,
                                source, tokens, program);
 
-  strmap_insert(ctx->modules, abs_path, mod);
+  strmap_insert(vm_get_modules(ctx->vm), abs_path, mod);
 
   allocator_free(ctx->allocator, (void **)&abs_path);
   return mod;

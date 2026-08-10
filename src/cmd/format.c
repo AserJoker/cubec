@@ -6,13 +6,12 @@
 #include "cubec/program.h"
 #include "cubec/token.h"
 #include "engine/context.h"
-#include "engine/module.h"
 #include <stdio.h>
 #include <string.h>
 
 /* ------------------------------------------------------------------
  *  File I/O helpers
- * ------------------------------------------------------------------ */
+ * -------------------------------------------------------------------------- */
 
 static char *read_file(allocator_t allocator, const char *path, size_t *out_len) {
   FILE *f = fopen(path, "rb");
@@ -45,7 +44,7 @@ static bool write_file(const char *path, const char *content, size_t len) {
 
 /* ------------------------------------------------------------------
  *  Options
- * ------------------------------------------------------------------ */
+ * -------------------------------------------------------------------------- */
 
 static const cmd_option_t format_options[] = {
     {"--check", "-c", "check if formatting is needed (no write)", false},
@@ -54,7 +53,7 @@ static const cmd_option_t format_options[] = {
 
 /* ------------------------------------------------------------------
  *  Handler
- * ------------------------------------------------------------------ */
+ * -------------------------------------------------------------------------- */
 
 static int format_run(const cmd_parsed_t *parsed) {
   if (parsed->positional_count < 1) {
@@ -66,13 +65,11 @@ static int format_run(const cmd_parsed_t *parsed) {
   const char *check_flag = cmd_get_option(parsed, "--check");
   const char *output_opt = cmd_get_option(parsed, "--output");
 
-  /* 1. Read source file */
-  size_t src_len = 0;
-
-  /* 2. Create allocator + context */
   allocator_t allocator = create_allocator(NULL, NULL);
   context_t ctx = context_create(allocator);
 
+  /* 1. Read source file */
+  size_t src_len = 0;
   char *source = read_file(allocator, input_path, &src_len);
   if (!source) {
     fprintf(stderr, "error: cannot read '%s'\n", input_path);
@@ -81,10 +78,17 @@ static int format_run(const cmd_parsed_t *parsed) {
     return 1;
   }
 
-  /* 3. Tokenize */
+  /* 2. Tokenize */
   vec_t tokens = resolve_token_list(ctx, input_path, source);
+  if (!tokens) {
+    fprintf(stderr, "error: failed to tokenize '%s'\n", input_path);
+    allocator_free(allocator, (void **)&source);
+    context_dispose(ctx);
+    delete_allocator(allocator);
+    return 1;
+  }
 
-  /* 4. Parse */
+  /* 3. Parse */
   size_t pos = 0;
   node_t program = read_program_node(ctx, tokens, &pos, input_path);
   if (!program) {
@@ -96,15 +100,11 @@ static int format_run(const cmd_parsed_t *parsed) {
     return 1;
   }
 
-  /* 5. Create module with compiled results */
-  module_t mod = module_create(allocator, ctx->global_scope, input_path, source, tokens, program);
-  /* source & tokens ownership now belongs to module */
+  /* 4. Emit — format only this file, no import resolution */
+  emit_context_t ectx = emit_context_create(allocator, tokens);
+  emit_program(ectx, program);
 
-  /* 6. Emit */
-  emit_context_t ectx = emit_context_create(allocator, mod->tokens);
-  emit_program(ectx, mod->program);
-
-  /* 7. Render */
+  /* 5. Render */
   string_t output = token_writer_render(allocator, ectx->output_tokens);
   const char *output_str = string_get(output);
   size_t output_len = string_get_length(output);
@@ -126,7 +126,9 @@ static int format_run(const cmd_parsed_t *parsed) {
   /* Cleanup */
   allocator_free(allocator, &output);
   emit_context_dispose(ectx);
-  module_dispose(mod);
+  allocator_free(allocator, &program);
+  allocator_free(allocator, &tokens);
+  allocator_free(allocator, (void **)&source);
   context_dispose(ctx);
   delete_allocator(allocator);
   return exit_code;

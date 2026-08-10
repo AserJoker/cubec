@@ -2,8 +2,8 @@
 #define _H_CUBEC_ENGINE_CONTEXT_
 #include "core/allocator.h"
 #include "core/diagnostic.h"
-#include "core/strmap.h"
 #include "core/class.h"
+#include "engine/vm.h"
 #include <stddef.h>
 #include <stdint.h>
 #ifdef __cplusplus
@@ -18,11 +18,10 @@ typedef struct _scope_t *scope_t;
 
 struct context {
   allocator_t allocator;
+  vm_t vm;                   /**< owned: VM instance */
   diagnostic_list_t diagnostics;
-  strmap_t modules;      /* absolute path (string key) → module_t */
-  scope_t global_scope;  /* owned: global scope */
-  scope_t root_scope;    /* borrowed: current module's root scope */
-  scope_t current_scope; /* borrowed: current traversal position */
+  scope_t root_scope;        /* borrowed: current module's root scope */
+  scope_t current_scope;     /* borrowed: current traversal position */
 };
 
 typedef struct context *context_t;
@@ -35,7 +34,8 @@ void context_dispose(context_t ctx);
 
 int context_get_error_count(context_t ctx);
 
-/* Module registry */
+/* Module registry (delegates to vm) */
+
 module_t context_get_module(context_t ctx, const char *abs_path);
 
 /**
@@ -45,23 +45,15 @@ module_t context_get_module(context_t ctx, const char *abs_path);
  * Results are cached; repeated imports return the existing module.
  * Name collection is NOT performed here — it is a separate phase.
  *
- * Path resolution:
- *   - Relative paths ("./io", "../utils") resolve relative to the importing
- *     module's directory (derived from ctx->root_scope->owner).
- *   - Bare names ("std", "std/vec") resolve against the module search paths.
- *
  * @param ctx         Compiler context
- * @param import_path Import path as written in source (e.g., "std", "./io")
+ * @param import_path Import path as written in source
  * @return The imported module, or NULL on failure
  */
 module_t context_import(context_t ctx, const char *import_path);
 
 /* Scope stack */
 
-/** Set root_scope and current_scope to the given scope. */
 void context_push_scope(context_t ctx, scope_t scope);
-
-/** Restore current_scope to its parent. */
 void context_pop_scope(context_t ctx);
 
 #ifdef __cplusplus
