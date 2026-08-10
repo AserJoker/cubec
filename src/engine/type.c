@@ -3,6 +3,8 @@
 #include "engine/vm.h"
 #include "engine/name.h"
 #include "engine/scope.h"
+#include "engine/bool_type.h"
+#include "engine/error_type.h"
 #include "core/string.h"
 #include <string.h>
 
@@ -26,18 +28,26 @@ static void _type_dispose(allocator_t allocator, value_t self) {
   allocator_free(allocator, &t);
 }
 
-static bool _type_equal(value_t a, value_t b) {
+static value_t _type_equal(vm_t vm, value_t a, value_t b) {
   type_t ta = (type_t)value_get_data(a);
   type_t tb = (type_t)value_get_data(b);
-  if (!ta->vtable.type_equal) return ta == tb;
-  return ta->vtable.type_equal(ta, tb);
+  if (ta->kind != tb->kind)
+    return create_error_value(vm, "cannot compare types of different kinds: %s vs %s",
+                              ta->name, tb->name);
+  if (!ta->vtable.type_equal)
+    return create_error_value(vm, "type '%s' does not support type_equal", ta->name);
+  return ta->vtable.type_equal(vm, ta, tb);
 }
 
-static bool _type_extends(value_t sub, value_t super_val) {
+static value_t _type_extends(vm_t vm, value_t sub, value_t super_val) {
   type_t t_sub = (type_t)value_get_data(sub);
   type_t t_super = (type_t)value_get_data(super_val);
-  if (!t_sub->vtable.type_extends) return t_sub == t_super;
-  return t_sub->vtable.type_extends(t_sub, t_super);
+  if (t_sub->kind != t_super->kind)
+    return create_error_value(vm, "cannot check extends between types of different kinds: %s vs %s",
+                              t_sub->name, t_super->name);
+  if (!t_sub->vtable.type_extends)
+    return create_error_value(vm, "type '%s' does not support type_extends", t_sub->name);
+  return t_sub->vtable.type_extends(vm, t_sub, t_super);
 }
 
 type_t type_create_type_type(allocator_t allocator) {

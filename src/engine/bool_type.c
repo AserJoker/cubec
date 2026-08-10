@@ -2,6 +2,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
+#include "engine/error_type.h"
 #include <stdbool.h>
 
 /* ---- Bool type vtable ---- */
@@ -18,8 +19,12 @@ static void _bool_dispose(allocator_t allocator, value_t self) {
   allocator_free(allocator, &d);
 }
 
-static bool _bool_equal(value_t a, value_t b) {
-  return *(bool *)value_get_data(a) == *(bool *)value_get_data(b);
+static value_t _bool_equal(vm_t vm, value_t a, value_t b) {
+  type_t ta = value_get_type(a);
+  type_t tb = value_get_type(b);
+  if (ta->kind != tb->kind)
+    return create_error_value(vm, "cannot compare values of different kinds");
+  return create_bool_value(vm, *(bool *)value_get_data(a) == *(bool *)value_get_data(b));
 }
 
 type_t type_create_bool_type(allocator_t allocator) {

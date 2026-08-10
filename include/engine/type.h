@@ -48,17 +48,20 @@ typedef struct _type_t *type_t;
 /**
  * @brief VTable — type behavior dispatch table.
  *
- *  clone/dispose — lifecycle
- *  equal/extends — value-level computation (delegate to type_* for type values)
- *  type_equal/type_extends — type-level computation
+ *  clone/dispose      — lifecycle (take allocator_t)
+ *  equal/extends      — value-level computation (take vm_t, return value_t)
+ *  type_equal/type_extends — type-level computation (take vm_t, return value_t)
+ *
+ *  Computation results: bool value on success, error value on failure
+ *  (kind mismatch or NULL vtable entry).
  */
 struct vtable_t {
   value_t (*clone)        (allocator_t alloc, value_t obj);
   void     (*dispose)     (allocator_t alloc, value_t obj);
-  bool     (*equal)       (value_t a, value_t b);
-  bool     (*extends)     (value_t sub, value_t super_val);
-  bool     (*type_equal)  (type_t a, type_t b);
-  bool     (*type_extends)(type_t sub, type_t super);
+  value_t (*equal)        (vm_t vm, value_t a, value_t b);
+  value_t (*extends)      (vm_t vm, value_t sub, value_t super_val);
+  value_t (*type_equal)   (vm_t vm, type_t a, type_t b);
+  value_t (*type_extends) (vm_t vm, type_t sub, type_t super);
 };
 typedef struct vtable_t vtable_t;
 
