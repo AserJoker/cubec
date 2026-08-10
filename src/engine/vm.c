@@ -1,5 +1,6 @@
 #include "engine/vm.h"
 #include "engine/scope.h"
+#include "engine/type.h"
 #include "core/strmap.h"
 #include <string.h>
 
@@ -26,6 +27,15 @@ static void _vm_dispose(void *self, allocator_t allocator) {
   vm_t vm = (vm_t)self;
   (void)allocator;
   if (vm->slots) {
+    /* dispose all live values in the slot map */
+    for (uint64_t i = 0; i < vm->slots->count; i++) {
+      slot_entry_t *e = &vm->slots->entries[i];
+      if (e->ptr) {
+        value_t v = (value_t)e->ptr;
+        value_dispose(v, vm->allocator);
+        e->ptr = NULL;
+      }
+    }
     slotmap_dispose(vm->slots);
     vm->slots = NULL;
   }
@@ -79,4 +89,28 @@ scope_t    vm_get_global_scope(vm_t self) { return self->global_scope; }
 
 module_t vm_get_module(vm_t self, const char *abs_path) {
   return (module_t)strmap_find(self->modules, abs_path);
+}
+
+value_t vm_create_value(vm_t self, type_t type, const void *data) {
+  /* allocate and copy data */
+  void *data_copy = NULL;
+  if (data && type_get_size(type) > 0) {
+    data_copy = allocator_alloc(self->allocator, type_get_size(type));
+    memcpy(data_copy, data, type_get_size(type));
+  }
+  /* create value (owning the data copy) with placeholder addr */
+  value_t v = value_create(self->allocator, type, data_copy, true, 0);
+  /* register in slot_map and set addr */
+  slot_id_t addr = slotmap_insert(self->slots, v);
+  value_set_addr(v, addr);
+  return v;
+}
+
+value_t vm_create_value_ref(vm_t self, type_t type, void *data) {
+  /* create a reference: borrowed data, own=false */
+  value_t v = value_create(self->allocator, type, data, false, 0);
+  /* register in slot_map and set addr */
+  slot_id_t addr = slotmap_insert(self->slots, v);
+  value_set_addr(v, addr);
+  return v;
 }

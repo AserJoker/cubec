@@ -4,6 +4,7 @@
 #include "core/class.h"
 #include "core/slotmap.h"
 #include "core/strmap.h"
+#include "engine/value.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,6 +47,31 @@ scope_t    vm_get_global_scope(vm_t self);
 /* ---- Module registry ---- */
 
 module_t vm_get_module(vm_t self, const char *abs_path);
+
+/* ---- Value creation ---- */
+
+/**
+ * @brief Create a value with owned copy of data, register in slot_map.
+ *
+ * @param self  VM
+ * @param type  Type object (must not be NULL)
+ * @param data  Source data to copy (may be NULL for shadow values)
+ * @return New value_t pointer with addr set to its slot handle
+ */
+value_t vm_create_value(vm_t self, type_t type, const void *data);
+
+/**
+ * @brief Create a reference value with borrowed data, register in slot_map.
+ *
+ * The new value does NOT own data (own=false). Useful for variable
+ * references, field references, etc.
+ *
+ * @param self  VM
+ * @param type  Type object (must not be NULL)
+ * @param data  Borrowed data pointer (may be NULL)
+ * @return New value_t (own=false)
+ */
+value_t vm_create_value_ref(vm_t self, type_t type, void *data);
 
 #ifdef __cplusplus
 }

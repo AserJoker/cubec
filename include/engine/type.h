@@ -1,17 +1,20 @@
-#ifndef _H_CUBEC_ENGINE_STYPE_
-#define _H_CUBEC_ENGINE_STYPE_
-#include "engine/value.h"
+#ifndef _H_CUBEC_ENGINE_TYPE_
+#define _H_CUBEC_ENGINE_TYPE_
+#include "core/allocator.h"
+#include "core/class.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct _value_t;
+typedef struct _value_t *value_t;
+
 /**
  * @brief Type kind — distinguishes value categories.
- *        Determined entirely by type_t, no kind field on value_t.
  */
 typedef enum type_kind_t {
-  TYPE_KIND_TYPE,       /**< Type itself (type_t as value's data) */
+  TYPE_KIND_TYPE,
   TYPE_KIND_MODULE,
   TYPE_KIND_FUNCTION,
   TYPE_KIND_CALLBACK,
@@ -32,33 +35,34 @@ typedef enum type_kind_t {
 
 /**
  * @brief VTable — type behavior dispatch table.
- *        Embedded in type_t, not a pointer.
  */
 typedef struct vtable_t {
-  value_t *(*clone)   (allocator_t alloc, value_t *obj);
-  void     (*dispose) (allocator_t alloc, value_t *obj);
+  value_t (*clone)   (allocator_t alloc, value_t obj);
+  void     (*dispose) (allocator_t alloc, value_t obj);
 } vtable_t;
 
 /**
- * @brief type_t — type object (independent data structure).
+ * @brief type_t — type object (opaque pointer).
  *
  * For TYPE_KIND_TYPE values: value.type and value.data point to the same
  * type_t (type=ref, data=own).
  */
-typedef struct type_t {
+struct _type_t {
   type_kind_t kind;
   const char *name;
-  uint64_t    size;      /**< Byte size of the type's data */
-  uint64_t    align;     /**< Alignment requirement */
-  vtable_t    vtable;    /**< Behavior dispatch (embedded) */
-} type_t;
+  uint64_t    size;
+  uint64_t    align;
+  vtable_t    vtable;
+};
+typedef struct _type_t *type_t;
 
 /* ---- Accessors ---- */
 
-type_kind_t type_get_kind(const type_t *self);
-const char *type_get_name(const type_t *self);
-uint64_t    type_get_size(const type_t *self);
-uint64_t    type_get_align(const type_t *self);
+type_kind_t type_get_kind(type_t self);
+const char *type_get_name(type_t self);
+uint64_t    type_get_size(type_t self);
+uint64_t    type_get_align(type_t self);
+vtable_t    type_get_vtable(type_t self);
 
 #ifdef __cplusplus
 }
