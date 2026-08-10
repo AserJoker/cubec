@@ -16,7 +16,22 @@ struct _vm_t {
   scope_t     global_scope;  /* owned: global scope */
   scope_t     root_scope;    /* borrowed: current module's root scope */
   scope_t     current_scope; /* borrowed: current traversal position */
+  value_t     v_type;        /* borrowed: bootstrap type "type" (in global_scope->values) */
 };
+
+/* ---- Bootstrap type "type" vtable ---- */
+
+static value_t _type_clone(allocator_t allocator, value_t self) {
+  type_t src = (type_t)value_get_data(self);
+  type_t copy = (type_t)allocator_alloc(allocator, sizeof(struct _type_t));
+  *copy = *src;
+  return value_create(allocator, value_get_type(self), copy, true);
+}
+
+static void _type_dispose(allocator_t allocator, value_t self) {
+  type_t t = (type_t)value_get_data(self);
+  allocator_free(allocator, &t);
+}
 
 static void _vm_init(void *self, allocator_t allocator, void *arg) {
   (void)arg;
@@ -29,6 +44,18 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   vm->global_scope = scope_create(allocator, SCOPE_GLOBAL, NULL, NULL);
   vm->root_scope = NULL;
   vm->current_scope = NULL;
+
+  /* Bootstrap: create the "type" type */
+  type_t type_type = (type_t)allocator_alloc(allocator, sizeof(struct _type_t));
+  type_type->kind  = TYPE_KIND_TYPE;
+  type_type->name  = "type";
+  type_type->size  = sizeof(struct _type_t);
+  type_type->align = _Alignof(struct _type_t);
+  type_type->vtable = (vtable_t){.clone = _type_clone, .dispose = _type_dispose};
+
+  /* v_type: value where type=ref, data=own, both point to the same type_t */
+  vm->v_type = value_create(allocator, type_type, type_type, true);
+  vec_push(vm->global_scope->values, vm->v_type);
 }
 
 static void _vm_dispose(void *self, allocator_t allocator) {
@@ -38,38 +65,13 @@ static void _vm_dispose(void *self, allocator_t allocator) {
   allocator_free(vm->allocator, &vm->global_scope);
 }
 
-static void _vm_clone(void *self, allocator_t allocator, void *another) {
-  (void)another;
-  vm_t dst = (vm_t)self;
-  dst->allocator = allocator;
-  dst->modules = NULL;
-  dst->global_scope = NULL;
-  dst->root_scope = NULL;
-  dst->current_scope = NULL;
-}
-
-static void _vm_move(void *self, allocator_t allocator, void *another) {
-  (void)allocator;
-  vm_t dst = (vm_t)self;
-  vm_t src = (vm_t)another;
-  dst->allocator = src->allocator;
-  dst->modules = src->modules;
-  dst->global_scope = src->global_scope;
-  dst->root_scope = src->root_scope;
-  dst->current_scope = src->current_scope;
-  src->modules = NULL;
-  src->global_scope = NULL;
-  src->root_scope = NULL;
-  src->current_scope = NULL;
-}
-
 class_t g_vm_class = {
     .size = sizeof(struct _vm_t),
     .name = "cubec.engine.vm",
     .init = (class_init_fn_t)_vm_init,
     .dispose = (class_dispose_fn_t)_vm_dispose,
-    .clone = (class_clone_fn_t)_vm_clone,
-    .move = (class_move_fn_t)_vm_move,
+    .clone = NULL,
+    .move = NULL,
 };
 
 vm_t vm_create(allocator_t allocator) {
@@ -85,6 +87,7 @@ strmap_t vm_get_modules(vm_t self) { return self->modules; }
 scope_t  vm_get_global_scope(vm_t self) { return self->global_scope; }
 scope_t  vm_get_root_scope(vm_t self) { return self->root_scope; }
 scope_t  vm_get_current_scope(vm_t self) { return self->current_scope; }
+value_t  vm_get_type_type(vm_t self) { return self->v_type; }
 
 module_t vm_get_module(vm_t self, const char *abs_path) {
   return (module_t)strmap_find(self->modules, abs_path);
