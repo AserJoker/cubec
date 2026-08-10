@@ -85,3 +85,4 @@ value_t create_type_value(vm_t vm, type_t type, const char *name, bool own) {
   }
   return v;
 }
+

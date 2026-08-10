@@ -3,6 +3,7 @@
 #include "engine/vm.h"
 #include "engine/scope.h"
 #include "engine/error_type.h"
+#include "engine/type.h"
 #include <stdbool.h>
 
 /* ---- Bool type vtable ---- */
@@ -27,6 +28,20 @@ static value_t _bool_equal(vm_t vm, value_t a, value_t b) {
   return create_bool_value(vm, *(bool *)value_get_data(a) == *(bool *)value_get_data(b));
 }
 
+static value_t _bool_type_equal(vm_t vm, type_t a, type_t b) {
+  (void)a;
+  if (b->kind == TYPE_KIND_WILDCARD)
+    return create_bool_value(vm, true);
+  return create_bool_value(vm, b->kind == TYPE_KIND_BOOL);
+}
+
+static value_t _bool_type_extends(vm_t vm, type_t sub, type_t super) {
+  (void)sub;
+  if (super->kind == TYPE_KIND_WILDCARD)
+    return create_bool_value(vm, true);
+  return create_bool_value(vm, super->kind == TYPE_KIND_BOOL);
+}
+
 type_t type_create_bool_type(allocator_t allocator) {
   (void)allocator;
   static struct _type_t bool_type = {
@@ -39,8 +54,8 @@ type_t type_create_bool_type(allocator_t allocator) {
           .dispose = _bool_dispose,
           .equal = _bool_equal,
           .extends = NULL,
-          .type_equal = NULL,
-          .type_extends = NULL,
+          .type_equal = _bool_type_equal,
+          .type_extends = _bool_type_extends,
       },
   };
   return &bool_type;

@@ -4,6 +4,7 @@
 #include "engine/type.h"
 #include "engine/error_type.h"
 #include "engine/bool_type.h"
+#include "engine/wildcard_type.h"
 #include "engine/module.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -21,6 +22,7 @@ struct _vm_t {
   value_t     v_type;        /* borrowed: bootstrap type "type" (in global_scope->values) */
   value_t     v_error;       /* borrowed: bootstrap type "error" (in global_scope->values) */
   value_t     v_bool;        /* borrowed: bootstrap type "bool" (in global_scope->values) */
+  value_t     v_wildcard;    /* borrowed: bootstrap type "wildcard" (in global_scope->values) */
 };
 
 static void _vm_init(void *self, allocator_t allocator, void *arg) {
@@ -49,6 +51,9 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 
   type_t bool_type = type_create_bool_type(allocator);
   vm->v_bool = create_type_value(vm, bool_type, "bool", false);
+
+  type_t wildcard_type = type_create_wildcard_type(allocator);
+  vm->v_wildcard = create_type_value(vm, wildcard_type, NULL, false);
 }
 
 static void _vm_dispose(void *self, allocator_t allocator) {
@@ -84,6 +89,7 @@ scope_t  vm_get_current_scope(vm_t self) { return self->current_scope; }
 value_t  vm_get_type_type(vm_t self) { return self->v_type; }
 value_t  vm_get_error_type(vm_t self) { return self->v_error; }
 value_t  vm_get_bool_type(vm_t self) { return self->v_bool; }
+value_t  vm_get_wildcard_type(vm_t self) { return self->v_wildcard; }
 
 module_t vm_get_module(vm_t self, const char *abs_path) {
   return (module_t)strmap_find(self->modules, abs_path);

@@ -69,14 +69,13 @@ static void _report_error(context_t ctx, node_t node, const char *fmt, ...) {
 
 /** Insert a name into a scope's name table. Returns true on success. */
 static bool _scope_insert_name(context_t ctx, scope_t scope, node_t node,
-                               const char *name_str, enum name_kind kind,
-                               value_t ref) {
+                               const char *name_str, value_t ref) {
   name_t existing = (name_t)strmap_find(scope->names, name_str);
   if (existing) {
     _report_error(ctx, node, "duplicate declaration of '%s'", name_str);
     return false;
   }
-  name_t name = name_create(scope->allocator, kind, ref);
+  name_t name = name_create(scope->allocator, ref);
   strmap_insert(scope->names, name_str, name);
   return true;
 }
@@ -127,7 +126,7 @@ static void _collect_var_declaration(context_t ctx, scope_t scope,
     return;
   /* Phase 1: insert name with ref=NULL — will be filled during definition
    * collection (phase 2) when the type/value system is rebuilt. */
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_VARIABLE, NULL))
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NULL))
     return;
   if (mod && decl->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
@@ -142,7 +141,7 @@ static void _collect_function_declaration(context_t ctx, scope_t scope,
   if (!name_str)
     return;
   /* Phase 1: ref=NULL — will be filled during definition collection (phase 2). */
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_FUNCTION, NULL))
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NULL))
     return;
   if (mod && func->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
@@ -157,7 +156,7 @@ static void _collect_struct_declaration(context_t ctx, scope_t scope,
     return;
   /* Phase 1: insert type name with ref=NULL — will be filled during
    * definition collection (phase 2). */
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NULL))
     return;
   if (mod && s->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
@@ -170,7 +169,7 @@ static void _collect_union_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(u->name);
   if (!name_str)
     return;
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NULL))
     return;
   if (mod && u->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
@@ -183,7 +182,7 @@ static void _collect_enum_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(e->name);
   if (!name_str)
     return;
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NULL))
     return;
   if (mod && e->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
@@ -196,7 +195,7 @@ static void _collect_interface_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(iface->name);
   if (!name_str)
     return;
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NULL))
     return;
   if (mod && iface->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
@@ -208,7 +207,7 @@ static void _collect_cunion_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(cu->name);
   if (!name_str)
     return;
-  _scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL);
+  _scope_insert_name(ctx, scope, stmt, name_str, NULL);
 }
 
 static void _collect_type_alias_declaration(context_t ctx, scope_t scope,
@@ -219,7 +218,7 @@ static void _collect_type_alias_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(t->name);
   if (!name_str)
     return;
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NULL))
     return;
   if (mod && t->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
@@ -250,7 +249,7 @@ static void _collect_import_statement(context_t ctx, scope_t scope,
   }
   name_collector_run(ctx, dep_mod);
   /* Phase 1: ref=NULL — will be filled during definition collection (phase 2). */
-  _scope_insert_name(ctx, scope, stmt, mod_name, NAME_NAMESPACE, NULL);
+  _scope_insert_name(ctx, scope, stmt, mod_name, NULL);
 }
 
 static void _collect_export_statement(context_t ctx, scope_t scope,
