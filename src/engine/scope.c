@@ -29,9 +29,14 @@ static void _scope_dispose(void *self, allocator_t allocator) {
   if (scope->parent) {
     scope_remove_child(scope->parent, scope);
   }
-  /* Free all children */
-  while (vec_get_size(scope->children) != 0) {
-    allocator_free(allocator, vec_get(scope->children, 0));
+  /* Free all children — iterate and free each, then destroy the vec.
+   * children vec is auto_dispose=false, so we manage child lifecycle manually.
+   * Clear parent pointer first to prevent double-remove from parent's vec. */
+  size_t n = vec_get_size(scope->children);
+  for (size_t i = 0; i < n; i++) {
+    scope_t child = (scope_t)vec_get(scope->children, i);
+    child->parent = NULL;
+    allocator_free(allocator, &child);
   }
   allocator_free(allocator, &scope->defers);
   allocator_free(allocator, &scope->values);
