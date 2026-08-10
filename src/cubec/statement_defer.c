@@ -23,7 +23,7 @@ static void _cubec_statement_defer_init(cubec_statement_defer_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->captures = init->captures;
   self->body = init->body;
 }
@@ -32,13 +32,13 @@ static void _cubec_statement_defer_dispose(cubec_statement_defer_t self,
                                            allocator_t allocator) {
   allocator_free(allocator, &self->body);
   allocator_free(allocator, &self->captures);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_defer_clone(cubec_statement_defer_t self,
                                          allocator_t allocator,
                                          cubec_statement_defer_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->captures =
       another->captures ? alloc_clone(allocator, another->captures) : NULL;
   self->body = alloc_clone(allocator, another->body);
@@ -48,20 +48,20 @@ static void _cubec_statement_defer_clone(cubec_statement_defer_t self,
 static void _cubec_statement_defer_move(cubec_statement_defer_t self,
                                         allocator_t allocator,
                                         cubec_statement_defer_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->captures =
       another->captures ? alloc_move(allocator, another->captures) : NULL;
   self->body = alloc_move(allocator, another->body);
   return;
 }
 
-type_t g_cubec_statement_defer_type = {
+class_t g_cubec_statement_defer_class = {
     .name = "cubec.cubec.statement_defer",
     .size = sizeof(struct _cubec_statement_defer_t),
-    .init = (type_init_fn_t)_cubec_statement_defer_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_defer_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_defer_clone,
-    .move = (type_move_fn_t)_cubec_statement_defer_move,
+    .init = (class_init_fn_t)_cubec_statement_defer_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_defer_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_defer_clone,
+    .move = (class_move_fn_t)_cubec_statement_defer_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -116,7 +116,7 @@ node_t read_statement_defer(context_t ctx, vec_t tokens, size_t *position,
     current++;
     skip_whitespace(tokens, &current);
 
-    captures = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+    captures = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
 
     while (true) {
       node_t cap = read_function_capture(ctx, tokens, &current, filename);
@@ -156,7 +156,7 @@ node_t read_statement_defer(context_t ctx, vec_t tokens, size_t *position,
       .captures = captures,
       .body = body,
   };
-  node = allocator_create(allocator, &g_cubec_statement_defer_type, &init);
+  node = allocator_create(allocator, &g_cubec_statement_defer_class, &init);
   *position = current;
   return &node->super;
 
@@ -173,7 +173,7 @@ node_t create_statement_defer(context_t ctx, location_t loc, vec_t captures,
                               node_t body) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_defer_init_t init = {.captures = captures, .body = body};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_defer_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_statement_defer_class, &init);
 }
 
 void emit_statement_defer(emit_context_t ctx, node_t node) {

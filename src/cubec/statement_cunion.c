@@ -23,7 +23,7 @@ static void _cubec_statement_cunion_init(cubec_statement_cunion_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->name = init->name;
   self->fields = init->fields;
   self->decorators = init->decorators;
@@ -34,13 +34,13 @@ static void _cubec_statement_cunion_dispose(cubec_statement_cunion_t self,
   allocator_free(allocator, &self->decorators);
   allocator_free(allocator, &self->fields);
   allocator_free(allocator, &self->name);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_cunion_clone(cubec_statement_cunion_t self,
                                           allocator_t allocator,
                                           cubec_statement_cunion_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->name = alloc_clone(allocator, another->name);
   self->fields = alloc_clone(allocator, another->fields);
   return;
@@ -49,19 +49,19 @@ static void _cubec_statement_cunion_clone(cubec_statement_cunion_t self,
 static void _cubec_statement_cunion_move(cubec_statement_cunion_t self,
                                          allocator_t allocator,
                                          cubec_statement_cunion_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->name = alloc_move(allocator, another->name);
   self->fields = alloc_move(allocator, another->fields);
   return;
 }
 
-type_t g_cubec_statement_cunion_type = {
+class_t g_cubec_statement_cunion_class = {
     .name = "cubec.cubec.statement_cunion",
     .size = sizeof(struct _cubec_statement_cunion_t),
-    .init = (type_init_fn_t)_cubec_statement_cunion_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_cunion_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_cunion_clone,
-    .move = (type_move_fn_t)_cubec_statement_cunion_move,
+    .init = (class_init_fn_t)_cubec_statement_cunion_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_cunion_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_cunion_clone,
+    .move = (class_move_fn_t)_cubec_statement_cunion_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -108,7 +108,7 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens, size_t *position,
         break;
       if (!decorators) {
         decorators =
-            allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+            allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
       }
       vec_push(decorators, dec);
     }
@@ -144,7 +144,7 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 4. Parse fields — semicolon-separated struct_field nodes */
-  fields = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+  fields = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, "}")) {
     node_t field = read_struct_field(ctx, tokens, &current, filename);
     if (node_is_error(field)) {
@@ -182,7 +182,7 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens, size_t *position,
       .fields = fields,
       .decorators = decorators,
   };
-  node = allocator_create(allocator, &g_cubec_statement_cunion_type, &init);
+  node = allocator_create(allocator, &g_cubec_statement_cunion_class, &init);
   *position = current;
   return &node->super;
 
@@ -205,7 +205,7 @@ node_t create_statement_cunion(context_t ctx, location_t loc, const char *name,
       .fields = fields,
       .decorators = decorators,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_statement_cunion_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_statement_cunion_class, &init);
 }
 
 void emit_statement_cunion(emit_context_t ctx, node_t node) {

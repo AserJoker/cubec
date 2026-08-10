@@ -21,7 +21,7 @@ _cubec_statement_do_while_init(cubec_statement_do_while_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->body = init->body;
   self->condition = init->condition;
 }
@@ -30,14 +30,14 @@ static void _cubec_statement_do_while_dispose(cubec_statement_do_while_t self,
                                               allocator_t allocator) {
   allocator_free(allocator, &self->condition);
   allocator_free(allocator, &self->body);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void
 _cubec_statement_do_while_clone(cubec_statement_do_while_t self,
                                 allocator_t allocator,
                                 cubec_statement_do_while_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->body = alloc_clone(allocator, another->body);
   self->condition = alloc_clone(allocator, another->condition);
   return;
@@ -46,19 +46,19 @@ _cubec_statement_do_while_clone(cubec_statement_do_while_t self,
 static void _cubec_statement_do_while_move(cubec_statement_do_while_t self,
                                            allocator_t allocator,
                                            cubec_statement_do_while_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->body = alloc_move(allocator, another->body);
   self->condition = alloc_move(allocator, another->condition);
   return;
 }
 
-type_t g_cubec_statement_do_while_type = {
+class_t g_cubec_statement_do_while_class = {
     .name = "cubec.cubec.statement_do_while",
     .size = sizeof(struct _cubec_statement_do_while_t),
-    .init = (type_init_fn_t)_cubec_statement_do_while_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_do_while_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_do_while_clone,
-    .move = (type_move_fn_t)_cubec_statement_do_while_move,
+    .init = (class_init_fn_t)_cubec_statement_do_while_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_do_while_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_do_while_clone,
+    .move = (class_move_fn_t)_cubec_statement_do_while_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -159,7 +159,7 @@ node_t read_statement_do_while(context_t ctx, vec_t tokens, size_t *position,
       .body = body,
       .condition = condition,
   };
-  node = allocator_create(allocator, &g_cubec_statement_do_while_type, &init);
+  node = allocator_create(allocator, &g_cubec_statement_do_while_class, &init);
   *position = current;
   return &node->super;
 
@@ -174,7 +174,7 @@ node_t create_statement_do_while(context_t ctx, location_t loc, node_t body,
                                  node_t cond) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_do_while_init_t init = {.body = body, .condition = cond};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_do_while_type,
+  return (node_t)allocator_create(alloc, &g_cubec_statement_do_while_class,
                                   &init);
 }
 

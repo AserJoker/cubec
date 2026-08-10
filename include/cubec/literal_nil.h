@@ -2,7 +2,7 @@
 #define _H_CUBEC_CUBEC_LITERAL_NIL_
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/emit_context.h"
 #include "cubec/literal.h"
 #include "engine/context.h"
@@ -15,7 +15,7 @@ struct _cubec_literal_nil_t {
 };
 typedef struct _cubec_literal_nil_t *cubec_literal_nil_t;
 
-extern type_t g_cubec_literal_nil_type;
+extern class_t g_cubec_literal_nil_class;
 
 node_t read_literal_nil(context_t ctx, vec_t tokens, size_t *position,
                         const char *filename);

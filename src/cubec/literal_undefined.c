@@ -8,37 +8,37 @@ static void _cubec_literal_undefined_init(cubec_literal_undefined_t self,
                                           cubec_literal_init_t *init) {
   if (!init)
     return;
-  g_cubec_literal_type.init(&self->super, allocator, init);
+  g_cubec_literal_class.init(&self->super, allocator, init);
 }
 
 static void _cubec_literal_undefined_dispose(cubec_literal_undefined_t self,
                                              allocator_t allocator) {
-  g_cubec_literal_type.dispose(&self->super, allocator);
+  g_cubec_literal_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_literal_undefined_clone(cubec_literal_undefined_t self,
                                            allocator_t allocator,
                                            cubec_literal_undefined_t another) {
-  g_cubec_literal_type.clone(&self->super, allocator, &another->super);
+  g_cubec_literal_class.clone(&self->super, allocator, &another->super);
 }
 
 static void _cubec_literal_undefined_move(cubec_literal_undefined_t self,
                                           allocator_t allocator,
                                           cubec_literal_undefined_t another) {
-  g_cubec_literal_type.move(&self->super, allocator, &another->super);
+  g_cubec_literal_class.move(&self->super, allocator, &another->super);
   return;
 
 cleanup:
   return;
 }
 
-type_t g_cubec_literal_undefined_type = {
+class_t g_cubec_literal_undefined_class = {
     .name = "cubec.cubec.literal_undefined",
     .size = sizeof(struct _cubec_literal_undefined_t),
-    .init = (type_init_fn_t)_cubec_literal_undefined_init,
-    .dispose = (type_dispose_fn_t)_cubec_literal_undefined_dispose,
-    .clone = (type_clone_fn_t)_cubec_literal_undefined_clone,
-    .move = (type_move_fn_t)_cubec_literal_undefined_move,
+    .init = (class_init_fn_t)_cubec_literal_undefined_init,
+    .dispose = (class_dispose_fn_t)_cubec_literal_undefined_dispose,
+    .clone = (class_clone_fn_t)_cubec_literal_undefined_clone,
+    .move = (class_move_fn_t)_cubec_literal_undefined_move,
 };
 
 node_t read_literal_undefined(context_t ctx, vec_t tokens, size_t *position,
@@ -62,7 +62,7 @@ node_t read_literal_undefined(context_t ctx, vec_t tokens, size_t *position,
   init.location = loc;
 
   cubec_literal_undefined_t node =
-      allocator_create(allocator, &g_cubec_literal_undefined_type, &init);
+      allocator_create(allocator, &g_cubec_literal_undefined_class, &init);
   *position = current;
   return (node_t)node;
 
@@ -74,7 +74,7 @@ node_t create_literal_undefined(context_t ctx, location_t loc) {
   allocator_t alloc = ctx->allocator;
   cubec_literal_init_t init = {
       .kind = CUBEC_NODE_LITERAL_UNDEFINED, .location = loc, .parent = NULL};
-  return (node_t)allocator_create(alloc, &g_cubec_literal_undefined_type,
+  return (node_t)allocator_create(alloc, &g_cubec_literal_undefined_class,
                                   &init);
 }
 

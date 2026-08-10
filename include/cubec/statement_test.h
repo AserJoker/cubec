@@ -3,7 +3,7 @@
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "engine/context.h"
@@ -32,7 +32,7 @@ struct _cubec_statement_test_t {
 };
 typedef struct _cubec_statement_test_t *cubec_statement_test_t;
 
-extern type_t g_cubec_statement_test_type;
+extern class_t g_cubec_statement_test_class;
 
 struct _cubec_statement_test_init_t {
   location_t location;

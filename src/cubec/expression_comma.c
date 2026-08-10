@@ -22,7 +22,7 @@ static void _cubec_expression_comma_init(cubec_expression_comma_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->left = init->left;
   self->right = init->right;
 }
@@ -31,13 +31,13 @@ static void _cubec_expression_comma_dispose(cubec_expression_comma_t self,
                                             allocator_t allocator) {
   allocator_free(allocator, &self->left);
   allocator_free(allocator, &self->right);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_expression_comma_clone(cubec_expression_comma_t self,
                                           allocator_t allocator,
                                           cubec_expression_comma_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->left = alloc_clone(allocator, another->left);
   self->right = alloc_clone(allocator, another->right);
   return;
@@ -50,7 +50,7 @@ cleanup:
 static void _cubec_expression_comma_move(cubec_expression_comma_t self,
                                          allocator_t allocator,
                                          cubec_expression_comma_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->left = alloc_move(allocator, another->left);
   self->right = alloc_move(allocator, another->right);
   return;
@@ -60,13 +60,13 @@ cleanup:
   allocator_free(allocator, &self->left);
 }
 
-type_t g_cubec_expression_comma_type = {
+class_t g_cubec_expression_comma_class = {
     .name = "cubec.cubec.expression_comma",
     .size = sizeof(struct _cubec_expression_comma_t),
-    .init = (type_init_fn_t)_cubec_expression_comma_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_comma_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_comma_clone,
-    .move = (type_move_fn_t)_cubec_expression_comma_move,
+    .init = (class_init_fn_t)_cubec_expression_comma_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_comma_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_comma_clone,
+    .move = (class_move_fn_t)_cubec_expression_comma_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -123,7 +123,7 @@ node_t read_expression_comma(context_t ctx, vec_t tokens, size_t *position,
   }
 
   /* Create comma node */
-  node = allocator_create(allocator, &g_cubec_expression_comma_type,
+  node = allocator_create(allocator, &g_cubec_expression_comma_class,
                           &(cubec_expression_comma_init_t){
                               .left = left,
                               .right = right,
@@ -149,7 +149,7 @@ node_t create_expression_comma(context_t ctx, location_t loc, node_t left,
                                node_t right) {
   allocator_t alloc = ctx->allocator;
   cubec_expression_comma_init_t init = {.left = left, .right = right};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_comma_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_expression_comma_class, &init);
 }
 
 void emit_expression_comma(emit_context_t ctx, node_t node) {

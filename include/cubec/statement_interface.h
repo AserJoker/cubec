@@ -2,7 +2,7 @@
 #define _H_CUBEC_CUBEC_STATEMENT_INTERFACE_
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "engine/context.h"
@@ -52,7 +52,7 @@ struct _cubec_statement_interface_t {
 };
 typedef struct _cubec_statement_interface_t *cubec_statement_interface_t;
 
-extern type_t g_cubec_statement_interface_type;
+extern class_t g_cubec_statement_interface_class;
 
 struct _cubec_statement_interface_init_t {
   location_t location;

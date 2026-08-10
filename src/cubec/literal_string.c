@@ -16,12 +16,12 @@ static void _cubec_literal_string_init(cubec_literal_string_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_cubec_literal_type.init(&self->super, allocator, &super_init);
+  g_cubec_literal_class.init(&self->super, allocator, &super_init);
   if (init->value) {
-    self->value = allocator_create(allocator, &g_string_type,
+    self->value = allocator_create(allocator, &g_string_class,
                                    &(string_init_t){.str = init->value});
   } else {
-    self->value = allocator_create(allocator, &g_string_type, NULL);
+    self->value = allocator_create(allocator, &g_string_class, NULL);
   }
 }
 
@@ -30,30 +30,30 @@ static void _cubec_literal_string_dispose(cubec_literal_string_t self,
   if (self->value) {
     allocator_free(allocator, &self->value);
   }
-  g_cubec_literal_type.dispose(&self->super, allocator);
+  g_cubec_literal_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_literal_string_clone(cubec_literal_string_t self,
                                         allocator_t allocator,
                                         cubec_literal_string_t another) {
-  g_cubec_literal_type.clone(&self->super, allocator, &another->super);
+  g_cubec_literal_class.clone(&self->super, allocator, &another->super);
   self->value = alloc_clone(allocator, another->value);
 }
 
 static void _cubec_literal_string_move(cubec_literal_string_t self,
                                        allocator_t allocator,
                                        cubec_literal_string_t another) {
-  g_cubec_literal_type.move(&self->super, allocator, &another->super);
+  g_cubec_literal_class.move(&self->super, allocator, &another->super);
   self->value = alloc_move(allocator, another->value);
 }
 
-type_t g_cubec_literal_string_type = {
+class_t g_cubec_literal_string_class = {
     .name = "cubec.cubec.literal_string",
     .size = sizeof(struct _cubec_literal_string_t),
-    .init = (type_init_fn_t)_cubec_literal_string_init,
-    .dispose = (type_dispose_fn_t)_cubec_literal_string_dispose,
-    .clone = (type_clone_fn_t)_cubec_literal_string_clone,
-    .move = (type_move_fn_t)_cubec_literal_string_move,
+    .init = (class_init_fn_t)_cubec_literal_string_init,
+    .dispose = (class_dispose_fn_t)_cubec_literal_string_dispose,
+    .clone = (class_clone_fn_t)_cubec_literal_string_clone,
+    .move = (class_move_fn_t)_cubec_literal_string_move,
 };
 
 node_t read_literal_string(context_t ctx, vec_t tokens, size_t *position,
@@ -76,7 +76,7 @@ node_t read_literal_string(context_t ctx, vec_t tokens, size_t *position,
       .value = NULL,
   };
   cubec_literal_string_t node =
-      allocator_create(allocator, &g_cubec_literal_string_type, &init);
+      allocator_create(allocator, &g_cubec_literal_string_class, &init);
   if (!node)
     goto onerror;
   node_t node_base = (node_t)node;
@@ -117,7 +117,7 @@ onerror:
 node_t create_literal_string(context_t ctx, location_t loc, const char *value) {
   allocator_t alloc = ctx->allocator;
   cubec_literal_string_init_t init = {.value = value};
-  return (node_t)allocator_create(alloc, &g_cubec_literal_string_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_literal_string_class, &init);
 }
 
 void emit_literal_string(emit_context_t ctx, node_t node) {

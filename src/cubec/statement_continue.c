@@ -20,36 +20,36 @@ _cubec_statement_continue_init(cubec_statement_continue_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
 }
 
 static void _cubec_statement_continue_dispose(cubec_statement_continue_t self,
                                               allocator_t allocator) {
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void
 _cubec_statement_continue_clone(cubec_statement_continue_t self,
                                 allocator_t allocator,
                                 cubec_statement_continue_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   return;
 }
 
 static void _cubec_statement_continue_move(cubec_statement_continue_t self,
                                            allocator_t allocator,
                                            cubec_statement_continue_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   return;
 }
 
-type_t g_cubec_statement_continue_type = {
+class_t g_cubec_statement_continue_class = {
     .name = "cubec.cubec.statement_continue",
     .size = sizeof(struct _cubec_statement_continue_t),
-    .init = (type_init_fn_t)_cubec_statement_continue_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_continue_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_continue_clone,
-    .move = (type_move_fn_t)_cubec_statement_continue_move,
+    .init = (class_init_fn_t)_cubec_statement_continue_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_continue_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_continue_clone,
+    .move = (class_move_fn_t)_cubec_statement_continue_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -110,7 +110,7 @@ node_t read_statement_continue(context_t ctx, vec_t tokens, size_t *position,
       .parent = NULL,
   };
   cubec_statement_continue_t node =
-      allocator_create(allocator, &g_cubec_statement_continue_type, &init);
+      allocator_create(allocator, &g_cubec_statement_continue_class, &init);
   *position = current;
   return &node->super;
 
@@ -123,7 +123,7 @@ onerror:
 node_t create_statement_continue(context_t ctx, location_t loc) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_continue_init_t init = {.location = loc, .parent = NULL};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_continue_type,
+  return (node_t)allocator_create(alloc, &g_cubec_statement_continue_class,
                                   &init);
 }
 

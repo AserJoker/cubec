@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_CORE_STRMAP_
 #define _H_CUBEC_CORE_STRMAP_
-#include "core/type.h"
+#include "core/class.h"
 #include <stdbool.h>
 #include <stddef.h>
 #ifdef __cplusplus
@@ -34,7 +34,7 @@ struct _strmap_iter_t {
 };
 
 /** @brief Virtual table for strmap_t. */
-extern type_t g_strmap_type;
+extern class_t g_strmap_class;
 
 /** @brief Get the number of entries. */
 size_t strmap_get_size(strmap_t self);

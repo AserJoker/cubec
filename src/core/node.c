@@ -29,11 +29,11 @@ static void _node_move(node_t self, allocator_t allocator, node_t another) {
   self->location = another->location;
   self->parent = NULL;
 }
-type_t g_node_type = {
+class_t g_node_class = {
     .name = "cubec.core.node",
     .size = sizeof(struct _node_t),
-    .init = (type_init_fn_t)_node_init,
-    .dispose = (type_dispose_fn_t)_node_dispose,
-    .clone = (type_clone_fn_t)_node_clone,
-    .move = (type_move_fn_t)_node_move,
+    .init = (class_init_fn_t)_node_init,
+    .dispose = (class_dispose_fn_t)_node_dispose,
+    .clone = (class_clone_fn_t)_node_clone,
+    .move = (class_move_fn_t)_node_move,
 };

@@ -71,13 +71,13 @@ static void _rbtree_move(rbtree_t self, allocator_t allocator,
   another->size = 0;
 }
 
-type_t g_rbtree_type = {
+class_t g_rbtree_class = {
     .size = sizeof(struct _rbtree_t),
     .name = "cubec.core.rbtree",
-    .init = (type_init_fn_t)_rbtree_init,
-    .dispose = (type_dispose_fn_t)_rbtree_dispose,
-    .clone = (type_clone_fn_t)_rbtree_clone,
-    .move = (type_move_fn_t)_rbtree_move,
+    .init = (class_init_fn_t)_rbtree_init,
+    .dispose = (class_dispose_fn_t)_rbtree_dispose,
+    .clone = (class_clone_fn_t)_rbtree_clone,
+    .move = (class_move_fn_t)_rbtree_move,
 };
 
 static rbtree_node_t *rbtree_find_node(rbtree_t self, uint64_t key);

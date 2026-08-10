@@ -12,7 +12,7 @@
 static token_t _create_token(emit_context_t ctx, uint32_t kind,
                              const char *text, size_t length) {
   /* Create a string_t in the string table to hold the text */
-  string_t str = allocator_create(ctx->allocator, &g_string_type, NULL);
+  string_t str = allocator_create(ctx->allocator, &g_string_class, NULL);
   string_nconcat(str, text, length);
 
   /* Create token with location pointing into the string_t buffer */
@@ -26,7 +26,7 @@ static token_t _create_token(emit_context_t ctx, uint32_t kind,
               .end = {.line = 0, .column = 0, .offset = ptr + length},
           },
   };
-  token_t tok = allocator_create(ctx->allocator, &g_token_type, &init);
+  token_t tok = allocator_create(ctx->allocator, &g_token_class, &init);
   vec_push(ctx->string_table, str);
   vec_push(ctx->output_tokens, tok);
   return tok;
@@ -43,9 +43,9 @@ emit_context_t emit_context_create(allocator_t allocator, vec_t source_tokens) {
   ctx->owns_source_tokens = false;
   ctx->source_token_idx = 0;
   ctx->output_tokens =
-      allocator_create(allocator, &g_vec_type, &(vec_init_t){.auto_dispose = true});
+      allocator_create(allocator, &g_vec_class, &(vec_init_t){.auto_dispose = true});
   ctx->string_table =
-      allocator_create(allocator, &g_vec_type, &(vec_init_t){.auto_dispose = true});
+      allocator_create(allocator, &g_vec_class, &(vec_init_t){.auto_dispose = true});
   ctx->indent_level = 0;
   return ctx;
 }
@@ -98,7 +98,7 @@ void emit_space(emit_context_t ctx) {
 
 void emit_newline(emit_context_t ctx) {
   /* Build "\n" + indent_level * 2 spaces */
-  string_t str = allocator_create(ctx->allocator, &g_string_type, NULL);
+  string_t str = allocator_create(ctx->allocator, &g_string_class, NULL);
   string_concat(str, "\n");
   for (int32_t i = 0; i < ctx->indent_level; i++) {
     string_concat(str, "  ");
@@ -115,7 +115,7 @@ void emit_newline(emit_context_t ctx) {
               .end = {.line = 0, .column = 0, .offset = ptr + len},
           },
   };
-  token_t tok = allocator_create(ctx->allocator, &g_token_type, &init);
+  token_t tok = allocator_create(ctx->allocator, &g_token_class, &init);
   vec_push(ctx->string_table, str);
   vec_push(ctx->output_tokens, tok);
 }

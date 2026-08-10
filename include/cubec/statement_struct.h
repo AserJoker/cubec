@@ -2,7 +2,7 @@
 #define _H_CUBEC_CUBEC_STATEMENT_STRUCT_
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "engine/context.h"
@@ -43,7 +43,7 @@ struct _cubec_statement_struct_t {
 };
 typedef struct _cubec_statement_struct_t *cubec_statement_struct_t;
 
-extern type_t g_cubec_statement_struct_type;
+extern class_t g_cubec_statement_struct_class;
 
 struct _cubec_statement_struct_init_t {
   location_t location;

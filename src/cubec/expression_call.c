@@ -24,7 +24,7 @@ static void _cubec_expression_call_init(cubec_expression_call_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
 
   self->callee = init->callee;
   if (init->arguments) {
@@ -34,7 +34,7 @@ static void _cubec_expression_call_init(cubec_expression_call_t self,
     /* If no arguments vec was provided (e.g. clone path), create an empty one
      */
     self->arguments =
-        allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+        allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   }
 }
 
@@ -42,13 +42,13 @@ static void _cubec_expression_call_dispose(cubec_expression_call_t self,
                                            allocator_t allocator) {
   allocator_free(allocator, &self->callee);
   allocator_free(allocator, &self->arguments);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_expression_call_clone(cubec_expression_call_t self,
                                          allocator_t allocator,
                                          cubec_expression_call_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->callee = alloc_clone(allocator, another->callee);
   self->arguments = alloc_clone(allocator, another->arguments);
   return;
@@ -61,14 +61,14 @@ cleanup:
 static void _cubec_expression_call_move(cubec_expression_call_t self,
                                         allocator_t allocator,
                                         cubec_expression_call_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->callee = alloc_move(allocator, another->callee);
 
   /* Transfer arguments vec directly */
   allocator_free(allocator, &self->arguments);
   self->arguments = another->arguments;
   another->arguments =
-      allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+      allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   return;
 
 cleanup:
@@ -77,13 +77,13 @@ cleanup:
    * already failed, so we just need to ensure consistency */
 }
 
-type_t g_cubec_expression_call_type = {
+class_t g_cubec_expression_call_class = {
     .name = "cubec.cubec.expression_call",
     .size = sizeof(struct _cubec_expression_call_t),
-    .init = (type_init_fn_t)_cubec_expression_call_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_call_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_call_clone,
-    .move = (type_move_fn_t)_cubec_expression_call_move,
+    .init = (class_init_fn_t)_cubec_expression_call_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_call_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_call_clone,
+    .move = (class_move_fn_t)_cubec_expression_call_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -105,7 +105,7 @@ node_t read_expression_call(context_t ctx, vec_t tokens, size_t *position,
   }
   current++; /* Consumed '(' — committed to parsing a call from here */
 
-  arguments = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+  arguments = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
 
   /* Parse comma-separated arguments */
   bool expect_comma = false;
@@ -147,7 +147,7 @@ node_t read_expression_call(context_t ctx, vec_t tokens, size_t *position,
     }
   }
 
-  node = allocator_create(allocator, &g_cubec_expression_call_type,
+  node = allocator_create(allocator, &g_cubec_expression_call_class,
                           &(cubec_expression_call_init_t){
                               .callee = callee,
                               .arguments = arguments,
@@ -189,7 +189,7 @@ node_t create_expression_call(context_t ctx, location_t loc, node_t callee,
                               vec_t args) {
   allocator_t alloc = ctx->allocator;
   cubec_expression_call_init_t init = {.callee = callee, .arguments = args};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_call_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_expression_call_class, &init);
 }
 
 void emit_expression_call(emit_context_t ctx, node_t node) {

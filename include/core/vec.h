@@ -1,12 +1,12 @@
 #ifndef _H_CUBEC_CORE_VEC_
 #define _H_CUBEC_CORE_VEC_
-#include "core/type.h"
+#include "core/class.h"
 #include <stddef.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
 /** @brief Virtual table for vec_t. */
-extern type_t g_vec_type;
+extern class_t g_vec_class;
 
 /**
  * @brief Dynamic array of `void*` pointers (like `std::vector<void*>`).

@@ -10,7 +10,7 @@ protected:
 };
 
 TEST_F(dt_vec, create_and_resize) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   ASSERT_NE(vec, nullptr);
   EXPECT_EQ(vec_get_size(vec), 0);
   EXPECT_EQ(vec_get_capacity(vec), 0);
@@ -18,7 +18,7 @@ TEST_F(dt_vec, create_and_resize) {
 }
 
 TEST_F(dt_vec, push_and_get) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -31,7 +31,7 @@ TEST_F(dt_vec, push_and_get) {
 }
 
 TEST_F(dt_vec, pop) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -44,7 +44,7 @@ TEST_F(dt_vec, pop) {
 }
 
 TEST_F(dt_vec, set) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20, val3 = 99;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -54,7 +54,7 @@ TEST_F(dt_vec, set) {
 }
 
 TEST_F(dt_vec, insert) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20, val3 = 15;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -67,7 +67,7 @@ TEST_F(dt_vec, insert) {
 }
 
 TEST_F(dt_vec, remove) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -80,7 +80,7 @@ TEST_F(dt_vec, remove) {
 }
 
 TEST_F(dt_vec, resize) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -93,7 +93,7 @@ TEST_F(dt_vec, resize) {
 }
 
 TEST_F(dt_vec, get_data) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -105,14 +105,14 @@ TEST_F(dt_vec, get_data) {
 }
 
 TEST_F(dt_vec, resize_down_to_zero) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   vec_resize(vec, 0);
   EXPECT_EQ(vec_get_size(vec), 0);
   allocator_free(allocator, &vec);
 }
 
 TEST_F(dt_vec, initial_capacity) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   vec_resize(vec, 1);
   EXPECT_EQ(vec_get_capacity(vec), 8);
   allocator_free(allocator, &vec);
@@ -123,7 +123,7 @@ TEST_F(dt_vec, initial_capacity) {
  * ============================================================================ */
 
 TEST_F(dt_vec, iteration) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -140,7 +140,7 @@ TEST_F(dt_vec, iteration) {
 }
 
 TEST_F(dt_vec, iteration_empty_vec) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   vec_iter_t iter = vec_iter_first(vec);
   EXPECT_EQ(vec_iter_get(&iter), nullptr);
   EXPECT_EQ(vec_iter_next(&iter), nullptr);
@@ -148,7 +148,7 @@ TEST_F(dt_vec, iteration_empty_vec) {
 }
 
 TEST_F(dt_vec, iter_get) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -171,7 +171,7 @@ TEST_F(dt_vec, iter_get) {
 }
 
 TEST_F(dt_vec, iter_set) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20, val3 = 99;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -187,7 +187,7 @@ TEST_F(dt_vec, iter_set) {
 }
 
 TEST_F(dt_vec, iter_remove) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -208,7 +208,7 @@ TEST_F(dt_vec, iter_remove) {
 }
 
 TEST_F(dt_vec, iter_remove_first) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -225,7 +225,7 @@ TEST_F(dt_vec, iter_remove_first) {
 }
 
 TEST_F(dt_vec, iter_remove_last) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -242,7 +242,7 @@ TEST_F(dt_vec, iter_remove_last) {
 }
 
 TEST_F(dt_vec, iter_remove_exhausted) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10;
   vec_push(vec, &val1);
 
@@ -255,7 +255,7 @@ TEST_F(dt_vec, iter_remove_exhausted) {
 }
 
 TEST_F(dt_vec, iter_traverse_and_remove_all) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   vec_push(vec, &val1);
   vec_push(vec, &val2);
@@ -273,7 +273,7 @@ TEST_F(dt_vec, iter_traverse_and_remove_all) {
 }
 
 TEST_F(dt_vec, iter_single_element) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   int val1 = 42;
   vec_push(vec, &val1);
 

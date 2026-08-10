@@ -18,7 +18,7 @@ static void _diagnostic_list_init(diagnostic_list_t self, allocator_t allocator,
   self->allocator = allocator;
   vec_init_t vec_init = {.auto_dispose = true};
   self->diagnostics =
-      (vec_t)allocator_create(allocator, &g_vec_type, &vec_init);
+      (vec_t)allocator_create(allocator, &g_vec_class, &vec_init);
   self->output = (init && init->output) ? init->output : stderr;
   self->error_count = 0;
 }
@@ -38,7 +38,7 @@ static void _diagnostic_list_clone(diagnostic_list_t self, allocator_t allocator
   self->allocator = allocator;
   vec_init_t vec_init = {.auto_dispose = true};
   self->diagnostics =
-      (vec_t)allocator_create(allocator, &g_vec_type, &vec_init);
+      (vec_t)allocator_create(allocator, &g_vec_class, &vec_init);
   self->output = another->output;
   self->error_count = another->error_count;
   size_t size = vec_get_size(another->diagnostics);
@@ -51,12 +51,12 @@ static void _diagnostic_list_clone(diagnostic_list_t self, allocator_t allocator
   }
 }
 
-type_t g_diagnostic_list_type = {
+class_t g_diagnostic_list_class = {
     .size = sizeof(struct _diagnostic_list_t),
     .name = "cubec.core.diagnostic_list",
-    .init = (type_init_fn_t)_diagnostic_list_init,
-    .dispose = (type_dispose_fn_t)_diagnostic_list_dispose,
-    .clone = (type_clone_fn_t)_diagnostic_list_clone,
+    .init = (class_init_fn_t)_diagnostic_list_init,
+    .dispose = (class_dispose_fn_t)_diagnostic_list_dispose,
+    .clone = (class_clone_fn_t)_diagnostic_list_clone,
 };
 
 /* ===== public API ===== */
@@ -89,7 +89,7 @@ struct diagnostic *diagnostic_list_push(diagnostic_list_t self,
   va_end(args);
 
   vec_init_t notes_init = {.auto_dispose = true};
-  d->notes = (vec_t)allocator_create(self->allocator, &g_vec_type, &notes_init);
+  d->notes = (vec_t)allocator_create(self->allocator, &g_vec_class, &notes_init);
 
   vec_push(self->diagnostics, d);
 

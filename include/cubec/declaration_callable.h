@@ -2,7 +2,7 @@
 #define _H_CUBEC_CUBEC_DECLARATION_CALLABLE_
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
 #include "engine/context.h"
@@ -36,7 +36,7 @@ struct _cubec_declaration_callable_t {
 };
 typedef struct _cubec_declaration_callable_t *cubec_declaration_callable_t;
 
-extern type_t g_cubec_declaration_callable_type;
+extern class_t g_cubec_declaration_callable_class;
 
 struct _cubec_declaration_callable_init_t {
   location_t location;

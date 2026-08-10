@@ -17,38 +17,38 @@ static void _cubec_program_node_init(cubec_program_node_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   if (init->statements) {
     self->statements = init->statements;
   } else {
     self->statements =
-        allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+        allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   }
 }
 static void _cubec_program_node_dispose(cubec_program_node_t self,
                                         allocator_t allocator) {
   allocator_free(allocator, &self->statements);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 static void _cubec_program_node_clone(cubec_program_node_t self,
                                       allocator_t allocator,
                                       cubec_program_node_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->statements = alloc_clone(allocator, another->statements);
 }
 static void _cubec_program_node_move(cubec_program_node_t self,
                                      allocator_t allocator,
                                      cubec_program_node_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->statements = alloc_move(allocator, another->statements);
 }
-type_t g_cubec_program_node_type = {
+class_t g_cubec_program_node_class = {
     .name = "cubec.cubec.program_node",
     .size = sizeof(struct _cubec_program_node_t),
-    .init = (type_init_fn_t)_cubec_program_node_init,
-    .dispose = (type_dispose_fn_t)_cubec_program_node_dispose,
-    .clone = (type_clone_fn_t)_cubec_program_node_clone,
-    .move = (type_move_fn_t)_cubec_program_node_move,
+    .init = (class_init_fn_t)_cubec_program_node_init,
+    .dispose = (class_dispose_fn_t)_cubec_program_node_dispose,
+    .clone = (class_clone_fn_t)_cubec_program_node_clone,
+    .move = (class_move_fn_t)_cubec_program_node_move,
 };
 
 node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
@@ -65,7 +65,7 @@ node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
       .parent = NULL,
   };
   cubec_program_node_t node =
-      allocator_create(allocator, &g_cubec_program_node_type, &init);
+      allocator_create(allocator, &g_cubec_program_node_class, &init);
   if (!node)
     goto onerror;
 
@@ -119,7 +119,7 @@ onerror:
 node_t create_program(context_t ctx, location_t loc, vec_t statements) {
   allocator_t alloc = ctx->allocator;
   cubec_program_node_init_t init = {.statements = statements};
-  return (node_t)allocator_create(alloc, &g_cubec_program_node_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_program_node_class, &init);
 }
 
 void emit_program(emit_context_t ctx, node_t node) {

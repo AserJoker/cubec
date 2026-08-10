@@ -25,7 +25,7 @@ _cubec_expression_ternary_init(cubec_expression_ternary_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
 
   self->condition = init->condition;
   self->consequent = init->consequent;
@@ -37,14 +37,14 @@ static void _cubec_expression_ternary_dispose(cubec_expression_ternary_t self,
   allocator_free(allocator, &self->condition);
   allocator_free(allocator, &self->consequent);
   allocator_free(allocator, &self->alternate);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void
 _cubec_expression_ternary_clone(cubec_expression_ternary_t self,
                                 allocator_t allocator,
                                 cubec_expression_ternary_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->condition = alloc_clone(allocator, another->condition);
   self->consequent = alloc_clone(allocator, another->consequent);
   self->alternate = alloc_clone(allocator, another->alternate);
@@ -59,7 +59,7 @@ cleanup:
 static void _cubec_expression_ternary_move(cubec_expression_ternary_t self,
                                            allocator_t allocator,
                                            cubec_expression_ternary_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->condition = alloc_move(allocator, another->condition);
   self->consequent = alloc_move(allocator, another->consequent);
   self->alternate = alloc_move(allocator, another->alternate);
@@ -71,13 +71,13 @@ cleanup:
   allocator_free(allocator, &self->condition);
 }
 
-type_t g_cubec_expression_ternary_type = {
+class_t g_cubec_expression_ternary_class = {
     .name = "cubec.cubec.expression_ternary",
     .size = sizeof(struct _cubec_expression_ternary_t),
-    .init = (type_init_fn_t)_cubec_expression_ternary_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_ternary_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_ternary_clone,
-    .move = (type_move_fn_t)_cubec_expression_ternary_move,
+    .init = (class_init_fn_t)_cubec_expression_ternary_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_ternary_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_ternary_clone,
+    .move = (class_move_fn_t)_cubec_expression_ternary_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -146,7 +146,7 @@ node_t read_expression_ternary(context_t ctx, vec_t tokens, size_t *position,
     goto onerror;
   }
 
-  node = allocator_create(allocator, &g_cubec_expression_ternary_type,
+  node = allocator_create(allocator, &g_cubec_expression_ternary_class,
                           &(cubec_expression_ternary_init_t){
                               .condition = condition,
                               .consequent = consequent,
@@ -184,7 +184,7 @@ node_t create_expression_ternary(context_t ctx, location_t loc, node_t cond,
                                           .condition = cond,
                                           .consequent = then_branch,
                                           .alternate = else_branch};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_ternary_type,
+  return (node_t)allocator_create(alloc, &g_cubec_expression_ternary_class,
                                   &init);
 }
 

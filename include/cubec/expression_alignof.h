@@ -2,7 +2,7 @@
 #define _H_CUBEC_CUBEC_EXPRESSION_ALIGNOF_
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "cubec/expression.h"
@@ -33,7 +33,7 @@ struct _cubec_expression_alignof_t {
 };
 typedef struct _cubec_expression_alignof_t *cubec_expression_alignof_t;
 
-extern type_t g_cubec_expression_alignof_type;
+extern class_t g_cubec_expression_alignof_class;
 
 struct _cubec_expression_alignof_init_t {
   location_t location;

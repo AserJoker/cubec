@@ -48,19 +48,19 @@ static void _value_move(void *self, allocator_t allocator, void *another) {
   src->own = false;
 }
 
-type_t g_value_type = {
+class_t g_value_class = {
     .size = sizeof(value_t),
     .name = "cubec.engine.value",
-    .init = (type_init_fn_t)_value_init,
-    .dispose = (type_dispose_fn_t)_value_dispose,
-    .clone = (type_clone_fn_t)_value_clone,
-    .move = (type_move_fn_t)_value_move,
+    .init = (class_init_fn_t)_value_init,
+    .dispose = (class_dispose_fn_t)_value_dispose,
+    .clone = (class_clone_fn_t)_value_clone,
+    .move = (class_move_fn_t)_value_move,
 };
 
 value_t *value_create(allocator_t allocator, stype_t *type, void *data,
                       bool own) {
   value_init_t init = {.type = type, .data = data, .own = own};
-  return (value_t *)allocator_create(allocator, &g_value_type, &init);
+  return (value_t *)allocator_create(allocator, &g_value_class, &init);
 }
 
 void value_dispose(value_t *self, allocator_t allocator) {

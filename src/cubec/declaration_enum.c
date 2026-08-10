@@ -22,20 +22,20 @@ static void _cubec_declaration_enum_init(cubec_declaration_enum_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->items = init->items;
 }
 
 static void _cubec_declaration_enum_dispose(cubec_declaration_enum_t self,
                                            allocator_t allocator) {
   allocator_free(allocator, &self->items);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_declaration_enum_clone(cubec_declaration_enum_t self,
                                          allocator_t allocator,
                                          cubec_declaration_enum_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->items = alloc_clone(allocator, another->items);
   return;
 }
@@ -43,18 +43,18 @@ static void _cubec_declaration_enum_clone(cubec_declaration_enum_t self,
 static void _cubec_declaration_enum_move(cubec_declaration_enum_t self,
                                         allocator_t allocator,
                                         cubec_declaration_enum_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->items = alloc_move(allocator, another->items);
   return;
 }
 
-type_t g_cubec_declaration_enum_type = {
+class_t g_cubec_declaration_enum_class = {
     .name = "cubec.cubec.declaration_enum",
     .size = sizeof(struct _cubec_declaration_enum_t),
-    .init = (type_init_fn_t)_cubec_declaration_enum_init,
-    .dispose = (type_dispose_fn_t)_cubec_declaration_enum_dispose,
-    .clone = (type_clone_fn_t)_cubec_declaration_enum_clone,
-    .move = (type_move_fn_t)_cubec_declaration_enum_move,
+    .init = (class_init_fn_t)_cubec_declaration_enum_init,
+    .dispose = (class_dispose_fn_t)_cubec_declaration_enum_dispose,
+    .clone = (class_clone_fn_t)_cubec_declaration_enum_clone,
+    .move = (class_move_fn_t)_cubec_declaration_enum_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -98,7 +98,7 @@ node_t read_declaration_enum_body(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 2. Parse items — comma separated enum_item nodes */
-  items = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+  items = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, "}")) {
     node_t item = read_enum_item(ctx, tokens, &current, filename);
     if (node_is_error(item))
@@ -138,7 +138,7 @@ node_t read_declaration_enum_body(context_t ctx, vec_t tokens, size_t *position,
       .parent = NULL,
       .items = items,
   };
-  node = allocator_create(allocator, &g_cubec_declaration_enum_type, &init);
+  node = allocator_create(allocator, &g_cubec_declaration_enum_class, &init);
   *position = current;
   return (node_t)&node->super;
 
@@ -195,7 +195,7 @@ node_t create_declaration_enum(context_t ctx, location_t loc, vec_t items) {
       .parent = NULL,
       .items = items,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_declaration_enum_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_declaration_enum_class, &init);
 }
 
 /* --------------------------------------------------------------------------

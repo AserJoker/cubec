@@ -25,7 +25,7 @@ _cubec_declaration_callable_init(cubec_declaration_callable_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->parameters = init->parameters;
   self->return_type = init->return_type;
   self->is_c_variadic = init->is_c_variadic;
@@ -35,14 +35,14 @@ static void _cubec_declaration_callable_dispose(cubec_declaration_callable_t sel
                                                allocator_t allocator) {
   allocator_free(allocator, &self->return_type);
   allocator_free(allocator, &self->parameters);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void
 _cubec_declaration_callable_clone(cubec_declaration_callable_t self,
                                  allocator_t allocator,
                                  cubec_declaration_callable_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->parameters = alloc_clone(allocator, another->parameters);
   self->return_type = another->return_type
                           ? alloc_clone(allocator, another->return_type)
@@ -59,7 +59,7 @@ static void
 _cubec_declaration_callable_move(cubec_declaration_callable_t self,
                                 allocator_t allocator,
                                 cubec_declaration_callable_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->parameters = alloc_move(allocator, another->parameters);
   self->return_type =
       another->return_type ? alloc_move(allocator, another->return_type) : NULL;
@@ -71,13 +71,13 @@ cleanup:
   allocator_free(allocator, &self->return_type);
 }
 
-type_t g_cubec_declaration_callable_type = {
+class_t g_cubec_declaration_callable_class = {
     .name = "cubec.cubec.declaration_callable",
     .size = sizeof(struct _cubec_declaration_callable_t),
-    .init = (type_init_fn_t)_cubec_declaration_callable_init,
-    .dispose = (type_dispose_fn_t)_cubec_declaration_callable_dispose,
-    .clone = (type_clone_fn_t)_cubec_declaration_callable_clone,
-    .move = (type_move_fn_t)_cubec_declaration_callable_move,
+    .init = (class_init_fn_t)_cubec_declaration_callable_init,
+    .dispose = (class_dispose_fn_t)_cubec_declaration_callable_dispose,
+    .clone = (class_clone_fn_t)_cubec_declaration_callable_clone,
+    .move = (class_move_fn_t)_cubec_declaration_callable_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -140,7 +140,7 @@ node_t read_declaration_callable(context_t ctx, vec_t tokens, size_t *position,
    * Function expression parameters have names: func(x: i32, y: f64): bool { ...
    * }. If we encounter a named parameter pattern (identifier followed by ':'),
    * this is a function expression, not a function type — return NULL. */
-  parameters = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+  parameters = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
 
   if (_is_symbol(tokens, current, ")")) {
     /* no parameters */
@@ -192,7 +192,7 @@ node_t read_declaration_callable(context_t ctx, vec_t tokens, size_t *position,
             spread_init.location.filename = filename;
           }
           node_t spread = allocator_create(
-              allocator, &g_cubec_expression_spread_type, &spread_init);
+              allocator, &g_cubec_expression_spread_class, &spread_init);
           vec_push(parameters, spread);
           skip_whitespace(tokens, &current);
 
@@ -298,7 +298,7 @@ node_t read_declaration_callable(context_t ctx, vec_t tokens, size_t *position,
   };
 
   /* 8. Create node */
-  node = allocator_create(allocator, &g_cubec_declaration_callable_type,
+  node = allocator_create(allocator, &g_cubec_declaration_callable_class,
                           &(cubec_declaration_callable_init_t){
                               .location = loc,
                               .parameters = parameters,
@@ -331,7 +331,7 @@ node_t create_declaration_callable(context_t ctx, location_t loc,
       .return_type = return_type,
       .is_c_variadic = is_c_variadic,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_declaration_callable_type,
+  return (node_t)allocator_create(alloc, &g_cubec_declaration_callable_class,
                                   &init);
 }
 

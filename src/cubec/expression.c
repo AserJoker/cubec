@@ -50,33 +50,33 @@ static void _cubec_expression_init(cubec_expression_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
 }
 
 static void _cubec_expression_dispose(cubec_expression_t self,
                                       allocator_t allocator) {
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_expression_clone(cubec_expression_t self,
                                     allocator_t allocator,
                                     cubec_expression_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
 }
 
 static void _cubec_expression_move(cubec_expression_t self,
                                    allocator_t allocator,
                                    cubec_expression_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
 }
 
-type_t g_cubec_expression_type = {
+class_t g_cubec_expression_class = {
     .name = "cubec.cubec.expression",
     .size = sizeof(struct _cubec_expression_t),
-    .init = (type_init_fn_t)_cubec_expression_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_clone,
-    .move = (type_move_fn_t)_cubec_expression_move,
+    .init = (class_init_fn_t)_cubec_expression_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_clone,
+    .move = (class_move_fn_t)_cubec_expression_move,
 };
 
 node_t read_atom(context_t ctx, vec_t tokens, size_t *position,

@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_CORE_RBTREE_
 #define _H_CUBEC_CORE_RBTREE_
-#include "core/type.h"
+#include "core/class.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -26,7 +26,7 @@ struct _rbtree_iter_t {
 };
 
 /** @brief Virtual table for rbtree_t. */
-extern type_t g_rbtree_type;
+extern class_t g_rbtree_class;
 
 /** @brief Get the number of entries. */
 size_t rbtree_get_size(rbtree_t self);

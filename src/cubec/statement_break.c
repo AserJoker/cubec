@@ -19,35 +19,35 @@ static void _cubec_statement_break_init(cubec_statement_break_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
 }
 
 static void _cubec_statement_break_dispose(cubec_statement_break_t self,
                                            allocator_t allocator) {
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_break_clone(cubec_statement_break_t self,
                                          allocator_t allocator,
                                          cubec_statement_break_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   return;
 }
 
 static void _cubec_statement_break_move(cubec_statement_break_t self,
                                         allocator_t allocator,
                                         cubec_statement_break_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   return;
 }
 
-type_t g_cubec_statement_break_type = {
+class_t g_cubec_statement_break_class = {
     .name = "cubec.cubec.statement_break",
     .size = sizeof(struct _cubec_statement_break_t),
-    .init = (type_init_fn_t)_cubec_statement_break_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_break_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_break_clone,
-    .move = (type_move_fn_t)_cubec_statement_break_move,
+    .init = (class_init_fn_t)_cubec_statement_break_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_break_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_break_clone,
+    .move = (class_move_fn_t)_cubec_statement_break_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -105,7 +105,7 @@ node_t read_statement_break(context_t ctx, vec_t tokens, size_t *position,
       .parent = NULL,
   };
   cubec_statement_break_t node =
-      allocator_create(allocator, &g_cubec_statement_break_type, &init);
+      allocator_create(allocator, &g_cubec_statement_break_class, &init);
   *position = current;
   return &node->super;
 
@@ -118,7 +118,7 @@ onerror:
 node_t create_statement_break(context_t ctx, location_t loc) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_break_init_t init = {.location = loc, .parent = NULL};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_break_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_statement_break_class, &init);
 }
 
 void emit_statement_break(emit_context_t ctx, node_t node) {

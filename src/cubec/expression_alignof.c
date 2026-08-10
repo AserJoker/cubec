@@ -16,38 +16,38 @@ _cubec_expression_alignof_init(cubec_expression_alignof_t self,
       .kind = CUBEC_NODE_EXPRESSION_ALIGNOF,
       .location = init->location,
   };
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->expression = init->expression;
 }
 
 static void _cubec_expression_alignof_dispose(cubec_expression_alignof_t self,
                                               allocator_t allocator) {
   allocator_free(allocator, &self->expression);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void
 _cubec_expression_alignof_clone(cubec_expression_alignof_t self,
                                 allocator_t allocator,
                                 cubec_expression_alignof_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->expression = alloc_clone(allocator, another->expression);
 }
 
 static void _cubec_expression_alignof_move(cubec_expression_alignof_t self,
                                            allocator_t allocator,
                                            cubec_expression_alignof_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->expression = alloc_move(allocator, another->expression);
 }
 
-type_t g_cubec_expression_alignof_type = {
+class_t g_cubec_expression_alignof_class = {
     .name = "cubec.cubec.expression_alignof",
     .size = sizeof(struct _cubec_expression_alignof_t),
-    .init = (type_init_fn_t)_cubec_expression_alignof_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_alignof_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_alignof_clone,
-    .move = (type_move_fn_t)_cubec_expression_alignof_move,
+    .init = (class_init_fn_t)_cubec_expression_alignof_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_alignof_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_alignof_clone,
+    .move = (class_move_fn_t)_cubec_expression_alignof_move,
 };
 
 node_t read_expression_alignof(context_t ctx, vec_t tokens, size_t *position,
@@ -104,7 +104,7 @@ node_t read_expression_alignof(context_t ctx, vec_t tokens, size_t *position,
       .expression = expr,
   };
   cubec_expression_alignof_t node =
-      allocator_create(allocator, &g_cubec_expression_alignof_type, &init);
+      allocator_create(allocator, &g_cubec_expression_alignof_class, &init);
   *position = current;
   return (node_t)&node->super;
 
@@ -123,7 +123,7 @@ onerror:
 node_t create_expression_alignof(context_t ctx, location_t loc, node_t expr) {
   allocator_t alloc = ctx->allocator;
   cubec_expression_alignof_init_t init = {.expression = expr};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_alignof_type,
+  return (node_t)allocator_create(alloc, &g_cubec_expression_alignof_class,
                                   &init);
 }
 

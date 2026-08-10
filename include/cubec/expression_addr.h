@@ -2,7 +2,7 @@
 #define _H_CUBEC_CUBEC_EXPRESSION_ADDR_
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "cubec/expression.h"
@@ -22,7 +22,7 @@ struct _cubec_expression_addr_t {
 };
 typedef struct _cubec_expression_addr_t *cubec_expression_addr_t;
 
-extern type_t g_cubec_expression_addr_type;
+extern class_t g_cubec_expression_addr_class;
 
 struct _cubec_expression_addr_init_t {
   location_t location;

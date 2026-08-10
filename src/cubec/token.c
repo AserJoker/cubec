@@ -8,65 +8,65 @@
 
 static token_t create_eof_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
-  return allocator_create(allocator, &g_token_type,
+  return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_EOF, location});
 }
 
 static token_t create_error_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
-  return allocator_create(allocator, &g_token_type,
+  return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_ERROR, location});
 }
 
 static token_t create_literal_identifier_token(context_t ctx,
                                                location_t location) {
   allocator_t allocator = ctx->allocator;
-  return allocator_create(allocator, &g_token_type,
+  return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_IDENTIFIER, location});
 }
 static token_t create_keyword_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
-  return allocator_create(allocator, &g_token_type,
+  return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_KEYWORD, location});
 }
 static token_t create_literal_numeric_token(context_t ctx,
                                             location_t location) {
   allocator_t allocator = ctx->allocator;
-  return allocator_create(allocator, &g_token_type,
+  return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_NUMERIC, location});
 }
 static token_t create_literal_string_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
-  return allocator_create(allocator, &g_token_type,
+  return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_STRING, location});
 }
 
 static token_t create_literal_char_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
-  return allocator_create(allocator, &g_token_type,
+  return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_CHAR, location});
 }
 
 static token_t create_symbol_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
-  return allocator_create(allocator, &g_token_type,
+  return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_SYMBOL, location});
 }
 static token_t create_whitespace_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
-  return allocator_create(allocator, &g_token_type,
+  return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_WHITESPACE, location});
 }
 static token_t create_comment_token(context_t ctx, location_t location) {
   allocator_t allocator = ctx->allocator;
-  return allocator_create(allocator, &g_token_type,
+  return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_COMMENT, location});
 }
 static token_t create_multiline_comment_token(context_t ctx,
                                               location_t location) {
   allocator_t allocator = ctx->allocator;
   return allocator_create(
-      allocator, &g_token_type,
+      allocator, &g_token_class,
       &(token_init_t){CUBEC_TOKEN_MULTILINE_COMMENT, location});
 }
 /**
@@ -668,7 +668,7 @@ token_t read_token(context_t ctx, position_t *position, const char *filename) {
 vec_t resolve_token_list(context_t ctx, const char *filename,
                          const char *source) {
   allocator_t allocator = ctx->allocator;
-  vec_t vec = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+  vec_t vec = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   position_t position = {
       .column = 0,
       .line = 0,

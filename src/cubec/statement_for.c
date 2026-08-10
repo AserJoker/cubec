@@ -23,7 +23,7 @@ static void _cubec_statement_for_init(cubec_statement_for_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->init = init->init;
   self->condition = init->condition;
   self->increment = init->increment;
@@ -36,13 +36,13 @@ static void _cubec_statement_for_dispose(cubec_statement_for_t self,
   allocator_free(allocator, &self->increment);
   allocator_free(allocator, &self->condition);
   allocator_free(allocator, &self->init);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_for_clone(cubec_statement_for_t self,
                                        allocator_t allocator,
                                        cubec_statement_for_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->init = another->init ? alloc_clone(allocator, another->init) : NULL;
   self->condition =
       another->condition ? alloc_clone(allocator, another->condition) : NULL;
@@ -55,7 +55,7 @@ static void _cubec_statement_for_clone(cubec_statement_for_t self,
 static void _cubec_statement_for_move(cubec_statement_for_t self,
                                       allocator_t allocator,
                                       cubec_statement_for_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->init = another->init ? alloc_move(allocator, another->init) : NULL;
   self->condition =
       another->condition ? alloc_move(allocator, another->condition) : NULL;
@@ -65,13 +65,13 @@ static void _cubec_statement_for_move(cubec_statement_for_t self,
   return;
 }
 
-type_t g_cubec_statement_for_type = {
+class_t g_cubec_statement_for_class = {
     .name = "cubec.cubec.statement_for",
     .size = sizeof(struct _cubec_statement_for_t),
-    .init = (type_init_fn_t)_cubec_statement_for_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_for_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_for_clone,
-    .move = (type_move_fn_t)_cubec_statement_for_move,
+    .init = (class_init_fn_t)_cubec_statement_for_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_for_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_for_clone,
+    .move = (class_move_fn_t)_cubec_statement_for_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -152,7 +152,7 @@ node_t read_statement_for(context_t ctx, vec_t tokens, size_t *position,
           .is_comptime = false,
           .declarator = declarator,
       };
-      init = allocator_create(allocator, &g_cubec_statement_declaration_type,
+      init = allocator_create(allocator, &g_cubec_statement_declaration_class,
                               &decl_init);
       if (!init) {
         allocator_free(allocator, &declarator);
@@ -237,7 +237,7 @@ node_t read_statement_for(context_t ctx, vec_t tokens, size_t *position,
       .increment = increment,
       .body = body,
   };
-  node = allocator_create(allocator, &g_cubec_statement_for_type, &finit);
+  node = allocator_create(allocator, &g_cubec_statement_for_class, &finit);
   *position = current;
   return &node->super;
 
@@ -259,7 +259,7 @@ node_t create_statement_for(context_t ctx, location_t loc, node_t init_node,
                                      .condition = cond,
                                      .increment = incr,
                                      .body = body};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_for_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_statement_for_class, &init);
 }
 
 void emit_statement_for(emit_context_t ctx, node_t node) {

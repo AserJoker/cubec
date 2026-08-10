@@ -22,7 +22,7 @@ _cubec_statement_foreach_init(cubec_statement_foreach_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->is_var_decl = init->is_var_decl;
   self->variable = init->variable;
   self->var_type = init->var_type;
@@ -36,13 +36,13 @@ static void _cubec_statement_foreach_dispose(cubec_statement_foreach_t self,
   allocator_free(allocator, &self->iterator);
   allocator_free(allocator, &self->var_type);
   allocator_free(allocator, &self->variable);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_foreach_clone(cubec_statement_foreach_t self,
                                            allocator_t allocator,
                                            cubec_statement_foreach_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->is_var_decl = another->is_var_decl;
   self->variable = alloc_clone(allocator, another->variable);
   self->var_type = alloc_clone(allocator, another->var_type);
@@ -54,7 +54,7 @@ static void _cubec_statement_foreach_clone(cubec_statement_foreach_t self,
 static void _cubec_statement_foreach_move(cubec_statement_foreach_t self,
                                           allocator_t allocator,
                                           cubec_statement_foreach_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->is_var_decl = another->is_var_decl;
   self->variable = alloc_move(allocator, another->variable);
   self->var_type = alloc_move(allocator, another->var_type);
@@ -63,13 +63,13 @@ static void _cubec_statement_foreach_move(cubec_statement_foreach_t self,
   return;
 }
 
-type_t g_cubec_statement_foreach_type = {
+class_t g_cubec_statement_foreach_class = {
     .name = "cubec.cubec.statement_foreach",
     .size = sizeof(struct _cubec_statement_foreach_t),
-    .init = (type_init_fn_t)_cubec_statement_foreach_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_foreach_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_foreach_clone,
-    .move = (type_move_fn_t)_cubec_statement_foreach_move,
+    .init = (class_init_fn_t)_cubec_statement_foreach_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_foreach_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_foreach_clone,
+    .move = (class_move_fn_t)_cubec_statement_foreach_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -214,7 +214,7 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens, size_t *position,
       .iterator = iterator,
       .body = body,
   };
-  node = allocator_create(allocator, &g_cubec_statement_foreach_type, &finit);
+  node = allocator_create(allocator, &g_cubec_statement_foreach_class, &finit);
   *position = current;
   return &node->super;
 
@@ -238,7 +238,7 @@ node_t create_statement_foreach(context_t ctx, location_t loc, bool is_var_decl,
                                          .var_type = var_type,
                                          .iterator = iterator,
                                          .body = body};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_foreach_type,
+  return (node_t)allocator_create(alloc, &g_cubec_statement_foreach_class,
                                   &init);
 }
 

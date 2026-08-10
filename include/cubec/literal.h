@@ -1,7 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_LITERAL_
 #define _H_CUBEC_CUBEC_LITERAL_
 #include "core/location.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #ifdef __cplusplus
@@ -14,7 +14,7 @@ struct _cubec_literal_t {
 };
 typedef struct _cubec_literal_t *cubec_literal_t;
 
-extern type_t g_cubec_literal_type;
+extern class_t g_cubec_literal_class;
 
 struct _cubec_literal_init_t {
   location_t location;

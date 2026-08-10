@@ -15,36 +15,36 @@ static void _cubec_expression_wildcard_init(cubec_expression_wildcard_t self,
       .kind = CUBEC_NODE_EXPRESSION_WILDCARD,
       .parent = NULL,
   };
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->is_tuple = false;
 }
 
 static void _cubec_expression_wildcard_dispose(cubec_expression_wildcard_t self,
                                                 allocator_t allocator) {
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_expression_wildcard_clone(cubec_expression_wildcard_t self,
                                               allocator_t allocator,
                                               cubec_expression_wildcard_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->is_tuple = another->is_tuple;
 }
 
 static void _cubec_expression_wildcard_move(cubec_expression_wildcard_t self,
                                              allocator_t allocator,
                                              cubec_expression_wildcard_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->is_tuple = another->is_tuple;
 }
 
-type_t g_cubec_expression_wildcard_type = {
+class_t g_cubec_expression_wildcard_class = {
     .name = "cubec.cubec.expression_wildcard",
     .size = sizeof(struct _cubec_expression_wildcard_t),
-    .init = (type_init_fn_t)_cubec_expression_wildcard_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_wildcard_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_wildcard_clone,
-    .move = (type_move_fn_t)_cubec_expression_wildcard_move,
+    .init = (class_init_fn_t)_cubec_expression_wildcard_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_wildcard_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_wildcard_clone,
+    .move = (class_move_fn_t)_cubec_expression_wildcard_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -65,7 +65,7 @@ node_t read_expression_wildcard(context_t ctx, vec_t tokens,
 
   cubec_expression_wildcard_t node =
       (cubec_expression_wildcard_t)allocator_create(
-          allocator, &g_cubec_expression_wildcard_type, NULL);
+          allocator, &g_cubec_expression_wildcard_class, NULL);
   if (!node) return NULL;
 
   location_t loc = *token_get_location(tok);
@@ -89,7 +89,7 @@ node_t create_expression_wildcard(context_t ctx, location_t loc,
       .parent = NULL,
       .is_tuple = is_tuple,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_expression_wildcard_type,
+  return (node_t)allocator_create(alloc, &g_cubec_expression_wildcard_class,
                                   &init);
 }
 

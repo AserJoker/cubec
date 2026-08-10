@@ -22,37 +22,37 @@ _cubec_expression_spread_init(cubec_expression_spread_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->value = init->value;
 }
 
 static void _cubec_expression_spread_dispose(cubec_expression_spread_t self,
                                              allocator_t allocator) {
   allocator_free(allocator, &self->value);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_expression_spread_clone(cubec_expression_spread_t self,
                                            allocator_t allocator,
                                            cubec_expression_spread_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->value = alloc_clone(allocator, another->value);
 }
 
 static void _cubec_expression_spread_move(cubec_expression_spread_t self,
                                           allocator_t allocator,
                                           cubec_expression_spread_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->value = alloc_move(allocator, another->value);
 }
 
-type_t g_cubec_expression_spread_type = {
+class_t g_cubec_expression_spread_class = {
     .name = "cubec.cubec.expression_spread",
     .size = sizeof(struct _cubec_expression_spread_t),
-    .init = (type_init_fn_t)_cubec_expression_spread_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_spread_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_spread_clone,
-    .move = (type_move_fn_t)_cubec_expression_spread_move,
+    .init = (class_init_fn_t)_cubec_expression_spread_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_spread_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_spread_clone,
+    .move = (class_move_fn_t)_cubec_expression_spread_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -84,7 +84,7 @@ node_t read_expression_spread(context_t ctx, vec_t tokens, size_t *position,
     goto onerror;
   }
 
-  node = allocator_create(allocator, &g_cubec_expression_spread_type,
+  node = allocator_create(allocator, &g_cubec_expression_spread_class,
                           &(cubec_expression_spread_init_t){
                               .value = value,
                           });
@@ -113,7 +113,7 @@ onerror:
 node_t create_expression_spread(context_t ctx, location_t loc, node_t value) {
   allocator_t alloc = ctx->allocator;
   cubec_expression_spread_init_t init = {.value = value};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_spread_type,
+  return (node_t)allocator_create(alloc, &g_cubec_expression_spread_class,
                                   &init);
 }
 

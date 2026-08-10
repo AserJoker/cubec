@@ -24,7 +24,7 @@ _cubec_statement_comptime_if_init(cubec_statement_comptime_if_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->condition = init->condition;
   self->then_branch = init->then_branch;
   self->else_branch = init->else_branch;
@@ -36,14 +36,14 @@ _cubec_statement_comptime_if_dispose(cubec_statement_comptime_if_t self,
   allocator_free(allocator, &self->else_branch);
   allocator_free(allocator, &self->then_branch);
   allocator_free(allocator, &self->condition);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void
 _cubec_statement_comptime_if_clone(cubec_statement_comptime_if_t self,
                                    allocator_t allocator,
                                    cubec_statement_comptime_if_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->condition = alloc_clone(allocator, another->condition);
   self->then_branch = alloc_clone(allocator, another->then_branch);
   self->else_branch = another->else_branch
@@ -56,7 +56,7 @@ static void
 _cubec_statement_comptime_if_move(cubec_statement_comptime_if_t self,
                                   allocator_t allocator,
                                   cubec_statement_comptime_if_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->condition = alloc_move(allocator, another->condition);
   self->then_branch = alloc_move(allocator, another->then_branch);
   self->else_branch =
@@ -64,13 +64,13 @@ _cubec_statement_comptime_if_move(cubec_statement_comptime_if_t self,
   return;
 }
 
-type_t g_cubec_statement_comptime_if_type = {
+class_t g_cubec_statement_comptime_if_class = {
     .name = "cubec.cubec.statement_comptime_if",
     .size = sizeof(struct _cubec_statement_comptime_if_t),
-    .init = (type_init_fn_t)_cubec_statement_comptime_if_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_comptime_if_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_comptime_if_clone,
-    .move = (type_move_fn_t)_cubec_statement_comptime_if_move,
+    .init = (class_init_fn_t)_cubec_statement_comptime_if_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_comptime_if_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_comptime_if_clone,
+    .move = (class_move_fn_t)_cubec_statement_comptime_if_move,
 };
 
 /* ==========================================================================
@@ -87,7 +87,7 @@ static void _cubec_statement_comptime_foreach_init(
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->is_var_decl = init->is_var_decl;
   self->variable = init->variable;
   self->var_type = init->var_type;
@@ -101,13 +101,13 @@ static void _cubec_statement_comptime_foreach_dispose(
   allocator_free(allocator, &self->iterator);
   allocator_free(allocator, &self->var_type);
   allocator_free(allocator, &self->variable);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_comptime_foreach_clone(
     cubec_statement_comptime_foreach_t self, allocator_t allocator,
     cubec_statement_comptime_foreach_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->is_var_decl = another->is_var_decl;
   self->variable = alloc_clone(allocator, another->variable);
   self->var_type =
@@ -120,7 +120,7 @@ static void _cubec_statement_comptime_foreach_clone(
 static void _cubec_statement_comptime_foreach_move(
     cubec_statement_comptime_foreach_t self, allocator_t allocator,
     cubec_statement_comptime_foreach_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->is_var_decl = another->is_var_decl;
   self->variable = alloc_move(allocator, another->variable);
   self->var_type =
@@ -130,13 +130,13 @@ static void _cubec_statement_comptime_foreach_move(
   return;
 }
 
-type_t g_cubec_statement_comptime_foreach_type = {
+class_t g_cubec_statement_comptime_foreach_class = {
     .name = "cubec.cubec.statement_comptime_foreach",
     .size = sizeof(struct _cubec_statement_comptime_foreach_t),
-    .init = (type_init_fn_t)_cubec_statement_comptime_foreach_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_comptime_foreach_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_comptime_foreach_clone,
-    .move = (type_move_fn_t)_cubec_statement_comptime_foreach_move,
+    .init = (class_init_fn_t)_cubec_statement_comptime_foreach_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_comptime_foreach_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_comptime_foreach_clone,
+    .move = (class_move_fn_t)_cubec_statement_comptime_foreach_move,
 };
 
 /* ==========================================================================
@@ -257,7 +257,7 @@ static node_t _read_comptime_if(context_t ctx, vec_t tokens, size_t *position,
       .else_branch = else_branch,
   };
   node =
-      allocator_create(allocator, &g_cubec_statement_comptime_if_type, &init);
+      allocator_create(allocator, &g_cubec_statement_comptime_if_class, &init);
   *position = current;
   return &node->super;
 
@@ -384,7 +384,7 @@ static node_t _read_comptime_foreach(context_t ctx, vec_t tokens,
       .iterator = iterator,
       .body = body,
   };
-  node = allocator_create(allocator, &g_cubec_statement_comptime_foreach_type,
+  node = allocator_create(allocator, &g_cubec_statement_comptime_foreach_class,
                           &finit);
   *position = current;
   return &node->super;
@@ -484,7 +484,7 @@ node_t create_statement_comptime_if(context_t ctx, location_t loc,
       .then_branch = then_branch,
       .else_branch = else_branch,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_statement_comptime_if_type,
+  return (node_t)allocator_create(alloc, &g_cubec_statement_comptime_if_class,
                                   &init);
 }
 
@@ -507,7 +507,7 @@ node_t create_statement_comptime_foreach(context_t ctx, location_t loc,
       .body = body,
   };
   return (node_t)allocator_create(alloc,
-                                  &g_cubec_statement_comptime_foreach_type,
+                                  &g_cubec_statement_comptime_foreach_class,
                                   &init);
 }
 

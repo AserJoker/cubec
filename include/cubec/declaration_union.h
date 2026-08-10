@@ -3,7 +3,7 @@
 #include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
 #ifdef __cplusplus
@@ -41,7 +41,7 @@ struct _cubec_declaration_union_t {
 };
 typedef struct _cubec_declaration_union_t *cubec_declaration_union_t;
 
-extern type_t g_cubec_declaration_union_type;
+extern class_t g_cubec_declaration_union_class;
 
 struct _cubec_declaration_union_init_t {
   location_t location;

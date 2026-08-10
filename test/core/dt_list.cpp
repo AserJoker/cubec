@@ -10,14 +10,14 @@ protected:
 };
 
 TEST_F(dt_list, create_and_destroy) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   ASSERT_NE(list, nullptr);
   EXPECT_EQ(list_get_size(list), 0);
   allocator_free(allocator, &list);
 }
 
 TEST_F(dt_list, push_and_pop) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   list_push(list, &val1);
   list_push(list, &val2);
@@ -33,7 +33,7 @@ TEST_F(dt_list, push_and_pop) {
 }
 
 TEST_F(dt_list, unshift_and_shift) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   list_unshift(list, &val1);
   list_unshift(list, &val2);
@@ -47,7 +47,7 @@ TEST_F(dt_list, unshift_and_shift) {
 }
 
 TEST_F(dt_list, get_first_and_last) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   list_push(list, &val1);
   list_push(list, &val2);
@@ -58,7 +58,7 @@ TEST_F(dt_list, get_first_and_last) {
 }
 
 TEST_F(dt_list, clear) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   list_push(list, &val1);
   list_push(list, &val2);
@@ -70,7 +70,7 @@ TEST_F(dt_list, clear) {
 }
 
 TEST_F(dt_list, get_data) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   list_push(list, &val1);
   list_push(list, &val2);
@@ -85,7 +85,7 @@ TEST_F(dt_list, get_data) {
 }
 
 TEST_F(dt_list, iteration) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   list_push(list, &val1);
   list_push(list, &val2);
@@ -102,14 +102,14 @@ TEST_F(dt_list, iteration) {
 }
 
 TEST_F(dt_list, iteration_empty_list) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   list_iter_t iter = list_iter_first(list);
   EXPECT_EQ(list_iter_next(&iter), nullptr);
   allocator_free(allocator, &list);
 }
 
 TEST_F(dt_list, iter_get) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   list_push(list, &val1);
   list_push(list, &val2);
@@ -133,7 +133,7 @@ TEST_F(dt_list, iter_get) {
 }
 
 TEST_F(dt_list, iter_set) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20, val3 = 99;
   list_push(list, &val1);
   list_push(list, &val2);
@@ -148,7 +148,7 @@ TEST_F(dt_list, iter_set) {
 }
 
 TEST_F(dt_list, iter_remove) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   list_push(list, &val1);
   list_push(list, &val2);
@@ -169,7 +169,7 @@ TEST_F(dt_list, iter_remove) {
 }
 
 TEST_F(dt_list, iter_remove_first) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   list_push(list, &val1);
   list_push(list, &val2);
@@ -186,7 +186,7 @@ TEST_F(dt_list, iter_remove_first) {
 }
 
 TEST_F(dt_list, iter_remove_last) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20;
   list_push(list, &val1);
   list_push(list, &val2);
@@ -203,7 +203,7 @@ TEST_F(dt_list, iter_remove_last) {
 }
 
 TEST_F(dt_list, iter_remove_exhausted) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10;
   list_push(list, &val1);
 
@@ -216,7 +216,7 @@ TEST_F(dt_list, iter_remove_exhausted) {
 }
 
 TEST_F(dt_list, insert) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20, val3 = 15;
   list_push(list, &val1);
   list_push(list, &val2);
@@ -235,7 +235,7 @@ TEST_F(dt_list, insert) {
 }
 
 TEST_F(dt_list, insert_at_beginning) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20;
   list_push(list, &val1);
   list_insert(list, 0, &val2);
@@ -245,7 +245,7 @@ TEST_F(dt_list, insert_at_beginning) {
 }
 
 TEST_F(dt_list, insert_at_end) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20;
   list_push(list, &val1);
   list_insert(list, 1, &val2);
@@ -255,7 +255,7 @@ TEST_F(dt_list, insert_at_end) {
 }
 
 TEST_F(dt_list, single_element) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 42;
   list_push(list, &val1);
   EXPECT_EQ(list_get_size(list), 1);
@@ -272,7 +272,7 @@ TEST_F(dt_list, single_element) {
 }
 
 TEST_F(dt_list, mixed_operations) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int a = 1, b = 2, c = 3, d = 4, e = 5;
   list_unshift(list, &c);
   list_unshift(list, &b);
@@ -291,7 +291,7 @@ TEST_F(dt_list, mixed_operations) {
 }
 
 TEST_F(dt_list, iter_traverse_and_remove_all) {
-  list_t list = (list_t)allocator_create(allocator, &g_list_type, NULL);
+  list_t list = (list_t)allocator_create(allocator, &g_list_class, NULL);
   int val1 = 10, val2 = 20, val3 = 30;
   list_push(list, &val1);
   list_push(list, &val2);

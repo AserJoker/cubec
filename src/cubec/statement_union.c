@@ -26,7 +26,7 @@ static void _cubec_statement_union_init(cubec_statement_union_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->is_export = init->is_export;
   self->name = init->name;
   self->generic_params = init->generic_params;
@@ -42,13 +42,13 @@ static void _cubec_statement_union_dispose(cubec_statement_union_t self,
   allocator_free(allocator, &self->members);
   allocator_free(allocator, &self->generic_params);
   allocator_free(allocator, &self->name);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_union_clone(cubec_statement_union_t self,
                                          allocator_t allocator,
                                          cubec_statement_union_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->name = alloc_clone(allocator, another->name);
   self->generic_params = another->generic_params
@@ -63,7 +63,7 @@ static void _cubec_statement_union_clone(cubec_statement_union_t self,
 static void _cubec_statement_union_move(cubec_statement_union_t self,
                                         allocator_t allocator,
                                         cubec_statement_union_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->name = alloc_move(allocator, another->name);
   self->generic_params = another->generic_params
@@ -75,13 +75,13 @@ static void _cubec_statement_union_move(cubec_statement_union_t self,
   return;
 }
 
-type_t g_cubec_statement_union_type = {
+class_t g_cubec_statement_union_class = {
     .name = "cubec.cubec.statement_union",
     .size = sizeof(struct _cubec_statement_union_t),
-    .init = (type_init_fn_t)_cubec_statement_union_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_union_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_union_clone,
-    .move = (type_move_fn_t)_cubec_statement_union_move,
+    .init = (class_init_fn_t)_cubec_statement_union_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_union_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_union_clone,
+    .move = (class_move_fn_t)_cubec_statement_union_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -124,7 +124,7 @@ node_t read_statement_union(context_t ctx, vec_t tokens, size_t *position,
         break;
       if (!decorators) {
         decorators =
-            allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+            allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
       }
       vec_push(decorators, dec);
     }
@@ -202,7 +202,7 @@ node_t read_statement_union(context_t ctx, vec_t tokens, size_t *position,
 
   allocator_free(allocator, &expr_node);
 
-  node = allocator_create(allocator, &g_cubec_statement_union_type, &init);
+  node = allocator_create(allocator, &g_cubec_statement_union_class, &init);
   *position = current;
   return &node->super;
 
@@ -230,7 +230,7 @@ node_t create_statement_union(context_t ctx, location_t loc, const char *name,
       .members = members,
       .decorators = decorators,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_statement_union_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_statement_union_class, &init);
 }
 
 void emit_statement_union(emit_context_t ctx, node_t node) {

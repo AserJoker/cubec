@@ -21,37 +21,37 @@ static void _cubec_function_capture_init(cubec_function_capture_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->identifier = init->identifier;
 }
 
 static void _cubec_function_capture_dispose(cubec_function_capture_t self,
                                             allocator_t allocator) {
   allocator_free(allocator, &self->identifier);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_function_capture_clone(cubec_function_capture_t self,
                                           allocator_t allocator,
                                           cubec_function_capture_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->identifier = alloc_clone(allocator, another->identifier);
 }
 
 static void _cubec_function_capture_move(cubec_function_capture_t self,
                                          allocator_t allocator,
                                          cubec_function_capture_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->identifier = alloc_move(allocator, another->identifier);
 }
 
-type_t g_cubec_function_capture_type = {
+class_t g_cubec_function_capture_class = {
     .name = "cubec.cubec.function_capture",
     .size = sizeof(struct _cubec_function_capture_t),
-    .init = (type_init_fn_t)_cubec_function_capture_init,
-    .dispose = (type_dispose_fn_t)_cubec_function_capture_dispose,
-    .clone = (type_clone_fn_t)_cubec_function_capture_clone,
-    .move = (type_move_fn_t)_cubec_function_capture_move,
+    .init = (class_init_fn_t)_cubec_function_capture_init,
+    .dispose = (class_dispose_fn_t)_cubec_function_capture_dispose,
+    .clone = (class_clone_fn_t)_cubec_function_capture_clone,
+    .move = (class_move_fn_t)_cubec_function_capture_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -86,7 +86,7 @@ node_t read_function_capture(context_t ctx, vec_t tokens, size_t *position,
 
   /* 4. Create node */
   cubec_function_capture_t cap = NULL;
-  cap = allocator_create(allocator, &g_cubec_function_capture_type,
+  cap = allocator_create(allocator, &g_cubec_function_capture_class,
                          &(cubec_function_capture_init_t){
                              .location = loc,
                              .identifier = identifier,
@@ -114,7 +114,7 @@ node_t create_function_capture(context_t ctx, location_t loc,
       .location = loc,
       .identifier = name_node,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_function_capture_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_function_capture_class, &init);
 }
 
 void emit_function_capture(emit_context_t ctx, node_t node) {

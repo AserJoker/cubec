@@ -50,13 +50,13 @@ static void _vec_dispose(vec_t self, allocator_t allocator) {
   self->capacity = 0;
 }
 
-type_t g_vec_type = {
+class_t g_vec_class = {
     .size = sizeof(struct _vec_t),
     .name = "cubec.core.vec",
-    .init = (type_init_fn_t)_vec_init,
-    .dispose = (type_dispose_fn_t)_vec_dispose,
-    .clone = (type_clone_fn_t)_vec_clone,
-    .move = (type_move_fn_t)_vec_move,
+    .init = (class_init_fn_t)_vec_init,
+    .dispose = (class_dispose_fn_t)_vec_dispose,
+    .clone = (class_clone_fn_t)_vec_clone,
+    .move = (class_move_fn_t)_vec_move,
 };
 
 size_t vec_get_size(vec_t self) { return self->size; }

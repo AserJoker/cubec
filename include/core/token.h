@@ -1,7 +1,7 @@
 #ifndef _H_CUBEC_CORE_TOKEN_
 #define _H_CUBEC_CORE_TOKEN_
 #include "core/location.h"
-#include "core/type.h"
+#include "core/class.h"
 #include <stdbool.h>
 #include <stddef.h>
 #ifdef __cplusplus
@@ -16,7 +16,7 @@ struct _token_t;
 typedef struct _token_t *token_t;
 
 /** @brief Virtual table for token_t. */
-extern type_t g_token_type;
+extern class_t g_token_class;
 
 /** @brief Initialization parameters for token_t. */
 struct _token_init_t {

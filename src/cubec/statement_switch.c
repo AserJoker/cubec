@@ -21,7 +21,7 @@ static void _cubec_statement_switch_init(cubec_statement_switch_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->condition = init->condition;
   self->matches = init->matches;
 }
@@ -30,13 +30,13 @@ static void _cubec_statement_switch_dispose(cubec_statement_switch_t self,
                                             allocator_t allocator) {
   allocator_free(allocator, &self->matches);
   allocator_free(allocator, &self->condition);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_switch_clone(cubec_statement_switch_t self,
                                           allocator_t allocator,
                                           cubec_statement_switch_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->condition = alloc_clone(allocator, another->condition);
   self->matches =
       another->matches ? alloc_clone(allocator, another->matches) : NULL;
@@ -46,20 +46,20 @@ static void _cubec_statement_switch_clone(cubec_statement_switch_t self,
 static void _cubec_statement_switch_move(cubec_statement_switch_t self,
                                          allocator_t allocator,
                                          cubec_statement_switch_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->condition = alloc_move(allocator, another->condition);
   self->matches =
       another->matches ? alloc_move(allocator, another->matches) : NULL;
   return;
 }
 
-type_t g_cubec_statement_switch_type = {
+class_t g_cubec_statement_switch_class = {
     .name = "cubec.cubec.statement_switch",
     .size = sizeof(struct _cubec_statement_switch_t),
-    .init = (type_init_fn_t)_cubec_statement_switch_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_switch_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_switch_clone,
-    .move = (type_move_fn_t)_cubec_statement_switch_move,
+    .init = (class_init_fn_t)_cubec_statement_switch_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_switch_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_switch_clone,
+    .move = (class_move_fn_t)_cubec_statement_switch_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -135,7 +135,7 @@ node_t read_statement_switch(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 6. Parse match arms */
-  matches = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+  matches = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
 
   while (true) {
     skip_whitespace(tokens, &current);
@@ -173,7 +173,7 @@ node_t read_statement_switch(context_t ctx, vec_t tokens, size_t *position,
       .condition = condition,
       .matches = matches,
   };
-  node = allocator_create(allocator, &g_cubec_statement_switch_type, &init);
+  node = allocator_create(allocator, &g_cubec_statement_switch_class, &init);
   *position = current;
   return &node->super;
 
@@ -188,7 +188,7 @@ node_t create_statement_switch(context_t ctx, location_t loc, node_t cond,
                                vec_t matches) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_switch_init_t init = {.condition = cond, .matches = matches};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_switch_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_statement_switch_class, &init);
 }
 
 void emit_statement_switch(emit_context_t ctx, node_t node) {

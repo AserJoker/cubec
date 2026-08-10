@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_CORE_ALLOCATOR_
 #define _H_CUBEC_CORE_ALLOCATOR_
-#include "core/type.h"
+#include "core/class.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
@@ -54,7 +54,7 @@ void *allocator_alloc(allocator_t self, size_t len);
  * @brief Allocate and initialize a typed object. Calls abort() on OOM.
  * @return Never NULL (allocator_alloc aborts on failure).
  */
-void *allocator_create(allocator_t self, type_t *type, void *arg);
+void *allocator_create(allocator_t self, class_t *type, void *arg);
 
 /**
  * @brief Free allocated memory and set the pointer to NULL.
@@ -69,9 +69,9 @@ void _allocator_free_impl(allocator_t self, void **data);
 /**
  * @brief Get the type descriptor of an allocated value.
  * @param self Pointer returned by allocator_alloc or allocator_create.
- * @return type_t* if the value was created via allocator_create, NULL if via allocator_alloc.
+ * @return class_t* if the value was created via allocator_create, NULL if via allocator_alloc.
  */
-type_t *alloc_get_type(void *self);
+class_t *alloc_get_type(void *self);
 
 /**
  * @brief Get the unique allocation ID assigned to this value.

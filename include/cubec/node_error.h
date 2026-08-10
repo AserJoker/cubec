@@ -3,7 +3,7 @@
 #include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "cubec/node.h"
 #include <stdbool.h>
 #ifdef __cplusplus
@@ -16,7 +16,7 @@ struct _cubec_node_error_t {
 };
 typedef struct _cubec_node_error_t *cubec_node_error_t;
 
-extern type_t g_cubec_node_error_type;
+extern class_t g_cubec_node_error_class;
 
 struct _cubec_node_error_init_t {
   location_t location;

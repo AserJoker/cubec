@@ -1,7 +1,7 @@
 #ifndef _H_CUBEC_CORE_DIAGNOSTIC_
 #define _H_CUBEC_CORE_DIAGNOSTIC_
 #include "core/location.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -35,7 +35,7 @@ struct _diagnostic_list_init_t {
   FILE *output;
 };
 
-extern type_t g_diagnostic_list_type;
+extern class_t g_diagnostic_list_class;
 
 size_t diagnostic_list_get_size(diagnostic_list_t self);
 struct diagnostic *diagnostic_list_get(diagnostic_list_t self, size_t idx);

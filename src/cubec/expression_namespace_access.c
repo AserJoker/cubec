@@ -16,7 +16,7 @@ static void _cubec_expression_namespace_access_init(
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->host = init->host;
   self->field = init->field;
 }
@@ -25,13 +25,13 @@ static void _cubec_expression_namespace_access_dispose(
     cubec_expression_namespace_access_t self, allocator_t allocator) {
   allocator_free(allocator, &self->host);
   allocator_free(allocator, &self->field);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_expression_namespace_access_clone(
     cubec_expression_namespace_access_t self, allocator_t allocator,
     cubec_expression_namespace_access_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->host = alloc_clone(allocator, another->host);
   self->field =
       (cubec_literal_identifier_t)alloc_clone(allocator, another->field);
@@ -45,7 +45,7 @@ cleanup:
 static void _cubec_expression_namespace_access_move(
     cubec_expression_namespace_access_t self, allocator_t allocator,
     cubec_expression_namespace_access_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->host = alloc_move(allocator, another->host);
   self->field =
       (cubec_literal_identifier_t)alloc_move(allocator, another->field);
@@ -56,13 +56,13 @@ cleanup:
   allocator_free(allocator, &self->host);
 }
 
-type_t g_cubec_expression_namespace_access_type = {
+class_t g_cubec_expression_namespace_access_class = {
     .name = "cubec.cubec.expression_namespace_access",
     .size = sizeof(struct _cubec_expression_namespace_access_t),
-    .init = (type_init_fn_t)_cubec_expression_namespace_access_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_namespace_access_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_namespace_access_clone,
-    .move = (type_move_fn_t)_cubec_expression_namespace_access_move,
+    .init = (class_init_fn_t)_cubec_expression_namespace_access_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_namespace_access_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_namespace_access_clone,
+    .move = (class_move_fn_t)_cubec_expression_namespace_access_move,
 };
 
 node_t read_expression_namespace_access(context_t ctx, vec_t tokens,
@@ -88,7 +88,7 @@ node_t read_expression_namespace_access(context_t ctx, vec_t tokens,
   }
   field = (cubec_literal_identifier_t)field_node;
 
-  node = allocator_create(allocator, &g_cubec_expression_namespace_access_type,
+  node = allocator_create(allocator, &g_cubec_expression_namespace_access_class,
                           &(cubec_expression_namespace_access_init_t){
                               .host = host,
                               .field = field,
@@ -121,7 +121,7 @@ node_t create_expression_namespace_access(context_t ctx, location_t loc,
                                                                      field),
   };
   return (node_t)allocator_create(
-      alloc, &g_cubec_expression_namespace_access_type, &init);
+      alloc, &g_cubec_expression_namespace_access_class, &init);
 }
 
 /* --------------------------------------------------------------------------

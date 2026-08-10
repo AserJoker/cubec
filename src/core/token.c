@@ -23,12 +23,12 @@ static void _token_clone(token_t self, allocator_t allocator, token_t another) {
   self->location = another->location;
 }
 
-type_t g_token_type = {
+class_t g_token_class = {
     .name = "cubec.core.token",
     .size = sizeof(struct _token_t),
-    .init = (type_init_fn_t)_token_init,
-    .dispose = (type_dispose_fn_t)_token_dispose,
-    .clone = (type_clone_fn_t)_token_clone,
+    .init = (class_init_fn_t)_token_init,
+    .dispose = (class_dispose_fn_t)_token_dispose,
+    .clone = (class_clone_fn_t)_token_clone,
     .move = NULL,
 };
 

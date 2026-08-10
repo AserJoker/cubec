@@ -3,7 +3,7 @@
 #include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
 #include "engine/context.h"
@@ -20,7 +20,7 @@ struct _cubec_expression_call_t {
 };
 typedef struct _cubec_expression_call_t *cubec_expression_call_t;
 
-extern type_t g_cubec_expression_call_type;
+extern class_t g_cubec_expression_call_class;
 
 struct _cubec_expression_call_init_t {
   location_t location;

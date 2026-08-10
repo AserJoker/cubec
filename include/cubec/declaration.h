@@ -1,7 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_DECLARATION_
 #define _H_CUBEC_CUBEC_DECLARATION_
 #include "core/location.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #ifdef __cplusplus
@@ -14,7 +14,7 @@ struct _cubec_declaration_t {
 };
 typedef struct _cubec_declaration_t *cubec_declaration_t;
 
-extern type_t g_cubec_declaration_type;
+extern class_t g_cubec_declaration_class;
 
 struct _cubec_declaration_init_t {
   location_t location;

@@ -16,7 +16,7 @@ _cubec_declaration_slice_init(cubec_declaration_slice_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_cubec_declaration_type.init(&self->super, allocator, &super_init);
+  g_cubec_declaration_class.init(&self->super, allocator, &super_init);
   self->type = init->type;
   self->is_const = init->is_const;
   self->is_volatile = init->is_volatile;
@@ -25,13 +25,13 @@ _cubec_declaration_slice_init(cubec_declaration_slice_t self,
 static void _cubec_declaration_slice_dispose(cubec_declaration_slice_t self,
                                              allocator_t allocator) {
   allocator_free(allocator, &self->type);
-  g_cubec_declaration_type.dispose(&self->super, allocator);
+  g_cubec_declaration_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_declaration_slice_clone(cubec_declaration_slice_t self,
                                            allocator_t allocator,
                                            cubec_declaration_slice_t another) {
-  g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
+  g_cubec_declaration_class.clone(&self->super, allocator, &another->super);
   self->type = alloc_clone(allocator, another->type);
   self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
@@ -40,19 +40,19 @@ static void _cubec_declaration_slice_clone(cubec_declaration_slice_t self,
 static void _cubec_declaration_slice_move(cubec_declaration_slice_t self,
                                           allocator_t allocator,
                                           cubec_declaration_slice_t another) {
-  g_cubec_declaration_type.move(&self->super, allocator, &another->super);
+  g_cubec_declaration_class.move(&self->super, allocator, &another->super);
   self->type = alloc_move(allocator, another->type);
   self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
 }
 
-type_t g_cubec_declaration_slice_type = {
+class_t g_cubec_declaration_slice_class = {
     .name = "cubec.cubec.declaration_slice",
     .size = sizeof(struct _cubec_declaration_slice_t),
-    .init = (type_init_fn_t)_cubec_declaration_slice_init,
-    .dispose = (type_dispose_fn_t)_cubec_declaration_slice_dispose,
-    .clone = (type_clone_fn_t)_cubec_declaration_slice_clone,
-    .move = (type_move_fn_t)_cubec_declaration_slice_move,
+    .init = (class_init_fn_t)_cubec_declaration_slice_init,
+    .dispose = (class_dispose_fn_t)_cubec_declaration_slice_dispose,
+    .clone = (class_clone_fn_t)_cubec_declaration_slice_clone,
+    .move = (class_move_fn_t)_cubec_declaration_slice_move,
 };
 
 /**
@@ -129,7 +129,7 @@ node_t read_declaration_slice(context_t ctx, vec_t tokens, size_t *position,
     goto onerror;
   }
 
-  node = allocator_create(allocator, &g_cubec_declaration_slice_type,
+  node = allocator_create(allocator, &g_cubec_declaration_slice_class,
                           &(cubec_declaration_slice_init_t){
                               .type = type,
                               .is_const = is_const,
@@ -160,7 +160,7 @@ node_t create_declaration_slice(context_t ctx, location_t loc, node_t base,
   allocator_t alloc = ctx->allocator;
   cubec_declaration_slice_init_t init = {
       .type = base, .is_const = is_const, .is_volatile = is_volatile};
-  return (node_t)allocator_create(alloc, &g_cubec_declaration_slice_type,
+  return (node_t)allocator_create(alloc, &g_cubec_declaration_slice_class,
                                   &init);
 }
 

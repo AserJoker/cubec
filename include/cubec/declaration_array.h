@@ -2,7 +2,7 @@
 #define _H_CUBEC_CUBEC_DECLARATION_ARRAY_
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "cubec/declaration.h"
 #include "engine/context.h"
@@ -18,7 +18,7 @@ struct _cubec_declaration_array_t {
 };
 typedef struct _cubec_declaration_array_t *cubec_declaration_array_t;
 
-extern type_t g_cubec_declaration_array_type;
+extern class_t g_cubec_declaration_array_class;
 
 struct _cubec_declaration_array_init_t {
   location_t location;

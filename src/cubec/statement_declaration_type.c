@@ -19,7 +19,7 @@ static void _cubec_statement_declaration_type_init(
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->is_export = init->is_export;
   self->is_builtin = init->is_builtin;
   self->name = init->name;
@@ -34,13 +34,13 @@ static void _cubec_statement_declaration_type_dispose(
   allocator_free(allocator, &self->type_value);
   allocator_free(allocator, &self->params);
   allocator_free(allocator, &self->name);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_declaration_type_clone(
     cubec_statement_declaration_type_t self, allocator_t allocator,
     cubec_statement_declaration_type_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->is_builtin = another->is_builtin;
   self->name = alloc_clone(allocator, another->name);
@@ -53,7 +53,7 @@ static void _cubec_statement_declaration_type_clone(
 static void _cubec_statement_declaration_type_move(
     cubec_statement_declaration_type_t self, allocator_t allocator,
     cubec_statement_declaration_type_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->is_builtin = another->is_builtin;
   self->name = alloc_move(allocator, another->name);
@@ -63,13 +63,13 @@ static void _cubec_statement_declaration_type_move(
   return;
 }
 
-type_t g_cubec_statement_decltype = {
+class_t g_cubec_statement_decltype = {
     .name = "cubec.cubec.statement_declaration_type",
     .size = sizeof(struct _cubec_statement_declaration_type_t),
-    .init = (type_init_fn_t)_cubec_statement_declaration_type_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_declaration_type_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_declaration_type_clone,
-    .move = (type_move_fn_t)_cubec_statement_declaration_type_move,
+    .init = (class_init_fn_t)_cubec_statement_declaration_type_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_declaration_type_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_declaration_type_clone,
+    .move = (class_move_fn_t)_cubec_statement_declaration_type_move,
 };
 
 /**
@@ -108,7 +108,7 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
         break;
       if (!decorators) {
         decorators =
-            allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+            allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
       }
       vec_push(decorators, dec);
     }

@@ -52,13 +52,13 @@ static void _strmap_init(strmap_t self, allocator_t allocator,
   self->allocator = allocator;
   vec_init_t keys_init = {.auto_dispose = true};
   vec_init_t values_init = {.auto_dispose = self->value_auto_dispose};
-  self->keys = allocator_create(allocator, &g_vec_type, &keys_init);
-  self->values = allocator_create(allocator, &g_vec_type, &values_init);
+  self->keys = allocator_create(allocator, &g_vec_class, &keys_init);
+  self->values = allocator_create(allocator, &g_vec_class, &values_init);
   self->index_type = STRMAP_INDEX_HASH;
   for (size_t i = 0; i < DEFAULT_BUCKET_COUNT; i++) {
     list_init_t list_init = {.auto_dispose = true};
     self->index.buckets[i] =
-        allocator_create(allocator, &g_list_type, &list_init);
+        allocator_create(allocator, &g_list_class, &list_init);
   }
 }
 
@@ -134,13 +134,13 @@ static void _strmap_clone(strmap_t self, allocator_t allocator,
   self->allocator = allocator;
   vec_init_t keys_init = {.auto_dispose = true};
   vec_init_t values_init = {.auto_dispose = another->value_auto_dispose};
-  self->keys = allocator_create(allocator, &g_vec_type, &keys_init);
-  self->values = allocator_create(allocator, &g_vec_type, &values_init);
+  self->keys = allocator_create(allocator, &g_vec_class, &keys_init);
+  self->values = allocator_create(allocator, &g_vec_class, &values_init);
   self->index_type = STRMAP_INDEX_HASH;
   for (size_t i = 0; i < DEFAULT_BUCKET_COUNT; i++) {
     list_init_t list_init = {.auto_dispose = true};
     self->index.buckets[i] =
-        allocator_create(allocator, &g_list_type, &list_init);
+        allocator_create(allocator, &g_list_class, &list_init);
   }
 
   size_t size = vec_get_size(another->keys);
@@ -162,24 +162,24 @@ static void _strmap_move(strmap_t self, allocator_t allocator,
   self->index = another->index;
 
   another->keys =
-      allocator_create(allocator, &g_vec_type, &(vec_init_t){false});
+      allocator_create(allocator, &g_vec_class, &(vec_init_t){false});
   another->values =
-      allocator_create(allocator, &g_vec_type, &(vec_init_t){false});
+      allocator_create(allocator, &g_vec_class, &(vec_init_t){false});
   another->index_type = STRMAP_INDEX_HASH;
   for (size_t i = 0; i < DEFAULT_BUCKET_COUNT; i++) {
     list_init_t list_init = {.auto_dispose = true};
     another->index.buckets[i] =
-        allocator_create(allocator, &g_list_type, &list_init);
+        allocator_create(allocator, &g_list_class, &list_init);
   }
 }
 
-type_t g_strmap_type = {
+class_t g_strmap_class = {
     .size = sizeof(struct _strmap_t),
     .name = "cubec.core.strmap",
-    .init = (type_init_fn_t)_strmap_init,
-    .dispose = (type_dispose_fn_t)_strmap_dispose,
-    .clone = (type_clone_fn_t)_strmap_clone,
-    .move = (type_move_fn_t)_strmap_move,
+    .init = (class_init_fn_t)_strmap_init,
+    .dispose = (class_dispose_fn_t)_strmap_dispose,
+    .clone = (class_clone_fn_t)_strmap_clone,
+    .move = (class_move_fn_t)_strmap_move,
 };
 
 /* ===== index entry creation ===== */
@@ -203,7 +203,7 @@ static void convert_to_rbtree(strmap_t self) {
     buckets[i] = self->index.buckets[i];
   }
 
-  self->index.rbtree = allocator_create(self->allocator, &g_rbtree_type, &init);
+  self->index.rbtree = allocator_create(self->allocator, &g_rbtree_class, &init);
 
   for (size_t i = 0; i < DEFAULT_BUCKET_COUNT; i++) {
     list_t bucket = buckets[i];
@@ -250,7 +250,7 @@ void *strmap_insert(strmap_t self, const char *key, void *value) {
   /* create string_t key object */
   string_init_t key_init = {.str = key};
   string_t key_obj =
-      allocator_create(self->allocator, &g_string_type, &key_init);
+      allocator_create(self->allocator, &g_string_class, &key_init);
 
   size_t index = vec_get_size(self->keys);
   vec_push(self->keys, key_obj);

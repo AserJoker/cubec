@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_CORE_MAP_
 #define _H_CUBEC_CORE_MAP_
-#include "core/type.h"
+#include "core/class.h"
 #include <stddef.h>
 #include <stdbool.h>
 #ifdef __cplusplus
@@ -34,7 +34,7 @@ struct _map_iter_t {
 };
 
 /** @brief Virtual table for map_t. */
-extern type_t g_map_type;
+extern class_t g_map_class;
 
 /** @brief Get the number of entries. */
 size_t map_get_size(map_t self);

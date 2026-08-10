@@ -22,7 +22,7 @@ _cubec_function_argument_init(cubec_function_argument_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->identifier = init->identifier;
   self->type = init->type;
   self->is_rest = init->is_rest;
@@ -32,13 +32,13 @@ static void _cubec_function_argument_dispose(cubec_function_argument_t self,
                                              allocator_t allocator) {
   allocator_free(allocator, &self->type);
   allocator_free(allocator, &self->identifier);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_function_argument_clone(cubec_function_argument_t self,
                                            allocator_t allocator,
                                            cubec_function_argument_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->identifier = alloc_clone(allocator, another->identifier);
   self->type = another->type ? alloc_clone(allocator, another->type) : NULL;
   self->is_rest = another->is_rest;
@@ -47,19 +47,19 @@ static void _cubec_function_argument_clone(cubec_function_argument_t self,
 static void _cubec_function_argument_move(cubec_function_argument_t self,
                                           allocator_t allocator,
                                           cubec_function_argument_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->identifier = alloc_move(allocator, another->identifier);
   self->type = another->type ? alloc_move(allocator, another->type) : NULL;
   self->is_rest = another->is_rest;
 }
 
-type_t g_cubec_function_argument_type = {
+class_t g_cubec_function_argument_class = {
     .name = "cubec.cubec.function_argument",
     .size = sizeof(struct _cubec_function_argument_t),
-    .init = (type_init_fn_t)_cubec_function_argument_init,
-    .dispose = (type_dispose_fn_t)_cubec_function_argument_dispose,
-    .clone = (type_clone_fn_t)_cubec_function_argument_clone,
-    .move = (type_move_fn_t)_cubec_function_argument_move,
+    .init = (class_init_fn_t)_cubec_function_argument_init,
+    .dispose = (class_dispose_fn_t)_cubec_function_argument_dispose,
+    .clone = (class_clone_fn_t)_cubec_function_argument_clone,
+    .move = (class_move_fn_t)_cubec_function_argument_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -129,7 +129,7 @@ node_t read_function_argument(context_t ctx, vec_t tokens, size_t *position,
 
   /* 6. Create node */
   cubec_function_argument_t arg = NULL;
-  arg = allocator_create(allocator, &g_cubec_function_argument_type,
+  arg = allocator_create(allocator, &g_cubec_function_argument_class,
                          &(cubec_function_argument_init_t){
                              .location = loc,
                              .identifier = identifier,
@@ -161,7 +161,7 @@ node_t create_function_argument(context_t ctx, location_t loc, const char *name,
       .identifier = name_node,
       .type = type,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_function_argument_type,
+  return (node_t)allocator_create(alloc, &g_cubec_function_argument_class,
                                   &init);
 }
 

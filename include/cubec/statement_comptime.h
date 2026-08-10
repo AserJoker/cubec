@@ -3,7 +3,7 @@
 #include "engine/context.h"
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
 #ifdef __cplusplus
@@ -25,7 +25,7 @@ struct _cubec_statement_comptime_if_t {
 };
 typedef struct _cubec_statement_comptime_if_t *cubec_statement_comptime_if_t;
 
-extern type_t g_cubec_statement_comptime_if_type;
+extern class_t g_cubec_statement_comptime_if_class;
 
 struct _cubec_statement_comptime_if_init_t {
   location_t location;
@@ -54,7 +54,7 @@ struct _cubec_statement_comptime_foreach_t {
 };
 typedef struct _cubec_statement_comptime_foreach_t *cubec_statement_comptime_foreach_t;
 
-extern type_t g_cubec_statement_comptime_foreach_type;
+extern class_t g_cubec_statement_comptime_foreach_class;
 
 struct _cubec_statement_comptime_foreach_init_t {
   location_t location;

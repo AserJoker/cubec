@@ -3,7 +3,7 @@
 #include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -46,7 +46,7 @@ struct _cubec_statement_declaration_type_t {
 typedef struct _cubec_statement_declaration_type_t
     *cubec_statement_declaration_type_t;
 
-extern type_t g_cubec_statement_decltype;
+extern class_t g_cubec_statement_decltype;
 
 struct _cubec_statement_declaration_type_init_t {
   location_t location;

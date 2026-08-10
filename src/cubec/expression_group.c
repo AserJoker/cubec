@@ -20,37 +20,37 @@ static void _cubec_expression_group_init(cubec_expression_group_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->inner = init->inner;
 }
 
 static void _cubec_expression_group_dispose(cubec_expression_group_t self,
                                             allocator_t allocator) {
   allocator_free(allocator, &self->inner);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_expression_group_clone(cubec_expression_group_t self,
                                           allocator_t allocator,
                                           cubec_expression_group_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->inner = alloc_clone(allocator, another->inner);
 }
 
 static void _cubec_expression_group_move(cubec_expression_group_t self,
                                          allocator_t allocator,
                                          cubec_expression_group_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->inner = alloc_move(allocator, another->inner);
 }
 
-type_t g_cubec_expression_group_type = {
+class_t g_cubec_expression_group_class = {
     .name = "cubec.cubec.expression_group",
     .size = sizeof(struct _cubec_expression_group_t),
-    .init = (type_init_fn_t)_cubec_expression_group_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_group_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_group_clone,
-    .move = (type_move_fn_t)_cubec_expression_group_move,
+    .init = (class_init_fn_t)_cubec_expression_group_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_group_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_group_clone,
+    .move = (class_move_fn_t)_cubec_expression_group_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -90,7 +90,7 @@ node_t read_expression_group(context_t ctx, vec_t tokens, size_t *position,
   }
   current++;
 
-  node = allocator_create(allocator, &g_cubec_expression_group_type,
+  node = allocator_create(allocator, &g_cubec_expression_group_class,
                           &(cubec_expression_group_init_t){
                               .inner = inner,
                           });
@@ -116,7 +116,7 @@ onerror:
 node_t create_expression_group(context_t ctx, location_t loc, node_t inner) {
   allocator_t alloc = ctx->allocator;
   cubec_expression_group_init_t init = {.inner = inner};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_group_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_expression_group_class, &init);
 }
 
 void emit_expression_group(emit_context_t ctx, node_t node) {

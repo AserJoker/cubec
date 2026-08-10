@@ -8,33 +8,33 @@ static void _cubec_literal_nil_init(cubec_literal_nil_t self,
                                     cubec_literal_init_t *init) {
   if (!init)
     return;
-  g_cubec_literal_type.init(&self->super, allocator, init);
+  g_cubec_literal_class.init(&self->super, allocator, init);
 }
 
 static void _cubec_literal_nil_dispose(cubec_literal_nil_t self,
                                        allocator_t allocator) {
-  g_cubec_literal_type.dispose(&self->super, allocator);
+  g_cubec_literal_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_literal_nil_clone(cubec_literal_nil_t self,
                                      allocator_t allocator,
                                      cubec_literal_nil_t another) {
-  g_cubec_literal_type.clone(&self->super, allocator, &another->super);
+  g_cubec_literal_class.clone(&self->super, allocator, &another->super);
 }
 
 static void _cubec_literal_nil_move(cubec_literal_nil_t self,
                                     allocator_t allocator,
                                     cubec_literal_nil_t another) {
-  g_cubec_literal_type.move(&self->super, allocator, &another->super);
+  g_cubec_literal_class.move(&self->super, allocator, &another->super);
 }
 
-type_t g_cubec_literal_nil_type = {
+class_t g_cubec_literal_nil_class = {
     .name = "cubec.cubec.literal_nil",
     .size = sizeof(struct _cubec_literal_nil_t),
-    .init = (type_init_fn_t)_cubec_literal_nil_init,
-    .dispose = (type_dispose_fn_t)_cubec_literal_nil_dispose,
-    .clone = (type_clone_fn_t)_cubec_literal_nil_clone,
-    .move = (type_move_fn_t)_cubec_literal_nil_move,
+    .init = (class_init_fn_t)_cubec_literal_nil_init,
+    .dispose = (class_dispose_fn_t)_cubec_literal_nil_dispose,
+    .clone = (class_clone_fn_t)_cubec_literal_nil_clone,
+    .move = (class_move_fn_t)_cubec_literal_nil_move,
 };
 
 node_t read_literal_nil(context_t ctx, vec_t tokens, size_t *position,
@@ -57,7 +57,7 @@ node_t read_literal_nil(context_t ctx, vec_t tokens, size_t *position,
   init.location = loc;
 
   cubec_literal_nil_t node =
-      allocator_create(allocator, &g_cubec_literal_nil_type, &init);
+      allocator_create(allocator, &g_cubec_literal_nil_class, &init);
   *position = current;
   return (node_t)node;
 }
@@ -66,7 +66,7 @@ node_t create_literal_nil(context_t ctx, location_t loc) {
   allocator_t alloc = ctx->allocator;
   cubec_literal_init_t init = {
       .kind = CUBEC_NODE_LITERAL_NIL, .location = loc, .parent = NULL};
-  return (node_t)allocator_create(alloc, &g_cubec_literal_nil_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_literal_nil_class, &init);
 }
 
 void emit_literal_nil(emit_context_t ctx, node_t node) {

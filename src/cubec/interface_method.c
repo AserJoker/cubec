@@ -23,7 +23,7 @@ static void _cubec_interface_method_init(cubec_interface_method_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->name = init->name;
   self->generic_params = init->generic_params;
   self->arguments = init->arguments;
@@ -36,13 +36,13 @@ static void _cubec_interface_method_dispose(cubec_interface_method_t self,
   allocator_free(allocator, &self->arguments);
   allocator_free(allocator, &self->generic_params);
   allocator_free(allocator, &self->name);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_interface_method_clone(cubec_interface_method_t self,
                                           allocator_t allocator,
                                           cubec_interface_method_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->name = alloc_clone(allocator, another->name);
   self->generic_params = another->generic_params
                              ? alloc_clone(allocator, another->generic_params)
@@ -57,7 +57,7 @@ static void _cubec_interface_method_clone(cubec_interface_method_t self,
 static void _cubec_interface_method_move(cubec_interface_method_t self,
                                          allocator_t allocator,
                                          cubec_interface_method_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->name = alloc_move(allocator, another->name);
   self->generic_params = another->generic_params
                              ? alloc_move(allocator, another->generic_params)
@@ -68,13 +68,13 @@ static void _cubec_interface_method_move(cubec_interface_method_t self,
   return;
 }
 
-type_t g_cubec_interface_method_type = {
+class_t g_cubec_interface_method_class = {
     .name = "cubec.cubec.interface_method",
     .size = sizeof(struct _cubec_interface_method_t),
-    .init = (type_init_fn_t)_cubec_interface_method_init,
-    .dispose = (type_dispose_fn_t)_cubec_interface_method_dispose,
-    .clone = (type_clone_fn_t)_cubec_interface_method_clone,
-    .move = (type_move_fn_t)_cubec_interface_method_move,
+    .init = (class_init_fn_t)_cubec_interface_method_init,
+    .dispose = (class_dispose_fn_t)_cubec_interface_method_dispose,
+    .clone = (class_clone_fn_t)_cubec_interface_method_clone,
+    .move = (class_move_fn_t)_cubec_interface_method_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -143,7 +143,7 @@ node_t read_interface_method(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 5. Parse parameter list */
-  arguments = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+  arguments = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, ")")) {
     node_t arg = read_function_argument(ctx, tokens, &current, filename);
     if (!arg) {
@@ -195,7 +195,7 @@ node_t read_interface_method(context_t ctx, vec_t tokens, size_t *position,
       .arguments = arguments,
       .return_type = return_type,
   };
-  node = allocator_create(allocator, &g_cubec_interface_method_type, &init);
+  node = allocator_create(allocator, &g_cubec_interface_method_class, &init);
   if (!node)
     goto cleanup;
   *position = current;
@@ -231,7 +231,7 @@ node_t create_interface_method(context_t ctx, location_t loc, const char *name,
       .arguments = args,
       .return_type = return_type,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_interface_method_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_interface_method_class, &init);
 }
 
 void emit_interface_method(emit_context_t ctx, node_t node) {

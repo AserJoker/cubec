@@ -22,7 +22,7 @@ static void _cubec_expression_slice_init(cubec_expression_slice_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
 
   self->host = init->host;
   self->start = init->start;
@@ -34,13 +34,13 @@ static void _cubec_expression_slice_dispose(cubec_expression_slice_t self,
   allocator_free(allocator, &self->host);
   allocator_free(allocator, &self->start);
   allocator_free(allocator, &self->length);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_expression_slice_clone(cubec_expression_slice_t self,
                                           allocator_t allocator,
                                           cubec_expression_slice_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->host = alloc_clone(allocator, another->host);
   self->start = alloc_clone(allocator, another->start);
   self->length = alloc_clone(allocator, another->length);
@@ -55,7 +55,7 @@ cleanup:
 static void _cubec_expression_slice_move(cubec_expression_slice_t self,
                                          allocator_t allocator,
                                          cubec_expression_slice_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->host = alloc_move(allocator, another->host);
   self->start = alloc_move(allocator, another->start);
   self->length = alloc_move(allocator, another->length);
@@ -67,13 +67,13 @@ cleanup:
   allocator_free(allocator, &self->host);
 }
 
-type_t g_cubec_expression_slice_type = {
+class_t g_cubec_expression_slice_class = {
     .name = "cubec.cubec.expression_slice",
     .size = sizeof(struct _cubec_expression_slice_t),
-    .init = (type_init_fn_t)_cubec_expression_slice_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_slice_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_slice_clone,
-    .move = (type_move_fn_t)_cubec_expression_slice_move,
+    .init = (class_init_fn_t)_cubec_expression_slice_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_slice_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_slice_clone,
+    .move = (class_move_fn_t)_cubec_expression_slice_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -201,7 +201,7 @@ node_t read_expression_slice(context_t ctx, vec_t tokens, size_t *position,
   }
   current++;
 
-  node = allocator_create(allocator, &g_cubec_expression_slice_type,
+  node = allocator_create(allocator, &g_cubec_expression_slice_class,
                           &(cubec_expression_slice_init_t){
                               .host = host,
                               .start = start,
@@ -242,7 +242,7 @@ node_t create_expression_slice(context_t ctx, location_t loc, node_t host,
   allocator_t alloc = ctx->allocator;
   cubec_expression_slice_init_t init = {
       .host = host, .start = start, .length = length};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_slice_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_expression_slice_class, &init);
 }
 
 /* --------------------------------------------------------------------------

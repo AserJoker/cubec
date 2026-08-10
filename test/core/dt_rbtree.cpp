@@ -11,7 +11,7 @@ protected:
 };
 
 TEST_F(dt_rbtree, create_and_empty) {
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, NULL);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, NULL);
   ASSERT_NE(tree, nullptr);
   EXPECT_EQ(rbtree_get_size(tree), 0);
   allocator_free(allocator, &tree);
@@ -19,10 +19,10 @@ TEST_F(dt_rbtree, create_and_empty) {
 
 TEST_F(dt_rbtree, insert_and_find) {
   rbtree_init_t init = {.auto_dispose = true};
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &init);
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t node3 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, &init);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t node3 = (node_t)allocator_create(allocator, &g_node_class, NULL);
 
   rbtree_insert(tree, alloc_get_id(node1), node1);
   rbtree_insert(tree, alloc_get_id(node2), node2);
@@ -46,9 +46,9 @@ TEST_F(dt_rbtree, insert_and_find) {
 
 TEST_F(dt_rbtree, find_nonexistent) {
   rbtree_init_t init = {.auto_dispose = true};
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &init);
-  node_t node = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t nonexistent = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, &init);
+  node_t node = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t nonexistent = (node_t)allocator_create(allocator, &g_node_class, NULL);
   rbtree_insert(tree, alloc_get_id(node), node);
   void *found = rbtree_find(tree, alloc_get_id(nonexistent));
   EXPECT_EQ(found, nullptr);
@@ -58,9 +58,9 @@ TEST_F(dt_rbtree, find_nonexistent) {
 
 TEST_F(dt_rbtree, insert_duplicate_key) {
   rbtree_init_t init = {.auto_dispose = true};
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &init);
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, &init);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, NULL);
 
   rbtree_insert(tree, alloc_get_id(node1), node1);
   EXPECT_EQ(rbtree_get_size(tree), 1);
@@ -79,10 +79,10 @@ TEST_F(dt_rbtree, insert_duplicate_key) {
 
 TEST_F(dt_rbtree, Remove) {
   rbtree_init_t init = {.auto_dispose = true};
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &init);
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t node3 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, &init);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t node3 = (node_t)allocator_create(allocator, &g_node_class, NULL);
 
   rbtree_insert(tree, alloc_get_id(node1), node1);
   rbtree_insert(tree, alloc_get_id(node2), node2);
@@ -104,9 +104,9 @@ TEST_F(dt_rbtree, Remove) {
 
 TEST_F(dt_rbtree, remove_nonexistent) {
   rbtree_init_t init = {.auto_dispose = true};
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &init);
-  node_t node = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t nonexistent = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, &init);
+  node_t node = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t nonexistent = (node_t)allocator_create(allocator, &g_node_class, NULL);
 
   rbtree_insert(tree, alloc_get_id(node), node);
   size_t result = rbtree_remove(tree, alloc_get_id(nonexistent));
@@ -118,10 +118,10 @@ TEST_F(dt_rbtree, remove_nonexistent) {
 
 TEST_F(dt_rbtree, Clear) {
   rbtree_init_t init = {.auto_dispose = true};
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &init);
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t node3 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, &init);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t node3 = (node_t)allocator_create(allocator, &g_node_class, NULL);
 
   rbtree_insert(tree, alloc_get_id(node1), node1);
   rbtree_insert(tree, alloc_get_id(node2), node2);
@@ -136,7 +136,7 @@ TEST_F(dt_rbtree, Clear) {
 }
 
 TEST_F(dt_rbtree, iterator_empty) {
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, NULL);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, NULL);
   rbtree_iter_t iter = rbtree_iter_first(tree);
   void *node = rbtree_iter_next(&iter);
   EXPECT_EQ(node, nullptr);
@@ -145,8 +145,8 @@ TEST_F(dt_rbtree, iterator_empty) {
 
 TEST_F(dt_rbtree, iterator_single) {
   rbtree_init_t init = {.auto_dispose = true};
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &init);
-  node_t node = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, &init);
+  node_t node = (node_t)allocator_create(allocator, &g_node_class, NULL);
   rbtree_insert(tree, alloc_get_id(node), node);
 
   rbtree_iter_t iter = rbtree_iter_first(tree);
@@ -162,10 +162,10 @@ TEST_F(dt_rbtree, iterator_single) {
 
 TEST_F(dt_rbtree, iterator_inorder) {
   rbtree_init_t init = {.auto_dispose = true};
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &init);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, &init);
   node_t nodes[5];
   for (int i = 0; i < 5; i++) {
-    nodes[i] = (node_t)allocator_create(allocator, &g_node_type, NULL);
+    nodes[i] = (node_t)allocator_create(allocator, &g_node_class, NULL);
   }
 
   // Insert in random order
@@ -190,10 +190,10 @@ TEST_F(dt_rbtree, iterator_inorder) {
 
 TEST_F(dt_rbtree, iterator_after_remove) {
   rbtree_init_t init = {.auto_dispose = true};
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &init);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, &init);
   node_t nodes[3];
   for (int i = 0; i < 3; i++) {
-    nodes[i] = (node_t)allocator_create(allocator, &g_node_type, NULL);
+    nodes[i] = (node_t)allocator_create(allocator, &g_node_class, NULL);
   }
 
   rbtree_insert(tree, alloc_get_id(nodes[0]), nodes[0]);
@@ -218,10 +218,10 @@ TEST_F(dt_rbtree, iterator_after_remove) {
 TEST_F(dt_rbtree, auto_dispose) {
   allocator_t allocator2 = create_allocator(NULL, NULL);
   rbtree_init_t init = {.auto_dispose = true};
-  rbtree_t tree = (rbtree_t)allocator_create(allocator2, &g_rbtree_type, &init);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator2, &g_rbtree_class, &init);
 
-  node_t node1 = (node_t)allocator_create(allocator2, &g_node_type, NULL);
-  node_t node2 = (node_t)allocator_create(allocator2, &g_node_type, NULL);
+  node_t node1 = (node_t)allocator_create(allocator2, &g_node_class, NULL);
+  node_t node2 = (node_t)allocator_create(allocator2, &g_node_class, NULL);
 
   rbtree_insert(tree, alloc_get_id(node1), node1);
   rbtree_insert(tree, alloc_get_id(node2), node2);
@@ -233,9 +233,9 @@ TEST_F(dt_rbtree, auto_dispose) {
 
 TEST_F(dt_rbtree, clone_with_value_clone) {
   rbtree_init_t init = {.auto_dispose = true};
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &init);
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, &init);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, NULL);
 
   rbtree_insert(tree, alloc_get_id(node1), node1);
   rbtree_insert(tree, alloc_get_id(node2), node2);
@@ -258,9 +258,9 @@ TEST_F(dt_rbtree, clone_with_value_clone) {
 
 TEST_F(dt_rbtree, move_with_value_move) {
   rbtree_init_t init = {.auto_dispose = true};
-  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_type, &init);
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  rbtree_t tree = (rbtree_t)allocator_create(allocator, &g_rbtree_class, &init);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, NULL);
 
   rbtree_insert(tree, alloc_get_id(node1), node1);
   rbtree_insert(tree, alloc_get_id(node2), node2);

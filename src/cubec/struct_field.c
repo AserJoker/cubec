@@ -21,7 +21,7 @@ static void _cubec_struct_field_init(cubec_struct_field_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->is_pub = init->is_pub;
   self->name = init->name;
   self->type = init->type;
@@ -31,13 +31,13 @@ static void _cubec_struct_field_dispose(cubec_struct_field_t self,
                                         allocator_t allocator) {
   allocator_free(allocator, &self->type);
   allocator_free(allocator, &self->name);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_struct_field_clone(cubec_struct_field_t self,
                                       allocator_t allocator,
                                       cubec_struct_field_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->is_pub = another->is_pub;
   self->name = alloc_clone(allocator, another->name);
   self->type = alloc_clone(allocator, another->type);
@@ -47,20 +47,20 @@ static void _cubec_struct_field_clone(cubec_struct_field_t self,
 static void _cubec_struct_field_move(cubec_struct_field_t self,
                                      allocator_t allocator,
                                      cubec_struct_field_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->is_pub = another->is_pub;
   self->name = alloc_move(allocator, another->name);
   self->type = alloc_move(allocator, another->type);
   return;
 }
 
-type_t g_cubec_struct_field_type = {
+class_t g_cubec_struct_field_class = {
     .name = "cubec.cubec.struct_field",
     .size = sizeof(struct _cubec_struct_field_t),
-    .init = (type_init_fn_t)_cubec_struct_field_init,
-    .dispose = (type_dispose_fn_t)_cubec_struct_field_dispose,
-    .clone = (type_clone_fn_t)_cubec_struct_field_clone,
-    .move = (type_move_fn_t)_cubec_struct_field_move,
+    .init = (class_init_fn_t)_cubec_struct_field_init,
+    .dispose = (class_dispose_fn_t)_cubec_struct_field_dispose,
+    .clone = (class_clone_fn_t)_cubec_struct_field_clone,
+    .move = (class_move_fn_t)_cubec_struct_field_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -149,7 +149,7 @@ node_t read_struct_field(context_t ctx, vec_t tokens, size_t *position,
       .name = name,
       .type = type_expr,
   };
-  node = allocator_create(allocator, &g_cubec_struct_field_type, &init);
+  node = allocator_create(allocator, &g_cubec_struct_field_class, &init);
   if (!node)
     goto cleanup;
   *position = current;
@@ -177,7 +177,7 @@ node_t create_struct_field(context_t ctx, location_t loc, const char *name,
       .name = name_node,
       .type = type,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_struct_field_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_struct_field_class, &init);
 }
 
 void emit_struct_field(emit_context_t ctx, node_t node) {

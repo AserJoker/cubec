@@ -11,7 +11,7 @@ protected:
 };
 
 TEST_F(dt_map, create_and_empty) {
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, NULL);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, NULL);
   ASSERT_NE(map, nullptr);
   EXPECT_EQ(map_get_size(map), 0);
   allocator_free(allocator, &map);
@@ -19,14 +19,14 @@ TEST_F(dt_map, create_and_empty) {
 
 TEST_F(dt_map, insert_and_find) {
   map_init_t map_init = {.key_auto_dispose = true,.value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &map_init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &map_init);
   node_init_t init = {.kind = 1, .location = {0}, .parent = NULL};
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t node3 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val1 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val2 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val3 = (node_t)allocator_create(allocator, &g_node_type, &init);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t node3 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val1 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val2 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val3 = (node_t)allocator_create(allocator, &g_node_class, &init);
 
   map_insert(map, node1, val1);
   map_insert(map, node2, val2);
@@ -50,11 +50,11 @@ TEST_F(dt_map, insert_and_find) {
 
 TEST_F(dt_map, find_nonexistent) {
   map_init_t map_init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &map_init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &map_init);
   node_init_t init = {.kind = 1, .location = {0}, .parent = NULL};
-  node_t node = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t nonexistent = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val = (node_t)allocator_create(allocator, &g_node_type, &init);
+  node_t node = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t nonexistent = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val = (node_t)allocator_create(allocator, &g_node_class, &init);
   map_insert(map, node, val);
   void *found = map_find(map, nonexistent);
   EXPECT_EQ(found, nullptr);
@@ -64,11 +64,11 @@ TEST_F(dt_map, find_nonexistent) {
 
 TEST_F(dt_map, insert_duplicate_key) {
   map_init_t map_init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &map_init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &map_init);
   node_init_t init = {.kind = 1, .location = {0}, .parent = NULL};
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val1 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val99 = (node_t)allocator_create(allocator, &g_node_type, &init);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val1 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val99 = (node_t)allocator_create(allocator, &g_node_class, &init);
 
   map_insert(map, node1, val1);
   EXPECT_EQ(map_get_size(map), 1);
@@ -85,14 +85,14 @@ TEST_F(dt_map, insert_duplicate_key) {
 
 TEST_F(dt_map, remove) {
   map_init_t map_init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &map_init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &map_init);
   node_init_t init = {.kind = 1, .location = {0}, .parent = NULL};
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t node3 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val1 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val2 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val3 = (node_t)allocator_create(allocator, &g_node_type, &init);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t node3 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val1 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val2 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val3 = (node_t)allocator_create(allocator, &g_node_class, &init);
 
   map_insert(map, node1, val1);
   map_insert(map, node2, val2);
@@ -112,11 +112,11 @@ TEST_F(dt_map, remove) {
 
 TEST_F(dt_map, remove_nonexistent) {
   map_init_t map_init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &map_init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &map_init);
   node_init_t init = {.kind = 1, .location = {0}, .parent = NULL};
-  node_t node = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t nonexistent = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val = (node_t)allocator_create(allocator, &g_node_type, &init);
+  node_t node = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t nonexistent = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val = (node_t)allocator_create(allocator, &g_node_class, &init);
 
   map_insert(map, node, val);
   size_t result = map_remove(map, nonexistent);
@@ -128,14 +128,14 @@ TEST_F(dt_map, remove_nonexistent) {
 
 TEST_F(dt_map, clear) {
   map_init_t map_init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &map_init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &map_init);
   node_init_t init = {.kind = 1, .location = {0}, .parent = NULL};
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t node3 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val1 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val2 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val3 = (node_t)allocator_create(allocator, &g_node_type, &init);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t node3 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val1 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val2 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val3 = (node_t)allocator_create(allocator, &g_node_class, &init);
 
   map_insert(map, node1, val1);
   map_insert(map, node2, val2);
@@ -150,7 +150,7 @@ TEST_F(dt_map, clear) {
 }
 
 TEST_F(dt_map, iterator_empty) {
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, NULL);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, NULL);
   map_iter_t iter = map_iter_first(map);
   void *value = map_iter_next(&iter);
   EXPECT_EQ(value, nullptr);
@@ -159,10 +159,10 @@ TEST_F(dt_map, iterator_empty) {
 
 TEST_F(dt_map, iterator_single) {
   map_init_t map_init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &map_init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &map_init);
   node_init_t init = {.kind = 1, .location = {0}, .parent = NULL};
-  node_t node = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val = (node_t)allocator_create(allocator, &g_node_type, &init);
+  node_t node = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val = (node_t)allocator_create(allocator, &g_node_class, &init);
   map_insert(map, node, val);
 
   map_iter_t iter = map_iter_first(map);
@@ -178,13 +178,13 @@ TEST_F(dt_map, iterator_single) {
 
 TEST_F(dt_map, iterator_multiple) {
   map_init_t map_init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &map_init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &map_init);
   node_init_t init = {.kind = 1, .location = {0}, .parent = NULL};
   node_t nodes[5];
   node_t vals[5];
   for (int i = 0; i < 5; i++) {
-    nodes[i] = (node_t)allocator_create(allocator, &g_node_type, &init);
-    vals[i] = (node_t)allocator_create(allocator, &g_node_type, &init);
+    nodes[i] = (node_t)allocator_create(allocator, &g_node_class, &init);
+    vals[i] = (node_t)allocator_create(allocator, &g_node_class, &init);
   }
 
   for (int i = 0; i < 5; i++) {
@@ -204,13 +204,13 @@ TEST_F(dt_map, iterator_multiple) {
 
 TEST_F(dt_map, iterator_after_remove) {
   map_init_t map_init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &map_init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &map_init);
   node_init_t init = {.kind = 1, .location = {0}, .parent = NULL};
   node_t nodes[3];
   node_t vals[3];
   for (int i = 0; i < 3; i++) {
-    nodes[i] = (node_t)allocator_create(allocator, &g_node_type, &init);
-    vals[i] = (node_t)allocator_create(allocator, &g_node_type, &init);
+    nodes[i] = (node_t)allocator_create(allocator, &g_node_class, &init);
+    vals[i] = (node_t)allocator_create(allocator, &g_node_class, &init);
   }
 
   map_insert(map, nodes[0], vals[0]);
@@ -233,13 +233,13 @@ TEST_F(dt_map, iterator_after_remove) {
 TEST_F(dt_map, auto_dispose) {
   allocator_t allocator2 = create_allocator(NULL, NULL);
   map_init_t init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator2, &g_map_type, &init);
+  map_t map = (map_t)allocator_create(allocator2, &g_map_class, &init);
 
   node_init_t node_init = {.kind = 1, .location = {0}, .parent = NULL};
-  node_t node1 = (node_t)allocator_create(allocator2, &g_node_type, &node_init);
-  node_t node2 = (node_t)allocator_create(allocator2, &g_node_type, &node_init);
-  node_t val1 = (node_t)allocator_create(allocator2, &g_node_type, &node_init);
-  node_t val2 = (node_t)allocator_create(allocator2, &g_node_type, &node_init);
+  node_t node1 = (node_t)allocator_create(allocator2, &g_node_class, &node_init);
+  node_t node2 = (node_t)allocator_create(allocator2, &g_node_class, &node_init);
+  node_t val1 = (node_t)allocator_create(allocator2, &g_node_class, &node_init);
+  node_t val2 = (node_t)allocator_create(allocator2, &g_node_class, &node_init);
 
   map_insert(map, node1, val1);
   map_insert(map, node2, val2);
@@ -251,12 +251,12 @@ TEST_F(dt_map, auto_dispose) {
 
 TEST_F(dt_map, clone_with_value_clone) {
   map_init_t map_init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &map_init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &map_init);
   node_init_t init = {.kind = 1, .location = {0}, .parent = NULL};
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val1 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val2 = (node_t)allocator_create(allocator, &g_node_type, &init);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val1 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val2 = (node_t)allocator_create(allocator, &g_node_class, &init);
 
   map_insert(map, node1, val1);
   map_insert(map, node2, val2);
@@ -284,12 +284,12 @@ TEST_F(dt_map, clone_with_value_clone) {
 
 TEST_F(dt_map, move_with_value_move) {
   map_init_t map_init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &map_init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &map_init);
   node_init_t init = {.kind = 1, .location = {0}, .parent = NULL};
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val1 = (node_t)allocator_create(allocator, &g_node_type, &init);
-  node_t val2 = (node_t)allocator_create(allocator, &g_node_type, &init);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val1 = (node_t)allocator_create(allocator, &g_node_class, &init);
+  node_t val2 = (node_t)allocator_create(allocator, &g_node_class, &init);
 
   map_insert(map, node1, val1);
   map_insert(map, node2, val2);
@@ -314,14 +314,14 @@ TEST_F(dt_map, move_with_value_move) {
 
 TEST_F(dt_map, threshold_list_mode) {
   map_init_t init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &init);
 
   node_init_t node_init = {.kind = 1, .location = {0}, .parent = NULL};
   node_t nodes[15];
   node_t vals[15];
   for (int i = 0; i < 15; i++) {
-    nodes[i] = (node_t)allocator_create(allocator, &g_node_type, &node_init);
-    vals[i] = (node_t)allocator_create(allocator, &g_node_type, &node_init);
+    nodes[i] = (node_t)allocator_create(allocator, &g_node_class, &node_init);
+    vals[i] = (node_t)allocator_create(allocator, &g_node_class, &node_init);
     map_insert(map, nodes[i], vals[i]);
   }
 
@@ -337,14 +337,14 @@ TEST_F(dt_map, threshold_list_mode) {
 
 TEST_F(dt_map, threshold_convert_to_rbtree) {
   map_init_t init = {.key_auto_dispose = true, .value_auto_dispose = true};
-  map_t map = (map_t)allocator_create(allocator, &g_map_type, &init);
+  map_t map = (map_t)allocator_create(allocator, &g_map_class, &init);
 
   node_init_t node_init = {.kind = 1, .location = {0}, .parent = NULL};
   node_t nodes[20];
   node_t vals[20];
   for (int i = 0; i < 20; i++) {
-    nodes[i] = (node_t)allocator_create(allocator, &g_node_type, &node_init);
-    vals[i] = (node_t)allocator_create(allocator, &g_node_type, &node_init);
+    nodes[i] = (node_t)allocator_create(allocator, &g_node_class, &node_init);
+    vals[i] = (node_t)allocator_create(allocator, &g_node_class, &node_init);
     map_insert(map, nodes[i], vals[i]);
   }
 

@@ -18,15 +18,15 @@ static void _slotmap_dispose(void *self, allocator_t allocator) {
   allocator_free(allocator, (void **)&sm->free_list);
 }
 
-type_t g_slotmap_type = {
+class_t g_slotmap_class = {
     .size = sizeof(slotmap_t),
     .name = "cubec.core.slotmap",
-    .init = (type_init_fn_t)_slotmap_init,
-    .dispose = (type_dispose_fn_t)_slotmap_dispose,
+    .init = (class_init_fn_t)_slotmap_init,
+    .dispose = (class_dispose_fn_t)_slotmap_dispose,
 };
 
 slotmap_t *slotmap_create(allocator_t allocator) {
-  return (slotmap_t *)allocator_create(allocator, &g_slotmap_type, NULL);
+  return (slotmap_t *)allocator_create(allocator, &g_slotmap_class, NULL);
 }
 
 void slotmap_dispose(slotmap_t *self) {

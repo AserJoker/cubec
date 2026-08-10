@@ -10,7 +10,7 @@ struct _alloc_chunk_t {
   alloc_chunk_t next;
   alloc_chunk_t last;
   size_t size;
-  type_t *type;
+  class_t *type;
   uint64_t id;
   uint8_t data[0];
 };
@@ -128,7 +128,7 @@ void *allocator_alloc(allocator_t self, size_t size) {
   return &chunk->data[0];
 }
 
-void *allocator_create(allocator_t self, type_t *type, void *arg) {
+void *allocator_create(allocator_t self, class_t *type, void *arg) {
   void *data = allocator_alloc(self, type->size);
   alloc_chunk_t chunk = value_get_chunk(data);
   chunk->type = type;
@@ -166,7 +166,7 @@ void _allocator_free_impl(allocator_t self, void **data) {
   self->free_fn(chunk);
   *data = NULL;
 }
-type_t *alloc_get_type(void *value) {
+class_t *alloc_get_type(void *value) {
   alloc_chunk_t chunk = value_get_chunk(value);
   return chunk->type;
 }
@@ -180,7 +180,7 @@ void *alloc_clone(allocator_t allocator, void *another) {
   if (!another) {
     return NULL;
   }
-  type_t *type = alloc_get_type(another);
+  class_t *type = alloc_get_type(another);
   if (type) {
     if (type->clone) {
       void *data = allocator_alloc(allocator, type->size);
@@ -205,7 +205,7 @@ void *alloc_move(allocator_t allocator, void *another) {
   if (!another) {
     return NULL;
   }
-  type_t *type = alloc_get_type(another);
+  class_t *type = alloc_get_type(another);
   if (type) {
     if (type->move) {
       void *data = allocator_alloc(allocator, type->size);

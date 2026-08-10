@@ -28,17 +28,17 @@ static void _module_dispose(void *self, allocator_t allocator) {
   allocator_free(mod->allocator, (void **)&mod->filename);
 }
 
-type_t g_module_type = {
+class_t g_module_class = {
     .size = sizeof(struct _module_t),
     .name = "cubec.engine.module",
-    .init = (type_init_fn_t)_module_init,
-    .dispose = (type_dispose_fn_t)_module_dispose,
+    .init = (class_init_fn_t)_module_init,
+    .dispose = (class_dispose_fn_t)_module_dispose,
 };
 
 module_t module_create(allocator_t allocator, scope_t parent_scope,
                        const char *filename, const char *source,
                        vec_t tokens, node_t program) {
-  module_t mod = (module_t)allocator_create(allocator, &g_module_type, NULL);
+  module_t mod = (module_t)allocator_create(allocator, &g_module_class, NULL);
   mod->filename = cstring_clone(allocator, filename);
   mod->source = (char *)source;
   mod->tokens = tokens;
@@ -46,7 +46,7 @@ module_t module_create(allocator_t allocator, scope_t parent_scope,
   /* scope_create already calls scope_add_child(parent_scope, scope) */
   mod->root_scope = scope_create(allocator, SCOPE_MODULE, parent_scope, mod);
   strmap_init_t sm_init = {.value_auto_dispose = false};
-  mod->exports = (strmap_t)allocator_create(allocator, &g_strmap_type, &sm_init);
+  mod->exports = (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_init);
   return mod;
 }
 

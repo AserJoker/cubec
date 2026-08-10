@@ -21,7 +21,7 @@ static void _cubec_statement_test_init(cubec_statement_test_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->name = init->name;
   self->body = init->body;
 }
@@ -30,13 +30,13 @@ static void _cubec_statement_test_dispose(cubec_statement_test_t self,
                                           allocator_t allocator) {
   allocator_free(allocator, &self->body);
   allocator_free(allocator, &self->name);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_test_clone(cubec_statement_test_t self,
                                         allocator_t allocator,
                                         cubec_statement_test_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->name = (string_t)alloc_clone(allocator, another->name);
   self->body = alloc_clone(allocator, another->body);
   return;
@@ -45,19 +45,19 @@ static void _cubec_statement_test_clone(cubec_statement_test_t self,
 static void _cubec_statement_test_move(cubec_statement_test_t self,
                                        allocator_t allocator,
                                        cubec_statement_test_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->name = (string_t)alloc_move(allocator, another->name);
   self->body = alloc_move(allocator, another->body);
   return;
 }
 
-type_t g_cubec_statement_test_type = {
+class_t g_cubec_statement_test_class = {
     .name = "cubec.cubec.statement_test",
     .size = sizeof(struct _cubec_statement_test_t),
-    .init = (type_init_fn_t)_cubec_statement_test_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_test_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_test_clone,
-    .move = (type_move_fn_t)_cubec_statement_test_move,
+    .init = (class_init_fn_t)_cubec_statement_test_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_test_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_test_clone,
+    .move = (class_move_fn_t)_cubec_statement_test_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -100,7 +100,7 @@ node_t read_statement_test(context_t ctx, vec_t tokens, size_t *position,
   if (token_get_kind(name_token) != CUBEC_TOKEN_STRING) {
     goto onerror;
   }
-  name = allocator_create(allocator, &g_string_type, NULL);
+  name = allocator_create(allocator, &g_string_class, NULL);
   string_nconcat(name, token_get_string(name_token),
                  token_get_string_length(name_token));
   current++;
@@ -125,7 +125,7 @@ node_t read_statement_test(context_t ctx, vec_t tokens, size_t *position,
       .name = name,
       .body = body,
   };
-  node = allocator_create(allocator, &g_cubec_statement_test_type, &init);
+  node = allocator_create(allocator, &g_cubec_statement_test_class, &init);
   *position = current;
   return &node->super;
 
@@ -140,10 +140,10 @@ node_t create_statement_test(context_t ctx, location_t loc, const char *name,
                              node_t body) {
   allocator_t alloc = ctx->allocator;
   string_t name_str =
-      allocator_create(alloc, &g_string_type, &(string_init_t){.str = name});
+      allocator_create(alloc, &g_string_class, &(string_init_t){.str = name});
   cubec_statement_test_init_t init = {
       .location = loc, .parent = NULL, .name = name_str, .body = body};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_test_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_statement_test_class, &init);
 }
 
 void emit_statement_test(emit_context_t ctx, node_t stmt) {

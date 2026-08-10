@@ -4,7 +4,7 @@
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "cubec/expression_binary.h"
 #include "engine/context.h"
@@ -33,7 +33,7 @@ extern "C" {
  */
 typedef cubec_expression_binary_t cubec_expression_assignment_t;
 
-extern type_t g_cubec_expression_assignment_type;
+extern class_t g_cubec_expression_assignment_class;
 
 struct _cubec_expression_assignment_init_t {
   location_t location;

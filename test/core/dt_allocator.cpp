@@ -44,7 +44,7 @@ TEST_F(dt_allocator, multiple_allocations) {
 }
 
 TEST_F(dt_allocator, allocator_create) {
-  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_type, NULL);
+  vec_t vec = (vec_t)allocator_create(allocator, &g_vec_class, NULL);
   EXPECT_NE(vec, nullptr);
   allocator_free(allocator, &vec);
 }
@@ -52,7 +52,7 @@ TEST_F(dt_allocator, allocator_create) {
 TEST_F(dt_allocator, alloc_get_type) {
   int *val = (int *)allocator_alloc(allocator, sizeof(int));
   *val = 42;
-  type_t *type = alloc_get_type(val);
+  class_t *type = alloc_get_type(val);
   EXPECT_EQ(type, nullptr);
   allocator_free(allocator, &val);
 }

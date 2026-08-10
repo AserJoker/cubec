@@ -2,7 +2,7 @@
 #define _H_CUBEC_CUBEC_PROGRAM_
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "engine/context.h"
@@ -15,7 +15,7 @@ struct _cubec_program_node_t {
   vec_t statements;
 };
 typedef struct _cubec_program_node_t *cubec_program_node_t;
-extern type_t g_cubec_program_node_type;
+extern class_t g_cubec_program_node_class;
 struct _cubec_program_node_init_t {
   location_t location;
   node_t parent;

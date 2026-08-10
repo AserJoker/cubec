@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_CORE_LIST_
 #define _H_CUBEC_CORE_LIST_
-#include "core/type.h"
+#include "core/class.h"
 #include <stddef.h>
 #ifdef __cplusplus
 extern "C" {
@@ -35,7 +35,7 @@ struct _list_iter_t {
 };
 
 /** @brief Virtual table for list_t. */
-extern type_t g_list_type;
+extern class_t g_list_class;
 
 /** @brief Get the number of elements. */
 size_t list_get_size(list_t self);

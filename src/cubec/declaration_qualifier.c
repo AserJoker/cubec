@@ -20,7 +20,7 @@ static void _cubec_declaration_qualifier_init(
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->type = init->type;
   self->is_const = init->is_const;
   self->is_volatile = init->is_volatile;
@@ -30,13 +30,13 @@ static void
 _cubec_declaration_qualifier_dispose(cubec_declaration_qualifier_t self,
                                          allocator_t allocator) {
   allocator_free(allocator, &self->type);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_declaration_qualifier_clone(
     cubec_declaration_qualifier_t self, allocator_t allocator,
     cubec_declaration_qualifier_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->type = alloc_clone(allocator, another->type);
   self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
@@ -45,19 +45,19 @@ static void _cubec_declaration_qualifier_clone(
 static void _cubec_declaration_qualifier_move(
     cubec_declaration_qualifier_t self, allocator_t allocator,
     cubec_declaration_qualifier_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->type = alloc_move(allocator, another->type);
   self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
 }
 
-type_t g_cubec_declaration_qualifier_type = {
+class_t g_cubec_declaration_qualifier_class = {
     .name = "cubec.cubec.declaration_qualifier",
     .size = sizeof(struct _cubec_declaration_qualifier_t),
-    .init = (type_init_fn_t)_cubec_declaration_qualifier_init,
-    .dispose = (type_dispose_fn_t)_cubec_declaration_qualifier_dispose,
-    .clone = (type_clone_fn_t)_cubec_declaration_qualifier_clone,
-    .move = (type_move_fn_t)_cubec_declaration_qualifier_move,
+    .init = (class_init_fn_t)_cubec_declaration_qualifier_init,
+    .dispose = (class_dispose_fn_t)_cubec_declaration_qualifier_dispose,
+    .clone = (class_clone_fn_t)_cubec_declaration_qualifier_clone,
+    .move = (class_move_fn_t)_cubec_declaration_qualifier_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -127,7 +127,7 @@ node_t read_declaration_qualifier(context_t ctx, vec_t tokens,
     loc.end = result->location.end;
     loc.filename = filename;
     result = allocator_create(
-        allocator, &g_cubec_declaration_qualifier_type,
+        allocator, &g_cubec_declaration_qualifier_class,
         &(cubec_declaration_qualifier_init_t){.location = loc,
                                                   .type = result,
                                                   .is_const = true,
@@ -137,7 +137,7 @@ node_t read_declaration_qualifier(context_t ctx, vec_t tokens,
     loc.end = result->location.end;
     loc.filename = filename;
     result = allocator_create(
-        allocator, &g_cubec_declaration_qualifier_type,
+        allocator, &g_cubec_declaration_qualifier_class,
         &(cubec_declaration_qualifier_init_t){.location = loc,
                                                   .type = result,
                                                   .is_const = false,
@@ -148,7 +148,7 @@ node_t read_declaration_qualifier(context_t ctx, vec_t tokens,
     loc.end = result->location.end;
     loc.filename = filename;
     result = allocator_create(
-        allocator, &g_cubec_declaration_qualifier_type,
+        allocator, &g_cubec_declaration_qualifier_class,
         &(cubec_declaration_qualifier_init_t){.location = loc,
                                                   .type = result,
                                                   .is_const = true,
@@ -158,7 +158,7 @@ node_t read_declaration_qualifier(context_t ctx, vec_t tokens,
     loc.end = result->location.end;
     loc.filename = filename;
     result = allocator_create(
-        allocator, &g_cubec_declaration_qualifier_type,
+        allocator, &g_cubec_declaration_qualifier_class,
         &(cubec_declaration_qualifier_init_t){.location = loc,
                                                   .type = result,
                                                   .is_const = false,
@@ -188,7 +188,7 @@ node_t create_declaration_qualifier(context_t ctx, location_t loc,
                                                  .is_const = is_const,
                                                  .is_volatile = is_volatile};
   return (node_t)allocator_create(
-      alloc, &g_cubec_declaration_qualifier_type, &init);
+      alloc, &g_cubec_declaration_qualifier_class, &init);
 }
 
 /* --------------------------------------------------------------------------

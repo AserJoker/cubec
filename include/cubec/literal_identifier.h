@@ -3,7 +3,7 @@
 #include "core/location.h"
 #include "core/node.h"
 #include "core/string.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "cubec/literal.h"
@@ -19,7 +19,7 @@ struct _cubec_literal_identifier_t {
 };
 typedef struct _cubec_literal_identifier_t *cubec_literal_identifier_t;
 
-extern type_t g_cubec_literal_identifier_type;
+extern class_t g_cubec_literal_identifier_class;
 
 struct _cubec_literal_identifier_init_t {
   location_t location;

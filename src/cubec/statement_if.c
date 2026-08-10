@@ -20,7 +20,7 @@ static void _cubec_statement_if_init(cubec_statement_if_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->condition = init->condition;
   self->then_branch = init->then_branch;
   self->else_branch = init->else_branch;
@@ -31,13 +31,13 @@ static void _cubec_statement_if_dispose(cubec_statement_if_t self,
   allocator_free(allocator, &self->else_branch);
   allocator_free(allocator, &self->then_branch);
   allocator_free(allocator, &self->condition);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_if_clone(cubec_statement_if_t self,
                                       allocator_t allocator,
                                       cubec_statement_if_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->condition = alloc_clone(allocator, another->condition);
   self->then_branch = alloc_clone(allocator, another->then_branch);
   self->else_branch = another->else_branch
@@ -49,7 +49,7 @@ static void _cubec_statement_if_clone(cubec_statement_if_t self,
 static void _cubec_statement_if_move(cubec_statement_if_t self,
                                      allocator_t allocator,
                                      cubec_statement_if_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->condition = alloc_move(allocator, another->condition);
   self->then_branch = alloc_move(allocator, another->then_branch);
   self->else_branch =
@@ -57,13 +57,13 @@ static void _cubec_statement_if_move(cubec_statement_if_t self,
   return;
 }
 
-type_t g_cubec_statement_if_type = {
+class_t g_cubec_statement_if_class = {
     .name = "cubec.cubec.statement_if",
     .size = sizeof(struct _cubec_statement_if_t),
-    .init = (type_init_fn_t)_cubec_statement_if_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_if_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_if_clone,
-    .move = (type_move_fn_t)_cubec_statement_if_move,
+    .init = (class_init_fn_t)_cubec_statement_if_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_if_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_if_clone,
+    .move = (class_move_fn_t)_cubec_statement_if_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -184,7 +184,7 @@ node_t read_statement_if(context_t ctx, vec_t tokens, size_t *position,
       .then_branch = then_branch,
       .else_branch = else_branch,
   };
-  node = allocator_create(allocator, &g_cubec_statement_if_type, &init);
+  node = allocator_create(allocator, &g_cubec_statement_if_class, &init);
   *position = current;
   return &node->super;
 
@@ -204,7 +204,7 @@ node_t create_statement_if(context_t ctx, location_t loc, node_t cond,
                                     .condition = cond,
                                     .then_branch = then_branch,
                                     .else_branch = else_branch};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_if_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_statement_if_class, &init);
 }
 
 void emit_statement_if(emit_context_t ctx, node_t node) {

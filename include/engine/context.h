@@ -3,7 +3,7 @@
 #include "core/allocator.h"
 #include "core/diagnostic.h"
 #include "core/strmap.h"
-#include "core/type.h"
+#include "core/class.h"
 #include <stddef.h>
 #include <stdint.h>
 #ifdef __cplusplus
@@ -27,7 +27,7 @@ struct context {
 
 typedef struct context *context_t;
 
-extern type_t g_context_type;
+extern class_t g_context_class;
 
 context_t context_create(allocator_t allocator);
 

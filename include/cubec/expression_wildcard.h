@@ -24,7 +24,7 @@ struct _cubec_expression_wildcard_t {
 };
 typedef struct _cubec_expression_wildcard_t *cubec_expression_wildcard_t;
 
-extern type_t g_cubec_expression_wildcard_type;
+extern class_t g_cubec_expression_wildcard_class;
 
 struct _cubec_expression_wildcard_init_t {
   location_t location;

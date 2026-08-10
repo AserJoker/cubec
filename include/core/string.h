@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 #include "core/allocator.h"
-#include "core/type.h"
+#include "core/class.h"
 #include <stdint.h>
 /**
  * @brief Dynamic null-terminated string (like std::string).
@@ -20,7 +20,7 @@ struct _string_init_t {
 };
 
 /** @brief Virtual table for string_t. */
-extern type_t g_string_type;
+extern class_t g_string_class;
 
 /**
  * @brief Get the null-terminated C string content.

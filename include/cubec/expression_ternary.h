@@ -2,7 +2,7 @@
 #define _H_CUBEC_CUBEC_EXPRESSION_TERNARY_
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/emit_context.h"
 #include "cubec/expression.h"
 #include "engine/context.h"
@@ -19,7 +19,7 @@ struct _cubec_expression_ternary_t {
 };
 typedef struct _cubec_expression_ternary_t *cubec_expression_ternary_t;
 
-extern type_t g_cubec_expression_ternary_type;
+extern class_t g_cubec_expression_ternary_class;
 
 struct _cubec_expression_ternary_init_t {
   location_t location;

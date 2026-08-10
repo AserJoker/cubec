@@ -2,7 +2,7 @@
 #define _H_CUBEC_CORE_NODE_
 #include "core/allocator.h"
 #include "core/location.h"
-#include "core/type.h"
+#include "core/class.h"
 #include <stdbool.h>
 #include <stddef.h>
 #ifdef __cplusplus
@@ -22,7 +22,7 @@ struct _node_t {
 };
 
 /** @brief Virtual table for node_t. */
-extern type_t g_node_type;
+extern class_t g_node_class;
 
 /** @brief Initialization parameters for node_t (passed to allocator_create). */
 struct _node_init_t {

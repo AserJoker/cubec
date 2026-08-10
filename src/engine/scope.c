@@ -9,13 +9,13 @@ static void _scope_init(void *self, allocator_t allocator, void *arg) {
   scope->parent = NULL;
 
   vec_init_t vec_init = {.auto_dispose = false};
-  scope->children = (vec_t)allocator_create(allocator, &g_vec_type, &vec_init);
+  scope->children = (vec_t)allocator_create(allocator, &g_vec_class, &vec_init);
 
   strmap_init_t sm_init = {.value_auto_dispose = true};
-  scope->names = (strmap_t)allocator_create(allocator, &g_strmap_type, &sm_init);
+  scope->names = (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_init);
 
   vec_init_t defer_init = {.auto_dispose = false};
-  scope->defers = (vec_t)allocator_create(allocator, &g_vec_type, &defer_init);
+  scope->defers = (vec_t)allocator_create(allocator, &g_vec_class, &defer_init);
 
   scope->owner = NULL;
 }
@@ -35,16 +35,16 @@ static void _scope_dispose(void *self, allocator_t allocator) {
   allocator_free(allocator, &scope->children);
 }
 
-type_t g_scope_type = {
+class_t g_scope_class = {
     .size = sizeof(struct _scope_t),
     .name = "cubec.engine.scope",
-    .init = (type_init_fn_t)_scope_init,
-    .dispose = (type_dispose_fn_t)_scope_dispose,
+    .init = (class_init_fn_t)_scope_init,
+    .dispose = (class_dispose_fn_t)_scope_dispose,
 };
 
 scope_t scope_create(allocator_t allocator, enum scope_kind kind,
                      struct _scope_t *parent, void *owner) {
-  scope_t scope = (scope_t)allocator_create(allocator, &g_scope_type, NULL);
+  scope_t scope = (scope_t)allocator_create(allocator, &g_scope_class, NULL);
   scope->kind = kind;
   scope->parent = parent;
   scope->owner = owner;

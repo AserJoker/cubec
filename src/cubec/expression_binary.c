@@ -24,7 +24,7 @@ _cubec_expression_binary_init(cubec_expression_binary_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->left = init->left;
   self->right = init->right;
   self->opt = init->opt;
@@ -35,13 +35,13 @@ static void _cubec_expression_binary_dispose(cubec_expression_binary_t self,
   allocator_free(allocator, &self->left);
   allocator_free(allocator, &self->right);
   allocator_free(allocator, &self->opt);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_expression_binary_clone(cubec_expression_binary_t self,
                                            allocator_t allocator,
                                            cubec_expression_binary_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->left = alloc_clone(allocator, another->left);
   self->right = alloc_clone(allocator, another->right);
   self->opt = (string_t)alloc_clone(allocator, another->opt);
@@ -56,7 +56,7 @@ cleanup:
 static void _cubec_expression_binary_move(cubec_expression_binary_t self,
                                           allocator_t allocator,
                                           cubec_expression_binary_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->left = alloc_move(allocator, another->left);
   self->right = alloc_move(allocator, another->right);
   self->opt = (string_t)alloc_move(allocator, another->opt);
@@ -68,13 +68,13 @@ cleanup:
   allocator_free(allocator, &self->left);
 }
 
-type_t g_cubec_expression_binary_type = {
+class_t g_cubec_expression_binary_class = {
     .name = "cubec.cubec.expression_binary",
     .size = sizeof(struct _cubec_expression_binary_t),
-    .init = (type_init_fn_t)_cubec_expression_binary_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_binary_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_binary_clone,
-    .move = (type_move_fn_t)_cubec_expression_binary_move,
+    .init = (class_init_fn_t)_cubec_expression_binary_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_binary_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_binary_clone,
+    .move = (class_move_fn_t)_cubec_expression_binary_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -130,7 +130,7 @@ node_t read_expression_prefix(context_t ctx, vec_t tokens, size_t *position,
   /* Build operator string */
   const char *op_text = token_get_string(op_token);
   size_t op_len = token_get_string_length(op_token);
-  opt = allocator_create(allocator, &g_string_type, NULL);
+  opt = allocator_create(allocator, &g_string_class, NULL);
   string_nconcat(opt, op_text, op_len);
 
   /* Parse operand via read_unary (prefix unary binds tighter than binary) */
@@ -143,7 +143,7 @@ node_t read_expression_prefix(context_t ctx, vec_t tokens, size_t *position,
     goto onerror;
   }
 
-  node = allocator_create(allocator, &g_cubec_expression_binary_type,
+  node = allocator_create(allocator, &g_cubec_expression_binary_class,
                           &(cubec_expression_binary_init_t){
                               .left = NULL,
                               .right = right,
@@ -222,7 +222,7 @@ static cubec_expression_binary_t make_binary_node(context_t ctx, node_t left,
                                                   const char *filename) {
   allocator_t allocator = ctx->allocator;
   cubec_expression_binary_t node =
-      allocator_create(allocator, &g_cubec_expression_binary_type,
+      allocator_create(allocator, &g_cubec_expression_binary_class,
                        &(cubec_expression_binary_init_t){
                            .left = left,
                            .right = right,
@@ -280,7 +280,7 @@ static node_t read_binary_rhs(context_t ctx, vec_t tokens, size_t *position,
     /* Build operator string */
     const char *op_text = token_get_string(op_token);
     size_t op_len = token_get_string_length(op_token);
-    string_t opt = allocator_create(allocator, &g_string_type, NULL);
+    string_t opt = allocator_create(allocator, &g_string_class, NULL);
     string_nconcat(opt, op_text, op_len);
 
     /* Parse right operand via read_unary (no binary yet) */
@@ -330,13 +330,13 @@ node_t create_expression_binary(context_t ctx, location_t loc, const char *op,
                                 node_t left, node_t right) {
   allocator_t alloc = ctx->allocator;
   string_t op_str =
-      allocator_create(alloc, &g_string_type, &(string_init_t){.str = op});
+      allocator_create(alloc, &g_string_class, &(string_init_t){.str = op});
   cubec_expression_binary_init_t init = {.location = loc,
                                          .parent = NULL,
                                          .left = left,
                                          .right = right,
                                          .opt = op_str};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_binary_type,
+  return (node_t)allocator_create(alloc, &g_cubec_expression_binary_class,
                                   &init);
 }
 

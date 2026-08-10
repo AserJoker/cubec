@@ -20,38 +20,38 @@ static void _cubec_decorator_init(cubec_decorator_t self, allocator_t allocator,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->expression = init->expression;
 }
 
 static void _cubec_decorator_dispose(cubec_decorator_t self,
                                      allocator_t allocator) {
   allocator_free(allocator, &self->expression);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_decorator_clone(cubec_decorator_t self,
                                    allocator_t allocator,
                                    cubec_decorator_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->expression = alloc_clone(allocator, another->expression);
   return;
 }
 
 static void _cubec_decorator_move(cubec_decorator_t self, allocator_t allocator,
                                   cubec_decorator_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->expression = alloc_move(allocator, another->expression);
   return;
 }
 
-type_t g_cubec_decorator_type = {
+class_t g_cubec_decorator_class = {
     .name = "cubec.cubec.decorator",
     .size = sizeof(struct _cubec_decorator_t),
-    .init = (type_init_fn_t)_cubec_decorator_init,
-    .dispose = (type_dispose_fn_t)_cubec_decorator_dispose,
-    .clone = (type_clone_fn_t)_cubec_decorator_clone,
-    .move = (type_move_fn_t)_cubec_decorator_move,
+    .init = (class_init_fn_t)_cubec_decorator_init,
+    .dispose = (class_dispose_fn_t)_cubec_decorator_dispose,
+    .clone = (class_clone_fn_t)_cubec_decorator_clone,
+    .move = (class_move_fn_t)_cubec_decorator_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -87,7 +87,7 @@ static node_t _read_keyword_as_identifier(context_t ctx, vec_t tokens,
       .value = NULL,
   };
   cubec_literal_identifier_t id_node =
-      allocator_create(allocator, &g_cubec_literal_identifier_type, &id_init);
+      allocator_create(allocator, &g_cubec_literal_identifier_class, &id_init);
   if (!id_node)
     goto onerror;
   const char *token_str = token_get_string(tok);
@@ -178,7 +178,7 @@ node_t read_decorator(context_t ctx, vec_t tokens, size_t *position,
       .parent = NULL,
       .expression = expression,
   };
-  node = allocator_create(allocator, &g_cubec_decorator_type, &init);
+  node = allocator_create(allocator, &g_cubec_decorator_class, &init);
   if (!node)
     goto onerror;
   *position = current;
@@ -200,7 +200,7 @@ onerror:
 node_t create_decorator(context_t ctx, location_t loc, node_t expr) {
   allocator_t alloc = ctx->allocator;
   cubec_decorator_init_t init = {.expression = expr};
-  return (node_t)allocator_create(alloc, &g_cubec_decorator_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_decorator_class, &init);
 }
 
 void emit_decorator(emit_context_t ctx, node_t node) {

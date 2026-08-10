@@ -24,37 +24,37 @@ _cubec_expression_assert_init(cubec_expression_assert_t self,
   super_init.location = init->location;
   super_init.parent = init->parent;
 
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->host = init->host;
 }
 
 static void _cubec_expression_assert_dispose(cubec_expression_assert_t self,
                                              allocator_t allocator) {
   allocator_free(allocator, &self->host);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_expression_assert_clone(cubec_expression_assert_t self,
                                            allocator_t allocator,
                                            cubec_expression_assert_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->host = alloc_clone(allocator, another->host);
 }
 
 static void _cubec_expression_assert_move(cubec_expression_assert_t self,
                                           allocator_t allocator,
                                           cubec_expression_assert_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->host = alloc_move(allocator, another->host);
 }
 
-type_t g_cubec_expression_assert_type = {
+class_t g_cubec_expression_assert_class = {
     .name = "cubec.cubec.expression_assert",
     .size = sizeof(struct _cubec_expression_assert_t),
-    .init = (type_init_fn_t)_cubec_expression_assert_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_assert_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_assert_clone,
-    .move = (type_move_fn_t)_cubec_expression_assert_move,
+    .init = (class_init_fn_t)_cubec_expression_assert_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_assert_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_assert_clone,
+    .move = (class_move_fn_t)_cubec_expression_assert_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -89,7 +89,7 @@ node_t read_expression_assert(context_t ctx, vec_t tokens, size_t *position,
   start_location.filename = filename;
   current++;
 
-  node = allocator_create(allocator, &g_cubec_expression_assert_type,
+  node = allocator_create(allocator, &g_cubec_expression_assert_class,
                           &(cubec_expression_assert_init_t){
                               .host = host,
                           });
@@ -116,7 +116,7 @@ node_t create_expression_assert(context_t ctx, location_t loc, node_t host) {
       .parent = NULL,
       .host = host,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_expression_assert_type,
+  return (node_t)allocator_create(alloc, &g_cubec_expression_assert_class,
                                   &init);
 }
 

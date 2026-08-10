@@ -25,7 +25,7 @@ _cubec_expression_assignment_init(cubec_expression_assignment_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
 
   self->left = init->lvalue;
   self->right = init->rvalue;
@@ -38,14 +38,14 @@ _cubec_expression_assignment_dispose(cubec_expression_assignment_t self,
   allocator_free(allocator, &self->left);
   allocator_free(allocator, &self->right);
   allocator_free(allocator, &self->opt);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void
 _cubec_expression_assignment_clone(cubec_expression_assignment_t self,
                                    allocator_t allocator,
                                    cubec_expression_assignment_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->left = alloc_clone(allocator, another->left);
   self->right = alloc_clone(allocator, another->right);
   self->opt = (string_t)alloc_clone(allocator, another->opt);
@@ -62,19 +62,19 @@ static void
 _cubec_expression_assignment_move(cubec_expression_assignment_t self,
                                   allocator_t allocator,
                                   cubec_expression_assignment_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->left = alloc_move(allocator, another->left);
   self->right = alloc_move(allocator, another->right);
   self->opt = (string_t)alloc_move(allocator, another->opt);
 }
 
-type_t g_cubec_expression_assignment_type = {
+class_t g_cubec_expression_assignment_class = {
     .name = "cubec.cubec.expression_assignment",
     .size = sizeof(struct _cubec_expression_binary_t),
-    .init = (type_init_fn_t)_cubec_expression_assignment_init,
-    .dispose = (type_dispose_fn_t)_cubec_expression_assignment_dispose,
-    .clone = (type_clone_fn_t)_cubec_expression_assignment_clone,
-    .move = (type_move_fn_t)_cubec_expression_assignment_move,
+    .init = (class_init_fn_t)_cubec_expression_assignment_init,
+    .dispose = (class_dispose_fn_t)_cubec_expression_assignment_dispose,
+    .clone = (class_clone_fn_t)_cubec_expression_assignment_clone,
+    .move = (class_move_fn_t)_cubec_expression_assignment_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -138,7 +138,7 @@ node_t read_expression_assignment(context_t ctx, vec_t tokens, size_t *position,
   op_token = tok;
   const char *op_text = token_get_string(op_token);
   size_t op_len = token_get_string_length(op_token);
-  opt = allocator_create(allocator, &g_string_type, NULL);
+  opt = allocator_create(allocator, &g_string_class, NULL);
   string_nconcat(opt, op_text, op_len);
   current++; /* consume operator */
 
@@ -156,7 +156,7 @@ node_t read_expression_assignment(context_t ctx, vec_t tokens, size_t *position,
   }
 
   /* Create assignment node */
-  node = allocator_create(allocator, &g_cubec_expression_assignment_type,
+  node = allocator_create(allocator, &g_cubec_expression_assignment_class,
                           &(cubec_expression_assignment_init_t){
                               .lvalue = lvalue,
                               .rvalue = rvalue,
@@ -193,13 +193,13 @@ node_t create_expression_assignment(context_t ctx, location_t loc,
                                     node_t rvalue) {
   allocator_t alloc = ctx->allocator;
   string_t op_str =
-      allocator_create(alloc, &g_string_type, &(string_init_t){.str = op});
+      allocator_create(alloc, &g_string_class, &(string_init_t){.str = op});
   cubec_expression_assignment_init_t init = {.location = loc,
                                              .parent = NULL,
                                              .lvalue = lvalue,
                                              .rvalue = rvalue,
                                              .opt = op_str};
-  return (node_t)allocator_create(alloc, &g_cubec_expression_assignment_type,
+  return (node_t)allocator_create(alloc, &g_cubec_expression_assignment_class,
                                   &init);
 }
 

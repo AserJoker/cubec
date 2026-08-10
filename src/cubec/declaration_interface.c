@@ -26,7 +26,7 @@ static void _cubec_declaration_interface_init(
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->generic_params = init->generic_params;
   self->members = init->members;
 }
@@ -36,13 +36,13 @@ _cubec_declaration_interface_dispose(cubec_declaration_interface_t self,
                                          allocator_t allocator) {
   allocator_free(allocator, &self->members);
   allocator_free(allocator, &self->generic_params);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_declaration_interface_clone(
     cubec_declaration_interface_t self, allocator_t allocator,
     cubec_declaration_interface_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
                              ? alloc_clone(allocator, another->generic_params)
                              : NULL;
@@ -53,7 +53,7 @@ static void _cubec_declaration_interface_clone(
 static void _cubec_declaration_interface_move(
     cubec_declaration_interface_t self, allocator_t allocator,
     cubec_declaration_interface_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
                              ? alloc_move(allocator, another->generic_params)
                              : NULL;
@@ -61,13 +61,13 @@ static void _cubec_declaration_interface_move(
   return;
 }
 
-type_t g_cubec_declaration_interface_type = {
+class_t g_cubec_declaration_interface_class = {
     .name = "cubec.cubec.declaration_interface",
     .size = sizeof(struct _cubec_declaration_interface_t),
-    .init = (type_init_fn_t)_cubec_declaration_interface_init,
-    .dispose = (type_dispose_fn_t)_cubec_declaration_interface_dispose,
-    .clone = (type_clone_fn_t)_cubec_declaration_interface_clone,
-    .move = (type_move_fn_t)_cubec_declaration_interface_move,
+    .init = (class_init_fn_t)_cubec_declaration_interface_init,
+    .dispose = (class_dispose_fn_t)_cubec_declaration_interface_dispose,
+    .clone = (class_clone_fn_t)_cubec_declaration_interface_clone,
+    .move = (class_move_fn_t)_cubec_declaration_interface_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -198,7 +198,7 @@ node_t read_declaration_interface_body(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* 3. Parse members */
-  members = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+  members = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, "}")) {
     node_t member = NULL;
 
@@ -243,7 +243,7 @@ node_t read_declaration_interface_body(context_t ctx, vec_t tokens,
       .generic_params = generic_params,
       .members = members,
   };
-  node = allocator_create(allocator, &g_cubec_declaration_interface_type,
+  node = allocator_create(allocator, &g_cubec_declaration_interface_class,
                           &init);
   *position = current;
   return (node_t)&node->super;
@@ -306,7 +306,7 @@ node_t create_declaration_interface(context_t ctx, location_t loc,
       .members = members,
   };
   return (node_t)allocator_create(alloc,
-                                  &g_cubec_declaration_interface_type,
+                                  &g_cubec_declaration_interface_class,
                                   &init);
 }
 

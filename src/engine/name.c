@@ -13,15 +13,15 @@ static void _name_dispose(void *self, allocator_t allocator) {
   (void)allocator;
 }
 
-type_t g_name_type = {
+class_t g_name_class = {
     .size = sizeof(struct _name_t),
     .name = "cubec.engine.name",
-    .init = (type_init_fn_t)_name_init,
-    .dispose = (type_dispose_fn_t)_name_dispose,
+    .init = (class_init_fn_t)_name_init,
+    .dispose = (class_dispose_fn_t)_name_dispose,
 };
 
 name_t name_create(allocator_t allocator, enum name_kind kind, void *ref) {
-  name_t name = (name_t)allocator_create(allocator, &g_name_type, NULL);
+  name_t name = (name_t)allocator_create(allocator, &g_name_class, NULL);
   name->kind = kind;
   name->ref = ref;
   return name;

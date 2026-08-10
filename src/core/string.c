@@ -52,13 +52,13 @@ static void _string_dispose(string_t self, allocator_t allocator) {
   self->capacity = 0;
 }
 
-type_t g_string_type = {
+class_t g_string_class = {
     .name = "cubec.core.string",
     .size = sizeof(struct _string_t),
-    .init = (type_init_fn_t)_string_init,
-    .dispose = (type_dispose_fn_t)_string_dispose,
-    .clone = (type_clone_fn_t)_string_clone,
-    .move = (type_move_fn_t)_string_move,
+    .init = (class_init_fn_t)_string_init,
+    .dispose = (class_dispose_fn_t)_string_dispose,
+    .clone = (class_clone_fn_t)_string_clone,
+    .move = (class_move_fn_t)_string_move,
 };
 const char *string_get(string_t self) { return self->data; }
 size_t string_set(string_t self, const char *str) {

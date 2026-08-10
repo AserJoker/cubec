@@ -19,7 +19,7 @@ static void _cubec_enum_item_init(cubec_enum_item_t self, allocator_t allocator,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->name = init->name;
   self->type = init->type;
   self->value = init->value;
@@ -30,13 +30,13 @@ static void _cubec_enum_item_dispose(cubec_enum_item_t self,
   allocator_free(allocator, &self->value);
   allocator_free(allocator, &self->type);
   allocator_free(allocator, &self->name);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_enum_item_clone(cubec_enum_item_t self,
                                    allocator_t allocator,
                                    cubec_enum_item_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->name = alloc_clone(allocator, another->name);
   self->type = another->type ? alloc_clone(allocator, another->type) : NULL;
   self->value = another->value ? alloc_clone(allocator, another->value) : NULL;
@@ -45,20 +45,20 @@ static void _cubec_enum_item_clone(cubec_enum_item_t self,
 
 static void _cubec_enum_item_move(cubec_enum_item_t self, allocator_t allocator,
                                   cubec_enum_item_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->name = alloc_move(allocator, another->name);
   self->type = another->type ? alloc_move(allocator, another->type) : NULL;
   self->value = another->value ? alloc_move(allocator, another->value) : NULL;
   return;
 }
 
-type_t g_cubec_enum_item_type = {
+class_t g_cubec_enum_item_class = {
     .name = "cubec.cubec.enum_item",
     .size = sizeof(struct _cubec_enum_item_t),
-    .init = (type_init_fn_t)_cubec_enum_item_init,
-    .dispose = (type_dispose_fn_t)_cubec_enum_item_dispose,
-    .clone = (type_clone_fn_t)_cubec_enum_item_clone,
-    .move = (type_move_fn_t)_cubec_enum_item_move,
+    .init = (class_init_fn_t)_cubec_enum_item_init,
+    .dispose = (class_dispose_fn_t)_cubec_enum_item_dispose,
+    .clone = (class_clone_fn_t)_cubec_enum_item_clone,
+    .move = (class_move_fn_t)_cubec_enum_item_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -125,7 +125,7 @@ node_t read_enum_item(context_t ctx, vec_t tokens, size_t *position,
       .type = type_expr,
       .value = value_expr,
   };
-  node = allocator_create(allocator, &g_cubec_enum_item_type, &init);
+  node = allocator_create(allocator, &g_cubec_enum_item_class, &init);
   if (!node)
     goto cleanup;
   *position = current;
@@ -152,7 +152,7 @@ node_t create_enum_item(context_t ctx, location_t loc, const char *name,
                                  .name = (node_t)name_node,
                                  .type = type,
                                  .value = value};
-  return (node_t)allocator_create(alloc, &g_cubec_enum_item_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_enum_item_class, &init);
 }
 
 void emit_enum_item(emit_context_t ctx, node_t node) {

@@ -2,7 +2,7 @@
 #define _H_CUBEC_CUBEC_EXPRESSION_
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "cubec/node.h"
@@ -18,7 +18,7 @@ struct _cubec_expression_t {
 };
 typedef struct _cubec_expression_t *cubec_expression_t;
 
-extern type_t g_cubec_expression_type;
+extern class_t g_cubec_expression_class;
 
 struct _cubec_expression_init_t {
   location_t location;

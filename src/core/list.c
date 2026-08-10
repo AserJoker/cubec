@@ -51,13 +51,13 @@ static void _list_dispose(list_t self, allocator_t allocator) {
   list_clear(self);
 }
 
-type_t g_list_type = {
+class_t g_list_class = {
     .size = sizeof(struct _list_t),
     .name = "cubec.core.list",
-    .init = (type_init_fn_t)_list_init,
-    .dispose = (type_dispose_fn_t)_list_dispose,
-    .clone = (type_clone_fn_t)_list_clone,
-    .move = (type_move_fn_t)_list_move,
+    .init = (class_init_fn_t)_list_init,
+    .dispose = (class_dispose_fn_t)_list_dispose,
+    .clone = (class_clone_fn_t)_list_clone,
+    .move = (class_move_fn_t)_list_move,
 };
 
 static list_node_t *create_list_node(allocator_t allocator, void *data) {

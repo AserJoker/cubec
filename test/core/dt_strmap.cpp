@@ -11,7 +11,7 @@ protected:
 };
 
 TEST_F(dt_strmap, create_and_empty) {
-  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_type, NULL);
+  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_class, NULL);
   ASSERT_NE(map, nullptr);
   EXPECT_EQ(strmap_get_size(map), 0);
   EXPECT_EQ(strmap_find(map, "any"), nullptr);
@@ -19,9 +19,9 @@ TEST_F(dt_strmap, create_and_empty) {
 }
 
 TEST_F(dt_strmap, insert_and_find) {
-  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_type, NULL);
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_class, NULL);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, NULL);
 
   strmap_insert(map, "alpha", node1);
   strmap_insert(map, "beta", node2);
@@ -37,9 +37,9 @@ TEST_F(dt_strmap, insert_and_find) {
 }
 
 TEST_F(dt_strmap, insert_replace) {
-  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_type, NULL);
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t node2 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_class, NULL);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t node2 = (node_t)allocator_create(allocator, &g_node_class, NULL);
 
   strmap_insert(map, "key", node1);
   void *old = strmap_insert(map, "key", node2);
@@ -53,8 +53,8 @@ TEST_F(dt_strmap, insert_replace) {
 }
 
 TEST_F(dt_strmap, remove) {
-  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_type, NULL);
-  node_t node1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_class, NULL);
+  node_t node1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
 
   strmap_insert(map, "alpha", node1);
   EXPECT_EQ(strmap_get_size(map), 1);
@@ -73,14 +73,14 @@ TEST_F(dt_strmap, remove) {
 }
 
 TEST_F(dt_strmap, many_insertions) {
-  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_type, NULL);
+  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_class, NULL);
   const int N = 100;
   node_t *nodes = (node_t *)allocator_alloc(allocator, sizeof(node_t) * N);
 
   for (int i = 0; i < N; i++) {
     char key[16];
     snprintf(key, sizeof(key), "key_%03d", i);
-    nodes[i] = (node_t)allocator_create(allocator, &g_node_type, NULL);
+    nodes[i] = (node_t)allocator_create(allocator, &g_node_class, NULL);
     strmap_insert(map, key, nodes[i]);
   }
   EXPECT_EQ(strmap_get_size(map), (size_t)N);
@@ -99,10 +99,10 @@ TEST_F(dt_strmap, many_insertions) {
 }
 
 TEST_F(dt_strmap, iterator) {
-  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_type, NULL);
-  node_t n1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t n2 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t n3 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_class, NULL);
+  node_t n1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t n2 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t n3 = (node_t)allocator_create(allocator, &g_node_class, NULL);
 
   strmap_insert(map, "banana", n1);
   strmap_insert(map, "apple", n2);
@@ -131,9 +131,9 @@ TEST_F(dt_strmap, iterator) {
 
 TEST_F(dt_strmap, clear) {
   strmap_init_t init = {.value_auto_dispose = true};
-  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_type, &init);
-  node_t n1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
-  node_t n2 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_class, &init);
+  node_t n1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
+  node_t n2 = (node_t)allocator_create(allocator, &g_node_class, NULL);
   strmap_insert(map, "a", n1);
   strmap_insert(map, "b", n2);
   EXPECT_EQ(strmap_get_size(map), 2);
@@ -147,8 +147,8 @@ TEST_F(dt_strmap, clear) {
 
 TEST_F(dt_strmap, clone) {
   strmap_init_t init = {.value_auto_dispose = true};
-  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_type, &init);
-  node_t n1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_class, &init);
+  node_t n1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
   strmap_insert(map, "key", n1);
 
   strmap_t copy = (strmap_t)alloc_clone(allocator, map);
@@ -162,8 +162,8 @@ TEST_F(dt_strmap, clone) {
 
 TEST_F(dt_strmap, move) {
   strmap_init_t init = {.value_auto_dispose = true};
-  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_type, &init);
-  node_t n1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
+  strmap_t map = (strmap_t)allocator_create(allocator, &g_strmap_class, &init);
+  node_t n1 = (node_t)allocator_create(allocator, &g_node_class, NULL);
   strmap_insert(map, "key", n1);
 
   strmap_t moved = (strmap_t)alloc_move(allocator, map);

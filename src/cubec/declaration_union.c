@@ -26,7 +26,7 @@ _cubec_declaration_union_init(cubec_declaration_union_t self,
   };
   super_init.location = init->location;
   super_init.parent = init->parent;
-  g_cubec_expression_type.init(&self->super, allocator, &super_init);
+  g_cubec_expression_class.init(&self->super, allocator, &super_init);
   self->generic_params = init->generic_params;
   self->members = init->members;
 }
@@ -36,14 +36,14 @@ _cubec_declaration_union_dispose(cubec_declaration_union_t self,
                                      allocator_t allocator) {
   allocator_free(allocator, &self->members);
   allocator_free(allocator, &self->generic_params);
-  g_cubec_expression_type.dispose(&self->super, allocator);
+  g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
 static void
 _cubec_declaration_union_clone(cubec_declaration_union_t self,
                                    allocator_t allocator,
                                    cubec_declaration_union_t another) {
-  g_cubec_expression_type.clone(&self->super, allocator, &another->super);
+  g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
                              ? alloc_clone(allocator, another->generic_params)
                              : NULL;
@@ -55,7 +55,7 @@ static void
 _cubec_declaration_union_move(cubec_declaration_union_t self,
                                   allocator_t allocator,
                                   cubec_declaration_union_t another) {
-  g_cubec_expression_type.move(&self->super, allocator, &another->super);
+  g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
                              ? alloc_move(allocator, another->generic_params)
                              : NULL;
@@ -63,13 +63,13 @@ _cubec_declaration_union_move(cubec_declaration_union_t self,
   return;
 }
 
-type_t g_cubec_declaration_union_type = {
+class_t g_cubec_declaration_union_class = {
     .name = "cubec.cubec.declaration_union",
     .size = sizeof(struct _cubec_declaration_union_t),
-    .init = (type_init_fn_t)_cubec_declaration_union_init,
-    .dispose = (type_dispose_fn_t)_cubec_declaration_union_dispose,
-    .clone = (type_clone_fn_t)_cubec_declaration_union_clone,
-    .move = (type_move_fn_t)_cubec_declaration_union_move,
+    .init = (class_init_fn_t)_cubec_declaration_union_init,
+    .dispose = (class_dispose_fn_t)_cubec_declaration_union_dispose,
+    .clone = (class_clone_fn_t)_cubec_declaration_union_clone,
+    .move = (class_move_fn_t)_cubec_declaration_union_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -125,7 +125,7 @@ node_t read_declaration_union_body(context_t ctx, vec_t tokens,
     if (!iface_expr) {
       goto cleanup;
     }
-    implements = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+    implements = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
     vec_push(implements, iface_expr);
     skip_whitespace(tokens, &current);
     while (_is_symbol(tokens, current, ",")) {
@@ -151,7 +151,7 @@ node_t read_declaration_union_body(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* 3. Parse members — union fields, spread, statements (func/var/type/etc.) */
-  members = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+  members = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, "}")) {
     node_t member = NULL;
 
@@ -219,7 +219,7 @@ node_t read_declaration_union_body(context_t ctx, vec_t tokens,
       .members = members,
   };
   node =
-      allocator_create(allocator, &g_cubec_declaration_union_type, &init);
+      allocator_create(allocator, &g_cubec_declaration_union_class, &init);
   if (out_implements)
     *out_implements = implements;
   *position = current;
@@ -286,7 +286,7 @@ node_t create_declaration_union(context_t ctx, location_t loc,
       .generic_params = generic_params,
       .members = members,
   };
-  return (node_t)allocator_create(alloc, &g_cubec_declaration_union_type,
+  return (node_t)allocator_create(alloc, &g_cubec_declaration_union_class,
                                   &init);
 }
 

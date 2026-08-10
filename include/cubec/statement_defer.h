@@ -3,7 +3,7 @@
 #include "core/emit_context.h"
 #include "core/location.h"
 #include "core/node.h"
-#include "core/type.h"
+#include "core/class.h"
 #include "core/vec.h"
 #include "engine/context.h"
 #ifdef __cplusplus
@@ -34,7 +34,7 @@ struct _cubec_statement_defer_t {
 };
 typedef struct _cubec_statement_defer_t *cubec_statement_defer_t;
 
-extern type_t g_cubec_statement_defer_type;
+extern class_t g_cubec_statement_defer_class;
 
 struct _cubec_statement_defer_init_t {
   location_t location;

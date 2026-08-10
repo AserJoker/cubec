@@ -1,7 +1,7 @@
 #ifndef _H_CUBEC_CORE_SLOTMAP_
 #define _H_CUBEC_CORE_SLOTMAP_
 #include "core/allocator.h"
-#include "core/type.h"
+#include "core/class.h"
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +50,7 @@ typedef struct slotmap_t {
 } slotmap_t;
 
 /** @brief Type descriptor for allocator_create. */
-extern type_t g_slotmap_type;
+extern class_t g_slotmap_class;
 
 /**
  * @brief Create a SlotMap via allocator.

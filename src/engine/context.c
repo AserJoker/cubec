@@ -16,11 +16,11 @@ static void _context_init(void *self, allocator_t allocator, void *arg) {
 
   diagnostic_list_init_t dl_init = {.output = NULL};
   ctx->diagnostics = (diagnostic_list_t)allocator_create(
-      allocator, &g_diagnostic_list_type, &dl_init);
+      allocator, &g_diagnostic_list_class, &dl_init);
 
   strmap_init_t sm_init = {.value_auto_dispose = true};
   ctx->modules =
-      (strmap_t)allocator_create(allocator, &g_strmap_type, &sm_init);
+      (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_init);
 
   ctx->global_scope = scope_create(allocator, SCOPE_GLOBAL, NULL, NULL);
   ctx->root_scope = NULL;
@@ -35,15 +35,15 @@ static void _context_dispose(void *self, allocator_t allocator) {
   allocator_free(allocator, &ctx->diagnostics);
 }
 
-type_t g_context_type = {
+class_t g_context_class = {
     .size = sizeof(struct context),
     .name = "cubec.engine.context",
-    .init = (type_init_fn_t)_context_init,
-    .dispose = (type_dispose_fn_t)_context_dispose,
+    .init = (class_init_fn_t)_context_init,
+    .dispose = (class_dispose_fn_t)_context_dispose,
 };
 
 context_t context_create(allocator_t allocator) {
-  return (context_t)allocator_create(allocator, &g_context_type, NULL);
+  return (context_t)allocator_create(allocator, &g_context_class, NULL);
 }
 
 void context_dispose(context_t ctx) {

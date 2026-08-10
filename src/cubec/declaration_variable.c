@@ -17,7 +17,7 @@ _cubec_declaration_variable_init(cubec_declaration_variable_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_cubec_declaration_type.init(&self->super, allocator, &super_init);
+  g_cubec_declaration_class.init(&self->super, allocator, &super_init);
   self->identifier = init->identifier;
   self->type = init->type;
   self->expression = init->expression;
@@ -29,14 +29,14 @@ _cubec_declaration_variable_dispose(cubec_declaration_variable_t self,
   allocator_free(allocator, &self->identifier);
   allocator_free(allocator, &self->type);
   allocator_free(allocator, &self->expression);
-  g_cubec_declaration_type.dispose(&self->super, allocator);
+  g_cubec_declaration_class.dispose(&self->super, allocator);
 }
 
 static void
 _cubec_declaration_variable_clone(cubec_declaration_variable_t self,
                                   allocator_t allocator,
                                   cubec_declaration_variable_t another) {
-  g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
+  g_cubec_declaration_class.clone(&self->super, allocator, &another->super);
   self->identifier = alloc_clone(allocator, another->identifier);
   self->type = alloc_clone(allocator, another->type);
   self->expression = alloc_clone(allocator, another->expression);
@@ -52,7 +52,7 @@ static void
 _cubec_declaration_variable_move(cubec_declaration_variable_t self,
                                  allocator_t allocator,
                                  cubec_declaration_variable_t another) {
-  g_cubec_declaration_type.move(&self->super, allocator, &another->super);
+  g_cubec_declaration_class.move(&self->super, allocator, &another->super);
   self->identifier = alloc_move(allocator, another->identifier);
   self->type = alloc_move(allocator, another->type);
   self->expression = alloc_move(allocator, another->expression);
@@ -64,13 +64,13 @@ cleanup:
   allocator_free(allocator, &self->expression);
 }
 
-type_t g_cubec_declaration_variable_type = {
+class_t g_cubec_declaration_variable_class = {
     .name = "cubec.cubec.declaration_variable",
     .size = sizeof(struct _cubec_declaration_variable_t),
-    .init = (type_init_fn_t)_cubec_declaration_variable_init,
-    .dispose = (type_dispose_fn_t)_cubec_declaration_variable_dispose,
-    .clone = (type_clone_fn_t)_cubec_declaration_variable_clone,
-    .move = (type_move_fn_t)_cubec_declaration_variable_move,
+    .init = (class_init_fn_t)_cubec_declaration_variable_init,
+    .dispose = (class_dispose_fn_t)_cubec_declaration_variable_dispose,
+    .clone = (class_clone_fn_t)_cubec_declaration_variable_clone,
+    .move = (class_move_fn_t)_cubec_declaration_variable_move,
 };
 
 node_t read_declaration_variable(context_t ctx, vec_t tokens, size_t *position,
@@ -133,7 +133,7 @@ node_t read_declaration_variable(context_t ctx, vec_t tokens, size_t *position,
   }
 
   /* Create the variable declarator node */
-  node = allocator_create(allocator, &g_cubec_declaration_variable_type,
+  node = allocator_create(allocator, &g_cubec_declaration_variable_class,
                           &(cubec_declaration_variable_init_t){
                               .identifier = identifier,
                               .type = type,
@@ -182,7 +182,7 @@ node_t create_declaration_variable(context_t ctx, location_t loc,
                                             .identifier = identifier,
                                             .type = type,
                                             .expression = expression};
-  return (node_t)allocator_create(alloc, &g_cubec_declaration_variable_type,
+  return (node_t)allocator_create(alloc, &g_cubec_declaration_variable_class,
                                   &init);
 }
 

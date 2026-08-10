@@ -18,20 +18,20 @@ static void _cubec_statement_block_init(cubec_statement_block_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_node_type.init(&self->super, allocator, &super_init);
+  g_node_class.init(&self->super, allocator, &super_init);
   self->statements = init->statements;
 }
 
 static void _cubec_statement_block_dispose(cubec_statement_block_t self,
                                            allocator_t allocator) {
   allocator_free(allocator, &self->statements);
-  g_node_type.dispose(&self->super, allocator);
+  g_node_class.dispose(&self->super, allocator);
 }
 
 static void _cubec_statement_block_clone(cubec_statement_block_t self,
                                          allocator_t allocator,
                                          cubec_statement_block_t another) {
-  g_node_type.clone(&self->super, allocator, &another->super);
+  g_node_class.clone(&self->super, allocator, &another->super);
   self->statements = alloc_clone(allocator, another->statements);
   return;
 }
@@ -39,18 +39,18 @@ static void _cubec_statement_block_clone(cubec_statement_block_t self,
 static void _cubec_statement_block_move(cubec_statement_block_t self,
                                         allocator_t allocator,
                                         cubec_statement_block_t another) {
-  g_node_type.move(&self->super, allocator, &another->super);
+  g_node_class.move(&self->super, allocator, &another->super);
   self->statements = alloc_move(allocator, another->statements);
   return;
 }
 
-type_t g_cubec_statement_block_type = {
+class_t g_cubec_statement_block_class = {
     .name = "cubec.cubec.statement_block",
     .size = sizeof(struct _cubec_statement_block_t),
-    .init = (type_init_fn_t)_cubec_statement_block_init,
-    .dispose = (type_dispose_fn_t)_cubec_statement_block_dispose,
-    .clone = (type_clone_fn_t)_cubec_statement_block_clone,
-    .move = (type_move_fn_t)_cubec_statement_block_move,
+    .init = (class_init_fn_t)_cubec_statement_block_init,
+    .dispose = (class_dispose_fn_t)_cubec_statement_block_dispose,
+    .clone = (class_clone_fn_t)_cubec_statement_block_clone,
+    .move = (class_move_fn_t)_cubec_statement_block_move,
 };
 
 node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
@@ -67,7 +67,7 @@ node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
 
   /* Create statements vec with auto_dispose */
   vec_t statements =
-      allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+      allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
 
   /* Parse statements until '}' */
   while (true) {
@@ -143,7 +143,7 @@ node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
       .statements = statements,
   };
   cubec_statement_block_t node =
-      allocator_create(allocator, &g_cubec_statement_block_type, &init);
+      allocator_create(allocator, &g_cubec_statement_block_class, &init);
   *position = current;
   return &node->super;
 }
@@ -151,7 +151,7 @@ node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
 node_t create_statement_block(context_t ctx, location_t loc, vec_t statements) {
   allocator_t alloc = ctx->allocator;
   cubec_statement_block_init_t init = {.statements = statements};
-  return (node_t)allocator_create(alloc, &g_cubec_statement_block_type, &init);
+  return (node_t)allocator_create(alloc, &g_cubec_statement_block_class, &init);
 }
 
 void emit_statement_block(emit_context_t ctx, node_t stmt) {

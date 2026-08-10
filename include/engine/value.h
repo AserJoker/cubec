@@ -1,7 +1,7 @@
 #ifndef _H_CUBEC_ENGINE_VALUE_
 #define _H_CUBEC_ENGINE_VALUE_
 #include "core/allocator.h"
-#include "core/type.h"
+#include "core/class.h"
 #include <stdbool.h>
 #include <stdint.h>
 #ifdef __cplusplus
@@ -35,7 +35,7 @@ typedef struct value_init_t {
 } value_init_t;
 
 /** @brief Type descriptor for allocator_create. */
-extern type_t g_value_type;
+extern class_t g_value_class;
 
 /**
  * @brief Create a value with given type, data, and ownership.

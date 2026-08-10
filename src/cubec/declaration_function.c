@@ -28,7 +28,7 @@ _cubec_declaration_function_init(cubec_declaration_function_t self,
       .parent = NULL,
   };
   super_init.location = init->location;
-  g_cubec_declaration_type.init(&self->super, allocator, &super_init);
+  g_cubec_declaration_class.init(&self->super, allocator, &super_init);
   self->name = init->name;
   self->captures = init->captures;
   self->generic_params = init->generic_params;
@@ -51,14 +51,14 @@ _cubec_declaration_function_dispose(cubec_declaration_function_t self,
   allocator_free(allocator, &self->generic_params);
   allocator_free(allocator, &self->captures);
   allocator_free(allocator, &self->name);
-  g_cubec_declaration_type.dispose(&self->super, allocator);
+  g_cubec_declaration_class.dispose(&self->super, allocator);
 }
 
 static void
 _cubec_declaration_function_clone(cubec_declaration_function_t self,
                                   allocator_t allocator,
                                   cubec_declaration_function_t another) {
-  g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
+  g_cubec_declaration_class.clone(&self->super, allocator, &another->super);
   self->name = another->name ? alloc_clone(allocator, another->name) : NULL;
   self->captures =
       another->captures ? alloc_clone(allocator, another->captures) : NULL;
@@ -82,7 +82,7 @@ static void
 _cubec_declaration_function_move(cubec_declaration_function_t self,
                                  allocator_t allocator,
                                  cubec_declaration_function_t another) {
-  g_cubec_declaration_type.move(&self->super, allocator, &another->super);
+  g_cubec_declaration_class.move(&self->super, allocator, &another->super);
   self->name = another->name ? alloc_move(allocator, another->name) : NULL;
   self->captures =
       another->captures ? alloc_move(allocator, another->captures) : NULL;
@@ -101,13 +101,13 @@ _cubec_declaration_function_move(cubec_declaration_function_t self,
   return;
 }
 
-type_t g_cubec_declaration_function_type = {
+class_t g_cubec_declaration_function_class = {
     .name = "cubec.cubec.declaration_function",
     .size = sizeof(struct _cubec_declaration_function_t),
-    .init = (type_init_fn_t)_cubec_declaration_function_init,
-    .dispose = (type_dispose_fn_t)_cubec_declaration_function_dispose,
-    .clone = (type_clone_fn_t)_cubec_declaration_function_clone,
-    .move = (type_move_fn_t)_cubec_declaration_function_move,
+    .init = (class_init_fn_t)_cubec_declaration_function_init,
+    .dispose = (class_dispose_fn_t)_cubec_declaration_function_dispose,
+    .clone = (class_clone_fn_t)_cubec_declaration_function_clone,
+    .move = (class_move_fn_t)_cubec_declaration_function_move,
 };
 
 /* --------------------------------------------------------------------------
@@ -170,7 +170,7 @@ node_t read_declaration_function(context_t ctx, vec_t tokens, size_t *position,
     current++;
     skip_whitespace(tokens, &current);
 
-    captures = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+    captures = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
 
     while (true) {
       node_t cap = read_function_capture(ctx, tokens, &current, filename);
@@ -224,7 +224,7 @@ node_t read_declaration_function(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 5. Parse parameter list */
-  arguments = allocator_create(allocator, &g_vec_type, &(vec_init_t){true});
+  arguments = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
 
   if (_is_symbol(tokens, current, ")")) {
     /* no parameters */
@@ -325,7 +325,7 @@ node_t read_declaration_function(context_t ctx, vec_t tokens, size_t *position,
       .is_comptime = false,
       .is_c_variadic = is_c_variadic,
   };
-  node = allocator_create(allocator, &g_cubec_declaration_function_type, &init);
+  node = allocator_create(allocator, &g_cubec_declaration_function_class, &init);
   *position = current;
   return (node_t)&node->super;
 
@@ -365,7 +365,7 @@ node_t create_declaration_function(context_t ctx, location_t loc, node_t name,
       .is_builtin = is_builtin,
       .is_comptime = is_comptime,
       .is_c_variadic = is_c_variadic};
-  return (node_t)allocator_create(alloc, &g_cubec_declaration_function_type,
+  return (node_t)allocator_create(alloc, &g_cubec_declaration_function_class,
                                   &init);
 }
 
