@@ -24,11 +24,11 @@ static void _error_dispose(allocator_t allocator, value_t self) {
   }
 }
 
-type_t type_create_error_type(allocator_t allocator) {
+type_t type_get_error_type(allocator_t allocator) {
   (void)allocator;
   static struct _type_t error_type = {
       .kind  = TYPE_KIND_ERROR,
-      .name  = "error",
+      .name  = (char *)"error",
       .size  = sizeof(struct error_data_t),
       .align = _Alignof(struct error_data_t),
       .vtable = {

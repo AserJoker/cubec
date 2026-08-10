@@ -42,11 +42,11 @@ static value_t _bool_type_extends(vm_t vm, type_t sub, type_t super) {
   return create_bool_value(vm, super->kind == TYPE_KIND_BOOL);
 }
 
-type_t type_create_bool_type(allocator_t allocator) {
+type_t type_get_bool_type(allocator_t allocator) {
   (void)allocator;
   static struct _type_t bool_type = {
       .kind  = TYPE_KIND_BOOL,
-      .name  = "bool",
+      .name  = (char *)"bool",
       .size  = 1,
       .align = 1,
       .vtable = {

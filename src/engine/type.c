@@ -20,11 +20,13 @@ static value_t _type_clone(allocator_t allocator, value_t self) {
   type_t src = (type_t)value_get_data(self);
   type_t copy = (type_t)allocator_alloc(allocator, sizeof(struct _type_t));
   *copy = *src;
+  copy->name = cstring_clone(allocator, src->name);
   return value_create(allocator, value_get_type(self), copy, true);
 }
 
 static void _type_dispose(allocator_t allocator, value_t self) {
   type_t t = (type_t)value_get_data(self);
+  allocator_free(allocator, &t->name);
   allocator_free(allocator, &t);
 }
 
@@ -50,11 +52,11 @@ static value_t _type_extends(vm_t vm, value_t sub, value_t super_val) {
   return t_sub->vtable.type_extends(vm, t_sub, t_super);
 }
 
-type_t type_create_type_type(allocator_t allocator) {
+type_t type_get_type_type(allocator_t allocator) {
   (void)allocator;
   static struct _type_t type_type = {
       .kind  = TYPE_KIND_TYPE,
-      .name  = "type",
+      .name  = (char *)"type",
       .size  = sizeof(struct _type_t),
       .align = _Alignof(struct _type_t),
       .vtable = {

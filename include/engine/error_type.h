@@ -10,8 +10,8 @@ struct error_data_t {
   char *message; /* owned */
 };
 
-/** @brief Create the "error" type_t (static singleton). */
-type_t type_create_error_type(allocator_t allocator);
+/** @brief Get the "error" type_t (static singleton). */
+type_t type_get_error_type(allocator_t allocator);
 
 /** @brief Create an error value with formatted message.
  *  value.data = error_data_t* (owned). Added to current_scope->values. */

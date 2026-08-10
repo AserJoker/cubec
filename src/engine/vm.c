@@ -39,20 +39,20 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 
   /* v_type must be created first — create_type_value depends on it.
    * Cannot use create_type_value for v_type itself (circular dependency). */
-  type_t type_type = type_create_type_type(allocator);
+  type_t type_type = type_get_type_type(allocator);
   vm->v_type = value_create(allocator, type_type, type_type, false);
   vec_push(vm->global_scope->values, vm->v_type);
   name_t n_type = name_create(vm->global_scope->allocator, vm->v_type);
   strmap_insert(vm->global_scope->names, "type", n_type);
 
   /* Subsequent builtin types use create_type_value */
-  type_t error_type = type_create_error_type(allocator);
+  type_t error_type = type_get_error_type(allocator);
   vm->v_error = create_type_value(vm, error_type, NULL, false);
 
-  type_t bool_type = type_create_bool_type(allocator);
+  type_t bool_type = type_get_bool_type(allocator);
   vm->v_bool = create_type_value(vm, bool_type, "bool", false);
 
-  type_t wildcard_type = type_create_wildcard_type(allocator);
+  type_t wildcard_type = type_get_wildcard_type(allocator);
   vm->v_wildcard = create_type_value(vm, wildcard_type, NULL, false);
 }
 

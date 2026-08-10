@@ -1,5 +1,6 @@
 #include "engine/vm.h"
 #include "engine/type.h"
+#include "core/string.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -24,7 +25,7 @@ protected:
   type_t _make_i32_type() {
     type_t t = (type_t)allocator_alloc(allocator, sizeof(struct _type_t));
     t->kind = TYPE_KIND_I32;
-    t->name = "i32";
+    t->name = cstring_clone(allocator, "i32");
     t->size = 4;
     t->align = 4;
     t->vtable = (vtable_t){.clone = _dummy_clone, .dispose = _dummy_dispose};
@@ -68,6 +69,7 @@ TEST_F(it_vm, create_value_with_data) {
 
   /* value is in current_scope->values, disposed by vm_dispose */
   vm_dispose(vm, allocator);
+  allocator_free(allocator, &i32->name);
   allocator_free(allocator, &i32);
   delete_allocator(allocator);
 }
@@ -84,6 +86,7 @@ TEST_F(it_vm, create_value_shadow) {
 
   /* value is in current_scope->values, disposed by vm_dispose */
   vm_dispose(vm, allocator);
+  allocator_free(allocator, &i32->name);
   allocator_free(allocator, &i32);
   delete_allocator(allocator);
 }

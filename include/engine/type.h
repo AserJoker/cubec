@@ -74,7 +74,7 @@ typedef struct vtable_t vtable_t;
  */
 struct _type_t {
   type_kind_t kind;
-  const char *name;
+  char *name;
   uint64_t    size;
   uint64_t    align;
   vtable_t    vtable;
@@ -90,9 +90,9 @@ vtable_t    type_get_vtable(type_t self);
 
 /* ---- Bootstrap ---- */
 
-/** @brief Create the self-referential "type" type_t.
+/** @brief Get the self-referential "type" type_t (static singleton).
  *  kind=TYPE_KIND_TYPE, name="type", with clone/dispose vtable. */
-type_t type_create_type_type(allocator_t allocator);
+type_t type_get_type_type(allocator_t allocator);
 
 /** @brief Create a type value wrapping the given type_t.
  *

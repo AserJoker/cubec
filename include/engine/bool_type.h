@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
-/** @brief Create the "bool" type_t (static singleton). */
-type_t type_create_bool_type(allocator_t allocator);
+/** @brief Get the "bool" type_t (static singleton). */
+type_t type_get_bool_type(allocator_t allocator);
 
 /** @brief Create a bool value. data=bool (1 byte). Added to current_scope->values. */
 value_t create_bool_value(vm_t vm, bool val);

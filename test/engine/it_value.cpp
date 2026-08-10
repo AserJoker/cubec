@@ -1,5 +1,6 @@
 #include "engine/type.h"
 #include "engine/value.h"
+#include "core/string.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -24,7 +25,7 @@ protected:
   type_t _make_i32_type() {
     type_t t = (type_t)allocator_alloc(allocator, sizeof(struct _type_t));
     t->kind = TYPE_KIND_I32;
-    t->name = "i32";
+    t->name = cstring_clone(allocator, "i32");
     t->size = 4;
     t->align = 4;
     t->vtable = (vtable_t){.clone = _dummy_clone, .dispose = _dummy_dispose};
@@ -34,7 +35,7 @@ protected:
   type_t _make_void_type() {
     type_t t = (type_t)allocator_alloc(allocator, sizeof(struct _type_t));
     t->kind = TYPE_KIND_VOID;
-    t->name = "void";
+    t->name = cstring_clone(allocator, "void");
     t->size = 0;
     t->align = 1;
     t->vtable = (vtable_t){.clone = NULL, .dispose = NULL};
@@ -55,6 +56,7 @@ TEST_F(it_value, create_and_accessors) {
   EXPECT_EQ(*(int32_t *)value_get_data(v), 42);
 
   value_dispose(v, allocator);
+  allocator_free(allocator, &i32_type->name);
   allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
@@ -66,6 +68,7 @@ TEST_F(it_value, shadow_value) {
   EXPECT_FALSE(value_is_own(v));
 
   value_dispose(v, allocator);
+  allocator_free(allocator, &i32_type->name);
   allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
@@ -77,6 +80,7 @@ TEST_F(it_value, dispose_calls_vtable_dispose) {
 
   value_t v = value_create(allocator, i32_type, data, true);
   value_dispose(v, allocator);
+  allocator_free(allocator, &i32_type->name);
   allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
@@ -85,6 +89,7 @@ TEST_F(it_value, dispose_no_vtable_no_crash) {
   type_t void_type = _make_void_type();
   value_t v = value_create(allocator, void_type, NULL, false);
   value_dispose(v, allocator);
+  allocator_free(allocator, &void_type->name);
   allocator_free(allocator, &void_type);
   delete_allocator(allocator);
 }
@@ -104,6 +109,7 @@ TEST_F(it_value, clone_delegates_to_vtable) {
 
   value_dispose(cloned, allocator);
   value_dispose(v, allocator);
+  allocator_free(allocator, &i32_type->name);
   allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
@@ -125,6 +131,7 @@ TEST_F(it_value, move_transfers_data) {
 
   value_dispose(moved, allocator);
   value_dispose(v, allocator);
+  allocator_free(allocator, &i32_type->name);
   allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
@@ -136,6 +143,7 @@ TEST_F(it_value, type_accessors) {
   EXPECT_EQ(type_get_size(i32_type), 4u);
   EXPECT_EQ(type_get_align(i32_type), 4u);
 
+  allocator_free(allocator, &i32_type->name);
   allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
