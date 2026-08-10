@@ -34,6 +34,8 @@ scope_t  vm_get_global_scope(vm_t self);
 scope_t  vm_get_root_scope(vm_t self);
 scope_t  vm_get_current_scope(vm_t self);
 value_t  vm_get_type_type(vm_t self);
+value_t  vm_get_error_type(vm_t self);
+value_t  vm_get_bool_type(vm_t self);
 
 /* ---- Module registry ---- */
 

@@ -2,6 +2,8 @@
 #include "engine/context.h"
 #include "engine/scope.h"
 #include "engine/type.h"
+#include "engine/error_type.h"
+#include "engine/bool_type.h"
 #include "engine/module.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -17,6 +19,8 @@ struct _vm_t {
   scope_t     root_scope;    /* borrowed: current module's root scope */
   scope_t     current_scope; /* borrowed: current traversal position */
   value_t     v_type;        /* borrowed: bootstrap type "type" (in global_scope->values) */
+  value_t     v_error;       /* borrowed: bootstrap type "error" (in global_scope->values) */
+  value_t     v_bool;        /* borrowed: bootstrap type "bool" (in global_scope->values) */
 };
 
 static void _vm_init(void *self, allocator_t allocator, void *arg) {
@@ -31,12 +35,22 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   vm->root_scope = NULL;
   vm->current_scope = NULL;
 
-  /* Bootstrap: create the "type" type */
+  /* Bootstrap: create the "type" type (static singleton, never freed) */
   type_t type_type = type_create_type_type(allocator);
 
-  /* v_type: value where type=ref, data=own, both point to the same type_t */
-  vm->v_type = value_create(allocator, type_type, type_type, true);
+  /* v_type: ref value — type=ref, data=ref, own=false since type_type is static */
+  vm->v_type = value_create(allocator, type_type, type_type, false);
   vec_push(vm->global_scope->values, vm->v_type);
+
+  /* Bootstrap: create the "error" type (static singleton, never freed) */
+  type_t error_type = type_create_error_type(allocator);
+  vm->v_error = value_create(allocator, type_type, error_type, false);
+  vec_push(vm->global_scope->values, vm->v_error);
+
+  /* Bootstrap: create the "bool" type (static singleton, never freed) */
+  type_t bool_type = type_create_bool_type(allocator);
+  vm->v_bool = value_create(allocator, type_type, bool_type, false);
+  vec_push(vm->global_scope->values, vm->v_bool);
 }
 
 static void _vm_dispose(void *self, allocator_t allocator) {
@@ -70,6 +84,8 @@ scope_t  vm_get_global_scope(vm_t self) { return self->global_scope; }
 scope_t  vm_get_root_scope(vm_t self) { return self->root_scope; }
 scope_t  vm_get_current_scope(vm_t self) { return self->current_scope; }
 value_t  vm_get_type_type(vm_t self) { return self->v_type; }
+value_t  vm_get_error_type(vm_t self) { return self->v_error; }
+value_t  vm_get_bool_type(vm_t self) { return self->v_bool; }
 
 module_t vm_get_module(vm_t self, const char *abs_path) {
   return (module_t)strmap_find(self->modules, abs_path);
