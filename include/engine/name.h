@@ -7,22 +7,14 @@
 extern "C" {
 #endif
 
-enum name_kind {
-  NAME_VARIABLE,
-  NAME_TYPE,
-  NAME_FUNCTION,
-  NAME_NAMESPACE
-};
-
 struct _name_t {
   allocator_t allocator;
-  enum name_kind kind;
   value_t ref; /* borrowing: points to the value in scope->values */
 };
 
 typedef struct _name_t *name_t;
 
-name_t name_create(allocator_t allocator, enum name_kind kind, value_t ref);
+name_t name_create(allocator_t allocator, value_t ref);
 void name_dispose(name_t name);
 
 #ifdef __cplusplus

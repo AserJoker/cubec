@@ -3,6 +3,7 @@
 #include "core/allocator.h"
 #include "core/class.h"
 #include "core/strmap.h"
+#include "engine/name.h"
 #include "engine/value.h"
 #ifdef __cplusplus
 extern "C" {
@@ -27,7 +28,8 @@ void vm_dispose(vm_t self, allocator_t allocator);
 
 /* ---- Accessors ---- */
 
-strmap_t vm_get_modules(vm_t self);
+allocator_t vm_get_allocator(vm_t self);
+strmap_t    vm_get_modules(vm_t self);
 scope_t  vm_get_global_scope(vm_t self);
 scope_t  vm_get_root_scope(vm_t self);
 scope_t  vm_get_current_scope(vm_t self);
@@ -54,11 +56,15 @@ void vm_pop_scope(vm_t self);
 /* ---- Value creation ---- */
 
 /** @brief Create a value with owned copy of data, add to current_scope->values.
- *  If data is NULL, allocates zeroed buffer of type_get_size(type). */
-value_t vm_create_value(vm_t self, type_t type, const void *data);
+ *  If data is NULL, allocates zeroed buffer of type_get_size(type).
+ *  If name is non-NULL, creates a name entry in current_scope. */
+value_t vm_create_value(vm_t self, type_t type, const void *data,
+                        const char *name);
 
-/** @brief Create a shadow value (data=NULL, own=false), add to current_scope->values. */
-value_t vm_create_value_shadow(vm_t self, type_t type);
+/** @brief Create a shadow value (data=NULL, own=false), add to current_scope->values.
+ *  If name is non-NULL, creates a name entry in current_scope. */
+value_t vm_create_value_shadow(vm_t self, type_t type,
+                               const char *name);
 
 #ifdef __cplusplus
 }

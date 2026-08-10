@@ -19,20 +19,6 @@ struct _vm_t {
   value_t     v_type;        /* borrowed: bootstrap type "type" (in global_scope->values) */
 };
 
-/* ---- Bootstrap type "type" vtable ---- */
-
-static value_t _type_clone(allocator_t allocator, value_t self) {
-  type_t src = (type_t)value_get_data(self);
-  type_t copy = (type_t)allocator_alloc(allocator, sizeof(struct _type_t));
-  *copy = *src;
-  return value_create(allocator, value_get_type(self), copy, true);
-}
-
-static void _type_dispose(allocator_t allocator, value_t self) {
-  type_t t = (type_t)value_get_data(self);
-  allocator_free(allocator, &t);
-}
-
 static void _vm_init(void *self, allocator_t allocator, void *arg) {
   (void)arg;
   vm_t vm = (vm_t)self;
@@ -46,12 +32,7 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   vm->current_scope = NULL;
 
   /* Bootstrap: create the "type" type */
-  type_t type_type = (type_t)allocator_alloc(allocator, sizeof(struct _type_t));
-  type_type->kind  = TYPE_KIND_TYPE;
-  type_type->name  = "type";
-  type_type->size  = sizeof(struct _type_t);
-  type_type->align = _Alignof(struct _type_t);
-  type_type->vtable = (vtable_t){.clone = _type_clone, .dispose = _type_dispose};
+  type_t type_type = type_create_type_type(allocator);
 
   /* v_type: value where type=ref, data=own, both point to the same type_t */
   vm->v_type = value_create(allocator, type_type, type_type, true);
@@ -83,6 +64,7 @@ void vm_dispose(vm_t self, allocator_t allocator) {
   allocator_free(allocator, &self);
 }
 
+allocator_t vm_get_allocator(vm_t self) { return self->allocator; }
 strmap_t vm_get_modules(vm_t self) { return self->modules; }
 scope_t  vm_get_global_scope(vm_t self) { return self->global_scope; }
 scope_t  vm_get_root_scope(vm_t self) { return self->root_scope; }
@@ -249,7 +231,8 @@ void vm_pop_scope(vm_t self) {
 
 /* ---- Value creation ---- */
 
-value_t vm_create_value(vm_t self, type_t type, const void *data) {
+value_t vm_create_value(vm_t self, type_t type, const void *data,
+                        const char *name) {
   size_t sz = type_get_size(type);
   void *data_copy = NULL;
   if (sz > 0) {
@@ -263,14 +246,26 @@ value_t vm_create_value(vm_t self, type_t type, const void *data) {
   value_t v = value_create(self->allocator, type, data_copy, true);
   if (self->current_scope) {
     vec_push(self->current_scope->values, v);
+    if (name) {
+      name_t n = name_create(self->current_scope->allocator, v);
+      char *owned_name = cstring_clone(self->current_scope->allocator, name);
+      strmap_insert(self->current_scope->names, owned_name, n);
+      allocator_free(self->current_scope->allocator, &owned_name);
+    }
   }
   return v;
 }
 
-value_t vm_create_value_shadow(vm_t self, type_t type) {
+value_t vm_create_value_shadow(vm_t self, type_t type, const char *name) {
   value_t v = value_create(self->allocator, type, NULL, false);
   if (self->current_scope) {
     vec_push(self->current_scope->values, v);
+    if (name) {
+      name_t n = name_create(self->current_scope->allocator, v);
+      char *owned_name = cstring_clone(self->current_scope->allocator, name);
+      strmap_insert(self->current_scope->names, owned_name, n);
+      allocator_free(self->current_scope->allocator, &owned_name);
+    }
   }
   return v;
 }

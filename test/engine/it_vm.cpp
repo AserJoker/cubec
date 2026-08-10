@@ -58,7 +58,7 @@ TEST_F(it_vm, create_value_with_data) {
   vm_t vm = vm_create(allocator);
   type_t i32 = _make_i32_type();
   int32_t val = 42;
-  value_t v = vm_create_value(vm, i32, &val);
+  value_t v = vm_create_value(vm, i32, &val, NULL);
 
   EXPECT_NE(v, nullptr);
   EXPECT_EQ(value_get_type(v), i32);
@@ -75,7 +75,7 @@ TEST_F(it_vm, create_value_with_data) {
 TEST_F(it_vm, create_value_shadow) {
   vm_t vm = vm_create(allocator);
   type_t i32 = _make_i32_type();
-  value_t v = vm_create_value_shadow(vm, i32);
+  value_t v = vm_create_value_shadow(vm, i32, NULL);
 
   EXPECT_NE(v, nullptr);
   EXPECT_TRUE(value_is_shadow(v));

@@ -7,6 +7,9 @@
 extern "C" {
 #endif
 
+struct _vm_t;
+typedef struct _vm_t *vm_t;
+
 struct _value_t;
 typedef struct _value_t *value_t;
 
@@ -34,12 +37,30 @@ typedef enum type_kind_t {
 } type_kind_t;
 
 /**
- * @brief VTable — type behavior dispatch table.
+ * @brief type_t — type object (opaque pointer).
+ *
+ * For TYPE_KIND_TYPE values: value.type and value.data point to the same
+ * type_t (type=ref, data=own).
  */
-typedef struct vtable_t {
-  value_t (*clone)   (allocator_t alloc, value_t obj);
-  void     (*dispose) (allocator_t alloc, value_t obj);
-} vtable_t;
+struct _type_t;
+typedef struct _type_t *type_t;
+
+/**
+ * @brief VTable — type behavior dispatch table.
+ *
+ *  clone/dispose — lifecycle
+ *  equal/extends — value-level computation (delegate to type_* for type values)
+ *  type_equal/type_extends — type-level computation
+ */
+struct vtable_t {
+  value_t (*clone)        (allocator_t alloc, value_t obj);
+  void     (*dispose)     (allocator_t alloc, value_t obj);
+  bool     (*equal)       (value_t a, value_t b);
+  bool     (*extends)     (value_t sub, value_t super_val);
+  bool     (*type_equal)  (type_t a, type_t b);
+  bool     (*type_extends)(type_t sub, type_t super);
+};
+typedef struct vtable_t vtable_t;
 
 /**
  * @brief type_t — type object (opaque pointer).
@@ -54,7 +75,6 @@ struct _type_t {
   uint64_t    align;
   vtable_t    vtable;
 };
-typedef struct _type_t *type_t;
 
 /* ---- Accessors ---- */
 
@@ -63,6 +83,20 @@ const char *type_get_name(type_t self);
 uint64_t    type_get_size(type_t self);
 uint64_t    type_get_align(type_t self);
 vtable_t    type_get_vtable(type_t self);
+
+/* ---- Bootstrap ---- */
+
+/** @brief Create the self-referential "type" type_t.
+ *  kind=TYPE_KIND_TYPE, name="type", with clone/dispose vtable. */
+type_t type_create_type_type(allocator_t allocator);
+
+/** @brief Create a type value wrapping the given type_t.
+ *
+ *  value.type = vm's "type" type_t (ref), value.data = type (own).
+ *  If name is non-NULL, creates a NAME_TYPE entry in vm's current scope.
+ *  The value is added to vm's current_scope->values.
+ */
+value_t create_type_value(vm_t vm, type_t type, const char *name);
 
 #ifdef __cplusplus
 }

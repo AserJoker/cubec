@@ -49,7 +49,6 @@ TEST_F(it_name_collector, function_name) {
 
   name_t name = find_name(mod, "add");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_FUNCTION);
 
   module_dispose(mod);
 }
@@ -62,7 +61,6 @@ TEST_F(it_name_collector, variable_name) {
 
   name_t name = find_name(mod, "x");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_VARIABLE);
 
   module_dispose(mod);
 }
@@ -75,7 +73,6 @@ TEST_F(it_name_collector, struct_name) {
 
   name_t name = find_name(mod, "Point");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_TYPE);
 
   module_dispose(mod);
 }
@@ -88,7 +85,6 @@ TEST_F(it_name_collector, enum_name) {
 
   name_t name = find_name(mod, "Color");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_TYPE);
 
   module_dispose(mod);
 }
@@ -101,7 +97,6 @@ TEST_F(it_name_collector, type_alias_name) {
 
   name_t name = find_name(mod, "MyInt");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_TYPE);
 
   module_dispose(mod);
 }
@@ -114,7 +109,6 @@ TEST_F(it_name_collector, union_name) {
 
   name_t name = find_name(mod, "Option");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_TYPE);
 
   module_dispose(mod);
 }
@@ -127,7 +121,6 @@ TEST_F(it_name_collector, interface_name) {
 
   name_t name = find_name(mod, "Printable");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_TYPE);
 
   module_dispose(mod);
 }
@@ -140,7 +133,6 @@ TEST_F(it_name_collector, cunion_name) {
 
   name_t name = find_name(mod, "Data");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_TYPE);
 
   module_dispose(mod);
 }
@@ -160,7 +152,6 @@ TEST_F(it_name_collector, import_namespace) {
 
   name_t name = find_name(mod, "dep");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_NAMESPACE);
 
   module_dispose(mod);
 }
@@ -181,16 +172,12 @@ TEST_F(it_name_collector, mixed_declarations) {
   name_t n_vec3 = find_name(mod, "Vec3");
 
   ASSERT_NE(n_count, nullptr);
-  EXPECT_EQ(n_count->kind, NAME_VARIABLE);
 
   ASSERT_NE(n_inc, nullptr);
-  EXPECT_EQ(n_inc->kind, NAME_FUNCTION);
 
   ASSERT_NE(n_point, nullptr);
-  EXPECT_EQ(n_point->kind, NAME_TYPE);
 
   ASSERT_NE(n_vec3, nullptr);
-  EXPECT_EQ(n_vec3->kind, NAME_TYPE);
 
   module_dispose(mod);
 }
@@ -247,7 +234,6 @@ TEST_F(it_name_collector, vm_import_creates_module) {
 
   name_t name = (name_t)strmap_find(mod->root_scope->names, "hello");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_FUNCTION);
 }
 
 TEST_F(it_name_collector, vm_import_caches_by_abs_path) {
@@ -272,12 +258,10 @@ TEST_F(it_name_collector, export_function) {
 
   name_t name = find_name(mod, "add");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_FUNCTION);
 
   /* Also check exports table */
   name_t exported = (name_t)strmap_find(mod->exports, "add");
   ASSERT_NE(exported, nullptr);
-  EXPECT_EQ(exported->kind, NAME_FUNCTION);
 
   module_dispose(mod);
 }
@@ -290,7 +274,6 @@ TEST_F(it_name_collector, export_struct) {
 
   name_t exported = (name_t)strmap_find(mod->exports, "Point");
   ASSERT_NE(exported, nullptr);
-  EXPECT_EQ(exported->kind, NAME_TYPE);
 
   module_dispose(mod);
 }
@@ -312,7 +295,6 @@ TEST_F(it_name_collector, non_exported_not_in_exports) {
   /* api is in both scope names and exports */
   name_t exported_api = (name_t)strmap_find(mod->exports, "api");
   ASSERT_NE(exported_api, nullptr);
-  EXPECT_EQ(exported_api->kind, NAME_FUNCTION);
 
   module_dispose(mod);
 }
@@ -332,7 +314,6 @@ TEST_F(it_name_collector, re_export_star) {
 
   name_t exported = (name_t)strmap_find(mod->exports, "dep_func");
   ASSERT_NE(exported, nullptr);
-  EXPECT_EQ(exported->kind, NAME_FUNCTION);
 
   module_dispose(mod);
 }
@@ -353,7 +334,6 @@ TEST_F(it_name_collector, re_export_selected_names) {
   /* foo is re-exported */
   name_t exported_foo = (name_t)strmap_find(mod->exports, "foo");
   ASSERT_NE(exported_foo, nullptr);
-  EXPECT_EQ(exported_foo->kind, NAME_FUNCTION);
 
   /* bar is NOT re-exported (not in the export list) */
   name_t exported_bar = (name_t)strmap_find(mod->exports, "bar");
@@ -397,7 +377,6 @@ TEST_F(it_name_collector, var_name_ref_null_in_phase1) {
 
   name_t name = find_name(mod, "x");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_VARIABLE);
   EXPECT_EQ(name->ref, nullptr); /* phase 1: not set */
 
   module_dispose(mod);
@@ -411,7 +390,6 @@ TEST_F(it_name_collector, function_name_ref_null_in_phase1) {
 
   name_t name = find_name(mod, "add");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_FUNCTION);
   EXPECT_EQ(name->ref, nullptr); /* phase 1: not set */
 
   module_dispose(mod);
@@ -425,7 +403,6 @@ TEST_F(it_name_collector, type_name_ref_null_in_phase1) {
 
   name_t name = find_name(mod, "Point");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_TYPE);
   EXPECT_EQ(name->ref, nullptr); /* phase 1: not set */
 
   module_dispose(mod);
@@ -445,7 +422,6 @@ TEST_F(it_name_collector, namespace_name_ref_null_in_phase1) {
 
   name_t name = find_name(mod, "dep");
   ASSERT_NE(name, nullptr);
-  EXPECT_EQ(name->kind, NAME_NAMESPACE);
   EXPECT_EQ(name->ref, nullptr); /* phase 1: not set */
 
   module_dispose(mod);
