@@ -67,6 +67,7 @@ TEST_F(it_vm, create_value_with_data) {
   EXPECT_EQ(*(int32_t *)value_get_data(v), 42);
 
   value_dispose(v, allocator);
+  allocator_free(allocator, &i32);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
@@ -85,6 +86,7 @@ TEST_F(it_vm, create_value_ref) {
   /* ref must be disposed before owner since it borrows owner's data */
   value_dispose(ref, allocator);
   value_dispose(owner, allocator);
+  allocator_free(allocator, &i32);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }

@@ -20,7 +20,7 @@ class_t g_name_class = {
     .dispose = (class_dispose_fn_t)_name_dispose,
 };
 
-name_t name_create(allocator_t allocator, enum name_kind kind, void *ref) {
+name_t name_create(allocator_t allocator, enum name_kind kind, value_t ref) {
   name_t name = (name_t)allocator_create(allocator, &g_name_class, NULL);
   name->kind = kind;
   name->ref = ref;

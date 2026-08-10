@@ -55,6 +55,7 @@ TEST_F(it_value, create_and_accessors) {
   EXPECT_EQ(*(int32_t *)value_get_data(v), 42);
 
   value_dispose(v, allocator);
+  allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
 
@@ -65,6 +66,7 @@ TEST_F(it_value, shadow_value) {
   EXPECT_FALSE(value_is_own(v));
 
   value_dispose(v, allocator);
+  allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
 
@@ -75,6 +77,7 @@ TEST_F(it_value, dispose_calls_vtable_dispose) {
 
   value_t v = value_create(allocator, i32_type, data, true);
   value_dispose(v, allocator);
+  allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
 
@@ -82,6 +85,7 @@ TEST_F(it_value, dispose_no_vtable_no_crash) {
   type_t void_type = _make_void_type();
   value_t v = value_create(allocator, void_type, NULL, false);
   value_dispose(v, allocator);
+  allocator_free(allocator, &void_type);
   delete_allocator(allocator);
 }
 
@@ -100,6 +104,7 @@ TEST_F(it_value, clone_delegates_to_vtable) {
 
   value_dispose(cloned, allocator);
   value_dispose(v, allocator);
+  allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
 
@@ -120,6 +125,7 @@ TEST_F(it_value, move_transfers_data) {
 
   value_dispose(moved, allocator);
   value_dispose(v, allocator);
+  allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
 
@@ -129,4 +135,7 @@ TEST_F(it_value, type_accessors) {
   EXPECT_STREQ(type_get_name(i32_type), "i32");
   EXPECT_EQ(type_get_size(i32_type), 4u);
   EXPECT_EQ(type_get_align(i32_type), 4u);
+
+  allocator_free(allocator, &i32_type);
+  delete_allocator(allocator);
 }

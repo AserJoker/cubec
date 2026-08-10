@@ -1,5 +1,5 @@
-#include "core/diagnostic.h"
-#include "engine/context.h"
+#include "engine/diagnostic.h"
+#include "engine/vm.h"
 #include "engine/module.h"
 #include <stdarg.h>
 #include <string.h>
@@ -53,7 +53,7 @@ static void _diagnostic_list_clone(diagnostic_list_t self, allocator_t allocator
 
 class_t g_diagnostic_list_class = {
     .size = sizeof(struct _diagnostic_list_t),
-    .name = "cubec.core.diagnostic_list",
+    .name = "cubec.engine.diagnostic_list",
     .init = (class_init_fn_t)_diagnostic_list_init,
     .dispose = (class_dispose_fn_t)_diagnostic_list_dispose,
     .clone = (class_clone_fn_t)_diagnostic_list_clone,
@@ -144,14 +144,14 @@ static void format_location(FILE *out, location_t *loc) {
 }
 
 static void emit_diagnostic(FILE *out, struct diagnostic *d,
-                            struct context *ctx) {
+                            vm_t vm) {
   fprintf(out, "%s: %s\n", severity_str(d->severity), d->message);
 
   format_location(out, &d->primary);
   fprintf(out, "\n");
 
-  if (ctx && d->primary.filename) {
-    module_t mod = context_get_module(ctx, d->primary.filename);
+  if (vm && d->primary.filename) {
+    module_t mod = vm_get_module(vm, d->primary.filename);
     if (mod) {
       const char *src = mod->source;
       if (src) {
@@ -226,11 +226,11 @@ static void emit_diagnostic(FILE *out, struct diagnostic *d,
   fprintf(out, "\n");
 }
 
-void diagnostic_list_emit(diagnostic_list_t self, struct context *ctx) {
+void diagnostic_list_emit(diagnostic_list_t self, vm_t vm) {
   size_t size = vec_get_size(self->diagnostics);
   for (size_t i = 0; i < size; i++) {
     struct diagnostic *d = (struct diagnostic *)vec_get(self->diagnostics, i);
-    emit_diagnostic(self->output, d, ctx);
+    emit_diagnostic(self->output, d, vm);
   }
 }
 

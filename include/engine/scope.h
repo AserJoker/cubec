@@ -4,6 +4,7 @@
 #include "core/allocator.h"
 #include "core/strmap.h"
 #include "core/vec.h"
+#include "engine/value.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -24,6 +25,7 @@ struct _scope_t {
   struct _scope_t *parent; /* parent scope */
   vec_t children;          /* child scopes (auto-dispose vec) */
   strmap_t names;          /* name table: text → name_t (owned) */
+  vec_t values;            /* all values in this scope (auto-dispose, owns value_t) */
   vec_t defers;            /* defer entries (empty for now) */
   void *owner;             /* borrowing pointer to owning object (module/function) */
 };

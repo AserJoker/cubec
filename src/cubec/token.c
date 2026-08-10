@@ -1,5 +1,5 @@
 #include "cubec/token.h"
-#include "core/diagnostic.h"
+#include "engine/diagnostic.h"
 #include "engine/context.h"
 #include <inttypes.h>
 #include <unicode/uchar.h>

@@ -227,9 +227,9 @@ TEST_F(it_name_collector, duplicate_name_error) {
   module_dispose(mod);
 }
 
-/* ---- context_import ---- */
+/* ---- vm_import ---- */
 
-TEST_F(it_name_collector, context_import_creates_module) {
+TEST_F(it_name_collector, vm_import_creates_module) {
   /* Write a temporary file to import */
   const char *tmp_path = "/tmp/cubec_import_test.cubec";
   FILE *f = fopen(tmp_path, "w");
@@ -237,8 +237,8 @@ TEST_F(it_name_collector, context_import_creates_module) {
   fputs("func hello(): void {}", f);
   fclose(f);
 
-  /* context_import loads the module; name collection is separate */
-  module_t mod = context_import(ctx, tmp_path);
+  /* vm_import loads the module; name collection is separate */
+  module_t mod = vm_import(ctx->vm, ctx, tmp_path);
   ASSERT_NE(mod, nullptr);
   EXPECT_NE(mod->program, nullptr);
 
@@ -250,17 +250,17 @@ TEST_F(it_name_collector, context_import_creates_module) {
   EXPECT_EQ(name->kind, NAME_FUNCTION);
 }
 
-TEST_F(it_name_collector, context_import_caches_by_abs_path) {
+TEST_F(it_name_collector, vm_import_caches_by_abs_path) {
   const char *tmp_path = "/tmp/cubec_import_test.cubec";
   FILE *f = fopen(tmp_path, "w");
   ASSERT_NE(f, nullptr);
   fputs("func hello(): void {}", f);
   fclose(f);
 
-  module_t mod1 = context_import(ctx, tmp_path);
+  module_t mod1 = vm_import(ctx->vm, ctx, tmp_path);
   ASSERT_NE(mod1, nullptr);
 
-  module_t mod2 = context_import(ctx, tmp_path);
+  module_t mod2 = vm_import(ctx->vm, ctx, tmp_path);
   EXPECT_EQ(mod1, mod2); /* same pointer, cached */
 }
 

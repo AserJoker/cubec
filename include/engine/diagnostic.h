@@ -1,5 +1,5 @@
-#ifndef _H_CUBEC_CORE_DIAGNOSTIC_
-#define _H_CUBEC_CORE_DIAGNOSTIC_
+#ifndef _H_CUBEC_ENGINE_DIAGNOSTIC_
+#define _H_CUBEC_ENGINE_DIAGNOSTIC_
 #include "core/location.h"
 #include "core/class.h"
 #include "core/vec.h"
@@ -49,8 +49,8 @@ struct diagnostic *diagnostic_list_push(diagnostic_list_t self,
 void diagnostic_list_push_note(diagnostic_list_t self, location_t location,
                                const char *fmt, ...);
 
-struct context;
-void diagnostic_list_emit(diagnostic_list_t self, struct context *ctx);
+struct _vm_t;
+void diagnostic_list_emit(diagnostic_list_t self, struct _vm_t *vm);
 
 void diagnostic_list_clear(diagnostic_list_t self);
 

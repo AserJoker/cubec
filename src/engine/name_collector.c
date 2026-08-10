@@ -1,7 +1,7 @@
 #include "engine/name_collector.h"
 #include "engine/name.h"
 #include "engine/scope.h"
-#include "core/diagnostic.h"
+#include "engine/diagnostic.h"
 #include "core/string.h"
 #include "core/strmap.h"
 #include "core/vec.h"
@@ -70,7 +70,7 @@ static void _report_error(context_t ctx, node_t node, const char *fmt, ...) {
 /** Insert a name into a scope's name table. Returns true on success. */
 static bool _scope_insert_name(context_t ctx, scope_t scope, node_t node,
                                const char *name_str, enum name_kind kind,
-                               void *ref) {
+                               value_t ref) {
   name_t existing = (name_t)strmap_find(scope->names, name_str);
   if (existing) {
     _report_error(ctx, node, "duplicate declaration of '%s'", name_str);
@@ -242,7 +242,7 @@ static void _collect_import_statement(context_t ctx, scope_t scope,
     _report_error(ctx, stmt, "import statement is missing module path");
     return;
   }
-  module_t dep_mod = context_import(ctx, mod_path);
+  module_t dep_mod = vm_import(ctx->vm, ctx, mod_path);
   if (!dep_mod) {
     _report_error(ctx, stmt, "cannot import module '%s' from '%s'",
                   mod_name, mod_path);
@@ -268,7 +268,7 @@ static void _collect_export_statement(context_t ctx, scope_t scope,
     _report_error(ctx, stmt, "export statement is missing module path");
     return;
   }
-  module_t dep_mod = context_import(ctx, mod_path);
+  module_t dep_mod = vm_import(ctx->vm, ctx, mod_path);
   if (!dep_mod) {
     _report_error(ctx, stmt, "cannot export from module '%s'", mod_path);
     return;
