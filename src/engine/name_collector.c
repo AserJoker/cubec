@@ -1,12 +1,7 @@
 #include "engine/name_collector.h"
 #include "engine/name.h"
 #include "engine/scope.h"
-#include "engine/stype.h"
-#include "engine/value.h"
-#include "engine/function.h"
-#include "engine/namespace.h"
 #include "core/diagnostic.h"
-#include "core/rbtree.h"
 #include "core/string.h"
 #include "core/strmap.h"
 #include "core/vec.h"
@@ -19,6 +14,7 @@
 #include "cubec/literal_string.h"
 #include "cubec/statement_declaration.h"
 #include "cubec/declaration_function.h"
+#include "cubec/literal_numeric.h"
 #include "cubec/statement_function.h"
 #include "cubec/statement_struct.h"
 #include "cubec/statement_union.h"
@@ -115,51 +111,6 @@ static module_t _check_export_scope(context_t ctx, scope_t scope,
 }
 
 /* --------------------------------------------------------------------------
- *  Semantic object creation helpers
- * -------------------------------------------------------------------------- */
-
-/** Create a value_t, register it in scope, and return it as ref. */
-static void *_create_value(scope_t scope, node_t decl_node,
-                           bool is_export, bool is_exportlib, bool is_extern,
-                           bool is_builtin, bool is_comptime, bool is_using) {
-  value_t val = value_create(scope->allocator, decl_node, is_export, is_exportlib,
-                             is_extern, is_builtin, is_comptime, is_using);
-  vec_push(scope->values, (void *)val);
-  return (void *)val;
-}
-
-/** Create a function_t, register it in scope, and return it as ref. */
-static void *_create_function(scope_t scope, node_t decl_node,
-                              bool is_export, bool is_exportlib, bool is_inline,
-                              bool is_extern, bool is_builtin, bool is_comptime,
-                              bool is_c_variadic) {
-  function_t func = function_create(scope->allocator, decl_node, is_export,
-                                    is_exportlib, is_inline, is_extern,
-                                    is_builtin, is_comptime, is_c_variadic);
-  vec_push(scope->functions, (void *)func);
-  return (void *)func;
-}
-
-/** Create a stype_t, register it in context (global), and return it as ref. */
-static void *_create_type(context_t ctx, enum type_kind_t kind, node_t decl_node) {
-  stype_t type = stype_create(ctx->allocator, kind, decl_node);
-  /* Named types get a temporary hash from the node pointer.
-     The real structural hash is computed during type resolution (phase 2). */
-  uint64_t temp_hash = stype_compute_primitive_hash(kind);
-  temp_hash = stype_hash_mix_u64(temp_hash, (uint64_t)(uintptr_t)decl_node);
-  type->instance.hash = temp_hash;
-  rbtree_insert(ctx->types, type->instance.hash, (void *)type);
-  return (void *)type;
-}
-
-/** Create a namespace_t, register it in scope, and return it as ref. */
-static void *_create_namespace(scope_t scope, node_t decl_node) {
-  namespace_t ns = namespace_create(scope->allocator, decl_node);
-  vec_push(scope->namespaces, (void *)ns);
-  return (void *)ns;
-}
-
-/* --------------------------------------------------------------------------
  *  Per-statement-type collection functions
  * -------------------------------------------------------------------------- */
 
@@ -174,11 +125,9 @@ static void _collect_var_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(var->identifier);
   if (!name_str)
     return;
-  /* node points to the declaration (declarator), not the statement wrapper */
-  void *ref = _create_value(scope, decl->declarator, decl->is_export,
-                            decl->is_exportlib, decl->is_extern,
-                            decl->is_builtin, decl->is_comptime, decl->is_using);
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_VARIABLE, ref))
+  /* Phase 1: insert name with ref=NULL — will be filled during definition
+   * collection (phase 2) when the type/value system is rebuilt. */
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_VARIABLE, NULL))
     return;
   if (mod && decl->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
@@ -192,12 +141,8 @@ static void _collect_function_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(decl->name);
   if (!name_str)
     return;
-  /* For functions, node points to the declaration (declarator), not the statement wrapper */
-  void *ref = _create_function(scope, func->declarator, func->is_export,
-                               func->is_exportlib, decl->is_inline,
-                               decl->is_extern, decl->is_builtin,
-                               decl->is_comptime, decl->is_c_variadic);
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_FUNCTION, ref))
+  /* Phase 1: ref=NULL — will be filled during definition collection (phase 2). */
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_FUNCTION, NULL))
     return;
   if (mod && func->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
@@ -210,12 +155,12 @@ static void _collect_struct_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(s->name);
   if (!name_str)
     return;
-  void *ref = _create_type(ctx, TYPE_STRUCT, stmt);
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, ref))
+  /* Phase 1: insert type name with ref=NULL — will be filled during
+   * definition collection (phase 2). */
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
     return;
   if (mod && s->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
-  /* TODO: recurse into struct members for method/type collection */
 }
 
 static void _collect_union_declaration(context_t ctx, scope_t scope,
@@ -225,12 +170,10 @@ static void _collect_union_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(u->name);
   if (!name_str)
     return;
-  void *ref = _create_type(ctx, TYPE_UNION, stmt);
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, ref))
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
     return;
   if (mod && u->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
-  /* TODO: recurse into union members for method/type collection */
 }
 
 static void _collect_enum_declaration(context_t ctx, scope_t scope,
@@ -240,8 +183,7 @@ static void _collect_enum_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(e->name);
   if (!name_str)
     return;
-  void *ref = _create_type(ctx, TYPE_ENUM, stmt);
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, ref))
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
     return;
   if (mod && e->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
@@ -254,12 +196,10 @@ static void _collect_interface_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(iface->name);
   if (!name_str)
     return;
-  void *ref = _create_type(ctx, TYPE_INTERFACE, stmt);
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, ref))
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
     return;
   if (mod && iface->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
-  /* TODO: recurse into interface members for method/type collection */
 }
 
 static void _collect_cunion_declaration(context_t ctx, scope_t scope,
@@ -268,8 +208,7 @@ static void _collect_cunion_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(cu->name);
   if (!name_str)
     return;
-  void *ref = _create_type(ctx, TYPE_CUNION, stmt);
-  _scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, ref);
+  _scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL);
 }
 
 static void _collect_type_alias_declaration(context_t ctx, scope_t scope,
@@ -280,8 +219,7 @@ static void _collect_type_alias_declaration(context_t ctx, scope_t scope,
   const char *name_str = _get_identifier_name(t->name);
   if (!name_str)
     return;
-  void *ref = _create_type(ctx, TYPE_TYPE_ALIAS, stmt);
-  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, ref))
+  if (!_scope_insert_name(ctx, scope, stmt, name_str, NAME_TYPE, NULL))
     return;
   if (mod && t->is_export)
     _module_export_name(ctx, mod, stmt, name_str);
@@ -311,8 +249,8 @@ static void _collect_import_statement(context_t ctx, scope_t scope,
     return;
   }
   name_collector_run(ctx, dep_mod);
-  void *ref = _create_namespace(scope, stmt);
-  _scope_insert_name(ctx, scope, stmt, mod_name, NAME_NAMESPACE, ref);
+  /* Phase 1: ref=NULL — will be filled during definition collection (phase 2). */
+  _scope_insert_name(ctx, scope, stmt, mod_name, NAME_NAMESPACE, NULL);
 }
 
 static void _collect_export_statement(context_t ctx, scope_t scope,

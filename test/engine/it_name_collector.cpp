@@ -9,10 +9,6 @@
 #include "engine/name_collector.h"
 #include "engine/module.h"
 #include "engine/scope.h"
-#include "engine/stype.h"
-#include "engine/value.h"
-#include "engine/function.h"
-#include "engine/namespace.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -201,17 +197,14 @@ TEST_F(it_name_collector, mixed_declarations) {
 
 /* ---- name ref is set after def collection phase 1 ---- */
 
-TEST_F(it_name_collector, name_ref_is_set_after_def_collection) {
+TEST_F(it_name_collector, name_ref_null_in_phase1) {
   const char *source = "func foo(): void {}";
   module_t mod = parse_and_collect(source, "test.cubec");
 
   name_t name = find_name(mod, "foo");
   ASSERT_NE(name, nullptr);
-  /* ref should be set — points to a function_t */
-  ASSERT_NE(name->ref, nullptr);
-
-  function_t func = (function_t)name->ref;
-  EXPECT_EQ(func->header.kind, DEF_FUNCTION);
+  /* Phase 1: ref is NULL — will be filled during definition collection */
+  EXPECT_EQ(name->ref, nullptr);
 
   module_dispose(mod);
 }
@@ -230,7 +223,6 @@ TEST_F(it_name_collector, duplicate_name_error) {
   /* First declaration should still be in scope (not overwritten) */
   name_t name = find_name(mod, "foo");
   ASSERT_NE(name, nullptr);
-  EXPECT_NE(name->ref, nullptr);
 
   module_dispose(mod);
 }
@@ -395,175 +387,53 @@ TEST_F(it_name_collector, import_nonexistent_file_error) {
   module_dispose(mod);
 }
 
-/* ======== New tests: semantic object creation ======== */
+/* ======== Semantic object creation tests ======== */
 
-/* ---- value_t ref is created with correct modifiers ---- */
+/* ---- variable names: ref=NULL in phase 1 ---- */
 
-TEST_F(it_name_collector, value_ref_has_modifiers) {
+TEST_F(it_name_collector, var_name_ref_null_in_phase1) {
   const char *source = "var x: i32 = 42;";
   module_t mod = parse_and_collect(source, "test.cubec");
 
   name_t name = find_name(mod, "x");
   ASSERT_NE(name, nullptr);
-  ASSERT_NE(name->ref, nullptr);
-
-  value_t val = (value_t)name->ref;
-  EXPECT_EQ(val->header.kind, DEF_VALUE);
-  EXPECT_EQ(val->stype, nullptr);   /* phase 1: not set */
-  EXPECT_EQ(val->data, nullptr);    /* phase 1: not set */
-  EXPECT_FALSE(val->is_export);
-  EXPECT_FALSE(val->is_extern);
-  EXPECT_FALSE(val->is_comptime);
+  EXPECT_EQ(name->kind, NAME_VARIABLE);
+  EXPECT_EQ(name->ref, nullptr); /* phase 1: not set */
 
   module_dispose(mod);
 }
 
-TEST_F(it_name_collector, value_ref_export_modifier) {
-  const char *source = "export var x: i32 = 42;";
-  module_t mod = parse_and_collect(source, "test.cubec");
+/* ---- function names: ref=NULL in phase 1 ---- */
 
-  name_t name = find_name(mod, "x");
-  ASSERT_NE(name, nullptr);
-  value_t val = (value_t)name->ref;
-  ASSERT_NE(val, nullptr);
-  EXPECT_TRUE(val->is_export);
-
-  module_dispose(mod);
-}
-
-TEST_F(it_name_collector, value_ref_extern_modifier) {
-  const char *source = "extern var x: i32;";
-  module_t mod = parse_and_collect(source, "test.cubec");
-
-  name_t name = find_name(mod, "x");
-  ASSERT_NE(name, nullptr);
-  value_t val = (value_t)name->ref;
-  ASSERT_NE(val, nullptr);
-  EXPECT_TRUE(val->is_extern);
-
-  module_dispose(mod);
-}
-
-/* ---- function_t ref is created with correct modifiers ---- */
-
-TEST_F(it_name_collector, function_ref_has_modifiers) {
+TEST_F(it_name_collector, function_name_ref_null_in_phase1) {
   const char *source = "func add(a: i32, b: i32): i32 { return a + b; }";
   module_t mod = parse_and_collect(source, "test.cubec");
 
   name_t name = find_name(mod, "add");
   ASSERT_NE(name, nullptr);
-  ASSERT_NE(name->ref, nullptr);
-
-  function_t func = (function_t)name->ref;
-  EXPECT_EQ(func->header.kind, DEF_FUNCTION);
-  EXPECT_EQ(func->params, nullptr);     /* phase 1: not set */
-  EXPECT_EQ(func->implements, nullptr); /* phase 1: not set */
-  EXPECT_FALSE(func->is_export);
-  EXPECT_FALSE(func->is_extern);
+  EXPECT_EQ(name->kind, NAME_FUNCTION);
+  EXPECT_EQ(name->ref, nullptr); /* phase 1: not set */
 
   module_dispose(mod);
 }
 
-TEST_F(it_name_collector, function_ref_export_modifier) {
-  const char *source = "export func add(a: i32, b: i32): i32 { return a + b; }";
-  module_t mod = parse_and_collect(source, "test.cubec");
+/* ---- type names: ref=NULL in phase 1 ---- */
 
-  name_t name = find_name(mod, "add");
-  ASSERT_NE(name, nullptr);
-  function_t func = (function_t)name->ref;
-  ASSERT_NE(func, nullptr);
-  EXPECT_TRUE(func->is_export);
-
-  module_dispose(mod);
-}
-
-/* ---- stype_t ref is created with correct type_kind ---- */
-
-TEST_F(it_name_collector, stype_ref_struct_kind) {
+TEST_F(it_name_collector, type_name_ref_null_in_phase1) {
   const char *source = "struct Point { x: f64; y: f64; }";
   module_t mod = parse_and_collect(source, "test.cubec");
 
   name_t name = find_name(mod, "Point");
   ASSERT_NE(name, nullptr);
-  ASSERT_NE(name->ref, nullptr);
-
-  stype_t type = (stype_t)name->ref;
-  EXPECT_EQ(type->header.kind, DEF_TYPE);
-  EXPECT_EQ(type->type_kind, TYPE_STRUCT);
-  EXPECT_EQ(type->params, nullptr);
-  EXPECT_EQ(type->implements, nullptr);
+  EXPECT_EQ(name->kind, NAME_TYPE);
+  EXPECT_EQ(name->ref, nullptr); /* phase 1: not set */
 
   module_dispose(mod);
 }
 
-TEST_F(it_name_collector, stype_ref_union_kind) {
-  const char *source = "union Opt[T] { value: T; none: void; }";
-  module_t mod = parse_and_collect(source, "test.cubec");
+/* ---- namespace names: ref=NULL in phase 1 ---- */
 
-  name_t name = find_name(mod, "Opt");
-  ASSERT_NE(name, nullptr);
-  stype_t type = (stype_t)name->ref;
-  ASSERT_NE(type, nullptr);
-  EXPECT_EQ(type->type_kind, TYPE_UNION);
-
-  module_dispose(mod);
-}
-
-TEST_F(it_name_collector, stype_ref_enum_kind) {
-  const char *source = "enum Color { Red, Green, Blue }";
-  module_t mod = parse_and_collect(source, "test.cubec");
-
-  name_t name = find_name(mod, "Color");
-  ASSERT_NE(name, nullptr);
-  stype_t type = (stype_t)name->ref;
-  ASSERT_NE(type, nullptr);
-  EXPECT_EQ(type->type_kind, TYPE_ENUM);
-
-  module_dispose(mod);
-}
-
-TEST_F(it_name_collector, stype_ref_interface_kind) {
-  const char *source = "interface Printable { func to_string(self): string; }";
-  module_t mod = parse_and_collect(source, "test.cubec");
-
-  name_t name = find_name(mod, "Printable");
-  ASSERT_NE(name, nullptr);
-  stype_t type = (stype_t)name->ref;
-  ASSERT_NE(type, nullptr);
-  EXPECT_EQ(type->type_kind, TYPE_INTERFACE);
-
-  module_dispose(mod);
-}
-
-TEST_F(it_name_collector, stype_ref_type_alias_kind) {
-  const char *source = "type MyInt = i32;";
-  module_t mod = parse_and_collect(source, "test.cubec");
-
-  name_t name = find_name(mod, "MyInt");
-  ASSERT_NE(name, nullptr);
-  stype_t type = (stype_t)name->ref;
-  ASSERT_NE(type, nullptr);
-  EXPECT_EQ(type->type_kind, TYPE_TYPE_ALIAS);
-
-  module_dispose(mod);
-}
-
-TEST_F(it_name_collector, stype_ref_cunion_kind) {
-  const char *source = "cunion Data { int_val: i32; float_val: f64; }";
-  module_t mod = parse_and_collect(source, "test.cubec");
-
-  name_t name = find_name(mod, "Data");
-  ASSERT_NE(name, nullptr);
-  stype_t type = (stype_t)name->ref;
-  ASSERT_NE(type, nullptr);
-  EXPECT_EQ(type->type_kind, TYPE_CUNION);
-
-  module_dispose(mod);
-}
-
-/* ---- namespace_t ref is created for imports ---- */
-
-TEST_F(it_name_collector, namespace_ref_created) {
+TEST_F(it_name_collector, namespace_name_ref_null_in_phase1) {
   const char *dep_path = "/tmp/cubec_ns_ref_dep.cubec";
   FILE *f = fopen(dep_path, "w");
   ASSERT_NE(f, nullptr);
@@ -575,48 +445,8 @@ TEST_F(it_name_collector, namespace_ref_created) {
 
   name_t name = find_name(mod, "dep");
   ASSERT_NE(name, nullptr);
-  ASSERT_NE(name->ref, nullptr);
-
-  namespace_t ns = (namespace_t)name->ref;
-  EXPECT_EQ(ns->header.kind, DEF_NAMESPACE);
-  EXPECT_EQ(ns->module, nullptr); /* phase 1: not set */
-
-  module_dispose(mod);
-}
-
-/* ---- stype_t objects are stored in context->types ---- */
-
-TEST_F(it_name_collector, types_stored_in_context) {
-  const char *source =
-      "struct Point { x: f64; y: f64; }\n"
-      "enum Color { Red, Green, Blue }\n";
-  module_t mod = parse_and_collect(source, "test.cubec");
-
-  /* context should have 2 stype_t objects (plus primitives) */
-  size_t type_count = rbtree_get_size(ctx->types);
-  EXPECT_GE(type_count, (size_t)2 + 16); /* 16 primitive types */
-
-  module_dispose(mod);
-}
-
-/* ---- value_t/function_t/namespace_t objects stored in scope ---- */
-
-TEST_F(it_name_collector, values_stored_in_scope) {
-  const char *source = "var x: i32 = 42;\nvar y: f64 = 3.14;";
-  module_t mod = parse_and_collect(source, "test.cubec");
-
-  size_t value_count = vec_get_size(mod->root_scope->values);
-  EXPECT_GE(value_count, (size_t)2);
-
-  module_dispose(mod);
-}
-
-TEST_F(it_name_collector, functions_stored_in_scope) {
-  const char *source = "func foo(): void {}\nfunc bar(): i32 { return 1; }";
-  module_t mod = parse_and_collect(source, "test.cubec");
-
-  size_t func_count = vec_get_size(mod->root_scope->functions);
-  EXPECT_GE(func_count, (size_t)2);
+  EXPECT_EQ(name->kind, NAME_NAMESPACE);
+  EXPECT_EQ(name->ref, nullptr); /* phase 1: not set */
 
   module_dispose(mod);
 }

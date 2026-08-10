@@ -2,11 +2,8 @@
 #define _H_CUBEC_ENGINE_CONTEXT_
 #include "core/allocator.h"
 #include "core/diagnostic.h"
-#include "core/rbtree.h"
 #include "core/strmap.h"
 #include "core/type.h"
-#include "core/vec.h"
-#include "engine/value.h"
 #include <stddef.h>
 #include <stdint.h>
 #ifdef __cplusplus
@@ -19,9 +16,6 @@ typedef struct _module_t *module_t;
 struct _scope_t;
 typedef struct _scope_t *scope_t;
 
-struct _stype_t;
-typedef struct _stype_t *stype_t;
-
 struct context {
   allocator_t allocator;
   diagnostic_list_t diagnostics;
@@ -29,18 +23,6 @@ struct context {
   scope_t global_scope;  /* owned: global scope */
   scope_t root_scope;    /* borrowed: current module's root scope */
   scope_t current_scope; /* borrowed: current traversal position */
-  rbtree_t types;        /* owned: hash(uint64_t) → stype_t (auto-dispose) */
-  rbtree_t strings;     /* owned: hash(uint64_t) → string_t (string interning table) */
-
-  /* Primitive type singletons — borrowing pointers into ctx->types */
-  stype_t t_void;
-  stype_t t_bool;
-  stype_t t_i8, t_i16, t_i32, t_i64;
-  stype_t t_u8, t_u16, t_u32, t_u64;
-  stype_t t_f16, t_f32, t_f64;
-  stype_t t_char;
-  stype_t t_str;
-  stype_t t_nil;
 };
 
 typedef struct context *context_t;
@@ -81,75 +63,6 @@ void context_push_scope(context_t ctx, scope_t scope);
 
 /** Restore current_scope to its parent. */
 void context_pop_scope(context_t ctx);
-
-/* --------------------------------------------------------------------------
- *  Value creation — unified entry point with generic instantiation
- * -------------------------------------------------------------------------- */
-
-/**
- * @brief Create a value_t with type, optional generic args, and comptime data.
- *
- * If type is generic and generic_args is provided, performs instantiation:
- * computes instance hash from generic_args, looks up in type->implements rbtree,
- * creates new instance if not found.
- *
- * data is copied (memcpy) into a newly allocated buffer of type->instance.size bytes.
- * If data is NULL, value->data is NULL (uninitialized value).
- *
- * @param ctx           Compiler context
- * @param type          Value's type template (borrowing)
- * @param generic_args  vec of value_t generic arguments (borrowing, nullable)
- * @param data          Source data to copy (borrowing, nullable — NULL for uninitialized)
- * @param is_export     Exported from module
- * @param is_exportlib  Exported with C ABI
- * @param is_extern     External linkage
- * @param is_builtin    Compiler-provided
- * @param is_comptime   Compile-time evaluated
- * @param is_using      Auto-defer at scope exit
- */
-value_t context_create_value(context_t ctx, stype_t type, vec_t generic_args,
-                             const void *data,
-                             bool is_export, bool is_exportlib, bool is_extern,
-                             bool is_builtin, bool is_comptime, bool is_using);
-
-/* Per-kind convenience wrappers (no generic args, all flags false) */
-
-/** @brief Create an integer value. type must be an integer type_kind. */
-value_t context_create_int_value(context_t ctx, stype_t type, uint64_t val);
-
-/** @brief Create a float value. type must be a float type_kind. */
-value_t context_create_float_value(context_t ctx, stype_t type, double val);
-
-/** @brief Create a bool value. */
-value_t context_create_bool_value(context_t ctx, stype_t type, bool val);
-
-/** @brief Create a char value. */
-value_t context_create_char_value(context_t ctx, stype_t type, uint8_t val);
-
-/** @brief Create a string value from C string (copied). */
-value_t context_create_str_value(context_t ctx, stype_t type, const char *val);
-
-/** @brief Create a nil value. */
-value_t context_create_nil_value(context_t ctx, stype_t type);
-
-/* --------------------------------------------------------------------------
- *  Value data hash — dispatches to per-type hash_value implementations
- * -------------------------------------------------------------------------- */
-
-/**
- * @brief Compute structural hash of a value's raw data buffer.
- *
- * Dispatches to per-type hash_value functions based on type->type_kind.
- * Each type interprets data according to its C layout.
- *
- * @param ctx       Compiler context (for string table lookups)
- * @param type      The semantic type describing the buffer layout (borrowing)
- * @param type_hash Instance hash within type->implements
- * @param data      Raw data buffer following C layout (borrowing, may be NULL)
- * @return Structural hash of the value
- */
-uint64_t value_data_hash(context_t ctx, stype_t type, uint64_t type_hash,
-                         const void *data);
 
 #ifdef __cplusplus
 }
