@@ -37,9 +37,9 @@ _cubec_declaration_variable_clone(cubec_declaration_variable_t self,
                                   allocator_t allocator,
                                   cubec_declaration_variable_t another) {
   g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
-  self->identifier = value_clone(allocator, another->identifier);
-  self->type = value_clone(allocator, another->type);
-  self->expression = value_clone(allocator, another->expression);
+  self->identifier = alloc_clone(allocator, another->identifier);
+  self->type = alloc_clone(allocator, another->type);
+  self->expression = alloc_clone(allocator, another->expression);
   return;
 
 cleanup:
@@ -53,9 +53,9 @@ _cubec_declaration_variable_move(cubec_declaration_variable_t self,
                                  allocator_t allocator,
                                  cubec_declaration_variable_t another) {
   g_cubec_declaration_type.move(&self->super, allocator, &another->super);
-  self->identifier = value_move(allocator, another->identifier);
-  self->type = value_move(allocator, another->type);
-  self->expression = value_move(allocator, another->expression);
+  self->identifier = alloc_move(allocator, another->identifier);
+  self->type = alloc_move(allocator, another->type);
+  self->expression = alloc_move(allocator, another->expression);
   return;
 
 cleanup:

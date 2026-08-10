@@ -46,7 +46,7 @@ static void _diagnostic_list_clone(diagnostic_list_t self, allocator_t allocator
     struct diagnostic *src = (struct diagnostic *)vec_get(another->diagnostics, i);
     struct diagnostic *dst = (struct diagnostic *)allocator_alloc(allocator, sizeof(struct diagnostic));
     *dst = *src;
-    dst->notes = (vec_t)value_clone(allocator, src->notes);
+    dst->notes = (vec_t)alloc_clone(allocator, src->notes);
     vec_push(self->diagnostics, dst);
   }
 }

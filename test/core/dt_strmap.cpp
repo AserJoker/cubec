@@ -151,7 +151,7 @@ TEST_F(dt_strmap, clone) {
   node_t n1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
   strmap_insert(map, "key", n1);
 
-  strmap_t copy = (strmap_t)value_clone(allocator, map);
+  strmap_t copy = (strmap_t)alloc_clone(allocator, map);
   ASSERT_NE(copy, nullptr);
   EXPECT_EQ(strmap_get_size(copy), 1);
   EXPECT_NE(strmap_find(copy, "key"), nullptr);
@@ -166,7 +166,7 @@ TEST_F(dt_strmap, move) {
   node_t n1 = (node_t)allocator_create(allocator, &g_node_type, NULL);
   strmap_insert(map, "key", n1);
 
-  strmap_t moved = (strmap_t)value_move(allocator, map);
+  strmap_t moved = (strmap_t)alloc_move(allocator, map);
   ASSERT_NE(moved, nullptr);
   EXPECT_EQ(strmap_get_size(moved), 1);
   EXPECT_NE(strmap_find(moved, "key"), nullptr);

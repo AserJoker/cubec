@@ -36,7 +36,7 @@ static void _cubec_declaration_enum_clone(cubec_declaration_enum_t self,
                                          allocator_t allocator,
                                          cubec_declaration_enum_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->items = value_clone(allocator, another->items);
+  self->items = alloc_clone(allocator, another->items);
   return;
 }
 
@@ -44,7 +44,7 @@ static void _cubec_declaration_enum_move(cubec_declaration_enum_t self,
                                         allocator_t allocator,
                                         cubec_declaration_enum_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->items = value_move(allocator, another->items);
+  self->items = alloc_move(allocator, another->items);
   return;
 }
 

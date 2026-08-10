@@ -38,10 +38,10 @@ static void _cubec_statement_if_clone(cubec_statement_if_t self,
                                       allocator_t allocator,
                                       cubec_statement_if_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->condition = value_clone(allocator, another->condition);
-  self->then_branch = value_clone(allocator, another->then_branch);
+  self->condition = alloc_clone(allocator, another->condition);
+  self->then_branch = alloc_clone(allocator, another->then_branch);
   self->else_branch = another->else_branch
-                          ? value_clone(allocator, another->else_branch)
+                          ? alloc_clone(allocator, another->else_branch)
                           : NULL;
   return;
 }
@@ -50,10 +50,10 @@ static void _cubec_statement_if_move(cubec_statement_if_t self,
                                      allocator_t allocator,
                                      cubec_statement_if_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->condition = value_move(allocator, another->condition);
-  self->then_branch = value_move(allocator, another->then_branch);
+  self->condition = alloc_move(allocator, another->condition);
+  self->then_branch = alloc_move(allocator, another->then_branch);
   self->else_branch =
-      another->else_branch ? value_move(allocator, another->else_branch) : NULL;
+      another->else_branch ? alloc_move(allocator, another->else_branch) : NULL;
   return;
 }
 

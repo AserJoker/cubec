@@ -38,8 +38,8 @@ static void _cubec_expression_comma_clone(cubec_expression_comma_t self,
                                           allocator_t allocator,
                                           cubec_expression_comma_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->left = value_clone(allocator, another->left);
-  self->right = value_clone(allocator, another->right);
+  self->left = alloc_clone(allocator, another->left);
+  self->right = alloc_clone(allocator, another->right);
   return;
 
 cleanup:
@@ -51,8 +51,8 @@ static void _cubec_expression_comma_move(cubec_expression_comma_t self,
                                          allocator_t allocator,
                                          cubec_expression_comma_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->left = value_move(allocator, another->left);
-  self->right = value_move(allocator, another->right);
+  self->left = alloc_move(allocator, another->left);
+  self->right = alloc_move(allocator, another->right);
   return;
 
 cleanup:

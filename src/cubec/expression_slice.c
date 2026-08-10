@@ -41,9 +41,9 @@ static void _cubec_expression_slice_clone(cubec_expression_slice_t self,
                                           allocator_t allocator,
                                           cubec_expression_slice_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->host = value_clone(allocator, another->host);
-  self->start = value_clone(allocator, another->start);
-  self->length = value_clone(allocator, another->length);
+  self->host = alloc_clone(allocator, another->host);
+  self->start = alloc_clone(allocator, another->start);
+  self->length = alloc_clone(allocator, another->length);
   return;
 
 cleanup:
@@ -56,9 +56,9 @@ static void _cubec_expression_slice_move(cubec_expression_slice_t self,
                                          allocator_t allocator,
                                          cubec_expression_slice_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->host = value_move(allocator, another->host);
-  self->start = value_move(allocator, another->start);
-  self->length = value_move(allocator, another->length);
+  self->host = alloc_move(allocator, another->host);
+  self->start = alloc_move(allocator, another->start);
+  self->length = alloc_move(allocator, another->length);
   return;
 
 cleanup:

@@ -37,18 +37,18 @@ static void _cubec_enum_item_clone(cubec_enum_item_t self,
                                    allocator_t allocator,
                                    cubec_enum_item_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->name = value_clone(allocator, another->name);
-  self->type = another->type ? value_clone(allocator, another->type) : NULL;
-  self->value = another->value ? value_clone(allocator, another->value) : NULL;
+  self->name = alloc_clone(allocator, another->name);
+  self->type = another->type ? alloc_clone(allocator, another->type) : NULL;
+  self->value = another->value ? alloc_clone(allocator, another->value) : NULL;
   return;
 }
 
 static void _cubec_enum_item_move(cubec_enum_item_t self, allocator_t allocator,
                                   cubec_enum_item_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->name = value_move(allocator, another->name);
-  self->type = another->type ? value_move(allocator, another->type) : NULL;
-  self->value = another->value ? value_move(allocator, another->value) : NULL;
+  self->name = alloc_move(allocator, another->name);
+  self->type = another->type ? alloc_move(allocator, another->type) : NULL;
+  self->value = another->value ? alloc_move(allocator, another->value) : NULL;
   return;
 }
 

@@ -267,7 +267,7 @@ TEST_F(dt_map, clone_with_value_clone) {
   ASSERT_NE(orig_val1, nullptr);
   ASSERT_NE(orig_val2, nullptr);
 
-  map_t cloned = (map_t)value_clone(allocator, map);
+  map_t cloned = (map_t)alloc_clone(allocator, map);
   ASSERT_NE(cloned, nullptr);
   EXPECT_EQ(map_get_size(cloned), 2);
 
@@ -298,7 +298,7 @@ TEST_F(dt_map, move_with_value_move) {
   void *orig_val1 = map_find(map, node1);
   void *orig_val2 = map_find(map, node2);
 
-  map_t moved = (map_t)value_move(allocator, map);
+  map_t moved = (map_t)alloc_move(allocator, map);
   ASSERT_NE(moved, nullptr);
   EXPECT_EQ(map_get_size(moved), 2);
   EXPECT_EQ(map_get_size(map), 0);

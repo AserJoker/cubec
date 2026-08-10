@@ -32,7 +32,7 @@ _cubec_statement_expression_clone(cubec_statement_expression_t self,
                                   allocator_t allocator,
                                   cubec_statement_expression_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->expression = value_clone(allocator, another->expression);
+  self->expression = alloc_clone(allocator, another->expression);
   return;
 }
 
@@ -41,7 +41,7 @@ _cubec_statement_expression_move(cubec_statement_expression_t self,
                                  allocator_t allocator,
                                  cubec_statement_expression_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->expression = value_move(allocator, another->expression);
+  self->expression = alloc_move(allocator, another->expression);
   return;
 }
 

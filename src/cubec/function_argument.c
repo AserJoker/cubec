@@ -39,8 +39,8 @@ static void _cubec_function_argument_clone(cubec_function_argument_t self,
                                            allocator_t allocator,
                                            cubec_function_argument_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->identifier = value_clone(allocator, another->identifier);
-  self->type = another->type ? value_clone(allocator, another->type) : NULL;
+  self->identifier = alloc_clone(allocator, another->identifier);
+  self->type = another->type ? alloc_clone(allocator, another->type) : NULL;
   self->is_rest = another->is_rest;
 }
 
@@ -48,8 +48,8 @@ static void _cubec_function_argument_move(cubec_function_argument_t self,
                                           allocator_t allocator,
                                           cubec_function_argument_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->identifier = value_move(allocator, another->identifier);
-  self->type = another->type ? value_move(allocator, another->type) : NULL;
+  self->identifier = alloc_move(allocator, another->identifier);
+  self->type = another->type ? alloc_move(allocator, another->type) : NULL;
   self->is_rest = another->is_rest;
 }
 

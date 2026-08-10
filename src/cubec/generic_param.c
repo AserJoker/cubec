@@ -40,12 +40,12 @@ static void _cubec_generic_param_clone(cubec_generic_param_t self,
                                        allocator_t allocator,
                                        cubec_generic_param_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->name = value_clone(allocator, another->name);
+  self->name = alloc_clone(allocator, another->name);
   self->constraints = another->constraints
-                          ? value_clone(allocator, another->constraints)
+                          ? alloc_clone(allocator, another->constraints)
                           : NULL;
   self->value_type =
-      another->value_type ? value_clone(allocator, another->value_type) : NULL;
+      another->value_type ? alloc_clone(allocator, another->value_type) : NULL;
   self->is_rest = another->is_rest;
 }
 
@@ -53,11 +53,11 @@ static void _cubec_generic_param_move(cubec_generic_param_t self,
                                       allocator_t allocator,
                                       cubec_generic_param_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->name = value_move(allocator, another->name);
+  self->name = alloc_move(allocator, another->name);
   self->constraints =
-      another->constraints ? value_move(allocator, another->constraints) : NULL;
+      another->constraints ? alloc_move(allocator, another->constraints) : NULL;
   self->value_type =
-      another->value_type ? value_move(allocator, another->value_type) : NULL;
+      another->value_type ? alloc_move(allocator, another->value_type) : NULL;
   self->is_rest = another->is_rest;
 }
 

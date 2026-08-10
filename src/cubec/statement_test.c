@@ -37,8 +37,8 @@ static void _cubec_statement_test_clone(cubec_statement_test_t self,
                                         allocator_t allocator,
                                         cubec_statement_test_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->name = (string_t)value_clone(allocator, another->name);
-  self->body = value_clone(allocator, another->body);
+  self->name = (string_t)alloc_clone(allocator, another->name);
+  self->body = alloc_clone(allocator, another->body);
   return;
 }
 
@@ -46,8 +46,8 @@ static void _cubec_statement_test_move(cubec_statement_test_t self,
                                        allocator_t allocator,
                                        cubec_statement_test_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->name = (string_t)value_move(allocator, another->name);
-  self->body = value_move(allocator, another->body);
+  self->name = (string_t)alloc_move(allocator, another->name);
+  self->body = alloc_move(allocator, another->body);
   return;
 }
 

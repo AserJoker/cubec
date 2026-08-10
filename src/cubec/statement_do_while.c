@@ -38,8 +38,8 @@ _cubec_statement_do_while_clone(cubec_statement_do_while_t self,
                                 allocator_t allocator,
                                 cubec_statement_do_while_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->body = value_clone(allocator, another->body);
-  self->condition = value_clone(allocator, another->condition);
+  self->body = alloc_clone(allocator, another->body);
+  self->condition = alloc_clone(allocator, another->condition);
   return;
 }
 
@@ -47,8 +47,8 @@ static void _cubec_statement_do_while_move(cubec_statement_do_while_t self,
                                            allocator_t allocator,
                                            cubec_statement_do_while_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->body = value_move(allocator, another->body);
-  self->condition = value_move(allocator, another->condition);
+  self->body = alloc_move(allocator, another->body);
+  self->condition = alloc_move(allocator, another->condition);
   return;
 }
 

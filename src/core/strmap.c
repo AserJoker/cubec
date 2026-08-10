@@ -147,7 +147,7 @@ static void _strmap_clone(strmap_t self, allocator_t allocator,
   for (size_t i = 0; i < size; i++) {
     string_t key = vec_get(another->keys, i);
     void *value = vec_get(another->values, i);
-    void *cloned_value = value_clone(allocator, value);
+    void *cloned_value = alloc_clone(allocator, value);
     strmap_insert(self, string_get(key), cloned_value);
   }
 }
@@ -212,7 +212,7 @@ static void convert_to_rbtree(strmap_t self) {
     while ((entry = list_iter_next(&iter)) != NULL) {
       if (rbtree_find(self->index.rbtree, entry->hash) == NULL) {
         strmap_entry_index_t *moved_entry =
-            (strmap_entry_index_t *)value_move(self->allocator, entry);
+            (strmap_entry_index_t *)alloc_move(self->allocator, entry);
         rbtree_insert(self->index.rbtree, moved_entry->hash, moved_entry);
       }
     }

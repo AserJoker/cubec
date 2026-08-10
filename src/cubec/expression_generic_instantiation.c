@@ -49,8 +49,8 @@ static void _cubec_expression_generic_instantiation_clone(
     cubec_expression_generic_instantiation_t self, allocator_t allocator,
     cubec_expression_generic_instantiation_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->callee = value_clone(allocator, another->callee);
-  self->arguments = value_clone(allocator, another->arguments);
+  self->callee = alloc_clone(allocator, another->callee);
+  self->arguments = alloc_clone(allocator, another->arguments);
   return;
 
 cleanup:
@@ -62,7 +62,7 @@ static void _cubec_expression_generic_instantiation_move(
     cubec_expression_generic_instantiation_t self, allocator_t allocator,
     cubec_expression_generic_instantiation_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->callee = value_move(allocator, another->callee);
+  self->callee = alloc_move(allocator, another->callee);
 
   /* Transfer arguments vec directly */
   allocator_free(allocator, &self->arguments);

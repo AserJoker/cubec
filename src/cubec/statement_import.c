@@ -32,8 +32,8 @@ static void _cubec_statement_import_clone(cubec_statement_import_t self,
                                           allocator_t allocator,
                                           cubec_statement_import_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->module_name = value_clone(allocator, another->module_name);
-  self->path = value_clone(allocator, another->path);
+  self->module_name = alloc_clone(allocator, another->module_name);
+  self->path = alloc_clone(allocator, another->path);
   return;
 }
 
@@ -41,8 +41,8 @@ static void _cubec_statement_import_move(cubec_statement_import_t self,
                                          allocator_t allocator,
                                          cubec_statement_import_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->module_name = value_move(allocator, another->module_name);
-  self->path = value_move(allocator, another->path);
+  self->module_name = alloc_move(allocator, another->module_name);
+  self->path = alloc_move(allocator, another->path);
   return;
 }
 

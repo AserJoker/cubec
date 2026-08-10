@@ -48,7 +48,7 @@ _cubec_statement_declaration_clone(cubec_statement_declaration_t self,
   self->is_builtin = another->is_builtin;
   self->is_comptime = another->is_comptime;
   self->is_using = another->is_using;
-  self->declarator = value_clone(allocator, another->declarator);
+  self->declarator = alloc_clone(allocator, another->declarator);
   return;
 }
 
@@ -63,7 +63,7 @@ _cubec_statement_declaration_move(cubec_statement_declaration_t self,
   self->is_builtin = another->is_builtin;
   self->is_comptime = another->is_comptime;
   self->is_using = another->is_using;
-  self->declarator = value_move(allocator, another->declarator);
+  self->declarator = alloc_move(allocator, another->declarator);
   return;
 }
 

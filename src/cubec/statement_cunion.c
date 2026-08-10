@@ -41,8 +41,8 @@ static void _cubec_statement_cunion_clone(cubec_statement_cunion_t self,
                                           allocator_t allocator,
                                           cubec_statement_cunion_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->name = value_clone(allocator, another->name);
-  self->fields = value_clone(allocator, another->fields);
+  self->name = alloc_clone(allocator, another->name);
+  self->fields = alloc_clone(allocator, another->fields);
   return;
 }
 
@@ -50,8 +50,8 @@ static void _cubec_statement_cunion_move(cubec_statement_cunion_t self,
                                          allocator_t allocator,
                                          cubec_statement_cunion_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->name = value_move(allocator, another->name);
-  self->fields = value_move(allocator, another->fields);
+  self->name = alloc_move(allocator, another->name);
+  self->fields = alloc_move(allocator, another->fields);
   return;
 }
 

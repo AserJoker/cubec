@@ -40,8 +40,8 @@ static void _cubec_statement_defer_clone(cubec_statement_defer_t self,
                                          cubec_statement_defer_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->captures =
-      another->captures ? value_clone(allocator, another->captures) : NULL;
-  self->body = value_clone(allocator, another->body);
+      another->captures ? alloc_clone(allocator, another->captures) : NULL;
+  self->body = alloc_clone(allocator, another->body);
   return;
 }
 
@@ -50,8 +50,8 @@ static void _cubec_statement_defer_move(cubec_statement_defer_t self,
                                         cubec_statement_defer_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->captures =
-      another->captures ? value_move(allocator, another->captures) : NULL;
-  self->body = value_move(allocator, another->body);
+      another->captures ? alloc_move(allocator, another->captures) : NULL;
+  self->body = alloc_move(allocator, another->body);
   return;
 }
 

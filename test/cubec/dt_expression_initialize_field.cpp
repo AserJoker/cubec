@@ -175,7 +175,7 @@ TEST_F(dt_expression_initialize_field, clone) {
   node_t original = read_initialize_field(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(original, nullptr);
 
-  node_t cloned = (node_t)value_clone(allocator, original);
+  node_t cloned = (node_t)alloc_clone(allocator, original);
   ASSERT_NE(cloned, nullptr);
   EXPECT_EQ(cloned->kind, CUBEC_NODE_INITIALIZE_LIST_FIELD);
 
@@ -197,10 +197,10 @@ TEST_F(dt_expression_initialize_field, move) {
   node_t original = read_initialize_field(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(original, nullptr);
 
-  node_t moved = (node_t)value_move(allocator, original);
+  node_t moved = (node_t)alloc_move(allocator, original);
   ASSERT_NE(moved, nullptr);
   EXPECT_EQ(moved->kind, CUBEC_NODE_INITIALIZE_LIST_FIELD);
-  /* value_move transfers ownership but does not NULL the source for typed
+  /* alloc_move transfers ownership but does not NULL the source for typed
    * objects */
 
   allocator_free(allocator, &moved);

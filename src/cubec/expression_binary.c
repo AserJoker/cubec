@@ -42,9 +42,9 @@ static void _cubec_expression_binary_clone(cubec_expression_binary_t self,
                                            allocator_t allocator,
                                            cubec_expression_binary_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->left = value_clone(allocator, another->left);
-  self->right = value_clone(allocator, another->right);
-  self->opt = (string_t)value_clone(allocator, another->opt);
+  self->left = alloc_clone(allocator, another->left);
+  self->right = alloc_clone(allocator, another->right);
+  self->opt = (string_t)alloc_clone(allocator, another->opt);
   return;
 
 cleanup:
@@ -57,9 +57,9 @@ static void _cubec_expression_binary_move(cubec_expression_binary_t self,
                                           allocator_t allocator,
                                           cubec_expression_binary_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->left = value_move(allocator, another->left);
-  self->right = value_move(allocator, another->right);
-  self->opt = (string_t)value_move(allocator, another->opt);
+  self->left = alloc_move(allocator, another->left);
+  self->right = alloc_move(allocator, another->right);
+  self->opt = (string_t)alloc_move(allocator, another->opt);
   return;
 
 cleanup:

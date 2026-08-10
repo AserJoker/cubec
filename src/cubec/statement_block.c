@@ -32,7 +32,7 @@ static void _cubec_statement_block_clone(cubec_statement_block_t self,
                                          allocator_t allocator,
                                          cubec_statement_block_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->statements = value_clone(allocator, another->statements);
+  self->statements = alloc_clone(allocator, another->statements);
   return;
 }
 
@@ -40,7 +40,7 @@ static void _cubec_statement_block_move(cubec_statement_block_t self,
                                         allocator_t allocator,
                                         cubec_statement_block_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->statements = value_move(allocator, another->statements);
+  self->statements = alloc_move(allocator, another->statements);
   return;
 }
 

@@ -31,8 +31,8 @@ static void _cubec_declaration_array_clone(cubec_declaration_array_t self,
                                            allocator_t allocator,
                                            cubec_declaration_array_t another) {
   g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
-  self->size = value_clone(allocator, another->size);
-  self->type = value_clone(allocator, another->type);
+  self->size = alloc_clone(allocator, another->size);
+  self->type = alloc_clone(allocator, another->type);
   return;
 
 cleanup:
@@ -44,8 +44,8 @@ static void _cubec_declaration_array_move(cubec_declaration_array_t self,
                                           allocator_t allocator,
                                           cubec_declaration_array_t another) {
   g_cubec_declaration_type.move(&self->super, allocator, &another->super);
-  self->size = value_move(allocator, another->size);
-  self->type = value_move(allocator, another->type);
+  self->size = alloc_move(allocator, another->size);
+  self->type = alloc_move(allocator, another->type);
   return;
 
 cleanup:

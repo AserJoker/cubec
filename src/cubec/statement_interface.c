@@ -50,11 +50,11 @@ _cubec_statement_interface_clone(cubec_statement_interface_t self,
                                  cubec_statement_interface_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
-  self->name = value_clone(allocator, another->name);
+  self->name = alloc_clone(allocator, another->name);
   self->generic_params = another->generic_params
-                             ? value_clone(allocator, another->generic_params)
+                             ? alloc_clone(allocator, another->generic_params)
                              : NULL;
-  self->members = value_clone(allocator, another->members);
+  self->members = alloc_clone(allocator, another->members);
   return;
 }
 
@@ -64,11 +64,11 @@ _cubec_statement_interface_move(cubec_statement_interface_t self,
                                 cubec_statement_interface_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
-  self->name = value_move(allocator, another->name);
+  self->name = alloc_move(allocator, another->name);
   self->generic_params = another->generic_params
-                             ? value_move(allocator, another->generic_params)
+                             ? alloc_move(allocator, another->generic_params)
                              : NULL;
-  self->members = value_move(allocator, another->members);
+  self->members = alloc_move(allocator, another->members);
   return;
 }
 

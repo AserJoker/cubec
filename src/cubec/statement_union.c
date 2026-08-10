@@ -50,13 +50,13 @@ static void _cubec_statement_union_clone(cubec_statement_union_t self,
                                          cubec_statement_union_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
-  self->name = value_clone(allocator, another->name);
+  self->name = alloc_clone(allocator, another->name);
   self->generic_params = another->generic_params
-                             ? value_clone(allocator, another->generic_params)
+                             ? alloc_clone(allocator, another->generic_params)
                              : NULL;
   self->implements =
-      another->implements ? value_clone(allocator, another->implements) : NULL;
-  self->members = value_clone(allocator, another->members);
+      another->implements ? alloc_clone(allocator, another->implements) : NULL;
+  self->members = alloc_clone(allocator, another->members);
   return;
 }
 
@@ -65,13 +65,13 @@ static void _cubec_statement_union_move(cubec_statement_union_t self,
                                         cubec_statement_union_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
-  self->name = value_move(allocator, another->name);
+  self->name = alloc_move(allocator, another->name);
   self->generic_params = another->generic_params
-                             ? value_move(allocator, another->generic_params)
+                             ? alloc_move(allocator, another->generic_params)
                              : NULL;
   self->implements =
-      another->implements ? value_move(allocator, another->implements) : NULL;
-  self->members = value_move(allocator, another->members);
+      another->implements ? alloc_move(allocator, another->implements) : NULL;
+  self->members = alloc_move(allocator, another->members);
   return;
 }
 

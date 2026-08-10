@@ -309,7 +309,7 @@ TEST_F(dt_expression_initialize_list, clone) {
   node_t original = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(original, nullptr);
 
-  node_t cloned = (node_t)value_clone(allocator, original);
+  node_t cloned = (node_t)alloc_clone(allocator, original);
   ASSERT_NE(cloned, nullptr);
   EXPECT_EQ(cloned->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 
@@ -334,7 +334,7 @@ TEST_F(dt_expression_initialize_list, move) {
   node_t original = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(original, nullptr);
 
-  node_t moved = (node_t)value_move(allocator, original);
+  node_t moved = (node_t)alloc_move(allocator, original);
   ASSERT_NE(moved, nullptr);
   EXPECT_EQ(moved->kind, CUBEC_NODE_EXPRESSION_INITIALIZE_LIST);
 

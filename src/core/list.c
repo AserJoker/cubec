@@ -29,7 +29,7 @@ static void _list_clone(list_t self, allocator_t allocator, list_t another) {
   self->allocator = allocator;
   list_node_t *node = another->head;
   while (node != NULL) {
-    void *cloned_data = value_clone(allocator, node->data);
+    void *cloned_data = alloc_clone(allocator, node->data);
     list_push(self, cloned_data);
     node = node->next;
   }

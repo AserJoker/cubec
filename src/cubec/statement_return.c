@@ -35,7 +35,7 @@ static void _cubec_statement_return_clone(cubec_statement_return_t self,
                                           cubec_statement_return_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->expression =
-      another->expression ? value_clone(allocator, another->expression) : NULL;
+      another->expression ? alloc_clone(allocator, another->expression) : NULL;
 }
 
 static void _cubec_statement_return_move(cubec_statement_return_t self,
@@ -43,7 +43,7 @@ static void _cubec_statement_return_move(cubec_statement_return_t self,
                                          cubec_statement_return_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->expression =
-      another->expression ? value_move(allocator, another->expression) : NULL;
+      another->expression ? alloc_move(allocator, another->expression) : NULL;
 }
 
 type_t g_cubec_statement_return_type = {

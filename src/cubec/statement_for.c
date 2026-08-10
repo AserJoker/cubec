@@ -43,12 +43,12 @@ static void _cubec_statement_for_clone(cubec_statement_for_t self,
                                        allocator_t allocator,
                                        cubec_statement_for_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->init = another->init ? value_clone(allocator, another->init) : NULL;
+  self->init = another->init ? alloc_clone(allocator, another->init) : NULL;
   self->condition =
-      another->condition ? value_clone(allocator, another->condition) : NULL;
+      another->condition ? alloc_clone(allocator, another->condition) : NULL;
   self->increment =
-      another->increment ? value_clone(allocator, another->increment) : NULL;
-  self->body = value_clone(allocator, another->body);
+      another->increment ? alloc_clone(allocator, another->increment) : NULL;
+  self->body = alloc_clone(allocator, another->body);
   return;
 }
 
@@ -56,12 +56,12 @@ static void _cubec_statement_for_move(cubec_statement_for_t self,
                                       allocator_t allocator,
                                       cubec_statement_for_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->init = another->init ? value_move(allocator, another->init) : NULL;
+  self->init = another->init ? alloc_move(allocator, another->init) : NULL;
   self->condition =
-      another->condition ? value_move(allocator, another->condition) : NULL;
+      another->condition ? alloc_move(allocator, another->condition) : NULL;
   self->increment =
-      another->increment ? value_move(allocator, another->increment) : NULL;
-  self->body = value_move(allocator, another->body);
+      another->increment ? alloc_move(allocator, another->increment) : NULL;
+  self->body = alloc_move(allocator, another->body);
   return;
 }
 

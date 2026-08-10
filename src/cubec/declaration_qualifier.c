@@ -37,7 +37,7 @@ static void _cubec_declaration_qualifier_clone(
     cubec_declaration_qualifier_t self, allocator_t allocator,
     cubec_declaration_qualifier_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->type = value_clone(allocator, another->type);
+  self->type = alloc_clone(allocator, another->type);
   self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
 }
@@ -46,7 +46,7 @@ static void _cubec_declaration_qualifier_move(
     cubec_declaration_qualifier_t self, allocator_t allocator,
     cubec_declaration_qualifier_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->type = value_move(allocator, another->type);
+  self->type = alloc_move(allocator, another->type);
   self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
 }

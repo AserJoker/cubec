@@ -45,9 +45,9 @@ _cubec_expression_ternary_clone(cubec_expression_ternary_t self,
                                 allocator_t allocator,
                                 cubec_expression_ternary_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->condition = value_clone(allocator, another->condition);
-  self->consequent = value_clone(allocator, another->consequent);
-  self->alternate = value_clone(allocator, another->alternate);
+  self->condition = alloc_clone(allocator, another->condition);
+  self->consequent = alloc_clone(allocator, another->consequent);
+  self->alternate = alloc_clone(allocator, another->alternate);
   return;
 
 cleanup:
@@ -60,9 +60,9 @@ static void _cubec_expression_ternary_move(cubec_expression_ternary_t self,
                                            allocator_t allocator,
                                            cubec_expression_ternary_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->condition = value_move(allocator, another->condition);
-  self->consequent = value_move(allocator, another->consequent);
-  self->alternate = value_move(allocator, another->alternate);
+  self->condition = alloc_move(allocator, another->condition);
+  self->consequent = alloc_move(allocator, another->consequent);
+  self->alternate = alloc_move(allocator, another->alternate);
   return;
 
 cleanup:

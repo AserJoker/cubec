@@ -34,13 +34,13 @@ static void _cubec_program_node_clone(cubec_program_node_t self,
                                       allocator_t allocator,
                                       cubec_program_node_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->statements = value_clone(allocator, another->statements);
+  self->statements = alloc_clone(allocator, another->statements);
 }
 static void _cubec_program_node_move(cubec_program_node_t self,
                                      allocator_t allocator,
                                      cubec_program_node_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->statements = value_move(allocator, another->statements);
+  self->statements = alloc_move(allocator, another->statements);
 }
 type_t g_cubec_program_node_type = {
     .name = "cubec.cubec.program_node",

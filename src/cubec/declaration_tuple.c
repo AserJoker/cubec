@@ -41,7 +41,7 @@ _cubec_declaration_tuple_clone(cubec_declaration_tuple_t self,
                                    cubec_declaration_tuple_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->element_types = another->element_types
-                            ? value_clone(allocator, another->element_types)
+                            ? alloc_clone(allocator, another->element_types)
                             : NULL;
   return;
 }

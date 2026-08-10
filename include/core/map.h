@@ -11,7 +11,7 @@ extern "C" {
  * @brief Dictionary / map: stores `void*` key-value pairs.
  *        Small maps (< 16 entries) use a hash table (16-bucket chaining);
  *        large maps auto-convert to a red-black tree index.
- *        Keys are identified by value_get_id(key) (the allocator-assigned unique ID).
+ *        Keys are identified by alloc_get_id(key) (the allocator-assigned unique ID).
  */
 struct _map_t;
 typedef struct _map_t *map_t;
@@ -41,7 +41,7 @@ size_t map_get_size(map_t self);
 
 /**
  * @brief Find the value for a given key.
- * @param key The key to look up (matched by value_get_id).
+ * @param key The key to look up (matched by alloc_get_id).
  * @return The associated value, or NULL if not found.
  */
 void *map_find(map_t self, void *key);

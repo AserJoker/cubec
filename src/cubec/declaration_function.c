@@ -59,17 +59,17 @@ _cubec_declaration_function_clone(cubec_declaration_function_t self,
                                   allocator_t allocator,
                                   cubec_declaration_function_t another) {
   g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
-  self->name = another->name ? value_clone(allocator, another->name) : NULL;
+  self->name = another->name ? alloc_clone(allocator, another->name) : NULL;
   self->captures =
-      another->captures ? value_clone(allocator, another->captures) : NULL;
+      another->captures ? alloc_clone(allocator, another->captures) : NULL;
   self->generic_params = another->generic_params
-                             ? value_clone(allocator, another->generic_params)
+                             ? alloc_clone(allocator, another->generic_params)
                              : NULL;
-  self->arguments = value_clone(allocator, another->arguments);
+  self->arguments = alloc_clone(allocator, another->arguments);
   self->return_type = another->return_type
-                          ? value_clone(allocator, another->return_type)
+                          ? alloc_clone(allocator, another->return_type)
                           : NULL;
-  self->body = another->body ? value_clone(allocator, another->body) : NULL;
+  self->body = another->body ? alloc_clone(allocator, another->body) : NULL;
   self->is_inline = another->is_inline;
   self->is_extern = another->is_extern;
   self->is_builtin = another->is_builtin;
@@ -83,16 +83,16 @@ _cubec_declaration_function_move(cubec_declaration_function_t self,
                                  allocator_t allocator,
                                  cubec_declaration_function_t another) {
   g_cubec_declaration_type.move(&self->super, allocator, &another->super);
-  self->name = another->name ? value_move(allocator, another->name) : NULL;
+  self->name = another->name ? alloc_move(allocator, another->name) : NULL;
   self->captures =
-      another->captures ? value_move(allocator, another->captures) : NULL;
+      another->captures ? alloc_move(allocator, another->captures) : NULL;
   self->generic_params = another->generic_params
-                             ? value_move(allocator, another->generic_params)
+                             ? alloc_move(allocator, another->generic_params)
                              : NULL;
-  self->arguments = value_move(allocator, another->arguments);
+  self->arguments = alloc_move(allocator, another->arguments);
   self->return_type =
-      another->return_type ? value_move(allocator, another->return_type) : NULL;
-  self->body = another->body ? value_move(allocator, another->body) : NULL;
+      another->return_type ? alloc_move(allocator, another->return_type) : NULL;
+  self->body = another->body ? alloc_move(allocator, another->body) : NULL;
   self->is_inline = another->is_inline;
   self->is_extern = another->is_extern;
   self->is_builtin = another->is_builtin;

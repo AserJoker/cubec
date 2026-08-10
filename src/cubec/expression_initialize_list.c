@@ -45,8 +45,8 @@ static void _cubec_expression_initialize_list_clone(
     cubec_expression_initialize_list_t self, allocator_t allocator,
     cubec_expression_initialize_list_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->type = value_clone(allocator, another->type);
-  self->items = value_clone(allocator, another->items);
+  self->type = alloc_clone(allocator, another->type);
+  self->items = alloc_clone(allocator, another->items);
   self->is_field = another->is_field;
   return;
 
@@ -59,7 +59,7 @@ static void _cubec_expression_initialize_list_move(
     cubec_expression_initialize_list_t self, allocator_t allocator,
     cubec_expression_initialize_list_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->type = value_move(allocator, another->type);
+  self->type = alloc_move(allocator, another->type);
   self->is_field = another->is_field;
 
   allocator_free(allocator, &self->items);

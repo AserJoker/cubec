@@ -36,14 +36,14 @@ static void _cubec_expression_spread_clone(cubec_expression_spread_t self,
                                            allocator_t allocator,
                                            cubec_expression_spread_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->value = value_clone(allocator, another->value);
+  self->value = alloc_clone(allocator, another->value);
 }
 
 static void _cubec_expression_spread_move(cubec_expression_spread_t self,
                                           allocator_t allocator,
                                           cubec_expression_spread_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->value = value_move(allocator, another->value);
+  self->value = alloc_move(allocator, another->value);
 }
 
 type_t g_cubec_expression_spread_type = {

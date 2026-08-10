@@ -71,14 +71,14 @@ void _allocator_free_impl(allocator_t self, void **data);
  * @param self Pointer returned by allocator_alloc or allocator_create.
  * @return type_t* if the value was created via allocator_create, NULL if via allocator_alloc.
  */
-type_t *value_get_type(void *self);
+type_t *alloc_get_type(void *self);
 
 /**
  * @brief Get the unique allocation ID assigned to this value.
  * @param self Pointer returned by allocator_alloc or allocator_create.
  * @return Monotonically increasing ID within the allocator that created this value.
  */
-uint64_t value_get_id(void *self);
+uint64_t alloc_get_id(void *self);
 
 /**
  * @brief Deep-clone an allocated value into a different allocator.
@@ -88,7 +88,7 @@ uint64_t value_get_id(void *self);
  * @param another  The value to clone (may be NULL, returns NULL).
  * @return Cloned value in the target allocator, or NULL if another is NULL.
  */
-void *value_clone(allocator_t allocator, void *another);
+void *alloc_clone(allocator_t allocator, void *another);
 
 /**
  * @brief Move an allocated value from one allocator to another.
@@ -98,7 +98,7 @@ void *value_clone(allocator_t allocator, void *another);
  * @param another   The value to move (may be NULL, returns NULL).
  * @return Moved value in the target allocator, or NULL if another is NULL.
  */
-void *value_move(allocator_t allocator, void *another);
+void *alloc_move(allocator_t allocator, void *another);
 
 /**
  * @brief Get total currently allocated bytes (net, after frees).

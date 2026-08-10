@@ -37,9 +37,9 @@ static void _cubec_statement_switch_clone(cubec_statement_switch_t self,
                                           allocator_t allocator,
                                           cubec_statement_switch_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->condition = value_clone(allocator, another->condition);
+  self->condition = alloc_clone(allocator, another->condition);
   self->matches =
-      another->matches ? value_clone(allocator, another->matches) : NULL;
+      another->matches ? alloc_clone(allocator, another->matches) : NULL;
   return;
 }
 
@@ -47,9 +47,9 @@ static void _cubec_statement_switch_move(cubec_statement_switch_t self,
                                          allocator_t allocator,
                                          cubec_statement_switch_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->condition = value_move(allocator, another->condition);
+  self->condition = alloc_move(allocator, another->condition);
   self->matches =
-      another->matches ? value_move(allocator, another->matches) : NULL;
+      another->matches ? alloc_move(allocator, another->matches) : NULL;
   return;
 }
 

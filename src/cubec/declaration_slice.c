@@ -32,7 +32,7 @@ static void _cubec_declaration_slice_clone(cubec_declaration_slice_t self,
                                            allocator_t allocator,
                                            cubec_declaration_slice_t another) {
   g_cubec_declaration_type.clone(&self->super, allocator, &another->super);
-  self->type = value_clone(allocator, another->type);
+  self->type = alloc_clone(allocator, another->type);
   self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
 }
@@ -41,7 +41,7 @@ static void _cubec_declaration_slice_move(cubec_declaration_slice_t self,
                                           allocator_t allocator,
                                           cubec_declaration_slice_t another) {
   g_cubec_declaration_type.move(&self->super, allocator, &another->super);
-  self->type = value_move(allocator, another->type);
+  self->type = alloc_move(allocator, another->type);
   self->is_const = another->is_const;
   self->is_volatile = another->is_volatile;
 }

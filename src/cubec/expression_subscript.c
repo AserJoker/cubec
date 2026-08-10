@@ -40,8 +40,8 @@ _cubec_expression_subscript_clone(cubec_expression_subscript_t self,
                                   allocator_t allocator,
                                   cubec_expression_subscript_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->host = value_clone(allocator, another->host);
-  self->index = value_clone(allocator, another->index);
+  self->host = alloc_clone(allocator, another->host);
+  self->index = alloc_clone(allocator, another->index);
   return;
 
 cleanup:
@@ -54,8 +54,8 @@ _cubec_expression_subscript_move(cubec_expression_subscript_t self,
                                  allocator_t allocator,
                                  cubec_expression_subscript_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->host = value_move(allocator, another->host);
-  self->index = value_move(allocator, another->index);
+  self->host = alloc_move(allocator, another->host);
+  self->index = alloc_move(allocator, another->index);
   return;
 
 cleanup:

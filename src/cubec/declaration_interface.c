@@ -44,9 +44,9 @@ static void _cubec_declaration_interface_clone(
     cubec_declaration_interface_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
-                             ? value_clone(allocator, another->generic_params)
+                             ? alloc_clone(allocator, another->generic_params)
                              : NULL;
-  self->members = value_clone(allocator, another->members);
+  self->members = alloc_clone(allocator, another->members);
   return;
 }
 
@@ -55,9 +55,9 @@ static void _cubec_declaration_interface_move(
     cubec_declaration_interface_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
   self->generic_params = another->generic_params
-                             ? value_move(allocator, another->generic_params)
+                             ? alloc_move(allocator, another->generic_params)
                              : NULL;
-  self->members = value_move(allocator, another->members);
+  self->members = alloc_move(allocator, another->members);
   return;
 }
 

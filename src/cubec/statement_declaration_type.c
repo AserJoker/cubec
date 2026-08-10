@@ -43,10 +43,10 @@ static void _cubec_statement_declaration_type_clone(
   g_node_type.clone(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->is_builtin = another->is_builtin;
-  self->name = value_clone(allocator, another->name);
-  self->params = value_clone(allocator, another->params);
+  self->name = alloc_clone(allocator, another->name);
+  self->params = alloc_clone(allocator, another->params);
   self->type_value =
-      another->type_value ? value_clone(allocator, another->type_value) : NULL;
+      another->type_value ? alloc_clone(allocator, another->type_value) : NULL;
   return;
 }
 
@@ -56,10 +56,10 @@ static void _cubec_statement_declaration_type_move(
   g_node_type.move(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->is_builtin = another->is_builtin;
-  self->name = value_move(allocator, another->name);
-  self->params = value_move(allocator, another->params);
+  self->name = alloc_move(allocator, another->name);
+  self->params = alloc_move(allocator, another->params);
   self->type_value =
-      another->type_value ? value_move(allocator, another->type_value) : NULL;
+      another->type_value ? alloc_move(allocator, another->type_value) : NULL;
   return;
 }
 

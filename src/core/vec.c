@@ -26,7 +26,7 @@ static void _vec_clone(vec_t self, allocator_t allocator, vec_t another) {
   self->size = another->size;
   self->data = allocator_alloc(allocator, sizeof(void *) * self->capacity);
   for (size_t idx = 0; idx < self->size; idx++) {
-    self->data[idx] = value_clone(allocator, another->data[idx]);
+    self->data[idx] = alloc_clone(allocator, another->data[idx]);
   }
 }
 static void _vec_move(vec_t self, allocator_t allocator, vec_t another) {

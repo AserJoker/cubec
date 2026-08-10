@@ -32,9 +32,9 @@ static void _cubec_expression_member_clone(cubec_expression_member_t self,
                                            allocator_t allocator,
                                            cubec_expression_member_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->host = value_clone(allocator, another->host);
+  self->host = alloc_clone(allocator, another->host);
   self->field =
-      (cubec_literal_identifier_t)value_clone(allocator, another->field);
+      (cubec_literal_identifier_t)alloc_clone(allocator, another->field);
   return;
 
 cleanup:
@@ -46,9 +46,9 @@ static void _cubec_expression_member_move(cubec_expression_member_t self,
                                           allocator_t allocator,
                                           cubec_expression_member_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->host = value_move(allocator, another->host);
+  self->host = alloc_move(allocator, another->host);
   self->field =
-      (cubec_literal_identifier_t)value_move(allocator, another->field);
+      (cubec_literal_identifier_t)alloc_move(allocator, another->field);
   return;
 
 cleanup:

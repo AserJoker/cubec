@@ -43,9 +43,9 @@ _cubec_declaration_callable_clone(cubec_declaration_callable_t self,
                                  allocator_t allocator,
                                  cubec_declaration_callable_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->parameters = value_clone(allocator, another->parameters);
+  self->parameters = alloc_clone(allocator, another->parameters);
   self->return_type = another->return_type
-                          ? value_clone(allocator, another->return_type)
+                          ? alloc_clone(allocator, another->return_type)
                           : NULL;
   self->is_c_variadic = another->is_c_variadic;
   return;
@@ -60,9 +60,9 @@ _cubec_declaration_callable_move(cubec_declaration_callable_t self,
                                 allocator_t allocator,
                                 cubec_declaration_callable_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->parameters = value_move(allocator, another->parameters);
+  self->parameters = alloc_move(allocator, another->parameters);
   self->return_type =
-      another->return_type ? value_move(allocator, another->return_type) : NULL;
+      another->return_type ? alloc_move(allocator, another->return_type) : NULL;
   self->is_c_variadic = another->is_c_variadic;
   return;
 

@@ -34,14 +34,14 @@ static void _cubec_expression_group_clone(cubec_expression_group_t self,
                                           allocator_t allocator,
                                           cubec_expression_group_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->inner = value_clone(allocator, another->inner);
+  self->inner = alloc_clone(allocator, another->inner);
 }
 
 static void _cubec_expression_group_move(cubec_expression_group_t self,
                                          allocator_t allocator,
                                          cubec_expression_group_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->inner = value_move(allocator, another->inner);
+  self->inner = alloc_move(allocator, another->inner);
 }
 
 type_t g_cubec_expression_group_type = {

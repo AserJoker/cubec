@@ -34,14 +34,14 @@ static void _cubec_decorator_clone(cubec_decorator_t self,
                                    allocator_t allocator,
                                    cubec_decorator_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->expression = value_clone(allocator, another->expression);
+  self->expression = alloc_clone(allocator, another->expression);
   return;
 }
 
 static void _cubec_decorator_move(cubec_decorator_t self, allocator_t allocator,
                                   cubec_decorator_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->expression = value_move(allocator, another->expression);
+  self->expression = alloc_move(allocator, another->expression);
   return;
 }
 

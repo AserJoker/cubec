@@ -39,9 +39,9 @@ _cubec_statement_export_clone(cubec_statement_export_t self,
                                    allocator_t allocator,
                                    cubec_statement_export_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->path = value_clone(allocator, another->path);
+  self->path = alloc_clone(allocator, another->path);
   self->is_star = another->is_star;
-  self->names = value_clone(allocator, another->names);
+  self->names = alloc_clone(allocator, another->names);
   return;
 }
 
@@ -50,9 +50,9 @@ _cubec_statement_export_move(cubec_statement_export_t self,
                                   allocator_t allocator,
                                   cubec_statement_export_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->path = value_move(allocator, another->path);
+  self->path = alloc_move(allocator, another->path);
   self->is_star = another->is_star;
-  self->names = value_move(allocator, another->names);
+  self->names = alloc_move(allocator, another->names);
   return;
 }
 

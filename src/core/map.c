@@ -74,7 +74,7 @@ static map_entry_index_t *find_entry_in_list(list_t list, uint64_t key_id) {
 }
 
 static map_entry_index_t *find_entry_by_key(map_t self, void *key) {
-  uint64_t key_id = value_get_id(key);
+  uint64_t key_id = alloc_get_id(key);
   if (self->index_type == MAP_INDEX_HASH) {
     size_t bucket_idx = hash_bucket_index(self, key_id);
     return find_entry_in_list(self->index.buckets[bucket_idx], key_id);
@@ -99,8 +99,8 @@ static void _map_clone(map_t self, allocator_t allocator, map_t another) {
 
   size_t size = vec_get_size(another->keys);
   for (size_t i = 0; i < size; i++) {
-    void *cloned_key = value_clone(allocator, vec_get(another->keys, i));
-    void *cloned_value = value_clone(allocator, vec_get(another->values, i));
+    void *cloned_key = alloc_clone(allocator, vec_get(another->keys, i));
+    void *cloned_value = alloc_clone(allocator, vec_get(another->values, i));
     map_insert(self, cloned_key, cloned_value);
   }
 }
@@ -158,7 +158,7 @@ static void convert_to_rbtree(map_t self) {
     list_iter_t iter = list_iter_first(bucket);
     map_entry_index_t *entry;
     while ((entry = list_iter_next(&iter)) != NULL) {
-      map_entry_index_t *moved_entry = (map_entry_index_t *)value_move(self->allocator, entry);
+      map_entry_index_t *moved_entry = (map_entry_index_t *)alloc_move(self->allocator, entry);
       rbtree_insert(self->index.rbtree, moved_entry->key_id, moved_entry);
     }
   }
@@ -187,7 +187,7 @@ size_t map_insert(map_t self, void *key, void *value) {
     return vec_get_size(self->keys);
   }
 
-  uint64_t key_id = value_get_id(key);
+  uint64_t key_id = alloc_get_id(key);
   size_t index = vec_get_size(self->keys);
   vec_push(self->keys, key);
   vec_push(self->values, value);

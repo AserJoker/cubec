@@ -40,7 +40,7 @@ static void _cubec_literal_numeric_clone(cubec_literal_numeric_t self,
   g_cubec_literal_type.clone(&self->super, allocator, &another->super);
   self->kind = another->kind;
   self->numeric_type = another->numeric_type;
-  self->value = value_clone(allocator, another->value);
+  self->value = alloc_clone(allocator, another->value);
 }
 
 static void _cubec_literal_numeric_move(cubec_literal_numeric_t self,
@@ -49,7 +49,7 @@ static void _cubec_literal_numeric_move(cubec_literal_numeric_t self,
   g_cubec_literal_type.move(&self->super, allocator, &another->super);
   self->kind = another->kind;
   self->numeric_type = another->numeric_type;
-  self->value = value_move(allocator, another->value);
+  self->value = alloc_move(allocator, another->value);
 }
 
 type_t g_cubec_literal_numeric_type = {

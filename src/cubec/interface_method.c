@@ -43,13 +43,13 @@ static void _cubec_interface_method_clone(cubec_interface_method_t self,
                                           allocator_t allocator,
                                           cubec_interface_method_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->name = value_clone(allocator, another->name);
+  self->name = alloc_clone(allocator, another->name);
   self->generic_params = another->generic_params
-                             ? value_clone(allocator, another->generic_params)
+                             ? alloc_clone(allocator, another->generic_params)
                              : NULL;
-  self->arguments = value_clone(allocator, another->arguments);
+  self->arguments = alloc_clone(allocator, another->arguments);
   self->return_type = another->return_type
-                          ? value_clone(allocator, another->return_type)
+                          ? alloc_clone(allocator, another->return_type)
                           : NULL;
   return;
 }
@@ -58,13 +58,13 @@ static void _cubec_interface_method_move(cubec_interface_method_t self,
                                          allocator_t allocator,
                                          cubec_interface_method_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->name = value_move(allocator, another->name);
+  self->name = alloc_move(allocator, another->name);
   self->generic_params = another->generic_params
-                             ? value_move(allocator, another->generic_params)
+                             ? alloc_move(allocator, another->generic_params)
                              : NULL;
-  self->arguments = value_move(allocator, another->arguments);
+  self->arguments = alloc_move(allocator, another->arguments);
   self->return_type =
-      another->return_type ? value_move(allocator, another->return_type) : NULL;
+      another->return_type ? alloc_move(allocator, another->return_type) : NULL;
   return;
 }
 

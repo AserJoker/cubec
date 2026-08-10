@@ -166,21 +166,21 @@ void _allocator_free_impl(allocator_t self, void **data) {
   self->free_fn(chunk);
   *data = NULL;
 }
-type_t *value_get_type(void *value) {
+type_t *alloc_get_type(void *value) {
   alloc_chunk_t chunk = value_get_chunk(value);
   return chunk->type;
 }
 
-uint64_t value_get_id(void *self) {
+uint64_t alloc_get_id(void *self) {
   alloc_chunk_t chunk = value_get_chunk(self);
   return chunk->id;
 }
 
-void *value_clone(allocator_t allocator, void *another) {
+void *alloc_clone(allocator_t allocator, void *another) {
   if (!another) {
     return NULL;
   }
-  type_t *type = value_get_type(another);
+  type_t *type = alloc_get_type(another);
   if (type) {
     if (type->clone) {
       void *data = allocator_alloc(allocator, type->size);
@@ -201,11 +201,11 @@ void *value_clone(allocator_t allocator, void *another) {
     return data;
   }
 }
-void *value_move(allocator_t allocator, void *another) {
+void *alloc_move(allocator_t allocator, void *another) {
   if (!another) {
     return NULL;
   }
-  type_t *type = value_get_type(another);
+  type_t *type = alloc_get_type(another);
   if (type) {
     if (type->move) {
       void *data = allocator_alloc(allocator, type->size);

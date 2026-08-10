@@ -44,10 +44,10 @@ static void _cubec_statement_foreach_clone(cubec_statement_foreach_t self,
                                            cubec_statement_foreach_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
   self->is_var_decl = another->is_var_decl;
-  self->variable = value_clone(allocator, another->variable);
-  self->var_type = value_clone(allocator, another->var_type);
-  self->iterator = value_clone(allocator, another->iterator);
-  self->body = value_clone(allocator, another->body);
+  self->variable = alloc_clone(allocator, another->variable);
+  self->var_type = alloc_clone(allocator, another->var_type);
+  self->iterator = alloc_clone(allocator, another->iterator);
+  self->body = alloc_clone(allocator, another->body);
   return;
 }
 
@@ -56,10 +56,10 @@ static void _cubec_statement_foreach_move(cubec_statement_foreach_t self,
                                           cubec_statement_foreach_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
   self->is_var_decl = another->is_var_decl;
-  self->variable = value_move(allocator, another->variable);
-  self->var_type = value_move(allocator, another->var_type);
-  self->iterator = value_move(allocator, another->iterator);
-  self->body = value_move(allocator, another->body);
+  self->variable = alloc_move(allocator, another->variable);
+  self->var_type = alloc_move(allocator, another->var_type);
+  self->iterator = alloc_move(allocator, another->iterator);
+  self->body = alloc_move(allocator, another->body);
   return;
 }
 

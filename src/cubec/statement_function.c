@@ -46,9 +46,9 @@ _cubec_statement_function_clone(cubec_statement_function_t self,
   g_node_type.clone(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->is_exportlib = another->is_exportlib;
-  self->declarator = another->declarator ? value_clone(allocator, another->declarator) : NULL;
+  self->declarator = another->declarator ? alloc_clone(allocator, another->declarator) : NULL;
   self->decorators =
-      another->decorators ? value_clone(allocator, another->decorators) : NULL;
+      another->decorators ? alloc_clone(allocator, another->decorators) : NULL;
   return;
 }
 
@@ -58,9 +58,9 @@ static void _cubec_statement_function_move(cubec_statement_function_t self,
   g_node_type.move(&self->super, allocator, &another->super);
   self->is_export = another->is_export;
   self->is_exportlib = another->is_exportlib;
-  self->declarator = another->declarator ? value_move(allocator, another->declarator) : NULL;
+  self->declarator = another->declarator ? alloc_move(allocator, another->declarator) : NULL;
   self->decorators =
-      another->decorators ? value_move(allocator, another->decorators) : NULL;
+      another->decorators ? alloc_move(allocator, another->decorators) : NULL;
   return;
 }
 

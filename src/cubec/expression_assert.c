@@ -38,14 +38,14 @@ static void _cubec_expression_assert_clone(cubec_expression_assert_t self,
                                            allocator_t allocator,
                                            cubec_expression_assert_t another) {
   g_cubec_expression_type.clone(&self->super, allocator, &another->super);
-  self->host = value_clone(allocator, another->host);
+  self->host = alloc_clone(allocator, another->host);
 }
 
 static void _cubec_expression_assert_move(cubec_expression_assert_t self,
                                           allocator_t allocator,
                                           cubec_expression_assert_t another) {
   g_cubec_expression_type.move(&self->super, allocator, &another->super);
-  self->host = value_move(allocator, another->host);
+  self->host = alloc_move(allocator, another->host);
 }
 
 type_t g_cubec_expression_assert_type = {

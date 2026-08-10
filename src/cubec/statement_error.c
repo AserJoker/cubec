@@ -62,7 +62,7 @@ void emit_statement_error(emit_context_t ctx, node_t node) {
       break;
     /* Clone all token types (including whitespace/comments) to preserve
      * original source text verbatim */
-    token_t cloned = (token_t)value_clone(ctx->allocator, tok);
+    token_t cloned = (token_t)alloc_clone(ctx->allocator, tok);
     vec_push(ctx->output_tokens, cloned);
     idx++;
   }

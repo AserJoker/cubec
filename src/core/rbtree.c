@@ -44,7 +44,7 @@ static void clone_recursive(allocator_t allocator, rbtree_t self,
     return;
   }
   clone_recursive(allocator, self, node->left);
-  void *cloned_value = value_clone(allocator, node->value);
+  void *cloned_value = alloc_clone(allocator, node->value);
   rbtree_insert(self, node->key, cloned_value);
   clone_recursive(allocator, self, node->right);
 }

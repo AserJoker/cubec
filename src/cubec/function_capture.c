@@ -35,14 +35,14 @@ static void _cubec_function_capture_clone(cubec_function_capture_t self,
                                           allocator_t allocator,
                                           cubec_function_capture_t another) {
   g_node_type.clone(&self->super, allocator, &another->super);
-  self->identifier = value_clone(allocator, another->identifier);
+  self->identifier = alloc_clone(allocator, another->identifier);
 }
 
 static void _cubec_function_capture_move(cubec_function_capture_t self,
                                          allocator_t allocator,
                                          cubec_function_capture_t another) {
   g_node_type.move(&self->super, allocator, &another->super);
-  self->identifier = value_move(allocator, another->identifier);
+  self->identifier = alloc_move(allocator, another->identifier);
 }
 
 type_t g_cubec_function_capture_type = {

@@ -179,7 +179,7 @@ TEST_F(dt_statement_expression, clone) {
   node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  node_t cloned = (node_t)value_clone(allocator, node);
+  node_t cloned = (node_t)alloc_clone(allocator, node);
   ASSERT_NE(cloned, nullptr);
   EXPECT_EQ(cloned->kind, CUBEC_NODE_STATEMENT_EXPRESSION);
 
@@ -203,7 +203,7 @@ TEST_F(dt_statement_expression, move) {
   node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  node_t moved = (node_t)value_move(allocator, node);
+  node_t moved = (node_t)alloc_move(allocator, node);
   ASSERT_NE(moved, nullptr);
   EXPECT_EQ(moved->kind, CUBEC_NODE_STATEMENT_EXPRESSION);
 
