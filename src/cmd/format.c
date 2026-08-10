@@ -8,21 +8,20 @@
 #include "engine/context.h"
 #include "engine/module.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 /* ------------------------------------------------------------------
  *  File I/O helpers
  * ------------------------------------------------------------------ */
 
-static char *read_file(const char *path, size_t *out_len) {
+static char *read_file(allocator_t allocator, const char *path, size_t *out_len) {
   FILE *f = fopen(path, "rb");
   if (!f)
     return NULL;
   fseek(f, 0, SEEK_END);
   long len = ftell(f);
   fseek(f, 0, SEEK_SET);
-  char *buf = malloc((size_t)len + 1);
+  char *buf = (char *)allocator_alloc(allocator, (size_t)len + 1);
   if (!buf) {
     fclose(f);
     return NULL;
@@ -69,15 +68,18 @@ static int format_run(const cmd_parsed_t *parsed) {
 
   /* 1. Read source file */
   size_t src_len = 0;
-  char *source = read_file(input_path, &src_len);
-  if (!source) {
-    fprintf(stderr, "error: cannot read '%s'\n", input_path);
-    return 1;
-  }
 
   /* 2. Create allocator + context */
   allocator_t allocator = create_allocator(NULL, NULL);
   context_t ctx = context_create(allocator);
+
+  char *source = read_file(allocator, input_path, &src_len);
+  if (!source) {
+    fprintf(stderr, "error: cannot read '%s'\n", input_path);
+    context_dispose(ctx);
+    delete_allocator(allocator);
+    return 1;
+  }
 
   /* 3. Tokenize */
   vec_t tokens = resolve_token_list(ctx, input_path, source);
@@ -88,9 +90,9 @@ static int format_run(const cmd_parsed_t *parsed) {
   if (!program) {
     fprintf(stderr, "error: failed to parse '%s'\n", input_path);
     allocator_free(allocator, &tokens);
+    allocator_free(allocator, (void **)&source);
     context_dispose(ctx);
     delete_allocator(allocator);
-    free(source);
     return 1;
   }
 

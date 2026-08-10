@@ -1,11 +1,11 @@
 #include "engine/context.h"
 #include "engine/module.h"
 #include "engine/scope.h"
+#include "core/string.h"
 #include "core/strmap.h"
 #include "cubec/program.h"
 #include "cubec/token.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 static void _context_init(void *self, allocator_t allocator, void *arg) {
@@ -61,16 +61,16 @@ module_t context_get_module(context_t ctx, const char *abs_path) {
 
 /* ------------------------------------------------------------------
  *  File I/O helper
- * ------------------------------------------------------------------ */
+ * -------------------------------------------------------------------------- */
 
-static char *_read_file(const char *path, size_t *out_len) {
+static char *_read_file(allocator_t allocator, const char *path, size_t *out_len) {
   FILE *f = fopen(path, "rb");
   if (!f)
     return NULL;
   fseek(f, 0, SEEK_END);
   long len = ftell(f);
   fseek(f, 0, SEEK_SET);
-  char *buf = malloc((size_t)len + 1);
+  char *buf = (char *)allocator_alloc(allocator, (size_t)len + 1);
   if (!buf) {
     fclose(f);
     return NULL;
@@ -85,7 +85,7 @@ static char *_read_file(const char *path, size_t *out_len) {
 
 /* ------------------------------------------------------------------
  *  Path resolution
- * ------------------------------------------------------------------ */
+ * -------------------------------------------------------------------------- */
 
 static char *_resolve_import_path(context_t ctx, const char *import_path) {
   if (!import_path || import_path[0] == '\0')
@@ -120,7 +120,7 @@ static char *_resolve_import_path(context_t ctx, const char *import_path) {
         if (last_slash) {
           size_t dir_len = (size_t)(last_slash - current_file) + 1;
           size_t path_len = strlen(import_path);
-          resolved = malloc(dir_len + path_len + 1);
+          resolved = (char *)allocator_alloc(ctx->allocator, dir_len + path_len + 1);
           if (!resolved)
             return NULL;
           memcpy(resolved, current_file, dir_len);
@@ -135,7 +135,7 @@ static char *_resolve_import_path(context_t ctx, const char *import_path) {
     size_t path_len = strlen(import_path);
     bool has_ext = (path_len > 6 && strcmp(import_path + path_len - 6, ".cubec") == 0);
     size_t ext_len = has_ext ? 0 : 6;
-    resolved = malloc(path_len + ext_len + 1);
+    resolved = (char *)allocator_alloc(ctx->allocator, path_len + ext_len + 1);
     if (!resolved)
       return NULL;
     memcpy(resolved, import_path, path_len);
@@ -148,17 +148,19 @@ static char *_resolve_import_path(context_t ctx, const char *import_path) {
 #ifdef _WIN32
   char abs_buf[_MAX_PATH];
   char *abs = _fullpath(abs_buf, resolved, _MAX_PATH);
-  char *result = abs ? strdup(abs) : NULL;
+  char *result = abs ? cstring_clone(ctx->allocator, abs) : NULL;
 #else
-  char *result = realpath(resolved, NULL);
+  char real_buf[4096];
+  char *real = realpath(resolved, real_buf);
+  char *result = real ? cstring_clone(ctx->allocator, real) : NULL;
 #endif
-  free(resolved);
+  allocator_free(ctx->allocator, (void **)&resolved);
   return result;
 }
 
 /* ------------------------------------------------------------------
  *  context_import
- * ------------------------------------------------------------------ */
+ * -------------------------------------------------------------------------- */
 
 module_t context_import(context_t ctx, const char *import_path) {
   char *abs_path = _resolve_import_path(ctx, import_path);
@@ -167,20 +169,20 @@ module_t context_import(context_t ctx, const char *import_path) {
 
   module_t existing = context_get_module(ctx, abs_path);
   if (existing) {
-    free(abs_path);
+    allocator_free(ctx->allocator, (void **)&abs_path);
     return existing;
   }
 
-  char *source = _read_file(abs_path, NULL);
+  char *source = _read_file(ctx->allocator, abs_path, NULL);
   if (!source) {
-    free(abs_path);
+    allocator_free(ctx->allocator, (void **)&abs_path);
     return NULL;
   }
 
   vec_t tokens = resolve_token_list(ctx, abs_path, source);
   if (!tokens) {
-    free(source);
-    free(abs_path);
+    allocator_free(ctx->allocator, (void **)&source);
+    allocator_free(ctx->allocator, (void **)&abs_path);
     return NULL;
   }
 
@@ -188,8 +190,8 @@ module_t context_import(context_t ctx, const char *import_path) {
   node_t program = read_program_node(ctx, tokens, &pos, abs_path);
   if (!program) {
     allocator_free(ctx->allocator, &tokens);
-    free(source);
-    free(abs_path);
+    allocator_free(ctx->allocator, (void **)&source);
+    allocator_free(ctx->allocator, (void **)&abs_path);
     return NULL;
   }
 
@@ -198,13 +200,13 @@ module_t context_import(context_t ctx, const char *import_path) {
 
   strmap_insert(ctx->modules, abs_path, mod);
 
-  free(abs_path);
+  allocator_free(ctx->allocator, (void **)&abs_path);
   return mod;
 }
 
 /* ------------------------------------------------------------------
  *  Scope stack
- * ------------------------------------------------------------------ */
+ * -------------------------------------------------------------------------- */
 
 void context_push_scope(context_t ctx, scope_t scope) {
   if (!ctx || !scope)

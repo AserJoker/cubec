@@ -3,6 +3,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include "core/allocator.h"
 #include "core/type.h"
 #include <stdint.h>
 /**
@@ -50,6 +51,19 @@ size_t string_concat(string_t self, const char *another);
  * @return New size in bytes (including null terminator).
  */
 size_t string_nconcat(string_t self, const char *another, size_t len);
+
+/**
+ * @brief Clone a C string using the allocator.
+ *
+ * Replaces strdup(). Allocates exactly strlen(str)+1 bytes via allocator_alloc.
+ * Use cstring_free() to release — do NOT use free().
+ *
+ * @param allocator  Allocator to allocate from
+ * @param str        Source C string (must not be NULL)
+ * @return New null-terminated copy owned by the caller
+ */
+char *cstring_clone(allocator_t allocator, const char *str);
+
 #ifdef __cplusplus
 }
 #endif

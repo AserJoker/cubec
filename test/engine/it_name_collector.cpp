@@ -22,8 +22,8 @@ protected:
 
   /** Parse source and run name collection, returning the module. */
   module_t parse_and_collect(const char *source, const char *filename) {
-    /* module_create takes ownership of source (calls free), so strdup it */
-    char *owned_source = strdup(source);
+    /* module_create takes ownership of source (allocator_free), so clone it */
+    char *owned_source = cstring_clone(allocator, source);
     vec_t tokens = resolve_token_list(ctx, filename, owned_source);
     EXPECT_NE(tokens, nullptr);
     size_t pos = 0;

@@ -24,7 +24,7 @@ enum module_state {
 
 struct _module_t {
   allocator_t allocator;
-  const char *filename;  /* owned copy (strdup) */
+  const char *filename;  /* owned copy (cstring_clone via allocator) */
   char *source;          /* owned source text */
   vec_t tokens;          /* owned token list (auto-dispose vec) */
   node_t program;        /* owned AST root node */
@@ -39,7 +39,7 @@ typedef struct _module_t *module_t;
  * @brief Create a module with pre-compiled tokens and AST.
  * @param allocator    Allocator for all allocations
  * @param parent_scope Parent scope (typically ctx->global_scope)
- * @param filename     Source file path (copied via strdup)
+ * @param filename     Source file path (copied via cstring_clone)
  * @param source       Source text (ownership taken)
  * @param tokens       Token list (ownership taken, must be auto-dispose vec)
  * @param program      AST root node (ownership taken)

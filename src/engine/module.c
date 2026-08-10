@@ -1,5 +1,6 @@
 #include "engine/module.h"
 #include "engine/scope.h"
+#include "core/string.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,12 +19,13 @@ static void _module_init(void *self, allocator_t allocator, void *arg) {
 
 static void _module_dispose(void *self, allocator_t allocator) {
   module_t mod = (module_t)self;
-  allocator_free(allocator, &mod->root_scope);
-  allocator_free(allocator, &mod->exports);
-  allocator_free(allocator, &mod->program);
-  allocator_free(allocator, &mod->tokens);
-  free(mod->source);
-  free((void *)mod->filename);
+  (void)allocator;
+  allocator_free(mod->allocator, &mod->root_scope);
+  allocator_free(mod->allocator, &mod->exports);
+  allocator_free(mod->allocator, &mod->program);
+  allocator_free(mod->allocator, &mod->tokens);
+  allocator_free(mod->allocator, (void **)&mod->source);
+  allocator_free(mod->allocator, (void **)&mod->filename);
 }
 
 type_t g_module_type = {
@@ -37,7 +39,7 @@ module_t module_create(allocator_t allocator, scope_t parent_scope,
                        const char *filename, const char *source,
                        vec_t tokens, node_t program) {
   module_t mod = (module_t)allocator_create(allocator, &g_module_type, NULL);
-  mod->filename = strdup(filename);
+  mod->filename = cstring_clone(allocator, filename);
   mod->source = (char *)source;
   mod->tokens = tokens;
   mod->program = program;

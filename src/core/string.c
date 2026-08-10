@@ -1,4 +1,4 @@
-﻿#include "core/string.h"
+#include "core/string.h"
 #include "core/allocator.h"
 #include <string.h>
 struct _string_t {
@@ -107,4 +107,11 @@ size_t string_nconcat(string_t self, const char *another, size_t len) {
   self->data[self->size - 1 + len] = 0;
   self->size += len;
   return self->size;
+}
+
+char *cstring_clone(allocator_t allocator, const char *str) {
+  size_t len = strlen(str) + 1;
+  char *copy = (char *)allocator_alloc(allocator, len);
+  memcpy(copy, str, len);
+  return copy;
 }
