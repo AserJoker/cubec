@@ -247,10 +247,15 @@ void vm_pop_scope(vm_t self) {
 /* ---- Value creation ---- */
 
 value_t vm_create_value(vm_t self, type_t type, const void *data) {
+  size_t sz = type_get_size(type);
   void *data_copy = NULL;
-  if (data && type_get_size(type) > 0) {
-    data_copy = allocator_alloc(self->allocator, type_get_size(type));
-    memcpy(data_copy, data, type_get_size(type));
+  if (sz > 0) {
+    data_copy = allocator_alloc(self->allocator, sz);
+    if (data) {
+      memcpy(data_copy, data, sz);
+    } else {
+      memset(data_copy, 0, sz);
+    }
   }
   value_t v = value_create(self->allocator, type, data_copy, true);
   if (self->current_scope) {
@@ -259,8 +264,8 @@ value_t vm_create_value(vm_t self, type_t type, const void *data) {
   return v;
 }
 
-value_t vm_create_value_ref(vm_t self, type_t type, void *data) {
-  value_t v = value_create(self->allocator, type, data, false);
+value_t vm_create_value_shadow(vm_t self, type_t type) {
+  value_t v = value_create(self->allocator, type, NULL, false);
   if (self->current_scope) {
     vec_push(self->current_scope->values, v);
   }

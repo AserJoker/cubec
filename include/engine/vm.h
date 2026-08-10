@@ -52,11 +52,12 @@ void vm_pop_scope(vm_t self);
 
 /* ---- Value creation ---- */
 
-/** @brief Create a value with owned copy of data, add to current_scope->values. */
+/** @brief Create a value with owned copy of data, add to current_scope->values.
+ *  If data is NULL, allocates zeroed buffer of type_get_size(type). */
 value_t vm_create_value(vm_t self, type_t type, const void *data);
 
-/** @brief Create a reference value with borrowed data (own=false), add to current_scope->values. */
-value_t vm_create_value_ref(vm_t self, type_t type, void *data);
+/** @brief Create a shadow value (data=NULL, own=false), add to current_scope->values. */
+value_t vm_create_value_shadow(vm_t self, type_t type);
 
 #ifdef __cplusplus
 }

@@ -72,20 +72,17 @@ TEST_F(it_vm, create_value_with_data) {
   delete_allocator(allocator);
 }
 
-TEST_F(it_vm, create_value_ref) {
+TEST_F(it_vm, create_value_shadow) {
   vm_t vm = vm_create(allocator);
   type_t i32 = _make_i32_type();
-  int32_t val = 7;
-  value_t owner = vm_create_value(vm, i32, &val);
-  value_t ref = vm_create_value_ref(vm, i32, value_get_data(owner));
+  value_t v = vm_create_value_shadow(vm, i32);
 
-  EXPECT_NE(ref, nullptr);
-  EXPECT_FALSE(value_is_own(ref));
-  EXPECT_EQ(value_get_data(ref), value_get_data(owner));
+  EXPECT_NE(v, nullptr);
+  EXPECT_TRUE(value_is_shadow(v));
+  EXPECT_FALSE(value_is_own(v));
+  EXPECT_EQ(value_get_data(v), nullptr);
 
-  /* ref must be disposed before owner since it borrows owner's data */
-  value_dispose(ref, allocator);
-  value_dispose(owner, allocator);
+  value_dispose(v, allocator);
   allocator_free(allocator, &i32);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
