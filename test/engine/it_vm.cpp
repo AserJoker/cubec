@@ -13,7 +13,7 @@ protected:
     size_t sz = type_get_size(value_get_type(obj));
     void *new_data = allocator_alloc(alloc, sz);
     memcpy(new_data, value_get_data(obj), sz);
-    return value_create(alloc, value_get_type(obj), new_data, true, 0);
+    return value_create(alloc, value_get_type(obj), new_data, true);
   }
 
   static void _dummy_dispose(allocator_t alloc, value_t obj) {
@@ -35,18 +35,6 @@ protected:
 TEST_F(it_vm, create_and_dispose) {
   vm_t vm = vm_create(allocator);
   EXPECT_NE(vm, nullptr);
-  EXPECT_NE(vm_get_slots(vm), nullptr);
-  vm_dispose(vm, allocator);
-  delete_allocator(allocator);
-}
-
-TEST_F(it_vm, slot_map_accessible) {
-  vm_t vm = vm_create(allocator);
-  int x = 42;
-  slot_id_t id = slotmap_insert(vm_get_slots(vm), &x);
-  void *ptr = slotmap_get(vm_get_slots(vm), id);
-  EXPECT_EQ(ptr, &x);
-  slotmap_remove(vm_get_slots(vm), id);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
@@ -78,10 +66,7 @@ TEST_F(it_vm, create_value_with_data) {
   EXPECT_NE(value_get_data(v), &val);
   EXPECT_EQ(*(int32_t *)value_get_data(v), 42);
 
-  /* slot_map lookup by addr returns same value */
-  value_t found = (value_t)slotmap_get(vm_get_slots(vm), value_get_addr(v));
-  EXPECT_EQ(found, v);
-
+  value_dispose(v, allocator);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
@@ -96,8 +81,10 @@ TEST_F(it_vm, create_value_ref) {
   EXPECT_NE(ref, nullptr);
   EXPECT_FALSE(value_is_own(ref));
   EXPECT_EQ(value_get_data(ref), value_get_data(owner));
-  EXPECT_NE(value_get_addr(ref), value_get_addr(owner));
 
+  /* ref must be disposed before owner since it borrows owner's data */
+  value_dispose(ref, allocator);
+  value_dispose(owner, allocator);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }

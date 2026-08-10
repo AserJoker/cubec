@@ -107,7 +107,8 @@
       "Bash(./cubec_test.exe --gtest_filter=\"dt_slotmap.*\")",
       "Bash(mv:*)",
       "Bash(mv include/engine/stype.h include/engine/type.h)",
-      "Bash(mv src/engine/stype.c src/engine/type.c)"
+      "Bash(mv src/engine/stype.c src/engine/type.c)",
+      "Bash(rm:*)"
     ]
   }
 }
