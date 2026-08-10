@@ -48,6 +48,25 @@ value_t value_equal(struct _vm_t *vm, value_t a, value_t b);
  * @return bool value on success, error value if vtable.extends is NULL. */
 value_t value_extends(struct _vm_t *vm, value_t sub, value_t super_val);
 
+/* ---- Binary operators ---- */
+
+/** @brief & (logical AND): delegates to type->vtable.band. */
+value_t value_band(struct _vm_t *vm, value_t a, value_t b);
+
+/** @brief | (logical OR): delegates to type->vtable.bor. */
+value_t value_bor(struct _vm_t *vm, value_t a, value_t b);
+
+/** @brief ^ (XOR): delegates to type->vtable.bxor. */
+value_t value_bxor(struct _vm_t *vm, value_t a, value_t b);
+
+/* ---- Unary operators ---- */
+
+/** @brief ~ (bitwise NOT): delegates to type->vtable.bnot. */
+value_t value_bnot(struct _vm_t *vm, value_t a);
+
+/** @brief ! (logical NOT): delegates to type->vtable.lnot. */
+value_t value_lnot(struct _vm_t *vm, value_t a);
+
 #ifdef __cplusplus
 }
 #endif

@@ -103,3 +103,43 @@ value_t value_extends(vm_t vm, value_t sub, value_t super_val) {
                               type_get_name(value_get_type(sub)));
   return vt.extends(vm, sub, super_val);
 }
+
+value_t value_band(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.band)
+    return create_error_value(vm, "type '%s' does not support operator &",
+                              type_get_name(value_get_type(a)));
+  return vt.band(vm, a, b);
+}
+
+value_t value_bor(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.bor)
+    return create_error_value(vm, "type '%s' does not support operator |",
+                              type_get_name(value_get_type(a)));
+  return vt.bor(vm, a, b);
+}
+
+value_t value_bxor(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.bxor)
+    return create_error_value(vm, "type '%s' does not support operator ^",
+                              type_get_name(value_get_type(a)));
+  return vt.bxor(vm, a, b);
+}
+
+value_t value_bnot(vm_t vm, value_t a) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.bnot)
+    return create_error_value(vm, "type '%s' does not support operator ~",
+                              type_get_name(value_get_type(a)));
+  return vt.bnot(vm, a);
+}
+
+value_t value_lnot(vm_t vm, value_t a) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.lnot)
+    return create_error_value(vm, "type '%s' does not support operator !",
+                              type_get_name(value_get_type(a)));
+  return vt.lnot(vm, a);
+}

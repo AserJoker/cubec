@@ -25,6 +25,8 @@ static value_t _bool_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
   if (ta->kind != tb->kind)
     return create_error_value(vm, "cannot compare values of different kinds");
+  if (value_is_shadow(a) || value_is_shadow(b))
+    return vm_create_value_shadow(vm, value_get_type(a), NULL);
   return create_bool_value(vm, *(bool *)value_get_data(a) == *(bool *)value_get_data(b));
 }
 
@@ -42,6 +44,38 @@ static value_t _bool_type_extends(vm_t vm, type_t sub, type_t super) {
   return create_bool_value(vm, super->kind == TYPE_KIND_BOOL);
 }
 
+static value_t _bool_band(vm_t vm, value_t a, value_t b) {
+  if (value_is_shadow(a) || value_is_shadow(b))
+    return vm_create_value_shadow(vm, value_get_type(a), NULL);
+  return create_bool_value(vm, *(bool *)value_get_data(a) && *(bool *)value_get_data(b));
+}
+
+static value_t _bool_bor(vm_t vm, value_t a, value_t b) {
+  if (value_is_shadow(a) || value_is_shadow(b))
+    return vm_create_value_shadow(vm, value_get_type(a), NULL);
+  return create_bool_value(vm, *(bool *)value_get_data(a) || *(bool *)value_get_data(b));
+}
+
+static value_t _bool_bxor(vm_t vm, value_t a, value_t b) {
+  if (value_is_shadow(a) || value_is_shadow(b))
+    return vm_create_value_shadow(vm, value_get_type(a), NULL);
+  bool va = *(bool *)value_get_data(a);
+  bool vb = *(bool *)value_get_data(b);
+  return create_bool_value(vm, va != vb);
+}
+
+static value_t _bool_bnot(vm_t vm, value_t a) {
+  if (value_is_shadow(a))
+    return vm_create_value_shadow(vm, value_get_type(a), NULL);
+  return create_bool_value(vm, !*(bool *)value_get_data(a));
+}
+
+static value_t _bool_lnot(vm_t vm, value_t a) {
+  if (value_is_shadow(a))
+    return vm_create_value_shadow(vm, value_get_type(a), NULL);
+  return create_bool_value(vm, !*(bool *)value_get_data(a));
+}
+
 type_t type_get_bool_type(allocator_t allocator) {
   (void)allocator;
   static struct _type_t bool_type = {
@@ -56,6 +90,11 @@ type_t type_get_bool_type(allocator_t allocator) {
           .extends = NULL,
           .type_equal = _bool_type_equal,
           .type_extends = _bool_type_extends,
+          .band = _bool_band,
+          .bor = _bool_bor,
+          .bxor = _bool_bxor,
+          .bnot = _bool_bnot,
+          .lnot = _bool_lnot,
       },
   };
   return &bool_type;

@@ -63,6 +63,13 @@ struct vtable_t {
   value_t (*extends)      (vm_t vm, value_t sub, value_t super_val);
   value_t (*type_equal)   (vm_t vm, type_t a, type_t b);
   value_t (*type_extends) (vm_t vm, type_t sub, type_t super);
+  /* Binary operators */
+  value_t (*band)         (vm_t vm, value_t a, value_t b); /* & (logical AND) */
+  value_t (*bor)          (vm_t vm, value_t a, value_t b); /* | (logical OR) */
+  value_t (*bxor)         (vm_t vm, value_t a, value_t b); /* ^ (XOR) */
+  /* Unary operators */
+  value_t (*bnot)         (vm_t vm, value_t a);            /* ~ (bitwise NOT) */
+  value_t (*lnot)         (vm_t vm, value_t a);            /* ! (logical NOT) */
 };
 typedef struct vtable_t vtable_t;
 
