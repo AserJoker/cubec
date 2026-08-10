@@ -37,6 +37,7 @@ value_t  vm_get_type_type(vm_t self);
 value_t  vm_get_error_type(vm_t self);
 value_t  vm_get_bool_type(vm_t self);
 value_t  vm_get_wildcard_type(vm_t self);
+value_t  vm_get_void_type(vm_t self);
 
 /* ---- Module registry ---- */
 

@@ -37,6 +37,17 @@ void   *value_get_data(value_t self);
 bool    value_is_own(value_t self);
 bool    value_is_shadow(value_t self);
 
+/**
+ * @brief Value-level equality: delegates to type->vtable.equal.
+ * @return bool value on success, error value if vtable.equal is NULL. */
+struct _vm_t;
+value_t value_equal(struct _vm_t *vm, value_t a, value_t b);
+
+/**
+ * @brief Value-level extends: delegates to type->vtable.extends.
+ * @return bool value on success, error value if vtable.extends is NULL. */
+value_t value_extends(struct _vm_t *vm, value_t sub, value_t super_val);
+
 #ifdef __cplusplus
 }
 #endif

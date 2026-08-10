@@ -1,5 +1,7 @@
 #include "engine/value.h"
 #include "engine/type.h"
+#include "engine/vm.h"
+#include "engine/error_type.h"
 #include <string.h>
 
 struct _value_t {
@@ -85,3 +87,19 @@ type_t  value_get_type(value_t self) { return self->type; }
 void   *value_get_data(value_t self) { return self->data; }
 bool    value_is_own(value_t self) { return self->own; }
 bool    value_is_shadow(value_t self) { return self->data == NULL; }
+
+value_t value_equal(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.equal)
+    return create_error_value(vm, "type '%s' does not support operator ==",
+                              type_get_name(value_get_type(a)));
+  return vt.equal(vm, a, b);
+}
+
+value_t value_extends(vm_t vm, value_t sub, value_t super_val) {
+  vtable_t vt = type_get_vtable(value_get_type(sub));
+  if (!vt.extends)
+    return create_error_value(vm, "type '%s' does not support extends",
+                              type_get_name(value_get_type(sub)));
+  return vt.extends(vm, sub, super_val);
+}
