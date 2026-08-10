@@ -69,10 +69,10 @@ type_t type_create_type_type(allocator_t allocator) {
   return &type_type;
 }
 
-value_t create_type_value(vm_t vm, type_t type, const char *name) {
+value_t create_type_value(vm_t vm, type_t type, const char *name, bool own) {
   type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
   allocator_t allocator = vm_get_allocator(vm);
-  value_t v = value_create(allocator, type_type, type, true);
+  value_t v = value_create(allocator, type_type, type, own);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) {
     vec_push(scope->values, v);

@@ -33,24 +33,22 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 
   vm->global_scope = scope_create(allocator, SCOPE_GLOBAL, NULL, NULL);
   vm->root_scope = NULL;
-  vm->current_scope = NULL;
+  vm->current_scope = vm->global_scope;
 
-  /* Bootstrap: create the "type" type (static singleton, never freed) */
+  /* v_type must be created first — create_type_value depends on it.
+   * Cannot use create_type_value for v_type itself (circular dependency). */
   type_t type_type = type_create_type_type(allocator);
-
-  /* v_type: ref value — type=ref, data=ref, own=false since type_type is static */
   vm->v_type = value_create(allocator, type_type, type_type, false);
   vec_push(vm->global_scope->values, vm->v_type);
+  name_t n_type = name_create(vm->global_scope->allocator, vm->v_type);
+  strmap_insert(vm->global_scope->names, "type", n_type);
 
-  /* Bootstrap: create the "error" type (static singleton, never freed) */
+  /* Subsequent builtin types use create_type_value */
   type_t error_type = type_create_error_type(allocator);
-  vm->v_error = value_create(allocator, type_type, error_type, false);
-  vec_push(vm->global_scope->values, vm->v_error);
+  vm->v_error = create_type_value(vm, error_type, NULL, false);
 
-  /* Bootstrap: create the "bool" type (static singleton, never freed) */
   type_t bool_type = type_create_bool_type(allocator);
-  vm->v_bool = value_create(allocator, type_type, bool_type, false);
-  vec_push(vm->global_scope->values, vm->v_bool);
+  vm->v_bool = create_type_value(vm, bool_type, "bool", false);
 }
 
 static void _vm_dispose(void *self, allocator_t allocator) {

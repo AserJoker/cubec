@@ -66,9 +66,9 @@ TEST_F(it_vm, create_value_with_data) {
   EXPECT_NE(value_get_data(v), &val);
   EXPECT_EQ(*(int32_t *)value_get_data(v), 42);
 
-  value_dispose(v, allocator);
-  allocator_free(allocator, &i32);
+  /* value is in current_scope->values, disposed by vm_dispose */
   vm_dispose(vm, allocator);
+  allocator_free(allocator, &i32);
   delete_allocator(allocator);
 }
 
@@ -82,8 +82,8 @@ TEST_F(it_vm, create_value_shadow) {
   EXPECT_FALSE(value_is_own(v));
   EXPECT_EQ(value_get_data(v), nullptr);
 
-  value_dispose(v, allocator);
-  allocator_free(allocator, &i32);
+  /* value is in current_scope->values, disposed by vm_dispose */
   vm_dispose(vm, allocator);
+  allocator_free(allocator, &i32);
   delete_allocator(allocator);
 }

@@ -95,11 +95,12 @@ type_t type_create_type_type(allocator_t allocator);
 
 /** @brief Create a type value wrapping the given type_t.
  *
- *  value.type = vm's "type" type_t (ref), value.data = type (own).
- *  If name is non-NULL, creates a NAME_TYPE entry in vm's current scope.
+ *  value.type = vm's "type" type_t (ref), value.data = type.
+ *  own=true for heap-allocated types, own=false for static singletons.
+ *  If name is non-NULL, creates a name entry in vm's current scope.
  *  The value is added to vm's current_scope->values.
  */
-value_t create_type_value(vm_t vm, type_t type, const char *name);
+value_t create_type_value(vm_t vm, type_t type, const char *name, bool own);
 
 #ifdef __cplusplus
 }
