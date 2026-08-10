@@ -1,4 +1,4 @@
-#include "engine/stype.h"
+#include "engine/type.h"
 #include <string.h>
 
 static void _value_init(void *self, allocator_t allocator, void *arg) {
@@ -57,7 +57,7 @@ class_t g_value_class = {
     .move = (class_move_fn_t)_value_move,
 };
 
-value_t *value_create(allocator_t allocator, stype_t *type, void *data,
+value_t *value_create(allocator_t allocator, type_t *type, void *data,
                       bool own) {
   value_init_t init = {.type = type, .data = data, .own = own};
   return (value_t *)allocator_create(allocator, &g_value_class, &init);
@@ -68,7 +68,7 @@ void value_dispose(value_t *self, allocator_t allocator) {
   allocator_free(allocator, &self);
 }
 
-stype_t *value_get_type(const value_t *self) { return self->type; }
+type_t *value_get_type(const value_t *self) { return self->type; }
 void    *value_get_data(const value_t *self) { return self->data; }
 bool     value_is_own(const value_t *self) { return self->own; }
 bool     value_is_shadow(const value_t *self) { return self->data == NULL; }

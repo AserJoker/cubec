@@ -105,7 +105,9 @@
       "Bash(build/bin/cubec_test)",
       "Bash(./cubec_test.exe --gtest_filter=\"it_name_collector.union_name\")",
       "Bash(./cubec_test.exe --gtest_filter=\"dt_slotmap.*\")",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(mv include/engine/stype.h include/engine/type.h)",
+      "Bash(mv src/engine/stype.c src/engine/type.c)"
     ]
   }
 }

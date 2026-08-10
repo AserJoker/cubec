@@ -8,10 +8,10 @@ extern "C" {
 
 /**
  * @brief Type kind — distinguishes value categories.
- *        Determined entirely by stype_t, no kind field on value_t.
+ *        Determined entirely by type_t, no kind field on value_t.
  */
 typedef enum type_kind_t {
-  TYPE_KIND_TYPE,       /**< Type itself (stype_t as value's data) */
+  TYPE_KIND_TYPE,       /**< Type itself (type_t as value's data) */
   TYPE_KIND_MODULE,
   TYPE_KIND_FUNCTION,
   TYPE_KIND_CALLBACK,
@@ -32,7 +32,7 @@ typedef enum type_kind_t {
 
 /**
  * @brief VTable — type behavior dispatch table.
- *        Embedded in stype_t, not a pointer.
+ *        Embedded in type_t, not a pointer.
  */
 typedef struct vtable_t {
   value_t *(*clone)   (allocator_t alloc, value_t *obj);
@@ -40,25 +40,25 @@ typedef struct vtable_t {
 } vtable_t;
 
 /**
- * @brief stype_t — type object (independent data structure).
+ * @brief type_t — type object (independent data structure).
  *
  * For TYPE_KIND_TYPE values: value.type and value.data point to the same
- * stype_t (type=ref, data=own).
+ * type_t (type=ref, data=own).
  */
-typedef struct stype_t {
+typedef struct type_t {
   type_kind_t kind;
   const char *name;
   uint64_t    size;      /**< Byte size of the type's data */
   uint64_t    align;     /**< Alignment requirement */
   vtable_t    vtable;    /**< Behavior dispatch (embedded) */
-} stype_t;
+} type_t;
 
 /* ---- Accessors ---- */
 
-type_kind_t stype_get_kind(const stype_t *self);
-const char *stype_get_name(const stype_t *self);
-uint64_t    stype_get_size(const stype_t *self);
-uint64_t    stype_get_align(const stype_t *self);
+type_kind_t type_get_kind(const type_t *self);
+const char *type_get_name(const type_t *self);
+uint64_t    type_get_size(const type_t *self);
+uint64_t    type_get_align(const type_t *self);
 
 #ifdef __cplusplus
 }
