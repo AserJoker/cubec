@@ -8,6 +8,7 @@
 #include "engine/void_type.h"
 #include "engine/integer_type.h"
 #include "engine/float_type.h"
+#include "engine/str_type.h"
 #include "engine/module.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -50,6 +51,8 @@ struct _vm_t {
   value_t     v_const_f16;   /* borrowed: bootstrap type "const f16" */
   value_t     v_const_f32;   /* borrowed: bootstrap type "const f32" */
   value_t     v_const_f64;   /* borrowed: bootstrap type "const f64" */
+  value_t     v_str;         /* borrowed: bootstrap type "str" */
+  value_t     v_const_str;   /* borrowed: bootstrap type "const str" */
 };
 
 static void _vm_init(void *self, allocator_t allocator, void *arg) {
@@ -156,6 +159,13 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 
   type_t const_f64_type = type_get_const_f64_type(allocator);
   vm->v_const_f64 = create_type_value(vm, const_f64_type, "const f64", false);
+
+  /* Str type */
+  type_t str_type = type_get_str_type(allocator);
+  vm->v_str = create_type_value(vm, str_type, "str", false);
+
+  type_t const_str_type = type_get_const_str_type(allocator);
+  vm->v_const_str = create_type_value(vm, const_str_type, "const str", false);
 }
 
 static void _vm_dispose(void *self, allocator_t allocator) {
@@ -216,6 +226,8 @@ value_t  vm_get_f64_type(vm_t self) { return self->v_f64; }
 value_t  vm_get_const_f16_type(vm_t self) { return self->v_const_f16; }
 value_t  vm_get_const_f32_type(vm_t self) { return self->v_const_f32; }
 value_t  vm_get_const_f64_type(vm_t self) { return self->v_const_f64; }
+value_t  vm_get_str_type(vm_t self) { return self->v_str; }
+value_t  vm_get_const_str_type(vm_t self) { return self->v_const_str; }
 
 module_t vm_get_module(vm_t self, const char *abs_path) {
   return (module_t)strmap_find(self->modules, abs_path);

@@ -4,6 +4,7 @@
 #include "engine/scope.h"
 #include "engine/error_type.h"
 #include "engine/void_type.h"
+#include "engine/str_type.h"
 #include "engine/type.h"
 #include <stdbool.h>
 #include <string.h>
@@ -121,6 +122,14 @@ static value_t _bool_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   return create_void_value(vm);
 }
 
+static value_t _bool_to_string(vm_t vm, value_t self) {
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm,
+        (type_t)value_get_data(vm_get_str_type(vm)), NULL, true);
+  bool val = *(bool *)value_get_data(self);
+  return create_str_value(vm, val ? "true" : "false");
+}
+
 type_t type_get_bool_type(allocator_t allocator) {
   (void)allocator;
   static struct _type_t bool_type = {
@@ -143,6 +152,7 @@ type_t type_get_bool_type(allocator_t allocator) {
           .lnot = _bool_lnot,
           .safe_cast = _bool_safe_cast,
           .assignment = _bool_assignment,
+          .to_string = _bool_to_string,
       },
   };
   return &bool_type;
@@ -184,6 +194,7 @@ type_t type_get_const_bool_type(allocator_t allocator) {
           .bnot = _bool_bnot,
           .lnot = _bool_lnot,
           .safe_cast = _const_bool_safe_cast,
+          .to_string = _bool_to_string,
       },
   };
   return &const_bool_type;

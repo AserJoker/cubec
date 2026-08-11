@@ -298,3 +298,11 @@ value_t value_le(vm_t vm, value_t a, value_t b) {
   bool result = !(*(bool *)value_get_data(gt_result));
   return create_bool_value(vm, result);
 }
+
+value_t value_to_string(vm_t vm, value_t self) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.to_string)
+    return create_error_value(vm, "type '%s' does not support to_string",
+                              type_get_name(value_get_type(self)));
+  return vt.to_string(vm, self);
+}

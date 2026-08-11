@@ -89,6 +89,8 @@ struct vtable_t {
   value_t (*safe_cast)    (vm_t vm, value_t self, type_t to); /* safe implicit cast */
   /* Assignment */
   value_t (*assignment)   (vm_t vm, value_t lvalue, value_t rvalue); /* = */
+  /* String representation */
+  value_t (*to_string)    (vm_t vm, value_t self);                   /* toString */
 };
 typedef struct vtable_t vtable_t;
 

@@ -509,6 +509,7 @@ type_t type_get_##Prefix##_type(allocator_t allocator) {                       \
           .lt           = _int_lt,                                             \
           .safe_cast    = _##Prefix##_safe_cast,                               \
           .assignment   = _##Prefix##_assignment,                              \
+          .to_string    = NULL,                                                \
       },                                                                       \
   };                                                                           \
   return &t;                                                                   \
@@ -547,6 +548,7 @@ type_t type_get_const_##Prefix##_type(allocator_t allocator) {                 \
           .lt           = _int_lt,                                             \
           .safe_cast    = _const_##Prefix##_safe_cast,                         \
           .assignment   = NULL,                                                \
+          .to_string    = NULL,                                                \
       },                                                                       \
   };                                                                           \
   return &t;                                                                   \
@@ -597,6 +599,7 @@ type_t type_get_##Prefix##_type(allocator_t allocator) {                       \
           .lt           = _int_lt,                                             \
           .safe_cast    = _##Prefix##_safe_cast,                               \
           .assignment   = _##Prefix##_assignment,                              \
+          .to_string    = NULL,                                                \
       },                                                                       \
   };                                                                           \
   return &t;                                                                   \
@@ -635,6 +638,7 @@ type_t type_get_const_##Prefix##_type(allocator_t allocator) {                 \
           .lt           = _int_lt,                                             \
           .safe_cast    = _const_##Prefix##_safe_cast,                         \
           .assignment   = NULL,                                                \
+          .to_string    = NULL,                                                \
       },                                                                       \
   };                                                                           \
   return &t;                                                                   \

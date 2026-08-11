@@ -125,6 +125,10 @@ value_t value_safe_cast(struct _vm_t *vm, value_t val, type_t to);
  *  Checks TDZ/const rules, then copies data and sets initialized=true. */
 value_t value_assignment(struct _vm_t *vm, value_t lvalue, value_t rvalue);
 
+/** @brief Convert value to its string representation.
+ *  Delegates to type->vtable.to_string. Returns str value or error. */
+value_t value_to_string(struct _vm_t *vm, value_t self);
+
 #ifdef __cplusplus
 }
 #endif

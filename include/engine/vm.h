@@ -61,6 +61,8 @@ value_t  vm_get_f64_type(vm_t self);
 value_t  vm_get_const_f16_type(vm_t self);
 value_t  vm_get_const_f32_type(vm_t self);
 value_t  vm_get_const_f64_type(vm_t self);
+value_t  vm_get_str_type(vm_t self);
+value_t  vm_get_const_str_type(vm_t self);
 
 /* ---- Module registry ---- */
 
