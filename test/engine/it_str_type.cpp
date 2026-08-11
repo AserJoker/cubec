@@ -6,6 +6,7 @@
 #include "engine/integer_type.h"
 #include "engine/void_type.h"
 #include "engine/error_type.h"
+#include "engine/slice_type.h"
 #include "core/string.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -470,6 +471,54 @@ TEST_F(it_str_type, move) {
   /* source is cleared */
   EXPECT_EQ(value_get_data(a), nullptr);
   EXPECT_FALSE(value_is_own(a));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- value_slice on str ---- */
+
+TEST_F(it_str_type, slice) {
+  vm_t vm = vm_create(allocator);
+  value_t s = create_str_value(vm, "hello world");
+
+  value_t sub = value_slice(vm, s, 0, 5);
+  EXPECT_EQ(type_get_kind(value_get_type(sub)), TYPE_KIND_SLICE);
+  /* str slice produces []u8 */
+  slice_type_t st = (slice_type_t)value_get_type(sub);
+  EXPECT_EQ(type_get_kind(slice_type_get_element_type(st)), TYPE_KIND_U8);
+
+  /* read first element: 'h' = 104 */
+  value_t idx0 = create_i32_value(vm, 0);
+  value_t elem = value_get_item(vm, sub, idx0);
+  EXPECT_EQ(*(uint8_t *)value_get_data(elem), 'h');
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_str_type, slice_middle) {
+  vm_t vm = vm_create(allocator);
+  value_t s = create_str_value(vm, "hello world");
+
+  value_t sub = value_slice(vm, s, 6, 5);
+  EXPECT_EQ(type_get_kind(value_get_type(sub)), TYPE_KIND_SLICE);
+
+  /* read 'w' = 119 */
+  value_t idx0 = create_i32_value(vm, 0);
+  value_t elem = value_get_item(vm, sub, idx0);
+  EXPECT_EQ(*(uint8_t *)value_get_data(elem), 'w');
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_str_type, slice_out_of_bounds) {
+  vm_t vm = vm_create(allocator);
+  value_t s = create_str_value(vm, "hi");
+
+  value_t sub = value_slice(vm, s, 0, 5);
+  EXPECT_EQ(type_get_kind(value_get_type(sub)), TYPE_KIND_ERROR);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

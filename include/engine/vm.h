@@ -115,6 +115,11 @@ value_t vm_create_value_shadow(vm_t self, type_t type,
 value_t vm_create_array_type_value(vm_t self, type_t element_type,
                                     uint64_t count, bool mut);
 
+/** @brief Create a slice type, register in vm's current scope, and wrap as a value.
+ *  The slice_type_t is added to current_scope->types (auto-dispose).
+ *  Returns the type value (value.data = slice_type_t, own=false). */
+value_t vm_create_slice_type_value(vm_t self, type_t element_type, bool mut);
+
 #ifdef __cplusplus
 }
 #endif

@@ -7,6 +7,7 @@
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
 #include "engine/integer_type.h"
+#include "engine/slice_type.h"
 #include "engine/type.h"
 #include "core/string.h"
 #include <stdbool.h>
@@ -25,6 +26,7 @@ static value_t _array_assignment(vm_t vm, value_t lvalue, value_t rvalue);
 static value_t _array_to_string(vm_t vm, value_t self);
 static value_t _array_get_item(vm_t vm, value_t self, value_t index);
 static value_t _array_set_item(vm_t vm, value_t self, value_t index, value_t val);
+static value_t _array_slice(vm_t vm, value_t self, uint64_t start, uint64_t count);
 
 /* ---- Shared vtable for all array types ---- */
 
@@ -59,6 +61,7 @@ static vtable_t _make_array_vtable(void) {
       .set_field    = NULL,
       .get_item     = _array_get_item,
       .set_item     = _array_set_item,
+      .slice        = _array_slice,
   };
 }
 
@@ -369,6 +372,25 @@ static value_t _array_to_string(vm_t vm, value_t self) {
   value_t sv = create_str_value(vm, cstr);
   allocator_free(alloc, &result);
   return sv;
+}
+
+/* ---- VTable: slice ---- */
+
+static value_t _array_slice(vm_t vm, value_t self, uint64_t start,
+                             uint64_t count) {
+  array_type_t at = (array_type_t)value_get_type(self);
+  if (start + count > at->count)
+    return create_error_value(vm,
+        "array slice [%llu..%llu) out of bounds (size %llu)",
+        (unsigned long long)start, (unsigned long long)(start + count),
+        (unsigned long long)at->count);
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, value_get_type(self), NULL, true);
+  /* create slice type and value */
+  type_t elem_type = at->element_type;
+  value_t slice_type_val = vm_create_slice_type_value(vm, elem_type, at->base.mut);
+  slice_type_t st = (slice_type_t)value_get_data(slice_type_val);
+  return create_slice_value(vm, st, self, start, count);
 }
 
 /* ---- Value constructors ---- */

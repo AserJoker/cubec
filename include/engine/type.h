@@ -97,6 +97,11 @@ struct vtable_t {
   /* Subscript ([index]) */
   value_t (*get_item)     (vm_t vm, value_t self, value_t index);   /* obj[index] */
   value_t (*set_item)     (vm_t vm, value_t self, value_t index, value_t val); /* obj[index] = val */
+  /* Dereference (*ptr) */
+  value_t (*deref_get)    (vm_t vm, value_t self);                  /* *ptr */
+  value_t (*deref_set)    (vm_t vm, value_t self, value_t val);     /* *ptr = val */
+  /* Slicing (value[start..start+count]) */
+  value_t (*slice)        (vm_t vm, value_t self, uint64_t start, uint64_t count);
 };
 typedef struct vtable_t vtable_t;
 

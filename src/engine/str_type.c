@@ -5,6 +5,8 @@
 #include "engine/error_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
+#include "engine/integer_type.h"
+#include "engine/slice_type.h"
 #include "engine/type.h"
 #include "core/string.h"
 #include <stdbool.h>
@@ -158,6 +160,35 @@ static value_t _const_str_safe_cast(vm_t vm, value_t self, type_t to) {
   return v;
 }
 
+static value_t _str_slice(vm_t vm, value_t self, uint64_t start,
+                           uint64_t count) {
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, value_get_type(self), NULL, true);
+  const char *s = string_get(_str_read(self));
+  size_t len = strlen(s);
+  if (start + count > len)
+    return create_error_value(vm,
+        "str slice [%llu..%llu) out of bounds (len %zu)",
+        (unsigned long long)start, (unsigned long long)(start + count), len);
+  /* str slice produces []u8 — a byte slice referencing the string's buffer */
+  type_t u8_type = (type_t)value_get_data(vm_get_u8_type(vm));
+  value_t slice_type_val = vm_create_slice_type_value(vm, u8_type, type_is_mut(value_get_type(self)));
+  slice_type_t st = (slice_type_t)value_get_data(slice_type_val);
+
+  allocator_t alloc = vm_get_allocator(vm);
+  struct slice_data_t *sd = (struct slice_data_t *)allocator_alloc(
+      alloc, sizeof(struct slice_data_t));
+  sd->ptr   = (void *)s;
+  sd->start = start;
+  sd->len   = count;
+
+  value_t v = value_create(alloc, (type_t)st, sd, true);
+  value_set_initialized(v, true);
+  scope_t scope = vm_get_current_scope(vm);
+  if (scope) vec_push(scope->values, v);
+  return v;
+}
+
 static value_t _str_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t rt = value_get_type(rvalue);
   if (rt->kind != TYPE_KIND_STR)
@@ -226,6 +257,7 @@ type_t type_get_str_type(allocator_t allocator) {
           .safe_cast    = _str_safe_cast,
           .assignment   = _str_assignment,
           .to_string    = NULL,
+          .slice        = _str_slice,
       },
   };
   return &t;
@@ -265,6 +297,7 @@ type_t type_get_const_str_type(allocator_t allocator) {
           .safe_cast    = _const_str_safe_cast,
           .assignment   = NULL,
           .to_string    = NULL,
+          .slice        = _str_slice,
       },
   };
   return &t;

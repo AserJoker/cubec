@@ -53,6 +53,18 @@ value_t value_clone(struct _vm_t *vm, value_t self);
 type_t value_type_clone(struct _vm_t *vm, type_t self);
 
 /**
+ * @brief Dereference: delegates to type->vtable.deref_get.
+ *  Reads the value pointed to by a pointer/reference.
+ * @return pointed-to value, or error if vtable.deref_get is NULL. */
+value_t value_deref_get(struct _vm_t *vm, value_t self);
+
+/**
+ * @brief Dereference assignment: delegates to type->vtable.deref_set.
+ *  Writes a value through a pointer/reference.
+ * @return void value on success, error if vtable.deref_set is NULL. */
+value_t value_deref_set(struct _vm_t *vm, value_t self, value_t val);
+
+/**
  * @brief Value-level extends: delegates to type->vtable.extends.
  * @return bool value on success, error value if vtable.extends is NULL. */
 value_t value_extends(struct _vm_t *vm, value_t sub, value_t super_val);
@@ -147,6 +159,12 @@ value_t value_get_item(struct _vm_t *vm, value_t self, value_t index);
 
 /** @brief Write an item by index: obj[index] = val. Delegates to type->vtable.set_item. */
 value_t value_set_item(struct _vm_t *vm, value_t self, value_t index, value_t val);
+
+/** @brief Slice a value: value[start..start+count]. Delegates to type->vtable.slice.
+ *  For arrays: returns a slice value referencing the array's data.
+ *  For slices: returns a new slice value referencing the same underlying data.
+ *  For str: returns a new str value with the substring. */
+value_t value_slice(struct _vm_t *vm, value_t self, uint64_t start, uint64_t count);
 
 #ifdef __cplusplus
 }

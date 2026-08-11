@@ -95,6 +95,22 @@ type_t value_type_clone(vm_t vm, type_t self) {
   return vt.type_clone(vm, self);
 }
 
+value_t value_deref_get(vm_t vm, value_t self) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.deref_get)
+    return create_error_value(vm, "type '%s' does not support dereference",
+                              type_get_name(value_get_type(self)));
+  return vt.deref_get(vm, self);
+}
+
+value_t value_deref_set(vm_t vm, value_t self, value_t val) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.deref_set)
+    return create_error_value(vm, "type '%s' does not support dereference assignment",
+                              type_get_name(value_get_type(self)));
+  return vt.deref_set(vm, self, val);
+}
+
 value_t value_equal(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.equal)
@@ -330,4 +346,12 @@ value_t value_set_item(vm_t vm, value_t self, value_t index, value_t val) {
     return create_error_value(vm, "type '%s' does not support subscript assignment",
                               type_get_name(value_get_type(self)));
   return vt.set_item(vm, self, index, val);
+}
+
+value_t value_slice(vm_t vm, value_t self, uint64_t start, uint64_t count) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.slice)
+    return create_error_value(vm, "type '%s' does not support slicing",
+                              type_get_name(value_get_type(self)));
+  return vt.slice(vm, self, start, count);
 }
