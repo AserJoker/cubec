@@ -5,10 +5,12 @@
 #include "engine/error_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
+#include "engine/str_type.h"
 #include "engine/type.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /* Helper: create a value and register it in vm's current scope */
 static value_t _int_value_create(vm_t vm, type_t type, void *data, bool own) {
@@ -471,6 +473,22 @@ static value_t _int_lt(vm_t vm, value_t a, value_t b) {
     return create_bool_value(vm, _int_read_u64(pa) < _int_read_u64(pb));
 }
 
+/* ---- Integer to_string ---- */
+
+static value_t _int_to_string(vm_t vm, value_t self) {
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm,
+        (type_t)value_get_data(vm_get_str_type(vm)), NULL, true);
+  type_t t = value_get_type(self);
+  uint64_t val = _int_read_u64(self);
+  char buf[32];
+  if (_is_signed_kind(t->kind))
+    snprintf(buf, sizeof(buf), "%lld", (long long)(int64_t)val);
+  else
+    snprintf(buf, sizeof(buf), "%llu", (unsigned long long)val);
+  return create_str_value(vm, buf);
+}
+
 /* ==================================================================
  * Static type singletons — vtables point to shared functions
  * ================================================================== */
@@ -509,7 +527,7 @@ type_t type_get_##Prefix##_type(allocator_t allocator) {                       \
           .lt           = _int_lt,                                             \
           .safe_cast    = _##Prefix##_safe_cast,                               \
           .assignment   = _##Prefix##_assignment,                              \
-          .to_string    = NULL,                                                \
+          .to_string    = _int_to_string,                                      \
       },                                                                       \
   };                                                                           \
   return &t;                                                                   \
@@ -548,7 +566,7 @@ type_t type_get_const_##Prefix##_type(allocator_t allocator) {                 \
           .lt           = _int_lt,                                             \
           .safe_cast    = _const_##Prefix##_safe_cast,                         \
           .assignment   = NULL,                                                \
-          .to_string    = NULL,                                                \
+          .to_string    = _int_to_string,                                      \
       },                                                                       \
   };                                                                           \
   return &t;                                                                   \
@@ -599,7 +617,7 @@ type_t type_get_##Prefix##_type(allocator_t allocator) {                       \
           .lt           = _int_lt,                                             \
           .safe_cast    = _##Prefix##_safe_cast,                               \
           .assignment   = _##Prefix##_assignment,                              \
-          .to_string    = NULL,                                                \
+          .to_string    = _int_to_string,                                      \
       },                                                                       \
   };                                                                           \
   return &t;                                                                   \
@@ -638,7 +656,7 @@ type_t type_get_const_##Prefix##_type(allocator_t allocator) {                 \
           .lt           = _int_lt,                                             \
           .safe_cast    = _const_##Prefix##_safe_cast,                         \
           .assignment   = NULL,                                                \
-          .to_string    = NULL,                                                \
+          .to_string    = _int_to_string,                                      \
       },                                                                       \
   };                                                                           \
   return &t;                                                                   \

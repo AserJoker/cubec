@@ -5,11 +5,13 @@
 #include "engine/error_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
+#include "engine/str_type.h"
 #include "engine/type.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
+#include <stdio.h>
 
 /* Helper: create a value and register it in vm's current scope */
 static value_t _float_value_create(vm_t vm, type_t type, void *data, bool own) {
@@ -366,6 +368,18 @@ static value_t _float_lt(vm_t vm, value_t a, value_t b) {
   return create_bool_value(vm, _float_read_f64(pa) < _float_read_f64(pb));
 }
 
+/* ---- Float to_string ---- */
+
+static value_t _float_to_string(vm_t vm, value_t self) {
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm,
+        (type_t)value_get_data(vm_get_str_type(vm)), NULL, true);
+  double val = _float_read_f64(self);
+  char buf[64];
+  snprintf(buf, sizeof(buf), "%g", val);
+  return create_str_value(vm, buf);
+}
+
 /* ==================================================================
  * Static type singletons
  * ================================================================== */
@@ -404,7 +418,7 @@ type_t type_get_##Prefix##_type(allocator_t allocator) {                       \
           .lt           = _float_lt,                                           \
           .safe_cast    = _##Prefix##_safe_cast,                               \
           .assignment   = _##Prefix##_assignment,                              \
-          .to_string    = NULL,                                                \
+          .to_string    = _float_to_string,                                    \
       },                                                                       \
   };                                                                           \
   return &t;                                                                   \
@@ -443,7 +457,7 @@ type_t type_get_const_##Prefix##_type(allocator_t allocator) {                 \
           .lt           = _float_lt,                                           \
           .safe_cast    = _const_##Prefix##_safe_cast,                         \
           .assignment   = NULL,                                                \
-          .to_string    = NULL,                                                \
+          .to_string    = _float_to_string,                                    \
       },                                                                       \
   };                                                                           \
   return &t;                                                                   \
