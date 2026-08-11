@@ -452,6 +452,19 @@ TEST_F(it_integer_type, i32_assign) {
   delete_allocator(allocator);
 }
 
+TEST_F(it_integer_type, i32_assign_negative) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_i32_value(vm, 0);
+  value_t b = create_i32_value(vm, -42);
+  value_t result = value_assignment(vm, a, b);
+
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_EQ(*(int32_t *)value_get_data(a), -42);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
 TEST_F(it_integer_type, const_i32_assign_error) {
   vm_t vm = vm_create(allocator);
   type_t ci32t = _get_const_i32_type(vm);
@@ -626,6 +639,347 @@ TEST_F(it_integer_type, void_add_not_supported) {
   value_t result = value_add(vm, a, b);
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ================================================================== */
+/* ---- Unsigned integer tests ---- */
+/* ================================================================== */
+
+TEST_F(it_integer_type, u32_create_value) {
+  vm_t vm = vm_create(allocator);
+  value_t v = create_u32_value(vm, 3000000000u);
+
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U32);
+  EXPECT_EQ(*(uint32_t *)value_get_data(v), 3000000000u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u64_create_value) {
+  vm_t vm = vm_create(allocator);
+  value_t v = create_u64_value(vm, 18000000000000000000ULL);
+
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U64);
+  EXPECT_EQ(*(uint64_t *)value_get_data(v), 18000000000000000000ULL);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- u32 arithmetic ---- */
+
+TEST_F(it_integer_type, u32_add) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 3000000000u);
+  value_t b = create_u32_value(vm, 1000000000u);
+  value_t result = value_add(vm, a, b);
+
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_U32);
+  /* wraps around: 4000000000 mod 2^32 */
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 4000000000u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_sub) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 100u);
+  value_t b = create_u32_value(vm, 50u);
+  value_t result = value_sub(vm, a, b);
+
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 50u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_mul) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 100u);
+  value_t b = create_u32_value(vm, 7u);
+  value_t result = value_mul(vm, a, b);
+
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 700u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_div) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 100u);
+  value_t b = create_u32_value(vm, 3u);
+  value_t result = value_div(vm, a, b);
+
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 33u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_mod) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 100u);
+  value_t b = create_u32_value(vm, 3u);
+  value_t result = value_mod(vm, a, b);
+
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 1u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_div_by_zero_error) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 100u);
+  value_t b = create_u32_value(vm, 0u);
+  value_t result = value_div(vm, a, b);
+
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- u32 relational (unsigned comparison) ---- */
+
+TEST_F(it_integer_type, u32_gt_large_value) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 0xFFFFFFFF);
+  value_t b = create_u32_value(vm, 1u);
+  value_t result = value_gt(vm, a, b);
+
+  EXPECT_TRUE(*(bool *)value_get_data(result));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- u32 bitwise ---- */
+
+TEST_F(it_integer_type, u32_band) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 0xFF00);
+  value_t b = create_u32_value(vm, 0x0FF0);
+  value_t result = value_band(vm, a, b);
+
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 0x0F00u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_bnot) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 0u);
+  value_t result = value_bnot(vm, a);
+
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 0xFFFFFFFFu);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_lnot_zero) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 0u);
+  value_t result = value_lnot(vm, a);
+
+  EXPECT_TRUE(*(bool *)value_get_data(result));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_lnot_nonzero) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 42u);
+  value_t result = value_lnot(vm, a);
+
+  EXPECT_FALSE(*(bool *)value_get_data(result));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- u32 shift ---- */
+
+TEST_F(it_integer_type, u32_shl) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 1u);
+  value_t b = create_u32_value(vm, 4u);
+  value_t result = value_shl(vm, a, b);
+
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 16u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_shr) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 0xF0000000u);
+  value_t b = create_u32_value(vm, 28u);
+  value_t result = value_shr(vm, a, b);
+
+  /* logical shift: 0xF0000000 >> 28 = 0xF */
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 0xFu);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- u32 unary ---- */
+
+TEST_F(it_integer_type, u32_pos) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 42u);
+  value_t result = value_pos(vm, a);
+
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 42u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_neg) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 1u);
+  value_t result = value_neg(vm, a);
+
+  /* two's complement: -1u = 0xFFFFFFFF */
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 0xFFFFFFFFu);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- u32 safe_cast / assignment ---- */
+
+TEST_F(it_integer_type, u32_safe_cast_to_u32) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 42u);
+  type_t u32t = (type_t)value_get_data(vm_get_u32_type(vm));
+  value_t result = value_safe_cast(vm, a, u32t);
+
+  EXPECT_EQ(result, a);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_safe_cast_to_const_u32) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 42u);
+  type_t cu32t = (type_t)value_get_data(vm_get_const_u32_type(vm));
+  value_t result = value_safe_cast(vm, a, cu32t);
+
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_U32);
+  EXPECT_FALSE(type_is_mut(value_get_type(result)));
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 42u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_assign) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 0u);
+  value_t b = create_u32_value(vm, 42u);
+  value_t result = value_assignment(vm, a, b);
+
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_EQ(*(uint32_t *)value_get_data(a), 42u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, const_u32_assign_error) {
+  vm_t vm = vm_create(allocator);
+  type_t cu32t = (type_t)value_get_data(vm_get_const_u32_type(vm));
+  value_t a = vm_create_value_shadow(vm, cu32t, NULL, true);
+  value_t b = create_u32_value(vm, 42u);
+  value_t result = value_assignment(vm, a, b);
+
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- Signed + unsigned cross-type promotion ---- */
+
+TEST_F(it_integer_type, i32_plus_u32_promotes_to_u32) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_i32_value(vm, -1);
+  value_t b = create_u32_value(vm, 1u);
+  value_t result = value_add(vm, a, b);
+
+  /* i32 + u32 → same size, unsigned wins → u32 */
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_U32);
+  /* -1 as u32 = 0xFFFFFFFF, + 1 = 0 (wraps) */
+  EXPECT_EQ(*(uint32_t *)value_get_data(result), 0u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, i64_plus_u32_promotes_to_i64) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_i64_value(vm, -1LL);
+  value_t b = create_u32_value(vm, 1u);
+  value_t result = value_add(vm, a, b);
+
+  /* i64 + u32 → i64 is larger → i64 wins */
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I64);
+  EXPECT_EQ(*(int64_t *)value_get_data(result), 0LL);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_gt_i32_promotes_to_u32) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 0xFFFFFFFF);
+  value_t b = create_i32_value(vm, 1);
+  value_t result = value_gt(vm, a, b);
+
+  /* u32 vs i32 → same size, unsigned wins → unsigned comparison */
+  EXPECT_TRUE(*(bool *)value_get_data(result));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, i8_plus_u8_promotes_to_u8) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_i8_value(vm, -1);
+  value_t b = create_u8_value(vm, 1u);
+  value_t result = value_add(vm, a, b);
+
+  /* i8 + u8 → same size, unsigned wins → u8 */
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_U8);
+  EXPECT_EQ(*(uint8_t *)value_get_data(result), 0u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_integer_type, u32_equal_i32_same_bits) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_u32_value(vm, 42u);
+  value_t b = create_i32_value(vm, 42);
+  value_t result = value_equal(vm, a, b);
+
+  /* u32 == i32 → promoted to u32, 42 == 42 → true */
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
+  EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

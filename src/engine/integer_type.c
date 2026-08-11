@@ -18,18 +18,86 @@ static value_t _int_value_create(vm_t vm, type_t type, void *data, bool own) {
   return v;
 }
 
-/* ---- Integer type promotion ---- */
+/* ---- Integer kind classification ---- */
 
-static bool _is_integer_kind(type_kind_t kind) {
+static bool _is_signed_kind(type_kind_t kind) {
   return kind == TYPE_KIND_I8  || kind == TYPE_KIND_I16 ||
          kind == TYPE_KIND_I32 || kind == TYPE_KIND_I64;
 }
 
+static bool _is_unsigned_kind(type_kind_t kind) {
+  return kind == TYPE_KIND_U8  || kind == TYPE_KIND_U16 ||
+         kind == TYPE_KIND_U32 || kind == TYPE_KIND_U64;
+}
+
+static bool _is_integer_kind(type_kind_t kind) {
+  return _is_signed_kind(kind) || _is_unsigned_kind(kind);
+}
+
+/* ---- Read/write values as uint64_t (preserves all bits) ---- */
+
+static uint64_t _int_read_u64(value_t v) {
+  type_t t = value_get_type(v);
+  switch (t->size) {
+    case 1: return (uint64_t)(*(uint8_t *)value_get_data(v));
+    case 2: return (uint64_t)(*(uint16_t *)value_get_data(v));
+    case 4: return (uint64_t)(*(uint32_t *)value_get_data(v));
+    case 8: return *(uint64_t *)value_get_data(v);
+    default: return 0;
+  }
+}
+
+static void _int_write_u64(type_t t, void *data, uint64_t val) {
+  switch (t->size) {
+    case 1: *(uint8_t  *)data = (uint8_t)val;  break;
+    case 2: *(uint16_t *)data = (uint16_t)val; break;
+    case 4: *(uint32_t *)data = (uint32_t)val; break;
+    case 8: *(uint64_t *)data = val;             break;
+    default: break;
+  }
+}
+
+static value_t _int_alloc_result(vm_t vm, type_t type, uint64_t val) {
+  void *data = allocator_alloc(vm_get_allocator(vm), type->size);
+  _int_write_u64(type, data, val);
+  return _int_value_create(vm, type, data, true);
+}
+
+/* ---- Integer type promotion ---- */
+
+static bool _is_signed_type(type_t t) { return _is_signed_kind(t->kind); }
+
 /**
- * @brief Promote two integer values to the larger type.
- * Returns the result type, or NULL if either operand is not an integer kind.
- * Also performs safe_cast on both operands if needed, storing results in
- * *out_a and *out_b (only allocated if promotion changed the type).
+ * @brief Pick the common type for binary integer operation.
+ *
+ * Rules (matching C usual arithmetic conversions):
+ *  1. Same signedness → larger size wins
+ *  2. Different signedness, different size → larger size wins
+ *  3. Different signedness, same size → unsigned wins
+ */
+static type_t _int_common_type(type_t ta, type_t tb) {
+  if (ta->size > tb->size) return ta;
+  if (tb->size > ta->size) return tb;
+  /* same size → unsigned wins */
+  return _is_signed_type(ta) ? tb : ta;
+}
+
+/**
+ * @brief Coerce an integer value to a target integer type (bit-pattern preserving).
+ * Used internally for type promotion. Not the same as safe_cast.
+ */
+static value_t _int_coerce(vm_t vm, value_t v, type_t to) {
+  if (value_get_type(v) == to) return v;
+  if (value_is_shadow(v))
+    return vm_create_value_shadow(vm, to, NULL, true);
+  uint64_t val = _int_read_u64(v);
+  return _int_alloc_result(vm, to, val);
+}
+
+/**
+ * @brief Promote two integer operands to a common type.
+ * Returns the common type, or NULL if either operand is not an integer kind.
+ * Stores coerced operands in *out_a, *out_b.
  */
 static type_t _int_promote(vm_t vm, value_t a, value_t b,
                            value_t *out_a, value_t *out_b) {
@@ -37,66 +105,24 @@ static type_t _int_promote(vm_t vm, value_t a, value_t b,
   type_t tb = value_get_type(b);
   if (!_is_integer_kind(ta->kind) || !_is_integer_kind(tb->kind))
     return NULL;
-  /* Pick the larger type (by size; same size → use left operand's type) */
-  type_t result_type = (ta->size >= tb->size) ? ta : tb;
-  /* If both already match result_type, no conversion needed */
-  if (ta == result_type && tb == result_type) {
-    *out_a = a;
-    *out_b = b;
-    return result_type;
-  }
-  /* safe_cast both to result_type */
-  *out_a = value_safe_cast(vm, a, result_type);
-  if (type_get_kind(value_get_type(*out_a)) == TYPE_KIND_ERROR)
-    return NULL;
-  *out_b = value_safe_cast(vm, b, result_type);
-  if (type_get_kind(value_get_type(*out_b)) == TYPE_KIND_ERROR)
-    return NULL;
-  return result_type;
-}
-
-/* ---- Shared integer read value as int64_t ---- */
-
-static int64_t _int_read_i64(value_t v) {
-  type_t t = value_get_type(v);
-  switch (t->size) {
-    case 1: return (int64_t)(*(int8_t *)value_get_data(v));
-    case 2: return (int64_t)(*(int16_t *)value_get_data(v));
-    case 4: return (int64_t)(*(int32_t *)value_get_data(v));
-    case 8: return *(int64_t *)value_get_data(v);
-    default: return 0;
-  }
-}
-
-static void _int_write_i64(type_t t, void *data, int64_t val) {
-  switch (t->size) {
-    case 1: *(int8_t *)data  = (int8_t)val;  break;
-    case 2: *(int16_t *)data = (int16_t)val; break;
-    case 4: *(int32_t *)data = (int32_t)val; break;
-    case 8: *(int64_t *)data = val;           break;
-    default: break;
-  }
-}
-
-static value_t _int_alloc_result(vm_t vm, type_t type, int64_t val) {
-  void *data = allocator_alloc(vm_get_allocator(vm), type->size);
-  _int_write_i64(type, data, val);
-  return _int_value_create(vm, type, data, true);
+  type_t rt = _int_common_type(ta, tb);
+  *out_a = _int_coerce(vm, a, rt);
+  *out_b = _int_coerce(vm, b, rt);
+  return rt;
 }
 
 static value_t _int_check_zero(vm_t vm, value_t b) {
-  if (_int_read_i64(b) == 0)
+  if (_int_read_u64(b) == 0)
     return create_error_value(vm, "division by zero");
   return NULL;
 }
 
 /* ==================================================================
  * Per-type clone/dispose/equal/type_equal/type_extends/safe_cast/assignment
- * Generated by macro — these are type-specific.
- * All arithmetic/bitwise/relational/shift/unary use shared functions.
+ * Generated by macros — these are type-specific.
  * ================================================================== */
 
-#define DEFINE_INT_VTABLE(Prefix, ctype, KIND, SIZE, ALIGN, NAME)              \
+#define DEFINE_SINT_VTABLE(Prefix, ctype, KIND, SIZE, ALIGN, NAME)            \
                                                                                \
 static value_t _##Prefix##_clone(allocator_t allocator, value_t self) {        \
   ctype *copy = (ctype *)allocator_alloc(allocator, SIZE);                     \
@@ -115,14 +141,13 @@ static value_t _##Prefix##_equal(vm_t vm, value_t a, value_t b) {             \
   if (!_is_integer_kind(tb->kind))                                             \
     return create_error_value(vm, "cannot compare values of different kinds");  \
   if (value_is_shadow(a) || value_is_shadow(b)) {                              \
-    type_t rt = (ta->size >= tb->size) ? ta : tb;                              \
+    type_t rt = _int_common_type(ta, tb);                                      \
     return vm_create_value_shadow(vm, rt, NULL, true);                         \
   }                                                                            \
-  /* promote both to larger type for comparison */                              \
   value_t pa, pb;                                                              \
   type_t rt = _int_promote(vm, a, b, &pa, &pb);                               \
   if (!rt) return create_error_value(vm, "integer comparison failed");         \
-  return create_bool_value(vm, _int_read_i64(pa) == _int_read_i64(pb));       \
+  return create_bool_value(vm, _int_read_u64(pa) == _int_read_u64(pb));       \
 }                                                                              \
                                                                                \
 static value_t _##Prefix##_type_equal(vm_t vm, type_t a, type_t b) {          \
@@ -130,7 +155,7 @@ static value_t _##Prefix##_type_equal(vm_t vm, type_t a, type_t b) {          \
   if (b->kind == TYPE_KIND_WILDCARD)                                           \
     return create_bool_value(vm, true);                                        \
   return create_bool_value(vm, b->kind == KIND);                              \
-}                                                                              \
+}                                                                               \
                                                                                \
 static value_t _##Prefix##_type_extends(vm_t vm, type_t sub, type_t super) {  \
   (void)sub;                                                                   \
@@ -146,8 +171,7 @@ static value_t _##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {       \
   if (to == value_get_type(self)) return self;                                 \
   if (value_is_shadow(self))                                                   \
     return vm_create_value_shadow(vm, to, NULL, true);                         \
-  int64_t val = _int_read_i64(self);                                           \
-  return _int_alloc_result(vm, to, val);                                       \
+  return _int_coerce(vm, self, to);                                            \
 }                                                                              \
                                                                                \
 static value_t _const_##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {\
@@ -160,8 +184,7 @@ static value_t _const_##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {\
   if (to == value_get_type(self)) return self;                                 \
   if (value_is_shadow(self))                                                   \
     return vm_create_value_shadow(vm, to, NULL, true);                         \
-  int64_t val = _int_read_i64(self);                                           \
-  return _int_alloc_result(vm, to, val);                                       \
+  return _int_coerce(vm, self, to);                                            \
 }                                                                              \
                                                                                \
 static value_t _##Prefix##_assignment(vm_t vm, value_t lvalue, value_t rvalue) {\
@@ -174,8 +197,8 @@ static value_t _##Prefix##_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
     value_set_initialized(lvalue, true);                                       \
     return create_void_value(vm);                                              \
   }                                                                            \
-  int64_t val = _int_read_i64(rvalue);                                         \
-  _int_write_i64(lt, value_get_data(lvalue), val);                             \
+  uint64_t val = _int_read_u64(rvalue);                                       \
+  _int_write_u64(lt, value_get_data(lvalue), val);                             \
   value_set_initialized(lvalue, true);                                         \
   return create_void_value(vm);                                                \
 }                                                                              \
@@ -186,14 +209,107 @@ static value_t _const_##Prefix##_clone(allocator_t allocator, value_t self) {  \
   return value_create(allocator, value_get_type(self), copy, true);            \
 }
 
-DEFINE_INT_VTABLE(i8,  int8_t,  TYPE_KIND_I8,  1, 1, "i8")
-DEFINE_INT_VTABLE(i16, int16_t, TYPE_KIND_I16, 2, 2, "i16")
-DEFINE_INT_VTABLE(i32, int32_t, TYPE_KIND_I32, 4, 4, "i32")
-DEFINE_INT_VTABLE(i64, int64_t, TYPE_KIND_I64, 8, 8, "i64")
+DEFINE_SINT_VTABLE(i8,  int8_t,  TYPE_KIND_I8,  1, 1, "i8")
+DEFINE_SINT_VTABLE(i16, int16_t, TYPE_KIND_I16, 2, 2, "i16")
+DEFINE_SINT_VTABLE(i32, int32_t, TYPE_KIND_I32, 4, 4, "i32")
+DEFINE_SINT_VTABLE(i64, int64_t, TYPE_KIND_I64, 8, 8, "i64")
+
+/* Unsigned types reuse the same equal/safe_cast/assignment pattern */
+#define DEFINE_UINT_VTABLE(Prefix, ctype, KIND, SIZE, ALIGN, NAME)            \
+                                                                               \
+static value_t _##Prefix##_clone(allocator_t allocator, value_t self) {        \
+  ctype *copy = (ctype *)allocator_alloc(allocator, SIZE);                     \
+  *copy = *(ctype *)value_get_data(self);                                      \
+  return value_create(allocator, value_get_type(self), copy, true);            \
+}                                                                              \
+                                                                               \
+static void _##Prefix##_dispose(allocator_t allocator, value_t self) {         \
+  void *d = value_get_data(self);                                              \
+  allocator_free(allocator, &d);                                               \
+}                                                                              \
+                                                                               \
+static value_t _##Prefix##_equal(vm_t vm, value_t a, value_t b) {             \
+  type_t ta = value_get_type(a);                                               \
+  type_t tb = value_get_type(b);                                               \
+  if (!_is_integer_kind(tb->kind))                                             \
+    return create_error_value(vm, "cannot compare values of different kinds");  \
+  if (value_is_shadow(a) || value_is_shadow(b)) {                              \
+    type_t rt = _int_common_type(ta, tb);                                      \
+    return vm_create_value_shadow(vm, rt, NULL, true);                         \
+  }                                                                            \
+  value_t pa, pb;                                                              \
+  type_t rt = _int_promote(vm, a, b, &pa, &pb);                               \
+  if (!rt) return create_error_value(vm, "integer comparison failed");         \
+  return create_bool_value(vm, _int_read_u64(pa) == _int_read_u64(pb));       \
+}                                                                              \
+                                                                               \
+static value_t _##Prefix##_type_equal(vm_t vm, type_t a, type_t b) {          \
+  (void)a;                                                                     \
+  if (b->kind == TYPE_KIND_WILDCARD)                                           \
+    return create_bool_value(vm, true);                                        \
+  return create_bool_value(vm, b->kind == KIND);                              \
+}                                                                               \
+                                                                               \
+static value_t _##Prefix##_type_extends(vm_t vm, type_t sub, type_t super) {  \
+  (void)sub;                                                                   \
+  if (super->kind == TYPE_KIND_WILDCARD)                                       \
+    return create_bool_value(vm, true);                                        \
+  return create_bool_value(vm, super->kind == KIND);                          \
+}                                                                              \
+                                                                               \
+static value_t _##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {       \
+  if (!_is_integer_kind(to->kind))                                             \
+    return create_error_value(vm,                                              \
+        "cannot safe_cast %s to '%s'", NAME, to->name);                        \
+  if (to == value_get_type(self)) return self;                                 \
+  if (value_is_shadow(self))                                                   \
+    return vm_create_value_shadow(vm, to, NULL, true);                         \
+  return _int_coerce(vm, self, to);                                            \
+}                                                                              \
+                                                                               \
+static value_t _const_##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {\
+  if (!_is_integer_kind(to->kind))                                             \
+    return create_error_value(vm,                                              \
+        "cannot safe_cast const %s to '%s'", NAME, to->name);                  \
+  if (to->mut)                                                                 \
+    return create_error_value(vm,                                              \
+        "cannot safe_cast const %s to %s", NAME, NAME);                        \
+  if (to == value_get_type(self)) return self;                                 \
+  if (value_is_shadow(self))                                                   \
+    return vm_create_value_shadow(vm, to, NULL, true);                         \
+  return _int_coerce(vm, self, to);                                            \
+}                                                                              \
+                                                                               \
+static value_t _##Prefix##_assignment(vm_t vm, value_t lvalue, value_t rvalue) {\
+  type_t lt = value_get_type(lvalue);                                          \
+  type_t rt = value_get_type(rvalue);                                          \
+  if (!_is_integer_kind(rt->kind))                                             \
+    return create_error_value(vm,                                              \
+        "cannot assign '%s' to '%s'", rt->name, lt->name);                     \
+  if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {                    \
+    value_set_initialized(lvalue, true);                                       \
+    return create_void_value(vm);                                              \
+  }                                                                            \
+  uint64_t val = _int_read_u64(rvalue);                                       \
+  _int_write_u64(lt, value_get_data(lvalue), val);                             \
+  value_set_initialized(lvalue, true);                                         \
+  return create_void_value(vm);                                                \
+}                                                                              \
+                                                                               \
+static value_t _const_##Prefix##_clone(allocator_t allocator, value_t self) {  \
+  ctype *copy = (ctype *)allocator_alloc(allocator, SIZE);                     \
+  *copy = *(ctype *)value_get_data(self);                                      \
+  return value_create(allocator, value_get_type(self), copy, true);            \
+}
+
+DEFINE_UINT_VTABLE(u8,  uint8_t,  TYPE_KIND_U8,  1, 1, "u8")
+DEFINE_UINT_VTABLE(u16, uint16_t, TYPE_KIND_U16, 2, 2, "u16")
+DEFINE_UINT_VTABLE(u32, uint32_t, TYPE_KIND_U32, 4, 4, "u32")
+DEFINE_UINT_VTABLE(u64, uint64_t, TYPE_KIND_U64, 8, 8, "u64")
 
 /* ==================================================================
  * Shared arithmetic/bitwise/relational/shift/unary implementations
- * All integer types point to these same functions.
+ * All integer types (signed + unsigned) point to these same functions.
  * ================================================================== */
 
 static value_t _int_add(vm_t vm, value_t a, value_t b) {
@@ -202,7 +318,7 @@ static value_t _int_add(vm_t vm, value_t a, value_t b) {
   if (!rt) return create_error_value(vm, "operator +: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
-  return _int_alloc_result(vm, rt, _int_read_i64(pa) + _int_read_i64(pb));
+  return _int_alloc_result(vm, rt, _int_read_u64(pa) + _int_read_u64(pb));
 }
 
 static value_t _int_sub(vm_t vm, value_t a, value_t b) {
@@ -211,7 +327,7 @@ static value_t _int_sub(vm_t vm, value_t a, value_t b) {
   if (!rt) return create_error_value(vm, "operator -: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
-  return _int_alloc_result(vm, rt, _int_read_i64(pa) - _int_read_i64(pb));
+  return _int_alloc_result(vm, rt, _int_read_u64(pa) - _int_read_u64(pb));
 }
 
 static value_t _int_mul(vm_t vm, value_t a, value_t b) {
@@ -220,7 +336,7 @@ static value_t _int_mul(vm_t vm, value_t a, value_t b) {
   if (!rt) return create_error_value(vm, "operator *: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
-  return _int_alloc_result(vm, rt, _int_read_i64(pa) * _int_read_i64(pb));
+  return _int_alloc_result(vm, rt, _int_read_u64(pa) * _int_read_u64(pb));
 }
 
 static value_t _int_div(vm_t vm, value_t a, value_t b) {
@@ -231,7 +347,12 @@ static value_t _int_div(vm_t vm, value_t a, value_t b) {
     return vm_create_value_shadow(vm, rt, NULL, true);
   value_t err = _int_check_zero(vm, pb);
   if (err) return err;
-  return _int_alloc_result(vm, rt, _int_read_i64(pa) / _int_read_i64(pb));
+  /* signed or unsigned division depending on result type */
+  if (_is_signed_type(rt))
+    return _int_alloc_result(vm, rt,
+        (uint64_t)((int64_t)_int_read_u64(pa) / (int64_t)_int_read_u64(pb)));
+  else
+    return _int_alloc_result(vm, rt, _int_read_u64(pa) / _int_read_u64(pb));
 }
 
 static value_t _int_mod(vm_t vm, value_t a, value_t b) {
@@ -242,7 +363,11 @@ static value_t _int_mod(vm_t vm, value_t a, value_t b) {
     return vm_create_value_shadow(vm, rt, NULL, true);
   value_t err = _int_check_zero(vm, pb);
   if (err) return err;
-  return _int_alloc_result(vm, rt, _int_read_i64(pa) % _int_read_i64(pb));
+  if (_is_signed_type(rt))
+    return _int_alloc_result(vm, rt,
+        (uint64_t)((int64_t)_int_read_u64(pa) % (int64_t)_int_read_u64(pb)));
+  else
+    return _int_alloc_result(vm, rt, _int_read_u64(pa) % _int_read_u64(pb));
 }
 
 static value_t _int_band(vm_t vm, value_t a, value_t b) {
@@ -251,9 +376,7 @@ static value_t _int_band(vm_t vm, value_t a, value_t b) {
   if (!rt) return create_error_value(vm, "operator &: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
-  uint64_t va = (uint64_t)_int_read_i64(pa);
-  uint64_t vb = (uint64_t)_int_read_i64(pb);
-  return _int_alloc_result(vm, rt, (int64_t)(va & vb));
+  return _int_alloc_result(vm, rt, _int_read_u64(pa) & _int_read_u64(pb));
 }
 
 static value_t _int_bor(vm_t vm, value_t a, value_t b) {
@@ -262,9 +385,7 @@ static value_t _int_bor(vm_t vm, value_t a, value_t b) {
   if (!rt) return create_error_value(vm, "operator |: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
-  uint64_t va = (uint64_t)_int_read_i64(pa);
-  uint64_t vb = (uint64_t)_int_read_i64(pb);
-  return _int_alloc_result(vm, rt, (int64_t)(va | vb));
+  return _int_alloc_result(vm, rt, _int_read_u64(pa) | _int_read_u64(pb));
 }
 
 static value_t _int_bxor(vm_t vm, value_t a, value_t b) {
@@ -273,23 +394,20 @@ static value_t _int_bxor(vm_t vm, value_t a, value_t b) {
   if (!rt) return create_error_value(vm, "operator ^: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
-  uint64_t va = (uint64_t)_int_read_i64(pa);
-  uint64_t vb = (uint64_t)_int_read_i64(pb);
-  return _int_alloc_result(vm, rt, (int64_t)(va ^ vb));
+  return _int_alloc_result(vm, rt, _int_read_u64(pa) ^ _int_read_u64(pb));
 }
 
 static value_t _int_bnot(vm_t vm, value_t a) {
   type_t ta = value_get_type(a);
   if (value_is_shadow(a))
     return vm_create_value_shadow(vm, ta, NULL, true);
-  uint64_t va = (uint64_t)_int_read_i64(a);
-  return _int_alloc_result(vm, ta, (int64_t)(~va));
+  return _int_alloc_result(vm, ta, ~_int_read_u64(a));
 }
 
 static value_t _int_lnot(vm_t vm, value_t a) {
   if (value_is_shadow(a))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
-  return create_bool_value(vm, _int_read_i64(a) == 0);
+  return create_bool_value(vm, _int_read_u64(a) == 0);
 }
 
 static value_t _int_shl(vm_t vm, value_t a, value_t b) {
@@ -298,9 +416,7 @@ static value_t _int_shl(vm_t vm, value_t a, value_t b) {
   if (!rt) return create_error_value(vm, "operator <<: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
-  uint64_t va = (uint64_t)_int_read_i64(pa);
-  uint64_t vb = (uint64_t)_int_read_i64(pb);
-  return _int_alloc_result(vm, rt, (int64_t)(va << vb));
+  return _int_alloc_result(vm, rt, _int_read_u64(pa) << _int_read_u64(pb));
 }
 
 static value_t _int_shr(vm_t vm, value_t a, value_t b) {
@@ -309,21 +425,26 @@ static value_t _int_shr(vm_t vm, value_t a, value_t b) {
   if (!rt) return create_error_value(vm, "operator >>: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
-  uint64_t va = (uint64_t)_int_read_i64(pa);
-  uint64_t vb = (uint64_t)_int_read_i64(pb);
-  return _int_alloc_result(vm, rt, (int64_t)(va >> vb));
+  /* signed → arithmetic shift; unsigned → logical shift */
+  if (_is_signed_type(rt))
+    return _int_alloc_result(vm, rt,
+        (uint64_t)((int64_t)_int_read_u64(pa) >> (int64_t)_int_read_u64(pb)));
+  else
+    return _int_alloc_result(vm, rt, _int_read_u64(pa) >> _int_read_u64(pb));
 }
 
 static value_t _int_pos(vm_t vm, value_t a) {
   if (value_is_shadow(a))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
-  return _int_alloc_result(vm, value_get_type(a), +_int_read_i64(a));
+  return _int_alloc_result(vm, value_get_type(a), _int_read_u64(a));
 }
 
 static value_t _int_neg(vm_t vm, value_t a) {
   if (value_is_shadow(a))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
-  return _int_alloc_result(vm, value_get_type(a), -_int_read_i64(a));
+  /* two's complement negation works for both signed and unsigned */
+  return _int_alloc_result(vm, value_get_type(a),
+      (uint64_t)(-(int64_t)_int_read_u64(a)));
 }
 
 static value_t _int_gt(vm_t vm, value_t a, value_t b) {
@@ -332,7 +453,10 @@ static value_t _int_gt(vm_t vm, value_t a, value_t b) {
   if (!rt) return create_error_value(vm, "operator >: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
-  return create_bool_value(vm, _int_read_i64(pa) > _int_read_i64(pb));
+  if (_is_signed_type(rt))
+    return create_bool_value(vm, (int64_t)_int_read_u64(pa) > (int64_t)_int_read_u64(pb));
+  else
+    return create_bool_value(vm, _int_read_u64(pa) > _int_read_u64(pb));
 }
 
 static value_t _int_lt(vm_t vm, value_t a, value_t b) {
@@ -341,14 +465,17 @@ static value_t _int_lt(vm_t vm, value_t a, value_t b) {
   if (!rt) return create_error_value(vm, "operator <: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
-  return create_bool_value(vm, _int_read_i64(pa) < _int_read_i64(pb));
+  if (_is_signed_type(rt))
+    return create_bool_value(vm, (int64_t)_int_read_u64(pa) < (int64_t)_int_read_u64(pb));
+  else
+    return create_bool_value(vm, _int_read_u64(pa) < _int_read_u64(pb));
 }
 
 /* ==================================================================
  * Static type singletons — vtables point to shared functions
  * ================================================================== */
 
-#define DEFINE_INT_TYPE(Prefix, ctype, KIND, SIZE, ALIGN, NAME)                \
+#define DEFINE_SINT_TYPE(Prefix, ctype, KIND, SIZE, ALIGN, NAME)              \
 type_t type_get_##Prefix##_type(allocator_t allocator) {                       \
   (void)allocator;                                                             \
   static struct _type_t t = {                                                  \
@@ -436,7 +563,100 @@ value_t create_##Prefix##_value(vm_t vm, ctype val) {                          \
   return v;                                                                    \
 }
 
-DEFINE_INT_TYPE(i8,  int8_t,  TYPE_KIND_I8,  1, 1, "i8")
-DEFINE_INT_TYPE(i16, int16_t, TYPE_KIND_I16, 2, 2, "i16")
-DEFINE_INT_TYPE(i32, int32_t, TYPE_KIND_I32, 4, 4, "i32")
-DEFINE_INT_TYPE(i64, int64_t, TYPE_KIND_I64, 8, 8, "i64")
+#define DEFINE_UINT_TYPE(Prefix, ctype, KIND, SIZE, ALIGN, NAME)               \
+type_t type_get_##Prefix##_type(allocator_t allocator) {                       \
+  (void)allocator;                                                             \
+  static struct _type_t t = {                                                  \
+      .kind  = KIND,                                                           \
+      .name  = (char *)NAME,                                                   \
+      .size  = SIZE,                                                           \
+      .align = ALIGN,                                                          \
+      .mut   = true,                                                           \
+      .vtable = {                                                              \
+          .clone        = _##Prefix##_clone,                                   \
+          .dispose      = _##Prefix##_dispose,                                 \
+          .equal        = _##Prefix##_equal,                                   \
+          .extends      = NULL,                                                \
+          .type_equal   = _##Prefix##_type_equal,                              \
+          .type_extends = _##Prefix##_type_extends,                            \
+          .band         = _int_band,                                           \
+          .bor          = _int_bor,                                            \
+          .bxor         = _int_bxor,                                           \
+          .bnot         = _int_bnot,                                           \
+          .lnot         = _int_lnot,                                           \
+          .add          = _int_add,                                            \
+          .sub          = _int_sub,                                            \
+          .mul          = _int_mul,                                            \
+          .div          = _int_div,                                            \
+          .mod          = _int_mod,                                            \
+          .shl          = _int_shl,                                            \
+          .shr          = _int_shr,                                            \
+          .pos          = _int_pos,                                            \
+          .neg          = _int_neg,                                            \
+          .gt           = _int_gt,                                             \
+          .lt           = _int_lt,                                             \
+          .safe_cast    = _##Prefix##_safe_cast,                               \
+          .assignment   = _##Prefix##_assignment,                              \
+      },                                                                       \
+  };                                                                           \
+  return &t;                                                                   \
+}                                                                              \
+                                                                               \
+type_t type_get_const_##Prefix##_type(allocator_t allocator) {                 \
+  (void)allocator;                                                             \
+  static struct _type_t t = {                                                  \
+      .kind  = KIND,                                                           \
+      .name  = (char *)"const " NAME,                                          \
+      .size  = SIZE,                                                           \
+      .align = ALIGN,                                                          \
+      .mut   = false,                                                          \
+      .vtable = {                                                              \
+          .clone        = _const_##Prefix##_clone,                             \
+          .dispose      = _##Prefix##_dispose,                                 \
+          .equal        = _##Prefix##_equal,                                   \
+          .extends      = NULL,                                                \
+          .type_equal   = _##Prefix##_type_equal,                              \
+          .type_extends = _##Prefix##_type_extends,                            \
+          .band         = _int_band,                                           \
+          .bor          = _int_bor,                                            \
+          .bxor         = _int_bxor,                                           \
+          .bnot         = _int_bnot,                                           \
+          .lnot         = _int_lnot,                                           \
+          .add          = _int_add,                                            \
+          .sub          = _int_sub,                                            \
+          .mul          = _int_mul,                                            \
+          .div          = _int_div,                                            \
+          .mod          = _int_mod,                                            \
+          .shl          = _int_shl,                                            \
+          .shr          = _int_shr,                                            \
+          .pos          = _int_pos,                                            \
+          .neg          = _int_neg,                                            \
+          .gt           = _int_gt,                                             \
+          .lt           = _int_lt,                                             \
+          .safe_cast    = _const_##Prefix##_safe_cast,                         \
+          .assignment   = NULL,                                                \
+      },                                                                       \
+  };                                                                           \
+  return &t;                                                                   \
+}                                                                              \
+                                                                               \
+value_t create_##Prefix##_value(vm_t vm, ctype val) {                          \
+  allocator_t alloc = vm_get_allocator(vm);                                    \
+  ctype *data = (ctype *)allocator_alloc(alloc, SIZE);                         \
+  *data = val;                                                                 \
+  type_t t = (type_t)value_get_data(vm_get_##Prefix##_type(vm));               \
+  value_t v = value_create(alloc, t, data, true);                              \
+  scope_t scope = vm_get_current_scope(vm);                                    \
+  if (scope) { vec_push(scope->values, v); }                                   \
+  return v;                                                                    \
+}
+
+DEFINE_SINT_TYPE(i8,  int8_t,  TYPE_KIND_I8,  1, 1, "i8")
+DEFINE_SINT_TYPE(i16, int16_t, TYPE_KIND_I16, 2, 2, "i16")
+DEFINE_SINT_TYPE(i32, int32_t, TYPE_KIND_I32, 4, 4, "i32")
+DEFINE_SINT_TYPE(i64, int64_t, TYPE_KIND_I64, 8, 8, "i64")
+
+DEFINE_UINT_TYPE(u8,  uint8_t,  TYPE_KIND_U8,  1, 1, "u8")
+DEFINE_UINT_TYPE(u16, uint16_t, TYPE_KIND_U16, 2, 2, "u16")
+DEFINE_UINT_TYPE(u32, uint32_t, TYPE_KIND_U32, 4, 4, "u32")
+DEFINE_UINT_TYPE(u64, uint64_t, TYPE_KIND_U64, 8, 8, "u64")

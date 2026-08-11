@@ -47,6 +47,20 @@ value_t  vm_get_const_i8_type(vm_t self);
 value_t  vm_get_const_i16_type(vm_t self);
 value_t  vm_get_const_i32_type(vm_t self);
 value_t  vm_get_const_i64_type(vm_t self);
+value_t  vm_get_u8_type(vm_t self);
+value_t  vm_get_u16_type(vm_t self);
+value_t  vm_get_u32_type(vm_t self);
+value_t  vm_get_u64_type(vm_t self);
+value_t  vm_get_const_u8_type(vm_t self);
+value_t  vm_get_const_u16_type(vm_t self);
+value_t  vm_get_const_u32_type(vm_t self);
+value_t  vm_get_const_u64_type(vm_t self);
+value_t  vm_get_f16_type(vm_t self);
+value_t  vm_get_f32_type(vm_t self);
+value_t  vm_get_f64_type(vm_t self);
+value_t  vm_get_const_f16_type(vm_t self);
+value_t  vm_get_const_f32_type(vm_t self);
+value_t  vm_get_const_f64_type(vm_t self);
 
 /* ---- Module registry ---- */
 

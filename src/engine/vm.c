@@ -7,6 +7,7 @@
 #include "engine/wildcard_type.h"
 #include "engine/void_type.h"
 #include "engine/integer_type.h"
+#include "engine/float_type.h"
 #include "engine/module.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -35,6 +36,20 @@ struct _vm_t {
   value_t     v_const_i16;   /* borrowed: bootstrap type "const i16" */
   value_t     v_const_i32;   /* borrowed: bootstrap type "const i32" */
   value_t     v_const_i64;   /* borrowed: bootstrap type "const i64" */
+  value_t     v_u8;          /* borrowed: bootstrap type "u8" */
+  value_t     v_u16;         /* borrowed: bootstrap type "u16" */
+  value_t     v_u32;         /* borrowed: bootstrap type "u32" */
+  value_t     v_u64;         /* borrowed: bootstrap type "u64" */
+  value_t     v_const_u8;    /* borrowed: bootstrap type "const u8" */
+  value_t     v_const_u16;   /* borrowed: bootstrap type "const u16" */
+  value_t     v_const_u32;   /* borrowed: bootstrap type "const u32" */
+  value_t     v_const_u64;   /* borrowed: bootstrap type "const u64" */
+  value_t     v_f16;         /* borrowed: bootstrap type "f16" */
+  value_t     v_f32;         /* borrowed: bootstrap type "f32" */
+  value_t     v_f64;         /* borrowed: bootstrap type "f64" */
+  value_t     v_const_f16;   /* borrowed: bootstrap type "const f16" */
+  value_t     v_const_f32;   /* borrowed: bootstrap type "const f32" */
+  value_t     v_const_f64;   /* borrowed: bootstrap type "const f64" */
 };
 
 static void _vm_init(void *self, allocator_t allocator, void *arg) {
@@ -97,6 +112,50 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 
   type_t const_i64_type = type_get_const_i64_type(allocator);
   vm->v_const_i64 = create_type_value(vm, const_i64_type, "const i64", false);
+
+  /* Unsigned integer types */
+  type_t u8_type = type_get_u8_type(allocator);
+  vm->v_u8 = create_type_value(vm, u8_type, "u8", false);
+
+  type_t u16_type = type_get_u16_type(allocator);
+  vm->v_u16 = create_type_value(vm, u16_type, "u16", false);
+
+  type_t u32_type = type_get_u32_type(allocator);
+  vm->v_u32 = create_type_value(vm, u32_type, "u32", false);
+
+  type_t u64_type = type_get_u64_type(allocator);
+  vm->v_u64 = create_type_value(vm, u64_type, "u64", false);
+
+  type_t const_u8_type = type_get_const_u8_type(allocator);
+  vm->v_const_u8 = create_type_value(vm, const_u8_type, "const u8", false);
+
+  type_t const_u16_type = type_get_const_u16_type(allocator);
+  vm->v_const_u16 = create_type_value(vm, const_u16_type, "const u16", false);
+
+  type_t const_u32_type = type_get_const_u32_type(allocator);
+  vm->v_const_u32 = create_type_value(vm, const_u32_type, "const u32", false);
+
+  type_t const_u64_type = type_get_const_u64_type(allocator);
+  vm->v_const_u64 = create_type_value(vm, const_u64_type, "const u64", false);
+
+  /* Float types */
+  type_t f16_type = type_get_f16_type(allocator);
+  vm->v_f16 = create_type_value(vm, f16_type, "f16", false);
+
+  type_t f32_type = type_get_f32_type(allocator);
+  vm->v_f32 = create_type_value(vm, f32_type, "f32", false);
+
+  type_t f64_type = type_get_f64_type(allocator);
+  vm->v_f64 = create_type_value(vm, f64_type, "f64", false);
+
+  type_t const_f16_type = type_get_const_f16_type(allocator);
+  vm->v_const_f16 = create_type_value(vm, const_f16_type, "const f16", false);
+
+  type_t const_f32_type = type_get_const_f32_type(allocator);
+  vm->v_const_f32 = create_type_value(vm, const_f32_type, "const f32", false);
+
+  type_t const_f64_type = type_get_const_f64_type(allocator);
+  vm->v_const_f64 = create_type_value(vm, const_f64_type, "const f64", false);
 }
 
 static void _vm_dispose(void *self, allocator_t allocator) {
@@ -143,6 +202,20 @@ value_t  vm_get_const_i8_type(vm_t self)  { return self->v_const_i8; }
 value_t  vm_get_const_i16_type(vm_t self) { return self->v_const_i16; }
 value_t  vm_get_const_i32_type(vm_t self) { return self->v_const_i32; }
 value_t  vm_get_const_i64_type(vm_t self) { return self->v_const_i64; }
+value_t  vm_get_u8_type(vm_t self)  { return self->v_u8; }
+value_t  vm_get_u16_type(vm_t self) { return self->v_u16; }
+value_t  vm_get_u32_type(vm_t self) { return self->v_u32; }
+value_t  vm_get_u64_type(vm_t self) { return self->v_u64; }
+value_t  vm_get_const_u8_type(vm_t self)  { return self->v_const_u8; }
+value_t  vm_get_const_u16_type(vm_t self) { return self->v_const_u16; }
+value_t  vm_get_const_u32_type(vm_t self) { return self->v_const_u32; }
+value_t  vm_get_const_u64_type(vm_t self) { return self->v_const_u64; }
+value_t  vm_get_f16_type(vm_t self) { return self->v_f16; }
+value_t  vm_get_f32_type(vm_t self) { return self->v_f32; }
+value_t  vm_get_f64_type(vm_t self) { return self->v_f64; }
+value_t  vm_get_const_f16_type(vm_t self) { return self->v_const_f16; }
+value_t  vm_get_const_f32_type(vm_t self) { return self->v_const_f32; }
+value_t  vm_get_const_f64_type(vm_t self) { return self->v_const_f64; }
 
 module_t vm_get_module(vm_t self, const char *abs_path) {
   return (module_t)strmap_find(self->modules, abs_path);

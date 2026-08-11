@@ -81,6 +81,8 @@ target_link_libraries(cubec_test PRIVATE
     gmock
     Threads::Threads
 )
+include(GoogleTest)
+gtest_discover_tests(cubec_test)
 
 # ===========================================================================
 # Platform-specific: Windows Clang needs clang_rt.builtins
