@@ -160,17 +160,6 @@ static type_t _float_promote(vm_t vm, value_t a, value_t b,
 
 #define DEFINE_FLOAT_VTABLE(Prefix, ctype, KIND, SIZE, ALIGN, NAME)            \
                                                                                \
-static value_t _##Prefix##_clone(allocator_t allocator, value_t self) {        \
-  ctype *copy = (ctype *)allocator_alloc(allocator, SIZE);                     \
-  memcpy(copy, value_get_data(self), SIZE);                                    \
-  return value_create(allocator, value_get_type(self), copy, true);            \
-}                                                                              \
-                                                                               \
-static void _##Prefix##_dispose(allocator_t allocator, value_t self) {         \
-  void *d = value_get_data(self);                                              \
-  allocator_free(allocator, &d);                                               \
-}                                                                              \
-                                                                               \
 static value_t _##Prefix##_equal(vm_t vm, value_t a, value_t b) {             \
   type_t ta = value_get_type(a);                                               \
   type_t tb = value_get_type(b);                                               \
@@ -237,12 +226,6 @@ static value_t _##Prefix##_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   _float_write_f64(lt, value_get_data(lvalue), val);                           \
   value_set_initialized(lvalue, true);                                         \
   return create_void_value(vm);                                                \
-}                                                                              \
-                                                                               \
-static value_t _const_##Prefix##_clone(allocator_t allocator, value_t self) {  \
-  ctype *copy = (ctype *)allocator_alloc(allocator, SIZE);                     \
-  memcpy(copy, value_get_data(self), SIZE);                                    \
-  return value_create(allocator, value_get_type(self), copy, true);            \
 }
 
 DEFINE_FLOAT_VTABLE(f16, uint16_t, TYPE_KIND_F16, 2, 2, "f16")
@@ -380,6 +363,17 @@ static value_t _float_to_string(vm_t vm, value_t self) {
   return create_str_value(vm, buf);
 }
 
+/* ---- Shared clone for all float types ---- */
+
+static value_t _float_clone(vm_t vm, value_t self) {
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, value_get_type(self), NULL, false);
+  type_t t = value_get_type(self);
+  void *data = allocator_alloc(vm_get_allocator(vm), t->size);
+  memcpy(data, value_get_data(self), t->size);
+  return _float_value_create(vm, t, data, true);
+}
+
 /* ==================================================================
  * Static type singletons
  * ================================================================== */
@@ -394,8 +388,7 @@ type_t type_get_##Prefix##_type(allocator_t allocator) {                       \
       .align = ALIGN,                                                          \
       .mut   = true,                                                           \
       .vtable = {                                                              \
-          .clone        = _##Prefix##_clone,                                   \
-          .dispose      = _##Prefix##_dispose,                                 \
+          .clone        = _float_clone,                                        \
           .equal        = _##Prefix##_equal,                                   \
           .extends      = NULL,                                                \
           .type_equal   = _##Prefix##_type_equal,                              \
@@ -433,8 +426,7 @@ type_t type_get_const_##Prefix##_type(allocator_t allocator) {                 \
       .align = ALIGN,                                                          \
       .mut   = false,                                                          \
       .vtable = {                                                              \
-          .clone        = _const_##Prefix##_clone,                             \
-          .dispose      = _##Prefix##_dispose,                                 \
+          .clone        = _float_clone,                                        \
           .equal        = _##Prefix##_equal,                                   \
           .extends      = NULL,                                                \
           .type_equal   = _##Prefix##_type_equal,                              \

@@ -77,10 +77,22 @@ module_t vm_get_module(vm_t self, const char *abs_path);
 struct context;
 module_t vm_import(vm_t self, struct context *ctx, const char *import_path);
 
-/* ---- Scope stack ---- */
+/* ---- Scope management ---- */
 
+/** @brief Push a child scope of current_scope. For block/for/while etc.
+ *  Sets root_scope and current_scope to the new child scope. */
 void vm_push_scope(vm_t self, scope_t scope);
+
+/** @brief Pop back to current_scope->parent. */
 void vm_pop_scope(vm_t self);
+
+/** @brief Set current_scope, return previous current_scope.
+ *  For function call / closure: switch to an independent scope tree. */
+scope_t vm_set_scope(vm_t self, scope_t scope);
+
+/** @brief Set root_scope, return previous root_scope.
+ *  Used together with vm_set_scope for function call / closure. */
+scope_t vm_set_root_scope(vm_t self, scope_t scope);
 
 /* ---- Value creation ---- */
 

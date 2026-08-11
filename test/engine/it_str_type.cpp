@@ -457,19 +457,20 @@ TEST_F(it_str_type, type_extends_wildcard) {
   delete_allocator(allocator);
 }
 
-/* ---- clone via allocator ---- */
+/* ---- move via allocator ---- */
 
-TEST_F(it_str_type, clone) {
+TEST_F(it_str_type, move) {
   vm_t vm = vm_create(allocator);
   value_t a = create_str_value(vm, "hello");
+  allocator_t alloc = vm_get_allocator(vm);
 
-  value_t c = (value_t)alloc_clone(vm_get_allocator(vm), a);
+  value_t m = (value_t)alloc_move(alloc, a);
 
-  EXPECT_STREQ(_read_str(c), "hello");
-  /* clone is independent: different string_t handles */
-  EXPECT_NE(_str_handle(a), _str_handle(c));
+  EXPECT_STREQ(_read_str(m), "hello");
+  /* source is cleared */
+  EXPECT_EQ(value_get_data(a), nullptr);
+  EXPECT_FALSE(value_is_own(a));
 
-  value_dispose(c, vm_get_allocator(vm));
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }

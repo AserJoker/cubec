@@ -24,7 +24,10 @@ static value_t _str_value_create(vm_t vm, const char *val) {
   type_t t = (type_t)value_get_data(vm_get_str_type(vm));
   value_t v = value_create(alloc, t, data, true);
   scope_t scope = vm_get_current_scope(vm);
-  if (scope) { vec_push(scope->values, v); }
+  if (scope) {
+    vec_push(scope->strings, *data);
+    vec_push(scope->values, v);
+  }
   return v;
 }
 
@@ -36,31 +39,19 @@ static value_t _str_value_from_owned(vm_t vm, string_t owned) {
   type_t t = (type_t)value_get_data(vm_get_str_type(vm));
   value_t v = value_create(alloc, t, data, true);
   scope_t scope = vm_get_current_scope(vm);
-  if (scope) { vec_push(scope->values, v); }
+  if (scope) {
+    vec_push(scope->strings, owned);
+    vec_push(scope->values, v);
+  }
   return v;
 }
 
 /* ---- str vtable ---- */
 
-static value_t _str_clone(allocator_t allocator, value_t self) {
-  string_t *copy = (string_t *)allocator_alloc(allocator, sizeof(string_t));
-  string_init_t si = {.str = string_get(_str_read(self))};
-  *copy = (string_t)allocator_create(allocator, &g_string_class, &si);
-  return value_create(allocator, value_get_type(self), copy, true);
-}
-
-static value_t _const_str_clone(allocator_t allocator, value_t self) {
-  string_t *copy = (string_t *)allocator_alloc(allocator, sizeof(string_t));
-  string_init_t si = {.str = string_get(_str_read(self))};
-  *copy = (string_t)allocator_create(allocator, &g_string_class, &si);
-  return value_create(allocator, value_get_type(self), copy, true);
-}
-
-static void _str_dispose(allocator_t allocator, value_t self) {
-  string_t *slot = (string_t *)value_get_data(self);
-  allocator_free(allocator, (void **)slot);
-  void *d = value_get_data(self);
-  allocator_free(allocator, &d);
+static value_t _str_clone(vm_t vm, value_t self) {
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, value_get_type(self), NULL, true);
+  return _str_value_create(vm, string_get(_str_read(self)));
 }
 
 static value_t _str_equal(vm_t vm, value_t a, value_t b) {
@@ -139,7 +130,10 @@ static value_t _str_safe_cast(vm_t vm, value_t self, type_t to) {
   *data = (string_t)allocator_create(alloc, &g_string_class, &si);
   value_t v = value_create(alloc, to, data, true);
   scope_t scope = vm_get_current_scope(vm);
-  if (scope) { vec_push(scope->values, v); }
+  if (scope) {
+    vec_push(scope->strings, *data);
+    vec_push(scope->values, v);
+  }
   return v;
 }
 
@@ -157,7 +151,10 @@ static value_t _const_str_safe_cast(vm_t vm, value_t self, type_t to) {
   *data = (string_t)allocator_create(alloc, &g_string_class, &si);
   value_t v = value_create(alloc, to, data, true);
   scope_t scope = vm_get_current_scope(vm);
-  if (scope) { vec_push(scope->values, v); }
+  if (scope) {
+    vec_push(scope->strings, *data);
+    vec_push(scope->values, v);
+  }
   return v;
 }
 
@@ -169,7 +166,14 @@ static value_t _str_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
     value_set_initialized(lvalue, true);
     return create_void_value(vm);
   }
-  string_set(_str_read(lvalue), string_get(_str_read(rvalue)));
+  /* Create new string_t in scope->strings; old one is managed by scope */
+  allocator_t alloc = vm_get_allocator(vm);
+  string_t new_str = (string_t)allocator_create(alloc, &g_string_class,
+      &(string_init_t){.str = string_get(_str_read(rvalue))});
+  string_t *slot = (string_t *)value_get_data(lvalue);
+  *slot = new_str;
+  scope_t scope = vm_get_current_scope(vm);
+  if (scope) vec_push(scope->strings, new_str);
   value_set_initialized(lvalue, true);
   return create_void_value(vm);
 }
@@ -198,7 +202,6 @@ type_t type_get_str_type(allocator_t allocator) {
       .mut   = true,
       .vtable = {
           .clone        = _str_clone,
-          .dispose      = _str_dispose,
           .equal        = _str_equal,
           .extends      = NULL,
           .type_equal   = _str_type_equal,
@@ -236,8 +239,7 @@ type_t type_get_const_str_type(allocator_t allocator) {
       .align = _Alignof(string_t),
       .mut   = false,
       .vtable = {
-          .clone        = _const_str_clone,
-          .dispose      = _str_dispose,
+          .clone        = _str_clone,
           .equal        = _str_equal,
           .extends      = NULL,
           .type_equal   = _str_type_equal,

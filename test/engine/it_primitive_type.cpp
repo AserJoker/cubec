@@ -669,17 +669,20 @@ TEST_F(it_primitive_type, void_create_value) {
   delete_allocator(allocator);
 }
 
-TEST_F(it_primitive_type, void_clone) {
+TEST_F(it_primitive_type, void_move) {
   vm_t vm = vm_create(allocator);
   value_t v = create_void_value(vm);
   allocator_t alloc = vm_get_allocator(vm);
-  value_t cloned = type_get_vtable(value_get_type(v)).clone(alloc, v);
+  value_t moved = (value_t)alloc_move(alloc, v);
 
-  EXPECT_NE(cloned, nullptr);
-  EXPECT_EQ(type_get_kind(value_get_type(cloned)), TYPE_KIND_VOID);
-  EXPECT_EQ(value_get_data(cloned), nullptr);
+  EXPECT_NE(moved, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(moved)), TYPE_KIND_VOID);
+  EXPECT_EQ(value_get_data(moved), nullptr);
+  /* source is cleared */
+  EXPECT_EQ(value_get_data(v), nullptr);
+  EXPECT_FALSE(value_is_own(v));
 
-  value_dispose(cloned, alloc);
+  allocator_free(alloc, &moved);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }

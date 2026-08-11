@@ -11,16 +11,16 @@
 
 /* ---- Bool type vtable ---- */
 
-static value_t _bool_clone(allocator_t allocator, value_t self) {
-  bool *src = (bool *)value_get_data(self);
-  bool *copy = (bool *)allocator_alloc(allocator, sizeof(bool));
-  *copy = *src;
-  return value_create(allocator, value_get_type(self), copy, true);
-}
-
-static void _bool_dispose(allocator_t allocator, value_t self) {
-  bool *d = (bool *)value_get_data(self);
-  allocator_free(allocator, &d);
+static value_t _bool_clone(vm_t vm, value_t self) {
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, value_get_type(self), NULL, false);
+  bool *copy = (bool *)allocator_alloc(vm_get_allocator(vm), sizeof(bool));
+  *copy = *(bool *)value_get_data(self);
+  type_t t = value_get_type(self);
+  value_t v = value_create(vm_get_allocator(vm), t, copy, true);
+  scope_t scope = vm_get_current_scope(vm);
+  if (scope) vec_push(scope->values, v);
+  return v;
 }
 
 static value_t _bool_equal(vm_t vm, value_t a, value_t b) {
@@ -140,7 +140,6 @@ type_t type_get_bool_type(allocator_t allocator) {
       .mut   = true,
       .vtable = {
           .clone = _bool_clone,
-          .dispose = _bool_dispose,
           .equal = _bool_equal,
           .extends = NULL,
           .type_equal = _bool_type_equal,
@@ -160,19 +159,6 @@ type_t type_get_bool_type(allocator_t allocator) {
 
 /* ---- Const bool type vtable ---- */
 
-static value_t _const_bool_clone(allocator_t allocator, value_t self) {
-  bool *src = (bool *)value_get_data(self);
-  bool *copy = (bool *)allocator_alloc(allocator, sizeof(bool));
-  *copy = *src;
-  /* clone of const produces const copy; assignment (safe_cast) produces mutable */
-  return value_create(allocator, value_get_type(self), copy, true);
-}
-
-static void _const_bool_dispose(allocator_t allocator, value_t self) {
-  bool *d = (bool *)value_get_data(self);
-  allocator_free(allocator, &d);
-}
-
 type_t type_get_const_bool_type(allocator_t allocator) {
   (void)allocator;
   static struct _type_t const_bool_type = {
@@ -182,8 +168,7 @@ type_t type_get_const_bool_type(allocator_t allocator) {
       .align = 1,
       .mut   = false,
       .vtable = {
-          .clone = _const_bool_clone,
-          .dispose = _const_bool_dispose,
+          .clone = _bool_clone,
           .equal = _bool_equal,
           .extends = NULL,
           .type_equal = _bool_type_equal,

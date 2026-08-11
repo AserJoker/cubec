@@ -31,31 +31,14 @@ static void _value_init(void *self, allocator_t allocator, void *arg) {
 
 static void _value_dispose(void *self, allocator_t allocator) {
   value_t v = (value_t)self;
-  if (v->own && v->data && type_get_vtable(v->type).dispose) {
-    type_get_vtable(v->type).dispose(allocator, v);
+  if (v->own && v->data) {
+    void *d = v->data;
+    allocator_free(allocator, &d);
   }
   v->type = NULL;
   v->data = NULL;
   v->own = false;
   v->initialized = false;
-}
-
-static void _value_clone(void *self, allocator_t allocator, void *another) {
-  value_t dst = (value_t)self;
-  value_t src = (value_t)another;
-  dst->type = src->type;
-  dst->own = false;
-  dst->initialized = true; /* clone succeeds only on initialized values */
-  dst->data = NULL;
-  vtable_t vt = type_get_vtable(src->type);
-  if (vt.clone) {
-    value_t cloned = vt.clone(allocator, src);
-    dst->data = value_get_data(cloned);
-    dst->own = value_is_own(cloned);
-    cloned->own = false;
-    cloned->data = NULL;
-    allocator_free(allocator, &cloned);
-  }
 }
 
 static void _value_move(void *self, allocator_t allocator, void *another) {
@@ -76,7 +59,7 @@ class_t g_value_class = {
     .name = "cubec.engine.value",
     .init = (class_init_fn_t)_value_init,
     .dispose = (class_dispose_fn_t)_value_dispose,
-    .clone = (class_clone_fn_t)_value_clone,
+    .clone = NULL,
     .move = (class_move_fn_t)_value_move,
 };
 
@@ -87,11 +70,6 @@ value_t value_create(allocator_t allocator, type_t type, void *data,
   return (value_t)allocator_create(allocator, &g_value_class, &init);
 }
 
-void value_dispose(value_t self, allocator_t allocator) {
-  if (!self) return;
-  allocator_free(allocator, &self);
-}
-
 type_t  value_get_type(value_t self) { return self->type; }
 void   *value_get_data(value_t self) { return self->data; }
 bool    value_is_own(value_t self) { return self->own; }
@@ -100,6 +78,14 @@ bool    value_is_initialized(value_t self) { return self->initialized; }
 
 void    value_set_initialized(value_t self, bool initialized) {
   self->initialized = initialized;
+}
+
+value_t value_clone(vm_t vm, value_t self) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.clone)
+    return create_error_value(vm, "type '%s' does not support clone",
+                              type_get_name(value_get_type(self)));
+  return vt.clone(vm, self);
 }
 
 value_t value_equal(vm_t vm, value_t a, value_t b) {
@@ -305,4 +291,36 @@ value_t value_to_string(vm_t vm, value_t self) {
     return create_error_value(vm, "type '%s' does not support to_string",
                               type_get_name(value_get_type(self)));
   return vt.to_string(vm, self);
+}
+
+value_t value_get_field(vm_t vm, value_t self, const char *name) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.get_field)
+    return create_error_value(vm, "type '%s' does not support field access",
+                              type_get_name(value_get_type(self)));
+  return vt.get_field(vm, self, name);
+}
+
+value_t value_set_field(vm_t vm, value_t self, const char *name, value_t val) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.set_field)
+    return create_error_value(vm, "type '%s' does not support field assignment",
+                              type_get_name(value_get_type(self)));
+  return vt.set_field(vm, self, name, val);
+}
+
+value_t value_get_item(vm_t vm, value_t self, value_t index) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.get_item)
+    return create_error_value(vm, "type '%s' does not support subscript access",
+                              type_get_name(value_get_type(self)));
+  return vt.get_item(vm, self, index);
+}
+
+value_t value_set_item(vm_t vm, value_t self, value_t index, value_t val) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.set_item)
+    return create_error_value(vm, "type '%s' does not support subscript assignment",
+                              type_get_name(value_get_type(self)));
+  return vt.set_item(vm, self, index, val);
 }

@@ -25,11 +25,6 @@ extern class_t g_value_class;
  */
 value_t value_create(allocator_t allocator, type_t type, void *data, bool own);
 
-/**
- * @brief Dispose a value. If own=true, calls type->vtable.dispose(data).
- */
-void value_dispose(value_t self, allocator_t allocator);
-
 /* ---- Accessors ---- */
 
 type_t  value_get_type(value_t self);
@@ -44,6 +39,11 @@ void    value_set_initialized(value_t self, bool initialized);
  * @return bool value on success, error value if vtable.equal is NULL. */
 struct _vm_t;
 value_t value_equal(struct _vm_t *vm, value_t a, value_t b);
+
+/**
+ * @brief Clone a value: delegates to type->vtable.clone.
+ * @return cloned value on success, error value if vtable.clone is NULL. */
+value_t value_clone(struct _vm_t *vm, value_t self);
 
 /**
  * @brief Value-level extends: delegates to type->vtable.extends.
@@ -128,6 +128,18 @@ value_t value_assignment(struct _vm_t *vm, value_t lvalue, value_t rvalue);
 /** @brief Convert value to its string representation.
  *  Delegates to type->vtable.to_string. Returns str value or error. */
 value_t value_to_string(struct _vm_t *vm, value_t self);
+
+/** @brief Read a named field: obj.name. Delegates to type->vtable.get_field. */
+value_t value_get_field(struct _vm_t *vm, value_t self, const char *name);
+
+/** @brief Write a named field: obj.name = val. Delegates to type->vtable.set_field. */
+value_t value_set_field(struct _vm_t *vm, value_t self, const char *name, value_t val);
+
+/** @brief Read an item by index: obj[index]. Delegates to type->vtable.get_item. */
+value_t value_get_item(struct _vm_t *vm, value_t self, value_t index);
+
+/** @brief Write an item by index: obj[index] = val. Delegates to type->vtable.set_item. */
+value_t value_set_item(struct _vm_t *vm, value_t self, value_t index, value_t val);
 
 #ifdef __cplusplus
 }

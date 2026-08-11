@@ -10,38 +10,14 @@ class it_value : public CubecTest {
 protected:
   allocator_t allocator = create_allocator(NULL, NULL);
 
-  static value_t _dummy_clone(allocator_t alloc, value_t obj) {
-    size_t sz = type_get_size(value_get_type(obj));
-    void *new_data = allocator_alloc(alloc, sz);
-    memcpy(new_data, value_get_data(obj), sz);
-    return value_create(alloc, value_get_type(obj), new_data, true);
-  }
-
-  static void _dummy_dispose(allocator_t alloc, value_t obj) {
-    void *d = value_get_data(obj);
-    allocator_free(alloc, &d);
-  }
-
   type_t _make_i32_type() {
-    type_t t = (type_t)allocator_alloc(allocator, sizeof(struct _type_t));
-    t->kind = TYPE_KIND_I32;
-    t->name = cstring_clone(allocator, "i32");
-    t->size = 4;
-    t->align = 4;
-    t->mut = false;
-    t->vtable = (vtable_t){.clone = _dummy_clone, .dispose = _dummy_dispose};
-    return t;
+    return type_create(allocator, TYPE_KIND_I32, "i32", 4, 4, false,
+                       (vtable_t){0});
   }
 
   type_t _make_void_type() {
-    type_t t = (type_t)allocator_alloc(allocator, sizeof(struct _type_t));
-    t->kind = TYPE_KIND_VOID;
-    t->name = cstring_clone(allocator, "void");
-    t->size = 0;
-    t->align = 1;
-    t->mut = false;
-    t->vtable = (vtable_t){.clone = NULL, .dispose = NULL};
-    return t;
+    return type_create(allocator, TYPE_KIND_VOID, "void", 0, 1, false,
+                       (vtable_t){0});
   }
 };
 
@@ -57,8 +33,7 @@ TEST_F(it_value, create_and_accessors) {
   EXPECT_FALSE(value_is_shadow(v));
   EXPECT_EQ(*(int32_t *)value_get_data(v), 42);
 
-  value_dispose(v, allocator);
-  allocator_free(allocator, &i32_type->name);
+  allocator_free(allocator, &v);
   allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
@@ -69,50 +44,27 @@ TEST_F(it_value, shadow_value) {
   EXPECT_TRUE(value_is_shadow(v));
   EXPECT_FALSE(value_is_own(v));
 
-  value_dispose(v, allocator);
-  allocator_free(allocator, &i32_type->name);
+  allocator_free(allocator, &v);
   allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
 
-TEST_F(it_value, dispose_calls_vtable_dispose) {
+TEST_F(it_value, dispose_owns_data) {
   type_t i32_type = _make_i32_type();
   int32_t *data = (int32_t *)allocator_alloc(allocator, sizeof(int32_t));
   *data = 99;
 
   value_t v = value_create(allocator, i32_type, data, true);
-  value_dispose(v, allocator);
-  allocator_free(allocator, &i32_type->name);
+  allocator_free(allocator, &v);
   allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
 
-TEST_F(it_value, dispose_no_vtable_no_crash) {
+TEST_F(it_value, dispose_no_data_no_crash) {
   type_t void_type = _make_void_type();
   value_t v = value_create(allocator, void_type, NULL, false);
-  value_dispose(v, allocator);
-  allocator_free(allocator, &void_type->name);
+  allocator_free(allocator, &v);
   allocator_free(allocator, &void_type);
-  delete_allocator(allocator);
-}
-
-TEST_F(it_value, clone_delegates_to_vtable) {
-  type_t i32_type = _make_i32_type();
-  int32_t *data = (int32_t *)allocator_alloc(allocator, sizeof(int32_t));
-  *data = 7;
-
-  value_t v = value_create(allocator, i32_type, data, true);
-  value_t cloned = (value_t)alloc_clone(allocator, v);
-
-  EXPECT_EQ(value_get_type(cloned), i32_type);
-  EXPECT_TRUE(value_is_own(cloned));
-  EXPECT_NE(value_get_data(cloned), value_get_data(v));
-  EXPECT_EQ(*(int32_t *)value_get_data(cloned), 7);
-
-  value_dispose(cloned, allocator);
-  value_dispose(v, allocator);
-  allocator_free(allocator, &i32_type->name);
-  allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
 
@@ -131,9 +83,8 @@ TEST_F(it_value, move_transfers_data) {
   EXPECT_EQ(value_get_data(v), nullptr);
   EXPECT_FALSE(value_is_own(v));
 
-  value_dispose(moved, allocator);
-  value_dispose(v, allocator);
-  allocator_free(allocator, &i32_type->name);
+  allocator_free(allocator, &moved);
+  allocator_free(allocator, &v);
   allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }
@@ -145,7 +96,6 @@ TEST_F(it_value, type_accessors) {
   EXPECT_EQ(type_get_size(i32_type), 4u);
   EXPECT_EQ(type_get_align(i32_type), 4u);
 
-  allocator_free(allocator, &i32_type->name);
   allocator_free(allocator, &i32_type);
   delete_allocator(allocator);
 }

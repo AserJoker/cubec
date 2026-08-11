@@ -8,20 +8,11 @@
 
 /* ---- Error type vtable ---- */
 
-static value_t _error_clone(allocator_t allocator, value_t self) {
+static value_t _error_clone(vm_t vm, value_t self) {
   struct error_data_t *src = (struct error_data_t *)value_get_data(self);
-  struct error_data_t *copy = (struct error_data_t *)allocator_alloc(
-      allocator, sizeof(struct error_data_t));
-  copy->message = src->message ? cstring_clone(allocator, src->message) : NULL;
-  return value_create(allocator, value_get_type(self), copy, true);
-}
-
-static void _error_dispose(allocator_t allocator, value_t self) {
-  struct error_data_t *d = (struct error_data_t *)value_get_data(self);
-  if (d) {
-    allocator_free(allocator, &d->message);
-    allocator_free(allocator, &d);
-  }
+  if (src && src->message)
+    return create_error_value(vm, "%s", src->message);
+  return create_error_value(vm, NULL);
 }
 
 type_t type_get_error_type(allocator_t allocator) {
@@ -34,7 +25,6 @@ type_t type_get_error_type(allocator_t allocator) {
       .mut   = false,
       .vtable = {
           .clone = _error_clone,
-          .dispose = _error_dispose,
           .equal = NULL,
           .extends = NULL,
           .type_equal = NULL,
@@ -47,26 +37,27 @@ type_t type_get_error_type(allocator_t allocator) {
 value_t create_error_value(vm_t vm, const char *fmt, ...) {
   allocator_t allocator = vm_get_allocator(vm);
 
-  struct error_data_t *data = (struct error_data_t *)allocator_alloc(
-      allocator, sizeof(struct error_data_t));
-
+  /* First pass: compute message length */
+  int len = 0;
   if (fmt) {
     va_list args;
     va_start(args, fmt);
-    int len = vsnprintf(NULL, 0, fmt, args);
+    len = vsnprintf(NULL, 0, fmt, args);
     va_end(args);
-    if (len > 0) {
-      char *buf = (char *)allocator_alloc(allocator, (size_t)len + 1);
-      va_start(args, fmt);
-      vsnprintf(buf, (size_t)len + 1, fmt, args);
-      va_end(args);
-      buf[len] = '\0';
-      data->message = buf;
-    } else {
-      data->message = NULL;
-    }
+  }
+
+  /* Allocate error_data_t with inline message */
+  size_t msg_size = (len > 0) ? (size_t)len + 1 : 1;
+  struct error_data_t *data = (struct error_data_t *)allocator_alloc(
+      allocator, sizeof(struct error_data_t) + msg_size);
+
+  if (fmt && len > 0) {
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(data->message, (size_t)len + 1, fmt, args);
+    va_end(args);
   } else {
-    data->message = NULL;
+    data->message[0] = '\0';
   }
 
   type_t error_type = (type_t)value_get_data(vm_get_error_type(vm));

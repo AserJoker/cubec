@@ -10,27 +10,9 @@ class it_vm : public CubecTest {
 protected:
   allocator_t allocator = create_allocator(NULL, NULL);
 
-  static value_t _dummy_clone(allocator_t alloc, value_t obj) {
-    size_t sz = type_get_size(value_get_type(obj));
-    void *new_data = allocator_alloc(alloc, sz);
-    memcpy(new_data, value_get_data(obj), sz);
-    return value_create(alloc, value_get_type(obj), new_data, true);
-  }
-
-  static void _dummy_dispose(allocator_t alloc, value_t obj) {
-    void *d = value_get_data(obj);
-    allocator_free(alloc, &d);
-  }
-
   type_t _make_i32_type() {
-    type_t t = (type_t)allocator_alloc(allocator, sizeof(struct _type_t));
-    t->kind = TYPE_KIND_I32;
-    t->name = cstring_clone(allocator, "i32");
-    t->size = 4;
-    t->align = 4;
-    t->mut = false;
-    t->vtable = (vtable_t){.clone = _dummy_clone, .dispose = _dummy_dispose};
-    return t;
+    return type_create(allocator, TYPE_KIND_I32, "i32", 4, 4, false,
+                       (vtable_t){0});
   }
 };
 
@@ -70,7 +52,6 @@ TEST_F(it_vm, create_value_with_data) {
 
   /* value is in current_scope->values, disposed by vm_dispose */
   vm_dispose(vm, allocator);
-  allocator_free(allocator, &i32->name);
   allocator_free(allocator, &i32);
   delete_allocator(allocator);
 }
@@ -87,7 +68,6 @@ TEST_F(it_vm, create_value_shadow) {
 
   /* value is in current_scope->values, disposed by vm_dispose */
   vm_dispose(vm, allocator);
-  allocator_free(allocator, &i32->name);
   allocator_free(allocator, &i32);
   delete_allocator(allocator);
 }

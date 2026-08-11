@@ -50,7 +50,7 @@ typedef struct _type_t *type_t;
 /**
  * @brief VTable — type behavior dispatch table.
  *
- *  clone/dispose      — lifecycle (take allocator_t)
+ *  clone              — value cloning (take vm_t, return value_t)
  *  equal/extends      — value-level computation (take vm_t, return value_t)
  *  type_equal/type_extends — type-level computation (take vm_t, return value_t)
  *
@@ -58,8 +58,7 @@ typedef struct _type_t *type_t;
  *  (kind mismatch or NULL vtable entry).
  */
 struct vtable_t {
-  value_t (*clone)        (allocator_t alloc, value_t obj);
-  void     (*dispose)     (allocator_t alloc, value_t obj);
+  value_t (*clone)        (vm_t vm, value_t self);
   value_t (*equal)        (vm_t vm, value_t a, value_t b);
   value_t (*extends)      (vm_t vm, value_t sub, value_t super_val);
   value_t (*type_equal)   (vm_t vm, type_t a, type_t b);
@@ -91,6 +90,12 @@ struct vtable_t {
   value_t (*assignment)   (vm_t vm, value_t lvalue, value_t rvalue); /* = */
   /* String representation */
   value_t (*to_string)    (vm_t vm, value_t self);                   /* toString */
+  /* Field access (.field) */
+  value_t (*get_field)    (vm_t vm, value_t self, const char *name); /* obj.field */
+  value_t (*set_field)    (vm_t vm, value_t self, const char *name, value_t val); /* obj.field = val */
+  /* Subscript ([index]) */
+  value_t (*get_item)     (vm_t vm, value_t self, value_t index);   /* obj[index] */
+  value_t (*set_item)     (vm_t vm, value_t self, value_t index, value_t val); /* obj[index] = val */
 };
 typedef struct vtable_t vtable_t;
 
@@ -117,6 +122,28 @@ uint64_t    type_get_size(type_t self);
 uint64_t    type_get_align(type_t self);
 bool        type_is_mut(type_t self);
 vtable_t    type_get_vtable(type_t self);
+
+/* ---- Class descriptor ---- */
+
+/** @brief Type descriptor for allocator_create.
+ *  Dynamic types (array, slice, etc.) should be created via
+ *  allocator_create(allocator, &g_type_class, &init). */
+extern class_t g_type_class;
+
+/** @brief Init args for g_type_class. */
+typedef struct type_init_t {
+  type_kind_t kind;
+  const char *name;   /* will be cloned (owned by type_t) */
+  uint64_t    size;
+  uint64_t    align;
+  bool        mut;
+  vtable_t    vtable;
+} type_init_t;
+
+/** @brief Create a dynamic type_t via allocator_create.
+ *  Convenience wrapper around allocator_create(&g_type_class, &init). */
+type_t type_create(allocator_t allocator, type_kind_t kind, const char *name,
+                   uint64_t size, uint64_t align, bool mut, vtable_t vtable);
 
 /* ---- Bootstrap ---- */
 

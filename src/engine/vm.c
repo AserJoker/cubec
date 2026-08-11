@@ -372,7 +372,7 @@ module_t vm_import(vm_t self, context_t ctx, const char *import_path) {
   return mod;
 }
 
-/* ---- Scope stack ---- */
+/* ---- Scope management ---- */
 
 void vm_push_scope(vm_t self, scope_t scope) {
   if (!self || !scope)
@@ -385,6 +385,22 @@ void vm_pop_scope(vm_t self) {
   if (!self || !self->current_scope)
     return;
   self->current_scope = self->current_scope->parent;
+}
+
+scope_t vm_set_scope(vm_t self, scope_t scope) {
+  if (!self)
+    return NULL;
+  scope_t prev = self->current_scope;
+  self->current_scope = scope;
+  return prev;
+}
+
+scope_t vm_set_root_scope(vm_t self, scope_t scope) {
+  if (!self)
+    return NULL;
+  scope_t prev = self->root_scope;
+  self->root_scope = scope;
+  return prev;
 }
 
 /* ---- Value creation ---- */
