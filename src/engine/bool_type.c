@@ -83,7 +83,7 @@ type_t type_get_bool_type(allocator_t allocator) {
       .name  = (char *)"bool",
       .size  = 1,
       .align = 1,
-      .mut   = false,
+      .mut   = true,
       .vtable = {
           .clone = _bool_clone,
           .dispose = _bool_dispose,
@@ -99,6 +99,31 @@ type_t type_get_bool_type(allocator_t allocator) {
       },
   };
   return &bool_type;
+}
+
+type_t type_get_const_bool_type(allocator_t allocator) {
+  (void)allocator;
+  static struct _type_t const_bool_type = {
+      .kind  = TYPE_KIND_BOOL,
+      .name  = (char *)"const bool",
+      .size  = 1,
+      .align = 1,
+      .mut   = false,
+      .vtable = {
+          .clone = NULL,
+          .dispose = NULL,
+          .equal = _bool_equal,
+          .extends = NULL,
+          .type_equal = _bool_type_equal,
+          .type_extends = _bool_type_extends,
+          .band = _bool_band,
+          .bor = _bool_bor,
+          .bxor = _bool_bxor,
+          .bnot = _bool_bnot,
+          .lnot = _bool_lnot,
+      },
+  };
+  return &const_bool_type;
 }
 
 value_t create_bool_value(vm_t vm, bool val) {

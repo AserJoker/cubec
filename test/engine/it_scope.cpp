@@ -257,8 +257,8 @@ TEST_F(it_scope, dispose_scope_with_values) {
   value_t v = create_bool_value(vm, true);
   (void)v;
   scope_t global = vm_get_global_scope(vm);
-  /* type+error+bool_type+wildcard+void_type+bool_value = 6 */
-  EXPECT_EQ(vec_get_size(global->values), 6u);
+  /* type+error+bool_type+wildcard+void_type+const_bool_type+bool_value = 7 */
+  EXPECT_EQ(vec_get_size(global->values), 7u);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -273,7 +273,7 @@ TEST_F(it_scope, vm_dispose_cleans_child_scope_values) {
   value_t v = create_bool_value(vm, true);
   (void)v;
   /* bool value is in vm->current_scope (global) */
-  EXPECT_EQ(vec_get_size(global->values), 6u); /* type+error+bool_type+wildcard+void_type+bool_value */
+  EXPECT_EQ(vec_get_size(global->values), 7u); /* type+error+bool_type+wildcard+void_type+bool_value */
 
   /* child scope has no values */
   EXPECT_EQ(vec_get_size(child->values), 0u);

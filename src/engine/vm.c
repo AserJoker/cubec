@@ -25,6 +25,7 @@ struct _vm_t {
   value_t     v_bool;        /* borrowed: bootstrap type "bool" (in global_scope->values) */
   value_t     v_wildcard;    /* borrowed: bootstrap type "wildcard" (in global_scope->values) */
   value_t     v_void;        /* borrowed: bootstrap type "void" (in global_scope->values) */
+  value_t     v_const_bool;  /* borrowed: bootstrap type "const bool" (in global_scope->values) */
 };
 
 static void _vm_init(void *self, allocator_t allocator, void *arg) {
@@ -59,6 +60,9 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 
   type_t void_type = type_get_void_type(allocator);
   vm->v_void = create_type_value(vm, void_type, "void", false);
+
+  type_t const_bool_type = type_get_const_bool_type(allocator);
+  vm->v_const_bool = create_type_value(vm, const_bool_type, "const bool", false);
 }
 
 static void _vm_dispose(void *self, allocator_t allocator) {
@@ -96,6 +100,7 @@ value_t  vm_get_error_type(vm_t self) { return self->v_error; }
 value_t  vm_get_bool_type(vm_t self) { return self->v_bool; }
 value_t  vm_get_wildcard_type(vm_t self) { return self->v_wildcard; }
 value_t  vm_get_void_type(vm_t self) { return self->v_void; }
+value_t  vm_get_const_bool_type(vm_t self) { return self->v_const_bool; }
 
 module_t vm_get_module(vm_t self, const char *abs_path) {
   return (module_t)strmap_find(self->modules, abs_path);
