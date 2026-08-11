@@ -8,7 +8,7 @@ extern "C" {
 /** @brief Payload for error values.
  *  message is a flexible array member — allocated inline with the struct. */
 struct error_data_t {
-  char message[]; /* owned, zero-terminated */
+  char message[0]; /* owned, zero-terminated */
 };
 
 /** @brief Get the "error" type_t (static singleton). */

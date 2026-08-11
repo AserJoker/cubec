@@ -140,6 +140,7 @@ type_t type_get_bool_type(allocator_t allocator) {
       .mut   = true,
       .vtable = {
           .clone = _bool_clone,
+          .type_clone = NULL,
           .equal = _bool_equal,
           .extends = NULL,
           .type_equal = _bool_type_equal,
@@ -169,6 +170,8 @@ type_t type_get_const_bool_type(allocator_t allocator) {
       .mut   = false,
       .vtable = {
           .clone = _bool_clone,
+          .type_clone = NULL,
+          .type_clone = NULL,
           .equal = _bool_equal,
           .extends = NULL,
           .type_equal = _bool_type_equal,

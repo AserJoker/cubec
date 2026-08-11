@@ -88,6 +88,13 @@ value_t value_clone(vm_t vm, value_t self) {
   return vt.clone(vm, self);
 }
 
+type_t value_type_clone(vm_t vm, type_t self) {
+  vtable_t vt = type_get_vtable(self);
+  if (!vt.type_clone)
+    return self; /* static singleton — return as-is */
+  return vt.type_clone(vm, self);
+}
+
 value_t value_equal(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.equal)

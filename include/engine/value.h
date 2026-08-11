@@ -46,6 +46,13 @@ value_t value_equal(struct _vm_t *vm, value_t a, value_t b);
 value_t value_clone(struct _vm_t *vm, value_t self);
 
 /**
+ * @brief Clone a type into vm's current scope: delegates to type->vtable.type_clone.
+ *  For static singletons (i32, bool, etc.) returns self.
+ *  For dynamic types (array, etc.) recursively clones into current scope.
+ * @return cloned type_t on success, NULL if vtable.type_clone is NULL. */
+type_t value_type_clone(struct _vm_t *vm, type_t self);
+
+/**
  * @brief Value-level extends: delegates to type->vtable.extends.
  * @return bool value on success, error value if vtable.extends is NULL. */
 value_t value_extends(struct _vm_t *vm, value_t sub, value_t super_val);

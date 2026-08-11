@@ -124,6 +124,7 @@ type_t type_get_type_type(allocator_t allocator) {
       .mut   = false,
       .vtable = {
           .clone = _type_clone,
+          .type_clone = NULL,
           .equal = _type_equal,
           .extends = _type_extends,
           .type_equal = NULL,

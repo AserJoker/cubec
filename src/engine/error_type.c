@@ -25,6 +25,7 @@ type_t type_get_error_type(allocator_t allocator) {
       .mut   = false,
       .vtable = {
           .clone = _error_clone,
+          .type_clone = NULL,
           .equal = NULL,
           .extends = NULL,
           .type_equal = NULL,

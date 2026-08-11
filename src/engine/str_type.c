@@ -202,6 +202,7 @@ type_t type_get_str_type(allocator_t allocator) {
       .mut   = true,
       .vtable = {
           .clone        = _str_clone,
+          .type_clone   = NULL,
           .equal        = _str_equal,
           .extends      = NULL,
           .type_equal   = _str_type_equal,
@@ -240,6 +241,7 @@ type_t type_get_const_str_type(allocator_t allocator) {
       .mut   = false,
       .vtable = {
           .clone        = _str_clone,
+          .type_clone   = NULL,
           .equal        = _str_equal,
           .extends      = NULL,
           .type_equal   = _str_type_equal,

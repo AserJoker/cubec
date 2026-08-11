@@ -9,6 +9,7 @@
 #include "engine/integer_type.h"
 #include "engine/float_type.h"
 #include "engine/str_type.h"
+#include "engine/array_type.h"
 #include "engine/module.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -444,4 +445,14 @@ value_t vm_create_value_shadow(vm_t self, type_t type, const char *name,
     }
   }
   return v;
+}
+
+value_t vm_create_array_type_value(vm_t self, type_t element_type,
+                              uint64_t count, bool mut) {
+  array_type_t at = array_type_create(self->allocator, element_type, count, mut);
+  /* register array_type_t in scope->types for auto-dispose */
+  if (self->current_scope)
+    vec_push(self->current_scope->types, at);
+  /* wrap as a type value — own=false because scope->types owns the type_t */
+  return create_type_value(self, (type_t)at, NULL, false);
 }

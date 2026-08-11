@@ -41,6 +41,7 @@ type_t type_get_void_type(allocator_t allocator) {
       .mut   = false,
       .vtable = {
           .clone = _void_clone,
+          .type_clone = NULL,
           .equal = NULL,
           .extends = NULL,
           .type_equal = _void_type_equal,

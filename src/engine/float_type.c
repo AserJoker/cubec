@@ -389,6 +389,7 @@ type_t type_get_##Prefix##_type(allocator_t allocator) {                       \
       .mut   = true,                                                           \
       .vtable = {                                                              \
           .clone        = _float_clone,                                        \
+          .type_clone   = NULL,                                        \
           .equal        = _##Prefix##_equal,                                   \
           .extends      = NULL,                                                \
           .type_equal   = _##Prefix##_type_equal,                              \
@@ -427,6 +428,7 @@ type_t type_get_const_##Prefix##_type(allocator_t allocator) {                 \
       .mut   = false,                                                          \
       .vtable = {                                                              \
           .clone        = _float_clone,                                        \
+          .type_clone   = NULL,                                        \
           .equal        = _##Prefix##_equal,                                   \
           .extends      = NULL,                                                \
           .type_equal   = _##Prefix##_type_equal,                              \
