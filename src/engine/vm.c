@@ -6,6 +6,7 @@
 #include "engine/bool_type.h"
 #include "engine/wildcard_type.h"
 #include "engine/void_type.h"
+#include "engine/integer_type.h"
 #include "engine/module.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -26,6 +27,14 @@ struct _vm_t {
   value_t     v_wildcard;    /* borrowed: bootstrap type "wildcard" (in global_scope->values) */
   value_t     v_void;        /* borrowed: bootstrap type "void" (in global_scope->values) */
   value_t     v_const_bool;  /* borrowed: bootstrap type "const bool" (in global_scope->values) */
+  value_t     v_i8;          /* borrowed: bootstrap type "i8" */
+  value_t     v_i16;         /* borrowed: bootstrap type "i16" */
+  value_t     v_i32;         /* borrowed: bootstrap type "i32" */
+  value_t     v_i64;         /* borrowed: bootstrap type "i64" */
+  value_t     v_const_i8;    /* borrowed: bootstrap type "const i8" */
+  value_t     v_const_i16;   /* borrowed: bootstrap type "const i16" */
+  value_t     v_const_i32;   /* borrowed: bootstrap type "const i32" */
+  value_t     v_const_i64;   /* borrowed: bootstrap type "const i64" */
 };
 
 static void _vm_init(void *self, allocator_t allocator, void *arg) {
@@ -63,6 +72,31 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 
   type_t const_bool_type = type_get_const_bool_type(allocator);
   vm->v_const_bool = create_type_value(vm, const_bool_type, "const bool", false);
+
+  /* Integer types */
+  type_t i8_type = type_get_i8_type(allocator);
+  vm->v_i8 = create_type_value(vm, i8_type, "i8", false);
+
+  type_t i16_type = type_get_i16_type(allocator);
+  vm->v_i16 = create_type_value(vm, i16_type, "i16", false);
+
+  type_t i32_type = type_get_i32_type(allocator);
+  vm->v_i32 = create_type_value(vm, i32_type, "i32", false);
+
+  type_t i64_type = type_get_i64_type(allocator);
+  vm->v_i64 = create_type_value(vm, i64_type, "i64", false);
+
+  type_t const_i8_type = type_get_const_i8_type(allocator);
+  vm->v_const_i8 = create_type_value(vm, const_i8_type, "const i8", false);
+
+  type_t const_i16_type = type_get_const_i16_type(allocator);
+  vm->v_const_i16 = create_type_value(vm, const_i16_type, "const i16", false);
+
+  type_t const_i32_type = type_get_const_i32_type(allocator);
+  vm->v_const_i32 = create_type_value(vm, const_i32_type, "const i32", false);
+
+  type_t const_i64_type = type_get_const_i64_type(allocator);
+  vm->v_const_i64 = create_type_value(vm, const_i64_type, "const i64", false);
 }
 
 static void _vm_dispose(void *self, allocator_t allocator) {
@@ -101,6 +135,14 @@ value_t  vm_get_bool_type(vm_t self) { return self->v_bool; }
 value_t  vm_get_wildcard_type(vm_t self) { return self->v_wildcard; }
 value_t  vm_get_void_type(vm_t self) { return self->v_void; }
 value_t  vm_get_const_bool_type(vm_t self) { return self->v_const_bool; }
+value_t  vm_get_i8_type(vm_t self)  { return self->v_i8; }
+value_t  vm_get_i16_type(vm_t self) { return self->v_i16; }
+value_t  vm_get_i32_type(vm_t self) { return self->v_i32; }
+value_t  vm_get_i64_type(vm_t self) { return self->v_i64; }
+value_t  vm_get_const_i8_type(vm_t self)  { return self->v_const_i8; }
+value_t  vm_get_const_i16_type(vm_t self) { return self->v_const_i16; }
+value_t  vm_get_const_i32_type(vm_t self) { return self->v_const_i32; }
+value_t  vm_get_const_i64_type(vm_t self) { return self->v_const_i64; }
 
 module_t vm_get_module(vm_t self, const char *abs_path) {
   return (module_t)strmap_find(self->modules, abs_path);

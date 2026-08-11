@@ -39,6 +39,14 @@ value_t  vm_get_bool_type(vm_t self);
 value_t  vm_get_wildcard_type(vm_t self);
 value_t  vm_get_void_type(vm_t self);
 value_t  vm_get_const_bool_type(vm_t self);
+value_t  vm_get_i8_type(vm_t self);
+value_t  vm_get_i16_type(vm_t self);
+value_t  vm_get_i32_type(vm_t self);
+value_t  vm_get_i64_type(vm_t self);
+value_t  vm_get_const_i8_type(vm_t self);
+value_t  vm_get_const_i16_type(vm_t self);
+value_t  vm_get_const_i32_type(vm_t self);
+value_t  vm_get_const_i64_type(vm_t self);
 
 /* ---- Module registry ---- */
 

@@ -34,6 +34,9 @@ static void _type_dispose(allocator_t allocator, value_t self) {
 static value_t _type_equal(vm_t vm, value_t a, value_t b) {
   type_t ta = (type_t)value_get_data(a);
   type_t tb = (type_t)value_get_data(b);
+  /* wildcard short-circuit: any type equal to wildcard */
+  if (tb->kind == TYPE_KIND_WILDCARD)
+    return create_bool_value(vm, true);
   if (ta->kind != tb->kind)
     return create_error_value(vm, "cannot compare types of different kinds: %s vs %s",
                               ta->name, tb->name);
@@ -45,6 +48,9 @@ static value_t _type_equal(vm_t vm, value_t a, value_t b) {
 static value_t _type_extends(vm_t vm, value_t sub, value_t super_val) {
   type_t t_sub = (type_t)value_get_data(sub);
   type_t t_super = (type_t)value_get_data(super_val);
+  /* wildcard short-circuit: any type extends wildcard */
+  if (t_super->kind == TYPE_KIND_WILDCARD)
+    return create_bool_value(vm, true);
   if (t_sub->kind != t_super->kind)
     return create_error_value(vm, "cannot check extends between types of different kinds: %s vs %s",
                               t_sub->name, t_super->name);

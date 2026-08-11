@@ -142,10 +142,11 @@ TEST_F(it_primitive_type, void_type_equal_wildcard) {
   vm_t vm = vm_create(allocator);
   value_t a = vm_get_void_type(vm);
   value_t b = vm_get_wildcard_type(vm);
-  /* kind mismatch: void vs wildcard — dispatcher returns error */
+  /* wildcard short-circuit: any type equal to wildcard → true */
   value_t result = value_equal(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
+  EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -181,10 +182,11 @@ TEST_F(it_primitive_type, void_type_extends_wildcard) {
   vm_t vm = vm_create(allocator);
   value_t a = vm_get_void_type(vm);
   value_t b = vm_get_wildcard_type(vm);
-  /* kind mismatch: void vs wildcard — dispatcher returns error */
+  /* wildcard short-circuit: any type extends wildcard → true */
   value_t result = value_extends(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
+  EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -220,10 +222,11 @@ TEST_F(it_primitive_type, bool_type_equal_wildcard) {
   vm_t vm = vm_create(allocator);
   value_t a = vm_get_bool_type(vm);
   value_t b = vm_get_wildcard_type(vm);
-  /* kind mismatch: bool vs wildcard */
+  /* wildcard short-circuit: any type equal to wildcard → true */
   value_t result = value_equal(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
+  EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -246,10 +249,11 @@ TEST_F(it_primitive_type, bool_type_extends_wildcard) {
   vm_t vm = vm_create(allocator);
   value_t a = vm_get_bool_type(vm);
   value_t b = vm_get_wildcard_type(vm);
-  /* kind mismatch */
+  /* wildcard short-circuit: any type extends wildcard → true */
   value_t result = value_extends(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
+  EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
