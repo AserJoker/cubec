@@ -83,6 +83,7 @@ type_t type_get_bool_type(allocator_t allocator) {
       .name  = (char *)"bool",
       .size  = 1,
       .align = 1,
+      .mut   = false,
       .vtable = {
           .clone = _bool_clone,
           .dispose = _bool_dispose,

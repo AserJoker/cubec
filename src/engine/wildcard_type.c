@@ -7,6 +7,7 @@ type_t type_get_wildcard_type(allocator_t allocator) {
       .name  = (char *)"?",
       .size  = 0,
       .align = 0,
+      .mut   = false,
       .vtable = {0},
   };
   return &wildcard_type;

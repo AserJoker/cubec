@@ -27,6 +27,7 @@ type_t type_get_void_type(allocator_t allocator) {
       .name  = (char *)"void",
       .size  = 0,
       .align = 0,
+      .mut   = false,
       .vtable = {
           .clone = NULL,
           .dispose = NULL,

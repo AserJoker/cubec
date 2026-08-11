@@ -28,6 +28,7 @@ protected:
     t->name = cstring_clone(allocator, "i32");
     t->size = 4;
     t->align = 4;
+    t->mut = false;
     t->vtable = (vtable_t){.clone = _dummy_clone, .dispose = _dummy_dispose};
     return t;
   }

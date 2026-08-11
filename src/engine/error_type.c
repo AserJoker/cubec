@@ -31,6 +31,7 @@ type_t type_get_error_type(allocator_t allocator) {
       .name  = (char *)"error",
       .size  = sizeof(struct error_data_t),
       .align = _Alignof(struct error_data_t),
+      .mut   = false,
       .vtable = {
           .clone = _error_clone,
           .dispose = _error_dispose,

@@ -12,6 +12,7 @@ type_kind_t type_get_kind(type_t self) { return self->kind; }
 const char *type_get_name(type_t self) { return self->name; }
 uint64_t    type_get_size(type_t self) { return self->size; }
 uint64_t    type_get_align(type_t self) { return self->align; }
+bool        type_is_mut(type_t self) { return self->mut; }
 vtable_t    type_get_vtable(type_t self) { return self->vtable; }
 
 /* ---- Bootstrap type "type" vtable ---- */
@@ -59,6 +60,7 @@ type_t type_get_type_type(allocator_t allocator) {
       .name  = (char *)"type",
       .size  = sizeof(struct _type_t),
       .align = _Alignof(struct _type_t),
+      .mut   = false,
       .vtable = {
           .clone = _type_clone,
           .dispose = _type_dispose,

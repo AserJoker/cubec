@@ -2,6 +2,7 @@
 #define _H_CUBEC_ENGINE_TYPE_
 #include "core/allocator.h"
 #include "core/class.h"
+#include <stdbool.h>
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
@@ -84,6 +85,7 @@ struct _type_t {
   char *name;
   uint64_t    size;
   uint64_t    align;
+  bool        mut;   /* true = mutable, false = read-only */
   vtable_t    vtable;
 };
 
@@ -93,6 +95,7 @@ type_kind_t type_get_kind(type_t self);
 const char *type_get_name(type_t self);
 uint64_t    type_get_size(type_t self);
 uint64_t    type_get_align(type_t self);
+bool        type_is_mut(type_t self);
 vtable_t    type_get_vtable(type_t self);
 
 /* ---- Bootstrap ---- */
