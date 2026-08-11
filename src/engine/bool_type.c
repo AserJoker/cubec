@@ -3,8 +3,10 @@
 #include "engine/vm.h"
 #include "engine/scope.h"
 #include "engine/error_type.h"
+#include "engine/void_type.h"
 #include "engine/type.h"
 #include <stdbool.h>
+#include <string.h>
 
 /* ---- Bool type vtable ---- */
 
@@ -105,6 +107,20 @@ static value_t _const_bool_safe_cast(vm_t vm, value_t self, type_t to) {
   return value_create(vm_get_allocator(vm), to, copy, true);
 }
 
+static value_t _bool_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
+  type_t lt = value_get_type(lvalue);
+  type_t rt = value_get_type(rvalue);
+  if (rt->kind != TYPE_KIND_BOOL)
+    return create_error_value(vm, "cannot assign '%s' to '%s'", rt->name, lt->name);
+  if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
+    value_set_initialized(lvalue, true);
+    return create_void_value(vm);
+  }
+  memcpy(value_get_data(lvalue), value_get_data(rvalue), lt->size);
+  value_set_initialized(lvalue, true);
+  return create_void_value(vm);
+}
+
 type_t type_get_bool_type(allocator_t allocator) {
   (void)allocator;
   static struct _type_t bool_type = {
@@ -126,6 +142,7 @@ type_t type_get_bool_type(allocator_t allocator) {
           .bnot = _bool_bnot,
           .lnot = _bool_lnot,
           .safe_cast = _bool_safe_cast,
+          .assignment = _bool_assignment,
       },
   };
   return &bool_type;

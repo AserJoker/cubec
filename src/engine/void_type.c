@@ -1,10 +1,23 @@
 #include "engine/void_type.h"
 #include "engine/value.h"
 #include "engine/vm.h"
+#include "engine/scope.h"
 #include "engine/bool_type.h"
 #include "engine/type.h"
 
 /* ---- Void type vtable ---- */
+
+static value_t _void_clone(allocator_t allocator, value_t self) {
+  (void)self;
+  /* void has size=0, no data to clone */
+  return value_create(allocator, value_get_type(self), NULL, false);
+}
+
+static void _void_dispose(allocator_t allocator, value_t self) {
+  (void)allocator;
+  (void)self;
+  /* void has no data to free */
+}
 
 static value_t _void_type_equal(vm_t vm, type_t a, type_t b) {
   (void)a;
@@ -29,8 +42,8 @@ type_t type_get_void_type(allocator_t allocator) {
       .align = 0,
       .mut   = false,
       .vtable = {
-          .clone = NULL,
-          .dispose = NULL,
+          .clone = _void_clone,
+          .dispose = _void_dispose,
           .equal = NULL,
           .extends = NULL,
           .type_equal = _void_type_equal,
@@ -38,4 +51,16 @@ type_t type_get_void_type(allocator_t allocator) {
       },
   };
   return &void_type;
+}
+
+value_t create_void_value(vm_t vm) {
+  allocator_t allocator = vm_get_allocator(vm);
+  type_t void_type = (type_t)value_get_data(vm_get_void_type(vm));
+  value_t v = value_create(allocator, void_type, NULL, false);
+  value_set_initialized(v, true);
+  scope_t scope = vm_get_current_scope(vm);
+  if (scope) {
+    vec_push(scope->values, v);
+  }
+  return v;
 }

@@ -73,6 +73,10 @@ value_t value_lnot(struct _vm_t *vm, value_t a);
  *  Delegates to type->vtable.safe_cast. Returns casted value or error. */
 value_t value_safe_cast(struct _vm_t *vm, value_t val, type_t to);
 
+/** @brief Assign rvalue to lvalue. Delegates to type->vtable.assignment.
+ *  Checks TDZ/const rules, then copies data and sets initialized=true. */
+value_t value_assignment(struct _vm_t *vm, value_t lvalue, value_t rvalue);
+
 #ifdef __cplusplus
 }
 #endif

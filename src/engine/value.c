@@ -164,3 +164,15 @@ value_t value_safe_cast(vm_t vm, value_t val, type_t to) {
                               type_get_name(value_get_type(val)));
   return vt.safe_cast(vm, val, to);
 }
+
+value_t value_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
+  type_t lt = value_get_type(lvalue);
+  /* const check: initialized && !mut → cannot assign */
+  if (value_is_initialized(lvalue) && !lt->mut)
+    return create_error_value(vm, "cannot assign to const '%s'", lt->name);
+  vtable_t vt = type_get_vtable(lt);
+  if (!vt.assignment)
+    return create_error_value(vm, "type '%s' does not support assignment",
+                              type_get_name(lt));
+  return vt.assignment(vm, lvalue, rvalue);
+}

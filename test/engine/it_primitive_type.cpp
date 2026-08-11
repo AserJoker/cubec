@@ -101,9 +101,8 @@ TEST_F(it_primitive_type, bool_extends_not_supported_error) {
 
 TEST_F(it_primitive_type, void_equal_not_supported_error) {
   vm_t vm = vm_create(allocator);
-  type_t void_type = _get_void_type(vm);
-  value_t a = vm_create_value_shadow(vm, void_type, NULL, true);
-  value_t b = vm_create_value_shadow(vm, void_type, NULL, true);
+  value_t a = create_void_value(vm);
+  value_t b = create_void_value(vm);
   value_t result = value_equal(vm, a, b);
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
@@ -114,9 +113,8 @@ TEST_F(it_primitive_type, void_equal_not_supported_error) {
 
 TEST_F(it_primitive_type, void_extends_not_supported_error) {
   vm_t vm = vm_create(allocator);
-  type_t void_type = _get_void_type(vm);
-  value_t a = vm_create_value_shadow(vm, void_type, NULL, true);
-  value_t b = vm_create_value_shadow(vm, void_type, NULL, true);
+  value_t a = create_void_value(vm);
+  value_t b = create_void_value(vm);
   value_t result = value_extends(vm, a, b);
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
@@ -532,9 +530,8 @@ TEST_F(it_primitive_type, bool_lnot_shadow) {
 
 TEST_F(it_primitive_type, void_band_not_supported) {
   vm_t vm = vm_create(allocator);
-  type_t vt = _get_void_type(vm);
-  value_t a = vm_create_value_shadow(vm, vt, NULL, true);
-  value_t b = vm_create_value_shadow(vm, vt, NULL, true);
+  value_t a = create_void_value(vm);
+  value_t b = create_void_value(vm);
   value_t result = value_band(vm, a, b);
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
@@ -550,6 +547,135 @@ TEST_F(it_primitive_type, error_lnot_not_supported) {
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
 
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- Bool assignment ---- */
+
+TEST_F(it_primitive_type, bool_assign_value) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_bool_value(vm, false);
+  value_t b = create_bool_value(vm, true);
+  value_t result = value_assignment(vm, a, b);
+
+  /* assignment returns void */
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(*(bool *)value_get_data(a));
+  EXPECT_TRUE(value_is_initialized(a));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_primitive_type, bool_assign_shadow_lvalue) {
+  vm_t vm = vm_create(allocator);
+  type_t bt = _get_bool_type(vm);
+  /* TDZ shadow: initialized=false */
+  value_t a = vm_create_value_shadow(vm, bt, NULL, false);
+  value_t b = create_bool_value(vm, true);
+  value_t result = value_assignment(vm, a, b);
+
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(a));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_primitive_type, bool_assign_shadow_rvalue) {
+  vm_t vm = vm_create(allocator);
+  type_t bt = _get_bool_type(vm);
+  value_t a = create_bool_value(vm, false);
+  value_t b = vm_create_value_shadow(vm, bt, NULL, true);
+  value_t result = value_assignment(vm, a, b);
+
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(a));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_primitive_type, bool_assign_kind_mismatch_error) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_bool_value(vm, true);
+  type_t vt = _get_void_type(vm);
+  value_t b = vm_create_value_shadow(vm, vt, NULL, true);
+  value_t result = value_assignment(vm, a, b);
+
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_primitive_type, const_bool_assign_error) {
+  vm_t vm = vm_create(allocator);
+  /* const bool value: initialized=true, mut=false → cannot assign */
+  type_t cbt = (type_t)value_get_data(vm_get_const_bool_type(vm));
+  value_t a = vm_create_value_shadow(vm, cbt, NULL, true);
+  value_t b = create_bool_value(vm, true);
+  value_t result = value_assignment(vm, a, b);
+
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_primitive_type, const_bool_assign_tdz_allowed) {
+  vm_t vm = vm_create(allocator);
+  /* const bool value: initialized=false (TDZ), mut=false → can assign once */
+  type_t cbt = (type_t)value_get_data(vm_get_const_bool_type(vm));
+  value_t a = vm_create_value_shadow(vm, cbt, NULL, false);
+  value_t b = create_bool_value(vm, true);
+  value_t result = value_assignment(vm, a, b);
+
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_primitive_type, void_assign_not_supported) {
+  vm_t vm = vm_create(allocator);
+  value_t a = create_void_value(vm);
+  value_t b = create_void_value(vm);
+  value_t result = value_assignment(vm, a, b);
+
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- Void create/clone/dispose ---- */
+
+TEST_F(it_primitive_type, void_create_value) {
+  vm_t vm = vm_create(allocator);
+  value_t v = create_void_value(vm);
+
+  EXPECT_NE(v, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(v));
+  EXPECT_EQ(value_get_data(v), nullptr);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_primitive_type, void_clone) {
+  vm_t vm = vm_create(allocator);
+  value_t v = create_void_value(vm);
+  allocator_t alloc = vm_get_allocator(vm);
+  value_t cloned = type_get_vtable(value_get_type(v)).clone(alloc, v);
+
+  EXPECT_NE(cloned, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(cloned)), TYPE_KIND_VOID);
+  EXPECT_EQ(value_get_data(cloned), nullptr);
+
+  value_dispose(cloned, alloc);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
