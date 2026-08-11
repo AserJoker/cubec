@@ -71,6 +71,8 @@ struct vtable_t {
   /* Unary operators */
   value_t (*bnot)         (vm_t vm, value_t a);            /* ~ (bitwise NOT) */
   value_t (*lnot)         (vm_t vm, value_t a);            /* ! (logical NOT) */
+  /* Implicit type conversion */
+  value_t (*safe_cast)    (vm_t vm, value_t self, type_t to); /* safe implicit cast */
 };
 typedef struct vtable_t vtable_t;
 

@@ -67,6 +67,10 @@ value_t value_bnot(struct _vm_t *vm, value_t a);
 /** @brief ! (logical NOT): delegates to type->vtable.lnot. */
 value_t value_lnot(struct _vm_t *vm, value_t a);
 
+/** @brief Safely implicitly cast a value to target type.
+ *  Delegates to type->vtable.safe_cast. Returns casted value or error. */
+value_t value_safe_cast(struct _vm_t *vm, value_t val, type_t to);
+
 #ifdef __cplusplus
 }
 #endif

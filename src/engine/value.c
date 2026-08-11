@@ -143,3 +143,11 @@ value_t value_lnot(vm_t vm, value_t a) {
                               type_get_name(value_get_type(a)));
   return vt.lnot(vm, a);
 }
+
+value_t value_safe_cast(vm_t vm, value_t val, type_t to) {
+  vtable_t vt = type_get_vtable(value_get_type(val));
+  if (!vt.safe_cast)
+    return create_error_value(vm, "type '%s' does not support safe_cast",
+                              type_get_name(value_get_type(val)));
+  return vt.safe_cast(vm, val, to);
+}

@@ -76,6 +76,35 @@ static value_t _bool_lnot(vm_t vm, value_t a) {
   return create_bool_value(vm, !*(bool *)value_get_data(a));
 }
 
+static value_t _bool_safe_cast(vm_t vm, value_t self, type_t to) {
+  if (to->kind != TYPE_KIND_BOOL)
+    return create_error_value(vm, "cannot safe_cast bool to '%s'", to->name);
+  /* bool → bool or bool → const bool: always safe */
+  if (to == value_get_type(self))
+    return self;
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, to, NULL);
+  bool *copy = (bool *)allocator_alloc(vm_get_allocator(vm), sizeof(bool));
+  *copy = *(bool *)value_get_data(self);
+  return value_create(vm_get_allocator(vm), to, copy, true);
+}
+
+static value_t _const_bool_safe_cast(vm_t vm, value_t self, type_t to) {
+  if (to->kind != TYPE_KIND_BOOL)
+    return create_error_value(vm, "cannot safe_cast const bool to '%s'", to->name);
+  /* const bool → bool: not allowed (const → mutable is not safe) */
+  if (to->mut)
+    return create_error_value(vm, "cannot safe_cast const bool to bool");
+  /* const bool → const bool */
+  if (to == value_get_type(self))
+    return self;
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, to, NULL);
+  bool *copy = (bool *)allocator_alloc(vm_get_allocator(vm), sizeof(bool));
+  *copy = *(bool *)value_get_data(self);
+  return value_create(vm_get_allocator(vm), to, copy, true);
+}
+
 type_t type_get_bool_type(allocator_t allocator) {
   (void)allocator;
   static struct _type_t bool_type = {
@@ -96,6 +125,7 @@ type_t type_get_bool_type(allocator_t allocator) {
           .bxor = _bool_bxor,
           .bnot = _bool_bnot,
           .lnot = _bool_lnot,
+          .safe_cast = _bool_safe_cast,
       },
   };
   return &bool_type;
@@ -107,9 +137,8 @@ static value_t _const_bool_clone(allocator_t allocator, value_t self) {
   bool *src = (bool *)value_get_data(self);
   bool *copy = (bool *)allocator_alloc(allocator, sizeof(bool));
   *copy = *src;
-  /* clone of const value produces mutable copy, like C: const T x; T y = x; */
-  type_t mut_type = type_get_bool_type(allocator);
-  return value_create(allocator, mut_type, copy, true);
+  /* clone of const produces const copy; assignment (safe_cast) produces mutable */
+  return value_create(allocator, value_get_type(self), copy, true);
 }
 
 static void _const_bool_dispose(allocator_t allocator, value_t self) {
@@ -137,6 +166,7 @@ type_t type_get_const_bool_type(allocator_t allocator) {
           .bxor = _bool_bxor,
           .bnot = _bool_bnot,
           .lnot = _bool_lnot,
+          .safe_cast = _const_bool_safe_cast,
       },
   };
   return &const_bool_type;
