@@ -2,6 +2,7 @@
 #include "engine/type.h"
 #include "engine/vm.h"
 #include "engine/error_type.h"
+#include "engine/bool_type.h"
 #include <string.h>
 
 struct _value_t {
@@ -157,6 +158,22 @@ value_t value_lnot(vm_t vm, value_t a) {
   return vt.lnot(vm, a);
 }
 
+value_t value_pos(vm_t vm, value_t a) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.pos)
+    return create_error_value(vm, "type '%s' does not support operator +",
+                              type_get_name(value_get_type(a)));
+  return vt.pos(vm, a);
+}
+
+value_t value_neg(vm_t vm, value_t a) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.neg)
+    return create_error_value(vm, "type '%s' does not support operator -",
+                              type_get_name(value_get_type(a)));
+  return vt.neg(vm, a);
+}
+
 value_t value_safe_cast(vm_t vm, value_t val, type_t to) {
   vtable_t vt = type_get_vtable(value_get_type(val));
   if (!vt.safe_cast)
@@ -175,4 +192,109 @@ value_t value_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
     return create_error_value(vm, "type '%s' does not support assignment",
                               type_get_name(lt));
   return vt.assignment(vm, lvalue, rvalue);
+}
+
+value_t value_add(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.add)
+    return create_error_value(vm, "type '%s' does not support operator +",
+                              type_get_name(value_get_type(a)));
+  return vt.add(vm, a, b);
+}
+
+value_t value_sub(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.sub)
+    return create_error_value(vm, "type '%s' does not support operator -",
+                              type_get_name(value_get_type(a)));
+  return vt.sub(vm, a, b);
+}
+
+value_t value_mul(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.mul)
+    return create_error_value(vm, "type '%s' does not support operator *",
+                              type_get_name(value_get_type(a)));
+  return vt.mul(vm, a, b);
+}
+
+value_t value_div(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.div)
+    return create_error_value(vm, "type '%s' does not support operator /",
+                              type_get_name(value_get_type(a)));
+  return vt.div(vm, a, b);
+}
+
+value_t value_mod(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.mod)
+    return create_error_value(vm, "type '%s' does not support operator %%",
+                              type_get_name(value_get_type(a)));
+  return vt.mod(vm, a, b);
+}
+
+value_t value_shl(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.shl)
+    return create_error_value(vm, "type '%s' does not support operator <<",
+                              type_get_name(value_get_type(a)));
+  return vt.shl(vm, a, b);
+}
+
+value_t value_shr(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.shr)
+    return create_error_value(vm, "type '%s' does not support operator >>",
+                              type_get_name(value_get_type(a)));
+  return vt.shr(vm, a, b);
+}
+
+value_t value_gt(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.gt)
+    return create_error_value(vm, "type '%s' does not support operator >",
+                              type_get_name(value_get_type(a)));
+  return vt.gt(vm, a, b);
+}
+
+value_t value_lt(vm_t vm, value_t a, value_t b) {
+  vtable_t vt = type_get_vtable(value_get_type(a));
+  if (!vt.lt)
+    return create_error_value(vm, "type '%s' does not support operator <",
+                              type_get_name(value_get_type(a)));
+  return vt.lt(vm, a, b);
+}
+
+/* != is derived from equal: negate the result */
+value_t value_ne(vm_t vm, value_t a, value_t b) {
+  value_t eq = value_equal(vm, a, b);
+  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+    return eq;
+  if (value_is_shadow(eq))
+    return vm_create_value_shadow(vm, value_get_type(eq), NULL, true);
+  bool result = !(*(bool *)value_get_data(eq));
+  return create_bool_value(vm, result);
+}
+
+/* >= is derived from lt: negate the result */
+value_t value_ge(vm_t vm, value_t a, value_t b) {
+  value_t lt_result = value_lt(vm, a, b);
+  if (type_get_kind(value_get_type(lt_result)) == TYPE_KIND_ERROR)
+    return lt_result;
+  if (value_is_shadow(lt_result))
+    return vm_create_value_shadow(vm, value_get_type(lt_result), NULL, true);
+  bool result = !(*(bool *)value_get_data(lt_result));
+  return create_bool_value(vm, result);
+}
+
+/* <= is derived from gt: negate the result */
+value_t value_le(vm_t vm, value_t a, value_t b) {
+  value_t gt_result = value_gt(vm, a, b);
+  if (type_get_kind(value_get_type(gt_result)) == TYPE_KIND_ERROR)
+    return gt_result;
+  if (value_is_shadow(gt_result))
+    return vm_create_value_shadow(vm, value_get_type(gt_result), NULL, true);
+  bool result = !(*(bool *)value_get_data(gt_result));
+  return create_bool_value(vm, result);
 }

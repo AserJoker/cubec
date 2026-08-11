@@ -69,6 +69,54 @@ value_t value_bnot(struct _vm_t *vm, value_t a);
 /** @brief ! (logical NOT): delegates to type->vtable.lnot. */
 value_t value_lnot(struct _vm_t *vm, value_t a);
 
+/** @brief + (unary plus): delegates to type->vtable.pos. */
+value_t value_pos(struct _vm_t *vm, value_t a);
+
+/** @brief - (unary minus): delegates to type->vtable.neg. */
+value_t value_neg(struct _vm_t *vm, value_t a);
+
+/* ---- Arithmetic operators ---- */
+
+/** @brief + : delegates to type->vtable.add. */
+value_t value_add(struct _vm_t *vm, value_t a, value_t b);
+
+/** @brief - : delegates to type->vtable.sub. */
+value_t value_sub(struct _vm_t *vm, value_t a, value_t b);
+
+/** @brief * : delegates to type->vtable.mul. */
+value_t value_mul(struct _vm_t *vm, value_t a, value_t b);
+
+/** @brief / : delegates to type->vtable.div. */
+value_t value_div(struct _vm_t *vm, value_t a, value_t b);
+
+/** @brief % : delegates to type->vtable.mod. */
+value_t value_mod(struct _vm_t *vm, value_t a, value_t b);
+
+/* ---- Shift operators ---- */
+
+/** @brief << : delegates to type->vtable.shl. */
+value_t value_shl(struct _vm_t *vm, value_t a, value_t b);
+
+/** @brief >> : delegates to type->vtable.shr. */
+value_t value_shr(struct _vm_t *vm, value_t a, value_t b);
+
+/* ---- Relational operators ---- */
+
+/** @brief > : delegates to type->vtable.gt. */
+value_t value_gt(struct _vm_t *vm, value_t a, value_t b);
+
+/** @brief < : delegates to type->vtable.lt. */
+value_t value_lt(struct _vm_t *vm, value_t a, value_t b);
+
+/** @brief != : delegates to type->vtable.ne. */
+value_t value_ne(struct _vm_t *vm, value_t a, value_t b);
+
+/** @brief >= : delegates to type->vtable.ge. */
+value_t value_ge(struct _vm_t *vm, value_t a, value_t b);
+
+/** @brief <= : delegates to type->vtable.le. */
+value_t value_le(struct _vm_t *vm, value_t a, value_t b);
+
 /** @brief Safely implicitly cast a value to target type.
  *  Delegates to type->vtable.safe_cast. Returns casted value or error. */
 value_t value_safe_cast(struct _vm_t *vm, value_t val, type_t to);

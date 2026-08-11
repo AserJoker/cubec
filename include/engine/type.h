@@ -68,9 +68,23 @@ struct vtable_t {
   value_t (*band)         (vm_t vm, value_t a, value_t b); /* & (logical AND) */
   value_t (*bor)          (vm_t vm, value_t a, value_t b); /* | (logical OR) */
   value_t (*bxor)         (vm_t vm, value_t a, value_t b); /* ^ (XOR) */
+  /* Arithmetic operators */
+  value_t (*add)          (vm_t vm, value_t a, value_t b); /* + */
+  value_t (*sub)          (vm_t vm, value_t a, value_t b); /* - */
+  value_t (*mul)          (vm_t vm, value_t a, value_t b); /* * */
+  value_t (*div)          (vm_t vm, value_t a, value_t b); /* / */
+  value_t (*mod)          (vm_t vm, value_t a, value_t b); /* % */
+  /* Shift operators */
+  value_t (*shl)          (vm_t vm, value_t a, value_t b); /* << */
+  value_t (*shr)          (vm_t vm, value_t a, value_t b); /* >> */
+  /* Relational operators (ne/ge/le derived from equal/gt/lt in value layer) */
+  value_t (*gt)           (vm_t vm, value_t a, value_t b); /* > */
+  value_t (*lt)           (vm_t vm, value_t a, value_t b); /* < */
   /* Unary operators */
   value_t (*bnot)         (vm_t vm, value_t a);            /* ~ (bitwise NOT) */
   value_t (*lnot)         (vm_t vm, value_t a);            /* ! (logical NOT) */
+  value_t (*pos)          (vm_t vm, value_t a);            /* + (unary plus) */
+  value_t (*neg)          (vm_t vm, value_t a);            /* - (unary minus) */
   /* Implicit type conversion */
   value_t (*safe_cast)    (vm_t vm, value_t self, type_t to); /* safe implicit cast */
   /* Assignment */
