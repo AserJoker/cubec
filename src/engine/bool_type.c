@@ -101,6 +101,22 @@ type_t type_get_bool_type(allocator_t allocator) {
   return &bool_type;
 }
 
+/* ---- Const bool type vtable ---- */
+
+static value_t _const_bool_clone(allocator_t allocator, value_t self) {
+  bool *src = (bool *)value_get_data(self);
+  bool *copy = (bool *)allocator_alloc(allocator, sizeof(bool));
+  *copy = *src;
+  /* clone of const value produces mutable copy, like C: const T x; T y = x; */
+  type_t mut_type = type_get_bool_type(allocator);
+  return value_create(allocator, mut_type, copy, true);
+}
+
+static void _const_bool_dispose(allocator_t allocator, value_t self) {
+  bool *d = (bool *)value_get_data(self);
+  allocator_free(allocator, &d);
+}
+
 type_t type_get_const_bool_type(allocator_t allocator) {
   (void)allocator;
   static struct _type_t const_bool_type = {
@@ -110,8 +126,8 @@ type_t type_get_const_bool_type(allocator_t allocator) {
       .align = 1,
       .mut   = false,
       .vtable = {
-          .clone = NULL,
-          .dispose = NULL,
+          .clone = _const_bool_clone,
+          .dispose = _const_bool_dispose,
           .equal = _bool_equal,
           .extends = NULL,
           .type_equal = _bool_type_equal,
