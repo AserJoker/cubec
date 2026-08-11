@@ -8,12 +8,14 @@ struct _value_t {
   type_t type;
   void  *data;
   bool   own;
+  bool   initialized; /* false = TDZ (temporal dead zone), true = initialized */
 };
 
 typedef struct value_init_t {
   type_t type;
   void  *data;
   bool   own;
+  bool   initialized;
 } value_init_t;
 
 static void _value_init(void *self, allocator_t allocator, void *arg) {
@@ -23,6 +25,7 @@ static void _value_init(void *self, allocator_t allocator, void *arg) {
   v->type = init->type;
   v->data = init->data;
   v->own = init->own;
+  v->initialized = init->initialized;
 }
 
 static void _value_dispose(void *self, allocator_t allocator) {
@@ -33,6 +36,7 @@ static void _value_dispose(void *self, allocator_t allocator) {
   v->type = NULL;
   v->data = NULL;
   v->own = false;
+  v->initialized = false;
 }
 
 static void _value_clone(void *self, allocator_t allocator, void *another) {
@@ -40,6 +44,7 @@ static void _value_clone(void *self, allocator_t allocator, void *another) {
   value_t src = (value_t)another;
   dst->type = src->type;
   dst->own = false;
+  dst->initialized = true; /* clone succeeds only on initialized values */
   dst->data = NULL;
   vtable_t vt = type_get_vtable(src->type);
   if (vt.clone) {
@@ -59,8 +64,10 @@ static void _value_move(void *self, allocator_t allocator, void *another) {
   dst->type = src->type;
   dst->data = src->data;
   dst->own = src->own;
+  dst->initialized = true; /* move succeeds only on initialized values */
   src->data = NULL;
   src->own = false;
+  src->initialized = false;
 }
 
 class_t g_value_class = {
@@ -74,7 +81,8 @@ class_t g_value_class = {
 
 value_t value_create(allocator_t allocator, type_t type, void *data,
                      bool own) {
-  value_init_t init = {.type = type, .data = data, .own = own};
+  value_init_t init = {.type = type, .data = data, .own = own,
+                        .initialized = (data != NULL)};
   return (value_t)allocator_create(allocator, &g_value_class, &init);
 }
 
@@ -87,6 +95,11 @@ type_t  value_get_type(value_t self) { return self->type; }
 void   *value_get_data(value_t self) { return self->data; }
 bool    value_is_own(value_t self) { return self->own; }
 bool    value_is_shadow(value_t self) { return self->data == NULL; }
+bool    value_is_initialized(value_t self) { return self->initialized; }
+
+void    value_set_initialized(value_t self, bool initialized) {
+  self->initialized = initialized;
+}
 
 value_t value_equal(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));

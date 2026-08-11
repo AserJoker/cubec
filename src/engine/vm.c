@@ -287,8 +287,10 @@ value_t vm_create_value(vm_t self, type_t type, const void *data,
   return v;
 }
 
-value_t vm_create_value_shadow(vm_t self, type_t type, const char *name) {
+value_t vm_create_value_shadow(vm_t self, type_t type, const char *name,
+                               bool initialized) {
   value_t v = value_create(self->allocator, type, NULL, false);
+  value_set_initialized(v, initialized);
   if (self->current_scope) {
     vec_push(self->current_scope->values, v);
     if (name) {

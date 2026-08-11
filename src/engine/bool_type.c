@@ -26,7 +26,7 @@ static value_t _bool_equal(vm_t vm, value_t a, value_t b) {
   if (ta->kind != tb->kind)
     return create_error_value(vm, "cannot compare values of different kinds");
   if (value_is_shadow(a) || value_is_shadow(b))
-    return vm_create_value_shadow(vm, value_get_type(a), NULL);
+    return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   return create_bool_value(vm, *(bool *)value_get_data(a) == *(bool *)value_get_data(b));
 }
 
@@ -46,19 +46,19 @@ static value_t _bool_type_extends(vm_t vm, type_t sub, type_t super) {
 
 static value_t _bool_band(vm_t vm, value_t a, value_t b) {
   if (value_is_shadow(a) || value_is_shadow(b))
-    return vm_create_value_shadow(vm, value_get_type(a), NULL);
+    return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   return create_bool_value(vm, *(bool *)value_get_data(a) && *(bool *)value_get_data(b));
 }
 
 static value_t _bool_bor(vm_t vm, value_t a, value_t b) {
   if (value_is_shadow(a) || value_is_shadow(b))
-    return vm_create_value_shadow(vm, value_get_type(a), NULL);
+    return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   return create_bool_value(vm, *(bool *)value_get_data(a) || *(bool *)value_get_data(b));
 }
 
 static value_t _bool_bxor(vm_t vm, value_t a, value_t b) {
   if (value_is_shadow(a) || value_is_shadow(b))
-    return vm_create_value_shadow(vm, value_get_type(a), NULL);
+    return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   bool va = *(bool *)value_get_data(a);
   bool vb = *(bool *)value_get_data(b);
   return create_bool_value(vm, va != vb);
@@ -66,13 +66,13 @@ static value_t _bool_bxor(vm_t vm, value_t a, value_t b) {
 
 static value_t _bool_bnot(vm_t vm, value_t a) {
   if (value_is_shadow(a))
-    return vm_create_value_shadow(vm, value_get_type(a), NULL);
+    return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   return create_bool_value(vm, !*(bool *)value_get_data(a));
 }
 
 static value_t _bool_lnot(vm_t vm, value_t a) {
   if (value_is_shadow(a))
-    return vm_create_value_shadow(vm, value_get_type(a), NULL);
+    return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   return create_bool_value(vm, !*(bool *)value_get_data(a));
 }
 
@@ -83,7 +83,7 @@ static value_t _bool_safe_cast(vm_t vm, value_t self, type_t to) {
   if (to == value_get_type(self))
     return self;
   if (value_is_shadow(self))
-    return vm_create_value_shadow(vm, to, NULL);
+    return vm_create_value_shadow(vm, to, NULL, true);
   bool *copy = (bool *)allocator_alloc(vm_get_allocator(vm), sizeof(bool));
   *copy = *(bool *)value_get_data(self);
   return value_create(vm_get_allocator(vm), to, copy, true);
@@ -99,7 +99,7 @@ static value_t _const_bool_safe_cast(vm_t vm, value_t self, type_t to) {
   if (to == value_get_type(self))
     return self;
   if (value_is_shadow(self))
-    return vm_create_value_shadow(vm, to, NULL);
+    return vm_create_value_shadow(vm, to, NULL, true);
   bool *copy = (bool *)allocator_alloc(vm_get_allocator(vm), sizeof(bool));
   *copy = *(bool *)value_get_data(self);
   return value_create(vm_get_allocator(vm), to, copy, true);

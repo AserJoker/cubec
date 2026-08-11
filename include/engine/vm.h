@@ -67,9 +67,10 @@ value_t vm_create_value(vm_t self, type_t type, const void *data,
                         const char *name);
 
 /** @brief Create a shadow value (data=NULL, own=false), add to current_scope->values.
+ *  initialized=true for compile-time placeholder, false for TDZ (undefined).
  *  If name is non-NULL, creates a name entry in current_scope. */
 value_t vm_create_value_shadow(vm_t self, type_t type,
-                               const char *name);
+                               const char *name, bool initialized);
 
 #ifdef __cplusplus
 }

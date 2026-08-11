@@ -36,6 +36,8 @@ type_t  value_get_type(value_t self);
 void   *value_get_data(value_t self);
 bool    value_is_own(value_t self);
 bool    value_is_shadow(value_t self);
+bool    value_is_initialized(value_t self);
+void    value_set_initialized(value_t self, bool initialized);
 
 /**
  * @brief Value-level equality: delegates to type->vtable.equal.
