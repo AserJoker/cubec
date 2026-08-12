@@ -23,6 +23,8 @@ static value_t _pointer_deref_set(vm_t vm, value_t self, value_t val);
 static value_t _pointer_safe_cast(vm_t vm, value_t self, type_t to);
 static value_t _pointer_assignment(vm_t vm, value_t lvalue, value_t rvalue);
 static value_t _pointer_to_string(vm_t vm, value_t self);
+static value_t _pointer_get_field(vm_t vm, value_t self, const char *name);
+static value_t _pointer_set_field(vm_t vm, value_t self, const char *name, value_t val);
 
 static vtable_t _make_pointer_vtable(void) {
   return (vtable_t){
@@ -50,8 +52,8 @@ static vtable_t _make_pointer_vtable(void) {
       .safe_cast    = _pointer_safe_cast,
       .assignment   = _pointer_assignment,
       .to_string    = _pointer_to_string,
-      .get_field    = NULL,
-      .set_field    = NULL,
+      .get_field    = _pointer_get_field,
+      .set_field    = _pointer_set_field,
       .get_item     = NULL,
       .set_item     = NULL,
       .deref_get    = _pointer_deref_get,
@@ -398,4 +400,30 @@ static value_t _pointer_to_string(vm_t vm, value_t self) {
   value_t result = create_str_value(vm, buf);
   allocator_free(vm_get_allocator(vm), &buf);
   return result;
+}
+
+/* ---- VTable: get_field / set_field (auto-deref) ---- */
+
+static value_t _pointer_get_field(vm_t vm, value_t self, const char *name) {
+  /* auto-deref: delegate to pointee's get_field */
+  value_t derefed = _pointer_deref_get(vm, self);
+  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_ERROR)
+    return derefed;
+  vtable_t vt = type_get_vtable(value_get_type(derefed));
+  if (!vt.get_field)
+    return create_error_value(vm, "type '%s' does not support field access",
+                              type_get_name(value_get_type(derefed)));
+  return vt.get_field(vm, derefed, name);
+}
+
+static value_t _pointer_set_field(vm_t vm, value_t self, const char *name, value_t val) {
+  /* auto-deref: delegate to pointee's set_field */
+  value_t derefed = _pointer_deref_get(vm, self);
+  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_ERROR)
+    return derefed;
+  vtable_t vt = type_get_vtable(value_get_type(derefed));
+  if (!vt.set_field)
+    return create_error_value(vm, "type '%s' does not support field assignment",
+                              type_get_name(value_get_type(derefed)));
+  return vt.set_field(vm, derefed, name, val);
 }

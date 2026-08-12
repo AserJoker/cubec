@@ -253,6 +253,97 @@ TEST_F(it_struct_type, member_addr) {
   delete_allocator(allocator);
 }
 
+/* ---- pointer auto-deref ---- */
+
+TEST_F(it_struct_type, pointer_get_field_auto_deref) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = _make_point_type(vm);
+
+  value_t vx = create_i32_value(vm, 42);
+  value_t vy = create_i32_value(vm, 99);
+  value_t fields[] = {vx, vy};
+  value_t sv = create_struct_value(vm, st, fields);
+
+  /* take address of struct → *Point */
+  value_t ptr = value_addrof(vm, sv);
+  EXPECT_EQ(type_get_kind(value_get_type(ptr)), TYPE_KIND_POINTER);
+
+  /* get_field on pointer auto-derefs */
+  value_t got_x = value_get_field(vm, ptr, "x");
+  EXPECT_EQ(type_get_kind(value_get_type(got_x)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(got_x), 42);
+
+  value_t got_y = value_get_field(vm, ptr, "y");
+  EXPECT_EQ(*(int32_t *)value_get_data(got_y), 99);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, pointer_set_field_auto_deref) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = _make_point_type(vm);
+
+  value_t vx = create_i32_value(vm, 10);
+  value_t vy = create_i32_value(vm, 20);
+  value_t fields[] = {vx, vy};
+  value_t sv = create_struct_value(vm, st, fields);
+
+  /* take address of struct */
+  value_t ptr = value_addrof(vm, sv);
+
+  /* set_field on pointer auto-derefs and writes through */
+  value_t new_x = create_i32_value(vm, 77);
+  value_t result = value_set_field(vm, ptr, "x", new_x);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+
+  /* verify original struct was modified */
+  value_t got = value_get_field(vm, sv, "x");
+  EXPECT_EQ(*(int32_t *)value_get_data(got), 77);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, pointer_set_field_const_struct_rejected) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = struct_type_create(allocator, "ConstPoint", false);
+  struct_type_add_field(allocator, st, "x", _get_i32_type(vm));
+  struct_type_seal(st);
+  vec_push(vm_get_current_scope(vm)->types, st);
+
+  value_t vx = create_i32_value(vm, 10);
+  value_t fields[] = {vx};
+  value_t sv = create_struct_value(vm, st, fields);
+
+  value_t ptr = value_addrof(vm, sv);
+
+  /* set_field on pointer to const struct → auto-deref gives const Point → rejected */
+  value_t new_x = create_i32_value(vm, 99);
+  value_t result = value_set_field(vm, ptr, "x", new_x);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, pointer_get_field_not_found) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = _make_point_type(vm);
+
+  value_t vx = create_i32_value(vm, 1);
+  value_t vy = create_i32_value(vm, 2);
+  value_t fields[] = {vx, vy};
+  value_t sv = create_struct_value(vm, st, fields);
+
+  value_t ptr = value_addrof(vm, sv);
+  value_t result = value_get_field(vm, ptr, "z");
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
 /* ---- type_equal (duck typing) ---- */
 
 TEST_F(it_struct_type, type_equal_same_structure) {
