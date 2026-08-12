@@ -367,14 +367,17 @@ value_t value_call(vm_t vm, value_t fn, size_t argc, value_t *argv) {
 }
 
 value_t value_member_addr(vm_t vm, value_t self, const char *name) {
-  /* only struct values support member_addr */
   type_kind_t kind = type_get_kind(value_get_type(self));
-  if (kind != TYPE_KIND_STRUCT)
-    return create_error_value(vm, "type '%s' does not support member address",
-                              type_get_name(value_get_type(self)));
-  /* delegate to struct_type implementation — forward declared, linked at compile */
-  extern value_t _struct_value_member_addr(vm_t vm, value_t self, const char *name);
-  return _struct_value_member_addr(vm, self, name);
+  if (kind == TYPE_KIND_STRUCT) {
+    extern value_t _struct_value_member_addr(vm_t vm, value_t self, const char *name);
+    return _struct_value_member_addr(vm, self, name);
+  }
+  if (kind == TYPE_KIND_UNION) {
+    extern value_t _union_value_member_addr(vm_t vm, value_t self, const char *name);
+    return _union_value_member_addr(vm, self, name);
+  }
+  return create_error_value(vm, "type '%s' does not support member address",
+                            type_get_name(value_get_type(self)));
 }
 
 value_t value_member_call(vm_t vm, value_t self, const char *name,
