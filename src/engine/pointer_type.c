@@ -360,27 +360,77 @@ static value_t _pointer_deref_set(vm_t vm, value_t self, value_t val) {
 /* ---- VTable: safe_cast ---- */
 
 static value_t _pointer_safe_cast(vm_t vm, value_t self, type_t to) {
-  (void)vm;
-  if (to->kind == TYPE_KIND_POINTER) {
-    /* TODO: check pointee type compatibility */
+  type_t from = value_get_type(self);
+
+  /* wildcard accepts anything */
+  if (to->kind == TYPE_KIND_WILDCARD)
     return self;
-  }
-  return self;
+
+  /* must cast to pointer type */
+  if (to->kind != TYPE_KIND_POINTER)
+    return create_error_value(vm, "cannot safe_cast pointer to '%s'", to->name);
+
+  /* same type → identity */
+  if (from == to)
+    return self;
+
+  pointer_type_t from_pt = (pointer_type_t)from;
+  pointer_type_t to_pt   = (pointer_type_t)to;
+
+  /* pointer mut is not checked here: const on the pointer variable
+   * doesn't affect the pointee. Copying address from const *T to *T is safe.
+   * Pointee const is handled by type_extends below (*const T ↛ *T). */
+
+  /* pointee covariance: from.pointee must extend to.pointee */
+  type_t from_elem = from_pt->pointee_type;
+  type_t to_elem   = to_pt->pointee_type;
+  vtable_t evt = type_get_vtable(from_elem);
+  value_t ext;
+  if (evt.type_extends)
+    ext = evt.type_extends(vm, from_elem, to_elem);
+  else if (to_elem->kind == TYPE_KIND_WILDCARD)
+    ext = create_bool_value(vm, true);
+  else
+    ext = create_bool_value(vm, type_get_kind(from_elem) == type_get_kind(to_elem));
+
+  if (type_get_kind(value_get_type(ext)) == TYPE_KIND_ERROR)
+    return ext;
+  if (value_is_shadow(ext) || !(*(bool *)value_get_data(ext)))
+    return create_error_value(vm, "cannot safe_cast '%s' to '%s'",
+                              type_get_name(from), type_get_name(to));
+
+  /* cast accepted: create new pointer value with target type */
+  if (value_is_shadow(self))
+    return create_pointer_shadow(vm, to_pt, value_is_initialized(self));
+
+  void **src_data = (void **)value_get_data(self);
+  /* clone pointer type into current scope */
+  type_t cloned_type = value_type_clone(vm, to);
+  pointer_type_t dst_pt = (pointer_type_t)cloned_type;
+  return create_pointer_value_from_addr(vm, dst_pt, *src_data);
 }
 
 /* ---- VTable: assignment ---- */
 
 static value_t _pointer_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
+  type_t lt = value_get_type(lvalue);
   type_t rt = value_get_type(rvalue);
   if (type_get_kind(rt) != TYPE_KIND_POINTER)
     return create_error_value(vm, "cannot assign non-pointer to pointer");
+
+  /* check const pointer */
+  if (value_is_initialized(lvalue) && !type_is_mut(lt))
+    return create_error_value(vm, "cannot assign to const pointer");
+
+  /* check rvalue safe_cast to lvalue type (handles pointee extends) */
+  value_t casted = _pointer_safe_cast(vm, rvalue, lt);
+  if (type_get_kind(value_get_type(casted)) == TYPE_KIND_ERROR)
+    return casted;
+
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
     value_set_initialized(lvalue, true);
     return create_void_value(vm);
   }
-  /* check const pointer */
-  if (!type_is_mut(value_get_type(lvalue)))
-    return create_error_value(vm, "cannot assign to const pointer");
 
   void **src = (void **)value_get_data(rvalue);
   void **dst = (void **)value_get_data(lvalue);

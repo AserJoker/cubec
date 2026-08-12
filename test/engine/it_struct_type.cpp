@@ -51,6 +51,17 @@ protected:
     vec_push(vm_get_current_scope(vm)->types, st);
     return st;
   }
+
+  /** Create a Point3D struct type (x:i32, y:i32, z:i32) — extends Point */
+  struct_type_t _make_point3d_type(vm_t vm) {
+    struct_type_t st = struct_type_create(allocator, "Point3D", true);
+    struct_type_add_field(allocator, st, "x", _get_i32_type(vm));
+    struct_type_add_field(allocator, st, "y", _get_i32_type(vm));
+    struct_type_add_field(allocator, st, "z", _get_i32_type(vm));
+    struct_type_seal(st);
+    vec_push(vm_get_current_scope(vm)->types, st);
+    return st;
+  }
 };
 
 /* ---- Type creation ---- */
@@ -339,6 +350,162 @@ TEST_F(it_struct_type, pointer_get_field_not_found) {
   value_t ptr = value_addrof(vm, sv);
   value_t result = value_get_field(vm, ptr, "z");
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- pointer upcast ---- */
+
+TEST_F(it_struct_type, pointer_safe_cast_upcast) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t point  = _make_point_type(vm);
+  struct_type_t point3d = _make_point3d_type(vm);
+
+  /* Point3D extends Point (subset: x:i32, y:i32) */
+  vtable_t vt3d = type_get_vtable((type_t)point3d);
+  value_t ext = vt3d.type_extends(vm, (type_t)point3d, (type_t)point);
+  ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
+  ASSERT_TRUE(*(bool *)value_get_data(ext));
+
+  /* create *Point3D pointer */
+  value_t vx = create_i32_value(vm, 1);
+  value_t vy = create_i32_value(vm, 2);
+  value_t vz = create_i32_value(vm, 3);
+  value_t fields3d[] = {vx, vy, vz};
+  value_t sv3d = create_struct_value(vm, point3d, fields3d);
+  value_t ptr3d = value_addrof(vm, sv3d);
+
+  /* create *Point type */
+  allocator_t alloc = vm_get_allocator(vm);
+  pointer_type_t ptr_point_type = pointer_type_create(alloc, (type_t)point, true, false);
+  vec_push(vm_get_current_scope(vm)->types, ptr_point_type);
+
+  /* safe_cast *Point3D → *Point (upcast) */
+  value_t ptr_point = value_safe_cast(vm, ptr3d, (type_t)ptr_point_type);
+  EXPECT_EQ(type_get_kind(value_get_type(ptr_point)), TYPE_KIND_POINTER);
+
+  /* access base fields through upcasted pointer */
+  value_t got_x = value_get_field(vm, ptr_point, "x");
+  EXPECT_EQ(type_get_kind(value_get_type(got_x)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(got_x), 1);
+
+  value_t got_y = value_get_field(vm, ptr_point, "y");
+  EXPECT_EQ(*(int32_t *)value_get_data(got_y), 2);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, pointer_safe_cast_downcast_rejected) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t point   = _make_point_type(vm);
+  struct_type_t point3d = _make_point3d_type(vm);
+
+  /* create *Point pointer */
+  value_t vx = create_i32_value(vm, 1);
+  value_t vy = create_i32_value(vm, 2);
+  value_t fields[] = {vx, vy};
+  value_t sv = create_struct_value(vm, point, fields);
+  value_t ptr = value_addrof(vm, sv);
+
+  /* create *Point3D type */
+  allocator_t alloc = vm_get_allocator(vm);
+  pointer_type_t ptr3d_type = pointer_type_create(alloc, (type_t)point3d, true, false);
+  vec_push(vm_get_current_scope(vm)->types, ptr3d_type);
+
+  /* safe_cast *Point → *Point3D (downcast) should be rejected */
+  value_t result = value_safe_cast(vm, ptr, (type_t)ptr3d_type);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, pointer_safe_cast_const_ptr_to_mut_ptr) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t point = _make_point_type(vm);
+
+  value_t vx = create_i32_value(vm, 1);
+  value_t vy = create_i32_value(vm, 2);
+  value_t fields[] = {vx, vy};
+  value_t sv = create_struct_value(vm, point, fields);
+
+  /* create const *Point (pointer itself is const) */
+  allocator_t alloc = vm_get_allocator(vm);
+  pointer_type_t const_ptr_type = pointer_type_create(alloc, (type_t)point, false, false);
+  vec_push(vm_get_current_scope(vm)->types, const_ptr_type);
+  value_t const_ptr = create_pointer_value(vm, const_ptr_type, sv);
+
+  /* create *Point type (mutable pointer) */
+  pointer_type_t mut_ptr_type = pointer_type_create(alloc, (type_t)point, true, false);
+  vec_push(vm_get_current_scope(vm)->types, mut_ptr_type);
+
+  /* const *Point → *Point: const is on the pointer variable, not pointee.
+   * Copying the address is safe — pointer is a trivial u64. */
+  value_t result = value_safe_cast(vm, const_ptr, (type_t)mut_ptr_type);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_POINTER);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, pointer_assignment_upcast) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t point   = _make_point_type(vm);
+  struct_type_t point3d = _make_point3d_type(vm);
+
+  /* create *Point3D rvalue */
+  value_t vx = create_i32_value(vm, 10);
+  value_t vy = create_i32_value(vm, 20);
+  value_t vz = create_i32_value(vm, 30);
+  value_t fields3d[] = {vx, vy, vz};
+  value_t sv3d = create_struct_value(vm, point3d, fields3d);
+  value_t ptr3d = value_addrof(vm, sv3d);
+
+  /* create *Point lvalue with actual data */
+  value_t dx = create_i32_value(vm, 0);
+  value_t dy = create_i32_value(vm, 0);
+  value_t fields_p[] = {dx, dy};
+  value_t sv_point = create_struct_value(vm, point, fields_p);
+  value_t ptr_point = value_addrof(vm, sv_point);
+
+  /* assign *Point3D → *Point (upcast assignment) */
+  value_t result = value_assignment(vm, ptr_point, ptr3d);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+
+  /* verify through the *Point pointer — now points to Point3D's data */
+  value_t got_x = value_get_field(vm, ptr_point, "x");
+  EXPECT_EQ(*(int32_t *)value_get_data(got_x), 10);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, pointer_assignment_shadow) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t point   = _make_point_type(vm);
+  struct_type_t point3d = _make_point3d_type(vm);
+
+  /* create *Point3D rvalue */
+  value_t vx = create_i32_value(vm, 10);
+  value_t vy = create_i32_value(vm, 20);
+  value_t vz = create_i32_value(vm, 30);
+  value_t fields3d[] = {vx, vy, vz};
+  value_t sv3d = create_struct_value(vm, point3d, fields3d);
+  value_t ptr3d = value_addrof(vm, sv3d);
+
+  /* create *Point shadow lvalue */
+  allocator_t alloc = vm_get_allocator(vm);
+  pointer_type_t ptr_point_type = pointer_type_create(alloc, (type_t)point, true, false);
+  vec_push(vm_get_current_scope(vm)->types, ptr_point_type);
+  value_t ptr_shadow = create_pointer_shadow(vm, ptr_point_type, false);
+
+  /* shadow assignment: mark initialized, data stays NULL */
+  value_t result = value_assignment(vm, ptr_shadow, ptr3d);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(ptr_shadow));
+  EXPECT_TRUE(value_is_shadow(ptr_shadow)); /* data still NULL */
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
