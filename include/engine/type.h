@@ -23,8 +23,7 @@ typedef struct _value_t *value_t;
 typedef enum type_kind_t {
   TYPE_KIND_TYPE,
   TYPE_KIND_MODULE,
-  TYPE_KIND_FUNCTION,
-  TYPE_KIND_CALLBACK,
+  TYPE_KIND_CALLABLE,
   TYPE_KIND_ERROR,
   /* Primitive */
   TYPE_KIND_VOID,
@@ -104,6 +103,8 @@ struct vtable_t {
   value_t (*deref_set)    (vm_t vm, value_t self, value_t val);     /* *ptr = val */
   /* Slicing (value[start..start+count]) */
   value_t (*slice)        (vm_t vm, value_t self, uint64_t start, uint64_t count);
+  /* Function call */
+  value_t (*call)         (vm_t vm, value_t self, size_t argc, value_t *argv);
 };
 typedef struct vtable_t vtable_t;
 

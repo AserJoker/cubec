@@ -28,6 +28,7 @@ struct _scope_t {
   vec_t values;            /* all values in this scope (auto-dispose, owns value_t) */
   vec_t types;             /* dynamic types created in this scope (auto-dispose, owns type_t) */
   vec_t strings;           /* string_t objects in this scope (auto-dispose) */
+  vec_t cfuncs;            /* cfunc_t objects in this scope (auto-dispose) */
   vec_t defers;            /* defer entries (empty for now) */
   void *owner;             /* borrowing pointer to owning object (module/function) */
 };

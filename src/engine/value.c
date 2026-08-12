@@ -357,3 +357,11 @@ value_t value_slice(vm_t vm, value_t self, uint64_t start, uint64_t count) {
                               type_get_name(value_get_type(self)));
   return vt.slice(vm, self, start, count);
 }
+
+value_t value_call(vm_t vm, value_t fn, size_t argc, value_t *argv) {
+  vtable_t vt = type_get_vtable(value_get_type(fn));
+  if (!vt.call)
+    return create_error_value(vm, "type '%s' is not callable",
+                              type_get_name(value_get_type(fn)));
+  return vt.call(vm, fn, argc, argv);
+}

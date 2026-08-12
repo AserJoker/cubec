@@ -12,6 +12,7 @@
 #include "engine/array_type.h"
 #include "engine/slice_type.h"
 #include "engine/tuple_type.h"
+#include "engine/callable_type.h"
 #include "engine/module.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -524,4 +525,14 @@ value_t vm_create_tuple_type_value(vm_t self, vec_t element_types, bool mut) {
     vec_push(self->current_scope->types, tt);
   /* wrap as a type value — own=false because scope->types owns the type_t */
   return create_type_value(self, (type_t)tt, NULL, false);
+}
+
+value_t vm_create_callable_type_value(vm_t self, vec_t param_types,
+                                       type_t return_type, bool is_variadic,
+                                       bool mut) {
+  callable_type_t ct = callable_type_create(self->allocator, param_types,
+                                             return_type, is_variadic, mut);
+  if (self->current_scope)
+    vec_push(self->current_scope->types, ct);
+  return create_type_value(self, (type_t)ct, NULL, false);
 }

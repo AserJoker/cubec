@@ -3,6 +3,7 @@
 #include "engine/vm.h"
 #include "engine/scope.h"
 #include "engine/bool_type.h"
+#include "engine/error_type.h"
 #include "engine/type.h"
 
 /* ---- Void type vtable ---- */
@@ -31,6 +32,12 @@ static value_t _void_type_extends(vm_t vm, type_t sub, type_t super) {
   return create_bool_value(vm, super->kind == TYPE_KIND_VOID);
 }
 
+static value_t _void_safe_cast(vm_t vm, value_t self, type_t to) {
+  if (to->kind != TYPE_KIND_VOID)
+    return create_error_value(vm, "cannot safe_cast void to '%s'", to->name);
+  return self;
+}
+
 type_t type_get_void_type(allocator_t allocator) {
   type_init_t init = {
       .kind  = TYPE_KIND_VOID,
@@ -44,6 +51,7 @@ type_t type_get_void_type(allocator_t allocator) {
           .extends = NULL,
           .type_equal = _void_type_equal,
           .type_extends = _void_type_extends,
+          .safe_cast = _void_safe_cast,
       },
   };
   return (type_t)allocator_create(allocator, &g_type_class, &init);

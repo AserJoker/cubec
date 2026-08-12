@@ -165,6 +165,11 @@ value_t value_set_item(struct _vm_t *vm, value_t self, value_t index, value_t va
  *  For str: returns a new str value with the substring. */
 value_t value_slice(struct _vm_t *vm, value_t self, uint64_t start, uint64_t count);
 
+/** @brief Call a callable value: fn(argc, argv). Delegates to type->vtable.call.
+ *  Performs argument safe_cast to declared param types and return value safe_cast.
+ * @return result value on success, error if type is not callable or call fails. */
+value_t value_call(struct _vm_t *vm, value_t fn, size_t argc, value_t *argv);
+
 #ifdef __cplusplus
 }
 #endif

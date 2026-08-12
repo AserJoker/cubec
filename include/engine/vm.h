@@ -132,6 +132,13 @@ value_t vm_create_slice_type_value(vm_t self, type_t element_type, bool mut);
  *  Returns the type value (value.data = tuple_type_t, own=false). */
 value_t vm_create_tuple_type_value(vm_t self, vec_t element_types, bool mut);
 
+/** @brief Create a callable type, register in vm's current scope, and wrap as a value.
+ *  The callable_type_t is added to current_scope->types (auto-dispose).
+ *  Returns the type value (value.data = callable_type_t, own=false). */
+value_t vm_create_callable_type_value(vm_t self, vec_t param_types,
+                                       type_t return_type, bool is_variadic,
+                                       bool mut);
+
 #ifdef __cplusplus
 }
 #endif

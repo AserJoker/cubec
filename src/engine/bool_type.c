@@ -89,7 +89,10 @@ static value_t _bool_safe_cast(vm_t vm, value_t self, type_t to) {
     return vm_create_value_shadow(vm, to, NULL, true);
   bool *copy = (bool *)allocator_alloc(vm_get_allocator(vm), sizeof(bool));
   *copy = *(bool *)value_get_data(self);
-  return value_create(vm_get_allocator(vm), to, copy, true);
+  value_t v = value_create(vm_get_allocator(vm), to, copy, true);
+  scope_t scope = vm_get_current_scope(vm);
+  if (scope) vec_push(scope->values, v);
+  return v;
 }
 
 static value_t _const_bool_safe_cast(vm_t vm, value_t self, type_t to) {
@@ -105,7 +108,10 @@ static value_t _const_bool_safe_cast(vm_t vm, value_t self, type_t to) {
     return vm_create_value_shadow(vm, to, NULL, true);
   bool *copy = (bool *)allocator_alloc(vm_get_allocator(vm), sizeof(bool));
   *copy = *(bool *)value_get_data(self);
-  return value_create(vm_get_allocator(vm), to, copy, true);
+  value_t v = value_create(vm_get_allocator(vm), to, copy, true);
+  scope_t scope = vm_get_current_scope(vm);
+  if (scope) vec_push(scope->values, v);
+  return v;
 }
 
 static value_t _bool_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
