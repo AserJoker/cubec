@@ -115,23 +115,21 @@ static value_t _type_extends(vm_t vm, value_t sub, value_t super_val) {
 }
 
 type_t type_get_type_type(allocator_t allocator) {
-  (void)allocator;
-  static struct _type_t type_type = {
+  type_init_t init = {
       .kind  = TYPE_KIND_TYPE,
-      .name  = (char *)"type",
+      .name  = "type",
       .size  = sizeof(struct _type_t),
       .align = _Alignof(struct _type_t),
       .mut   = false,
       .vtable = {
           .clone = _type_clone,
-          .type_clone = NULL,
           .equal = _type_equal,
           .extends = _type_extends,
           .type_equal = NULL,
           .type_extends = NULL,
       },
   };
-  return &type_type;
+  return (type_t)allocator_create(allocator, &g_type_class, &init);
 }
 
 value_t create_type_value(vm_t vm, type_t type, const char *name, bool own) {

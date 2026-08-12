@@ -71,3 +71,17 @@ TEST_F(it_vm, create_value_shadow) {
   allocator_free(allocator, &i32);
   delete_allocator(allocator);
 }
+
+TEST_F(it_vm, wildcard_value_is_global_unique) {
+  vm_t vm = vm_create(allocator);
+  value_t wv1 = vm_get_wildcard_value(vm);
+  value_t wv2 = vm_get_wildcard_value(vm);
+
+  EXPECT_NE(wv1, nullptr);
+  EXPECT_EQ(wv1, wv2); /* same pointer — global unique */
+  EXPECT_EQ(type_get_kind(value_get_type(wv1)), TYPE_KIND_WILDCARD);
+  EXPECT_TRUE(value_is_shadow(wv1)); /* no data */
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}

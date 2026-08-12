@@ -1,6 +1,7 @@
 #include "engine/value.h"
 #include "engine/type.h"
 #include "engine/vm.h"
+#include "engine/scope.h"
 #include "engine/error_type.h"
 #include "engine/bool_type.h"
 #include <string.h>
@@ -89,10 +90,11 @@ value_t value_clone(vm_t vm, value_t self) {
 }
 
 type_t value_type_clone(vm_t vm, type_t self) {
-  vtable_t vt = type_get_vtable(self);
-  if (!vt.type_clone)
-    return self; /* static singleton — return as-is */
-  return vt.type_clone(vm, self);
+  allocator_t alloc = vm_get_allocator(vm);
+  type_t cloned = (type_t)alloc_clone(alloc, self);
+  scope_t scope = vm_get_current_scope(vm);
+  if (scope) vec_push(scope->types, cloned);
+  return cloned;
 }
 
 value_t value_deref_get(vm_t vm, value_t self) {

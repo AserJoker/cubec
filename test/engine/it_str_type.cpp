@@ -1,6 +1,7 @@
 #include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
+#include "engine/scope.h"
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
 #include "engine/integer_type.h"
@@ -465,7 +466,10 @@ TEST_F(it_str_type, move) {
   value_t a = create_str_value(vm, "hello");
   allocator_t alloc = vm_get_allocator(vm);
 
+  scope_t scope = vm_get_current_scope(vm);
   value_t m = (value_t)alloc_move(alloc, a);
+  /* register moved value in scope so vm_dispose cleans it up */
+  vec_push(scope->values, m);
 
   EXPECT_STREQ(_read_str(m), "hello");
   /* source is cleared */

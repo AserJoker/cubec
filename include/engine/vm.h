@@ -3,6 +3,7 @@
 #include "core/allocator.h"
 #include "core/class.h"
 #include "core/strmap.h"
+#include "core/vec.h"
 #include "engine/name.h"
 #include "engine/value.h"
 #ifdef __cplusplus
@@ -63,6 +64,12 @@ value_t  vm_get_const_f32_type(vm_t self);
 value_t  vm_get_const_f64_type(vm_t self);
 value_t  vm_get_str_type(vm_t self);
 value_t  vm_get_const_str_type(vm_t self);
+value_t  vm_get_wildcard_tuple_type(vm_t self);
+
+/** @brief Get the global unique wildcard value (type=wildcard).
+ *  Used as a sentinel in value-type generic parameters (e.g. Array[i32, ?]).
+ *  In type_equal/type_extends, if a parameter is this value, skip comparison. */
+value_t  vm_get_wildcard_value(vm_t self);
 
 /* ---- Module registry ---- */
 
@@ -119,6 +126,11 @@ value_t vm_create_array_type_value(vm_t self, type_t element_type,
  *  The slice_type_t is added to current_scope->types (auto-dispose).
  *  Returns the type value (value.data = slice_type_t, own=false). */
 value_t vm_create_slice_type_value(vm_t self, type_t element_type, bool mut);
+
+/** @brief Create a tuple type, register in vm's current scope, and wrap as a value.
+ *  The tuple_type_t is added to current_scope->types (auto-dispose).
+ *  Returns the type value (value.data = tuple_type_t, own=false). */
+value_t vm_create_tuple_type_value(vm_t self, vec_t element_types, bool mut);
 
 #ifdef __cplusplus
 }

@@ -70,7 +70,7 @@ TEST_F(it_slice_type, create_type) {
   EXPECT_EQ(type_get_size((type_t)st), sizeof(struct slice_data_t));
   EXPECT_EQ(type_get_align((type_t)st), _Alignof(struct slice_data_t));
   EXPECT_TRUE(type_is_mut((type_t)st));
-  EXPECT_EQ(slice_type_get_element_type(st), i32t);
+  EXPECT_EQ(type_get_kind(slice_type_get_element_type(st)), type_get_kind(i32t));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

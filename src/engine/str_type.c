@@ -221,19 +221,17 @@ static value_t _str_unsupported_unary(vm_t vm, value_t a) {
   return create_error_value(vm, "str does not support this operator");
 }
 
-/* ---- Static type singletons ---- */
+/* ---- Type creation ---- */
 
 type_t type_get_str_type(allocator_t allocator) {
-  (void)allocator;
-  static struct _type_t t = {
+  type_init_t init = {
       .kind  = TYPE_KIND_STR,
-      .name  = (char *)"str",
+      .name  = "str",
       .size  = sizeof(string_t),
       .align = _Alignof(string_t),
       .mut   = true,
       .vtable = {
           .clone        = _str_clone,
-          .type_clone   = NULL,
           .equal        = _str_equal,
           .extends      = NULL,
           .type_equal   = _str_type_equal,
@@ -260,20 +258,18 @@ type_t type_get_str_type(allocator_t allocator) {
           .slice        = _str_slice,
       },
   };
-  return &t;
+  return (type_t)allocator_create(allocator, &g_type_class, &init);
 }
 
 type_t type_get_const_str_type(allocator_t allocator) {
-  (void)allocator;
-  static struct _type_t t = {
+  type_init_t init = {
       .kind  = TYPE_KIND_STR,
-      .name  = (char *)"const str",
+      .name  = "const str",
       .size  = sizeof(string_t),
       .align = _Alignof(string_t),
       .mut   = false,
       .vtable = {
           .clone        = _str_clone,
-          .type_clone   = NULL,
           .equal        = _str_equal,
           .extends      = NULL,
           .type_equal   = _str_type_equal,
@@ -300,7 +296,7 @@ type_t type_get_const_str_type(allocator_t allocator) {
           .slice        = _str_slice,
       },
   };
-  return &t;
+  return (type_t)allocator_create(allocator, &g_type_class, &init);
 }
 
 value_t create_str_value(vm_t vm, const char *val) {

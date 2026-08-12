@@ -17,6 +17,9 @@ typedef struct _value_t *value_t;
 /**
  * @brief Type kind — distinguishes value categories.
  */
+/** @brief Sentinel value for wildcard count in array types: [?]T. */
+#define WILDCARD_COUNT UINT64_MAX
+
 typedef enum type_kind_t {
   TYPE_KIND_TYPE,
   TYPE_KIND_MODULE,
@@ -59,7 +62,6 @@ typedef struct _type_t *type_t;
  */
 struct vtable_t {
   value_t (*clone)        (vm_t vm, value_t self);
-  type_t  (*type_clone)   (vm_t vm, type_t self);
   value_t (*equal)        (vm_t vm, value_t a, value_t b);
   value_t (*extends)      (vm_t vm, value_t sub, value_t super_val);
   value_t (*type_equal)   (vm_t vm, type_t a, type_t b);

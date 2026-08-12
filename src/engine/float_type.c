@@ -380,16 +380,14 @@ static value_t _float_clone(vm_t vm, value_t self) {
 
 #define DEFINE_FLOAT_TYPE(Prefix, ctype, KIND, SIZE, ALIGN, NAME)              \
 type_t type_get_##Prefix##_type(allocator_t allocator) {                       \
-  (void)allocator;                                                             \
-  static struct _type_t t = {                                                  \
+  type_init_t init = {                                                          \
       .kind  = KIND,                                                           \
-      .name  = (char *)NAME,                                                   \
+      .name  = NAME,                                                           \
       .size  = SIZE,                                                           \
       .align = ALIGN,                                                          \
       .mut   = true,                                                           \
       .vtable = {                                                              \
           .clone        = _float_clone,                                        \
-          .type_clone   = NULL,                                        \
           .equal        = _##Prefix##_equal,                                   \
           .extends      = NULL,                                                \
           .type_equal   = _##Prefix##_type_equal,                              \
@@ -415,20 +413,18 @@ type_t type_get_##Prefix##_type(allocator_t allocator) {                       \
           .to_string    = _float_to_string,                                    \
       },                                                                       \
   };                                                                           \
-  return &t;                                                                   \
+  return (type_t)allocator_create(allocator, &g_type_class, &init);            \
 }                                                                              \
                                                                                \
 type_t type_get_const_##Prefix##_type(allocator_t allocator) {                 \
-  (void)allocator;                                                             \
-  static struct _type_t t = {                                                  \
+  type_init_t init = {                                                          \
       .kind  = KIND,                                                           \
-      .name  = (char *)"const " NAME,                                          \
+      .name  = "const " NAME,                                                  \
       .size  = SIZE,                                                           \
       .align = ALIGN,                                                          \
       .mut   = false,                                                          \
       .vtable = {                                                              \
           .clone        = _float_clone,                                        \
-          .type_clone   = NULL,                                        \
           .equal        = _##Prefix##_equal,                                   \
           .extends      = NULL,                                                \
           .type_equal   = _##Prefix##_type_equal,                              \
@@ -454,7 +450,7 @@ type_t type_get_const_##Prefix##_type(allocator_t allocator) {                 \
           .to_string    = _float_to_string,                                    \
       },                                                                       \
   };                                                                           \
-  return &t;                                                                   \
+  return (type_t)allocator_create(allocator, &g_type_class, &init);            \
 }                                                                              \
                                                                                \
 value_t create_##Prefix##_value(vm_t vm, ctype val) {                          \

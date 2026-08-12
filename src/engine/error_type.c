@@ -2,6 +2,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
+#include "engine/type.h"
 #include "core/string.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -16,23 +17,21 @@ static value_t _error_clone(vm_t vm, value_t self) {
 }
 
 type_t type_get_error_type(allocator_t allocator) {
-  (void)allocator;
-  static struct _type_t error_type = {
+  type_init_t init = {
       .kind  = TYPE_KIND_ERROR,
-      .name  = (char *)"error",
+      .name  = "error",
       .size  = sizeof(struct error_data_t),
       .align = _Alignof(struct error_data_t),
       .mut   = false,
       .vtable = {
           .clone = _error_clone,
-          .type_clone = NULL,
           .equal = NULL,
           .extends = NULL,
           .type_equal = NULL,
           .type_extends = NULL,
       },
   };
-  return &error_type;
+  return (type_t)allocator_create(allocator, &g_type_class, &init);
 }
 
 value_t create_error_value(vm_t vm, const char *fmt, ...) {

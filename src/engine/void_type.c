@@ -32,23 +32,21 @@ static value_t _void_type_extends(vm_t vm, type_t sub, type_t super) {
 }
 
 type_t type_get_void_type(allocator_t allocator) {
-  (void)allocator;
-  static struct _type_t void_type = {
+  type_init_t init = {
       .kind  = TYPE_KIND_VOID,
-      .name  = (char *)"void",
+      .name  = "void",
       .size  = 0,
       .align = 0,
       .mut   = false,
       .vtable = {
           .clone = _void_clone,
-          .type_clone = NULL,
           .equal = NULL,
           .extends = NULL,
           .type_equal = _void_type_equal,
           .type_extends = _void_type_extends,
       },
   };
-  return &void_type;
+  return (type_t)allocator_create(allocator, &g_type_class, &init);
 }
 
 value_t create_void_value(vm_t vm) {

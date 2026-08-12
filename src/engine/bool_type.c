@@ -131,16 +131,14 @@ static value_t _bool_to_string(vm_t vm, value_t self) {
 }
 
 type_t type_get_bool_type(allocator_t allocator) {
-  (void)allocator;
-  static struct _type_t bool_type = {
+  type_init_t init = {
       .kind  = TYPE_KIND_BOOL,
-      .name  = (char *)"bool",
+      .name  = "bool",
       .size  = 1,
       .align = 1,
       .mut   = true,
       .vtable = {
           .clone = _bool_clone,
-          .type_clone = NULL,
           .equal = _bool_equal,
           .extends = NULL,
           .type_equal = _bool_type_equal,
@@ -155,23 +153,20 @@ type_t type_get_bool_type(allocator_t allocator) {
           .to_string = _bool_to_string,
       },
   };
-  return &bool_type;
+  return (type_t)allocator_create(allocator, &g_type_class, &init);
 }
 
 /* ---- Const bool type vtable ---- */
 
 type_t type_get_const_bool_type(allocator_t allocator) {
-  (void)allocator;
-  static struct _type_t const_bool_type = {
+  type_init_t init = {
       .kind  = TYPE_KIND_BOOL,
-      .name  = (char *)"const bool",
+      .name  = "const bool",
       .size  = 1,
       .align = 1,
       .mut   = false,
       .vtable = {
           .clone = _bool_clone,
-          .type_clone = NULL,
-          .type_clone = NULL,
           .equal = _bool_equal,
           .extends = NULL,
           .type_equal = _bool_type_equal,
@@ -185,7 +180,7 @@ type_t type_get_const_bool_type(allocator_t allocator) {
           .to_string = _bool_to_string,
       },
   };
-  return &const_bool_type;
+  return (type_t)allocator_create(allocator, &g_type_class, &init);
 }
 
 value_t create_bool_value(vm_t vm, bool val) {

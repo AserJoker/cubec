@@ -52,7 +52,7 @@ TEST_F(it_array_type, create_type) {
   EXPECT_EQ(type_get_size((type_t)at), 3u * 4u);
   EXPECT_EQ(type_get_align((type_t)at), 4u);
   EXPECT_TRUE(type_is_mut((type_t)at));
-  EXPECT_EQ(array_type_get_element_type(at), i32t);
+  EXPECT_EQ(type_get_kind(array_type_get_element_type(at)), type_get_kind(i32t));
   EXPECT_EQ(array_type_get_count(at), 3u);
 
   vm_dispose(vm, allocator);
@@ -327,6 +327,69 @@ TEST_F(it_array_type, type_extends_wildcard) {
   vtable_t vt = type_get_vtable((type_t)at);
   value_t ext = vt.type_extends(vm, (type_t)at, wc);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_array_type, wildcard_count_name) {
+  vm_t vm = vm_create(allocator);
+  value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), WILDCARD_COUNT, true);
+  array_type_t at = (array_type_t)value_get_data(tv);
+
+  EXPECT_STREQ(type_get_name((type_t)at), "[?]i32");
+  EXPECT_EQ(array_type_get_count(at), WILDCARD_COUNT);
+  EXPECT_EQ(type_get_size((type_t)at), 0u); /* unknown size */
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_array_type, wildcard_count_type_equal) {
+  vm_t vm = vm_create(allocator);
+  array_type_t concrete = _make_i32_array_type(vm, 10);
+  value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), WILDCARD_COUNT, true);
+  array_type_t wc_at = (array_type_t)value_get_data(tv);
+
+  /* [10]i32 equal [?]i32 → true (wildcard count skips comparison) */
+  vtable_t vt = type_get_vtable((type_t)concrete);
+  value_t eq = vt.type_equal(vm, (type_t)concrete, (type_t)wc_at);
+  EXPECT_TRUE(*(bool *)value_get_data(eq));
+
+  /* [?]i32 equal [10]i32 → false (wildcard only on right side) */
+  vtable_t vt2 = type_get_vtable((type_t)wc_at);
+  value_t eq2 = vt2.type_equal(vm, (type_t)wc_at, (type_t)concrete);
+  EXPECT_FALSE(*(bool *)value_get_data(eq2));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_array_type, wildcard_count_type_extends) {
+  vm_t vm = vm_create(allocator);
+  array_type_t concrete = _make_i32_array_type(vm, 10);
+  value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), WILDCARD_COUNT, true);
+  array_type_t wc_at = (array_type_t)value_get_data(tv);
+
+  /* [10]i32 extends [?]i32 → true */
+  vtable_t vt = type_get_vtable((type_t)concrete);
+  value_t ext = vt.type_extends(vm, (type_t)concrete, (type_t)wc_at);
+  EXPECT_TRUE(*(bool *)value_get_data(ext));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_array_type, wildcard_count_different_element) {
+  vm_t vm = vm_create(allocator);
+  array_type_t i32_arr = _make_i32_array_type(vm, 10);
+  value_t tv = vm_create_array_type_value(vm, _get_bool_type(vm), WILDCARD_COUNT, true);
+  array_type_t wc_bool = (array_type_t)value_get_data(tv);
+
+  /* [10]i32 extends [?]bool → false (element type mismatch) */
+  vtable_t vt = type_get_vtable((type_t)i32_arr);
+  value_t ext = vt.type_extends(vm, (type_t)i32_arr, (type_t)wc_bool);
+  EXPECT_FALSE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

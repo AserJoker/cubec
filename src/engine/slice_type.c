@@ -17,7 +17,6 @@
 /* ---- Forward declarations for vtable functions ---- */
 
 static value_t _slice_clone(vm_t vm, value_t self);
-static type_t  _slice_vtable_type_clone(vm_t vm, type_t self);
 static value_t _slice_equal(vm_t vm, value_t a, value_t b);
 static value_t _slice_type_equal(vm_t vm, type_t a, type_t b);
 static value_t _slice_type_extends(vm_t vm, type_t sub, type_t super);
@@ -34,7 +33,6 @@ static value_t _slice_slice(vm_t vm, value_t self, uint64_t start, uint64_t coun
 static vtable_t _make_slice_vtable(void) {
   return (vtable_t){
       .clone        = _slice_clone,
-      .type_clone   = _slice_vtable_type_clone,
       .equal        = _slice_equal,
       .extends      = NULL,
       .type_equal   = _slice_type_equal,
@@ -79,14 +77,14 @@ static void _slice_type_init(void *self, allocator_t allocator, void *arg) {
   st->base.align  = init->align;
   st->base.mut    = init->mut;
   st->base.vtable = init->vtable;
-  st->element_type = init->element_type;
+  st->element_type = (type_t)alloc_clone(allocator, init->element_type);
 }
 
 static void _slice_type_dispose(void *self, allocator_t allocator) {
   slice_type_t st = (slice_type_t)self;
   allocator_free(allocator, &st->base.name);
   st->base.name = NULL;
-  st->element_type = NULL;
+  allocator_free(allocator, &st->element_type);
 }
 
 static void _slice_type_clone(void *self, allocator_t allocator, void *another) {
@@ -98,7 +96,7 @@ static void _slice_type_clone(void *self, allocator_t allocator, void *another) 
   dst->base.align  = src->base.align;
   dst->base.mut    = src->base.mut;
   dst->base.vtable = src->base.vtable;
-  dst->element_type = src->element_type;
+  dst->element_type = (type_t)alloc_clone(allocator, src->element_type);
 }
 
 static void _slice_type_move(void *self, allocator_t allocator, void *another) {
@@ -168,15 +166,6 @@ static value_t _make_elem_from_slice(vm_t vm, slice_type_t st, value_t slice,
   return v;
 }
 
-/* ---- VTable: type_clone ---- */
-
-static type_t _slice_vtable_type_clone(vm_t vm, type_t self) {
-  slice_type_t st = (slice_type_t)self;
-  type_t cloned_elem = value_type_clone(vm, st->element_type);
-  value_t type_val = vm_create_slice_type_value(vm, cloned_elem, st->base.mut);
-  return (type_t)value_get_data(type_val);
-}
-
 /* ---- VTable: clone ---- */
 
 static value_t _slice_clone(vm_t vm, value_t self) {
@@ -211,7 +200,7 @@ static value_t _slice_equal(vm_t vm, value_t a, value_t b) {
     return create_error_value(vm, "cannot compare slice with different kind");
   slice_type_t sa = (slice_type_t)value_get_type(a);
   slice_type_t sb = (slice_type_t)tb;
-  if (sa->element_type != sb->element_type)
+  if (type_get_kind(sa->element_type) != type_get_kind(sb->element_type))
     return create_bool_value(vm, false);
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
@@ -245,7 +234,7 @@ static value_t _slice_type_equal(vm_t vm, type_t a, type_t b) {
   vtable_t elem_vt = type_get_vtable(sa->element_type);
   if (elem_vt.type_equal)
     return elem_vt.type_equal(vm, sa->element_type, sb->element_type);
-  return create_bool_value(vm, sa->element_type == sb->element_type);
+  return create_bool_value(vm, type_get_kind(sa->element_type) == type_get_kind(sb->element_type));
 }
 
 /* ---- VTable: type_extends ---- */
@@ -260,7 +249,7 @@ static value_t _slice_type_extends(vm_t vm, type_t sub, type_t super) {
   vtable_t elem_vt = type_get_vtable(sub_st->element_type);
   if (elem_vt.type_extends)
     return elem_vt.type_extends(vm, sub_st->element_type, super_st->element_type);
-  return create_bool_value(vm, sub_st->element_type == super_st->element_type);
+  return create_bool_value(vm, type_get_kind(sub_st->element_type) == type_get_kind(super_st->element_type));
 }
 
 /* ---- VTable: safe_cast ---- */
@@ -273,7 +262,7 @@ static value_t _slice_safe_cast(vm_t vm, value_t self, type_t to) {
     return self;
   slice_type_t from_st = (slice_type_t)from;
   slice_type_t to_st = (slice_type_t)to;
-  if (from_st->element_type != to_st->element_type)
+  if (type_get_kind(from_st->element_type) != type_get_kind(to_st->element_type))
     return create_error_value(vm, "cannot safe_cast slice with different element type");
   if (!from->mut && to->mut)
     return create_error_value(vm, "cannot safe_cast const slice to mut slice");
@@ -304,7 +293,7 @@ static value_t _slice_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   }
   slice_type_t lst = (slice_type_t)value_get_type(lvalue);
   slice_type_t rst = (slice_type_t)rt;
-  if (lst->element_type != rst->element_type)
+  if (type_get_kind(lst->element_type) != type_get_kind(rst->element_type))
     return create_error_value(vm, "cannot assign slice with different element type");
   /* copy slice_data_t (ptr/start/len) */
   struct slice_data_t *dst_sd = _slice_read(lvalue);
@@ -426,7 +415,7 @@ value_t create_slice_value(vm_t vm, slice_type_t st,
   if (type_get_kind(arr_type) != TYPE_KIND_ARRAY)
     return create_error_value(vm, "cannot create slice from non-array");
   array_type_t at = (array_type_t)arr_type;
-  if (at->element_type != st->element_type)
+  if (type_get_kind(at->element_type) != type_get_kind(st->element_type))
     return create_error_value(vm, "slice element type does not match array");
   if (start_elem + count > at->count)
     return create_error_value(vm, "slice range out of bounds");
