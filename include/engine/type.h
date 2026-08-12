@@ -130,6 +130,7 @@ const char *type_get_name(type_t self);
 uint64_t    type_get_size(type_t self);
 uint64_t    type_get_align(type_t self);
 bool        type_is_mut(type_t self);
+bool        type_is_mut(type_t self);
 vtable_t    type_get_vtable(type_t self);
 
 /* ---- Class descriptor ---- */

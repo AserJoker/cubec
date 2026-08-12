@@ -13,6 +13,7 @@
 #include "engine/slice_type.h"
 #include "engine/tuple_type.h"
 #include "engine/callable_type.h"
+#include "engine/pointer_type.h"
 #include "engine/module.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -535,4 +536,13 @@ value_t vm_create_callable_type_value(vm_t self, vec_t param_types,
   if (self->current_scope)
     vec_push(self->current_scope->types, ct);
   return create_type_value(self, (type_t)ct, NULL, false);
+}
+
+value_t vm_create_pointer_type_value(vm_t self, type_t pointee_type,
+                                      bool mut, bool is_volatile) {
+  pointer_type_t pt = pointer_type_create(self->allocator, pointee_type,
+                                           mut, is_volatile);
+  if (self->current_scope)
+    vec_push(self->current_scope->types, pt);
+  return create_type_value(self, (type_t)pt, NULL, false);
 }

@@ -111,7 +111,6 @@ TEST_F(dt_expression_type_const, const_pointer) {
       (cubec_declaration_pointer_t)const_node->type;
   ASSERT_NE(ptr->type, nullptr);
   EXPECT_EQ(ptr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_FALSE(ptr->is_const);
   EXPECT_FALSE(ptr->is_volatile);
 
   allocator_free(allocator, &node);
@@ -168,7 +167,9 @@ TEST_F(dt_expression_type_const, const_array) {
   allocator_free(allocator, &tokens);
 }
 
-/* const * const i32 → type_const(pointer(*const i32)) */
+/* const * const i32 → type_const(pointer(type_const(i32)))
+ * const pointer to const i32: outer const qualifies the pointer,
+ * inner const qualifies i32. */
 TEST_F(dt_expression_type_const, const_pointer_const) {
   const char *source = "const * const i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -186,10 +187,17 @@ TEST_F(dt_expression_type_const, const_pointer_const) {
 
   cubec_declaration_pointer_t ptr =
       (cubec_declaration_pointer_t)const_node->type;
-  ASSERT_NE(ptr->type, nullptr);
-  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_TRUE(ptr->is_const);
   EXPECT_FALSE(ptr->is_volatile);
+  ASSERT_NE(ptr->type, nullptr);
+  /* const after * is part of the base type */
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_DECLARATION_QUALIFIER);
+
+  cubec_declaration_qualifier_t inner_q =
+      (cubec_declaration_qualifier_t)ptr->type;
+  EXPECT_TRUE(inner_q->is_const);
+  EXPECT_FALSE(inner_q->is_volatile);
+  ASSERT_NE(inner_q->type, nullptr);
+  EXPECT_EQ(inner_q->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

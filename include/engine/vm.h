@@ -139,6 +139,12 @@ value_t vm_create_callable_type_value(vm_t self, vec_t param_types,
                                        type_t return_type, bool is_variadic,
                                        bool mut);
 
+/** @brief Create a pointer type, register in vm's current scope, and wrap as a value.
+ *  The pointer_type_t is added to current_scope->types (auto-dispose).
+ *  Returns the type value (value.data = pointer_type_t, own=false). */
+value_t vm_create_pointer_type_value(vm_t self, type_t pointee_type,
+                                      bool mut, bool is_volatile);
+
 #ifdef __cplusplus
 }
 #endif

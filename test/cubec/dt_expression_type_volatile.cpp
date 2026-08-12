@@ -111,7 +111,6 @@ TEST_F(dt_expression_type_volatile, volatile_pointer) {
       (cubec_declaration_pointer_t)volatile_node->type;
   ASSERT_NE(ptr->type, nullptr);
   EXPECT_EQ(ptr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_FALSE(ptr->is_const);
   EXPECT_FALSE(ptr->is_volatile);
 
   allocator_free(allocator, &node);
@@ -178,7 +177,6 @@ TEST_F(dt_expression_type_volatile, volatile_pointer_volatile) {
       (cubec_declaration_pointer_t)volatile_node->type;
   ASSERT_NE(ptr->type, nullptr);
   EXPECT_EQ(ptr->type->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_FALSE(ptr->is_const);
   EXPECT_TRUE(ptr->is_volatile);
 
   allocator_free(allocator, &node);

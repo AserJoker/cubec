@@ -170,6 +170,11 @@ value_t value_slice(struct _vm_t *vm, value_t self, uint64_t start, uint64_t cou
  * @return result value on success, error if type is not callable or call fails. */
 value_t value_call(struct _vm_t *vm, value_t fn, size_t argc, value_t *argv);
 
+/** @brief Take the address of a value, returning a pointer value.
+ *  Returns error for void/type/error kinds (no addressable data). */
+struct _pointer_type_t;
+value_t value_addrof(struct _vm_t *vm, value_t target);
+
 #ifdef __cplusplus
 }
 #endif
