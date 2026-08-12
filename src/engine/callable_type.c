@@ -58,6 +58,9 @@ static vtable_t _make_callable_vtable(void) {
       .deref_set    = NULL,
       .slice        = NULL,
       .call         = _callable_call,
+      .member_call  = NULL,
+      .get_prop     = NULL,
+      .set_prop     = NULL,
   };
 }
 

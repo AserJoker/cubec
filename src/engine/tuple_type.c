@@ -60,6 +60,10 @@ static vtable_t _make_tuple_vtable(void) {
       .deref_get    = NULL,
       .deref_set    = NULL,
       .slice        = NULL,
+      .call         = NULL,
+      .member_call  = NULL,
+      .get_prop     = NULL,
+      .set_prop     = NULL,
   };
 }
 

@@ -105,6 +105,12 @@ struct vtable_t {
   value_t (*slice)        (vm_t vm, value_t self, uint64_t start, uint64_t count);
   /* Function call */
   value_t (*call)         (vm_t vm, value_t self, size_t argc, value_t *argv);
+  /* Member call (a.method(args) — method dispatch with implicit self) */
+  value_t (*member_call)  (vm_t vm, value_t self, const char *name,
+                           size_t argc, value_t *argv);
+  /* Static property access (Type::prop) */
+  value_t (*get_prop)     (vm_t vm, value_t self, const char *name);
+  value_t (*set_prop)     (vm_t vm, value_t self, const char *name, value_t val);
 };
 typedef struct vtable_t vtable_t;
 

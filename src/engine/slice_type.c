@@ -63,6 +63,10 @@ static vtable_t _make_slice_vtable(void) {
       .deref_get    = _slice_deref_get,
       .deref_set    = NULL,
       .slice        = _slice_slice,
+      .call         = NULL,
+      .member_call  = NULL,
+      .get_prop     = NULL,
+      .set_prop     = NULL,
   };
 }
 
@@ -380,6 +384,7 @@ static value_t _slice_to_string(vm_t vm, value_t self) {
   if (value_is_shadow(self))
     return vm_create_value_shadow(vm, value_get_type(self), NULL, true);
   slice_type_t st = (slice_type_t)value_get_type(self);
+  (void)st;
   struct slice_data_t *sd = _slice_read(self);
   allocator_t alloc = vm_get_allocator(vm);
   string_t result = (string_t)allocator_create(alloc, &g_string_class, NULL);

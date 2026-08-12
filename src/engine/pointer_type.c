@@ -58,6 +58,9 @@ static vtable_t _make_pointer_vtable(void) {
       .deref_set    = _pointer_deref_set,
       .slice        = NULL,
       .call         = NULL,
+      .member_call  = NULL,
+      .get_prop     = NULL,
+      .set_prop     = NULL,
   };
 }
 

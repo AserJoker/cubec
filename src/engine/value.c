@@ -365,3 +365,39 @@ value_t value_call(vm_t vm, value_t fn, size_t argc, value_t *argv) {
                               type_get_name(value_get_type(fn)));
   return vt.call(vm, fn, argc, argv);
 }
+
+value_t value_member_addr(vm_t vm, value_t self, const char *name) {
+  /* only struct values support member_addr */
+  type_kind_t kind = type_get_kind(value_get_type(self));
+  if (kind != TYPE_KIND_STRUCT)
+    return create_error_value(vm, "type '%s' does not support member address",
+                              type_get_name(value_get_type(self)));
+  /* delegate to struct_type implementation — forward declared, linked at compile */
+  extern value_t _struct_value_member_addr(vm_t vm, value_t self, const char *name);
+  return _struct_value_member_addr(vm, self, name);
+}
+
+value_t value_member_call(vm_t vm, value_t self, const char *name,
+                          size_t argc, value_t *argv) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.member_call)
+    return create_error_value(vm, "type '%s' does not support member call",
+                              type_get_name(value_get_type(self)));
+  return vt.member_call(vm, self, name, argc, argv);
+}
+
+value_t value_get_prop(vm_t vm, value_t self, const char *name) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.get_prop)
+    return create_error_value(vm, "type '%s' does not support static property access",
+                              type_get_name(value_get_type(self)));
+  return vt.get_prop(vm, self, name);
+}
+
+value_t value_set_prop(vm_t vm, value_t self, const char *name, value_t val) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.set_prop)
+    return create_error_value(vm, "type '%s' does not support static property assignment",
+                              type_get_name(value_get_type(self)));
+  return vt.set_prop(vm, self, name, val);
+}

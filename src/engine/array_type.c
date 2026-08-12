@@ -60,6 +60,10 @@ static vtable_t _make_array_vtable(void) {
       .get_item     = _array_get_item,
       .set_item     = _array_set_item,
       .slice        = _array_slice,
+      .call         = NULL,
+      .member_call  = NULL,
+      .get_prop     = NULL,
+      .set_prop     = NULL,
   };
 }
 

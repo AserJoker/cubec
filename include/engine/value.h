@@ -175,6 +175,21 @@ value_t value_call(struct _vm_t *vm, value_t fn, size_t argc, value_t *argv);
 struct _pointer_type_t;
 value_t value_addrof(struct _vm_t *vm, value_t target);
 
+/** @brief Get pointer to a struct member field: &obj.field.
+ *  Returns a pointer value pointing to obj.data + field.offset. */
+value_t value_member_addr(struct _vm_t *vm, value_t self, const char *name);
+
+/** @brief Member call: obj.method(args). Delegates to type->vtable.member_call.
+ *  For structs: looks up method, passes addrof(self) as first arg. */
+value_t value_member_call(struct _vm_t *vm, value_t self, const char *name,
+                          size_t argc, value_t *argv);
+
+/** @brief Read a static property: Type::prop. Delegates to type->vtable.get_prop. */
+value_t value_get_prop(struct _vm_t *vm, value_t self, const char *name);
+
+/** @brief Write a static property: Type::prop = val. Delegates to type->vtable.set_prop. */
+value_t value_set_prop(struct _vm_t *vm, value_t self, const char *name, value_t val);
+
 #ifdef __cplusplus
 }
 #endif
