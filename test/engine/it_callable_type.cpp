@@ -171,9 +171,9 @@ TEST_F(it_callable_type, create_callable_value) {
   EXPECT_TRUE(value_is_own(cv));
   EXPECT_TRUE(value_is_initialized(cv));
 
-  /* cfunc_t registered in scope */
+  /* cfunc_t registered in scope (+1 for builtin panic) */
   scope_t scope = vm_get_current_scope(vm);
-  EXPECT_EQ(vec_get_size(scope->cfuncs), 1u);
+  EXPECT_EQ(vec_get_size(scope->cfuncs), 2u);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

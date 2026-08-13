@@ -23,6 +23,23 @@
 #include <stdio.h>
 #include <string.h>
 
+/* ---- Builtin callable: panic ---- */
+
+static value_t _builtin_panic(vm_t vm, value_t fn, size_t argc, value_t *argv) {
+  (void)fn;
+  (void)argc;
+  (void)argv;
+  /* extract message from first argument (str) */
+  if (argc < 1)
+    return create_exception_value(vm, "panic expected 1 argument, got 0");
+  value_t msg_val = argv[0];
+  if (type_get_kind(value_get_type(msg_val)) != TYPE_KIND_STR)
+    return create_exception_value(vm, "panic expected str argument");
+  /* read the string content */
+  string_t s = *(string_t *)value_get_data(msg_val);
+  return create_exception_value(vm, "panic: %s", string_get(s));
+}
+
 struct _vm_t {
   allocator_t allocator;
   strmap_t    modules;       /* absolute path → module_t (auto-dispose) */
@@ -250,6 +267,28 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   struct_type_seal(error_st);
   vec_push(vm->global_scope->types, (type_t)error_st);
   vm->v_error = create_type_value(vm, (type_t)error_st, "error", false);
+
+  /* ---- builtin: panic(str) -> void ---- */
+  /* panic constructs an exception and returns it.
+   * Declared return type is void, but _callable_call short-circuits
+   * exception values before the safe_cast to return_type. */
+  {
+    vec_init_t vi = {.auto_dispose = false}; /* borrowed type refs */
+    vec_t panic_params = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+    type_t str_t = (type_t)value_get_data(vm->v_str);
+    vec_push(panic_params, str_t);
+
+    type_t void_t = (type_t)value_get_data(vm->v_void);
+    callable_type_t panic_ct = callable_type_create(allocator, panic_params,
+                                                      void_t, false, true,
+                                                      "<builtin>");
+    allocator_free(allocator, &panic_params);
+    vec_push(vm->global_scope->types, panic_ct);
+    value_t panic_val = create_callable_value(vm, panic_ct, _builtin_panic,
+                                               "panic");
+    name_t n_panic = name_create(vm->global_scope->allocator, panic_val);
+    strmap_insert(vm->global_scope->names, "panic", n_panic);
+  }
 }
 
 static void _vm_dispose(void *self, allocator_t allocator) {
