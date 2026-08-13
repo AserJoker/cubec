@@ -27,6 +27,7 @@ typedef value_t (*cfunction_t)(struct _vm_t *vm, value_t fn, size_t argc,
  */
 struct _cfunc_t {
   cfunction_t func;
+  const char *name;  /* nullable: function name for call stack / debugging */
 };
 typedef struct _cfunc_t *cfunc_t;
 
@@ -36,6 +37,7 @@ extern class_t g_cfunc_class;
 /** @brief Init args for g_cfunc_class. */
 typedef struct cfunc_init_t {
   cfunction_t func;
+  const char *name;  /* nullable, borrowed reference (not cloned/freed) */
 } cfunc_init_t;
 
 #ifdef __cplusplus

@@ -19,6 +19,27 @@ typedef struct _module_t *module_t;
 struct _vm_t;
 typedef struct _vm_t *vm_t;
 
+/**
+ * @brief Call frame — one entry in the VM call stack.
+ * name: function/method name (borrowed reference)
+ * message: optional context info, displayed as <name> (<message>) (borrowed reference)
+ * Managed as a class object via g_call_frame_class, owned by vm->call_stack (auto_dispose).
+ */
+struct _call_frame_t {
+  const char *name;
+  const char *message;
+};
+typedef struct _call_frame_t *call_frame_t;
+
+/** @brief Class descriptor for allocator_create. */
+extern class_t g_call_frame_class;
+
+/** @brief Init args for g_call_frame_class. */
+typedef struct call_frame_init_t {
+  const char *name;
+  const char *message;
+} call_frame_init_t;
+
 /** @brief Type descriptor for allocator_create. */
 extern class_t g_vm_class;
 
@@ -100,6 +121,21 @@ scope_t vm_set_scope(vm_t self, scope_t scope);
 /** @brief Set root_scope, return previous root_scope.
  *  Used together with vm_set_scope for function call / closure. */
 scope_t vm_set_root_scope(vm_t self, scope_t scope);
+
+/* ---- Call stack ---- */
+
+/** @brief Push a call frame onto the VM call stack.
+ *  name and message are borrowed references (not cloned/freed).
+ *  C functions should call this at entry. */
+void vm_push_frame(vm_t self, const char *name, const char *message);
+
+/** @brief Pop the top call frame from the VM call stack.
+ *  C functions should call this at exit. */
+void vm_pop_frame(vm_t self);
+
+/** @brief Get the current call stack (vec of call_frame_t).
+ *  Index 0 = bottom (oldest), last = top (most recent). */
+vec_t vm_get_call_stack(vm_t self);
 
 /* ---- Value creation ---- */
 

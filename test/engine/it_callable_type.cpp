@@ -163,7 +163,7 @@ TEST_F(it_callable_type, create_no_params) {
 TEST_F(it_callable_type, create_callable_value) {
   vm_t vm = vm_create(allocator);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
-  value_t cv = create_callable_value(vm, ct, _add_one);
+  value_t cv = create_callable_value(vm, ct, _add_one, NULL);
 
   EXPECT_NE(cv, nullptr);
   EXPECT_EQ(type_get_kind(value_get_type(cv)), TYPE_KIND_CALLABLE);
@@ -196,7 +196,7 @@ TEST_F(it_callable_type, create_callable_shadow) {
 TEST_F(it_callable_type, call_basic) {
   vm_t vm = vm_create(allocator);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
-  value_t cv = create_callable_value(vm, ct, _add_one);
+  value_t cv = create_callable_value(vm, ct, _add_one, NULL);
 
   int32_t arg = 41;
   value_t argv[1] = { vm_create_value(vm, _get_i32_type(vm), &arg, NULL) };
@@ -219,7 +219,7 @@ TEST_F(it_callable_type, call_no_args) {
   allocator_free(alloc, &params);
   callable_type_t ct = (callable_type_t)value_get_data(tv);
 
-  value_t cv = create_callable_value(vm, ct, _return_true);
+  value_t cv = create_callable_value(vm, ct, _return_true, NULL);
   value_t result = value_call(vm, cv, 0, NULL);
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
@@ -232,7 +232,7 @@ TEST_F(it_callable_type, call_no_args) {
 TEST_F(it_callable_type, call_void_return) {
   vm_t vm = vm_create(allocator);
   callable_type_t ct = _make_i32_bool_to_void_callable(vm);
-  value_t cv = create_callable_value(vm, ct, _noop);
+  value_t cv = create_callable_value(vm, ct, _noop, NULL);
 
   int32_t a = 1;
   bool b = true;
@@ -250,7 +250,7 @@ TEST_F(it_callable_type, call_void_return) {
 TEST_F(it_callable_type, call_wrong_argc) {
   vm_t vm = vm_create(allocator);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
-  value_t cv = create_callable_value(vm, ct, _add_one);
+  value_t cv = create_callable_value(vm, ct, _add_one, NULL);
 
   value_t result = value_call(vm, cv, 0, NULL);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
@@ -274,7 +274,7 @@ TEST_F(it_callable_type, call_not_callable_type) {
 TEST_F(it_callable_type, call_safe_cast_arg) {
   vm_t vm = vm_create(allocator);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
-  value_t cv = create_callable_value(vm, ct, _echo_first);
+  value_t cv = create_callable_value(vm, ct, _echo_first, NULL);
 
   /* Pass i64, should be safe_cast to i32 */
   int64_t big = 42;
@@ -302,7 +302,7 @@ TEST_F(it_callable_type, call_variadic) {
   allocator_free(alloc, &params);
   callable_type_t ct = (callable_type_t)value_get_data(tv);
 
-  value_t cv = create_callable_value(vm, ct, _variadic_sum);
+  value_t cv = create_callable_value(vm, ct, _variadic_sum, NULL);
 
   int32_t a = 10, b = 20, c = 30;
   value_t argv[3] = {
@@ -328,7 +328,7 @@ TEST_F(it_callable_type, call_variadic_too_few) {
   allocator_free(alloc, &params);
   callable_type_t ct = (callable_type_t)value_get_data(tv);
 
-  value_t cv = create_callable_value(vm, ct, _variadic_sum);
+  value_t cv = create_callable_value(vm, ct, _variadic_sum, NULL);
 
   /* 0 args but need at least 1 */
   value_t result = value_call(vm, cv, 0, NULL);
@@ -407,7 +407,7 @@ TEST_F(it_callable_type, type_extends_wildcard) {
 TEST_F(it_callable_type, clone) {
   vm_t vm = vm_create(allocator);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
-  value_t cv = create_callable_value(vm, ct, _add_one);
+  value_t cv = create_callable_value(vm, ct, _add_one, NULL);
 
   value_t cloned = value_clone(vm, cv);
   EXPECT_NE(cloned, nullptr);
@@ -428,8 +428,8 @@ TEST_F(it_callable_type, clone) {
 TEST_F(it_callable_type, equal_same_func) {
   vm_t vm = vm_create(allocator);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
-  value_t a = create_callable_value(vm, ct, _add_one);
-  value_t b = create_callable_value(vm, ct, _add_one);
+  value_t a = create_callable_value(vm, ct, _add_one, NULL);
+  value_t b = create_callable_value(vm, ct, _add_one, NULL);
 
   value_t eq = value_equal(vm, a, b);
   EXPECT_TRUE(*(bool *)value_get_data(eq));
@@ -441,8 +441,8 @@ TEST_F(it_callable_type, equal_same_func) {
 TEST_F(it_callable_type, equal_different_func) {
   vm_t vm = vm_create(allocator);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
-  value_t a = create_callable_value(vm, ct, _add_one);
-  value_t b = create_callable_value(vm, ct, _echo_first);
+  value_t a = create_callable_value(vm, ct, _add_one, NULL);
+  value_t b = create_callable_value(vm, ct, _echo_first, NULL);
 
   value_t eq = value_equal(vm, a, b);
   EXPECT_FALSE(*(bool *)value_get_data(eq));
@@ -456,8 +456,8 @@ TEST_F(it_callable_type, equal_different_func) {
 TEST_F(it_callable_type, assignment) {
   vm_t vm = vm_create(allocator);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
-  value_t a = create_callable_value(vm, ct, _add_one);
-  value_t b = create_callable_value(vm, ct, _echo_first);
+  value_t a = create_callable_value(vm, ct, _add_one, NULL);
+  value_t b = create_callable_value(vm, ct, _echo_first, NULL);
 
   value_t result = value_assignment(vm, b, a);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
@@ -474,7 +474,7 @@ TEST_F(it_callable_type, assignment) {
 TEST_F(it_callable_type, assignment_shadow) {
   vm_t vm = vm_create(allocator);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
-  value_t a = create_callable_value(vm, ct, _add_one);
+  value_t a = create_callable_value(vm, ct, _add_one, NULL);
   value_t b = create_callable_shadow(vm, ct, false);
 
   /* assigning to shadow just marks initialized, no data copy */
@@ -492,7 +492,7 @@ TEST_F(it_callable_type, assignment_shadow) {
 TEST_F(it_callable_type, to_string) {
   vm_t vm = vm_create(allocator);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
-  value_t cv = create_callable_value(vm, ct, _add_one);
+  value_t cv = create_callable_value(vm, ct, _add_one, NULL);
 
   value_t str = value_to_string(vm, cv);
   EXPECT_EQ(type_get_kind(value_get_type(str)), TYPE_KIND_STR);
@@ -514,7 +514,7 @@ static value_t _inspect_self(vm_t vm, value_t fn, size_t argc, value_t *argv) {
 TEST_F(it_callable_type, call_fn_self_inspection) {
   vm_t vm = vm_create(allocator);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
-  value_t cv = create_callable_value(vm, ct, _inspect_self);
+  value_t cv = create_callable_value(vm, ct, _inspect_self, NULL);
 
   int32_t arg = 0;
   value_t argv[1] = { vm_create_value(vm, _get_i32_type(vm), &arg, NULL) };

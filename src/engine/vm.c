@@ -60,6 +60,7 @@ struct _vm_t {
   value_t     v_const_str;   /* borrowed: bootstrap type "const str" */
   value_t     v_wildcard_tuple; /* borrowed: bootstrap type "<?>" (wildcard tuple) */
   value_t     v_wildcard_value; /* borrowed: global unique wildcard value for generic params */
+  vec_t       call_stack;      /* vec of call_frame_t (no auto-dispose, trivially copyable) */
 };
 
 static void _vm_init(void *self, allocator_t allocator, void *arg) {
@@ -73,6 +74,7 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   vm->global_scope = scope_create(allocator, SCOPE_GLOBAL, NULL, NULL);
   vm->root_scope = NULL;
   vm->current_scope = vm->global_scope;
+  vm->call_stack = NULL;
 
   /* v_type must be created first — create_type_value depends on it.
    * Cannot use create_type_value for v_type itself (circular dependency). */
@@ -223,6 +225,7 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 static void _vm_dispose(void *self, allocator_t allocator) {
   vm_t vm = (vm_t)self;
   (void)allocator;
+  allocator_free(vm->allocator, &vm->call_stack);
   allocator_free(vm->allocator, &vm->modules);
   allocator_free(vm->allocator, &vm->global_scope);
 }
@@ -455,6 +458,56 @@ scope_t vm_set_root_scope(vm_t self, scope_t scope) {
   scope_t prev = self->root_scope;
   self->root_scope = scope;
   return prev;
+}
+
+/* ---- Call frame class ---- */
+
+static void _call_frame_init(void *self, allocator_t allocator, void *arg) {
+  (void)allocator;
+  call_frame_t cf = (call_frame_t)self;
+  call_frame_init_t *init = (call_frame_init_t *)arg;
+  cf->name = init ? init->name : NULL;
+  cf->message = init ? init->message : NULL;
+}
+
+static void _call_frame_dispose(void *self, allocator_t allocator) {
+  (void)self;
+  (void)allocator;
+  /* name and message are borrowed references, not owned */
+}
+
+class_t g_call_frame_class = {
+    .size = sizeof(struct _call_frame_t),
+    .name = "cubec.engine.call_frame",
+    .init = (class_init_fn_t)_call_frame_init,
+    .dispose = (class_dispose_fn_t)_call_frame_dispose,
+    .clone = NULL,
+    .move = NULL,
+};
+
+/* ---- Call stack ---- */
+
+void vm_push_frame(vm_t self, const char *name, const char *message) {
+  if (!self->call_stack) {
+    vec_init_t vi = {.auto_dispose = true};
+    self->call_stack = (vec_t)allocator_create(self->allocator, &g_vec_class, &vi);
+  }
+  call_frame_init_t init = {.name = name, .message = message};
+  call_frame_t frame = (call_frame_t)allocator_create(self->allocator,
+                                                       &g_call_frame_class, &init);
+  vec_push(self->call_stack, frame);
+}
+
+void vm_pop_frame(vm_t self) {
+  if (!self->call_stack)
+    return;
+  size_t sz = vec_get_size(self->call_stack);
+  if (sz > 0)
+    vec_pop(self->call_stack);
+}
+
+vec_t vm_get_call_stack(vm_t self) {
+  return self->call_stack;
 }
 
 /* ---- Value creation ---- */

@@ -234,10 +234,11 @@ bool      callable_type_is_variadic(callable_type_t self) { return self->is_vari
 
 /* ---- Value constructors ---- */
 
-value_t create_callable_value(vm_t vm, callable_type_t ct, cfunction_t func) {
+value_t create_callable_value(vm_t vm, callable_type_t ct, cfunction_t func,
+                               const char *name) {
   allocator_t alloc = vm_get_allocator(vm);
   cfunc_t *data = (cfunc_t *)allocator_alloc(alloc, sizeof(cfunc_t));
-  cfunc_init_t fn_init = {.func = func};
+  cfunc_init_t fn_init = {.func = func, .name = name};
   *data = (cfunc_t)allocator_create(alloc, &g_cfunc_class, &fn_init);
   value_t v = value_create(alloc, (type_t)ct, data, true);
   scope_t scope = vm_get_current_scope(vm);
@@ -265,8 +266,8 @@ static value_t _callable_clone(vm_t vm, value_t self) {
   if (!value_is_initialized(self) || src_fc->func == NULL)
     return create_callable_shadow(vm, dst_ct, value_is_initialized(self));
 
-  /* create new cfunc_t with same func pointer */
-  return create_callable_value(vm, dst_ct, src_fc->func);
+  /* create new cfunc_t with same func pointer and name */
+  return create_callable_value(vm, dst_ct, src_fc->func, src_fc->name);
 }
 
 /* ---- VTable: equal ---- */

@@ -85,3 +85,62 @@ TEST_F(it_vm, wildcard_value_is_global_unique) {
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
+
+/* ---- Call stack ---- */
+
+TEST_F(it_vm, call_stack_push_pop) {
+  vm_t vm = vm_create(allocator);
+
+  vm_push_frame(vm, "main", "entry");
+  vm_push_frame(vm, "foo", "calling bar");
+
+  vec_t cs = vm_get_call_stack(vm);
+  EXPECT_EQ(vec_get_size(cs), 2u);
+
+  call_frame_t f0 = (call_frame_t)vec_get(cs, 0);
+  EXPECT_STREQ(f0->name, "main");
+  EXPECT_STREQ(f0->message, "entry");
+
+  call_frame_t f1 = (call_frame_t)vec_get(cs, 1);
+  EXPECT_STREQ(f1->name, "foo");
+  EXPECT_STREQ(f1->message, "calling bar");
+
+  vm_pop_frame(vm);
+  EXPECT_EQ(vec_get_size(cs), 1u);
+
+  vm_pop_frame(vm);
+  EXPECT_EQ(vec_get_size(cs), 0u);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_vm, call_stack_empty_initially) {
+  vm_t vm = vm_create(allocator);
+  vec_t cs = vm_get_call_stack(vm);
+  EXPECT_EQ(cs, nullptr);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_vm, call_stack_pop_empty_noop) {
+  vm_t vm = vm_create(allocator);
+  vm_pop_frame(vm); /* should not crash */
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_vm, call_stack_null_message) {
+  vm_t vm = vm_create(allocator);
+
+  vm_push_frame(vm, "init", NULL);
+  vec_t cs = vm_get_call_stack(vm);
+  call_frame_t f = (call_frame_t)vec_get(cs, 0);
+  EXPECT_STREQ(f->name, "init");
+  EXPECT_EQ(f->message, nullptr);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}

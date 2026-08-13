@@ -66,7 +66,7 @@ struct _vm_t;
  *  Follows the str double-pointer pattern:
  *  value.data = cfunc_t* → cfunc_t (registered in scope->cfuncs). */
 value_t create_callable_value(struct _vm_t *vm, callable_type_t ct,
-                               cfunction_t func);
+                               cfunction_t func, const char *name);
 
 /** @brief Create a callable shadow value (no cfunc_t). */
 value_t create_callable_shadow(struct _vm_t *vm, callable_type_t ct,
