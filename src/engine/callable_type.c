@@ -91,6 +91,7 @@ static void _callable_type_init(void *self, allocator_t allocator, void *arg) {
   ct->return_type = (type_t)alloc_clone(allocator, init->return_type);
   ct->param_count = init->param_count;
   ct->is_variadic = init->is_variadic;
+  ct->module_id   = init->module_id;
 }
 
 static void _callable_type_dispose(void *self, allocator_t allocator) {
@@ -126,6 +127,7 @@ static void _callable_type_clone(void *self, allocator_t allocator, void *anothe
   dst->return_type = (type_t)alloc_clone(allocator, src->return_type);
   dst->param_count = src->param_count;
   dst->is_variadic = src->is_variadic;
+  dst->module_id   = src->module_id;
 }
 
 class_t g_callable_type_class = {
@@ -141,7 +143,7 @@ class_t g_callable_type_class = {
 
 callable_type_t callable_type_create(allocator_t allocator, vec_t param_types,
                                       type_t return_type, bool is_variadic,
-                                      bool mut) {
+                                      bool mut, const char *module_id) {
   /* generate name: (T1, T2, ...) -> R or (T1, T2) -> R */
   size_t name_cap = 64;
   char *name = (char *)allocator_alloc(allocator, name_cap);
@@ -213,6 +215,7 @@ callable_type_t callable_type_create(allocator_t allocator, vec_t param_types,
       .return_type  = return_type,
       .param_count  = pcount,
       .is_variadic  = is_variadic,
+      .module_id    = module_id,
   };
 
   callable_type_t ct = (callable_type_t)allocator_create(
@@ -231,6 +234,7 @@ type_t    callable_type_get_param_type(callable_type_t self, uint64_t index) {
 type_t    callable_type_get_return_type(callable_type_t self) { return self->return_type; }
 uint64_t  callable_type_get_param_count(callable_type_t self) { return self->param_count; }
 bool      callable_type_is_variadic(callable_type_t self) { return self->is_variadic; }
+const char *callable_type_get_module_id(callable_type_t self) { return self->module_id; }
 
 /* ---- Value constructors ---- */
 
@@ -394,9 +398,16 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
       casted[i] = argv[i];
   }
 
-  /* invoke */
+  /* invoke — switch to callable's module context */
+  const char *prev_module = vm_get_current_module_id(vm);
+  vm_set_current_module_id(vm, callable_type_get_module_id(ct));
+
   cfunc_t fc = *(cfunc_t *)value_get_data(self);
   value_t result = fc->func(vm, self, argc, casted);
+
+  /* restore module context */
+  vm_set_current_module_id(vm, prev_module);
+
   if (casted)
     allocator_free(alloc, &casted);
 

@@ -16,6 +16,17 @@
 #include <string.h>
 #include <stdio.h>
 
+/* ---- Access control helper ---- */
+
+/** @brief Returns true if access should be denied: field/prop is private
+ *  and caller's module differs from the type's owning module. */
+static bool _access_denied(const char *type_module_id, bool is_pub,
+                           const char *current_module_id) {
+  if (is_pub) return false;
+  if (type_module_id == current_module_id) return false;
+  return true;
+}
+
 /* ---- Forward declarations for vtable functions ---- */
 
 static value_t _struct_clone(vm_t vm, value_t self);
@@ -84,12 +95,14 @@ struct _field_info_t {
   char    *name;     /* owned */
   type_t   type;     /* owned (alloc_clone) */
   uint64_t offset;   /* computed */
+  bool     pub;      /* true = accessible across modules */
 };
 
 typedef struct field_info_init_t {
   const char *name;
   type_t      type;
   uint64_t    offset;
+  bool        pub;
 } field_info_init_t;
 
 static void _field_info_init(void *self, allocator_t allocator, void *arg) {
@@ -98,6 +111,7 @@ static void _field_info_init(void *self, allocator_t allocator, void *arg) {
   fi->name   = cstring_clone(allocator, init->name);
   fi->type   = (type_t)alloc_clone(allocator, init->type);
   fi->offset = init->offset;
+  fi->pub    = init ? init->pub : false;
 }
 
 static void _field_info_dispose(void *self, allocator_t allocator) {
@@ -110,6 +124,7 @@ static void _field_info_dispose(void *self, allocator_t allocator) {
   allocator_free(allocator, &fi->type);
   fi->type   = NULL;
   fi->offset = 0;
+  fi->pub    = false;
 }
 
 static void _field_info_clone(void *self, allocator_t allocator, void *another) {
@@ -118,6 +133,7 @@ static void _field_info_clone(void *self, allocator_t allocator, void *another) 
   dst->name   = cstring_clone(allocator, src->name);
   dst->type   = (type_t)alloc_clone(allocator, src->type);
   dst->offset = src->offset;
+  dst->pub    = src->pub;
 }
 
 class_t g_field_info_class = {
@@ -132,6 +148,7 @@ class_t g_field_info_class = {
 const char *field_info_get_name(field_info_t self)   { return self->name; }
 type_t      field_info_get_type(field_info_t self)   { return self->type; }
 uint64_t    field_info_get_offset(field_info_t self)  { return self->offset; }
+bool        field_info_is_pub(field_info_t self)      { return self->pub; }
 
 /* ================================================================== */
 /* struct_type_t class                                                 */
@@ -157,15 +174,18 @@ static void _struct_type_init(void *self, allocator_t allocator, void *arg) {
   strmap_init_t smi = {.value_auto_dispose = false};
   st->props   = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
   st->methods = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  st->pub_names = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
   st->sealed  = false;
+  st->module_id = init->module_id;
 }
 
 static void _struct_type_dispose(void *self, allocator_t allocator) {
   struct_type_t st = (struct_type_t)self;
 
-  /* dispose props/methods strmaps (borrowed values, just free map) */
+  /* dispose props/methods/pub_names strmaps (borrowed values, just free map) */
   allocator_free(allocator, &st->props);
   allocator_free(allocator, &st->methods);
+  allocator_free(allocator, &st->pub_names);
 
   /* dispose owned scope (which owns the prop/method values) */
   if (st->scope) {
@@ -181,6 +201,8 @@ static void _struct_type_dispose(void *self, allocator_t allocator) {
     allocator_free(allocator, &p);
     st->base.name = NULL;
   }
+
+  st->module_id = NULL;
 }
 
 static value_t _shallow_clone_value(allocator_t allocator, value_t src);
@@ -232,6 +254,7 @@ static void _struct_type_clone(void *self, allocator_t allocator, void *another)
         .name   = fi->name,
         .type   = fi->type,
         .offset = fi->offset,
+        .pub    = fi->pub,
     };
     field_info_t cloned = (field_info_t)allocator_create(allocator,
                                                           &g_field_info_class, &fiinit);
@@ -263,7 +286,15 @@ static void _struct_type_clone(void *self, allocator_t allocator, void *another)
     strmap_insert(dst->methods, key, cv);
   }
 
+  /* clone pub_names: copy entries with dummy value */
+  dst->pub_names = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  it = strmap_iter_first(src->pub_names);
+  while ((key = strmap_iter_next(&it)) != NULL) {
+    strmap_insert(dst->pub_names, key, (void *)1);
+  }
+
   dst->sealed = src->sealed;
+  dst->module_id = src->module_id;
 }
 
 class_t g_struct_type_class = {
@@ -285,7 +316,7 @@ static uint64_t _align_up(uint64_t offset, uint64_t align) {
 }
 
 struct_type_t struct_type_create(allocator_t allocator, const char *name,
-                                  bool mut) {
+                                  bool mut, const char *module_id) {
   struct_type_init_t init = {
       .kind         = TYPE_KIND_STRUCT,
       .name         = name,
@@ -293,6 +324,7 @@ struct_type_t struct_type_create(allocator_t allocator, const char *name,
       .align        = 1,
       .mut          = mut,
       .vtable       = _make_struct_vtable(),
+      .module_id    = module_id,
   };
 
   struct_type_t st = (struct_type_t)allocator_create(
@@ -301,7 +333,7 @@ struct_type_t struct_type_create(allocator_t allocator, const char *name,
 }
 
 void struct_type_add_field(allocator_t allocator, struct_type_t st,
-                           const char *name, type_t field_type) {
+                           const char *name, type_t field_type, bool pub) {
   if (st->sealed) {
     fprintf(stderr, "error: cannot add field '%s' to sealed struct type '%s'\n",
             name, st->base.name ? st->base.name : "<anonymous>");
@@ -323,10 +355,15 @@ void struct_type_add_field(allocator_t allocator, struct_type_t st,
       .name   = name,
       .type   = field_type,
       .offset = offset,
+      .pub    = pub,
   };
   field_info_t fi = (field_info_t)allocator_create(allocator,
                                                      &g_field_info_class, &fiinit);
   vec_push(st->fields, fi);
+
+  /* if pub, insert name into pub_names */
+  if (pub)
+    strmap_insert(st->pub_names, name, (void *)1);
 
   /* advance size past this field */
   st->base.size = offset + field_size;
@@ -341,13 +378,17 @@ void struct_type_seal(struct_type_t st) {
 }
 
 void struct_type_add_prop(vm_t vm, struct_type_t st,
-                          const char *name, value_t val, bool is_method) {
+                          const char *name, value_t val, bool is_method, bool pub) {
   /* register in props table (borrowed — value lifecycle managed by vm's scope) */
   strmap_insert(st->props, name, val);
 
   /* if method, also register in methods table */
   if (is_method)
     strmap_insert(st->methods, name, val);
+
+  /* if pub, insert name into pub_names */
+  if (pub)
+    strmap_insert(st->pub_names, name, (void *)1);
 
   (void)vm;
 }
@@ -361,6 +402,17 @@ scope_t  struct_type_get_scope(struct_type_t self)   { return self->scope; }
 strmap_t struct_type_get_props(struct_type_t self)    { return self->props; }
 strmap_t struct_type_get_methods(struct_type_t self)  { return self->methods; }
 bool     struct_type_is_sealed(struct_type_t self)    { return self->sealed; }
+
+const char *struct_type_get_module_id(struct_type_t self) { return self->module_id; }
+
+bool struct_type_is_field_pub(struct_type_t self, const char *name) {
+  field_info_t fi = struct_type_find_field(self, name);
+  return fi ? field_info_is_pub(fi) : false;
+}
+
+bool struct_type_is_prop_pub(struct_type_t self, const char *name) {
+  return strmap_find(self->pub_names, name) != NULL;
+}
 
 field_info_t struct_type_find_field(struct_type_t self, const char *name) {
   size_t fc = vec_get_size(self->fields);
@@ -419,6 +471,13 @@ value_t _struct_value_member_addr(vm_t vm, value_t self, const char *name) {
   if (!fi)
     return create_exception_value(vm, "struct '%s' has no field '%s'",
                               type_get_name((type_t)st), name);
+
+  /* access control: private field only accessible from same module */
+  if (_access_denied(struct_type_get_module_id(st), field_info_is_pub(fi),
+                     vm_get_current_module_id(vm)))
+    return create_exception_value(vm, "cannot access private field '%s' of struct '%s' from outside its module",
+                              name, type_get_name((type_t)st));
+
   if (value_is_shadow(self) || !value_get_data(self))
     return create_exception_value(vm, "cannot take address of field in uninitialized struct");
 
@@ -438,8 +497,8 @@ value_t _struct_value_member_addr(vm_t vm, value_t self, const char *name) {
 /* ================================================================== */
 
 value_t vm_create_struct_type_value(vm_t vm, const char *name,
-                                     bool mut) {
-  struct_type_t st = struct_type_create(vm_get_allocator(vm), name, mut);
+                                     bool mut, const char *module_id) {
+  struct_type_t st = struct_type_create(vm_get_allocator(vm), name, mut, module_id);
   if (vm_get_current_scope(vm))
     vec_push(vm_get_current_scope(vm)->types, st);
   return create_type_value(vm, (type_t)st, NULL, false);
@@ -713,6 +772,13 @@ static value_t _struct_get_field(vm_t vm, value_t self, const char *name) {
   if (!fi)
     return create_exception_value(vm, "struct '%s' has no field '%s'",
                               type_get_name((type_t)st), name);
+
+  /* access control: private field only accessible from same module */
+  if (_access_denied(struct_type_get_module_id(st), field_info_is_pub(fi),
+                     vm_get_current_module_id(vm)))
+    return create_exception_value(vm, "cannot access private field '%s' of struct '%s' from outside its module",
+                              name, type_get_name((type_t)st));
+
   if (value_is_shadow(self) || !value_get_data(self))
     return create_exception_value(vm, "cannot access field '%s' of uninitialized struct", name);
 
@@ -738,6 +804,12 @@ static value_t _struct_set_field(vm_t vm, value_t self, const char *name, value_
   if (!fi)
     return create_exception_value(vm, "struct '%s' has no field '%s'",
                               type_get_name((type_t)st), name);
+
+  /* access control: private field only accessible from same module */
+  if (_access_denied(struct_type_get_module_id(st), field_info_is_pub(fi),
+                     vm_get_current_module_id(vm)))
+    return create_exception_value(vm, "cannot access private field '%s' of struct '%s' from outside its module",
+                              name, type_get_name((type_t)st));
 
   /* const struct check */
   if (!type_is_mut((type_t)st))
@@ -802,6 +874,13 @@ static value_t _struct_type_get_prop(vm_t vm, type_t self, const char *name) {
   if (!val)
     return create_exception_value(vm, "struct '%s' has no static property '%s'",
                               type_get_name(self), name);
+
+  /* access control: private prop only accessible from same module */
+  if (_access_denied(struct_type_get_module_id(st), struct_type_is_prop_pub(st, name),
+                     vm_get_current_module_id(vm)))
+    return create_exception_value(vm, "cannot access private property '%s' of struct '%s' from outside its module",
+                              name, type_get_name(self));
+
   return val;
 }
 
@@ -811,6 +890,12 @@ static value_t _struct_type_set_prop(vm_t vm, type_t self, const char *name, val
   if (!existing)
     return create_exception_value(vm, "struct '%s' has no static property '%s'",
                               type_get_name(self), name);
+
+  /* access control: private prop only accessible from same module */
+  if (_access_denied(struct_type_get_module_id(st), struct_type_is_prop_pub(st, name),
+                     vm_get_current_module_id(vm)))
+    return create_exception_value(vm, "cannot access private property '%s' of struct '%s' from outside its module",
+                              name, type_get_name(self));
 
   /* const check on existing prop */
   if (value_is_initialized(existing) && !type_is_mut(value_get_type(existing)))

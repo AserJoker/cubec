@@ -22,6 +22,7 @@ struct _callable_type_t {
   type_t   return_type;       /* owned */
   uint64_t param_count;       /* number of fixed parameters */
   bool     is_variadic;       /* true = (T1, T2, ...) -> R */
+  const char *module_id;      /* borrowed: owning module path or "<builtin>" */
 };
 typedef struct _callable_type_t *callable_type_t;
 
@@ -40,6 +41,7 @@ typedef struct callable_type_init_t {
   type_t      return_type;   /* borrowed, will be cloned (owned by callable_type_t) */
   uint64_t    param_count;
   bool        is_variadic;
+  const char *module_id;     /* borrowed: owning module path or "<builtin>" */
 } callable_type_init_t;
 
 /* ---- Type creation ---- */
@@ -49,7 +51,7 @@ typedef struct callable_type_init_t {
  *  param_types and return_type are deep-copied (owned by callable_type_t). */
 callable_type_t callable_type_create(allocator_t allocator, vec_t param_types,
                                       type_t return_type, bool is_variadic,
-                                      bool mut);
+                                      bool mut, const char *module_id);
 
 /* ---- Accessors ---- */
 
@@ -57,6 +59,7 @@ type_t    callable_type_get_param_type(callable_type_t self, uint64_t index);
 type_t    callable_type_get_return_type(callable_type_t self);
 uint64_t  callable_type_get_param_count(callable_type_t self);
 bool      callable_type_is_variadic(callable_type_t self);
+const char *callable_type_get_module_id(callable_type_t self);
 
 /* ---- Value constructors ---- */
 

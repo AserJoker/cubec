@@ -43,9 +43,11 @@ struct _union_type_t {
   struct _scope_t *scope;    /* owned: isolated scope for props/methods lifecycle */
   strmap_t props;            /* borrowed (value_auto_dispose=false): name -> value_t */
   strmap_t methods;          /* borrowed (value_auto_dispose=false): name -> value_t */
+  strmap_t pub_names;        /* set of names that are pub (name -> dummy value) */
   bool    sealed;            /* true = field layout frozen */
   uint64_t payload_size;     /* max(field sizes) */
   uint64_t payload_offset;   /* offset from data start to payload area */
+  const char *module_id;     /* borrowed: owning module path or "<builtin>" */
 };
 typedef struct _union_type_t *union_type_t;
 
@@ -60,6 +62,7 @@ typedef struct union_type_init_t {
   uint64_t    align;
   bool        mut;
   vtable_t    vtable;
+  const char *module_id;     /* borrowed: owning module path or "<builtin>" */
 } union_type_init_t;
 
 /* ---- Type creation ---- */
@@ -67,14 +70,15 @@ typedef struct union_type_init_t {
 /** @brief Create a union type with given name (nullable).
  *  Initially unsealed: fields can be added via union_type_add_field.
  *  The union's scope is isolated (no parent), fully owned by union_type_t. */
-union_type_t union_type_create(allocator_t allocator, const char *name, bool mut);
+union_type_t union_type_create(allocator_t allocator, const char *name, bool mut,
+                                const char *module_id);
 
 /** @brief Add a variant field to the union type (before seal).
  *  All fields share the same payload offset.
  *  Computes payload_size = max(field sizes) incrementally.
  *  Errors if union is already sealed. */
 void union_type_add_field(allocator_t allocator, union_type_t ut,
-                           const char *name, type_t field_type);
+                           const char *name, type_t field_type, bool pub);
 
 /** @brief Seal the union type: finalize payload_offset and total size.
  *  After seal, union_type_add_field will emit an error. */
@@ -84,7 +88,7 @@ void union_type_seal(union_type_t ut);
  *  is_method=true: registers in both props and methods.
  *  is_method=false: registers in props only. */
 void union_type_add_prop(vm_t vm, union_type_t ut,
-                          const char *name, value_t val, bool is_method);
+                          const char *name, value_t val, bool is_method, bool pub);
 
 /* ---- Accessors ---- */
 
@@ -93,6 +97,15 @@ scope_t  union_type_get_scope(union_type_t self);
 strmap_t union_type_get_props(union_type_t self);
 strmap_t union_type_get_methods(union_type_t self);
 bool     union_type_is_sealed(union_type_t self);
+
+/** @brief Get the module_id (borrowed) that owns this union type. */
+const char *union_type_get_module_id(union_type_t self);
+
+/** @brief Check if a field is pub (accessible across modules). */
+bool union_type_is_field_pub(union_type_t self, const char *name);
+
+/** @brief Check if a prop/method is pub (accessible across modules). */
+bool union_type_is_prop_pub(union_type_t self, const char *name);
 
 /** @brief Find a field by name. Returns NULL if not found. */
 field_info_t union_type_find_field(union_type_t self, const char *name);

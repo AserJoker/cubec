@@ -37,9 +37,9 @@ protected:
 
   /** Create a Result union: ok:i32 | err:str */
   union_type_t _make_result_type(vm_t vm) {
-    union_type_t ut = union_type_create(allocator, "Result", true);
-    union_type_add_field(allocator, ut, "ok", _get_i32_type(vm));
-    union_type_add_field(allocator, ut, "err", _get_str_type(vm));
+    union_type_t ut = union_type_create(allocator, "Result", true, "<builtin>");
+    union_type_add_field(allocator, ut, "ok", _get_i32_type(vm), true);
+    union_type_add_field(allocator, ut, "err", _get_str_type(vm), true);
     union_type_seal(ut);
     vec_push(vm_get_current_scope(vm)->types, ut);
     return ut;
@@ -58,9 +58,9 @@ protected:
 
   /** Create an anonymous union: a:i32 | b:f64 */
   union_type_t _make_anon_type(vm_t vm) {
-    union_type_t ut = union_type_create(allocator, NULL, true);
-    union_type_add_field(allocator, ut, "a", _get_i32_type(vm));
-    union_type_add_field(allocator, ut, "b", _get_f64_type(vm));
+    union_type_t ut = union_type_create(allocator, NULL, true, "<builtin>");
+    union_type_add_field(allocator, ut, "a", _get_i32_type(vm), true);
+    union_type_add_field(allocator, ut, "b", _get_f64_type(vm), true);
     union_type_seal(ut);
     vec_push(vm_get_current_scope(vm)->types, ut);
     return ut;
@@ -68,9 +68,9 @@ protected:
 
   /** Create an IntOrFloat union: int_val:i32 | float_val:f64 */
   union_type_t _make_int_or_float_type(vm_t vm) {
-    union_type_t ut = union_type_create(allocator, "IntOrFloat", true);
-    union_type_add_field(allocator, ut, "int_val", _get_i32_type(vm));
-    union_type_add_field(allocator, ut, "float_val", _get_f64_type(vm));
+    union_type_t ut = union_type_create(allocator, "IntOrFloat", true, "<builtin>");
+    union_type_add_field(allocator, ut, "int_val", _get_i32_type(vm), true);
+    union_type_add_field(allocator, ut, "float_val", _get_f64_type(vm), true);
     union_type_seal(ut);
     vec_push(vm_get_current_scope(vm)->types, ut);
     return ut;
@@ -112,7 +112,7 @@ TEST_F(it_union_type, seal_prevents_add_field) {
   vm_t vm = vm_create(allocator);
   union_type_t ut = _make_result_type(vm);
 
-  union_type_add_field(allocator, ut, "z", _get_i32_type(vm));
+  union_type_add_field(allocator, ut, "z", _get_i32_type(vm), true);
   EXPECT_EQ(vec_get_size(union_type_get_fields(ut)), 2u);
 
   vm_dispose(vm, allocator);
@@ -121,8 +121,8 @@ TEST_F(it_union_type, seal_prevents_add_field) {
 
 TEST_F(it_union_type, const_union) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = union_type_create(allocator, "ConstResult", false);
-  union_type_add_field(allocator, ut, "ok", _get_i32_type(vm));
+  union_type_t ut = union_type_create(allocator, "ConstResult", false, "<builtin>");
+  union_type_add_field(allocator, ut, "ok", _get_i32_type(vm), true);
   union_type_seal(ut);
   vec_push(vm_get_current_scope(vm)->types, ut);
 
@@ -249,8 +249,8 @@ TEST_F(it_union_type, get_field_not_found) {
 
 TEST_F(it_union_type, set_field_const_union_rejected) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = union_type_create(allocator, "ConstResult", false);
-  union_type_add_field(allocator, ut, "ok", _get_i32_type(vm));
+  union_type_t ut = union_type_create(allocator, "ConstResult", false, "<builtin>");
+  union_type_add_field(allocator, ut, "ok", _get_i32_type(vm), true);
   union_type_seal(ut);
   vec_push(vm_get_current_scope(vm)->types, ut);
 
@@ -534,7 +534,7 @@ TEST_F(it_union_type, add_prop_and_get) {
   union_type_t ut = _make_result_type(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  union_type_add_prop(vm, ut, "count", prop_val, false);
+  union_type_add_prop(vm, ut, "count", prop_val, false, true);
 
   value_t found = (value_t)strmap_find(union_type_get_props(ut), "count");
   ASSERT_NE(found, nullptr);
@@ -549,10 +549,10 @@ TEST_F(it_union_type, methods_registration) {
   union_type_t ut = _make_result_type(vm);
 
   value_t method_val = create_i32_value(vm, 42);
-  union_type_add_prop(vm, ut, "unwrap", method_val, true);
+  union_type_add_prop(vm, ut, "unwrap", method_val, true, true);
 
   value_t prop_val = create_i32_value(vm, 7);
-  union_type_add_prop(vm, ut, "count", prop_val, false);
+  union_type_add_prop(vm, ut, "count", prop_val, false, true);
 
   EXPECT_NE(strmap_find(union_type_get_props(ut), "unwrap"), nullptr);
   EXPECT_NE(strmap_find(union_type_get_methods(ut), "unwrap"), nullptr);
@@ -585,7 +585,7 @@ TEST_F(it_union_type, type_get_prop_via_type_value) {
   union_type_t ut = _make_result_type(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  union_type_add_prop(vm, ut, "count", prop_val, false);
+  union_type_add_prop(vm, ut, "count", prop_val, false, true);
 
   value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
 
@@ -602,7 +602,7 @@ TEST_F(it_union_type, type_set_prop_via_type_value) {
   union_type_t ut = _make_result_type(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  union_type_add_prop(vm, ut, "count", prop_val, false);
+  union_type_add_prop(vm, ut, "count", prop_val, false, true);
 
   value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
 
@@ -635,7 +635,7 @@ TEST_F(it_union_type, instance_get_prop_rejected) {
   union_type_t ut = _make_result_type(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  union_type_add_prop(vm, ut, "count", prop_val, false);
+  union_type_add_prop(vm, ut, "count", prop_val, false, true);
 
   value_t ok_val = create_i32_value(vm, 42);
   value_t uv = create_union_value(vm, ut, 0, ok_val);

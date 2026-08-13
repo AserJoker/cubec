@@ -62,6 +62,7 @@ struct _vm_t {
   value_t     v_wildcard_tuple; /* borrowed: bootstrap type "<?>" (wildcard tuple) */
   value_t     v_wildcard_value; /* borrowed: global unique wildcard value for generic params */
   value_t     v_error;         /* borrowed: user-facing error struct type value */
+  const char *current_module_id; /* borrowed: current module path or "<builtin>" */
   vec_t       call_stack;      /* vec of call_frame_t (auto_dispose=true, owned name/message) */
 };
 
@@ -69,6 +70,7 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   (void)arg;
   vm_t vm = (vm_t)self;
   vm->allocator = allocator;
+  vm->current_module_id = "<builtin>";
 
   strmap_init_t sm_init = {.value_auto_dispose = true};
   vm->modules = (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_init);
@@ -225,25 +227,25 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 
   /* User-facing error struct: error { message: [128]u8, error_code: u64,
    *                                    backtrace: [32]u64, backtrace_count: u64 } */
-  struct_type_t error_st = struct_type_create(allocator, "error", true);
+  struct_type_t error_st = struct_type_create(allocator, "error", true, "<builtin>");
 
   /* message: [128]u8 */
   type_t err_u8_type = (type_t)value_get_data(vm->v_u8);
   type_t msg_array_type = (type_t)array_type_create(allocator, err_u8_type, 128, true);
   vec_push(vm->global_scope->types, msg_array_type);
-  struct_type_add_field(allocator, error_st, "message", msg_array_type);
+  struct_type_add_field(allocator, error_st, "message", msg_array_type, true);
 
   /* error_code: u64 */
   type_t err_u64_type = (type_t)value_get_data(vm->v_u64);
-  struct_type_add_field(allocator, error_st, "error_code", err_u64_type);
+  struct_type_add_field(allocator, error_st, "error_code", err_u64_type, true);
 
   /* backtrace: [32]u64 */
   type_t bt_array_type = (type_t)array_type_create(allocator, err_u64_type, 32, true);
   vec_push(vm->global_scope->types, bt_array_type);
-  struct_type_add_field(allocator, error_st, "backtrace", bt_array_type);
+  struct_type_add_field(allocator, error_st, "backtrace", bt_array_type, true);
 
   /* backtrace_count: u64 */
-  struct_type_add_field(allocator, error_st, "backtrace_count", err_u64_type);
+  struct_type_add_field(allocator, error_st, "backtrace_count", err_u64_type, true);
 
   struct_type_seal(error_st);
   vec_push(vm->global_scope->types, (type_t)error_st);
@@ -283,6 +285,11 @@ scope_t  vm_get_root_scope(vm_t self) { return self->root_scope; }
 scope_t  vm_get_current_scope(vm_t self) { return self->current_scope; }
 value_t  vm_get_type_type(vm_t self) { return self->v_type; }
 value_t  vm_get_exception_type(vm_t self) { return self->v_exception; }
+
+const char *vm_get_current_module_id(vm_t self) { return self->current_module_id; }
+void        vm_set_current_module_id(vm_t self, const char *module_id) {
+  self->current_module_id = module_id;
+}
 value_t  vm_get_error_type(vm_t self) { return self->v_error; }
 value_t  vm_get_bool_type(vm_t self) { return self->v_bool; }
 value_t  vm_get_wildcard_type(vm_t self) { return self->v_wildcard; }
@@ -626,9 +633,10 @@ value_t vm_create_tuple_type_value(vm_t self, vec_t element_types, bool mut) {
 
 value_t vm_create_callable_type_value(vm_t self, vec_t param_types,
                                        type_t return_type, bool is_variadic,
-                                       bool mut) {
+                                       bool mut, const char *module_id) {
   callable_type_t ct = callable_type_create(self->allocator, param_types,
-                                             return_type, is_variadic, mut);
+                                             return_type, is_variadic, mut,
+                                             module_id);
   if (self->current_scope)
     vec_push(self->current_scope->types, ct);
   return create_type_value(self, (type_t)ct, NULL, false);

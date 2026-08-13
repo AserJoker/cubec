@@ -58,6 +58,12 @@ scope_t  vm_get_current_scope(vm_t self);
 value_t  vm_get_type_type(vm_t self);
 value_t  vm_get_exception_type(vm_t self);
 value_t  vm_get_error_type(vm_t self);
+
+/** @brief Get/set the current module identifier.
+ *  Used for access control: private fields/props are only accessible
+ *  from within the same module. "<builtin>" for built-in types. */
+const char *vm_get_current_module_id(vm_t self);
+void        vm_set_current_module_id(vm_t self, const char *module_id);
 value_t  vm_get_bool_type(vm_t self);
 value_t  vm_get_wildcard_type(vm_t self);
 value_t  vm_get_void_type(vm_t self);
@@ -174,7 +180,7 @@ value_t vm_create_tuple_type_value(vm_t self, vec_t element_types, bool mut);
  *  Returns the type value (value.data = callable_type_t, own=false). */
 value_t vm_create_callable_type_value(vm_t self, vec_t param_types,
                                        type_t return_type, bool is_variadic,
-                                       bool mut);
+                                       bool mut, const char *module_id);
 
 /** @brief Create a pointer type, register in vm's current scope, and wrap as a value.
  *  The pointer_type_t is added to current_scope->types (auto-dispose).

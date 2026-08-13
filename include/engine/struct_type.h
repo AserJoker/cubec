@@ -28,6 +28,7 @@ extern class_t g_field_info_class;
 const char *field_info_get_name(field_info_t self);
 type_t      field_info_get_type(field_info_t self);
 uint64_t    field_info_get_offset(field_info_t self);
+bool        field_info_is_pub(field_info_t self);
 
 /* ---- struct_type_t ---- */
 
@@ -43,7 +44,9 @@ struct _struct_type_t {
   struct _scope_t *scope;    /* owned: manages lifecycle of static props/methods */
   strmap_t props;            /* borrowed (value_auto_dispose=false): name -> value_t */
   strmap_t methods;          /* borrowed (value_auto_dispose=false): name -> value_t */
+  strmap_t pub_names;        /* set of names that are pub (name -> dummy value) */
   bool    sealed;            /* true = field layout frozen */
+  const char *module_id;     /* borrowed: owning module path or "<builtin>" */
 };
 typedef struct _struct_type_t *struct_type_t;
 
@@ -58,6 +61,7 @@ typedef struct struct_type_init_t {
   uint64_t    align;
   bool        mut;
   vtable_t    vtable;
+  const char *module_id;     /* borrowed: owning module path or "<builtin>" */
 } struct_type_init_t;
 
 /* ---- Type creation ---- */
@@ -66,14 +70,14 @@ typedef struct struct_type_init_t {
  *  Initially unsealed: fields can be added via struct_type_add_field.
  *  The struct's scope is isolated (no parent), fully owned by struct_type_t. */
 struct_type_t struct_type_create(allocator_t allocator, const char *name,
-                                  bool mut);
+                                  bool mut, const char *module_id);
 
 /** @brief Add a field to the struct type (before seal).
  *  Computes incremental offset using C alignment rules.
  *  Calls allocator_create for field_info_t via g_field_info_class.
  *  Errors if struct is already sealed. */
 void struct_type_add_field(allocator_t allocator, struct_type_t st,
-                           const char *name, type_t field_type);
+                           const char *name, type_t field_type, bool pub);
 
 /** @brief Seal the struct type: finalize total size with trailing padding.
  *  Computes base.size = align_up(current_offset, base.align).
@@ -85,7 +89,7 @@ void struct_type_seal(struct_type_t st);
  *  is_method=false: registers in props only.
  *  The value is added to the struct's owned scope for lifecycle management. */
 void struct_type_add_prop(vm_t vm, struct_type_t st,
-                          const char *name, value_t val, bool is_method);
+                          const char *name, value_t val, bool is_method, bool pub);
 
 /* ---- Accessors ---- */
 
@@ -97,6 +101,15 @@ bool     struct_type_is_sealed(struct_type_t self);
 
 /** @brief Find a field by name. Returns NULL if not found. */
 field_info_t struct_type_find_field(struct_type_t self, const char *name);
+
+/** @brief Get the module_id (borrowed) that owns this struct type. */
+const char *struct_type_get_module_id(struct_type_t self);
+
+/** @brief Check if a field is pub (accessible across modules). */
+bool struct_type_is_field_pub(struct_type_t self, const char *name);
+
+/** @brief Check if a prop/method is pub (accessible across modules). */
+bool struct_type_is_prop_pub(struct_type_t self, const char *name);
 
 /* ---- Value constructors ---- */
 
@@ -122,7 +135,7 @@ value_t _struct_value_member_addr(struct _vm_t *vm, value_t self, const char *na
  *  The struct_type_t is added to current_scope->types (auto-dispose).
  *  Returns the type value (value.data = struct_type_t, own=false). */
 value_t vm_create_struct_type_value(struct _vm_t *vm, const char *name,
-                                     bool mut);
+                                     bool mut, const char *module_id);
 
 #ifdef __cplusplus
 }

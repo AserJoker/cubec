@@ -33,9 +33,9 @@ protected:
 
   /** Create a Point struct type with fields x:i32, y:i32 */
   struct_type_t _make_point_type(vm_t vm) {
-    struct_type_t st = struct_type_create(allocator, "Point", true);
-    struct_type_add_field(allocator, st, "x", _get_i32_type(vm));
-    struct_type_add_field(allocator, st, "y", _get_i32_type(vm));
+    struct_type_t st = struct_type_create(allocator, "Point", true, "<builtin>");
+    struct_type_add_field(allocator, st, "x", _get_i32_type(vm), true);
+    struct_type_add_field(allocator, st, "y", _get_i32_type(vm), true);
     struct_type_seal(st);
     /* register in scope->types for proper lifecycle */
     vec_push(vm_get_current_scope(vm)->types, st);
@@ -44,9 +44,9 @@ protected:
 
   /** Create an anonymous struct with fields a:i32, b:f64 */
   struct_type_t _make_anon_type(vm_t vm) {
-    struct_type_t st = struct_type_create(allocator, NULL, true);
-    struct_type_add_field(allocator, st, "a", _get_i32_type(vm));
-    struct_type_add_field(allocator, st, "b", _get_f64_type(vm));
+    struct_type_t st = struct_type_create(allocator, NULL, true, "<builtin>");
+    struct_type_add_field(allocator, st, "a", _get_i32_type(vm), true);
+    struct_type_add_field(allocator, st, "b", _get_f64_type(vm), true);
     struct_type_seal(st);
     vec_push(vm_get_current_scope(vm)->types, st);
     return st;
@@ -54,10 +54,10 @@ protected:
 
   /** Create a Point3D struct type (x:i32, y:i32, z:i32) — extends Point */
   struct_type_t _make_point3d_type(vm_t vm) {
-    struct_type_t st = struct_type_create(allocator, "Point3D", true);
-    struct_type_add_field(allocator, st, "x", _get_i32_type(vm));
-    struct_type_add_field(allocator, st, "y", _get_i32_type(vm));
-    struct_type_add_field(allocator, st, "z", _get_i32_type(vm));
+    struct_type_t st = struct_type_create(allocator, "Point3D", true, "<builtin>");
+    struct_type_add_field(allocator, st, "x", _get_i32_type(vm), true);
+    struct_type_add_field(allocator, st, "y", _get_i32_type(vm), true);
+    struct_type_add_field(allocator, st, "z", _get_i32_type(vm), true);
     struct_type_seal(st);
     vec_push(vm_get_current_scope(vm)->types, st);
     return st;
@@ -111,7 +111,7 @@ TEST_F(it_struct_type, seal_prevents_add_field) {
   struct_type_t st = _make_point_type(vm);
 
   /* trying to add field after seal should not crash */
-  struct_type_add_field(allocator, st, "z", _get_i32_type(vm));
+  struct_type_add_field(allocator, st, "z", _get_i32_type(vm), true);
   /* field count should still be 2 */
   EXPECT_EQ(vec_get_size(struct_type_get_fields(st)), 2u);
 
@@ -121,8 +121,8 @@ TEST_F(it_struct_type, seal_prevents_add_field) {
 
 TEST_F(it_struct_type, const_struct) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = struct_type_create(allocator, "ConstPoint", false);
-  struct_type_add_field(allocator, st, "x", _get_i32_type(vm));
+  struct_type_t st = struct_type_create(allocator, "ConstPoint", false, "<builtin>");
+  struct_type_add_field(allocator, st, "x", _get_i32_type(vm), true);
   struct_type_seal(st);
   vec_push(vm_get_current_scope(vm)->types, st);
 
@@ -224,8 +224,8 @@ TEST_F(it_struct_type, get_field_not_found) {
 
 TEST_F(it_struct_type, set_field_const_struct_rejected) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = struct_type_create(allocator, "ConstPoint", false);
-  struct_type_add_field(allocator, st, "x", _get_i32_type(vm));
+  struct_type_t st = struct_type_create(allocator, "ConstPoint", false, "<builtin>");
+  struct_type_add_field(allocator, st, "x", _get_i32_type(vm), true);
   struct_type_seal(st);
   vec_push(vm_get_current_scope(vm)->types, st);
 
@@ -318,8 +318,8 @@ TEST_F(it_struct_type, pointer_set_field_auto_deref) {
 
 TEST_F(it_struct_type, pointer_set_field_const_struct_rejected) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = struct_type_create(allocator, "ConstPoint", false);
-  struct_type_add_field(allocator, st, "x", _get_i32_type(vm));
+  struct_type_t st = struct_type_create(allocator, "ConstPoint", false, "<builtin>");
+  struct_type_add_field(allocator, st, "x", _get_i32_type(vm), true);
   struct_type_seal(st);
   vec_push(vm_get_current_scope(vm)->types, st);
 
@@ -713,7 +713,7 @@ TEST_F(it_struct_type, add_prop_and_get) {
 
   /* add a static property */
   value_t prop_val = create_i32_value(vm, 42);
-  struct_type_add_prop(vm, st, "count", prop_val, false);
+  struct_type_add_prop(vm, st, "count", prop_val, false, true);
 
   /* verify prop is in props map */
   value_t found = (value_t)strmap_find(struct_type_get_props(st), "count");
@@ -730,11 +730,11 @@ TEST_F(it_struct_type, methods_registration) {
 
   /* add a method (is_method=true) */
   value_t method_val = create_i32_value(vm, 42); /* placeholder callable */
-  struct_type_add_prop(vm, st, "add", method_val, true);
+  struct_type_add_prop(vm, st, "add", method_val, true, true);
 
   /* add a regular prop (is_method=false) */
   value_t prop_val = create_i32_value(vm, 7);
-  struct_type_add_prop(vm, st, "count", prop_val, false);
+  struct_type_add_prop(vm, st, "count", prop_val, false, true);
 
   /* verify: "add" is in both props and methods */
   EXPECT_NE(strmap_find(struct_type_get_props(st), "add"), nullptr);
@@ -796,7 +796,7 @@ TEST_F(it_struct_type, type_get_prop_via_type_value) {
 
   /* add a static property */
   value_t prop_val = create_i32_value(vm, 42);
-  struct_type_add_prop(vm, st, "count", prop_val, false);
+  struct_type_add_prop(vm, st, "count", prop_val, false, true);
 
   /* create a TYPE_KIND_TYPE value wrapping the struct type */
   value_t type_val = create_type_value(vm, (type_t)st, NULL, false);
@@ -816,7 +816,7 @@ TEST_F(it_struct_type, type_set_prop_via_type_value) {
 
   /* add a mutable static property */
   value_t prop_val = create_i32_value(vm, 42);
-  struct_type_add_prop(vm, st, "count", prop_val, false);
+  struct_type_add_prop(vm, st, "count", prop_val, false, true);
 
   value_t type_val = create_type_value(vm, (type_t)st, NULL, false);
 
@@ -851,7 +851,7 @@ TEST_F(it_struct_type, instance_get_prop_rejected) {
   struct_type_t st = _make_point_type(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  struct_type_add_prop(vm, st, "count", prop_val, false);
+  struct_type_add_prop(vm, st, "count", prop_val, false, true);
 
   /* create a struct instance value */
   value_t vx = create_i32_value(vm, 10);

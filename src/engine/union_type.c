@@ -18,6 +18,17 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
+
+/* ---- Access control helper ---- */
+
+/** @brief Returns true if access should be denied: field/prop is private
+ *  and caller's module differs from the type's owning module. */
+static bool _access_denied(const char *type_module_id, bool is_pub,
+                           const char *current_module_id) {
+  if (is_pub) return false;
+  if (type_module_id == current_module_id) return false;
+  return true;
+}
 #include <stdint.h>
 
 /* ---- Forward declarations for vtable functions ---- */
@@ -90,6 +101,7 @@ typedef struct {
   const char *name;
   type_t      type;
   uint64_t    offset;
+  bool        pub;
 } _field_info_init_t;
 
 static void _union_type_init(void *self, allocator_t allocator, void *arg) {
@@ -108,11 +120,13 @@ static void _union_type_init(void *self, allocator_t allocator, void *arg) {
   ut->scope   = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
 
   strmap_init_t smi = {.value_auto_dispose = false};
-  ut->props   = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
-  ut->methods = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
-  ut->sealed  = false;
+  ut->props     = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  ut->methods   = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  ut->pub_names = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  ut->sealed    = false;
   ut->payload_size   = 0;
   ut->payload_offset = 0;
+  ut->module_id      = init->module_id;
 }
 
 static void _union_type_dispose(void *self, allocator_t allocator) {
@@ -120,6 +134,7 @@ static void _union_type_dispose(void *self, allocator_t allocator) {
 
   allocator_free(allocator, &ut->props);
   allocator_free(allocator, &ut->methods);
+  allocator_free(allocator, &ut->pub_names);
 
   if (ut->scope) {
     scope_dispose(ut->scope);
@@ -181,6 +196,7 @@ static void _union_type_clone(void *self, allocator_t allocator, void *another) 
         .name   = field_info_get_name(fi),
         .type   = field_info_get_type(fi),
         .offset = field_info_get_offset(fi),
+        .pub    = field_info_is_pub(fi),
     };
     field_info_t cloned = (field_info_t)allocator_create(allocator,
                                                           &g_field_info_class, &fiinit);
@@ -212,6 +228,14 @@ static void _union_type_clone(void *self, allocator_t allocator, void *another) 
   dst->sealed         = src->sealed;
   dst->payload_size   = src->payload_size;
   dst->payload_offset = src->payload_offset;
+  dst->module_id      = src->module_id;
+
+  /* clone pub_names */
+  dst->pub_names = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  it = strmap_iter_first(src->pub_names);
+  while ((key = strmap_iter_next(&it)) != NULL) {
+    strmap_insert(dst->pub_names, key, (void *)1);
+  }
 }
 
 class_t g_union_type_class = {
@@ -231,14 +255,16 @@ static uint64_t _align_up(uint64_t offset, uint64_t align) {
   return (offset + align - 1) & ~(align - 1);
 }
 
-union_type_t union_type_create(allocator_t allocator, const char *name, bool mut) {
+union_type_t union_type_create(allocator_t allocator, const char *name, bool mut,
+                                const char *module_id) {
   union_type_init_t init = {
-      .kind   = TYPE_KIND_UNION,
-      .name   = name,
-      .size   = 0,
-      .align  = _Alignof(uint32_t),
-      .mut    = mut,
-      .vtable = _make_union_vtable(),
+      .kind      = TYPE_KIND_UNION,
+      .name      = name,
+      .size      = 0,
+      .align     = _Alignof(uint32_t),
+      .mut       = mut,
+      .vtable    = _make_union_vtable(),
+      .module_id = module_id,
   };
 
   union_type_t ut = (union_type_t)allocator_create(
@@ -247,7 +273,7 @@ union_type_t union_type_create(allocator_t allocator, const char *name, bool mut
 }
 
 void union_type_add_field(allocator_t allocator, union_type_t ut,
-                           const char *name, type_t field_type) {
+                           const char *name, type_t field_type, bool pub) {
   if (ut->sealed) {
     fprintf(stderr, "error: cannot add field '%s' to sealed union type '%s'\n",
             name, ut->base.name ? ut->base.name : "<anonymous>");
@@ -267,10 +293,15 @@ void union_type_add_field(allocator_t allocator, union_type_t ut,
       .name   = name,
       .type   = field_type,
       .offset = 0, /* set in seal */
+      .pub    = pub,
   };
   field_info_t fi = (field_info_t)allocator_create(allocator,
                                                      &g_field_info_class, &fiinit);
   vec_push(ut->fields, fi);
+
+  /* if pub, insert name into pub_names */
+  if (pub)
+    strmap_insert(ut->pub_names, name, (void *)1);
 }
 
 void union_type_seal(union_type_t ut) {
@@ -304,10 +335,15 @@ void union_type_seal(union_type_t ut) {
 }
 
 void union_type_add_prop(vm_t vm, union_type_t ut,
-                          const char *name, value_t val, bool is_method) {
+                          const char *name, value_t val, bool is_method, bool pub) {
   strmap_insert(ut->props, name, val);
   if (is_method)
     strmap_insert(ut->methods, name, val);
+
+  /* if pub, insert name into pub_names */
+  if (pub)
+    strmap_insert(ut->pub_names, name, (void *)1);
+
   (void)vm;
 }
 
@@ -320,6 +356,16 @@ scope_t  union_type_get_scope(union_type_t self)    { return self->scope; }
 strmap_t union_type_get_props(union_type_t self)     { return self->props; }
 strmap_t union_type_get_methods(union_type_t self)   { return self->methods; }
 bool     union_type_is_sealed(union_type_t self)     { return self->sealed; }
+const char *union_type_get_module_id(union_type_t self) { return self->module_id; }
+
+bool union_type_is_field_pub(union_type_t self, const char *name) {
+  field_info_t fi = union_type_find_field(self, name);
+  return fi ? field_info_is_pub(fi) : false;
+}
+
+bool union_type_is_prop_pub(union_type_t self, const char *name) {
+  return strmap_find(self->pub_names, name) != NULL;
+}
 
 field_info_t union_type_find_field(union_type_t self, const char *name) {
   size_t fc = vec_get_size(self->fields);
@@ -400,6 +446,13 @@ value_t _union_value_member_addr(vm_t vm, value_t self, const char *name) {
   if (!fi)
     return create_exception_value(vm, "union '%s' has no field '%s'",
                               type_get_name((type_t)ut), name);
+
+  /* access control: private field only accessible from same module */
+  if (_access_denied(union_type_get_module_id(ut), field_info_is_pub(fi),
+                     vm_get_current_module_id(vm)))
+    return create_exception_value(vm, "cannot access private field '%s' of union '%s' from outside its module",
+                              name, type_get_name((type_t)ut));
+
   if (value_is_shadow(self) || !value_get_data(self))
     return create_exception_value(vm, "cannot take address of field in uninitialized union");
 
@@ -682,6 +735,13 @@ static value_t _union_get_field(vm_t vm, value_t self, const char *name) {
   if (!fi)
     return create_exception_value(vm, "union '%s' has no field '%s'",
                               type_get_name((type_t)ut), name);
+
+  /* access control: private field only accessible from same module */
+  if (_access_denied(union_type_get_module_id(ut), field_info_is_pub(fi),
+                     vm_get_current_module_id(vm)))
+    return create_exception_value(vm, "cannot access private field '%s' of union '%s' from outside its module",
+                              name, type_get_name((type_t)ut));
+
   if (value_is_shadow(self) || !value_get_data(self))
     return create_exception_value(vm, "cannot access field '%s' of uninitialized union", name);
 
@@ -715,6 +775,12 @@ static value_t _union_set_field(vm_t vm, value_t self, const char *name, value_t
   if (!fi)
     return create_exception_value(vm, "union '%s' has no field '%s'",
                               type_get_name((type_t)ut), name);
+
+  /* access control: private field only accessible from same module */
+  if (_access_denied(union_type_get_module_id(ut), field_info_is_pub(fi),
+                     vm_get_current_module_id(vm)))
+    return create_exception_value(vm, "cannot access private field '%s' of union '%s' from outside its module",
+                              name, type_get_name((type_t)ut));
 
   if (!type_is_mut((type_t)ut))
     return create_exception_value(vm, "cannot assign to field of const union");
@@ -781,6 +847,13 @@ static value_t _union_type_get_prop(vm_t vm, type_t self, const char *name) {
   if (!val)
     return create_exception_value(vm, "union '%s' has no static property '%s'",
                               type_get_name(self), name);
+
+  /* access control: private prop only accessible from same module */
+  if (_access_denied(union_type_get_module_id(ut), union_type_is_prop_pub(ut, name),
+                     vm_get_current_module_id(vm)))
+    return create_exception_value(vm, "cannot access private property '%s' of union '%s' from outside its module",
+                              name, type_get_name(self));
+
   return val;
 }
 
@@ -790,6 +863,12 @@ static value_t _union_type_set_prop(vm_t vm, type_t self, const char *name, valu
   if (!existing)
     return create_exception_value(vm, "union '%s' has no static property '%s'",
                               type_get_name(self), name);
+
+  /* access control: private prop only accessible from same module */
+  if (_access_denied(union_type_get_module_id(ut), union_type_is_prop_pub(ut, name),
+                     vm_get_current_module_id(vm)))
+    return create_exception_value(vm, "cannot access private property '%s' of union '%s' from outside its module",
+                              name, type_get_name(self));
 
   if (value_is_initialized(existing) && !type_is_mut(value_get_type(existing)))
     return create_exception_value(vm, "cannot assign to const static property '%s'", name);

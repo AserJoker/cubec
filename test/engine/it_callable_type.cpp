@@ -42,7 +42,7 @@ protected:
     vec_init_t vi = {.auto_dispose = false};
     vec_t params = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
     vec_push(params, _get_i32_type(vm));
-    value_t tv = vm_create_callable_type_value(vm, params, _get_i32_type(vm), false, true);
+    value_t tv = vm_create_callable_type_value(vm, params, _get_i32_type(vm), false, true, "<builtin>");
     allocator_free(alloc, &params);
     return (callable_type_t)value_get_data(tv);
   }
@@ -53,7 +53,7 @@ protected:
     vec_t params = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
     vec_push(params, _get_i32_type(vm));
     vec_push(params, _get_bool_type(vm));
-    value_t tv = vm_create_callable_type_value(vm, params, _get_void_type(vm), false, true);
+    value_t tv = vm_create_callable_type_value(vm, params, _get_void_type(vm), false, true, "<builtin>");
     allocator_free(alloc, &params);
     return (callable_type_t)value_get_data(tv);
   }
@@ -129,7 +129,7 @@ TEST_F(it_callable_type, create_variadic) {
   vec_init_t vi = {.auto_dispose = false};
   vec_t params = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
   vec_push(params, _get_i32_type(vm));
-  value_t tv = vm_create_callable_type_value(vm, params, _get_i32_type(vm), true, true);
+  value_t tv = vm_create_callable_type_value(vm, params, _get_i32_type(vm), true, true, "<builtin>");
   allocator_free(alloc, &params);
   callable_type_t ct = (callable_type_t)value_get_data(tv);
 
@@ -147,7 +147,7 @@ TEST_F(it_callable_type, create_no_params) {
 
   vec_init_t vi = {.auto_dispose = false};
   vec_t params = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
-  value_t tv = vm_create_callable_type_value(vm, params, _get_bool_type(vm), false, true);
+  value_t tv = vm_create_callable_type_value(vm, params, _get_bool_type(vm), false, true, "<builtin>");
   allocator_free(alloc, &params);
   callable_type_t ct = (callable_type_t)value_get_data(tv);
 
@@ -215,7 +215,7 @@ TEST_F(it_callable_type, call_no_args) {
 
   vec_init_t vi = {.auto_dispose = false};
   vec_t params = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
-  value_t tv = vm_create_callable_type_value(vm, params, _get_bool_type(vm), false, true);
+  value_t tv = vm_create_callable_type_value(vm, params, _get_bool_type(vm), false, true, "<builtin>");
   allocator_free(alloc, &params);
   callable_type_t ct = (callable_type_t)value_get_data(tv);
 
@@ -298,7 +298,7 @@ TEST_F(it_callable_type, call_variadic) {
   vec_init_t vi = {.auto_dispose = false};
   vec_t params = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
   vec_push(params, _get_i32_type(vm));
-  value_t tv = vm_create_callable_type_value(vm, params, _get_i32_type(vm), true, true);
+  value_t tv = vm_create_callable_type_value(vm, params, _get_i32_type(vm), true, true, "<builtin>");
   allocator_free(alloc, &params);
   callable_type_t ct = (callable_type_t)value_get_data(tv);
 
@@ -324,7 +324,7 @@ TEST_F(it_callable_type, call_variadic_too_few) {
   vec_init_t vi = {.auto_dispose = false};
   vec_t params = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
   vec_push(params, _get_i32_type(vm));
-  value_t tv = vm_create_callable_type_value(vm, params, _get_i32_type(vm), true, true);
+  value_t tv = vm_create_callable_type_value(vm, params, _get_i32_type(vm), true, true, "<builtin>");
   allocator_free(alloc, &params);
   callable_type_t ct = (callable_type_t)value_get_data(tv);
 
@@ -377,7 +377,7 @@ TEST_F(it_callable_type, type_equal_variadic_vs_nonvariadic) {
   vec_init_t vi = {.auto_dispose = false};
   vec_t params = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
   vec_push(params, _get_i32_type(vm));
-  value_t tv = vm_create_callable_type_value(vm, params, _get_i32_type(vm), true, true);
+  value_t tv = vm_create_callable_type_value(vm, params, _get_i32_type(vm), true, true, "<builtin>");
   allocator_free(alloc, &params);
   callable_type_t ct_v = (callable_type_t)value_get_data(tv);
 
