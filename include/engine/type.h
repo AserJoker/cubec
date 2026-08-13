@@ -108,9 +108,13 @@ struct vtable_t {
   /* Member call (a.method(args) — method dispatch with implicit self) */
   value_t (*member_call)  (vm_t vm, value_t self, const char *name,
                            size_t argc, value_t *argv);
-  /* Static property access (Type::prop) */
+  /* Static property access (Type::prop) — only TYPE_KIND_TYPE implements get_prop/set_prop;
+   * it delegates to the inner type's type_get_prop/type_set_prop. */
   value_t (*get_prop)     (vm_t vm, value_t self, const char *name);
   value_t (*set_prop)     (vm_t vm, value_t self, const char *name, value_t val);
+  /* Type-level property access — each type implements its own */
+  value_t (*type_get_prop)(vm_t vm, type_t self, const char *name);
+  value_t (*type_set_prop)(vm_t vm, type_t self, const char *name, value_t val);
 };
 typedef struct vtable_t vtable_t;
 

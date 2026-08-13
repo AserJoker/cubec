@@ -114,6 +114,22 @@ static value_t _type_extends(vm_t vm, value_t sub, value_t super_val) {
   return t_sub->vtable.type_extends(vm, t_sub, t_super);
 }
 
+static value_t _type_get_prop(vm_t vm, value_t self, const char *name) {
+  type_t inner = (type_t)value_get_data(self);
+  if (!inner->vtable.type_get_prop)
+    return create_error_value(vm, "type '%s' does not support static property access",
+                              inner->name);
+  return inner->vtable.type_get_prop(vm, inner, name);
+}
+
+static value_t _type_set_prop(vm_t vm, value_t self, const char *name, value_t val) {
+  type_t inner = (type_t)value_get_data(self);
+  if (!inner->vtable.type_set_prop)
+    return create_error_value(vm, "type '%s' does not support static property assignment",
+                              inner->name);
+  return inner->vtable.type_set_prop(vm, inner, name, val);
+}
+
 type_t type_get_type_type(allocator_t allocator) {
   type_init_t init = {
       .kind  = TYPE_KIND_TYPE,
@@ -127,6 +143,10 @@ type_t type_get_type_type(allocator_t allocator) {
           .extends = _type_extends,
           .type_equal = NULL,
           .type_extends = NULL,
+          .get_prop = _type_get_prop,
+          .set_prop = _type_set_prop,
+          .type_get_prop = NULL,
+          .type_set_prop = NULL,
       },
   };
   return (type_t)allocator_create(allocator, &g_type_class, &init);

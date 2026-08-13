@@ -560,3 +560,73 @@ TEST_F(it_union_type, member_call_no_method_error) {
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
+
+/* ---- type-level get_prop / set_prop (via TYPE_KIND_TYPE value) ---- */
+
+TEST_F(it_union_type, type_get_prop_via_type_value) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+
+  value_t prop_val = create_i32_value(vm, 42);
+  union_type_add_prop(vm, ut, "count", prop_val, false);
+
+  value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
+
+  value_t got = value_get_prop(vm, type_val, "count");
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_union_type, type_set_prop_via_type_value) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+
+  value_t prop_val = create_i32_value(vm, 42);
+  union_type_add_prop(vm, ut, "count", prop_val, false);
+
+  value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
+
+  value_t new_val = create_i32_value(vm, 99);
+  value_t result = value_set_prop(vm, type_val, "count", new_val);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+
+  value_t got = value_get_prop(vm, type_val, "count");
+  EXPECT_EQ(*(int32_t *)value_get_data(got), 99);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_union_type, type_get_prop_not_found) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+
+  value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
+
+  value_t got = value_get_prop(vm, type_val, "nonexistent");
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_union_type, instance_get_prop_rejected) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+
+  value_t prop_val = create_i32_value(vm, 42);
+  union_type_add_prop(vm, ut, "count", prop_val, false);
+
+  value_t ok_val = create_i32_value(vm, 42);
+  value_t uv = create_union_value(vm, ut, 0, ok_val);
+
+  /* get_prop on instance should return error (only TYPE_KIND_TYPE supports it) */
+  value_t got = value_get_prop(vm, uv, "count");
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}

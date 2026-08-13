@@ -765,3 +765,105 @@ TEST_F(it_struct_type, member_call_no_method_error) {
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
+
+/* ---- pointer member_call auto-deref ---- */
+
+TEST_F(it_struct_type, pointer_member_call_auto_deref) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = _make_point_type(vm);
+
+  value_t vx = create_i32_value(vm, 10);
+  value_t vy = create_i32_value(vm, 20);
+  value_t fields[] = {vx, vy};
+  value_t sv = create_struct_value(vm, st, fields);
+
+  value_t ptr = value_addrof(vm, sv);
+
+  /* calling a non-existent method through pointer should auto-deref and return error */
+  value_t argv[] = {};
+  value_t result = value_member_call(vm, ptr, "nonexistent", 0, argv);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- type-level get_prop / set_prop (via TYPE_KIND_TYPE value) ---- */
+
+TEST_F(it_struct_type, type_get_prop_via_type_value) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = _make_point_type(vm);
+
+  /* add a static property */
+  value_t prop_val = create_i32_value(vm, 42);
+  struct_type_add_prop(vm, st, "count", prop_val, false);
+
+  /* create a TYPE_KIND_TYPE value wrapping the struct type */
+  value_t type_val = create_type_value(vm, (type_t)st, NULL, false);
+
+  /* value_get_prop on the type value should delegate to _struct_type_get_prop */
+  value_t got = value_get_prop(vm, type_val, "count");
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, type_set_prop_via_type_value) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = _make_point_type(vm);
+
+  /* add a mutable static property */
+  value_t prop_val = create_i32_value(vm, 42);
+  struct_type_add_prop(vm, st, "count", prop_val, false);
+
+  value_t type_val = create_type_value(vm, (type_t)st, NULL, false);
+
+  /* set_prop via type value */
+  value_t new_val = create_i32_value(vm, 99);
+  value_t result = value_set_prop(vm, type_val, "count", new_val);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+
+  /* verify the prop was updated */
+  value_t got = value_get_prop(vm, type_val, "count");
+  EXPECT_EQ(*(int32_t *)value_get_data(got), 99);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, type_get_prop_not_found) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = _make_point_type(vm);
+
+  value_t type_val = create_type_value(vm, (type_t)st, NULL, false);
+
+  value_t got = value_get_prop(vm, type_val, "nonexistent");
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, instance_get_prop_rejected) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = _make_point_type(vm);
+
+  value_t prop_val = create_i32_value(vm, 42);
+  struct_type_add_prop(vm, st, "count", prop_val, false);
+
+  /* create a struct instance value */
+  value_t vx = create_i32_value(vm, 10);
+  value_t vy = create_i32_value(vm, 20);
+  value_t fields[] = {vx, vy};
+  value_t sv = create_struct_value(vm, st, fields);
+
+  /* get_prop on instance should return error (only TYPE_KIND_TYPE supports it) */
+  value_t got = value_get_prop(vm, sv, "count");
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+

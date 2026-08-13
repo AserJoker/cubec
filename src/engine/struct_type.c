@@ -29,8 +29,8 @@ static value_t _struct_get_field(vm_t vm, value_t self, const char *name);
 static value_t _struct_set_field(vm_t vm, value_t self, const char *name, value_t val);
 static value_t _struct_member_call(vm_t vm, value_t self, const char *name,
                                    size_t argc, value_t *argv);
-static value_t _struct_get_prop(vm_t vm, value_t self, const char *name);
-static value_t _struct_set_prop(vm_t vm, value_t self, const char *name, value_t val);
+static value_t _struct_type_get_prop(vm_t vm, type_t self, const char *name);
+static value_t _struct_type_set_prop(vm_t vm, type_t self, const char *name, value_t val);
 
 /* ---- Shared vtable for all struct types ---- */
 
@@ -69,8 +69,10 @@ static vtable_t _make_struct_vtable(void) {
       .slice        = NULL,
       .call         = NULL,
       .member_call  = _struct_member_call,
-      .get_prop     = _struct_get_prop,
-      .set_prop     = _struct_set_prop,
+      .get_prop     = NULL,
+      .set_prop     = NULL,
+      .type_get_prop= _struct_type_get_prop,
+      .type_set_prop= _struct_type_set_prop,
   };
 }
 
@@ -791,24 +793,24 @@ static value_t _struct_member_call(vm_t vm, value_t self, const char *name,
 }
 
 /* ================================================================== */
-/* VTable: get_prop / set_prop                                         */
+/* VTable: type_get_prop / type_set_prop                               */
 /* ================================================================== */
 
-static value_t _struct_get_prop(vm_t vm, value_t self, const char *name) {
-  struct_type_t st = (struct_type_t)value_get_type(self);
+static value_t _struct_type_get_prop(vm_t vm, type_t self, const char *name) {
+  struct_type_t st = (struct_type_t)self;
   value_t val = (value_t)strmap_find(st->props, name);
   if (!val)
     return create_error_value(vm, "struct '%s' has no static property '%s'",
-                              type_get_name((type_t)st), name);
+                              type_get_name(self), name);
   return val;
 }
 
-static value_t _struct_set_prop(vm_t vm, value_t self, const char *name, value_t val) {
-  struct_type_t st = (struct_type_t)value_get_type(self);
+static value_t _struct_type_set_prop(vm_t vm, type_t self, const char *name, value_t val) {
+  struct_type_t st = (struct_type_t)self;
   value_t existing = (value_t)strmap_find(st->props, name);
   if (!existing)
     return create_error_value(vm, "struct '%s' has no static property '%s'",
-                              type_get_name((type_t)st), name);
+                              type_get_name(self), name);
 
   /* const check on existing prop */
   if (value_is_initialized(existing) && !type_is_mut(value_get_type(existing)))
