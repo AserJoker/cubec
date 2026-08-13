@@ -2,7 +2,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
@@ -164,14 +164,14 @@ static value_t _##Prefix##_equal(vm_t vm, value_t a, value_t b) {             \
   type_t ta = value_get_type(a);                                               \
   type_t tb = value_get_type(b);                                               \
   if (!_is_float_kind(tb->kind))                                               \
-    return create_error_value(vm, "cannot compare values of different kinds");  \
+    return create_exception_value(vm, "cannot compare values of different kinds");  \
   if (value_is_shadow(a) || value_is_shadow(b)) {                              \
     type_t rt = _float_common_type(ta, tb);                                    \
     return vm_create_value_shadow(vm, rt, NULL, true);                         \
   }                                                                            \
   value_t pa, pb;                                                              \
   type_t rt = _float_promote(vm, a, b, &pa, &pb);                             \
-  if (!rt) return create_error_value(vm, "float comparison failed");           \
+  if (!rt) return create_exception_value(vm, "float comparison failed");           \
   return create_bool_value(vm, _float_read_f64(pa) == _float_read_f64(pb));   \
 }                                                                              \
                                                                                \
@@ -191,7 +191,7 @@ static value_t _##Prefix##_type_extends(vm_t vm, type_t sub, type_t super) {  \
                                                                                \
 static value_t _##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {       \
   if (!_is_float_kind(to->kind))                                               \
-    return create_error_value(vm,                                              \
+    return create_exception_value(vm,                                              \
         "cannot safe_cast %s to '%s'", NAME, to->name);                        \
   if (to == value_get_type(self)) return self;                                 \
   if (value_is_shadow(self))                                                   \
@@ -201,10 +201,10 @@ static value_t _##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {       \
                                                                                \
 static value_t _const_##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {\
   if (!_is_float_kind(to->kind))                                               \
-    return create_error_value(vm,                                              \
+    return create_exception_value(vm,                                              \
         "cannot safe_cast const %s to '%s'", NAME, to->name);                  \
   if (to->mut)                                                                 \
-    return create_error_value(vm,                                              \
+    return create_exception_value(vm,                                              \
         "cannot safe_cast const %s to %s", NAME, NAME);                        \
   if (to == value_get_type(self)) return self;                                 \
   if (value_is_shadow(self))                                                   \
@@ -216,7 +216,7 @@ static value_t _##Prefix##_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t lt = value_get_type(lvalue);                                          \
   type_t rt = value_get_type(rvalue);                                          \
   if (!_is_float_kind(rt->kind))                                               \
-    return create_error_value(vm,                                              \
+    return create_exception_value(vm,                                              \
         "cannot assign '%s' to '%s'", rt->name, lt->name);                     \
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {                    \
     value_set_initialized(lvalue, true);                                       \
@@ -239,7 +239,7 @@ DEFINE_FLOAT_VTABLE(f64, double,   TYPE_KIND_F64, 8, 8, "f64")
 static value_t _float_add(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _float_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator +: incompatible float types");
+  if (!rt) return create_exception_value(vm, "operator +: incompatible float types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   return _float_alloc_result(vm, rt, _float_read_f64(pa) + _float_read_f64(pb));
@@ -248,7 +248,7 @@ static value_t _float_add(vm_t vm, value_t a, value_t b) {
 static value_t _float_sub(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _float_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator -: incompatible float types");
+  if (!rt) return create_exception_value(vm, "operator -: incompatible float types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   return _float_alloc_result(vm, rt, _float_read_f64(pa) - _float_read_f64(pb));
@@ -257,7 +257,7 @@ static value_t _float_sub(vm_t vm, value_t a, value_t b) {
 static value_t _float_mul(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _float_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator *: incompatible float types");
+  if (!rt) return create_exception_value(vm, "operator *: incompatible float types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   return _float_alloc_result(vm, rt, _float_read_f64(pa) * _float_read_f64(pb));
@@ -266,43 +266,43 @@ static value_t _float_mul(vm_t vm, value_t a, value_t b) {
 static value_t _float_div(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _float_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator /: incompatible float types");
+  if (!rt) return create_exception_value(vm, "operator /: incompatible float types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   if (_float_read_f64(pb) == 0.0)
-    return create_error_value(vm, "division by zero");
+    return create_exception_value(vm, "division by zero");
   return _float_alloc_result(vm, rt, _float_read_f64(pa) / _float_read_f64(pb));
 }
 
 static value_t _float_mod(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _float_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator %%: incompatible float types");
+  if (!rt) return create_exception_value(vm, "operator %%: incompatible float types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   if (_float_read_f64(pb) == 0.0)
-    return create_error_value(vm, "division by zero");
+    return create_exception_value(vm, "division by zero");
   return _float_alloc_result(vm, rt, fmod(_float_read_f64(pa), _float_read_f64(pb)));
 }
 
 static value_t _float_band(vm_t vm, value_t a, value_t b) {
   (void)a; (void)b;
-  return create_error_value(vm, "float does not support operator &");
+  return create_exception_value(vm, "float does not support operator &");
 }
 
 static value_t _float_bor(vm_t vm, value_t a, value_t b) {
   (void)a; (void)b;
-  return create_error_value(vm, "float does not support operator |");
+  return create_exception_value(vm, "float does not support operator |");
 }
 
 static value_t _float_bxor(vm_t vm, value_t a, value_t b) {
   (void)a; (void)b;
-  return create_error_value(vm, "float does not support operator ^");
+  return create_exception_value(vm, "float does not support operator ^");
 }
 
 static value_t _float_bnot(vm_t vm, value_t a) {
   (void)a;
-  return create_error_value(vm, "float does not support operator ~");
+  return create_exception_value(vm, "float does not support operator ~");
 }
 
 static value_t _float_lnot(vm_t vm, value_t a) {
@@ -313,12 +313,12 @@ static value_t _float_lnot(vm_t vm, value_t a) {
 
 static value_t _float_shl(vm_t vm, value_t a, value_t b) {
   (void)a; (void)b;
-  return create_error_value(vm, "float does not support operator <<");
+  return create_exception_value(vm, "float does not support operator <<");
 }
 
 static value_t _float_shr(vm_t vm, value_t a, value_t b) {
   (void)a; (void)b;
-  return create_error_value(vm, "float does not support operator >>");
+  return create_exception_value(vm, "float does not support operator >>");
 }
 
 static value_t _float_pos(vm_t vm, value_t a) {
@@ -336,7 +336,7 @@ static value_t _float_neg(vm_t vm, value_t a) {
 static value_t _float_gt(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _float_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator >: incompatible float types");
+  if (!rt) return create_exception_value(vm, "operator >: incompatible float types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   return create_bool_value(vm, _float_read_f64(pa) > _float_read_f64(pb));
@@ -345,7 +345,7 @@ static value_t _float_gt(vm_t vm, value_t a, value_t b) {
 static value_t _float_lt(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _float_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator <: incompatible float types");
+  if (!rt) return create_exception_value(vm, "operator <: incompatible float types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   return create_bool_value(vm, _float_read_f64(pa) < _float_read_f64(pb));

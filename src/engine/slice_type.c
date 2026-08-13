@@ -3,7 +3,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
@@ -201,7 +201,7 @@ static value_t _slice_clone(vm_t vm, value_t self) {
 static value_t _slice_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
   if (tb->kind != TYPE_KIND_SLICE)
-    return create_error_value(vm, "cannot compare slice with different kind");
+    return create_exception_value(vm, "cannot compare slice with different kind");
   slice_type_t sa = (slice_type_t)value_get_type(a);
   slice_type_t sb = (slice_type_t)tb;
   if (type_get_kind(sa->element_type) != type_get_kind(sb->element_type))
@@ -216,7 +216,7 @@ static value_t _slice_equal(vm_t vm, value_t a, value_t b) {
     value_t ea = _make_elem_from_slice(vm, sa, a, i);
     value_t eb = _make_elem_from_slice(vm, sb, b, i);
     value_t eq = value_equal(vm, ea, eb);
-    if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+    if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
       return eq;
     if (value_is_shadow(eq))
       return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
@@ -261,15 +261,15 @@ static value_t _slice_type_extends(vm_t vm, type_t sub, type_t super) {
 static value_t _slice_safe_cast(vm_t vm, value_t self, type_t to) {
   type_t from = value_get_type(self);
   if (to->kind != TYPE_KIND_SLICE)
-    return create_error_value(vm, "cannot safe_cast slice to '%s'", to->name);
+    return create_exception_value(vm, "cannot safe_cast slice to '%s'", to->name);
   if (to == from)
     return self;
   slice_type_t from_st = (slice_type_t)from;
   slice_type_t to_st = (slice_type_t)to;
   if (type_get_kind(from_st->element_type) != type_get_kind(to_st->element_type))
-    return create_error_value(vm, "cannot safe_cast slice with different element type");
+    return create_exception_value(vm, "cannot safe_cast slice with different element type");
   if (!from->mut && to->mut)
-    return create_error_value(vm, "cannot safe_cast const slice to mut slice");
+    return create_exception_value(vm, "cannot safe_cast const slice to mut slice");
   if (value_is_shadow(self))
     return create_slice_shadow(vm, to_st, value_is_initialized(self));
   /* clone data struct with new type */
@@ -290,7 +290,7 @@ static value_t _slice_safe_cast(vm_t vm, value_t self, type_t to) {
 static value_t _slice_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t rt = value_get_type(rvalue);
   if (rt->kind != TYPE_KIND_SLICE)
-    return create_error_value(vm, "cannot assign non-slice to slice");
+    return create_exception_value(vm, "cannot assign non-slice to slice");
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
     value_set_initialized(lvalue, true);
     return create_void_value(vm);
@@ -298,7 +298,7 @@ static value_t _slice_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   slice_type_t lst = (slice_type_t)value_get_type(lvalue);
   slice_type_t rst = (slice_type_t)rt;
   if (type_get_kind(lst->element_type) != type_get_kind(rst->element_type))
-    return create_error_value(vm, "cannot assign slice with different element type");
+    return create_exception_value(vm, "cannot assign slice with different element type");
   /* copy slice_data_t (ptr/start/len) */
   struct slice_data_t *dst_sd = _slice_read(lvalue);
   struct slice_data_t *src_sd = _slice_read(rvalue);
@@ -314,7 +314,7 @@ static value_t _slice_get_item(vm_t vm, value_t self, value_t index) {
   struct slice_data_t *sd = _slice_read(self);
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= sd->len)
-    return create_error_value(vm, "slice index %llu out of bounds (len %llu)",
+    return create_exception_value(vm, "slice index %llu out of bounds (len %llu)",
                               (unsigned long long)i, (unsigned long long)sd->len);
   return _make_elem_from_slice(vm, st, self, i);
 }
@@ -324,11 +324,11 @@ static value_t _slice_get_item(vm_t vm, value_t self, value_t index) {
 static value_t _slice_set_item(vm_t vm, value_t self, value_t index, value_t val) {
   slice_type_t st = (slice_type_t)value_get_type(self);
   if (!st->base.mut)
-    return create_error_value(vm, "cannot set_item on const slice");
+    return create_exception_value(vm, "cannot set_item on const slice");
   struct slice_data_t *sd = _slice_read(self);
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= sd->len)
-    return create_error_value(vm, "slice index %llu out of bounds (len %llu)",
+    return create_exception_value(vm, "slice index %llu out of bounds (len %llu)",
                               (unsigned long long)i, (unsigned long long)sd->len);
   type_t elem_type = st->element_type;
   uint64_t elem_size = type_get_size(elem_type);
@@ -343,7 +343,7 @@ static value_t _slice_deref_get(vm_t vm, value_t self) {
   slice_type_t st = (slice_type_t)value_get_type(self);
   struct slice_data_t *sd = _slice_read(self);
   if (sd->len == 0)
-    return create_error_value(vm, "cannot dereference empty slice");
+    return create_exception_value(vm, "cannot dereference empty slice");
   return _make_elem_from_slice(vm, st, self, 0);
 }
 
@@ -354,7 +354,7 @@ static value_t _slice_slice(vm_t vm, value_t self, uint64_t start,
   slice_type_t st = (slice_type_t)value_get_type(self);
   struct slice_data_t *sd = _slice_read(self);
   if (start + count > sd->len)
-    return create_error_value(vm,
+    return create_exception_value(vm,
         "slice slice [%llu..%llu) out of bounds (len %llu)",
         (unsigned long long)start, (unsigned long long)(start + count),
         (unsigned long long)sd->len);
@@ -393,7 +393,7 @@ static value_t _slice_to_string(vm_t vm, value_t self) {
     if (i > 0) string_concat(result, ", ");
     value_t idx = create_i32_value(vm, (int32_t)i);
     value_t elem = _slice_get_item(vm, self, idx);
-    if (type_get_kind(value_get_type(elem)) == TYPE_KIND_ERROR) {
+    if (type_get_kind(value_get_type(elem)) == TYPE_KIND_EXCEPTION) {
       string_concat(result, "<error>");
     } else {
       value_t s = value_to_string(vm, elem);
@@ -418,12 +418,12 @@ value_t create_slice_value(vm_t vm, slice_type_t st,
   type_t arr_type = value_get_type(array_value);
   /* must be an array with compatible element type */
   if (type_get_kind(arr_type) != TYPE_KIND_ARRAY)
-    return create_error_value(vm, "cannot create slice from non-array");
+    return create_exception_value(vm, "cannot create slice from non-array");
   array_type_t at = (array_type_t)arr_type;
   if (type_get_kind(at->element_type) != type_get_kind(st->element_type))
-    return create_error_value(vm, "slice element type does not match array");
+    return create_exception_value(vm, "slice element type does not match array");
   if (start_elem + count > at->count)
-    return create_error_value(vm, "slice range out of bounds");
+    return create_exception_value(vm, "slice range out of bounds");
 
   struct slice_data_t *sd = (struct slice_data_t *)allocator_alloc(
       alloc, sizeof(struct slice_data_t));

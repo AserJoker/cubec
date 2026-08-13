@@ -201,8 +201,8 @@ TEST_F(it_scope, vm_global_has_builtin_names) {
   EXPECT_NE(scope_lookup(global, "type"), nullptr);
   EXPECT_NE(scope_lookup(global, "bool"), nullptr);
   EXPECT_NE(scope_lookup(global, "void"), nullptr);
-  /* error and wildcard have no name */
-  EXPECT_EQ(scope_lookup(global, "error"), nullptr);
+  EXPECT_NE(scope_lookup(global, "error"), nullptr);
+  /* wildcard has no name */
   EXPECT_EQ(scope_lookup(global, "?"), nullptr);
 
   vm_dispose(vm, allocator);
@@ -257,8 +257,8 @@ TEST_F(it_scope, dispose_scope_with_values) {
   value_t v = create_bool_value(vm, true);
   (void)v;
   scope_t global = vm_get_global_scope(vm);
-  /* 31 bootstrap types + 1 wildcard value + 1 bool value = 33 */
-  EXPECT_EQ(vec_get_size(global->values), 33u);
+  /* 32 bootstrap types (incl. error struct) + 1 wildcard value + 1 bool value = 34 */
+  EXPECT_EQ(vec_get_size(global->values), 34u);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -273,7 +273,7 @@ TEST_F(it_scope, vm_dispose_cleans_child_scope_values) {
   value_t v = create_bool_value(vm, true);
   (void)v;
   /* bool value is in vm->current_scope (global) */
-  EXPECT_EQ(vec_get_size(global->values), 33u); /* 31 bootstrap types + wildcard value + bool_value */
+  EXPECT_EQ(vec_get_size(global->values), 34u); /* 32 bootstrap types + wildcard value + bool_value */
 
   /* child scope has no values */
   EXPECT_EQ(vec_get_size(child->values), 0u);

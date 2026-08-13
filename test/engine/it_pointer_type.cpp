@@ -5,7 +5,7 @@
 #include "engine/bool_type.h"
 #include "engine/integer_type.h"
 #include "engine/void_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/pointer_type.h"
 #include "core/string.h"
 #include "common/test_common.h"
@@ -173,7 +173,7 @@ TEST_F(it_pointer_type, addrof_void_error) {
   vm_t vm = vm_create(allocator);
   value_t v = create_void_value(vm);
   value_t result = value_addrof(vm, v);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -183,7 +183,7 @@ TEST_F(it_pointer_type, addrof_type_error) {
   vm_t vm = vm_create(allocator);
   value_t tv = vm_get_i32_type(vm);
   value_t result = value_addrof(vm, tv);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -191,9 +191,9 @@ TEST_F(it_pointer_type, addrof_type_error) {
 
 TEST_F(it_pointer_type, addrof_error_error) {
   vm_t vm = vm_create(allocator);
-  value_t ev = create_error_value(vm, "test");
+  value_t ev = create_exception_value(vm, "test");
   value_t result = value_addrof(vm, ev);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -250,7 +250,7 @@ TEST_F(it_pointer_type, deref_set_const_ptr_error) {
   int32_t new_val = 100;
   value_t new_v = vm_create_value(vm, _get_i32_type(vm), &new_val, NULL);
   value_t result = value_deref_set(vm, pv, new_v);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -397,7 +397,7 @@ TEST_F(it_pointer_type, assignment_const_ptr_error) {
   value_t mp = create_pointer_value(vm, mut_pt, t2);
 
   value_t result = value_assignment(vm, cp, mp);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

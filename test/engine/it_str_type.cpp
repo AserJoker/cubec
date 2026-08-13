@@ -6,7 +6,7 @@
 #include "engine/str_type.h"
 #include "engine/integer_type.h"
 #include "engine/void_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/slice_type.h"
 #include "core/string.h"
 #include "common/test_common.h"
@@ -95,7 +95,7 @@ TEST_F(it_str_type, equal_integer_error) {
   value_t b = create_i32_value(vm, 42);
   value_t result = value_equal(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -147,7 +147,7 @@ TEST_F(it_str_type, add_integer_error) {
   value_t b = create_i32_value(vm, 42);
   value_t result = value_add(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -261,7 +261,7 @@ TEST_F(it_str_type, sub_error) {
   value_t b = create_str_value(vm, "b");
   value_t result = value_sub(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -273,7 +273,7 @@ TEST_F(it_str_type, mul_error) {
   value_t b = create_str_value(vm, "b");
   value_t result = value_mul(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -285,7 +285,7 @@ TEST_F(it_str_type, band_error) {
   value_t b = create_str_value(vm, "b");
   value_t result = value_band(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -296,7 +296,7 @@ TEST_F(it_str_type, neg_error) {
   value_t a = create_str_value(vm, "a");
   value_t result = value_neg(vm, a);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -308,7 +308,7 @@ TEST_F(it_str_type, shl_error) {
   value_t b = create_str_value(vm, "b");
   value_t result = value_shl(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -348,7 +348,7 @@ TEST_F(it_str_type, safe_cast_to_void_error) {
   type_t vt = _get_void_type(vm);
   value_t result = value_safe_cast(vm, a, vt);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -361,7 +361,7 @@ TEST_F(it_str_type, const_str_safe_cast_to_str_error) {
   type_t strt = _get_str_type(vm);
   value_t result = value_safe_cast(vm, a, strt);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -402,7 +402,7 @@ TEST_F(it_str_type, const_str_assign_error) {
   value_t b = create_str_value(vm, "hello");
   value_t result = value_assignment(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -414,7 +414,7 @@ TEST_F(it_str_type, assign_integer_error) {
   value_t b = create_i32_value(vm, 42);
   value_t result = value_assignment(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -441,7 +441,7 @@ TEST_F(it_str_type, type_equal_i32_error) {
   value_t b = vm_get_i32_type(vm);
   value_t result = value_equal(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -522,7 +522,7 @@ TEST_F(it_str_type, slice_out_of_bounds) {
   value_t s = create_str_value(vm, "hi");
 
   value_t sub = value_slice(vm, s, 0, 5);
-  EXPECT_EQ(type_get_kind(value_get_type(sub)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(sub)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

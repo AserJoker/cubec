@@ -5,7 +5,7 @@
 #include "engine/bool_type.h"
 #include "engine/integer_type.h"
 #include "engine/void_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/str_type.h"
 #include "engine/struct_type.h"
 #include "engine/union_type.h"
@@ -187,7 +187,7 @@ TEST_F(it_union_type, get_field_inactive_error) {
 
   /* "err" is inactive → error */
   value_t result = value_get_field(vm, uv, "err");
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -208,7 +208,7 @@ TEST_F(it_union_type, set_field_switches_tag) {
 
   /* now "ok" should be inactive */
   value_t got_ok = value_get_field(vm, uv, "ok");
-  EXPECT_EQ(type_get_kind(value_get_type(got_ok)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(got_ok)), TYPE_KIND_EXCEPTION);
 
   /* "err" should be active */
   value_t got_err = value_get_field(vm, uv, "err");
@@ -226,7 +226,7 @@ TEST_F(it_union_type, get_field_not_found) {
   value_t uv = create_union_value(vm, ut, 0, ok_val);
 
   value_t result = value_get_field(vm, uv, "nonexistent");
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -244,7 +244,7 @@ TEST_F(it_union_type, set_field_const_union_rejected) {
 
   value_t new_ok = create_i32_value(vm, 99);
   value_t result = value_set_field(vm, uv, "ok", new_ok);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -278,7 +278,7 @@ TEST_F(it_union_type, member_addr_inactive_error) {
   value_t uv = create_union_value(vm, ut, 0, ok_val);
 
   value_t addr = value_member_addr(vm, uv, "err");
-  EXPECT_EQ(type_get_kind(value_get_type(addr)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(addr)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -433,7 +433,7 @@ TEST_F(it_union_type, safe_cast_different_type_rejected) {
   value_t uv = create_union_value(vm, ut1, 0, ok_val);
 
   value_t casted = value_safe_cast(vm, uv, (type_t)ut2);
-  EXPECT_EQ(type_get_kind(value_get_type(casted)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(casted)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -556,7 +556,7 @@ TEST_F(it_union_type, member_call_no_method_error) {
 
   value_t argv[] = {};
   value_t result = value_member_call(vm, uv, "nonexistent", 0, argv);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -608,7 +608,7 @@ TEST_F(it_union_type, type_get_prop_not_found) {
   value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
 
   value_t got = value_get_prop(vm, type_val, "nonexistent");
-  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -626,7 +626,7 @@ TEST_F(it_union_type, instance_get_prop_rejected) {
 
   /* get_prop on instance should return error (only TYPE_KIND_TYPE supports it) */
   value_t got = value_get_prop(vm, uv, "count");
-  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

@@ -1,4 +1,4 @@
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
@@ -7,24 +7,24 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-/* ---- Error type vtable ---- */
+/* ---- Exception type vtable ---- */
 
-static value_t _error_clone(vm_t vm, value_t self) {
-  struct error_data_t *src = (struct error_data_t *)value_get_data(self);
+static value_t _exception_clone(vm_t vm, value_t self) {
+  struct exception_data_t *src = (struct exception_data_t *)value_get_data(self);
   if (src && src->message)
-    return create_error_value(vm, "%s", src->message);
-  return create_error_value(vm, NULL);
+    return create_exception_value(vm, "%s", src->message);
+  return create_exception_value(vm, NULL);
 }
 
-type_t type_get_error_type(allocator_t allocator) {
+type_t type_get_exception_type(allocator_t allocator) {
   type_init_t init = {
-      .kind  = TYPE_KIND_ERROR,
-      .name  = "error",
-      .size  = sizeof(struct error_data_t),
-      .align = _Alignof(struct error_data_t),
+      .kind  = TYPE_KIND_EXCEPTION,
+      .name  = "exception",
+      .size  = sizeof(struct exception_data_t),
+      .align = _Alignof(struct exception_data_t),
       .mut   = false,
       .vtable = {
-          .clone = _error_clone,
+          .clone = _exception_clone,
           .equal = NULL,
           .extends = NULL,
           .type_equal = NULL,
@@ -34,7 +34,7 @@ type_t type_get_error_type(allocator_t allocator) {
   return (type_t)allocator_create(allocator, &g_type_class, &init);
 }
 
-value_t create_error_value(vm_t vm, const char *fmt, ...) {
+value_t create_exception_value(vm_t vm, const char *fmt, ...) {
   allocator_t allocator = vm_get_allocator(vm);
 
   /* First pass: compute message length */
@@ -46,10 +46,10 @@ value_t create_error_value(vm_t vm, const char *fmt, ...) {
     va_end(args);
   }
 
-  /* Allocate error_data_t with inline message */
+  /* Allocate exception_data_t with inline message */
   size_t msg_size = (len > 0) ? (size_t)len + 1 : 1;
-  struct error_data_t *data = (struct error_data_t *)allocator_alloc(
-      allocator, sizeof(struct error_data_t) + msg_size);
+  struct exception_data_t *data = (struct exception_data_t *)allocator_alloc(
+      allocator, sizeof(struct exception_data_t) + msg_size);
 
   if (fmt && len > 0) {
     va_list args;
@@ -60,8 +60,8 @@ value_t create_error_value(vm_t vm, const char *fmt, ...) {
     data->message[0] = '\0';
   }
 
-  type_t error_type = (type_t)value_get_data(vm_get_error_type(vm));
-  value_t v = value_create(allocator, error_type, data, true);
+  type_t exception_type = (type_t)value_get_data(vm_get_exception_type(vm));
+  value_t v = value_create(allocator, exception_type, data, true);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) {
     vec_push(scope->values, v);

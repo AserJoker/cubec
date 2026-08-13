@@ -5,7 +5,7 @@
 #include "engine/bool_type.h"
 #include "engine/integer_type.h"
 #include "engine/void_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/str_type.h"
 #include "engine/callable_type.h"
 #include "engine/cfunc.h"
@@ -253,7 +253,7 @@ TEST_F(it_callable_type, call_wrong_argc) {
   value_t cv = create_callable_value(vm, ct, _add_one, NULL);
 
   value_t result = value_call(vm, cv, 0, NULL);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -263,7 +263,7 @@ TEST_F(it_callable_type, call_not_callable_type) {
   vm_t vm = vm_create(allocator);
   value_t not_callable = create_bool_value(vm, true);
   value_t result = value_call(vm, not_callable, 0, NULL);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -332,7 +332,7 @@ TEST_F(it_callable_type, call_variadic_too_few) {
 
   /* 0 args but need at least 1 */
   value_t result = value_call(vm, cv, 0, NULL);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

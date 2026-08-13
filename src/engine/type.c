@@ -4,7 +4,7 @@
 #include "engine/name.h"
 #include "engine/scope.h"
 #include "engine/bool_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "core/string.h"
 #include <string.h>
 
@@ -93,10 +93,10 @@ static value_t _type_equal(vm_t vm, value_t a, value_t b) {
   if (tb->kind == TYPE_KIND_WILDCARD)
     return create_bool_value(vm, true);
   if (ta->kind != tb->kind)
-    return create_error_value(vm, "cannot compare types of different kinds: %s vs %s",
+    return create_exception_value(vm, "cannot compare types of different kinds: %s vs %s",
                               ta->name, tb->name);
   if (!ta->vtable.type_equal)
-    return create_error_value(vm, "type '%s' does not support type_equal", ta->name);
+    return create_exception_value(vm, "type '%s' does not support type_equal", ta->name);
   return ta->vtable.type_equal(vm, ta, tb);
 }
 
@@ -107,17 +107,17 @@ static value_t _type_extends(vm_t vm, value_t sub, value_t super_val) {
   if (t_super->kind == TYPE_KIND_WILDCARD)
     return create_bool_value(vm, true);
   if (t_sub->kind != t_super->kind)
-    return create_error_value(vm, "cannot check extends between types of different kinds: %s vs %s",
+    return create_exception_value(vm, "cannot check extends between types of different kinds: %s vs %s",
                               t_sub->name, t_super->name);
   if (!t_sub->vtable.type_extends)
-    return create_error_value(vm, "type '%s' does not support type_extends", t_sub->name);
+    return create_exception_value(vm, "type '%s' does not support type_extends", t_sub->name);
   return t_sub->vtable.type_extends(vm, t_sub, t_super);
 }
 
 static value_t _type_get_prop(vm_t vm, value_t self, const char *name) {
   type_t inner = (type_t)value_get_data(self);
   if (!inner->vtable.type_get_prop)
-    return create_error_value(vm, "type '%s' does not support static property access",
+    return create_exception_value(vm, "type '%s' does not support static property access",
                               inner->name);
   return inner->vtable.type_get_prop(vm, inner, name);
 }
@@ -125,7 +125,7 @@ static value_t _type_get_prop(vm_t vm, value_t self, const char *name) {
 static value_t _type_set_prop(vm_t vm, value_t self, const char *name, value_t val) {
   type_t inner = (type_t)value_get_data(self);
   if (!inner->vtable.type_set_prop)
-    return create_error_value(vm, "type '%s' does not support static property assignment",
+    return create_exception_value(vm, "type '%s' does not support static property assignment",
                               inner->name);
   return inner->vtable.type_set_prop(vm, inner, name, val);
 }

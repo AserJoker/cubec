@@ -2,7 +2,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
@@ -209,7 +209,7 @@ static value_t _array_clone(vm_t vm, value_t self) {
 static value_t _array_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
   if (tb->kind != TYPE_KIND_ARRAY)
-    return create_error_value(vm, "cannot compare array with different kind");
+    return create_exception_value(vm, "cannot compare array with different kind");
   array_type_t at = (array_type_t)value_get_type(a);
   array_type_t bt = (array_type_t)tb;
   if (at->count != bt->count || type_get_kind(at->element_type) != type_get_kind(bt->element_type))
@@ -220,7 +220,7 @@ static value_t _array_equal(vm_t vm, value_t a, value_t b) {
     value_t ea = _make_elem_value(vm, at, a, i);
     value_t eb = _make_elem_value(vm, bt, b, i);
     value_t eq = value_equal(vm, ea, eb);
-    if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+    if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
       return eq;
     if (value_is_shadow(eq))
       return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
@@ -271,17 +271,17 @@ static value_t _array_type_extends(vm_t vm, type_t sub, type_t super) {
 static value_t _array_safe_cast(vm_t vm, value_t self, type_t to) {
   type_t from = value_get_type(self);
   if (to->kind != TYPE_KIND_ARRAY)
-    return create_error_value(vm, "cannot safe_cast array to '%s'", to->name);
+    return create_exception_value(vm, "cannot safe_cast array to '%s'", to->name);
   if (to == from)
     return self;
   array_type_t from_at = (array_type_t)from;
   array_type_t to_at = (array_type_t)to;
   if (from_at->count != to_at->count)
-    return create_error_value(vm, "cannot safe_cast array with different count");
+    return create_exception_value(vm, "cannot safe_cast array with different count");
   if (type_get_kind(from_at->element_type) != type_get_kind(to_at->element_type))
-    return create_error_value(vm, "cannot safe_cast array with different element type");
+    return create_exception_value(vm, "cannot safe_cast array with different element type");
   if (!from->mut && to->mut)
-    return create_error_value(vm, "cannot safe_cast const array to mut array");
+    return create_exception_value(vm, "cannot safe_cast const array to mut array");
   if (value_is_shadow(self))
     return create_array_shadow(vm, to_at, value_is_initialized(self));
   allocator_t alloc = vm_get_allocator(vm);
@@ -303,7 +303,7 @@ static value_t _array_safe_cast(vm_t vm, value_t self, type_t to) {
 static value_t _array_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t rt = value_get_type(rvalue);
   if (rt->kind != TYPE_KIND_ARRAY)
-    return create_error_value(vm, "cannot assign non-array to array");
+    return create_exception_value(vm, "cannot assign non-array to array");
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
     value_set_initialized(lvalue, true);
     return create_void_value(vm);
@@ -311,7 +311,7 @@ static value_t _array_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   array_type_t lat = (array_type_t)value_get_type(lvalue);
   array_type_t rat = (array_type_t)rt;
   if (lat->count != rat->count || type_get_kind(lat->element_type) != type_get_kind(rat->element_type))
-    return create_error_value(vm, "cannot assign array with different shape");
+    return create_exception_value(vm, "cannot assign array with different shape");
   memcpy(value_get_data(lvalue), value_get_data(rvalue), lat->base.size);
   value_set_initialized(lvalue, true);
   return create_void_value(vm);
@@ -323,7 +323,7 @@ static value_t _array_get_item(vm_t vm, value_t self, value_t index) {
   array_type_t at = (array_type_t)value_get_type(self);
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= at->count)
-    return create_error_value(vm, "array index %llu out of bounds (size %llu)",
+    return create_exception_value(vm, "array index %llu out of bounds (size %llu)",
                               (unsigned long long)i, (unsigned long long)at->count);
   return _make_elem_value(vm, at, self, i);
 }
@@ -334,7 +334,7 @@ static value_t _array_set_item(vm_t vm, value_t self, value_t index, value_t val
   array_type_t at = (array_type_t)value_get_type(self);
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= at->count)
-    return create_error_value(vm, "array index %llu out of bounds (size %llu)",
+    return create_exception_value(vm, "array index %llu out of bounds (size %llu)",
                               (unsigned long long)i, (unsigned long long)at->count);
   type_t elem_type = at->element_type;
   uint64_t elem_size = type_get_size(elem_type);
@@ -356,7 +356,7 @@ static value_t _array_to_string(vm_t vm, value_t self) {
     if (i > 0) string_concat(result, ", ");
     value_t idx = create_i32_value(vm, (int32_t)i);
     value_t elem = _array_get_item(vm, self, idx);
-    if (type_get_kind(value_get_type(elem)) == TYPE_KIND_ERROR) {
+    if (type_get_kind(value_get_type(elem)) == TYPE_KIND_EXCEPTION) {
       string_concat(result, "<error>");
     } else {
       value_t s = value_to_string(vm, elem);
@@ -379,7 +379,7 @@ static value_t _array_slice(vm_t vm, value_t self, uint64_t start,
                              uint64_t count) {
   array_type_t at = (array_type_t)value_get_type(self);
   if (start + count > at->count)
-    return create_error_value(vm,
+    return create_exception_value(vm,
         "array slice [%llu..%llu) out of bounds (size %llu)",
         (unsigned long long)start, (unsigned long long)(start + count),
         (unsigned long long)at->count);

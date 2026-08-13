@@ -5,7 +5,7 @@
 #include "engine/bool_type.h"
 #include "engine/integer_type.h"
 #include "engine/void_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/str_type.h"
 #include "engine/struct_type.h"
 #include "engine/pointer_type.h"
@@ -216,7 +216,7 @@ TEST_F(it_struct_type, get_field_not_found) {
   value_t sv = create_struct_value(vm, st, fields);
 
   value_t result = value_get_field(vm, sv, "z");
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -235,7 +235,7 @@ TEST_F(it_struct_type, set_field_const_struct_rejected) {
 
   value_t new_x = create_i32_value(vm, 99);
   value_t result = value_set_field(vm, sv, "x", new_x);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -332,7 +332,7 @@ TEST_F(it_struct_type, pointer_set_field_const_struct_rejected) {
   /* set_field on pointer to const struct → auto-deref gives const Point → rejected */
   value_t new_x = create_i32_value(vm, 99);
   value_t result = value_set_field(vm, ptr, "x", new_x);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -349,7 +349,7 @@ TEST_F(it_struct_type, pointer_get_field_not_found) {
 
   value_t ptr = value_addrof(vm, sv);
   value_t result = value_get_field(vm, ptr, "z");
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -416,7 +416,7 @@ TEST_F(it_struct_type, pointer_safe_cast_downcast_rejected) {
 
   /* safe_cast *Point → *Point3D (downcast) should be rejected */
   value_t result = value_safe_cast(vm, ptr, (type_t)ptr3d_type);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -603,7 +603,7 @@ TEST_F(it_struct_type, safe_cast_different_type_rejected) {
   value_t sv = create_struct_value(vm, st1, fields);
 
   value_t casted = value_safe_cast(vm, sv, (type_t)st2);
-  EXPECT_EQ(type_get_kind(value_get_type(casted)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(casted)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -760,7 +760,7 @@ TEST_F(it_struct_type, member_call_no_method_error) {
   /* calling a non-existent method should return error */
   value_t argv[] = {};
   value_t result = value_member_call(vm, sv, "nonexistent", 0, argv);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -782,7 +782,7 @@ TEST_F(it_struct_type, pointer_member_call_auto_deref) {
   /* calling a non-existent method through pointer should auto-deref and return error */
   value_t argv[] = {};
   value_t result = value_member_call(vm, ptr, "nonexistent", 0, argv);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -840,7 +840,7 @@ TEST_F(it_struct_type, type_get_prop_not_found) {
   value_t type_val = create_type_value(vm, (type_t)st, NULL, false);
 
   value_t got = value_get_prop(vm, type_val, "nonexistent");
-  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -861,7 +861,7 @@ TEST_F(it_struct_type, instance_get_prop_rejected) {
 
   /* get_prop on instance should return error (only TYPE_KIND_TYPE supports it) */
   value_t got = value_get_prop(vm, sv, "count");
-  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

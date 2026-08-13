@@ -2,7 +2,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
@@ -417,10 +417,10 @@ value_t _struct_value_member_addr(vm_t vm, value_t self, const char *name) {
   struct_type_t st = (struct_type_t)value_get_type(self);
   field_info_t fi = struct_type_find_field(st, name);
   if (!fi)
-    return create_error_value(vm, "struct '%s' has no field '%s'",
+    return create_exception_value(vm, "struct '%s' has no field '%s'",
                               type_get_name((type_t)st), name);
   if (value_is_shadow(self) || !value_get_data(self))
-    return create_error_value(vm, "cannot take address of field in uninitialized struct");
+    return create_exception_value(vm, "cannot take address of field in uninitialized struct");
 
   /* create pointer type: *FieldType */
   allocator_t alloc = vm_get_allocator(vm);
@@ -503,7 +503,7 @@ static value_t _struct_equal(vm_t vm, value_t a, value_t b) {
     allocator_free(alloc, &fa);
     allocator_free(alloc, &fb);
 
-    if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+    if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
       return eq;
     if (value_is_shadow(eq))
       return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
@@ -546,7 +546,7 @@ static value_t _struct_type_equal(vm_t vm, type_t a, type_t b) {
       eq = evt.type_equal(vm, fia->type, fib->type);
     else
       eq = create_bool_value(vm, type_get_kind(fia->type) == type_get_kind(fib->type));
-    if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+    if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
       return eq;
     if (value_is_shadow(eq))
       return vm_create_value_shadow(vm, a, NULL, true);
@@ -591,7 +591,7 @@ static value_t _struct_type_extends(vm_t vm, type_t sub, type_t super) {
       ext = create_bool_value(vm, true);
     else
       ext = create_bool_value(vm, type_get_kind(fi_sub->type) == type_get_kind(fi_sup->type));
-    if (type_get_kind(value_get_type(ext)) == TYPE_KIND_ERROR)
+    if (type_get_kind(value_get_type(ext)) == TYPE_KIND_EXCEPTION)
       return ext;
     if (value_is_shadow(ext))
       return vm_create_value_shadow(vm, sub, NULL, true);
@@ -609,10 +609,10 @@ static value_t _struct_safe_cast(vm_t vm, value_t self, type_t to) {
   type_t from = value_get_type(self);
   /* strict type_equal required */
   value_t eq = _struct_type_equal(vm, from, to);
-  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
     return eq;
   if (value_is_shadow(eq) || !(*(bool *)value_get_data(eq)))
-    return create_error_value(vm, "cannot safe_cast '%s' to '%s'",
+    return create_exception_value(vm, "cannot safe_cast '%s' to '%s'",
                               type_get_name(from), type_get_name(to));
   return self;
 }
@@ -625,7 +625,7 @@ static value_t _struct_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t lt = value_get_type(lvalue);
   /* const check */
   if (value_is_initialized(lvalue) && !lt->mut)
-    return create_error_value(vm, "cannot assign to const '%s'", lt->name);
+    return create_exception_value(vm, "cannot assign to const '%s'", lt->name);
 
   /* shadow: just mark initialized */
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
@@ -635,10 +635,10 @@ static value_t _struct_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
 
   /* type_equal check */
   value_t eq = _struct_type_equal(vm, lt, value_get_type(rvalue));
-  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
     return eq;
   if (!(*(bool *)value_get_data(eq)))
-    return create_error_value(vm, "cannot assign '%s' to '%s'",
+    return create_exception_value(vm, "cannot assign '%s' to '%s'",
                               type_get_name(value_get_type(rvalue)),
                               type_get_name(lt));
 
@@ -684,7 +684,7 @@ static value_t _struct_to_string(vm_t vm, value_t self) {
                                 (char *)value_get_data(self) + fi->offset, false);
       value_t fvs = value_to_string(vm, fv);
       allocator_free(alloc, &fv);
-      if (type_get_kind(value_get_type(fvs)) != TYPE_KIND_ERROR &&
+      if (type_get_kind(value_get_type(fvs)) != TYPE_KIND_EXCEPTION &&
           type_get_kind(value_get_type(fvs)) == TYPE_KIND_STR) {
         string_t sdata = *(string_t *)value_get_data(fvs);
         const char *s = string_get(sdata);
@@ -711,10 +711,10 @@ static value_t _struct_get_field(vm_t vm, value_t self, const char *name) {
   struct_type_t st = (struct_type_t)value_get_type(self);
   field_info_t fi = struct_type_find_field(st, name);
   if (!fi)
-    return create_error_value(vm, "struct '%s' has no field '%s'",
+    return create_exception_value(vm, "struct '%s' has no field '%s'",
                               type_get_name((type_t)st), name);
   if (value_is_shadow(self) || !value_get_data(self))
-    return create_error_value(vm, "cannot access field '%s' of uninitialized struct", name);
+    return create_exception_value(vm, "cannot access field '%s' of uninitialized struct", name);
 
   /* memcpy field data out as temporary value */
   uint64_t fsize = type_get_size(fi->type);
@@ -736,16 +736,16 @@ static value_t _struct_set_field(vm_t vm, value_t self, const char *name, value_
   struct_type_t st = (struct_type_t)value_get_type(self);
   field_info_t fi = struct_type_find_field(st, name);
   if (!fi)
-    return create_error_value(vm, "struct '%s' has no field '%s'",
+    return create_exception_value(vm, "struct '%s' has no field '%s'",
                               type_get_name((type_t)st), name);
 
   /* const struct check */
   if (!type_is_mut((type_t)st))
-    return create_error_value(vm, "cannot assign to field of const struct");
+    return create_exception_value(vm, "cannot assign to field of const struct");
 
   /* safe_cast val to field type */
   value_t casted = value_safe_cast(vm, val, fi->type);
-  if (type_get_kind(value_get_type(casted)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(casted)) == TYPE_KIND_EXCEPTION)
     return casted;
 
   if (!value_is_shadow(self) && value_get_data(self) && value_get_data(casted)) {
@@ -772,7 +772,7 @@ static value_t _struct_member_call(vm_t vm, value_t self, const char *name,
   /* look up in methods table */
   value_t method = (value_t)strmap_find(st->methods, name);
   if (!method)
-    return create_error_value(vm, "struct '%s' has no method '%s'",
+    return create_exception_value(vm, "struct '%s' has no method '%s'",
                               type_get_name((type_t)st), name);
 
   /* addrof(self) as first argument */
@@ -800,7 +800,7 @@ static value_t _struct_type_get_prop(vm_t vm, type_t self, const char *name) {
   struct_type_t st = (struct_type_t)self;
   value_t val = (value_t)strmap_find(st->props, name);
   if (!val)
-    return create_error_value(vm, "struct '%s' has no static property '%s'",
+    return create_exception_value(vm, "struct '%s' has no static property '%s'",
                               type_get_name(self), name);
   return val;
 }
@@ -809,16 +809,16 @@ static value_t _struct_type_set_prop(vm_t vm, type_t self, const char *name, val
   struct_type_t st = (struct_type_t)self;
   value_t existing = (value_t)strmap_find(st->props, name);
   if (!existing)
-    return create_error_value(vm, "struct '%s' has no static property '%s'",
+    return create_exception_value(vm, "struct '%s' has no static property '%s'",
                               type_get_name(self), name);
 
   /* const check on existing prop */
   if (value_is_initialized(existing) && !type_is_mut(value_get_type(existing)))
-    return create_error_value(vm, "cannot assign to const static property '%s'", name);
+    return create_exception_value(vm, "cannot assign to const static property '%s'", name);
 
   /* assign value */
   value_t result = value_assignment(vm, existing, val);
-  if (type_get_kind(value_get_type(result)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(result)) == TYPE_KIND_EXCEPTION)
     return result;
 
   return create_void_value(vm);

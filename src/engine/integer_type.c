@@ -2,7 +2,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
@@ -115,7 +115,7 @@ static type_t _int_promote(vm_t vm, value_t a, value_t b,
 
 static value_t _int_check_zero(vm_t vm, value_t b) {
   if (_int_read_u64(b) == 0)
-    return create_error_value(vm, "division by zero");
+    return create_exception_value(vm, "division by zero");
   return NULL;
 }
 
@@ -141,14 +141,14 @@ static value_t _##Prefix##_equal(vm_t vm, value_t a, value_t b) {             \
   type_t ta = value_get_type(a);                                               \
   type_t tb = value_get_type(b);                                               \
   if (!_is_integer_kind(tb->kind))                                             \
-    return create_error_value(vm, "cannot compare values of different kinds");  \
+    return create_exception_value(vm, "cannot compare values of different kinds");  \
   if (value_is_shadow(a) || value_is_shadow(b)) {                              \
     type_t rt = _int_common_type(ta, tb);                                      \
     return vm_create_value_shadow(vm, rt, NULL, true);                         \
   }                                                                            \
   value_t pa, pb;                                                              \
   type_t rt = _int_promote(vm, a, b, &pa, &pb);                               \
-  if (!rt) return create_error_value(vm, "integer comparison failed");         \
+  if (!rt) return create_exception_value(vm, "integer comparison failed");         \
   return create_bool_value(vm, _int_read_u64(pa) == _int_read_u64(pb));       \
 }                                                                              \
                                                                                \
@@ -168,7 +168,7 @@ static value_t _##Prefix##_type_extends(vm_t vm, type_t sub, type_t super) {  \
                                                                                \
 static value_t _##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {       \
   if (!_is_integer_kind(to->kind))                                             \
-    return create_error_value(vm,                                              \
+    return create_exception_value(vm,                                              \
         "cannot safe_cast %s to '%s'", NAME, to->name);                        \
   if (to == value_get_type(self)) return self;                                 \
   if (value_is_shadow(self))                                                   \
@@ -178,10 +178,10 @@ static value_t _##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {       \
                                                                                \
 static value_t _const_##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {\
   if (!_is_integer_kind(to->kind))                                             \
-    return create_error_value(vm,                                              \
+    return create_exception_value(vm,                                              \
         "cannot safe_cast const %s to '%s'", NAME, to->name);                  \
   if (to->mut)                                                                 \
-    return create_error_value(vm,                                              \
+    return create_exception_value(vm,                                              \
         "cannot safe_cast const %s to %s", NAME, NAME);                        \
   if (to == value_get_type(self)) return self;                                 \
   if (value_is_shadow(self))                                                   \
@@ -193,7 +193,7 @@ static value_t _##Prefix##_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t lt = value_get_type(lvalue);                                          \
   type_t rt = value_get_type(rvalue);                                          \
   if (!_is_integer_kind(rt->kind))                                             \
-    return create_error_value(vm,                                              \
+    return create_exception_value(vm,                                              \
         "cannot assign '%s' to '%s'", rt->name, lt->name);                     \
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {                    \
     value_set_initialized(lvalue, true);                                       \
@@ -217,14 +217,14 @@ static value_t _##Prefix##_equal(vm_t vm, value_t a, value_t b) {             \
   type_t ta = value_get_type(a);                                               \
   type_t tb = value_get_type(b);                                               \
   if (!_is_integer_kind(tb->kind))                                             \
-    return create_error_value(vm, "cannot compare values of different kinds");  \
+    return create_exception_value(vm, "cannot compare values of different kinds");  \
   if (value_is_shadow(a) || value_is_shadow(b)) {                              \
     type_t rt = _int_common_type(ta, tb);                                      \
     return vm_create_value_shadow(vm, rt, NULL, true);                         \
   }                                                                            \
   value_t pa, pb;                                                              \
   type_t rt = _int_promote(vm, a, b, &pa, &pb);                               \
-  if (!rt) return create_error_value(vm, "integer comparison failed");         \
+  if (!rt) return create_exception_value(vm, "integer comparison failed");         \
   return create_bool_value(vm, _int_read_u64(pa) == _int_read_u64(pb));       \
 }                                                                              \
                                                                                \
@@ -244,7 +244,7 @@ static value_t _##Prefix##_type_extends(vm_t vm, type_t sub, type_t super) {  \
                                                                                \
 static value_t _##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {       \
   if (!_is_integer_kind(to->kind))                                             \
-    return create_error_value(vm,                                              \
+    return create_exception_value(vm,                                              \
         "cannot safe_cast %s to '%s'", NAME, to->name);                        \
   if (to == value_get_type(self)) return self;                                 \
   if (value_is_shadow(self))                                                   \
@@ -254,10 +254,10 @@ static value_t _##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {       \
                                                                                \
 static value_t _const_##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {\
   if (!_is_integer_kind(to->kind))                                             \
-    return create_error_value(vm,                                              \
+    return create_exception_value(vm,                                              \
         "cannot safe_cast const %s to '%s'", NAME, to->name);                  \
   if (to->mut)                                                                 \
-    return create_error_value(vm,                                              \
+    return create_exception_value(vm,                                              \
         "cannot safe_cast const %s to %s", NAME, NAME);                        \
   if (to == value_get_type(self)) return self;                                 \
   if (value_is_shadow(self))                                                   \
@@ -269,7 +269,7 @@ static value_t _##Prefix##_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t lt = value_get_type(lvalue);                                          \
   type_t rt = value_get_type(rvalue);                                          \
   if (!_is_integer_kind(rt->kind))                                             \
-    return create_error_value(vm,                                              \
+    return create_exception_value(vm,                                              \
         "cannot assign '%s' to '%s'", rt->name, lt->name);                     \
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {                    \
     value_set_initialized(lvalue, true);                                       \
@@ -294,7 +294,7 @@ DEFINE_UINT_VTABLE(u64, uint64_t, TYPE_KIND_U64, 8, 8, "u64")
 static value_t _int_add(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _int_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator +: incompatible integer types");
+  if (!rt) return create_exception_value(vm, "operator +: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   return _int_alloc_result(vm, rt, _int_read_u64(pa) + _int_read_u64(pb));
@@ -303,7 +303,7 @@ static value_t _int_add(vm_t vm, value_t a, value_t b) {
 static value_t _int_sub(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _int_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator -: incompatible integer types");
+  if (!rt) return create_exception_value(vm, "operator -: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   return _int_alloc_result(vm, rt, _int_read_u64(pa) - _int_read_u64(pb));
@@ -312,7 +312,7 @@ static value_t _int_sub(vm_t vm, value_t a, value_t b) {
 static value_t _int_mul(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _int_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator *: incompatible integer types");
+  if (!rt) return create_exception_value(vm, "operator *: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   return _int_alloc_result(vm, rt, _int_read_u64(pa) * _int_read_u64(pb));
@@ -321,7 +321,7 @@ static value_t _int_mul(vm_t vm, value_t a, value_t b) {
 static value_t _int_div(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _int_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator /: incompatible integer types");
+  if (!rt) return create_exception_value(vm, "operator /: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   value_t err = _int_check_zero(vm, pb);
@@ -337,7 +337,7 @@ static value_t _int_div(vm_t vm, value_t a, value_t b) {
 static value_t _int_mod(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _int_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator %%: incompatible integer types");
+  if (!rt) return create_exception_value(vm, "operator %%: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   value_t err = _int_check_zero(vm, pb);
@@ -352,7 +352,7 @@ static value_t _int_mod(vm_t vm, value_t a, value_t b) {
 static value_t _int_band(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _int_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator &: incompatible integer types");
+  if (!rt) return create_exception_value(vm, "operator &: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   return _int_alloc_result(vm, rt, _int_read_u64(pa) & _int_read_u64(pb));
@@ -361,7 +361,7 @@ static value_t _int_band(vm_t vm, value_t a, value_t b) {
 static value_t _int_bor(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _int_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator |: incompatible integer types");
+  if (!rt) return create_exception_value(vm, "operator |: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   return _int_alloc_result(vm, rt, _int_read_u64(pa) | _int_read_u64(pb));
@@ -370,7 +370,7 @@ static value_t _int_bor(vm_t vm, value_t a, value_t b) {
 static value_t _int_bxor(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _int_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator ^: incompatible integer types");
+  if (!rt) return create_exception_value(vm, "operator ^: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   return _int_alloc_result(vm, rt, _int_read_u64(pa) ^ _int_read_u64(pb));
@@ -392,7 +392,7 @@ static value_t _int_lnot(vm_t vm, value_t a) {
 static value_t _int_shl(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _int_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator <<: incompatible integer types");
+  if (!rt) return create_exception_value(vm, "operator <<: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   return _int_alloc_result(vm, rt, _int_read_u64(pa) << _int_read_u64(pb));
@@ -401,7 +401,7 @@ static value_t _int_shl(vm_t vm, value_t a, value_t b) {
 static value_t _int_shr(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _int_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator >>: incompatible integer types");
+  if (!rt) return create_exception_value(vm, "operator >>: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   /* signed → arithmetic shift; unsigned → logical shift */
@@ -429,7 +429,7 @@ static value_t _int_neg(vm_t vm, value_t a) {
 static value_t _int_gt(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _int_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator >: incompatible integer types");
+  if (!rt) return create_exception_value(vm, "operator >: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   if (_is_signed_type(rt))
@@ -441,7 +441,7 @@ static value_t _int_gt(vm_t vm, value_t a, value_t b) {
 static value_t _int_lt(vm_t vm, value_t a, value_t b) {
   value_t pa, pb;
   type_t rt = _int_promote(vm, a, b, &pa, &pb);
-  if (!rt) return create_error_value(vm, "operator <: incompatible integer types");
+  if (!rt) return create_exception_value(vm, "operator <: incompatible integer types");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, rt, NULL, true);
   if (_is_signed_type(rt))

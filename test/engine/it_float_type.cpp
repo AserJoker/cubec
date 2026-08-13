@@ -5,7 +5,7 @@
 #include "engine/float_type.h"
 #include "engine/integer_type.h"
 #include "engine/void_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "core/string.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -120,7 +120,7 @@ TEST_F(it_float_type, f32_equal_integer_error) {
   value_t result = value_equal(vm, a, b);
 
   /* float != integer → error */
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -196,7 +196,7 @@ TEST_F(it_float_type, f32_div_by_zero_error) {
   value_t b = create_f32_value(vm, 0.0f);
   value_t result = value_div(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -220,7 +220,7 @@ TEST_F(it_float_type, f32_mod_by_zero_error) {
   value_t b = create_f32_value(vm, 0.0f);
   value_t result = value_mod(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -322,7 +322,7 @@ TEST_F(it_float_type, f32_band_error) {
   value_t b = create_f32_value(vm, 2.0f);
   value_t result = value_band(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -334,7 +334,7 @@ TEST_F(it_float_type, f32_bor_error) {
   value_t b = create_f32_value(vm, 2.0f);
   value_t result = value_bor(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -346,7 +346,7 @@ TEST_F(it_float_type, f32_bxor_error) {
   value_t b = create_f32_value(vm, 2.0f);
   value_t result = value_bxor(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -357,7 +357,7 @@ TEST_F(it_float_type, f32_bnot_error) {
   value_t a = create_f32_value(vm, 1.0f);
   value_t result = value_bnot(vm, a);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -369,7 +369,7 @@ TEST_F(it_float_type, f32_shl_error) {
   value_t b = create_f32_value(vm, 2.0f);
   value_t result = value_shl(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -381,7 +381,7 @@ TEST_F(it_float_type, f32_shr_error) {
   value_t b = create_f32_value(vm, 2.0f);
   value_t result = value_shr(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -460,7 +460,7 @@ TEST_F(it_float_type, f32_safe_cast_to_void_error) {
   type_t vt = _get_void_type(vm);
   value_t result = value_safe_cast(vm, a, vt);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -473,7 +473,7 @@ TEST_F(it_float_type, f32_safe_cast_to_i32_error) {
   value_t result = value_safe_cast(vm, a, i32t);
 
   /* float → integer not allowed */
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -487,7 +487,7 @@ TEST_F(it_float_type, const_f32_safe_cast_to_f32_error) {
   value_t result = value_safe_cast(vm, a, f32t);
 
   /* const → mutable not allowed */
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -515,7 +515,7 @@ TEST_F(it_float_type, const_f32_assign_error) {
   value_t b = create_f32_value(vm, 42.0f);
   value_t result = value_assignment(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -528,7 +528,7 @@ TEST_F(it_float_type, f32_assign_integer_error) {
   value_t result = value_assignment(vm, a, b);
 
   /* cannot assign integer to float */
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -555,7 +555,7 @@ TEST_F(it_float_type, f32_type_equal_f64_error) {
   value_t b = vm_get_f64_type(vm);
   value_t result = value_equal(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

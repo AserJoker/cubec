@@ -2,7 +2,7 @@
 #include "engine/type.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/bool_type.h"
 #include <string.h>
 
@@ -84,7 +84,7 @@ void    value_set_initialized(value_t self, bool initialized) {
 value_t value_clone(vm_t vm, value_t self) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.clone)
-    return create_error_value(vm, "type '%s' does not support clone",
+    return create_exception_value(vm, "type '%s' does not support clone",
                               type_get_name(value_get_type(self)));
   return vt.clone(vm, self);
 }
@@ -100,7 +100,7 @@ type_t value_type_clone(vm_t vm, type_t self) {
 value_t value_deref_get(vm_t vm, value_t self) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.deref_get)
-    return create_error_value(vm, "type '%s' does not support dereference",
+    return create_exception_value(vm, "type '%s' does not support dereference",
                               type_get_name(value_get_type(self)));
   return vt.deref_get(vm, self);
 }
@@ -108,7 +108,7 @@ value_t value_deref_get(vm_t vm, value_t self) {
 value_t value_deref_set(vm_t vm, value_t self, value_t val) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.deref_set)
-    return create_error_value(vm, "type '%s' does not support dereference assignment",
+    return create_exception_value(vm, "type '%s' does not support dereference assignment",
                               type_get_name(value_get_type(self)));
   return vt.deref_set(vm, self, val);
 }
@@ -116,7 +116,7 @@ value_t value_deref_set(vm_t vm, value_t self, value_t val) {
 value_t value_equal(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.equal)
-    return create_error_value(vm, "type '%s' does not support operator ==",
+    return create_exception_value(vm, "type '%s' does not support operator ==",
                               type_get_name(value_get_type(a)));
   return vt.equal(vm, a, b);
 }
@@ -124,7 +124,7 @@ value_t value_equal(vm_t vm, value_t a, value_t b) {
 value_t value_extends(vm_t vm, value_t sub, value_t super_val) {
   vtable_t vt = type_get_vtable(value_get_type(sub));
   if (!vt.extends)
-    return create_error_value(vm, "type '%s' does not support extends",
+    return create_exception_value(vm, "type '%s' does not support extends",
                               type_get_name(value_get_type(sub)));
   return vt.extends(vm, sub, super_val);
 }
@@ -132,7 +132,7 @@ value_t value_extends(vm_t vm, value_t sub, value_t super_val) {
 value_t value_band(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.band)
-    return create_error_value(vm, "type '%s' does not support operator &",
+    return create_exception_value(vm, "type '%s' does not support operator &",
                               type_get_name(value_get_type(a)));
   return vt.band(vm, a, b);
 }
@@ -140,7 +140,7 @@ value_t value_band(vm_t vm, value_t a, value_t b) {
 value_t value_bor(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.bor)
-    return create_error_value(vm, "type '%s' does not support operator |",
+    return create_exception_value(vm, "type '%s' does not support operator |",
                               type_get_name(value_get_type(a)));
   return vt.bor(vm, a, b);
 }
@@ -148,7 +148,7 @@ value_t value_bor(vm_t vm, value_t a, value_t b) {
 value_t value_bxor(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.bxor)
-    return create_error_value(vm, "type '%s' does not support operator ^",
+    return create_exception_value(vm, "type '%s' does not support operator ^",
                               type_get_name(value_get_type(a)));
   return vt.bxor(vm, a, b);
 }
@@ -156,7 +156,7 @@ value_t value_bxor(vm_t vm, value_t a, value_t b) {
 value_t value_bnot(vm_t vm, value_t a) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.bnot)
-    return create_error_value(vm, "type '%s' does not support operator ~",
+    return create_exception_value(vm, "type '%s' does not support operator ~",
                               type_get_name(value_get_type(a)));
   return vt.bnot(vm, a);
 }
@@ -164,7 +164,7 @@ value_t value_bnot(vm_t vm, value_t a) {
 value_t value_lnot(vm_t vm, value_t a) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.lnot)
-    return create_error_value(vm, "type '%s' does not support operator !",
+    return create_exception_value(vm, "type '%s' does not support operator !",
                               type_get_name(value_get_type(a)));
   return vt.lnot(vm, a);
 }
@@ -172,7 +172,7 @@ value_t value_lnot(vm_t vm, value_t a) {
 value_t value_pos(vm_t vm, value_t a) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.pos)
-    return create_error_value(vm, "type '%s' does not support operator +",
+    return create_exception_value(vm, "type '%s' does not support operator +",
                               type_get_name(value_get_type(a)));
   return vt.pos(vm, a);
 }
@@ -180,7 +180,7 @@ value_t value_pos(vm_t vm, value_t a) {
 value_t value_neg(vm_t vm, value_t a) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.neg)
-    return create_error_value(vm, "type '%s' does not support operator -",
+    return create_exception_value(vm, "type '%s' does not support operator -",
                               type_get_name(value_get_type(a)));
   return vt.neg(vm, a);
 }
@@ -188,7 +188,7 @@ value_t value_neg(vm_t vm, value_t a) {
 value_t value_safe_cast(vm_t vm, value_t val, type_t to) {
   vtable_t vt = type_get_vtable(value_get_type(val));
   if (!vt.safe_cast)
-    return create_error_value(vm, "type '%s' does not support safe_cast",
+    return create_exception_value(vm, "type '%s' does not support safe_cast",
                               type_get_name(value_get_type(val)));
   return vt.safe_cast(vm, val, to);
 }
@@ -197,10 +197,10 @@ value_t value_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t lt = value_get_type(lvalue);
   /* const check: initialized && !mut → cannot assign */
   if (value_is_initialized(lvalue) && !lt->mut)
-    return create_error_value(vm, "cannot assign to const '%s'", lt->name);
+    return create_exception_value(vm, "cannot assign to const '%s'", lt->name);
   vtable_t vt = type_get_vtable(lt);
   if (!vt.assignment)
-    return create_error_value(vm, "type '%s' does not support assignment",
+    return create_exception_value(vm, "type '%s' does not support assignment",
                               type_get_name(lt));
   return vt.assignment(vm, lvalue, rvalue);
 }
@@ -208,7 +208,7 @@ value_t value_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
 value_t value_add(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.add)
-    return create_error_value(vm, "type '%s' does not support operator +",
+    return create_exception_value(vm, "type '%s' does not support operator +",
                               type_get_name(value_get_type(a)));
   return vt.add(vm, a, b);
 }
@@ -216,7 +216,7 @@ value_t value_add(vm_t vm, value_t a, value_t b) {
 value_t value_sub(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.sub)
-    return create_error_value(vm, "type '%s' does not support operator -",
+    return create_exception_value(vm, "type '%s' does not support operator -",
                               type_get_name(value_get_type(a)));
   return vt.sub(vm, a, b);
 }
@@ -224,7 +224,7 @@ value_t value_sub(vm_t vm, value_t a, value_t b) {
 value_t value_mul(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.mul)
-    return create_error_value(vm, "type '%s' does not support operator *",
+    return create_exception_value(vm, "type '%s' does not support operator *",
                               type_get_name(value_get_type(a)));
   return vt.mul(vm, a, b);
 }
@@ -232,7 +232,7 @@ value_t value_mul(vm_t vm, value_t a, value_t b) {
 value_t value_div(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.div)
-    return create_error_value(vm, "type '%s' does not support operator /",
+    return create_exception_value(vm, "type '%s' does not support operator /",
                               type_get_name(value_get_type(a)));
   return vt.div(vm, a, b);
 }
@@ -240,7 +240,7 @@ value_t value_div(vm_t vm, value_t a, value_t b) {
 value_t value_mod(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.mod)
-    return create_error_value(vm, "type '%s' does not support operator %%",
+    return create_exception_value(vm, "type '%s' does not support operator %%",
                               type_get_name(value_get_type(a)));
   return vt.mod(vm, a, b);
 }
@@ -248,7 +248,7 @@ value_t value_mod(vm_t vm, value_t a, value_t b) {
 value_t value_shl(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.shl)
-    return create_error_value(vm, "type '%s' does not support operator <<",
+    return create_exception_value(vm, "type '%s' does not support operator <<",
                               type_get_name(value_get_type(a)));
   return vt.shl(vm, a, b);
 }
@@ -256,7 +256,7 @@ value_t value_shl(vm_t vm, value_t a, value_t b) {
 value_t value_shr(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.shr)
-    return create_error_value(vm, "type '%s' does not support operator >>",
+    return create_exception_value(vm, "type '%s' does not support operator >>",
                               type_get_name(value_get_type(a)));
   return vt.shr(vm, a, b);
 }
@@ -264,7 +264,7 @@ value_t value_shr(vm_t vm, value_t a, value_t b) {
 value_t value_gt(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.gt)
-    return create_error_value(vm, "type '%s' does not support operator >",
+    return create_exception_value(vm, "type '%s' does not support operator >",
                               type_get_name(value_get_type(a)));
   return vt.gt(vm, a, b);
 }
@@ -272,7 +272,7 @@ value_t value_gt(vm_t vm, value_t a, value_t b) {
 value_t value_lt(vm_t vm, value_t a, value_t b) {
   vtable_t vt = type_get_vtable(value_get_type(a));
   if (!vt.lt)
-    return create_error_value(vm, "type '%s' does not support operator <",
+    return create_exception_value(vm, "type '%s' does not support operator <",
                               type_get_name(value_get_type(a)));
   return vt.lt(vm, a, b);
 }
@@ -280,7 +280,7 @@ value_t value_lt(vm_t vm, value_t a, value_t b) {
 /* != is derived from equal: negate the result */
 value_t value_ne(vm_t vm, value_t a, value_t b) {
   value_t eq = value_equal(vm, a, b);
-  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
     return eq;
   if (value_is_shadow(eq))
     return vm_create_value_shadow(vm, value_get_type(eq), NULL, true);
@@ -291,7 +291,7 @@ value_t value_ne(vm_t vm, value_t a, value_t b) {
 /* >= is derived from lt: negate the result */
 value_t value_ge(vm_t vm, value_t a, value_t b) {
   value_t lt_result = value_lt(vm, a, b);
-  if (type_get_kind(value_get_type(lt_result)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(lt_result)) == TYPE_KIND_EXCEPTION)
     return lt_result;
   if (value_is_shadow(lt_result))
     return vm_create_value_shadow(vm, value_get_type(lt_result), NULL, true);
@@ -302,7 +302,7 @@ value_t value_ge(vm_t vm, value_t a, value_t b) {
 /* <= is derived from gt: negate the result */
 value_t value_le(vm_t vm, value_t a, value_t b) {
   value_t gt_result = value_gt(vm, a, b);
-  if (type_get_kind(value_get_type(gt_result)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(gt_result)) == TYPE_KIND_EXCEPTION)
     return gt_result;
   if (value_is_shadow(gt_result))
     return vm_create_value_shadow(vm, value_get_type(gt_result), NULL, true);
@@ -313,7 +313,7 @@ value_t value_le(vm_t vm, value_t a, value_t b) {
 value_t value_to_string(vm_t vm, value_t self) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.to_string)
-    return create_error_value(vm, "type '%s' does not support to_string",
+    return create_exception_value(vm, "type '%s' does not support to_string",
                               type_get_name(value_get_type(self)));
   return vt.to_string(vm, self);
 }
@@ -321,7 +321,7 @@ value_t value_to_string(vm_t vm, value_t self) {
 value_t value_get_field(vm_t vm, value_t self, const char *name) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.get_field)
-    return create_error_value(vm, "type '%s' does not support field access",
+    return create_exception_value(vm, "type '%s' does not support field access",
                               type_get_name(value_get_type(self)));
   return vt.get_field(vm, self, name);
 }
@@ -329,7 +329,7 @@ value_t value_get_field(vm_t vm, value_t self, const char *name) {
 value_t value_set_field(vm_t vm, value_t self, const char *name, value_t val) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.set_field)
-    return create_error_value(vm, "type '%s' does not support field assignment",
+    return create_exception_value(vm, "type '%s' does not support field assignment",
                               type_get_name(value_get_type(self)));
   return vt.set_field(vm, self, name, val);
 }
@@ -337,7 +337,7 @@ value_t value_set_field(vm_t vm, value_t self, const char *name, value_t val) {
 value_t value_get_item(vm_t vm, value_t self, value_t index) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.get_item)
-    return create_error_value(vm, "type '%s' does not support subscript access",
+    return create_exception_value(vm, "type '%s' does not support subscript access",
                               type_get_name(value_get_type(self)));
   return vt.get_item(vm, self, index);
 }
@@ -345,7 +345,7 @@ value_t value_get_item(vm_t vm, value_t self, value_t index) {
 value_t value_set_item(vm_t vm, value_t self, value_t index, value_t val) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.set_item)
-    return create_error_value(vm, "type '%s' does not support subscript assignment",
+    return create_exception_value(vm, "type '%s' does not support subscript assignment",
                               type_get_name(value_get_type(self)));
   return vt.set_item(vm, self, index, val);
 }
@@ -353,7 +353,7 @@ value_t value_set_item(vm_t vm, value_t self, value_t index, value_t val) {
 value_t value_slice(vm_t vm, value_t self, uint64_t start, uint64_t count) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.slice)
-    return create_error_value(vm, "type '%s' does not support slicing",
+    return create_exception_value(vm, "type '%s' does not support slicing",
                               type_get_name(value_get_type(self)));
   return vt.slice(vm, self, start, count);
 }
@@ -361,7 +361,7 @@ value_t value_slice(vm_t vm, value_t self, uint64_t start, uint64_t count) {
 value_t value_call(vm_t vm, value_t fn, size_t argc, value_t *argv) {
   vtable_t vt = type_get_vtable(value_get_type(fn));
   if (!vt.call)
-    return create_error_value(vm, "type '%s' is not callable",
+    return create_exception_value(vm, "type '%s' is not callable",
                               type_get_name(value_get_type(fn)));
   return vt.call(vm, fn, argc, argv);
 }
@@ -376,7 +376,7 @@ value_t value_member_addr(vm_t vm, value_t self, const char *name) {
     extern value_t _union_value_member_addr(vm_t vm, value_t self, const char *name);
     return _union_value_member_addr(vm, self, name);
   }
-  return create_error_value(vm, "type '%s' does not support member address",
+  return create_exception_value(vm, "type '%s' does not support member address",
                             type_get_name(value_get_type(self)));
 }
 
@@ -384,7 +384,7 @@ value_t value_member_call(vm_t vm, value_t self, const char *name,
                           size_t argc, value_t *argv) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.member_call)
-    return create_error_value(vm, "type '%s' does not support member call",
+    return create_exception_value(vm, "type '%s' does not support member call",
                               type_get_name(value_get_type(self)));
   return vt.member_call(vm, self, name, argc, argv);
 }
@@ -392,7 +392,7 @@ value_t value_member_call(vm_t vm, value_t self, const char *name,
 value_t value_get_prop(vm_t vm, value_t self, const char *name) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.get_prop)
-    return create_error_value(vm, "type '%s' does not support static property access",
+    return create_exception_value(vm, "type '%s' does not support static property access",
                               type_get_name(value_get_type(self)));
   return vt.get_prop(vm, self, name);
 }
@@ -400,7 +400,7 @@ value_t value_get_prop(vm_t vm, value_t self, const char *name) {
 value_t value_set_prop(vm_t vm, value_t self, const char *name, value_t val) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.set_prop)
-    return create_error_value(vm, "type '%s' does not support static property assignment",
+    return create_exception_value(vm, "type '%s' does not support static property assignment",
                               type_get_name(value_get_type(self)));
   return vt.set_prop(vm, self, name, val);
 }
@@ -408,7 +408,7 @@ value_t value_set_prop(vm_t vm, value_t self, const char *name, value_t val) {
 value_t value_is(vm_t vm, value_t self, type_t type) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.is_instance)
-    return create_error_value(vm, "type '%s' does not support 'is' operator",
+    return create_exception_value(vm, "type '%s' does not support 'is' operator",
                               type_get_name(value_get_type(self)));
   return vt.is_instance(vm, self, type);
 }

@@ -3,7 +3,7 @@
 #include "engine/vm.h"
 #include "engine/scope.h"
 #include "engine/cfunc.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
@@ -315,7 +315,7 @@ static value_t _callable_type_equal(vm_t vm, type_t a, type_t b) {
     vtable_t pvt = type_get_vtable(pa);
     if (pvt.type_equal) {
       value_t eq = pvt.type_equal(vm, pa, pb);
-      if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+      if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
         return eq;
       if (value_is_shadow(eq))
         continue;
@@ -333,7 +333,7 @@ static value_t _callable_type_equal(vm_t vm, type_t a, type_t b) {
     vtable_t rvt = type_get_vtable(ra);
     if (rvt.type_equal) {
       value_t eq = rvt.type_equal(vm, ra, rb);
-      if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+      if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
         return eq;
       if (!value_is_shadow(eq) && !(*(bool *)value_get_data(eq)))
         return eq;
@@ -365,12 +365,12 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
   /* argc check */
   if (ct->is_variadic) {
     if (argc < ct->param_count)
-      return create_error_value(vm, "expected at least %llu args, got %llu",
+      return create_exception_value(vm, "expected at least %llu args, got %llu",
                                 (unsigned long long)ct->param_count,
                                 (unsigned long long)argc);
   } else {
     if (argc != ct->param_count)
-      return create_error_value(vm, "expected %llu args, got %llu",
+      return create_exception_value(vm, "expected %llu args, got %llu",
                                 (unsigned long long)ct->param_count,
                                 (unsigned long long)argc);
   }
@@ -383,7 +383,7 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
     for (uint64_t i = 0; i < ct->param_count; i++) {
       type_t param_t = (type_t)vec_get(ct->param_types, (size_t)i);
       casted[i] = value_safe_cast(vm, argv[i], param_t);
-      if (type_get_kind(value_get_type(casted[i])) == TYPE_KIND_ERROR) {
+      if (type_get_kind(value_get_type(casted[i])) == TYPE_KIND_EXCEPTION) {
         value_t err = casted[i];
         allocator_free(alloc, &casted);
         return err;
@@ -401,7 +401,7 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
     allocator_free(alloc, &casted);
 
   /* safe_cast return value to declared return type */
-  if (type_get_kind(value_get_type(result)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(result)) == TYPE_KIND_EXCEPTION)
     return result;
   result = value_safe_cast(vm, result, ct->return_type);
   return result;
@@ -423,7 +423,7 @@ static value_t _callable_safe_cast(vm_t vm, value_t self, type_t to) {
 static value_t _callable_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t rt = value_get_type(rvalue);
   if (type_get_kind(rt) != TYPE_KIND_CALLABLE)
-    return create_error_value(vm, "cannot assign non-callable to callable");
+    return create_exception_value(vm, "cannot assign non-callable to callable");
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
     value_set_initialized(lvalue, true);
     return create_void_value(vm);

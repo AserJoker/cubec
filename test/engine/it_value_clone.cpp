@@ -5,7 +5,7 @@
 #include "engine/str_type.h"
 #include "engine/integer_type.h"
 #include "engine/void_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/scope.h"
 #include "core/string.h"
 #include "common/test_common.h"
@@ -96,12 +96,12 @@ TEST_F(it_value_clone, void_clone) {
 
 TEST_F(it_value_clone, error_clone) {
   vm_t vm = vm_create(allocator);
-  value_t a = create_error_value(vm, "test error %d", 42);
+  value_t a = create_exception_value(vm, "test error %d", 42);
   value_t c = value_clone(vm, a);
 
   EXPECT_NE(c, a);
-  EXPECT_EQ(type_get_kind(value_get_type(c)), TYPE_KIND_ERROR);
-  struct error_data_t *d = (struct error_data_t *)value_get_data(c);
+  EXPECT_EQ(type_get_kind(value_get_type(c)), TYPE_KIND_EXCEPTION);
+  struct exception_data_t *d = (struct exception_data_t *)value_get_data(c);
   EXPECT_STREQ(d->message, "test error 42");
 
   vm_dispose(vm, allocator);

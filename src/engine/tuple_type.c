@@ -2,7 +2,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
@@ -272,7 +272,7 @@ static value_t _tuple_clone(vm_t vm, value_t self) {
 static value_t _tuple_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
   if (tb->kind != TYPE_KIND_TUPLE)
-    return create_error_value(vm, "cannot compare tuple with different kind");
+    return create_exception_value(vm, "cannot compare tuple with different kind");
   tuple_type_t ta = (tuple_type_t)value_get_type(a);
   tuple_type_t tbb = (tuple_type_t)tb;
   if (ta->field_count != tbb->field_count)
@@ -287,7 +287,7 @@ static value_t _tuple_equal(vm_t vm, value_t a, value_t b) {
     value_t ea = _make_elem_from_tuple(vm, ta, a, i);
     value_t eb = _make_elem_from_tuple(vm, tbb, b, i);
     value_t eq = value_equal(vm, ea, eb);
-    if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+    if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
       return eq;
     if (value_is_shadow(eq))
       return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
@@ -365,19 +365,19 @@ static value_t _tuple_type_extends(vm_t vm, type_t sub, type_t super) {
 static value_t _tuple_safe_cast(vm_t vm, value_t self, type_t to) {
   type_t from = value_get_type(self);
   if (to->kind != TYPE_KIND_TUPLE)
-    return create_error_value(vm, "cannot safe_cast tuple to '%s'", to->name);
+    return create_exception_value(vm, "cannot safe_cast tuple to '%s'", to->name);
   if (to == from)
     return self;
   tuple_type_t from_tt = (tuple_type_t)from;
   tuple_type_t to_tt = (tuple_type_t)to;
   if (from_tt->field_count != to_tt->field_count)
-    return create_error_value(vm, "cannot safe_cast tuple with different field count");
+    return create_exception_value(vm, "cannot safe_cast tuple with different field count");
   for (uint64_t i = 0; i < from_tt->field_count; i++) {
     if (type_get_kind(tuple_type_get_element_type(from_tt, i)) != type_get_kind(tuple_type_get_element_type(to_tt, i)))
-      return create_error_value(vm, "cannot safe_cast tuple with different element types");
+      return create_exception_value(vm, "cannot safe_cast tuple with different element types");
   }
   if (!from->mut && to->mut)
-    return create_error_value(vm, "cannot safe_cast const tuple to mut tuple");
+    return create_exception_value(vm, "cannot safe_cast const tuple to mut tuple");
   if (value_is_shadow(self))
     return create_tuple_shadow(vm, to_tt, value_is_initialized(self));
   /* clone data buffer with new type */
@@ -400,7 +400,7 @@ static value_t _tuple_safe_cast(vm_t vm, value_t self, type_t to) {
 static value_t _tuple_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t rt = value_get_type(rvalue);
   if (rt->kind != TYPE_KIND_TUPLE)
-    return create_error_value(vm, "cannot assign non-tuple to tuple");
+    return create_exception_value(vm, "cannot assign non-tuple to tuple");
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
     value_set_initialized(lvalue, true);
     return create_void_value(vm);
@@ -408,10 +408,10 @@ static value_t _tuple_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   tuple_type_t ltt = (tuple_type_t)value_get_type(lvalue);
   tuple_type_t rtt = (tuple_type_t)rt;
   if (ltt->field_count != rtt->field_count)
-    return create_error_value(vm, "cannot assign tuple with different field count");
+    return create_exception_value(vm, "cannot assign tuple with different field count");
   for (uint64_t i = 0; i < ltt->field_count; i++) {
     if (type_get_kind(tuple_type_get_element_type(ltt, i)) != type_get_kind(tuple_type_get_element_type(rtt, i)))
-      return create_error_value(vm, "cannot assign tuple with different element types");
+      return create_exception_value(vm, "cannot assign tuple with different element types");
   }
   /* copy entire data buffer */
   memcpy(value_get_data(lvalue), value_get_data(rvalue), ltt->base.size);
@@ -425,7 +425,7 @@ static value_t _tuple_get_item(vm_t vm, value_t self, value_t index) {
   tuple_type_t tt = (tuple_type_t)value_get_type(self);
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= tt->field_count)
-    return create_error_value(vm, "tuple index %llu out of bounds (fields %llu)",
+    return create_exception_value(vm, "tuple index %llu out of bounds (fields %llu)",
                               (unsigned long long)i,
                               (unsigned long long)tt->field_count);
   return _make_elem_from_tuple(vm, tt, self, i);
@@ -436,10 +436,10 @@ static value_t _tuple_get_item(vm_t vm, value_t self, value_t index) {
 static value_t _tuple_set_item(vm_t vm, value_t self, value_t index, value_t val) {
   tuple_type_t tt = (tuple_type_t)value_get_type(self);
   if (!tt->base.mut)
-    return create_error_value(vm, "cannot set_item on const tuple");
+    return create_exception_value(vm, "cannot set_item on const tuple");
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= tt->field_count)
-    return create_error_value(vm, "tuple index %llu out of bounds (fields %llu)",
+    return create_exception_value(vm, "tuple index %llu out of bounds (fields %llu)",
                               (unsigned long long)i,
                               (unsigned long long)tt->field_count);
   type_t elem_type = (type_t)vec_get(tt->element_types, (size_t)i);
@@ -462,7 +462,7 @@ static value_t _tuple_to_string(vm_t vm, value_t self) {
     if (i > 0) string_concat(result, ", ");
     value_t idx = create_i32_value(vm, (int32_t)i);
     value_t elem = _tuple_get_item(vm, self, idx);
-    if (type_get_kind(value_get_type(elem)) == TYPE_KIND_ERROR) {
+    if (type_get_kind(value_get_type(elem)) == TYPE_KIND_EXCEPTION) {
       string_concat(result, "<error>");
     } else {
       value_t s = value_to_string(vm, elem);

@@ -5,7 +5,7 @@
 #include "engine/str_type.h"
 #include "engine/integer_type.h"
 #include "engine/void_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/array_type.h"
 #include "engine/slice_type.h"
 #include "engine/scope.h"
@@ -236,7 +236,7 @@ TEST_F(it_slice_type, set_item_const_error) {
   value_t idx0 = create_i32_value(vm, 0);
   value_t val = vm_create_value(vm, _get_i32_type(vm), &new_val, NULL);
   value_t result = value_set_item(vm, sl, idx0, val);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -254,7 +254,7 @@ TEST_F(it_slice_type, out_of_bounds) {
 
   value_t idx = create_i32_value(vm, 5);
   value_t result = value_get_item(vm, sl, idx);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -269,7 +269,7 @@ TEST_F(it_slice_type, create_out_of_bounds) {
 
   /* start_elem + count > array count */
   value_t sl = create_slice_value(vm, st, arr, 1, 3);
-  EXPECT_EQ(type_get_kind(value_get_type(sl)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(sl)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -382,7 +382,7 @@ TEST_F(it_slice_type, safe_cast_const_to_mut_error) {
   value_t sl = create_slice_value(vm, const_st, arr, 0, 3);
 
   value_t cast = value_safe_cast(vm, sl, (type_t)mut_st);
-  EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -438,7 +438,7 @@ TEST_F(it_slice_type, deref_get_empty_error) {
   value_t sl = create_slice_value(vm, st, arr, 0, 0);
 
   value_t result = value_deref_get(vm, sl);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -598,7 +598,7 @@ TEST_F(it_slice_type, create_from_non_array_error) {
   int32_t val = 42;
   value_t not_array = vm_create_value(vm, _get_i32_type(vm), &val, NULL);
   value_t sl = create_slice_value(vm, st, not_array, 0, 1);
-  EXPECT_EQ(type_get_kind(value_get_type(sl)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(sl)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -641,7 +641,7 @@ TEST_F(it_slice_type, array_slice_out_of_bounds) {
 
   value_t arr = _make_i32_array_3(vm, at);
   value_t sl = value_slice(vm, arr, 1, 3);
-  EXPECT_EQ(type_get_kind(value_get_type(sl)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(sl)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -698,7 +698,7 @@ TEST_F(it_slice_type, slice_of_slice_out_of_bounds) {
   value_t sl1 = create_slice_value(vm, st, arr, 1, 3);
   /* sl1 has len=3, so start=2 count=2 is out of bounds */
   value_t sl2 = value_slice(vm, sl1, 2, 2);
-  EXPECT_EQ(type_get_kind(value_get_type(sl2)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(sl2)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

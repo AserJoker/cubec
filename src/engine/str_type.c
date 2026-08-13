@@ -2,7 +2,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/integer_type.h"
@@ -59,7 +59,7 @@ static value_t _str_clone(vm_t vm, value_t self) {
 static value_t _str_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
   if (tb->kind != TYPE_KIND_STR)
-    return create_error_value(vm, "cannot compare str with different kind");
+    return create_exception_value(vm, "cannot compare str with different kind");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   return create_bool_value(vm, strcmp(string_get(_str_read(a)),
@@ -83,7 +83,7 @@ static value_t _str_type_extends(vm_t vm, type_t sub, type_t super) {
 static value_t _str_add(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
   if (tb->kind != TYPE_KIND_STR)
-    return create_error_value(vm, "cannot concatenate str with non-str");
+    return create_exception_value(vm, "cannot concatenate str with non-str");
   type_t result_type = (type_t)value_get_data(vm_get_str_type(vm));
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, result_type, NULL, true);
@@ -97,7 +97,7 @@ static value_t _str_add(vm_t vm, value_t a, value_t b) {
 static value_t _str_gt(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
   if (tb->kind != TYPE_KIND_STR)
-    return create_error_value(vm, "cannot compare str with different kind");
+    return create_exception_value(vm, "cannot compare str with different kind");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   return create_bool_value(vm, strcmp(string_get(_str_read(a)),
@@ -107,7 +107,7 @@ static value_t _str_gt(vm_t vm, value_t a, value_t b) {
 static value_t _str_lt(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
   if (tb->kind != TYPE_KIND_STR)
-    return create_error_value(vm, "cannot compare str with different kind");
+    return create_exception_value(vm, "cannot compare str with different kind");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   return create_bool_value(vm, strcmp(string_get(_str_read(a)),
@@ -122,7 +122,7 @@ static value_t _str_lnot(vm_t vm, value_t a) {
 
 static value_t _str_safe_cast(vm_t vm, value_t self, type_t to) {
   if (to->kind != TYPE_KIND_STR)
-    return create_error_value(vm, "cannot safe_cast str to '%s'", to->name);
+    return create_exception_value(vm, "cannot safe_cast str to '%s'", to->name);
   if (to == value_get_type(self)) return self;
   if (value_is_shadow(self))
     return vm_create_value_shadow(vm, to, NULL, true);
@@ -141,9 +141,9 @@ static value_t _str_safe_cast(vm_t vm, value_t self, type_t to) {
 
 static value_t _const_str_safe_cast(vm_t vm, value_t self, type_t to) {
   if (to->kind != TYPE_KIND_STR)
-    return create_error_value(vm, "cannot safe_cast const str to '%s'", to->name);
+    return create_exception_value(vm, "cannot safe_cast const str to '%s'", to->name);
   if (to->mut)
-    return create_error_value(vm, "cannot safe_cast const str to str");
+    return create_exception_value(vm, "cannot safe_cast const str to str");
   if (to == value_get_type(self)) return self;
   if (value_is_shadow(self))
     return vm_create_value_shadow(vm, to, NULL, true);
@@ -167,7 +167,7 @@ static value_t _str_slice(vm_t vm, value_t self, uint64_t start,
   const char *s = string_get(_str_read(self));
   size_t len = strlen(s);
   if (start + count > len)
-    return create_error_value(vm,
+    return create_exception_value(vm,
         "str slice [%llu..%llu) out of bounds (len %zu)",
         (unsigned long long)start, (unsigned long long)(start + count), len);
   /* str slice produces []u8 — a byte slice referencing the string's buffer */
@@ -192,7 +192,7 @@ static value_t _str_slice(vm_t vm, value_t self, uint64_t start,
 static value_t _str_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t rt = value_get_type(rvalue);
   if (rt->kind != TYPE_KIND_STR)
-    return create_error_value(vm, "cannot assign non-str to str");
+    return create_exception_value(vm, "cannot assign non-str to str");
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
     value_set_initialized(lvalue, true);
     return create_void_value(vm);
@@ -213,12 +213,12 @@ static value_t _str_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
 
 static value_t _str_unsupported(vm_t vm, value_t a, value_t b) {
   (void)a; (void)b;
-  return create_error_value(vm, "str does not support this operator");
+  return create_exception_value(vm, "str does not support this operator");
 }
 
 static value_t _str_unsupported_unary(vm_t vm, value_t a) {
   (void)a;
-  return create_error_value(vm, "str does not support this operator");
+  return create_exception_value(vm, "str does not support this operator");
 }
 
 /* ---- Type creation ---- */

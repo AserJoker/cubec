@@ -3,7 +3,7 @@
 #include "engine/vm.h"
 #include "engine/scope.h"
 #include "engine/bool_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/type.h"
 
 /* ---- Void type vtable ---- */
@@ -34,7 +34,7 @@ static value_t _void_type_extends(vm_t vm, type_t sub, type_t super) {
 
 static value_t _void_safe_cast(vm_t vm, value_t self, type_t to) {
   if (to->kind != TYPE_KIND_VOID)
-    return create_error_value(vm, "cannot safe_cast void to '%s'", to->name);
+    return create_exception_value(vm, "cannot safe_cast void to '%s'", to->name);
   return self;
 }
 

@@ -21,13 +21,13 @@ typedef struct _vm_t *vm_t;
 
 /**
  * @brief Call frame — one entry in the VM call stack.
- * name: function/method name (borrowed reference)
- * message: optional context info, displayed as <name> (<message>) (borrowed reference)
+ * name: function/method name (owned, cloned on init)
+ * message: optional context info, displayed as <name> (<message>) (owned, cloned on init)
  * Managed as a class object via g_call_frame_class, owned by vm->call_stack (auto_dispose).
  */
 struct _call_frame_t {
-  const char *name;
-  const char *message;
+  char *name;
+  char *message;
 };
 typedef struct _call_frame_t *call_frame_t;
 
@@ -56,6 +56,7 @@ scope_t  vm_get_global_scope(vm_t self);
 scope_t  vm_get_root_scope(vm_t self);
 scope_t  vm_get_current_scope(vm_t self);
 value_t  vm_get_type_type(vm_t self);
+value_t  vm_get_exception_type(vm_t self);
 value_t  vm_get_error_type(vm_t self);
 value_t  vm_get_bool_type(vm_t self);
 value_t  vm_get_wildcard_type(vm_t self);

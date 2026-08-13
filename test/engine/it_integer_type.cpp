@@ -4,7 +4,7 @@
 #include "engine/bool_type.h"
 #include "engine/integer_type.h"
 #include "engine/void_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "core/string.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -166,7 +166,7 @@ TEST_F(it_integer_type, i32_div_by_zero_error) {
   value_t b = create_i32_value(vm, 0);
   value_t result = value_div(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -190,7 +190,7 @@ TEST_F(it_integer_type, i32_mod_by_zero_error) {
   value_t b = create_i32_value(vm, 0);
   value_t result = value_mod(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -417,7 +417,7 @@ TEST_F(it_integer_type, i32_safe_cast_to_void_error) {
   type_t vt = _get_void_type(vm);
   value_t result = value_safe_cast(vm, a, vt);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -431,7 +431,7 @@ TEST_F(it_integer_type, const_i32_safe_cast_to_i32_error) {
   value_t result = value_safe_cast(vm, a, i32t);
 
   /* const → mutable not allowed */
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -472,7 +472,7 @@ TEST_F(it_integer_type, const_i32_assign_error) {
   value_t b = create_i32_value(vm, 42);
   value_t result = value_assignment(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -499,7 +499,7 @@ TEST_F(it_integer_type, i32_type_equal_i64_error) {
   value_t b = vm_get_i64_type(vm);
   value_t result = value_equal(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -638,7 +638,7 @@ TEST_F(it_integer_type, void_add_not_supported) {
   value_t b = create_void_value(vm);
   value_t result = value_add(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -740,7 +740,7 @@ TEST_F(it_integer_type, u32_div_by_zero_error) {
   value_t b = create_u32_value(vm, 0u);
   value_t result = value_div(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -907,7 +907,7 @@ TEST_F(it_integer_type, const_u32_assign_error) {
   value_t b = create_u32_value(vm, 42u);
   value_t result = value_assignment(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

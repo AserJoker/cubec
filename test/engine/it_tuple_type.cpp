@@ -6,7 +6,7 @@
 #include "engine/integer_type.h"
 #include "engine/float_type.h"
 #include "engine/void_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/tuple_type.h"
 #include "engine/scope.h"
 #include "core/string.h"
@@ -271,7 +271,7 @@ TEST_F(it_tuple_type, set_item_const_error) {
   value_t idx0 = create_i32_value(vm, 0);
   value_t val = vm_create_value(vm, _get_i32_type(vm), &new_i, NULL);
   value_t result = value_set_item(vm, tup, idx0, val);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -291,7 +291,7 @@ TEST_F(it_tuple_type, out_of_bounds) {
 
   value_t idx = create_i32_value(vm, 5);
   value_t result = value_get_item(vm, tup, idx);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -534,7 +534,7 @@ TEST_F(it_tuple_type, safe_cast_const_to_mut_error) {
   value_t tup = create_tuple_value(vm, const_tt, elems);
 
   value_t cast = value_safe_cast(vm, tup, (type_t)mut_tt);
-  EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -723,7 +723,7 @@ TEST_F(it_tuple_type, empty_tuple) {
 
   value_t idx = create_i32_value(vm, 0);
   value_t result = value_get_item(vm, tup, idx);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

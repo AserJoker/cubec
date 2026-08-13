@@ -3,7 +3,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
@@ -396,15 +396,15 @@ value_t _union_value_member_addr(vm_t vm, value_t self, const char *name) {
   union_type_t ut = (union_type_t)value_get_type(self);
   field_info_t fi = union_type_find_field(ut, name);
   if (!fi)
-    return create_error_value(vm, "union '%s' has no field '%s'",
+    return create_exception_value(vm, "union '%s' has no field '%s'",
                               type_get_name((type_t)ut), name);
   if (value_is_shadow(self) || !value_get_data(self))
-    return create_error_value(vm, "cannot take address of field in uninitialized union");
+    return create_exception_value(vm, "cannot take address of field in uninitialized union");
 
   uint32_t tag = _union_read_tag(self);
   uint32_t field_idx = _union_find_field_index(ut, fi);
   if (tag != field_idx)
-    return create_error_value(vm, "cannot take address of inactive field '%s' in union '%s'",
+    return create_exception_value(vm, "cannot take address of inactive field '%s' in union '%s'",
                               name, type_get_name((type_t)ut));
 
   allocator_t alloc = vm_get_allocator(vm);
@@ -476,7 +476,7 @@ static value_t _union_equal(vm_t vm, value_t a, value_t b) {
   else
     teq = create_bool_value(vm, type_get_kind(type_a) == type_get_kind(type_b));
 
-  if (type_get_kind(value_get_type(teq)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(teq)) == TYPE_KIND_EXCEPTION)
     return teq;
   if (value_is_shadow(teq) || !(*(bool *)value_get_data(teq)))
     return create_bool_value(vm, false);
@@ -492,7 +492,7 @@ static value_t _union_equal(vm_t vm, value_t a, value_t b) {
   allocator_free(alloc, &va);
   allocator_free(alloc, &vb);
 
-  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
     return eq;
   if (value_is_shadow(eq))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
@@ -531,7 +531,7 @@ static value_t _union_type_equal(vm_t vm, type_t a, type_t b) {
       eq = evt.type_equal(vm, ta, tb);
     else
       eq = create_bool_value(vm, type_get_kind(ta) == type_get_kind(tb));
-    if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+    if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
       return eq;
     if (value_is_shadow(eq))
       return vm_create_value_shadow(vm, a, NULL, true);
@@ -548,10 +548,10 @@ static value_t _union_type_equal(vm_t vm, type_t a, type_t b) {
 static value_t _union_safe_cast(vm_t vm, value_t self, type_t to) {
   type_t from = value_get_type(self);
   value_t eq = _union_type_equal(vm, from, to);
-  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
     return eq;
   if (value_is_shadow(eq) || !(*(bool *)value_get_data(eq)))
-    return create_error_value(vm, "cannot safe_cast '%s' to '%s'",
+    return create_exception_value(vm, "cannot safe_cast '%s' to '%s'",
                               type_get_name(from), type_get_name(to));
 
   if (value_is_shadow(self))
@@ -567,7 +567,7 @@ static value_t _union_safe_cast(vm_t vm, value_t self, type_t to) {
 
   field_info_t dst_fi = union_type_find_field(to_ut, active_name);
   if (!dst_fi)
-    return create_error_value(vm, "cannot safe_cast union: no matching field '%s'",
+    return create_exception_value(vm, "cannot safe_cast union: no matching field '%s'",
                               active_name);
 
   uint32_t dst_tag = _union_find_field_index(to_ut, dst_fi);
@@ -605,7 +605,7 @@ static value_t _union_safe_cast(vm_t vm, value_t self, type_t to) {
 static value_t _union_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t lt = value_get_type(lvalue);
   if (value_is_initialized(lvalue) && !lt->mut)
-    return create_error_value(vm, "cannot assign to const '%s'", lt->name);
+    return create_exception_value(vm, "cannot assign to const '%s'", lt->name);
 
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
     value_set_initialized(lvalue, true);
@@ -613,10 +613,10 @@ static value_t _union_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   }
 
   value_t eq = _union_type_equal(vm, lt, value_get_type(rvalue));
-  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
     return eq;
   if (!(*(bool *)value_get_data(eq)))
-    return create_error_value(vm, "cannot assign '%s' to '%s'",
+    return create_exception_value(vm, "cannot assign '%s' to '%s'",
                               type_get_name(value_get_type(rvalue)),
                               type_get_name(lt));
 
@@ -677,16 +677,16 @@ static value_t _union_get_field(vm_t vm, value_t self, const char *name) {
   union_type_t ut = (union_type_t)value_get_type(self);
   field_info_t fi = union_type_find_field(ut, name);
   if (!fi)
-    return create_error_value(vm, "union '%s' has no field '%s'",
+    return create_exception_value(vm, "union '%s' has no field '%s'",
                               type_get_name((type_t)ut), name);
   if (value_is_shadow(self) || !value_get_data(self))
-    return create_error_value(vm, "cannot access field '%s' of uninitialized union", name);
+    return create_exception_value(vm, "cannot access field '%s' of uninitialized union", name);
 
   /* check tag: only active field can be read */
   uint32_t tag = _union_read_tag(self);
   uint32_t field_idx = _union_find_field_index(ut, fi);
   if (tag != field_idx)
-    return create_error_value(vm, "cannot access inactive field '%s' in union '%s'",
+    return create_exception_value(vm, "cannot access inactive field '%s' in union '%s'",
                               name, type_get_name((type_t)ut));
 
   /* memcpy field data out */
@@ -709,14 +709,14 @@ static value_t _union_set_field(vm_t vm, value_t self, const char *name, value_t
   union_type_t ut = (union_type_t)value_get_type(self);
   field_info_t fi = union_type_find_field(ut, name);
   if (!fi)
-    return create_error_value(vm, "union '%s' has no field '%s'",
+    return create_exception_value(vm, "union '%s' has no field '%s'",
                               type_get_name((type_t)ut), name);
 
   if (!type_is_mut((type_t)ut))
-    return create_error_value(vm, "cannot assign to field of const union");
+    return create_exception_value(vm, "cannot assign to field of const union");
 
   value_t casted = value_safe_cast(vm, val, field_info_get_type(fi));
-  if (type_get_kind(value_get_type(casted)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(casted)) == TYPE_KIND_EXCEPTION)
     return casted;
 
   if (!value_is_shadow(self) && value_get_data(self)) {
@@ -749,7 +749,7 @@ static value_t _union_member_call(vm_t vm, value_t self, const char *name,
 
   value_t method = (value_t)strmap_find(ut->methods, name);
   if (!method)
-    return create_error_value(vm, "union '%s' has no method '%s'",
+    return create_exception_value(vm, "union '%s' has no method '%s'",
                               type_get_name((type_t)ut), name);
 
   value_t addr = value_addrof(vm, self);
@@ -775,7 +775,7 @@ static value_t _union_type_get_prop(vm_t vm, type_t self, const char *name) {
   union_type_t ut = (union_type_t)self;
   value_t val = (value_t)strmap_find(ut->props, name);
   if (!val)
-    return create_error_value(vm, "union '%s' has no static property '%s'",
+    return create_exception_value(vm, "union '%s' has no static property '%s'",
                               type_get_name(self), name);
   return val;
 }
@@ -784,14 +784,14 @@ static value_t _union_type_set_prop(vm_t vm, type_t self, const char *name, valu
   union_type_t ut = (union_type_t)self;
   value_t existing = (value_t)strmap_find(ut->props, name);
   if (!existing)
-    return create_error_value(vm, "union '%s' has no static property '%s'",
+    return create_exception_value(vm, "union '%s' has no static property '%s'",
                               type_get_name(self), name);
 
   if (value_is_initialized(existing) && !type_is_mut(value_get_type(existing)))
-    return create_error_value(vm, "cannot assign to const static property '%s'", name);
+    return create_exception_value(vm, "cannot assign to const static property '%s'", name);
 
   value_t result = value_assignment(vm, existing, val);
-  if (type_get_kind(value_get_type(result)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(result)) == TYPE_KIND_EXCEPTION)
     return result;
 
   return create_void_value(vm);

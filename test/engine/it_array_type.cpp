@@ -5,7 +5,7 @@
 #include "engine/str_type.h"
 #include "engine/integer_type.h"
 #include "engine/void_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/array_type.h"
 #include "engine/scope.h"
 #include "core/string.h"
@@ -233,7 +233,7 @@ TEST_F(it_array_type, out_of_bounds) {
 
   value_t idx = create_i32_value(vm, 5);
   value_t result = value_get_item(vm, arr, idx);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -449,7 +449,7 @@ TEST_F(it_array_type, safe_cast_const_to_mut_error) {
   value_t arr = create_array_value(vm, const_at, elems);
 
   value_t cast = value_safe_cast(vm, arr, (type_t)mut_at);
-  EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -555,7 +555,7 @@ TEST_F(it_array_type, empty_array) {
 
   value_t idx = create_i32_value(vm, 0);
   value_t result = value_get_item(vm, arr, idx);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

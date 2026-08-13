@@ -2,7 +2,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/str_type.h"
 #include "engine/type.h"
@@ -27,7 +27,7 @@ static value_t _bool_equal(vm_t vm, value_t a, value_t b) {
   type_t ta = value_get_type(a);
   type_t tb = value_get_type(b);
   if (ta->kind != tb->kind)
-    return create_error_value(vm, "cannot compare values of different kinds");
+    return create_exception_value(vm, "cannot compare values of different kinds");
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   return create_bool_value(vm, *(bool *)value_get_data(a) == *(bool *)value_get_data(b));
@@ -81,7 +81,7 @@ static value_t _bool_lnot(vm_t vm, value_t a) {
 
 static value_t _bool_safe_cast(vm_t vm, value_t self, type_t to) {
   if (to->kind != TYPE_KIND_BOOL)
-    return create_error_value(vm, "cannot safe_cast bool to '%s'", to->name);
+    return create_exception_value(vm, "cannot safe_cast bool to '%s'", to->name);
   /* bool → bool or bool → const bool: always safe */
   if (to == value_get_type(self))
     return self;
@@ -97,10 +97,10 @@ static value_t _bool_safe_cast(vm_t vm, value_t self, type_t to) {
 
 static value_t _const_bool_safe_cast(vm_t vm, value_t self, type_t to) {
   if (to->kind != TYPE_KIND_BOOL)
-    return create_error_value(vm, "cannot safe_cast const bool to '%s'", to->name);
+    return create_exception_value(vm, "cannot safe_cast const bool to '%s'", to->name);
   /* const bool → bool: not allowed (const → mutable is not safe) */
   if (to->mut)
-    return create_error_value(vm, "cannot safe_cast const bool to bool");
+    return create_exception_value(vm, "cannot safe_cast const bool to bool");
   /* const bool → const bool */
   if (to == value_get_type(self))
     return self;
@@ -118,7 +118,7 @@ static value_t _bool_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t lt = value_get_type(lvalue);
   type_t rt = value_get_type(rvalue);
   if (rt->kind != TYPE_KIND_BOOL)
-    return create_error_value(vm, "cannot assign '%s' to '%s'", rt->name, lt->name);
+    return create_exception_value(vm, "cannot assign '%s' to '%s'", rt->name, lt->name);
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
     value_set_initialized(lvalue, true);
     return create_void_value(vm);

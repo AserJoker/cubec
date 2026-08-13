@@ -2,7 +2,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
@@ -215,8 +215,8 @@ value_t create_pointer_shadow(vm_t vm, pointer_type_t pt, bool initialized) {
 value_t value_addrof(vm_t vm, value_t target) {
   type_kind_t kind = type_get_kind(value_get_type(target));
   /* void/type/error have no addressable data */
-  if (kind == TYPE_KIND_VOID || kind == TYPE_KIND_TYPE || kind == TYPE_KIND_ERROR)
-    return create_error_value(vm, "cannot take address of type '%s'",
+  if (kind == TYPE_KIND_VOID || kind == TYPE_KIND_TYPE || kind == TYPE_KIND_EXCEPTION)
+    return create_exception_value(vm, "cannot take address of type '%s'",
                               type_get_name(value_get_type(target)));
 
   allocator_t alloc = vm_get_allocator(vm);
@@ -316,11 +316,11 @@ static value_t _pointer_type_extends(vm_t vm, type_t sub, type_t super) {
 static value_t _pointer_deref_get(vm_t vm, value_t self) {
   pointer_type_t pt = (pointer_type_t)value_get_type(self);
   if (value_is_shadow(self) || !value_get_data(self))
-    return create_error_value(vm, "cannot dereference null/uninitialized pointer");
+    return create_exception_value(vm, "cannot dereference null/uninitialized pointer");
 
   void **ptr = (void **)value_get_data(self);
   if (!*ptr)
-    return create_error_value(vm, "null pointer dereference");
+    return create_exception_value(vm, "null pointer dereference");
 
   type_t pointee = pt->pointee_type;
   /* create a value referencing the pointee's data (borrowed, not owned) */
@@ -338,20 +338,20 @@ static value_t _pointer_deref_get(vm_t vm, value_t self) {
 static value_t _pointer_deref_set(vm_t vm, value_t self, value_t val) {
   pointer_type_t pt = (pointer_type_t)value_get_type(self);
   if (value_is_shadow(self) || !value_get_data(self))
-    return create_error_value(vm, "cannot dereference null/uninitialized pointer");
+    return create_exception_value(vm, "cannot dereference null/uninitialized pointer");
 
   /* check const pointer */
   if (!type_is_mut((type_t)pt))
-    return create_error_value(vm, "cannot write through const pointer");
+    return create_exception_value(vm, "cannot write through const pointer");
 
   void **ptr = (void **)value_get_data(self);
   if (!*ptr)
-    return create_error_value(vm, "null pointer dereference");
+    return create_exception_value(vm, "null pointer dereference");
 
   /* safe_cast val to pointee type, then memcpy */
   type_t pointee = pt->pointee_type;
   value_t casted = value_safe_cast(vm, val, pointee);
-  if (type_get_kind(value_get_type(casted)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(casted)) == TYPE_KIND_EXCEPTION)
     return casted;
 
   uint64_t size = type_get_size(pointee);
@@ -372,7 +372,7 @@ static value_t _pointer_safe_cast(vm_t vm, value_t self, type_t to) {
 
   /* must cast to pointer type */
   if (to->kind != TYPE_KIND_POINTER)
-    return create_error_value(vm, "cannot safe_cast pointer to '%s'", to->name);
+    return create_exception_value(vm, "cannot safe_cast pointer to '%s'", to->name);
 
   /* same type → identity */
   if (from == to)
@@ -397,10 +397,10 @@ static value_t _pointer_safe_cast(vm_t vm, value_t self, type_t to) {
   else
     ext = create_bool_value(vm, type_get_kind(from_elem) == type_get_kind(to_elem));
 
-  if (type_get_kind(value_get_type(ext)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(ext)) == TYPE_KIND_EXCEPTION)
     return ext;
   if (value_is_shadow(ext) || !(*(bool *)value_get_data(ext)))
-    return create_error_value(vm, "cannot safe_cast '%s' to '%s'",
+    return create_exception_value(vm, "cannot safe_cast '%s' to '%s'",
                               type_get_name(from), type_get_name(to));
 
   /* cast accepted: create new pointer value with target type */
@@ -420,15 +420,15 @@ static value_t _pointer_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t lt = value_get_type(lvalue);
   type_t rt = value_get_type(rvalue);
   if (type_get_kind(rt) != TYPE_KIND_POINTER)
-    return create_error_value(vm, "cannot assign non-pointer to pointer");
+    return create_exception_value(vm, "cannot assign non-pointer to pointer");
 
   /* check const pointer */
   if (value_is_initialized(lvalue) && !type_is_mut(lt))
-    return create_error_value(vm, "cannot assign to const pointer");
+    return create_exception_value(vm, "cannot assign to const pointer");
 
   /* check rvalue safe_cast to lvalue type (handles pointee extends) */
   value_t casted = _pointer_safe_cast(vm, rvalue, lt);
-  if (type_get_kind(value_get_type(casted)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(casted)) == TYPE_KIND_EXCEPTION)
     return casted;
 
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
@@ -461,11 +461,11 @@ static value_t _pointer_to_string(vm_t vm, value_t self) {
 static value_t _pointer_get_field(vm_t vm, value_t self, const char *name) {
   /* auto-deref: delegate to pointee's get_field */
   value_t derefed = _pointer_deref_get(vm, self);
-  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_EXCEPTION)
     return derefed;
   vtable_t vt = type_get_vtable(value_get_type(derefed));
   if (!vt.get_field)
-    return create_error_value(vm, "type '%s' does not support field access",
+    return create_exception_value(vm, "type '%s' does not support field access",
                               type_get_name(value_get_type(derefed)));
   return vt.get_field(vm, derefed, name);
 }
@@ -473,11 +473,11 @@ static value_t _pointer_get_field(vm_t vm, value_t self, const char *name) {
 static value_t _pointer_set_field(vm_t vm, value_t self, const char *name, value_t val) {
   /* auto-deref: delegate to pointee's set_field */
   value_t derefed = _pointer_deref_get(vm, self);
-  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_EXCEPTION)
     return derefed;
   vtable_t vt = type_get_vtable(value_get_type(derefed));
   if (!vt.set_field)
-    return create_error_value(vm, "type '%s' does not support field assignment",
+    return create_exception_value(vm, "type '%s' does not support field assignment",
                               type_get_name(value_get_type(derefed)));
   return vt.set_field(vm, derefed, name, val);
 }
@@ -487,11 +487,11 @@ static value_t _pointer_set_field(vm_t vm, value_t self, const char *name, value
 static value_t _pointer_member_call(vm_t vm, value_t self, const char *name,
                                      size_t argc, value_t *argv) {
   value_t derefed = _pointer_deref_get(vm, self);
-  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_EXCEPTION)
     return derefed;
   vtable_t vt = type_get_vtable(value_get_type(derefed));
   if (!vt.member_call)
-    return create_error_value(vm, "type '%s' does not support member call",
+    return create_exception_value(vm, "type '%s' does not support member call",
                               type_get_name(value_get_type(derefed)));
   return vt.member_call(vm, derefed, name, argc, argv);
 }
@@ -500,11 +500,11 @@ static value_t _pointer_member_call(vm_t vm, value_t self, const char *name,
 
 static value_t _pointer_is_instance(vm_t vm, value_t self, type_t type) {
   value_t derefed = _pointer_deref_get(vm, self);
-  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_ERROR)
+  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_EXCEPTION)
     return derefed;
   vtable_t vt = type_get_vtable(value_get_type(derefed));
   if (!vt.is_instance)
-    return create_error_value(vm, "type '%s' does not support 'is' operator",
+    return create_exception_value(vm, "type '%s' does not support 'is' operator",
                               type_get_name(value_get_type(derefed)));
   return vt.is_instance(vm, derefed, type);
 }

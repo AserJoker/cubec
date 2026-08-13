@@ -3,7 +3,7 @@
 #include "engine/value.h"
 #include "engine/bool_type.h"
 #include "engine/void_type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "core/string.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -22,7 +22,7 @@ protected:
     return (type_t)value_get_data(vm_get_void_type(vm));
   }
   type_t _get_error_type(vm_t vm) {
-    return (type_t)value_get_data(vm_get_error_type(vm));
+    return (type_t)value_get_data(vm_get_exception_type(vm));
   }
   type_t _get_wildcard_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_wildcard_type(vm));
@@ -79,7 +79,7 @@ TEST_F(it_primitive_type, bool_equal_different_kind_error) {
   value_t b = vm_create_value_shadow(vm, void_type, NULL, true);
   value_t result = value_equal(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -91,7 +91,7 @@ TEST_F(it_primitive_type, bool_extends_not_supported_error) {
   value_t b = create_bool_value(vm, false);
   value_t result = value_extends(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -105,7 +105,7 @@ TEST_F(it_primitive_type, void_equal_not_supported_error) {
   value_t b = create_void_value(vm);
   value_t result = value_equal(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -117,7 +117,7 @@ TEST_F(it_primitive_type, void_extends_not_supported_error) {
   value_t b = create_void_value(vm);
   value_t result = value_extends(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -159,7 +159,7 @@ TEST_F(it_primitive_type, void_type_equal_bool) {
   /* kind mismatch: void vs bool */
   value_t result = value_equal(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -199,7 +199,7 @@ TEST_F(it_primitive_type, void_type_extends_bool) {
   /* kind mismatch */
   value_t result = value_extends(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -261,12 +261,12 @@ TEST_F(it_primitive_type, bool_type_extends_wildcard) {
 
 TEST_F(it_primitive_type, error_type_equal_not_supported) {
   vm_t vm = vm_create(allocator);
-  value_t a = vm_get_error_type(vm);
-  value_t b = vm_get_error_type(vm);
+  value_t a = vm_get_exception_type(vm);
+  value_t b = vm_get_exception_type(vm);
   /* error type_equal is NULL → _type_equal returns error */
   value_t result = value_equal(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -274,12 +274,12 @@ TEST_F(it_primitive_type, error_type_equal_not_supported) {
 
 TEST_F(it_primitive_type, error_type_extends_not_supported) {
   vm_t vm = vm_create(allocator);
-  value_t a = vm_get_error_type(vm);
-  value_t b = vm_get_error_type(vm);
+  value_t a = vm_get_exception_type(vm);
+  value_t b = vm_get_exception_type(vm);
   /* error type_extends is NULL → _type_extends returns error */
   value_t result = value_extends(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -538,7 +538,7 @@ TEST_F(it_primitive_type, void_band_not_supported) {
   value_t b = create_void_value(vm);
   value_t result = value_band(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -546,10 +546,10 @@ TEST_F(it_primitive_type, void_band_not_supported) {
 
 TEST_F(it_primitive_type, error_lnot_not_supported) {
   vm_t vm = vm_create(allocator);
-  value_t a = vm_get_error_type(vm);
+  value_t a = vm_get_exception_type(vm);
   value_t result = value_lnot(vm, a);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -608,7 +608,7 @@ TEST_F(it_primitive_type, bool_assign_kind_mismatch_error) {
   value_t b = vm_create_value_shadow(vm, vt, NULL, true);
   value_t result = value_assignment(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -622,7 +622,7 @@ TEST_F(it_primitive_type, const_bool_assign_error) {
   value_t b = create_bool_value(vm, true);
   value_t result = value_assignment(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -636,7 +636,7 @@ TEST_F(it_primitive_type, const_bool_assign_tdz_allowed) {
   value_t b = create_bool_value(vm, true);
   value_t result = value_assignment(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -648,7 +648,7 @@ TEST_F(it_primitive_type, void_assign_not_supported) {
   value_t b = create_void_value(vm);
   value_t result = value_assignment(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_ERROR);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

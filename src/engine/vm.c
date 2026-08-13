@@ -2,7 +2,7 @@
 #include "engine/context.h"
 #include "engine/scope.h"
 #include "engine/type.h"
-#include "engine/error_type.h"
+#include "engine/exception_type.h"
 #include "engine/bool_type.h"
 #include "engine/wildcard_type.h"
 #include "engine/void_type.h"
@@ -14,6 +14,7 @@
 #include "engine/tuple_type.h"
 #include "engine/callable_type.h"
 #include "engine/pointer_type.h"
+#include "engine/struct_type.h"
 #include "engine/module.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -29,7 +30,7 @@ struct _vm_t {
   scope_t     root_scope;    /* borrowed: current module's root scope */
   scope_t     current_scope; /* borrowed: current traversal position */
   value_t     v_type;        /* borrowed: bootstrap type "type" (in global_scope->values) */
-  value_t     v_error;       /* borrowed: bootstrap type "error" (in global_scope->values) */
+  value_t     v_exception;   /* borrowed: bootstrap type "exception" (in global_scope->values) */
   value_t     v_bool;        /* borrowed: bootstrap type "bool" (in global_scope->values) */
   value_t     v_wildcard;    /* borrowed: bootstrap type "wildcard" (in global_scope->values) */
   value_t     v_void;        /* borrowed: bootstrap type "void" (in global_scope->values) */
@@ -60,7 +61,8 @@ struct _vm_t {
   value_t     v_const_str;   /* borrowed: bootstrap type "const str" */
   value_t     v_wildcard_tuple; /* borrowed: bootstrap type "<?>" (wildcard tuple) */
   value_t     v_wildcard_value; /* borrowed: global unique wildcard value for generic params */
-  vec_t       call_stack;      /* vec of call_frame_t (no auto-dispose, trivially copyable) */
+  value_t     v_error;         /* borrowed: user-facing error struct type value */
+  vec_t       call_stack;      /* vec of call_frame_t (auto_dispose=true, owned name/message) */
 };
 
 static void _vm_init(void *self, allocator_t allocator, void *arg) {
@@ -88,9 +90,9 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   /* Subsequent builtin types use create_type_value.
    * Each type is heap-allocated and registered in global_scope->types
    * so scope dispose auto-frees them. value.data = type (ref, own=false). */
-  type_t error_type = type_get_error_type(allocator);
-  vec_push(vm->global_scope->types, error_type);
-  vm->v_error = create_type_value(vm, error_type, NULL, false);
+  type_t exception_type = type_get_exception_type(allocator);
+  vec_push(vm->global_scope->types, exception_type);
+  vm->v_exception = create_type_value(vm, exception_type, NULL, false);
 
   type_t bool_type = type_get_bool_type(allocator);
   vec_push(vm->global_scope->types, bool_type);
@@ -220,6 +222,32 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
    * skip comparison for that parameter. */
   vm->v_wildcard_value = value_create(allocator, wildcard_type, NULL, false);
   vec_push(vm->global_scope->values, vm->v_wildcard_value);
+
+  /* User-facing error struct: error { message: [128]u8, error_code: u64,
+   *                                    backtrace: [32]u64, backtrace_count: u64 } */
+  struct_type_t error_st = struct_type_create(allocator, "error", true);
+
+  /* message: [128]u8 */
+  type_t err_u8_type = (type_t)value_get_data(vm->v_u8);
+  type_t msg_array_type = (type_t)array_type_create(allocator, err_u8_type, 128, true);
+  vec_push(vm->global_scope->types, msg_array_type);
+  struct_type_add_field(allocator, error_st, "message", msg_array_type);
+
+  /* error_code: u64 */
+  type_t err_u64_type = (type_t)value_get_data(vm->v_u64);
+  struct_type_add_field(allocator, error_st, "error_code", err_u64_type);
+
+  /* backtrace: [32]u64 */
+  type_t bt_array_type = (type_t)array_type_create(allocator, err_u64_type, 32, true);
+  vec_push(vm->global_scope->types, bt_array_type);
+  struct_type_add_field(allocator, error_st, "backtrace", bt_array_type);
+
+  /* backtrace_count: u64 */
+  struct_type_add_field(allocator, error_st, "backtrace_count", err_u64_type);
+
+  struct_type_seal(error_st);
+  vec_push(vm->global_scope->types, (type_t)error_st);
+  vm->v_error = create_type_value(vm, (type_t)error_st, "error", false);
 }
 
 static void _vm_dispose(void *self, allocator_t allocator) {
@@ -254,6 +282,7 @@ scope_t  vm_get_global_scope(vm_t self) { return self->global_scope; }
 scope_t  vm_get_root_scope(vm_t self) { return self->root_scope; }
 scope_t  vm_get_current_scope(vm_t self) { return self->current_scope; }
 value_t  vm_get_type_type(vm_t self) { return self->v_type; }
+value_t  vm_get_exception_type(vm_t self) { return self->v_exception; }
 value_t  vm_get_error_type(vm_t self) { return self->v_error; }
 value_t  vm_get_bool_type(vm_t self) { return self->v_bool; }
 value_t  vm_get_wildcard_type(vm_t self) { return self->v_wildcard; }
@@ -463,17 +492,31 @@ scope_t vm_set_root_scope(vm_t self, scope_t scope) {
 /* ---- Call frame class ---- */
 
 static void _call_frame_init(void *self, allocator_t allocator, void *arg) {
-  (void)allocator;
   call_frame_t cf = (call_frame_t)self;
   call_frame_init_t *init = (call_frame_init_t *)arg;
-  cf->name = init ? init->name : NULL;
-  cf->message = init ? init->message : NULL;
+  cf->name = (init && init->name) ? cstring_clone(allocator, init->name) : NULL;
+  cf->message = (init && init->message) ? cstring_clone(allocator, init->message) : NULL;
 }
 
 static void _call_frame_dispose(void *self, allocator_t allocator) {
-  (void)self;
-  (void)allocator;
-  /* name and message are borrowed references, not owned */
+  call_frame_t cf = (call_frame_t)self;
+  if (cf->name) {
+    void *p = cf->name;
+    allocator_free(allocator, &p);
+    cf->name = NULL;
+  }
+  if (cf->message) {
+    void *p = cf->message;
+    allocator_free(allocator, &p);
+    cf->message = NULL;
+  }
+}
+
+static void _call_frame_clone(void *self, allocator_t allocator, void *another) {
+  call_frame_t dst = (call_frame_t)self;
+  call_frame_t src = (call_frame_t)another;
+  dst->name = src->name ? cstring_clone(allocator, src->name) : NULL;
+  dst->message = src->message ? cstring_clone(allocator, src->message) : NULL;
 }
 
 class_t g_call_frame_class = {
@@ -481,7 +524,7 @@ class_t g_call_frame_class = {
     .name = "cubec.engine.call_frame",
     .init = (class_init_fn_t)_call_frame_init,
     .dispose = (class_dispose_fn_t)_call_frame_dispose,
-    .clone = NULL,
+    .clone = (class_clone_fn_t)_call_frame_clone,
     .move = NULL,
 };
 
