@@ -163,6 +163,8 @@ static uint64_t _align_up(uint64_t value, uint64_t align) {
 tuple_type_t tuple_type_create(allocator_t allocator, vec_t element_types,
                                 bool mut) {
   uint64_t count = (uint64_t)vec_get_size(element_types);
+  if (count == 0)
+    return NULL; /* zero-field tuples are not semantically valid */
 
   /* compute offsets and total size/align */
   uint64_t *offsets = NULL;
@@ -423,6 +425,8 @@ static value_t _tuple_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
 
 static value_t _tuple_get_item(vm_t vm, value_t self, value_t index) {
   tuple_type_t tt = (tuple_type_t)value_get_type(self);
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, (type_t)vec_get(tt->element_types, 0), NULL, true);
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= tt->field_count)
     return create_exception_value(vm, "tuple index %llu out of bounds (fields %llu)",
@@ -437,6 +441,10 @@ static value_t _tuple_set_item(vm_t vm, value_t self, value_t index, value_t val
   tuple_type_t tt = (tuple_type_t)value_get_type(self);
   if (!tt->base.mut)
     return create_exception_value(vm, "cannot set_item on const tuple");
+  if (value_is_shadow(self) || value_is_shadow(val)) {
+    value_set_initialized(self, true);
+    return create_void_value(vm);
+  }
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= tt->field_count)
     return create_exception_value(vm, "tuple index %llu out of bounds (fields %llu)",

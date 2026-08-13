@@ -196,6 +196,13 @@ value_t value_set_prop(struct _vm_t *vm, value_t self, const char *name, value_t
  *  Returns bool value, or shadow bool for shadow values. */
 value_t value_is(struct _vm_t *vm, value_t self, type_t type);
 
+/** @brief Raw field read — bypasses result wrapping for path-narrowed union access.
+ *  After type narrowing (e.g. `if u is i32`), field access can skip the result
+ *  wrapper and return the field value directly.
+ *  Delegates to type->vtable.get_field_raw.
+ *  Returns error if vtable.get_field_raw is NULL (type does not support raw access). */
+value_t value_get_field_raw(struct _vm_t *vm, value_t self, const char *name);
+
 #ifdef __cplusplus
 }
 #endif

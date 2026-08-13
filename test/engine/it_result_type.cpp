@@ -10,6 +10,7 @@
 #include "engine/str_type.h"
 #include "engine/struct_type.h"
 #include "engine/union_type.h"
+#include "engine/result_type.h"
 #include "engine/callable_type.h"
 #include "engine/pointer_type.h"
 #include "common/test_common.h"
@@ -283,6 +284,40 @@ TEST_F(it_result_type, str_result_of_value_and_ok) {
 
   value_t inner = value_member_call(vm, result_val, "value", 0, NULL);
   EXPECT_EQ(type_get_kind(value_get_type(inner)), TYPE_KIND_STR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- Shadow result ---- */
+
+TEST_F(it_result_type, shadow_member_call_propagates_shadow) {
+  vm_t vm = vm_create(allocator);
+  value_t rv = _make_i32_result(vm);
+  union_type_t ut = (union_type_t)value_get_data(rv);
+
+  value_t result_val = create_union_shadow(vm, ut, false);
+
+  /* shadow result → value_addrof → shadow pointer → member_call deref → shadow result
+   * → value_is → shadow bool */
+  value_t ok_result = value_member_call(vm, result_val, "ok", 0, NULL);
+  EXPECT_EQ(type_get_kind(value_get_type(ok_result)), TYPE_KIND_BOOL);
+  EXPECT_TRUE(value_is_shadow(ok_result));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_result_type, shadow_get_field_returns_exception) {
+  vm_t vm = vm_create(allocator);
+  value_t rv = _make_i32_result(vm);
+  union_type_t ut = (union_type_t)value_get_data(rv);
+
+  value_t result_val = create_union_shadow(vm, ut, false);
+
+  /* get_field on shadow result: shadow check before tag read → exception */
+  value_t got = value_get_field(vm, result_val, "_value");
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

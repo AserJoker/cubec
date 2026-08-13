@@ -82,7 +82,7 @@ void union_type_add_field(allocator_t allocator, union_type_t ut,
 
 /** @brief Seal the union type: finalize payload_offset and total size.
  *  After seal, union_type_add_field will emit an error. */
-void union_type_seal(union_type_t ut);
+bool union_type_seal(union_type_t ut);
 
 /** @brief Register a static property or method on the union type.
  *  is_method=true: registers in both props and methods.
@@ -109,6 +109,14 @@ bool union_type_is_prop_pub(union_type_t self, const char *name);
 
 /** @brief Find a field by name. Returns NULL if not found. */
 field_info_t union_type_find_field(union_type_t self, const char *name);
+
+/* ---- VM convenience ---- */
+
+/** @brief Create a union type value via vm (registered in scope->types).
+ *  The union_type_t is added to current_scope->types (auto-dispose).
+ *  Returns the type value (value.data = union_type_t, own=false). */
+value_t vm_create_union_type_value(struct _vm_t *vm, const char *name,
+                                    bool mut, const char *module_id);
 
 /* ---- Value constructors ---- */
 

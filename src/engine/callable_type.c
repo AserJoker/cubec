@@ -261,11 +261,15 @@ value_t create_callable_shadow(vm_t vm, callable_type_t ct, bool initialized) {
 
 static value_t _callable_clone(vm_t vm, value_t self) {
   callable_type_t ct = (callable_type_t)value_get_type(self);
-  cfunc_t src_fc = *(cfunc_t *)value_get_data(self);
 
   /* clone the type into current scope */
   type_t cloned_type = value_type_clone(vm, (type_t)ct);
   callable_type_t dst_ct = (callable_type_t)cloned_type;
+
+  if (value_is_shadow(self))
+    return create_callable_shadow(vm, dst_ct, value_is_initialized(self));
+
+  cfunc_t src_fc = *(cfunc_t *)value_get_data(self);
 
   if (!value_is_initialized(self) || src_fc->func == NULL)
     return create_callable_shadow(vm, dst_ct, value_is_initialized(self));
@@ -366,6 +370,10 @@ static value_t _callable_type_extends(vm_t vm, type_t sub, type_t super) {
 static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv) {
   callable_type_t ct = (callable_type_t)value_get_type(self);
 
+  /* shadow: return shadow of return type */
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, ct->return_type, NULL, true);
+
   /* argc check */
   if (ct->is_variadic) {
     if (argc < ct->param_count)
@@ -421,9 +429,10 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
 /* ---- VTable: safe_cast ---- */
 
 static value_t _callable_safe_cast(vm_t vm, value_t self, type_t to) {
-  (void)vm;
   if (type_get_kind(to) == TYPE_KIND_CALLABLE) {
     /* TODO: structural compatibility check */
+    if (value_is_shadow(self))
+      return create_callable_shadow(vm, (callable_type_t)to, value_is_initialized(self));
     return self;
   }
   return self;

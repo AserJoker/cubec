@@ -70,18 +70,6 @@ TEST_F(it_array_type, create_const_type) {
   delete_allocator(allocator);
 }
 
-TEST_F(it_array_type, create_empty_type) {
-  vm_t vm = vm_create(allocator);
-  array_type_t at = _make_i32_array_type(vm, 0);
-
-  EXPECT_EQ(type_get_size((type_t)at), 0u);
-  EXPECT_EQ(array_type_get_count(at), 0u);
-  EXPECT_STREQ(type_get_name((type_t)at), "[0]i32");
-
-  vm_dispose(vm, allocator);
-  delete_allocator(allocator);
-}
-
 /* ---- Value creation ---- */
 
 TEST_F(it_array_type, create_value) {
@@ -538,25 +526,6 @@ TEST_F(it_array_type, cross_scope_clone) {
   EXPECT_EQ(odata[0], 10);
 
   allocator_free(alloc, &callee);
-  vm_dispose(vm, allocator);
-  delete_allocator(allocator);
-}
-
-/* ---- Empty array ---- */
-
-TEST_F(it_array_type, empty_array) {
-  vm_t vm = vm_create(allocator);
-  array_type_t at = _make_i32_array_type(vm, 0);
-  value_t arr = create_array_value(vm, at, NULL);
-
-  EXPECT_NE(arr, nullptr);
-  EXPECT_TRUE(value_is_initialized(arr));
-  EXPECT_EQ(type_get_size((type_t)at), 0u);
-
-  value_t idx = create_i32_value(vm, 0);
-  value_t result = value_get_item(vm, arr, idx);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
-
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }

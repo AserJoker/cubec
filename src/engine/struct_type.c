@@ -369,12 +369,16 @@ void struct_type_add_field(allocator_t allocator, struct_type_t st,
   st->base.size = offset + field_size;
 }
 
-void struct_type_seal(struct_type_t st) {
-  if (st->sealed) return;
+bool struct_type_seal(struct_type_t st) {
+  if (st->sealed) return true;
 
   /* final size = align_up(current_size, struct_align) for trailing padding */
   st->base.size = _align_up(st->base.size, st->base.align);
+  /* C guarantee: even empty struct has size >= 1 */
+  if (st->base.size == 0)
+    st->base.size = 1;
   st->sealed = true;
+  return true;
 }
 
 void struct_type_add_prop(vm_t vm, struct_type_t st,
@@ -673,6 +677,8 @@ static value_t _struct_safe_cast(vm_t vm, value_t self, type_t to) {
   if (value_is_shadow(eq) || !(*(bool *)value_get_data(eq)))
     return create_exception_value(vm, "cannot safe_cast '%s' to '%s'",
                               type_get_name(from), type_get_name(to));
+  if (value_is_shadow(self))
+    return create_struct_shadow(vm, (struct_type_t)to, value_is_initialized(self));
   return self;
 }
 

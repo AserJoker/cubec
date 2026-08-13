@@ -124,6 +124,8 @@ class_t g_array_type_class = {
 
 array_type_t array_type_create(allocator_t allocator, type_t element_type,
                                 uint64_t count, bool mut) {
+  if (count == 0)
+    return NULL; /* zero-length arrays are not semantically valid */
   const char *elem_name = type_get_name(element_type);
   size_t name_len;
   char *name;
@@ -321,6 +323,8 @@ static value_t _array_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
 
 static value_t _array_get_item(vm_t vm, value_t self, value_t index) {
   array_type_t at = (array_type_t)value_get_type(self);
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, at->element_type, NULL, true);
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= at->count)
     return create_exception_value(vm, "array index %llu out of bounds (size %llu)",
@@ -332,6 +336,10 @@ static value_t _array_get_item(vm_t vm, value_t self, value_t index) {
 
 static value_t _array_set_item(vm_t vm, value_t self, value_t index, value_t val) {
   array_type_t at = (array_type_t)value_get_type(self);
+  if (value_is_shadow(self) || value_is_shadow(val)) {
+    value_set_initialized(self, true);
+    return create_void_value(vm);
+  }
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= at->count)
     return create_exception_value(vm, "array index %llu out of bounds (size %llu)",

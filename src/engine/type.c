@@ -4,6 +4,7 @@
 #include "engine/name.h"
 #include "engine/scope.h"
 #include "engine/bool_type.h"
+#include "engine/void_type.h"
 #include "engine/exception_type.h"
 #include "core/string.h"
 #include <string.h>
@@ -75,6 +76,8 @@ type_t type_create(allocator_t allocator, type_kind_t kind, const char *name,
 /* ---- Bootstrap type "type" vtable ---- */
 
 static value_t _type_clone(vm_t vm, value_t self) {
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, value_get_type(self), NULL, value_is_initialized(self));
   type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
   type_t inner = (type_t)value_get_data(self);
   allocator_t allocator = vm_get_allocator(vm);
@@ -87,6 +90,8 @@ static value_t _type_clone(vm_t vm, value_t self) {
 }
 
 static value_t _type_equal(vm_t vm, value_t a, value_t b) {
+  if (value_is_shadow(a) || value_is_shadow(b))
+    return vm_create_value_shadow(vm, (type_t)value_get_data(vm_get_bool_type(vm)), NULL, true);
   type_t ta = (type_t)value_get_data(a);
   type_t tb = (type_t)value_get_data(b);
   /* wildcard short-circuit: any type equal to wildcard */
@@ -101,6 +106,8 @@ static value_t _type_equal(vm_t vm, value_t a, value_t b) {
 }
 
 static value_t _type_extends(vm_t vm, value_t sub, value_t super_val) {
+  if (value_is_shadow(sub) || value_is_shadow(super_val))
+    return vm_create_value_shadow(vm, (type_t)value_get_data(vm_get_bool_type(vm)), NULL, true);
   type_t t_sub = (type_t)value_get_data(sub);
   type_t t_super = (type_t)value_get_data(super_val);
   /* wildcard short-circuit: any type extends wildcard */
@@ -115,6 +122,8 @@ static value_t _type_extends(vm_t vm, value_t sub, value_t super_val) {
 }
 
 static value_t _type_get_prop(vm_t vm, value_t self, const char *name) {
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, value_get_type(self), NULL, true);
   type_t inner = (type_t)value_get_data(self);
   if (!inner->vtable.type_get_prop)
     return create_exception_value(vm, "type '%s' does not support static property access",
@@ -123,6 +132,8 @@ static value_t _type_get_prop(vm_t vm, value_t self, const char *name) {
 }
 
 static value_t _type_set_prop(vm_t vm, value_t self, const char *name, value_t val) {
+  if (value_is_shadow(self))
+    return create_void_value(vm);
   type_t inner = (type_t)value_get_data(self);
   if (!inner->vtable.type_set_prop)
     return create_exception_value(vm, "type '%s' does not support static property assignment",

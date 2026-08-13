@@ -25,6 +25,7 @@ static value_t _pointer_assignment(vm_t vm, value_t lvalue, value_t rvalue);
 static value_t _pointer_to_string(vm_t vm, value_t self);
 static value_t _pointer_get_field(vm_t vm, value_t self, const char *name);
 static value_t _pointer_set_field(vm_t vm, value_t self, const char *name, value_t val);
+static value_t _pointer_get_field_raw(vm_t vm, value_t self, const char *name);
 static value_t _pointer_member_call(vm_t vm, value_t self, const char *name,
                                      size_t argc, value_t *argv);
 static value_t _pointer_is_instance(vm_t vm, value_t self, type_t type);
@@ -67,6 +68,7 @@ static vtable_t _make_pointer_vtable(void) {
       .get_prop     = NULL,
       .set_prop     = NULL,
       .is_instance  = _pointer_is_instance,
+      .get_field_raw= _pointer_get_field_raw,
   };
 }
 
@@ -226,6 +228,10 @@ value_t value_addrof(vm_t vm, value_t target) {
   scope_t scope = vm_get_current_scope(vm);
   if (scope) vec_push(scope->types, pt);
 
+  /* shadow target → shadow pointer (compile-time type-only) */
+  if (value_is_shadow(target))
+    return create_pointer_shadow(vm, pt, value_is_initialized(target));
+
   return create_pointer_value(vm, pt, target);
 }
 
@@ -315,8 +321,13 @@ static value_t _pointer_type_extends(vm_t vm, type_t sub, type_t super) {
 
 static value_t _pointer_deref_get(vm_t vm, value_t self) {
   pointer_type_t pt = (pointer_type_t)value_get_type(self);
-  if (value_is_shadow(self) || !value_get_data(self))
-    return create_exception_value(vm, "cannot dereference null/uninitialized pointer");
+
+  /* shadow pointer → shadow of pointee type (compile-time type-only) */
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, pt->pointee_type, NULL, value_is_initialized(self));
+
+  if (!value_get_data(self))
+    return create_exception_value(vm, "cannot dereference null pointer");
 
   void **ptr = (void **)value_get_data(self);
   if (!*ptr)
@@ -337,7 +348,12 @@ static value_t _pointer_deref_get(vm_t vm, value_t self) {
 
 static value_t _pointer_deref_set(vm_t vm, value_t self, value_t val) {
   pointer_type_t pt = (pointer_type_t)value_get_type(self);
-  if (value_is_shadow(self) || !value_get_data(self))
+
+  if (value_is_shadow(self)) {
+    value_set_initialized(self, true);
+    return create_void_value(vm);
+  }
+  if (!value_get_data(self))
     return create_exception_value(vm, "cannot dereference null/uninitialized pointer");
 
   /* check const pointer */
@@ -480,6 +496,18 @@ static value_t _pointer_set_field(vm_t vm, value_t self, const char *name, value
     return create_exception_value(vm, "type '%s' does not support field assignment",
                               type_get_name(value_get_type(derefed)));
   return vt.set_field(vm, derefed, name, val);
+}
+
+static value_t _pointer_get_field_raw(vm_t vm, value_t self, const char *name) {
+  /* auto-deref: delegate to pointee's get_field_raw */
+  value_t derefed = _pointer_deref_get(vm, self);
+  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_EXCEPTION)
+    return derefed;
+  vtable_t vt = type_get_vtable(value_get_type(derefed));
+  if (!vt.get_field_raw)
+    return create_exception_value(vm, "type '%s' does not support raw field access",
+                              type_get_name(value_get_type(derefed)));
+  return vt.get_field_raw(vm, derefed, name);
 }
 
 /* ---- VTable: member_call / get_prop / set_prop (auto-deref) ---- */

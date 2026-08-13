@@ -11,6 +11,7 @@
 #include "engine/str_type.h"
 #include "engine/pointer_type.h"
 #include "engine/callable_type.h"
+#include "engine/result_type.h"
 #include "engine/type.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -40,6 +41,7 @@ static value_t _union_safe_cast(vm_t vm, value_t self, type_t to);
 static value_t _union_assignment(vm_t vm, value_t lvalue, value_t rvalue);
 static value_t _union_to_string(vm_t vm, value_t self);
 static value_t _union_get_field(vm_t vm, value_t self, const char *name);
+static value_t _union_get_field_raw(vm_t vm, value_t self, const char *name);
 static value_t _union_set_field(vm_t vm, value_t self, const char *name, value_t val);
 static value_t _union_member_call(vm_t vm, value_t self, const char *name,
                                    size_t argc, value_t *argv);
@@ -89,6 +91,7 @@ static vtable_t _make_union_vtable(void) {
       .type_get_prop= _union_type_get_prop,
       .type_set_prop= _union_type_set_prop,
       .is_instance  = _union_is_instance,
+      .get_field_raw= _union_get_field_raw,
   };
 }
 
@@ -120,10 +123,10 @@ static void _union_type_init(void *self, allocator_t allocator, void *arg) {
   ut->scope   = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
 
   strmap_init_t smi = {.value_auto_dispose = false};
-  ut->props     = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
-  ut->methods   = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
-  ut->pub_names = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
-  ut->sealed    = false;
+  ut->props        = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  ut->methods      = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  ut->pub_names    = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  ut->sealed       = false;
   ut->payload_size   = 0;
   ut->payload_offset = 0;
   ut->module_id      = init->module_id;
@@ -304,8 +307,9 @@ void union_type_add_field(allocator_t allocator, union_type_t ut,
     strmap_insert(ut->pub_names, name, (void *)1);
 }
 
-void union_type_seal(union_type_t ut) {
-  if (ut->sealed) return;
+bool union_type_seal(union_type_t ut) {
+  if (ut->sealed) return true;
+  if (vec_get_size(ut->fields) == 0) return false; /* empty union is invalid */
 
   ut->payload_offset = _align_up(sizeof(uint32_t), ut->base.align);
 
@@ -331,7 +335,11 @@ void union_type_seal(union_type_t ut) {
   (void)fc;
 
   ut->base.size = _align_up(ut->payload_offset + ut->payload_size, ut->base.align);
+  /* C guarantee: even empty union has size >= 1 */
+  if (ut->base.size == 0)
+    ut->base.size = 1;
   ut->sealed = true;
+  return true;
 }
 
 void union_type_add_prop(vm_t vm, union_type_t ut,
@@ -402,6 +410,18 @@ static void _union_write_tag(value_t v, uint32_t tag) {
 
 /* ================================================================== */
 /* Value constructors                                                  */
+/* ================================================================== */
+/* VM convenience                                                      */
+/* ================================================================== */
+
+value_t vm_create_union_type_value(vm_t vm, const char *name,
+                                    bool mut, const char *module_id) {
+  union_type_t ut = union_type_create(vm_get_allocator(vm), name, mut, module_id);
+  if (vm_get_current_scope(vm))
+    vec_push(vm_get_current_scope(vm)->types, ut);
+  return create_type_value(vm, (type_t)ut, NULL, false);
+}
+
 /* ================================================================== */
 
 value_t create_union_value(vm_t vm, union_type_t ut,
@@ -729,6 +749,41 @@ static value_t _union_to_string(vm_t vm, value_t self) {
 /* VTable: get_field / set_field                                       */
 /* ================================================================== */
 
+/** @brief Read field data directly from union payload (no tag check, no result wrapping).
+ *  VTable entry for path-narrowed access: after `if u is T`, the compiler can
+ *  call get_field_raw to bypass the result[T,error] wrapper.
+ *  Also used internally by _union_get_field and result methods. */
+static value_t _union_get_field_raw(vm_t vm, value_t self, const char *name) {
+  union_type_t ut = (union_type_t)value_get_type(self);
+  field_info_t fi = union_type_find_field(ut, name);
+  if (!fi)
+    return create_exception_value(vm, "union '%s' has no field '%s'",
+                              type_get_name((type_t)ut), name);
+
+  /* access control: same as get_field */
+  if (_access_denied(union_type_get_module_id(ut), field_info_is_pub(fi),
+                     vm_get_current_module_id(vm)))
+    return create_exception_value(vm, "cannot access private field '%s' of union '%s' from outside its module",
+                              name, type_get_name((type_t)ut));
+
+  if (value_is_shadow(self) || !value_get_data(self))
+    return create_exception_value(vm, "cannot access field '%s' of uninitialized union", name);
+
+  /* read directly from payload — no tag check, no result wrapping */
+  uint64_t fsize = type_get_size(field_info_get_type(fi));
+  allocator_t alloc = vm_get_allocator(vm);
+  void *data = NULL;
+  if (fsize > 0) {
+    data = allocator_alloc(alloc, fsize);
+    memcpy(data, (char *)value_get_data(self) + ut->payload_offset, (size_t)fsize);
+  }
+  value_t v = value_create(alloc, field_info_get_type(fi), data, true);
+  value_set_initialized(v, true);
+  scope_t scope = vm_get_current_scope(vm);
+  if (scope) vec_push(scope->values, v);
+  return v;
+}
+
 static value_t _union_get_field(vm_t vm, value_t self, const char *name) {
   union_type_t ut = (union_type_t)value_get_type(self);
   field_info_t fi = union_type_find_field(ut, name);
@@ -745,28 +800,27 @@ static value_t _union_get_field(vm_t vm, value_t self, const char *name) {
   if (value_is_shadow(self) || !value_get_data(self))
     return create_exception_value(vm, "cannot access field '%s' of uninitialized union", name);
 
-  /* check tag: only active field can be read */
+  /* create result[field_type, error] — registered in current_scope, lifecycle managed by scope */
+  type_t field_type = field_info_get_type(fi);
+  type_t error_type = (type_t)value_get_data(vm_get_error_type(vm));
+  value_t rv = vm_create_result_type_value(vm, field_type, error_type);
+  union_type_t result_ut = (union_type_t)value_get_data(rv);
+
+  /* check tag to determine which variant of result to return */
   uint32_t tag = _union_read_tag(self);
   uint32_t field_idx = _union_find_field_index(ut, fi);
-  if (tag != field_idx)
-    return create_error_value(vm, ERROR_CODE_UNION_INACTIVE_FIELD,
+
+  if (tag == field_idx) {
+    /* active field → result.of_value(field_data) */
+    value_t field_val = _union_get_field_raw(vm, self, name);
+    return create_union_value(vm, result_ut, 0, field_val);
+  } else {
+    /* inactive field → result.of_error(error) */
+    value_t err = create_error_value(vm, ERROR_CODE_UNION_INACTIVE_FIELD,
                         "cannot access inactive field '%s' in union '%s'",
                         name, type_get_name((type_t)ut));
-
-  /* memcpy field data out */
-  uint64_t fsize = type_get_size(field_info_get_type(fi));
-  allocator_t alloc = vm_get_allocator(vm);
-  void *data = NULL;
-  if (fsize > 0) {
-    data = allocator_alloc(alloc, fsize);
-    memcpy(data, (char *)value_get_data(self) + ut->payload_offset, (size_t)fsize);
+    return create_union_value(vm, result_ut, 1, err);
   }
-
-  value_t v = value_create(alloc, field_info_get_type(fi), data, true);
-  value_set_initialized(v, true);
-  scope_t scope = vm_get_current_scope(vm);
-  if (scope) vec_push(scope->values, v);
-  return v;
 }
 
 static value_t _union_set_field(vm_t vm, value_t self, const char *name, value_t val) {
@@ -889,7 +943,7 @@ static value_t _union_is_instance(vm_t vm, value_t self, type_t type) {
 
   /* shadow → shadow bool */
   if (value_is_shadow(self))
-    return vm_create_value_shadow(vm, value_get_type(create_bool_value(vm, false)),
+    return vm_create_value_shadow(vm, (type_t)value_get_data(vm_get_bool_type(vm)),
                                   NULL, true);
 
   /* read active tag */

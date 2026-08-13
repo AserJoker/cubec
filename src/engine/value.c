@@ -326,6 +326,14 @@ value_t value_get_field(vm_t vm, value_t self, const char *name) {
   return vt.get_field(vm, self, name);
 }
 
+value_t value_get_field_raw(vm_t vm, value_t self, const char *name) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.get_field_raw)
+    return create_exception_value(vm, "type '%s' does not support raw field access",
+                              type_get_name(value_get_type(self)));
+  return vt.get_field_raw(vm, self, name);
+}
+
 value_t value_set_field(vm_t vm, value_t self, const char *name, value_t val) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.set_field)

@@ -117,6 +117,10 @@ struct vtable_t {
   value_t (*type_set_prop)(vm_t vm, type_t self, const char *name, value_t val);
   /* Instance type check: value is Type — checks if the active variant matches the given type */
   value_t (*is_instance) (vm_t vm, value_t self, type_t type);
+  /* Raw field read — bypasses result wrapping for path-narrowed access (e.g. after `if u is T`).
+   * Only union types implement this; returns the field value directly without result[T,error].
+   * NULL for types that do not support raw field access. */
+  value_t (*get_field_raw)(vm_t vm, value_t self, const char *name);
 };
 typedef struct vtable_t vtable_t;
 

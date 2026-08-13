@@ -32,21 +32,21 @@ protected:
 
   /** Create a struct with module_id="/foo", pub x:i32, private y:i32 */
   struct_type_t _make_foo_struct(vm_t vm) {
-    struct_type_t st = struct_type_create(allocator, "Foo", true, "/foo");
-    struct_type_add_field(allocator, st, "x", _get_i32_type(vm), true);   /* pub */
-    struct_type_add_field(allocator, st, "y", _get_i32_type(vm), false);  /* private */
-    struct_type_seal(st);
-    vec_push(vm_get_current_scope(vm)->types, st);
+    value_t tv = vm_create_struct_type_value(vm, "Foo", true, "/foo");
+    struct_type_t st = (struct_type_t)value_get_data(tv);
+    struct_type_add_field(vm_get_allocator(vm), st, "x", _get_i32_type(vm), true);   /* pub */
+    struct_type_add_field(vm_get_allocator(vm), st, "y", _get_i32_type(vm), false);  /* private */
+    (void)struct_type_seal(st);
     return st;
   }
 
   /** Create a union with module_id="/bar", pub Ok:i32, private Err:i32 */
   union_type_t _make_bar_union(vm_t vm) {
-    union_type_t ut = union_type_create(allocator, "Bar", true, "/bar");
-    union_type_add_field(allocator, ut, "Ok", _get_i32_type(vm), true);   /* pub */
-    union_type_add_field(allocator, ut, "Err", _get_i32_type(vm), false); /* private */
-    union_type_seal(ut);
-    vec_push(vm_get_current_scope(vm)->types, ut);
+    value_t tv = vm_create_union_type_value(vm, "Bar", true, "/bar");
+    union_type_t ut = (union_type_t)value_get_data(tv);
+    union_type_add_field(vm_get_allocator(vm), ut, "Ok", _get_i32_type(vm), true);   /* pub */
+    union_type_add_field(vm_get_allocator(vm), ut, "Err", _get_i32_type(vm), false); /* private */
+    (void)union_type_seal(ut);
     return ut;
   }
 };
@@ -307,8 +307,10 @@ TEST_F(it_access_control, union_same_module_get_private_field_ok) {
   vm_set_current_module_id(vm, "/bar");
   value_t got = value_get_field(vm, uv, "Err");
   /* tag=0 (Ok) but Err is private — same module: access control passes,
-     but tag=0 != Err index → inactive field error (error struct, TYPE_KIND_STRUCT) */
-  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_STRUCT);
+     but tag=0 != Err index → result with error variant (tag=1) */
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_UNION);
+  uint32_t tag = *(uint32_t *)value_get_data(got);
+  EXPECT_EQ(tag, 1u); /* error variant */
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -342,8 +344,15 @@ TEST_F(it_access_control, union_cross_module_get_pub_field_ok) {
 
   vm_set_current_module_id(vm, "/other");
   value_t got = value_get_field(vm, uv, "Ok");
-  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
-  EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
+  /* get_field returns result[i32, error], Ok is active → ok variant */
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_UNION);
+  uint32_t tag = *(uint32_t *)value_get_data(got);
+  EXPECT_EQ(tag, 0u); /* ok variant */
+
+  /* verify inner value via get_field_raw */
+  value_t raw = value_get_field_raw(vm, uv, "Ok");
+  EXPECT_EQ(type_get_kind(value_get_type(raw)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(raw), 42);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -437,10 +446,10 @@ TEST_F(it_access_control, union_cross_module_get_pub_prop_ok) {
 TEST_F(it_access_control, builtin_private_field_from_other_module_rejected) {
   vm_t vm = vm_create(allocator);
   /* struct with module_id="<builtin>", private field */
-  struct_type_t st = struct_type_create(allocator, "BuiltinType", true, "<builtin>");
-  struct_type_add_field(allocator, st, "data", _get_i32_type(vm), false); /* private */
-  struct_type_seal(st);
-  vec_push(vm_get_current_scope(vm)->types, st);
+  value_t stv = vm_create_struct_type_value(vm, "BuiltinType", true, "<builtin>");
+  struct_type_t st = (struct_type_t)value_get_data(stv);
+  struct_type_add_field(vm_get_allocator(vm), st, "data", _get_i32_type(vm), false); /* private */
+  (void)struct_type_seal(st);
 
   value_t dv = create_i32_value(vm, 42);
   value_t fields[] = {dv};
@@ -457,10 +466,10 @@ TEST_F(it_access_control, builtin_private_field_from_other_module_rejected) {
 
 TEST_F(it_access_control, builtin_private_field_from_builtin_ok) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = struct_type_create(allocator, "BuiltinType", true, "<builtin>");
-  struct_type_add_field(allocator, st, "data", _get_i32_type(vm), false); /* private */
-  struct_type_seal(st);
-  vec_push(vm_get_current_scope(vm)->types, st);
+  value_t stv2 = vm_create_struct_type_value(vm, "BuiltinType", true, "<builtin>");
+  struct_type_t st = (struct_type_t)value_get_data(stv2);
+  struct_type_add_field(vm_get_allocator(vm), st, "data", _get_i32_type(vm), false); /* private */
+  (void)struct_type_seal(st);
 
   value_t dv = create_i32_value(vm, 42);
   value_t fields[] = {dv};
@@ -478,10 +487,10 @@ TEST_F(it_access_control, builtin_private_field_from_builtin_ok) {
 
 TEST_F(it_access_control, builtin_pub_field_from_other_module_ok) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = struct_type_create(allocator, "BuiltinType", true, "<builtin>");
-  struct_type_add_field(allocator, st, "data", _get_i32_type(vm), true); /* pub */
-  struct_type_seal(st);
-  vec_push(vm_get_current_scope(vm)->types, st);
+  value_t stv3 = vm_create_struct_type_value(vm, "BuiltinType", true, "<builtin>");
+  struct_type_t st = (struct_type_t)value_get_data(stv3);
+  struct_type_add_field(vm_get_allocator(vm), st, "data", _get_i32_type(vm), true); /* pub */
+  (void)struct_type_seal(st);
 
   value_t dv = create_i32_value(vm, 42);
   value_t fields[] = {dv};

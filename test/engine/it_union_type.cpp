@@ -37,11 +37,11 @@ protected:
 
   /** Create a Result union: ok:i32 | err:str */
   union_type_t _make_result_type(vm_t vm) {
-    union_type_t ut = union_type_create(allocator, "Result", true, "<builtin>");
-    union_type_add_field(allocator, ut, "ok", _get_i32_type(vm), true);
-    union_type_add_field(allocator, ut, "err", _get_str_type(vm), true);
-    union_type_seal(ut);
-    vec_push(vm_get_current_scope(vm)->types, ut);
+    value_t tv = vm_create_union_type_value(vm, "Result", true, "<builtin>");
+    union_type_t ut = (union_type_t)value_get_data(tv);
+    union_type_add_field(vm_get_allocator(vm), ut, "ok", _get_i32_type(vm), true);
+    union_type_add_field(vm_get_allocator(vm), ut, "err", _get_str_type(vm), true);
+    (void)union_type_seal(ut);
     return ut;
   }
 
@@ -56,23 +56,28 @@ protected:
     return code;
   }
 
+  /** Read tag from a union value (0 = first field active, 1 = second, etc). */
+  uint32_t _read_tag(value_t uv) {
+    return *(uint32_t *)value_get_data(uv);
+  }
+
   /** Create an anonymous union: a:i32 | b:f64 */
   union_type_t _make_anon_type(vm_t vm) {
-    union_type_t ut = union_type_create(allocator, NULL, true, "<builtin>");
-    union_type_add_field(allocator, ut, "a", _get_i32_type(vm), true);
-    union_type_add_field(allocator, ut, "b", _get_f64_type(vm), true);
-    union_type_seal(ut);
-    vec_push(vm_get_current_scope(vm)->types, ut);
+    value_t tv = vm_create_union_type_value(vm, NULL, true, "<builtin>");
+    union_type_t ut = (union_type_t)value_get_data(tv);
+    union_type_add_field(vm_get_allocator(vm), ut, "a", _get_i32_type(vm), true);
+    union_type_add_field(vm_get_allocator(vm), ut, "b", _get_f64_type(vm), true);
+    (void)union_type_seal(ut);
     return ut;
   }
 
   /** Create an IntOrFloat union: int_val:i32 | float_val:f64 */
   union_type_t _make_int_or_float_type(vm_t vm) {
-    union_type_t ut = union_type_create(allocator, "IntOrFloat", true, "<builtin>");
-    union_type_add_field(allocator, ut, "int_val", _get_i32_type(vm), true);
-    union_type_add_field(allocator, ut, "float_val", _get_f64_type(vm), true);
-    union_type_seal(ut);
-    vec_push(vm_get_current_scope(vm)->types, ut);
+    value_t tv = vm_create_union_type_value(vm, "IntOrFloat", true, "<builtin>");
+    union_type_t ut = (union_type_t)value_get_data(tv);
+    union_type_add_field(vm_get_allocator(vm), ut, "int_val", _get_i32_type(vm), true);
+    union_type_add_field(vm_get_allocator(vm), ut, "float_val", _get_f64_type(vm), true);
+    (void)union_type_seal(ut);
     return ut;
   }
 };
@@ -121,10 +126,10 @@ TEST_F(it_union_type, seal_prevents_add_field) {
 
 TEST_F(it_union_type, const_union) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = union_type_create(allocator, "ConstResult", false, "<builtin>");
-  union_type_add_field(allocator, ut, "ok", _get_i32_type(vm), true);
-  union_type_seal(ut);
-  vec_push(vm_get_current_scope(vm)->types, ut);
+  value_t utv = vm_create_union_type_value(vm, "ConstResult", false, "<builtin>");
+  union_type_t ut = (union_type_t)value_get_data(utv);
+  union_type_add_field(vm_get_allocator(vm), ut, "ok", _get_i32_type(vm), true);
+  (void)union_type_seal(ut);
 
   EXPECT_FALSE(type_is_mut((type_t)ut));
 
@@ -183,9 +188,15 @@ TEST_F(it_union_type, get_field_active) {
   value_t ok_val = create_i32_value(vm, 42);
   value_t uv = create_union_value(vm, ut, 0, ok_val);
 
+  /* get_field now returns result[i32, error] */
   value_t got = value_get_field(vm, uv, "ok");
-  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
-  EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_UNION);
+  EXPECT_EQ(_read_tag(got), 0u); /* ok variant */
+
+  /* get_field_raw bypasses result wrapping */
+  value_t raw = value_get_field_raw(vm, uv, "ok");
+  EXPECT_EQ(type_get_kind(value_get_type(raw)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(raw), 42);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -198,10 +209,10 @@ TEST_F(it_union_type, get_field_inactive_error) {
   value_t ok_val = create_i32_value(vm, 42);
   value_t uv = create_union_value(vm, ut, 0, ok_val);
 
-  /* "err" is inactive → error struct */
+  /* "err" is inactive → result with error variant (tag=1) */
   value_t result = value_get_field(vm, uv, "err");
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_STRUCT);
-  EXPECT_EQ(_get_error_code(result), ERROR_CODE_UNION_INACTIVE_FIELD);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_UNION);
+  EXPECT_EQ(_read_tag(result), 1u); /* error variant */
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -220,14 +231,15 @@ TEST_F(it_union_type, set_field_switches_tag) {
   value_t result = value_set_field(vm, uv, "err", err_val);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
 
-  /* now "ok" should be inactive */
+  /* now "ok" should be inactive → result with error variant */
   value_t got_ok = value_get_field(vm, uv, "ok");
-  EXPECT_EQ(type_get_kind(value_get_type(got_ok)), TYPE_KIND_STRUCT);
-  EXPECT_EQ(_get_error_code(got_ok), ERROR_CODE_UNION_INACTIVE_FIELD);
+  EXPECT_EQ(type_get_kind(value_get_type(got_ok)), TYPE_KIND_UNION);
+  EXPECT_EQ(_read_tag(got_ok), 1u); /* error variant */
 
-  /* "err" should be active */
+  /* "err" should be active → result with ok variant */
   value_t got_err = value_get_field(vm, uv, "err");
-  EXPECT_EQ(type_get_kind(value_get_type(got_err)), TYPE_KIND_STR);
+  EXPECT_EQ(type_get_kind(value_get_type(got_err)), TYPE_KIND_UNION);
+  EXPECT_EQ(_read_tag(got_err), 0u); /* ok variant */
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -249,10 +261,10 @@ TEST_F(it_union_type, get_field_not_found) {
 
 TEST_F(it_union_type, set_field_const_union_rejected) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = union_type_create(allocator, "ConstResult", false, "<builtin>");
-  union_type_add_field(allocator, ut, "ok", _get_i32_type(vm), true);
-  union_type_seal(ut);
-  vec_push(vm_get_current_scope(vm)->types, ut);
+  value_t utv = vm_create_union_type_value(vm, "ConstResult", false, "<builtin>");
+  union_type_t ut = (union_type_t)value_get_data(utv);
+  union_type_add_field(vm_get_allocator(vm), ut, "ok", _get_i32_type(vm), true);
+  (void)union_type_seal(ut);
 
   value_t ok_val = create_i32_value(vm, 10);
   value_t uv = create_union_value(vm, ut, 0, ok_val);
@@ -311,8 +323,14 @@ TEST_F(it_union_type, pointer_get_field_auto_deref) {
 
   value_t ptr = value_addrof(vm, uv);
   value_t got = value_get_field(vm, ptr, "ok");
-  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
-  EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
+  /* pointer auto-derefs, then union get_field returns result */
+  EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_UNION);
+  EXPECT_EQ(_read_tag(got), 0u); /* ok variant */
+
+  /* raw access through pointer also works */
+  value_t raw = value_get_field_raw(vm, ptr, "ok");
+  EXPECT_EQ(type_get_kind(value_get_type(raw)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(raw), 42);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -330,7 +348,8 @@ TEST_F(it_union_type, pointer_set_field_auto_deref) {
   value_t result = value_set_field(vm, ptr, "ok", new_ok);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
 
-  value_t got = value_get_field(vm, uv, "ok");
+  /* verify via get_field_raw (bypasses result wrapping) */
+  value_t got = value_get_field_raw(vm, uv, "ok");
   EXPECT_EQ(*(int32_t *)value_get_data(got), 77);
 
   vm_dispose(vm, allocator);
@@ -431,8 +450,8 @@ TEST_F(it_union_type, safe_cast_tag_remapping) {
   value_t casted = value_safe_cast(vm, uv, (type_t)ut2);
   EXPECT_EQ(type_get_kind(value_get_type(casted)), TYPE_KIND_UNION);
 
-  /* "ok" should still be active */
-  value_t got = value_get_field(vm, casted, "ok");
+  /* "ok" should still be active — verify via get_field_raw */
+  value_t got = value_get_field_raw(vm, casted, "ok");
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
@@ -470,8 +489,8 @@ TEST_F(it_union_type, assignment) {
   value_t result = value_assignment(vm, uv2, uv1);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
 
-  /* uv2 should now have ok=42 active */
-  value_t got = value_get_field(vm, uv2, "ok");
+  /* uv2 should now have ok=42 active — verify via get_field_raw */
+  value_t got = value_get_field_raw(vm, uv2, "ok");
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
@@ -491,7 +510,7 @@ TEST_F(it_union_type, clone_value) {
   value_t cloned = value_clone(vm, uv);
   EXPECT_TRUE(value_is_initialized(cloned));
 
-  value_t got = value_get_field(vm, cloned, "ok");
+  value_t got = value_get_field_raw(vm, cloned, "ok");
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
   vm_dispose(vm, allocator);

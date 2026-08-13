@@ -54,15 +54,6 @@ protected:
     allocator_free(alloc, &types);
     return (tuple_type_t)value_get_data(tv);
   }
-
-  tuple_type_t _make_empty_tuple_type(vm_t vm) {
-    allocator_t alloc = vm_get_allocator(vm);
-    vec_init_t vi = {.auto_dispose = false};
-    vec_t types = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
-    value_t tv = vm_create_tuple_type_value(vm, types, true);
-    allocator_free(alloc, &types);
-    return (tuple_type_t)value_get_data(tv);
-  }
 };
 
 /* ---- Type creation ---- */
@@ -96,18 +87,6 @@ TEST_F(it_tuple_type, create_const_type) {
   tuple_type_t tt = _make_const_i32_f64_tuple_type(vm);
 
   EXPECT_FALSE(type_is_mut((type_t)tt));
-
-  vm_dispose(vm, allocator);
-  delete_allocator(allocator);
-}
-
-TEST_F(it_tuple_type, create_empty_type) {
-  vm_t vm = vm_create(allocator);
-  tuple_type_t tt = _make_empty_tuple_type(vm);
-
-  EXPECT_EQ(type_get_size((type_t)tt), 0u);
-  EXPECT_EQ(tuple_type_get_field_count(tt), 0u);
-  EXPECT_STREQ(type_get_name((type_t)tt), "<>");
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -371,10 +350,17 @@ TEST_F(it_tuple_type, type_equal_same) {
 TEST_F(it_tuple_type, type_equal_different_count) {
   vm_t vm = vm_create(allocator);
   tuple_type_t tt2 = _make_i32_f64_tuple_type(vm);
-  tuple_type_t tt0 = _make_empty_tuple_type(vm);
+  /* create single-element tuple for different count comparison */
+  allocator_t alloc = vm_get_allocator(vm);
+  vec_init_t vi = {.auto_dispose = false};
+  vec_t types1 = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
+  vec_push(types1, _get_i32_type(vm));
+  value_t tv1 = vm_create_tuple_type_value(vm, types1, true);
+  tuple_type_t tt1 = (tuple_type_t)value_get_data(tv1);
+  allocator_free(alloc, &types1);
 
   vtable_t vt = type_get_vtable((type_t)tt2);
-  value_t eq = vt.type_equal(vm, (type_t)tt2, (type_t)tt0);
+  value_t eq = vt.type_equal(vm, (type_t)tt2, (type_t)tt1);
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
@@ -711,23 +697,6 @@ TEST_F(it_tuple_type, type_clone_cross_scope) {
 }
 
 /* ---- Empty tuple ---- */
-
-TEST_F(it_tuple_type, empty_tuple) {
-  vm_t vm = vm_create(allocator);
-  tuple_type_t tt = _make_empty_tuple_type(vm);
-  value_t tup = create_tuple_value(vm, tt, NULL);
-
-  EXPECT_NE(tup, nullptr);
-  EXPECT_TRUE(value_is_initialized(tup));
-  EXPECT_EQ(type_get_size((type_t)tt), 0u);
-
-  value_t idx = create_i32_value(vm, 0);
-  value_t result = value_get_item(vm, tup, idx);
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
-
-  vm_dispose(vm, allocator);
-  delete_allocator(allocator);
-}
 
 /* ---- Wildcard tuple type ---- */
 

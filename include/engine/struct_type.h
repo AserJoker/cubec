@@ -82,7 +82,7 @@ void struct_type_add_field(allocator_t allocator, struct_type_t st,
 /** @brief Seal the struct type: finalize total size with trailing padding.
  *  Computes base.size = align_up(current_offset, base.align).
  *  After seal, struct_type_add_field will emit an error. */
-void struct_type_seal(struct_type_t st);
+bool struct_type_seal(struct_type_t st);
 
 /** @brief Register a static property or method on the struct type.
  *  is_method=true: registers in both props and methods.

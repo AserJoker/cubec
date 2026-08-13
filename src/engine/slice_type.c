@@ -311,6 +311,8 @@ static value_t _slice_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
 
 static value_t _slice_get_item(vm_t vm, value_t self, value_t index) {
   slice_type_t st = (slice_type_t)value_get_type(self);
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, st->element_type, NULL, true);
   struct slice_data_t *sd = _slice_read(self);
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= sd->len)
@@ -325,6 +327,10 @@ static value_t _slice_set_item(vm_t vm, value_t self, value_t index, value_t val
   slice_type_t st = (slice_type_t)value_get_type(self);
   if (!st->base.mut)
     return create_exception_value(vm, "cannot set_item on const slice");
+  if (value_is_shadow(self) || value_is_shadow(val)) {
+    value_set_initialized(self, true);
+    return create_void_value(vm);
+  }
   struct slice_data_t *sd = _slice_read(self);
   uint64_t i = (uint64_t)(*(int32_t *)value_get_data(index));
   if (i >= sd->len)
@@ -341,6 +347,8 @@ static value_t _slice_set_item(vm_t vm, value_t self, value_t index, value_t val
 
 static value_t _slice_deref_get(vm_t vm, value_t self) {
   slice_type_t st = (slice_type_t)value_get_type(self);
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, st->element_type, NULL, true);
   struct slice_data_t *sd = _slice_read(self);
   if (sd->len == 0)
     return create_exception_value(vm, "cannot dereference empty slice");
