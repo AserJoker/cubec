@@ -27,6 +27,7 @@ static value_t _pointer_get_field(vm_t vm, value_t self, const char *name);
 static value_t _pointer_set_field(vm_t vm, value_t self, const char *name, value_t val);
 static value_t _pointer_member_call(vm_t vm, value_t self, const char *name,
                                      size_t argc, value_t *argv);
+static value_t _pointer_is_instance(vm_t vm, value_t self, type_t type);
 
 static vtable_t _make_pointer_vtable(void) {
   return (vtable_t){
@@ -65,6 +66,7 @@ static vtable_t _make_pointer_vtable(void) {
       .member_call  = _pointer_member_call,
       .get_prop     = NULL,
       .set_prop     = NULL,
+      .is_instance  = _pointer_is_instance,
   };
 }
 
@@ -492,5 +494,18 @@ static value_t _pointer_member_call(vm_t vm, value_t self, const char *name,
     return create_error_value(vm, "type '%s' does not support member call",
                               type_get_name(value_get_type(derefed)));
   return vt.member_call(vm, derefed, name, argc, argv);
+}
+
+/* ---- VTable: is_instance (auto-deref) ---- */
+
+static value_t _pointer_is_instance(vm_t vm, value_t self, type_t type) {
+  value_t derefed = _pointer_deref_get(vm, self);
+  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_ERROR)
+    return derefed;
+  vtable_t vt = type_get_vtable(value_get_type(derefed));
+  if (!vt.is_instance)
+    return create_error_value(vm, "type '%s' does not support 'is' operator",
+                              type_get_name(value_get_type(derefed)));
+  return vt.is_instance(vm, derefed, type);
 }
 

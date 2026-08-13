@@ -10,6 +10,7 @@
 #include "engine/struct_type.h"
 #include "engine/union_type.h"
 #include "engine/pointer_type.h"
+#include "engine/wildcard_type.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
 
@@ -626,6 +627,88 @@ TEST_F(it_union_type, instance_get_prop_rejected) {
   /* get_prop on instance should return error (only TYPE_KIND_TYPE supports it) */
   value_t got = value_get_prop(vm, uv, "count");
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_ERROR);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- is_instance ---- */
+
+TEST_F(it_union_type, is_instance_active_field) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+
+  /* ok=42 → active tag = 0 → i32 */
+  value_t ok_val = create_i32_value(vm, 42);
+  value_t uv = create_union_value(vm, ut, 0, ok_val);
+
+  value_t result = value_is(vm, uv, _get_i32_type(vm));
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
+  EXPECT_TRUE(*(bool *)value_get_data(result));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_union_type, is_instance_inactive_field) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+
+  /* ok=42 → active tag = 0 → i32, NOT str */
+  value_t ok_val = create_i32_value(vm, 42);
+  value_t uv = create_union_value(vm, ut, 0, ok_val);
+
+  value_t result = value_is(vm, uv, _get_str_type(vm));
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
+  EXPECT_FALSE(*(bool *)value_get_data(result));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_union_type, is_instance_switched_tag) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+
+  /* err="fail" → active tag = 1 → str */
+  value_t err_val = create_str_value(vm, "fail");
+  value_t uv = create_union_value(vm, ut, 1, err_val);
+
+  value_t result_i32 = value_is(vm, uv, _get_i32_type(vm));
+  EXPECT_FALSE(*(bool *)value_get_data(result_i32));
+
+  value_t result_str = value_is(vm, uv, _get_str_type(vm));
+  EXPECT_TRUE(*(bool *)value_get_data(result_str));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_union_type, is_instance_shadow) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+
+  value_t uv = create_union_shadow(vm, ut, false);
+  value_t result = value_is(vm, uv, _get_i32_type(vm));
+  EXPECT_TRUE(value_is_shadow(result));
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- pointer is_instance auto-deref ---- */
+
+TEST_F(it_union_type, pointer_is_instance_auto_deref) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+
+  value_t ok_val = create_i32_value(vm, 42);
+  value_t uv = create_union_value(vm, ut, 0, ok_val);
+
+  value_t ptr = value_addrof(vm, uv);
+  value_t result = value_is(vm, ptr, _get_i32_type(vm));
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
+  EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

@@ -115,6 +115,8 @@ struct vtable_t {
   /* Type-level property access — each type implements its own */
   value_t (*type_get_prop)(vm_t vm, type_t self, const char *name);
   value_t (*type_set_prop)(vm_t vm, type_t self, const char *name, value_t val);
+  /* Instance type check: value is Type — checks if the active variant matches the given type */
+  value_t (*is_instance) (vm_t vm, value_t self, type_t type);
 };
 typedef struct vtable_t vtable_t;
 

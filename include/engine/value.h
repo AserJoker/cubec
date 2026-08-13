@@ -190,6 +190,12 @@ value_t value_get_prop(struct _vm_t *vm, value_t self, const char *name);
 /** @brief Write a static property: Type::prop = val. Delegates to type->vtable.set_prop. */
 value_t value_set_prop(struct _vm_t *vm, value_t self, const char *name, value_t val);
 
+/** @brief Check if value's active variant matches the given type: value is Type.
+ *  For unions: checks if the active tag's field type equals the given type.
+ *  For pointers: auto-derefs then delegates.
+ *  Returns bool value, or shadow bool for shadow values. */
+value_t value_is(struct _vm_t *vm, value_t self, type_t type);
+
 #ifdef __cplusplus
 }
 #endif

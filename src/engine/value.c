@@ -404,3 +404,11 @@ value_t value_set_prop(vm_t vm, value_t self, const char *name, value_t val) {
                               type_get_name(value_get_type(self)));
   return vt.set_prop(vm, self, name, val);
 }
+
+value_t value_is(vm_t vm, value_t self, type_t type) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.is_instance)
+    return create_error_value(vm, "type '%s' does not support 'is' operator",
+                              type_get_name(value_get_type(self)));
+  return vt.is_instance(vm, self, type);
+}

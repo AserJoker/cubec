@@ -32,6 +32,7 @@ static value_t _union_member_call(vm_t vm, value_t self, const char *name,
                                    size_t argc, value_t *argv);
 static value_t _union_type_get_prop(vm_t vm, type_t self, const char *name);
 static value_t _union_type_set_prop(vm_t vm, type_t self, const char *name, value_t val);
+static value_t _union_is_instance(vm_t vm, value_t self, type_t type);
 
 /* ---- Shared vtable for all union types ---- */
 
@@ -74,6 +75,7 @@ static vtable_t _make_union_vtable(void) {
       .set_prop     = NULL,
       .type_get_prop= _union_type_get_prop,
       .type_set_prop= _union_type_set_prop,
+      .is_instance  = _union_is_instance,
   };
 }
 
@@ -793,4 +795,36 @@ static value_t _union_type_set_prop(vm_t vm, type_t self, const char *name, valu
     return result;
 
   return create_void_value(vm);
+}
+
+/* ================================================================== */
+/* VTable: is_instance                                                 */
+/* ================================================================== */
+
+static value_t _union_is_instance(vm_t vm, value_t self, type_t type) {
+  union_type_t ut = (union_type_t)value_get_type(self);
+
+  /* shadow → shadow bool */
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, value_get_type(create_bool_value(vm, false)),
+                                  NULL, true);
+
+  /* read active tag */
+  uint32_t tag = _union_read_tag(self);
+  if (tag >= vec_get_size(ut->fields))
+    return create_bool_value(vm, false);
+
+  /* get active field's type */
+  field_info_t fi = (field_info_t)vec_get(ut->fields, tag);
+  type_t active_type = field_info_get_type(fi);
+
+  /* compare with target type via type_equal */
+  if (type == active_type)
+    return create_bool_value(vm, true);
+
+  vtable_t evt = type_get_vtable(active_type);
+  if (evt.type_equal)
+    return evt.type_equal(vm, active_type, type);
+
+  return create_bool_value(vm, type_get_kind(active_type) == type_get_kind(type));
 }
