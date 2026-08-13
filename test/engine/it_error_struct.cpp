@@ -3,6 +3,8 @@
 #include "engine/value.h"
 #include "engine/scope.h"
 #include "engine/struct_type.h"
+#include "engine/error.h"
+#include "engine/error_code.h"
 #include "engine/integer_type.h"
 #include "engine/array_type.h"
 #include "common/test_common.h"
@@ -136,6 +138,34 @@ TEST_F(it_error_struct, error_name_in_global_scope) {
   scope_t global = vm_get_global_scope(vm);
   name_t n = scope_lookup(global, "error");
   EXPECT_NE(n, nullptr);
+
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- create_error ---- */
+
+TEST_F(it_error_struct, create_error_with_code) {
+  vm_t vm = vm_create(allocator);
+  value_t err = create_error_value(vm, ERROR_CODE_UNION_INACTIVE_FIELD,
+                             "cannot access field '%s'", "foo");
+
+  EXPECT_NE(err, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(err)), TYPE_KIND_STRUCT);
+
+  /* read error_code field */
+  struct_type_t st = (struct_type_t)value_get_type(err);
+  field_info_t code_fi = (field_info_t)vec_get(struct_type_get_fields(st), 1);
+  uint64_t code;
+  memcpy(&code, (uint8_t *)value_get_data(err) + field_info_get_offset(code_fi),
+         sizeof(uint64_t));
+  EXPECT_EQ(code, ERROR_CODE_UNION_INACTIVE_FIELD);
+
+  /* read message field */
+  field_info_t msg_fi = (field_info_t)vec_get(struct_type_get_fields(st), 0);
+  const char *msg = (const char *)((uint8_t *)value_get_data(err) +
+                                    field_info_get_offset(msg_fi));
+  EXPECT_STREQ(msg, "cannot access field 'foo'");
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

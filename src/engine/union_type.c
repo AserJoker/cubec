@@ -4,6 +4,8 @@
 #include "engine/vm.h"
 #include "engine/scope.h"
 #include "engine/exception_type.h"
+#include "engine/error.h"
+#include "engine/error_code.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
@@ -404,8 +406,9 @@ value_t _union_value_member_addr(vm_t vm, value_t self, const char *name) {
   uint32_t tag = _union_read_tag(self);
   uint32_t field_idx = _union_find_field_index(ut, fi);
   if (tag != field_idx)
-    return create_exception_value(vm, "cannot take address of inactive field '%s' in union '%s'",
-                              name, type_get_name((type_t)ut));
+    return create_error_value(vm, ERROR_CODE_UNION_ADDR_INACTIVE,
+                        "cannot take address of inactive field '%s' in union '%s'",
+                        name, type_get_name((type_t)ut));
 
   allocator_t alloc = vm_get_allocator(vm);
   pointer_type_t pt = pointer_type_create(alloc, field_info_get_type(fi), true, false);
@@ -686,8 +689,9 @@ static value_t _union_get_field(vm_t vm, value_t self, const char *name) {
   uint32_t tag = _union_read_tag(self);
   uint32_t field_idx = _union_find_field_index(ut, fi);
   if (tag != field_idx)
-    return create_exception_value(vm, "cannot access inactive field '%s' in union '%s'",
-                              name, type_get_name((type_t)ut));
+    return create_error_value(vm, ERROR_CODE_UNION_INACTIVE_FIELD,
+                        "cannot access inactive field '%s' in union '%s'",
+                        name, type_get_name((type_t)ut));
 
   /* memcpy field data out */
   uint64_t fsize = type_get_size(field_info_get_type(fi));

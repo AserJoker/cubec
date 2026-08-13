@@ -6,6 +6,8 @@
 #include "engine/integer_type.h"
 #include "engine/void_type.h"
 #include "engine/exception_type.h"
+#include "engine/error.h"
+#include "engine/error_code.h"
 #include "engine/str_type.h"
 #include "engine/struct_type.h"
 #include "engine/union_type.h"
@@ -41,6 +43,17 @@ protected:
     union_type_seal(ut);
     vec_push(vm_get_current_scope(vm)->types, ut);
     return ut;
+  }
+
+  /** Read error_code from an error struct value. */
+  uint64_t _get_error_code(value_t err) {
+    type_t t = value_get_type(err);
+    struct_type_t st = (struct_type_t)t;
+    field_info_t fi = (field_info_t)vec_get(struct_type_get_fields(st), 1);
+    uint64_t code;
+    memcpy(&code, (uint8_t *)value_get_data(err) + field_info_get_offset(fi),
+           sizeof(uint64_t));
+    return code;
   }
 
   /** Create an anonymous union: a:i32 | b:f64 */
@@ -185,9 +198,10 @@ TEST_F(it_union_type, get_field_inactive_error) {
   value_t ok_val = create_i32_value(vm, 42);
   value_t uv = create_union_value(vm, ut, 0, ok_val);
 
-  /* "err" is inactive → error */
+  /* "err" is inactive → error struct */
   value_t result = value_get_field(vm, uv, "err");
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_STRUCT);
+  EXPECT_EQ(_get_error_code(result), ERROR_CODE_UNION_INACTIVE_FIELD);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -208,7 +222,8 @@ TEST_F(it_union_type, set_field_switches_tag) {
 
   /* now "ok" should be inactive */
   value_t got_ok = value_get_field(vm, uv, "ok");
-  EXPECT_EQ(type_get_kind(value_get_type(got_ok)), TYPE_KIND_EXCEPTION);
+  EXPECT_EQ(type_get_kind(value_get_type(got_ok)), TYPE_KIND_STRUCT);
+  EXPECT_EQ(_get_error_code(got_ok), ERROR_CODE_UNION_INACTIVE_FIELD);
 
   /* "err" should be active */
   value_t got_err = value_get_field(vm, uv, "err");
@@ -278,7 +293,8 @@ TEST_F(it_union_type, member_addr_inactive_error) {
   value_t uv = create_union_value(vm, ut, 0, ok_val);
 
   value_t addr = value_member_addr(vm, uv, "err");
-  EXPECT_EQ(type_get_kind(value_get_type(addr)), TYPE_KIND_EXCEPTION);
+  EXPECT_EQ(type_get_kind(value_get_type(addr)), TYPE_KIND_STRUCT);
+  EXPECT_EQ(_get_error_code(addr), ERROR_CODE_UNION_ADDR_INACTIVE);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
