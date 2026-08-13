@@ -748,3 +748,65 @@ TEST_F(it_union_type, pointer_is_instance_auto_deref) {
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
+
+/* ---- Empty union rejected ---- */
+
+TEST_F(it_union_type, seal_empty_union_returns_false) {
+  vm_t vm = vm_create(allocator);
+  value_t tv = vm_create_union_type_value(vm, "Empty", true, "<builtin>");
+  union_type_t ut = (union_type_t)value_get_data(tv);
+  bool ok = union_type_seal(ut);
+  EXPECT_FALSE(ok);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- Empty union has size 1 when sealed with fields ---- */
+/* (already covered by create_named — union with fields has size >= 1) */
+
+/* ---- Shadow operations ---- */
+
+TEST_F(it_union_type, shadow_equal) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+  value_t a = create_union_shadow(vm, ut, true);
+  value_t b = create_union_shadow(vm, ut, true);
+  value_t result = value_equal(vm, a, b);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_union_type, shadow_assignment) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+  value_t a = create_union_shadow(vm, ut, false);
+  value_t b = create_union_shadow(vm, ut, true);
+  value_t result = value_assignment(vm, a, b);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(a));
+  EXPECT_TRUE(value_is_shadow(a));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_union_type, shadow_safe_cast) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+  value_t uv = create_union_shadow(vm, ut, true);
+  value_t result = value_safe_cast(vm, uv, (type_t)ut);
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(value_get_type(result), (type_t)ut);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_union_type, shadow_to_string) {
+  vm_t vm = vm_create(allocator);
+  union_type_t ut = _make_result_type(vm);
+  value_t uv = create_union_shadow(vm, ut, true);
+  value_t result = value_to_string(vm, uv);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}

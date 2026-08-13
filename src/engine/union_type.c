@@ -709,6 +709,8 @@ static value_t _union_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
 /* ================================================================== */
 
 static value_t _union_to_string(vm_t vm, value_t self) {
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, (type_t)value_get_data(vm_get_str_type(vm)), NULL, true);
   union_type_t ut = (union_type_t)value_get_type(self);
   allocator_t alloc = vm_get_allocator(vm);
 

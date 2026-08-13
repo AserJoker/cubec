@@ -703,3 +703,87 @@ TEST_F(it_slice_type, slice_of_slice_out_of_bounds) {
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
+
+/* ---- Shadow operations ---- */
+
+TEST_F(it_slice_type, shadow_equal) {
+  vm_t vm = vm_create(allocator);
+  slice_type_t st = _make_i32_slice_type(vm);
+  value_t a = create_slice_shadow(vm, st, true);
+  value_t b = create_slice_shadow(vm, st, true);
+  value_t result = value_equal(vm, a, b);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_slice_type, shadow_assignment) {
+  vm_t vm = vm_create(allocator);
+  slice_type_t st = _make_i32_slice_type(vm);
+  value_t a = create_slice_shadow(vm, st, false);
+  value_t b = create_slice_shadow(vm, st, true);
+  value_t result = value_assignment(vm, a, b);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(a));
+  EXPECT_TRUE(value_is_shadow(a));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_slice_type, shadow_get_item) {
+  vm_t vm = vm_create(allocator);
+  slice_type_t st = _make_i32_slice_type(vm);
+  value_t sl = create_slice_shadow(vm, st, true);
+  value_t idx = create_i32_value(vm, 0);
+  value_t result = value_get_item(vm, sl, idx);
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_slice_type, shadow_set_item) {
+  vm_t vm = vm_create(allocator);
+  slice_type_t st = _make_i32_slice_type(vm);
+  value_t sl = create_slice_shadow(vm, st, false);
+  value_t idx = create_i32_value(vm, 0);
+  value_t val = create_i32_value(vm, 42);
+  value_t result = value_set_item(vm, sl, idx, val);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(sl));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_slice_type, shadow_deref_get) {
+  vm_t vm = vm_create(allocator);
+  slice_type_t st = _make_i32_slice_type(vm);
+  value_t sl = create_slice_shadow(vm, st, true);
+  value_t result = value_deref_get(vm, sl);
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_slice_type, shadow_safe_cast) {
+  vm_t vm = vm_create(allocator);
+  slice_type_t st = _make_i32_slice_type(vm);
+  slice_type_t const_st = _make_const_i32_slice_type(vm);
+  value_t sl = create_slice_shadow(vm, st, true);
+  value_t result = value_safe_cast(vm, sl, (type_t)const_st);
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(value_get_type(result), (type_t)const_st);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_slice_type, shadow_to_string) {
+  vm_t vm = vm_create(allocator);
+  slice_type_t st = _make_i32_slice_type(vm);
+  value_t sl = create_slice_shadow(vm, st, true);
+  value_t result = value_to_string(vm, sl);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}

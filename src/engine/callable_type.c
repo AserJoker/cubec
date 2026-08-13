@@ -459,6 +459,8 @@ static value_t _callable_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
 /* ---- VTable: to_string ---- */
 
 static value_t _callable_to_string(vm_t vm, value_t self) {
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, (type_t)value_get_data(vm_get_str_type(vm)), NULL, true);
   type_t t = value_get_type(self);
   const char *type_name = type_get_name(t);
   size_t len = strlen("<callable >") + strlen(type_name);

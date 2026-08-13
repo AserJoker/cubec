@@ -721,6 +721,8 @@ static value_t _struct_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
 /* ================================================================== */
 
 static value_t _struct_to_string(vm_t vm, value_t self) {
+  if (value_is_shadow(self))
+    return vm_create_value_shadow(vm, (type_t)value_get_data(vm_get_str_type(vm)), NULL, true);
   struct_type_t st = (struct_type_t)value_get_type(self);
   size_t fc = vec_get_size(st->fields);
   allocator_t alloc = vm_get_allocator(vm);

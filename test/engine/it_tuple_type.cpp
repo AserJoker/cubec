@@ -733,3 +733,90 @@ TEST_F(it_tuple_type, non_tuple_extends_wildcard_tuple_fails) {
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
+
+/* ---- Empty tuple rejected ---- */
+
+TEST_F(it_tuple_type, vm_create_tuple_type_value_0_fields_returns_exception) {
+  vm_t vm = vm_create(allocator);
+  allocator_t alloc = vm_get_allocator(vm);
+  vec_init_t vi = {.auto_dispose = false};
+  vec_t types = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
+  value_t tv = vm_create_tuple_type_value(vm, types, true);
+  allocator_free(alloc, &types);
+  EXPECT_EQ(type_get_kind(value_get_type(tv)), TYPE_KIND_EXCEPTION);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- Shadow operations ---- */
+
+TEST_F(it_tuple_type, shadow_equal) {
+  vm_t vm = vm_create(allocator);
+  tuple_type_t tt = _make_i32_f64_tuple_type(vm);
+  value_t a = create_tuple_shadow(vm, tt, true);
+  value_t b = create_tuple_shadow(vm, tt, true);
+  value_t result = value_equal(vm, a, b);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_tuple_type, shadow_assignment) {
+  vm_t vm = vm_create(allocator);
+  tuple_type_t tt = _make_i32_f64_tuple_type(vm);
+  value_t a = create_tuple_shadow(vm, tt, false);
+  value_t b = create_tuple_shadow(vm, tt, true);
+  value_t result = value_assignment(vm, a, b);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(a));
+  EXPECT_TRUE(value_is_shadow(a));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_tuple_type, shadow_get_item) {
+  vm_t vm = vm_create(allocator);
+  tuple_type_t tt = _make_i32_f64_tuple_type(vm);
+  value_t tup = create_tuple_shadow(vm, tt, true);
+  value_t idx = create_i32_value(vm, 0);
+  value_t result = value_get_item(vm, tup, idx);
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_tuple_type, shadow_set_item) {
+  vm_t vm = vm_create(allocator);
+  tuple_type_t tt = _make_i32_f64_tuple_type(vm);
+  value_t tup = create_tuple_shadow(vm, tt, false);
+  value_t idx = create_i32_value(vm, 0);
+  value_t val = create_i32_value(vm, 42);
+  value_t result = value_set_item(vm, tup, idx, val);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(tup));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_tuple_type, shadow_safe_cast) {
+  vm_t vm = vm_create(allocator);
+  tuple_type_t tt = _make_i32_f64_tuple_type(vm);
+  tuple_type_t const_tt = _make_const_i32_f64_tuple_type(vm);
+  value_t tup = create_tuple_shadow(vm, tt, true);
+  value_t result = value_safe_cast(vm, tup, (type_t)const_tt);
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(value_get_type(result), (type_t)const_tt);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_tuple_type, shadow_to_string) {
+  vm_t vm = vm_create(allocator);
+  tuple_type_t tt = _make_i32_f64_tuple_type(vm);
+  value_t tup = create_tuple_shadow(vm, tt, true);
+  value_t result = value_to_string(vm, tup);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}

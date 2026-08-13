@@ -442,3 +442,75 @@ TEST_F(it_pointer_type, to_string) {
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
+
+/* ---- Shadow operations ---- */
+
+TEST_F(it_pointer_type, shadow_deref_get) {
+  vm_t vm = vm_create(allocator);
+  pointer_type_t pt = _make_i32_ptr(vm);
+  value_t pv = create_pointer_shadow(vm, pt, true);
+  value_t result = value_deref_get(vm, pv);
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_pointer_type, shadow_deref_set) {
+  vm_t vm = vm_create(allocator);
+  pointer_type_t pt = _make_i32_ptr(vm);
+  value_t pv = create_pointer_shadow(vm, pt, false);
+  int32_t val = 42;
+  value_t v = vm_create_value(vm, _get_i32_type(vm), &val, NULL);
+  value_t result = value_deref_set(vm, pv, v);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(pv));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_pointer_type, shadow_equal) {
+  vm_t vm = vm_create(allocator);
+  pointer_type_t pt = _make_i32_ptr(vm);
+  value_t a = create_pointer_shadow(vm, pt, true);
+  value_t b = create_pointer_shadow(vm, pt, true);
+  value_t result = value_equal(vm, a, b);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_pointer_type, shadow_assignment) {
+  vm_t vm = vm_create(allocator);
+  pointer_type_t pt = _make_i32_ptr(vm);
+  value_t a = create_pointer_shadow(vm, pt, false);
+  value_t b = create_pointer_shadow(vm, pt, true);
+  value_t result = value_assignment(vm, a, b);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(a));
+  EXPECT_TRUE(value_is_shadow(a));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_pointer_type, shadow_safe_cast) {
+  vm_t vm = vm_create(allocator);
+  pointer_type_t pt = _make_i32_ptr(vm);
+  pointer_type_t const_pt = _make_const_i32_ptr(vm);
+  value_t pv = create_pointer_shadow(vm, pt, true);
+  value_t result = value_safe_cast(vm, pv, (type_t)const_pt);
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(value_get_type(result), (type_t)const_pt);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_pointer_type, shadow_to_string) {
+  vm_t vm = vm_create(allocator);
+  pointer_type_t pt = _make_i32_ptr(vm);
+  value_t pv = create_pointer_shadow(vm, pt, true);
+  value_t result = value_to_string(vm, pv);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}

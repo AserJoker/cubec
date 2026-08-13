@@ -672,3 +672,87 @@ TEST_F(it_array_type, nested_array_cross_scope_clone) {
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
+
+/* ---- Empty array rejected ---- */
+
+TEST_F(it_array_type, vm_create_array_type_value_count0_returns_exception) {
+  vm_t vm = vm_create(allocator);
+  type_t i32t = _get_i32_type(vm);
+  value_t tv = vm_create_array_type_value(vm, i32t, 0, true);
+  EXPECT_EQ(type_get_kind(value_get_type(tv)), TYPE_KIND_EXCEPTION);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- Shadow operations ---- */
+
+TEST_F(it_array_type, shadow_equal) {
+  vm_t vm = vm_create(allocator);
+  array_type_t at = _make_i32_array_type(vm, 3);
+  value_t a = create_array_shadow(vm, at, true);
+  value_t b = create_array_shadow(vm, at, true);
+  value_t result = value_equal(vm, a, b);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_array_type, shadow_assignment) {
+  vm_t vm = vm_create(allocator);
+  array_type_t at = _make_i32_array_type(vm, 3);
+  value_t a = create_array_shadow(vm, at, false);
+  value_t b = create_array_shadow(vm, at, true);
+  value_t result = value_assignment(vm, a, b);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(a));
+  EXPECT_TRUE(value_is_shadow(a));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_array_type, shadow_get_item) {
+  vm_t vm = vm_create(allocator);
+  array_type_t at = _make_i32_array_type(vm, 3);
+  value_t arr = create_array_shadow(vm, at, true);
+  value_t idx = create_i32_value(vm, 0);
+  value_t result = value_get_item(vm, arr, idx);
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_array_type, shadow_set_item) {
+  vm_t vm = vm_create(allocator);
+  array_type_t at = _make_i32_array_type(vm, 3);
+  value_t arr = create_array_shadow(vm, at, false);
+  value_t idx = create_i32_value(vm, 0);
+  value_t val = create_i32_value(vm, 42);
+  value_t result = value_set_item(vm, arr, idx, val);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(arr));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_array_type, shadow_safe_cast) {
+  vm_t vm = vm_create(allocator);
+  array_type_t at = _make_i32_array_type(vm, 3);
+  array_type_t at2 = _make_const_i32_array_type(vm, 3);
+  value_t arr = create_array_shadow(vm, at, true);
+  value_t result = value_safe_cast(vm, arr, (type_t)at2);
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(value_get_type(result), (type_t)at2);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_array_type, shadow_to_string) {
+  vm_t vm = vm_create(allocator);
+  array_type_t at = _make_i32_array_type(vm, 3);
+  value_t arr = create_array_shadow(vm, at, true);
+  value_t result = value_to_string(vm, arr);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}

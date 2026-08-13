@@ -524,3 +524,51 @@ TEST_F(it_callable_type, call_fn_self_inspection) {
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
+
+/* ---- Shadow operations ---- */
+
+TEST_F(it_callable_type, shadow_equal) {
+  vm_t vm = vm_create(allocator);
+  callable_type_t ct = _make_i32_to_i32_callable(vm);
+  value_t a = create_callable_shadow(vm, ct, true);
+  value_t b = create_callable_shadow(vm, ct, true);
+  value_t result = value_equal(vm, a, b);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_callable_type, shadow_call) {
+  vm_t vm = vm_create(allocator);
+  callable_type_t ct = _make_i32_to_i32_callable(vm);
+  value_t cv = create_callable_shadow(vm, ct, true);
+  int32_t arg = 42;
+  value_t argv[1] = { vm_create_value(vm, _get_i32_type(vm), &arg, NULL) };
+  value_t result = value_call(vm, cv, 1, argv);
+  /* shadow call returns shadow of return type */
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_callable_type, shadow_safe_cast) {
+  vm_t vm = vm_create(allocator);
+  callable_type_t ct = _make_i32_to_i32_callable(vm);
+  value_t cv = create_callable_shadow(vm, ct, true);
+  value_t result = value_safe_cast(vm, cv, (type_t)ct);
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(value_get_type(result), (type_t)ct);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_callable_type, shadow_to_string) {
+  vm_t vm = vm_create(allocator);
+  callable_type_t ct = _make_i32_to_i32_callable(vm);
+  value_t cv = create_callable_shadow(vm, ct, true);
+  value_t result = value_to_string(vm, cv);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}

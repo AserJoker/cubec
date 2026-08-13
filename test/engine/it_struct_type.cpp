@@ -862,3 +862,62 @@ TEST_F(it_struct_type, instance_get_prop_rejected) {
   delete_allocator(allocator);
 }
 
+/* ---- Empty struct has size 1 ---- */
+
+TEST_F(it_struct_type, empty_struct_size_is_1) {
+  vm_t vm = vm_create(allocator);
+  value_t tv = vm_create_struct_type_value(vm, "Empty", true, "<builtin>");
+  struct_type_t st = (struct_type_t)value_get_data(tv);
+  (void)struct_type_seal(st);
+  EXPECT_EQ(type_get_size((type_t)st), 1u);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+/* ---- Shadow operations ---- */
+
+TEST_F(it_struct_type, shadow_equal) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = _make_point_type(vm);
+  value_t a = create_struct_shadow(vm, st, true);
+  value_t b = create_struct_shadow(vm, st, true);
+  value_t result = value_equal(vm, a, b);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, shadow_assignment) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = _make_point_type(vm);
+  value_t a = create_struct_shadow(vm, st, false);
+  value_t b = create_struct_shadow(vm, st, true);
+  value_t result = value_assignment(vm, a, b);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
+  EXPECT_TRUE(value_is_initialized(a));
+  EXPECT_TRUE(value_is_shadow(a));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, shadow_safe_cast) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = _make_point_type(vm);
+  value_t sv = create_struct_shadow(vm, st, true);
+  value_t result = value_safe_cast(vm, sv, (type_t)st);
+  EXPECT_TRUE(value_is_shadow(result));
+  EXPECT_EQ(value_get_type(result), (type_t)st);
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
+TEST_F(it_struct_type, shadow_to_string) {
+  vm_t vm = vm_create(allocator);
+  struct_type_t st = _make_point_type(vm);
+  value_t sv = create_struct_shadow(vm, st, true);
+  value_t result = value_to_string(vm, sv);
+  EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+  delete_allocator(allocator);
+}
+
