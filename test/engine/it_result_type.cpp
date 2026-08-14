@@ -58,14 +58,14 @@ TEST_F(it_result_type, create_result_type) {
   EXPECT_STREQ(type_get_name((type_t)ut), "result[i32,error]");
 
   /* fields: _value:i32, _error:error */
-  EXPECT_EQ(vec_get_size(union_type_get_fields(ut)), 2u);
-  field_info_t fv = union_type_find_field(ut, "_value");
-  field_info_t fe = union_type_find_field(ut, "_error");
+  EXPECT_EQ(vec_get_size(vm_union_get_fields(vm, rv)), 2u);
+  field_info_t fv = vm_union_find_field(vm, rv, "_value");
+  field_info_t fe = vm_union_find_field(vm, rv, "_error");
   ASSERT_NE(fv, nullptr);
   ASSERT_NE(fe, nullptr);
   EXPECT_EQ(type_get_kind(field_info_get_type(fv)), TYPE_KIND_I32);
   EXPECT_EQ(type_get_kind(field_info_get_type(fe)), TYPE_KIND_STRUCT);
-  EXPECT_TRUE(union_type_is_sealed(ut));
+  EXPECT_TRUE(vm_union_is_sealed(vm, rv));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -74,10 +74,9 @@ TEST_F(it_result_type, create_result_type) {
 TEST_F(it_result_type, result_fields_are_private) {
   vm_t vm = vm_create(allocator);
   value_t rv = _make_i32_result(vm);
-  union_type_t ut = (union_type_t)value_get_data(rv);
 
-  EXPECT_FALSE(union_type_is_field_pub(ut, "_value"));
-  EXPECT_FALSE(union_type_is_field_pub(ut, "_error"));
+  EXPECT_FALSE(vm_union_is_field_pub(vm, rv, "_value"));
+  EXPECT_FALSE(vm_union_is_field_pub(vm, rv, "_error"));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -88,9 +87,8 @@ TEST_F(it_result_type, result_fields_are_private) {
 TEST_F(it_result_type, ok_method_registered) {
   vm_t vm = vm_create(allocator);
   value_t rv = _make_i32_result(vm);
-  union_type_t ut = (union_type_t)value_get_data(rv);
 
-  value_t ok_fn = (value_t)strmap_find(union_type_get_methods(ut), "ok");
+  value_t ok_fn = (value_t)strmap_find(vm_union_get_methods(vm, rv), "ok");
   ASSERT_NE(ok_fn, nullptr);
   EXPECT_EQ(type_get_kind(value_get_type(ok_fn)), TYPE_KIND_CALLABLE);
 
@@ -101,16 +99,15 @@ TEST_F(it_result_type, ok_method_registered) {
 TEST_F(it_result_type, of_value_and_of_error_are_props) {
   vm_t vm = vm_create(allocator);
   value_t rv = _make_i32_result(vm);
-  union_type_t ut = (union_type_t)value_get_data(rv);
 
   /* of_value and of_error are props (not methods) */
-  value_t of_val = (value_t)strmap_find(union_type_get_props(ut), "of_value");
-  value_t of_err = (value_t)strmap_find(union_type_get_props(ut), "of_error");
+  value_t of_val = (value_t)strmap_find(vm_union_get_props(vm, rv), "of_value");
+  value_t of_err = (value_t)strmap_find(vm_union_get_props(vm, rv), "of_error");
   ASSERT_NE(of_val, nullptr);
   ASSERT_NE(of_err, nullptr);
   /* they should NOT be in methods */
-  EXPECT_EQ(strmap_find(union_type_get_methods(ut), "of_value"), nullptr);
-  EXPECT_EQ(strmap_find(union_type_get_methods(ut), "of_error"), nullptr);
+  EXPECT_EQ(strmap_find(vm_union_get_methods(vm, rv), "of_value"), nullptr);
+  EXPECT_EQ(strmap_find(vm_union_get_methods(vm, rv), "of_error"), nullptr);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -170,11 +167,10 @@ TEST_F(it_result_type, of_error_creates_error_result) {
 TEST_F(it_result_type, ok_returns_true_for_value_variant) {
   vm_t vm = vm_create(allocator);
   value_t rv = _make_i32_result(vm);
-  union_type_t ut = (union_type_t)value_get_data(rv);
 
-  /* create a result with _value active (tag=0) */
+  /* create a result with _value active */
   value_t i32_val = create_i32_value(vm, 42);
-  value_t result_val = create_union_value(vm, ut, 0, i32_val);
+  value_t result_val = vm_create_union_value(vm, rv, "_value", i32_val);
 
   /* call result.ok() via member_call */
   value_t ok_result = value_member_call(vm, result_val, "ok", 0, NULL);
@@ -188,11 +184,10 @@ TEST_F(it_result_type, ok_returns_true_for_value_variant) {
 TEST_F(it_result_type, ok_returns_false_for_error_variant) {
   vm_t vm = vm_create(allocator);
   value_t rv = _make_i32_result(vm);
-  union_type_t ut = (union_type_t)value_get_data(rv);
 
-  /* create a result with _error active (tag=1) */
+  /* create a result with _error active */
   value_t err_val = create_error_value(vm, 1, "test error");
-  value_t result_val = create_union_value(vm, ut, 1, err_val);
+  value_t result_val = vm_create_union_value(vm, rv, "_error", err_val);
 
   value_t ok_result = value_member_call(vm, result_val, "ok", 0, NULL);
   EXPECT_EQ(type_get_kind(value_get_type(ok_result)), TYPE_KIND_BOOL);
@@ -207,10 +202,9 @@ TEST_F(it_result_type, ok_returns_false_for_error_variant) {
 TEST_F(it_result_type, value_returns_inner_when_ok) {
   vm_t vm = vm_create(allocator);
   value_t rv = _make_i32_result(vm);
-  union_type_t ut = (union_type_t)value_get_data(rv);
 
   value_t i32_val = create_i32_value(vm, 42);
-  value_t result_val = create_union_value(vm, ut, 0, i32_val);
+  value_t result_val = vm_create_union_value(vm, rv, "_value", i32_val);
 
   value_t inner = value_member_call(vm, result_val, "value", 0, NULL);
   EXPECT_EQ(type_get_kind(value_get_type(inner)), TYPE_KIND_I32);
@@ -223,10 +217,9 @@ TEST_F(it_result_type, value_returns_inner_when_ok) {
 TEST_F(it_result_type, value_panics_when_error) {
   vm_t vm = vm_create(allocator);
   value_t rv = _make_i32_result(vm);
-  union_type_t ut = (union_type_t)value_get_data(rv);
 
   value_t err_val = create_error_value(vm, 1, "test error");
-  value_t result_val = create_union_value(vm, ut, 1, err_val);
+  value_t result_val = vm_create_union_value(vm, rv, "_error", err_val);
 
   value_t inner = value_member_call(vm, result_val, "value", 0, NULL);
   EXPECT_EQ(type_get_kind(value_get_type(inner)), TYPE_KIND_EXCEPTION);
@@ -240,10 +233,9 @@ TEST_F(it_result_type, value_panics_when_error) {
 TEST_F(it_result_type, error_returns_inner_when_error) {
   vm_t vm = vm_create(allocator);
   value_t rv = _make_i32_result(vm);
-  union_type_t ut = (union_type_t)value_get_data(rv);
 
   value_t err_val = create_error_value(vm, 1, "test error");
-  value_t result_val = create_union_value(vm, ut, 1, err_val);
+  value_t result_val = vm_create_union_value(vm, rv, "_error", err_val);
 
   value_t inner = value_member_call(vm, result_val, "error", 0, NULL);
   EXPECT_EQ(type_get_kind(value_get_type(inner)), TYPE_KIND_STRUCT); /* error struct */
@@ -255,10 +247,9 @@ TEST_F(it_result_type, error_returns_inner_when_error) {
 TEST_F(it_result_type, error_panics_when_ok) {
   vm_t vm = vm_create(allocator);
   value_t rv = _make_i32_result(vm);
-  union_type_t ut = (union_type_t)value_get_data(rv);
 
   value_t i32_val = create_i32_value(vm, 42);
-  value_t result_val = create_union_value(vm, ut, 0, i32_val);
+  value_t result_val = vm_create_union_value(vm, rv, "_value", i32_val);
 
   value_t inner = value_member_call(vm, result_val, "error", 0, NULL);
   EXPECT_EQ(type_get_kind(value_get_type(inner)), TYPE_KIND_EXCEPTION);
@@ -277,7 +268,7 @@ TEST_F(it_result_type, str_result_of_value_and_ok) {
   EXPECT_STREQ(type_get_name((type_t)ut), "result[str,error]");
 
   value_t s = create_str_value(vm, "hello");
-  value_t result_val = create_union_value(vm, ut, 0, s);
+  value_t result_val = vm_create_union_value(vm, rv, "_value", s);
 
   value_t ok_result = value_member_call(vm, result_val, "ok", 0, NULL);
   EXPECT_TRUE(*(bool *)value_get_data(ok_result));
@@ -294,9 +285,8 @@ TEST_F(it_result_type, str_result_of_value_and_ok) {
 TEST_F(it_result_type, shadow_member_call_propagates_shadow) {
   vm_t vm = vm_create(allocator);
   value_t rv = _make_i32_result(vm);
-  union_type_t ut = (union_type_t)value_get_data(rv);
 
-  value_t result_val = create_union_shadow(vm, ut, false);
+  value_t result_val = vm_create_union_shadow(vm, rv, false);
 
   /* shadow result → value_addrof → shadow pointer → member_call deref → shadow result
    * → value_is → shadow bool */
@@ -311,9 +301,8 @@ TEST_F(it_result_type, shadow_member_call_propagates_shadow) {
 TEST_F(it_result_type, shadow_get_field_returns_exception) {
   vm_t vm = vm_create(allocator);
   value_t rv = _make_i32_result(vm);
-  union_type_t ut = (union_type_t)value_get_data(rv);
 
-  value_t result_val = create_union_shadow(vm, ut, false);
+  value_t result_val = vm_create_union_shadow(vm, rv, false);
 
   /* get_field on shadow result: shadow check before tag read → exception */
   value_t got = value_get_field(vm, result_val, "_value");

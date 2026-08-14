@@ -245,30 +245,53 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   vec_push(vm->global_scope->values, vm->v_wildcard_value);
 
   /* User-facing error struct: error { message: [128]u8, error_code: u64,
-   *                                    backtrace: [32]u64, backtrace_count: u64 } */
-  struct_type_t error_st = struct_type_create(allocator, "error", true, "<builtin>");
+   *                                    backtrace: [32]u64, backtrace_count: u64 }
+   * vm_struct_add_field clones field types into the struct's scope,
+   * so temporary type values (value_create, not create_type_value) are safe
+   * to free after use — they are NOT registered in scope->values. */
+  value_t error_tv = vm_create_struct_type_value(vm, "error", true, "<builtin>");
+  type_t type_type_val = (type_t)value_get_data(vm->v_type);
 
   /* message: [128]u8 */
   type_t err_u8_type = (type_t)value_get_data(vm->v_u8);
   type_t msg_array_type = (type_t)array_type_create(allocator, err_u8_type, 128, true);
-  vec_push(vm->global_scope->types, msg_array_type);
-  struct_type_add_field(allocator, error_st, "message", msg_array_type, true);
+  {
+    value_t tmp = value_create(allocator, type_type_val, msg_array_type, false);
+    vm_struct_add_field(vm, error_tv, "message", tmp, true);
+    allocator_free(allocator, &tmp);
+  }
+  allocator_free(allocator, &msg_array_type);
 
   /* error_code: u64 */
   type_t err_u64_type = (type_t)value_get_data(vm->v_u64);
-  struct_type_add_field(allocator, error_st, "error_code", err_u64_type, true);
+  {
+    value_t tmp = value_create(allocator, type_type_val, err_u64_type, false);
+    vm_struct_add_field(vm, error_tv, "error_code", tmp, true);
+    allocator_free(allocator, &tmp);
+  }
 
   /* backtrace: [32]u64 */
   type_t bt_array_type = (type_t)array_type_create(allocator, err_u64_type, 32, true);
-  vec_push(vm->global_scope->types, bt_array_type);
-  struct_type_add_field(allocator, error_st, "backtrace", bt_array_type, true);
+  {
+    value_t tmp = value_create(allocator, type_type_val, bt_array_type, false);
+    vm_struct_add_field(vm, error_tv, "backtrace", tmp, true);
+    allocator_free(allocator, &tmp);
+  }
+  allocator_free(allocator, &bt_array_type);
 
   /* backtrace_count: u64 */
-  struct_type_add_field(allocator, error_st, "backtrace_count", err_u64_type, true);
+  {
+    value_t tmp = value_create(allocator, type_type_val, err_u64_type, false);
+    vm_struct_add_field(vm, error_tv, "backtrace_count", tmp, true);
+    allocator_free(allocator, &tmp);
+  }
 
-  (void)struct_type_seal(error_st);
-  vec_push(vm->global_scope->types, (type_t)error_st);
-  vm->v_error = create_type_value(vm, (type_t)error_st, "error", false);
+  vm_struct_seal(vm, error_tv);
+  /* Register "error" name in global scope so scope_lookup("error") works */
+  scope_t gscope = vm_get_global_scope(vm);
+  name_t n_error = name_create(gscope->allocator, error_tv);
+  strmap_insert(gscope->names, "error", n_error);
+  vm->v_error = error_tv;
 
   /* ---- builtin: panic(str) -> void ---- */
   /* panic constructs an exception and returns it.

@@ -23,31 +23,35 @@ protected:
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
   }
-  type_t _get_f64_type(vm_t vm) {
-    return (type_t)value_get_data(vm_get_f64_type(vm));
-  }
-  type_t _get_bool_type(vm_t vm) {
-    return (type_t)value_get_data(vm_get_bool_type(vm));
+
+  /** Create a type value wrapping i32 type (temporary, for vm_union_add_field). */
+  value_t _make_type_val(vm_t vm, type_t t) {
+    type_t type_type_val = (type_t)value_get_data(vm_get_type_type(vm));
+    return value_create(vm_get_allocator(vm), type_type_val, t, false);
   }
 
   /** Create a struct with module_id="/foo", pub x:i32, private y:i32 */
-  struct_type_t _make_foo_struct(vm_t vm) {
+  value_t _make_foo_struct(vm_t vm) {
     value_t tv = vm_create_struct_type_value(vm, "Foo", true, "/foo");
-    struct_type_t st = (struct_type_t)value_get_data(tv);
-    struct_type_add_field(vm_get_allocator(vm), st, "x", _get_i32_type(vm), true);   /* pub */
-    struct_type_add_field(vm_get_allocator(vm), st, "y", _get_i32_type(vm), false);  /* private */
-    (void)struct_type_seal(st);
-    return st;
+    (void)vm_struct_add_field(vm, tv, "x", vm_get_i32_type(vm), true);   /* pub */
+    (void)vm_struct_add_field(vm, tv, "y", vm_get_i32_type(vm), false);  /* private */
+    (void)vm_struct_seal(vm, tv);
+    return tv;
   }
 
-  /** Create a union with module_id="/bar", pub Ok:i32, private Err:i32 */
-  union_type_t _make_bar_union(vm_t vm) {
+  /** Create a union type value with module_id="/bar", pub Ok:i32, private Err:i32 */
+  value_t _make_bar_union(vm_t vm) {
     value_t tv = vm_create_union_type_value(vm, "Bar", true, "/bar");
-    union_type_t ut = (union_type_t)value_get_data(tv);
-    union_type_add_field(vm_get_allocator(vm), ut, "Ok", _get_i32_type(vm), true);   /* pub */
-    union_type_add_field(vm_get_allocator(vm), ut, "Err", _get_i32_type(vm), false); /* private */
-    (void)union_type_seal(ut);
-    return ut;
+    {
+      value_t ft = _make_type_val(vm, _get_i32_type(vm));
+      vm_union_add_field(vm, tv, "Ok", ft, true);   /* pub */
+    }
+    {
+      value_t ft = _make_type_val(vm, _get_i32_type(vm));
+      vm_union_add_field(vm, tv, "Err", ft, false); /* private */
+    }
+    vm_union_seal(vm, tv);
+    return tv;
   }
 };
 
@@ -55,12 +59,12 @@ protected:
 
 TEST_F(it_access_control, struct_same_module_get_private_field_ok) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t vx = create_i32_value(vm, 10);
   value_t vy = create_i32_value(vm, 20);
   value_t fields[] = {vx, vy};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, type_val, fields);
 
   /* access from same module → private field accessible */
   vm_set_current_module_id(vm, "/foo");
@@ -74,12 +78,12 @@ TEST_F(it_access_control, struct_same_module_get_private_field_ok) {
 
 TEST_F(it_access_control, struct_same_module_set_private_field_ok) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t vx = create_i32_value(vm, 10);
   value_t vy = create_i32_value(vm, 20);
   value_t fields[] = {vx, vy};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, type_val, fields);
 
   vm_set_current_module_id(vm, "/foo");
   value_t new_y = create_i32_value(vm, 99);
@@ -92,12 +96,12 @@ TEST_F(it_access_control, struct_same_module_set_private_field_ok) {
 
 TEST_F(it_access_control, struct_same_module_member_addr_private_ok) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t vx = create_i32_value(vm, 10);
   value_t vy = create_i32_value(vm, 20);
   value_t fields[] = {vx, vy};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, type_val, fields);
 
   vm_set_current_module_id(vm, "/foo");
   value_t addr = value_member_addr(vm, sv, "y");
@@ -111,12 +115,12 @@ TEST_F(it_access_control, struct_same_module_member_addr_private_ok) {
 
 TEST_F(it_access_control, struct_cross_module_get_pub_field_ok) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t vx = create_i32_value(vm, 10);
   value_t vy = create_i32_value(vm, 20);
   value_t fields[] = {vx, vy};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, type_val, fields);
 
   /* access from different module → pub field accessible */
   vm_set_current_module_id(vm, "/other");
@@ -130,12 +134,12 @@ TEST_F(it_access_control, struct_cross_module_get_pub_field_ok) {
 
 TEST_F(it_access_control, struct_cross_module_get_private_field_rejected) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t vx = create_i32_value(vm, 10);
   value_t vy = create_i32_value(vm, 20);
   value_t fields[] = {vx, vy};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, type_val, fields);
 
   /* access from different module → private field rejected */
   vm_set_current_module_id(vm, "/other");
@@ -148,12 +152,12 @@ TEST_F(it_access_control, struct_cross_module_get_private_field_rejected) {
 
 TEST_F(it_access_control, struct_cross_module_set_private_field_rejected) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t vx = create_i32_value(vm, 10);
   value_t vy = create_i32_value(vm, 20);
   value_t fields[] = {vx, vy};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, type_val, fields);
 
   vm_set_current_module_id(vm, "/other");
   value_t new_y = create_i32_value(vm, 99);
@@ -166,12 +170,12 @@ TEST_F(it_access_control, struct_cross_module_set_private_field_rejected) {
 
 TEST_F(it_access_control, struct_cross_module_member_addr_private_rejected) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t vx = create_i32_value(vm, 10);
   value_t vy = create_i32_value(vm, 20);
   value_t fields[] = {vx, vy};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, type_val, fields);
 
   vm_set_current_module_id(vm, "/other");
   value_t addr = value_member_addr(vm, sv, "y");
@@ -183,12 +187,12 @@ TEST_F(it_access_control, struct_cross_module_member_addr_private_rejected) {
 
 TEST_F(it_access_control, struct_cross_module_set_pub_field_ok) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t vx = create_i32_value(vm, 10);
   value_t vy = create_i32_value(vm, 20);
   value_t fields[] = {vx, vy};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, type_val, fields);
 
   vm_set_current_module_id(vm, "/other");
   value_t new_x = create_i32_value(vm, 77);
@@ -203,12 +207,10 @@ TEST_F(it_access_control, struct_cross_module_set_pub_field_ok) {
 
 TEST_F(it_access_control, struct_cross_module_get_private_prop_rejected) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  struct_type_add_prop(vm, st, "secret", prop_val, false, false); /* private prop */
-
-  value_t type_val = create_type_value(vm, (type_t)st, NULL, false);
+  (void)vm_struct_add_prop(vm, type_val, "secret", prop_val, false, false); /* private prop */
 
   vm_set_current_module_id(vm, "/other");
   value_t got = value_get_prop(vm, type_val, "secret");
@@ -220,12 +222,10 @@ TEST_F(it_access_control, struct_cross_module_get_private_prop_rejected) {
 
 TEST_F(it_access_control, struct_cross_module_get_pub_prop_ok) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  struct_type_add_prop(vm, st, "count", prop_val, false, true); /* pub prop */
-
-  value_t type_val = create_type_value(vm, (type_t)st, NULL, false);
+  (void)vm_struct_add_prop(vm, type_val, "count", prop_val, false, true); /* pub prop */
 
   vm_set_current_module_id(vm, "/other");
   value_t got = value_get_prop(vm, type_val, "count");
@@ -238,12 +238,10 @@ TEST_F(it_access_control, struct_cross_module_get_pub_prop_ok) {
 
 TEST_F(it_access_control, struct_cross_module_set_private_prop_rejected) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  struct_type_add_prop(vm, st, "secret", prop_val, false, false); /* private */
-
-  value_t type_val = create_type_value(vm, (type_t)st, NULL, false);
+  (void)vm_struct_add_prop(vm, type_val, "secret", prop_val, false, false); /* private */
 
   vm_set_current_module_id(vm, "/other");
   value_t new_val = create_i32_value(vm, 99);
@@ -258,12 +256,12 @@ TEST_F(it_access_control, struct_cross_module_set_private_prop_rejected) {
 
 TEST_F(it_access_control, struct_pointer_cross_module_get_private_rejected) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t vx = create_i32_value(vm, 10);
   value_t vy = create_i32_value(vm, 20);
   value_t fields[] = {vx, vy};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, type_val, fields);
 
   value_t ptr = value_addrof(vm, sv);
 
@@ -277,12 +275,12 @@ TEST_F(it_access_control, struct_pointer_cross_module_get_private_rejected) {
 
 TEST_F(it_access_control, struct_pointer_cross_module_get_pub_ok) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t vx = create_i32_value(vm, 10);
   value_t vy = create_i32_value(vm, 20);
   value_t fields[] = {vx, vy};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, type_val, fields);
 
   value_t ptr = value_addrof(vm, sv);
 
@@ -299,10 +297,10 @@ TEST_F(it_access_control, struct_pointer_cross_module_get_pub_ok) {
 
 TEST_F(it_access_control, union_same_module_get_private_field_ok) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = _make_bar_union(vm);
+  value_t tv = _make_bar_union(vm);
 
   value_t ok_val = create_i32_value(vm, 42);
-  value_t uv = create_union_value(vm, ut, 0, ok_val);
+  value_t uv = vm_create_union_value(vm, tv, "Ok", ok_val);
 
   vm_set_current_module_id(vm, "/bar");
   value_t got = value_get_field(vm, uv, "Err");
@@ -318,10 +316,10 @@ TEST_F(it_access_control, union_same_module_get_private_field_ok) {
 
 TEST_F(it_access_control, union_same_module_set_private_field_ok) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = _make_bar_union(vm);
+  value_t tv = _make_bar_union(vm);
 
   value_t ok_val = create_i32_value(vm, 42);
-  value_t uv = create_union_value(vm, ut, 0, ok_val);
+  value_t uv = vm_create_union_value(vm, tv, "Ok", ok_val);
 
   vm_set_current_module_id(vm, "/bar");
   /* set private field from same module */
@@ -337,10 +335,10 @@ TEST_F(it_access_control, union_same_module_set_private_field_ok) {
 
 TEST_F(it_access_control, union_cross_module_get_pub_field_ok) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = _make_bar_union(vm);
+  value_t tv = _make_bar_union(vm);
 
   value_t ok_val = create_i32_value(vm, 42);
-  value_t uv = create_union_value(vm, ut, 0, ok_val);
+  value_t uv = vm_create_union_value(vm, tv, "Ok", ok_val);
 
   vm_set_current_module_id(vm, "/other");
   value_t got = value_get_field(vm, uv, "Ok");
@@ -360,10 +358,10 @@ TEST_F(it_access_control, union_cross_module_get_pub_field_ok) {
 
 TEST_F(it_access_control, union_cross_module_get_private_field_rejected) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = _make_bar_union(vm);
+  value_t tv = _make_bar_union(vm);
 
   value_t err_val = create_i32_value(vm, 1);
-  value_t uv = create_union_value(vm, ut, 1, err_val); /* tag=1 = Err */
+  value_t uv = vm_create_union_value(vm, tv, "Err", err_val); /* tag=1 = Err */
 
   vm_set_current_module_id(vm, "/other");
   value_t got = value_get_field(vm, uv, "Err");
@@ -375,10 +373,10 @@ TEST_F(it_access_control, union_cross_module_get_private_field_rejected) {
 
 TEST_F(it_access_control, union_cross_module_set_private_field_rejected) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = _make_bar_union(vm);
+  value_t tv = _make_bar_union(vm);
 
   value_t ok_val = create_i32_value(vm, 42);
-  value_t uv = create_union_value(vm, ut, 0, ok_val);
+  value_t uv = vm_create_union_value(vm, tv, "Ok", ok_val);
 
   vm_set_current_module_id(vm, "/other");
   value_t err_val = create_i32_value(vm, 1);
@@ -391,10 +389,10 @@ TEST_F(it_access_control, union_cross_module_set_private_field_rejected) {
 
 TEST_F(it_access_control, union_cross_module_member_addr_private_rejected) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = _make_bar_union(vm);
+  value_t tv = _make_bar_union(vm);
 
   value_t ok_val = create_i32_value(vm, 42);
-  value_t uv = create_union_value(vm, ut, 0, ok_val);
+  value_t uv = vm_create_union_value(vm, tv, "Ok", ok_val);
 
   vm_set_current_module_id(vm, "/other");
   value_t addr = value_member_addr(vm, uv, "Err");
@@ -408,11 +406,12 @@ TEST_F(it_access_control, union_cross_module_member_addr_private_rejected) {
 
 TEST_F(it_access_control, union_cross_module_get_private_prop_rejected) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = _make_bar_union(vm);
+  value_t tv = _make_bar_union(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  union_type_add_prop(vm, ut, "secret", prop_val, false, false); /* private */
+  vm_union_add_prop(vm, tv, "secret", prop_val, false, false); /* private */
 
+  union_type_t ut = (union_type_t)value_get_data(tv);
   value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
 
   vm_set_current_module_id(vm, "/other");
@@ -425,11 +424,12 @@ TEST_F(it_access_control, union_cross_module_get_private_prop_rejected) {
 
 TEST_F(it_access_control, union_cross_module_get_pub_prop_ok) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = _make_bar_union(vm);
+  value_t tv = _make_bar_union(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  union_type_add_prop(vm, ut, "count", prop_val, false, true); /* pub */
+  vm_union_add_prop(vm, tv, "count", prop_val, false, true); /* pub */
 
+  union_type_t ut = (union_type_t)value_get_data(tv);
   value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
 
   vm_set_current_module_id(vm, "/other");
@@ -447,13 +447,12 @@ TEST_F(it_access_control, builtin_private_field_from_other_module_rejected) {
   vm_t vm = vm_create(allocator);
   /* struct with module_id="<builtin>", private field */
   value_t stv = vm_create_struct_type_value(vm, "BuiltinType", true, "<builtin>");
-  struct_type_t st = (struct_type_t)value_get_data(stv);
-  struct_type_add_field(vm_get_allocator(vm), st, "data", _get_i32_type(vm), false); /* private */
-  (void)struct_type_seal(st);
+  (void)vm_struct_add_field(vm, stv, "data", vm_get_i32_type(vm), false); /* private */
+  (void)vm_struct_seal(vm, stv);
 
   value_t dv = create_i32_value(vm, 42);
   value_t fields[] = {dv};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, stv, fields);
 
   /* from /user module, builtin's private field should be rejected */
   vm_set_current_module_id(vm, "/user");
@@ -467,13 +466,12 @@ TEST_F(it_access_control, builtin_private_field_from_other_module_rejected) {
 TEST_F(it_access_control, builtin_private_field_from_builtin_ok) {
   vm_t vm = vm_create(allocator);
   value_t stv2 = vm_create_struct_type_value(vm, "BuiltinType", true, "<builtin>");
-  struct_type_t st = (struct_type_t)value_get_data(stv2);
-  struct_type_add_field(vm_get_allocator(vm), st, "data", _get_i32_type(vm), false); /* private */
-  (void)struct_type_seal(st);
+  (void)vm_struct_add_field(vm, stv2, "data", vm_get_i32_type(vm), false); /* private */
+  (void)vm_struct_seal(vm, stv2);
 
   value_t dv = create_i32_value(vm, 42);
   value_t fields[] = {dv};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, stv2, fields);
 
   /* from <builtin> module, builtin's private field is accessible */
   vm_set_current_module_id(vm, "<builtin>");
@@ -488,13 +486,12 @@ TEST_F(it_access_control, builtin_private_field_from_builtin_ok) {
 TEST_F(it_access_control, builtin_pub_field_from_other_module_ok) {
   vm_t vm = vm_create(allocator);
   value_t stv3 = vm_create_struct_type_value(vm, "BuiltinType", true, "<builtin>");
-  struct_type_t st = (struct_type_t)value_get_data(stv3);
-  struct_type_add_field(vm_get_allocator(vm), st, "data", _get_i32_type(vm), true); /* pub */
-  (void)struct_type_seal(st);
+  (void)vm_struct_add_field(vm, stv3, "data", vm_get_i32_type(vm), true); /* pub */
+  (void)vm_struct_seal(vm, stv3);
 
   value_t dv = create_i32_value(vm, 42);
   value_t fields[] = {dv};
-  value_t sv = create_struct_value(vm, st, fields);
+  value_t sv = vm_create_struct_value(vm, stv3, fields);
 
   /* pub field from builtin is accessible from any module */
   vm_set_current_module_id(vm, "/user");
@@ -510,11 +507,11 @@ TEST_F(it_access_control, builtin_pub_field_from_other_module_ok) {
 
 TEST_F(it_access_control, struct_is_field_pub) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
-  EXPECT_TRUE(struct_type_is_field_pub(st, "x"));
-  EXPECT_FALSE(struct_type_is_field_pub(st, "y"));
-  EXPECT_FALSE(struct_type_is_field_pub(st, "nonexistent"));
+  EXPECT_TRUE(vm_struct_is_field_pub(vm, type_val, "x"));
+  EXPECT_FALSE(vm_struct_is_field_pub(vm, type_val, "y"));
+  EXPECT_FALSE(vm_struct_is_field_pub(vm, type_val, "nonexistent"));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -522,16 +519,16 @@ TEST_F(it_access_control, struct_is_field_pub) {
 
 TEST_F(it_access_control, struct_is_prop_pub) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
+  value_t type_val = _make_foo_struct(vm);
 
   value_t pub_prop = create_i32_value(vm, 1);
   value_t priv_prop = create_i32_value(vm, 2);
-  struct_type_add_prop(vm, st, "pub_count", pub_prop, false, true);
-  struct_type_add_prop(vm, st, "priv_count", priv_prop, false, false);
+  (void)vm_struct_add_prop(vm, type_val, "pub_count", pub_prop, false, true);
+  (void)vm_struct_add_prop(vm, type_val, "priv_count", priv_prop, false, false);
 
-  EXPECT_TRUE(struct_type_is_prop_pub(st, "pub_count"));
-  EXPECT_FALSE(struct_type_is_prop_pub(st, "priv_count"));
-  EXPECT_FALSE(struct_type_is_prop_pub(st, "nonexistent"));
+  EXPECT_TRUE(vm_struct_is_prop_pub(vm, type_val, "pub_count"));
+  EXPECT_FALSE(vm_struct_is_prop_pub(vm, type_val, "priv_count"));
+  EXPECT_FALSE(vm_struct_is_prop_pub(vm, type_val, "nonexistent"));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -539,11 +536,11 @@ TEST_F(it_access_control, struct_is_prop_pub) {
 
 TEST_F(it_access_control, union_is_field_pub) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = _make_bar_union(vm);
+  value_t tv = _make_bar_union(vm);
 
-  EXPECT_TRUE(union_type_is_field_pub(ut, "Ok"));
-  EXPECT_FALSE(union_type_is_field_pub(ut, "Err"));
-  EXPECT_FALSE(union_type_is_field_pub(ut, "nonexistent"));
+  EXPECT_TRUE(vm_union_is_field_pub(vm, tv, "Ok"));
+  EXPECT_FALSE(vm_union_is_field_pub(vm, tv, "Err"));
+  EXPECT_FALSE(vm_union_is_field_pub(vm, tv, "nonexistent"));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -551,16 +548,16 @@ TEST_F(it_access_control, union_is_field_pub) {
 
 TEST_F(it_access_control, union_is_prop_pub) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = _make_bar_union(vm);
+  value_t tv = _make_bar_union(vm);
 
   value_t pub_prop = create_i32_value(vm, 1);
   value_t priv_prop = create_i32_value(vm, 2);
-  union_type_add_prop(vm, ut, "pub_count", pub_prop, false, true);
-  union_type_add_prop(vm, ut, "priv_count", priv_prop, false, false);
+  vm_union_add_prop(vm, tv, "pub_count", pub_prop, false, true);
+  vm_union_add_prop(vm, tv, "priv_count", priv_prop, false, false);
 
-  EXPECT_TRUE(union_type_is_prop_pub(ut, "pub_count"));
-  EXPECT_FALSE(union_type_is_prop_pub(ut, "priv_count"));
-  EXPECT_FALSE(union_type_is_prop_pub(ut, "nonexistent"));
+  EXPECT_TRUE(vm_union_is_prop_pub(vm, tv, "pub_count"));
+  EXPECT_FALSE(vm_union_is_prop_pub(vm, tv, "priv_count"));
+  EXPECT_FALSE(vm_union_is_prop_pub(vm, tv, "nonexistent"));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -570,8 +567,8 @@ TEST_F(it_access_control, union_is_prop_pub) {
 
 TEST_F(it_access_control, struct_get_module_id) {
   vm_t vm = vm_create(allocator);
-  struct_type_t st = _make_foo_struct(vm);
-  EXPECT_STREQ(struct_type_get_module_id(st), "/foo");
+  value_t type_val = _make_foo_struct(vm);
+  EXPECT_STREQ(vm_struct_get_module_id(vm, type_val), "/foo");
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
@@ -579,8 +576,8 @@ TEST_F(it_access_control, struct_get_module_id) {
 
 TEST_F(it_access_control, union_get_module_id) {
   vm_t vm = vm_create(allocator);
-  union_type_t ut = _make_bar_union(vm);
-  EXPECT_STREQ(union_type_get_module_id(ut), "/bar");
+  value_t tv = _make_bar_union(vm);
+  EXPECT_STREQ(vm_union_get_module_id(vm, tv), "/bar");
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

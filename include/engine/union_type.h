@@ -36,6 +36,10 @@ struct union_data_t {
  * Safe to cast union_type_t -> type_t (base is first field).
  * Uses duck typing (structural comparison), name is for reflection/to_string only.
  * All fields share the same payload area; tag indicates which is active.
+ *
+ * NOTE: union_type_t is an internal type pointer. Public API operates on
+ * value_t (TYPE_KIND_TYPE type values). Direct union_type_t access is only
+ * for internal vtable implementations within the engine.
  */
 struct _union_type_t {
   struct _type_t base;       /* inherited header, base.name nullable (anonymous) */
@@ -51,7 +55,7 @@ struct _union_type_t {
 };
 typedef struct _union_type_t *union_type_t;
 
-/** @brief Class descriptor for allocator_create. */
+/** @brief Class descriptor for allocator_create / alloc_clone. */
 extern class_t g_union_type_class;
 
 /** @brief Init args for g_union_type_class. */
@@ -65,50 +69,83 @@ typedef struct union_type_init_t {
   const char *module_id;     /* borrowed: owning module path or "<builtin>" */
 } union_type_init_t;
 
-/* ---- Type creation ---- */
+/* ---- Value-based type operations ---- */
 
-/** @brief Create a union type with given name (nullable).
- *  Initially unsealed: fields can be added via union_type_add_field.
- *  The union's scope is isolated (no parent), fully owned by union_type_t. */
-union_type_t union_type_create(allocator_t allocator, const char *name, bool mut,
-                                const char *module_id);
+struct _vm_t;
 
-/** @brief Add a variant field to the union type (before seal).
- *  All fields share the same payload offset.
- *  Computes payload_size = max(field sizes) incrementally.
- *  Errors if union is already sealed. */
-void union_type_add_field(allocator_t allocator, union_type_t ut,
-                           const char *name, type_t field_type, bool pub);
+/** @brief Add a variant field to the union type value (before seal).
+ *  field_type_val must be a TYPE_KIND_TYPE value wrapping the field type.
+ *  The field type is cloned into the union's scope->types.
+ *  Returns NULL on success, exception value on error (sealed, duplicate name). */
+value_t vm_union_add_field(struct _vm_t *vm, value_t type_val,
+                           const char *name, value_t field_type_val, bool pub);
 
-/** @brief Seal the union type: finalize payload_offset and total size.
- *  After seal, union_type_add_field will emit an error. */
-bool union_type_seal(union_type_t ut);
+/** @brief Seal the union type value: finalize payload_offset and total size.
+ *  Returns NULL on success, exception value on error. */
+value_t vm_union_seal(struct _vm_t *vm, value_t type_val);
 
-/** @brief Register a static property or method on the union type.
+/** @brief Register a static property or method on the union type value.
  *  is_method=true: registers in both props and methods.
- *  is_method=false: registers in props only. */
-void union_type_add_prop(vm_t vm, union_type_t ut,
+ *  Returns NULL on success, exception value on error (duplicate name). */
+value_t vm_union_add_prop(struct _vm_t *vm, value_t type_val,
                           const char *name, value_t val, bool is_method, bool pub);
 
-/* ---- Accessors ---- */
-
-vec_t    union_type_get_fields(union_type_t self);
-scope_t  union_type_get_scope(union_type_t self);
-strmap_t union_type_get_props(union_type_t self);
-strmap_t union_type_get_methods(union_type_t self);
-bool     union_type_is_sealed(union_type_t self);
-
-/** @brief Get the module_id (borrowed) that owns this union type. */
-const char *union_type_get_module_id(union_type_t self);
-
-/** @brief Check if a field is pub (accessible across modules). */
-bool union_type_is_field_pub(union_type_t self, const char *name);
-
-/** @brief Check if a prop/method is pub (accessible across modules). */
-bool union_type_is_prop_pub(union_type_t self, const char *name);
+/* ---- Value-based type accessors ---- */
 
 /** @brief Find a field by name. Returns NULL if not found. */
-field_info_t union_type_find_field(union_type_t self, const char *name);
+field_info_t vm_union_find_field(struct _vm_t *vm, value_t type_val, const char *name);
+
+/** @brief Get the fields vec (field_info_t* elements). */
+vec_t vm_union_get_fields(struct _vm_t *vm, value_t type_val);
+
+/** @brief Get the owned scope. */
+scope_t vm_union_get_scope(struct _vm_t *vm, value_t type_val);
+
+/** @brief Get the props strmap (name -> value_t). */
+strmap_t vm_union_get_props(struct _vm_t *vm, value_t type_val);
+
+/** @brief Get the methods strmap (name -> value_t). */
+strmap_t vm_union_get_methods(struct _vm_t *vm, value_t type_val);
+
+/** @brief Check if the union type is sealed. */
+bool vm_union_is_sealed(struct _vm_t *vm, value_t type_val);
+
+/** @brief Get the module_id (borrowed). */
+const char *vm_union_get_module_id(struct _vm_t *vm, value_t type_val);
+
+/** @brief Check if a field is pub. */
+bool vm_union_is_field_pub(struct _vm_t *vm, value_t type_val, const char *name);
+
+/** @brief Check if a prop/method is pub. */
+bool vm_union_is_prop_pub(struct _vm_t *vm, value_t type_val, const char *name);
+
+/* ---- Value constructors ---- */
+
+/** @brief Create a union instance value with given field name and field value.
+ *  type_val must be a TYPE_KIND_TYPE value wrapping a sealed union_type_t.
+ *  Looks up field by name, sets tag, memcpy's field data into payload area.
+ *  Returns exception value if field not found. */
+value_t vm_create_union_value(struct _vm_t *vm, value_t type_val,
+                               const char *field_name, value_t field_value);
+
+/** @brief Create a union shadow value (no data). */
+value_t vm_create_union_shadow(struct _vm_t *vm, value_t type_val, bool initialized);
+
+/** @brief Create a pointer value pointing to a union member field.
+ *  Checks tag matches, returns *FieldType pointer.
+ *  Exported for value_member_addr in value.c. */
+value_t _union_value_member_addr(struct _vm_t *vm, value_t self, const char *name);
+
+/** @brief Find a field by name from union_type_t directly (read-only).
+ *  Internal helper for result_type.c method functions.
+ *  Prefer vm_union_find_field for value-based API usage. */
+field_info_t _union_type_find_field(union_type_t ut, const char *name);
+
+/** @brief Create a union instance value from union_type_t directly.
+ *  Internal helper for result_type.c method functions.
+ *  Prefer vm_create_union_value for value-based API usage. */
+value_t _union_type_create_value(struct _vm_t *vm, union_type_t ut,
+                                  uint32_t tag, value_t field_value);
 
 /* ---- VM convenience ---- */
 
@@ -117,25 +154,6 @@ field_info_t union_type_find_field(union_type_t self, const char *name);
  *  Returns the type value (value.data = union_type_t, own=false). */
 value_t vm_create_union_type_value(struct _vm_t *vm, const char *name,
                                     bool mut, const char *module_id);
-
-/* ---- Value constructors ---- */
-
-struct _vm_t;
-
-/** @brief Create a union value with given tag index and field value.
- *  Sets tag, memcpy's field data into payload area.
- *  Value is registered in vm's current_scope->values. */
-value_t create_union_value(struct _vm_t *vm, union_type_t ut,
-                            uint32_t tag, value_t field_value);
-
-/** @brief Create a union shadow value (no data).
- *  Value is registered in vm's current_scope->values. */
-value_t create_union_shadow(struct _vm_t *vm, union_type_t ut, bool initialized);
-
-/** @brief Create a pointer value pointing to a union member field.
- *  Checks tag matches, returns *FieldType pointer.
- *  Exported for value_member_addr in value.c. */
-value_t _union_value_member_addr(struct _vm_t *vm, value_t self, const char *name);
 
 #ifdef __cplusplus
 }

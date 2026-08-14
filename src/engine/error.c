@@ -11,8 +11,8 @@
 #define ERROR_MESSAGE_SIZE 128
 
 value_t create_error_value(vm_t vm, uint64_t error_code, const char *fmt, ...) {
-  type_t error_type = (type_t)value_get_data(vm_get_error_type(vm));
-  struct_type_t st = (struct_type_t)error_type;
+  value_t error_tv = vm_get_error_type(vm);
+  type_t error_type = (type_t)value_get_data(error_tv);
   allocator_t alloc = vm_get_allocator(vm);
 
   /* zero-initialize the struct buffer */
@@ -22,7 +22,7 @@ value_t create_error_value(vm_t vm, uint64_t error_code, const char *fmt, ...) {
   memset(data, 0, (size_t)sz);
 
   /* fill message field (field 0) */
-  vec_t fields = struct_type_get_fields(st);
+  vec_t fields = vm_struct_get_fields(vm, error_tv);
   if (!fields || vec_get_size(fields) < 2) {
     allocator_free(alloc, &data);
     return NULL;

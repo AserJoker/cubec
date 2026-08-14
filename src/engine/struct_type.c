@@ -8,6 +8,7 @@
 #include "engine/str_type.h"
 #include "engine/pointer_type.h"
 #include "engine/callable_type.h"
+#include "engine/interface_type.h"
 #include "engine/type.h"
 #include "core/string.h"
 #include "core/strmap.h"
@@ -244,15 +245,21 @@ static void _struct_type_clone(void *self, allocator_t allocator, void *another)
   dst->base.mut     = src->base.mut;
   dst->base.vtable  = src->base.vtable;
 
-  /* clone fields */
+  /* clone scope — isolated, no parent (must be created before fields,
+   * because _st_add_field pushes cloned field types into scope->types) */
+  dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
+
+  /* clone fields — clone each field type into dst->scope->types */
   vec_init_t vi = {.auto_dispose = true};
   dst->fields = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
   size_t fc = vec_get_size(src->fields);
   for (size_t i = 0; i < fc; i++) {
     field_info_t fi = (field_info_t)vec_get(src->fields, i);
+    type_t cloned_type = (type_t)alloc_clone(allocator, fi->type);
+    vec_push(dst->scope->types, cloned_type);
     field_info_init_t fiinit = {
         .name   = fi->name,
-        .type   = fi->type,
+        .type   = cloned_type,
         .offset = fi->offset,
         .pub    = fi->pub,
     };
@@ -260,9 +267,6 @@ static void _struct_type_clone(void *self, allocator_t allocator, void *another)
                                                           &g_field_info_class, &fiinit);
     vec_push(dst->fields, cloned);
   }
-
-  /* clone scope — isolated, no parent */
-  dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
 
   /* clone props: shallow-clone values, register in dst->scope, rebuild strmap */
   strmap_init_t smi = {.value_auto_dispose = false};
@@ -307,16 +311,21 @@ class_t g_struct_type_class = {
 };
 
 /* ================================================================== */
-/* Type creation                                                       */
+/* Type creation (static helpers)                                      */
 /* ================================================================== */
+
+/* Forward declarations for static helpers */
+static field_info_t _st_find_field(struct_type_t self, const char *name);
+static const char *_st_get_module_id(struct_type_t self);
+static strmap_t _st_get_methods(struct_type_t self);
 
 /** Align offset up to alignment boundary. */
 static uint64_t _align_up(uint64_t offset, uint64_t align) {
   return (offset + align - 1) & ~(align - 1);
 }
 
-struct_type_t struct_type_create(allocator_t allocator, const char *name,
-                                  bool mut, const char *module_id) {
+static struct_type_t _st_create(allocator_t allocator, const char *name,
+                                bool mut, const char *module_id) {
   struct_type_init_t init = {
       .kind         = TYPE_KIND_STRUCT,
       .name         = name,
@@ -332,17 +341,28 @@ struct_type_t struct_type_create(allocator_t allocator, const char *name,
   return st;
 }
 
-void struct_type_add_field(allocator_t allocator, struct_type_t st,
+static void _st_add_field(allocator_t allocator, struct_type_t st,
                            const char *name, type_t field_type, bool pub) {
   if (st->sealed) {
     fprintf(stderr, "error: cannot add field '%s' to sealed struct type '%s'\n",
             name, st->base.name ? st->base.name : "<anonymous>");
     return;
   }
+  if (_st_find_field(st, name)) {
+    fprintf(stderr, "error: duplicate field '%s' in struct type '%s'\n",
+            name, st->base.name ? st->base.name : "<anonymous>");
+    return;
+  }
+
+  /* Clone the field type into the struct's own scope.
+   * field_info_t.type borrows from scope->types, so the type's lifecycle
+   * is tied to the struct, not the caller's value. */
+  type_t cloned = (type_t)alloc_clone(allocator, field_type);
+  vec_push(st->scope->types, cloned);
 
   /* compute offset using C alignment rules */
-  uint64_t field_align = type_get_align(field_type);
-  uint64_t field_size  = type_get_size(field_type);
+  uint64_t field_align = type_get_align(cloned);
+  uint64_t field_size  = type_get_size(cloned);
 
   /* update struct alignment to max of all fields */
   if (field_align > st->base.align)
@@ -353,7 +373,7 @@ void struct_type_add_field(allocator_t allocator, struct_type_t st,
 
   field_info_init_t fiinit = {
       .name   = name,
-      .type   = field_type,
+      .type   = cloned,
       .offset = offset,
       .pub    = pub,
   };
@@ -369,7 +389,7 @@ void struct_type_add_field(allocator_t allocator, struct_type_t st,
   st->base.size = offset + field_size;
 }
 
-bool struct_type_seal(struct_type_t st) {
+static bool _st_seal(struct_type_t st) {
   if (st->sealed) return true;
 
   /* final size = align_up(current_size, struct_align) for trailing padding */
@@ -381,8 +401,13 @@ bool struct_type_seal(struct_type_t st) {
   return true;
 }
 
-void struct_type_add_prop(vm_t vm, struct_type_t st,
+static void _st_add_prop(vm_t vm, struct_type_t st,
                           const char *name, value_t val, bool is_method, bool pub) {
+  if (strmap_find(st->props, name)) {
+    fprintf(stderr, "error: duplicate prop '%s' in struct type '%s'\n",
+            name, st->base.name ? st->base.name : "<anonymous>");
+    return;
+  }
   /* register in props table (borrowed — value lifecycle managed by vm's scope) */
   strmap_insert(st->props, name, val);
 
@@ -401,24 +426,24 @@ void struct_type_add_prop(vm_t vm, struct_type_t st,
 /* Accessors                                                           */
 /* ================================================================== */
 
-vec_t    struct_type_get_fields(struct_type_t self)  { return self->fields; }
-scope_t  struct_type_get_scope(struct_type_t self)   { return self->scope; }
-strmap_t struct_type_get_props(struct_type_t self)    { return self->props; }
-strmap_t struct_type_get_methods(struct_type_t self)  { return self->methods; }
-bool     struct_type_is_sealed(struct_type_t self)    { return self->sealed; }
+static vec_t    _st_get_fields(struct_type_t self)  { return self->fields; }
+static scope_t  _st_get_scope(struct_type_t self)   { return self->scope; }
+static strmap_t _st_get_props(struct_type_t self)    { return self->props; }
+static strmap_t _st_get_methods(struct_type_t self)  { return self->methods; }
+static bool     _st_is_sealed(struct_type_t self)    { return self->sealed; }
 
-const char *struct_type_get_module_id(struct_type_t self) { return self->module_id; }
+static const char *_st_get_module_id(struct_type_t self) { return self->module_id; }
 
-bool struct_type_is_field_pub(struct_type_t self, const char *name) {
-  field_info_t fi = struct_type_find_field(self, name);
+static bool _st_is_field_pub(struct_type_t self, const char *name) {
+  field_info_t fi = _st_find_field(self, name);
   return fi ? field_info_is_pub(fi) : false;
 }
 
-bool struct_type_is_prop_pub(struct_type_t self, const char *name) {
+static bool _st_is_prop_pub(struct_type_t self, const char *name) {
   return strmap_find(self->pub_names, name) != NULL;
 }
 
-field_info_t struct_type_find_field(struct_type_t self, const char *name) {
+static field_info_t _st_find_field(struct_type_t self, const char *name) {
   size_t fc = vec_get_size(self->fields);
   for (size_t i = 0; i < fc; i++) {
     field_info_t fi = (field_info_t)vec_get(self->fields, i);
@@ -432,7 +457,7 @@ field_info_t struct_type_find_field(struct_type_t self, const char *name) {
 /* Value constructors                                                  */
 /* ================================================================== */
 
-value_t create_struct_value(vm_t vm, struct_type_t st, value_t *field_values) {
+static value_t _create_struct_value(vm_t vm, struct_type_t st, value_t *field_values) {
   allocator_t alloc = vm_get_allocator(vm);
   uint64_t total_size = st->base.size;
 
@@ -461,7 +486,7 @@ value_t create_struct_value(vm_t vm, struct_type_t st, value_t *field_values) {
   return v;
 }
 
-value_t create_struct_shadow(vm_t vm, struct_type_t st, bool initialized) {
+static value_t _create_struct_shadow(vm_t vm, struct_type_t st, bool initialized) {
   value_t v = value_create(vm_get_allocator(vm), (type_t)st, NULL, false);
   value_set_initialized(v, initialized);
   scope_t scope = vm_get_current_scope(vm);
@@ -471,13 +496,13 @@ value_t create_struct_shadow(vm_t vm, struct_type_t st, bool initialized) {
 
 value_t _struct_value_member_addr(vm_t vm, value_t self, const char *name) {
   struct_type_t st = (struct_type_t)value_get_type(self);
-  field_info_t fi = struct_type_find_field(st, name);
+  field_info_t fi = _st_find_field(st, name);
   if (!fi)
     return create_exception_value(vm, "struct '%s' has no field '%s'",
                               type_get_name((type_t)st), name);
 
   /* access control: private field only accessible from same module */
-  if (_access_denied(struct_type_get_module_id(st), field_info_is_pub(fi),
+  if (_access_denied(_st_get_module_id(st), field_info_is_pub(fi),
                      vm_get_current_module_id(vm)))
     return create_exception_value(vm, "cannot access private field '%s' of struct '%s' from outside its module",
                               name, type_get_name((type_t)st));
@@ -502,7 +527,7 @@ value_t _struct_value_member_addr(vm_t vm, value_t self, const char *name) {
 
 value_t vm_create_struct_type_value(vm_t vm, const char *name,
                                      bool mut, const char *module_id) {
-  struct_type_t st = struct_type_create(vm_get_allocator(vm), name, mut, module_id);
+  struct_type_t st = _st_create(vm_get_allocator(vm), name, mut, module_id);
   if (vm_get_current_scope(vm))
     vec_push(vm_get_current_scope(vm)->types, st);
   return create_type_value(vm, (type_t)st, NULL, false);
@@ -515,7 +540,7 @@ value_t vm_create_struct_type_value(vm_t vm, const char *name,
 static value_t _struct_clone(vm_t vm, value_t self) {
   struct_type_t st = (struct_type_t)value_get_type(self);
   if (value_is_shadow(self))
-    return create_struct_shadow(vm, st, value_is_initialized(self));
+    return _create_struct_shadow(vm, st, value_is_initialized(self));
 
   type_t cloned_type = value_type_clone(vm, (type_t)st);
 
@@ -626,6 +651,11 @@ static value_t _struct_type_equal(vm_t vm, type_t a, type_t b) {
 static value_t _struct_type_extends(vm_t vm, type_t sub, type_t super) {
   if (super->kind == TYPE_KIND_WILDCARD)
     return create_bool_value(vm, true);
+  if (super->kind == TYPE_KIND_INTERFACE) {
+    /* struct implements interface: check all interface methods against struct's methods */
+    return _interface_type_check_extends(vm, (interface_type_t)super,
+                                        _st_get_methods((struct_type_t)sub));
+  }
   if (super->kind != TYPE_KIND_STRUCT)
     return create_bool_value(vm, false);
 
@@ -678,7 +708,7 @@ static value_t _struct_safe_cast(vm_t vm, value_t self, type_t to) {
     return create_exception_value(vm, "cannot safe_cast '%s' to '%s'",
                               type_get_name(from), type_get_name(to));
   if (value_is_shadow(self))
-    return create_struct_shadow(vm, (struct_type_t)to, value_is_initialized(self));
+    return _create_struct_shadow(vm, (struct_type_t)to, value_is_initialized(self));
   return self;
 }
 
@@ -776,13 +806,13 @@ static value_t _struct_to_string(vm_t vm, value_t self) {
 
 static value_t _struct_get_field(vm_t vm, value_t self, const char *name) {
   struct_type_t st = (struct_type_t)value_get_type(self);
-  field_info_t fi = struct_type_find_field(st, name);
+  field_info_t fi = _st_find_field(st, name);
   if (!fi)
     return create_exception_value(vm, "struct '%s' has no field '%s'",
                               type_get_name((type_t)st), name);
 
   /* access control: private field only accessible from same module */
-  if (_access_denied(struct_type_get_module_id(st), field_info_is_pub(fi),
+  if (_access_denied(_st_get_module_id(st), field_info_is_pub(fi),
                      vm_get_current_module_id(vm)))
     return create_exception_value(vm, "cannot access private field '%s' of struct '%s' from outside its module",
                               name, type_get_name((type_t)st));
@@ -808,13 +838,13 @@ static value_t _struct_get_field(vm_t vm, value_t self, const char *name) {
 
 static value_t _struct_set_field(vm_t vm, value_t self, const char *name, value_t val) {
   struct_type_t st = (struct_type_t)value_get_type(self);
-  field_info_t fi = struct_type_find_field(st, name);
+  field_info_t fi = _st_find_field(st, name);
   if (!fi)
     return create_exception_value(vm, "struct '%s' has no field '%s'",
                               type_get_name((type_t)st), name);
 
   /* access control: private field only accessible from same module */
-  if (_access_denied(struct_type_get_module_id(st), field_info_is_pub(fi),
+  if (_access_denied(_st_get_module_id(st), field_info_is_pub(fi),
                      vm_get_current_module_id(vm)))
     return create_exception_value(vm, "cannot access private field '%s' of struct '%s' from outside its module",
                               name, type_get_name((type_t)st));
@@ -884,7 +914,7 @@ static value_t _struct_type_get_prop(vm_t vm, type_t self, const char *name) {
                               type_get_name(self), name);
 
   /* access control: private prop only accessible from same module */
-  if (_access_denied(struct_type_get_module_id(st), struct_type_is_prop_pub(st, name),
+  if (_access_denied(_st_get_module_id(st), _st_is_prop_pub(st, name),
                      vm_get_current_module_id(vm)))
     return create_exception_value(vm, "cannot access private property '%s' of struct '%s' from outside its module",
                               name, type_get_name(self));
@@ -900,7 +930,7 @@ static value_t _struct_type_set_prop(vm_t vm, type_t self, const char *name, val
                               type_get_name(self), name);
 
   /* access control: private prop only accessible from same module */
-  if (_access_denied(struct_type_get_module_id(st), struct_type_is_prop_pub(st, name),
+  if (_access_denied(_st_get_module_id(st), _st_is_prop_pub(st, name),
                      vm_get_current_module_id(vm)))
     return create_exception_value(vm, "cannot access private property '%s' of struct '%s' from outside its module",
                               name, type_get_name(self));
@@ -915,4 +945,132 @@ static value_t _struct_type_set_prop(vm_t vm, type_t self, const char *name, val
     return result;
 
   return create_void_value(vm);
+}
+
+/* ================================================================== */
+/* Value-based public API (vm_struct_xxx)                              */
+/* ================================================================== */
+
+/** Helper: unwrap a TYPE_KIND_TYPE value to struct_type_t, or return NULL. */
+static struct_type_t _unwrap_struct_type(vm_t vm, value_t type_val) {
+  if (type_get_kind(value_get_type(type_val)) != TYPE_KIND_TYPE)
+    return NULL;
+  type_t inner = (type_t)value_get_data(type_val);
+  if (type_get_kind(inner) != TYPE_KIND_STRUCT)
+    return NULL;
+  return (struct_type_t)inner;
+}
+
+value_t vm_struct_add_field(vm_t vm, value_t type_val,
+                            const char *name, value_t field_type_val, bool pub) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  if (!st)
+    return create_exception_value(vm, "vm_struct_add_field: expected struct type value");
+  type_t inner = (type_t)value_get_data(type_val);
+  if (st->sealed)
+    return create_exception_value(vm, "cannot add field '%s' to sealed struct type '%s'",
+                                  name, type_get_name(inner));
+  if (_st_find_field(st, name))
+    return create_exception_value(vm, "duplicate field '%s' in struct type '%s'",
+                                  name, type_get_name(inner));
+  type_t field_type = (type_t)value_get_data(field_type_val);
+  _st_add_field(vm_get_allocator(vm), st, name, field_type, pub);
+  return NULL;
+}
+
+value_t vm_struct_seal(vm_t vm, value_t type_val) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  if (!st)
+    return create_exception_value(vm, "vm_struct_seal: expected struct type value");
+  _st_seal(st);
+  return NULL;
+}
+
+value_t vm_struct_add_prop(vm_t vm, value_t type_val,
+                           const char *name, value_t val, bool is_method, bool pub) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  if (!st)
+    return create_exception_value(vm, "vm_struct_add_prop: expected struct type value");
+  if (strmap_find(st->props, name))
+    return create_exception_value(vm, "duplicate prop '%s' in struct type '%s'",
+                                  name, type_get_name((type_t)st));
+  _st_add_prop(vm, st, name, val, is_method, pub);
+  return NULL;
+}
+
+field_info_t vm_struct_find_field(vm_t vm, value_t type_val, const char *name) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  (void)vm;
+  if (!st) return NULL;
+  return _st_find_field(st, name);
+}
+
+vec_t vm_struct_get_fields(vm_t vm, value_t type_val) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  (void)vm;
+  if (!st) return NULL;
+  return _st_get_fields(st);
+}
+
+scope_t vm_struct_get_scope(vm_t vm, value_t type_val) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  (void)vm;
+  if (!st) return NULL;
+  return _st_get_scope(st);
+}
+
+strmap_t vm_struct_get_props(vm_t vm, value_t type_val) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  (void)vm;
+  if (!st) return NULL;
+  return _st_get_props(st);
+}
+
+strmap_t vm_struct_get_methods(vm_t vm, value_t type_val) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  (void)vm;
+  if (!st) return NULL;
+  return _st_get_methods(st);
+}
+
+bool vm_struct_is_sealed(vm_t vm, value_t type_val) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  (void)vm;
+  if (!st) return false;
+  return _st_is_sealed(st);
+}
+
+const char *vm_struct_get_module_id(vm_t vm, value_t type_val) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  (void)vm;
+  if (!st) return NULL;
+  return _st_get_module_id(st);
+}
+
+bool vm_struct_is_field_pub(vm_t vm, value_t type_val, const char *name) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  (void)vm;
+  if (!st) return false;
+  return _st_is_field_pub(st, name);
+}
+
+bool vm_struct_is_prop_pub(vm_t vm, value_t type_val, const char *name) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  (void)vm;
+  if (!st) return false;
+  return _st_is_prop_pub(st, name);
+}
+
+value_t vm_create_struct_value(vm_t vm, value_t type_val, value_t *field_values) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  if (!st)
+    return create_exception_value(vm, "vm_create_struct_value: expected struct type value");
+  return _create_struct_value(vm, st, field_values);
+}
+
+value_t vm_create_struct_shadow(vm_t vm, value_t type_val, bool initialized) {
+  struct_type_t st = _unwrap_struct_type(vm, type_val);
+  if (!st)
+    return create_exception_value(vm, "vm_create_struct_shadow: expected struct type value");
+  return _create_struct_shadow(vm, st, initialized);
 }

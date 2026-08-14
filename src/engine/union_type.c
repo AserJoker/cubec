@@ -11,6 +11,7 @@
 #include "engine/str_type.h"
 #include "engine/pointer_type.h"
 #include "engine/callable_type.h"
+#include "engine/interface_type.h"
 #include "engine/result_type.h"
 #include "engine/type.h"
 #include "core/string.h"
@@ -32,11 +33,31 @@ static bool _access_denied(const char *type_module_id, bool is_pub,
 }
 #include <stdint.h>
 
+/* ---- Forward declarations for static helpers ---- */
+
+static union_type_t _ut_create(allocator_t allocator, const char *name, bool mut,
+                               const char *module_id);
+static void _ut_add_field(allocator_t allocator, union_type_t ut,
+                           const char *name, type_t field_type, bool pub);
+static bool _ut_seal(union_type_t ut);
+static void _ut_add_prop(vm_t vm, union_type_t ut,
+                          const char *name, value_t val, bool is_method, bool pub);
+static vec_t _ut_get_fields(union_type_t self);
+static scope_t _ut_get_scope(union_type_t self);
+static strmap_t _ut_get_props(union_type_t self);
+static strmap_t _ut_get_methods(union_type_t self);
+static bool _ut_is_sealed(union_type_t self);
+static const char *_ut_get_module_id(union_type_t self);
+static bool _ut_is_field_pub(union_type_t self, const char *name);
+static bool _ut_is_prop_pub(union_type_t self, const char *name);
+static field_info_t _ut_find_field(union_type_t self, const char *name);
+
 /* ---- Forward declarations for vtable functions ---- */
 
 static value_t _union_clone(vm_t vm, value_t self);
 static value_t _union_equal(vm_t vm, value_t a, value_t b);
 static value_t _union_type_equal(vm_t vm, type_t a, type_t b);
+static value_t _union_type_extends(vm_t vm, type_t sub, type_t super);
 static value_t _union_safe_cast(vm_t vm, value_t self, type_t to);
 static value_t _union_assignment(vm_t vm, value_t lvalue, value_t rvalue);
 static value_t _union_to_string(vm_t vm, value_t self);
@@ -57,7 +78,7 @@ static vtable_t _make_union_vtable(void) {
       .equal        = _union_equal,
       .extends      = NULL,
       .type_equal   = _union_type_equal,
-      .type_extends = NULL, /* union has no subtyping */
+      .type_extends = _union_type_extends,
       .band         = NULL,
       .bor          = NULL,
       .bxor         = NULL,
@@ -189,15 +210,21 @@ static void _union_type_clone(void *self, allocator_t allocator, void *another) 
   dst->base.mut     = src->base.mut;
   dst->base.vtable  = src->base.vtable;
 
-  /* clone fields using field_info accessors */
+  /* clone scope — isolated, no parent (must be created before fields,
+   * because _ut_add_field pushes cloned field types into scope->types) */
+  dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
+
+  /* clone fields — clone each field type into dst->scope->types */
   vec_init_t vi = {.auto_dispose = true};
   dst->fields = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
   size_t fc = vec_get_size(src->fields);
   for (size_t i = 0; i < fc; i++) {
     field_info_t fi = (field_info_t)vec_get(src->fields, i);
+    type_t cloned_type = (type_t)alloc_clone(allocator, field_info_get_type(fi));
+    vec_push(dst->scope->types, cloned_type);
     _field_info_init_t fiinit = {
         .name   = field_info_get_name(fi),
-        .type   = field_info_get_type(fi),
+        .type   = cloned_type,
         .offset = field_info_get_offset(fi),
         .pub    = field_info_is_pub(fi),
     };
@@ -205,8 +232,6 @@ static void _union_type_clone(void *self, allocator_t allocator, void *another) 
                                                           &g_field_info_class, &fiinit);
     vec_push(dst->fields, cloned);
   }
-
-  dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
 
   strmap_init_t smi = {.value_auto_dispose = false};
   dst->props = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
@@ -258,7 +283,7 @@ static uint64_t _align_up(uint64_t offset, uint64_t align) {
   return (offset + align - 1) & ~(align - 1);
 }
 
-union_type_t union_type_create(allocator_t allocator, const char *name, bool mut,
+static union_type_t _ut_create(allocator_t allocator, const char *name, bool mut,
                                 const char *module_id) {
   union_type_init_t init = {
       .kind      = TYPE_KIND_UNION,
@@ -275,16 +300,27 @@ union_type_t union_type_create(allocator_t allocator, const char *name, bool mut
   return ut;
 }
 
-void union_type_add_field(allocator_t allocator, union_type_t ut,
+static void _ut_add_field(allocator_t allocator, union_type_t ut,
                            const char *name, type_t field_type, bool pub) {
   if (ut->sealed) {
     fprintf(stderr, "error: cannot add field '%s' to sealed union type '%s'\n",
             name, ut->base.name ? ut->base.name : "<anonymous>");
     return;
   }
+  if (_ut_find_field(ut, name)) {
+    fprintf(stderr, "error: duplicate field '%s' in union type '%s'\n",
+            name, ut->base.name ? ut->base.name : "<anonymous>");
+    return;
+  }
 
-  uint64_t field_align = type_get_align(field_type);
-  uint64_t field_size  = type_get_size(field_type);
+  /* Clone the field type into the union's own scope.
+   * field_info_t.type borrows from scope->types, so the type's lifecycle
+   * is tied to the union, not the caller's value. */
+  type_t cloned = (type_t)alloc_clone(allocator, field_type);
+  vec_push(ut->scope->types, cloned);
+
+  uint64_t field_align = type_get_align(cloned);
+  uint64_t field_size  = type_get_size(cloned);
 
   if (field_align > ut->base.align)
     ut->base.align = field_align;
@@ -294,7 +330,7 @@ void union_type_add_field(allocator_t allocator, union_type_t ut,
 
   _field_info_init_t fiinit = {
       .name   = name,
-      .type   = field_type,
+      .type   = cloned,
       .offset = 0, /* set in seal */
       .pub    = pub,
   };
@@ -307,7 +343,7 @@ void union_type_add_field(allocator_t allocator, union_type_t ut,
     strmap_insert(ut->pub_names, name, (void *)1);
 }
 
-bool union_type_seal(union_type_t ut) {
+static bool _ut_seal(union_type_t ut) {
   if (ut->sealed) return true;
   if (vec_get_size(ut->fields) == 0) return false; /* empty union is invalid */
 
@@ -342,8 +378,13 @@ bool union_type_seal(union_type_t ut) {
   return true;
 }
 
-void union_type_add_prop(vm_t vm, union_type_t ut,
+static void _ut_add_prop(vm_t vm, union_type_t ut,
                           const char *name, value_t val, bool is_method, bool pub) {
+  if (strmap_find(ut->props, name)) {
+    fprintf(stderr, "error: duplicate prop '%s' in union type '%s'\n",
+            name, ut->base.name ? ut->base.name : "<anonymous>");
+    return;
+  }
   strmap_insert(ut->props, name, val);
   if (is_method)
     strmap_insert(ut->methods, name, val);
@@ -359,23 +400,23 @@ void union_type_add_prop(vm_t vm, union_type_t ut,
 /* Accessors                                                           */
 /* ================================================================== */
 
-vec_t    union_type_get_fields(union_type_t self)   { return self->fields; }
-scope_t  union_type_get_scope(union_type_t self)    { return self->scope; }
-strmap_t union_type_get_props(union_type_t self)     { return self->props; }
-strmap_t union_type_get_methods(union_type_t self)   { return self->methods; }
-bool     union_type_is_sealed(union_type_t self)     { return self->sealed; }
-const char *union_type_get_module_id(union_type_t self) { return self->module_id; }
+static vec_t    _ut_get_fields(union_type_t self)   { return self->fields; }
+static scope_t  _ut_get_scope(union_type_t self)    { return self->scope; }
+static strmap_t _ut_get_props(union_type_t self)     { return self->props; }
+static strmap_t _ut_get_methods(union_type_t self)   { return self->methods; }
+static bool     _ut_is_sealed(union_type_t self)     { return self->sealed; }
+static const char *_ut_get_module_id(union_type_t self) { return self->module_id; }
 
-bool union_type_is_field_pub(union_type_t self, const char *name) {
-  field_info_t fi = union_type_find_field(self, name);
+static bool _ut_is_field_pub(union_type_t self, const char *name) {
+  field_info_t fi = _ut_find_field(self, name);
   return fi ? field_info_is_pub(fi) : false;
 }
 
-bool union_type_is_prop_pub(union_type_t self, const char *name) {
+static bool _ut_is_prop_pub(union_type_t self, const char *name) {
   return strmap_find(self->pub_names, name) != NULL;
 }
 
-field_info_t union_type_find_field(union_type_t self, const char *name) {
+static field_info_t _ut_find_field(union_type_t self, const char *name) {
   size_t fc = vec_get_size(self->fields);
   for (size_t i = 0; i < fc; i++) {
     field_info_t fi = (field_info_t)vec_get(self->fields, i);
@@ -416,7 +457,7 @@ static void _union_write_tag(value_t v, uint32_t tag) {
 
 value_t vm_create_union_type_value(vm_t vm, const char *name,
                                     bool mut, const char *module_id) {
-  union_type_t ut = union_type_create(vm_get_allocator(vm), name, mut, module_id);
+  union_type_t ut = _ut_create(vm_get_allocator(vm), name, mut, module_id);
   if (vm_get_current_scope(vm))
     vec_push(vm_get_current_scope(vm)->types, ut);
   return create_type_value(vm, (type_t)ut, NULL, false);
@@ -424,19 +465,18 @@ value_t vm_create_union_type_value(vm_t vm, const char *name,
 
 /* ================================================================== */
 
-value_t create_union_value(vm_t vm, union_type_t ut,
-                            uint32_t tag, value_t field_value) {
+/** Internal: create union value from union_type_t directly (for vtable/result_type use). */
+static value_t _create_union_value(vm_t vm, union_type_t ut,
+                                    uint32_t tag, value_t field_value) {
   allocator_t alloc = vm_get_allocator(vm);
   uint64_t total_size = ut->base.size;
 
   void *data = allocator_alloc(alloc, total_size);
   memset(data, 0, (size_t)total_size);
 
-  /* set tag */
   struct union_data_t *ud = (struct union_data_t *)data;
   ud->tag = tag;
 
-  /* memcpy field value into payload at payload_offset */
   if (field_value && value_get_data(field_value)) {
     field_info_t fi = (field_info_t)vec_get(ut->fields, tag);
     uint64_t fsize = type_get_size(field_info_get_type(fi));
@@ -452,7 +492,8 @@ value_t create_union_value(vm_t vm, union_type_t ut,
   return v;
 }
 
-value_t create_union_shadow(vm_t vm, union_type_t ut, bool initialized) {
+/** Internal: create union shadow from union_type_t directly. */
+static value_t _create_union_shadow(vm_t vm, union_type_t ut, bool initialized) {
   value_t v = value_create(vm_get_allocator(vm), (type_t)ut, NULL, false);
   value_set_initialized(v, initialized);
   scope_t scope = vm_get_current_scope(vm);
@@ -460,15 +501,33 @@ value_t create_union_shadow(vm_t vm, union_type_t ut, bool initialized) {
   return v;
 }
 
+/* ---- Public value-based API ---- */
+
+value_t vm_create_union_value(vm_t vm, value_t type_val,
+                               const char *field_name, value_t field_value) {
+  union_type_t ut = (union_type_t)value_get_data(type_val);
+  field_info_t fi = _ut_find_field(ut, field_name);
+  if (!fi)
+    return create_exception_value(vm, "union '%s' has no field '%s'",
+                          type_get_name((type_t)ut), field_name);
+  uint32_t tag = _union_find_field_index(ut, fi);
+  return _create_union_value(vm, ut, tag, field_value);
+}
+
+value_t vm_create_union_shadow(vm_t vm, value_t type_val, bool initialized) {
+  union_type_t ut = (union_type_t)value_get_data(type_val);
+  return _create_union_shadow(vm, ut, initialized);
+}
+
 value_t _union_value_member_addr(vm_t vm, value_t self, const char *name) {
   union_type_t ut = (union_type_t)value_get_type(self);
-  field_info_t fi = union_type_find_field(ut, name);
+  field_info_t fi = _ut_find_field(ut, name);
   if (!fi)
     return create_exception_value(vm, "union '%s' has no field '%s'",
                               type_get_name((type_t)ut), name);
 
   /* access control: private field only accessible from same module */
-  if (_access_denied(union_type_get_module_id(ut), field_info_is_pub(fi),
+  if (_access_denied(_ut_get_module_id(ut), field_info_is_pub(fi),
                      vm_get_current_module_id(vm)))
     return create_exception_value(vm, "cannot access private field '%s' of union '%s' from outside its module",
                               name, type_get_name((type_t)ut));
@@ -499,7 +558,7 @@ value_t _union_value_member_addr(vm_t vm, value_t self, const char *name) {
 static value_t _union_clone(vm_t vm, value_t self) {
   union_type_t ut = (union_type_t)value_get_type(self);
   if (value_is_shadow(self))
-    return create_union_shadow(vm, ut, value_is_initialized(self));
+    return _create_union_shadow(vm, ut, value_is_initialized(self));
 
   type_t cloned_type = value_type_clone(vm, (type_t)ut);
 
@@ -618,6 +677,26 @@ static value_t _union_type_equal(vm_t vm, type_t a, type_t b) {
 }
 
 /* ================================================================== */
+/* VTable: type_extends (interface only)                               */
+/* ================================================================== */
+
+static value_t _union_type_extends(vm_t vm, type_t sub, type_t super) {
+  if (super->kind == TYPE_KIND_WILDCARD)
+    return create_bool_value(vm, true);
+  if (super->kind == TYPE_KIND_INTERFACE) {
+    /* union implements interface: check all interface methods against union's methods */
+    return _interface_type_check_extends(vm, (interface_type_t)super,
+                                        _ut_get_methods((union_type_t)sub));
+  }
+  if (super->kind == TYPE_KIND_UNION) {
+    /* union extends union: structural equality (no subtyping) */
+    return _union_type_equal(vm, sub, super);
+  }
+  /* union has no subtyping with other kinds */
+  return create_bool_value(vm, false);
+}
+
+/* ================================================================== */
 /* VTable: safe_cast (tag remapping)                                   */
 /* ================================================================== */
 
@@ -631,7 +710,7 @@ static value_t _union_safe_cast(vm_t vm, value_t self, type_t to) {
                               type_get_name(from), type_get_name(to));
 
   if (value_is_shadow(self))
-    return create_union_shadow(vm, (union_type_t)to, value_is_initialized(self));
+    return _create_union_shadow(vm, (union_type_t)to, value_is_initialized(self));
 
   union_type_t from_ut = (union_type_t)from;
   union_type_t to_ut   = (union_type_t)to;
@@ -641,7 +720,7 @@ static value_t _union_safe_cast(vm_t vm, value_t self, type_t to) {
   field_info_t src_fi = (field_info_t)vec_get(from_ut->fields, src_tag);
   const char *active_name = field_info_get_name(src_fi);
 
-  field_info_t dst_fi = union_type_find_field(to_ut, active_name);
+  field_info_t dst_fi = _ut_find_field(to_ut, active_name);
   if (!dst_fi)
     return create_exception_value(vm, "cannot safe_cast union: no matching field '%s'",
                               active_name);
@@ -757,13 +836,13 @@ static value_t _union_to_string(vm_t vm, value_t self) {
  *  Also used internally by _union_get_field and result methods. */
 static value_t _union_get_field_raw(vm_t vm, value_t self, const char *name) {
   union_type_t ut = (union_type_t)value_get_type(self);
-  field_info_t fi = union_type_find_field(ut, name);
+  field_info_t fi = _ut_find_field(ut, name);
   if (!fi)
     return create_exception_value(vm, "union '%s' has no field '%s'",
                               type_get_name((type_t)ut), name);
 
   /* access control: same as get_field */
-  if (_access_denied(union_type_get_module_id(ut), field_info_is_pub(fi),
+  if (_access_denied(_ut_get_module_id(ut), field_info_is_pub(fi),
                      vm_get_current_module_id(vm)))
     return create_exception_value(vm, "cannot access private field '%s' of union '%s' from outside its module",
                               name, type_get_name((type_t)ut));
@@ -788,13 +867,13 @@ static value_t _union_get_field_raw(vm_t vm, value_t self, const char *name) {
 
 static value_t _union_get_field(vm_t vm, value_t self, const char *name) {
   union_type_t ut = (union_type_t)value_get_type(self);
-  field_info_t fi = union_type_find_field(ut, name);
+  field_info_t fi = _ut_find_field(ut, name);
   if (!fi)
     return create_exception_value(vm, "union '%s' has no field '%s'",
                               type_get_name((type_t)ut), name);
 
   /* access control: private field only accessible from same module */
-  if (_access_denied(union_type_get_module_id(ut), field_info_is_pub(fi),
+  if (_access_denied(_ut_get_module_id(ut), field_info_is_pub(fi),
                      vm_get_current_module_id(vm)))
     return create_exception_value(vm, "cannot access private field '%s' of union '%s' from outside its module",
                               name, type_get_name((type_t)ut));
@@ -815,24 +894,24 @@ static value_t _union_get_field(vm_t vm, value_t self, const char *name) {
   if (tag == field_idx) {
     /* active field → result.of_value(field_data) */
     value_t field_val = _union_get_field_raw(vm, self, name);
-    return create_union_value(vm, result_ut, 0, field_val);
+    return _create_union_value(vm, result_ut, 0, field_val);
   } else {
     /* inactive field → result.of_error(ERROR_CODE_UNION_INACTIVE_FIELD) */
     uint64_t code = ERROR_CODE_UNION_INACTIVE_FIELD;
     value_t err_val = vm_create_value(vm, u64_type, &code, NULL);
-    return create_union_value(vm, result_ut, 1, err_val);
+    return _create_union_value(vm, result_ut, 1, err_val);
   }
 }
 
 static value_t _union_set_field(vm_t vm, value_t self, const char *name, value_t val) {
   union_type_t ut = (union_type_t)value_get_type(self);
-  field_info_t fi = union_type_find_field(ut, name);
+  field_info_t fi = _ut_find_field(ut, name);
   if (!fi)
     return create_exception_value(vm, "union '%s' has no field '%s'",
                               type_get_name((type_t)ut), name);
 
   /* access control: private field only accessible from same module */
-  if (_access_denied(union_type_get_module_id(ut), field_info_is_pub(fi),
+  if (_access_denied(_ut_get_module_id(ut), field_info_is_pub(fi),
                      vm_get_current_module_id(vm)))
     return create_exception_value(vm, "cannot access private field '%s' of union '%s' from outside its module",
                               name, type_get_name((type_t)ut));
@@ -904,7 +983,7 @@ static value_t _union_type_get_prop(vm_t vm, type_t self, const char *name) {
                               type_get_name(self), name);
 
   /* access control: private prop only accessible from same module */
-  if (_access_denied(union_type_get_module_id(ut), union_type_is_prop_pub(ut, name),
+  if (_access_denied(_ut_get_module_id(ut), _ut_is_prop_pub(ut, name),
                      vm_get_current_module_id(vm)))
     return create_exception_value(vm, "cannot access private property '%s' of union '%s' from outside its module",
                               name, type_get_name(self));
@@ -920,7 +999,7 @@ static value_t _union_type_set_prop(vm_t vm, type_t self, const char *name, valu
                               type_get_name(self), name);
 
   /* access control: private prop only accessible from same module */
-  if (_access_denied(union_type_get_module_id(ut), union_type_is_prop_pub(ut, name),
+  if (_access_denied(_ut_get_module_id(ut), _ut_is_prop_pub(ut, name),
                      vm_get_current_module_id(vm)))
     return create_exception_value(vm, "cannot access private property '%s' of union '%s' from outside its module",
                               name, type_get_name(self));
@@ -965,4 +1044,130 @@ static value_t _union_is_instance(vm_t vm, value_t self, type_t type) {
     return evt.type_equal(vm, active_type, type);
 
   return create_bool_value(vm, type_get_kind(active_type) == type_get_kind(type));
+}
+
+/* ================================================================== */
+/* Value-based public API wrappers                                     */
+/* ================================================================== */
+
+static union_type_t _unwrap_union_type(vm_t vm, value_t type_val) {
+  if (type_get_kind(value_get_type(type_val)) != TYPE_KIND_TYPE)
+    return NULL;
+  type_t inner = (type_t)value_get_data(type_val);
+  if (type_get_kind(inner) != TYPE_KIND_UNION)
+    return NULL;
+  return (union_type_t)inner;
+}
+
+value_t vm_union_add_field(vm_t vm, value_t type_val,
+                            const char *name, value_t field_type_val, bool pub) {
+  union_type_t ut = _unwrap_union_type(vm, type_val);
+  if (!ut)
+    return create_exception_value(vm, "vm_union_add_field: expected union type value");
+  type_t inner = (type_t)value_get_data(type_val);
+  if (ut->sealed)
+    return create_exception_value(vm, "cannot add field '%s' to sealed union type '%s'",
+                                  name, type_get_name(inner));
+  if (_ut_find_field(ut, name))
+    return create_exception_value(vm, "duplicate field '%s' in union type '%s'",
+                                  name, type_get_name(inner));
+  type_t field_type = (type_t)value_get_data(field_type_val);
+  _ut_add_field(vm_get_allocator(vm), ut, name, field_type, pub);
+  return NULL;
+}
+
+value_t vm_union_seal(vm_t vm, value_t type_val) {
+  union_type_t ut = _unwrap_union_type(vm, type_val);
+  if (!ut)
+    return create_exception_value(vm, "vm_union_seal: expected union type value");
+  if (!_ut_seal(ut))
+    return create_exception_value(vm, "cannot seal empty union type '%s'",
+                                  type_get_name((type_t)ut));
+  return NULL;
+}
+
+value_t vm_union_add_prop(vm_t vm, value_t type_val,
+                           const char *name, value_t val, bool is_method, bool pub) {
+  union_type_t ut = _unwrap_union_type(vm, type_val);
+  if (!ut)
+    return create_exception_value(vm, "vm_union_add_prop: expected union type value");
+  if (strmap_find(ut->props, name))
+    return create_exception_value(vm, "duplicate prop '%s' in union type '%s'",
+                                  name, type_get_name((type_t)ut));
+  _ut_add_prop(vm, ut, name, val, is_method, pub);
+  return NULL;
+}
+
+field_info_t vm_union_find_field(vm_t vm, value_t type_val, const char *name) {
+  union_type_t ut = _unwrap_union_type(vm, type_val);
+  (void)vm;
+  if (!ut) return NULL;
+  return _ut_find_field(ut, name);
+}
+
+vec_t vm_union_get_fields(vm_t vm, value_t type_val) {
+  union_type_t ut = _unwrap_union_type(vm, type_val);
+  (void)vm;
+  if (!ut) return NULL;
+  return _ut_get_fields(ut);
+}
+
+scope_t vm_union_get_scope(vm_t vm, value_t type_val) {
+  union_type_t ut = _unwrap_union_type(vm, type_val);
+  (void)vm;
+  if (!ut) return NULL;
+  return _ut_get_scope(ut);
+}
+
+strmap_t vm_union_get_props(vm_t vm, value_t type_val) {
+  union_type_t ut = _unwrap_union_type(vm, type_val);
+  (void)vm;
+  if (!ut) return NULL;
+  return _ut_get_props(ut);
+}
+
+strmap_t vm_union_get_methods(vm_t vm, value_t type_val) {
+  union_type_t ut = _unwrap_union_type(vm, type_val);
+  (void)vm;
+  if (!ut) return NULL;
+  return _ut_get_methods(ut);
+}
+
+bool vm_union_is_sealed(vm_t vm, value_t type_val) {
+  union_type_t ut = _unwrap_union_type(vm, type_val);
+  (void)vm;
+  if (!ut) return false;
+  return _ut_is_sealed(ut);
+}
+
+const char *vm_union_get_module_id(vm_t vm, value_t type_val) {
+  union_type_t ut = _unwrap_union_type(vm, type_val);
+  (void)vm;
+  if (!ut) return NULL;
+  return _ut_get_module_id(ut);
+}
+
+bool vm_union_is_field_pub(vm_t vm, value_t type_val, const char *name) {
+  union_type_t ut = _unwrap_union_type(vm, type_val);
+  (void)vm;
+  if (!ut) return false;
+  return _ut_is_field_pub(ut, name);
+}
+
+bool vm_union_is_prop_pub(vm_t vm, value_t type_val, const char *name) {
+  union_type_t ut = _unwrap_union_type(vm, type_val);
+  (void)vm;
+  if (!ut) return false;
+  return _ut_is_prop_pub(ut, name);
+}
+
+/* ---- Internal helpers for result_type.c (operate on union_type_t directly) ---- */
+
+field_info_t _union_type_find_field(union_type_t ut, const char *name) {
+  return _ut_find_field(ut, name);
+}
+
+value_t _union_type_create_value(vm_t vm, union_type_t ut,
+                                  uint32_t tag, value_t field_value) {
+  return _create_union_value(vm, ut, tag, field_value);
 }

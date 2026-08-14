@@ -37,6 +37,10 @@ bool        field_info_is_pub(field_info_t self);
  *
  * Safe to cast struct_type_t -> type_t (base is first field).
  * Uses duck typing (structural comparison), name is for reflection/to_string only.
+ *
+ * NOTE: struct_type_t is an internal type pointer. Public API operates on
+ * value_t (TYPE_KIND_TYPE type values). Direct struct_type_t access is only
+ * for internal vtable implementations within the engine.
  */
 struct _struct_type_t {
   struct _type_t base;       /* inherited header, base.name nullable (anonymous) */
@@ -50,7 +54,7 @@ struct _struct_type_t {
 };
 typedef struct _struct_type_t *struct_type_t;
 
-/** @brief Class descriptor for allocator_create. */
+/** @brief Class descriptor for allocator_create / alloc_clone. */
 extern class_t g_struct_type_class;
 
 /** @brief Init args for g_struct_type_class. */
@@ -64,65 +68,64 @@ typedef struct struct_type_init_t {
   const char *module_id;     /* borrowed: owning module path or "<builtin>" */
 } struct_type_init_t;
 
-/* ---- Type creation ---- */
-
-/** @brief Create a struct type with given name (nullable).
- *  Initially unsealed: fields can be added via struct_type_add_field.
- *  The struct's scope is isolated (no parent), fully owned by struct_type_t. */
-struct_type_t struct_type_create(allocator_t allocator, const char *name,
-                                  bool mut, const char *module_id);
-
-/** @brief Add a field to the struct type (before seal).
- *  Computes incremental offset using C alignment rules.
- *  Calls allocator_create for field_info_t via g_field_info_class.
- *  Errors if struct is already sealed. */
-void struct_type_add_field(allocator_t allocator, struct_type_t st,
-                           const char *name, type_t field_type, bool pub);
-
-/** @brief Seal the struct type: finalize total size with trailing padding.
- *  Computes base.size = align_up(current_offset, base.align).
- *  After seal, struct_type_add_field will emit an error. */
-bool struct_type_seal(struct_type_t st);
-
-/** @brief Register a static property or method on the struct type.
- *  is_method=true: registers in both props and methods.
- *  is_method=false: registers in props only.
- *  The value is added to the struct's owned scope for lifecycle management. */
-void struct_type_add_prop(vm_t vm, struct_type_t st,
-                          const char *name, value_t val, bool is_method, bool pub);
-
-/* ---- Accessors ---- */
-
-vec_t    struct_type_get_fields(struct_type_t self);
-scope_t  struct_type_get_scope(struct_type_t self);
-strmap_t struct_type_get_props(struct_type_t self);
-strmap_t struct_type_get_methods(struct_type_t self);
-bool     struct_type_is_sealed(struct_type_t self);
-
-/** @brief Find a field by name. Returns NULL if not found. */
-field_info_t struct_type_find_field(struct_type_t self, const char *name);
-
-/** @brief Get the module_id (borrowed) that owns this struct type. */
-const char *struct_type_get_module_id(struct_type_t self);
-
-/** @brief Check if a field is pub (accessible across modules). */
-bool struct_type_is_field_pub(struct_type_t self, const char *name);
-
-/** @brief Check if a prop/method is pub (accessible across modules). */
-bool struct_type_is_prop_pub(struct_type_t self, const char *name);
-
-/* ---- Value constructors ---- */
+/* ---- Value-based type operations ---- */
 
 struct _vm_t;
 
-/** @brief Create a struct value with given field values.
- *  Each field's data is memcpy'd into a contiguous buffer at the field's offset.
- *  Value is registered in vm's current_scope->values. */
-value_t create_struct_value(struct _vm_t *vm, struct_type_t st, value_t *field_values);
+/** @brief Add a field to the struct type value (before seal).
+ *  field_type_val must be a TYPE_KIND_TYPE value wrapping the field type.
+ *  Returns NULL on success, exception value on error (sealed, duplicate name). */
+value_t vm_struct_add_field(struct _vm_t *vm, value_t type_val,
+                            const char *name, value_t field_type_val, bool pub);
 
-/** @brief Create a struct shadow value (no data).
- *  Value is registered in vm's current_scope->values. */
-value_t create_struct_shadow(struct _vm_t *vm, struct_type_t st, bool initialized);
+/** @brief Seal the struct type value: finalize field layout.
+ *  Returns NULL on success, exception value on error. */
+value_t vm_struct_seal(struct _vm_t *vm, value_t type_val);
+
+/** @brief Register a static property or method on the struct type value.
+ *  is_method=true: registers in both props and methods.
+ *  Returns NULL on success, exception value on error (duplicate name). */
+value_t vm_struct_add_prop(struct _vm_t *vm, value_t type_val,
+                           const char *name, value_t val, bool is_method, bool pub);
+
+/* ---- Value-based type accessors ---- */
+
+/** @brief Find a field by name. Returns NULL if not found. */
+field_info_t vm_struct_find_field(struct _vm_t *vm, value_t type_val, const char *name);
+
+/** @brief Get the fields vec (field_info_t* elements). */
+vec_t vm_struct_get_fields(struct _vm_t *vm, value_t type_val);
+
+/** @brief Get the owned scope. */
+scope_t vm_struct_get_scope(struct _vm_t *vm, value_t type_val);
+
+/** @brief Get the props strmap (name -> value_t). */
+strmap_t vm_struct_get_props(struct _vm_t *vm, value_t type_val);
+
+/** @brief Get the methods strmap (name -> value_t). */
+strmap_t vm_struct_get_methods(struct _vm_t *vm, value_t type_val);
+
+/** @brief Check if the struct type is sealed. */
+bool vm_struct_is_sealed(struct _vm_t *vm, value_t type_val);
+
+/** @brief Get the module_id (borrowed). */
+const char *vm_struct_get_module_id(struct _vm_t *vm, value_t type_val);
+
+/** @brief Check if a field is pub. */
+bool vm_struct_is_field_pub(struct _vm_t *vm, value_t type_val, const char *name);
+
+/** @brief Check if a prop/method is pub. */
+bool vm_struct_is_prop_pub(struct _vm_t *vm, value_t type_val, const char *name);
+
+/* ---- Value constructors ---- */
+
+/** @brief Create a struct instance value with given field values.
+ *  type_val must be a TYPE_KIND_TYPE value wrapping a sealed struct_type_t.
+ *  Each field's data is memcpy'd into a contiguous buffer at the field's offset. */
+value_t vm_create_struct_value(struct _vm_t *vm, value_t type_val, value_t *field_values);
+
+/** @brief Create a struct shadow value (no data). */
+value_t vm_create_struct_shadow(struct _vm_t *vm, value_t type_val, bool initialized);
 
 /** @brief Create a pointer value pointing to a struct member field.
  *  Returns *FieldType pointer with data = obj.data + field.offset.

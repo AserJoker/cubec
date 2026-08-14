@@ -39,7 +39,7 @@ static value_t _result_ok(vm_t vm, value_t fn, size_t argc, value_t *argv) {
   if (type_get_kind(value_get_type(self)) == TYPE_KIND_EXCEPTION)
     return self;
   union_type_t ut = (union_type_t)value_get_type(self);
-  type_t T = field_info_get_type(union_type_find_field(ut, "_value"));
+  type_t T = field_info_get_type(_union_type_find_field(ut, "_value"));
   return value_is(vm, self, T);
 }
 
@@ -54,7 +54,7 @@ static value_t _result_value(vm_t vm, value_t fn, size_t argc, value_t *argv) {
   if (type_get_kind(value_get_type(self)) == TYPE_KIND_EXCEPTION)
     return self;
   union_type_t ut = (union_type_t)value_get_type(self);
-  type_t T = field_info_get_type(union_type_find_field(ut, "_value"));
+  type_t T = field_info_get_type(_union_type_find_field(ut, "_value"));
   value_t is_ok = value_is(vm, self, T);
   if (type_get_kind(value_get_type(is_ok)) == TYPE_KIND_EXCEPTION)
     return is_ok;
@@ -75,7 +75,7 @@ static value_t _result_error(vm_t vm, value_t fn, size_t argc, value_t *argv) {
   if (type_get_kind(value_get_type(self)) == TYPE_KIND_EXCEPTION)
     return self;
   union_type_t ut = (union_type_t)value_get_type(self);
-  type_t T = field_info_get_type(union_type_find_field(ut, "_value"));
+  type_t T = field_info_get_type(_union_type_find_field(ut, "_value"));
   value_t is_ok = value_is(vm, self, T);
   if (type_get_kind(value_get_type(is_ok)) == TYPE_KIND_EXCEPTION)
     return is_ok;
@@ -93,11 +93,11 @@ static value_t _result_of_value(vm_t vm, value_t fn, size_t argc, value_t *argv)
     return create_exception_value(vm, "result.of_value expected 1 argument");
   callable_type_t ct = (callable_type_t)value_get_type(fn);
   union_type_t ut = (union_type_t)callable_type_get_return_type(ct);
-  type_t T = field_info_get_type(union_type_find_field(ut, "_value"));
+  type_t T = field_info_get_type(_union_type_find_field(ut, "_value"));
   value_t val = value_safe_cast(vm, argv[0], T);
   if (type_get_kind(value_get_type(val)) == TYPE_KIND_EXCEPTION)
     return val;
-  return create_union_value(vm, ut, 0, val);
+  return _union_type_create_value(vm, ut, 0, val);
 }
 
 /** of_error(E) -> result[T,E]  (static constructor)
@@ -108,20 +108,20 @@ static value_t _result_of_error(vm_t vm, value_t fn, size_t argc, value_t *argv)
     return create_exception_value(vm, "result.of_error expected 1 argument");
   callable_type_t ct = (callable_type_t)value_get_type(fn);
   union_type_t ut = (union_type_t)callable_type_get_return_type(ct);
-  type_t E = field_info_get_type(union_type_find_field(ut, "_error"));
+  type_t E = field_info_get_type(_union_type_find_field(ut, "_error"));
   value_t err = value_safe_cast(vm, argv[0], E);
   if (type_get_kind(value_get_type(err)) == TYPE_KIND_EXCEPTION)
     return err;
-  return create_union_value(vm, ut, 1, err);
+  return _union_type_create_value(vm, ut, 1, err);
 }
 
 /* ================================================================== */
 /* vm_create_result_type_value                                         */
 /* ================================================================== */
 
-value_t vm_create_result_type_value(vm_t self, type_t T, type_t E) {
-  allocator_t alloc = vm_get_allocator(self);
-  const char *module_id = vm_get_current_module_id(self);
+value_t vm_create_result_type_value(vm_t vm, type_t T, type_t E) {
+  allocator_t alloc = vm_get_allocator(vm);
+  const char *module_id = vm_get_current_module_id(vm);
 
   /* generate name: result[T_name,E_name] */
   const char *tname = type_get_name(T);
@@ -130,25 +130,39 @@ value_t vm_create_result_type_value(vm_t self, type_t T, type_t E) {
   char *name = (char *)allocator_alloc(alloc, name_len + 1);
   snprintf(name, name_len + 1, "result[%s,%s]", tname, ename);
 
-  /* create union type with _value:T, _error:E */
-  union_type_t ut = union_type_create(alloc, name, true, module_id);
-  union_type_add_field(alloc, ut, "_value", T, false); /* private */
-  union_type_add_field(alloc, ut, "_error", E, false); /* private */
-  if (!union_type_seal(ut))
-    return create_exception_value(self, "failed to seal result union type");
-  allocator_free(alloc, &name); /* union_type_create cloned it */
+  /* create union type value via vm API */
+  value_t type_val = vm_create_union_type_value(vm, name, true, module_id);
+  allocator_free(alloc, &name); /* vm_create_union_type_value cloned it */
 
-  if (vm_get_current_scope(self))
-    vec_push(vm_get_current_scope(self)->types, ut);
+  /* add _value:T, _error:E fields via vm_union_add_field */
+  type_t type_type_val = (type_t)value_get_data(vm_get_type_type(vm));
+  {
+    value_t tmp = value_create(alloc, type_type_val, T, false);
+    vm_union_add_field(vm, type_val, "_value", tmp, false); /* private */
+    allocator_free(alloc, &tmp);
+  }
+  {
+    value_t tmp = value_create(alloc, type_type_val, E, false);
+    vm_union_add_field(vm, type_val, "_error", tmp, false); /* private */
+    allocator_free(alloc, &tmp);
+  }
+
+  /* seal the union type */
+  value_t seal_err = vm_union_seal(vm, type_val);
+  if (seal_err)
+    return seal_err;
+
+  /* extract union_type_t for method registration (read-only access) */
+  union_type_t ut = (union_type_t)value_get_data(type_val);
 
   /* ---- Register methods ---- */
 
   /* *const result[T,E] type — used as self parameter for instance methods */
   pointer_type_t const_result_ptr = pointer_type_create(alloc, (type_t)ut, false, false);
-  if (vm_get_current_scope(self))
-    vec_push(vm_get_current_scope(self)->types, const_result_ptr);
+  if (vm_get_current_scope(vm))
+    vec_push(vm_get_current_scope(vm)->types, const_result_ptr);
 
-  type_t bool_t = (type_t)value_get_data(vm_get_bool_type(self));
+  type_t bool_t = (type_t)value_get_data(vm_get_bool_type(vm));
 
   /* ok(*const result) -> bool */
   {
@@ -158,10 +172,10 @@ value_t vm_create_result_type_value(vm_t self, type_t T, type_t E) {
     callable_type_t ct = callable_type_create(alloc, params, bool_t, false, true,
                                                module_id);
     allocator_free(alloc, &params);
-    if (vm_get_current_scope(self))
-      vec_push(vm_get_current_scope(self)->types, ct);
-    value_t fn = create_callable_value(self, ct, _result_ok, "ok");
-    union_type_add_prop(self, ut, "ok", fn, true, true); /* method, pub */
+    if (vm_get_current_scope(vm))
+      vec_push(vm_get_current_scope(vm)->types, ct);
+    value_t fn = create_callable_value(vm, ct, _result_ok, "ok");
+    vm_union_add_prop(vm, type_val, "ok", fn, true, true); /* method, pub */
   }
 
   /* value(*const result) -> T */
@@ -172,10 +186,10 @@ value_t vm_create_result_type_value(vm_t self, type_t T, type_t E) {
     callable_type_t ct = callable_type_create(alloc, params, T, false, true,
                                                module_id);
     allocator_free(alloc, &params);
-    if (vm_get_current_scope(self))
-      vec_push(vm_get_current_scope(self)->types, ct);
-    value_t fn = create_callable_value(self, ct, _result_value, "value");
-    union_type_add_prop(self, ut, "value", fn, true, true);
+    if (vm_get_current_scope(vm))
+      vec_push(vm_get_current_scope(vm)->types, ct);
+    value_t fn = create_callable_value(vm, ct, _result_value, "value");
+    vm_union_add_prop(vm, type_val, "value", fn, true, true);
   }
 
   /* error(*const result) -> E */
@@ -186,10 +200,10 @@ value_t vm_create_result_type_value(vm_t self, type_t T, type_t E) {
     callable_type_t ct = callable_type_create(alloc, params, E, false, true,
                                                module_id);
     allocator_free(alloc, &params);
-    if (vm_get_current_scope(self))
-      vec_push(vm_get_current_scope(self)->types, ct);
-    value_t fn = create_callable_value(self, ct, _result_error, "error");
-    union_type_add_prop(self, ut, "error", fn, true, true);
+    if (vm_get_current_scope(vm))
+      vec_push(vm_get_current_scope(vm)->types, ct);
+    value_t fn = create_callable_value(vm, ct, _result_error, "error");
+    vm_union_add_prop(vm, type_val, "error", fn, true, true);
   }
 
   /* of_value(T) -> result[T,E]  (static, not method) */
@@ -200,10 +214,10 @@ value_t vm_create_result_type_value(vm_t self, type_t T, type_t E) {
     callable_type_t ct = callable_type_create(alloc, params, (type_t)ut, false, true,
                                                module_id);
     allocator_free(alloc, &params);
-    if (vm_get_current_scope(self))
-      vec_push(vm_get_current_scope(self)->types, ct);
-    value_t fn = create_callable_value(self, ct, _result_of_value, "of_value");
-    union_type_add_prop(self, ut, "of_value", fn, false, true); /* not method, pub */
+    if (vm_get_current_scope(vm))
+      vec_push(vm_get_current_scope(vm)->types, ct);
+    value_t fn = create_callable_value(vm, ct, _result_of_value, "of_value");
+    vm_union_add_prop(vm, type_val, "of_value", fn, false, true); /* not method, pub */
   }
 
   /* of_error(E) -> result[T,E]  (static, not method) */
@@ -214,11 +228,11 @@ value_t vm_create_result_type_value(vm_t self, type_t T, type_t E) {
     callable_type_t ct = callable_type_create(alloc, params, (type_t)ut, false, true,
                                                module_id);
     allocator_free(alloc, &params);
-    if (vm_get_current_scope(self))
-      vec_push(vm_get_current_scope(self)->types, ct);
-    value_t fn = create_callable_value(self, ct, _result_of_error, "of_error");
-    union_type_add_prop(self, ut, "of_error", fn, false, true);
+    if (vm_get_current_scope(vm))
+      vec_push(vm_get_current_scope(vm)->types, ct);
+    value_t fn = create_callable_value(vm, ct, _result_of_error, "of_error");
+    vm_union_add_prop(vm, type_val, "of_error", fn, false, true);
   }
 
-  return create_type_value(self, (type_t)ut, NULL, false);
+  return type_val;
 }

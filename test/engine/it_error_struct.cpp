@@ -37,11 +37,11 @@ TEST_F(it_error_struct, vm_has_error_type) {
 
 TEST_F(it_error_struct, field_count_and_names) {
   vm_t vm = vm_create(allocator);
-  type_t error_type = (type_t)value_get_data(vm_get_error_type(vm));
-  struct_type_t st = (struct_type_t)error_type;
+  value_t type_val = vm_get_error_type(vm);
+  type_t error_type = (type_t)value_get_data(type_val);
 
-  EXPECT_TRUE(struct_type_is_sealed(st));
-  vec_t fields = struct_type_get_fields(st);
+  EXPECT_TRUE(vm_struct_is_sealed(vm, type_val));
+  vec_t fields = vm_struct_get_fields(vm, type_val);
   EXPECT_EQ(vec_get_size(fields), 4u);
 
   field_info_t f0 = (field_info_t)vec_get(fields, 0);
@@ -68,9 +68,9 @@ TEST_F(it_error_struct, field_count_and_names) {
 
 TEST_F(it_error_struct, message_is_128_u8_array) {
   vm_t vm = vm_create(allocator);
-  type_t error_type = (type_t)value_get_data(vm_get_error_type(vm));
-  struct_type_t st = (struct_type_t)error_type;
-  vec_t fields = struct_type_get_fields(st);
+  value_t type_val = vm_get_error_type(vm);
+  type_t error_type = (type_t)value_get_data(type_val);
+  vec_t fields = vm_struct_get_fields(vm, type_val);
 
   field_info_t f0 = (field_info_t)vec_get(fields, 0);
   array_type_t at = (array_type_t)field_info_get_type(f0);
@@ -83,9 +83,9 @@ TEST_F(it_error_struct, message_is_128_u8_array) {
 
 TEST_F(it_error_struct, backtrace_is_32_u64_array) {
   vm_t vm = vm_create(allocator);
-  type_t error_type = (type_t)value_get_data(vm_get_error_type(vm));
-  struct_type_t st = (struct_type_t)error_type;
-  vec_t fields = struct_type_get_fields(st);
+  value_t type_val = vm_get_error_type(vm);
+  type_t error_type = (type_t)value_get_data(type_val);
+  vec_t fields = vm_struct_get_fields(vm, type_val);
 
   field_info_t f2 = (field_info_t)vec_get(fields, 2);
   array_type_t at = (array_type_t)field_info_get_type(f2);
@@ -100,7 +100,8 @@ TEST_F(it_error_struct, backtrace_is_32_u64_array) {
 
 TEST_F(it_error_struct, struct_size_is_nonzero) {
   vm_t vm = vm_create(allocator);
-  type_t error_type = (type_t)value_get_data(vm_get_error_type(vm));
+  value_t type_val = vm_get_error_type(vm);
+  type_t error_type = (type_t)value_get_data(type_val);
 
   /* message[128] = 128 bytes
    * error_code: u64 = 8 bytes
@@ -118,11 +119,11 @@ TEST_F(it_error_struct, struct_size_is_nonzero) {
 
 TEST_F(it_error_struct, create_error_value) {
   vm_t vm = vm_create(allocator);
-  type_t error_type = (type_t)value_get_data(vm_get_error_type(vm));
-  struct_type_t st = (struct_type_t)error_type;
+  value_t type_val = vm_get_error_type(vm);
+  type_t error_type = (type_t)value_get_data(type_val);
 
   /* create a struct value with zeroed data */
-  value_t ev = create_struct_value(vm, st, NULL);
+  value_t ev = vm_create_struct_value(vm, type_val, NULL);
   EXPECT_NE(ev, nullptr);
   EXPECT_EQ(value_get_type(ev), error_type);
   EXPECT_TRUE(value_is_own(ev));
@@ -147,6 +148,7 @@ TEST_F(it_error_struct, error_name_in_global_scope) {
 
 TEST_F(it_error_struct, create_error_with_code) {
   vm_t vm = vm_create(allocator);
+  value_t type_val = vm_get_error_type(vm);
   value_t err = create_error_value(vm, ERROR_CODE_UNION_INACTIVE_FIELD,
                              "cannot access field '%s'", "foo");
 
@@ -154,15 +156,15 @@ TEST_F(it_error_struct, create_error_with_code) {
   EXPECT_EQ(type_get_kind(value_get_type(err)), TYPE_KIND_STRUCT);
 
   /* read error_code field */
-  struct_type_t st = (struct_type_t)value_get_type(err);
-  field_info_t code_fi = (field_info_t)vec_get(struct_type_get_fields(st), 1);
+  vec_t fields = vm_struct_get_fields(vm, type_val);
+  field_info_t code_fi = (field_info_t)vec_get(fields, 1);
   uint64_t code;
   memcpy(&code, (uint8_t *)value_get_data(err) + field_info_get_offset(code_fi),
          sizeof(uint64_t));
   EXPECT_EQ(code, ERROR_CODE_UNION_INACTIVE_FIELD);
 
   /* read message field */
-  field_info_t msg_fi = (field_info_t)vec_get(struct_type_get_fields(st), 0);
+  field_info_t msg_fi = (field_info_t)vec_get(fields, 0);
   const char *msg = (const char *)((uint8_t *)value_get_data(err) +
                                     field_info_get_offset(msg_fi));
   EXPECT_STREQ(msg, "cannot access field 'foo'");
