@@ -802,10 +802,10 @@ static value_t _union_get_field(vm_t vm, value_t self, const char *name) {
   if (value_is_shadow(self) || !value_get_data(self))
     return create_exception_value(vm, "cannot access field '%s' of uninitialized union", name);
 
-  /* create result[field_type, error] — registered in current_scope, lifecycle managed by scope */
+  /* create result[field_type, u64] — error is just a code, not a heavy struct */
   type_t field_type = field_info_get_type(fi);
-  type_t error_type = (type_t)value_get_data(vm_get_error_type(vm));
-  value_t rv = vm_create_result_type_value(vm, field_type, error_type);
+  type_t u64_type = (type_t)value_get_data(vm_get_u64_type(vm));
+  value_t rv = vm_create_result_type_value(vm, field_type, u64_type);
   union_type_t result_ut = (union_type_t)value_get_data(rv);
 
   /* check tag to determine which variant of result to return */
@@ -817,11 +817,10 @@ static value_t _union_get_field(vm_t vm, value_t self, const char *name) {
     value_t field_val = _union_get_field_raw(vm, self, name);
     return create_union_value(vm, result_ut, 0, field_val);
   } else {
-    /* inactive field → result.of_error(error) */
-    value_t err = create_error_value(vm, ERROR_CODE_UNION_INACTIVE_FIELD,
-                        "cannot access inactive field '%s' in union '%s'",
-                        name, type_get_name((type_t)ut));
-    return create_union_value(vm, result_ut, 1, err);
+    /* inactive field → result.of_error(ERROR_CODE_UNION_INACTIVE_FIELD) */
+    uint64_t code = ERROR_CODE_UNION_INACTIVE_FIELD;
+    value_t err_val = vm_create_value(vm, u64_type, &code, NULL);
+    return create_union_value(vm, result_ut, 1, err_val);
   }
 }
 
