@@ -1,17 +1,17 @@
-#include "engine/vm.h"
-#include "engine/type.h"
-#include "engine/value.h"
-#include "engine/scope.h"
+#include "common/test_common.h"
 #include "engine/bool_type.h"
-#include "engine/integer_type.h"
-#include "engine/void_type.h"
+#include "engine/callable_type.h"
 #include "engine/exception_type.h"
+#include "engine/integer_type.h"
+#include "engine/pointer_type.h"
+#include "engine/scope.h"
 #include "engine/str_type.h"
 #include "engine/struct_type.h"
+#include "engine/type.h"
 #include "engine/union_type.h"
-#include "engine/callable_type.h"
-#include "engine/pointer_type.h"
-#include "common/test_common.h"
+#include "engine/value.h"
+#include "engine/vm.h"
+#include "engine/void_type.h"
 #include <gtest/gtest.h>
 
 using ::testing::Test;
@@ -24,27 +24,30 @@ protected:
     return (type_t)value_get_data(vm_get_i32_type(vm));
   }
 
-  /** Create a type value wrapping i32 type (temporary, for vm_union_add_field). */
+  /** Create a type value wrapping i32 type (temporary, for vm_union_add_field).
+   */
   value_t _make_type_val(vm_t vm, type_t t) {
     type_t type_type_val = (type_t)value_get_data(vm_get_type_type(vm));
-    return value_create(vm_get_allocator(vm), type_type_val, t, false);
+    return vm_create_value_ref(vm, type_type_val, t, NULL);
   }
 
   /** Create a struct with module_id="/foo", pub x:i32, private y:i32 */
   value_t _make_foo_struct(vm_t vm) {
     value_t tv = vm_create_struct_type_value(vm, "Foo", true, "/foo");
-    (void)vm_struct_add_field(vm, tv, "x", vm_get_i32_type(vm), true);   /* pub */
-    (void)vm_struct_add_field(vm, tv, "y", vm_get_i32_type(vm), false);  /* private */
+    (void)vm_struct_add_field(vm, tv, "x", vm_get_i32_type(vm), true); /* pub */
+    (void)vm_struct_add_field(vm, tv, "y", vm_get_i32_type(vm),
+                              false); /* private */
     (void)vm_struct_seal(vm, tv);
     return tv;
   }
 
-  /** Create a union type value with module_id="/bar", pub Ok:i32, private Err:i32 */
+  /** Create a union type value with module_id="/bar", pub Ok:i32, private
+   * Err:i32 */
   value_t _make_bar_union(vm_t vm) {
     value_t tv = vm_create_union_type_value(vm, "Bar", true, "/bar");
     {
       value_t ft = _make_type_val(vm, _get_i32_type(vm));
-      (void)vm_union_add_field(vm, tv, "Ok", ft, true);   /* pub */
+      (void)vm_union_add_field(vm, tv, "Ok", ft, true); /* pub */
     }
     {
       value_t ft = _make_type_val(vm, _get_i32_type(vm));
@@ -210,7 +213,8 @@ TEST_F(it_access_control, struct_cross_module_get_private_prop_rejected) {
   value_t type_val = _make_foo_struct(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  (void)vm_struct_add_prop(vm, type_val, "secret", prop_val, false, false); /* private prop */
+  (void)vm_struct_add_prop(vm, type_val, "secret", prop_val, false,
+                           false); /* private prop */
 
   vm_set_current_module_id(vm, "/other");
   value_t got = value_get_prop(vm, type_val, "secret");
@@ -225,7 +229,8 @@ TEST_F(it_access_control, struct_cross_module_get_pub_prop_ok) {
   value_t type_val = _make_foo_struct(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  (void)vm_struct_add_prop(vm, type_val, "count", prop_val, false, true); /* pub prop */
+  (void)vm_struct_add_prop(vm, type_val, "count", prop_val, false,
+                           true); /* pub prop */
 
   vm_set_current_module_id(vm, "/other");
   value_t got = value_get_prop(vm, type_val, "count");
@@ -241,7 +246,8 @@ TEST_F(it_access_control, struct_cross_module_set_private_prop_rejected) {
   value_t type_val = _make_foo_struct(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  (void)vm_struct_add_prop(vm, type_val, "secret", prop_val, false, false); /* private */
+  (void)vm_struct_add_prop(vm, type_val, "secret", prop_val, false,
+                           false); /* private */
 
   vm_set_current_module_id(vm, "/other");
   value_t new_val = create_i32_value(vm, 99);
@@ -409,7 +415,8 @@ TEST_F(it_access_control, union_cross_module_get_private_prop_rejected) {
   value_t tv = _make_bar_union(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  (void)vm_union_add_prop(vm, tv, "secret", prop_val, false, false); /* private */
+  (void)vm_union_add_prop(vm, tv, "secret", prop_val, false,
+                          false); /* private */
 
   union_type_t ut = (union_type_t)value_get_data(tv);
   value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
@@ -446,8 +453,10 @@ TEST_F(it_access_control, union_cross_module_get_pub_prop_ok) {
 TEST_F(it_access_control, builtin_private_field_from_other_module_rejected) {
   vm_t vm = vm_create(allocator);
   /* struct with module_id="<builtin>", private field */
-  value_t stv = vm_create_struct_type_value(vm, "BuiltinType", true, "<builtin>");
-  (void)vm_struct_add_field(vm, stv, "data", vm_get_i32_type(vm), false); /* private */
+  value_t stv =
+      vm_create_struct_type_value(vm, "BuiltinType", true, "<builtin>");
+  (void)vm_struct_add_field(vm, stv, "data", vm_get_i32_type(vm),
+                            false); /* private */
   (void)vm_struct_seal(vm, stv);
 
   value_t dv = create_i32_value(vm, 42);
@@ -465,8 +474,10 @@ TEST_F(it_access_control, builtin_private_field_from_other_module_rejected) {
 
 TEST_F(it_access_control, builtin_private_field_from_builtin_ok) {
   vm_t vm = vm_create(allocator);
-  value_t stv2 = vm_create_struct_type_value(vm, "BuiltinType", true, "<builtin>");
-  (void)vm_struct_add_field(vm, stv2, "data", vm_get_i32_type(vm), false); /* private */
+  value_t stv2 =
+      vm_create_struct_type_value(vm, "BuiltinType", true, "<builtin>");
+  (void)vm_struct_add_field(vm, stv2, "data", vm_get_i32_type(vm),
+                            false); /* private */
   (void)vm_struct_seal(vm, stv2);
 
   value_t dv = create_i32_value(vm, 42);
@@ -485,8 +496,10 @@ TEST_F(it_access_control, builtin_private_field_from_builtin_ok) {
 
 TEST_F(it_access_control, builtin_pub_field_from_other_module_ok) {
   vm_t vm = vm_create(allocator);
-  value_t stv3 = vm_create_struct_type_value(vm, "BuiltinType", true, "<builtin>");
-  (void)vm_struct_add_field(vm, stv3, "data", vm_get_i32_type(vm), true); /* pub */
+  value_t stv3 =
+      vm_create_struct_type_value(vm, "BuiltinType", true, "<builtin>");
+  (void)vm_struct_add_field(vm, stv3, "data", vm_get_i32_type(vm),
+                            true); /* pub */
   (void)vm_struct_seal(vm, stv3);
 
   value_t dv = create_i32_value(vm, 42);

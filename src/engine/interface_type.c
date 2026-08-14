@@ -39,7 +39,7 @@ static void _interface_type_init(void *self, allocator_t allocator, void *arg) {
   it->base.mut   = init->mut;
   it->base.vtable = init->vtable;
 
-  strmap_init_t si = {.value_auto_dispose = false};
+  strmap_init_t si = {.value_auto_dispose = true};
   it->methods = (strmap_t)allocator_create(allocator, &g_strmap_class, &si);
   it->sealed   = false;
   it->module_id = init->module_id;

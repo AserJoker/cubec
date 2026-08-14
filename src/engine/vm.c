@@ -1,27 +1,27 @@
 #include "engine/vm.h"
-#include "engine/context.h"
-#include "engine/scope.h"
-#include "engine/type.h"
-#include "engine/exception_type.h"
-#include "engine/bool_type.h"
-#include "engine/wildcard_type.h"
-#include "engine/void_type.h"
-#include "engine/integer_type.h"
-#include "engine/float_type.h"
-#include "engine/str_type.h"
-#include "engine/array_type.h"
-#include "engine/slice_type.h"
-#include "engine/tuple_type.h"
-#include "engine/callable_type.h"
-#include "engine/pointer_type.h"
-#include "engine/union_type.h"
-#include "engine/struct_type.h"
-#include "engine/module.h"
-#include "engine/result_type.h"
 #include "core/string.h"
 #include "core/strmap.h"
 #include "cubec/program.h"
 #include "cubec/token.h"
+#include "engine/array_type.h"
+#include "engine/bool_type.h"
+#include "engine/callable_type.h"
+#include "engine/context.h"
+#include "engine/exception_type.h"
+#include "engine/float_type.h"
+#include "engine/integer_type.h"
+#include "engine/module.h"
+#include "engine/pointer_type.h"
+#include "engine/result_type.h"
+#include "engine/scope.h"
+#include "engine/slice_type.h"
+#include "engine/str_type.h"
+#include "engine/struct_type.h"
+#include "engine/tuple_type.h"
+#include "engine/type.h"
+#include "engine/union_type.h"
+#include "engine/void_type.h"
+#include "engine/wildcard_type.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -44,45 +44,55 @@ static value_t _builtin_panic(vm_t vm, value_t fn, size_t argc, value_t *argv) {
 
 struct _vm_t {
   allocator_t allocator;
-  strmap_t    modules;       /* absolute path → module_t (auto-dispose) */
-  scope_t     global_scope;  /* owned: global scope */
-  scope_t     root_scope;    /* borrowed: current module's root scope */
-  scope_t     current_scope; /* borrowed: current traversal position */
-  value_t     v_type;        /* borrowed: bootstrap type "type" (in global_scope->values) */
-  value_t     v_exception;   /* borrowed: bootstrap type "exception" (in global_scope->values) */
-  value_t     v_bool;        /* borrowed: bootstrap type "bool" (in global_scope->values) */
-  value_t     v_wildcard;    /* borrowed: bootstrap type "wildcard" (in global_scope->values) */
-  value_t     v_void;        /* borrowed: bootstrap type "void" (in global_scope->values) */
-  value_t     v_const_bool;  /* borrowed: bootstrap type "const bool" (in global_scope->values) */
-  value_t     v_i8;          /* borrowed: bootstrap type "i8" */
-  value_t     v_i16;         /* borrowed: bootstrap type "i16" */
-  value_t     v_i32;         /* borrowed: bootstrap type "i32" */
-  value_t     v_i64;         /* borrowed: bootstrap type "i64" */
-  value_t     v_const_i8;    /* borrowed: bootstrap type "const i8" */
-  value_t     v_const_i16;   /* borrowed: bootstrap type "const i16" */
-  value_t     v_const_i32;   /* borrowed: bootstrap type "const i32" */
-  value_t     v_const_i64;   /* borrowed: bootstrap type "const i64" */
-  value_t     v_u8;          /* borrowed: bootstrap type "u8" */
-  value_t     v_u16;         /* borrowed: bootstrap type "u16" */
-  value_t     v_u32;         /* borrowed: bootstrap type "u32" */
-  value_t     v_u64;         /* borrowed: bootstrap type "u64" */
-  value_t     v_const_u8;    /* borrowed: bootstrap type "const u8" */
-  value_t     v_const_u16;   /* borrowed: bootstrap type "const u16" */
-  value_t     v_const_u32;   /* borrowed: bootstrap type "const u32" */
-  value_t     v_const_u64;   /* borrowed: bootstrap type "const u64" */
-  value_t     v_f16;         /* borrowed: bootstrap type "f16" */
-  value_t     v_f32;         /* borrowed: bootstrap type "f32" */
-  value_t     v_f64;         /* borrowed: bootstrap type "f64" */
-  value_t     v_const_f16;   /* borrowed: bootstrap type "const f16" */
-  value_t     v_const_f32;   /* borrowed: bootstrap type "const f32" */
-  value_t     v_const_f64;   /* borrowed: bootstrap type "const f64" */
-  value_t     v_str;         /* borrowed: bootstrap type "str" */
-  value_t     v_const_str;   /* borrowed: bootstrap type "const str" */
-  value_t     v_wildcard_tuple; /* borrowed: bootstrap type "<?>" (wildcard tuple) */
-  value_t     v_wildcard_value; /* borrowed: global unique wildcard value for generic params */
-  value_t     v_error;         /* borrowed: user-facing error struct type value */
-  const char *current_module_id; /* borrowed: current module path or "<builtin>" */
-  vec_t       call_stack;      /* vec of call_frame_t (auto_dispose=true, owned name/message) */
+  strmap_t modules;      /* absolute path → module_t (auto-dispose) */
+  scope_t global_scope;  /* owned: global scope */
+  scope_t root_scope;    /* borrowed: current module's root scope */
+  scope_t current_scope; /* borrowed: current traversal position */
+  value_t
+      v_type; /* borrowed: bootstrap type "type" (in global_scope->values) */
+  value_t v_exception; /* borrowed: bootstrap type "exception" (in
+                          global_scope->values) */
+  value_t
+      v_bool; /* borrowed: bootstrap type "bool" (in global_scope->values) */
+  value_t v_wildcard; /* borrowed: bootstrap type "wildcard" (in
+                         global_scope->values) */
+  value_t
+      v_void; /* borrowed: bootstrap type "void" (in global_scope->values) */
+  value_t v_const_bool; /* borrowed: bootstrap type "const bool" (in
+                           global_scope->values) */
+  value_t v_i8;         /* borrowed: bootstrap type "i8" */
+  value_t v_i16;        /* borrowed: bootstrap type "i16" */
+  value_t v_i32;        /* borrowed: bootstrap type "i32" */
+  value_t v_i64;        /* borrowed: bootstrap type "i64" */
+  value_t v_const_i8;   /* borrowed: bootstrap type "const i8" */
+  value_t v_const_i16;  /* borrowed: bootstrap type "const i16" */
+  value_t v_const_i32;  /* borrowed: bootstrap type "const i32" */
+  value_t v_const_i64;  /* borrowed: bootstrap type "const i64" */
+  value_t v_u8;         /* borrowed: bootstrap type "u8" */
+  value_t v_u16;        /* borrowed: bootstrap type "u16" */
+  value_t v_u32;        /* borrowed: bootstrap type "u32" */
+  value_t v_u64;        /* borrowed: bootstrap type "u64" */
+  value_t v_const_u8;   /* borrowed: bootstrap type "const u8" */
+  value_t v_const_u16;  /* borrowed: bootstrap type "const u16" */
+  value_t v_const_u32;  /* borrowed: bootstrap type "const u32" */
+  value_t v_const_u64;  /* borrowed: bootstrap type "const u64" */
+  value_t v_f16;        /* borrowed: bootstrap type "f16" */
+  value_t v_f32;        /* borrowed: bootstrap type "f32" */
+  value_t v_f64;        /* borrowed: bootstrap type "f64" */
+  value_t v_const_f16;  /* borrowed: bootstrap type "const f16" */
+  value_t v_const_f32;  /* borrowed: bootstrap type "const f32" */
+  value_t v_const_f64;  /* borrowed: bootstrap type "const f64" */
+  value_t v_str;        /* borrowed: bootstrap type "str" */
+  value_t v_const_str;  /* borrowed: bootstrap type "const str" */
+  value_t
+      v_wildcard_tuple; /* borrowed: bootstrap type "<?>" (wildcard tuple) */
+  value_t v_wildcard_value; /* borrowed: global unique wildcard value for
+                               generic params */
+  value_t v_error;          /* borrowed: user-facing error struct type value */
+  const char
+      *current_module_id; /* borrowed: current module path or "<builtin>" */
+  vec_t call_stack;       /* vec of call_frame_t (auto_dispose=true, owned
+                             name/message) */
 };
 
 static void _vm_init(void *self, allocator_t allocator, void *arg) {
@@ -92,7 +102,8 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   vm->current_module_id = "<builtin>";
 
   strmap_init_t sm_init = {.value_auto_dispose = true};
-  vm->modules = (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_init);
+  vm->modules =
+      (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_init);
 
   vm->global_scope = scope_create(allocator, SCOPE_GLOBAL, NULL, NULL);
   vm->root_scope = NULL;
@@ -129,7 +140,8 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 
   type_t const_bool_type = type_get_const_bool_type(allocator);
   vec_push(vm->global_scope->types, const_bool_type);
-  vm->v_const_bool = create_type_value(vm, const_bool_type, "const bool", false);
+  vm->v_const_bool =
+      create_type_value(vm, const_bool_type, "const bool", false);
 
   /* Integer types */
   type_t i8_type = type_get_i8_type(allocator);
@@ -232,33 +244,36 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   vm->v_const_str = create_type_value(vm, const_str_type, "const str", false);
 
   /* Wildcard tuple type <?> — extends placeholder for any tuple */
-  type_t wildcard_tuple_type = type_create(allocator, TYPE_KIND_TUPLE, "<?>",
-      0, 0, false, (vtable_t){0});
+  type_t wildcard_tuple_type = type_create(allocator, TYPE_KIND_TUPLE, "<?>", 0,
+                                           0, false, (vtable_t){0});
   vec_push(vm->global_scope->types, wildcard_tuple_type);
-  vm->v_wildcard_tuple = create_type_value(vm, wildcard_tuple_type, NULL, false);
+  vm->v_wildcard_tuple =
+      create_type_value(vm, wildcard_tuple_type, NULL, false);
 
   /* Wildcard value — global unique sentinel for value-type generic parameters.
    * type = wildcard_type, data = NULL, own = false.
-   * Used in type_equal/type_extends: if a parameter == vm_get_wildcard_value(vm),
-   * skip comparison for that parameter. */
+   * Used in type_equal/type_extends: if a parameter ==
+   * vm_get_wildcard_value(vm), skip comparison for that parameter. */
   vm->v_wildcard_value = value_create(allocator, wildcard_type, NULL, false);
   vec_push(vm->global_scope->values, vm->v_wildcard_value);
 
   /* User-facing error struct: error { message: [128]u8, error_code: u64,
-   *                                    backtrace: [32]u64, backtrace_count: u64 }
-   * vm_struct_add_field/seal return void values that should NOT accumulate
-   * in global_scope->values. Push a temporary child scope so those
-   * transient void values are collected there, then pop and dispose. */
-  value_t error_tv = vm_create_struct_type_value(vm, "error", true, "<builtin>");
+   *                                    backtrace: [32]u64, backtrace_count: u64
+   * } vm_struct_add_field/seal return void values that should NOT accumulate in
+   * global_scope->values. Push a temporary child scope so those transient void
+   * values are collected there, then pop and dispose. */
+  value_t error_tv =
+      vm_create_struct_type_value(vm, "error", true, "<builtin>");
   type_t type_type_val = (type_t)value_get_data(vm->v_type);
 
-  scope_t bootstrap_scope = scope_create(allocator, SCOPE_BLOCK,
-                                         vm->global_scope, NULL);
+  scope_t bootstrap_scope =
+      scope_create(allocator, SCOPE_BLOCK, vm->global_scope, NULL);
   vm_push_scope(vm, bootstrap_scope);
 
   /* message: [128]u8 */
   type_t err_u8_type = (type_t)value_get_data(vm->v_u8);
-  type_t msg_array_type = (type_t)array_type_create(allocator, err_u8_type, 128, true);
+  type_t msg_array_type =
+      (type_t)array_type_create(allocator, err_u8_type, 128, true);
   {
     value_t tmp = value_create(allocator, type_type_val, msg_array_type, false);
     vm_struct_add_field(vm, error_tv, "message", tmp, true);
@@ -275,7 +290,8 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   }
 
   /* backtrace: [32]u64 */
-  type_t bt_array_type = (type_t)array_type_create(allocator, err_u64_type, 32, true);
+  type_t bt_array_type =
+      (type_t)array_type_create(allocator, err_u64_type, 32, true);
   {
     value_t tmp = value_create(allocator, type_type_val, bt_array_type, false);
     vm_struct_add_field(vm, error_tv, "backtrace", tmp, true);
@@ -312,13 +328,12 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
     vec_push(panic_params, str_t);
 
     type_t void_t = (type_t)value_get_data(vm->v_void);
-    callable_type_t panic_ct = callable_type_create(allocator, panic_params,
-                                                      void_t, false, true,
-                                                      "<builtin>");
+    callable_type_t panic_ct = callable_type_create(
+        allocator, panic_params, void_t, false, true, "<builtin>");
     allocator_free(allocator, &panic_params);
     vec_push(vm->global_scope->types, panic_ct);
-    value_t panic_val = create_callable_value(vm, panic_ct, _builtin_panic,
-                                               "panic");
+    value_t panic_val =
+        create_callable_value(vm, panic_ct, _builtin_panic, "panic");
     name_t n_panic = name_create(vm->global_scope->allocator, panic_val);
     strmap_insert(vm->global_scope->names, "panic", n_panic);
   }
@@ -346,53 +361,56 @@ vm_t vm_create(allocator_t allocator) {
 }
 
 void vm_dispose(vm_t self, allocator_t allocator) {
-  if (!self) return;
+  if (!self)
+    return;
   allocator_free(allocator, &self);
 }
 
 allocator_t vm_get_allocator(vm_t self) { return self->allocator; }
 strmap_t vm_get_modules(vm_t self) { return self->modules; }
-scope_t  vm_get_global_scope(vm_t self) { return self->global_scope; }
-scope_t  vm_get_root_scope(vm_t self) { return self->root_scope; }
-scope_t  vm_get_current_scope(vm_t self) { return self->current_scope; }
-value_t  vm_get_type_type(vm_t self) { return self->v_type; }
-value_t  vm_get_exception_type(vm_t self) { return self->v_exception; }
+scope_t vm_get_global_scope(vm_t self) { return self->global_scope; }
+scope_t vm_get_root_scope(vm_t self) { return self->root_scope; }
+scope_t vm_get_current_scope(vm_t self) { return self->current_scope; }
+value_t vm_get_type_type(vm_t self) { return self->v_type; }
+value_t vm_get_exception_type(vm_t self) { return self->v_exception; }
 
-const char *vm_get_current_module_id(vm_t self) { return self->current_module_id; }
-void        vm_set_current_module_id(vm_t self, const char *module_id) {
+const char *vm_get_current_module_id(vm_t self) {
+  return self->current_module_id;
+}
+void vm_set_current_module_id(vm_t self, const char *module_id) {
   self->current_module_id = module_id;
 }
-value_t  vm_get_error_type(vm_t self) { return self->v_error; }
-value_t  vm_get_bool_type(vm_t self) { return self->v_bool; }
-value_t  vm_get_wildcard_type(vm_t self) { return self->v_wildcard; }
-value_t  vm_get_void_type(vm_t self) { return self->v_void; }
-value_t  vm_get_const_bool_type(vm_t self) { return self->v_const_bool; }
-value_t  vm_get_i8_type(vm_t self)  { return self->v_i8; }
-value_t  vm_get_i16_type(vm_t self) { return self->v_i16; }
-value_t  vm_get_i32_type(vm_t self) { return self->v_i32; }
-value_t  vm_get_i64_type(vm_t self) { return self->v_i64; }
-value_t  vm_get_const_i8_type(vm_t self)  { return self->v_const_i8; }
-value_t  vm_get_const_i16_type(vm_t self) { return self->v_const_i16; }
-value_t  vm_get_const_i32_type(vm_t self) { return self->v_const_i32; }
-value_t  vm_get_const_i64_type(vm_t self) { return self->v_const_i64; }
-value_t  vm_get_u8_type(vm_t self)  { return self->v_u8; }
-value_t  vm_get_u16_type(vm_t self) { return self->v_u16; }
-value_t  vm_get_u32_type(vm_t self) { return self->v_u32; }
-value_t  vm_get_u64_type(vm_t self) { return self->v_u64; }
-value_t  vm_get_const_u8_type(vm_t self)  { return self->v_const_u8; }
-value_t  vm_get_const_u16_type(vm_t self) { return self->v_const_u16; }
-value_t  vm_get_const_u32_type(vm_t self) { return self->v_const_u32; }
-value_t  vm_get_const_u64_type(vm_t self) { return self->v_const_u64; }
-value_t  vm_get_f16_type(vm_t self) { return self->v_f16; }
-value_t  vm_get_f32_type(vm_t self) { return self->v_f32; }
-value_t  vm_get_f64_type(vm_t self) { return self->v_f64; }
-value_t  vm_get_const_f16_type(vm_t self) { return self->v_const_f16; }
-value_t  vm_get_const_f32_type(vm_t self) { return self->v_const_f32; }
-value_t  vm_get_const_f64_type(vm_t self) { return self->v_const_f64; }
-value_t  vm_get_str_type(vm_t self) { return self->v_str; }
-value_t  vm_get_const_str_type(vm_t self) { return self->v_const_str; }
-value_t  vm_get_wildcard_tuple_type(vm_t self) { return self->v_wildcard_tuple; }
-value_t  vm_get_wildcard_value(vm_t self) { return self->v_wildcard_value; }
+value_t vm_get_error_type(vm_t self) { return self->v_error; }
+value_t vm_get_bool_type(vm_t self) { return self->v_bool; }
+value_t vm_get_wildcard_type(vm_t self) { return self->v_wildcard; }
+value_t vm_get_void_type(vm_t self) { return self->v_void; }
+value_t vm_get_const_bool_type(vm_t self) { return self->v_const_bool; }
+value_t vm_get_i8_type(vm_t self) { return self->v_i8; }
+value_t vm_get_i16_type(vm_t self) { return self->v_i16; }
+value_t vm_get_i32_type(vm_t self) { return self->v_i32; }
+value_t vm_get_i64_type(vm_t self) { return self->v_i64; }
+value_t vm_get_const_i8_type(vm_t self) { return self->v_const_i8; }
+value_t vm_get_const_i16_type(vm_t self) { return self->v_const_i16; }
+value_t vm_get_const_i32_type(vm_t self) { return self->v_const_i32; }
+value_t vm_get_const_i64_type(vm_t self) { return self->v_const_i64; }
+value_t vm_get_u8_type(vm_t self) { return self->v_u8; }
+value_t vm_get_u16_type(vm_t self) { return self->v_u16; }
+value_t vm_get_u32_type(vm_t self) { return self->v_u32; }
+value_t vm_get_u64_type(vm_t self) { return self->v_u64; }
+value_t vm_get_const_u8_type(vm_t self) { return self->v_const_u8; }
+value_t vm_get_const_u16_type(vm_t self) { return self->v_const_u16; }
+value_t vm_get_const_u32_type(vm_t self) { return self->v_const_u32; }
+value_t vm_get_const_u64_type(vm_t self) { return self->v_const_u64; }
+value_t vm_get_f16_type(vm_t self) { return self->v_f16; }
+value_t vm_get_f32_type(vm_t self) { return self->v_f32; }
+value_t vm_get_f64_type(vm_t self) { return self->v_f64; }
+value_t vm_get_const_f16_type(vm_t self) { return self->v_const_f16; }
+value_t vm_get_const_f32_type(vm_t self) { return self->v_const_f32; }
+value_t vm_get_const_f64_type(vm_t self) { return self->v_const_f64; }
+value_t vm_get_str_type(vm_t self) { return self->v_str; }
+value_t vm_get_const_str_type(vm_t self) { return self->v_const_str; }
+value_t vm_get_wildcard_tuple_type(vm_t self) { return self->v_wildcard_tuple; }
+value_t vm_get_wildcard_value(vm_t self) { return self->v_wildcard_value; }
 
 module_t vm_get_module(vm_t self, const char *abs_path) {
   return (module_t)strmap_find(self->modules, abs_path);
@@ -400,7 +418,8 @@ module_t vm_get_module(vm_t self, const char *abs_path) {
 
 /* ---- File I/O ---- */
 
-static char *_read_file(allocator_t allocator, const char *path, size_t *out_len) {
+static char *_read_file(allocator_t allocator, const char *path,
+                        size_t *out_len) {
   FILE *f = fopen(path, "rb");
   if (!f)
     return NULL;
@@ -426,9 +445,9 @@ static char *_resolve_import_path(vm_t vm, const char *import_path) {
   if (!import_path || import_path[0] == '\0')
     return NULL;
 
-  bool is_relative =
-      (import_path[0] == '.' &&
-       (import_path[1] == '/' || (import_path[1] == '.' && import_path[2] == '/')));
+  bool is_relative = (import_path[0] == '.' &&
+                      (import_path[1] == '/' ||
+                       (import_path[1] == '.' && import_path[2] == '/')));
 
   bool is_absolute = (import_path[0] == '/' || import_path[0] == '\\'
 #ifdef _WIN32
@@ -455,7 +474,8 @@ static char *_resolve_import_path(vm_t vm, const char *import_path) {
         if (last_slash) {
           size_t dir_len = (size_t)(last_slash - current_file) + 1;
           size_t path_len = strlen(import_path);
-          resolved = (char *)allocator_alloc(vm->allocator, dir_len + path_len + 1);
+          resolved =
+              (char *)allocator_alloc(vm->allocator, dir_len + path_len + 1);
           if (!resolved)
             return NULL;
           memcpy(resolved, current_file, dir_len);
@@ -468,7 +488,8 @@ static char *_resolve_import_path(vm_t vm, const char *import_path) {
 
   if (!resolved) {
     size_t path_len = strlen(import_path);
-    bool has_ext = (path_len > 6 && strcmp(import_path + path_len - 6, ".cubec") == 0);
+    bool has_ext =
+        (path_len > 6 && strcmp(import_path + path_len - 6, ".cubec") == 0);
     size_t ext_len = has_ext ? 0 : 6;
     resolved = (char *)allocator_alloc(vm->allocator, path_len + ext_len + 1);
     if (!resolved)
@@ -574,7 +595,8 @@ static void _call_frame_init(void *self, allocator_t allocator, void *arg) {
   call_frame_t cf = (call_frame_t)self;
   call_frame_init_t *init = (call_frame_init_t *)arg;
   cf->name = (init && init->name) ? cstring_clone(allocator, init->name) : NULL;
-  cf->message = (init && init->message) ? cstring_clone(allocator, init->message) : NULL;
+  cf->message =
+      (init && init->message) ? cstring_clone(allocator, init->message) : NULL;
 }
 
 static void _call_frame_dispose(void *self, allocator_t allocator) {
@@ -591,7 +613,8 @@ static void _call_frame_dispose(void *self, allocator_t allocator) {
   }
 }
 
-static void _call_frame_clone(void *self, allocator_t allocator, void *another) {
+static void _call_frame_clone(void *self, allocator_t allocator,
+                              void *another) {
   call_frame_t dst = (call_frame_t)self;
   call_frame_t src = (call_frame_t)another;
   dst->name = src->name ? cstring_clone(allocator, src->name) : NULL;
@@ -612,11 +635,12 @@ class_t g_call_frame_class = {
 void vm_push_frame(vm_t self, const char *name, const char *message) {
   if (!self->call_stack) {
     vec_init_t vi = {.auto_dispose = true};
-    self->call_stack = (vec_t)allocator_create(self->allocator, &g_vec_class, &vi);
+    self->call_stack =
+        (vec_t)allocator_create(self->allocator, &g_vec_class, &vi);
   }
   call_frame_init_t init = {.name = name, .message = message};
-  call_frame_t frame = (call_frame_t)allocator_create(self->allocator,
-                                                       &g_call_frame_class, &init);
+  call_frame_t frame = (call_frame_t)allocator_create(
+      self->allocator, &g_call_frame_class, &init);
   vec_push(self->call_stack, frame);
 }
 
@@ -628,9 +652,7 @@ void vm_pop_frame(vm_t self) {
     vec_pop(self->call_stack);
 }
 
-vec_t vm_get_call_stack(vm_t self) {
-  return self->call_stack;
-}
+vec_t vm_get_call_stack(vm_t self) { return self->call_stack; }
 
 /* ---- Value creation ---- */
 
@@ -647,6 +669,21 @@ value_t vm_create_value(vm_t self, type_t type, const void *data,
     }
   }
   value_t v = value_create(self->allocator, type, data_copy, true);
+  if (self->current_scope) {
+    vec_push(self->current_scope->values, v);
+    if (name) {
+      name_t n = name_create(self->current_scope->allocator, v);
+      char *owned_name = cstring_clone(self->current_scope->allocator, name);
+      strmap_insert(self->current_scope->names, owned_name, n);
+      allocator_free(self->current_scope->allocator, &owned_name);
+    }
+  }
+  return v;
+}
+
+value_t vm_create_value_ref(vm_t self, type_t type, const void *data,
+                            const char *name) {
+  value_t v = value_create(self->allocator, type, (void *)data, false);
   if (self->current_scope) {
     vec_push(self->current_scope->values, v);
     if (name) {
@@ -676,8 +713,9 @@ value_t vm_create_value_shadow(vm_t self, type_t type, const char *name,
 }
 
 value_t vm_create_array_type_value(vm_t self, type_t element_type,
-                              uint64_t count, bool mut) {
-  array_type_t at = array_type_create(self->allocator, element_type, count, mut);
+                                   uint64_t count, bool mut) {
+  array_type_t at =
+      array_type_create(self->allocator, element_type, count, mut);
   if (!at)
     return create_exception_value(self, "zero-length array is not valid");
   /* register array_type_t in scope->types for auto-dispose */
@@ -708,20 +746,19 @@ value_t vm_create_tuple_type_value(vm_t self, vec_t element_types, bool mut) {
 }
 
 value_t vm_create_callable_type_value(vm_t self, vec_t param_types,
-                                       type_t return_type, bool is_variadic,
-                                       bool mut, const char *module_id) {
-  callable_type_t ct = callable_type_create(self->allocator, param_types,
-                                             return_type, is_variadic, mut,
-                                             module_id);
+                                      type_t return_type, bool is_variadic,
+                                      bool mut, const char *module_id) {
+  callable_type_t ct = callable_type_create(
+      self->allocator, param_types, return_type, is_variadic, mut, module_id);
   if (self->current_scope)
     vec_push(self->current_scope->types, ct);
   return create_type_value(self, (type_t)ct, NULL, false);
 }
 
-value_t vm_create_pointer_type_value(vm_t self, type_t pointee_type,
-                                      bool mut, bool is_volatile) {
-  pointer_type_t pt = pointer_type_create(self->allocator, pointee_type,
-                                           mut, is_volatile);
+value_t vm_create_pointer_type_value(vm_t self, type_t pointee_type, bool mut,
+                                     bool is_volatile) {
+  pointer_type_t pt =
+      pointer_type_create(self->allocator, pointee_type, mut, is_volatile);
   if (self->current_scope)
     vec_push(self->current_scope->types, pt);
   return create_type_value(self, (type_t)pt, NULL, false);

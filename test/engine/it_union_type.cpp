@@ -1,19 +1,19 @@
-#include "engine/vm.h"
-#include "engine/type.h"
-#include "engine/value.h"
-#include "engine/scope.h"
+#include "common/test_common.h"
 #include "engine/bool_type.h"
-#include "engine/integer_type.h"
-#include "engine/void_type.h"
-#include "engine/exception_type.h"
 #include "engine/error.h"
 #include "engine/error_code.h"
+#include "engine/exception_type.h"
+#include "engine/integer_type.h"
+#include "engine/pointer_type.h"
+#include "engine/scope.h"
 #include "engine/str_type.h"
 #include "engine/struct_type.h"
+#include "engine/type.h"
 #include "engine/union_type.h"
-#include "engine/pointer_type.h"
+#include "engine/value.h"
+#include "engine/vm.h"
+#include "engine/void_type.h"
 #include "engine/wildcard_type.h"
-#include "common/test_common.h"
 #include <gtest/gtest.h>
 
 using ::testing::Test;
@@ -35,10 +35,11 @@ protected:
     return (type_t)value_get_data(vm_get_str_type(vm));
   }
 
-  /** Create a type value wrapping i32 type (temporary, for vm_union_add_field). */
+  /** Create a type value wrapping i32 type (temporary, for vm_union_add_field).
+   */
   value_t _make_type_val(vm_t vm, type_t t) {
     type_t type_type_val = (type_t)value_get_data(vm_get_type_type(vm));
-    return value_create(vm_get_allocator(vm), type_type_val, t, false);
+    return vm_create_value_ref(vm, type_type_val, t, NULL);
   }
 
   /** Create a Result union type value: ok:i32 | err:str */
@@ -47,7 +48,6 @@ protected:
     {
       value_t ft = _make_type_val(vm, _get_i32_type(vm));
       (void)vm_union_add_field(vm, tv, "ok", ft, true);
-      vm_get_allocator(vm); /* no free needed — _ut_add_field clones internally */
     }
     {
       value_t ft = _make_type_val(vm, _get_str_type(vm));
@@ -60,7 +60,8 @@ protected:
   /** Read error_code from an error struct value. */
   uint64_t _get_error_code(vm_t vm, value_t err) {
     value_t error_tv = vm_get_error_type(vm);
-    field_info_t fi = (field_info_t)vec_get(vm_struct_get_fields(vm, error_tv), 1);
+    field_info_t fi =
+        (field_info_t)vec_get(vm_struct_get_fields(vm, error_tv), 1);
     uint64_t code;
     memcpy(&code, (uint8_t *)value_get_data(err) + field_info_get_offset(fi),
            sizeof(uint64_t));
@@ -68,9 +69,7 @@ protected:
   }
 
   /** Read tag from a union value (0 = first field active, 1 = second, etc). */
-  uint32_t _read_tag(value_t uv) {
-    return *(uint32_t *)value_get_data(uv);
-  }
+  uint32_t _read_tag(value_t uv) { return *(uint32_t *)value_get_data(uv); }
 
   /** Create an anonymous union type value: a:i32 | b:f64 */
   value_t _make_anon_type(vm_t vm) {
@@ -89,7 +88,8 @@ protected:
 
   /** Create an IntOrFloat union type value: int_val:i32 | float_val:f64 */
   value_t _make_int_or_float_type(vm_t vm) {
-    value_t tv = vm_create_union_type_value(vm, "IntOrFloat", true, "<builtin>");
+    value_t tv =
+        vm_create_union_type_value(vm, "IntOrFloat", true, "<builtin>");
     {
       value_t ft = _make_type_val(vm, _get_i32_type(vm));
       (void)vm_union_add_field(vm, tv, "int_val", ft, true);
@@ -152,7 +152,8 @@ TEST_F(it_union_type, seal_prevents_add_field) {
 
 TEST_F(it_union_type, const_union) {
   vm_t vm = vm_create(allocator);
-  value_t tv = vm_create_union_type_value(vm, "ConstResult", false, "<builtin>");
+  value_t tv =
+      vm_create_union_type_value(vm, "ConstResult", false, "<builtin>");
   {
     value_t ft = _make_type_val(vm, _get_i32_type(vm));
     (void)vm_union_add_field(vm, tv, "ok", ft, true);
@@ -290,7 +291,8 @@ TEST_F(it_union_type, get_field_not_found) {
 
 TEST_F(it_union_type, set_field_const_union_rejected) {
   vm_t vm = vm_create(allocator);
-  value_t tv = vm_create_union_type_value(vm, "ConstResult", false, "<builtin>");
+  value_t tv =
+      vm_create_union_type_value(vm, "ConstResult", false, "<builtin>");
   {
     value_t ft = _make_type_val(vm, _get_i32_type(vm));
     (void)vm_union_add_field(vm, tv, "ok", ft, true);
@@ -701,7 +703,8 @@ TEST_F(it_union_type, instance_get_prop_rejected) {
   value_t ok_val = create_i32_value(vm, 42);
   value_t uv = vm_create_union_value(vm, tv, "ok", ok_val);
 
-  /* get_prop on instance should return error (only TYPE_KIND_TYPE supports it) */
+  /* get_prop on instance should return error (only TYPE_KIND_TYPE supports it)
+   */
   value_t got = value_get_prop(vm, uv, "count");
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 

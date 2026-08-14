@@ -11,6 +11,8 @@
 #include "engine/scope.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
+#include <filesystem>
+#include <string>
 
 using ::testing::Test;
 
@@ -38,6 +40,15 @@ protected:
   /** Look up a name in the module's root scope. */
   name_t find_name(module_t mod, const char *name_str) {
     return (name_t)strmap_find(mod->root_scope->names, name_str);
+  }
+
+  /**
+   * Build a temp-dir path with forward slashes (portable: Windows accepts
+   * '/' as a separator, and the tokenizer only allows whitelisted escapes
+   * in string literals, so backslashes must be avoided in .cubec sources).
+   */
+  static std::string _temp_path(const char *filename) {
+    return (std::filesystem::temp_directory_path() / filename).generic_string();
   }
 };
 
@@ -141,14 +152,14 @@ TEST_F(it_name_collector, cunion_name) {
 
 TEST_F(it_name_collector, import_namespace) {
   /* Create a dependency module file */
-  const char *dep_path = "/tmp/cubec_import_ns_dep.cubec";
-  FILE *f = fopen(dep_path, "w");
+  std::string dep_path = _temp_path("cubec_import_ns_dep.cubec");
+  FILE *f = fopen(dep_path.c_str(), "w");
   ASSERT_NE(f, nullptr);
   fputs("func helper(): void {}", f);
   fclose(f);
 
-  const char *source = "import dep from \"/tmp/cubec_import_ns_dep.cubec\";";
-  module_t mod = parse_and_collect(source, "test.cubec");
+  std::string source = "import dep from \"" + dep_path + "\";";
+  module_t mod = parse_and_collect(source.c_str(), "test.cubec");
 
   name_t name = find_name(mod, "dep");
   ASSERT_NE(name, nullptr);
@@ -218,14 +229,15 @@ TEST_F(it_name_collector, duplicate_name_error) {
 
 TEST_F(it_name_collector, vm_import_creates_module) {
   /* Write a temporary file to import */
-  const char *tmp_path = "/tmp/cubec_import_test.cubec";
-  FILE *f = fopen(tmp_path, "w");
+  std::string tmp_path =
+      (std::filesystem::temp_directory_path() / "cubec_import_test.cubec").string();
+  FILE *f = fopen(tmp_path.c_str(), "w");
   ASSERT_NE(f, nullptr);
   fputs("func hello(): void {}", f);
   fclose(f);
 
   /* vm_import loads the module; name collection is separate */
-  module_t mod = vm_import(ctx->vm, ctx, tmp_path);
+  module_t mod = vm_import(ctx->vm, ctx, tmp_path.c_str());
   ASSERT_NE(mod, nullptr);
   EXPECT_NE(mod->program, nullptr);
 
@@ -237,16 +249,16 @@ TEST_F(it_name_collector, vm_import_creates_module) {
 }
 
 TEST_F(it_name_collector, vm_import_caches_by_abs_path) {
-  const char *tmp_path = "/tmp/cubec_import_test.cubec";
-  FILE *f = fopen(tmp_path, "w");
+  std::string tmp_path = _temp_path("cubec_import_test.cubec");
+  FILE *f = fopen(tmp_path.c_str(), "w");
   ASSERT_NE(f, nullptr);
   fputs("func hello(): void {}", f);
   fclose(f);
 
-  module_t mod1 = vm_import(ctx->vm, ctx, tmp_path);
+  module_t mod1 = vm_import(ctx->vm, ctx, tmp_path.c_str());
   ASSERT_NE(mod1, nullptr);
 
-  module_t mod2 = vm_import(ctx->vm, ctx, tmp_path);
+  module_t mod2 = vm_import(ctx->vm, ctx, tmp_path.c_str());
   EXPECT_EQ(mod1, mod2); /* same pointer, cached */
 }
 
@@ -303,14 +315,14 @@ TEST_F(it_name_collector, non_exported_not_in_exports) {
 
 TEST_F(it_name_collector, re_export_star) {
   /* Create a dependency module file */
-  const char *dep_path = "/tmp/cubec_reexport_dep.cubec";
-  FILE *f = fopen(dep_path, "w");
+  std::string dep_path = _temp_path("cubec_reexport_dep.cubec");
+  FILE *f = fopen(dep_path.c_str(), "w");
   ASSERT_NE(f, nullptr);
   fputs("export func dep_func(): void {}", f);
   fclose(f);
 
-  const char *source = "export * from \"/tmp/cubec_reexport_dep.cubec\";";
-  module_t mod = parse_and_collect(source, "test.cubec");
+  std::string source = "export * from \"" + dep_path + "\";";
+  module_t mod = parse_and_collect(source.c_str(), "test.cubec");
 
   name_t exported = (name_t)strmap_find(mod->exports, "dep_func");
   ASSERT_NE(exported, nullptr);
@@ -322,14 +334,14 @@ TEST_F(it_name_collector, re_export_star) {
 
 TEST_F(it_name_collector, re_export_selected_names) {
   /* Create a dependency module file */
-  const char *dep_path = "/tmp/cubec_reexport_sel_dep.cubec";
-  FILE *f = fopen(dep_path, "w");
+  std::string dep_path = _temp_path("cubec_reexport_sel_dep.cubec");
+  FILE *f = fopen(dep_path.c_str(), "w");
   ASSERT_NE(f, nullptr);
   fputs("export func foo(): void {}\nexport func bar(): void {}", f);
   fclose(f);
 
-  const char *source = "export { foo } from \"/tmp/cubec_reexport_sel_dep.cubec\";";
-  module_t mod = parse_and_collect(source, "test.cubec");
+  std::string source = "export { foo } from \"" + dep_path + "\";";
+  module_t mod = parse_and_collect(source.c_str(), "test.cubec");
 
   /* foo is re-exported */
   name_t exported_foo = (name_t)strmap_find(mod->exports, "foo");
@@ -411,14 +423,14 @@ TEST_F(it_name_collector, type_name_ref_null_in_phase1) {
 /* ---- namespace names: ref=NULL in phase 1 ---- */
 
 TEST_F(it_name_collector, namespace_name_ref_null_in_phase1) {
-  const char *dep_path = "/tmp/cubec_ns_ref_dep.cubec";
-  FILE *f = fopen(dep_path, "w");
+  std::string dep_path = _temp_path("cubec_ns_ref_dep.cubec");
+  FILE *f = fopen(dep_path.c_str(), "w");
   ASSERT_NE(f, nullptr);
   fputs("func helper(): void {}", f);
   fclose(f);
 
-  const char *source = "import dep from \"/tmp/cubec_ns_ref_dep.cubec\";";
-  module_t mod = parse_and_collect(source, "test.cubec");
+  std::string source = "import dep from \"" + dep_path + "\";";
+  module_t mod = parse_and_collect(source.c_str(), "test.cubec");
 
   name_t name = find_name(mod, "dep");
   ASSERT_NE(name, nullptr);
