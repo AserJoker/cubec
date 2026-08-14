@@ -172,8 +172,8 @@ static value_t _shallow_clone_value(allocator_t allocator, value_t src) {
     }
   }
 
-  typedef struct { type_t type; void *data; bool own; bool initialized; } value_init_repr;
-  value_init_repr init = { .type = src_type, .data = new_data, .own = src_own, .initialized = src_init };
+  typedef struct { type_t type; void *data; void *meta; bool own; bool initialized; } value_init_repr;
+  value_init_repr init = { .type = src_type, .data = new_data, .meta = NULL, .own = src_own, .initialized = src_init };
   value_t dst = (value_t)allocator_create(allocator, &g_value_class, &init);
   return dst;
 }

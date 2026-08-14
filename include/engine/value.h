@@ -29,10 +29,12 @@ value_t value_create(allocator_t allocator, type_t type, void *data, bool own);
 
 type_t  value_get_type(value_t self);
 void   *value_get_data(value_t self);
+void   *value_get_meta(value_t self);
 bool    value_is_own(value_t self);
 bool    value_is_shadow(value_t self);
 bool    value_is_initialized(value_t self);
 void    value_set_initialized(value_t self, bool initialized);
+void    value_set_meta(value_t self, void *meta);
 
 /**
  * @brief Value-level equality: delegates to type->vtable.equal.
