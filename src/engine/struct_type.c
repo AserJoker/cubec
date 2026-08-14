@@ -408,18 +408,19 @@ static void _st_add_prop(vm_t vm, struct_type_t st,
             name, st->base.name ? st->base.name : "<anonymous>");
     return;
   }
-  /* register in props table (borrowed — value lifecycle managed by vm's scope) */
-  strmap_insert(st->props, name, val);
+  /* clone value into the struct's own scope (owned lifecycle) */
+  scope_t prev = vm_set_scope(vm, st->scope);
+  value_t cloned = value_clone(vm, val);
+  vm_set_scope(vm, prev);
+  strmap_insert(st->props, name, cloned);
 
   /* if method, also register in methods table */
   if (is_method)
-    strmap_insert(st->methods, name, val);
+    strmap_insert(st->methods, name, cloned);
 
   /* if pub, insert name into pub_names */
   if (pub)
     strmap_insert(st->pub_names, name, (void *)1);
-
-  (void)vm;
 }
 
 /* ================================================================== */
@@ -975,7 +976,7 @@ value_t vm_struct_add_field(vm_t vm, value_t type_val,
                                   name, type_get_name(inner));
   type_t field_type = (type_t)value_get_data(field_type_val);
   _st_add_field(vm_get_allocator(vm), st, name, field_type, pub);
-  return NULL;
+  return create_void_value(vm);
 }
 
 value_t vm_struct_seal(vm_t vm, value_t type_val) {
@@ -983,7 +984,7 @@ value_t vm_struct_seal(vm_t vm, value_t type_val) {
   if (!st)
     return create_exception_value(vm, "vm_struct_seal: expected struct type value");
   _st_seal(st);
-  return NULL;
+  return create_void_value(vm);
 }
 
 value_t vm_struct_add_prop(vm_t vm, value_t type_val,
@@ -995,7 +996,7 @@ value_t vm_struct_add_prop(vm_t vm, value_t type_val,
     return create_exception_value(vm, "duplicate prop '%s' in struct type '%s'",
                                   name, type_get_name((type_t)st));
   _st_add_prop(vm, st, name, val, is_method, pub);
-  return NULL;
+  return create_void_value(vm);
 }
 
 field_info_t vm_struct_find_field(vm_t vm, value_t type_val, const char *name) {

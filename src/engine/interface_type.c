@@ -6,6 +6,7 @@
 #include "engine/struct_type.h"
 #include "engine/union_type.h"
 #include "engine/bool_type.h"
+#include "engine/void_type.h"
 #include "engine/exception_type.h"
 #include "engine/type.h"
 #include "core/string.h"
@@ -200,7 +201,7 @@ value_t vm_interface_add_method(vm_t vm, value_t type_val,
                                   name, type_get_name((type_t)it));
   callable_type_t ct = (callable_type_t)value_get_data(callable_type_val);
   _it_add_method(vm_get_allocator(vm), it, name, ct);
-  return NULL;
+  return create_void_value(vm);
 }
 
 value_t vm_interface_seal(vm_t vm, value_t type_val) {
@@ -210,7 +211,7 @@ value_t vm_interface_seal(vm_t vm, value_t type_val) {
   if (!_it_seal(it))
     return create_exception_value(vm, "cannot seal empty interface '%s'",
                                   type_get_name((type_t)it));
-  return NULL;
+  return create_void_value(vm);
 }
 
 strmap_t vm_interface_get_methods(vm_t vm, value_t type_val) {

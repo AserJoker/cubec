@@ -76,17 +76,17 @@ struct _vm_t;
 /** @brief Add a variant field to the union type value (before seal).
  *  field_type_val must be a TYPE_KIND_TYPE value wrapping the field type.
  *  The field type is cloned into the union's scope->types.
- *  Returns NULL on success, exception value on error (sealed, duplicate name). */
+ *  Returns void value on success, exception value on error (sealed, duplicate name). */
 value_t vm_union_add_field(struct _vm_t *vm, value_t type_val,
                            const char *name, value_t field_type_val, bool pub);
 
 /** @brief Seal the union type value: finalize payload_offset and total size.
- *  Returns NULL on success, exception value on error. */
+ *  Returns void value on success, exception value on error. */
 value_t vm_union_seal(struct _vm_t *vm, value_t type_val);
 
 /** @brief Register a static property or method on the union type value.
  *  is_method=true: registers in both props and methods.
- *  Returns NULL on success, exception value on error (duplicate name). */
+ *  Returns void value on success, exception value on error (duplicate name). */
 value_t vm_union_add_prop(struct _vm_t *vm, value_t type_val,
                           const char *name, value_t val, bool is_method, bool pub);
 

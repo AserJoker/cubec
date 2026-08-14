@@ -51,12 +51,12 @@ struct _vm_t;
 
 /** @brief Add a method signature to the interface type value (before seal).
  *  The callable_type_t is deep-cloned and owned by the interface.
- *  Returns NULL on success, exception value on error (sealed, duplicate name). */
+ *  Returns void value on success, exception value on error (sealed, duplicate name). */
 value_t vm_interface_add_method(struct _vm_t *vm, value_t type_val,
                                  const char *name, value_t callable_type_val);
 
 /** @brief Seal the interface type value: freeze method set.
- *  Returns NULL on success, exception value on error (empty interface). */
+ *  Returns void value on success, exception value on error (empty interface). */
 value_t vm_interface_seal(struct _vm_t *vm, value_t type_val);
 
 /* ---- Value-based type accessors ---- */

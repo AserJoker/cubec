@@ -92,7 +92,7 @@ TEST_F(it_interface_type, add_method_and_seal) {
 
   {
     value_t ctv = _make_callable_type_val(vm, ct);
-    vm_interface_add_method(vm, tv, "print", ctv);
+    (void)vm_interface_add_method(vm, tv, "print", ctv);
   }
 
   /* find method */
@@ -105,7 +105,7 @@ TEST_F(it_interface_type, add_method_and_seal) {
   /* seal */
   EXPECT_TRUE(vm_interface_is_sealed(vm, tv) == false);
   value_t seal_err = vm_interface_seal(vm, tv);
-  EXPECT_EQ(seal_err, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(seal_err)), TYPE_KIND_VOID);
   EXPECT_TRUE(vm_interface_is_sealed(vm, tv));
 
   vm_dispose(vm, allocator);
@@ -118,7 +118,6 @@ TEST_F(it_interface_type, seal_empty_interface_fails) {
 
   /* empty interface cannot be sealed */
   value_t seal_err = vm_interface_seal(vm, tv);
-  EXPECT_NE(seal_err, nullptr);
   EXPECT_EQ(type_get_kind(value_get_type(seal_err)), TYPE_KIND_EXCEPTION);
   EXPECT_FALSE(vm_interface_is_sealed(vm, tv));
 
@@ -140,15 +139,14 @@ TEST_F(it_interface_type, add_method_after_seal_emits_error) {
   allocator_free(vm_get_allocator(vm), &params);
   {
     value_t ctv = _make_callable_type_val(vm, ct);
-    vm_interface_add_method(vm, tv, "do_it", ctv);
+    (void)vm_interface_add_method(vm, tv, "do_it", ctv);
   }
-  vm_interface_seal(vm, tv);
+  (void)vm_interface_seal(vm, tv);
 
   /* adding after seal should return exception */
   {
     value_t ctv = _make_callable_type_val(vm, ct);
     value_t err = vm_interface_add_method(vm, tv, "late_method", ctv);
-    EXPECT_NE(err, nullptr);
     EXPECT_EQ(type_get_kind(value_get_type(err)), TYPE_KIND_EXCEPTION);
   }
 
@@ -211,9 +209,9 @@ TEST_F(it_interface_type, struct_extends_interface_match) {
 
   {
     value_t ctv = _make_callable_type_val(vm, iface_ct);
-    vm_interface_add_method(vm, itv, "print", ctv);
+    (void)vm_interface_add_method(vm, itv, "print", ctv);
   }
-  vm_interface_seal(vm, itv);
+  (void)vm_interface_seal(vm, itv);
 
   /* add matching method to struct (same callable_type) */
   callable_type_t struct_ct = (callable_type_t)alloc_clone(vm_get_allocator(vm), iface_ct);
@@ -244,9 +242,9 @@ TEST_F(it_interface_type, struct_extends_interface_missing_method) {
 
   {
     value_t ctv = _make_callable_type_val(vm, ct);
-    vm_interface_add_method(vm, itv, "print", ctv);
+    (void)vm_interface_add_method(vm, itv, "print", ctv);
   }
-  vm_interface_seal(vm, itv);
+  (void)vm_interface_seal(vm, itv);
 
   /* create struct with NO methods */
   value_t stv = vm_create_struct_type_value(vm, "Empty", true, "<builtin>");
@@ -279,25 +277,25 @@ TEST_F(it_interface_type, union_extends_interface_match) {
 
   {
     value_t ctv = _make_callable_type_val(vm, iface_ct);
-    vm_interface_add_method(vm, itv, "inspect", ctv);
+    (void)vm_interface_add_method(vm, itv, "inspect", ctv);
   }
-  vm_interface_seal(vm, itv);
+  (void)vm_interface_seal(vm, itv);
 
   /* create union with matching method */
   value_t utv = vm_create_union_type_value(vm, "Option", true, "<builtin>");
   {
     value_t ft = _make_type_val(vm, _get_i32_type(vm));
-    vm_union_add_field(vm, utv, "some", ft, true);
+    (void)vm_union_add_field(vm, utv, "some", ft, true);
   }
   {
     value_t ft = _make_type_val(vm, _get_i32_type(vm));
-    vm_union_add_field(vm, utv, "none", ft, true);
+    (void)vm_union_add_field(vm, utv, "none", ft, true);
   }
-  vm_union_seal(vm, utv);
+  (void)vm_union_seal(vm, utv);
 
   callable_type_t union_ct = (callable_type_t)alloc_clone(vm_get_allocator(vm), iface_ct);
   value_t fn = create_callable_value(vm, union_ct, NULL, "inspect");
-  vm_union_add_prop(vm, utv, "inspect", fn, true, true);
+  (void)vm_union_add_prop(vm, utv, "inspect", fn, true, true);
 
   /* check: union implements interface */
   value_t ext = vm_interface_check_extends(vm, itv, vm_union_get_methods(vm, utv));
@@ -323,21 +321,21 @@ TEST_F(it_interface_type, union_extends_interface_missing_method) {
 
   {
     value_t ctv = _make_callable_type_val(vm, ct);
-    vm_interface_add_method(vm, itv, "inspect", ctv);
+    (void)vm_interface_add_method(vm, itv, "inspect", ctv);
   }
-  vm_interface_seal(vm, itv);
+  (void)vm_interface_seal(vm, itv);
 
   /* create union with NO methods */
   value_t utv = vm_create_union_type_value(vm, "Simple", true, "<builtin>");
   {
     value_t ft = _make_type_val(vm, _get_i32_type(vm));
-    vm_union_add_field(vm, utv, "a", ft, true);
+    (void)vm_union_add_field(vm, utv, "a", ft, true);
   }
   {
     value_t ft = _make_type_val(vm, _get_f64_type(vm));
-    vm_union_add_field(vm, utv, "b", ft, true);
+    (void)vm_union_add_field(vm, utv, "b", ft, true);
   }
-  vm_union_seal(vm, utv);
+  (void)vm_union_seal(vm, utv);
 
   /* check: union does NOT implement interface */
   value_t ext = vm_interface_check_extends(vm, itv, vm_union_get_methods(vm, utv));
@@ -365,9 +363,9 @@ TEST_F(it_interface_type, struct_type_extends_interface_via_vtable) {
   allocator_free(vm_get_allocator(vm), &params);
   {
     value_t ctv = _make_callable_type_val(vm, iface_ct);
-    vm_interface_add_method(vm, itv, "add", ctv);
+    (void)vm_interface_add_method(vm, itv, "add", ctv);
   }
-  vm_interface_seal(vm, itv);
+  (void)vm_interface_seal(vm, itv);
 
   /* create struct with matching method */
   value_t stv = vm_create_struct_type_value(vm, "Counter", true, "<builtin>");
@@ -406,9 +404,9 @@ TEST_F(it_interface_type, struct_type_extends_interface_mismatch) {
   allocator_free(vm_get_allocator(vm), &params);
   {
     value_t ctv = _make_callable_type_val(vm, iface_ct);
-    vm_interface_add_method(vm, itv, "count", ctv);
+    (void)vm_interface_add_method(vm, itv, "count", ctv);
   }
-  vm_interface_seal(vm, itv);
+  (void)vm_interface_seal(vm, itv);
 
   /* create struct with DIFFERENT method signature: () -> f64 */
   value_t stv = vm_create_struct_type_value(vm, "BadCounter", true, "<builtin>");
@@ -451,25 +449,25 @@ TEST_F(it_interface_type, union_type_extends_interface_via_vtable) {
   allocator_free(vm_get_allocator(vm), &params);
   {
     value_t ctv = _make_callable_type_val(vm, iface_ct);
-    vm_interface_add_method(vm, itv, "describe", ctv);
+    (void)vm_interface_add_method(vm, itv, "describe", ctv);
   }
-  vm_interface_seal(vm, itv);
+  (void)vm_interface_seal(vm, itv);
 
   /* create union with matching method */
   value_t utv = vm_create_union_type_value(vm, "Result", true, "<builtin>");
   {
     value_t ft = _make_type_val(vm, _get_i32_type(vm));
-    vm_union_add_field(vm, utv, "ok", ft, true);
+    (void)vm_union_add_field(vm, utv, "ok", ft, true);
   }
   {
     value_t ft = _make_type_val(vm, _get_i32_type(vm));
-    vm_union_add_field(vm, utv, "err", ft, true);
+    (void)vm_union_add_field(vm, utv, "err", ft, true);
   }
-  vm_union_seal(vm, utv);
+  (void)vm_union_seal(vm, utv);
 
   callable_type_t union_ct = (callable_type_t)alloc_clone(vm_get_allocator(vm), iface_ct);
   value_t fn = create_callable_value(vm, union_ct, NULL, "describe");
-  vm_union_add_prop(vm, utv, "describe", fn, true, true);
+  (void)vm_union_add_prop(vm, utv, "describe", fn, true, true);
 
   union_type_t ut = (union_type_t)value_get_data(utv);
 
@@ -509,13 +507,13 @@ TEST_F(it_interface_type, union_extends_wildcard) {
   value_t utv = vm_create_union_type_value(vm, "U", true, "<builtin>");
   {
     value_t ft = _make_type_val(vm, _get_i32_type(vm));
-    vm_union_add_field(vm, utv, "a", ft, true);
+    (void)vm_union_add_field(vm, utv, "a", ft, true);
   }
   {
     value_t ft = _make_type_val(vm, _get_i32_type(vm));
-    vm_union_add_field(vm, utv, "b", ft, true);
+    (void)vm_union_add_field(vm, utv, "b", ft, true);
   }
-  vm_union_seal(vm, utv);
+  (void)vm_union_seal(vm, utv);
   union_type_t ut = (union_type_t)value_get_data(utv);
 
   /* union extends wildcard is always true */

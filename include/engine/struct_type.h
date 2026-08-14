@@ -74,17 +74,17 @@ struct _vm_t;
 
 /** @brief Add a field to the struct type value (before seal).
  *  field_type_val must be a TYPE_KIND_TYPE value wrapping the field type.
- *  Returns NULL on success, exception value on error (sealed, duplicate name). */
+ *  Returns void value on success, exception value on error (sealed, duplicate name). */
 value_t vm_struct_add_field(struct _vm_t *vm, value_t type_val,
                             const char *name, value_t field_type_val, bool pub);
 
 /** @brief Seal the struct type value: finalize field layout.
- *  Returns NULL on success, exception value on error. */
+ *  Returns void value on success, exception value on error. */
 value_t vm_struct_seal(struct _vm_t *vm, value_t type_val);
 
 /** @brief Register a static property or method on the struct type value.
  *  is_method=true: registers in both props and methods.
- *  Returns NULL on success, exception value on error (duplicate name). */
+ *  Returns void value on success, exception value on error (duplicate name). */
 value_t vm_struct_add_prop(struct _vm_t *vm, value_t type_val,
                            const char *name, value_t val, bool is_method, bool pub);
 

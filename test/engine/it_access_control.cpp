@@ -44,13 +44,13 @@ protected:
     value_t tv = vm_create_union_type_value(vm, "Bar", true, "/bar");
     {
       value_t ft = _make_type_val(vm, _get_i32_type(vm));
-      vm_union_add_field(vm, tv, "Ok", ft, true);   /* pub */
+      (void)vm_union_add_field(vm, tv, "Ok", ft, true);   /* pub */
     }
     {
       value_t ft = _make_type_val(vm, _get_i32_type(vm));
-      vm_union_add_field(vm, tv, "Err", ft, false); /* private */
+      (void)vm_union_add_field(vm, tv, "Err", ft, false); /* private */
     }
-    vm_union_seal(vm, tv);
+    (void)vm_union_seal(vm, tv);
     return tv;
   }
 };
@@ -409,7 +409,7 @@ TEST_F(it_access_control, union_cross_module_get_private_prop_rejected) {
   value_t tv = _make_bar_union(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  vm_union_add_prop(vm, tv, "secret", prop_val, false, false); /* private */
+  (void)vm_union_add_prop(vm, tv, "secret", prop_val, false, false); /* private */
 
   union_type_t ut = (union_type_t)value_get_data(tv);
   value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
@@ -427,7 +427,7 @@ TEST_F(it_access_control, union_cross_module_get_pub_prop_ok) {
   value_t tv = _make_bar_union(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  vm_union_add_prop(vm, tv, "count", prop_val, false, true); /* pub */
+  (void)vm_union_add_prop(vm, tv, "count", prop_val, false, true); /* pub */
 
   union_type_t ut = (union_type_t)value_get_data(tv);
   value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
@@ -552,8 +552,8 @@ TEST_F(it_access_control, union_is_prop_pub) {
 
   value_t pub_prop = create_i32_value(vm, 1);
   value_t priv_prop = create_i32_value(vm, 2);
-  vm_union_add_prop(vm, tv, "pub_count", pub_prop, false, true);
-  vm_union_add_prop(vm, tv, "priv_count", priv_prop, false, false);
+  (void)vm_union_add_prop(vm, tv, "pub_count", pub_prop, false, true);
+  (void)vm_union_add_prop(vm, tv, "priv_count", priv_prop, false, false);
 
   EXPECT_TRUE(vm_union_is_prop_pub(vm, tv, "pub_count"));
   EXPECT_FALSE(vm_union_is_prop_pub(vm, tv, "priv_count"));

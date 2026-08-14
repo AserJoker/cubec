@@ -246,11 +246,15 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 
   /* User-facing error struct: error { message: [128]u8, error_code: u64,
    *                                    backtrace: [32]u64, backtrace_count: u64 }
-   * vm_struct_add_field clones field types into the struct's scope,
-   * so temporary type values (value_create, not create_type_value) are safe
-   * to free after use — they are NOT registered in scope->values. */
+   * vm_struct_add_field/seal return void values that should NOT accumulate
+   * in global_scope->values. Push a temporary child scope so those
+   * transient void values are collected there, then pop and dispose. */
   value_t error_tv = vm_create_struct_type_value(vm, "error", true, "<builtin>");
   type_t type_type_val = (type_t)value_get_data(vm->v_type);
+
+  scope_t bootstrap_scope = scope_create(allocator, SCOPE_BLOCK,
+                                         vm->global_scope, NULL);
+  vm_push_scope(vm, bootstrap_scope);
 
   /* message: [128]u8 */
   type_t err_u8_type = (type_t)value_get_data(vm->v_u8);
@@ -287,6 +291,10 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   }
 
   vm_struct_seal(vm, error_tv);
+
+  vm_pop_scope(vm);
+  scope_dispose(bootstrap_scope);
+
   /* Register "error" name in global scope so scope_lookup("error") works */
   scope_t gscope = vm_get_global_scope(vm);
   name_t n_error = name_create(gscope->allocator, error_tv);

@@ -46,14 +46,14 @@ protected:
     value_t tv = vm_create_union_type_value(vm, "Result", true, "<builtin>");
     {
       value_t ft = _make_type_val(vm, _get_i32_type(vm));
-      vm_union_add_field(vm, tv, "ok", ft, true);
+      (void)vm_union_add_field(vm, tv, "ok", ft, true);
       vm_get_allocator(vm); /* no free needed — _ut_add_field clones internally */
     }
     {
       value_t ft = _make_type_val(vm, _get_str_type(vm));
-      vm_union_add_field(vm, tv, "err", ft, true);
+      (void)vm_union_add_field(vm, tv, "err", ft, true);
     }
-    vm_union_seal(vm, tv);
+    (void)vm_union_seal(vm, tv);
     return tv;
   }
 
@@ -77,13 +77,13 @@ protected:
     value_t tv = vm_create_union_type_value(vm, NULL, true, "<builtin>");
     {
       value_t ft = _make_type_val(vm, _get_i32_type(vm));
-      vm_union_add_field(vm, tv, "a", ft, true);
+      (void)vm_union_add_field(vm, tv, "a", ft, true);
     }
     {
       value_t ft = _make_type_val(vm, _get_f64_type(vm));
-      vm_union_add_field(vm, tv, "b", ft, true);
+      (void)vm_union_add_field(vm, tv, "b", ft, true);
     }
-    vm_union_seal(vm, tv);
+    (void)vm_union_seal(vm, tv);
     return tv;
   }
 
@@ -92,13 +92,13 @@ protected:
     value_t tv = vm_create_union_type_value(vm, "IntOrFloat", true, "<builtin>");
     {
       value_t ft = _make_type_val(vm, _get_i32_type(vm));
-      vm_union_add_field(vm, tv, "int_val", ft, true);
+      (void)vm_union_add_field(vm, tv, "int_val", ft, true);
     }
     {
       value_t ft = _make_type_val(vm, _get_f64_type(vm));
-      vm_union_add_field(vm, tv, "float_val", ft, true);
+      (void)vm_union_add_field(vm, tv, "float_val", ft, true);
     }
-    vm_union_seal(vm, tv);
+    (void)vm_union_seal(vm, tv);
     return tv;
   }
 };
@@ -143,7 +143,6 @@ TEST_F(it_union_type, seal_prevents_add_field) {
   /* try to add field after seal — should return exception */
   value_t ft = _make_type_val(vm, _get_i32_type(vm));
   value_t err = vm_union_add_field(vm, tv, "z", ft, true);
-  EXPECT_NE(err, nullptr);
   EXPECT_EQ(type_get_kind(value_get_type(err)), TYPE_KIND_EXCEPTION);
   EXPECT_EQ(vec_get_size(vm_union_get_fields(vm, tv)), 2u);
 
@@ -156,9 +155,9 @@ TEST_F(it_union_type, const_union) {
   value_t tv = vm_create_union_type_value(vm, "ConstResult", false, "<builtin>");
   {
     value_t ft = _make_type_val(vm, _get_i32_type(vm));
-    vm_union_add_field(vm, tv, "ok", ft, true);
+    (void)vm_union_add_field(vm, tv, "ok", ft, true);
   }
-  vm_union_seal(vm, tv);
+  (void)vm_union_seal(vm, tv);
   union_type_t ut = (union_type_t)value_get_data(tv);
 
   EXPECT_FALSE(type_is_mut((type_t)ut));
@@ -294,9 +293,9 @@ TEST_F(it_union_type, set_field_const_union_rejected) {
   value_t tv = vm_create_union_type_value(vm, "ConstResult", false, "<builtin>");
   {
     value_t ft = _make_type_val(vm, _get_i32_type(vm));
-    vm_union_add_field(vm, tv, "ok", ft, true);
+    (void)vm_union_add_field(vm, tv, "ok", ft, true);
   }
-  vm_union_seal(vm, tv);
+  (void)vm_union_seal(vm, tv);
 
   value_t ok_val = create_i32_value(vm, 10);
   value_t uv = vm_create_union_value(vm, tv, "ok", ok_val);
@@ -593,7 +592,7 @@ TEST_F(it_union_type, add_prop_and_get) {
   value_t tv = _make_result_type(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  vm_union_add_prop(vm, tv, "count", prop_val, false, true);
+  (void)vm_union_add_prop(vm, tv, "count", prop_val, false, true);
 
   value_t found = (value_t)strmap_find(vm_union_get_props(vm, tv), "count");
   ASSERT_NE(found, nullptr);
@@ -608,10 +607,10 @@ TEST_F(it_union_type, methods_registration) {
   value_t tv = _make_result_type(vm);
 
   value_t method_val = create_i32_value(vm, 42);
-  vm_union_add_prop(vm, tv, "unwrap", method_val, true, true);
+  (void)vm_union_add_prop(vm, tv, "unwrap", method_val, true, true);
 
   value_t prop_val = create_i32_value(vm, 7);
-  vm_union_add_prop(vm, tv, "count", prop_val, false, true);
+  (void)vm_union_add_prop(vm, tv, "count", prop_val, false, true);
 
   EXPECT_NE(strmap_find(vm_union_get_props(vm, tv), "unwrap"), nullptr);
   EXPECT_NE(strmap_find(vm_union_get_methods(vm, tv), "unwrap"), nullptr);
@@ -644,7 +643,7 @@ TEST_F(it_union_type, type_get_prop_via_type_value) {
   value_t tv = _make_result_type(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  vm_union_add_prop(vm, tv, "count", prop_val, false, true);
+  (void)vm_union_add_prop(vm, tv, "count", prop_val, false, true);
 
   union_type_t ut = (union_type_t)value_get_data(tv);
   value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
@@ -662,7 +661,7 @@ TEST_F(it_union_type, type_set_prop_via_type_value) {
   value_t tv = _make_result_type(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  vm_union_add_prop(vm, tv, "count", prop_val, false, true);
+  (void)vm_union_add_prop(vm, tv, "count", prop_val, false, true);
 
   union_type_t ut = (union_type_t)value_get_data(tv);
   value_t type_val = create_type_value(vm, (type_t)ut, NULL, false);
@@ -697,7 +696,7 @@ TEST_F(it_union_type, instance_get_prop_rejected) {
   value_t tv = _make_result_type(vm);
 
   value_t prop_val = create_i32_value(vm, 42);
-  vm_union_add_prop(vm, tv, "count", prop_val, false, true);
+  (void)vm_union_add_prop(vm, tv, "count", prop_val, false, true);
 
   value_t ok_val = create_i32_value(vm, 42);
   value_t uv = vm_create_union_value(vm, tv, "ok", ok_val);
@@ -798,7 +797,6 @@ TEST_F(it_union_type, seal_empty_union_returns_false) {
   vm_t vm = vm_create(allocator);
   value_t tv = vm_create_union_type_value(vm, "Empty", true, "<builtin>");
   value_t err = vm_union_seal(vm, tv);
-  EXPECT_NE(err, nullptr);
   EXPECT_EQ(type_get_kind(value_get_type(err)), TYPE_KIND_EXCEPTION);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);

@@ -385,15 +385,17 @@ static void _ut_add_prop(vm_t vm, union_type_t ut,
             name, ut->base.name ? ut->base.name : "<anonymous>");
     return;
   }
-  strmap_insert(ut->props, name, val);
+  /* clone value into the union's own scope (owned lifecycle) */
+  scope_t prev = vm_set_scope(vm, ut->scope);
+  value_t cloned = value_clone(vm, val);
+  vm_set_scope(vm, prev);
+  strmap_insert(ut->props, name, cloned);
   if (is_method)
-    strmap_insert(ut->methods, name, val);
+    strmap_insert(ut->methods, name, cloned);
 
   /* if pub, insert name into pub_names */
   if (pub)
     strmap_insert(ut->pub_names, name, (void *)1);
-
-  (void)vm;
 }
 
 /* ================================================================== */
@@ -1073,7 +1075,7 @@ value_t vm_union_add_field(vm_t vm, value_t type_val,
                                   name, type_get_name(inner));
   type_t field_type = (type_t)value_get_data(field_type_val);
   _ut_add_field(vm_get_allocator(vm), ut, name, field_type, pub);
-  return NULL;
+  return create_void_value(vm);
 }
 
 value_t vm_union_seal(vm_t vm, value_t type_val) {
@@ -1083,7 +1085,7 @@ value_t vm_union_seal(vm_t vm, value_t type_val) {
   if (!_ut_seal(ut))
     return create_exception_value(vm, "cannot seal empty union type '%s'",
                                   type_get_name((type_t)ut));
-  return NULL;
+  return create_void_value(vm);
 }
 
 value_t vm_union_add_prop(vm_t vm, value_t type_val,
@@ -1095,7 +1097,7 @@ value_t vm_union_add_prop(vm_t vm, value_t type_val,
     return create_exception_value(vm, "duplicate prop '%s' in union type '%s'",
                                   name, type_get_name((type_t)ut));
   _ut_add_prop(vm, ut, name, val, is_method, pub);
-  return NULL;
+  return create_void_value(vm);
 }
 
 field_info_t vm_union_find_field(vm_t vm, value_t type_val, const char *name) {
