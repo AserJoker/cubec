@@ -137,6 +137,23 @@ value_t value_equal(vm_t vm, value_t a, value_t b) {
 }
 
 value_t value_extends(vm_t vm, value_t sub, value_t super_val) {
+  /* A type value (value whose type is `type`) carries a type_t in its data.
+   * For type values, `extends` is type-level computation: delegate directly to
+   * the wrapped type's type_extends vtable, which handles wildcard/interface/
+   * cross-kind supers itself. This is the correct path for e.g. a struct type
+   * value checking extends against an interface type value. */
+  if (type_get_kind(value_get_type(sub)) == TYPE_KIND_TYPE) {
+    type_t t_sub = (type_t)value_get_data(sub);
+    type_t t_super = (type_t)value_get_data(super_val);
+    if (t_super->kind == TYPE_KIND_WILDCARD)
+      return create_bool_value(vm, true);
+    if (!t_sub->vtable.type_extends)
+      return create_exception_value(vm, "type '%s' does not support type_extends",
+                                t_sub->name);
+    return t_sub->vtable.type_extends(vm, t_sub, t_super);
+  }
+
+  /* Non-type values: delegate to the value's own extends vtable entry. */
   vtable_t vt = type_get_vtable(value_get_type(sub));
   if (!vt.extends)
     return create_exception_value(vm, "type '%s' does not support extends",

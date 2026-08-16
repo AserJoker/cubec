@@ -210,11 +210,11 @@ TEST_F(it_interface_type, struct_extends_interface_match) {
   value_t fn = create_callable_value(vm, iface_ct, NULL, "print");
   (void)vm_struct_add_prop(vm, stv, "print", fn, true, true);
 
-  /* check: struct implements interface (via struct vtable type_extends) */
-  interface_type_t it = (interface_type_t)value_get_data(itv);
-  vtable_t svt = type_get_vtable((type_t)st);
-  ASSERT_TRUE(svt.type_extends != NULL);
-  value_t ext = svt.type_extends(vm, (type_t)st, (type_t)it);
+  /* check: struct implements interface.
+   * stv is a type value (type == type_type); its extends (g_type_type.extends
+   * == _type_extends) delegates to the data's type_extends, i.e. struct's
+   * type_extends. extends is type-level computation, not value-level. */
+  value_t ext = value_extends(vm, stv, itv);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
@@ -244,12 +244,9 @@ TEST_F(it_interface_type, struct_extends_interface_missing_method) {
   (void)vm_struct_add_field(vm, stv, "x", vm_get_i32_type(vm), true);
   (void)vm_struct_seal(vm, stv);
 
-  /* check: struct does NOT implement interface (missing method) */
-  interface_type_t it = (interface_type_t)value_get_data(itv);
-  struct_type_t st = (struct_type_t)value_get_data(stv);
-  vtable_t svt = type_get_vtable((type_t)st);
-  ASSERT_TRUE(svt.type_extends != NULL);
-  value_t ext = svt.type_extends(vm, (type_t)st, (type_t)it);
+  /* check: struct does NOT implement interface (missing method).
+   * type value's extends delegates to data's type_extends. */
+  value_t ext = value_extends(vm, stv, itv);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_FALSE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
@@ -294,12 +291,8 @@ TEST_F(it_interface_type, union_extends_interface_match) {
   value_t fn = create_callable_value(vm, union_ct, NULL, "inspect");
   (void)vm_union_add_prop(vm, utv, "inspect", fn, true, true);
 
-  /* check: union implements interface (via union vtable type_extends) */
-  interface_type_t it = (interface_type_t)value_get_data(itv);
-  union_type_t ut = (union_type_t)value_get_data(utv);
-  vtable_t uvt = type_get_vtable((type_t)ut);
-  ASSERT_TRUE(uvt.type_extends != NULL);
-  value_t ext = uvt.type_extends(vm, (type_t)ut, (type_t)it);
+  /* check: union implements interface (type value's extends → data's type_extends) */
+  value_t ext = value_extends(vm, utv, itv);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
@@ -336,12 +329,8 @@ TEST_F(it_interface_type, union_extends_interface_missing_method) {
   }
   (void)vm_union_seal(vm, utv);
 
-  /* check: union does NOT implement interface */
-  interface_type_t it = (interface_type_t)value_get_data(itv);
-  union_type_t ut = (union_type_t)value_get_data(utv);
-  vtable_t uvt = type_get_vtable((type_t)ut);
-  ASSERT_TRUE(uvt.type_extends != NULL);
-  value_t ext = uvt.type_extends(vm, (type_t)ut, (type_t)it);
+  /* check: union does NOT implement interface (type value's extends → data's type_extends) */
+  value_t ext = value_extends(vm, utv, itv);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_FALSE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
@@ -356,7 +345,6 @@ TEST_F(it_interface_type, struct_type_extends_interface_via_vtable) {
   /* create interface */
   value_t itv =
       vm_create_interface_type_value(vm, "Addable", true, "<builtin>");
-  interface_type_t it = (interface_type_t)value_get_data(itv);
 
   type_t i32_t = _get_i32_type(vm);
   vec_init_t vi = {.auto_dispose = false};
@@ -370,7 +358,6 @@ TEST_F(it_interface_type, struct_type_extends_interface_via_vtable) {
 
   /* create struct with matching method */
   value_t stv = vm_create_struct_type_value(vm, "Counter", true, "<builtin>");
-  struct_type_t st = (struct_type_t)value_get_data(stv);
   (void)vm_struct_add_field(vm, stv, "val", vm_get_i32_type(vm), true);
   (void)vm_struct_seal(vm, stv);
 
@@ -380,10 +367,8 @@ TEST_F(it_interface_type, struct_type_extends_interface_via_vtable) {
   value_t fn = create_callable_value(vm, struct_ct, NULL, "add");
   (void)vm_struct_add_prop(vm, stv, "add", fn, true, true);
 
-  /* struct type_extends interface */
-  vtable_t svt = type_get_vtable((type_t)st);
-  ASSERT_TRUE(svt.type_extends != NULL);
-  value_t ext = svt.type_extends(vm, (type_t)st, (type_t)it);
+  /* struct type_extends interface: type value's extends delegates to data's type_extends */
+  value_t ext = value_extends(vm, stv, itv);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
@@ -396,7 +381,6 @@ TEST_F(it_interface_type, struct_type_extends_interface_mismatch) {
   /* create interface with method signature: () -> i32 */
   value_t itv =
       vm_create_interface_type_value(vm, "Countable", true, "<builtin>");
-  interface_type_t it = (interface_type_t)value_get_data(itv);
 
   type_t i32_t = _get_i32_type(vm);
   type_t f64_t = _get_f64_type(vm);
@@ -412,7 +396,6 @@ TEST_F(it_interface_type, struct_type_extends_interface_mismatch) {
   /* create struct with DIFFERENT method signature: () -> f64 */
   value_t stv =
       vm_create_struct_type_value(vm, "BadCounter", true, "<builtin>");
-  struct_type_t st = (struct_type_t)value_get_data(stv);
   (void)vm_struct_add_field(vm, stv, "val", vm_get_f64_type(vm), true);
   (void)vm_struct_seal(vm, stv);
 
@@ -426,9 +409,9 @@ TEST_F(it_interface_type, struct_type_extends_interface_mismatch) {
   value_t fn = create_callable_value(vm, struct_ct, NULL, "count");
   (void)vm_struct_add_prop(vm, stv, "count", fn, true, true);
 
-  /* struct type_extends interface should be false (signature mismatch) */
-  vtable_t svt = type_get_vtable((type_t)st);
-  value_t ext = svt.type_extends(vm, (type_t)st, (type_t)it);
+  /* struct type_extends interface should be false (signature mismatch):
+   * type value's extends delegates to data's type_extends */
+  value_t ext = value_extends(vm, stv, itv);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_FALSE(*(bool *)value_get_data(ext));
 
@@ -444,7 +427,6 @@ TEST_F(it_interface_type, union_type_extends_interface_via_vtable) {
   /* create interface */
   value_t itv =
       vm_create_interface_type_value(vm, "Describable", true, "<builtin>");
-  interface_type_t it = (interface_type_t)value_get_data(itv);
 
   type_t void_t = (type_t)value_get_data(vm_get_void_type(vm));
   vec_init_t vi = {.auto_dispose = false};
@@ -474,12 +456,8 @@ TEST_F(it_interface_type, union_type_extends_interface_via_vtable) {
   value_t fn = create_callable_value(vm, union_ct, NULL, "describe");
   (void)vm_union_add_prop(vm, utv, "describe", fn, true, true);
 
-  union_type_t ut = (union_type_t)value_get_data(utv);
-
-  /* union type_extends interface */
-  vtable_t uvt = type_get_vtable((type_t)ut);
-  ASSERT_TRUE(uvt.type_extends != NULL);
-  value_t ext = uvt.type_extends(vm, (type_t)ut, (type_t)it);
+  /* union type_extends interface: type value's extends delegates to data's type_extends */
+  value_t ext = value_extends(vm, utv, itv);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
@@ -491,14 +469,11 @@ TEST_F(it_interface_type, union_type_extends_interface_via_vtable) {
 TEST_F(it_interface_type, struct_extends_wildcard) {
   vm_t vm = vm_create(allocator);
   value_t stv = vm_create_struct_type_value(vm, "S", true, "<builtin>");
-  struct_type_t st = (struct_type_t)value_get_data(stv);
   (void)vm_struct_add_field(vm, stv, "x", vm_get_i32_type(vm), true);
   (void)vm_struct_seal(vm, stv);
 
-  /* struct extends wildcard is always true */
-  vtable_t svt = type_get_vtable((type_t)st);
-  type_t wc_type = (type_t)value_get_data(vm_get_wildcard_type(vm));
-  value_t ext = svt.type_extends(vm, (type_t)st, wc_type);
+  /* struct extends wildcard is always true: type value's extends → data's type_extends */
+  value_t ext = value_extends(vm, stv, vm_get_wildcard_type(vm));
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 
@@ -518,12 +493,8 @@ TEST_F(it_interface_type, union_extends_wildcard) {
     (void)vm_union_add_field(vm, utv, "b", ft, true);
   }
   (void)vm_union_seal(vm, utv);
-  union_type_t ut = (union_type_t)value_get_data(utv);
-
-  /* union extends wildcard is always true */
-  vtable_t uvt = type_get_vtable((type_t)ut);
-  type_t wc_type = (type_t)value_get_data(vm_get_wildcard_type(vm));
-  value_t ext = uvt.type_extends(vm, (type_t)ut, wc_type);
+  /* union extends wildcard is always true: type value's extends → data's type_extends */
+  value_t ext = value_extends(vm, utv, vm_get_wildcard_type(vm));
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 

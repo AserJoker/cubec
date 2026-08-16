@@ -196,10 +196,12 @@ TEST_F(it_primitive_type, void_type_extends_bool) {
   vm_t vm = vm_create(allocator);
   value_t a = vm_get_void_type(vm);
   value_t b = vm_get_bool_type(vm);
-  /* kind mismatch */
+  /* type value's extends delegates to data's type_extends; void does not
+   * extend bool → false (not an exception, since the comparison is well-defined) */
   value_t result = value_extends(vm, a, b);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
+  EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
