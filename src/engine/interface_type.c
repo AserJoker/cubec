@@ -242,9 +242,4 @@ const char *vm_interface_get_module_id(vm_t vm, value_t type_val) {
   return _it_get_module_id(it);
 }
 
-value_t vm_interface_check_extends(vm_t vm, value_t type_val, strmap_t sub_methods) {
-  interface_type_t it = _unwrap_interface_type(vm, type_val);
-  if (!it)
-    return create_exception_value(vm, "vm_interface_check_extends: expected interface type value");
-  return _interface_type_check_extends(vm, it, sub_methods);
-}
+

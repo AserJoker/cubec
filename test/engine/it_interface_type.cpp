@@ -171,7 +171,7 @@ TEST_F(it_interface_type, get_module_id) {
   delete_allocator(allocator);
 }
 
-/* ---- vm_interface_check_extends — struct implements interface ---- */
+/* ---- struct type_extends interface (via vtable) ---- */
 
 TEST_F(it_interface_type, struct_extends_interface_match) {
   vm_t vm = vm_create(allocator);
@@ -210,9 +210,11 @@ TEST_F(it_interface_type, struct_extends_interface_match) {
   value_t fn = create_callable_value(vm, iface_ct, NULL, "print");
   (void)vm_struct_add_prop(vm, stv, "print", fn, true, true);
 
-  /* check: struct implements interface */
-  value_t ext =
-      vm_interface_check_extends(vm, itv, vm_struct_get_methods(vm, stv));
+  /* check: struct implements interface (via struct vtable type_extends) */
+  interface_type_t it = (interface_type_t)value_get_data(itv);
+  vtable_t svt = type_get_vtable((type_t)st);
+  ASSERT_TRUE(svt.type_extends != NULL);
+  value_t ext = svt.type_extends(vm, (type_t)st, (type_t)it);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
@@ -243,15 +245,18 @@ TEST_F(it_interface_type, struct_extends_interface_missing_method) {
   (void)vm_struct_seal(vm, stv);
 
   /* check: struct does NOT implement interface (missing method) */
-  value_t ext =
-      vm_interface_check_extends(vm, itv, vm_struct_get_methods(vm, stv));
+  interface_type_t it = (interface_type_t)value_get_data(itv);
+  struct_type_t st = (struct_type_t)value_get_data(stv);
+  vtable_t svt = type_get_vtable((type_t)st);
+  ASSERT_TRUE(svt.type_extends != NULL);
+  value_t ext = svt.type_extends(vm, (type_t)st, (type_t)it);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_FALSE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
 
-/* ---- vm_interface_check_extends — union implements interface ---- */
+/* ---- union type_extends interface (via vtable) ---- */
 
 TEST_F(it_interface_type, union_extends_interface_match) {
   vm_t vm = vm_create(allocator);
@@ -289,9 +294,12 @@ TEST_F(it_interface_type, union_extends_interface_match) {
   value_t fn = create_callable_value(vm, union_ct, NULL, "inspect");
   (void)vm_union_add_prop(vm, utv, "inspect", fn, true, true);
 
-  /* check: union implements interface */
-  value_t ext =
-      vm_interface_check_extends(vm, itv, vm_union_get_methods(vm, utv));
+  /* check: union implements interface (via union vtable type_extends) */
+  interface_type_t it = (interface_type_t)value_get_data(itv);
+  union_type_t ut = (union_type_t)value_get_data(utv);
+  vtable_t uvt = type_get_vtable((type_t)ut);
+  ASSERT_TRUE(uvt.type_extends != NULL);
+  value_t ext = uvt.type_extends(vm, (type_t)ut, (type_t)it);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
@@ -329,8 +337,11 @@ TEST_F(it_interface_type, union_extends_interface_missing_method) {
   (void)vm_union_seal(vm, utv);
 
   /* check: union does NOT implement interface */
-  value_t ext =
-      vm_interface_check_extends(vm, itv, vm_union_get_methods(vm, utv));
+  interface_type_t it = (interface_type_t)value_get_data(itv);
+  union_type_t ut = (union_type_t)value_get_data(utv);
+  vtable_t uvt = type_get_vtable((type_t)ut);
+  ASSERT_TRUE(uvt.type_extends != NULL);
+  value_t ext = uvt.type_extends(vm, (type_t)ut, (type_t)it);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_FALSE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);

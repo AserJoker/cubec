@@ -73,16 +73,10 @@ callable_type_t vm_interface_find_method(struct _vm_t *vm, value_t type_val, con
 /** @brief Get the module_id (borrowed) that owns this interface type. */
 const char *vm_interface_get_module_id(struct _vm_t *vm, value_t type_val);
 
-/** @brief Check whether sub_methods implements all methods of the interface.
- *  Called by struct_type_extends and union_type_extends when super is INTERFACE.
- *  sub_methods is the concrete type's methods strmap (name -> callable value_t).
- *  Returns bool value: true if every interface method is satisfied. */
-value_t vm_interface_check_extends(struct _vm_t *vm, value_t type_val,
-                                    strmap_t sub_methods);
-
 /** @brief Check extends from interface_type_t directly (read-only).
  *  Internal helper for struct/union type_extends vtable functions.
- *  Prefer vm_interface_check_extends for value-based API usage. */
+ *  External callers must NOT use this directly — use the struct/union
+ *  vtable's type_extends (via type_get_vtable) instead. */
 value_t _interface_type_check_extends(struct _vm_t *vm, interface_type_t it,
                                        strmap_t sub_methods);
 
