@@ -416,6 +416,10 @@ value_t value_member_addr(vm_t vm, value_t self, const char *name) {
     extern value_t _union_value_member_addr(vm_t vm, value_t self, const char *name);
     return _union_value_member_addr(vm, self, name);
   }
+  if (kind == TYPE_KIND_CUNION) {
+    extern value_t _cunion_value_member_addr(vm_t vm, value_t self, const char *name);
+    return _cunion_value_member_addr(vm, self, name);
+  }
   return create_exception_value(vm, "type '%s' does not support member address",
                             type_get_name(value_get_type(self)));
 }
