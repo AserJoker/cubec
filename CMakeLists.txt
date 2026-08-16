@@ -43,6 +43,7 @@ add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>)
 add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-character-conversion>)
 # Also suppress character-conversion in googletest (it triggers in gtest-printers.h)
 target_compile_options(gtest PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wno-character-conversion>)
+target_compile_options(gmock PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wno-character-conversion>)
 
 # Optional: include-what-you-use for unused include detection
 # Build with: cmake -DCMAKE_C_INCLUDE_WHAT_YOU_USE="include-what-you-use" ..
