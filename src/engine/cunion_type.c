@@ -41,7 +41,6 @@ static value_t _cunion_assignment(vm_t vm, value_t lvalue, value_t rvalue);
 static value_t _cunion_to_string(vm_t vm, value_t self);
 static value_t _cunion_get_field(vm_t vm, value_t self, const char *name);
 static value_t _cunion_set_field(vm_t vm, value_t self, const char *name, value_t val);
-static value_t _cunion_get_field_raw(vm_t vm, value_t self, const char *name);
 
 /* ---- Shared vtable for all cunion types ---- */
 
@@ -85,7 +84,7 @@ static vtable_t _make_cunion_vtable(void) {
       .type_get_prop= NULL,
       .type_set_prop= NULL,
       .is_instance  = NULL,
-      .get_field_raw= _cunion_get_field_raw,
+      .get_field_raw= NULL,
   };
 }
 
@@ -586,7 +585,7 @@ static value_t _cunion_to_string(vm_t vm, value_t self) {
 /* VTable: get_field / set_field (raw, no tag, no result wrapping)      */
 /* ================================================================== */
 
-static value_t _cunion_get_field_raw(vm_t vm, value_t self, const char *name) {
+static value_t _cunion_get_field(vm_t vm, value_t self, const char *name) {
   cunion_type_t ct = (cunion_type_t)value_get_type(self);
   field_info_t fi = _ct_find_field(ct, name);
   if (!fi)
@@ -596,7 +595,7 @@ static value_t _cunion_get_field_raw(vm_t vm, value_t self, const char *name) {
   if (value_is_shadow(self) || !value_get_data(self))
     return create_exception_value(vm, "cannot access field '%s' of uninitialized cunion", name);
 
-  /* raw read from offset 0 — C-compatible, no active-variant check */
+  /* raw read from offset 0 — C-compatible, no active-variant check, no narrowing */
   uint64_t fsize = type_get_size(field_info_get_type(fi));
   allocator_t alloc = vm_get_allocator(vm);
   void *data = NULL;
@@ -609,11 +608,6 @@ static value_t _cunion_get_field_raw(vm_t vm, value_t self, const char *name) {
   scope_t scope = vm_get_current_scope(vm);
   if (scope) vec_push(scope->values, v);
   return v;
-}
-
-static value_t _cunion_get_field(vm_t vm, value_t self, const char *name) {
-  /* C-compatible: get_field is identical to raw read (no result wrapping). */
-  return _cunion_get_field_raw(vm, self, name);
 }
 
 static value_t _cunion_set_field(vm_t vm, value_t self, const char *name, value_t val) {

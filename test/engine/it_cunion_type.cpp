@@ -229,15 +229,10 @@ TEST_F(it_cunion_type, get_field_no_result_wrapping) {
   value_t iv = create_i32_value(vm, 42);
   value_t uv = vm_create_cunion_value(vm, tv, "int_val", iv);
 
-  /* get_field returns the raw field value (not wrapped in a result union) */
+  /* get_field returns the raw field value (no result wrapping, no narrowing) */
   value_t got = value_get_field(vm, uv, "int_val");
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
-
-  /* get_field_raw is identical to get_field for cunion */
-  value_t raw = value_get_field_raw(vm, uv, "int_val");
-  EXPECT_EQ(type_get_kind(value_get_type(raw)), TYPE_KIND_I32);
-  EXPECT_EQ(*(int32_t *)value_get_data(raw), 42);
 
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
