@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/scope.h"
@@ -12,7 +12,6 @@ using ::testing::Test;
 
 class it_scope : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 };
 
 /* ---- Basic scope creation ---- */
@@ -26,7 +25,6 @@ TEST_F(it_scope, create_standalone) {
   EXPECT_EQ(strmap_get_size(s->names), 0u);
   EXPECT_EQ(vec_get_size(s->values), 0u);
   scope_dispose(s);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, create_child) {
@@ -36,7 +34,6 @@ TEST_F(it_scope, create_child) {
   EXPECT_EQ(vec_get_size(parent->children), 1u);
   EXPECT_EQ(vec_get(parent->children, 0), child);
   scope_dispose(parent);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, create_nested_children) {
@@ -48,7 +45,6 @@ TEST_F(it_scope, create_nested_children) {
   EXPECT_EQ(vec_get_size(root->children), 1u);
   EXPECT_EQ(vec_get_size(func->children), 1u);
   scope_dispose(root);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, dispose_parent_frees_children) {
@@ -60,7 +56,6 @@ TEST_F(it_scope, dispose_parent_frees_children) {
   EXPECT_EQ(vec_get_size(parent->children), 2u);
   /* disposing parent should recursively dispose children */
   scope_dispose(parent);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, dispose_cascade_nested) {
@@ -70,7 +65,6 @@ TEST_F(it_scope, dispose_cascade_nested) {
   (void)block;
   /* disposing root cascades to func, then to block */
   scope_dispose(root);
-  delete_allocator(allocator);
 }
 
 /* ---- scope_add_child / scope_remove_child ---- */
@@ -83,7 +77,6 @@ TEST_F(it_scope, add_child_manual) {
   EXPECT_EQ(vec_get_size(parent->children), 1u);
   EXPECT_EQ(vec_get(parent->children, 0), child);
   scope_dispose(parent);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, remove_child) {
@@ -95,7 +88,6 @@ TEST_F(it_scope, remove_child) {
   child->parent = NULL;
   scope_dispose(child);
   scope_dispose(parent);
-  delete_allocator(allocator);
 }
 
 /* ---- scope_lookup ---- */
@@ -109,7 +101,6 @@ TEST_F(it_scope, lookup_in_same_scope) {
   EXPECT_NE(found->ref, nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, lookup_not_found) {
@@ -117,7 +108,6 @@ TEST_F(it_scope, lookup_not_found) {
   name_t found = scope_lookup(s, "x");
   EXPECT_EQ(found, nullptr);
   scope_dispose(s);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, lookup_walks_to_parent) {
@@ -132,7 +122,6 @@ TEST_F(it_scope, lookup_walks_to_parent) {
   EXPECT_NE(found->ref, nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, lookup_prefers_closer_scope) {
@@ -159,7 +148,6 @@ TEST_F(it_scope, lookup_prefers_closer_scope) {
   EXPECT_NE(found->ref, v_child);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, lookup_walks_multiple_levels) {
@@ -169,19 +157,17 @@ TEST_F(it_scope, lookup_walks_multiple_levels) {
   scope_t func = scope_create(vm_alloc, SCOPE_FUNCTION, global, NULL);
   scope_t block = scope_create(vm_alloc, SCOPE_BLOCK, func, NULL);
 
-  /* "bool" is in global, block should find it through func → global */
+  /* "bool" is in global, block should find it through func 鈫?global */
   name_t found = scope_lookup(block, "bool");
   ASSERT_NE(found, nullptr);
   EXPECT_NE(found->ref, nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, lookup_null_scope) {
   name_t found = scope_lookup(NULL, "x");
   EXPECT_EQ(found, nullptr);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, lookup_null_name) {
@@ -189,7 +175,6 @@ TEST_F(it_scope, lookup_null_name) {
   name_t found = scope_lookup(s, NULL);
   EXPECT_EQ(found, nullptr);
   scope_dispose(s);
-  delete_allocator(allocator);
 }
 
 /* ---- scope with vm: lookup builtin names ---- */
@@ -206,7 +191,6 @@ TEST_F(it_scope, vm_global_has_builtin_names) {
   EXPECT_EQ(scope_lookup(global, "?"), nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, vm_child_lookup_builtin) {
@@ -220,7 +204,6 @@ TEST_F(it_scope, vm_child_lookup_builtin) {
   EXPECT_NE(scope_lookup(child, "void"), nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, vm_nested_child_lookup) {
@@ -234,7 +217,6 @@ TEST_F(it_scope, vm_nested_child_lookup) {
   EXPECT_NE(scope_lookup(block, "void"), nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, vm_child_lookup_not_found) {
@@ -246,7 +228,6 @@ TEST_F(it_scope, vm_child_lookup_not_found) {
   EXPECT_EQ(scope_lookup(child, "nonexistent"), nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Resource cleanup with values ---- */
@@ -261,7 +242,6 @@ TEST_F(it_scope, dispose_scope_with_values) {
   EXPECT_EQ(vec_get_size(global->values), 35u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_scope, vm_dispose_cleans_child_scope_values) {
@@ -279,5 +259,4 @@ TEST_F(it_scope, vm_dispose_cleans_child_scope_values) {
   EXPECT_EQ(vec_get_size(child->values), 0u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

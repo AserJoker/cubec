@@ -1,4 +1,4 @@
-#include "core/strmap.h"
+﻿#include "core/strmap.h"
 #include "core/node.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -7,7 +7,6 @@ using ::testing::Test;
 
 class dt_strmap : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
 };
 
 TEST_F(dt_strmap, create_and_empty) {

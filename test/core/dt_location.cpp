@@ -6,7 +6,6 @@ using ::testing::Test;
 
 class dt_location : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
 };
 
 /* Helper: build a location_t from a C string. */

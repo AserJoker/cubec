@@ -1,4 +1,4 @@
-#include "cubec/token.h"
+﻿#include "cubec/token.h"
 #include "cubec/token.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -7,9 +7,6 @@ using ::testing::Test;
 
 class dt_token : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 // Helper function to check token kind

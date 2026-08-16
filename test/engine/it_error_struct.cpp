@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/scope.h"
@@ -14,7 +14,6 @@ using ::testing::Test;
 
 class it_error_struct : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 };
 
 /* ---- Type availability ---- */
@@ -30,7 +29,6 @@ TEST_F(it_error_struct, vm_has_error_type) {
   EXPECT_STREQ(type_get_name(error_type), "error");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Field layout ---- */
@@ -61,7 +59,6 @@ TEST_F(it_error_struct, field_count_and_names) {
   EXPECT_EQ(type_get_kind(field_info_get_type(f3)), TYPE_KIND_U64);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Array field dimensions ---- */
@@ -78,7 +75,6 @@ TEST_F(it_error_struct, message_is_128_u8_array) {
   EXPECT_EQ(type_get_kind(array_type_get_element_type(at)), TYPE_KIND_U8);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_error_struct, backtrace_is_32_u64_array) {
@@ -93,7 +89,6 @@ TEST_F(it_error_struct, backtrace_is_32_u64_array) {
   EXPECT_EQ(type_get_kind(array_type_get_element_type(at)), TYPE_KIND_U64);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Error struct size ---- */
@@ -112,7 +107,6 @@ TEST_F(it_error_struct, struct_size_is_nonzero) {
   EXPECT_GE(sz, 400u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Create error value ---- */
@@ -129,7 +123,6 @@ TEST_F(it_error_struct, create_error_value) {
   EXPECT_TRUE(value_is_own(ev));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Scope lookup ---- */
@@ -141,7 +134,6 @@ TEST_F(it_error_struct, error_name_in_global_scope) {
   EXPECT_NE(n, nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- create_error ---- */
@@ -170,5 +162,4 @@ TEST_F(it_error_struct, create_error_with_code) {
   EXPECT_STREQ(msg, "cannot access field 'foo'");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

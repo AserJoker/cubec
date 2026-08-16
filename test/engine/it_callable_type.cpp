@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/scope.h"
@@ -18,7 +18,6 @@ using ::testing::Test;
 
 class it_callable_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
@@ -36,7 +35,7 @@ protected:
     return (type_t)value_get_data(vm_get_str_type(vm));
   }
 
-  /* Create a callable type via vm — registered in scope */
+  /* Create a callable type via vm 鈥?registered in scope */
   callable_type_t _make_i32_to_i32_callable(vm_t vm) {
     allocator_t alloc = vm_get_allocator(vm);
     vec_init_t vi = {.auto_dispose = false};
@@ -107,7 +106,6 @@ TEST_F(it_callable_type, create_basic) {
   EXPECT_FALSE(callable_type_is_variadic(ct));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, create_multi_param) {
@@ -119,7 +117,6 @@ TEST_F(it_callable_type, create_multi_param) {
   EXPECT_EQ(type_get_kind(callable_type_get_return_type(ct)), TYPE_KIND_VOID);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, create_variadic) {
@@ -138,7 +135,6 @@ TEST_F(it_callable_type, create_variadic) {
   EXPECT_EQ(callable_type_get_param_count(ct), 1u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, create_no_params) {
@@ -155,7 +151,6 @@ TEST_F(it_callable_type, create_no_params) {
   EXPECT_EQ(callable_type_get_param_count(ct), 0u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Value creation ---- */
@@ -176,7 +171,6 @@ TEST_F(it_callable_type, create_callable_value) {
   EXPECT_EQ(vec_get_size(scope->cfuncs), 2u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, create_callable_shadow) {
@@ -188,7 +182,6 @@ TEST_F(it_callable_type, create_callable_shadow) {
   EXPECT_TRUE(value_is_initialized(cv));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Call ---- */
@@ -206,7 +199,6 @@ TEST_F(it_callable_type, call_basic) {
   EXPECT_EQ(*(int32_t *)value_get_data(result), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, call_no_args) {
@@ -226,7 +218,6 @@ TEST_F(it_callable_type, call_no_args) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, call_void_return) {
@@ -244,7 +235,6 @@ TEST_F(it_callable_type, call_void_return) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, call_wrong_argc) {
@@ -256,7 +246,6 @@ TEST_F(it_callable_type, call_wrong_argc) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, call_not_callable_type) {
@@ -266,7 +255,6 @@ TEST_F(it_callable_type, call_not_callable_type) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Call with safe_cast ---- */
@@ -281,12 +269,11 @@ TEST_F(it_callable_type, call_safe_cast_arg) {
   value_t argv[1] = { vm_create_value(vm, _get_i64_type(vm), &big, NULL) };
   value_t result = value_call(vm, cv, 1, argv);
 
-  /* _echo_first returns the (casted) arg — it receives i32 after safe_cast */
+  /* _echo_first returns the (casted) arg 鈥?it receives i32 after safe_cast */
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(result), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Variadic call ---- */
@@ -314,7 +301,6 @@ TEST_F(it_callable_type, call_variadic) {
   EXPECT_EQ(*(int32_t *)value_get_data(result), 60);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, call_variadic_too_few) {
@@ -335,7 +321,6 @@ TEST_F(it_callable_type, call_variadic_too_few) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_equal ---- */
@@ -350,7 +335,6 @@ TEST_F(it_callable_type, type_equal_same) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, type_equal_different_params) {
@@ -363,7 +347,6 @@ TEST_F(it_callable_type, type_equal_different_params) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, type_equal_variadic_vs_nonvariadic) {
@@ -386,7 +369,6 @@ TEST_F(it_callable_type, type_equal_variadic_vs_nonvariadic) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, type_extends_wildcard) {
@@ -399,7 +381,6 @@ TEST_F(it_callable_type, type_extends_wildcard) {
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- clone ---- */
@@ -420,7 +401,6 @@ TEST_F(it_callable_type, clone) {
   EXPECT_EQ(orig_fc->func, clone_fc->func);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- equal ---- */
@@ -435,7 +415,6 @@ TEST_F(it_callable_type, equal_same_func) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, equal_different_func) {
@@ -448,7 +427,6 @@ TEST_F(it_callable_type, equal_different_func) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- assignment ---- */
@@ -468,7 +446,6 @@ TEST_F(it_callable_type, assignment) {
   EXPECT_EQ(fa->func, fb->func);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, assignment_shadow) {
@@ -484,7 +461,6 @@ TEST_F(it_callable_type, assignment_shadow) {
   EXPECT_TRUE(value_is_shadow(b)); /* shadow stays shadow */
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- to_string ---- */
@@ -498,7 +474,6 @@ TEST_F(it_callable_type, to_string) {
   EXPECT_EQ(type_get_kind(value_get_type(str)), TYPE_KIND_STR);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- self-inspection via fn parameter ---- */
@@ -522,7 +497,6 @@ TEST_F(it_callable_type, call_fn_self_inspection) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Shadow operations ---- */
@@ -535,7 +509,6 @@ TEST_F(it_callable_type, shadow_equal) {
   value_t result = value_equal(vm, a, b);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, shadow_call) {
@@ -549,7 +522,6 @@ TEST_F(it_callable_type, shadow_call) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, shadow_safe_cast) {
@@ -560,7 +532,6 @@ TEST_F(it_callable_type, shadow_safe_cast) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(value_get_type(result), (type_t)ct);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_callable_type, shadow_to_string) {
@@ -570,5 +541,4 @@ TEST_F(it_callable_type, shadow_to_string) {
   value_t result = value_to_string(vm, cv);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

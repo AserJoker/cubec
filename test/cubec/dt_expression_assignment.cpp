@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/expression_binary.h"
 #include "cubec/literal_identifier.h"
@@ -16,9 +16,6 @@ using ::testing::Test;
 
 class dt_expression_assignment : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* ============================================================================

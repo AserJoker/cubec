@@ -1,4 +1,4 @@
-#include "common/test_common.h"
+﻿#include "common/test_common.h"
 #include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token_writer.h"
@@ -12,9 +12,6 @@
 
 class dt_declaration_enum : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* ==========================================================================

@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/scope.h"
@@ -14,7 +14,6 @@ using ::testing::Test;
 
 class it_panic : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 };
 
 TEST_F(it_panic, panic_is_registered_in_global_scope) {
@@ -28,7 +27,6 @@ TEST_F(it_panic, panic_is_registered_in_global_scope) {
   EXPECT_EQ(type_get_kind(value_get_type(pv)), TYPE_KIND_CALLABLE);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_panic, panic_returns_exception) {
@@ -48,7 +46,6 @@ TEST_F(it_panic, panic_returns_exception) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_panic, panic_message_contains_input) {
@@ -69,7 +66,6 @@ TEST_F(it_panic, panic_message_contains_input) {
   EXPECT_NE(strstr(emsg, "panic"), nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_panic, panic_no_args_returns_exception) {
@@ -79,12 +75,11 @@ TEST_F(it_panic, panic_no_args_returns_exception) {
   ASSERT_NE(n, nullptr);
   value_t panic_fn = n->ref;
 
-  /* call panic() with no args → argc check in _callable_call rejects */
+  /* call panic() with no args 鈫?argc check in _callable_call rejects */
   value_t result = value_call(vm, panic_fn, 0, NULL);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_panic, panic_non_str_arg_returns_exception) {
@@ -94,14 +89,13 @@ TEST_F(it_panic, panic_non_str_arg_returns_exception) {
   ASSERT_NE(n, nullptr);
   value_t panic_fn = n->ref;
 
-  /* call panic(42) — wrong type → safe_cast to str fails → exception */
+  /* call panic(42) 鈥?wrong type 鈫?safe_cast to str fails 鈫?exception */
   value_t i32_val = create_i32_value(vm, 42);
   value_t argv[] = {i32_val};
   value_t result = value_call(vm, panic_fn, 1, argv);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_panic, panic_callable_type_signature) {
@@ -124,5 +118,4 @@ TEST_F(it_panic, panic_callable_type_signature) {
   EXPECT_EQ(type_get_kind(ret_t), TYPE_KIND_VOID);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

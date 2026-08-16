@@ -1,4 +1,4 @@
-#include "common/test_common.h"
+﻿#include "common/test_common.h"
 #include "engine/bool_type.h"
 #include "engine/callable_type.h"
 #include "engine/exception_type.h"
@@ -18,7 +18,6 @@ using ::testing::Test;
 
 class it_access_control : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
@@ -69,14 +68,13 @@ TEST_F(it_access_control, struct_same_module_get_private_field_ok) {
   value_t fields[] = {vx, vy};
   value_t sv = vm_create_struct_value(vm, type_val, fields);
 
-  /* access from same module → private field accessible */
+  /* access from same module 鈫?private field accessible */
   vm_set_current_module_id(vm, "/foo");
   value_t got = value_get_field(vm, sv, "y");
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(got), 20);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, struct_same_module_set_private_field_ok) {
@@ -94,7 +92,6 @@ TEST_F(it_access_control, struct_same_module_set_private_field_ok) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, struct_same_module_member_addr_private_ok) {
@@ -111,7 +108,6 @@ TEST_F(it_access_control, struct_same_module_member_addr_private_ok) {
   EXPECT_EQ(type_get_kind(value_get_type(addr)), TYPE_KIND_POINTER);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Struct: cross-module access ---- */
@@ -125,14 +121,13 @@ TEST_F(it_access_control, struct_cross_module_get_pub_field_ok) {
   value_t fields[] = {vx, vy};
   value_t sv = vm_create_struct_value(vm, type_val, fields);
 
-  /* access from different module → pub field accessible */
+  /* access from different module 鈫?pub field accessible */
   vm_set_current_module_id(vm, "/other");
   value_t got = value_get_field(vm, sv, "x");
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(got), 10);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, struct_cross_module_get_private_field_rejected) {
@@ -144,13 +139,12 @@ TEST_F(it_access_control, struct_cross_module_get_private_field_rejected) {
   value_t fields[] = {vx, vy};
   value_t sv = vm_create_struct_value(vm, type_val, fields);
 
-  /* access from different module → private field rejected */
+  /* access from different module 鈫?private field rejected */
   vm_set_current_module_id(vm, "/other");
   value_t got = value_get_field(vm, sv, "y");
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, struct_cross_module_set_private_field_rejected) {
@@ -168,7 +162,6 @@ TEST_F(it_access_control, struct_cross_module_set_private_field_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, struct_cross_module_member_addr_private_rejected) {
@@ -185,7 +178,6 @@ TEST_F(it_access_control, struct_cross_module_member_addr_private_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(addr)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, struct_cross_module_set_pub_field_ok) {
@@ -203,7 +195,6 @@ TEST_F(it_access_control, struct_cross_module_set_pub_field_ok) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Struct: prop access control ---- */
@@ -221,7 +212,6 @@ TEST_F(it_access_control, struct_cross_module_get_private_prop_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, struct_cross_module_get_pub_prop_ok) {
@@ -238,7 +228,6 @@ TEST_F(it_access_control, struct_cross_module_get_pub_prop_ok) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, struct_cross_module_set_private_prop_rejected) {
@@ -255,7 +244,6 @@ TEST_F(it_access_control, struct_cross_module_set_private_prop_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Struct: pointer auto-deref access control ---- */
@@ -276,7 +264,6 @@ TEST_F(it_access_control, struct_pointer_cross_module_get_private_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, struct_pointer_cross_module_get_pub_ok) {
@@ -296,7 +283,6 @@ TEST_F(it_access_control, struct_pointer_cross_module_get_pub_ok) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 10);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Union: same module access ---- */
@@ -310,14 +296,13 @@ TEST_F(it_access_control, union_same_module_get_private_field_ok) {
 
   vm_set_current_module_id(vm, "/bar");
   value_t got = value_get_field(vm, uv, "Err");
-  /* tag=0 (Ok) but Err is private — same module: access control passes,
-     but tag=0 != Err index → result with error variant (tag=1) */
+  /* tag=0 (Ok) but Err is private 鈥?same module: access control passes,
+     but tag=0 != Err index 鈫?result with error variant (tag=1) */
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_UNION);
   uint32_t tag = *(uint32_t *)value_get_data(got);
   EXPECT_EQ(tag, 1u); /* error variant */
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, union_same_module_set_private_field_ok) {
@@ -334,7 +319,6 @@ TEST_F(it_access_control, union_same_module_set_private_field_ok) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Union: cross-module access ---- */
@@ -348,7 +332,7 @@ TEST_F(it_access_control, union_cross_module_get_pub_field_ok) {
 
   vm_set_current_module_id(vm, "/other");
   value_t got = value_get_field(vm, uv, "Ok");
-  /* get_field returns result[i32, error], Ok is active → ok variant */
+  /* get_field returns result[i32, error], Ok is active 鈫?ok variant */
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_UNION);
   uint32_t tag = *(uint32_t *)value_get_data(got);
   EXPECT_EQ(tag, 0u); /* ok variant */
@@ -359,7 +343,6 @@ TEST_F(it_access_control, union_cross_module_get_pub_field_ok) {
   EXPECT_EQ(*(int32_t *)value_get_data(raw), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, union_cross_module_get_private_field_rejected) {
@@ -374,7 +357,6 @@ TEST_F(it_access_control, union_cross_module_get_private_field_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, union_cross_module_set_private_field_rejected) {
@@ -390,7 +372,6 @@ TEST_F(it_access_control, union_cross_module_set_private_field_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, union_cross_module_member_addr_private_rejected) {
@@ -405,7 +386,6 @@ TEST_F(it_access_control, union_cross_module_member_addr_private_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(addr)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Union: prop access control ---- */
@@ -426,7 +406,6 @@ TEST_F(it_access_control, union_cross_module_get_private_prop_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, union_cross_module_get_pub_prop_ok) {
@@ -445,7 +424,6 @@ TEST_F(it_access_control, union_cross_module_get_pub_prop_ok) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Builtin module: same rules as any module ---- */
@@ -469,7 +447,6 @@ TEST_F(it_access_control, builtin_private_field_from_other_module_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, builtin_private_field_from_builtin_ok) {
@@ -491,7 +468,6 @@ TEST_F(it_access_control, builtin_private_field_from_builtin_ok) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, builtin_pub_field_from_other_module_ok) {
@@ -513,7 +489,6 @@ TEST_F(it_access_control, builtin_pub_field_from_other_module_ok) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Accessor: is_field_pub / is_prop_pub ---- */
@@ -527,7 +502,6 @@ TEST_F(it_access_control, struct_is_field_pub) {
   EXPECT_FALSE(vm_struct_is_field_pub(vm, type_val, "nonexistent"));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, struct_is_prop_pub) {
@@ -544,7 +518,6 @@ TEST_F(it_access_control, struct_is_prop_pub) {
   EXPECT_FALSE(vm_struct_is_prop_pub(vm, type_val, "nonexistent"));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, union_is_field_pub) {
@@ -556,7 +529,6 @@ TEST_F(it_access_control, union_is_field_pub) {
   EXPECT_FALSE(vm_union_is_field_pub(vm, tv, "nonexistent"));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, union_is_prop_pub) {
@@ -573,7 +545,6 @@ TEST_F(it_access_control, union_is_prop_pub) {
   EXPECT_FALSE(vm_union_is_prop_pub(vm, tv, "nonexistent"));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- module_id accessor ---- */
@@ -584,7 +555,6 @@ TEST_F(it_access_control, struct_get_module_id) {
   EXPECT_STREQ(vm_struct_get_module_id(vm, type_val), "/foo");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, union_get_module_id) {
@@ -593,7 +563,6 @@ TEST_F(it_access_control, union_get_module_id) {
   EXPECT_STREQ(vm_union_get_module_id(vm, tv), "/bar");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- vm current_module_id ---- */
@@ -603,7 +572,6 @@ TEST_F(it_access_control, vm_default_module_id_is_builtin) {
   EXPECT_STREQ(vm_get_current_module_id(vm), "<builtin>");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_access_control, vm_set_and_get_current_module_id) {
@@ -615,5 +583,4 @@ TEST_F(it_access_control, vm_set_and_get_current_module_id) {
   EXPECT_STREQ(vm_get_current_module_id(vm), "<builtin>");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

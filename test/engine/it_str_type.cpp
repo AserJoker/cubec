@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/scope.h"
@@ -16,7 +16,6 @@ using ::testing::Test;
 
 class it_str_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_str_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_str_type(vm));
@@ -49,7 +48,6 @@ TEST_F(it_str_type, create_value) {
   EXPECT_TRUE(value_is_initialized(v));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, create_empty) {
@@ -59,7 +57,6 @@ TEST_F(it_str_type, create_empty) {
   EXPECT_STREQ(_read_str(v), "");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- equal ---- */
@@ -74,7 +71,6 @@ TEST_F(it_str_type, equal_same) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, equal_different) {
@@ -86,7 +82,6 @@ TEST_F(it_str_type, equal_different) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, equal_integer_error) {
@@ -98,7 +93,6 @@ TEST_F(it_str_type, equal_integer_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, equal_shadow) {
@@ -111,7 +105,6 @@ TEST_F(it_str_type, equal_shadow) {
   EXPECT_TRUE(value_is_shadow(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- add (concatenation) ---- */
@@ -126,7 +119,6 @@ TEST_F(it_str_type, add_concat) {
   EXPECT_STREQ(_read_str(result), "hello world");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, add_empty) {
@@ -138,7 +130,6 @@ TEST_F(it_str_type, add_empty) {
   EXPECT_STREQ(_read_str(result), "abc");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, add_integer_error) {
@@ -150,7 +141,6 @@ TEST_F(it_str_type, add_integer_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, add_shadow) {
@@ -163,7 +153,6 @@ TEST_F(it_str_type, add_shadow) {
   EXPECT_TRUE(value_is_shadow(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- relational ---- */
@@ -177,7 +166,6 @@ TEST_F(it_str_type, gt) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, lt) {
@@ -189,7 +177,6 @@ TEST_F(it_str_type, lt) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, ne) {
@@ -201,7 +188,6 @@ TEST_F(it_str_type, ne) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, ge) {
@@ -213,7 +199,6 @@ TEST_F(it_str_type, ge) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, le) {
@@ -225,7 +210,6 @@ TEST_F(it_str_type, le) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- lnot ---- */
@@ -239,7 +223,6 @@ TEST_F(it_str_type, lnot_empty) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, lnot_nonempty) {
@@ -250,7 +233,6 @@ TEST_F(it_str_type, lnot_nonempty) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- unsupported operators ---- */
@@ -264,7 +246,6 @@ TEST_F(it_str_type, sub_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, mul_error) {
@@ -276,7 +257,6 @@ TEST_F(it_str_type, mul_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, band_error) {
@@ -288,7 +268,6 @@ TEST_F(it_str_type, band_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, neg_error) {
@@ -299,7 +278,6 @@ TEST_F(it_str_type, neg_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, shl_error) {
@@ -311,7 +289,6 @@ TEST_F(it_str_type, shl_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- safe_cast ---- */
@@ -325,7 +302,6 @@ TEST_F(it_str_type, safe_cast_to_str_identity) {
   EXPECT_EQ(result, a);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, safe_cast_to_const_str) {
@@ -339,7 +315,6 @@ TEST_F(it_str_type, safe_cast_to_const_str) {
   EXPECT_STREQ(_read_str(result), "hello");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, safe_cast_to_void_error) {
@@ -351,7 +326,6 @@ TEST_F(it_str_type, safe_cast_to_void_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, const_str_safe_cast_to_str_error) {
@@ -364,7 +338,6 @@ TEST_F(it_str_type, const_str_safe_cast_to_str_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- assignment ---- */
@@ -379,7 +352,6 @@ TEST_F(it_str_type, assign) {
   EXPECT_STREQ(_read_str(a), "hello");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, assign_replaces_old) {
@@ -392,7 +364,6 @@ TEST_F(it_str_type, assign_replaces_old) {
   EXPECT_STREQ(_read_str(b), "new");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, const_str_assign_error) {
@@ -405,7 +376,6 @@ TEST_F(it_str_type, const_str_assign_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, assign_integer_error) {
@@ -417,7 +387,6 @@ TEST_F(it_str_type, assign_integer_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type-level equal/extends ---- */
@@ -432,7 +401,6 @@ TEST_F(it_str_type, type_equal_str) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, type_equal_i32_error) {
@@ -444,7 +412,6 @@ TEST_F(it_str_type, type_equal_i32_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, type_extends_wildcard) {
@@ -456,7 +423,6 @@ TEST_F(it_str_type, type_extends_wildcard) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- move via allocator ---- */
@@ -477,7 +443,6 @@ TEST_F(it_str_type, move) {
   EXPECT_FALSE(value_is_own(a));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- value_slice on str ---- */
@@ -498,7 +463,6 @@ TEST_F(it_str_type, slice) {
   EXPECT_EQ(*(uint8_t *)value_get_data(elem), 'h');
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, slice_middle) {
@@ -514,7 +478,6 @@ TEST_F(it_str_type, slice_middle) {
   EXPECT_EQ(*(uint8_t *)value_get_data(elem), 'w');
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_str_type, slice_out_of_bounds) {
@@ -525,5 +488,4 @@ TEST_F(it_str_type, slice_out_of_bounds) {
   EXPECT_EQ(type_get_kind(value_get_type(sub)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

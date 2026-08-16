@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/bool_type.h"
@@ -17,7 +17,6 @@ using ::testing::Test;
 
 class it_tuple_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
@@ -32,7 +31,7 @@ protected:
     return (type_t)value_get_data(vm_get_str_type(vm));
   }
 
-  /* create tuple type via vm — registered in scope, no leak */
+  /* create tuple type via vm 鈥?registered in scope, no leak */
   tuple_type_t _make_i32_f64_tuple_type(vm_t vm) {
     allocator_t alloc = vm_get_allocator(vm);
     vec_init_t vi = {.auto_dispose = false};
@@ -79,7 +78,6 @@ TEST_F(it_tuple_type, create_type) {
   EXPECT_EQ(tuple_type_get_offset(tt, 1), 8u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, create_const_type) {
@@ -89,7 +87,6 @@ TEST_F(it_tuple_type, create_const_type) {
   EXPECT_FALSE(type_is_mut((type_t)tt));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Value creation ---- */
@@ -119,7 +116,6 @@ TEST_F(it_tuple_type, create_value) {
   EXPECT_DOUBLE_EQ(read_d, 3.14);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, create_shadow) {
@@ -131,7 +127,6 @@ TEST_F(it_tuple_type, create_shadow) {
   EXPECT_FALSE(value_is_initialized(tup));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Clone ---- */
@@ -159,7 +154,6 @@ TEST_F(it_tuple_type, clone) {
   EXPECT_DOUBLE_EQ(read_d, 2.5);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, clone_independence) {
@@ -179,7 +173,6 @@ TEST_F(it_tuple_type, clone_independence) {
   EXPECT_EQ(*(int32_t *)((char *)value_get_data(cloned) + 0), 10);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- get_item / set_item ---- */
@@ -207,7 +200,6 @@ TEST_F(it_tuple_type, get_item) {
   EXPECT_DOUBLE_EQ(*(double *)value_get_data(elem1), 3.14);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, set_item) {
@@ -231,7 +223,6 @@ TEST_F(it_tuple_type, set_item) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 99);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, set_item_const_error) {
@@ -253,7 +244,6 @@ TEST_F(it_tuple_type, set_item_const_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, out_of_bounds) {
@@ -273,7 +263,6 @@ TEST_F(it_tuple_type, out_of_bounds) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Equal ---- */
@@ -302,7 +291,6 @@ TEST_F(it_tuple_type, equal_same) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, equal_different) {
@@ -329,7 +317,6 @@ TEST_F(it_tuple_type, equal_different) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_equal / type_extends ---- */
@@ -344,7 +331,6 @@ TEST_F(it_tuple_type, type_equal_same) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, type_equal_different_count) {
@@ -364,7 +350,6 @@ TEST_F(it_tuple_type, type_equal_different_count) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, type_extends_wildcard) {
@@ -377,7 +362,6 @@ TEST_F(it_tuple_type, type_extends_wildcard) {
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, type_extends_wildcard_tuple) {
@@ -390,7 +374,6 @@ TEST_F(it_tuple_type, type_extends_wildcard_tuple) {
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, type_equal_wildcard_tuple) {
@@ -403,7 +386,6 @@ TEST_F(it_tuple_type, type_equal_wildcard_tuple) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, type_equal_wildcard_element) {
@@ -413,7 +395,7 @@ TEST_F(it_tuple_type, type_equal_wildcard_element) {
   type_t f64t = _get_f64_type(vm);
   type_t wct = (type_t)value_get_data(vm_get_wildcard_type(vm));
 
-  /* <i32, f64> vs <i32, ?> → true (wildcard element skips comparison) */
+  /* <i32, f64> vs <i32, ?> 鈫?true (wildcard element skips comparison) */
   tuple_type_t concrete = _make_i32_f64_tuple_type(vm);
 
   vec_init_t vi = {.auto_dispose = false};
@@ -428,13 +410,12 @@ TEST_F(it_tuple_type, type_equal_wildcard_element) {
   value_t eq = vt.type_equal(vm, (type_t)concrete, (type_t)wc_tt);
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
-  /* <i32, ?> vs <i32, f64> → false (wildcard only on right side) */
+  /* <i32, ?> vs <i32, f64> 鈫?false (wildcard only on right side) */
   vtable_t vt2 = type_get_vtable((type_t)wc_tt);
   value_t eq2 = vt2.type_equal(vm, (type_t)wc_tt, (type_t)concrete);
   EXPECT_FALSE(*(bool *)value_get_data(eq2));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, type_extends_wildcard_element) {
@@ -444,7 +425,7 @@ TEST_F(it_tuple_type, type_extends_wildcard_element) {
   type_t f64t = _get_f64_type(vm);
   type_t wct = (type_t)value_get_data(vm_get_wildcard_type(vm));
 
-  /* <i32, f64> extends <i32, ?> → true */
+  /* <i32, f64> extends <i32, ?> 鈫?true */
   tuple_type_t concrete = _make_i32_f64_tuple_type(vm);
 
   vec_init_t vi = {.auto_dispose = false};
@@ -460,7 +441,6 @@ TEST_F(it_tuple_type, type_extends_wildcard_element) {
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- safe_cast ---- */
@@ -481,7 +461,6 @@ TEST_F(it_tuple_type, safe_cast_identity) {
   EXPECT_EQ(cast, tup);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, safe_cast_mut_to_const) {
@@ -503,7 +482,6 @@ TEST_F(it_tuple_type, safe_cast_mut_to_const) {
   EXPECT_FALSE(type_is_mut(value_get_type(cast)));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, safe_cast_const_to_mut_error) {
@@ -523,7 +501,6 @@ TEST_F(it_tuple_type, safe_cast_const_to_mut_error) {
   EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Assignment ---- */
@@ -557,7 +534,6 @@ TEST_F(it_tuple_type, assignment) {
   EXPECT_DOUBLE_EQ(read_d, 20.0);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- to_string ---- */
@@ -579,7 +555,6 @@ TEST_F(it_tuple_type, to_string) {
   EXPECT_STREQ(string_get(*(string_t *)value_get_data(s)), "<42, 3.14>");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Cross-scope clone ---- */
@@ -612,7 +587,6 @@ TEST_F(it_tuple_type, cross_scope_clone) {
   allocator_free(alloc, &callee);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Shadow clone ---- */
@@ -628,7 +602,6 @@ TEST_F(it_tuple_type, shadow_clone) {
   EXPECT_EQ(type_get_kind(value_get_type(cloned)), TYPE_KIND_TUPLE);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- vm_create_tuple_type_value registers in scope ---- */
@@ -659,7 +632,6 @@ TEST_F(it_tuple_type, vm_create_tuple_type_value_registers_in_scope) {
   EXPECT_EQ(vec_get_size(scope->types), types_before + 1);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_clone cross scope ---- */
@@ -693,7 +665,6 @@ TEST_F(it_tuple_type, type_clone_cross_scope) {
   allocator_free(alloc, &inner);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Empty tuple ---- */
@@ -711,7 +682,6 @@ TEST_F(it_tuple_type, wildcard_tuple_singleton) {
   EXPECT_FALSE(type_is_mut(wct));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, non_tuple_extends_wildcard_tuple_fails) {
@@ -731,7 +701,6 @@ TEST_F(it_tuple_type, non_tuple_extends_wildcard_tuple_fails) {
   }
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Empty tuple rejected ---- */
@@ -745,7 +714,6 @@ TEST_F(it_tuple_type, vm_create_tuple_type_value_0_fields_returns_exception) {
   allocator_free(alloc, &types);
   EXPECT_EQ(type_get_kind(value_get_type(tv)), TYPE_KIND_EXCEPTION);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Shadow operations ---- */
@@ -758,7 +726,6 @@ TEST_F(it_tuple_type, shadow_equal) {
   value_t result = value_equal(vm, a, b);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, shadow_assignment) {
@@ -771,7 +738,6 @@ TEST_F(it_tuple_type, shadow_assignment) {
   EXPECT_TRUE(value_is_initialized(a));
   EXPECT_TRUE(value_is_shadow(a));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, shadow_get_item) {
@@ -783,7 +749,6 @@ TEST_F(it_tuple_type, shadow_get_item) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, shadow_set_item) {
@@ -796,7 +761,6 @@ TEST_F(it_tuple_type, shadow_set_item) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
   EXPECT_TRUE(value_is_initialized(tup));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, shadow_safe_cast) {
@@ -808,7 +772,6 @@ TEST_F(it_tuple_type, shadow_safe_cast) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(value_get_type(result), (type_t)const_tt);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_tuple_type, shadow_to_string) {
@@ -818,5 +781,4 @@ TEST_F(it_tuple_type, shadow_to_string) {
   value_t result = value_to_string(vm, tup);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

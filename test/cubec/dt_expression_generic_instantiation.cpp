@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_generic_instantiation.h"
@@ -18,9 +18,6 @@ using ::testing::Test;
 
 class dt_expression_generic_instantiation : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* --------------------------------------------------------------------------
@@ -231,7 +228,7 @@ TEST_F(dt_expression_generic_instantiation, mixed_spread) {
  * -------------------------------------------------------------------------- */
 
 TEST_F(dt_expression_generic_instantiation, wildcard_arg) {
-  /* foo[?]  →  generic instantiation with wildcard argument */
+  /* foo[?]  鈫? generic instantiation with wildcard argument */
   const char *source = "foo[?]";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -258,7 +255,7 @@ TEST_F(dt_expression_generic_instantiation, wildcard_arg) {
 }
 
 TEST_F(dt_expression_generic_instantiation, wildcard_mixed) {
-  /* foo[a, ?, b]  →  generic instantiation with wildcard among other args */
+  /* foo[a, ?, b]  鈫? generic instantiation with wildcard among other args */
   const char *source = "foo[a, ?, b]";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -291,7 +288,7 @@ TEST_F(dt_expression_generic_instantiation, wildcard_mixed) {
 }
 
 TEST_F(dt_expression_generic_instantiation, multiple_wildcards) {
-  /* foo[?, ?, ?]  →  generic instantiation with multiple wildcards */
+  /* foo[?, ?, ?]  鈫? generic instantiation with multiple wildcards */
   const char *source = "foo[?, ?, ?]";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -319,7 +316,7 @@ TEST_F(dt_expression_generic_instantiation, multiple_wildcards) {
  * -------------------------------------------------------------------------- */
 
 TEST_F(dt_expression_generic_instantiation, generic_then_call) {
-  /* foo[a]()  →  generic instantiation, then call with no args */
+  /* foo[a]()  鈫? generic instantiation, then call with no args */
   const char *source = "foo[a]()";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -342,7 +339,7 @@ TEST_F(dt_expression_generic_instantiation, generic_then_call) {
 }
 
 TEST_F(dt_expression_generic_instantiation, generic_then_member) {
-  /* foo[a].field  →  generic instantiation, then member access */
+  /* foo[a].field  鈫? generic instantiation, then member access */
   const char *source = "foo[a].field";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -361,7 +358,7 @@ TEST_F(dt_expression_generic_instantiation, generic_then_member) {
 }
 
 TEST_F(dt_expression_generic_instantiation, call_then_generic) {
-  /* foo()[a]  →  call first, then generic instantiation on result */
+  /* foo()[a]  鈫? call first, then generic instantiation on result */
   const char *source = "foo()[a]";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -381,7 +378,7 @@ TEST_F(dt_expression_generic_instantiation, call_then_generic) {
 }
 
 TEST_F(dt_expression_generic_instantiation, chained_generic) {
-  /* foo[a][b]  →  nested generic instantiation */
+  /* foo[a][b]  鈫? nested generic instantiation */
   const char *source = "foo[a][b]";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -410,7 +407,7 @@ TEST_F(dt_expression_generic_instantiation, chained_generic) {
  * -------------------------------------------------------------------------- */
 
 TEST_F(dt_expression_generic_instantiation, generic_call_member) {
-  /* foo[a]().field  →  generic → call → member */
+  /* foo[a]().field  鈫? generic 鈫?call 鈫?member */
   const char *source = "foo[a]().field";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -455,7 +452,7 @@ TEST_F(dt_expression_generic_instantiation, unclosed_bracket) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  /* parse error expected: unclosed bracket → recorded in diagnostics */
+  /* parse error expected: unclosed bracket 鈫?recorded in diagnostics */
   node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   EXPECT_GT(context_get_error_count(ctx), 0);
 
@@ -469,7 +466,7 @@ TEST_F(dt_expression_generic_instantiation, trailing_comma) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  /* parse error expected: trailing comma → recorded in diagnostics */
+  /* parse error expected: trailing comma 鈫?recorded in diagnostics */
   node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   EXPECT_GT(context_get_error_count(ctx), 0);
 

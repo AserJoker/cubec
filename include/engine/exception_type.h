@@ -6,9 +6,12 @@ extern "C" {
 #endif
 
 /** @brief Payload for exception values.
- *  message is a flexible array member — allocated inline with the struct. */
+ *  message is an inline buffer allocated with extra space via
+ *  allocator_alloc(sizeof(exception_data_t) + msg_len). Using a 1-element
+ *  array (instead of a zero-length/flexible array) keeps the struct size
+ *  identical under C and C++ and avoids -Wextern-c-compat. */
 struct exception_data_t {
-  char message[0]; /* owned, zero-terminated */
+  char message[1]; /* owned, zero-terminated */
 };
 
 /** @brief Get the "exception" type_t (static singleton). */

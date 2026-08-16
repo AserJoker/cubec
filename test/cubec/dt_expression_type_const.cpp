@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/declaration_array.h"
 #include "core/token_writer.h"
 #include "cubec/declaration_pointer.h"
@@ -21,9 +21,6 @@ using ::testing::Test;
 
 class dt_expression_type_const : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* --------------------------------------------------------------------------
@@ -52,7 +49,7 @@ TEST_F(dt_expression_type_const, simple) {
   allocator_free(allocator, &tokens);
 }
 
-/* Repeated const: const const i32 — duplicate const is merged into a single qualifier */
+/* Repeated const: const const i32 鈥?duplicate const is merged into a single qualifier */
 TEST_F(dt_expression_type_const, nested_const) {
   const char *source = "const const i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -91,7 +88,7 @@ TEST_F(dt_expression_type_const, non_const_returns_null) {
  *  Const with declaration combinations
  * -------------------------------------------------------------------------- */
 
-/* const * i32 → type_const(pointer(*i32)) */
+/* const * i32 鈫?type_const(pointer(*i32)) */
 TEST_F(dt_expression_type_const, const_pointer) {
   const char *source = "const * i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -117,7 +114,7 @@ TEST_F(dt_expression_type_const, const_pointer) {
   allocator_free(allocator, &tokens);
 }
 
-/* const [] i32 → type_const(slice([]i32)) */
+/* const [] i32 鈫?type_const(slice([]i32)) */
 TEST_F(dt_expression_type_const, const_slice) {
   const char *source = "const [] i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -142,7 +139,7 @@ TEST_F(dt_expression_type_const, const_slice) {
   allocator_free(allocator, &tokens);
 }
 
-/* const [ 10 ] i32 → type_const(array([10]i32)) */
+/* const [ 10 ] i32 鈫?type_const(array([10]i32)) */
 TEST_F(dt_expression_type_const, const_array) {
   const char *source = "const [ 10 ] i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -167,7 +164,7 @@ TEST_F(dt_expression_type_const, const_array) {
   allocator_free(allocator, &tokens);
 }
 
-/* const * const i32 → type_const(pointer(type_const(i32)))
+/* const * const i32 鈫?type_const(pointer(type_const(i32)))
  * const pointer to const i32: outer const qualifies the pointer,
  * inner const qualifies i32. */
 TEST_F(dt_expression_type_const, const_pointer_const) {
@@ -207,7 +204,7 @@ TEST_F(dt_expression_type_const, const_pointer_const) {
  *  Const with generic instantiation and member access
  * -------------------------------------------------------------------------- */
 
-/* const Vec[i32] → type_const(generic(Vec[i32])) */
+/* const Vec[i32] 鈫?type_const(generic(Vec[i32])) */
 TEST_F(dt_expression_type_const, const_generic) {
   const char *source = "const Vec[ i32 ]";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -228,7 +225,7 @@ TEST_F(dt_expression_type_const, const_generic) {
   allocator_free(allocator, &tokens);
 }
 
-/* const std::vec::Vec → type_const(namespace_access(std::vec::Vec)) */
+/* const std::vec::Vec 鈫?type_const(namespace_access(std::vec::Vec)) */
 TEST_F(dt_expression_type_const, const_member) {
   const char *source = "const std::vec::Vec";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -252,7 +249,7 @@ TEST_F(dt_expression_type_const, const_member) {
  *  Const with type_group (ternary wrapping)
  * -------------------------------------------------------------------------- */
 
-/* const ( a ? b : c ) → type_const(type_group(ternary)) */
+/* const ( a ? b : c ) 鈫?type_const(type_group(ternary)) */
 TEST_F(dt_expression_type_const, const_with_type_group_ternary) {
   const char *source = "const ( a ? b : c )";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -281,7 +278,7 @@ TEST_F(dt_expression_type_const, const_with_type_group_ternary) {
  *  Const as ternary condition
  * -------------------------------------------------------------------------- */
 
-/* const greedily consumes ternary: const a ? b : c → const(a ? b : c) */
+/* const greedily consumes ternary: const a ? b : c 鈫?const(a ? b : c) */
 TEST_F(dt_expression_type_const, const_greedy_ternary) {
   const char *source = "const a ? b : c";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);

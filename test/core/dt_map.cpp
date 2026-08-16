@@ -1,4 +1,4 @@
-#include "core/map.h"
+﻿#include "core/map.h"
 #include "core/node.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -7,7 +7,6 @@ using ::testing::Test;
 
 class dt_map : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
 };
 
 TEST_F(dt_map, create_and_empty) {

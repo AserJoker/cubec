@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/declaration_array.h"
 #include "core/token_writer.h"
 #include "cubec/declaration_pointer.h"
@@ -21,9 +21,6 @@ using ::testing::Test;
 
 class dt_expression_type_volatile : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* --------------------------------------------------------------------------
@@ -52,7 +49,7 @@ TEST_F(dt_expression_type_volatile, simple) {
   allocator_free(allocator, &tokens);
 }
 
-/* Repeated volatile: volatile volatile i32 — duplicate volatile is merged */
+/* Repeated volatile: volatile volatile i32 鈥?duplicate volatile is merged */
 TEST_F(dt_expression_type_volatile, nested_volatile) {
   const char *source = "volatile volatile i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -91,7 +88,7 @@ TEST_F(dt_expression_type_volatile, non_volatile_returns_null) {
  *  Volatile with declaration combinations
  * -------------------------------------------------------------------------- */
 
-/* volatile * i32 → type_volatile(pointer(*i32)) */
+/* volatile * i32 鈫?type_volatile(pointer(*i32)) */
 TEST_F(dt_expression_type_volatile, volatile_pointer) {
   const char *source = "volatile * i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -117,7 +114,7 @@ TEST_F(dt_expression_type_volatile, volatile_pointer) {
   allocator_free(allocator, &tokens);
 }
 
-/* volatile [] i32 → type_volatile(slice([]i32)) */
+/* volatile [] i32 鈫?type_volatile(slice([]i32)) */
 TEST_F(dt_expression_type_volatile, volatile_slice) {
   const char *source = "volatile [] i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -137,7 +134,7 @@ TEST_F(dt_expression_type_volatile, volatile_slice) {
   allocator_free(allocator, &tokens);
 }
 
-/* volatile [ 10 ] i32 → type_volatile(array([10]i32)) */
+/* volatile [ 10 ] i32 鈫?type_volatile(array([10]i32)) */
 TEST_F(dt_expression_type_volatile, volatile_array) {
   const char *source = "volatile [ 10 ] i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -157,7 +154,7 @@ TEST_F(dt_expression_type_volatile, volatile_array) {
   allocator_free(allocator, &tokens);
 }
 
-/* volatile * volatile i32 → type_volatile(pointer(*volatile i32)) */
+/* volatile * volatile i32 鈫?type_volatile(pointer(*volatile i32)) */
 TEST_F(dt_expression_type_volatile, volatile_pointer_volatile) {
   const char *source = "volatile * volatile i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -187,7 +184,7 @@ TEST_F(dt_expression_type_volatile, volatile_pointer_volatile) {
  *  Volatile with generic instantiation and member access
  * -------------------------------------------------------------------------- */
 
-/* volatile Vec[i32] → type_volatile(generic(Vec[i32])) */
+/* volatile Vec[i32] 鈫?type_volatile(generic(Vec[i32])) */
 TEST_F(dt_expression_type_volatile, volatile_generic) {
   const char *source = "volatile Vec[ i32 ]";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -208,7 +205,7 @@ TEST_F(dt_expression_type_volatile, volatile_generic) {
   allocator_free(allocator, &tokens);
 }
 
-/* volatile std::vec::Vec → type_volatile(namespace_access(std::vec::Vec)) */
+/* volatile std::vec::Vec 鈫?type_volatile(namespace_access(std::vec::Vec)) */
 TEST_F(dt_expression_type_volatile, volatile_member) {
   const char *source = "volatile std::vec::Vec";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -232,7 +229,7 @@ TEST_F(dt_expression_type_volatile, volatile_member) {
  *  Volatile with type_group (ternary wrapping)
  * -------------------------------------------------------------------------- */
 
-/* volatile ( a ? b : c ) → type_volatile(type_group(ternary)) */
+/* volatile ( a ? b : c ) 鈫?type_volatile(type_group(ternary)) */
 TEST_F(dt_expression_type_volatile, volatile_with_type_group_ternary) {
   const char *source = "volatile ( a ? b : c )";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -261,7 +258,7 @@ TEST_F(dt_expression_type_volatile, volatile_with_type_group_ternary) {
  *  Volatile as ternary condition
  * -------------------------------------------------------------------------- */
 
-/* volatile greedily consumes ternary: volatile a ? b : c → volatile(a ? b : c) */
+/* volatile greedily consumes ternary: volatile a ? b : c 鈫?volatile(a ? b : c) */
 TEST_F(dt_expression_type_volatile, volatile_greedy_ternary) {
   const char *source = "volatile a ? b : c";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -294,7 +291,7 @@ TEST_F(dt_expression_type_volatile, volatile_greedy_ternary) {
  *  Volatile combined with const
  * -------------------------------------------------------------------------- */
 
-/* const volatile i32 → type_const(type_volatile(i32)) */
+/* const volatile i32 鈫?type_const(type_volatile(i32)) */
 TEST_F(dt_expression_type_volatile, const_volatile) {
   const char *source = "const volatile i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -323,7 +320,7 @@ TEST_F(dt_expression_type_volatile, const_volatile) {
   allocator_free(allocator, &tokens);
 }
 
-/* volatile const i32 → type_volatile(type_const(i32)) */
+/* volatile const i32 鈫?type_volatile(type_const(i32)) */
 TEST_F(dt_expression_type_volatile, volatile_const) {
   const char *source = "volatile const i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);

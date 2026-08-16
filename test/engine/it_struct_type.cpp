@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/scope.h"
@@ -16,7 +16,6 @@ using ::testing::Test;
 
 class it_struct_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   /** Create a Point struct type with fields x:i32, y:i32 */
   value_t _make_point_type(vm_t vm) {
@@ -36,7 +35,7 @@ protected:
     return tv;
   }
 
-  /** Create a Point3D struct type (x:i32, y:i32, z:i32) — extends Point */
+  /** Create a Point3D struct type (x:i32, y:i32, z:i32) 鈥?extends Point */
   value_t _make_point3d_type(vm_t vm) {
     value_t tv = vm_create_struct_type_value(vm, "Point3D", true, "<builtin>");
     (void)vm_struct_add_field(vm, tv, "x", vm_get_i32_type(vm), true);
@@ -75,7 +74,6 @@ TEST_F(it_struct_type, create_named) {
   EXPECT_EQ(type_get_align(st), 4u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, create_anonymous) {
@@ -88,7 +86,6 @@ TEST_F(it_struct_type, create_anonymous) {
   EXPECT_EQ(vec_get_size(vm_struct_get_fields(vm, tv)), 2u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, seal_prevents_add_field) {
@@ -101,7 +98,6 @@ TEST_F(it_struct_type, seal_prevents_add_field) {
   EXPECT_EQ(vec_get_size(vm_struct_get_fields(vm, tv)), 2u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, const_struct) {
@@ -113,7 +109,6 @@ TEST_F(it_struct_type, const_struct) {
   EXPECT_FALSE(type_is_mut((type_t)value_get_data(tv)));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Value creation ---- */
@@ -132,7 +127,6 @@ TEST_F(it_struct_type, create_value) {
   EXPECT_EQ(type_get_kind(value_get_type(sv)), TYPE_KIND_STRUCT);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, create_shadow) {
@@ -144,7 +138,6 @@ TEST_F(it_struct_type, create_shadow) {
   EXPECT_FALSE(value_is_initialized(sv));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- get_field / set_field ---- */
@@ -166,7 +159,6 @@ TEST_F(it_struct_type, get_field) {
   EXPECT_EQ(*(int32_t *)value_get_data(got_y), 99);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, set_field) {
@@ -187,7 +179,6 @@ TEST_F(it_struct_type, set_field) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 77);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, get_field_not_found) {
@@ -203,7 +194,6 @@ TEST_F(it_struct_type, get_field_not_found) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, set_field_const_struct_rejected) {
@@ -221,7 +211,6 @@ TEST_F(it_struct_type, set_field_const_struct_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- member_addr ---- */
@@ -244,7 +233,6 @@ TEST_F(it_struct_type, member_addr) {
   EXPECT_EQ(*(int32_t *)value_get_data(derefed), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- pointer auto-deref ---- */
@@ -258,7 +246,7 @@ TEST_F(it_struct_type, pointer_get_field_auto_deref) {
   value_t fields[] = {vx, vy};
   value_t sv = vm_create_struct_value(vm, tv, fields);
 
-  /* take address of struct → *Point */
+  /* take address of struct 鈫?*Point */
   value_t ptr = value_addrof(vm, sv);
   EXPECT_EQ(type_get_kind(value_get_type(ptr)), TYPE_KIND_POINTER);
 
@@ -271,7 +259,6 @@ TEST_F(it_struct_type, pointer_get_field_auto_deref) {
   EXPECT_EQ(*(int32_t *)value_get_data(got_y), 99);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, pointer_set_field_auto_deref) {
@@ -296,7 +283,6 @@ TEST_F(it_struct_type, pointer_set_field_auto_deref) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 77);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, pointer_set_field_const_struct_rejected) {
@@ -311,13 +297,12 @@ TEST_F(it_struct_type, pointer_set_field_const_struct_rejected) {
 
   value_t ptr = value_addrof(vm, sv);
 
-  /* set_field on pointer to const struct → auto-deref gives const Point → rejected */
+  /* set_field on pointer to const struct 鈫?auto-deref gives const Point 鈫?rejected */
   value_t new_x = create_i32_value(vm, 99);
   value_t result = value_set_field(vm, ptr, "x", new_x);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, pointer_get_field_not_found) {
@@ -334,7 +319,6 @@ TEST_F(it_struct_type, pointer_get_field_not_found) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- pointer upcast ---- */
@@ -364,7 +348,7 @@ TEST_F(it_struct_type, pointer_safe_cast_upcast) {
   value_t ptr_tv = vm_create_pointer_type_value(vm, point, true, false);
   pointer_type_t ptr_point_type = (pointer_type_t)value_get_data(ptr_tv);
 
-  /* safe_cast *Point3D → *Point (upcast) */
+  /* safe_cast *Point3D 鈫?*Point (upcast) */
   value_t ptr_point = value_safe_cast(vm, ptr3d, (type_t)ptr_point_type);
   EXPECT_EQ(type_get_kind(value_get_type(ptr_point)), TYPE_KIND_POINTER);
 
@@ -377,7 +361,6 @@ TEST_F(it_struct_type, pointer_safe_cast_upcast) {
   EXPECT_EQ(*(int32_t *)value_get_data(got_y), 2);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, pointer_safe_cast_downcast_rejected) {
@@ -398,12 +381,11 @@ TEST_F(it_struct_type, pointer_safe_cast_downcast_rejected) {
   value_t ptr3d_tv = vm_create_pointer_type_value(vm, point3d, true, false);
   pointer_type_t ptr3d_type = (pointer_type_t)value_get_data(ptr3d_tv);
 
-  /* safe_cast *Point → *Point3D (downcast) should be rejected */
+  /* safe_cast *Point 鈫?*Point3D (downcast) should be rejected */
   value_t result = value_safe_cast(vm, ptr, (type_t)ptr3d_type);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, pointer_safe_cast_const_ptr_to_mut_ptr) {
@@ -425,13 +407,12 @@ TEST_F(it_struct_type, pointer_safe_cast_const_ptr_to_mut_ptr) {
   value_t mptr_tv = vm_create_pointer_type_value(vm, point, true, false);
   pointer_type_t mut_ptr_type = (pointer_type_t)value_get_data(mptr_tv);
 
-  /* const *Point → *Point: const is on the pointer variable, not pointee.
-   * Copying the address is safe — pointer is a trivial u64. */
+  /* const *Point 鈫?*Point: const is on the pointer variable, not pointee.
+   * Copying the address is safe 鈥?pointer is a trivial u64. */
   value_t result = value_safe_cast(vm, const_ptr, (type_t)mut_ptr_type);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_POINTER);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, pointer_assignment_upcast) {
@@ -454,16 +435,15 @@ TEST_F(it_struct_type, pointer_assignment_upcast) {
   value_t sv_point = vm_create_struct_value(vm, point_tv, fields_p);
   value_t ptr_point = value_addrof(vm, sv_point);
 
-  /* assign *Point3D → *Point (upcast assignment) */
+  /* assign *Point3D 鈫?*Point (upcast assignment) */
   value_t result = value_assignment(vm, ptr_point, ptr3d);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
 
-  /* verify through the *Point pointer — now points to Point3D's data */
+  /* verify through the *Point pointer 鈥?now points to Point3D's data */
   value_t got_x = value_get_field(vm, ptr_point, "x");
   EXPECT_EQ(*(int32_t *)value_get_data(got_x), 10);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, pointer_assignment_shadow) {
@@ -492,7 +472,6 @@ TEST_F(it_struct_type, pointer_assignment_shadow) {
   EXPECT_TRUE(value_is_shadow(ptr_shadow)); /* data still NULL */
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_equal (duck typing) ---- */
@@ -508,14 +487,13 @@ TEST_F(it_struct_type, type_equal_same_structure) {
       vm_create_value_shadow(vm, st1, NULL, true),
       vm_create_value_shadow(vm, st2, NULL, true));
 
-  /* duck typing: same fields → equal */
+  /* duck typing: same fields 鈫?equal */
   vtable_t vt = type_get_vtable(st1);
   value_t teq = vt.type_equal(vm, st1, st2);
   EXPECT_EQ(type_get_kind(value_get_type(teq)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(teq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, type_equal_different_fields) {
@@ -530,7 +508,6 @@ TEST_F(it_struct_type, type_equal_different_fields) {
   EXPECT_FALSE(*(bool *)value_get_data(teq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- assignment ---- */
@@ -558,7 +535,6 @@ TEST_F(it_struct_type, assignment) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 10);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- safe_cast ---- */
@@ -573,11 +549,10 @@ TEST_F(it_struct_type, safe_cast_same_type) {
   value_t sv = vm_create_struct_value(vm, tv, fields);
 
   value_t casted = value_safe_cast(vm, sv, (type_t)value_get_data(tv));
-  /* same type → returns self */
+  /* same type 鈫?returns self */
   EXPECT_EQ(type_get_kind(value_get_type(casted)), TYPE_KIND_STRUCT);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, safe_cast_different_type_rejected) {
@@ -594,7 +569,6 @@ TEST_F(it_struct_type, safe_cast_different_type_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(casted)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- clone ---- */
@@ -614,7 +588,6 @@ TEST_F(it_struct_type, clone_value) {
   EXPECT_EQ(type_get_kind(cloned_type), TYPE_KIND_STRUCT);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, clone_shadow) {
@@ -627,7 +600,6 @@ TEST_F(it_struct_type, clone_shadow) {
   EXPECT_FALSE(value_is_initialized(cloned));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- equal ---- */
@@ -651,7 +623,6 @@ TEST_F(it_struct_type, equal_same_values) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, equal_different_values) {
@@ -672,7 +643,6 @@ TEST_F(it_struct_type, equal_different_values) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- to_string ---- */
@@ -690,7 +660,6 @@ TEST_F(it_struct_type, to_string_named) {
   EXPECT_EQ(type_get_kind(value_get_type(s)), TYPE_KIND_STR);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- props / methods ---- */
@@ -709,7 +678,6 @@ TEST_F(it_struct_type, add_prop_and_get) {
   EXPECT_EQ(*(int32_t *)value_get_data(found), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, methods_registration) {
@@ -733,7 +701,6 @@ TEST_F(it_struct_type, methods_registration) {
   EXPECT_EQ(strmap_find(vm_struct_get_methods(vm, tv), "count"), nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, member_call_no_method_error) {
@@ -751,7 +718,6 @@ TEST_F(it_struct_type, member_call_no_method_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- pointer member_call auto-deref ---- */
@@ -773,7 +739,6 @@ TEST_F(it_struct_type, pointer_member_call_auto_deref) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type-level get_prop / set_prop (via TYPE_KIND_TYPE value) ---- */
@@ -795,7 +760,6 @@ TEST_F(it_struct_type, type_get_prop_via_type_value) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, type_set_prop_via_type_value) {
@@ -818,7 +782,6 @@ TEST_F(it_struct_type, type_set_prop_via_type_value) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 99);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, type_get_prop_not_found) {
@@ -831,7 +794,6 @@ TEST_F(it_struct_type, type_get_prop_not_found) {
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, instance_get_prop_rejected) {
@@ -852,7 +814,6 @@ TEST_F(it_struct_type, instance_get_prop_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Empty struct has size 1 ---- */
@@ -863,7 +824,6 @@ TEST_F(it_struct_type, empty_struct_size_is_1) {
   (void)vm_struct_seal(vm, tv);
   EXPECT_EQ(type_get_size((type_t)value_get_data(tv)), 1u);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Shadow operations ---- */
@@ -876,7 +836,6 @@ TEST_F(it_struct_type, shadow_equal) {
   value_t result = value_equal(vm, a, b);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, shadow_assignment) {
@@ -889,7 +848,6 @@ TEST_F(it_struct_type, shadow_assignment) {
   EXPECT_TRUE(value_is_initialized(a));
   EXPECT_TRUE(value_is_shadow(a));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, shadow_safe_cast) {
@@ -900,7 +858,6 @@ TEST_F(it_struct_type, shadow_safe_cast) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(value_get_type(result), (type_t)value_get_data(tv));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_struct_type, shadow_to_string) {
@@ -910,6 +867,5 @@ TEST_F(it_struct_type, shadow_to_string) {
   value_t result = value_to_string(vm, sv);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 

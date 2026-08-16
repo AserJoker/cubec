@@ -6,7 +6,6 @@ using ::testing::Test;
 
 class dt_list : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
 };
 
 TEST_F(dt_list, create_and_destroy) {

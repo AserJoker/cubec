@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "core/token_writer.h"
 #include "cubec/expression_ternary.h"
@@ -19,16 +19,13 @@ using ::testing::Test;
 
 class dt_expression_type_constraint : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* --------------------------------------------------------------------------
  *  Basic constraint operators (now binary ops)
  * -------------------------------------------------------------------------- */
 
-/* extends: T extends U → EXPRESSION_BINARY with opt "extends" */
+/* extends: T extends U 鈫?EXPRESSION_BINARY with opt "extends" */
 TEST_F(dt_expression_type_constraint, simple_extends) {
   const char *source = "T extends U";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -50,7 +47,7 @@ TEST_F(dt_expression_type_constraint, simple_extends) {
   allocator_free(allocator, &tokens);
 }
 
-/* ==: T == U → EXPRESSION_BINARY with opt "==" */
+/* ==: T == U 鈫?EXPRESSION_BINARY with opt "==" */
 TEST_F(dt_expression_type_constraint, simple_eq) {
   const char *source = "T == U";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -68,7 +65,7 @@ TEST_F(dt_expression_type_constraint, simple_eq) {
   allocator_free(allocator, &tokens);
 }
 
-/* !=: T != U → EXPRESSION_BINARY with opt "!=" */
+/* !=: T != U 鈫?EXPRESSION_BINARY with opt "!=" */
 TEST_F(dt_expression_type_constraint, simple_ne) {
   const char *source = "T != U";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -87,7 +84,7 @@ TEST_F(dt_expression_type_constraint, simple_ne) {
 }
 
 /* --------------------------------------------------------------------------
- *  Fallback: no constraint operator → returns left operand as-is
+ *  Fallback: no constraint operator 鈫?returns left operand as-is
  * -------------------------------------------------------------------------- */
 
 /* Plain identifier returns as-is */
@@ -175,7 +172,7 @@ TEST_F(dt_expression_type_constraint, ne_pointer_right) {
  *  Constraint as ternary condition (via read_expression_type)
  * -------------------------------------------------------------------------- */
 
-/* T extends U ? X : Y — binary extends as ternary condition */
+/* T extends U ? X : Y 鈥?binary extends as ternary condition */
 TEST_F(dt_expression_type_constraint, extends_ternary) {
   const char *source = "T extends U ? X : Y";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -200,7 +197,7 @@ TEST_F(dt_expression_type_constraint, extends_ternary) {
   allocator_free(allocator, &tokens);
 }
 
-/* T == U ? X : Y — equality binary as ternary condition */
+/* T == U ? X : Y 鈥?equality binary as ternary condition */
 TEST_F(dt_expression_type_constraint, eq_ternary) {
   const char *source = "T == i32 ? Vec[ T ] : T";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -228,7 +225,7 @@ TEST_F(dt_expression_type_constraint, eq_ternary) {
   allocator_free(allocator, &tokens);
 }
 
-/* T != U ? X : Y — inequality binary as ternary condition */
+/* T != U ? X : Y 鈥?inequality binary as ternary condition */
 TEST_F(dt_expression_type_constraint, ne_ternary) {
   const char *source = "T != f64 ? f32 : T";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -254,7 +251,7 @@ TEST_F(dt_expression_type_constraint, ne_ternary) {
  *  typeof + extends in value context
  * -------------------------------------------------------------------------- */
 
-/* (typeof(a) extends i32) ? 1 : 2 — value ternary with typeof+extends condition */
+/* (typeof(a) extends i32) ? 1 : 2 鈥?value ternary with typeof+extends condition */
 TEST_F(dt_expression_type_constraint, typeof_extends_ternary_value) {
   const char *source = "(typeof(a) extends i32) ? 1 : 2";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);

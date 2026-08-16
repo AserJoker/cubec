@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/declaration_array.h"
 #include "core/token_writer.h"
 #include "cubec/declaration_pointer.h"
@@ -23,9 +23,6 @@ using ::testing::Test;
 
 class dt_expression_type_ternary : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* --------------------------------------------------------------------------
@@ -187,7 +184,7 @@ TEST_F(dt_expression_type_ternary, deeply_nested) {
  *  Pointer / slice / array declarations with ternary base type
  * -------------------------------------------------------------------------- */
 
-/* Pointer greedily consumes ternary: * a ? b : c  →  *(a ? b : c) */
+/* Pointer greedily consumes ternary: * a ? b : c  鈫? *(a ? b : c) */
 TEST_F(dt_expression_type_ternary, pointer_greedy_ternary) {
   const char *source = "* a ? b : c";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -239,7 +236,7 @@ TEST_F(dt_expression_type_ternary, with_pointer_condition) {
   allocator_free(allocator, &tokens);
 }
 
-/* Slice greedily consumes ternary: [] a ? b : c  →  [](a ? b : c) */
+/* Slice greedily consumes ternary: [] a ? b : c  鈫? [](a ? b : c) */
 TEST_F(dt_expression_type_ternary, slice_greedy_ternary) {
   const char *source = "[] a ? b : c";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -267,7 +264,7 @@ TEST_F(dt_expression_type_ternary, slice_greedy_ternary) {
   allocator_free(allocator, &tokens);
 }
 
-/* Array greedily consumes ternary: [ 10 ] a ? b : c  →  [10](a ? b : c) */
+/* Array greedily consumes ternary: [ 10 ] a ? b : c  鈫? [10](a ? b : c) */
 TEST_F(dt_expression_type_ternary, array_greedy_ternary) {
   const char *source = "[ 10 ] a ? b : c";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -378,7 +375,7 @@ TEST_F(dt_expression_type_ternary, array_to_ternary_via_group) {
  * -------------------------------------------------------------------------- */
 
 /* expression_group condition with binary expression:
- * ( a + b ) ? X : Y → condition is expression_group wrapping binary */
+ * ( a + b ) ? X : Y 鈫?condition is expression_group wrapping binary */
 TEST_F(dt_expression_type_ternary, expression_group_with_binary_condition) {
   const char *source = "( a + b ) ? X : Y";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -405,7 +402,7 @@ TEST_F(dt_expression_type_ternary, expression_group_with_binary_condition) {
   allocator_free(allocator, &tokens);
 }
 
-/* type_group in consequent: a ? ( b ) : c → consequent wrapped in type_group */
+/* type_group in consequent: a ? ( b ) : c 鈫?consequent wrapped in type_group */
 TEST_F(dt_expression_type_ternary, type_group_in_consequent) {
   const char *source = "a ? ( b ) : c";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -432,7 +429,7 @@ TEST_F(dt_expression_type_ternary, type_group_in_consequent) {
   allocator_free(allocator, &tokens);
 }
 
-/* type_group in alternate: a ? b : ( c ) → alternate wrapped in type_group */
+/* type_group in alternate: a ? b : ( c ) 鈫?alternate wrapped in type_group */
 TEST_F(dt_expression_type_ternary, type_group_in_alternate) {
   const char *source = "a ? b : ( c )";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -459,7 +456,7 @@ TEST_F(dt_expression_type_ternary, type_group_in_alternate) {
 }
 
 /* expression_group in consequent (value expr in type context):
- * a ? ( 1 ) : b → consequent is expression_group (1 is not a valid type) */
+ * a ? ( 1 ) : b 鈫?consequent is expression_group (1 is not a valid type) */
 TEST_F(dt_expression_type_ternary, expression_group_in_consequent) {
   const char *source = "a ? ( 1 ) : b";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -548,7 +545,7 @@ TEST_F(dt_expression_type_ternary, mixed_group_and_type_group) {
 }
 
 /* All three branches wrapped in groups:
- * ( a ) ? ( b ) : ( c ) — all type_groups */
+ * ( a ) ? ( b ) : ( c ) 鈥?all type_groups */
 TEST_F(dt_expression_type_ternary, all_branches_type_group) {
   const char *source = "( a ) ? ( b ) : ( c )";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -741,7 +738,7 @@ TEST_F(dt_expression_type_ternary, extends_with_generic_consequent) {
 }
 
 /* Bare constraint without '?' is a valid binary expression:
- * T extends U → returns a binary node */
+ * T extends U 鈫?returns a binary node */
 TEST_F(dt_expression_type_ternary, bare_constraint_is_valid) {
   const char *source = "T extends U";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -762,7 +759,7 @@ TEST_F(dt_expression_type_ternary, bare_constraint_is_valid) {
 }
 
 /* Nested ternary with constraint on outer layer:
- * ( a extends b ? c : d ) ? e : f → outer condition is type_group */
+ * ( a extends b ? c : d ) ? e : f 鈫?outer condition is type_group */
 TEST_F(dt_expression_type_ternary, constraint_nested_in_group) {
   const char *source = "( a extends b ? c : d ) ? e : f";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);

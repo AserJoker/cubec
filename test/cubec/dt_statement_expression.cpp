@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/statement.h"
 #include "cubec/statement_expression.h"
@@ -16,9 +16,6 @@ using ::testing::Test;
 
 class dt_statement_expression : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* ---- Simple identifier expression statement ---- */
@@ -131,7 +128,7 @@ TEST_F(dt_statement_expression, consume_all_tokens) {
   size_t position = 0;
   node_t node = read_statement_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  /* foo, ; → 2 tokens + EOF */
+  /* foo, ; 鈫?2 tokens + EOF */
   EXPECT_EQ(position, 2);
 
   allocator_free(allocator, &node);

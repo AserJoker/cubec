@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "core/token_writer.h"
 #include "cubec/expression_group.h"
@@ -16,12 +16,9 @@
 
 class test_func_type_extends : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
-/* typeof(fn) == func(i32) -> i32 — binary == with function type */
+/* typeof(fn) == func(i32) -> i32 鈥?binary == with function type */
 TEST_F(test_func_type_extends, typeof_eq_func_type) {
   const char *source = "typeof(fn) == func(i32) -> i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -42,7 +39,7 @@ TEST_F(test_func_type_extends, typeof_eq_func_type) {
 }
 
 /* typeof(fn) == func(i32) -> i32 ? Vec[i32] : f32
- * Greedy: func return type consumes ternary →
+ * Greedy: func return type consumes ternary 鈫?
  * binary(typeof(fn), ==, func(i32) -> ternary(i32, Vec[i32], f32)) */
 TEST_F(test_func_type_extends, typeof_eq_func_type_ternary) {
   const char *source = "typeof(fn) == func(i32) -> i32 ? Vec[i32] : f32";

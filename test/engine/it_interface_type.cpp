@@ -1,6 +1,6 @@
-/**
+﻿/**
  * @file it_interface_type.cpp
- * @brief Integration tests for interface_type_t — compile-time constraint type.
+ * @brief Integration tests for interface_type_t 鈥?compile-time constraint type.
  */
 #include "common/test_common.h"
 #include "core/allocator.h"
@@ -23,7 +23,6 @@ using ::testing::Test;
 
 class it_interface_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
@@ -58,7 +57,6 @@ TEST_F(it_interface_type, create_basic) {
   EXPECT_TRUE(type_is_mut((type_t)it));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_interface_type, create_const) {
@@ -69,7 +67,6 @@ TEST_F(it_interface_type, create_const) {
   EXPECT_FALSE(type_is_mut((type_t)it));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Add method + seal ---- */
@@ -104,7 +101,6 @@ TEST_F(it_interface_type, add_method_and_seal) {
   EXPECT_TRUE(vm_interface_is_sealed(vm, tv));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_interface_type, seal_empty_interface_fails) {
@@ -117,7 +113,6 @@ TEST_F(it_interface_type, seal_empty_interface_fails) {
   EXPECT_FALSE(vm_interface_is_sealed(vm, tv));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_interface_type, add_method_after_seal_emits_error) {
@@ -143,7 +138,6 @@ TEST_F(it_interface_type, add_method_after_seal_emits_error) {
     EXPECT_EQ(type_get_kind(value_get_type(err)), TYPE_KIND_EXCEPTION);
   }
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- get_methods ---- */
@@ -157,7 +151,6 @@ TEST_F(it_interface_type, get_methods_returns_strmap) {
   EXPECT_EQ(strmap_get_size(methods), 0u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- get_module_id ---- */
@@ -168,7 +161,6 @@ TEST_F(it_interface_type, get_module_id) {
   EXPECT_STREQ(vm_interface_get_module_id(vm, tv), "my/module");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- struct type_extends interface (via vtable) ---- */
@@ -218,7 +210,6 @@ TEST_F(it_interface_type, struct_extends_interface_match) {
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_interface_type, struct_extends_interface_missing_method) {
@@ -250,7 +241,6 @@ TEST_F(it_interface_type, struct_extends_interface_missing_method) {
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_FALSE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- union type_extends interface (via vtable) ---- */
@@ -291,12 +281,11 @@ TEST_F(it_interface_type, union_extends_interface_match) {
   value_t fn = create_callable_value(vm, union_ct, NULL, "inspect");
   (void)vm_union_add_prop(vm, utv, "inspect", fn, true, true);
 
-  /* check: union implements interface (type value's extends → data's type_extends) */
+  /* check: union implements interface (type value's extends 鈫?data's type_extends) */
   value_t ext = value_extends(vm, utv, itv);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_interface_type, union_extends_interface_missing_method) {
@@ -329,12 +318,11 @@ TEST_F(it_interface_type, union_extends_interface_missing_method) {
   }
   (void)vm_union_seal(vm, utv);
 
-  /* check: union does NOT implement interface (type value's extends → data's type_extends) */
+  /* check: union does NOT implement interface (type value's extends 鈫?data's type_extends) */
   value_t ext = value_extends(vm, utv, itv);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_FALSE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- struct type_extends with interface ---- */
@@ -372,7 +360,6 @@ TEST_F(it_interface_type, struct_type_extends_interface_via_vtable) {
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_interface_type, struct_type_extends_interface_mismatch) {
@@ -416,7 +403,6 @@ TEST_F(it_interface_type, struct_type_extends_interface_mismatch) {
   EXPECT_FALSE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- union type_extends with interface ---- */
@@ -461,7 +447,6 @@ TEST_F(it_interface_type, union_type_extends_interface_via_vtable) {
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- wildcard extends ---- */
@@ -472,13 +457,12 @@ TEST_F(it_interface_type, struct_extends_wildcard) {
   (void)vm_struct_add_field(vm, stv, "x", vm_get_i32_type(vm), true);
   (void)vm_struct_seal(vm, stv);
 
-  /* struct extends wildcard is always true: type value's extends → data's type_extends */
+  /* struct extends wildcard is always true: type value's extends 鈫?data's type_extends */
   value_t ext = value_extends(vm, stv, vm_get_wildcard_type(vm));
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_interface_type, union_extends_wildcard) {
@@ -493,13 +477,12 @@ TEST_F(it_interface_type, union_extends_wildcard) {
     (void)vm_union_add_field(vm, utv, "b", ft, true);
   }
   (void)vm_union_seal(vm, utv);
-  /* union extends wildcard is always true: type value's extends → data's type_extends */
+  /* union extends wildcard is always true: type value's extends 鈫?data's type_extends */
   value_t ext = value_extends(vm, utv, vm_get_wildcard_type(vm));
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- interface vtable is all NULL ---- */
@@ -510,7 +493,7 @@ TEST_F(it_interface_type, interface_vtable_is_null) {
   interface_type_t it = (interface_type_t)value_get_data(tv);
 
   vtable_t vt = type_get_vtable((type_t)it);
-  /* interface is compile-time only — no vtable entries */
+  /* interface is compile-time only 鈥?no vtable entries */
   EXPECT_EQ(vt.type_equal, nullptr);
   EXPECT_EQ(vt.type_extends, nullptr);
   EXPECT_EQ(vt.to_string, nullptr);
@@ -522,7 +505,6 @@ TEST_F(it_interface_type, interface_vtable_is_null) {
   EXPECT_EQ(vt.set_prop, nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- interface size and align are zero ---- */
@@ -536,5 +518,4 @@ TEST_F(it_interface_type, interface_size_align_zero) {
   EXPECT_EQ(type_get_align((type_t)it), 0u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

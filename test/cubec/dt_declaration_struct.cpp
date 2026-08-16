@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/declaration_struct.h"
@@ -18,9 +18,6 @@ using ::testing::Test;
 
 class dt_declaration_struct : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* ==========================================================================

@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/declaration_array.h"
 #include "core/token_writer.h"
 #include "cubec/declaration_pointer.h"
@@ -21,9 +21,6 @@ using ::testing::Test;
 
 class dt_expression_type : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* Test: simple identifier type (e.g., "i32", "Vec") */
@@ -252,7 +249,7 @@ TEST_F(dt_expression_type, consume_all_tokens) {
   ASSERT_NE(node, nullptr);
 
   /* All tokens should be consumed:
-   * std, ::, vec, ::, Vec, [, i32, ] → 8 tokens */
+   * std, ::, vec, ::, Vec, [, i32, ] 鈫?8 tokens */
   EXPECT_EQ(position, 8);
 
   allocator_free(allocator, &node);
@@ -507,7 +504,7 @@ TEST_F(dt_expression_type, simple_pointer_declaration) {
 
 /* Test: pointer with const in base type (e.g., "* const i32")
  * After fix: const after * is part of the base type, not the pointer itself.
- * So "* const i32" → pointer(is_volatile=false, type=qualifier(const, i32)) */
+ * So "* const i32" 鈫?pointer(is_volatile=false, type=qualifier(const, i32)) */
 TEST_F(dt_expression_type, pointer_with_const) {
   const char *source = "* const i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -683,7 +680,7 @@ TEST_F(dt_expression_type, pointer_on_complex_type) {
 
 /* Test: volatile pointer to const type (e.g., "* volatile const i32")
  * After fix: volatile is pointer-level, const is part of base type.
- * So "* volatile const i32" → pointer(is_volatile=true, type=qualifier(const, i32)) */
+ * So "* volatile const i32" 鈫?pointer(is_volatile=true, type=qualifier(const, i32)) */
 TEST_F(dt_expression_type, pointer_volatile_const) {
   const char *source = "* volatile const i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -1302,7 +1299,7 @@ TEST_F(dt_expression_type, type_group_consume_all_tokens) {
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  /* All tokens should be consumed: (, whitespace, i32, whitespace, ) → 5 tokens */
+  /* All tokens should be consumed: (, whitespace, i32, whitespace, ) 鈫?5 tokens */
   EXPECT_EQ(position, 5);
 
   allocator_free(allocator, &node);

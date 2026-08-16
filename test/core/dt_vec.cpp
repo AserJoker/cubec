@@ -6,7 +6,6 @@ using ::testing::Test;
 
 class dt_vec : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
 };
 
 TEST_F(dt_vec, create_and_resize) {

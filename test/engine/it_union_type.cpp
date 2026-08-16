@@ -1,4 +1,4 @@
-#include "common/test_common.h"
+﻿#include "common/test_common.h"
 #include "engine/bool_type.h"
 #include "engine/error.h"
 #include "engine/error_code.h"
@@ -20,7 +20,6 @@ using ::testing::Test;
 
 class it_union_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
@@ -120,7 +119,6 @@ TEST_F(it_union_type, create_named) {
   EXPECT_GT(type_get_size((type_t)ut), sizeof(int32_t));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, create_anonymous) {
@@ -133,21 +131,19 @@ TEST_F(it_union_type, create_anonymous) {
   EXPECT_EQ(vec_get_size(vm_union_get_fields(vm, tv)), 2u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, seal_prevents_add_field) {
   vm_t vm = vm_create(allocator);
   value_t tv = _make_result_type(vm);
 
-  /* try to add field after seal — should return exception */
+  /* try to add field after seal 鈥?should return exception */
   value_t ft = _make_type_val(vm, _get_i32_type(vm));
   value_t err = vm_union_add_field(vm, tv, "z", ft, true);
   EXPECT_EQ(type_get_kind(value_get_type(err)), TYPE_KIND_EXCEPTION);
   EXPECT_EQ(vec_get_size(vm_union_get_fields(vm, tv)), 2u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, const_union) {
@@ -164,7 +160,6 @@ TEST_F(it_union_type, const_union) {
   EXPECT_FALSE(type_is_mut((type_t)ut));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Value creation ---- */
@@ -181,7 +176,6 @@ TEST_F(it_union_type, create_value_ok) {
   EXPECT_EQ(type_get_kind(value_get_type(uv)), TYPE_KIND_UNION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, create_value_err) {
@@ -194,7 +188,6 @@ TEST_F(it_union_type, create_value_err) {
   EXPECT_TRUE(value_is_initialized(uv));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, create_shadow) {
@@ -206,7 +199,6 @@ TEST_F(it_union_type, create_shadow) {
   EXPECT_FALSE(value_is_initialized(uv));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- get_field / set_field ---- */
@@ -229,7 +221,6 @@ TEST_F(it_union_type, get_field_active) {
   EXPECT_EQ(*(int32_t *)value_get_data(raw), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, get_field_inactive_error) {
@@ -239,13 +230,12 @@ TEST_F(it_union_type, get_field_inactive_error) {
   value_t ok_val = create_i32_value(vm, 42);
   value_t uv = vm_create_union_value(vm, tv, "ok", ok_val);
 
-  /* "err" is inactive → result with error variant (tag=1) */
+  /* "err" is inactive 鈫?result with error variant (tag=1) */
   value_t result = value_get_field(vm, uv, "err");
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_UNION);
   EXPECT_EQ(_read_tag(result), 1u); /* error variant */
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, set_field_switches_tag) {
@@ -256,23 +246,22 @@ TEST_F(it_union_type, set_field_switches_tag) {
   value_t ok_val = create_i32_value(vm, 42);
   value_t uv = vm_create_union_value(vm, tv, "ok", ok_val);
 
-  /* switch to err="fail" — this changes tag */
+  /* switch to err="fail" 鈥?this changes tag */
   value_t err_val = create_str_value(vm, "fail");
   value_t result = value_set_field(vm, uv, "err", err_val);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
 
-  /* now "ok" should be inactive → result with error variant */
+  /* now "ok" should be inactive 鈫?result with error variant */
   value_t got_ok = value_get_field(vm, uv, "ok");
   EXPECT_EQ(type_get_kind(value_get_type(got_ok)), TYPE_KIND_UNION);
   EXPECT_EQ(_read_tag(got_ok), 1u); /* error variant */
 
-  /* "err" should be active → result with ok variant */
+  /* "err" should be active 鈫?result with ok variant */
   value_t got_err = value_get_field(vm, uv, "err");
   EXPECT_EQ(type_get_kind(value_get_type(got_err)), TYPE_KIND_UNION);
   EXPECT_EQ(_read_tag(got_err), 0u); /* ok variant */
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, get_field_not_found) {
@@ -286,7 +275,6 @@ TEST_F(it_union_type, get_field_not_found) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, set_field_const_union_rejected) {
@@ -307,7 +295,6 @@ TEST_F(it_union_type, set_field_const_union_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- member_addr ---- */
@@ -327,7 +314,6 @@ TEST_F(it_union_type, member_addr_active) {
   EXPECT_EQ(*(int32_t *)value_get_data(derefed), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, member_addr_inactive_error) {
@@ -342,7 +328,6 @@ TEST_F(it_union_type, member_addr_inactive_error) {
   EXPECT_EQ(_get_error_code(vm, addr), ERROR_CODE_UNION_ADDR_INACTIVE);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- pointer auto-deref ---- */
@@ -366,7 +351,6 @@ TEST_F(it_union_type, pointer_get_field_auto_deref) {
   EXPECT_EQ(*(int32_t *)value_get_data(raw), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, pointer_set_field_auto_deref) {
@@ -386,7 +370,6 @@ TEST_F(it_union_type, pointer_set_field_auto_deref) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 77);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_equal (duck typing) ---- */
@@ -403,7 +386,6 @@ TEST_F(it_union_type, type_equal_same_structure) {
   EXPECT_TRUE(*(bool *)value_get_data(teq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, type_equal_different_fields) {
@@ -418,7 +400,6 @@ TEST_F(it_union_type, type_equal_different_fields) {
   EXPECT_FALSE(*(bool *)value_get_data(teq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- equal ---- */
@@ -438,7 +419,6 @@ TEST_F(it_union_type, equal_same_active_field) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, equal_different_active_field) {
@@ -455,7 +435,6 @@ TEST_F(it_union_type, equal_different_active_field) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- safe_cast (tag remapping) ---- */
@@ -472,7 +451,6 @@ TEST_F(it_union_type, safe_cast_same_type) {
   EXPECT_EQ(type_get_kind(value_get_type(casted)), TYPE_KIND_UNION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, safe_cast_tag_remapping) {
@@ -485,17 +463,16 @@ TEST_F(it_union_type, safe_cast_tag_remapping) {
   value_t ok_val = create_i32_value(vm, 42);
   value_t uv = vm_create_union_value(vm, tv1, "ok", ok_val);
 
-  /* safe_cast to ut2 — tag should map correctly */
+  /* safe_cast to ut2 鈥?tag should map correctly */
   value_t casted = value_safe_cast(vm, uv, (type_t)ut2);
   EXPECT_EQ(type_get_kind(value_get_type(casted)), TYPE_KIND_UNION);
 
-  /* "ok" should still be active — verify via get_field_raw */
+  /* "ok" should still be active 鈥?verify via get_field_raw */
   value_t got = value_get_field_raw(vm, casted, "ok");
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, safe_cast_different_type_rejected) {
@@ -512,7 +489,6 @@ TEST_F(it_union_type, safe_cast_different_type_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(casted)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- assignment ---- */
@@ -530,13 +506,12 @@ TEST_F(it_union_type, assignment) {
   value_t result = value_assignment(vm, uv2, uv1);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
 
-  /* uv2 should now have ok=42 active — verify via get_field_raw */
+  /* uv2 should now have ok=42 active 鈥?verify via get_field_raw */
   value_t got = value_get_field_raw(vm, uv2, "ok");
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- clone ---- */
@@ -555,7 +530,6 @@ TEST_F(it_union_type, clone_value) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, clone_shadow) {
@@ -568,7 +542,6 @@ TEST_F(it_union_type, clone_shadow) {
   EXPECT_FALSE(value_is_initialized(cloned));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- to_string ---- */
@@ -584,7 +557,6 @@ TEST_F(it_union_type, to_string) {
   EXPECT_EQ(type_get_kind(value_get_type(s)), TYPE_KIND_STR);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- props / methods ---- */
@@ -601,7 +573,6 @@ TEST_F(it_union_type, add_prop_and_get) {
   EXPECT_EQ(*(int32_t *)value_get_data(found), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, methods_registration) {
@@ -620,7 +591,6 @@ TEST_F(it_union_type, methods_registration) {
   EXPECT_EQ(strmap_find(vm_union_get_methods(vm, tv), "count"), nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, member_call_no_method_error) {
@@ -635,7 +605,6 @@ TEST_F(it_union_type, member_call_no_method_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type-level get_prop / set_prop (via TYPE_KIND_TYPE value) ---- */
@@ -655,7 +624,6 @@ TEST_F(it_union_type, type_get_prop_via_type_value) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, type_set_prop_via_type_value) {
@@ -676,7 +644,6 @@ TEST_F(it_union_type, type_set_prop_via_type_value) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 99);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, type_get_prop_not_found) {
@@ -690,7 +657,6 @@ TEST_F(it_union_type, type_get_prop_not_found) {
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, instance_get_prop_rejected) {
@@ -709,7 +675,6 @@ TEST_F(it_union_type, instance_get_prop_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- is_instance ---- */
@@ -718,7 +683,7 @@ TEST_F(it_union_type, is_instance_active_field) {
   vm_t vm = vm_create(allocator);
   value_t tv = _make_result_type(vm);
 
-  /* ok=42 → active tag = 0 → i32 */
+  /* ok=42 鈫?active tag = 0 鈫?i32 */
   value_t ok_val = create_i32_value(vm, 42);
   value_t uv = vm_create_union_value(vm, tv, "ok", ok_val);
 
@@ -727,14 +692,13 @@ TEST_F(it_union_type, is_instance_active_field) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, is_instance_inactive_field) {
   vm_t vm = vm_create(allocator);
   value_t tv = _make_result_type(vm);
 
-  /* ok=42 → active tag = 0 → i32, NOT str */
+  /* ok=42 鈫?active tag = 0 鈫?i32, NOT str */
   value_t ok_val = create_i32_value(vm, 42);
   value_t uv = vm_create_union_value(vm, tv, "ok", ok_val);
 
@@ -743,14 +707,13 @@ TEST_F(it_union_type, is_instance_inactive_field) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, is_instance_switched_tag) {
   vm_t vm = vm_create(allocator);
   value_t tv = _make_result_type(vm);
 
-  /* err="fail" → active tag = 1 → str */
+  /* err="fail" 鈫?active tag = 1 鈫?str */
   value_t err_val = create_str_value(vm, "fail");
   value_t uv = vm_create_union_value(vm, tv, "err", err_val);
 
@@ -761,7 +724,6 @@ TEST_F(it_union_type, is_instance_switched_tag) {
   EXPECT_TRUE(*(bool *)value_get_data(result_str));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, is_instance_shadow) {
@@ -773,7 +735,6 @@ TEST_F(it_union_type, is_instance_shadow) {
   EXPECT_TRUE(value_is_shadow(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- pointer is_instance auto-deref ---- */
@@ -791,7 +752,6 @@ TEST_F(it_union_type, pointer_is_instance_auto_deref) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Empty union rejected ---- */
@@ -802,7 +762,6 @@ TEST_F(it_union_type, seal_empty_union_returns_false) {
   value_t err = vm_union_seal(vm, tv);
   EXPECT_EQ(type_get_kind(value_get_type(err)), TYPE_KIND_EXCEPTION);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Shadow operations ---- */
@@ -815,7 +774,6 @@ TEST_F(it_union_type, shadow_equal) {
   value_t result = value_equal(vm, a, b);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, shadow_assignment) {
@@ -828,7 +786,6 @@ TEST_F(it_union_type, shadow_assignment) {
   EXPECT_TRUE(value_is_initialized(a));
   EXPECT_TRUE(value_is_shadow(a));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, shadow_safe_cast) {
@@ -840,7 +797,6 @@ TEST_F(it_union_type, shadow_safe_cast) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(value_get_type(result), (type_t)ut);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_union_type, shadow_to_string) {
@@ -850,5 +806,4 @@ TEST_F(it_union_type, shadow_to_string) {
   value_t result = value_to_string(vm, uv);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

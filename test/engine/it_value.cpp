@@ -1,4 +1,4 @@
-#include "engine/type.h"
+﻿#include "engine/type.h"
 #include "engine/value.h"
 #include "core/string.h"
 #include "common/test_common.h"
@@ -8,7 +8,6 @@ using ::testing::Test;
 
 class it_value : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _make_i32_type() {
     return type_create(allocator, TYPE_KIND_I32, "i32", 4, 4, false,
@@ -35,7 +34,6 @@ TEST_F(it_value, create_and_accessors) {
 
   allocator_free(allocator, &v);
   allocator_free(allocator, &i32_type);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value, shadow_value) {
@@ -46,7 +44,6 @@ TEST_F(it_value, shadow_value) {
 
   allocator_free(allocator, &v);
   allocator_free(allocator, &i32_type);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value, dispose_owns_data) {
@@ -57,7 +54,6 @@ TEST_F(it_value, dispose_owns_data) {
   value_t v = value_create(allocator, i32_type, data, true);
   allocator_free(allocator, &v);
   allocator_free(allocator, &i32_type);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value, dispose_no_data_no_crash) {
@@ -65,7 +61,6 @@ TEST_F(it_value, dispose_no_data_no_crash) {
   value_t v = value_create(allocator, void_type, NULL, false);
   allocator_free(allocator, &v);
   allocator_free(allocator, &void_type);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value, move_transfers_data) {
@@ -86,7 +81,6 @@ TEST_F(it_value, move_transfers_data) {
   allocator_free(allocator, &moved);
   allocator_free(allocator, &v);
   allocator_free(allocator, &i32_type);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value, type_accessors) {
@@ -97,5 +91,4 @@ TEST_F(it_value, type_accessors) {
   EXPECT_EQ(type_get_align(i32_type), 4u);
 
   allocator_free(allocator, &i32_type);
-  delete_allocator(allocator);
 }

@@ -1,4 +1,4 @@
-#include "common/test_common.h"
+﻿#include "common/test_common.h"
 #include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token_writer.h"
@@ -12,9 +12,6 @@
 
 class dt_statement_union : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* ==========================================================================
@@ -282,7 +279,7 @@ TEST_F(dt_statement_union, implement_single) {
   allocator_free(allocator, &tokens);
 }
 
-/* ---- union without implement — implements is NULL ---- */
+/* ---- union without implement 鈥?implements is NULL ---- */
 
 TEST_F(dt_statement_union, no_implement) {
   const char *source = "union Option[T] { value: T; }";

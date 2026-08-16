@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/bool_type.h"
@@ -15,7 +15,6 @@ using ::testing::Test;
 
 class it_float_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_f16_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_f16_type(vm));
@@ -46,7 +45,6 @@ TEST_F(it_float_type, f32_create_value) {
   EXPECT_TRUE(value_is_initialized(v));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f64_create_value) {
@@ -57,7 +55,6 @@ TEST_F(it_float_type, f64_create_value) {
   EXPECT_DOUBLE_EQ(*(double *)value_get_data(v), 2.718281828);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f16_create_value) {
@@ -69,7 +66,6 @@ TEST_F(it_float_type, f16_create_value) {
   EXPECT_EQ(*(uint16_t *)value_get_data(v), 0x3C00u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f32 equal ---- */
@@ -84,7 +80,6 @@ TEST_F(it_float_type, f32_equal_same) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_equal_different) {
@@ -96,7 +91,6 @@ TEST_F(it_float_type, f32_equal_different) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_equal_f64_same_value) {
@@ -105,12 +99,11 @@ TEST_F(it_float_type, f32_equal_f64_same_value) {
   value_t b = create_f64_value(vm, 10.0);
   value_t result = value_equal(vm, a, b);
 
-  /* float promotion: f32 and f64 → compare as f64 */
+  /* float promotion: f32 and f64 鈫?compare as f64 */
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_equal_integer_error) {
@@ -119,11 +112,10 @@ TEST_F(it_float_type, f32_equal_integer_error) {
   value_t b = create_i32_value(vm, 10);
   value_t result = value_equal(vm, a, b);
 
-  /* float != integer → error */
+  /* float != integer 鈫?error */
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_equal_shadow) {
@@ -136,7 +128,6 @@ TEST_F(it_float_type, f32_equal_shadow) {
   EXPECT_TRUE(value_is_shadow(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f32 arithmetic ---- */
@@ -151,7 +142,6 @@ TEST_F(it_float_type, f32_add) {
   EXPECT_FLOAT_EQ(*(float *)value_get_data(result), 30.0f);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_sub) {
@@ -163,7 +153,6 @@ TEST_F(it_float_type, f32_sub) {
   EXPECT_FLOAT_EQ(*(float *)value_get_data(result), 30.0f);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_mul) {
@@ -175,7 +164,6 @@ TEST_F(it_float_type, f32_mul) {
   EXPECT_FLOAT_EQ(*(float *)value_get_data(result), 42.0f);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_div) {
@@ -187,7 +175,6 @@ TEST_F(it_float_type, f32_div) {
   EXPECT_FLOAT_EQ(*(float *)value_get_data(result), 2.5f);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_div_by_zero_error) {
@@ -199,7 +186,6 @@ TEST_F(it_float_type, f32_div_by_zero_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_mod) {
@@ -211,7 +197,6 @@ TEST_F(it_float_type, f32_mod) {
   EXPECT_FLOAT_EQ(*(float *)value_get_data(result), fmodf(10.5f, 3.0f));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_mod_by_zero_error) {
@@ -223,7 +208,6 @@ TEST_F(it_float_type, f32_mod_by_zero_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f32 unary ---- */
@@ -237,7 +221,6 @@ TEST_F(it_float_type, f32_pos) {
   EXPECT_FLOAT_EQ(*(float *)value_get_data(result), -42.5f);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_neg) {
@@ -248,7 +231,6 @@ TEST_F(it_float_type, f32_neg) {
   EXPECT_FLOAT_EQ(*(float *)value_get_data(result), -42.5f);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f32 relational ---- */
@@ -263,7 +245,6 @@ TEST_F(it_float_type, f32_gt) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_lt) {
@@ -275,7 +256,6 @@ TEST_F(it_float_type, f32_lt) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_ne) {
@@ -287,7 +267,6 @@ TEST_F(it_float_type, f32_ne) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_ge) {
@@ -299,7 +278,6 @@ TEST_F(it_float_type, f32_ge) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_le) {
@@ -311,7 +289,6 @@ TEST_F(it_float_type, f32_le) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f32 bitwise/shift unsupported ---- */
@@ -325,7 +302,6 @@ TEST_F(it_float_type, f32_band_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_bor_error) {
@@ -337,7 +313,6 @@ TEST_F(it_float_type, f32_bor_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_bxor_error) {
@@ -349,7 +324,6 @@ TEST_F(it_float_type, f32_bxor_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_bnot_error) {
@@ -360,7 +334,6 @@ TEST_F(it_float_type, f32_bnot_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_shl_error) {
@@ -372,7 +345,6 @@ TEST_F(it_float_type, f32_shl_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_shr_error) {
@@ -384,7 +356,6 @@ TEST_F(it_float_type, f32_shr_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f32 lnot ---- */
@@ -398,7 +369,6 @@ TEST_F(it_float_type, f32_lnot_zero) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_lnot_nonzero) {
@@ -409,7 +379,6 @@ TEST_F(it_float_type, f32_lnot_nonzero) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f32 safe_cast ---- */
@@ -420,11 +389,10 @@ TEST_F(it_float_type, f32_safe_cast_to_f32) {
   type_t f32t = _get_f32_type(vm);
   value_t result = value_safe_cast(vm, a, f32t);
 
-  /* same type → returns self */
+  /* same type 鈫?returns self */
   EXPECT_EQ(result, a);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_safe_cast_to_f64) {
@@ -437,7 +405,6 @@ TEST_F(it_float_type, f32_safe_cast_to_f64) {
   EXPECT_DOUBLE_EQ(*(double *)value_get_data(result), 42.5);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_safe_cast_to_const_f32) {
@@ -451,7 +418,6 @@ TEST_F(it_float_type, f32_safe_cast_to_const_f32) {
   EXPECT_FLOAT_EQ(*(float *)value_get_data(result), 42.0f);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_safe_cast_to_void_error) {
@@ -463,7 +429,6 @@ TEST_F(it_float_type, f32_safe_cast_to_void_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_safe_cast_to_i32_error) {
@@ -472,11 +437,10 @@ TEST_F(it_float_type, f32_safe_cast_to_i32_error) {
   type_t i32t = (type_t)value_get_data(vm_get_i32_type(vm));
   value_t result = value_safe_cast(vm, a, i32t);
 
-  /* float → integer not allowed */
+  /* float 鈫?integer not allowed */
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, const_f32_safe_cast_to_f32_error) {
@@ -486,11 +450,10 @@ TEST_F(it_float_type, const_f32_safe_cast_to_f32_error) {
   type_t f32t = _get_f32_type(vm);
   value_t result = value_safe_cast(vm, a, f32t);
 
-  /* const → mutable not allowed */
+  /* const 鈫?mutable not allowed */
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f32 assignment ---- */
@@ -505,7 +468,6 @@ TEST_F(it_float_type, f32_assign) {
   EXPECT_FLOAT_EQ(*(float *)value_get_data(a), 42.5f);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, const_f32_assign_error) {
@@ -518,7 +480,6 @@ TEST_F(it_float_type, const_f32_assign_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_assign_integer_error) {
@@ -531,7 +492,6 @@ TEST_F(it_float_type, f32_assign_integer_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f32 type-level equal/extends ---- */
@@ -546,7 +506,6 @@ TEST_F(it_float_type, f32_type_equal_f32) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_type_equal_f64_error) {
@@ -558,7 +517,6 @@ TEST_F(it_float_type, f32_type_equal_f64_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_type_extends_wildcard) {
@@ -570,7 +528,6 @@ TEST_F(it_float_type, f32_type_extends_wildcard) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- shadow propagation ---- */
@@ -586,7 +543,6 @@ TEST_F(it_float_type, f32_add_shadow) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_F32);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_neg_shadow) {
@@ -598,7 +554,6 @@ TEST_F(it_float_type, f32_neg_shadow) {
   EXPECT_TRUE(value_is_shadow(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f64 arithmetic ---- */
@@ -613,7 +568,6 @@ TEST_F(it_float_type, f64_add) {
   EXPECT_DOUBLE_EQ(*(double *)value_get_data(result), 1e15 + 1.0);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f64_mul) {
@@ -625,7 +579,6 @@ TEST_F(it_float_type, f64_mul) {
   EXPECT_DOUBLE_EQ(*(double *)value_get_data(result), 21.0);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Cross-type float promotion ---- */
@@ -636,12 +589,11 @@ TEST_F(it_float_type, f32_plus_f64_promotes_to_f64) {
   value_t b = create_f64_value(vm, 2.5);
   value_t result = value_add(vm, a, b);
 
-  /* f32 + f64 → result is f64 */
+  /* f32 + f64 鈫?result is f64 */
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_F64);
   EXPECT_DOUBLE_EQ(*(double *)value_get_data(result), 4.0);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f16_plus_f32_promotes_to_f32) {
@@ -651,12 +603,11 @@ TEST_F(it_float_type, f16_plus_f32_promotes_to_f32) {
   value_t b = create_f32_value(vm, 3.0f);
   value_t result = value_add(vm, a, b);
 
-  /* f16 + f32 → result is f32 */
+  /* f16 + f32 鈫?result is f32 */
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_F32);
   EXPECT_FLOAT_EQ(*(float *)value_get_data(result), 4.0f);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f16_plus_f64_promotes_to_f64) {
@@ -666,12 +617,11 @@ TEST_F(it_float_type, f16_plus_f64_promotes_to_f64) {
   value_t b = create_f64_value(vm, 2.5);
   value_t result = value_add(vm, a, b);
 
-  /* f16 + f64 → result is f64 */
+  /* f16 + f64 鈫?result is f64 */
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_F64);
   EXPECT_DOUBLE_EQ(*(double *)value_get_data(result), 3.5);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f32_gt_f64_promotes) {
@@ -684,7 +634,6 @@ TEST_F(it_float_type, f32_gt_f64_promotes) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f16 basic operations ---- */
@@ -699,7 +648,6 @@ TEST_F(it_float_type, f16_neg) {
   EXPECT_EQ(*(uint16_t *)value_get_data(result), 0xBC00u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_float_type, f16_add_same) {
@@ -714,7 +662,6 @@ TEST_F(it_float_type, f16_add_same) {
   EXPECT_EQ(*(uint16_t *)value_get_data(result), 0x4400u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f64 assignment with promotion ---- */
@@ -730,7 +677,6 @@ TEST_F(it_float_type, f32_assign_f64_promotes) {
   EXPECT_FLOAT_EQ(*(float *)value_get_data(a), 42.5f);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- f64 safe_cast to f32 ---- */
@@ -745,5 +691,4 @@ TEST_F(it_float_type, f64_safe_cast_to_f32) {
   EXPECT_FLOAT_EQ(*(float *)value_get_data(result), 3.14f);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

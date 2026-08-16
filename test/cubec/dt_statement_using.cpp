@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/statement.h"
 #include "cubec/statement_declaration.h"
@@ -15,9 +15,6 @@ using ::testing::Test;
 
 class dt_statement_using : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* ---- using with type annotation ---- */
@@ -89,7 +86,7 @@ TEST_F(dt_statement_using, using_undefined_error) {
 
   size_t position = 0;
   node_t node = read_statement(ctx, tokens, &position, "test.cubec");
-  /* Parsing succeeds — undefined is still valid syntax,
+  /* Parsing succeeds 鈥?undefined is still valid syntax,
    * the error is reported by the checker, not the parser */
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_DECLARATION);

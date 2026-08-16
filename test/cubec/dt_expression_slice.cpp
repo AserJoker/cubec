@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_binary.h"
@@ -18,10 +18,6 @@ using ::testing::Test;
 
 class dt_expression_slice : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
-
   void SetUp() override { CubecTest::SetUp(); }
 };
 
@@ -151,7 +147,7 @@ TEST_F(dt_expression_slice, with_binary_expression) {
  * -------------------------------------------------------------------------- */
 
 TEST_F(dt_expression_slice, slice_on_call_result) {
-  /* getArray()[0:10] — slice on call result */
+  /* getArray()[0:10] 鈥?slice on call result */
   const char *source = "getArray()[0:10]";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -169,7 +165,7 @@ TEST_F(dt_expression_slice, slice_on_call_result) {
 }
 
 TEST_F(dt_expression_slice, slice_on_member_access) {
-  /* obj.arr[0:10] — slice on member access */
+  /* obj.arr[0:10] 鈥?slice on member access */
   const char *source = "obj.arr[0:10]";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -191,7 +187,7 @@ TEST_F(dt_expression_slice, slice_on_member_access) {
  * -------------------------------------------------------------------------- */
 
 TEST_F(dt_expression_slice, slice_then_member) {
-  /* arr[0:10].field — slice then member access */
+  /* arr[0:10].field 鈥?slice then member access */
   const char *source = "arr[0:10].field";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -209,7 +205,7 @@ TEST_F(dt_expression_slice, slice_then_member) {
 }
 
 TEST_F(dt_expression_slice, slice_then_call) {
-  /* arr[0:10]() — slice then call (unlikely but should work) */
+  /* arr[0:10]() 鈥?slice then call (unlikely but should work) */
   const char *source = "arr[0:10]()";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -227,7 +223,7 @@ TEST_F(dt_expression_slice, slice_then_call) {
 }
 
 TEST_F(dt_expression_slice, chained_slices) {
-  /* arr[1:2][0:1] — nested slice */
+  /* arr[1:2][0:1] 鈥?nested slice */
   const char *source = "arr[1:2][0:1]";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -308,7 +304,7 @@ TEST_F(dt_expression_slice, unclosed_bracket) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  /* parse error expected: unclosed bracket → recorded in diagnostics */
+  /* parse error expected: unclosed bracket 鈫?recorded in diagnostics */
   node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   EXPECT_GT(context_get_error_count(ctx), 0);
 
@@ -322,7 +318,7 @@ TEST_F(dt_expression_slice, start_without_colon_error) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  /* parse error expected: expected ':' after start expression → recorded in diagnostics */
+  /* parse error expected: expected ':' after start expression 鈫?recorded in diagnostics */
   node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   EXPECT_GT(context_get_error_count(ctx), 0);
 
@@ -353,7 +349,7 @@ TEST_F(dt_expression_slice, complex_start_expression) {
 }
 
 TEST_F(dt_expression_slice, nested_ternary_in_slice) {
-  /* arr[a ? b : c: len] — ternary in start position */
+  /* arr[a ? b : c: len] 鈥?ternary in start position */
   const char *source = "arr[a ? b : c: len]";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);

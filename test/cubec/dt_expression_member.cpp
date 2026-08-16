@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_member.h"
@@ -13,9 +13,6 @@ using ::testing::Test;
 
 class dt_expression_member : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 TEST_F(dt_expression_member, single_member_access) {
@@ -83,7 +80,7 @@ TEST_F(dt_expression_member, triple_chain) {
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
-  /* Walk the chain: x.y.z.w → field=w, host=x.y.z */
+  /* Walk the chain: x.y.z.w 鈫?field=w, host=x.y.z */
   cubec_expression_member_t m1 = (cubec_expression_member_t)node;
   EXPECT_STREQ(string_get(m1->field->value), "w");
   EXPECT_EQ(m1->host->kind, CUBEC_NODE_EXPRESSION_MEMBER);
@@ -110,7 +107,7 @@ TEST_F(dt_expression_member, no_dot_returns_atom) {
   size_t position = 0;
   node_t node = read_value(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  /* No dot → returns the identifier atom directly */
+  /* No dot 鈫?returns the identifier atom directly */
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);
@@ -145,7 +142,7 @@ TEST_F(dt_expression_member, consume_all_tokens) {
   node_t node = read_value(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
-  /* position should be past all tokens (a, ., b → 3) */
+  /* position should be past all tokens (a, ., b 鈫?3) */
   EXPECT_EQ(position, 3);
 
   allocator_free(allocator, &node);

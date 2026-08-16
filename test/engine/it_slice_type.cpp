@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/bool_type.h"
@@ -17,7 +17,6 @@ using ::testing::Test;
 
 class it_slice_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
@@ -29,13 +28,13 @@ protected:
     return (type_t)value_get_data(vm_get_str_type(vm));
   }
 
-  /* create array type via vm — registered in scope, no leak */
+  /* create array type via vm 鈥?registered in scope, no leak */
   array_type_t _make_i32_array_type(vm_t vm, uint64_t count) {
     value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), count, true);
     return (array_type_t)value_get_data(tv);
   }
 
-  /* create slice type via vm — registered in scope, no leak */
+  /* create slice type via vm 鈥?registered in scope, no leak */
   slice_type_t _make_i32_slice_type(vm_t vm) {
     value_t tv = vm_create_slice_type_value(vm, _get_i32_type(vm), true);
     return (slice_type_t)value_get_data(tv);
@@ -73,7 +72,6 @@ TEST_F(it_slice_type, create_type) {
   EXPECT_EQ(type_get_kind(slice_type_get_element_type(st)), type_get_kind(i32t));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, create_const_type) {
@@ -83,7 +81,6 @@ TEST_F(it_slice_type, create_const_type) {
   EXPECT_FALSE(type_is_mut((type_t)st));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Value creation ---- */
@@ -106,7 +103,6 @@ TEST_F(it_slice_type, create_value) {
   EXPECT_EQ(sd->len, 3u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, create_partial_slice) {
@@ -124,7 +120,7 @@ TEST_F(it_slice_type, create_partial_slice) {
   };
   value_t arr = create_array_value(vm, at, elems);
 
-  /* slice [1..3] → elements at index 1 and 2 */
+  /* slice [1..3] 鈫?elements at index 1 and 2 */
   value_t sl = create_slice_value(vm, st, arr, 1, 2);
 
   struct slice_data_t *sd = (struct slice_data_t *)value_get_data(sl);
@@ -132,7 +128,6 @@ TEST_F(it_slice_type, create_partial_slice) {
   EXPECT_EQ(sd->len, 2u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, create_shadow) {
@@ -144,7 +139,6 @@ TEST_F(it_slice_type, create_shadow) {
   EXPECT_FALSE(value_is_initialized(sl));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- get_item ---- */
@@ -163,7 +157,6 @@ TEST_F(it_slice_type, get_item) {
   EXPECT_EQ(*(int32_t *)value_get_data(elem), 20);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, get_item_offset_slice) {
@@ -181,7 +174,7 @@ TEST_F(it_slice_type, get_item_offset_slice) {
   };
   value_t arr = create_array_value(vm, at, elems);
 
-  /* slice [2..5) → {30, 40, 50} */
+  /* slice [2..5) 鈫?{30, 40, 50} */
   value_t sl = create_slice_value(vm, st, arr, 2, 3);
 
   value_t idx0 = create_i32_value(vm, 0);
@@ -193,7 +186,6 @@ TEST_F(it_slice_type, get_item_offset_slice) {
   EXPECT_EQ(*(int32_t *)value_get_data(elem), 50);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- set_item ---- */
@@ -221,7 +213,6 @@ TEST_F(it_slice_type, set_item) {
   EXPECT_EQ(*(int32_t *)value_get_data(arr_got), 99);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, set_item_const_error) {
@@ -239,7 +230,6 @@ TEST_F(it_slice_type, set_item_const_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- out of bounds ---- */
@@ -257,7 +247,6 @@ TEST_F(it_slice_type, out_of_bounds) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, create_out_of_bounds) {
@@ -272,7 +261,6 @@ TEST_F(it_slice_type, create_out_of_bounds) {
   EXPECT_EQ(type_get_kind(value_get_type(sl)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Equal ---- */
@@ -290,7 +278,6 @@ TEST_F(it_slice_type, equal_same) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, equal_different_len) {
@@ -306,7 +293,6 @@ TEST_F(it_slice_type, equal_different_len) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_equal / type_extends ---- */
@@ -321,7 +307,6 @@ TEST_F(it_slice_type, type_equal_same) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, type_extends_wildcard) {
@@ -334,7 +319,6 @@ TEST_F(it_slice_type, type_extends_wildcard) {
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- safe_cast ---- */
@@ -351,7 +335,6 @@ TEST_F(it_slice_type, safe_cast_identity) {
   EXPECT_EQ(cast, sl);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, safe_cast_mut_to_const) {
@@ -369,7 +352,6 @@ TEST_F(it_slice_type, safe_cast_mut_to_const) {
   EXPECT_FALSE(type_is_mut(value_get_type(cast)));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, safe_cast_const_to_mut_error) {
@@ -385,7 +367,6 @@ TEST_F(it_slice_type, safe_cast_const_to_mut_error) {
   EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Assignment ---- */
@@ -407,7 +388,6 @@ TEST_F(it_slice_type, assignment) {
   EXPECT_EQ(sd->len, 2u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- deref_get ---- */
@@ -420,13 +400,12 @@ TEST_F(it_slice_type, deref_get) {
   value_t arr = _make_i32_array_3(vm, at);
   value_t sl = create_slice_value(vm, st, arr, 1, 2);
 
-  /* deref_get returns first element of slice → arr[1] = 20 */
+  /* deref_get returns first element of slice 鈫?arr[1] = 20 */
   value_t first = value_deref_get(vm, sl);
   EXPECT_EQ(type_get_kind(value_get_type(first)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(first), 20);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, deref_get_empty_error) {
@@ -441,7 +420,6 @@ TEST_F(it_slice_type, deref_get_empty_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- to_string ---- */
@@ -459,7 +437,6 @@ TEST_F(it_slice_type, to_string) {
   EXPECT_STREQ(string_get(*(string_t *)value_get_data(s)), "[10, 20, 30]");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Clone ---- */
@@ -484,7 +461,6 @@ TEST_F(it_slice_type, clone) {
   EXPECT_EQ(dst_sd->len, src_sd->len);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, shadow_clone) {
@@ -498,7 +474,6 @@ TEST_F(it_slice_type, shadow_clone) {
   EXPECT_EQ(type_get_kind(value_get_type(cloned)), TYPE_KIND_SLICE);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Cross-scope clone ---- */
@@ -528,7 +503,6 @@ TEST_F(it_slice_type, cross_scope_clone) {
   allocator_free(alloc, &callee);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_clone ---- */
@@ -562,7 +536,6 @@ TEST_F(it_slice_type, type_clone_cross_scope) {
   allocator_free(alloc, &inner);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- vm_create_slice_type_value registers in scope ---- */
@@ -585,7 +558,6 @@ TEST_F(it_slice_type, vm_create_slice_type_value_registers_in_scope) {
   EXPECT_EQ(vec_get_size(scope->types), types_before + 1);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- create_slice_value from non-array error ---- */
@@ -601,7 +573,6 @@ TEST_F(it_slice_type, create_from_non_array_error) {
   EXPECT_EQ(type_get_kind(value_get_type(sl)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- value_slice on array ---- */
@@ -632,7 +603,6 @@ TEST_F(it_slice_type, array_slice) {
   EXPECT_EQ(*(int32_t *)value_get_data(value_get_item(vm, sl, idx2)), 40);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, array_slice_out_of_bounds) {
@@ -644,7 +614,6 @@ TEST_F(it_slice_type, array_slice_out_of_bounds) {
   EXPECT_EQ(type_get_kind(value_get_type(sl)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- value_slice on slice (slice of slice) ---- */
@@ -664,10 +633,10 @@ TEST_F(it_slice_type, slice_of_slice) {
   };
   value_t arr = create_array_value(vm, at, elems);
 
-  /* first slice: [1..4) → {20, 30, 40} */
+  /* first slice: [1..4) 鈫?{20, 30, 40} */
   value_t sl1 = create_slice_value(vm, st, arr, 1, 3);
 
-  /* second slice: sl1[1..3) → {30, 40} */
+  /* second slice: sl1[1..3) 鈫?{30, 40} */
   value_t sl2 = value_slice(vm, sl1, 1, 2);
   EXPECT_EQ(type_get_kind(value_get_type(sl2)), TYPE_KIND_SLICE);
 
@@ -677,7 +646,6 @@ TEST_F(it_slice_type, slice_of_slice) {
   EXPECT_EQ(*(int32_t *)value_get_data(value_get_item(vm, sl2, idx1)), 40);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, slice_of_slice_out_of_bounds) {
@@ -701,7 +669,6 @@ TEST_F(it_slice_type, slice_of_slice_out_of_bounds) {
   EXPECT_EQ(type_get_kind(value_get_type(sl2)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Shadow operations ---- */
@@ -714,7 +681,6 @@ TEST_F(it_slice_type, shadow_equal) {
   value_t result = value_equal(vm, a, b);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, shadow_assignment) {
@@ -727,7 +693,6 @@ TEST_F(it_slice_type, shadow_assignment) {
   EXPECT_TRUE(value_is_initialized(a));
   EXPECT_TRUE(value_is_shadow(a));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, shadow_get_item) {
@@ -739,7 +704,6 @@ TEST_F(it_slice_type, shadow_get_item) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, shadow_set_item) {
@@ -752,7 +716,6 @@ TEST_F(it_slice_type, shadow_set_item) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
   EXPECT_TRUE(value_is_initialized(sl));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, shadow_deref_get) {
@@ -763,7 +726,6 @@ TEST_F(it_slice_type, shadow_deref_get) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, shadow_safe_cast) {
@@ -775,7 +737,6 @@ TEST_F(it_slice_type, shadow_safe_cast) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(value_get_type(result), (type_t)const_st);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_slice_type, shadow_to_string) {
@@ -785,5 +746,4 @@ TEST_F(it_slice_type, shadow_to_string) {
   value_t result = value_to_string(vm, sl);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

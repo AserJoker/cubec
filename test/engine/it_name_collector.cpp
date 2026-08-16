@@ -1,4 +1,4 @@
-#include "core/strmap.h"
+﻿#include "core/strmap.h"
 #include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/node.h"
@@ -18,10 +18,6 @@ using ::testing::Test;
 
 class it_name_collector : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
-
   /** Parse source and run name collection, returning the module. */
   module_t parse_and_collect(const char *source, const char *filename) {
     /* module_create takes ownership of source (allocator_free), so clone it */
@@ -201,7 +197,7 @@ TEST_F(it_name_collector, name_ref_null_in_phase1) {
 
   name_t name = find_name(mod, "foo");
   ASSERT_NE(name, nullptr);
-  /* Phase 1: ref is NULL — will be filled during definition collection */
+  /* Phase 1: ref is NULL 鈥?will be filled during definition collection */
   EXPECT_EQ(name->ref, nullptr);
 
   module_dispose(mod);

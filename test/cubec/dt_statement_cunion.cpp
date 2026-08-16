@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/statement_cunion.h"
 #include "cubec/struct_field.h"
@@ -15,9 +15,6 @@ using ::testing::Test;
 
 class dt_statement_cunion : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* ==========================================================================

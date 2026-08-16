@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/bool_type.h"
@@ -15,7 +15,6 @@ using ::testing::Test;
 
 class it_value_clone : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
@@ -48,7 +47,6 @@ TEST_F(it_value_clone, bool_clone) {
   EXPECT_EQ(*(bool *)value_get_data(a), true);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, i32_clone) {
@@ -63,7 +61,6 @@ TEST_F(it_value_clone, i32_clone) {
   EXPECT_NE(value_get_data(c), value_get_data(a));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, str_clone) {
@@ -77,7 +74,6 @@ TEST_F(it_value_clone, str_clone) {
   EXPECT_STREQ(string_get(*(string_t *)value_get_data(c)), "hello");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, void_clone) {
@@ -91,7 +87,6 @@ TEST_F(it_value_clone, void_clone) {
   EXPECT_TRUE(value_is_initialized(c));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, error_clone) {
@@ -105,7 +100,6 @@ TEST_F(it_value_clone, error_clone) {
   EXPECT_STREQ(d->message, "test error 42");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, shadow_clone) {
@@ -119,7 +113,6 @@ TEST_F(it_value_clone, shadow_clone) {
   EXPECT_EQ(type_get_kind(value_get_type(c)), TYPE_KIND_I32);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Clone independent data: modify clone does not affect original ---- */
@@ -135,7 +128,6 @@ TEST_F(it_value_clone, i32_clone_independence) {
   EXPECT_EQ(*(int32_t *)value_get_data(c), 99);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, str_clone_independence) {
@@ -150,10 +142,9 @@ TEST_F(it_value_clone, str_clone_independence) {
   EXPECT_STREQ(string_get(*(string_t *)value_get_data(c)), "modified");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
-/* ---- Cross-scope: function argument passing (caller → callee) ---- */
+/* ---- Cross-scope: function argument passing (caller 鈫?callee) ---- */
 
 TEST_F(it_value_clone, function_arg_i32) {
   vm_t vm = vm_create(allocator);
@@ -186,7 +177,6 @@ TEST_F(it_value_clone, function_arg_i32) {
   /* callee scope cleanup */
   allocator_free(alloc, &callee);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, function_arg_str) {
@@ -212,7 +202,6 @@ TEST_F(it_value_clone, function_arg_str) {
 
   allocator_free(alloc, &callee);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, function_arg_bool) {
@@ -234,10 +223,9 @@ TEST_F(it_value_clone, function_arg_bool) {
 
   allocator_free(alloc, &callee);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
-/* ---- Cross-scope: return value (callee → caller) ---- */
+/* ---- Cross-scope: return value (callee 鈫?caller) ---- */
 
 TEST_F(it_value_clone, return_value_i32) {
   vm_t vm = vm_create(allocator);
@@ -263,7 +251,6 @@ TEST_F(it_value_clone, return_value_i32) {
 
   allocator_free(alloc, &callee);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, return_value_str) {
@@ -287,10 +274,9 @@ TEST_F(it_value_clone, return_value_str) {
 
   allocator_free(alloc, &callee);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
-/* ---- Cross-scope: closure capture (outer → closure scope) ---- */
+/* ---- Cross-scope: closure capture (outer 鈫?closure scope) ---- */
 
 TEST_F(it_value_clone, closure_capture_i32) {
   vm_t vm = vm_create(allocator);
@@ -318,7 +304,6 @@ TEST_F(it_value_clone, closure_capture_i32) {
 
   allocator_free(alloc, &closure_scope);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, closure_capture_str) {
@@ -343,7 +328,6 @@ TEST_F(it_value_clone, closure_capture_str) {
 
   allocator_free(alloc, &closure_scope);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, closure_capture_multiple) {
@@ -375,7 +359,6 @@ TEST_F(it_value_clone, closure_capture_multiple) {
 
   allocator_free(alloc, &closure_scope);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Closure capture: original modified after capture does not affect clone ---- */
@@ -404,10 +387,9 @@ TEST_F(it_value_clone, closure_capture_isolation) {
 
   allocator_free(alloc, &closure_scope);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
-/* ---- Function call: full round-trip (arg in → return out) ---- */
+/* ---- Function call: full round-trip (arg in 鈫?return out) ---- */
 
 TEST_F(it_value_clone, function_call_roundtrip) {
   vm_t vm = vm_create(allocator);
@@ -439,7 +421,6 @@ TEST_F(it_value_clone, function_call_roundtrip) {
 
   allocator_free(alloc, &func_scope);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, function_call_str_roundtrip) {
@@ -469,10 +450,9 @@ TEST_F(it_value_clone, function_call_str_roundtrip) {
 
   allocator_free(alloc, &func_scope);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
-/* ---- Nested function call (scope A → scope B → scope C) ---- */
+/* ---- Nested function call (scope A 鈫?scope B 鈫?scope C) ---- */
 
 TEST_F(it_value_clone, nested_function_call) {
   vm_t vm = vm_create(allocator);
@@ -517,7 +497,6 @@ TEST_F(it_value_clone, nested_function_call) {
   allocator_free(alloc, &scope_c);
   allocator_free(alloc, &scope_b);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- vm_set_scope / vm_set_root_scope API tests ---- */
@@ -539,7 +518,6 @@ TEST_F(it_value_clone, vm_set_scope_returns_previous) {
 
   allocator_free(alloc, &func);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_value_clone, vm_set_root_scope_returns_previous) {
@@ -559,7 +537,6 @@ TEST_F(it_value_clone, vm_set_root_scope_returns_previous) {
 
   allocator_free(alloc, &func);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Scope cleanup: cloned values live in their scope ---- */
@@ -593,5 +570,4 @@ TEST_F(it_value_clone, cloned_values_disposed_with_scope) {
   EXPECT_EQ(before, after);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

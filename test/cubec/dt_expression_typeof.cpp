@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression_typeof.h"
 #include "cubec/expression.h"
@@ -21,9 +21,6 @@ using ::testing::Test;
 
 class dt_expression_typeof : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* ---- Basic typeof with identifier ---- */
@@ -194,7 +191,7 @@ TEST_F(dt_expression_typeof, consume_all_tokens) {
   size_t position = 0;
   node_t node = read_expression_typeof(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  /* typeof, (, x, ) → 4 tokens */
+  /* typeof, (, x, ) 鈫?4 tokens */
   EXPECT_EQ(position, 4);
 
   allocator_free(allocator, &node);

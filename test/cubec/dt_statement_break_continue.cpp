@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/statement_break.h"
 #include "cubec/statement_continue.h"
@@ -17,9 +17,6 @@ using ::testing::Test;
 
 class dt_statement_break : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 TEST_F(dt_statement_break, simple_break) {
@@ -127,9 +124,6 @@ TEST_F(dt_statement_break, write_break) {
 
 class dt_statement_continue : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 TEST_F(dt_statement_continue, simple_continue) {

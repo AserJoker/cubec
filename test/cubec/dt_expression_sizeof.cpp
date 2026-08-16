@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression_sizeof.h"
 #include "cubec/expression.h"
@@ -18,9 +18,6 @@ using ::testing::Test;
 
 class dt_expression_sizeof : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* ---- Basic sizeof with identifier ---- */

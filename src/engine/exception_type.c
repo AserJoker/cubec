@@ -11,7 +11,7 @@
 
 static value_t _exception_clone(vm_t vm, value_t self) {
   struct exception_data_t *src = (struct exception_data_t *)value_get_data(self);
-  if (src && src->message)
+  if (src && src->message[0])
     return create_exception_value(vm, "%s", src->message);
   return create_exception_value(vm, NULL);
 }

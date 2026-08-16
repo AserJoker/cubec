@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_binary.h"
@@ -17,10 +17,6 @@ using ::testing::Test;
 
 class dt_expression_ternary : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
-
   void SetUp() override { CubecTest::SetUp(); }
 };
 
@@ -76,7 +72,7 @@ TEST_F(dt_expression_ternary, indirect_ternary_with_binary_condition) {
  *  Exception/error cases
  * -------------------------------------------------------------------------- */
 
-/* Missing '?' → returns condition as-is (graceful fallback, no error) */
+/* Missing '?' 鈫?returns condition as-is (graceful fallback, no error) */
 TEST_F(dt_expression_ternary, missing_question_mark_returns_condition) {
   const char *source = "a : b";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -92,7 +88,7 @@ TEST_F(dt_expression_ternary, missing_question_mark_returns_condition) {
   allocator_free(allocator, &tokens);
 }
 
-/* Missing ':' after consequent → error */
+/* Missing ':' after consequent 鈫?error */
 TEST_F(dt_expression_ternary, missing_colon_error) {
   const char *source = "a ? b";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -106,7 +102,7 @@ TEST_F(dt_expression_ternary, missing_colon_error) {
   allocator_free(allocator, &tokens);
 }
 
-/* Missing consequent (empty between ? and :) → error */
+/* Missing consequent (empty between ? and :) 鈫?error */
 TEST_F(dt_expression_ternary, missing_consequent_error) {
   const char *source = "a ? : b";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -120,7 +116,7 @@ TEST_F(dt_expression_ternary, missing_consequent_error) {
   allocator_free(allocator, &tokens);
 }
 
-/* Missing alternate (empty after :) → error */
+/* Missing alternate (empty after :) 鈫?error */
 TEST_F(dt_expression_ternary, missing_alternate_error) {
   const char *source = "a ? b :";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);

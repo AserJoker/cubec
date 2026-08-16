@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/bool_type.h"
@@ -16,7 +16,6 @@ using ::testing::Test;
 
 class it_array_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
@@ -28,7 +27,7 @@ protected:
     return (type_t)value_get_data(vm_get_str_type(vm));
   }
 
-  /* create array type via vm — registered in scope, no leak */
+  /* create array type via vm 鈥?registered in scope, no leak */
   array_type_t _make_i32_array_type(vm_t vm, uint64_t count) {
     value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), count, true);
     return (array_type_t)value_get_data(tv);
@@ -56,7 +55,6 @@ TEST_F(it_array_type, create_type) {
   EXPECT_EQ(array_type_get_count(at), 3u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, create_const_type) {
@@ -67,7 +65,6 @@ TEST_F(it_array_type, create_const_type) {
   EXPECT_EQ(array_type_get_count(at), 5u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Value creation ---- */
@@ -96,7 +93,6 @@ TEST_F(it_array_type, create_value) {
   EXPECT_EQ(data[2], 30);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, create_shadow) {
@@ -108,7 +104,6 @@ TEST_F(it_array_type, create_shadow) {
   EXPECT_FALSE(value_is_initialized(arr));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Clone ---- */
@@ -127,7 +122,7 @@ TEST_F(it_array_type, clone) {
 
   value_t cloned = value_clone(vm, arr);
   EXPECT_NE(cloned, arr);
-  /* type is cloned into current scope — may be different pointer */
+  /* type is cloned into current scope 鈥?may be different pointer */
   EXPECT_EQ(type_get_kind(value_get_type(cloned)), TYPE_KIND_ARRAY);
   EXPECT_TRUE(value_is_own(cloned));
 
@@ -139,7 +134,6 @@ TEST_F(it_array_type, clone) {
   EXPECT_EQ(dst_data[2], 3);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, clone_independence) {
@@ -158,7 +152,6 @@ TEST_F(it_array_type, clone_independence) {
   EXPECT_EQ(((int32_t *)value_get_data(cloned))[0], 10);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- get_item / set_item ---- */
@@ -181,7 +174,6 @@ TEST_F(it_array_type, get_item) {
   EXPECT_EQ(*(int32_t *)value_get_data(elem), 20);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, set_item) {
@@ -205,7 +197,6 @@ TEST_F(it_array_type, set_item) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 99);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, out_of_bounds) {
@@ -224,7 +215,6 @@ TEST_F(it_array_type, out_of_bounds) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Equal ---- */
@@ -251,7 +241,6 @@ TEST_F(it_array_type, equal_same) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, equal_different) {
@@ -276,7 +265,6 @@ TEST_F(it_array_type, equal_different) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_equal / type_extends ---- */
@@ -291,7 +279,6 @@ TEST_F(it_array_type, type_equal_same) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, type_equal_different_count) {
@@ -304,7 +291,6 @@ TEST_F(it_array_type, type_equal_different_count) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, type_extends_wildcard) {
@@ -317,7 +303,6 @@ TEST_F(it_array_type, type_extends_wildcard) {
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, wildcard_count_name) {
@@ -330,7 +315,6 @@ TEST_F(it_array_type, wildcard_count_name) {
   EXPECT_EQ(type_get_size((type_t)at), 0u); /* unknown size */
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, wildcard_count_type_equal) {
@@ -339,18 +323,17 @@ TEST_F(it_array_type, wildcard_count_type_equal) {
   value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), WILDCARD_COUNT, true);
   array_type_t wc_at = (array_type_t)value_get_data(tv);
 
-  /* [10]i32 equal [?]i32 → true (wildcard count skips comparison) */
+  /* [10]i32 equal [?]i32 鈫?true (wildcard count skips comparison) */
   vtable_t vt = type_get_vtable((type_t)concrete);
   value_t eq = vt.type_equal(vm, (type_t)concrete, (type_t)wc_at);
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
-  /* [?]i32 equal [10]i32 → false (wildcard only on right side) */
+  /* [?]i32 equal [10]i32 鈫?false (wildcard only on right side) */
   vtable_t vt2 = type_get_vtable((type_t)wc_at);
   value_t eq2 = vt2.type_equal(vm, (type_t)wc_at, (type_t)concrete);
   EXPECT_FALSE(*(bool *)value_get_data(eq2));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, wildcard_count_type_extends) {
@@ -359,13 +342,12 @@ TEST_F(it_array_type, wildcard_count_type_extends) {
   value_t tv = vm_create_array_type_value(vm, _get_i32_type(vm), WILDCARD_COUNT, true);
   array_type_t wc_at = (array_type_t)value_get_data(tv);
 
-  /* [10]i32 extends [?]i32 → true */
+  /* [10]i32 extends [?]i32 鈫?true */
   vtable_t vt = type_get_vtable((type_t)concrete);
   value_t ext = vt.type_extends(vm, (type_t)concrete, (type_t)wc_at);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, wildcard_count_different_element) {
@@ -374,13 +356,12 @@ TEST_F(it_array_type, wildcard_count_different_element) {
   value_t tv = vm_create_array_type_value(vm, _get_bool_type(vm), WILDCARD_COUNT, true);
   array_type_t wc_bool = (array_type_t)value_get_data(tv);
 
-  /* [10]i32 extends [?]bool → false (element type mismatch) */
+  /* [10]i32 extends [?]bool 鈫?false (element type mismatch) */
   vtable_t vt = type_get_vtable((type_t)i32_arr);
   value_t ext = vt.type_extends(vm, (type_t)i32_arr, (type_t)wc_bool);
   EXPECT_FALSE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- safe_cast ---- */
@@ -400,7 +381,6 @@ TEST_F(it_array_type, safe_cast_identity) {
   EXPECT_EQ(cast, arr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, safe_cast_mut_to_const) {
@@ -421,7 +401,6 @@ TEST_F(it_array_type, safe_cast_mut_to_const) {
   EXPECT_FALSE(type_is_mut(value_get_type(cast)));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, safe_cast_const_to_mut_error) {
@@ -440,7 +419,6 @@ TEST_F(it_array_type, safe_cast_const_to_mut_error) {
   EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Assignment ---- */
@@ -471,7 +449,6 @@ TEST_F(it_array_type, assignment) {
   EXPECT_EQ(data[1], 20);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- to_string ---- */
@@ -493,7 +470,6 @@ TEST_F(it_array_type, to_string) {
   EXPECT_STREQ(string_get(*(string_t *)value_get_data(s)), "[1, 2, 3]");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Cross-scope clone ---- */
@@ -527,7 +503,6 @@ TEST_F(it_array_type, cross_scope_clone) {
 
   allocator_free(alloc, &callee);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Shadow clone ---- */
@@ -543,7 +518,6 @@ TEST_F(it_array_type, shadow_clone) {
   EXPECT_EQ(value_get_type(cloned), (type_t)at);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- vm_create_array_type_value ---- */
@@ -566,7 +540,6 @@ TEST_F(it_array_type, vm_create_array_type_value_registers_in_scope) {
   EXPECT_EQ(vec_get_size(scope->types), types_before + 1);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_clone: recursive for nested arrays ---- */
@@ -584,7 +557,6 @@ TEST_F(it_array_type, type_clone_same_scope) {
   EXPECT_EQ(type_get_kind(cloned), TYPE_KIND_ARRAY);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, type_clone_cross_scope) {
@@ -617,7 +589,6 @@ TEST_F(it_array_type, type_clone_cross_scope) {
   allocator_free(alloc, &inner);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, nested_array_cross_scope_clone) {
@@ -670,7 +641,6 @@ TEST_F(it_array_type, nested_array_cross_scope_clone) {
   allocator_free(alloc, &callee);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Empty array rejected ---- */
@@ -681,7 +651,6 @@ TEST_F(it_array_type, vm_create_array_type_value_count0_returns_exception) {
   value_t tv = vm_create_array_type_value(vm, i32t, 0, true);
   EXPECT_EQ(type_get_kind(value_get_type(tv)), TYPE_KIND_EXCEPTION);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Shadow operations ---- */
@@ -694,7 +663,6 @@ TEST_F(it_array_type, shadow_equal) {
   value_t result = value_equal(vm, a, b);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, shadow_assignment) {
@@ -707,7 +675,6 @@ TEST_F(it_array_type, shadow_assignment) {
   EXPECT_TRUE(value_is_initialized(a));
   EXPECT_TRUE(value_is_shadow(a));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, shadow_get_item) {
@@ -719,7 +686,6 @@ TEST_F(it_array_type, shadow_get_item) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, shadow_set_item) {
@@ -732,7 +698,6 @@ TEST_F(it_array_type, shadow_set_item) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
   EXPECT_TRUE(value_is_initialized(arr));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, shadow_safe_cast) {
@@ -744,7 +709,6 @@ TEST_F(it_array_type, shadow_safe_cast) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(value_get_type(result), (type_t)at2);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_array_type, shadow_to_string) {
@@ -754,5 +718,4 @@ TEST_F(it_array_type, shadow_to_string) {
   value_t result = value_to_string(vm, arr);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

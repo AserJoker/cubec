@@ -7,7 +7,6 @@ using ::testing::Test;
 
 class dt_allocator : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
 };
 
 TEST_F(dt_allocator, create_and_delete) {

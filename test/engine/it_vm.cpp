@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "core/string.h"
 #include "common/test_common.h"
@@ -8,7 +8,6 @@ using ::testing::Test;
 
 class it_vm : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _make_i32_type() {
     return type_create(allocator, TYPE_KIND_I32, "i32", 4, 4, false,
@@ -20,14 +19,12 @@ TEST_F(it_vm, create_and_dispose) {
   vm_t vm = vm_create(allocator);
   EXPECT_NE(vm, nullptr);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_vm, global_scope_created) {
   vm_t vm = vm_create(allocator);
   EXPECT_NE(vm_get_global_scope(vm), nullptr);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_vm, modules_empty_initially) {
@@ -35,7 +32,6 @@ TEST_F(it_vm, modules_empty_initially) {
   EXPECT_NE(vm_get_modules(vm), nullptr);
   EXPECT_EQ(strmap_get_size(vm_get_modules(vm)), 0u);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_vm, create_value_with_data) {
@@ -53,7 +49,6 @@ TEST_F(it_vm, create_value_with_data) {
   /* value is in current_scope->values, disposed by vm_dispose */
   vm_dispose(vm, allocator);
   allocator_free(allocator, &i32);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_vm, create_value_shadow) {
@@ -69,7 +64,6 @@ TEST_F(it_vm, create_value_shadow) {
   /* value is in current_scope->values, disposed by vm_dispose */
   vm_dispose(vm, allocator);
   allocator_free(allocator, &i32);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_vm, wildcard_value_is_global_unique) {
@@ -78,12 +72,11 @@ TEST_F(it_vm, wildcard_value_is_global_unique) {
   value_t wv2 = vm_get_wildcard_value(vm);
 
   EXPECT_NE(wv1, nullptr);
-  EXPECT_EQ(wv1, wv2); /* same pointer — global unique */
+  EXPECT_EQ(wv1, wv2); /* same pointer 鈥?global unique */
   EXPECT_EQ(type_get_kind(value_get_type(wv1)), TYPE_KIND_WILDCARD);
   EXPECT_TRUE(value_is_shadow(wv1)); /* no data */
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Call stack ---- */
@@ -112,7 +105,6 @@ TEST_F(it_vm, call_stack_push_pop) {
   EXPECT_EQ(vec_get_size(cs), 0u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_vm, call_stack_empty_initially) {
@@ -121,7 +113,6 @@ TEST_F(it_vm, call_stack_empty_initially) {
   EXPECT_EQ(cs, nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_vm, call_stack_pop_empty_noop) {
@@ -129,7 +120,6 @@ TEST_F(it_vm, call_stack_pop_empty_noop) {
   vm_pop_frame(vm); /* should not crash */
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_vm, call_stack_null_message) {
@@ -142,5 +132,4 @@ TEST_F(it_vm, call_stack_null_message) {
   EXPECT_EQ(f->message, nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

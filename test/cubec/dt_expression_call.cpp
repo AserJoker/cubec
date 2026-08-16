@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_call.h"
@@ -17,9 +17,6 @@ using ::testing::Test;
 
 class dt_expression_call : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* --------------------------------------------------------------------------
@@ -332,7 +329,7 @@ TEST_F(dt_expression_call, unclosed_paren) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  /* parse error expected: unclosed paren → recorded in diagnostics */
+  /* parse error expected: unclosed paren 鈫?recorded in diagnostics */
   node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   EXPECT_GT(context_get_error_count(ctx), 0);
 
@@ -346,7 +343,7 @@ TEST_F(dt_expression_call, trailing_comma) {
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  /* parse error expected: trailing comma → recorded in diagnostics */
+  /* parse error expected: trailing comma 鈫?recorded in diagnostics */
   node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   EXPECT_GT(context_get_error_count(ctx), 0);
 
@@ -359,7 +356,7 @@ TEST_F(dt_expression_call, trailing_comma) {
  * -------------------------------------------------------------------------- */
 
 TEST_F(dt_expression_call, group_callee) {
-  /* (func_ptr)(arg)  →  call with group as callee */
+  /* (func_ptr)(arg)  鈫? call with group as callee */
   const char *source = "(fp)(a)";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);

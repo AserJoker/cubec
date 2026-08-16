@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_binary.h"
@@ -17,9 +17,6 @@ using ::testing::Test;
 
 class dt_expression_group : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* --------------------------------------------------------------------------
@@ -42,7 +39,7 @@ TEST_F(dt_expression_group, simple_group) {
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)group->inner)->value), "a");
 
-  /* Consumed all tokens: (, a, ) → 3 */
+  /* Consumed all tokens: (, a, ) 鈫?3 */
   EXPECT_EQ(position, 3);
 
   allocator_free(allocator, &node);
@@ -121,8 +118,8 @@ TEST_F(dt_expression_group, binary_inside_group) {
  * -------------------------------------------------------------------------- */
 
 TEST_F(dt_expression_group, group_overrides_precedence) {
-  /* Without group: a + b * c  →  a + (b * c)
-   * With group:    (a + b) * c  →  add binds first */
+  /* Without group: a + b * c  鈫? a + (b * c)
+   * With group:    (a + b) * c  鈫? add binds first */
   const char *source = "(a + b) * c";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -181,7 +178,7 @@ TEST_F(dt_expression_group, nested_groups) {
   EXPECT_STREQ(
       string_get(((cubec_literal_identifier_t)inner->inner)->value), "a");
 
-  EXPECT_EQ(position, 5); /* (, (, a, ), ) → 5 */
+  EXPECT_EQ(position, 5); /* (, (, a, ), ) 鈫?5 */
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -219,7 +216,7 @@ TEST_F(dt_expression_group, deeply_nested) {
  * -------------------------------------------------------------------------- */
 
 TEST_F(dt_expression_group, group_with_member_access) {
-  /* (obj).field  →  group wraps obj, then .field applied */
+  /* (obj).field  鈫? group wraps obj, then .field applied */
   const char *source = "(obj).field";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -242,7 +239,7 @@ TEST_F(dt_expression_group, group_with_member_access) {
 }
 
 TEST_F(dt_expression_group, prefix_on_group) {
-  /* !(a + b)  →  prefix ! applies to group (a + b) */
+  /* !(a + b)  鈫? prefix ! applies to group (a + b) */
   const char *source = "!(a + b)";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -264,7 +261,7 @@ TEST_F(dt_expression_group, prefix_on_group) {
 }
 
 TEST_F(dt_expression_group, group_inside_binary) {
-  /* a * (b + c)  →  group on right side of * */
+  /* a * (b + c)  鈫? group on right side of * */
   const char *source = "a * (b + c)";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);

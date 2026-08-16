@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_namespace_access.h"
@@ -16,9 +16,6 @@ using ::testing::Test;
 
 class dt_expression_namespace_access : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* ---- Basic namespace access in normal expressions ---- */
@@ -117,7 +114,7 @@ TEST_F(dt_expression_namespace_access, namespace_with_generic) {
 /* ---- Namespace access followed by namespace access (chained ::) ---- */
 
 TEST_F(dt_expression_namespace_access, namespace_then_static_member) {
-  /* std::Vec::create() — namespace navigation then static method access */
+  /* std::Vec::create() 鈥?namespace navigation then static method access */
   const char *source = "std::Vec::create";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -125,7 +122,7 @@ TEST_F(dt_expression_namespace_access, namespace_then_static_member) {
   size_t position = 0;
   node_t node = read_value(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  /* The outer should be namespace access (::create) — type member access */
+  /* The outer should be namespace access (::create) 鈥?type member access */
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   cubec_expression_namespace_access_t ns = (cubec_expression_namespace_access_t)node;
@@ -141,7 +138,7 @@ TEST_F(dt_expression_namespace_access, namespace_then_static_member) {
 /* ---- Namespace access in normal expression context ---- */
 
 TEST_F(dt_expression_namespace_access, namespace_in_expression) {
-  /* a + std::Vec::create() + b — :: for type member access */
+  /* a + std::Vec::create() + b 鈥?:: for type member access */
   const char *source = "a + std::Vec::create() + b";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -159,7 +156,7 @@ TEST_F(dt_expression_namespace_access, namespace_in_expression) {
 /* ---- Mixed :: and . : type member (::) then instance member (.) ---- */
 
 TEST_F(dt_expression_namespace_access, type_static_then_instance_member) {
-  /* std::Vec::new().field — :: for type member, . for instance member */
+  /* std::Vec::new().field 鈥?:: for type member, . for instance member */
   const char *source = "std::Vec::new().field";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -184,7 +181,7 @@ TEST_F(dt_expression_namespace_access, type_static_then_instance_member) {
 /* ---- Namespace access in type expression context ---- */
 
 TEST_F(dt_expression_namespace_access, namespace_in_type_expression) {
-  /* *std::vec::Vec → pointer to namespaced type */
+  /* *std::vec::Vec 鈫?pointer to namespaced type */
   const char *source = "* std::vec::Vec";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -212,7 +209,7 @@ TEST_F(dt_expression_namespace_access, consume_all_tokens) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  /* std, ::, vec, ::, Vec, [, i32, ] → 8 tokens */
+  /* std, ::, vec, ::, Vec, [, i32, ] 鈫?8 tokens */
   EXPECT_EQ(position, 8);
 
   allocator_free(allocator, &node);

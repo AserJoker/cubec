@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/declaration_pointer.h"
@@ -23,9 +23,6 @@ using ::testing::Test;
 
 class dt_declaration_callable : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* --------------------------------------------------------------------------
@@ -190,7 +187,7 @@ TEST_F(dt_declaration_callable, c_variadic) {
   allocator_free(allocator, &tokens);
 }
 
-/* func(...) -> void — variadic only, no named params */
+/* func(...) -> void 鈥?variadic only, no named params */
 TEST_F(dt_declaration_callable, c_variadic_only) {
   const char *source = "func(...) -> void";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -383,7 +380,7 @@ TEST_F(dt_declaration_callable, non_func_returns_null) {
  *  Error cases
  * -------------------------------------------------------------------------- */
 
-/* Missing open paren: func i32) -> i32 — falls back to declaration_function which also fails */
+/* Missing open paren: func i32) -> i32 鈥?falls back to declaration_function which also fails */
 TEST_F(dt_declaration_callable, missing_open_paren_returns_null) {
   const char *source = "func i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -405,7 +402,7 @@ TEST_F(dt_declaration_callable, missing_close_paren_error) {
 
   size_t position = 0;
   node_t node = read_declaration_callable(ctx, tokens, &position, "test.cubec");
-  /* Should fail — no ')' before '->' */
+  /* Should fail 鈥?no ')' before '->' */
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -458,7 +455,7 @@ TEST_F(dt_declaration_callable, trailing_comma_error) {
  *  Greedy ternary consumption
  * -------------------------------------------------------------------------- */
 
-/* func(i32) -> A ? B : C → func(i32) -> ternary(A, B, C) */
+/* func(i32) -> A ? B : C 鈫?func(i32) -> ternary(A, B, C) */
 TEST_F(dt_declaration_callable, greedy_ternary_return) {
   const char *source = "func(i32) -> A ? B : C";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -487,7 +484,7 @@ TEST_F(dt_declaration_callable, greedy_ternary_return) {
   allocator_free(allocator, &tokens);
 }
 
-/* func(A ? B : C) -> i32 → ternary as parameter type */
+/* func(A ? B : C) -> i32 鈫?ternary as parameter type */
 TEST_F(dt_declaration_callable, greedy_ternary_param) {
   const char *source = "func(A ? B : C) -> i32";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);

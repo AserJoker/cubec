@@ -1,4 +1,4 @@
-#include "core/emit_context.h"
+﻿#include "core/emit_context.h"
 #include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
@@ -13,10 +13,6 @@ using ::testing::Test;
 
 class it_emit_pipeline : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
-
   /* Helper: parse + emit a statement and return the output string */
   string_t emit_statement_str(const char *source) {
     vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -331,7 +327,7 @@ TEST_F(it_emit_pipeline, program_roundtrip_with_comments) {
 }
 
 /* ==========================================================================
- *  Comment preservation — per-statement exhaustive tests
+ *  Comment preservation 鈥?per-statement exhaustive tests
  * ========================================================================== */
 
 /* --- if with comment between branches --- */
@@ -416,7 +412,7 @@ TEST_F(it_emit_pipeline, comment_before_each_stmt_in_block) {
 }
 
 /* ==========================================================================
- *  Comment preservation — expression-level tests
+ *  Comment preservation 鈥?expression-level tests
  * ========================================================================== */
 
 /* --- initialize list with comments between items --- */
@@ -438,7 +434,7 @@ TEST_F(it_emit_pipeline, comment_between_init_list_fields) {
 }
 
 /* ==========================================================================
- *  Comment preservation — program-level tests
+ *  Comment preservation 鈥?program-level tests
  * ========================================================================== */
 
 /* --- comment between top-level declarations --- */

@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/bool_type.h"
@@ -12,7 +12,6 @@ using ::testing::Test;
 
 class it_primitive_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   /* helpers to extract inner type_t from vm bootstrap value */
   type_t _get_bool_type(vm_t vm) {
@@ -42,7 +41,6 @@ TEST_F(it_primitive_type, bool_equal_same_true) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_equal_same_false) {
@@ -55,7 +53,6 @@ TEST_F(it_primitive_type, bool_equal_same_false) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_equal_different) {
@@ -68,7 +65,6 @@ TEST_F(it_primitive_type, bool_equal_different) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_equal_different_kind_error) {
@@ -82,7 +78,6 @@ TEST_F(it_primitive_type, bool_equal_different_kind_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_extends_not_supported_error) {
@@ -94,7 +89,6 @@ TEST_F(it_primitive_type, bool_extends_not_supported_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Void value_equal/value_extends (not supported) ---- */
@@ -108,7 +102,6 @@ TEST_F(it_primitive_type, void_equal_not_supported_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, void_extends_not_supported_error) {
@@ -120,7 +113,6 @@ TEST_F(it_primitive_type, void_extends_not_supported_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Type-level equal/extends via type values ---- */
@@ -135,21 +127,19 @@ TEST_F(it_primitive_type, void_type_equal_void) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, void_type_equal_wildcard) {
   vm_t vm = vm_create(allocator);
   value_t a = vm_get_void_type(vm);
   value_t b = vm_get_wildcard_type(vm);
-  /* wildcard short-circuit: any type equal to wildcard → true */
+  /* wildcard short-circuit: any type equal to wildcard 鈫?true */
   value_t result = value_equal(vm, a, b);
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, void_type_equal_bool) {
@@ -162,7 +152,6 @@ TEST_F(it_primitive_type, void_type_equal_bool) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, void_type_extends_void) {
@@ -175,21 +164,19 @@ TEST_F(it_primitive_type, void_type_extends_void) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, void_type_extends_wildcard) {
   vm_t vm = vm_create(allocator);
   value_t a = vm_get_void_type(vm);
   value_t b = vm_get_wildcard_type(vm);
-  /* wildcard short-circuit: any type extends wildcard → true */
+  /* wildcard short-circuit: any type extends wildcard 鈫?true */
   value_t result = value_extends(vm, a, b);
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, void_type_extends_bool) {
@@ -197,14 +184,13 @@ TEST_F(it_primitive_type, void_type_extends_bool) {
   value_t a = vm_get_void_type(vm);
   value_t b = vm_get_bool_type(vm);
   /* type value's extends delegates to data's type_extends; void does not
-   * extend bool → false (not an exception, since the comparison is well-defined) */
+   * extend bool 鈫?false (not an exception, since the comparison is well-defined) */
   value_t result = value_extends(vm, a, b);
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_type_equal_bool) {
@@ -217,21 +203,19 @@ TEST_F(it_primitive_type, bool_type_equal_bool) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_type_equal_wildcard) {
   vm_t vm = vm_create(allocator);
   value_t a = vm_get_bool_type(vm);
   value_t b = vm_get_wildcard_type(vm);
-  /* wildcard short-circuit: any type equal to wildcard → true */
+  /* wildcard short-circuit: any type equal to wildcard 鈫?true */
   value_t result = value_equal(vm, a, b);
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_type_extends_bool) {
@@ -244,47 +228,43 @@ TEST_F(it_primitive_type, bool_type_extends_bool) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_type_extends_wildcard) {
   vm_t vm = vm_create(allocator);
   value_t a = vm_get_bool_type(vm);
   value_t b = vm_get_wildcard_type(vm);
-  /* wildcard short-circuit: any type extends wildcard → true */
+  /* wildcard short-circuit: any type extends wildcard 鈫?true */
   value_t result = value_extends(vm, a, b);
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, error_type_equal_not_supported) {
   vm_t vm = vm_create(allocator);
   value_t a = vm_get_exception_type(vm);
   value_t b = vm_get_exception_type(vm);
-  /* error type_equal is NULL → _type_equal returns error */
+  /* error type_equal is NULL 鈫?_type_equal returns error */
   value_t result = value_equal(vm, a, b);
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, error_type_extends_not_supported) {
   vm_t vm = vm_create(allocator);
   value_t a = vm_get_exception_type(vm);
   value_t b = vm_get_exception_type(vm);
-  /* error type_extends is NULL → _type_extends returns error */
+  /* error type_extends is NULL 鈫?_type_extends returns error */
   value_t result = value_extends(vm, a, b);
 
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Bool shadow handling ---- */
@@ -296,12 +276,11 @@ TEST_F(it_primitive_type, bool_equal_shadow_left) {
   value_t b = create_bool_value(vm, true);
   value_t result = value_equal(vm, a, b);
 
-  /* shadow operand → result is shadow bool */
+  /* shadow operand 鈫?result is shadow bool */
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_equal_shadow_right) {
@@ -314,7 +293,6 @@ TEST_F(it_primitive_type, bool_equal_shadow_right) {
   EXPECT_TRUE(value_is_shadow(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_equal_shadow_both) {
@@ -327,7 +305,6 @@ TEST_F(it_primitive_type, bool_equal_shadow_both) {
   EXPECT_TRUE(value_is_shadow(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Bool binary operators ---- */
@@ -342,7 +319,6 @@ TEST_F(it_primitive_type, bool_band_true_true) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_band_true_false) {
@@ -354,7 +330,6 @@ TEST_F(it_primitive_type, bool_band_true_false) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_band_false_false) {
@@ -366,7 +341,6 @@ TEST_F(it_primitive_type, bool_band_false_false) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_bor_true_false) {
@@ -378,7 +352,6 @@ TEST_F(it_primitive_type, bool_bor_true_false) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_bor_false_false) {
@@ -390,7 +363,6 @@ TEST_F(it_primitive_type, bool_bor_false_false) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_bxor_true_false) {
@@ -402,7 +374,6 @@ TEST_F(it_primitive_type, bool_bxor_true_false) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_bxor_true_true) {
@@ -414,7 +385,6 @@ TEST_F(it_primitive_type, bool_bxor_true_true) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Bool unary operators ---- */
@@ -428,7 +398,6 @@ TEST_F(it_primitive_type, bool_bnot_true) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_bnot_false) {
@@ -439,7 +408,6 @@ TEST_F(it_primitive_type, bool_bnot_false) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_lnot_true) {
@@ -451,7 +419,6 @@ TEST_F(it_primitive_type, bool_lnot_true) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_lnot_false) {
@@ -462,7 +429,6 @@ TEST_F(it_primitive_type, bool_lnot_false) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Bool operators with shadow ---- */
@@ -478,7 +444,6 @@ TEST_F(it_primitive_type, bool_band_shadow) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_bor_shadow) {
@@ -491,7 +456,6 @@ TEST_F(it_primitive_type, bool_bor_shadow) {
   EXPECT_TRUE(value_is_shadow(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_bxor_shadow) {
@@ -504,7 +468,6 @@ TEST_F(it_primitive_type, bool_bxor_shadow) {
   EXPECT_TRUE(value_is_shadow(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_bnot_shadow) {
@@ -517,7 +480,6 @@ TEST_F(it_primitive_type, bool_bnot_shadow) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_BOOL);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_lnot_shadow) {
@@ -529,7 +491,6 @@ TEST_F(it_primitive_type, bool_lnot_shadow) {
   EXPECT_TRUE(value_is_shadow(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Bool operators not supported on void/error ---- */
@@ -543,7 +504,6 @@ TEST_F(it_primitive_type, void_band_not_supported) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, error_lnot_not_supported) {
@@ -554,7 +514,6 @@ TEST_F(it_primitive_type, error_lnot_not_supported) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Bool assignment ---- */
@@ -571,7 +530,6 @@ TEST_F(it_primitive_type, bool_assign_value) {
   EXPECT_TRUE(value_is_initialized(a));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_assign_shadow_lvalue) {
@@ -586,7 +544,6 @@ TEST_F(it_primitive_type, bool_assign_shadow_lvalue) {
   EXPECT_TRUE(value_is_initialized(a));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_assign_shadow_rvalue) {
@@ -600,7 +557,6 @@ TEST_F(it_primitive_type, bool_assign_shadow_rvalue) {
   EXPECT_TRUE(value_is_initialized(a));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, bool_assign_kind_mismatch_error) {
@@ -613,12 +569,11 @@ TEST_F(it_primitive_type, bool_assign_kind_mismatch_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, const_bool_assign_error) {
   vm_t vm = vm_create(allocator);
-  /* const bool value: initialized=true, mut=false → cannot assign */
+  /* const bool value: initialized=true, mut=false 鈫?cannot assign */
   type_t cbt = (type_t)value_get_data(vm_get_const_bool_type(vm));
   value_t a = vm_create_value_shadow(vm, cbt, NULL, true);
   value_t b = create_bool_value(vm, true);
@@ -627,12 +582,11 @@ TEST_F(it_primitive_type, const_bool_assign_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, const_bool_assign_tdz_allowed) {
   vm_t vm = vm_create(allocator);
-  /* const bool value: initialized=false (TDZ), mut=false → can assign once */
+  /* const bool value: initialized=false (TDZ), mut=false 鈫?can assign once */
   type_t cbt = (type_t)value_get_data(vm_get_const_bool_type(vm));
   value_t a = vm_create_value_shadow(vm, cbt, NULL, false);
   value_t b = create_bool_value(vm, true);
@@ -641,7 +595,6 @@ TEST_F(it_primitive_type, const_bool_assign_tdz_allowed) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, void_assign_not_supported) {
@@ -653,7 +606,6 @@ TEST_F(it_primitive_type, void_assign_not_supported) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Void create/clone/dispose ---- */
@@ -668,7 +620,6 @@ TEST_F(it_primitive_type, void_create_value) {
   EXPECT_EQ(value_get_data(v), nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_primitive_type, void_move) {
@@ -686,5 +637,4 @@ TEST_F(it_primitive_type, void_move) {
 
   allocator_free(alloc, &moved);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

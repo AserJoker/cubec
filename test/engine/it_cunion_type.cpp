@@ -1,4 +1,4 @@
-#include "common/test_common.h"
+﻿#include "common/test_common.h"
 #include "engine/bool_type.h"
 #include "engine/cunion_type.h"
 #include "engine/integer_type.h"
@@ -19,7 +19,6 @@ using ::testing::Test;
 
 class it_cunion_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
@@ -88,7 +87,6 @@ TEST_F(it_cunion_type, create_named) {
   EXPECT_EQ(type_get_size((type_t)ct), sizeof(double));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, create_anonymous) {
@@ -101,7 +99,6 @@ TEST_F(it_cunion_type, create_anonymous) {
   EXPECT_EQ(vec_get_size(vm_cunion_get_fields(vm, tv)), 2u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, seal_prevents_add_field) {
@@ -114,7 +111,6 @@ TEST_F(it_cunion_type, seal_prevents_add_field) {
   EXPECT_EQ(vec_get_size(vm_cunion_get_fields(vm, tv)), 2u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, duplicate_field_rejected) {
@@ -127,7 +123,6 @@ TEST_F(it_cunion_type, duplicate_field_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(dup)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, const_cunion) {
@@ -143,7 +138,6 @@ TEST_F(it_cunion_type, const_cunion) {
   EXPECT_FALSE(type_is_mut((type_t)ct));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- C-compatible layout: all fields overlap at offset 0, no tag ---- */
@@ -160,7 +154,6 @@ TEST_F(it_cunion_type, fields_overlap_offset_zero) {
   }
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, no_tag_in_value_layout) {
@@ -176,7 +169,6 @@ TEST_F(it_cunion_type, no_tag_in_value_layout) {
   EXPECT_EQ(type_get_size(value_get_type(uv)), sizeof(double));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Value creation ---- */
@@ -193,7 +185,6 @@ TEST_F(it_cunion_type, create_value) {
   EXPECT_EQ(type_get_kind(value_get_type(uv)), TYPE_KIND_CUNION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, create_shadow) {
@@ -205,7 +196,6 @@ TEST_F(it_cunion_type, create_shadow) {
   EXPECT_FALSE(value_is_initialized(uv));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, create_value_unknown_field) {
@@ -217,7 +207,6 @@ TEST_F(it_cunion_type, create_value_unknown_field) {
   EXPECT_EQ(type_get_kind(value_get_type(uv)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- get_field / set_field: raw, no result wrapping, no active-variant tracking ---- */
@@ -235,7 +224,6 @@ TEST_F(it_cunion_type, get_field_no_result_wrapping) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, set_field_overwrites_shared_region) {
@@ -245,7 +233,7 @@ TEST_F(it_cunion_type, set_field_overwrites_shared_region) {
   value_t iv = create_i32_value(vm, 42);
   value_t uv = vm_create_cunion_value(vm, tv, "int_val", iv);
 
-  /* write a float into the same shared memory — C reinterpret semantics */
+  /* write a float into the same shared memory 鈥?C reinterpret semantics */
   value_t fv = create_f64_value(vm, 3.5);
   value_t result = value_set_field(vm, uv, "float_val", fv);
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
@@ -261,7 +249,6 @@ TEST_F(it_cunion_type, set_field_overwrites_shared_region) {
   EXPECT_EQ(*(int32_t *)value_get_data(got_int), raw_i32);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, get_field_not_found) {
@@ -275,7 +262,6 @@ TEST_F(it_cunion_type, get_field_not_found) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, set_field_const_rejected) {
@@ -295,7 +281,6 @@ TEST_F(it_cunion_type, set_field_const_rejected) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- member_addr: C-compatible, offset 0, no active-variant check ---- */
@@ -323,7 +308,6 @@ TEST_F(it_cunion_type, member_addr_offset_zero) {
   EXPECT_DOUBLE_EQ(*(double *)value_get_data(got), 9.25);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, member_addr_unknown_field) {
@@ -337,7 +321,6 @@ TEST_F(it_cunion_type, member_addr_unknown_field) {
   EXPECT_EQ(type_get_kind(value_get_type(ptr)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- equal: byte-for-byte comparison of the whole overlapping region ---- */
@@ -357,7 +340,6 @@ TEST_F(it_cunion_type, equal_same) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, equal_different) {
@@ -374,7 +356,6 @@ TEST_F(it_cunion_type, equal_different) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, equal_kind_mismatch) {
@@ -389,7 +370,6 @@ TEST_F(it_cunion_type, equal_kind_mismatch) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_equal / type_extends: structural, cunion-only ---- */
@@ -416,7 +396,6 @@ TEST_F(it_cunion_type, type_equal_structural) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, type_equal_field_count_mismatch) {
@@ -436,7 +415,6 @@ TEST_F(it_cunion_type, type_equal_field_count_mismatch) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, type_extends_wildcard) {
@@ -449,7 +427,6 @@ TEST_F(it_cunion_type, type_extends_wildcard) {
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, type_extends_non_cunion_false) {
@@ -461,7 +438,6 @@ TEST_F(it_cunion_type, type_extends_non_cunion_false) {
   EXPECT_FALSE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- safe_cast: alias of assignment, no tag remap ---- */
@@ -481,7 +457,6 @@ TEST_F(it_cunion_type, safe_cast_identical) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_cunion_type, safe_cast_incompatible) {
@@ -502,7 +477,6 @@ TEST_F(it_cunion_type, safe_cast_incompatible) {
   EXPECT_EQ(type_get_kind(value_get_type(casted)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- clone: whole-region memcpy ---- */
@@ -528,7 +502,6 @@ TEST_F(it_cunion_type, clone) {
   EXPECT_EQ(*(int32_t *)value_get_data(got2), 99);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- assignment: whole-region memcpy ---- */
@@ -550,7 +523,6 @@ TEST_F(it_cunion_type, assignment) {
   EXPECT_EQ(*(int32_t *)value_get_data(got), 22);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- to_string ---- */
@@ -571,5 +543,4 @@ TEST_F(it_cunion_type, to_string) {
   EXPECT_NE(strstr(cstr, "float_val"), nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

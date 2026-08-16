@@ -1,4 +1,4 @@
-#include "core/rbtree.h"
+﻿#include "core/rbtree.h"
 #include "core/node.h"
 #include "common/test_common.h"
 #include <gtest/gtest.h>
@@ -7,7 +7,6 @@ using ::testing::Test;
 
 class dt_rbtree : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
 };
 
 TEST_F(dt_rbtree, create_and_empty) {
@@ -278,8 +277,8 @@ TEST_F(dt_rbtree, move_with_value_move) {
   }
   EXPECT_EQ(count, 2);
 
-  // moved 获得了 tree 的所有权（包括 auto_dispose），需要释放
+  // moved 鑾峰緱浜?tree 鐨勬墍鏈夋潈锛堝寘鎷?auto_dispose锛夛紝闇€瑕侀噴鏀?
   allocator_free(allocator, &moved);
-  // tree 变成空壳后必须显式释放，否则内存泄漏
+  // tree 鍙樻垚绌哄３鍚庡繀椤绘樉寮忛噴鏀撅紝鍚﹀垯鍐呭瓨娉勬紡
   allocator_free(allocator, &tree);
 }

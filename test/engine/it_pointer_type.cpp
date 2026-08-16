@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/scope.h"
@@ -15,7 +15,6 @@ using ::testing::Test;
 
 class it_pointer_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
@@ -56,7 +55,6 @@ TEST_F(it_pointer_type, create_basic) {
   EXPECT_FALSE(pointer_type_is_volatile(pt));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, create_const_ptr) {
@@ -67,7 +65,6 @@ TEST_F(it_pointer_type, create_const_ptr) {
   EXPECT_FALSE(type_is_mut((type_t)pt));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, create_volatile_ptr) {
@@ -78,7 +75,6 @@ TEST_F(it_pointer_type, create_volatile_ptr) {
   EXPECT_TRUE(pointer_type_is_volatile(pt));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, create_const_volatile_ptr) {
@@ -89,7 +85,6 @@ TEST_F(it_pointer_type, create_const_volatile_ptr) {
   EXPECT_STREQ(type_get_name((type_t)pt), "const * volatile i32");
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, create_ptr_to_const) {
@@ -97,12 +92,11 @@ TEST_F(it_pointer_type, create_ptr_to_const) {
   value_t tv = vm_create_pointer_type_value(vm, _get_const_i32_type(vm), true, false);
   pointer_type_t pt = (pointer_type_t)value_get_data(tv);
 
-  /* * const i32 — mutable pointer to const i32 */
+  /* * const i32 鈥?mutable pointer to const i32 */
   EXPECT_STREQ(type_get_name((type_t)pt), "* const i32");
   EXPECT_TRUE(type_is_mut((type_t)pt));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Value creation ---- */
@@ -124,7 +118,6 @@ TEST_F(it_pointer_type, create_pointer_value) {
   EXPECT_EQ(*ptr, value_get_data(target));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, create_pointer_from_addr) {
@@ -137,7 +130,6 @@ TEST_F(it_pointer_type, create_pointer_from_addr) {
   EXPECT_EQ(*ptr, &x);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, create_pointer_shadow) {
@@ -149,7 +141,6 @@ TEST_F(it_pointer_type, create_pointer_shadow) {
   EXPECT_FALSE(value_is_initialized(pv));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- value_addrof ---- */
@@ -166,7 +157,6 @@ TEST_F(it_pointer_type, addrof_basic) {
   EXPECT_EQ(type_get_kind(pointer_type_get_pointee_type(pt)), TYPE_KIND_I32);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, addrof_void_error) {
@@ -176,7 +166,6 @@ TEST_F(it_pointer_type, addrof_void_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, addrof_type_error) {
@@ -186,7 +175,6 @@ TEST_F(it_pointer_type, addrof_type_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, addrof_error_error) {
@@ -196,7 +184,6 @@ TEST_F(it_pointer_type, addrof_error_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- deref_get ---- */
@@ -214,7 +201,6 @@ TEST_F(it_pointer_type, deref_get_basic) {
   EXPECT_EQ(*(int32_t *)value_get_data(derefed), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- deref_set ---- */
@@ -236,7 +222,6 @@ TEST_F(it_pointer_type, deref_set_basic) {
   EXPECT_EQ(*(int32_t *)value_get_data(target), 100);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, deref_set_const_ptr_error) {
@@ -253,7 +238,6 @@ TEST_F(it_pointer_type, deref_set_const_ptr_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_equal ---- */
@@ -268,7 +252,6 @@ TEST_F(it_pointer_type, type_equal_same) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, type_equal_const_vs_mutable) {
@@ -281,7 +264,6 @@ TEST_F(it_pointer_type, type_equal_const_vs_mutable) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, type_equal_volatile_ignored) {
@@ -295,7 +277,6 @@ TEST_F(it_pointer_type, type_equal_volatile_ignored) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, type_equal_different_pointee) {
@@ -309,7 +290,6 @@ TEST_F(it_pointer_type, type_equal_different_pointee) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_extends ---- */
@@ -324,7 +304,6 @@ TEST_F(it_pointer_type, type_extends_wildcard) {
   EXPECT_TRUE(*(bool *)value_get_data(ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- equal ---- */
@@ -342,7 +321,6 @@ TEST_F(it_pointer_type, equal_same_addr) {
   EXPECT_TRUE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, equal_different_addr) {
@@ -359,7 +337,6 @@ TEST_F(it_pointer_type, equal_different_addr) {
   EXPECT_FALSE(*(bool *)value_get_data(eq));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- assignment ---- */
@@ -382,7 +359,6 @@ TEST_F(it_pointer_type, assignment) {
   EXPECT_EQ(*ptr1, value_get_data(t2));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, assignment_const_ptr_error) {
@@ -400,7 +376,6 @@ TEST_F(it_pointer_type, assignment_const_ptr_error) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- clone ---- */
@@ -423,7 +398,6 @@ TEST_F(it_pointer_type, clone) {
   EXPECT_EQ(*orig_ptr, *clone_ptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- to_string ---- */
@@ -440,7 +414,6 @@ TEST_F(it_pointer_type, to_string) {
   EXPECT_EQ(type_get_kind(value_get_type(str)), TYPE_KIND_STR);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Shadow operations ---- */
@@ -453,7 +426,6 @@ TEST_F(it_pointer_type, shadow_deref_get) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, shadow_deref_set) {
@@ -466,7 +438,6 @@ TEST_F(it_pointer_type, shadow_deref_set) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
   EXPECT_TRUE(value_is_initialized(pv));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, shadow_equal) {
@@ -477,7 +448,6 @@ TEST_F(it_pointer_type, shadow_equal) {
   value_t result = value_equal(vm, a, b);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, shadow_assignment) {
@@ -490,7 +460,6 @@ TEST_F(it_pointer_type, shadow_assignment) {
   EXPECT_TRUE(value_is_initialized(a));
   EXPECT_TRUE(value_is_shadow(a));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, shadow_safe_cast) {
@@ -502,7 +471,6 @@ TEST_F(it_pointer_type, shadow_safe_cast) {
   EXPECT_TRUE(value_is_shadow(result));
   EXPECT_EQ(value_get_type(result), (type_t)const_pt);
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_pointer_type, shadow_to_string) {
@@ -512,5 +480,4 @@ TEST_F(it_pointer_type, shadow_to_string) {
   value_t result = value_to_string(vm, pv);
   EXPECT_TRUE(value_is_shadow(result));
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

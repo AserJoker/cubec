@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/enum_type.h"
@@ -13,7 +13,6 @@ using ::testing::Test;
 
 class it_enum_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
@@ -46,7 +45,6 @@ TEST_F(it_enum_type, create_and_domain_access) {
   EXPECT_TRUE(value_is_own(red_item));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- enum == strict isolation ---- */
@@ -68,7 +66,6 @@ TEST_F(it_enum_type, equal_same_item_true) {
   EXPECT_TRUE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_enum_type, equal_different_item_false) {
@@ -89,7 +86,6 @@ TEST_F(it_enum_type, equal_different_item_false) {
   EXPECT_FALSE(*(bool *)value_get_data(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_enum_type, equal_non_enum_is_exception) {
@@ -108,7 +104,6 @@ TEST_F(it_enum_type, equal_non_enum_is_exception) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- type_extends: only self + wildcard ---- */
@@ -133,7 +128,6 @@ TEST_F(it_enum_type, type_extends_only_self_and_wildcard) {
   EXPECT_FALSE(*(bool *)value_get_data(und_ext));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- shadow value semantics ---- */
@@ -157,5 +151,4 @@ TEST_F(it_enum_type, shadow_value_equal_returns_shadow) {
   EXPECT_TRUE(value_is_shadow(result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

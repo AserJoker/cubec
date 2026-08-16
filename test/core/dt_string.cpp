@@ -7,7 +7,6 @@ using ::testing::Test;
 
 class dt_string : public CubecTest {
 protected:
-  TEST_ALLOCATOR;
 };
 
 TEST_F(dt_string, create_and_get) {

@@ -1,4 +1,4 @@
-#include "core/string.h"
+﻿#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/statement_comptime.h"
 #include "cubec/node.h"
@@ -14,9 +14,6 @@ using ::testing::Test;
 
 class dt_statement_comptime : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* ==========================================================================
@@ -229,7 +226,7 @@ TEST_F(dt_statement_comptime, non_comptime_returns_null) {
 }
 
 TEST_F(dt_statement_comptime, comptime_var_not_consumed) {
-  /* comptime var should NOT be consumed by read_statement_comptime —
+  /* comptime var should NOT be consumed by read_statement_comptime 鈥?
      it falls through to declaration parser */
   const char *source = "comptime var x: i32 = 42;";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
@@ -243,7 +240,7 @@ TEST_F(dt_statement_comptime, comptime_var_not_consumed) {
 }
 
 TEST_F(dt_statement_comptime, comptime_func_not_consumed) {
-  /* comptime func should NOT be consumed by read_statement_comptime —
+  /* comptime func should NOT be consumed by read_statement_comptime 鈥?
      it falls through to function parser */
   const char *source = "comptime func foo(): void { }";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);

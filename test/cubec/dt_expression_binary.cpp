@@ -1,4 +1,4 @@
-#include "cubec/expression.h"
+﻿#include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_addr.h"
 #include "cubec/expression_deref.h"
@@ -20,9 +20,6 @@ using ::testing::Test;
 
 class dt_expression_binary : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 /* ============================================================================
@@ -227,7 +224,7 @@ TEST_F(dt_expression_binary, prefix_not_negate_chained) {
 }
 
 TEST_F(dt_expression_binary, read_value_fallback) {
-  /* No prefix operator → falls back to read_value */
+  /* No prefix operator 鈫?falls back to read_value */
   const char *source = "hello";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -302,7 +299,7 @@ TEST_F(dt_expression_binary, non_prefix_symbol_returns_null) {
 }
 
 /* ============================================================================
- *  read_expression_binary — infix binary operators
+ *  read_expression_binary 鈥?infix binary operators
  * ============================================================================ */
 
 /* Helper: verify a binary node's operator and operand kinds */

@@ -1,4 +1,4 @@
-#include "engine/vm.h"
+﻿#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/scope.h"
@@ -20,7 +20,6 @@ using ::testing::Test;
 
 class it_result_type : public CubecTest {
 protected:
-  allocator_t allocator = create_allocator(NULL, NULL);
 
   type_t _get_i32_type(vm_t vm) {
     return (type_t)value_get_data(vm_get_i32_type(vm));
@@ -68,7 +67,6 @@ TEST_F(it_result_type, create_result_type) {
   EXPECT_TRUE(vm_union_is_sealed(vm, rv));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_result_type, result_fields_are_private) {
@@ -79,7 +77,6 @@ TEST_F(it_result_type, result_fields_are_private) {
   EXPECT_FALSE(vm_union_is_field_pub(vm, rv, "_error"));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Methods registration ---- */
@@ -93,7 +90,6 @@ TEST_F(it_result_type, ok_method_registered) {
   EXPECT_EQ(type_get_kind(value_get_type(ok_fn)), TYPE_KIND_CALLABLE);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_result_type, of_value_and_of_error_are_props) {
@@ -110,7 +106,6 @@ TEST_F(it_result_type, of_value_and_of_error_are_props) {
   EXPECT_EQ(strmap_find(vm_union_get_methods(vm, rv), "of_error"), nullptr);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- of_value / of_error ---- */
@@ -136,7 +131,6 @@ TEST_F(it_result_type, of_value_creates_ok_result) {
   EXPECT_EQ(tag, 0u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_result_type, of_error_creates_error_result) {
@@ -159,7 +153,6 @@ TEST_F(it_result_type, of_error_creates_error_result) {
   EXPECT_EQ(tag, 1u);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- ok() method ---- */
@@ -178,7 +171,6 @@ TEST_F(it_result_type, ok_returns_true_for_value_variant) {
   EXPECT_TRUE(*(bool *)value_get_data(ok_result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_result_type, ok_returns_false_for_error_variant) {
@@ -194,7 +186,6 @@ TEST_F(it_result_type, ok_returns_false_for_error_variant) {
   EXPECT_FALSE(*(bool *)value_get_data(ok_result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- value() method ---- */
@@ -211,7 +202,6 @@ TEST_F(it_result_type, value_returns_inner_when_ok) {
   EXPECT_EQ(*(int32_t *)value_get_data(inner), 42);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_result_type, value_panics_when_error) {
@@ -225,7 +215,6 @@ TEST_F(it_result_type, value_panics_when_error) {
   EXPECT_EQ(type_get_kind(value_get_type(inner)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- error() method ---- */
@@ -241,7 +230,6 @@ TEST_F(it_result_type, error_returns_inner_when_error) {
   EXPECT_EQ(type_get_kind(value_get_type(inner)), TYPE_KIND_STRUCT); /* error struct */
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_result_type, error_panics_when_ok) {
@@ -255,7 +243,6 @@ TEST_F(it_result_type, error_panics_when_ok) {
   EXPECT_EQ(type_get_kind(value_get_type(inner)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- str result variant ---- */
@@ -277,7 +264,6 @@ TEST_F(it_result_type, str_result_of_value_and_ok) {
   EXPECT_EQ(type_get_kind(value_get_type(inner)), TYPE_KIND_STR);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 /* ---- Shadow result ---- */
@@ -288,14 +274,13 @@ TEST_F(it_result_type, shadow_member_call_propagates_shadow) {
 
   value_t result_val = vm_create_union_shadow(vm, rv, false);
 
-  /* shadow result → value_addrof → shadow pointer → member_call deref → shadow result
-   * → value_is → shadow bool */
+  /* shadow result 鈫?value_addrof 鈫?shadow pointer 鈫?member_call deref 鈫?shadow result
+   * 鈫?value_is 鈫?shadow bool */
   value_t ok_result = value_member_call(vm, result_val, "ok", 0, NULL);
   EXPECT_EQ(type_get_kind(value_get_type(ok_result)), TYPE_KIND_BOOL);
   EXPECT_TRUE(value_is_shadow(ok_result));
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }
 
 TEST_F(it_result_type, shadow_get_field_returns_exception) {
@@ -304,10 +289,9 @@ TEST_F(it_result_type, shadow_get_field_returns_exception) {
 
   value_t result_val = vm_create_union_shadow(vm, rv, false);
 
-  /* get_field on shadow result: shadow check before tag read → exception */
+  /* get_field on shadow result: shadow check before tag read 鈫?exception */
   value_t got = value_get_field(vm, result_val, "_value");
   EXPECT_EQ(type_get_kind(value_get_type(got)), TYPE_KIND_EXCEPTION);
 
   vm_dispose(vm, allocator);
-  delete_allocator(allocator);
 }

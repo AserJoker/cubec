@@ -1,4 +1,4 @@
-#include "cubec/decorator.h"
+﻿#include "cubec/decorator.h"
 #include "cubec/expression.h"
 #include "cubec/node.h"
 #include "cubec/token.h"
@@ -12,9 +12,6 @@ using ::testing::Test;
 
 class dt_decorator : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 TEST_F(dt_decorator, simple_identifier) {

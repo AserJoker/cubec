@@ -1,4 +1,4 @@
-#include "cubec/literal_string.h"
+﻿#include "cubec/literal_string.h"
 #include "cubec/node.h"
 #include "cubec/expression.h"
 #include "cubec/token.h"
@@ -12,9 +12,6 @@ using ::testing::Test;
 
 class dt_literal_string : public CubecTest {
 protected:
-  test_context test_context_instance;
-  allocator_t allocator = test_context_instance.allocator;
-  context_t ctx = test_context_instance.ctx;
 };
 
 TEST_F(dt_literal_string, parse_non_string_returns_null) {
@@ -150,7 +147,7 @@ TEST_F(dt_literal_string, parse_string_with_tab) {
 }
 
 TEST_F(dt_literal_string, parse_string_with_unicode) {
-  const char *source = "\"你好世界\"";
+  const char *source = "\"浣犲ソ涓栫晫\"";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
@@ -160,7 +157,7 @@ TEST_F(dt_literal_string, parse_string_with_unicode) {
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_STRING);
 
   cubec_literal_string_t literal = (cubec_literal_string_t)node;
-  EXPECT_STREQ(string_get(literal->value), "你好世界");
+  EXPECT_STREQ(string_get(literal->value), "浣犲ソ涓栫晫");
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
