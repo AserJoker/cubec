@@ -4,15 +4,12 @@
 #include "engine/vm.h"
 #include "engine/scope.h"
 #include "engine/exception_type.h"
-#include "engine/error.h"
-#include "engine/error_code.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/pointer_type.h"
 #include "engine/str_type.h"
 #include "engine/type.h"
 #include "core/string.h"
-#include "core/strmap.h"
 #include "core/vec.h"
 #include <stdbool.h>
 #include <string.h>
@@ -138,31 +135,6 @@ static void _cunion_type_dispose(void *self, allocator_t allocator) {
     allocator_free(allocator, &p);
     ct->base.name = NULL;
   }
-}
-
-static value_t _shallow_clone_value(allocator_t allocator, value_t src);
-
-static value_t _shallow_clone_value(allocator_t allocator, value_t src) {
-  extern class_t g_value_class;
-
-  type_t  src_type = value_get_type(src);
-  void   *src_data = value_get_data(src);
-  bool    src_own   = value_is_own(src);
-  bool    src_init  = value_is_initialized(src);
-
-  void *new_data = src_data;
-  if (src_own && src_data) {
-    uint64_t sz = type_get_size(src_type);
-    if (sz > 0) {
-      new_data = allocator_alloc(allocator, sz);
-      memcpy(new_data, src_data, (size_t)sz);
-    }
-  }
-
-  typedef struct { type_t type; void *data; void *meta; bool own; bool initialized; } value_init_repr;
-  value_init_repr init = { .type = src_type, .data = new_data, .meta = NULL, .own = src_own, .initialized = src_init };
-  value_t dst = (value_t)allocator_create(allocator, &g_value_class, &init);
-  return dst;
 }
 
 static void _cunion_type_clone(void *self, allocator_t allocator, void *another) {
