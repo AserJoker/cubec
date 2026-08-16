@@ -162,7 +162,7 @@ foreach (elem of array.iter()) { ... }
 循环变量的可变性根据元素类型推导：
 
 ```c
-is_mutable = !semantic_type_is_const(element_type)
+is_mutable = !type_is_const(element_type)   /* 由 type_t.mut 表达，见 02-type-system.md */
 ```
 
 如果迭代器返回的 value 类型是 const，循环变量不可修改。

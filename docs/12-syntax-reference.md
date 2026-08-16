@@ -40,11 +40,24 @@
 // 等价于: "line1\nline2\n"
 ```
 
+**`undefined` 字面量** 关键字，表示"未初始化"占位（强制变量在使用前必须被显式赋值，对应 TDZ 机制，见 `01-architecture.md`）：
+
+```c
+var x: i32 = undefined;   // 声明但未初始化，后续必须赋值才能使用
+var p: *i32 = undefined;
+```
+
+> `undefined` 是关键字（在 `src/cubec/token.c` 的 `keywords[]` 中），由 `read_literal_undefined` 解析（`CUBEC_NODE_LITERAL_UNDEFINED`）。
+
+
+
 ### 1.3 标识符与关键字
 
 标识符遵循 Unicode 标准（通过 ICU `u_isIDStart`/`u_isIDPart` 识别），支持非 ASCII 字符。
 
-**关键字（42个）**：
+> 关键字列表以 `src/cubec/token.c` 的 `keywords[]` 数组为准（共 **41** 个）。
+
+**关键字（41个）**：
 
 | | | | | |
 |---|---|---|---|---|
@@ -52,13 +65,16 @@
 | `comptime` | `const` | `continue` | `cunion` | `defer` |
 | `do` | `else` | `enum` | `export` | `exportlib` |
 | `extends` | `extern` | `for` | `foreach` | `from` |
-| `func` | `if` | `import` | `in` | `inline` |
+| `func` | `if` | `implement` | `import` | `inline` |
 | `interface` | `is` | `of` | `pub` | `return` |
 | `sizeof` | `struct` | `switch` | `test` | `type` |
-| `typeof` | `union` | `using` | `var` | `volatile` |
-| `while` | | | | |
+| `typeof` | `union` | `undefined` | `using` | `var` |
+| `volatile` | `while` | | | |
 
-> `mutable` 已移除。`void` 是预定义标识符，非关键字。
+> - `mutable` 已移除；`void` 是预定义标识符，非关键字。
+> - `in` **不是**关键字（早期文档曾列出，已从 lexer 移除；foreach 使用 `of`）。
+> - 相对早期文档新增：`implement`（接口实现）、`undefined`（未初始化占位字面量）。
+> - 关键字识别在 `read_identifier_token` 中通过 `location_is` 与 `keywords[]` 逐字匹配完成。
 
 ---
 
@@ -204,17 +220,21 @@ Vec[[10] i32]         // Vec 的元素类型是 [10] i32 数组
 
 ### 3.2 后缀一元运算符
 
-Cubec 使用**后缀语法**表示指针操作和 try 操作（区别于 C 的前缀 `*`/`&`）：
+Cubec 使用**后缀语法**表示指针操作和 try/assert 操作（区别于 C 的前缀 `*`/`&`）。
+这些运算符在解析层面由 `.` 后跟一个符号组合识别（`src/cubec/expression_{deref,addr,try,assert}.c`）：
 
 ```c
-value.*     // 解引用（读取指针指向的值）
-value.&     // 取地址（获取 value 的指针）
-value.?     // Try/unwrap（安全地解包 Result/Option 类型）
+value.*     // 解引用（读取指针指向的值）    read_expression_deref
+value.&     // 取地址（获取 value 的指针）   read_expression_addr
+value.?     // Try/unwrap（安全地解包 Result/Option 类型）  read_expression_try
+value.!     // Assert（解包，失败则 panic）   read_expression_assert
 ```
+
+> `value.!` 在早期文档中未列出，现已实现（`CUBEC_NODE_EXPRESSION_ASSERT`）。
 
 ### 3.3 二元运算符与优先级
 
-运算符按优先级从低到高：
+运算符按优先级从低到高（以 `read_expression_binary` 实现为准）：
 
 | 优先级 | 运算符 | 结合性 |
 |--------|--------|--------|
@@ -229,7 +249,25 @@ value.?     // Try/unwrap（安全地解包 Result/Option 类型）
 | 9 | `+` `-` | 左结合 |
 | 10 | `*` `/` `%` | 左结合 |
 
-> **注意**：赋值运算符（`=`、`+=` 等）和逗号运算符（`,`）目前**不作为**二元表达式处理，将在语句层面单独实现。
+> **赋值运算符**：`=` 及复合赋值 `+=` `-=` `*=` `/=` `%=` `&=` `|=` `^=` `<<=` `>>=` `&&=` `||=`
+> 由 `read_expression_assignment`（`src/cubec/expression_assignment.c`）独立处理，**不**进入上述二元表达式优先级表。
+> 注意：`~=` 虽被词法器识别为符号，但当前未纳入赋值运算符集合。
+>
+> **逗号运算符** `,`：作为表达式分隔符（函数参数、初始化列表等），由 `read_expression_comma` 处理。
+
+### 3.3.1 完整符号表（词法层）
+
+`src/cubec/token.c` 的 `symbols[]` 数组定义的所有符号（按最长匹配优先）：
+
+```
+&&=  ||=  ...  ==  !=  >>= <<= ->  >>  <<
++=   -=   *=   /=  %=  &=   |=   ^=  ~=  &&
+||   >=   <=   =   !   +    -    *   /   &
+|    ^    ?    ,   .   <    >    ;   ::  :
+%    [    ]    {   }   (    )    ~
+```
+
+其中 `...` 为展开运算符（见 3.5 节），`::` 为命名空间/类型访问（见 4.4 节），`->` 仅用于函数类型表达式的返回类型（见 6.2 节）。
 
 ### 3.4 三元条件运算符
 
@@ -702,6 +740,25 @@ interface Container[T] {
     get(self, idx: u64): T
 }
 ```
+
+### 6.8 接口实现（implement）
+
+struct / union 通过 `implement` 关键字声明对 interface 的实现，位于泛型参数之后、成员体之前，可同时实现多个接口（逗号分隔）：
+
+```c
+struct Point implement Drawable, Serializable {
+    x: f64;
+    y: f64;
+}
+
+// 泛型结构体实现接口
+struct Vec[T] implement Iterable[T] {
+    data: *T;
+    len: u64;
+}
+```
+
+`implement` 是独立关键字（非修饰符），由 `read_declaration_union_body` / struct 对应解析器处理，emit 时输出 `implement` 关键字。
 
 ---
 

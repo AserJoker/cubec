@@ -193,7 +193,7 @@ func wrap[R, ...Args](fn: func(...Args) -> R): func(...Args) -> R {
 
 ### 4.7 语义表示
 
-- **类型层**：`semantic_type_t` 中 `TYPE_GENERIC_PACK` 表示参数包类型，含 `element_types` 向量
+- **类型层**：参数包类型在实例化时由 VM 类型层表示，含元素类型向量（早期文档中的 `TYPE_GENERIC_PACK` 分类已不存在，见 `02-type-system.md`）
 - **值层**：`comptime_value_t` 中 `COMPTIME_VALUE_PACK` 表示参数包值，含 `elements` 向量
 - **符号层**：`symbol_t` 的 `generic_param` 中 `is_rest` 标记参数包
 - **函数参数**：`cubec_function_argument_t` 中 `is_rest` 标记包展开参数 (`...args`)

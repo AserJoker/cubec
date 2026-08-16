@@ -75,7 +75,7 @@ Cubec 的指针 const 语义与 C 一致（详见 `02-type-system.md` 第11节�
 
 - `*const T`：`ptr.* = value` 报错（pointee 是 const），`ptr = &other` 合法（指针本身非 const）
 - `const *T`：`ptr = &other` 报错（指针是 const），`ptr.* = value` 合法（pointee 非 const）
-- 解引用时，先 `semantic_type_strip_qualifier` 剥离外层 qualifier，再判断是否为 POINTER 类型
+- 解引用时，先处理 const/volatile 标志（由 `type_t.mut` 表达），再判断是否为 POINTER 类型
 - 成员访问时，const 传播到字段类型（如果 host 是 const，字段也是 const）
 
 ---

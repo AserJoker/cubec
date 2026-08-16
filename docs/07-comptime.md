@@ -11,51 +11,42 @@ comptime 解释器本质是 Cubec 解释器，将 Cubec 视作脚本执行：
 
 ---
 
-## 2. 虚拟指针系统
+## 2. 编译期执行模型
 
-不用真实内存地址，用 Map 分配虚拟地址：
+comptime 求值复用统一的 VM 值/类型引擎（见 `15-runtime-execution.md`）。编译期
+不分配真实内存，而是通过 VM 的 `value_t` 承载编译期常量：
 
-```c
-struct comptime_allocator {
-    uint64_t next_addr;
-    map_t allocations;           // addr → comptime_value
-    map_t ptr_lifetimes;         // addr → 作用域层级
-};
-```
+- 编译期值通过 `value_create` / `value_create_shadow` 创建，存放在作用域的 `values` 向量中
+- 指针语义经类型 vtable 的 `deref_get` / `deref_set` 分派
+- 作用域退出时，`scope_dispose` 自动释放该作用域的 `values` / `types` / `strings` 等
+- 早期文档描述的 `comptime_allocator`（Map 分配虚拟地址）结构已不存在
 
-- 分配：返回虚拟地址
-- 解引用：从 Map 查找值
-- 释放：标记地址无效
-- 作用域结束：标记该作用域的虚拟地址为失效
+> 注：编译期能力（调用非 comptime 函数、支持内存分配、test 块、build 脚本）的语义
+> 目标不变，但底层实现已统一到 VM 引擎。
 
 ---
 
 ## 3. 安全检查
 
-| 限制 | 值 | 说明 |
-|------|-----|------|
-| 最大循环次数 | 1024 | 防止无限循环 |
-| 最大调用栈深度 | 256 | 防止无限递归 |
-| 最大内存分配 | 可配置 | 防止内存爆炸 |
-| extern 函数 | 禁止 | 不可预测的副作用 |
-| 指针越界 | 检查 | 虚拟地址空间验证 |
-| 悬垂指针 | 检查 | 生命周期追踪 |
+> 早期文档列出的具体限制常量（最大循环 1024、最大调用栈 256、最大内存分配可配置）
+> 在**当前源码中未找到对应实现**（VM 内无此类硬限制常量）。以下为设计目标的语义约束：
+
+| 限制 | 状态 | 说明 |
+|------|------|------|
+| 最大循环次数 | 规划中 | 防止无限循环 |
+| 最大调用栈深度 | 规划中 | 防止无限递归（VM 有 `call_stack` 向量） |
+| 最大内存分配 | 规划中 | 防止内存爆炸 |
+| extern 函数 | 语义约束（目标） | 不可预测的副作用，编译期不应调用 |
+| 指针越界 / 悬垂指针 | 由 VM 值层保证 | 值对象经 `value_t` 管理，无裸虚拟地址 |
 
 ---
 
 ## 4. 编译期值表示
 
-```c
-enum comptime_value_kind {
-    COMPTIME_VALUE_INT,
-    COMPTIME_VALUE_FLOAT,
-    COMPTIME_VALUE_BOOL,
-    COMPTIME_VALUE_STRING,
-    COMPTIME_VALUE_TYPE,
-    COMPTIME_VALUE_NIL,
-    COMPTIME_VALUE_COMPOSITE,
-};
-```
+> 早期文档中的 `comptime_value_kind` 枚举（`COMPTIME_VALUE_INT` 等）已不存在。
+> 编译期值统一用 `value_t` 表示，其具体类别由 `value_get_type(value)->kind`
+> （`type_kind_t`，如 `TYPE_KIND_I32` / `TYPE_KIND_STR` / `TYPE_KIND_TYPE` 等）
+> 区分，见 `02-type-system.md` 第 3 节。
 
 ---
 
@@ -63,13 +54,14 @@ enum comptime_value_kind {
 
 | 场景 | 执行时机 | 环境 |
 |------|---------|------|
-| comptime {} | 编译期 | 虚拟内存 + 解释器 |
-| comptime var/func | 编译期 | 虚拟内存 + 解释器 |
-| test "name" {} | 测试期 | 虚拟内存 + 解释器 |
-| build 脚本 | 构建期 | 虚拟内存 + 解释器 |
-| 普通函数 | 运行期 | 真实内存 + 编译后代码 |
+| comptime {} | 编译期 | VM 值层（编译期求值） |
+| comptime var/func | 编译期 | VM 值层（编译期求值） |
+| test "name" {} | 测试期 | VM 值层（编译期求值） |
+| build 脚本 | 构建期 | VM 值层（编译期求值） |
+| 普通函数 | 运行期 | 真实内存 + C 后端生成代码 |
 
-统一存储模型：env 存储 name → addr 映射，alloc 存储 addr → value 映射。指针使用引用语义。
+统一存储模型：作用域的 `names` 表存储 name → `value_t` 映射，`values` 向量存储
+实际值对象。指针使用引用语义（经类型 vtable 的 `deref_*` 分派）。
 
 ---
 

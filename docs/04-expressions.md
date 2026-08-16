@@ -153,7 +153,7 @@ g();
 
 | 场景 | 检查规则 |
 |------|---------|
-| 标识符 `x = val` | `semantic_type_is_const(x.type)` |
+| 标识符 `x = val` | `type_is_const(x.type)`（由 `type_t.mut` 表达） |
 | 成员 `p.x = val` | host 类型是 const → 字段不可写；字段类型本身是 const → 也不可写 |
 | 解引用 `p.* = val` | pointee 类型是 const → 不可通过指针写入 |
 

@@ -1,19 +1,27 @@
 # Cubec 修饰符体系
 
+> 本文档基于 `src/cubec/statement_declaration.c`、`statement_function.c`、
+> `statement_struct.c` 等实际实现整理。
+>
+> **AST 表示**：修饰符在 AST 中并非 enum，而是声明节点上的一组独立布尔标志位
+> （`is_export`、`is_exportlib`、`is_extern`、`is_builtin`、`is_comptime`、
+> `is_using`，函数另有 `is_inline`、`is_c_variadic`）。互斥检查在解析/语义阶段进行。
+> 声明还可携带 `decorators` 向量（C++11 属性风格 `[[expr]]`，见第 11 节）。
+
 ## 1. 总览
 
 Cubec 有 8 个修饰符，分为三类：
 
-| 修饰符 | 作用域 | 修饰目标 |
-|--------|--------|---------|
-| `builtin` | 声明级 | type / var / func |
-| `extern` | 声明级 | func / var |
-| `comptime` | 声明级 + 语句 | var / func / if / for / block |
-| `inline` | 声明级 | func |
-| `export` | 声明级 | func / type / var |
-| `exportlib` | 声明级 | func / var |
-| `pub` | 字段级 | struct field |
-| `using` | 声明级 | var |
+| 修饰符 | 作用域 | 修饰目标 | AST 标志 |
+|--------|--------|---------|---------|
+| `builtin` | 声明级 | type / var / func | `is_builtin` |
+| `extern` | 声明级 | func / var | `is_extern` |
+| `comptime` | 声明级 + 语句 | var / func / if / for / block | `is_comptime` |
+| `inline` | 声明级 | func | `is_inline` |
+| `export` | 声明级 | func / type / var | `is_export` |
+| `exportlib` | 声明级 | func / var | `is_exportlib` |
+| `pub` | 字段级 | struct field | 字段 `is_pub` |
+| `using` | 声明级 | var | `is_using` |
 
 ---
 
@@ -205,6 +213,31 @@ type Point = struct {
 - 访问控制框架已就位：`_is_field_accessible()` 在字段访问时检查可见性
 - 当前阶段（模块系统未实现）：所有字段在当前模块内均可访问
 - Phase 8 实现模块系统后：非 pub 字段从其他模块访问时报错
+
+---
+
+## 11. Decorator（属性，新增特性）
+
+Cubec 支持 C++11 属性风格的 decorator 语法 `[[expression]]`，可附加在声明上
+（struct/union/enum/interface/func/type alias/cunion 的 AST 节点均含 `decorators` 向量）。
+
+```c
+[[deprecated("use foo2 instead")]]
+func foo(): void { ... }
+
+[[inline]]
+func bar(): i32 { return 1; }
+
+[[cfg("debug")]]
+struct Logger { ... }
+```
+
+- 解析器 `read_decorator` 识别 `[[` ... `]]`，内部表达式支持 `keyword(args)` 形式
+  （如 `[[deprecated("reason")]]`）
+- decorator 作为 `cubec_decorator_t` AST 节点保留，供 codegen / 工具消费
+- decorator 与修饰符（`export`/`inline` 等）是正交的两个维度：修饰符是语言保留关键字，
+  decorator 是用户/工具可扩展的元数据注解
+- 早期文档未包含 decorator 语法
 
 ---
 
