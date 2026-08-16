@@ -41,13 +41,6 @@ protected:
     type_t type_type_val = (type_t)value_get_data(vm_get_type_type(vm));
     return vm_create_value_ref(vm, type_type_val, t, NULL);
   }
-
-  /** Create a TYPE_KIND_TYPE value wrapping a callable_type_t (for
-   * vm_interface_add_method). */
-  value_t _make_callable_type_val(vm_t vm, callable_type_t ct) {
-    type_t type_type_val = (type_t)value_get_data(vm_get_type_type(vm));
-    return vm_create_value_ref(vm, type_type_val, ct, NULL);
-  }
 };
 
 /* ---- Type creation ---- */
@@ -199,26 +192,22 @@ TEST_F(it_interface_type, struct_extends_interface_match) {
       vm_create_pointer_type_value(vm, (type_t)st, false, false);
   pointer_type_t const_ptr = (pointer_type_t)value_get_data(const_ptr_tv);
 
-  /* callable_type: print(*const Point) -> void */
+  /* callable_type: print(*const Point) -> void (created via vm lifecycle API) */
   type_t void_t = (type_t)value_get_data(vm_get_void_type(vm));
   vec_init_t vi = {.auto_dispose = false};
   vec_t params =
       (vec_t)allocator_create(vm_get_allocator(vm), &g_vec_class, &vi);
   vec_push(params, (type_t)const_ptr);
-  callable_type_t iface_ct = callable_type_create(
-      vm_get_allocator(vm), params, void_t, false, true, "<builtin>");
+  value_t ctv = vm_create_callable_type_value(vm, params, void_t, false, true,
+                                              "<builtin>");
   allocator_free(vm_get_allocator(vm), &params);
 
-  {
-    value_t ctv = _make_callable_type_val(vm, iface_ct);
-    (void)vm_interface_add_method(vm, itv, "print", ctv);
-  }
+  (void)vm_interface_add_method(vm, itv, "print", ctv);
   (void)vm_interface_seal(vm, itv);
 
-  /* add matching method to struct (same callable_type) */
-  callable_type_t struct_ct =
-      (callable_type_t)alloc_clone(vm_get_allocator(vm), iface_ct);
-  value_t fn = create_callable_value(vm, struct_ct, NULL, "print");
+  /* add matching method to struct (same callable_type, owned by vm scope) */
+  callable_type_t iface_ct = (callable_type_t)value_get_data(ctv);
+  value_t fn = create_callable_value(vm, iface_ct, NULL, "print");
   (void)vm_struct_add_prop(vm, stv, "print", fn, true, true);
 
   /* check: struct implements interface */
@@ -226,8 +215,6 @@ TEST_F(it_interface_type, struct_extends_interface_match) {
       vm_interface_check_extends(vm, itv, vm_struct_get_methods(vm, stv));
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
-  allocator_free(allocator, &iface_ct);
-  allocator_free(allocator, &struct_ct);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
@@ -243,14 +230,11 @@ TEST_F(it_interface_type, struct_extends_interface_missing_method) {
   vec_init_t vi = {.auto_dispose = false};
   vec_t params =
       (vec_t)allocator_create(vm_get_allocator(vm), &g_vec_class, &vi);
-  callable_type_t ct = callable_type_create(vm_get_allocator(vm), params,
-                                            void_t, false, true, "<builtin>");
+  value_t ctv = vm_create_callable_type_value(vm, params, void_t, false, true,
+                                              "<builtin>");
   allocator_free(vm_get_allocator(vm), &params);
 
-  {
-    value_t ctv = _make_callable_type_val(vm, ct);
-    (void)vm_interface_add_method(vm, itv, "print", ctv);
-  }
+  (void)vm_interface_add_method(vm, itv, "print", ctv);
   (void)vm_interface_seal(vm, itv);
 
   /* create struct with NO methods */
@@ -263,7 +247,6 @@ TEST_F(it_interface_type, struct_extends_interface_missing_method) {
       vm_interface_check_extends(vm, itv, vm_struct_get_methods(vm, stv));
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_FALSE(*(bool *)value_get_data(ext));
-  allocator_free(allocator, &ct);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
@@ -281,14 +264,11 @@ TEST_F(it_interface_type, union_extends_interface_match) {
   vec_init_t vi = {.auto_dispose = false};
   vec_t params =
       (vec_t)allocator_create(vm_get_allocator(vm), &g_vec_class, &vi);
-  callable_type_t iface_ct = callable_type_create(
-      vm_get_allocator(vm), params, void_t, false, true, "<builtin>");
+  value_t ctv = vm_create_callable_type_value(vm, params, void_t, false, true,
+                                              "<builtin>");
   allocator_free(vm_get_allocator(vm), &params);
 
-  {
-    value_t ctv = _make_callable_type_val(vm, iface_ct);
-    (void)vm_interface_add_method(vm, itv, "inspect", ctv);
-  }
+  (void)vm_interface_add_method(vm, itv, "inspect", ctv);
   (void)vm_interface_seal(vm, itv);
 
   /* create union with matching method */
@@ -303,8 +283,9 @@ TEST_F(it_interface_type, union_extends_interface_match) {
   }
   (void)vm_union_seal(vm, utv);
 
-  callable_type_t union_ct =
-      (callable_type_t)alloc_clone(vm_get_allocator(vm), iface_ct);
+  /* clone the callable type (vm-managed) for the union's own method */
+  value_t union_ctv = value_clone(vm, ctv);
+  callable_type_t union_ct = (callable_type_t)value_get_data(union_ctv);
   value_t fn = create_callable_value(vm, union_ct, NULL, "inspect");
   (void)vm_union_add_prop(vm, utv, "inspect", fn, true, true);
 
@@ -313,8 +294,6 @@ TEST_F(it_interface_type, union_extends_interface_match) {
       vm_interface_check_extends(vm, itv, vm_union_get_methods(vm, utv));
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
-  allocator_free(allocator, &iface_ct);
-  allocator_free(allocator, &union_ct);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
@@ -330,14 +309,11 @@ TEST_F(it_interface_type, union_extends_interface_missing_method) {
   vec_init_t vi = {.auto_dispose = false};
   vec_t params =
       (vec_t)allocator_create(vm_get_allocator(vm), &g_vec_class, &vi);
-  callable_type_t ct = callable_type_create(vm_get_allocator(vm), params,
-                                            void_t, false, true, "<builtin>");
+  value_t ctv = vm_create_callable_type_value(vm, params, void_t, false, true,
+                                              "<builtin>");
   allocator_free(vm_get_allocator(vm), &params);
 
-  {
-    value_t ctv = _make_callable_type_val(vm, ct);
-    (void)vm_interface_add_method(vm, itv, "inspect", ctv);
-  }
+  (void)vm_interface_add_method(vm, itv, "inspect", ctv);
   (void)vm_interface_seal(vm, itv);
 
   /* create union with NO methods */
@@ -357,7 +333,6 @@ TEST_F(it_interface_type, union_extends_interface_missing_method) {
       vm_interface_check_extends(vm, itv, vm_union_get_methods(vm, utv));
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_FALSE(*(bool *)value_get_data(ext));
-  allocator_free(allocator, &ct);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
@@ -376,13 +351,10 @@ TEST_F(it_interface_type, struct_type_extends_interface_via_vtable) {
   vec_init_t vi = {.auto_dispose = false};
   vec_t params =
       (vec_t)allocator_create(vm_get_allocator(vm), &g_vec_class, &vi);
-  callable_type_t iface_ct = callable_type_create(
-      vm_get_allocator(vm), params, i32_t, false, true, "<builtin>");
+  value_t ctv = vm_create_callable_type_value(vm, params, i32_t, false, true,
+                                              "<builtin>");
   allocator_free(vm_get_allocator(vm), &params);
-  {
-    value_t ctv = _make_callable_type_val(vm, iface_ct);
-    (void)vm_interface_add_method(vm, itv, "add", ctv);
-  }
+  (void)vm_interface_add_method(vm, itv, "add", ctv);
   (void)vm_interface_seal(vm, itv);
 
   /* create struct with matching method */
@@ -391,8 +363,9 @@ TEST_F(it_interface_type, struct_type_extends_interface_via_vtable) {
   (void)vm_struct_add_field(vm, stv, "val", vm_get_i32_type(vm), true);
   (void)vm_struct_seal(vm, stv);
 
-  callable_type_t struct_ct =
-      (callable_type_t)alloc_clone(vm_get_allocator(vm), iface_ct);
+  /* clone the callable type (vm-managed) for the struct's own method */
+  value_t struct_ctv = value_clone(vm, ctv);
+  callable_type_t struct_ct = (callable_type_t)value_get_data(struct_ctv);
   value_t fn = create_callable_value(vm, struct_ct, NULL, "add");
   (void)vm_struct_add_prop(vm, stv, "add", fn, true, true);
 
@@ -402,8 +375,6 @@ TEST_F(it_interface_type, struct_type_extends_interface_via_vtable) {
   value_t ext = svt.type_extends(vm, (type_t)st, (type_t)it);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
-  allocator_free(allocator, &iface_ct);
-  allocator_free(allocator, &struct_ct);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
@@ -421,13 +392,10 @@ TEST_F(it_interface_type, struct_type_extends_interface_mismatch) {
   vec_init_t vi = {.auto_dispose = false};
   vec_t params =
       (vec_t)allocator_create(vm_get_allocator(vm), &g_vec_class, &vi);
-  callable_type_t iface_ct = callable_type_create(
-      vm_get_allocator(vm), params, i32_t, false, true, "<builtin>");
+  value_t ctv = vm_create_callable_type_value(vm, params, i32_t, false, true,
+                                              "<builtin>");
   allocator_free(vm_get_allocator(vm), &params);
-  {
-    value_t ctv = _make_callable_type_val(vm, iface_ct);
-    (void)vm_interface_add_method(vm, itv, "count", ctv);
-  }
+  (void)vm_interface_add_method(vm, itv, "count", ctv);
   (void)vm_interface_seal(vm, itv);
 
   /* create struct with DIFFERENT method signature: () -> f64 */
@@ -440,9 +408,10 @@ TEST_F(it_interface_type, struct_type_extends_interface_mismatch) {
   vec_init_t vi2 = {.auto_dispose = false};
   vec_t params2 =
       (vec_t)allocator_create(vm_get_allocator(vm), &g_vec_class, &vi2);
-  callable_type_t struct_ct = callable_type_create(
-      vm_get_allocator(vm), params2, f64_t, false, true, "<builtin>");
+  value_t struct_ctv = vm_create_callable_type_value(vm, params2, f64_t, false,
+                                                     true, "<builtin>");
   allocator_free(vm_get_allocator(vm), &params2);
+  callable_type_t struct_ct = (callable_type_t)value_get_data(struct_ctv);
   value_t fn = create_callable_value(vm, struct_ct, NULL, "count");
   (void)vm_struct_add_prop(vm, stv, "count", fn, true, true);
 
@@ -452,8 +421,6 @@ TEST_F(it_interface_type, struct_type_extends_interface_mismatch) {
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_FALSE(*(bool *)value_get_data(ext));
 
-  allocator_free(allocator, &iface_ct);
-  allocator_free(allocator, &struct_ct);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
@@ -472,13 +439,10 @@ TEST_F(it_interface_type, union_type_extends_interface_via_vtable) {
   vec_init_t vi = {.auto_dispose = false};
   vec_t params =
       (vec_t)allocator_create(vm_get_allocator(vm), &g_vec_class, &vi);
-  callable_type_t iface_ct = callable_type_create(
-      vm_get_allocator(vm), params, void_t, false, true, "<builtin>");
+  value_t ctv = vm_create_callable_type_value(vm, params, void_t, false, true,
+                                              "<builtin>");
   allocator_free(vm_get_allocator(vm), &params);
-  {
-    value_t ctv = _make_callable_type_val(vm, iface_ct);
-    (void)vm_interface_add_method(vm, itv, "describe", ctv);
-  }
+  (void)vm_interface_add_method(vm, itv, "describe", ctv);
   (void)vm_interface_seal(vm, itv);
 
   /* create union with matching method */
@@ -493,8 +457,9 @@ TEST_F(it_interface_type, union_type_extends_interface_via_vtable) {
   }
   (void)vm_union_seal(vm, utv);
 
-  callable_type_t union_ct =
-      (callable_type_t)alloc_clone(vm_get_allocator(vm), iface_ct);
+  /* clone the callable type (vm-managed) for the union's own method */
+  value_t union_ctv = value_clone(vm, ctv);
+  callable_type_t union_ct = (callable_type_t)value_get_data(union_ctv);
   value_t fn = create_callable_value(vm, union_ct, NULL, "describe");
   (void)vm_union_add_prop(vm, utv, "describe", fn, true, true);
 
@@ -506,8 +471,6 @@ TEST_F(it_interface_type, union_type_extends_interface_via_vtable) {
   value_t ext = uvt.type_extends(vm, (type_t)ut, (type_t)it);
   ASSERT_EQ(type_get_kind(value_get_type(ext)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(ext));
-  allocator_free(allocator, &iface_ct);
-  allocator_free(allocator, &union_ct);
   vm_dispose(vm, allocator);
   delete_allocator(allocator);
 }
