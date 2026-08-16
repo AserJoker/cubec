@@ -43,6 +43,7 @@ func main(): void {
 | [`docs/11-codegen.md`](docs/11-codegen.md) | 代码生成：C 后端映射 |
 | [`docs/12-syntax-reference.md`](docs/12-syntax-reference.md) | 语法参考：关键字、类型、运算符、表达式、语句、声明 |
 | [`docs/13-ast-semantics.md`](docs/13-ast-semantics.md) | AST 节点语义与 checker 模块结构 |
+| [`docs/15-runtime-execution.md`](docs/15-runtime-execution.md) | 脚本执行后端：Engine VM 运行时架构（含当前实现状态） |
 
 ---
 
@@ -93,15 +94,89 @@ cubec/
 
 ### 已实现
 
+#### 前端编译器
 - **词法分析器**：完整的 tokenizer，支持所有字面量类型、42 个关键字、符号最长匹配
 - **表达式解析器**：完整覆盖所有表达式类型（前缀/后缀一元、二元、三元、成员访问、泛型实例化、typeof、sizeof、alignof、初始化列表、匿名函数、const/volatile 限定符等）
 - **语句解析器**：完整覆盖所有语句类型（if/for/foreach/while/do-while/switch/defer/break/continue/return/import/test/comptime 等）
 - **声明解析器**：func/struct/enum/union/cunion/interface/type/var/decorator
-- **语义分析引擎**：双层类型表示、结构等价、无隐式类型转换（严格模式，int→float / []T→*T 需显式 cast）、TDZ 多遍检查、const/volatile 语义、builtin 回调注册表、原生 tuple 类型（`<i32, f64>` 语法）、TYPE_OPAQUE（对标 C `void*`）、参数包（variadic generics）、泛型推断、匿名 initialize_list 推断、显式类型转换 cast builtin、`<?>` 元组通配符约束、Rustc 风格诊断、`undefined` 字面量与强制变量初始化、表达式语句返回值未使用警告、控制流分析（不可达代码检测、非 void 函数 return 完整性、TDZ 流传播）、修饰符互斥矩阵强制、pub 字段访问控制框架、tagged union 运行时布局（`__type__` tag + data）、unionIs builtin、错误传播运算符（`.?` try / `.!` assert）、`assert`（test 块专用）/`panic`（不可恢复中止）builtin、魔术方法（`__dispose__`、`__value__`、`__get__`、`__set__`、`__call__`、`__slice__`）、模块系统（import/export、路径解析、`::` 命名空间访问、export 可见性过滤、循环依赖检测、跨模块 pub 字段访问控制、跨模块 comptime 函数调用）、`extends` 表达式求值（comptime bool 返回）、泛型单态化（队列驱动工作列表算法，级联实例化，去重缓存，泛型方法体检查，方法级泛型参数推断与显式类型参数）
-- **comptime 编译期求值器**：AST 解释器、虚拟内存、安全限制、test 块执行、SEH 崩溃防护、union/cunion 初始化与 tag 读写、`.?` 错误传播与 `.!` 断言解包求值、FATAL signal 传播与 `fatal_error` 编译中止、`comptime if` 条件必知+分支跳过（未采取分支不做类型检查）、`comptime foreach` 迭代器展开
-- **核心数据结构**：动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
-- **代码生成（C 后端）**：完整的 AST→C lowering 管线（类型映射、表达式翻译、语句翻译、魔术方法调度、defer 栈实现、名称修饰），C 代码写入 `.c` + `.h` 文件，编译+链接管线（调用系统 C 编译器生成可执行文件）
+
+#### 语义分析引擎
+- 双层类型表示、结构等价、无隐式类型转换（严格模式，int→float / []T→*T 需显式 cast）
+- TDZ 多遍检查、const/volatile 语义
+- builtin 回调注册表、原生 tuple 类型（`<i32, f64>` 语法）、TYPE_OPAQUE（对标 C `void*`）
+- 参数包（variadic generics）、泛型推断、匿名 initialize_list 推断
+- 显式类型转换 cast builtin、`<?>` 元组通配符约束
+- Rustc 风格诊断、`undefined` 字面量与强制变量初始化
+- 表达式语句返回值未使用警告
+- 控制流分析（不可达代码检测、非 void 函数 return 完整性、TDZ 流传播）
+- 修饰符互斥矩阵强制、pub 字段访问控制框架
+- tagged union 运行时布局（`__type__` tag + data）、unionIs builtin
+- 错误传播运算符（`.?` try / `.!` assert）
+- `assert`（test 块专用）/`panic`（不可恢复中止）builtin
+- 魔术方法（`__dispose__`、`__value__`、`__get__`、`__set__`、`__call__`、`__slice__`）
+- 模块系统（import/export、路径解析、`::` 命名空间访问、export 可见性过滤、循环依赖检测）
+- 跨模块 pub 字段访问控制、跨模块 comptime 函数调用
+- `extends` 表达式求值（comptime bool 返回）
+- 泛型单态化（队列驱动工作列表算法，级联实例化，去重缓存，泛型方法体检查，方法级泛型参数推断与显式类型参数）
+
+#### 编译期运行时
+- **comptime 编译期求值器**：AST 解释器、虚拟内存、安全限制、test 块执行、SEH 崩溃防护
+- union/cunion 初始化与 tag 读写、`.?` 错误传播与 `.!` 断言解包求值
+- FATAL signal 传播与 `fatal_error` 编译中止
+- `comptime if` 条件必知+分支跳过（未采取分支不做类型检查）
+- `comptime foreach` 迭代器展开
+
+#### 脚本执行后端 (Engine VM)
+- **VM 基础架构**（765 行）：
+  - `vm_t` 运行时实例，模块注册表（`strmap_t`）
+  - 作用域管理（全局作用域、模块作用域、函数作用域）
+  - 调用栈（`call_frame_t`）
+  - 全局内置类型注册（i8/i16/i32/i64/u8/u16/u32/u64/f16/f32/f64/bool/str/void/type/exception/error/wildcard）
+
+- **类型系统运行时**（约 5,200 行）：
+  - `type_t` 类型抽象、类型哈希与缓存
+  - 基本类型实现：`bool_type`、`void_type`、`wildcard_type`
+  - 数值类型实现：`integer_type`（支持 i8-i64/u8-u64/f16/f32/f64，653 行）、`float_type`、`result_type`
+  - 复合类型实现：`struct_type`（1077 行，含 vtable、字段、魔术方法）、`union_type`（1175 行，含 tagged/cunion 支持）、`array_type`、`slice_type`、`tuple_type`、`pointer_type`、`callable_type`
+  - 接口类型：`interface_type`（9805 行）
+  - 字符串类型：`str_type`（304 行）
+
+- **值操作引擎**（437 行）：
+  - `value_t` 统一值表示（type/data/own/initialized）
+  - 值创建/销毁/移动
+  - 类型实例化与注册（`vm_create_array_type_value`、`vm_create_slice_type_value`、`vm_create_tuple_type_value`、`vm_create_callable_type_value`、`vm_create_pointer_type_value`）
+
+- **作用域与模块系统**（322 行）：
+  - `scope_t` 层级作用域树（global/module/function/block）
+  - 作用域变量查找与注册（`scope_lookup`）
+  - `module_t` 模块封装（AST、tokens、root_scope、exports）
+  - `name_collector` 命名收集器（泛型单态化依赖名称解析）
+
+- **辅助系统**（368 行）：
+  - `diagnostic.c`：Rustc 风格诊断系统
+  - `error.c/error_code.c`：错误类型与错误码
+  - `exception_type.c`：异常类型
+  - `name.c/name_collector.c`：名称管理与收集
+  - `context.c`：编译上下文（VM + 诊断）
+
+**统计**：Engine VM 已实现约 **9,278 行代码**，涵盖类型系统、值操作、作用域管理、模块加载、诊断系统等运行时核心功能。
+
+#### 核心数据结构
+- 动态数组、双向链表、红黑树、哈希表、动态字符串、统一内存管理
+
+#### 代码生成（C 后端）
+- 完整的 AST→C lowering 管线（类型映射、表达式翻译、语句翻译、魔术方法调度、defer 栈实现、名称修饰）
+- C 代码写入 `.c` + `.h` 文件
+- 编译+链接管线（调用系统 C 编译器生成可执行文件）
 
 ### 待实现
+
+- **脚本执行后端**（Engine VM 运行时接口）：
+  - 缺少 `vm_run` / `context_run_module` 等入口函数
+  - 缺少 AST→VM 指令翻译器（如字节码生成或解释器解释）
+  - 缺少函数调用执行引擎
+  - 缺少变量赋值与访问执行
+  - 缺少控制流语句执行（if/for/while/switch/defer）
+  - 缺少 comptime 运行时与运行时切换机制
 
 - **LLVM 后端**（C 后端已可用）
