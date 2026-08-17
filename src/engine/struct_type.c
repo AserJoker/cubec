@@ -568,7 +568,8 @@ static value_t _struct_clone(vm_t vm, value_t self) {
 static value_t _struct_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
   if (type_get_kind(tb) != TYPE_KIND_STRUCT)
-    return create_bool_value(vm, false);
+    return create_exception_value(vm, "cannot compare struct with '%s'",
+                                  type_get_name(tb));
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
 
@@ -723,12 +724,6 @@ static value_t _struct_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   if (value_is_initialized(lvalue) && !lt->mut)
     return create_exception_value(vm, "cannot assign to const '%s'", lt->name);
 
-  /* shadow: just mark initialized */
-  if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
-    value_set_initialized(lvalue, true);
-    return create_void_value(vm);
-  }
-
   /* type_equal check */
   value_t eq = _struct_type_equal(vm, lt, value_get_type(rvalue));
   if (value_is_error(eq))
@@ -737,6 +732,12 @@ static value_t _struct_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
     return create_exception_value(vm, "cannot assign '%s' to '%s'",
                               type_get_name(value_get_type(rvalue)),
                               type_get_name(lt));
+
+  /* shadow: just mark initialized */
+  if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
+    value_set_initialized(lvalue, true);
+    return create_void_value(vm);
+  }
 
   /* memcpy entire buffer */
   uint64_t size = type_get_size(lt);

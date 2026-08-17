@@ -1,4 +1,4 @@
-﻿#include "common/test_common.h"
+#include "common/test_common.h"
 #include "engine/bool_type.h"
 #include "engine/cunion_type.h"
 #include "engine/integer_type.h"
@@ -367,7 +367,7 @@ TEST_F(it_cunion_type, equal_kind_mismatch) {
 
   value_t u2 = create_bool_value(vm, true);
   value_t eq = value_equal(vm, u1, u2);
-  EXPECT_FALSE(*(bool *)value_get_data(eq));
+  EXPECT_TRUE(value_is_error(eq));
 
   vm_dispose(vm, allocator);
 }

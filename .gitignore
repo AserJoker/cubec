@@ -13,3 +13,6 @@ build_wsl
 build-wsl
 build_asan
 build-vg
+
+# codegraph index cache
+.codegraph/

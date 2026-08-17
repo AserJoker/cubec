@@ -5,6 +5,8 @@
 #include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
+#include "engine/nil_type.h"
+#include "engine/opaque_type.h"
 #include "engine/str_type.h"
 #include "engine/type.h"
 #include "core/string.h"
@@ -253,15 +255,42 @@ static value_t _pointer_clone(vm_t vm, value_t self) {
 
 static value_t _pointer_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
-  if (type_get_kind(tb) != TYPE_KIND_POINTER)
-    return create_bool_value(vm, false);
-  if (value_is_shadow(a) || value_is_shadow(b))
-    return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
 
-  /* compare addresses */
-  void **pa = (void **)value_get_data(a);
-  void **pb = (void **)value_get_data(b);
-  return create_bool_value(vm, *pa == *pb);
+  /* pointer == nil: true if pointer holds NULL address */
+  if (type_get_kind(tb) == TYPE_KIND_NIL) {
+    if (value_is_shadow(a) || value_is_shadow(b))
+      return vm_create_value_shadow(vm,
+                                    (type_t)value_get_data(vm_get_bool_type(vm)),
+                                    NULL, true);
+    void **pa = (void **)value_get_data(a);
+    return create_bool_value(vm, pa == NULL || *pa == NULL);
+  }
+
+  /* pointer == opaque: compare addresses */
+  if (type_get_kind(tb) == TYPE_KIND_OPAQUE) {
+    if (value_is_shadow(a) || value_is_shadow(b))
+      return vm_create_value_shadow(vm,
+                                    (type_t)value_get_data(vm_get_bool_type(vm)),
+                                    NULL, true);
+    void **pa = (void **)value_get_data(a);
+    void **pb = (void **)value_get_data(b);
+    return create_bool_value(vm, (pa ? *pa : NULL) == (pb ? *pb : NULL));
+  }
+
+  /* pointer == pointer */
+  if (type_get_kind(tb) == TYPE_KIND_POINTER) {
+    if (value_is_shadow(a) || value_is_shadow(b))
+      return vm_create_value_shadow(vm,
+                                    (type_t)value_get_data(vm_get_bool_type(vm)),
+                                    NULL, true);
+    void **pa = (void **)value_get_data(a);
+    void **pb = (void **)value_get_data(b);
+    return create_bool_value(vm, *pa == *pb);
+  }
+
+  /* pointer vs incompatible type */
+  return create_exception_value(vm, "cannot compare pointer with '%s'",
+                                type_get_name(tb));
 }
 
 /* ---- VTable: type_equal ---- */
@@ -385,6 +414,14 @@ static value_t _pointer_safe_cast(vm_t vm, value_t self, type_t to) {
   /* wildcard accepts anything */
   if (to->kind == TYPE_KIND_WILDCARD)
     return self;
+
+  /* pointer -> opaque: any pointer can become opaque */
+  if (to->kind == TYPE_KIND_OPAQUE) {
+    if (value_is_shadow(self))
+      return vm_create_value_shadow(vm, to, NULL, value_is_initialized(self));
+    void **src_data = (void **)value_get_data(self);
+    return create_opaque_value(vm, src_data ? *src_data : NULL);
+  }
 
   /* must cast to pointer type */
   if (to->kind != TYPE_KIND_POINTER)

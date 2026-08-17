@@ -12,6 +12,8 @@
 #include "engine/float_type.h"
 #include "engine/integer_type.h"
 #include "engine/module.h"
+#include "engine/nil_type.h"
+#include "engine/opaque_type.h"
 #include "engine/pointer_type.h"
 #include "engine/result_type.h"
 #include "engine/scope.h"
@@ -61,6 +63,8 @@ struct _vm_t {
                          global_scope->values) */
   value_t
       v_void; /* borrowed: bootstrap type "void" (in global_scope->values) */
+  value_t v_nil;    /* borrowed: bootstrap type "nil" */
+  value_t v_opaque; /* borrowed: bootstrap type "opaque" */
   value_t v_const_bool; /* borrowed: bootstrap type "const bool" (in
                            global_scope->values) */
   value_t v_i8;         /* borrowed: bootstrap type "i8" */
@@ -144,6 +148,14 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   type_t void_type = type_get_void_type(allocator);
   vec_push(vm->global_scope->types, void_type);
   vm->v_void = create_type_value(vm, void_type, "void", false);
+
+  type_t nil_type = type_get_nil_type(allocator);
+  vec_push(vm->global_scope->types, nil_type);
+  vm->v_nil = create_type_value(vm, nil_type, "nil", false);
+
+  type_t opaque_type = type_get_opaque_type(allocator);
+  vec_push(vm->global_scope->types, opaque_type);
+  vm->v_opaque = create_type_value(vm, opaque_type, "opaque", false);
 
   type_t const_bool_type = type_get_const_bool_type(allocator);
   vec_push(vm->global_scope->types, const_bool_type);
@@ -392,6 +404,8 @@ value_t vm_get_error_type(vm_t self) { return self->v_error; }
 value_t vm_get_bool_type(vm_t self) { return self->v_bool; }
 value_t vm_get_wildcard_type(vm_t self) { return self->v_wildcard; }
 value_t vm_get_void_type(vm_t self) { return self->v_void; }
+value_t vm_get_nil_type(vm_t self) { return self->v_nil; }
+value_t vm_get_opaque_type(vm_t self) { return self->v_opaque; }
 value_t vm_get_const_bool_type(vm_t self) { return self->v_const_bool; }
 value_t vm_get_i8_type(vm_t self) { return self->v_i8; }
 value_t vm_get_i16_type(vm_t self) { return self->v_i16; }

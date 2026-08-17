@@ -403,10 +403,6 @@ static value_t _tuple_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t rt = value_get_type(rvalue);
   if (rt->kind != TYPE_KIND_TUPLE)
     return create_exception_value(vm, "cannot assign non-tuple to tuple");
-  if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
-    value_set_initialized(lvalue, true);
-    return create_void_value(vm);
-  }
   tuple_type_t ltt = (tuple_type_t)value_get_type(lvalue);
   tuple_type_t rtt = (tuple_type_t)rt;
   if (ltt->field_count != rtt->field_count)
@@ -414,6 +410,10 @@ static value_t _tuple_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   for (uint64_t i = 0; i < ltt->field_count; i++) {
     if (type_get_kind(tuple_type_get_element_type(ltt, i)) != type_get_kind(tuple_type_get_element_type(rtt, i)))
       return create_exception_value(vm, "cannot assign tuple with different element types");
+  }
+  if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
+    value_set_initialized(lvalue, true);
+    return create_void_value(vm);
   }
   /* copy entire data buffer */
   memcpy(value_get_data(lvalue), value_get_data(rvalue), ltt->base.size);

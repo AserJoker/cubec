@@ -48,18 +48,27 @@ static value_t _bool_type_extends(vm_t vm, type_t sub, type_t super) {
 }
 
 static value_t _bool_band(vm_t vm, value_t a, value_t b) {
+  type_t tb = value_get_type(b);
+  if (tb->kind != TYPE_KIND_BOOL)
+    return create_exception_value(vm, "cannot apply operator & to bool and '%s'", tb->name);
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   return create_bool_value(vm, *(bool *)value_get_data(a) && *(bool *)value_get_data(b));
 }
 
 static value_t _bool_bor(vm_t vm, value_t a, value_t b) {
+  type_t tb = value_get_type(b);
+  if (tb->kind != TYPE_KIND_BOOL)
+    return create_exception_value(vm, "cannot apply operator | to bool and '%s'", tb->name);
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   return create_bool_value(vm, *(bool *)value_get_data(a) || *(bool *)value_get_data(b));
 }
 
 static value_t _bool_bxor(vm_t vm, value_t a, value_t b) {
+  type_t tb = value_get_type(b);
+  if (tb->kind != TYPE_KIND_BOOL)
+    return create_exception_value(vm, "cannot apply operator ^ to bool and '%s'", tb->name);
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   bool va = *(bool *)value_get_data(a);

@@ -205,7 +205,9 @@ static value_t _slice_equal(vm_t vm, value_t a, value_t b) {
   slice_type_t sa = (slice_type_t)value_get_type(a);
   slice_type_t sb = (slice_type_t)tb;
   if (type_get_kind(sa->element_type) != type_get_kind(sb->element_type))
-    return create_bool_value(vm, false);
+    return create_exception_value(vm, "cannot compare slice of '%s' with slice of '%s'",
+                                  type_get_name(sa->element_type),
+                                  type_get_name(sb->element_type));
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   struct slice_data_t *da = _slice_read(a);
@@ -291,14 +293,14 @@ static value_t _slice_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t rt = value_get_type(rvalue);
   if (rt->kind != TYPE_KIND_SLICE)
     return create_exception_value(vm, "cannot assign non-slice to slice");
-  if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
-    value_set_initialized(lvalue, true);
-    return create_void_value(vm);
-  }
   slice_type_t lst = (slice_type_t)value_get_type(lvalue);
   slice_type_t rst = (slice_type_t)rt;
   if (type_get_kind(lst->element_type) != type_get_kind(rst->element_type))
     return create_exception_value(vm, "cannot assign slice with different element type");
+  if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
+    value_set_initialized(lvalue, true);
+    return create_void_value(vm);
+  }
   /* copy slice_data_t (ptr/start/len) */
   struct slice_data_t *dst_sd = _slice_read(lvalue);
   struct slice_data_t *src_sd = _slice_read(rvalue);

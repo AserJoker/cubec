@@ -215,7 +215,11 @@ static value_t _array_equal(vm_t vm, value_t a, value_t b) {
   array_type_t at = (array_type_t)value_get_type(a);
   array_type_t bt = (array_type_t)tb;
   if (at->count != bt->count || type_get_kind(at->element_type) != type_get_kind(bt->element_type))
-    return create_bool_value(vm, false);
+    return create_exception_value(vm, "cannot compare array [%llu]%s with array [%llu]%s",
+                                  (unsigned long long)at->count,
+                                  type_get_name(at->element_type),
+                                  (unsigned long long)bt->count,
+                                  type_get_name(bt->element_type));
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
   for (uint64_t i = 0; i < at->count; i++) {
@@ -306,14 +310,14 @@ static value_t _array_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   type_t rt = value_get_type(rvalue);
   if (rt->kind != TYPE_KIND_ARRAY)
     return create_exception_value(vm, "cannot assign non-array to array");
-  if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
-    value_set_initialized(lvalue, true);
-    return create_void_value(vm);
-  }
   array_type_t lat = (array_type_t)value_get_type(lvalue);
   array_type_t rat = (array_type_t)rt;
   if (lat->count != rat->count || type_get_kind(lat->element_type) != type_get_kind(rat->element_type))
     return create_exception_value(vm, "cannot assign array with different shape");
+  if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
+    value_set_initialized(lvalue, true);
+    return create_void_value(vm);
+  }
   memcpy(value_get_data(lvalue), value_get_data(rvalue), lat->base.size);
   value_set_initialized(lvalue, true);
   return create_void_value(vm);

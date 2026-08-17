@@ -586,12 +586,22 @@ static value_t _union_clone(vm_t vm, value_t self) {
 static value_t _union_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
   if (type_get_kind(tb) != TYPE_KIND_UNION)
-    return create_bool_value(vm, false);
-  if (value_is_shadow(a) || value_is_shadow(b))
-    return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
+    return create_exception_value(vm, "cannot compare union with '%s'",
+                                  type_get_name(tb));
 
   union_type_t uta = (union_type_t)value_get_type(a);
   union_type_t utb = (union_type_t)value_get_type(b);
+
+  /* check type compatibility */
+  value_t teq = _union_type_equal(vm, (type_t)uta, (type_t)utb);
+  if (value_is_error(teq))
+    return teq;
+  if (!(*(bool *)value_get_data(teq)))
+    return create_exception_value(vm, "cannot compare union '%s' with union '%s'",
+                                  type_get_name((type_t)uta), type_get_name((type_t)utb));
+
+  if (value_is_shadow(a) || value_is_shadow(b))
+    return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
 
   uint32_t tag_a = _union_read_tag(a);
   uint32_t tag_b = _union_read_tag(b);
@@ -607,15 +617,15 @@ static value_t _union_equal(vm_t vm, value_t a, value_t b) {
   type_t type_a = field_info_get_type(fi_a);
   type_t type_b = field_info_get_type(fi_b);
   vtable_t evt = type_get_vtable(type_a);
-  value_t teq;
+  value_t feq;
   if (evt.type_equal)
-    teq = evt.type_equal(vm, type_a, type_b);
+    feq = evt.type_equal(vm, type_a, type_b);
   else
-    teq = create_bool_value(vm, type_get_kind(type_a) == type_get_kind(type_b));
+    feq = create_bool_value(vm, type_get_kind(type_a) == type_get_kind(type_b));
 
-  if (value_is_error(teq))
-    return teq;
-  if (value_is_shadow(teq) || !(*(bool *)value_get_data(teq)))
+  if (value_is_error(feq))
+    return feq;
+  if (value_is_shadow(feq) || !(*(bool *)value_get_data(feq)))
     return create_bool_value(vm, false);
 
   /* compare active field values */
@@ -764,11 +774,6 @@ static value_t _union_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   if (value_is_initialized(lvalue) && !lt->mut)
     return create_exception_value(vm, "cannot assign to const '%s'", lt->name);
 
-  if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
-    value_set_initialized(lvalue, true);
-    return create_void_value(vm);
-  }
-
   value_t eq = _union_type_equal(vm, lt, value_get_type(rvalue));
   if (value_is_error(eq))
     return eq;
@@ -776,6 +781,11 @@ static value_t _union_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
     return create_exception_value(vm, "cannot assign '%s' to '%s'",
                               type_get_name(value_get_type(rvalue)),
                               type_get_name(lt));
+
+  if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
+    value_set_initialized(lvalue, true);
+    return create_void_value(vm);
+  }
 
   uint64_t size = type_get_size(lt);
   if (size > 0 && value_get_data(rvalue))

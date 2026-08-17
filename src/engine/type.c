@@ -90,8 +90,6 @@ static value_t _type_clone(vm_t vm, value_t self) {
 }
 
 static value_t _type_equal(vm_t vm, value_t a, value_t b) {
-  if (value_is_shadow(a) || value_is_shadow(b))
-    return vm_create_value_shadow(vm, (type_t)value_get_data(vm_get_bool_type(vm)), NULL, true);
   type_t ta = (type_t)value_get_data(a);
   type_t tb = (type_t)value_get_data(b);
   /* wildcard short-circuit: any type equal to wildcard */
@@ -100,14 +98,14 @@ static value_t _type_equal(vm_t vm, value_t a, value_t b) {
   if (ta->kind != tb->kind)
     return create_exception_value(vm, "cannot compare types of different kinds: %s vs %s",
                               ta->name, tb->name);
+  if (value_is_shadow(a) || value_is_shadow(b))
+    return vm_create_value_shadow(vm, (type_t)value_get_data(vm_get_bool_type(vm)), NULL, true);
   if (!ta->vtable.type_equal)
     return create_exception_value(vm, "type '%s' does not support type_equal", ta->name);
   return ta->vtable.type_equal(vm, ta, tb);
 }
 
 static value_t _type_extends(vm_t vm, value_t sub, value_t super_val) {
-  if (value_is_shadow(sub) || value_is_shadow(super_val))
-    return vm_create_value_shadow(vm, (type_t)value_get_data(vm_get_bool_type(vm)), NULL, true);
   type_t t_sub = (type_t)value_get_data(sub);
   type_t t_super = (type_t)value_get_data(super_val);
   /* wildcard short-circuit: any type extends wildcard */
@@ -116,6 +114,8 @@ static value_t _type_extends(vm_t vm, value_t sub, value_t super_val) {
   if (t_sub->kind != t_super->kind)
     return create_exception_value(vm, "cannot check extends between types of different kinds: %s vs %s",
                               t_sub->name, t_super->name);
+  if (value_is_shadow(sub) || value_is_shadow(super_val))
+    return vm_create_value_shadow(vm, (type_t)value_get_data(vm_get_bool_type(vm)), NULL, true);
   if (!t_sub->vtable.type_extends)
     return create_exception_value(vm, "type '%s' does not support type_extends", t_sub->name);
   return t_sub->vtable.type_extends(vm, t_sub, t_super);

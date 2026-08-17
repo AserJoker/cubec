@@ -283,7 +283,17 @@ static value_t _callable_clone(vm_t vm, value_t self) {
 static value_t _callable_equal(vm_t vm, value_t a, value_t b) {
   type_t tb = value_get_type(b);
   if (type_get_kind(tb) != TYPE_KIND_CALLABLE)
-    return create_bool_value(vm, false);
+    return create_exception_value(vm, "cannot compare callable with '%s'",
+                                  type_get_name(tb));
+
+  /* check type compatibility */
+  value_t teq = _callable_type_equal(vm, value_get_type(a), tb);
+  if (value_is_error(teq))
+    return teq;
+  if (!(*(bool *)value_get_data(teq)))
+    return create_exception_value(vm, "cannot compare callable '%s' with callable '%s'",
+                                  type_get_name(value_get_type(a)), type_get_name(tb));
+
   if (value_is_shadow(a) || value_is_shadow(b))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
 
@@ -441,9 +451,17 @@ static value_t _callable_safe_cast(vm_t vm, value_t self, type_t to) {
 /* ---- VTable: assignment ---- */
 
 static value_t _callable_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
+  type_t lt = value_get_type(lvalue);
   type_t rt = value_get_type(rvalue);
   if (type_get_kind(rt) != TYPE_KIND_CALLABLE)
     return create_exception_value(vm, "cannot assign non-callable to callable");
+  /* check type compatibility */
+  value_t eq = _callable_type_equal(vm, lt, rt);
+  if (value_is_error(eq))
+    return eq;
+  if (!(*(bool *)value_get_data(eq)))
+    return create_exception_value(vm, "cannot assign '%s' to '%s'",
+                                  type_get_name(rt), type_get_name(lt));
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
     value_set_initialized(lvalue, true);
     return create_void_value(vm);

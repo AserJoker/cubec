@@ -161,17 +161,14 @@ static type_t _float_promote(vm_t vm, value_t a, value_t b,
 #define DEFINE_FLOAT_VTABLE(Prefix, ctype, KIND, SIZE, ALIGN, NAME)            \
                                                                                \
 static value_t _##Prefix##_equal(vm_t vm, value_t a, value_t b) {             \
-  type_t ta = value_get_type(a);                                               \
   type_t tb = value_get_type(b);                                               \
   if (!_is_float_kind(tb->kind))                                               \
     return create_exception_value(vm, "cannot compare values of different kinds");  \
-  if (value_is_shadow(a) || value_is_shadow(b)) {                              \
-    type_t rt = _float_common_type(ta, tb);                                    \
-    return vm_create_value_shadow(vm, rt, NULL, true);                         \
-  }                                                                            \
   value_t pa, pb;                                                              \
   type_t rt = _float_promote(vm, a, b, &pa, &pb);                             \
   if (!rt) return create_exception_value(vm, "float comparison failed");           \
+  if (value_is_shadow(a) || value_is_shadow(b))                                \
+    return vm_create_value_shadow(vm, rt, NULL, true);                         \
   return create_bool_value(vm, _float_read_f64(pa) == _float_read_f64(pb));   \
 }                                                                              \
                                                                                \
@@ -218,6 +215,11 @@ static value_t _##Prefix##_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   if (!_is_float_kind(rt->kind))                                               \
     return create_exception_value(vm,                                              \
         "cannot assign '%s' to '%s'", rt->name, lt->name);                     \
+  /* check type compatibility via safe_cast */                                 \
+  if (rt != lt) {                                                              \
+    value_t casted = value_safe_cast(vm, rvalue, lt);                          \
+    if (value_is_error(casted)) return casted;                                 \
+  }                                                                            \
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {                    \
     value_set_initialized(lvalue, true);                                       \
     return create_void_value(vm);                                              \
