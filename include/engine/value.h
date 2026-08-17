@@ -33,6 +33,8 @@ void   *value_get_meta(value_t self);
 bool    value_is_own(value_t self);
 bool    value_is_shadow(value_t self);
 bool    value_is_initialized(value_t self);
+bool    value_is_interrupt(value_t self);
+bool    value_is_error(value_t self);
 void    value_set_initialized(value_t self, bool initialized);
 void    value_set_meta(value_t self, void *meta);
 

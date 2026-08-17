@@ -8,6 +8,7 @@
 #include "engine/callable_type.h"
 #include "engine/context.h"
 #include "engine/exception_type.h"
+#include "engine/interrupt_type.h"
 #include "engine/float_type.h"
 #include "engine/integer_type.h"
 #include "engine/module.h"
@@ -51,6 +52,8 @@ struct _vm_t {
   value_t
       v_type; /* borrowed: bootstrap type "type" (in global_scope->values) */
   value_t v_exception; /* borrowed: bootstrap type "exception" (in
+                          global_scope->values) */
+  value_t v_interrupt; /* borrowed: bootstrap type "interrupt" (in
                           global_scope->values) */
   value_t
       v_bool; /* borrowed: bootstrap type "bool" (in global_scope->values) */
@@ -125,6 +128,10 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   type_t exception_type = type_get_exception_type(allocator);
   vec_push(vm->global_scope->types, exception_type);
   vm->v_exception = create_type_value(vm, exception_type, NULL, false);
+
+  type_t interrupt_type = type_get_interrupt_type(allocator);
+  vec_push(vm->global_scope->types, interrupt_type);
+  vm->v_interrupt = create_type_value(vm, interrupt_type, NULL, false);
 
   type_t bool_type = type_get_bool_type(allocator);
   vec_push(vm->global_scope->types, bool_type);
@@ -373,6 +380,7 @@ scope_t vm_get_root_scope(vm_t self) { return self->root_scope; }
 scope_t vm_get_current_scope(vm_t self) { return self->current_scope; }
 value_t vm_get_type_type(vm_t self) { return self->v_type; }
 value_t vm_get_exception_type(vm_t self) { return self->v_exception; }
+value_t vm_get_interrupt_type(vm_t self) { return self->v_interrupt; }
 
 const char *vm_get_current_module_id(vm_t self) {
   return self->current_module_id;

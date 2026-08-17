@@ -217,7 +217,7 @@ value_t create_pointer_shadow(vm_t vm, pointer_type_t pt, bool initialized) {
 value_t value_addrof(vm_t vm, value_t target) {
   type_kind_t kind = type_get_kind(value_get_type(target));
   /* void/type/error have no addressable data */
-  if (kind == TYPE_KIND_VOID || kind == TYPE_KIND_TYPE || kind == TYPE_KIND_EXCEPTION)
+  if (kind == TYPE_KIND_VOID || kind == TYPE_KIND_TYPE || kind == TYPE_KIND_EXCEPTION || kind == TYPE_KIND_INTERRUPT)
     return create_exception_value(vm, "cannot take address of type '%s'",
                               type_get_name(value_get_type(target)));
 
@@ -367,7 +367,7 @@ static value_t _pointer_deref_set(vm_t vm, value_t self, value_t val) {
   /* safe_cast val to pointee type, then memcpy */
   type_t pointee = pt->pointee_type;
   value_t casted = value_safe_cast(vm, val, pointee);
-  if (type_get_kind(value_get_type(casted)) == TYPE_KIND_EXCEPTION)
+  if (value_is_error(casted))
     return casted;
 
   uint64_t size = type_get_size(pointee);
@@ -413,7 +413,7 @@ static value_t _pointer_safe_cast(vm_t vm, value_t self, type_t to) {
   else
     ext = create_bool_value(vm, type_get_kind(from_elem) == type_get_kind(to_elem));
 
-  if (type_get_kind(value_get_type(ext)) == TYPE_KIND_EXCEPTION)
+  if (value_is_error(ext))
     return ext;
   if (value_is_shadow(ext) || !(*(bool *)value_get_data(ext)))
     return create_exception_value(vm, "cannot safe_cast '%s' to '%s'",
@@ -444,7 +444,7 @@ static value_t _pointer_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
 
   /* check rvalue safe_cast to lvalue type (handles pointee extends) */
   value_t casted = _pointer_safe_cast(vm, rvalue, lt);
-  if (type_get_kind(value_get_type(casted)) == TYPE_KIND_EXCEPTION)
+  if (value_is_error(casted))
     return casted;
 
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {
@@ -479,7 +479,7 @@ static value_t _pointer_to_string(vm_t vm, value_t self) {
 static value_t _pointer_get_field(vm_t vm, value_t self, const char *name) {
   /* auto-deref: delegate to pointee's get_field */
   value_t derefed = _pointer_deref_get(vm, self);
-  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_EXCEPTION)
+  if (value_is_error(derefed))
     return derefed;
   vtable_t vt = type_get_vtable(value_get_type(derefed));
   if (!vt.get_field)
@@ -491,7 +491,7 @@ static value_t _pointer_get_field(vm_t vm, value_t self, const char *name) {
 static value_t _pointer_set_field(vm_t vm, value_t self, const char *name, value_t val) {
   /* auto-deref: delegate to pointee's set_field */
   value_t derefed = _pointer_deref_get(vm, self);
-  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_EXCEPTION)
+  if (value_is_error(derefed))
     return derefed;
   vtable_t vt = type_get_vtable(value_get_type(derefed));
   if (!vt.set_field)
@@ -503,7 +503,7 @@ static value_t _pointer_set_field(vm_t vm, value_t self, const char *name, value
 static value_t _pointer_get_field_raw(vm_t vm, value_t self, const char *name) {
   /* auto-deref: delegate to pointee's get_field_raw */
   value_t derefed = _pointer_deref_get(vm, self);
-  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_EXCEPTION)
+  if (value_is_error(derefed))
     return derefed;
   vtable_t vt = type_get_vtable(value_get_type(derefed));
   if (!vt.get_field_raw)
@@ -517,7 +517,7 @@ static value_t _pointer_get_field_raw(vm_t vm, value_t self, const char *name) {
 static value_t _pointer_member_call(vm_t vm, value_t self, const char *name,
                                      size_t argc, value_t *argv) {
   value_t derefed = _pointer_deref_get(vm, self);
-  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_EXCEPTION)
+  if (value_is_error(derefed))
     return derefed;
   vtable_t vt = type_get_vtable(value_get_type(derefed));
   if (!vt.member_call)
@@ -530,7 +530,7 @@ static value_t _pointer_member_call(vm_t vm, value_t self, const char *name,
 
 static value_t _pointer_is_instance(vm_t vm, value_t self, type_t type) {
   value_t derefed = _pointer_deref_get(vm, self);
-  if (type_get_kind(value_get_type(derefed)) == TYPE_KIND_EXCEPTION)
+  if (value_is_error(derefed))
     return derefed;
   vtable_t vt = type_get_vtable(value_get_type(derefed));
   if (!vt.is_instance)

@@ -167,7 +167,7 @@ value_t _interface_type_check_extends(vm_t vm, interface_type_t it, strmap_t sub
       ext = vt.type_equal(vm, (type_t)sub_ct, (type_t)sup_ct);
     else
       ext = create_bool_value(vm, type_get_kind((type_t)sub_ct) == type_get_kind((type_t)sup_ct));
-    if (type_get_kind(value_get_type(ext)) == TYPE_KIND_EXCEPTION)
+    if (value_is_error(ext))
       return ext;
     if (!value_is_shadow(ext) && !(*(bool *)value_get_data(ext)))
       return create_bool_value(vm, false);

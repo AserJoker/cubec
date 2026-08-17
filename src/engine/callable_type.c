@@ -323,7 +323,7 @@ static value_t _callable_type_equal(vm_t vm, type_t a, type_t b) {
     vtable_t pvt = type_get_vtable(pa);
     if (pvt.type_equal) {
       value_t eq = pvt.type_equal(vm, pa, pb);
-      if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
+      if (value_is_error(eq))
         return eq;
       if (value_is_shadow(eq))
         continue;
@@ -341,7 +341,7 @@ static value_t _callable_type_equal(vm_t vm, type_t a, type_t b) {
     vtable_t rvt = type_get_vtable(ra);
     if (rvt.type_equal) {
       value_t eq = rvt.type_equal(vm, ra, rb);
-      if (type_get_kind(value_get_type(eq)) == TYPE_KIND_EXCEPTION)
+      if (value_is_error(eq))
         return eq;
       if (!value_is_shadow(eq) && !(*(bool *)value_get_data(eq)))
         return eq;
@@ -395,7 +395,7 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
     for (uint64_t i = 0; i < ct->param_count; i++) {
       type_t param_t = (type_t)vec_get(ct->param_types, (size_t)i);
       casted[i] = value_safe_cast(vm, argv[i], param_t);
-      if (type_get_kind(value_get_type(casted[i])) == TYPE_KIND_EXCEPTION) {
+      if (value_is_error(casted[i])) {
         value_t err = casted[i];
         allocator_free(alloc, &casted);
         return err;
@@ -420,7 +420,7 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
     allocator_free(alloc, &casted);
 
   /* safe_cast return value to declared return type */
-  if (type_get_kind(value_get_type(result)) == TYPE_KIND_EXCEPTION)
+  if (value_is_error(result))
     return result;
   result = value_safe_cast(vm, result, ct->return_type);
   return result;

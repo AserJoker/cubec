@@ -58,6 +58,7 @@ scope_t vm_get_root_scope(vm_t self);
 scope_t vm_get_current_scope(vm_t self);
 value_t vm_get_type_type(vm_t self);
 value_t vm_get_exception_type(vm_t self);
+value_t vm_get_interrupt_type(vm_t self);
 value_t vm_get_error_type(vm_t self);
 
 /** @brief Get/set the current module identifier.

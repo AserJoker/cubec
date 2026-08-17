@@ -25,6 +25,7 @@ typedef enum type_kind_t {
   TYPE_KIND_MODULE,
   TYPE_KIND_CALLABLE,
   TYPE_KIND_EXCEPTION,
+  TYPE_KIND_INTERRUPT,
   /* Primitive */
   TYPE_KIND_VOID,
   TYPE_KIND_BOOL,
