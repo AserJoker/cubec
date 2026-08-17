@@ -48,6 +48,7 @@ static value_t _builtin_panic(vm_t vm, value_t fn, size_t argc, value_t *argv) {
 struct _vm_t {
   allocator_t allocator;
   strmap_t modules;      /* absolute path → module_t (auto-dispose) */
+  strmap_t builtins;     /* name → value_t (borrowed, not owned) */
   scope_t global_scope;  /* owned: global scope */
   scope_t root_scope;    /* borrowed: current module's root scope */
   scope_t current_scope; /* borrowed: current traversal position */
@@ -111,6 +112,10 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   strmap_init_t sm_init = {.value_auto_dispose = true};
   vm->modules =
       (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_init);
+
+  strmap_init_t sm_builtins = {.value_auto_dispose = false};
+  vm->builtins =
+      (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_builtins);
 
   vm->global_scope = scope_create(allocator, SCOPE_GLOBAL, NULL, NULL);
   vm->root_scope = NULL;
@@ -353,6 +358,7 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
     vec_push(vm->global_scope->types, panic_ct);
     value_t panic_val =
         create_callable_value(vm, panic_ct, _builtin_panic, "panic");
+    strmap_insert(vm->builtins, "panic", panic_val);
     name_t n_panic = name_create(vm->global_scope->allocator, panic_val);
     strmap_insert(vm->global_scope->names, "panic", n_panic);
   }
@@ -362,6 +368,7 @@ static void _vm_dispose(void *self, allocator_t allocator) {
   vm_t vm = (vm_t)self;
   (void)allocator;
   allocator_free(vm->allocator, &vm->call_stack);
+  allocator_free(vm->allocator, &vm->builtins);
   allocator_free(vm->allocator, &vm->modules);
   allocator_free(vm->allocator, &vm->global_scope);
 }
@@ -387,6 +394,7 @@ void vm_dispose(vm_t self, allocator_t allocator) {
 
 allocator_t vm_get_allocator(vm_t self) { return self->allocator; }
 strmap_t vm_get_modules(vm_t self) { return self->modules; }
+strmap_t vm_get_builtins(vm_t self) { return self->builtins; }
 scope_t vm_get_global_scope(vm_t self) { return self->global_scope; }
 scope_t vm_get_root_scope(vm_t self) { return self->root_scope; }
 scope_t vm_get_current_scope(vm_t self) { return self->current_scope; }
@@ -436,6 +444,24 @@ value_t vm_get_wildcard_value(vm_t self) { return self->v_wildcard_value; }
 
 module_t vm_get_module(vm_t self, const char *abs_path) {
   return (module_t)strmap_find(self->modules, abs_path);
+}
+
+/* ---- Builtins ---- */
+
+value_t vm_add_builtin(vm_t self, const char *name, value_t value) {
+  /* clone value into global scope */
+  scope_t prev = vm_set_scope(self, self->global_scope);
+  value_t cloned = value_clone(self, value);
+  vm_set_scope(self, prev);
+  if (value_is_error(cloned))
+    return cloned;
+  /* insert borrowed reference into builtins strmap */
+  strmap_insert(self->builtins, name, cloned);
+  return cloned;
+}
+
+value_t vm_get_builtin(vm_t self, const char *name) {
+  return (value_t)strmap_find(self->builtins, name);
 }
 
 /* ---- File I/O ---- */

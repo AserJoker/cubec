@@ -1,4 +1,4 @@
-﻿#include "engine/vm.h"
+#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/scope.h"
@@ -117,5 +117,62 @@ TEST_F(it_panic, panic_callable_type_signature) {
   type_t ret_t = callable_type_get_return_type(ct);
   EXPECT_EQ(type_get_kind(ret_t), TYPE_KIND_VOID);
 
+  vm_dispose(vm, allocator);
+}
+
+/* ---- builtins strmap ---- */
+
+TEST_F(it_panic, panic_available_via_vm_get_builtin) {
+  vm_t vm = vm_create(allocator);
+
+  value_t panic_fn = vm_get_builtin(vm, "panic");
+  ASSERT_NE(panic_fn, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(panic_fn)), TYPE_KIND_CALLABLE);
+
+  /* same value as scope_lookup */
+  name_t n = scope_lookup(vm_get_global_scope(vm), "panic");
+  ASSERT_NE(n, nullptr);
+  EXPECT_EQ(panic_fn, n->ref);
+
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_panic, vm_get_builtin_unknown_returns_null) {
+  vm_t vm = vm_create(allocator);
+
+  value_t v = vm_get_builtin(vm, "nonexistent");
+  EXPECT_EQ(v, nullptr);
+
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_panic, vm_add_builtin_clones_into_global_scope) {
+  vm_t vm = vm_create(allocator);
+  scope_t global = vm_get_global_scope(vm);
+
+  /* create a value and add it as a builtin */
+  value_t i32_val = create_i32_value(vm, 99);
+  /* switch away from global scope to prove clone lands in global */
+  scope_t child = scope_create(allocator, SCOPE_BLOCK, global, NULL);
+  vm_set_scope(vm, child);
+
+  size_t before = vec_get_size(global->values);
+
+  value_t cloned = vm_add_builtin(vm, "my_const", i32_val);
+  ASSERT_NE(cloned, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(cloned)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(cloned), 99);
+
+  /* cloned value registered in global scope (+1) */
+  EXPECT_EQ(vec_get_size(global->values), before + 1);
+
+  /* retrievable via vm_get_builtin */
+  value_t found = vm_get_builtin(vm, "my_const");
+  EXPECT_EQ(found, cloned);
+
+  /* not the same pointer as original (it's a clone) */
+  EXPECT_NE(cloned, i32_val);
+
+  vm_set_scope(vm, global);
   vm_dispose(vm, allocator);
 }

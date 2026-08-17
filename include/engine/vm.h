@@ -117,6 +117,28 @@ module_t vm_get_module(vm_t self, const char *abs_path);
 struct context;
 module_t vm_import(vm_t self, struct context *ctx, const char *import_path);
 
+/* ---- Builtins ---- */
+
+/**
+ * @brief Get the builtins strmap (name → value_t, borrowed references).
+ */
+strmap_t vm_get_builtins(vm_t self);
+
+/**
+ * @brief Add a builtin value by name.
+ *
+ * Clones the value into the global scope (global scope owns the clone),
+ * then inserts a borrowed reference into the builtins strmap.
+ * Returns the cloned value, or error on clone failure.
+ */
+value_t vm_add_builtin(vm_t self, const char *name, value_t value);
+
+/**
+ * @brief Look up a builtin value by name.
+ * Returns the value, or NULL if not found.
+ */
+value_t vm_get_builtin(vm_t self, const char *name);
+
 /* ---- Scope management ---- */
 
 /** @brief Push a child scope of current_scope. For block/for/while etc.
