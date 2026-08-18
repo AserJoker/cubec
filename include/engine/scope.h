@@ -16,7 +16,8 @@ enum scope_kind {
   SCOPE_BLOCK,
   SCOPE_FOR,
   SCOPE_FOREACH,
-  SCOPE_TYPE
+  SCOPE_TYPE,
+  SCOPE_DEFER
 };
 
 struct _scope_t {
