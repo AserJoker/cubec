@@ -417,3 +417,12 @@ TEST_F(it_run_statement_declaration, builtin_generic_remove_const_instantiate) {
   EXPECT_EQ(type_get_kind(result_type), TYPE_KIND_I32);
   EXPECT_TRUE(type_is_mut(result_type));
 }
+
+TEST_F(it_run_statement_declaration, builtin_generic_remove_const_extends_violation) {
+  /* remove_const[i32] should fail — i32 is mutable, not const,
+   * violates T extends const ? constraint */
+  value_t v = _run_source(
+      "builtin type remove_const[T extends const ?]; "
+      "type T = remove_const[i32];");
+  EXPECT_TRUE(value_is_error(v));
+}
