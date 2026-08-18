@@ -318,6 +318,34 @@ TEST_F(it_run_expression, logical_and_shadow_left) {
 }
 
 /* ==================================================================
+ *  Script-mode shadow guard: shadow=false accessing a compile-time
+ *  (shadow) value must report an error, not silently propagate shadow.
+ * ================================================================== */
+
+TEST_F(it_run_expression, script_guard_rejects_shadow_identifier) {
+  /* bind a shadow value (compile-time-only name) into scope, then
+   * reference it in script mode (shadow=false). The dispatcher guard
+   * must catch this and return an exception. */
+  type_t i32t = (type_t)value_get_data(vm_get_i32_type(vm));
+  value_t sh = vm_create_value_shadow(vm, i32t, NULL, true);
+  _bind("compileonly", sh);
+
+  value_t v = _run_expr("compileonly");
+  EXPECT_TRUE(value_is_error(v));
+}
+
+TEST_F(it_run_expression, script_guard_allows_void_result) {
+  /* void is a legitimate runtime "no value" (e.g. assignment result),
+   * not a compile-time placeholder — the guard must NOT trip on void. */
+  value_t i32_val = create_i32_value(vm, 0);
+  _bind("g", i32_val);
+
+  value_t v = _run_expr("g = 1");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+  EXPECT_FALSE(value_is_error(v));
+}
+
+/* ==================================================================
  *  Assignment expression
  * ================================================================== */
 
