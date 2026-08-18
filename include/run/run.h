@@ -36,6 +36,7 @@ value_t run_expression_group(vm_t vm, node_t node, bool shadow);
 value_t run_expression_subscript(vm_t vm, node_t node, bool shadow);
 value_t run_expression_namespace_access(vm_t vm, node_t node,
                                         bool shadow);
+value_t run_expression_initialize_list(vm_t vm, node_t node, bool shadow);
 
 /* ---- Type declaration runners ---- */
 

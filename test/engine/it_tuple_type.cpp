@@ -1,4 +1,4 @@
-﻿#include "engine/vm.h"
+#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/bool_type.h"
@@ -8,6 +8,7 @@
 #include "engine/void_type.h"
 #include "engine/exception_type.h"
 #include "engine/tuple_type.h"
+#include "engine/array_type.h"
 #include "engine/scope.h"
 #include "core/string.h"
 #include "common/test_common.h"
@@ -52,6 +53,44 @@ protected:
     value_t tv = vm_create_tuple_type_value(vm, types, false);
     allocator_free(alloc, &types);
     return (tuple_type_t)value_get_data(tv);
+  }
+
+  /* create a homogeneous <i32, i32, i32> tuple type for array-cast tests */
+  tuple_type_t _make_i32x3_tuple_type(vm_t vm) {
+    allocator_t alloc = vm_get_allocator(vm);
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t types = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
+    vec_push(types, _get_i32_type(vm));
+    vec_push(types, _get_i32_type(vm));
+    vec_push(types, _get_i32_type(vm));
+    value_t tv = vm_create_tuple_type_value(vm, types, true);
+    allocator_free(alloc, &types);
+    return (tuple_type_t)value_get_data(tv);
+  }
+
+  tuple_type_t _make_const_i32x3_tuple_type(vm_t vm) {
+    allocator_t alloc = vm_get_allocator(vm);
+    vec_init_t vi = {.auto_dispose = false};
+    vec_t types = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
+    vec_push(types, _get_i32_type(vm));
+    vec_push(types, _get_i32_type(vm));
+    vec_push(types, _get_i32_type(vm));
+    value_t tv = vm_create_tuple_type_value(vm, types, false);
+    allocator_free(alloc, &types);
+    return (tuple_type_t)value_get_data(tv);
+  }
+
+  /* create a [3]i32 array type for tuple→array cast tests */
+  array_type_t _make_i32x3_array_type(vm_t vm) {
+    type_t i32_t = _get_i32_type(vm);
+    value_t tv = vm_create_array_type_value(vm, i32_t, 3, true);
+    return (array_type_t)value_get_data(tv);
+  }
+
+  array_type_t _make_const_i32x3_array_type(vm_t vm) {
+    type_t i32_t = _get_i32_type(vm);
+    value_t tv = vm_create_array_type_value(vm, i32_t, 3, false);
+    return (array_type_t)value_get_data(tv);
   }
 };
 
@@ -499,6 +538,171 @@ TEST_F(it_tuple_type, safe_cast_const_to_mut_error) {
 
   value_t cast = value_safe_cast(vm, tup, (type_t)mut_tt);
   EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_EXCEPTION);
+
+  vm_dispose(vm, allocator);
+}
+
+/* ---- safe_cast: tuple → array ---- */
+
+TEST_F(it_tuple_type, safe_cast_tuple_to_array_homogeneous) {
+  vm_t vm = vm_create(allocator);
+  tuple_type_t tt = _make_i32x3_tuple_type(vm);
+  array_type_t at = _make_i32x3_array_type(vm);
+
+  int32_t a = 10, b = 20, c = 30;
+  value_t elems[] = {
+    vm_create_value(vm, _get_i32_type(vm), &a, NULL),
+    vm_create_value(vm, _get_i32_type(vm), &b, NULL),
+    vm_create_value(vm, _get_i32_type(vm), &c, NULL),
+  };
+  value_t tup = create_tuple_value(vm, tt, elems);
+
+  value_t cast = value_safe_cast(vm, tup, (type_t)at);
+  ASSERT_FALSE(value_is_error(cast));
+  EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_ARRAY);
+  EXPECT_EQ(array_type_get_count((array_type_t)value_get_type(cast)), 3u);
+
+  /* verify each element was preserved */
+  for (uint64_t i = 0; i < 3; i++) {
+    value_t idx = create_i32_value(vm, (int32_t)i);
+    value_t elem = value_get_item(vm, cast, idx);
+    ASSERT_FALSE(value_is_error(elem));
+    EXPECT_EQ(*(int32_t *)value_get_data(elem), (int32_t)((i + 1) * 10));
+  }
+
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_tuple_type, safe_cast_tuple_to_array_mut_to_const) {
+  vm_t vm = vm_create(allocator);
+  tuple_type_t tt = _make_i32x3_tuple_type(vm);
+  array_type_t const_at = _make_const_i32x3_array_type(vm);
+
+  int32_t a = 1, b = 2, c = 3;
+  value_t elems[] = {
+    vm_create_value(vm, _get_i32_type(vm), &a, NULL),
+    vm_create_value(vm, _get_i32_type(vm), &b, NULL),
+    vm_create_value(vm, _get_i32_type(vm), &c, NULL),
+  };
+  value_t tup = create_tuple_value(vm, tt, elems);
+
+  value_t cast = value_safe_cast(vm, tup, (type_t)const_at);
+  ASSERT_FALSE(value_is_error(cast));
+  EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_ARRAY);
+  EXPECT_FALSE(type_is_mut(value_get_type(cast)));
+
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_tuple_type, safe_cast_tuple_to_array_const_to_mut_error) {
+  vm_t vm = vm_create(allocator);
+  tuple_type_t const_tt = _make_const_i32x3_tuple_type(vm);
+  array_type_t at = _make_i32x3_array_type(vm);
+
+  int32_t a = 1, b = 2, c = 3;
+  value_t elems[] = {
+    vm_create_value(vm, _get_i32_type(vm), &a, NULL),
+    vm_create_value(vm, _get_i32_type(vm), &b, NULL),
+    vm_create_value(vm, _get_i32_type(vm), &c, NULL),
+  };
+  value_t tup = create_tuple_value(vm, const_tt, elems);
+
+  value_t cast = value_safe_cast(vm, tup, (type_t)at);
+  EXPECT_TRUE(value_is_error(cast));
+
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_tuple_type, safe_cast_tuple_to_array_count_mismatch_error) {
+  vm_t vm = vm_create(allocator);
+  tuple_type_t tt = _make_i32x3_tuple_type(vm);
+  /* [2]i32 array — count mismatch with 3-element tuple */
+  type_t i32_t = _get_i32_type(vm);
+  value_t atv = vm_create_array_type_value(vm, i32_t, 2, true);
+  array_type_t at = (array_type_t)value_get_data(atv);
+
+  int32_t a = 1, b = 2, c = 3;
+  value_t elems[] = {
+    vm_create_value(vm, _get_i32_type(vm), &a, NULL),
+    vm_create_value(vm, _get_i32_type(vm), &b, NULL),
+    vm_create_value(vm, _get_i32_type(vm), &c, NULL),
+  };
+  value_t tup = create_tuple_value(vm, tt, elems);
+
+  value_t cast = value_safe_cast(vm, tup, (type_t)at);
+  EXPECT_TRUE(value_is_error(cast));
+
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_tuple_type, safe_cast_tuple_to_array_incompatible_element_error) {
+  vm_t vm = vm_create(allocator);
+  /* <i32, f64> tuple vs [2]i32 array — element types incompatible */
+  tuple_type_t tt = _make_i32_f64_tuple_type(vm);
+  type_t i32_t = _get_i32_type(vm);
+  value_t atv = vm_create_array_type_value(vm, i32_t, 2, true);
+  array_type_t at = (array_type_t)value_get_data(atv);
+
+  int32_t i = 1;
+  double d = 2.5;
+  value_t elems[] = {
+    vm_create_value(vm, _get_i32_type(vm), &i, NULL),
+    vm_create_value(vm, _get_f64_type(vm), &d, NULL),
+  };
+  value_t tup = create_tuple_value(vm, tt, elems);
+
+  value_t cast = value_safe_cast(vm, tup, (type_t)at);
+  EXPECT_TRUE(value_is_error(cast));
+
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_tuple_type, safe_cast_tuple_to_array_widening_element) {
+  vm_t vm = vm_create(allocator);
+  /* <i32, i32> tuple → [2]i64 array: i32 safe_casts to i64 (widening) */
+  allocator_t alloc = vm_get_allocator(vm);
+  vec_init_t vi = {.auto_dispose = false};
+  vec_t types = (vec_t)allocator_create(alloc, &g_vec_class, &vi);
+  vec_push(types, _get_i32_type(vm));
+  vec_push(types, _get_i32_type(vm));
+  value_t ttv = vm_create_tuple_type_value(vm, types, true);
+  allocator_free(alloc, &types);
+  tuple_type_t tt = (tuple_type_t)value_get_data(ttv);
+
+  type_t i64_t = (type_t)value_get_data(vm_get_i64_type(vm));
+  value_t atv = vm_create_array_type_value(vm, i64_t, 2, true);
+  array_type_t at = (array_type_t)value_get_data(atv);
+
+  int32_t a = 42, b = 99;
+  value_t elems[] = {
+    vm_create_value(vm, _get_i32_type(vm), &a, NULL),
+    vm_create_value(vm, _get_i32_type(vm), &b, NULL),
+  };
+  value_t tup = create_tuple_value(vm, tt, elems);
+
+  value_t cast = value_safe_cast(vm, tup, (type_t)at);
+  ASSERT_FALSE(value_is_error(cast)) << "i32→i64 widening should succeed";
+  EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_ARRAY);
+
+  value_t idx0 = create_i32_value(vm, 0);
+  value_t e0 = value_get_item(vm, cast, idx0);
+  ASSERT_FALSE(value_is_error(e0));
+  EXPECT_EQ(type_get_kind(value_get_type(e0)), TYPE_KIND_I64);
+  EXPECT_EQ(*(int64_t *)value_get_data(e0), 42);
+
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_tuple_type, safe_cast_tuple_to_array_shadow) {
+  vm_t vm = vm_create(allocator);
+  tuple_type_t tt = _make_i32x3_tuple_type(vm);
+  array_type_t at = _make_i32x3_array_type(vm);
+
+  value_t tup = create_tuple_shadow(vm, tt, true);
+  value_t cast = value_safe_cast(vm, tup, (type_t)at);
+  ASSERT_FALSE(value_is_error(cast));
+  EXPECT_TRUE(value_is_shadow(cast));
+  EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_ARRAY);
 
   vm_dispose(vm, allocator);
 }

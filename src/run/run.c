@@ -48,6 +48,8 @@ value_t run_expression(vm_t vm, node_t node, bool shadow) {
     return run_expression_subscript(vm, node, shadow);
   case CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS:
     return run_expression_namespace_access(vm, node, shadow);
+  case CUBEC_NODE_EXPRESSION_INITIALIZE_LIST:
+    return run_expression_initialize_list(vm, node, shadow);
   /* type declarations (compatible with expression dispatch) */
   case CUBEC_NODE_DECLARATION_ARRAY:
     return run_declaration_array(vm, node, shadow);

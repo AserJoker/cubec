@@ -8,6 +8,7 @@
 #include "engine/str_type.h"
 #include "engine/integer_type.h"
 #include "engine/type.h"
+#include "engine/array_type.h"
 #include "core/string.h"
 #include <stdbool.h>
 #include <string.h>
@@ -364,8 +365,76 @@ static value_t _tuple_type_extends(vm_t vm, type_t sub, type_t super) {
 
 /* ---- VTable: safe_cast ---- */
 
+/* tuple → array: allowed when field_count == array.count and every tuple
+ * element safe_casts to the array's element type. Used by the anonymous
+ * initialize_list flow (.{1,2,3} produces a tuple; assigning to an array
+ * type triggers this cast). */
+static value_t _tuple_safe_cast_to_array(vm_t vm, value_t self,
+                                         tuple_type_t from_tt,
+                                         array_type_t to_at) {
+  type_t from = value_get_type(self);
+  type_t to = (type_t)to_at;
+
+  /* validation before shortcut: count must match */
+  if (from_tt->field_count != to_at->count)
+    return create_exception_value(vm,
+                                  "cannot safe_cast tuple to '%s': field count %llu != array count %llu",
+                                  to->name,
+                                  (unsigned long long)from_tt->field_count,
+                                  (unsigned long long)to_at->count);
+
+  /* const tuple → mut array is not allowed */
+  if (!from->mut && to->mut)
+    return create_exception_value(vm,
+                                  "cannot safe_cast const tuple to mut array '%s'",
+                                  to->name);
+
+  /* shadow shortcut: return array shadow, no element evaluation needed */
+  if (value_is_shadow(self))
+    return create_array_shadow(vm, to_at, value_is_initialized(self));
+
+  /* extract each tuple element and safe_cast to array's element type */
+  allocator_t alloc = vm_get_allocator(vm);
+  uint64_t count = to_at->count;
+  value_t *elems = NULL;
+  if (count > 0) {
+    elems = (value_t *)allocator_alloc(alloc, count * sizeof(value_t));
+    if (!elems)
+      return create_exception_value(vm, "tuple→array safe_cast: out of memory");
+  }
+
+  for (uint64_t i = 0; i < count; i++) {
+    value_t elem = _make_elem_from_tuple(vm, from_tt, self, i);
+    if (value_is_error(elem)) {
+      allocator_free(alloc, &elems);
+      return elem;
+    }
+    value_t cast = value_safe_cast(vm, elem, to_at->element_type);
+    if (value_is_error(cast)) {
+      allocator_free(alloc, &elems);
+      return create_exception_value(vm,
+                                    "cannot safe_cast tuple element %llu to array element type '%s'",
+                                    (unsigned long long)i,
+                                    type_get_name(to_at->element_type));
+    }
+    elems[i] = cast;
+  }
+
+  value_t result = create_array_value(vm, to_at, elems);
+  allocator_free(alloc, &elems);
+  return result;
+}
+
 static value_t _tuple_safe_cast(vm_t vm, value_t self, type_t to) {
   type_t from = value_get_type(self);
+
+  /* tuple → array: when tuple elements are compatible with array's element
+   * type and counts match. Enables anonymous initialize_list .{1,2,3} (tuple)
+   * to flow into array-typed contexts. */
+  if (to->kind == TYPE_KIND_ARRAY)
+    return _tuple_safe_cast_to_array(vm, self, (tuple_type_t)from,
+                                     (array_type_t)to);
+
   if (to->kind != TYPE_KIND_TUPLE)
     return create_exception_value(vm, "cannot safe_cast tuple to '%s'", to->name);
   if (to == from)
