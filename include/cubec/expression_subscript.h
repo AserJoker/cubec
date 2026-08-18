@@ -4,6 +4,7 @@
 #include "core/location.h"
 #include "core/node.h"
 #include "core/class.h"
+#include "core/vec.h"
 #include "core/emit_context.h"
 #include "cubec/expression.h"
 #ifdef __cplusplus
@@ -13,8 +14,9 @@ extern "C" {
 struct _cubec_expression_subscript_t;
 struct _cubec_expression_subscript_t {
   struct _cubec_expression_t super;
-  node_t host;    /**< The expression being subscripted (e.g., a tuple) */
-  node_t index;   /**< Index expression (must be comptime-evaluable) */
+  node_t host;      /**< The expression being subscripted */
+  vec_t arguments;  /**< vec_t of argument expression nodes (1 or more;
+                         overlaps with generic instantiation syntax) */
 };
 typedef struct _cubec_expression_subscript_t *cubec_expression_subscript_t;
 
@@ -24,12 +26,12 @@ struct _cubec_expression_subscript_init_t {
   location_t location;
   node_t parent;
   node_t host;
-  node_t index;
+  vec_t arguments; /**< Already-parsed arguments vec (transferred to node) */
 };
 typedef struct _cubec_expression_subscript_init_t cubec_expression_subscript_init_t;
 
 /**
- * @brief Try to parse a subscript expression: host[index]
+ * @brief Try to parse a subscript expression: host[arg1, arg2, ...]
  *
  * Called from read_value as a postfix operator after the host expression
  * has been parsed. Checks for '[' at the current position.
@@ -48,7 +50,7 @@ node_t read_expression_subscript(context_t ctx, vec_t tokens,
                                  node_t host);
 
 node_t create_expression_subscript(context_t ctx, location_t loc, node_t host,
-                                   node_t index);
+                                   vec_t args);
 
 
 void emit_expression_subscript(emit_context_t ctx, node_t node);

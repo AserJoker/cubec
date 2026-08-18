@@ -23,15 +23,21 @@ _cubec_expression_subscript_init(cubec_expression_subscript_t self,
   super_init.location = init->location;
   super_init.parent = init->parent;
   g_cubec_expression_class.init(&self->super, allocator, &super_init);
+
   self->host = init->host;
-  self->index = init->index;
+  if (init->arguments) {
+    self->arguments = init->arguments;
+  } else {
+    self->arguments =
+        allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
+  }
 }
 
 static void
 _cubec_expression_subscript_dispose(cubec_expression_subscript_t self,
                                     allocator_t allocator) {
   allocator_free(allocator, &self->host);
-  allocator_free(allocator, &self->index);
+  allocator_free(allocator, &self->arguments);
   g_cubec_expression_class.dispose(&self->super, allocator);
 }
 
@@ -41,11 +47,22 @@ _cubec_expression_subscript_clone(cubec_expression_subscript_t self,
                                   cubec_expression_subscript_t another) {
   g_cubec_expression_class.clone(&self->super, allocator, &another->super);
   self->host = alloc_clone(allocator, another->host);
-  self->index = alloc_clone(allocator, another->index);
+  if (!self->host)
+    goto cleanup;
+
+  self->arguments =
+      allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
+  size_t count = vec_get_size(another->arguments);
+  for (size_t i = 0; i < count; i++) {
+    node_t arg = alloc_clone(allocator, vec_get(another->arguments, i));
+    if (!arg)
+      goto cleanup;
+    vec_push(self->arguments, arg);
+  }
   return;
 
 cleanup:
-  allocator_free(allocator, &self->index);
+  allocator_free(allocator, &self->arguments);
   allocator_free(allocator, &self->host);
 }
 
@@ -55,11 +72,14 @@ _cubec_expression_subscript_move(cubec_expression_subscript_t self,
                                  cubec_expression_subscript_t another) {
   g_cubec_expression_class.move(&self->super, allocator, &another->super);
   self->host = alloc_move(allocator, another->host);
-  self->index = alloc_move(allocator, another->index);
+
+  allocator_free(allocator, &self->arguments);
+  self->arguments = another->arguments;
+  another->arguments =
+      allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   return;
 
 cleanup:
-  allocator_free(allocator, &self->index);
   allocator_free(allocator, &self->host);
 }
 
@@ -81,7 +101,7 @@ node_t read_expression_subscript(context_t ctx, vec_t tokens, size_t *position,
   allocator_t allocator = ctx->allocator;
   size_t current = *position;
   cubec_expression_subscript_t node = NULL;
-  node_t index = NULL;
+  vec_t arguments = NULL;
   token_t open_bracket = NULL;
 
   /* Expect '[' (caller ensures whitespace already skipped) */
@@ -121,31 +141,55 @@ node_t read_expression_subscript(context_t ctx, vec_t tokens, size_t *position,
   /* Commit to parsing a subscript */
   current++; /* consume '[' */
 
-  skip_whitespace(tokens, &current);
+  arguments = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
 
-  /* Parse index expression */
-  index = read_expression(ctx, tokens, &current, filename);
-  if (!index) {
-    goto onerror;
+  /* Parse comma-separated arguments */
+  bool expect_comma = false;
+  while (true) {
+    skip_whitespace(tokens, &current);
+
+    token_t tok = vec_get(tokens, current);
+
+    /* Check for closing ']' */
+    if (token_is(tok, CUBEC_TOKEN_SYMBOL, "]")) {
+      if (expect_comma) {
+        goto onerror; /* trailing comma */
+      }
+      current++;
+      break;
+    }
+
+    /* Parse one argument expression */
+    node_t arg = read_expression(ctx, tokens, &current, filename);
+    if (!arg) {
+      goto onerror;
+    }
+    vec_push(arguments, arg);
+
+    /* After an argument, expect either ',' or ']' */
+    skip_whitespace(tokens, &current);
+    tok = vec_get(tokens, current);
+    if (token_is(tok, CUBEC_TOKEN_SYMBOL, ",")) {
+      current++;
+      expect_comma = true;
+    } else if (token_is(tok, CUBEC_TOKEN_SYMBOL, "]")) {
+      current++;
+      break;
+    } else {
+      goto onerror;
+    }
   }
-
-  skip_whitespace(tokens, &current);
-
-  /* Expect ']' */
-  token_t close_bracket = vec_get(tokens, current);
-  if (!token_is(close_bracket, CUBEC_TOKEN_SYMBOL, "]")) {
-    goto onerror;
-  }
-  current++;
 
   node = allocator_create(allocator, &g_cubec_expression_subscript_class,
                           &(cubec_expression_subscript_init_t){
                               .host = host,
-                              .index = index,
+                              .arguments = arguments,
                           });
+  /* NOTE: arguments ownership has been transferred to node via init */
 
   /* Location spans from '[' to ']' */
   {
+    token_t close_bracket = vec_get(tokens, current - 1);
     location_t loc = *token_get_location(open_bracket);
     loc.end = token_get_location(close_bracket)->end;
     loc.filename = filename;
@@ -160,8 +204,7 @@ onerror:
                        open_bracket ? *token_get_location(open_bracket)
                                     : (location_t){0},
                        "invalid subscript expression");
-  allocator_free(allocator, &index);
-  /* host ownership: caller (read_value) owns it and will clean up */
+  allocator_free(allocator, &arguments);
   allocator_free(allocator, &node);
   return create_error(ctx, open_bracket ? *token_get_location(open_bracket)
                                         : (location_t){0});
@@ -172,13 +215,13 @@ onerror:
  * -------------------------------------------------------------------------- */
 
 node_t create_expression_subscript(context_t ctx, location_t loc, node_t host,
-                                   node_t index) {
+                                   vec_t args) {
   allocator_t alloc = ctx->allocator;
   cubec_expression_subscript_init_t init = {
       .location = loc,
       .parent = NULL,
       .host = host,
-      .index = index,
+      .arguments = args,
   };
   return (node_t)allocator_create(alloc, &g_cubec_expression_subscript_class,
                                   &init);
@@ -193,6 +236,11 @@ void emit_expression_subscript(emit_context_t ctx, node_t node) {
   recover_comments_to(ctx, node->location.begin.offset);
   emit_expression(ctx, sub->host);
   emit_symbol(ctx, "[");
-  emit_expression(ctx, sub->index);
+  size_t count = vec_get_size(sub->arguments);
+  for (size_t i = 0; i < count; i++) {
+    if (i > 0)
+      emit_symbol(ctx, ",");
+    emit_expression(ctx, vec_get(sub->arguments, i));
+  }
   emit_symbol(ctx, "]");
 }
