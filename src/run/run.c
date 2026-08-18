@@ -95,6 +95,10 @@ value_t run_statement(vm_t vm, node_t node, bool shadow) {
     return run_statement_block(vm, node, shadow);
   case CUBEC_NODE_STATEMENT_EMPTY:
     return create_void_value(vm);
+  case CUBEC_NODE_STATEMENT_DECLARATION:
+    return run_statement_declaration(vm, node, shadow);
+  case CUBEC_NODE_STATEMENT_DECLARATION_TYPE:
+    return run_statement_declaration_type(vm, node, shadow);
   default:
     if (shadow) {
       diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,

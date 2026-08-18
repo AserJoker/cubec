@@ -37,8 +37,8 @@ struct _cubec_statement_declaration_type_t {
   bool is_export;  /**< Whether this declaration is exported */
   bool is_builtin; /**< Whether this is a builtin type (no type_value) */
   node_t name;     /**< Identifier node for the type alias name */
-  vec_t params; /**< Vector of identifier nodes for optional generic parameters
-                   (may be NULL) */
+  vec_t params; /**< Vector of cubec_generic_param_t nodes for optional generic
+                   parameters (may be NULL) */
   node_t type_value; /**< Type expression parsed by read_expression_type (NULL
                         for builtin) */
   vec_t decorators;  /**< Vector of cubec_decorator_t (may be NULL) */
