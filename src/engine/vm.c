@@ -61,6 +61,8 @@ struct _vm_t {
       v_bool; /* borrowed: bootstrap type "bool" (in global_scope->values) */
   value_t v_wildcard; /* borrowed: bootstrap type "wildcard" (in
                          global_scope->values) */
+  value_t v_const_wildcard; /* borrowed: bootstrap type "const ?" (in
+                               global_scope->values) */
   value_t
       v_void; /* borrowed: bootstrap type "void" (in global_scope->values) */
   value_t v_nil;    /* borrowed: bootstrap type "nil" */
@@ -158,6 +160,12 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   type_t wildcard_type = type_get_wildcard_type(allocator);
   vec_push(vm->global_scope->types, wildcard_type);
   vm->v_wildcard = create_type_value(vm, wildcard_type, NULL, false);
+
+  type_t const_wildcard_type = (type_t)alloc_clone(allocator, wildcard_type);
+  type_set_mut(const_wildcard_type, false);
+  vec_push(vm->global_scope->types, const_wildcard_type);
+  vm->v_const_wildcard =
+      create_type_value(vm, const_wildcard_type, "const ?", false);
 
   type_t void_type = type_get_void_type(allocator);
   vec_push(vm->global_scope->types, void_type);
@@ -371,6 +379,9 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
     name_t n_panic = name_create(vm->global_scope->allocator, panic_val);
     strmap_insert(vm->global_scope->names, "panic", n_panic);
   }
+
+  /* ---- builtin templates ---- */
+  vm_register_builtin_template(vm, "remove_const", create_remove_const_instance);
 }
 
 static void _vm_dispose(void *self, allocator_t allocator) {
@@ -423,6 +434,7 @@ void vm_set_current_module_id(vm_t self, const char *module_id) {
 value_t vm_get_error_type(vm_t self) { return self->v_error; }
 value_t vm_get_bool_type(vm_t self) { return self->v_bool; }
 value_t vm_get_wildcard_type(vm_t self) { return self->v_wildcard; }
+value_t vm_get_const_wildcard_type(vm_t self) { return self->v_const_wildcard; }
 value_t vm_get_void_type(vm_t self) { return self->v_void; }
 value_t vm_get_nil_type(vm_t self) { return self->v_nil; }
 value_t vm_get_opaque_type(vm_t self) { return self->v_opaque; }

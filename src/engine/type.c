@@ -14,6 +14,7 @@ const char *type_get_name(type_t self) { return self->name; }
 uint64_t    type_get_size(type_t self) { return self->size; }
 uint64_t    type_get_align(type_t self) { return self->align; }
 bool        type_is_mut(type_t self) { return self->mut; }
+void        type_set_mut(type_t self, bool mut) { self->mut = mut; }
 vtable_t    type_get_vtable(type_t self) { return self->vtable; }
 
 /* ---- g_type_class: lifecycle for dynamically-created type_t ---- */

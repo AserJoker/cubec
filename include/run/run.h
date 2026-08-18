@@ -38,6 +38,10 @@ value_t run_expression_namespace_access(vm_t vm, node_t node,
                                         bool shadow);
 value_t run_expression_initialize_list(vm_t vm, node_t node, bool shadow);
 
+/* ---- Wildcard runner ---- */
+
+value_t run_expression_wildcard(vm_t vm, node_t node, bool shadow);
+
 /* ---- Type declaration runners ---- */
 
 value_t run_declaration_array(vm_t vm, node_t node, bool shadow);

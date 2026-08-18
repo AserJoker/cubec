@@ -47,7 +47,107 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
   /* ---- builtin: verify against global scope, register name in current scope
    * ---- */
   if (stmt->is_builtin) {
-    /* builtin types are registered in global scope during bootstrap */
+    /* builtin + generic: create generic type with C callback from
+     * builtin_templates */
+    if (stmt->params && vec_get_size(stmt->params) > 0) {
+      allocator_t allocator = vm_get_allocator(vm);
+      create_instance_fn_t callback =
+          vm_get_builtin_template(vm, name);
+      if (!callback)
+        return create_exception_value(vm,
+            "run: builtin generic type '%s' not found in builtin_templates",
+            name);
+
+      /* build engine-level generic_param_t vec from AST */
+      type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
+      vec_init_t pvi = {.auto_dispose = true};
+      vec_t params_vec = (vec_t)allocator_create(allocator, &g_vec_class, &pvi);
+      size_t pc = vec_get_size(stmt->params);
+      for (size_t i = 0; i < pc; i++) {
+        cubec_generic_param_t ast_param =
+            (cubec_generic_param_t)vec_get(stmt->params, i);
+        const char *pname = _get_name(ast_param->name);
+
+        /* determine param type */
+        type_t param_type = type_type;
+        if (ast_param->value_type) {
+          value_t vt = run_expression(vm, ast_param->value_type, false);
+          if (value_is_error(vt)) {
+            if (shadow) {
+              while (vm_get_current_scope(vm) != scope_before)
+                vm_pop_scope(vm);
+              diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
+                                   node->location,
+                                   "builtin generic param type evaluation error");
+              allocator_free(allocator, &params_vec);
+              return create_void_value(vm);
+            }
+            allocator_free(allocator, &params_vec);
+            return vt;
+          }
+          if (type_get_kind(value_get_type(vt)) != TYPE_KIND_TYPE) {
+            allocator_free(allocator, &params_vec);
+            return create_exception_value(vm,
+                "run: builtin generic param '%s' type annotation must produce a type, got '%s'",
+                pname, type_get_name(value_get_type(vt)));
+          }
+          param_type = (type_t)value_get_data(vt);
+        }
+
+        /* evaluate extends constraints */
+        vec_init_t evi = {.auto_dispose = true};
+        vec_t extends = (vec_t)allocator_create(allocator, &g_vec_class, &evi);
+        if (ast_param->constraints) {
+          size_t cc = vec_get_size(ast_param->constraints);
+          for (size_t j = 0; j < cc; j++) {
+            node_t constraint_node = (node_t)vec_get(ast_param->constraints, j);
+            value_t cv = run_expression(vm, constraint_node, false);
+            if (value_is_error(cv)) {
+              allocator_free(allocator, &extends);
+              allocator_free(allocator, &params_vec);
+              if (shadow) {
+                while (vm_get_current_scope(vm) != scope_before)
+                  vm_pop_scope(vm);
+                diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
+                                     node->location,
+                                     "builtin generic param constraint evaluation error");
+                return create_void_value(vm);
+              }
+              return cv;
+            }
+            if (type_get_kind(value_get_type(cv)) != TYPE_KIND_TYPE) {
+              allocator_free(allocator, &extends);
+              allocator_free(allocator, &params_vec);
+              return create_exception_value(vm,
+                  "run: builtin generic param constraint must produce a type, got '%s'",
+                  type_get_name(value_get_type(cv)));
+            }
+            type_t constraint_type = (type_t)value_get_data(cv);
+            vec_push(extends, alloc_clone(allocator, constraint_type));
+          }
+        }
+
+        generic_param_t gp = generic_param_create(allocator, pname, param_type,
+                                                    extends);
+        allocator_free(allocator, &extends);
+        vec_push(params_vec, gp);
+      }
+
+      /* create generic type — node=NULL (builtin has no AST) */
+      generic_type_t gt = generic_type_create(allocator, name, params_vec, NULL);
+      allocator_free(allocator, &params_vec);
+
+      /* register in scope->types */
+      scope_t scope = vm_get_current_scope(vm);
+      vec_push(scope->types, gt);
+
+      /* create generic value: value.data = builtin callback.
+       * vm_create_value_ref registers in scope->values and binds the name. */
+      vm_create_value_ref(vm, (type_t)gt, (const void *)callback, name);
+      return create_void_value(vm);
+    }
+
+    /* builtin non-generic: look up concrete type in global scope */
     scope_t global_scope = vm_get_global_scope(vm);
     name_t builtin_name = scope_lookup(global_scope, name);
     if (!builtin_name || !builtin_name->ref)

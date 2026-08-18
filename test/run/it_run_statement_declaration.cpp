@@ -13,6 +13,7 @@
 #include "engine/str_type.h"
 #include "engine/pointer_type.h"
 #include "engine/array_type.h"
+#include "engine/generic_type.h"
 #include "cubec/token.h"
 #include "cubec/program.h"
 #include "cubec/node.h"
@@ -376,4 +377,43 @@ TEST_F(it_run_statement_declaration, multiple_vars_in_block) {
 TEST_F(it_run_statement_declaration, var_and_type_in_block) {
   value_t v = _run_source("{ type T = i32; var x: T = 5; }");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+}
+
+/* ==================================================================
+ *  Builtin generic type: remove_const
+ * ================================================================== */
+
+TEST_F(it_run_statement_declaration, builtin_generic_remove_const_decl) {
+  /* builtin generic type with extends const ? constraint */
+  value_t v = _run_source("builtin type remove_const[T extends const ?];");
+  if (value_is_error(v)) {
+    const char *msg = (const char *)value_get_data(v);
+    FAIL() << "unexpected error: " << (msg ? msg : "(null)");
+  }
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "remove_const");
+  ASSERT_NE(n, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(n->ref)), TYPE_KIND_GENERIC);
+}
+
+TEST_F(it_run_statement_declaration, builtin_generic_remove_const_instantiate) {
+  /* remove_const[const i32] should produce mutable i32 */
+  value_t v = _run_source(
+      "builtin type remove_const[T extends const ?]; "
+      "type T = remove_const[const i32];");
+  if (value_is_error(v)) {
+    const char *msg = (const char *)value_get_data(v);
+    FAIL() << "unexpected error: " << (msg ? msg : "(null)");
+  }
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "T");
+  ASSERT_NE(n, nullptr);
+  EXPECT_EQ(type_get_kind(value_get_type(n->ref)), TYPE_KIND_TYPE);
+  type_t result_type = (type_t)value_get_data(n->ref);
+  EXPECT_EQ(type_get_kind(result_type), TYPE_KIND_I32);
+  EXPECT_TRUE(type_is_mut(result_type));
 }

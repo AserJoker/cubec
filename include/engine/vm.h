@@ -70,6 +70,7 @@ const char *vm_get_current_module_id(vm_t self);
 void vm_set_current_module_id(vm_t self, const char *module_id);
 value_t vm_get_bool_type(vm_t self);
 value_t vm_get_wildcard_type(vm_t self);
+value_t vm_get_const_wildcard_type(vm_t self);
 value_t vm_get_void_type(vm_t self);
 value_t vm_get_nil_type(vm_t self);
 value_t vm_get_opaque_type(vm_t self);

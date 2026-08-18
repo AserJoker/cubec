@@ -261,3 +261,54 @@ value_t create_type_instance(vm_t vm, value_t tmpl,
 
   return instance;
 }
+
+/* ---- create_remove_const_instance ---- */
+
+value_t create_remove_const_instance(vm_t vm, value_t tmpl,
+                                     size_t argc, value_t *argv) {
+  type_t self_type = value_get_type(tmpl);
+  generic_type_t gt = (generic_type_t)self_type;
+  allocator_t allocator = vm_get_allocator(vm);
+
+  /* 1. cache lookup */
+  value_t cached = _cache_lookup(vm, gt, argc, argv);
+  if (cached) return cached;
+
+  /* 2. argv[0] must be a type value wrapping a const type */
+  value_t arg = argv[0];
+  if (type_get_kind(value_get_type(arg)) != TYPE_KIND_TYPE)
+    return create_exception_value(vm,
+        "remove_const: argument must be a type, got '%s'",
+        type_get_name(value_get_type(arg)));
+
+  type_t const_type = (type_t)value_get_data(arg);
+  if (type_is_mut(const_type))
+    return create_exception_value(vm,
+        "remove_const: type '%s' is already mutable",
+        type_get_name(const_type));
+
+  /* 3. clone the type and set mutable */
+  type_t mut_type = (type_t)alloc_clone(allocator, const_type);
+  type_set_mut(mut_type, true);
+
+  /* register the cloned type in the generic's isolated scope */
+  scope_t gt_scope = generic_type_get_scope(gt);
+  vec_push(gt_scope->types, mut_type);
+
+  /* 4. create a type value wrapping the mutable type in the generic's scope */
+  scope_t orig_scope = vm_get_current_scope(vm);
+  vm_set_scope(vm, gt_scope);
+  type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
+  value_t instance = vm_create_value_ref(vm, type_type, mut_type, NULL);
+  vm_set_scope(vm, orig_scope);
+
+  /* 5. build cache entry */
+  vec_init_t vi2 = {.auto_dispose = false};
+  vec_t params_vec = (vec_t)allocator_create(allocator, &g_vec_class, &vi2);
+  vec_push(params_vec, argv[0]);
+
+  generic_instance_t gi = generic_instance_create(allocator, params_vec, instance);
+  vec_push(generic_type_get_instances(gt), gi);
+
+  return instance;
+}

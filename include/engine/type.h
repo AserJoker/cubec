@@ -154,7 +154,7 @@ const char *type_get_name(type_t self);
 uint64_t    type_get_size(type_t self);
 uint64_t    type_get_align(type_t self);
 bool        type_is_mut(type_t self);
-bool        type_is_mut(type_t self);
+void        type_set_mut(type_t self, bool mut);
 vtable_t    type_get_vtable(type_t self);
 
 /* ---- Class descriptor ---- */
@@ -203,6 +203,12 @@ value_t create_type_value(vm_t vm, type_t type, const char *name, bool own);
  *  Follows create_instance_fn_t signature. */
 value_t create_type_instance(struct _vm_t *vm, value_t tmpl,
                              size_t argc, value_t *argv);
+
+/** @brief Builtin generic instantiation callback for remove_const.
+ *  Takes a type arg (must be const), returns the mutable version.
+ *  Follows create_instance_fn_t signature. */
+value_t create_remove_const_instance(struct _vm_t *vm, value_t tmpl,
+                                     size_t argc, value_t *argv);
 
 #ifdef __cplusplus
 }

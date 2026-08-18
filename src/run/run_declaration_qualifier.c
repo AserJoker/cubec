@@ -3,6 +3,7 @@
 #include "engine/exception_type.h"
 #include "engine/value.h"
 #include "engine/type.h"
+#include "engine/scope.h"
 #include "cubec/declaration_qualifier.h"
 
 value_t run_declaration_qualifier(vm_t vm, node_t node, bool shadow) {
@@ -19,15 +20,23 @@ value_t run_declaration_qualifier(vm_t vm, node_t node, bool shadow) {
                                   type_get_name(value_get_type(inner_type_val)));
   type_t inner_type = (type_t)value_get_data(inner_type_val);
 
-  /* const qualifier: produce a const version of the type */
+  /* const qualifier: clone the type and set mut=false */
   if (qual->is_const) {
-    /* use value_safe_cast to derive the const variant — the type value
-     * wrapping inner_type is cast to its const counterpart. */
+    if (!type_is_mut(inner_type))
+      return inner_type_val; /* already const — return as-is */
+
+    allocator_t allocator = vm_get_allocator(vm);
+    type_t const_type = (type_t)alloc_clone(allocator, inner_type);
+    type_set_mut(const_type, false);
+
+    /* register in scope->types so it's disposed with the scope */
+    scope_t scope = vm_get_current_scope(vm);
+    vec_push(scope->types, const_type);
+
+    /* create a type value wrapping the const type.
+     * Use vm_create_value_ref: data is the cloned type_t (ref, not copied). */
     type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
-    value_t inner_as_type = value_create(vm_get_allocator(vm), type_type, inner_type, false);
-    value_t result = value_safe_cast(vm, inner_as_type, type_type);
-    allocator_free(vm_get_allocator(vm), &inner_as_type);
-    return result;
+    return vm_create_value_ref(vm, type_type, const_type, NULL);
   }
 
   /* volatile qualifier: volatile is recorded but silently ignored at runtime.
