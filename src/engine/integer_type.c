@@ -168,6 +168,9 @@ static value_t _##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {       \
     return create_exception_value(vm,                                              \
         "cannot safe_cast %s to '%s'", NAME, to->name);                        \
   if (to == value_get_type(self)) return self;                                 \
+  if (to->size < value_get_type(self)->size)                                   \
+    return create_exception_value(vm,                                              \
+        "cannot safe_cast %s to narrower type '%s'", NAME, to->name);          \
   if (value_is_shadow(self))                                                   \
     return vm_create_value_shadow(vm, to, NULL, true);                         \
   return _int_coerce(vm, self, to);                                            \
@@ -181,6 +184,9 @@ static value_t _const_##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {\
     return create_exception_value(vm,                                              \
         "cannot safe_cast const %s to %s", NAME, NAME);                        \
   if (to == value_get_type(self)) return self;                                 \
+  if (to->size < value_get_type(self)->size)                                   \
+    return create_exception_value(vm,                                              \
+        "cannot safe_cast const %s to narrower type '%s'", NAME, to->name);    \
   if (value_is_shadow(self))                                                   \
     return vm_create_value_shadow(vm, to, NULL, true);                         \
   return _int_coerce(vm, self, to);                                            \
@@ -246,6 +252,9 @@ static value_t _##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {       \
     return create_exception_value(vm,                                              \
         "cannot safe_cast %s to '%s'", NAME, to->name);                        \
   if (to == value_get_type(self)) return self;                                 \
+  if (to->size < value_get_type(self)->size)                                   \
+    return create_exception_value(vm,                                              \
+        "cannot safe_cast %s to narrower type '%s'", NAME, to->name);          \
   if (value_is_shadow(self))                                                   \
     return vm_create_value_shadow(vm, to, NULL, true);                         \
   return _int_coerce(vm, self, to);                                            \
@@ -259,6 +268,9 @@ static value_t _const_##Prefix##_safe_cast(vm_t vm, value_t self, type_t to) {\
     return create_exception_value(vm,                                              \
         "cannot safe_cast const %s to %s", NAME, NAME);                        \
   if (to == value_get_type(self)) return self;                                 \
+  if (to->size < value_get_type(self)->size)                                   \
+    return create_exception_value(vm,                                              \
+        "cannot safe_cast const %s to narrower type '%s'", NAME, to->name);    \
   if (value_is_shadow(self))                                                   \
     return vm_create_value_shadow(vm, to, NULL, true);                         \
   return _int_coerce(vm, self, to);                                            \

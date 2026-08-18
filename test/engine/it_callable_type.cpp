@@ -1,4 +1,4 @@
-﻿#include "engine/vm.h"
+#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/scope.h"
@@ -264,14 +264,13 @@ TEST_F(it_callable_type, call_safe_cast_arg) {
   callable_type_t ct = _make_i32_to_i32_callable(vm);
   value_t cv = create_callable_value(vm, ct, _echo_first, NULL);
 
-  /* Pass i64, should be safe_cast to i32 */
+  /* Pass i64 to i32 parameter — narrowing safe_cast is rejected */
   int64_t big = 42;
   value_t argv[1] = { vm_create_value(vm, _get_i64_type(vm), &big, NULL) };
   value_t result = value_call(vm, cv, 1, argv);
 
-  /* _echo_first returns the (casted) arg 鈥?it receives i32 after safe_cast */
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
-  EXPECT_EQ(*(int32_t *)value_get_data(result), 42);
+  /* safe_cast i64→i32 is narrowing, returns exception */
+  EXPECT_TRUE(value_is_error(result));
 
   vm_dispose(vm, allocator);
 }

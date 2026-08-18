@@ -289,3 +289,60 @@ TEST_F(it_run_statement, compound_assignment_in_statement) {
   ASSERT_NE(ny, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(ny->ref), 15);
 }
+
+/* ==================================================================
+ *  Assignment with safe_cast in statement context
+ * ================================================================== */
+
+TEST_F(it_run_statement, assign_i32_literal_to_i8_rejected) {
+  /* x: i8 = 42; — i32→i8 narrowing, safe_cast rejects */
+  value_t x = create_i8_value(vm(), 0);
+  _bind("x", x);
+
+  value_t v = _run_source("x = 42;");
+  EXPECT_TRUE(value_is_error(v));
+}
+
+TEST_F(it_run_statement, assign_i64_to_i32_rejected) {
+  /* y: i32 = big; — i64→i32 narrowing, safe_cast rejects */
+  value_t y = create_i32_value(vm(), 0);
+  _bind("y", y);
+  value_t big = create_i64_value(vm(), 0x1FFFFFFFF);
+  _bind("big", big);
+
+  value_t v = _run_source("y = big;");
+  EXPECT_TRUE(value_is_error(v));
+}
+
+TEST_F(it_run_statement, assign_incompatible_type_statement_error) {
+  /* x: i32 = true; — safe_cast bool→i32 fails, error propagates */
+  value_t x = create_i32_value(vm(), 0);
+  _bind("x", x);
+
+  value_t v = _run_source("x = true;");
+  EXPECT_TRUE(value_is_error(v));
+}
+
+TEST_F(it_run_statement, compound_assign_same_type) {
+  /* y: i8 += 3i8; — same type compound assignment, no widening */
+  value_t y = create_i8_value(vm(), 5);
+  _bind("y", y);
+
+  value_t v = _run_source("y += 3i8;");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  scope_t scope = vm_get_current_scope(vm());
+  name_t ny = scope_lookup(scope, "y");
+  ASSERT_NE(ny, nullptr);
+  EXPECT_EQ(*(int8_t *)value_get_data(ny->ref), 8);
+}
+
+TEST_F(it_run_statement, compound_assign_widening_then_narrowing_rejected) {
+  /* y: i8 += 10; — i8(5) + i32(10) promotes to i32(15), then
+   * safe_cast i32→i8 is narrowing → rejected */
+  value_t y = create_i8_value(vm(), 5);
+  _bind("y", y);
+
+  value_t v = _run_source("y += 10;");
+  EXPECT_TRUE(value_is_error(v));
+}

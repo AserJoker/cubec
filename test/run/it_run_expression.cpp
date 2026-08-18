@@ -471,3 +471,200 @@ TEST_F(it_run_expression, namespace_access_on_non_type_returns_error) {
   value_t v = _run_expr("nottype::prop");
   EXPECT_TRUE(value_is_error(v));
 }
+
+/* ==================================================================
+ *  Assignment with safe_cast — type coercion on write
+ * ================================================================== */
+
+TEST_F(it_run_expression, assign_i32_to_i8_safe_cast_rejected) {
+  /* x: i8 = 42 — i32→i8 is narrowing, safe_cast rejects */
+  value_t i8_val = create_i8_value(vm(), 0);
+  _bind("x", i8_val);
+
+  value_t v = _run_expr("x = 42");
+  EXPECT_TRUE(value_is_error(v));
+}
+
+TEST_F(it_run_expression, assign_i64_to_i32_narrowing_rejected) {
+  /* y: i32 = big_i64 — i64→i32 is narrowing, safe_cast rejects */
+  value_t i32_val = create_i32_value(vm(), 0);
+  _bind("y", i32_val);
+
+  value_t big_val = create_i64_value(vm(), 0x1FFFFFFFF);
+  _bind("big", big_val);
+
+  value_t v = _run_expr("y = big");
+  EXPECT_TRUE(value_is_error(v));
+}
+
+TEST_F(it_run_expression, assign_i8_to_i32_safe_cast_ok) {
+  /* z: i32 = small_i8 — i8→i32 is widening, safe_cast allows */
+  value_t i32_val = create_i32_value(vm(), 0);
+  _bind("z", i32_val);
+
+  value_t small_val = create_i8_value(vm(), 42);
+  _bind("small", small_val);
+
+  value_t v = _run_expr("z = small");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  scope_t scope = vm_get_current_scope(vm());
+  name_t n = scope_lookup(scope, "z");
+  ASSERT_NE(n, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(n->ref), 42);
+}
+
+TEST_F(it_run_expression, assign_i32_to_u32_same_width_safe_cast_ok) {
+  /* z: u32 = neg_i32 — same width, safe_cast allows */
+  value_t u32_val = create_u32_value(vm(), 0);
+  _bind("z", u32_val);
+
+  value_t neg_val = create_i32_value(vm(), -1);
+  _bind("neg", neg_val);
+
+  value_t v = _run_expr("z = neg");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  scope_t scope = vm_get_current_scope(vm());
+  name_t n = scope_lookup(scope, "z");
+  ASSERT_NE(n, nullptr);
+  EXPECT_EQ(*(uint32_t *)value_get_data(n->ref), 0xFFFFFFFFu);
+}
+
+TEST_F(it_run_expression, assign_incompatible_type_returns_error) {
+  /* i32 = bool — safe_cast fails, returns exception */
+  value_t i32_val = create_i32_value(vm(), 0);
+  _bind("x", i32_val);
+
+  value_t v = _run_expr("x = true");
+  EXPECT_TRUE(value_is_error(v));
+}
+
+TEST_F(it_run_expression, assign_incompatible_type_shadow_skips_write) {
+  /* shadow mode: x = true → shadow path evaluates rvalue only,
+   * does not attempt safe_cast/write (type mismatch not detected at
+   * expression level in shadow mode; statement layer handles it) */
+  value_t i32_val = create_i32_value(vm(), 0);
+  _bind("x", i32_val);
+
+  value_t v = _run_expr("x = true", true);
+  /* Shadow path for = returns the rvalue's shadow result (bool shadow) */
+  EXPECT_TRUE(value_is_shadow(v));
+}
+
+/* ==================================================================
+ *  Type negotiation — different-width integer arithmetic
+ * ================================================================== */
+
+TEST_F(it_run_expression, add_i8_i32_promotes_to_i32) {
+  /* i8 + i32 → i32 (wider type wins) */
+  value_t a8 = create_i8_value(vm(), 10);
+  _bind("a", a8);
+
+  value_t v = _run_expr("a + 20");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(v), 30);
+}
+
+TEST_F(it_run_expression, add_i32_i64_promotes_to_i64) {
+  /* i32 + i64 → i64 */
+  value_t a32 = create_i32_value(vm(), 100);
+  _bind("a", a32);
+  value_t b64 = create_i64_value(vm(), 200);
+  _bind("b", b64);
+
+  value_t v = _run_expr("a + b");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I64);
+  EXPECT_EQ(*(int64_t *)value_get_data(v), 300);
+}
+
+TEST_F(it_run_expression, add_i32_u32_promotes_to_u32) {
+  /* i32 + u32 → u32 (same size, unsigned wins) */
+  value_t a32 = create_i32_value(vm(), 10);
+  _bind("a", a32);
+  value_t b32 = create_u32_value(vm(), 20);
+  _bind("b", b32);
+
+  value_t v = _run_expr("a + b");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U32);
+  EXPECT_EQ(*(uint32_t *)value_get_data(v), 30u);
+}
+
+TEST_F(it_run_expression, add_i8_u64_promotes_to_u64) {
+  /* i8 + u64 → u64 (wider wins) */
+  value_t a8 = create_i8_value(vm(), 5);
+  _bind("a", a8);
+  value_t b64 = create_u64_value(vm(), 100);
+  _bind("b", b64);
+
+  value_t v = _run_expr("a + b");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U64);
+  EXPECT_EQ(*(uint64_t *)value_get_data(v), 105ull);
+}
+
+TEST_F(it_run_expression, sub_u8_i32_promotes_to_i32) {
+  /* u8 - i32 → i32 (wider signed wins) */
+  value_t a8 = create_u8_value(vm(), 50);
+  _bind("a", a8);
+
+  value_t v = _run_expr("a - 20");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(v), 30);
+}
+
+TEST_F(it_run_expression, mul_i16_u16_promotes_to_u16) {
+  /* i16 * u16 → u16 (same size, unsigned wins) */
+  value_t a16 = create_i16_value(vm(), 3);
+  _bind("a", a16);
+  value_t b16 = create_u16_value(vm(), 7);
+  _bind("b", b16);
+
+  value_t v = _run_expr("a * b");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U16);
+  EXPECT_EQ(*(uint16_t *)value_get_data(v), 21);
+}
+
+TEST_F(it_run_expression, type_negotiation_shadow_propagates) {
+  /* shadow: i8 + i32 → shadow i32 */
+  value_t a8 = create_i8_value(vm(), 10);
+  _bind("a", a8);
+
+  value_t v = _run_expr("a + 20", true);
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
+  EXPECT_TRUE(value_is_shadow(v));
+}
+
+/* ==================================================================
+ *  Typed literal suffixes — explicit-width integer values
+ * ================================================================== */
+
+TEST_F(it_run_expression, literal_suffix_i8) {
+  value_t v = _run_expr("42i8");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I8);
+  EXPECT_EQ(*(int8_t *)value_get_data(v), 42);
+}
+
+TEST_F(it_run_expression, literal_suffix_i64) {
+  value_t v = _run_expr("1000i64");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I64);
+  EXPECT_EQ(*(int64_t *)value_get_data(v), 1000);
+}
+
+TEST_F(it_run_expression, literal_suffix_u32) {
+  value_t v = _run_expr("100u32");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_U32);
+  EXPECT_EQ(*(uint32_t *)value_get_data(v), 100u);
+}
+
+TEST_F(it_run_expression, literal_suffix_f64) {
+  value_t v = _run_expr("1.5f64");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_F64);
+  EXPECT_DOUBLE_EQ(*(double *)value_get_data(v), 1.5);
+}
+
+TEST_F(it_run_expression, same_type_arithmetic_with_suffix) {
+  /* 10i8 + 20i8 → i8 result (no widening) */
+  value_t v = _run_expr("10i8 + 20i8");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I8);
+  EXPECT_EQ(*(int8_t *)value_get_data(v), 30);
+}

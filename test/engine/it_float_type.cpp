@@ -1,4 +1,4 @@
-﻿#include "engine/vm.h"
+#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/bool_type.h"
@@ -666,29 +666,28 @@ TEST_F(it_float_type, f16_add_same) {
 
 /* ---- f64 assignment with promotion ---- */
 
-TEST_F(it_float_type, f32_assign_f64_promotes) {
+TEST_F(it_float_type, f32_assign_f64_narrowing_rejected) {
   vm_t vm = vm_create(allocator);
   value_t a = create_f32_value(vm, 0.0f);
   value_t b = create_f64_value(vm, 42.5);
   value_t result = value_assignment(vm, a, b);
 
-  /* assignment coerces rvalue to lvalue type */
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
-  EXPECT_FLOAT_EQ(*(float *)value_get_data(a), 42.5f);
+  /* f64→f32 is narrowing, safe_cast rejects */
+  EXPECT_TRUE(value_is_error(result));
 
   vm_dispose(vm, allocator);
 }
 
-/* ---- f64 safe_cast to f32 ---- */
+/* ---- f64 safe_cast to f32 — narrowing rejected ---- */
 
-TEST_F(it_float_type, f64_safe_cast_to_f32) {
+TEST_F(it_float_type, f64_safe_cast_to_f32_rejected) {
   vm_t vm = vm_create(allocator);
   value_t a = create_f64_value(vm, 3.14);
   type_t f32t = _get_f32_type(vm);
   value_t result = value_safe_cast(vm, a, f32t);
 
-  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_F32);
-  EXPECT_FLOAT_EQ(*(float *)value_get_data(result), 3.14f);
+  /* f64→f32 is narrowing, safe_cast rejects */
+  EXPECT_TRUE(value_is_error(result));
 
   vm_dispose(vm, allocator);
 }
