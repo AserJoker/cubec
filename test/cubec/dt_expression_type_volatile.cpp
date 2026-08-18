@@ -1,9 +1,8 @@
-﻿#include "cubec/expression.h"
+#include "cubec/expression.h"
 #include "cubec/declaration_array.h"
 #include "core/token_writer.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
-#include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/declaration_qualifier.h"
@@ -199,7 +198,7 @@ TEST_F(dt_expression_type_volatile, volatile_generic) {
       (cubec_declaration_qualifier_t)node;
   ASSERT_NE(volatile_node->type, nullptr);
   EXPECT_EQ(volatile_node->type->kind,
-            CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+            CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

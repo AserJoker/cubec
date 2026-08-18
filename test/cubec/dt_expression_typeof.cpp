@@ -1,9 +1,9 @@
-﻿#include "core/string.h"
+#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression_typeof.h"
 #include "cubec/expression.h"
 #include "cubec/expression_call.h"
-#include "cubec/expression_generic_instantiation.h"
+#include "cubec/expression_subscript.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/declaration_slice.h"
@@ -170,12 +170,12 @@ TEST_F(dt_expression_typeof, typeof_with_generic_instantiation) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
-  ASSERT_NE(generic->callee, nullptr);
-  EXPECT_EQ(generic->callee->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
+  ASSERT_NE(generic->host, nullptr);
+  EXPECT_EQ(generic->host->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

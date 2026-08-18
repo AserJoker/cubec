@@ -1,9 +1,9 @@
-﻿#include "core/string.h"
+#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_member.h"
-#include "cubec/expression_generic_instantiation.h"
+#include "cubec/expression_subscript.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/literal_identifier.h"
 #include "cubec/node.h"
@@ -100,12 +100,12 @@ TEST_F(dt_expression_namespace_access, namespace_with_generic) {
   size_t position = 0;
   node_t node = read_value(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
-  ASSERT_NE(generic->callee, nullptr);
-  EXPECT_EQ(generic->callee->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
+  ASSERT_NE(generic->host, nullptr);
+  EXPECT_EQ(generic->host->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

@@ -43,9 +43,10 @@ node_t read_expression_type(context_t ctx, vec_t tokens, size_t *position,
                             const char *filename);
 
 /** @brief Parse a primary (non-ternary, non-binary) type expression:
- *  identifier with optional namespace access (::), generic instantiation,
- *  pointer/slice/array declaration, const/volatile qualifier,
- * typeof/sizeof/alignof, function type, and grouping.
+ *  identifier with optional namespace access (::), subscript/generic
+ *  instantiation (unified [...] syntax), pointer/slice/array declaration,
+ *  const/volatile qualifier, typeof/sizeof/alignof, function type, and
+ *  grouping.
  *  @note Internal helper for read_atom and type_constraint parsing.
  *        External callers should use read_expression_type. */
 node_t read_type_expression_primary(context_t ctx, vec_t tokens,

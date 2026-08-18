@@ -1,10 +1,9 @@
-﻿#include "cubec/expression.h"
+#include "cubec/expression.h"
 #include "cubec/declaration_array.h"
 #include "core/token_writer.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
 #include "cubec/expression_binary.h"
-#include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/declaration_qualifier.h"
 #include "cubec/expression_group.h"
@@ -728,7 +727,7 @@ TEST_F(dt_expression_type_ternary, extends_with_generic_consequent) {
 
   /* Consequent: generic instantiation Vec[T] */
   EXPECT_EQ(ternary->consequent->kind,
-            CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+            CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
   /* Alternate: plain identifier */
   EXPECT_EQ(ternary->alternate->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
@@ -874,7 +873,7 @@ TEST_F(dt_expression_type_ternary, consequent_generic) {
   cubec_expression_ternary_t ternary = (cubec_expression_ternary_t)node;
   EXPECT_EQ(ternary->condition->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
   EXPECT_EQ(ternary->consequent->kind,
-            CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+            CUBEC_NODE_EXPRESSION_SUBSCRIPT);
   EXPECT_EQ(ternary->alternate->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);

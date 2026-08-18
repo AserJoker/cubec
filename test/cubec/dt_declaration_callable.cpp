@@ -1,9 +1,9 @@
-﻿#include "core/string.h"
+#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_slice.h"
-#include "cubec/expression_generic_instantiation.h"
+#include "cubec/expression_subscript.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/declaration_qualifier.h"
 #include "cubec/declaration_callable.h"
@@ -136,7 +136,7 @@ TEST_F(dt_declaration_callable, generic_param) {
   cubec_declaration_callable_t func_node =
       (cubec_declaration_callable_t)node;
   node_t param = (node_t)vec_get(func_node->parameters, 0);
-  EXPECT_EQ(param->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(param->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
   EXPECT_EQ(func_node->return_type->kind, CUBEC_NODE_DECLARATION_SLICE);
 
   allocator_free(allocator, &node);

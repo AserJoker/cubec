@@ -21,6 +21,7 @@ value_t run_literal_string(context_t ctx, node_t node, bool shadow);
 value_t run_literal_char(context_t ctx, node_t node, bool shadow);
 value_t run_literal_identifier(context_t ctx, node_t node, bool shadow);
 value_t run_literal_nil(context_t ctx, node_t node, bool shadow);
+value_t run_literal_bool(context_t ctx, node_t node, bool shadow);
 value_t run_literal_undefined(context_t ctx, node_t node, bool shadow);
 
 /* ---- Expression runners ---- */
@@ -39,6 +40,20 @@ value_t run_expression_namespace_access(context_t ctx, node_t node,
 /* ---- Program runner ---- */
 
 value_t run_program(context_t ctx, node_t node, bool shadow);
+
+/* ---- Statement dispatcher ---- */
+
+/**
+ * @brief Run a statement node by its kind.
+ * In shadow mode, errors are written to ctx->diagnostics (not propagated)
+ * and void is always returned. In script mode, errors propagate normally.
+ */
+value_t run_statement(context_t ctx, node_t node, bool shadow);
+
+/* ---- Statement runners ---- */
+
+value_t run_statement_expression(context_t ctx, node_t node, bool shadow);
+value_t run_statement_block(context_t ctx, node_t node, bool shadow);
 
 #ifdef __cplusplus
 }

@@ -3,6 +3,7 @@
 #include "cubec/expression_subscript.h"
 #include "core/token.h"
 #include "cubec/expression.h"
+#include "cubec/expression_spread.h"
 #include "cubec/node_error.h"
 #include "cubec/token.h"
 
@@ -159,8 +160,13 @@ node_t read_expression_subscript(context_t ctx, vec_t tokens, size_t *position,
       break;
     }
 
-    /* Parse one argument expression */
-    node_t arg = read_expression(ctx, tokens, &current, filename);
+    /* Parse one argument: try spread first (...expr), then a regular
+     * expression. read_expression_base covers identifiers, binary, group,
+     * wildcard '?', etc. (matches the former generic_instantiation parser). */
+    node_t arg = read_expression_spread(ctx, tokens, &current, filename);
+    if (!arg) {
+      arg = read_expression_base(ctx, tokens, &current, filename);
+    }
     if (!arg) {
       goto onerror;
     }

@@ -1,10 +1,10 @@
-﻿#include "cubec/expression.h"
+#include "cubec/expression.h"
 #include "cubec/declaration_array.h"
 #include "core/token_writer.h"
 #include "cubec/declaration_pointer.h"
 #include "cubec/declaration_qualifier.h"
 #include "cubec/declaration_slice.h"
-#include "cubec/expression_generic_instantiation.h"
+#include "cubec/expression_subscript.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/expression_group.h"
@@ -68,14 +68,14 @@ TEST_F(dt_expression_type, generic_single_argument) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
-  ASSERT_NE(generic->callee, nullptr);
-  EXPECT_EQ(generic->callee->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
+  ASSERT_NE(generic->host, nullptr);
+  EXPECT_EQ(generic->host->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  cubec_literal_identifier_t callee = (cubec_literal_identifier_t)generic->callee;
+  cubec_literal_identifier_t callee = (cubec_literal_identifier_t)generic->host;
   EXPECT_STREQ(string_get(callee->value), "Vec");
 
   ASSERT_NE(generic->arguments, nullptr);
@@ -94,14 +94,14 @@ TEST_F(dt_expression_type, generic_multiple_arguments) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
-  ASSERT_NE(generic->callee, nullptr);
-  EXPECT_EQ(generic->callee->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
+  ASSERT_NE(generic->host, nullptr);
+  EXPECT_EQ(generic->host->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  cubec_literal_identifier_t callee = (cubec_literal_identifier_t)generic->callee;
+  cubec_literal_identifier_t callee = (cubec_literal_identifier_t)generic->host;
   EXPECT_STREQ(string_get(callee->value), "Map");
 
   ASSERT_NE(generic->arguments, nullptr);
@@ -120,14 +120,14 @@ TEST_F(dt_expression_type, generic_type_parameter) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
-  ASSERT_NE(generic->callee, nullptr);
-  EXPECT_EQ(generic->callee->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
+  ASSERT_NE(generic->host, nullptr);
+  EXPECT_EQ(generic->host->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
-  cubec_literal_identifier_t callee = (cubec_literal_identifier_t)generic->callee;
+  cubec_literal_identifier_t callee = (cubec_literal_identifier_t)generic->host;
   EXPECT_STREQ(string_get(callee->value), "Option");
 
   allocator_free(allocator, &node);
@@ -201,17 +201,17 @@ TEST_F(dt_expression_type, member_with_generic) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
 
   /* Callee should be namespace access expression: std::vec::Vec */
-  ASSERT_NE(generic->callee, nullptr);
-  EXPECT_EQ(generic->callee->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
+  ASSERT_NE(generic->host, nullptr);
+  EXPECT_EQ(generic->host->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
   cubec_expression_namespace_access_t callee_member =
-      (cubec_expression_namespace_access_t)generic->callee;
+      (cubec_expression_namespace_access_t)generic->host;
   EXPECT_STREQ(string_get(callee_member->field->value), "Vec");
 
   allocator_free(allocator, &node);
@@ -312,12 +312,12 @@ TEST_F(dt_expression_type, generic_with_nested_generic) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
   EXPECT_STREQ(
-      string_get(((cubec_literal_identifier_t)generic->callee)->value), "Result");
+      string_get(((cubec_literal_identifier_t)generic->host)->value), "Result");
 
   /* Should have 2 arguments: Ok[i32] and Err[string] */
   EXPECT_EQ(vec_get_size(generic->arguments), 2);
@@ -335,12 +335,12 @@ TEST_F(dt_expression_type, generic_with_member_argument) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
   EXPECT_STREQ(
-      string_get(((cubec_literal_identifier_t)generic->callee)->value), "Vec");
+      string_get(((cubec_literal_identifier_t)generic->host)->value), "Vec");
 
   /* Should have 1 argument: std::vec::Vec (namespace access) */
   EXPECT_EQ(vec_get_size(generic->arguments), 1);
@@ -361,12 +361,12 @@ TEST_F(dt_expression_type, generic_with_multiple_member_arguments) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
   EXPECT_STREQ(
-      string_get(((cubec_literal_identifier_t)generic->callee)->value), "Map");
+      string_get(((cubec_literal_identifier_t)generic->host)->value), "Map");
 
   /* Should have 2 arguments: std::vec::Vec and std::str::String */
   EXPECT_EQ(vec_get_size(generic->arguments), 2);
@@ -390,12 +390,12 @@ TEST_F(dt_expression_type, generic_with_mixed_arguments) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
   EXPECT_STREQ(
-      string_get(((cubec_literal_identifier_t)generic->callee)->value), "Pair");
+      string_get(((cubec_literal_identifier_t)generic->host)->value), "Pair");
 
   /* Should have 2 arguments: i32 (identifier) and std::vec::Vec (namespace access) */
   EXPECT_EQ(vec_get_size(generic->arguments), 2);
@@ -419,19 +419,19 @@ TEST_F(dt_expression_type, deeply_nested_generic_with_member) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
   EXPECT_STREQ(
-      string_get(((cubec_literal_identifier_t)generic->callee)->value), "Outer");
+      string_get(((cubec_literal_identifier_t)generic->host)->value), "Outer");
 
   /* Should have 2 arguments */
   EXPECT_EQ(vec_get_size(generic->arguments), 2);
 
   /* First argument: Inner[std::a::B] - a generic instantiation */
   node_t arg0 = (node_t)vec_get(generic->arguments, 0);
-  EXPECT_EQ(arg0->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(arg0->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
   /* Second argument: std::c::D - a namespace access */
   node_t arg1 = (node_t)vec_get(generic->arguments, 1);
@@ -589,7 +589,7 @@ TEST_F(dt_expression_type, pointer_to_generic_type) {
 
   cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
   ASSERT_NE(ptr->type, nullptr);
-  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -623,10 +623,10 @@ TEST_F(dt_expression_type, generic_with_pointer_argument) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
   ASSERT_EQ(vec_get_size(generic->arguments), 1);
 
   node_t arg = (node_t)vec_get(generic->arguments, 0);
@@ -672,7 +672,7 @@ TEST_F(dt_expression_type, pointer_on_complex_type) {
 
   cubec_declaration_pointer_t ptr = (cubec_declaration_pointer_t)node;
   ASSERT_NE(ptr->type, nullptr);
-  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(ptr->type->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -811,7 +811,7 @@ TEST_F(dt_expression_type, slice_to_generic_type) {
 
   cubec_declaration_slice_t slice = (cubec_declaration_slice_t)node;
   ASSERT_NE(slice->type, nullptr);
-  EXPECT_EQ(slice->type->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(slice->type->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -845,10 +845,10 @@ TEST_F(dt_expression_type, generic_with_slice_argument) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
   ASSERT_EQ(vec_get_size(generic->arguments), 1);
 
   node_t arg = (node_t)vec_get(generic->arguments, 0);
@@ -1019,7 +1019,7 @@ TEST_F(dt_expression_type, array_to_generic_type) {
 
   cubec_declaration_array_t arr = (cubec_declaration_array_t)node;
   ASSERT_NE(arr->type, nullptr);
-  EXPECT_EQ(arr->type->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(arr->type->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -1114,10 +1114,10 @@ TEST_F(dt_expression_type, generic_with_array_argument) {
   size_t position = 0;
   node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t generic =
-      (cubec_expression_generic_instantiation_t)node;
+  cubec_expression_subscript_t generic =
+      (cubec_expression_subscript_t)node;
   ASSERT_EQ(vec_get_size(generic->arguments), 1);
 
   node_t arg = (node_t)vec_get(generic->arguments, 0);
@@ -1210,7 +1210,7 @@ TEST_F(dt_expression_type, type_group_with_generic) {
 
   cubec_expression_group_t group = (cubec_expression_group_t)node;
   ASSERT_NE(group->inner, nullptr);
-  EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(group->inner->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

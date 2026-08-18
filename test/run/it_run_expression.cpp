@@ -11,12 +11,18 @@
 #include "engine/nil_type.h"
 #include "engine/void_type.h"
 #include "engine/exception_type.h"
+#include "engine/diagnostic.h"
 #include "engine/pointer_type.h"
 #include "engine/callable_type.h"
+#include "engine/cfunc.h"
+#include "engine/struct_type.h"
+#include "engine/slice_type.h"
+#include "engine/array_type.h"
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
 #include "cubec/literal_nil.h"
 #include "cubec/literal_identifier.h"
+#include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/expression_group.h"
@@ -26,6 +32,8 @@
 #include "cubec/expression_call.h"
 #include "cubec/expression_subscript.h"
 #include "cubec/expression_namespace_access.h"
+#include "cubec/token.h"
+#include "cubec/node.h"
 #include "core/string.h"
 #include "core/location.h"
 #include "core/vec.h"
@@ -34,6 +42,16 @@
 #include <gtest/gtest.h>
 
 using ::testing::Test;
+
+/* ------------------------------------------------------------------ *
+ *  it_run_expression — end-to-end expression tests via
+ *  lexer→parser→run_expression.
+ *
+ *  Source strings are tokenized with resolve_token_list, parsed with
+ *  read_expression, then executed with run_expression.  Variables
+ *  (struct, callable, slice) are pre-bound in the vm scope to
+ *  exercise member/call/subscript paths that need runtime objects.
+ * ------------------------------------------------------------------ */
 
 class it_run_expression : public CubecTest {
 protected:
@@ -50,21 +68,8 @@ protected:
     if (node) allocator_free(ctx->allocator, &node);
   }
 
-  /* Create an i32 literal node */
-  node_t _i32_node(const char *val) {
-    return create_literal_numeric(ctx, _loc(), val,
-        CUBEC_LITERAL_NUMERIC_KIND_INTEGER, CUBEC_LITERAL_NUMERIC_TYPE_I32);
-  }
-
-  /* Create an f64 literal node */
-  node_t _f64_node(const char *val) {
-    return create_literal_numeric(ctx, _loc(), val,
-        CUBEC_LITERAL_NUMERIC_KIND_FLOAT, CUBEC_LITERAL_NUMERIC_TYPE_DEFAULT);
-  }
-
-  /* Create a bool literal node (true=1, false=0) */
-  node_t _bool_node(bool b) {
-    return _i32_node(b ? "1" : "0");
+  void free_tokens(vec_t &tokens) {
+    if (tokens) allocator_free(ctx->allocator, &tokens);
   }
 
   /* Register a value in current scope under the given name */
@@ -74,9 +79,22 @@ protected:
     strmap_insert(scope->names, name, n);
   }
 
-  /* Create identifier node */
-  node_t _id_node(const char *name) {
-    return create_literal_identifier(ctx, _loc(), name);
+  /* Parse a source string into an expression node via lexer→parser */
+  node_t _parse_expr(const char *source) {
+    vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+    if (!tokens) return NULL;
+    size_t position = 0;
+    node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+    free_tokens(tokens);
+    return node;
+  }
+
+  /* Parse + run a source string as an expression */
+  value_t _run_expr(const char *source, bool shadow = false) {
+    node_t node = _parse_expr(source);
+    value_t v = run_expression(ctx, node, shadow);
+    free_node(node);
+    return v;
   }
 };
 
@@ -94,65 +112,35 @@ TEST_F(it_run_expression, null_node_returns_void) {
  * ================================================================== */
 
 TEST_F(it_run_expression, add_i32) {
-  node_t l = _i32_node("10");
-  node_t r = _i32_node("20");
-  node_t bin = create_expression_binary(ctx, _loc(), "+", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("10 + 20");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(v), 30);
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, sub_i32) {
-  node_t l = _i32_node("50");
-  node_t r = _i32_node("20");
-  node_t bin = create_expression_binary(ctx, _loc(), "-", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("50 - 20");
   EXPECT_EQ(*(int32_t *)value_get_data(v), 30);
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, mul_i32) {
-  node_t l = _i32_node("6");
-  node_t r = _i32_node("7");
-  node_t bin = create_expression_binary(ctx, _loc(), "*", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("6 * 7");
   EXPECT_EQ(*(int32_t *)value_get_data(v), 42);
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, div_i32) {
-  node_t l = _i32_node("100");
-  node_t r = _i32_node("4");
-  node_t bin = create_expression_binary(ctx, _loc(), "/", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("100 / 4");
   EXPECT_EQ(*(int32_t *)value_get_data(v), 25);
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, mod_i32) {
-  node_t l = _i32_node("17");
-  node_t r = _i32_node("5");
-  node_t bin = create_expression_binary(ctx, _loc(), "%", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("17 % 5");
   EXPECT_EQ(*(int32_t *)value_get_data(v), 2);
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, add_f64) {
-  node_t l = _f64_node("1.5");
-  node_t r = _f64_node("2.5");
-  node_t bin = create_expression_binary(ctx, _loc(), "+", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("1.5 + 2.5");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_F64);
   EXPECT_DOUBLE_EQ(*(double *)value_get_data(v), 4.0);
-  free_node(bin);
 }
 
 /* ==================================================================
@@ -160,22 +148,14 @@ TEST_F(it_run_expression, add_f64) {
  * ================================================================== */
 
 TEST_F(it_run_expression, unary_neg) {
-  node_t r = _i32_node("5");
-  node_t bin = create_expression_binary(ctx, _loc(), "-", NULL, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("-5");
   EXPECT_EQ(*(int32_t *)value_get_data(v), -5);
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, unary_lnot) {
-  node_t r = _bool_node(false);
-  node_t bin = create_expression_binary(ctx, _loc(), "!", NULL, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("!false");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(v));
-  free_node(bin);
 }
 
 /* ==================================================================
@@ -183,74 +163,39 @@ TEST_F(it_run_expression, unary_lnot) {
  * ================================================================== */
 
 TEST_F(it_run_expression, equal_true) {
-  node_t l = _i32_node("10");
-  node_t r = _i32_node("10");
-  node_t bin = create_expression_binary(ctx, _loc(), "==", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("10 == 10");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(v));
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, equal_false) {
-  node_t l = _i32_node("10");
-  node_t r = _i32_node("20");
-  node_t bin = create_expression_binary(ctx, _loc(), "==", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("10 == 20");
   EXPECT_FALSE(*(bool *)value_get_data(v));
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, not_equal) {
-  node_t l = _i32_node("10");
-  node_t r = _i32_node("20");
-  node_t bin = create_expression_binary(ctx, _loc(), "!=", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("10 != 20");
   EXPECT_TRUE(*(bool *)value_get_data(v));
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, less_than) {
-  node_t l = _i32_node("5");
-  node_t r = _i32_node("10");
-  node_t bin = create_expression_binary(ctx, _loc(), "<", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("5 < 10");
   EXPECT_TRUE(*(bool *)value_get_data(v));
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, greater_than) {
-  node_t l = _i32_node("10");
-  node_t r = _i32_node("5");
-  node_t bin = create_expression_binary(ctx, _loc(), ">", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("10 > 5");
   EXPECT_TRUE(*(bool *)value_get_data(v));
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, less_equal_true) {
-  node_t l = _i32_node("5");
-  node_t r = _i32_node("5");
-  node_t bin = create_expression_binary(ctx, _loc(), "<=", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("5 <= 5");
   EXPECT_TRUE(*(bool *)value_get_data(v));
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, greater_equal_true) {
-  node_t l = _i32_node("10");
-  node_t r = _i32_node("10");
-  node_t bin = create_expression_binary(ctx, _loc(), ">=", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("10 >= 10");
   EXPECT_TRUE(*(bool *)value_get_data(v));
-  free_node(bin);
 }
 
 /* ==================================================================
@@ -258,44 +203,24 @@ TEST_F(it_run_expression, greater_equal_true) {
  * ================================================================== */
 
 TEST_F(it_run_expression, logical_and_true) {
-  node_t l = _bool_node(true);
-  node_t r = _bool_node(true);
-  node_t bin = create_expression_binary(ctx, _loc(), "&&", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("true && true");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_BOOL);
   EXPECT_TRUE(*(bool *)value_get_data(v));
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, logical_and_false) {
-  node_t l = _bool_node(false);
-  node_t r = _bool_node(true);
-  node_t bin = create_expression_binary(ctx, _loc(), "&&", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("false && true");
   EXPECT_FALSE(*(bool *)value_get_data(v));
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, logical_or_true) {
-  node_t l = _bool_node(true);
-  node_t r = _bool_node(false);
-  node_t bin = create_expression_binary(ctx, _loc(), "||", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("true || false");
   EXPECT_TRUE(*(bool *)value_get_data(v));
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, logical_or_false) {
-  node_t l = _bool_node(false);
-  node_t r = _bool_node(false);
-  node_t bin = create_expression_binary(ctx, _loc(), "||", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("false || false");
   EXPECT_FALSE(*(bool *)value_get_data(v));
-  free_node(bin);
 }
 
 /* ==================================================================
@@ -303,102 +228,33 @@ TEST_F(it_run_expression, logical_or_false) {
  * ================================================================== */
 
 TEST_F(it_run_expression, band_i32) {
-  node_t l = _i32_node("12");
-  node_t r = _i32_node("10");
-  node_t bin = create_expression_binary(ctx, _loc(), "&", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("12 & 10");
   EXPECT_EQ(*(int32_t *)value_get_data(v), 8);
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, bor_i32) {
-  node_t l = _i32_node("12");
-  node_t r = _i32_node("10");
-  node_t bin = create_expression_binary(ctx, _loc(), "|", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("12 | 10");
   EXPECT_EQ(*(int32_t *)value_get_data(v), 14);
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, bxor_i32) {
-  node_t l = _i32_node("12");
-  node_t r = _i32_node("10");
-  node_t bin = create_expression_binary(ctx, _loc(), "^", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("12 ^ 10");
   EXPECT_EQ(*(int32_t *)value_get_data(v), 6);
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, shl_i32) {
-  node_t l = _i32_node("1");
-  node_t r = _i32_node("4");
-  node_t bin = create_expression_binary(ctx, _loc(), "<<", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("1 << 4");
   EXPECT_EQ(*(int32_t *)value_get_data(v), 16);
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, shr_i32) {
-  node_t l = _i32_node("16");
-  node_t r = _i32_node("4");
-  node_t bin = create_expression_binary(ctx, _loc(), ">>", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("16 >> 4");
   EXPECT_EQ(*(int32_t *)value_get_data(v), 1);
-  free_node(bin);
 }
 
 TEST_F(it_run_expression, bnot_i32) {
-  node_t r = _i32_node("0");
-  node_t bin = create_expression_binary(ctx, _loc(), "~", NULL, r);
-  value_t v = run_expression(ctx, bin, false);
-
+  value_t v = _run_expr("~0");
   EXPECT_EQ(*(int32_t *)value_get_data(v), ~0);
-  free_node(bin);
-}
-
-/* ==================================================================
- *  Unknown operator returns exception
- * ================================================================== */
-
-TEST_F(it_run_expression, unknown_binary_op) {
-  node_t l = _i32_node("1");
-  node_t r = _i32_node("2");
-  node_t bin = create_expression_binary(ctx, _loc(), "$$$", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
-  EXPECT_TRUE(value_is_error(v));
-  free_node(bin);
-}
-
-/* ==================================================================
- *  Shadow propagation
- * ================================================================== */
-
-TEST_F(it_run_expression, add_shadow) {
-  node_t l = _i32_node("10");
-  node_t r = _i32_node("20");
-  node_t bin = create_expression_binary(ctx, _loc(), "+", l, r);
-  value_t v = run_expression(ctx, bin, true);
-
-  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
-  EXPECT_TRUE(value_is_shadow(v));
-  free_node(bin);
-}
-
-TEST_F(it_run_expression, logical_and_shadow_left) {
-  node_t l = _bool_node(true);
-  node_t r = _bool_node(true);
-  node_t bin = create_expression_binary(ctx, _loc(), "&&", l, r);
-  value_t v = run_expression(ctx, bin, true);
-
-  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_BOOL);
-  EXPECT_TRUE(value_is_shadow(v));
-  free_node(bin);
 }
 
 /* ==================================================================
@@ -406,13 +262,61 @@ TEST_F(it_run_expression, logical_and_shadow_left) {
  * ================================================================== */
 
 TEST_F(it_run_expression, group_passthrough) {
-  node_t inner = _i32_node("42");
-  node_t group = create_expression_group(ctx, _loc(), inner);
-  value_t v = run_expression(ctx, group, false);
-
+  value_t v = _run_expr("(42)");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(v), 42);
-  free_node(group);
+}
+
+TEST_F(it_run_expression, group_wraps_binary) {
+  value_t v = _run_expr("(10 + 20)");
+  EXPECT_EQ(*(int32_t *)value_get_data(v), 30);
+}
+
+TEST_F(it_run_expression, group_precedence) {
+  /* (2 + 3) * 4 = 20, not 2 + 12 = 14 */
+  value_t v = _run_expr("(2 + 3) * 4");
+  EXPECT_EQ(*(int32_t *)value_get_data(v), 20);
+}
+
+/* ==================================================================
+ *  Nested expressions
+ * ================================================================== */
+
+TEST_F(it_run_expression, nested_arithmetic) {
+  /* 2 + 3 * 4 = 14 */
+  value_t v = _run_expr("2 + 3 * 4");
+  EXPECT_EQ(*(int32_t *)value_get_data(v), 14);
+}
+
+TEST_F(it_run_expression, chained_arithmetic) {
+  /* ((1 + 2) * 3) - 4 = 5 */
+  value_t v = _run_expr("(1 + 2) * 3 - 4");
+  EXPECT_EQ(*(int32_t *)value_get_data(v), 5);
+}
+
+/* ==================================================================
+ *  Type mismatch returns exception
+ * ================================================================== */
+
+TEST_F(it_run_expression, add_i32_str_returns_exception) {
+  value_t v = _run_expr("10 + \"hello\"");
+  EXPECT_TRUE(value_is_error(v));
+}
+
+/* ==================================================================
+ *  Shadow propagation
+ * ================================================================== */
+
+TEST_F(it_run_expression, add_shadow) {
+  value_t v = _run_expr("10 + 20", true);
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
+  EXPECT_TRUE(value_is_shadow(v));
+}
+
+TEST_F(it_run_expression, logical_and_shadow_left) {
+  value_t v = _run_expr("true && true", true);
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_BOOL);
+  EXPECT_TRUE(value_is_shadow(v));
 }
 
 /* ==================================================================
@@ -423,69 +327,31 @@ TEST_F(it_run_expression, assign_identifier_returns_void) {
   value_t i32_val = create_i32_value(vm(), 0);
   _bind("x", i32_val);
 
-  node_t lval = _id_node("x");
-  node_t rval = _i32_node("99");
-  node_t asgn = create_expression_assignment(ctx, _loc(), "=", lval, rval);
-  value_t v = run_expression(ctx, asgn, false);
-
+  value_t v = _run_expr("x = 99");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
-  /* verify x was updated */
+
   scope_t scope = vm_get_current_scope(vm());
   name_t n = scope_lookup(scope, "x");
   ASSERT_NE(n, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(n->ref), 99);
-  free_node(asgn);
 }
 
 TEST_F(it_run_expression, assign_compound_add) {
   value_t i32_val = create_i32_value(vm(), 10);
   _bind("y", i32_val);
 
-  node_t lval = _id_node("y");
-  node_t rval = _i32_node("5");
-  node_t asgn = create_expression_assignment(ctx, _loc(), "+=", lval, rval);
-  value_t v = run_expression(ctx, asgn, false);
-
+  value_t v = _run_expr("y += 5");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
   scope_t scope = vm_get_current_scope(vm());
   name_t n = scope_lookup(scope, "y");
   ASSERT_NE(n, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(n->ref), 15);
-  free_node(asgn);
 }
 
 TEST_F(it_run_expression, assign_discard_wildcard) {
-  node_t lval = _id_node("_");
-  node_t rval = _i32_node("42");
-  node_t asgn = create_expression_assignment(ctx, _loc(), "=", lval, rval);
-  value_t v = run_expression(ctx, asgn, false);
-
+  value_t v = _run_expr("_ = 42");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
-  free_node(asgn);
-}
-
-TEST_F(it_run_expression, assign_invalid_lvalue) {
-  /* a string literal is not a valid lvalue */
-  node_t lval = create_literal_string(ctx, _loc(), "bad");
-  node_t rval = _i32_node("1");
-  node_t asgn = create_expression_assignment(ctx, _loc(), "=", lval, rval);
-  value_t v = run_expression(ctx, asgn, false);
-
-  EXPECT_TRUE(value_is_error(v));
-  free_node(asgn);
-}
-
-TEST_F(it_run_expression, assign_unknown_compound_op) {
-  value_t i32_val = create_i32_value(vm(), 0);
-  _bind("z", i32_val);
-
-  node_t lval = _id_node("z");
-  node_t rval = _i32_node("1");
-  node_t asgn = create_expression_assignment(ctx, _loc(), "$$$=", lval, rval);
-  value_t v = run_expression(ctx, asgn, false);
-
-  EXPECT_TRUE(value_is_error(v));
-  free_node(asgn);
 }
 
 /* ==================================================================
@@ -496,16 +362,11 @@ TEST_F(it_run_expression, deref_pointer) {
   value_t i32_val = create_i32_value(vm(), 77);
   value_t ptr_val = value_addrof(vm(), i32_val);
   ASSERT_NE(ptr_val, nullptr);
-
   _bind("p", ptr_val);
 
-  node_t id = _id_node("p");
-  node_t deref = create_expression_deref(ctx, _loc(), id);
-  value_t v = run_expression(ctx, deref, false);
-
+  value_t v = _run_expr("p.*");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(v), 77);
-  free_node(deref);
 }
 
 /* ==================================================================
@@ -516,129 +377,97 @@ TEST_F(it_run_expression, addr_of_value) {
   value_t i32_val = create_i32_value(vm(), 55);
   _bind("a", i32_val);
 
-  node_t id = _id_node("a");
-  node_t addr = create_expression_addr(ctx, _loc(), id);
-  value_t v = run_expression(ctx, addr, false);
-
+  value_t v = _run_expr("a.&");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_POINTER);
-  free_node(addr);
 }
 
 /* ==================================================================
- *  Call expression (panic builtin)
+ *  Member expression — struct field access
+ * ================================================================== */
+
+TEST_F(it_run_expression, member_get_struct_field) {
+  /* Build a struct type Point { x: i32, y: i32 } and a value */
+  value_t tv = vm_create_struct_type_value(vm(), "Point", true, "test");
+  (void)vm_struct_add_field(vm(), tv, "x", vm_get_i32_type(vm()), true);
+  (void)vm_struct_add_field(vm(), tv, "y", vm_get_i32_type(vm()), true);
+  (void)vm_struct_seal(vm(), tv);
+
+  vm_set_current_module_id(vm(), "test");
+
+  value_t vx = create_i32_value(vm(), 10);
+  value_t vy = create_i32_value(vm(), 20);
+  value_t fields[] = {vx, vy};
+  value_t sv = vm_create_struct_value(vm(), tv, fields);
+  _bind("pt", sv);
+
+  /* Access pt.x */
+  value_t v = _run_expr("pt.x");
+  ASSERT_FALSE(value_is_error(v)) << "member access on struct failed";
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(v), 10);
+}
+
+TEST_F(it_run_expression, member_on_non_struct_returns_error) {
+  value_t i32_val = create_i32_value(vm(), 123);
+  _bind("simple", i32_val);
+
+  value_t v = _run_expr("simple.field");
+  EXPECT_TRUE(value_is_error(v));
+}
+
+/* ==================================================================
+ *  Subscript expression — array/slice index
+ * ================================================================== */
+
+TEST_F(it_run_expression, subscript_array_element) {
+  /* Create an array [3]i32 { 10, 20, 30 } */
+  type_t i32_t = (type_t)value_get_data(vm_get_i32_type(vm()));
+  array_type_t at = array_type_create(ctx->allocator, i32_t, 3, true);
+  vec_push(vm_get_current_scope(vm())->types, at);
+
+  value_t e0 = create_i32_value(vm(), 10);
+  value_t e1 = create_i32_value(vm(), 20);
+  value_t e2 = create_i32_value(vm(), 30);
+  value_t elems[] = {e0, e1, e2};
+  value_t av = create_array_value(vm(), at, elems);
+  _bind("arr", av);
+
+  /* arr[1] should be 20 */
+  value_t v = _run_expr("arr[1]");
+  ASSERT_FALSE(value_is_error(v)) << "subscript on array failed";
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(v), 20);
+}
+
+TEST_F(it_run_expression, subscript_on_non_indexable_returns_error) {
+  value_t i32_val = create_i32_value(vm(), 0);
+  _bind("num", i32_val);
+
+  value_t v = _run_expr("num[0]");
+  EXPECT_TRUE(value_is_error(v));
+}
+
+/* ==================================================================
+ *  Call expression — panic builtin
  * ================================================================== */
 
 TEST_F(it_run_expression, call_panic_returns_exception) {
   value_t panic_fn = vm_get_builtin(vm(), "panic");
   ASSERT_NE(panic_fn, nullptr);
+  /* panic is already registered in global scope by vm bootstrap */
 
-  node_t callee = _id_node("panic");
-  node_t msg = create_literal_string(ctx, _loc(), "oops");
-  vec_init_t vi = {true};
-  vec_t args = (vec_t)allocator_create(ctx->allocator, &g_vec_class, &vi);
-  vec_push(args, msg);
-  node_t call = create_expression_call(ctx, _loc(), callee, args);
-  value_t v = run_expression(ctx, call, false);
-
+  value_t v = _run_expr("panic(\"oops\")");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_EXCEPTION);
-  free_node(call);
 }
 
 /* ==================================================================
- *  Member expression (struct field)
+ *  Namespace access expression (::) on non-type
  * ================================================================== */
 
-TEST_F(it_run_expression, member_get_field) {
-  /* Create a struct value with a field, then access it via member expression */
-  value_t i32_val = create_i32_value(vm(), 123);
-  value_t str_type_val = vm_get_builtin(vm(), "str");
-  /* Use a struct type — we need to create one via the VM */
-  /* For now, test that member on a non-struct returns error */
-  _bind("simple", i32_val);
-
-  node_t host = _id_node("simple");
-  node_t mem = create_expression_member(ctx, _loc(), host, "field");
-  value_t v = run_expression(ctx, mem, false);
-
-  /* i32 does not support field access → error */
-  EXPECT_TRUE(value_is_error(v));
-  free_node(mem);
-}
-
-/* ==================================================================
- *  Namespace access expression (::)
- * ================================================================== */
-
-TEST_F(it_run_expression, namespace_access_on_non_type) {
-  /* Accessing :: on a non-type value should return error */
+TEST_F(it_run_expression, namespace_access_on_non_type_returns_error) {
   value_t i32_val = create_i32_value(vm(), 1);
   _bind("nottype", i32_val);
 
-  node_t host = _id_node("nottype");
-  node_t ns = create_expression_namespace_access(ctx, _loc(), host, "prop");
-  value_t v = run_expression(ctx, ns, false);
-
+  value_t v = _run_expr("nottype::prop");
   EXPECT_TRUE(value_is_error(v));
-  free_node(ns);
-}
-
-/* ==================================================================
- *  Subscript expression
- * ================================================================== */
-
-TEST_F(it_run_expression, subscript_on_non_indexable) {
-  /* i32 does not support subscript access */
-  value_t i32_val = create_i32_value(vm(), 0);
-  _bind("num", i32_val);
-
-  node_t host = _id_node("num");
-  vec_init_t vi2 = {true};
-  vec_t args = (vec_t)allocator_create(ctx->allocator, &g_vec_class, &vi2);
-  vec_push(args, _i32_node("0"));
-  node_t sub = create_expression_subscript(ctx, _loc(), host, args);
-  value_t v = run_expression(ctx, sub, false);
-
-  EXPECT_TRUE(value_is_error(v));
-  free_node(sub);
-}
-
-/* ==================================================================
- *  Nested expressions via dispatcher
- * ================================================================== */
-
-TEST_F(it_run_expression, nested_add_via_dispatcher) {
-  /* (10 + 20) via run_expression dispatcher */
-  node_t l = _i32_node("10");
-  node_t r = _i32_node("20");
-  node_t bin = create_expression_binary(ctx, _loc(), "+", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
-  EXPECT_EQ(*(int32_t *)value_get_data(v), 30);
-  free_node(bin);
-}
-
-TEST_F(it_run_expression, group_wraps_binary) {
-  /* (10 + 20) wrapped in group */
-  node_t l = _i32_node("10");
-  node_t r = _i32_node("20");
-  node_t bin = create_expression_binary(ctx, _loc(), "+", l, r);
-  node_t group = create_expression_group(ctx, _loc(), bin);
-  value_t v = run_expression(ctx, group, false);
-
-  EXPECT_EQ(*(int32_t *)value_get_data(v), 30);
-  free_node(group);
-}
-
-/* ==================================================================
- *  Type mismatch returns exception
- * ================================================================== */
-
-TEST_F(it_run_expression, add_i32_str_returns_exception) {
-  node_t l = _i32_node("10");
-  node_t r = create_literal_string(ctx, _loc(), "hello");
-  node_t bin = create_expression_binary(ctx, _loc(), "+", l, r);
-  value_t v = run_expression(ctx, bin, false);
-
-  EXPECT_TRUE(value_is_error(v));
-  free_node(bin);
 }

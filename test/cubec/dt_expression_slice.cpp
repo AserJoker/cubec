@@ -1,9 +1,9 @@
-﻿#include "core/string.h"
+#include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "cubec/expression_call.h"
-#include "cubec/expression_generic_instantiation.h"
+#include "cubec/expression_subscript.h"
 #include "cubec/expression_member.h"
 #include "cubec/expression_slice.h"
 #include "cubec/literal_identifier.h"
@@ -263,8 +263,8 @@ TEST_F(dt_expression_slice, not_a_slice_no_bracket) {
 }
 
 TEST_F(dt_expression_slice, empty_brackets_is_generic) {
-  /* arr[] without ':' is valid generic instantiation with empty args,
-   * NOT a slice error. Slice requires ':' to distinguish from generics. */
+  /* arr[] without ':' is valid subscript with empty args,
+   * NOT a slice error. Slice requires ':' to distinguish from subscript. */
   const char *source = "arr[]";
   vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
@@ -272,11 +272,11 @@ TEST_F(dt_expression_slice, empty_brackets_is_generic) {
   size_t position = 0;
   node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  /* Should be generic_instantiation with empty args, not slice */
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  /* Should be subscript with empty args, not slice */
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
-  cubec_expression_generic_instantiation_t gi =
-      (cubec_expression_generic_instantiation_t)node;
+  cubec_expression_subscript_t gi =
+      (cubec_expression_subscript_t)node;
   EXPECT_EQ(vec_get_size(gi->arguments), 0);
 
   allocator_free(allocator, &node);
@@ -291,8 +291,8 @@ TEST_F(dt_expression_slice, missing_colon_error) {
   size_t position = 0;
   node_t node = read_expression(ctx, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
-  /* Should be generic_instantiation, not slice */
-  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  /* Should be subscript, not slice */
+  EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);

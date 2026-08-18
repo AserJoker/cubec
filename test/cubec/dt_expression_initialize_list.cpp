@@ -1,4 +1,4 @@
-﻿#include "core/string.h"
+#include "core/string.h"
 #include "core/token_writer.h"
 #include "common/test_common.h"
 #include "cubec/expression.h"
@@ -479,8 +479,8 @@ TEST_F(dt_expression_initialize_list, typed_generic_instantiation) {
   cubec_expression_initialize_list_t list =
       (cubec_expression_initialize_list_t)node;
   ASSERT_NE(list->type, nullptr);
-  /* Type should be a generic instantiation expression */
-  EXPECT_EQ(list->type->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  /* Type should be a subscript expression (unified [...] syntax) */
+  EXPECT_EQ(list->type->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
   EXPECT_EQ(list->is_field, false);
   EXPECT_EQ(vec_get_size(list->items), 2);
 

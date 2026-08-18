@@ -37,8 +37,11 @@ typedef struct _cubec_expression_subscript_init_t cubec_expression_subscript_ini
  * has been parsed. Checks for '[' at the current position.
  *
  * A subscript is distinguished from a slice (host[start:length]) by the
- * absence of a ':' token, and from generic instantiation (callee[Type])
- * by the host not being a plain identifier.
+ * absence of a ':' token. The bracket syntax `[...]` is shared between
+ * subscript access and generic instantiation (callee[Type]); the two are
+ * unified here into a single AST node and disambiguated later during
+ * semantic analysis. Arguments may include spread (`...expr`) and wildcard
+ * (`?`) forms used by generic instantiation / constraint types.
  *
  * @param host The node already parsed as the expression being subscripted.
  *             Ownership is transferred to the new subscript node.

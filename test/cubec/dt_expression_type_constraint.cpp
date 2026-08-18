@@ -1,8 +1,7 @@
-﻿#include "cubec/expression.h"
+#include "cubec/expression.h"
 #include "cubec/expression_binary.h"
 #include "core/token_writer.h"
 #include "cubec/expression_ternary.h"
-#include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_namespace_access.h"
 #include "cubec/declaration_qualifier.h"
 #include "cubec/declaration_pointer.h"
@@ -120,7 +119,7 @@ TEST_F(dt_expression_type_constraint, extends_generic_right) {
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
   EXPECT_STREQ(string_get(bin->opt), "extends");
   EXPECT_EQ(bin->left->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
-  EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(bin->right->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -218,7 +217,7 @@ TEST_F(dt_expression_type_constraint, eq_ternary) {
   EXPECT_EQ(bin->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   EXPECT_EQ(ternary->consequent->kind,
-            CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+            CUBEC_NODE_EXPRESSION_SUBSCRIPT);
   EXPECT_EQ(ternary->alternate->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);

@@ -1,4 +1,4 @@
-﻿#include "cubec/expression.h"
+#include "cubec/expression.h"
 #include "cubec/expression_assignment.h"
 #include "cubec/expression_binary.h"
 #include "cubec/literal_identifier.h"
@@ -278,7 +278,7 @@ TEST_F(dt_expression_assignment, compound_logical_or_assignment) {
                                            "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_assignment(node, "||=", CUBEC_NODE_LITERAL_IDENTIFIER,
-                    CUBEC_NODE_LITERAL_IDENTIFIER);
+                    CUBEC_NODE_LITERAL_BOOL);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -567,7 +567,7 @@ TEST_F(dt_expression_assignment, assignment_with_generic_instantiation_lvalue) {
 
   cubec_expression_assignment_t assign = (cubec_expression_assignment_t)node;
   EXPECT_STREQ(string_get(assign->opt), "=");
-  EXPECT_EQ(assign->left->kind, CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION);
+  EXPECT_EQ(assign->left->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
   EXPECT_EQ(assign->right->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
   allocator_free(allocator, &node);

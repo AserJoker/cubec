@@ -18,7 +18,6 @@
 #include "cubec/declaration_union.h"
 #include "cubec/expression_deref.h"
 #include "cubec/declaration_function.h"
-#include "cubec/expression_generic_instantiation.h"
 #include "cubec/expression_group.h"
 #include "cubec/expression_initialize_list.h"
 #include "cubec/expression_member.h"
@@ -35,6 +34,7 @@
 #include "cubec/literal_numeric.h"
 #include "cubec/literal_string.h"
 #include "cubec/literal_nil.h"
+#include "cubec/literal_bool.h"
 #include "cubec/literal_undefined.h"
 #include "cubec/node.h"
 #include "cubec/node_error.h"
@@ -262,6 +262,15 @@ node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
     return result;
   }
 
+  // Try bool literal (true/false)
+  result = read_literal_bool(ctx, tokens, &current, filename);
+  if (node_is_error(result))
+    return result;
+  if (result) {
+    *position = current;
+    return result;
+  }
+
   // Try undefined literal
   result = read_literal_undefined(ctx, tokens, &current, filename);
   if (node_is_error(result))
@@ -332,8 +341,8 @@ node_t read_value(context_t ctx, vec_t tokens, size_t *position,
       }
 
       /* Try postfix: slice expression <host>[start:length] - MUST be before
-       * generic instantiation because arr[0:10] would otherwise be incorrectly
-       * parsed as generic with argument "0" followed by ":" error */
+       * subscript because arr[0:10] would otherwise be incorrectly parsed
+       * as subscript with argument "0" followed by ":" error */
       node_t slice_node =
           read_expression_slice(ctx, tokens, &current, filename, node);
       if (node_is_error(slice_node)) {
@@ -346,21 +355,9 @@ node_t read_value(context_t ctx, vec_t tokens, size_t *position,
         continue;
       }
 
-      /* Try postfix: generic instantiation <callee>[<args>] */
-      node_t generic_instantiation_node = read_expression_generic_instantiation(
-          ctx, tokens, &current, filename, node);
-      if (node_is_error(generic_instantiation_node)) {
-        allocator_free(allocator, &node);
-        return generic_instantiation_node;
-      }
-      if (generic_instantiation_node) {
-        node = generic_instantiation_node;
-        *position = current;
-        continue;
-      }
-
-      /* Try postfix: subscript <host>[<index>] — after generic instantiation
-       * (identifier[Type] is generic, expr[index] is subscript) */
+      /* Try postfix: subscript <host>[<args>] — unified bracket syntax for
+       * subscript access and generic instantiation (callee[Type]); the two
+       * are disambiguated later during semantic analysis. */
       node_t subscript_node =
           read_expression_subscript(ctx, tokens, &current, filename, node);
       if (node_is_error(subscript_node)) {
@@ -595,15 +592,17 @@ node_t read_type_expression_primary(context_t ctx, vec_t tokens,
       continue;
     }
 
-    /* Try postfix: generic instantiation <callee>[<args>] */
-    node_t generic_node = read_expression_generic_instantiation(
+    /* Try postfix: subscript <host>[<args>] — unified bracket syntax for
+     * subscript access and generic instantiation (callee[Type]); disambiguated
+     * later during semantic analysis. */
+    node_t subscript_node = read_expression_subscript(
         ctx, tokens, &current, filename, node);
-    if (node_is_error(generic_node)) {
+    if (node_is_error(subscript_node)) {
       allocator_free(ctx->allocator, &node);
-      return generic_node;
+      return subscript_node;
     }
-    if (generic_node) {
-      node = generic_node;
+    if (subscript_node) {
+      node = subscript_node;
       *position = current;
       continue;
     }
@@ -714,9 +713,6 @@ void emit_expression(emit_context_t ctx, node_t expr) {
     break;
   case CUBEC_NODE_DECLARATION_FUNCTION:
     emit_declaration_function(ctx, expr);
-    break;
-  case CUBEC_NODE_EXPRESSION_GENERIC_INSTANTIATION:
-    emit_expression_generic_instantiation(ctx, expr);
     break;
   case CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS:
     emit_expression_namespace_access(ctx, expr);
