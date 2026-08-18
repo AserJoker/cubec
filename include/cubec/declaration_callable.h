@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,10 +57,10 @@ typedef struct _cubec_declaration_callable_init_t
  * @return A new cubec_declaration_callable_t node, or NULL if current token
  *         is not 'func' keyword.
  */
-node_t read_declaration_callable(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_callable(vm_t vm, vec_t tokens, size_t *position,
                                 const char *filename);
 
-node_t create_declaration_callable(context_t ctx, location_t loc,
+node_t create_declaration_callable(vm_t vm, location_t loc,
                                   vec_t parameters, node_t return_type,
                                   bool is_c_variadic);
 

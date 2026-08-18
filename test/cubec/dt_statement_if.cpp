@@ -21,11 +21,11 @@ protected:
 
 TEST_F(dt_statement_if, simple_if) {
   const char *source = "if(x > 0) { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_if(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_if(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_IF);
 
@@ -41,11 +41,11 @@ TEST_F(dt_statement_if, simple_if) {
 
 TEST_F(dt_statement_if, if_else) {
   const char *source = "if(x > 0) { } else { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_if(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_if(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_if_t if_node = (cubec_statement_if_t)node;
@@ -59,11 +59,11 @@ TEST_F(dt_statement_if, if_else) {
 
 TEST_F(dt_statement_if, if_else_if_else) {
   const char *source = "if(x > 0) { } else if(x < 0) { } else { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_if(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_if(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_if_t if_node = (cubec_statement_if_t)node;
@@ -86,11 +86,11 @@ TEST_F(dt_statement_if, if_else_if_else) {
 
 TEST_F(dt_statement_if, clone) {
   const char *source = "if(x > 0) { } else { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_if(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_if(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)alloc_clone(allocator, node);
@@ -109,11 +109,11 @@ TEST_F(dt_statement_if, clone) {
 
 TEST_F(dt_statement_if, move) {
   const char *source = "if(x) { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_if(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_if(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)alloc_move(allocator, node);
@@ -135,11 +135,11 @@ TEST_F(dt_statement_if, move) {
 
 TEST_F(dt_statement_if, consume_all_tokens) {
   const char *source = "if(x > 0) { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_if(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_if(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   skip_whitespace(tokens, &position);
@@ -157,11 +157,11 @@ TEST_F(dt_statement_if, consume_all_tokens) {
 
 TEST_F(dt_statement_if, via_read_statement) {
   const char *source = "if(x) { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_IF);
 
@@ -171,11 +171,11 @@ TEST_F(dt_statement_if, via_read_statement) {
 
 TEST_F(dt_statement_if, non_if_returns_null) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_if(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_if(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -183,10 +183,10 @@ TEST_F(dt_statement_if, non_if_returns_null) {
 
 TEST_F(dt_statement_if, write_if_break) {
   const char *source = "if (x) break;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

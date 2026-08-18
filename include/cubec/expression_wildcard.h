@@ -37,10 +37,10 @@ typedef struct _cubec_expression_wildcard_init_t cubec_expression_wildcard_init_
  * @brief Parse a wildcard type expression `?`.
  * @return Wildcard node, or NULL if current token is not `?`.
  */
-node_t read_expression_wildcard(context_t ctx, vec_t tokens,
+node_t read_expression_wildcard(vm_t vm, vec_t tokens,
                                 size_t *position, const char *filename);
 
-node_t create_expression_wildcard(context_t ctx, location_t loc, bool is_tuple);
+node_t create_expression_wildcard(vm_t vm, location_t loc, bool is_tuple);
 
 
 void emit_expression_wildcard(emit_context_t ctx, node_t node);

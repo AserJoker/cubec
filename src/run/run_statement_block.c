@@ -8,19 +8,18 @@
 #include "cubec/statement_block.h"
 #include "core/vec.h"
 
-value_t run_statement_block(context_t ctx, node_t node, bool shadow) {
-  vm_t vm = ctx->vm;
+value_t run_statement_block(vm_t vm, node_t node, bool shadow) {
   cubec_statement_block_t block = (cubec_statement_block_t)node;
 
   /* push a new block scope */
   scope_t scope_before = vm_get_current_scope(vm);
-  scope_t inner = scope_create(ctx->allocator, SCOPE_BLOCK, scope_before, NULL);
+  scope_t inner = scope_create(vm_get_allocator(vm), SCOPE_BLOCK, scope_before, NULL);
   vm_push_scope(vm, inner);
 
   size_t count = vec_get_size(block->statements);
   for (size_t i = 0; i < count; i++) {
     node_t stmt = (node_t)vec_get(block->statements, i);
-    value_t v = run_statement(ctx, stmt, shadow);
+    value_t v = run_statement(vm, stmt, shadow);
 
     /* interrupt (break/continue/return) — propagate immediately. Do NOT
      * pop scope: the interrupt value references data from the originating

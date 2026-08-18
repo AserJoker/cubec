@@ -43,36 +43,34 @@ using ::testing::Test;
 
 class it_run_statement : public CubecTest {
 protected:
-  vm_t vm() { return ctx->vm; }
-
   void free_node(node_t &node) {
-    if (node) allocator_free(ctx->allocator, &node);
+    if (node) allocator_free(vm_get_allocator(vm), &node);
   }
 
   void free_tokens(vec_t &tokens) {
-    if (tokens) allocator_free(ctx->allocator, &tokens);
+    if (tokens) allocator_free(vm_get_allocator(vm), &tokens);
   }
 
   /* Register a value in current scope under the given name */
   void _bind(const char *name, value_t val) {
-    scope_t scope = vm_get_current_scope(vm());
+    scope_t scope = vm_get_current_scope(vm);
     name_t n = name_create(scope->allocator, val);
     strmap_insert(scope->names, name, n);
   }
 
   /* Parse source code into a program node via lexer→parser */
   node_t _parse(const char *source) {
-    vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+    vec_t tokens = resolve_token_list(vm, "test.cubec", source);
     if (!tokens) return NULL;
     size_t position = 0;
-    node_t node = read_program_node(ctx, tokens, &position, "test.cubec");
+    node_t node = read_program_node(vm, tokens, &position, "test.cubec");
     free_tokens(tokens);
     return node;
   }
 
   /* Run a program node */
   value_t _run(node_t node, bool shadow = false) {
-    return run_program(ctx, node, shadow);
+    return run_program(vm, node, shadow);
   }
 
   /* Parse + run a source string in one step */
@@ -84,11 +82,11 @@ protected:
   }
 
   size_t _error_count() {
-    return diagnostic_list_get_error_count(ctx->diagnostics);
+    return diagnostic_list_get_error_count(vm_get_diagnostics(vm));
   }
 
   void _clear_diagnostics() {
-    diagnostic_list_clear(ctx->diagnostics);
+    diagnostic_list_clear(vm_get_diagnostics(vm));
   }
 };
 
@@ -97,7 +95,7 @@ protected:
  * ================================================================== */
 
 TEST_F(it_run_statement, null_node_returns_void) {
-  value_t v = run_statement(ctx, NULL, false);
+  value_t v = run_statement(vm, NULL, false);
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 }
 
@@ -120,14 +118,14 @@ TEST_F(it_run_statement, empty_statement_returns_void) {
  * ================================================================== */
 
 TEST_F(it_run_statement, expression_statement_assignment_void_ok) {
-  value_t i32_val = create_i32_value(vm(), 0);
+  value_t i32_val = create_i32_value(vm, 0);
   _bind("x", i32_val);
 
   value_t v = _run_source("x = 42;");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 
   /* verify x was updated */
-  scope_t scope = vm_get_current_scope(vm());
+  scope_t scope = vm_get_current_scope(vm);
   name_t n = scope_lookup(scope, "x");
   ASSERT_NE(n, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(n->ref), 42);
@@ -153,7 +151,7 @@ TEST_F(it_run_statement, expression_statement_non_void_shadow_writes_diagnostic)
   size_t before = _error_count();
   value_t v = _run_source("42;", true);
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
-  EXPECT_GT(diagnostic_list_get_error_count(ctx->diagnostics), before);
+  EXPECT_GT(diagnostic_list_get_error_count(vm_get_diagnostics(vm)), before);
   _clear_diagnostics();
 }
 
@@ -166,7 +164,7 @@ TEST_F(it_run_statement, expression_statement_shadow_error_absorbed) {
   size_t before = _error_count();
   value_t v = _run_source("1 + \"bad\";", true);
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
-  EXPECT_GT(diagnostic_list_get_error_count(ctx->diagnostics), before);
+  EXPECT_GT(diagnostic_list_get_error_count(vm_get_diagnostics(vm)), before);
   _clear_diagnostics();
 }
 
@@ -185,15 +183,15 @@ TEST_F(it_run_statement, block_empty_returns_void) {
 }
 
 TEST_F(it_run_statement, block_with_void_statements) {
-  value_t x = create_i32_value(vm(), 0);
-  value_t y = create_i32_value(vm(), 0);
+  value_t x = create_i32_value(vm, 0);
+  value_t y = create_i32_value(vm, 0);
   _bind("x", x);
   _bind("y", y);
 
   value_t v = _run_source("{ x = 1; y = 2; }");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 
-  scope_t scope = vm_get_current_scope(vm());
+  scope_t scope = vm_get_current_scope(vm);
   name_t nx = scope_lookup(scope, "x");
   ASSERT_NE(nx, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(nx->ref), 1);
@@ -211,7 +209,7 @@ TEST_F(it_run_statement, block_error_propagated) {
 TEST_F(it_run_statement, block_shadow_error_continues) {
   size_t before = _error_count();
 
-  value_t z = create_i32_value(vm(), 0);
+  value_t z = create_i32_value(vm, 0);
   _bind("z", z);
 
   /* first statement errors (non-void), second is valid; shadow mode
@@ -219,21 +217,21 @@ TEST_F(it_run_statement, block_shadow_error_continues) {
    * Note: shadow mode does not perform actual writes, so z stays 0 */
   value_t v = _run_source("{ 42; z = 99; }", true);
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
-  EXPECT_GT(diagnostic_list_get_error_count(ctx->diagnostics), before);
+  EXPECT_GT(diagnostic_list_get_error_count(vm_get_diagnostics(vm)), before);
 
   _clear_diagnostics();
 }
 
 TEST_F(it_run_statement, block_creates_scope) {
   /* variables defined inside block should not leak to outer scope */
-  value_t x = create_i32_value(vm(), 1);
+  value_t x = create_i32_value(vm, 1);
   _bind("x", x);
 
   value_t v = _run_source("{ x = 2; }");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 
   /* x should be updated (assignment in inner scope affects same name) */
-  scope_t scope = vm_get_current_scope(vm());
+  scope_t scope = vm_get_current_scope(vm);
   name_t nx = scope_lookup(scope, "x");
   ASSERT_NE(nx, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(nx->ref), 2);
@@ -244,13 +242,13 @@ TEST_F(it_run_statement, block_creates_scope) {
  * ================================================================== */
 
 TEST_F(it_run_statement, program_multiple_statements) {
-  value_t x = create_i32_value(vm(), 0);
+  value_t x = create_i32_value(vm, 0);
   _bind("x", x);
 
   value_t v = _run_source("x = 1; x = 2; x = 3;");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 
-  scope_t scope = vm_get_current_scope(vm());
+  scope_t scope = vm_get_current_scope(vm);
   name_t nx = scope_lookup(scope, "x");
   ASSERT_NE(nx, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(nx->ref), 3);
@@ -261,13 +259,13 @@ TEST_F(it_run_statement, program_multiple_statements) {
  * ================================================================== */
 
 TEST_F(it_run_statement, nested_blocks) {
-  value_t x = create_i32_value(vm(), 0);
+  value_t x = create_i32_value(vm, 0);
   _bind("x", x);
 
   value_t v = _run_source("{ x = 1; { x = 2; }; }");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 
-  scope_t scope = vm_get_current_scope(vm());
+  scope_t scope = vm_get_current_scope(vm);
   name_t nx = scope_lookup(scope, "x");
   ASSERT_NE(nx, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(nx->ref), 2);
@@ -278,13 +276,13 @@ TEST_F(it_run_statement, nested_blocks) {
  * ================================================================== */
 
 TEST_F(it_run_statement, compound_assignment_in_statement) {
-  value_t y = create_i32_value(vm(), 10);
+  value_t y = create_i32_value(vm, 10);
   _bind("y", y);
 
   value_t v = _run_source("y += 5;");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 
-  scope_t scope = vm_get_current_scope(vm());
+  scope_t scope = vm_get_current_scope(vm);
   name_t ny = scope_lookup(scope, "y");
   ASSERT_NE(ny, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(ny->ref), 15);
@@ -296,7 +294,7 @@ TEST_F(it_run_statement, compound_assignment_in_statement) {
 
 TEST_F(it_run_statement, assign_i32_literal_to_i8_rejected) {
   /* x: i8 = 42; — i32→i8 narrowing, safe_cast rejects */
-  value_t x = create_i8_value(vm(), 0);
+  value_t x = create_i8_value(vm, 0);
   _bind("x", x);
 
   value_t v = _run_source("x = 42;");
@@ -305,9 +303,9 @@ TEST_F(it_run_statement, assign_i32_literal_to_i8_rejected) {
 
 TEST_F(it_run_statement, assign_i64_to_i32_rejected) {
   /* y: i32 = big; — i64→i32 narrowing, safe_cast rejects */
-  value_t y = create_i32_value(vm(), 0);
+  value_t y = create_i32_value(vm, 0);
   _bind("y", y);
-  value_t big = create_i64_value(vm(), 0x1FFFFFFFF);
+  value_t big = create_i64_value(vm, 0x1FFFFFFFF);
   _bind("big", big);
 
   value_t v = _run_source("y = big;");
@@ -316,7 +314,7 @@ TEST_F(it_run_statement, assign_i64_to_i32_rejected) {
 
 TEST_F(it_run_statement, assign_incompatible_type_statement_error) {
   /* x: i32 = true; — safe_cast bool→i32 fails, error propagates */
-  value_t x = create_i32_value(vm(), 0);
+  value_t x = create_i32_value(vm, 0);
   _bind("x", x);
 
   value_t v = _run_source("x = true;");
@@ -325,13 +323,13 @@ TEST_F(it_run_statement, assign_incompatible_type_statement_error) {
 
 TEST_F(it_run_statement, compound_assign_same_type) {
   /* y: i8 += 3i8; — same type compound assignment, no widening */
-  value_t y = create_i8_value(vm(), 5);
+  value_t y = create_i8_value(vm, 5);
   _bind("y", y);
 
   value_t v = _run_source("y += 3i8;");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 
-  scope_t scope = vm_get_current_scope(vm());
+  scope_t scope = vm_get_current_scope(vm);
   name_t ny = scope_lookup(scope, "y");
   ASSERT_NE(ny, nullptr);
   EXPECT_EQ(*(int8_t *)value_get_data(ny->ref), 8);
@@ -340,7 +338,7 @@ TEST_F(it_run_statement, compound_assign_same_type) {
 TEST_F(it_run_statement, compound_assign_widening_then_narrowing_rejected) {
   /* y: i8 += 10; — i8(5) + i32(10) promotes to i32(15), then
    * safe_cast i32→i8 is narrowing → rejected */
-  value_t y = create_i8_value(vm(), 5);
+  value_t y = create_i8_value(vm, 5);
   _bind("y", y);
 
   value_t v = _run_source("y += 10;");

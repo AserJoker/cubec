@@ -53,9 +53,9 @@ class_t g_cubec_statement_block_class = {
     .move = (class_move_fn_t)_cubec_statement_block_move,
 };
 
-node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_block(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
 
   /* Expect '{' */
@@ -83,14 +83,14 @@ node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
 
     /* Check for EOF (unterminated block) */
     if (next && token_get_kind(next) == CUBEC_TOKEN_EOF) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+      diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
                            *token_get_location(lbrace),
                            "unterminated block (missing '}')");
       break;
     }
 
     /* Try to parse a statement */
-    node_t stmt = read_statement(ctx, tokens, &current, filename);
+    node_t stmt = read_statement(vm, tokens, &current, filename);
 
     /* Error node (CUBEC_NODE_ERROR or CUBEC_NODE_STATEMENT_ERROR) — push and
      * continue */
@@ -108,10 +108,10 @@ node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
       if (bad) {
         location_t loc = *token_get_location(bad);
         loc.filename = filename;
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, loc,
+        diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, loc,
                              "unexpected token");
         current++;
-        stmt = create_statement_error(ctx, loc);
+        stmt = create_statement_error(vm, loc);
         vec_push(statements, stmt);
       } else {
         break; /* No more tokens */
@@ -148,8 +148,8 @@ node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
   return &node->super;
 }
 
-node_t create_statement_block(context_t ctx, location_t loc, vec_t statements) {
-  allocator_t alloc = ctx->allocator;
+node_t create_statement_block(vm_t vm, location_t loc, vec_t statements) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_statement_block_init_t init = {.statements = statements};
   return (node_t)allocator_create(alloc, &g_cubec_statement_block_class, &init);
 }

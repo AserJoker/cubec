@@ -95,9 +95,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *          type <name> [<generic_params>] ;
  * -------------------------------------------------------------------------- */
 
-static node_t _read_associated_type(context_t ctx, vec_t tokens,
+static node_t _read_associated_type(vm_t vm, vec_t tokens,
                                     size_t *position, const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t name = NULL;
   vec_t params = NULL;
@@ -114,7 +114,7 @@ static node_t _read_associated_type(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* Parse type name (required) */
-  name = read_literal_identifier(ctx, tokens, &current, filename);
+  name = read_literal_identifier(vm, tokens, &current, filename);
   if (node_is_error(name))
     goto onerror;
   if (!name) {
@@ -124,7 +124,7 @@ static node_t _read_associated_type(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* Parse optional generic parameters */
-  params = read_generic_params(ctx, tokens, &current, filename);
+  params = read_generic_params(vm, tokens, &current, filename);
   if (params) {
     skip_whitespace(tokens, &current);
   }
@@ -166,7 +166,7 @@ onerror:
   allocator_free(allocator, &params);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
@@ -174,18 +174,18 @@ onerror:
  *            [generic_params] { members }
  * -------------------------------------------------------------------------- */
 
-node_t read_declaration_interface_body(context_t ctx, vec_t tokens,
+node_t read_declaration_interface_body(vm_t vm, vec_t tokens,
                                            size_t *position,
                                            const char *filename,
                                            location_t start_location) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   vec_t generic_params = NULL;
   vec_t members = NULL;
   cubec_declaration_interface_t node = NULL;
 
   /* 1. Parse optional generic parameters */
-  generic_params = read_generic_params(ctx, tokens, &current, filename);
+  generic_params = read_generic_params(vm, tokens, &current, filename);
   if (generic_params) {
     skip_whitespace(tokens, &current);
   }
@@ -203,13 +203,13 @@ node_t read_declaration_interface_body(context_t ctx, vec_t tokens,
     node_t member = NULL;
 
     /* Try associated type: type <name> [<params>] ; */
-    member = _read_associated_type(ctx, tokens, &current, filename);
+    member = _read_associated_type(vm, tokens, &current, filename);
     if (node_is_error(member))
       goto onerror;
 
     /* Try method signature: func <name> [<params>] (<args>) [: <type>] ; */
     if (!member) {
-      member = read_interface_method(ctx, tokens, &current, filename);
+      member = read_interface_method(vm, tokens, &current, filename);
       if (node_is_error(member))
         goto onerror;
     }
@@ -257,14 +257,14 @@ onerror:
   allocator_free(allocator, &members);
   allocator_free(allocator, &generic_params);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Parser: read_declaration_interface — entry point for type expressions
  * -------------------------------------------------------------------------- */
 
-node_t read_declaration_interface(context_t ctx, vec_t tokens,
+node_t read_declaration_interface(vm_t vm, vec_t tokens,
                                       size_t *position, const char *filename) {
   size_t current = *position;
 
@@ -278,7 +278,7 @@ node_t read_declaration_interface(context_t ctx, vec_t tokens,
   current++;
   skip_whitespace(tokens, &current);
 
-  node_t result = read_declaration_interface_body(ctx, tokens, &current,
+  node_t result = read_declaration_interface_body(vm, tokens, &current,
                                                       filename, start_location);
   if (node_is_error(result))
     return result;
@@ -287,18 +287,18 @@ node_t read_declaration_interface(context_t ctx, vec_t tokens,
     return result;
   }
 
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid interface type expression");
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_declaration_interface
  * -------------------------------------------------------------------------- */
 
-node_t create_declaration_interface(context_t ctx, location_t loc,
+node_t create_declaration_interface(vm_t vm, location_t loc,
                                         vec_t generic_params, vec_t members) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_declaration_interface_init_t init = {
       .location = loc,
       .parent = NULL,

@@ -66,9 +66,9 @@ class_t g_cubec_declaration_qualifier_class = {
  *  Each node represents a single qualifier; chains create nested nodes.
  * -------------------------------------------------------------------------- */
 
-node_t read_declaration_qualifier(context_t ctx, vec_t tokens,
+node_t read_declaration_qualifier(vm_t vm, vec_t tokens,
                                       size_t *position, const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   /* Track qualifier order: first seen → outermost, last seen → innermost. */
   typedef enum { _Q_NONE, _Q_CONST, _Q_VOLATILE } _qualifier_kind_t;
@@ -110,7 +110,7 @@ node_t read_declaration_qualifier(context_t ctx, vec_t tokens,
   start_loc.filename = filename;
 
   /* Parse the underlying type using read_expression_base (greedy). */
-  node_t type = read_expression_base(ctx, tokens, &current, filename);
+  node_t type = read_expression_base(vm, tokens, &current, filename);
   if (node_is_error(type))
     return type;
   if (!type) {
@@ -169,19 +169,19 @@ node_t read_declaration_qualifier(context_t ctx, vec_t tokens,
   return result;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_loc,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_loc,
                        "invalid type qualifier expression");
-  return create_error(ctx, start_loc);
+  return create_error(vm, start_loc);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_declaration_qualifier
  * -------------------------------------------------------------------------- */
 
-node_t create_declaration_qualifier(context_t ctx, location_t loc,
+node_t create_declaration_qualifier(vm_t vm, location_t loc,
                                         node_t base, bool is_const,
                                         bool is_volatile) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_declaration_qualifier_init_t init = {.location = loc,
                                                  .parent = NULL,
                                                  .type = base,

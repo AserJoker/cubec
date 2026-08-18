@@ -77,9 +77,9 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
  *  Parser: read_statement_test — test "name" { }
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_test(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_test(vm_t vm, vec_t tokens, size_t *position,
                            const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   string_t name = NULL;
   node_t body = NULL;
@@ -107,7 +107,7 @@ node_t read_statement_test(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 3. Parse body (block) */
-  body = read_statement_block(ctx, tokens, &current, filename);
+  body = read_statement_block(vm, tokens, &current, filename);
   if (node_is_error(body)) {
     allocator_free(allocator, &name);
     return body;
@@ -133,12 +133,12 @@ onerror:
   allocator_free(allocator, &body);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_test(context_t ctx, location_t loc, const char *name,
+node_t create_statement_test(vm_t vm, location_t loc, const char *name,
                              node_t body) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   string_t name_str =
       allocator_create(alloc, &g_string_class, &(string_init_t){.str = name});
   cubec_statement_test_init_t init = {

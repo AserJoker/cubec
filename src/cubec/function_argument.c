@@ -77,9 +77,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_function_argument
  * -------------------------------------------------------------------------- */
 
-node_t read_function_argument(context_t ctx, vec_t tokens, size_t *position,
+node_t read_function_argument(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t identifier = NULL;
   node_t type = NULL;
@@ -99,7 +99,7 @@ node_t read_function_argument(context_t ctx, vec_t tokens, size_t *position,
   }
 
   /* 3. Parse identifier */
-  identifier = read_literal_identifier(ctx, tokens, &current, filename);
+  identifier = read_literal_identifier(vm, tokens, &current, filename);
   if (!identifier) {
     return NULL;
   }
@@ -110,7 +110,7 @@ node_t read_function_argument(context_t ctx, vec_t tokens, size_t *position,
   if (_is_symbol(tokens, current, ":")) {
     current++;
     skip_whitespace(tokens, &current);
-    type = read_type_expression_primary(ctx, tokens, &current, filename);
+    type = read_type_expression_primary(vm, tokens, &current, filename);
     if (!type) {
       goto fail;
     }
@@ -152,10 +152,10 @@ fail:
  *  Factory: create_function_argument
  * -------------------------------------------------------------------------- */
 
-node_t create_function_argument(context_t ctx, location_t loc, const char *name,
+node_t create_function_argument(vm_t vm, location_t loc, const char *name,
                                 node_t type) {
-  allocator_t alloc = ctx->allocator;
-  node_t name_node = create_literal_identifier(ctx, loc, name);
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t name_node = create_literal_identifier(vm, loc, name);
   cubec_function_argument_init_t init = {
       .location = loc,
       .identifier = name_node,

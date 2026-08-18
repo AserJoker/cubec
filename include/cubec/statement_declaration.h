@@ -5,7 +5,7 @@
 #include "core/node.h"
 #include "core/class.h"
 #include "core/vec.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -90,10 +90,10 @@ typedef struct _cubec_statement_declaration_init_t
  * @return A new cubec_statement_declaration_t node, or NULL if current token
  *         is not a declaration prefix (export/extern/builtin/comptime/var).
  */
-node_t read_statement_declaration(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_declaration(vm_t vm, vec_t tokens, size_t *position,
                                   const char *filename);
 
-node_t create_statement_declaration(context_t ctx, location_t loc,
+node_t create_statement_declaration(vm_t vm, location_t loc,
                                     const char *name, node_t type, node_t expr,
                                     bool is_export, bool is_extern,
                                     bool is_builtin, bool is_comptime,

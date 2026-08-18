@@ -84,9 +84,9 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   return location_is(token_get_location(token), keyword);
 }
 
-node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
+node_t read_statement_declaration_type(vm_t vm, vec_t tokens,
                                        size_t *position, const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_statement_declaration_type_t node = NULL;
   node_t name = NULL;
@@ -101,7 +101,7 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
   {
     while (true) {
       skip_whitespace(tokens, &current);
-      node_t dec = read_decorator(ctx, tokens, &current, filename);
+      node_t dec = read_decorator(vm, tokens, &current, filename);
       if (node_is_error(dec))
         return dec;
       if (!dec)
@@ -157,7 +157,7 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* 3. Parse type alias name (required) */
-  name = read_literal_identifier(ctx, tokens, &current, filename);
+  name = read_literal_identifier(vm, tokens, &current, filename);
   if (node_is_error(name)) {
     allocator_free(allocator, &decorators);
     return name;
@@ -168,7 +168,7 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   /* 4. Parse optional generic parameters */
-  params = read_generic_params(ctx, tokens, &current, filename);
+  params = read_generic_params(vm, tokens, &current, filename);
 
   if (params) {
     skip_whitespace(tokens, &current);
@@ -186,7 +186,7 @@ node_t read_statement_declaration_type(context_t ctx, vec_t tokens,
     skip_whitespace(tokens, &current);
 
     /* Parse type expression (no comma/assignment — terminated by ';') */
-    type_value = read_expression_base(ctx, tokens, &current, filename);
+    type_value = read_expression_base(vm, tokens, &current, filename);
     if (node_is_error(type_value)) {
       allocator_free(allocator, &decorators);
       allocator_free(allocator, &params);
@@ -234,15 +234,15 @@ onerror:
   allocator_free(allocator, &params);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_declaration_type(context_t ctx, location_t loc,
+node_t create_statement_declaration_type(vm_t vm, location_t loc,
                                          const char *name, node_t type_value,
                                          bool is_export, bool is_builtin,
                                          vec_t decorators) {
-  allocator_t alloc = ctx->allocator;
-  node_t name_node = create_literal_identifier(ctx, loc, name);
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t name_node = create_literal_identifier(vm, loc, name);
   cubec_statement_declaration_type_init_t init = {
       .location = loc,
       .parent = NULL,

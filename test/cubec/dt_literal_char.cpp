@@ -16,11 +16,11 @@ protected:
 
 TEST_F(dt_literal_char, parse_non_char_returns_null) {
   const char *source = "123";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_char(ctx, tokens, &position, "test.cubec");
+  node_t node = read_literal_char(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -28,11 +28,11 @@ TEST_F(dt_literal_char, parse_non_char_returns_null) {
 
 TEST_F(dt_literal_char, parse_simple_char) {
   const char *source = "'a'";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_char(ctx, tokens, &position, "test.cubec");
+  node_t node = read_literal_char(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_CHAR);
 
@@ -45,11 +45,11 @@ TEST_F(dt_literal_char, parse_simple_char) {
 
 TEST_F(dt_literal_char, parse_escape_char) {
   const char *source = "'\\n'";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_char(ctx, tokens, &position, "test.cubec");
+  node_t node = read_literal_char(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_CHAR);
 
@@ -62,11 +62,11 @@ TEST_F(dt_literal_char, parse_escape_char) {
 
 TEST_F(dt_literal_char, parse_digit_char) {
   const char *source = "'5'";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_char(ctx, tokens, &position, "test.cubec");
+  node_t node = read_literal_char(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_CHAR);
 
@@ -79,11 +79,11 @@ TEST_F(dt_literal_char, parse_digit_char) {
 
 TEST_F(dt_literal_char, parse_string_returns_null) {
   const char *source = "\"hello\"";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_literal_char(ctx, tokens, &position, "test.cubec");
+  node_t node = read_literal_char(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -91,10 +91,10 @@ TEST_F(dt_literal_char, parse_string_returns_null) {
 
 TEST_F(dt_literal_char, write_simple_char) {
   const char *source = "'a'";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_literal_char(ctx, tokens, &position, "test.cubec");
+  node_t node = read_literal_char(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

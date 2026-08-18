@@ -90,9 +90,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_if — if(condition) { } [else { } | else if(...)]
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_if(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_if(vm_t vm, vec_t tokens, size_t *position,
                          const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t condition = NULL;
   node_t then_branch = NULL;
@@ -117,7 +117,7 @@ node_t read_statement_if(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 3. Parse condition expression */
-  condition = read_expression(ctx, tokens, &current, filename);
+  condition = read_expression(vm, tokens, &current, filename);
   if (node_is_error(condition))
     return condition;
   if (!condition)
@@ -132,7 +132,7 @@ node_t read_statement_if(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 5. Parse then branch (any statement) */
-  then_branch = read_statement(ctx, tokens, &current, filename);
+  then_branch = read_statement(vm, tokens, &current, filename);
   if (node_is_error(then_branch)) {
     allocator_free(allocator, &condition);
     return then_branch;
@@ -148,7 +148,7 @@ node_t read_statement_if(context_t ctx, vec_t tokens, size_t *position,
 
     if (_is_keyword(tokens, current, "if")) {
       /* else if — parse as nested if statement */
-      else_branch = read_statement_if(ctx, tokens, &current, filename);
+      else_branch = read_statement_if(vm, tokens, &current, filename);
       if (node_is_error(else_branch)) {
         allocator_free(allocator, &condition);
         allocator_free(allocator, &then_branch);
@@ -158,7 +158,7 @@ node_t read_statement_if(context_t ctx, vec_t tokens, size_t *position,
         goto onerror;
     } else {
       /* else <statement> */
-      else_branch = read_statement(ctx, tokens, &current, filename);
+      else_branch = read_statement(vm, tokens, &current, filename);
       if (node_is_error(else_branch)) {
         allocator_free(allocator, &condition);
         allocator_free(allocator, &then_branch);
@@ -193,12 +193,12 @@ onerror:
   allocator_free(allocator, &then_branch);
   allocator_free(allocator, &condition);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_if(context_t ctx, location_t loc, node_t cond,
+node_t create_statement_if(vm_t vm, location_t loc, node_t cond,
                            node_t then_branch, node_t else_branch) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_statement_if_init_t init = {.location = loc,
                                     .parent = NULL,
                                     .condition = cond,

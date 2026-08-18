@@ -14,11 +14,11 @@ protected:
 
 TEST_F(dt_generic_param, parse_simple) {
   const char *source = "[T]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  vec_t params = read_generic_params(ctx, tokens, &position, "test.cubec");
+  vec_t params = read_generic_params(vm, tokens, &position, "test.cubec");
   ASSERT_NE(params, nullptr);
   EXPECT_EQ(vec_get_size(params), 1);
 
@@ -39,11 +39,11 @@ TEST_F(dt_generic_param, parse_simple) {
 
 TEST_F(dt_generic_param, parse_with_constraint) {
   const char *source = "[T extends Hashable]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  vec_t params = read_generic_params(ctx, tokens, &position, "test.cubec");
+  vec_t params = read_generic_params(vm, tokens, &position, "test.cubec");
   ASSERT_NE(params, nullptr);
   EXPECT_EQ(vec_get_size(params), 1);
 
@@ -61,11 +61,11 @@ TEST_F(dt_generic_param, parse_with_constraint) {
 
 TEST_F(dt_generic_param, parse_multiple_params) {
   const char *source = "[A, B]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  vec_t params = read_generic_params(ctx, tokens, &position, "test.cubec");
+  vec_t params = read_generic_params(vm, tokens, &position, "test.cubec");
   ASSERT_NE(params, nullptr);
   EXPECT_EQ(vec_get_size(params), 2);
 
@@ -75,11 +75,11 @@ TEST_F(dt_generic_param, parse_multiple_params) {
 
 TEST_F(dt_generic_param, non_bracket_returns_null) {
   const char *source = "T";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  vec_t params = read_generic_params(ctx, tokens, &position, "test.cubec");
+  vec_t params = read_generic_params(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(params, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -87,10 +87,10 @@ TEST_F(dt_generic_param, non_bracket_returns_null) {
 
 TEST_F(dt_generic_param, write_simple) {
   const char *source = "[T]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  vec_t params = read_generic_params(ctx, tokens, &position, "test.cubec");
+  vec_t params = read_generic_params(vm, tokens, &position, "test.cubec");
   ASSERT_NE(params, nullptr);
   node_t param = (node_t)vec_get(params, 0);
   ASSERT_NE(param, nullptr);
@@ -109,10 +109,10 @@ TEST_F(dt_generic_param, write_simple) {
 
 TEST_F(dt_generic_param, write_with_constraint) {
   const char *source = "[T extends Hashable]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  vec_t params = read_generic_params(ctx, tokens, &position, "test.cubec");
+  vec_t params = read_generic_params(vm, tokens, &position, "test.cubec");
   ASSERT_NE(params, nullptr);
   node_t param = (node_t)vec_get(params, 0);
   ASSERT_NE(param, nullptr);
@@ -131,10 +131,10 @@ TEST_F(dt_generic_param, write_with_constraint) {
 
 TEST_F(dt_generic_param, write_value_param) {
   const char *source = "[N: u64]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  vec_t params = read_generic_params(ctx, tokens, &position, "test.cubec");
+  vec_t params = read_generic_params(vm, tokens, &position, "test.cubec");
   ASSERT_NE(params, nullptr);
   node_t param = (node_t)vec_get(params, 0);
   ASSERT_NE(param, nullptr);

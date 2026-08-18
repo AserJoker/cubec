@@ -16,11 +16,11 @@ protected:
 
 TEST_F(dt_decorator, simple_identifier) {
   const char *source = "[[inline]]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
+  node_t node = read_decorator(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECORATOR);
 
@@ -33,11 +33,11 @@ TEST_F(dt_decorator, simple_identifier) {
 
 TEST_F(dt_decorator, call_expression) {
   const char *source = "[[deprecated(\"use new_api instead\")]]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
+  node_t node = read_decorator(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECORATOR);
 
@@ -51,11 +51,11 @@ TEST_F(dt_decorator, call_expression) {
 
 TEST_F(dt_decorator, export_decorator) {
   const char *source = "[[export]]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
+  node_t node = read_decorator(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   allocator_free(allocator, &node);
@@ -64,11 +64,11 @@ TEST_F(dt_decorator, export_decorator) {
 
 TEST_F(dt_decorator, clone) {
   const char *source = "[[inline]]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
+  node_t node = read_decorator(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)alloc_clone(allocator, node);
@@ -82,11 +82,11 @@ TEST_F(dt_decorator, clone) {
 
 TEST_F(dt_decorator, move) {
   const char *source = "[[inline]]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
+  node_t node = read_decorator(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)alloc_move(allocator, node);
@@ -100,11 +100,11 @@ TEST_F(dt_decorator, move) {
 
 TEST_F(dt_decorator, non_decorator_returns_null) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
+  node_t node = read_decorator(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -112,11 +112,11 @@ TEST_F(dt_decorator, non_decorator_returns_null) {
 
 TEST_F(dt_decorator, single_bracket_not_decorator) {
   const char *source = "[1, 2]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
+  node_t node = read_decorator(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -124,10 +124,10 @@ TEST_F(dt_decorator, single_bracket_not_decorator) {
 
 TEST_F(dt_decorator, write_simple_identifier) {
   const char *source = "[[test]]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
+  node_t node = read_decorator(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);
@@ -144,10 +144,10 @@ TEST_F(dt_decorator, write_simple_identifier) {
 
 TEST_F(dt_decorator, write_call_decorator) {
   const char *source = R"([[deprecated("use new_api instead")]])";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_decorator(ctx, tokens, &position, "test.cubec");
+  node_t node = read_decorator(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

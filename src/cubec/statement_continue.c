@@ -76,9 +76,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_continue — continue;
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_continue(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_continue(vm_t vm, vec_t tokens, size_t *position,
                                const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
 
   /* 1. Expect 'continue' keyword */
@@ -115,13 +115,13 @@ node_t read_statement_continue(context_t ctx, vec_t tokens, size_t *position,
   return &node->super;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "expected ';' after 'continue'");
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_continue(context_t ctx, location_t loc) {
-  allocator_t alloc = ctx->allocator;
+node_t create_statement_continue(vm_t vm, location_t loc) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_statement_continue_init_t init = {.location = loc, .parent = NULL};
   return (node_t)allocator_create(alloc, &g_cubec_statement_continue_class,
                                   &init);

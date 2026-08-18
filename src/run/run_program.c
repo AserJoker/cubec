@@ -5,14 +5,13 @@
 #include "cubec/program.h"
 #include "core/vec.h"
 
-value_t run_program(context_t ctx, node_t node, bool shadow) {
-  vm_t vm = ctx->vm;
+value_t run_program(vm_t vm, node_t node, bool shadow) {
   cubec_program_node_t program = (cubec_program_node_t)node;
 
   size_t count = vec_get_size(program->statements);
   for (size_t i = 0; i < count; i++) {
     node_t stmt = (node_t)vec_get(program->statements, i);
-    value_t v = run_statement(ctx, stmt, shadow);
+    value_t v = run_statement(vm, stmt, shadow);
 
     /* interrupt (break/continue/return) — propagate immediately. Do NOT
      * pop scope: the interrupt value references data from the originating

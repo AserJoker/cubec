@@ -6,8 +6,8 @@
 extern "C" {
 #endif
 #include "core/token.h"
-struct context;
-typedef struct context *context_t;
+struct _vm_t;
+typedef struct _vm_t *vm_t;
 #include <stddef.h>
 #include <stdint.h>
 enum _cubec_token_kind_t {
@@ -24,9 +24,9 @@ enum _cubec_token_kind_t {
   CUBEC_TOKEN_ERROR
 };
 typedef enum _cubec_token_kind_t cubec_token_kind_t;
-token_t read_token(context_t ctx, position_t *position,
+token_t read_token(vm_t vm, position_t *position,
                    const char *filename);
-vec_t resolve_token_list(context_t ctx, const char *filename,
+vec_t resolve_token_list(vm_t vm, const char *filename,
                          const char *source);
 #ifdef __cplusplus
 }

@@ -20,11 +20,11 @@ protected:
 
 TEST_F(dt_expression_initialize_field, basic_initialize_field) {
   const char *source = ".name = 42";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_INITIALIZE_LIST_FIELD);
 
@@ -41,11 +41,11 @@ TEST_F(dt_expression_initialize_field, basic_initialize_field) {
 
 TEST_F(dt_expression_initialize_field, string_value) {
   const char *source = ".field = \"hello\"";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_INITIALIZE_LIST_FIELD);
 
@@ -60,11 +60,11 @@ TEST_F(dt_expression_initialize_field, string_value) {
 
 TEST_F(dt_expression_initialize_field, identifier_value) {
   const char *source = ".x = y";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_INITIALIZE_LIST_FIELD);
 
@@ -79,11 +79,11 @@ TEST_F(dt_expression_initialize_field, identifier_value) {
 
 TEST_F(dt_expression_initialize_field, with_spaces) {
   const char *source = ".field   =   123";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_INITIALIZE_LIST_FIELD);
 
@@ -96,11 +96,11 @@ TEST_F(dt_expression_initialize_field, with_spaces) {
 
 TEST_F(dt_expression_initialize_field, binary_expression_value) {
   const char *source = ".result = a + b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_INITIALIZE_LIST_FIELD);
 
@@ -115,11 +115,11 @@ TEST_F(dt_expression_initialize_field, binary_expression_value) {
 
 TEST_F(dt_expression_initialize_field, no_dot_returns_null) {
   const char *source = "field = 42";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -127,11 +127,11 @@ TEST_F(dt_expression_initialize_field, no_dot_returns_null) {
 
 TEST_F(dt_expression_initialize_field, no_equals_returns_null) {
   const char *source = ".field 42";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -139,11 +139,11 @@ TEST_F(dt_expression_initialize_field, no_equals_returns_null) {
 
 TEST_F(dt_expression_initialize_field, missing_identifier_after_dot) {
   const char *source = ". = 42";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -152,11 +152,11 @@ TEST_F(dt_expression_initialize_field, missing_identifier_after_dot) {
 
 TEST_F(dt_expression_initialize_field, numeric_after_dot_is_not_identifier) {
   const char *source = ".123 = 42";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -165,11 +165,11 @@ TEST_F(dt_expression_initialize_field, numeric_after_dot_is_not_identifier) {
 
 TEST_F(dt_expression_initialize_field, clone) {
   const char *source = ".name = 42";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t original = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t original = read_initialize_field(vm, tokens, &position, "test.cubec");
   ASSERT_NE(original, nullptr);
 
   node_t cloned = (node_t)alloc_clone(allocator, original);
@@ -187,11 +187,11 @@ TEST_F(dt_expression_initialize_field, clone) {
 
 TEST_F(dt_expression_initialize_field, move) {
   const char *source = ".name = 42";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t original = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t original = read_initialize_field(vm, tokens, &position, "test.cubec");
   ASSERT_NE(original, nullptr);
 
   node_t moved = (node_t)alloc_move(allocator, original);
@@ -207,11 +207,11 @@ TEST_F(dt_expression_initialize_field, move) {
 
 TEST_F(dt_expression_initialize_field, nested_expression_in_value) {
   const char *source = ".field = (a + b) * c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_INITIALIZE_LIST_FIELD);
 
@@ -226,11 +226,11 @@ TEST_F(dt_expression_initialize_field, nested_expression_in_value) {
 
 TEST_F(dt_expression_initialize_field, consume_all_tokens) {
   const char *source = ".x = 1";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   /* Verify the position moved past the = and value tokens */
@@ -242,10 +242,10 @@ TEST_F(dt_expression_initialize_field, consume_all_tokens) {
 
 TEST_F(dt_expression_initialize_field, write_field) {
   const char *source = ".Foo{.x = 1}";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   emit_context_t ectx = emit_context_create(allocator, tokens);
   emit_expression(ectx, node);
@@ -260,10 +260,10 @@ TEST_F(dt_expression_initialize_field, write_field) {
 
 TEST_F(dt_expression_initialize_field, write_single_field) {
   const char *source = ".x = 1";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_initialize_field(ctx, tokens, &position, "test.cubec");
+  node_t node = read_initialize_field(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

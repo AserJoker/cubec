@@ -16,11 +16,11 @@ protected:
 
 TEST_F(dt_statement_empty, parse_empty) {
   const char *source = ";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_empty(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_empty(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_EMPTY);
 
@@ -30,11 +30,11 @@ TEST_F(dt_statement_empty, parse_empty) {
 
 TEST_F(dt_statement_empty, via_read_statement) {
   const char *source = ";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_EMPTY);
 
@@ -44,11 +44,11 @@ TEST_F(dt_statement_empty, via_read_statement) {
 
 TEST_F(dt_statement_empty, non_empty_returns_null) {
   const char *source = "break;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_empty(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_empty(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -56,10 +56,10 @@ TEST_F(dt_statement_empty, non_empty_returns_null) {
 
 TEST_F(dt_statement_empty, write_empty) {
   const char *source = ";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

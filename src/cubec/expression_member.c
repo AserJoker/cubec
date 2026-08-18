@@ -65,9 +65,9 @@ class_t g_cubec_expression_member_class = {
     .move = (class_move_fn_t)_cubec_expression_member_move,
 };
 
-node_t read_expression_member(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_member(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename, node_t host) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_expression_member_t node = NULL;
   cubec_literal_identifier_t field = NULL;
@@ -81,7 +81,7 @@ node_t read_expression_member(context_t ctx, vec_t tokens, size_t *position,
 
   /* Expect identifier after '.' */
   skip_whitespace(tokens, &current);
-  node_t field_node = read_literal_identifier(ctx, tokens, &current, filename);
+  node_t field_node = read_literal_identifier(vm, tokens, &current, filename);
   if (!field_node) {
     return NULL;
   }
@@ -109,14 +109,14 @@ onerror:
  *  Factory: create_expression_member
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_member(context_t ctx, location_t loc, node_t host,
+node_t create_expression_member(vm_t vm, location_t loc, node_t host,
                                 const char *field) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_expression_member_init_t init = {
       .location = loc,
       .parent = NULL,
       .host = host,
-      .field = (cubec_literal_identifier_t)create_literal_identifier(ctx, loc,
+      .field = (cubec_literal_identifier_t)create_literal_identifier(vm, loc,
                                                                      field),
   };
   return (node_t)allocator_create(alloc, &g_cubec_expression_member_class,

@@ -6,7 +6,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,10 +39,10 @@ typedef struct _cubec_expression_assert_init_t cubec_expression_assert_init_t;
  * @return A new cubec_expression_assert_t node, or NULL if the current
  *         token is not '.' followed by '!'.
  */
-node_t read_expression_assert(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_assert(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename, node_t host);
 
-node_t create_expression_assert(context_t ctx, location_t loc, node_t host);
+node_t create_expression_assert(vm_t vm, location_t loc, node_t host);
 
 
 void emit_expression_assert(emit_context_t ctx, node_t node);

@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,10 +54,10 @@ typedef struct _cubec_enum_item_init_t cubec_enum_item_init_t;
  * @return A new cubec_enum_item_t node, or NULL if current tokens
  *         don't match the item pattern.
  */
-node_t read_enum_item(context_t ctx, vec_t tokens, size_t *position,
+node_t read_enum_item(vm_t vm, vec_t tokens, size_t *position,
                       const char *filename);
 
-node_t create_enum_item(context_t ctx, location_t loc, const char *name,
+node_t create_enum_item(vm_t vm, location_t loc, const char *name,
                         node_t type, node_t value);
 
 

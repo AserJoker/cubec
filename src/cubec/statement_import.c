@@ -67,9 +67,9 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   return location_is(token_get_location(token), keyword);
 }
 
-node_t read_statement_import(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_import(vm_t vm, vec_t tokens, size_t *position,
                              const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_statement_import_t node = NULL;
   node_t module_name = NULL;
@@ -88,7 +88,7 @@ node_t read_statement_import(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* Parse module name (required identifier) */
-  module_name = read_literal_identifier(ctx, tokens, &current, filename);
+  module_name = read_literal_identifier(vm, tokens, &current, filename);
   if (!module_name) {
     goto onerror;
   }
@@ -104,7 +104,7 @@ node_t read_statement_import(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* Parse module path (required string literal) */
-  path = read_literal_string(ctx, tokens, &current, filename);
+  path = read_literal_string(vm, tokens, &current, filename);
   if (!path) {
     goto onerror;
   }
@@ -137,20 +137,20 @@ node_t read_statement_import(context_t ctx, vec_t tokens, size_t *position,
   return &node->super;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid import statement");
   allocator_free(allocator, &path);
   allocator_free(allocator, &module_name);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_import(context_t ctx, location_t loc,
+node_t create_statement_import(vm_t vm, location_t loc,
                                const char *module_name, const char *path) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   node_t mod_node =
-      (module_name) ? create_literal_identifier(ctx, loc, module_name) : NULL;
-  node_t path_node = (path) ? create_literal_identifier(ctx, loc, path) : NULL;
+      (module_name) ? create_literal_identifier(vm, loc, module_name) : NULL;
+  node_t path_node = (path) ? create_literal_identifier(vm, loc, path) : NULL;
   cubec_statement_import_init_t init = {.location = loc,
                                         .parent = NULL,
                                         .module_name = mod_node,

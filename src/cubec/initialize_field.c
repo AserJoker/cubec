@@ -66,9 +66,9 @@ class_t g_cubec_initialize_field_class = {
     .move = (class_move_fn_t)_cubec_initialize_field_move,
 };
 
-node_t read_initialize_field(context_t ctx, vec_t tokens, size_t *position,
+node_t read_initialize_field(vm_t vm, vec_t tokens, size_t *position,
                              const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_initialize_field_t node = NULL;
   cubec_literal_identifier_t field = NULL;
@@ -86,7 +86,7 @@ node_t read_initialize_field(context_t ctx, vec_t tokens, size_t *position,
 
   /* Expect identifier after '.' */
   skip_whitespace(tokens, &current);
-  node_t field_node = read_literal_identifier(ctx, tokens, &current, filename);
+  node_t field_node = read_literal_identifier(vm, tokens, &current, filename);
   if (!field_node) {
     goto onerror;
   }
@@ -103,7 +103,7 @@ node_t read_initialize_field(context_t ctx, vec_t tokens, size_t *position,
 
   /* Parse the value expression */
   skip_whitespace(tokens, &current);
-  value = read_expression_base(ctx, tokens, &current, filename);
+  value = read_expression_base(vm, tokens, &current, filename);
   if (!value) {
     goto onerror;
   }
@@ -123,21 +123,21 @@ onerror:
   allocator_free(allocator, &value);
   allocator_free(allocator, &field);
   allocator_free(allocator, &node);
-  return create_error(ctx, dot_location);
+  return create_error(vm, dot_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_initialize_field
  * -------------------------------------------------------------------------- */
 
-node_t create_initialize_field(context_t ctx, location_t loc, const char *name,
+node_t create_initialize_field(vm_t vm, location_t loc, const char *name,
                                node_t value) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_initialize_field_init_t init = {
       .location = loc,
       .parent = NULL,
       .field =
-          (cubec_literal_identifier_t)create_literal_identifier(ctx, loc, name),
+          (cubec_literal_identifier_t)create_literal_identifier(vm, loc, name),
       .value = value,
   };
   return (node_t)allocator_create(alloc, &g_cubec_initialize_field_class, &init);

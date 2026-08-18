@@ -3,7 +3,7 @@
 #include "core/emit_context.h"
 #include "core/node.h"
 #include "core/vec.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,7 +19,7 @@ extern "C" {
  * @return A new statement node, or NULL if the current token does not start a
  *         valid statement.
  */
-node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement(vm_t vm, vec_t tokens, size_t *position,
                       const char *filename);
 
 void emit_statement(emit_context_t ctx, node_t stmt);

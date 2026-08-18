@@ -17,11 +17,11 @@ protected:
 
 TEST_F(dt_function_argument, parse_name_only) {
   const char *source = "a";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_function_argument(ctx, tokens, &position, "test.cubec");
+  node_t node = read_function_argument(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_FUNCTION_ARGUMENT);
 
@@ -37,11 +37,11 @@ TEST_F(dt_function_argument, parse_name_only) {
 
 TEST_F(dt_function_argument, parse_name_with_type) {
   const char *source = "a: i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_function_argument(ctx, tokens, &position, "test.cubec");
+  node_t node = read_function_argument(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_FUNCTION_ARGUMENT);
 
@@ -57,11 +57,11 @@ TEST_F(dt_function_argument, parse_name_with_type) {
 
 TEST_F(dt_function_argument, non_identifier_returns_null) {
   const char *source = "123";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_function_argument(ctx, tokens, &position, "test.cubec");
+  node_t node = read_function_argument(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -69,10 +69,10 @@ TEST_F(dt_function_argument, non_identifier_returns_null) {
 
 TEST_F(dt_function_argument, write_name_only) {
   const char *source = "a";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_function_argument(ctx, tokens, &position, "test.cubec");
+  node_t node = read_function_argument(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);
@@ -89,10 +89,10 @@ TEST_F(dt_function_argument, write_name_only) {
 
 TEST_F(dt_function_argument, write_name_with_type) {
   const char *source = "a: i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_function_argument(ctx, tokens, &position, "test.cubec");
+  node_t node = read_function_argument(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

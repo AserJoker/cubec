@@ -101,9 +101,9 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
  *  Parser: read_statement_union — delegates to read_declaration_union
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_union(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_union(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   bool is_export = false;
   node_t name = NULL;
@@ -117,7 +117,7 @@ node_t read_statement_union(context_t ctx, vec_t tokens, size_t *position,
   {
     while (true) {
       skip_whitespace(tokens, &current);
-      node_t dec = read_decorator(ctx, tokens, &current, filename);
+      node_t dec = read_decorator(vm, tokens, &current, filename);
       if (node_is_error(dec))
         return dec;
       if (!dec)
@@ -153,7 +153,7 @@ node_t read_statement_union(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 3. Parse union name (required for statement form) */
-  name = read_literal_identifier(ctx, tokens, &current, filename);
+  name = read_literal_identifier(vm, tokens, &current, filename);
   if (node_is_error(name)) {
     allocator_free(allocator, &decorators);
     return name;
@@ -165,7 +165,7 @@ node_t read_statement_union(context_t ctx, vec_t tokens, size_t *position,
 
   /* 4. Delegate to read_declaration_union_body for [generic_params] {
    * members } */
-  expr_node = read_declaration_union_body(ctx, tokens, &current, filename,
+  expr_node = read_declaration_union_body(vm, tokens, &current, filename,
                                               start_location, &implements);
   if (node_is_error(expr_node)) {
     allocator_free(allocator, &decorators);
@@ -212,14 +212,14 @@ onerror:
   allocator_free(allocator, &name);
   allocator_free(allocator, &expr_node);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_union(context_t ctx, location_t loc, const char *name,
+node_t create_statement_union(vm_t vm, location_t loc, const char *name,
                               vec_t members, bool is_export, vec_t implements,
                               vec_t decorators) {
-  allocator_t alloc = ctx->allocator;
-  node_t name_node = create_literal_identifier(ctx, loc, name);
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t name_node = create_literal_identifier(vm, loc, name);
   cubec_statement_union_init_t init = {
       .location = loc,
       .parent = NULL,

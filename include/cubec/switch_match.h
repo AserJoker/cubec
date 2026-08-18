@@ -5,7 +5,7 @@
 #include "core/node.h"
 #include "core/class.h"
 #include "core/vec.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,10 +48,10 @@ typedef struct _cubec_switch_match_init_t cubec_switch_match_init_t;
 /**
  * @brief Try to parse a switch match arm (case or else).
  */
-node_t read_switch_match(context_t ctx, vec_t tokens, size_t *position,
+node_t read_switch_match(vm_t vm, vec_t tokens, size_t *position,
                          const char *filename);
 
-node_t create_switch_match(context_t ctx, location_t loc, bool is_else,
+node_t create_switch_match(vm_t vm, location_t loc, bool is_else,
                            vec_t values, node_t body);
 
 

@@ -51,9 +51,9 @@ class_t g_cubec_expression_wildcard_class = {
  *  Parser
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_wildcard(context_t ctx, vec_t tokens,
+node_t read_expression_wildcard(vm_t vm, vec_t tokens,
                                 size_t *position, const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
 
   skip_whitespace(tokens, &current);
@@ -81,9 +81,9 @@ node_t read_expression_wildcard(context_t ctx, vec_t tokens,
  *  Factory: create_expression_wildcard
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_wildcard(context_t ctx, location_t loc,
+node_t create_expression_wildcard(vm_t vm, location_t loc,
                                    bool is_tuple) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_expression_wildcard_init_t init = {
       .location = loc,
       .parent = NULL,

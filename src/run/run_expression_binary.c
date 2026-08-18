@@ -9,10 +9,9 @@
 
 /* ---- Unary ---- */
 
-static value_t _run_unary(context_t ctx, const char *op, node_t right,
+static value_t _run_unary(vm_t vm, const char *op, node_t right,
                           bool shadow) {
-  vm_t vm = ctx->vm;
-  value_t rv = run_expression(ctx, right, shadow);
+  value_t rv = run_expression(vm, right, shadow);
   if (value_is_error(rv)) return rv;
 
   if (strcmp(op, "!") == 0) return value_lnot(vm, rv);
@@ -25,13 +24,12 @@ static value_t _run_unary(context_t ctx, const char *op, node_t right,
 
 /* ---- Binary ---- */
 
-static value_t _run_binary(context_t ctx, const char *op, node_t left,
+static value_t _run_binary(vm_t vm, const char *op, node_t left,
                            node_t right, bool shadow) {
-  vm_t vm = ctx->vm;
 
   /* short-circuit: && and || */
   if (strcmp(op, "&&") == 0) {
-    value_t lv = run_expression(ctx, left, shadow);
+    value_t lv = run_expression(vm, left, shadow);
     if (value_is_error(lv)) return lv;
     if (value_is_shadow(lv))
       return vm_create_value_shadow(vm,
@@ -39,13 +37,13 @@ static value_t _run_binary(context_t ctx, const char *op, node_t left,
                                     NULL, true);
     bool lb = *(bool *)value_get_data(lv);
     if (!lb) return create_bool_value(vm, false);
-    value_t rv = run_expression(ctx, right, shadow);
+    value_t rv = run_expression(vm, right, shadow);
     if (value_is_error(rv)) return rv;
     /* coerce to bool via double lnot */
     return value_lnot(vm, value_lnot(vm, rv));
   }
   if (strcmp(op, "||") == 0) {
-    value_t lv = run_expression(ctx, left, shadow);
+    value_t lv = run_expression(vm, left, shadow);
     if (value_is_error(lv)) return lv;
     if (value_is_shadow(lv))
       return vm_create_value_shadow(vm,
@@ -53,15 +51,15 @@ static value_t _run_binary(context_t ctx, const char *op, node_t left,
                                     NULL, true);
     bool lb = *(bool *)value_get_data(lv);
     if (lb) return create_bool_value(vm, true);
-    value_t rv = run_expression(ctx, right, shadow);
+    value_t rv = run_expression(vm, right, shadow);
     if (value_is_error(rv)) return rv;
     return value_lnot(vm, value_lnot(vm, rv));
   }
 
   /* eager: evaluate both */
-  value_t lv = run_expression(ctx, left, shadow);
+  value_t lv = run_expression(vm, left, shadow);
   if (value_is_error(lv)) return lv;
-  value_t rv = run_expression(ctx, right, shadow);
+  value_t rv = run_expression(vm, right, shadow);
   if (value_is_error(rv)) return rv;
 
   /* arithmetic */
@@ -101,13 +99,13 @@ static value_t _run_binary(context_t ctx, const char *op, node_t left,
   return create_exception_value(vm, "run: unknown binary operator '%s'", op);
 }
 
-value_t run_expression_binary(context_t ctx, node_t node, bool shadow) {
+value_t run_expression_binary(vm_t vm, node_t node, bool shadow) {
   cubec_expression_binary_t bin = (cubec_expression_binary_t)node;
   const char *op = string_get(bin->opt);
 
   /* unary: left is NULL */
   if (!bin->left)
-    return _run_unary(ctx, op, bin->right, shadow);
+    return _run_unary(vm, op, bin->right, shadow);
 
-  return _run_binary(ctx, op, bin->left, bin->right, shadow);
+  return _run_binary(vm, op, bin->left, bin->right, shadow);
 }

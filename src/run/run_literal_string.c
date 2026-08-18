@@ -5,9 +5,8 @@
 #include "engine/str_type.h"
 #include "core/string.h"
 
-value_t run_literal_string(context_t ctx, node_t node, bool shadow) {
+value_t run_literal_string(vm_t vm, node_t node, bool shadow) {
   cubec_literal_string_t lit = (cubec_literal_string_t)node;
-  vm_t vm = ctx->vm;
   type_t type = (type_t)value_get_data(vm_get_str_type(vm));
 
   if (shadow)

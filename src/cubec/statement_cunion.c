@@ -88,9 +88,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_cunion — cunion <name> { <fields> }
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_cunion(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_cunion(vm_t vm, vec_t tokens, size_t *position,
                              const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t name = NULL;
   vec_t fields = NULL;
@@ -101,7 +101,7 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens, size_t *position,
   {
     while (true) {
       skip_whitespace(tokens, &current);
-      node_t dec = read_decorator(ctx, tokens, &current, filename);
+      node_t dec = read_decorator(vm, tokens, &current, filename);
       if (node_is_error(dec))
         return dec;
       if (!dec)
@@ -126,7 +126,7 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 2. Parse cunion name (required) */
-  name = read_literal_identifier(ctx, tokens, &current, filename);
+  name = read_literal_identifier(vm, tokens, &current, filename);
   if (node_is_error(name)) {
     allocator_free(allocator, &decorators);
     return name;
@@ -146,7 +146,7 @@ node_t read_statement_cunion(context_t ctx, vec_t tokens, size_t *position,
   /* 4. Parse fields — semicolon-separated struct_field nodes */
   fields = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, "}")) {
-    node_t field = read_struct_field(ctx, tokens, &current, filename);
+    node_t field = read_struct_field(vm, tokens, &current, filename);
     if (node_is_error(field)) {
       allocator_free(allocator, &decorators);
       allocator_free(allocator, &name);
@@ -191,13 +191,13 @@ onerror:
   allocator_free(allocator, &fields);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_cunion(context_t ctx, location_t loc, const char *name,
+node_t create_statement_cunion(vm_t vm, location_t loc, const char *name,
                                vec_t fields, vec_t decorators) {
-  allocator_t alloc = ctx->allocator;
-  node_t name_node = create_literal_identifier(ctx, loc, name);
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t name_node = create_literal_identifier(vm, loc, name);
   cubec_statement_cunion_init_t init = {
       .location = loc,
       .parent = NULL,

@@ -5,7 +5,7 @@
 #include "core/node.h"
 #include "core/class.h"
 #include "core/vec.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,10 +53,10 @@ typedef struct _cubec_statement_export_init_t
  * @return A new cubec_statement_export_t node, or NULL if current token
  *         is not 'export' followed by '*' or '{'.
  */
-node_t read_statement_export(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_export(vm_t vm, vec_t tokens, size_t *position,
                                   const char *filename);
 
-node_t create_statement_export(context_t ctx, location_t loc, node_t path,
+node_t create_statement_export(vm_t vm, location_t loc, node_t path,
                                     bool is_star, vec_t names);
 
 

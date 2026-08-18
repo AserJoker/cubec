@@ -49,9 +49,9 @@ class_t g_cubec_expression_typeof_class = {
     .move = (class_move_fn_t)_cubec_expression_typeof_move,
 };
 
-node_t read_expression_typeof(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_typeof(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t expr = NULL;
 
@@ -73,7 +73,7 @@ node_t read_expression_typeof(context_t ctx, vec_t tokens, size_t *position,
   current++;
 
   /* Parse the inner expression */
-  expr = read_expression(ctx, tokens, &current, filename);
+  expr = read_expression(vm, tokens, &current, filename);
   if (node_is_error(expr))
     return expr;
   if (!expr) {
@@ -109,18 +109,18 @@ node_t read_expression_typeof(context_t ctx, vec_t tokens, size_t *position,
 
 cleanup:
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid typeof expression");
   allocator_free(allocator, &expr);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_expression_typeof
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_typeof(context_t ctx, location_t loc, node_t expr) {
-  allocator_t alloc = ctx->allocator;
+node_t create_expression_typeof(vm_t vm, location_t loc, node_t expr) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_expression_typeof_init_t init = {.expression = expr};
   return (node_t)allocator_create(alloc, &g_cubec_expression_typeof_class,
                                   &init);

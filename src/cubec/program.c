@@ -51,9 +51,9 @@ class_t g_cubec_program_node_class = {
     .move = (class_move_fn_t)_cubec_program_node_move,
 };
 
-node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
+node_t read_program_node(vm_t vm, vec_t tokens, size_t *position,
                          const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   skip_whitespace(tokens, &current);
 
@@ -79,7 +79,7 @@ node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
     }
 
     /* Delegate to read_statement for unified dispatch + error recovery */
-    node_t statement = read_statement(ctx, tokens, &current, filename);
+    node_t statement = read_statement(vm, tokens, &current, filename);
 
     if (node_is_error(statement)) {
       /* Error node — push as placeholder, recovery already done by
@@ -92,10 +92,10 @@ node_t read_program_node(context_t ctx, vec_t tokens, size_t *position,
       /* No parser matched — skip token and create error placeholder */
       location_t loc = *token_get_location(next);
       loc.filename = filename;
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, loc,
+      diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, loc,
                            "unexpected token at top level");
       current++;
-      statement = create_statement_error(ctx, loc);
+      statement = create_statement_error(vm, loc);
       vec_push(node->statements, statement);
       continue;
     }
@@ -116,8 +116,8 @@ onerror:
   return NULL;
 }
 
-node_t create_program(context_t ctx, location_t loc, vec_t statements) {
-  allocator_t alloc = ctx->allocator;
+node_t create_program(vm_t vm, location_t loc, vec_t statements) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_program_node_init_t init = {.statements = statements};
   return (node_t)allocator_create(alloc, &g_cubec_program_node_class, &init);
 }

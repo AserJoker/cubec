@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_DECLARATION_TUPLE_
 #define _H_CUBEC_CUBEC_DECLARATION_TUPLE_
-#include "engine/context.h"
+#include "engine/vm.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/class.h"
@@ -44,10 +44,10 @@ typedef struct _cubec_declaration_tuple_init_t cubec_declaration_tuple_init_t;
  * @return A new cubec_declaration_tuple_t node, or NULL if current token
  *         is not '<' or doesn't form a valid tuple type.
  */
-node_t read_declaration_tuple(context_t ctx, vec_t tokens,
+node_t read_declaration_tuple(vm_t vm, vec_t tokens,
                                     size_t *position, const char *filename);
 
-node_t create_declaration_tuple(context_t ctx, location_t loc,
+node_t create_declaration_tuple(vm_t vm, location_t loc,
                                     vec_t element_types);
 
 

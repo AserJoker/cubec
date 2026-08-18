@@ -207,6 +207,14 @@ value_t value_is(struct _vm_t *vm, value_t self, type_t type);
  *  Returns error if vtable.get_field_raw is NULL (type does not support raw access). */
 value_t value_get_field_raw(struct _vm_t *vm, value_t self, const char *name);
 
+/**
+ * @brief Generic instantiation: delegates to type->vtable.instantiate.
+ * Only TYPE_KIND_GENERIC / TYPE_KIND_GENERIC_FN implement this.
+ * Validates extends constraints then calls the create_instance callback.
+ * Returns error if vtable.instantiate is NULL (type does not support instantiation). */
+value_t value_instantiate(struct _vm_t *vm, value_t self,
+                          size_t argc, value_t *argv);
+
 #ifdef __cplusplus
 }
 #endif

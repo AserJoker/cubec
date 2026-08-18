@@ -90,9 +90,9 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
  *  Parser: read_statement_function
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_function(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_function(vm_t vm, vec_t tokens, size_t *position,
                                const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   bool is_export = false;
   bool is_inline = false;
@@ -108,7 +108,7 @@ node_t read_statement_function(context_t ctx, vec_t tokens, size_t *position,
   {
     while (true) {
       skip_whitespace(tokens, &current);
-      node_t dec = read_decorator(ctx, tokens, &current, filename);
+      node_t dec = read_decorator(vm, tokens, &current, filename);
       if (node_is_error(dec))
         return dec;
       if (!dec)
@@ -222,7 +222,7 @@ node_t read_statement_function(context_t ctx, vec_t tokens, size_t *position,
   /* inline + comptime: comptime takes precedence; ignore inline silently */
 
   /* 3. Delegate to read_declaration_function for the actual func parsing */
-  decl_node = read_declaration_function(ctx, tokens, &current, filename);
+  decl_node = read_declaration_function(vm, tokens, &current, filename);
   if (node_is_error(decl_node)) {
     allocator_free(allocator, &decorators);
     return decl_node;
@@ -277,17 +277,17 @@ onerror:
   allocator_free(allocator, &decorators);
   allocator_free(allocator, &decl_node);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_func(context_t ctx, location_t loc, const char *name,
+node_t create_statement_func(vm_t vm, location_t loc, const char *name,
                              vec_t args, node_t return_type, node_t body,
                              bool is_export, bool is_inline, bool is_extern,
                              bool is_builtin, bool is_comptime,
                              bool is_c_variadic, vec_t decorators) {
-  allocator_t alloc = ctx->allocator;
-  node_t name_node = create_literal_identifier(ctx, loc, name);
-  node_t decl = create_declaration_function(ctx, loc, name_node, NULL, NULL,
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t name_node = create_literal_identifier(vm, loc, name);
+  node_t decl = create_declaration_function(vm, loc, name_node, NULL, NULL,
                                             args, return_type, body, is_inline,
                                             is_extern, is_builtin, is_comptime,
                                             is_c_variadic);

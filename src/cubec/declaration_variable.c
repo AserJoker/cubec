@@ -73,9 +73,9 @@ class_t g_cubec_declaration_variable_class = {
     .move = (class_move_fn_t)_cubec_declaration_variable_move,
 };
 
-node_t read_declaration_variable(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_variable(vm_t vm, vec_t tokens, size_t *position,
                                  const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_declaration_variable_t node = NULL;
   node_t identifier = NULL;
@@ -92,7 +92,7 @@ node_t read_declaration_variable(context_t ctx, vec_t tokens, size_t *position,
   start_location.filename = filename;
 
   /* Parse identifier using read_literal_identifier */
-  identifier = read_literal_identifier(ctx, tokens, &current, filename);
+  identifier = read_literal_identifier(vm, tokens, &current, filename);
   if (!identifier) {
     return NULL;
   }
@@ -108,7 +108,7 @@ node_t read_declaration_variable(context_t ctx, vec_t tokens, size_t *position,
     /* Parse the type using read_expression_base (no comma/assignment —
      * read_expression_type includes assignment which would consume '=' as
      * part of the type, breaking the type/init split) */
-    type = read_expression_base(ctx, tokens, &current, filename);
+    type = read_expression_base(vm, tokens, &current, filename);
     if (!type) {
       goto cleanup_node;
     }
@@ -126,7 +126,7 @@ node_t read_declaration_variable(context_t ctx, vec_t tokens, size_t *position,
     /* Parse the initializer expression using read_expression_base
      * (no comma — comma in var init would conflict with comma-separated
      * declarator lists, and assignment is already handled by the '=' above) */
-    expression = read_expression_base(ctx, tokens, &current, filename);
+    expression = read_expression_base(vm, tokens, &current, filename);
     if (!expression) {
       goto cleanup_node;
     }
@@ -173,10 +173,10 @@ onerror:
  *  Factory: create_declaration_variable
  * -------------------------------------------------------------------------- */
 
-node_t create_declaration_variable(context_t ctx, location_t loc,
+node_t create_declaration_variable(vm_t vm, location_t loc,
                                    node_t identifier, node_t type,
                                    node_t expression) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_declaration_variable_init_t init = {.location = loc,
                                             .parent = NULL,
                                             .identifier = identifier,

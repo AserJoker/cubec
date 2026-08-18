@@ -7,7 +7,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "cubec/expression_binary.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -63,10 +63,10 @@ typedef struct _cubec_expression_assignment_init_t
  * @return A new cubec_expression_assignment_t node, or the value node if
  *         no assignment operator follows
  */
-node_t read_expression_assignment(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_assignment(vm_t vm, vec_t tokens, size_t *position,
                                   const char *filename);
 
-node_t create_expression_assignment(context_t ctx, location_t loc,
+node_t create_expression_assignment(vm_t vm, location_t loc,
                                     const char *op, node_t lvalue,
                                     node_t rvalue);
 

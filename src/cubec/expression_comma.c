@@ -73,9 +73,9 @@ class_t g_cubec_expression_comma_class = {
  *  Parser: read_expression_comma
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_comma(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_comma(vm_t vm, vec_t tokens, size_t *position,
                              const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t left = NULL;
   node_t right = NULL;
@@ -84,11 +84,11 @@ node_t read_expression_comma(context_t ctx, vec_t tokens, size_t *position,
   /* Try assignment first (value = expression). If no assignment operator
    * follows the value, read_expression_assignment returns NULL and we
    * fall through to read_expression_base which handles ternary/binary. */
-  left = read_expression_assignment(ctx, tokens, &current, filename);
+  left = read_expression_assignment(vm, tokens, &current, filename);
   if (node_is_error(left))
     return left;
   if (!left) {
-    left = read_expression_base(ctx, tokens, &current, filename);
+    left = read_expression_base(vm, tokens, &current, filename);
   }
   if (node_is_error(left))
     return left;
@@ -112,7 +112,7 @@ node_t read_expression_comma(context_t ctx, vec_t tokens, size_t *position,
   /* Parse right operand: recursively call self for right-associativity
    * This allows comma expressions like a, b, c to parse as comma(a, comma(b,
    * c)) */
-  right = read_expression_comma(ctx, tokens, &current, filename);
+  right = read_expression_comma(vm, tokens, &current, filename);
   if (node_is_error(right)) {
     allocator_free(allocator, &left);
     return right;
@@ -133,21 +133,21 @@ node_t read_expression_comma(context_t ctx, vec_t tokens, size_t *position,
   return (node_t)node;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid comma expression");
   allocator_free(allocator, &right);
   allocator_free(allocator, &left);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_expression_comma
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_comma(context_t ctx, location_t loc, node_t left,
+node_t create_expression_comma(vm_t vm, location_t loc, node_t left,
                                node_t right) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_expression_comma_init_t init = {.left = left, .right = right};
   return (node_t)allocator_create(alloc, &g_cubec_expression_comma_class, &init);
 }

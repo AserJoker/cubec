@@ -62,9 +62,9 @@ class_t g_cubec_declaration_array_class = {
     .move = (class_move_fn_t)_cubec_declaration_array_move,
 };
 
-node_t read_declaration_array(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_array(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_declaration_array_t node = NULL;
   node_t size = NULL;
@@ -92,7 +92,7 @@ node_t read_declaration_array(context_t ctx, vec_t tokens, size_t *position,
   start_location.filename = filename;
 
   /* Parse the array size expression using read_expression */
-  size = read_expression(ctx, tokens, &current, filename);
+  size = read_expression(vm, tokens, &current, filename);
   if (!size) {
     goto onerror;
   }
@@ -119,7 +119,7 @@ node_t read_declaration_array(context_t ctx, vec_t tokens, size_t *position,
    * c). Namespace access binds tighter: [N]std::vec::Vec → [N](std::vec::Vec).
    */
   skip_whitespace(tokens, &current);
-  type = read_expression_base(ctx, tokens, &current, filename);
+  type = read_expression_base(vm, tokens, &current, filename);
   if (!type) {
     goto onerror;
   }
@@ -150,9 +150,9 @@ onerror:
  *  Factory: create_declaration_array
  * -------------------------------------------------------------------------- */
 
-node_t create_declaration_array(context_t ctx, location_t loc, node_t size,
+node_t create_declaration_array(vm_t vm, location_t loc, node_t size,
                                 node_t base) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_declaration_array_init_t init = {.size = size, .type = base};
   return (node_t)allocator_create(alloc, &g_cubec_declaration_array_class,
                                   &init);

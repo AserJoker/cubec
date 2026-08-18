@@ -5,7 +5,7 @@
 #include "core/node.h"
 #include "core/class.h"
 #include "core/vec.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -35,10 +35,10 @@ typedef struct _cubec_statement_break_init_t cubec_statement_break_init_t;
 /**
  * @brief Try to parse a break statement.
  */
-node_t read_statement_break(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_break(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename);
 
-node_t create_statement_break(context_t ctx, location_t loc);
+node_t create_statement_break(vm_t vm, location_t loc);
 
 
 void emit_statement_break(emit_context_t ctx, node_t node);

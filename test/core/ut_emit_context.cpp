@@ -15,7 +15,7 @@ protected:
 
 TEST_F(ut_emit_context, create_dispose) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);
@@ -28,7 +28,7 @@ TEST_F(ut_emit_context, create_dispose) {
 
 TEST_F(ut_emit_context, emit_keyword) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   emit_context_t ectx = emit_context_create(allocator, tokens);
 
   emit_keyword(ectx, "var");
@@ -46,7 +46,7 @@ TEST_F(ut_emit_context, emit_keyword) {
 
 TEST_F(ut_emit_context, emit_symbol) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   emit_context_t ectx = emit_context_create(allocator, tokens);
 
   emit_symbol(ectx, "=");
@@ -64,7 +64,7 @@ TEST_F(ut_emit_context, emit_symbol) {
 
 TEST_F(ut_emit_context, emit_space) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   emit_context_t ectx = emit_context_create(allocator, tokens);
 
   emit_space(ectx);
@@ -82,7 +82,7 @@ TEST_F(ut_emit_context, emit_space) {
 
 TEST_F(ut_emit_context, emit_newline_zero_indent) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   emit_context_t ectx = emit_context_create(allocator, tokens);
 
   emit_newline(ectx);
@@ -98,7 +98,7 @@ TEST_F(ut_emit_context, emit_newline_zero_indent) {
 
 TEST_F(ut_emit_context, emit_newline_with_indent) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   emit_context_t ectx = emit_context_create(allocator, tokens);
 
   emit_indent(ectx, 1);
@@ -116,7 +116,7 @@ TEST_F(ut_emit_context, emit_newline_with_indent) {
 
 TEST_F(ut_emit_context, emit_indent_changes_level) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   emit_context_t ectx = emit_context_create(allocator, tokens);
 
   EXPECT_EQ(ectx->indent_level, 0);
@@ -133,7 +133,7 @@ TEST_F(ut_emit_context, emit_indent_changes_level) {
 
 TEST_F(ut_emit_context, recover_single_line_comment) {
   const char *source = "var /* comment */ x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   emit_context_t ectx = emit_context_create(allocator, tokens);
 
   /* Find the identifier 'x' token */
@@ -161,7 +161,7 @@ TEST_F(ut_emit_context, recover_single_line_comment) {
 
 TEST_F(ut_emit_context, recover_multiline_comment) {
   const char *source = "var /* multi\nline */ x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   emit_context_t ectx = emit_context_create(allocator, tokens);
 
   token_t x_token = nullptr;
@@ -186,7 +186,7 @@ TEST_F(ut_emit_context, recover_multiline_comment) {
 
 TEST_F(ut_emit_context, recover_no_comments) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   emit_context_t ectx = emit_context_create(allocator, tokens);
 
   /* No comments in source, recover to EOF */
@@ -211,7 +211,7 @@ TEST_F(ut_emit_context, recover_no_comments) {
 
 TEST_F(ut_emit_context, token_writer_render_basic) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   emit_context_t ectx = emit_context_create(allocator, tokens);
 
   emit_keyword(ectx, "var");
@@ -233,7 +233,7 @@ TEST_F(ut_emit_context, token_writer_render_basic) {
 
 TEST_F(ut_emit_context, token_writer_render_with_newline_and_indent) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   emit_context_t ectx = emit_context_create(allocator, tokens);
 
   emit_symbol(ectx, "{");
@@ -257,7 +257,7 @@ TEST_F(ut_emit_context, token_writer_render_with_newline_and_indent) {
 
 TEST_F(ut_emit_context, full_roundtrip_with_comment) {
   const char *source = "var /* comment */ x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   emit_context_t ectx = emit_context_create(allocator, tokens);
 
   /* Find the identifier 'x' token */

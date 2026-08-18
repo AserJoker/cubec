@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -75,10 +75,10 @@ typedef struct _cubec_statement_interface_init_t
  * @return A new cubec_statement_interface_t node, or NULL if current token
  *         is not an interface declaration prefix (export/interface).
  */
-node_t read_statement_interface(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_interface(vm_t vm, vec_t tokens, size_t *position,
                                 const char *filename);
 
-node_t create_statement_interface(context_t ctx, location_t loc,
+node_t create_statement_interface(vm_t vm, location_t loc,
                                   const char *name, vec_t members,
                                   bool is_export, vec_t decorators);
 

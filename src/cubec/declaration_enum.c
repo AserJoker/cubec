@@ -82,10 +82,10 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *            { items }
  * -------------------------------------------------------------------------- */
 
-node_t read_declaration_enum_body(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_enum_body(vm_t vm, vec_t tokens, size_t *position,
                                  const char *filename,
                                  location_t start_location) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   vec_t items = NULL;
   cubec_declaration_enum_t node = NULL;
@@ -100,7 +100,7 @@ node_t read_declaration_enum_body(context_t ctx, vec_t tokens, size_t *position,
   /* 2. Parse items — comma separated enum_item nodes */
   items = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, "}")) {
-    node_t item = read_enum_item(ctx, tokens, &current, filename);
+    node_t item = read_enum_item(vm, tokens, &current, filename);
     if (node_is_error(item))
       goto onerror;
     if (!item) {
@@ -149,14 +149,14 @@ cleanup:
 onerror:
   allocator_free(allocator, &items);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Parser: read_declaration_enum — entry point for type expressions
  * -------------------------------------------------------------------------- */
 
-node_t read_declaration_enum(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_enum(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename) {
   size_t current = *position;
 
@@ -170,7 +170,7 @@ node_t read_declaration_enum(context_t ctx, vec_t tokens, size_t *position,
   current++;
   skip_whitespace(tokens, &current);
 
-  node_t result = read_declaration_enum_body(ctx, tokens, &current, filename,
+  node_t result = read_declaration_enum_body(vm, tokens, &current, filename,
                                             start_location);
   if (node_is_error(result))
     return result;
@@ -179,17 +179,17 @@ node_t read_declaration_enum(context_t ctx, vec_t tokens, size_t *position,
     return result;
   }
 
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid enum type expression");
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_declaration_enum
  * -------------------------------------------------------------------------- */
 
-node_t create_declaration_enum(context_t ctx, location_t loc, vec_t items) {
-  allocator_t alloc = ctx->allocator;
+node_t create_declaration_enum(vm_t vm, location_t loc, vec_t items) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_declaration_enum_init_t init = {
       .location = loc,
       .parent = NULL,

@@ -97,11 +97,11 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *            [generic_params] { members }
  * -------------------------------------------------------------------------- */
 
-node_t read_declaration_struct_body(context_t ctx, vec_t tokens,
+node_t read_declaration_struct_body(vm_t vm, vec_t tokens,
                                         size_t *position, const char *filename,
                                         location_t start_location,
                                         vec_t *out_implements) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   vec_t generic_params = NULL;
   vec_t members = NULL;
@@ -109,7 +109,7 @@ node_t read_declaration_struct_body(context_t ctx, vec_t tokens,
   cubec_declaration_struct_t node = NULL;
 
   /* 1. Parse optional generic parameters */
-  generic_params = read_generic_params(ctx, tokens, &current, filename);
+  generic_params = read_generic_params(vm, tokens, &current, filename);
   if (generic_params) {
     skip_whitespace(tokens, &current);
   }
@@ -119,7 +119,7 @@ node_t read_declaration_struct_body(context_t ctx, vec_t tokens,
     current++;
     skip_whitespace(tokens, &current);
     node_t iface_expr =
-        read_type_expression_primary(ctx, tokens, &current, filename);
+        read_type_expression_primary(vm, tokens, &current, filename);
     if (node_is_error(iface_expr))
       goto onerror;
     if (!iface_expr) {
@@ -132,7 +132,7 @@ node_t read_declaration_struct_body(context_t ctx, vec_t tokens,
       current++;
       skip_whitespace(tokens, &current);
       iface_expr =
-          read_type_expression_primary(ctx, tokens, &current, filename);
+          read_type_expression_primary(vm, tokens, &current, filename);
       if (node_is_error(iface_expr))
         goto onerror;
       if (!iface_expr) {
@@ -158,7 +158,7 @@ node_t read_declaration_struct_body(context_t ctx, vec_t tokens,
     /* Try spread: ...expr ; */
     token_t tok = vec_get(tokens, current);
     if (token_is(tok, CUBEC_TOKEN_SYMBOL, "...")) {
-      member = read_expression_spread(ctx, tokens, &current, filename);
+      member = read_expression_spread(vm, tokens, &current, filename);
       if (node_is_error(member))
         goto onerror;
       if (!member) {
@@ -175,14 +175,14 @@ node_t read_declaration_struct_body(context_t ctx, vec_t tokens,
 
     /* Try struct field: [pub] <identifier> : <type> ; */
     if (!member) {
-      member = read_struct_field(ctx, tokens, &current, filename);
+      member = read_struct_field(vm, tokens, &current, filename);
       if (node_is_error(member))
         goto onerror;
     }
 
     /* Try statement (var, type, func, struct, interface, etc.) */
     if (!member) {
-      member = read_statement(ctx, tokens, &current, filename);
+      member = read_statement(vm, tokens, &current, filename);
       if (node_is_error(member))
         goto onerror;
     }
@@ -234,16 +234,16 @@ onerror:
   allocator_free(allocator, &members);
   allocator_free(allocator, &generic_params);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Parser: read_declaration_struct — entry point for type expressions
  * -------------------------------------------------------------------------- */
 
-node_t read_declaration_struct(context_t ctx, vec_t tokens,
+node_t read_declaration_struct(vm_t vm, vec_t tokens,
                                    size_t *position, const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   (void)allocator;
   size_t current = *position;
 
@@ -258,7 +258,7 @@ node_t read_declaration_struct(context_t ctx, vec_t tokens,
   skip_whitespace(tokens, &current);
 
   node_t result = read_declaration_struct_body(
-      ctx, tokens, &current, filename, start_location, NULL);
+      vm, tokens, &current, filename, start_location, NULL);
   if (node_is_error(result))
     return result;
   if (result) {
@@ -266,18 +266,18 @@ node_t read_declaration_struct(context_t ctx, vec_t tokens,
     return result;
   }
 
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid struct type expression");
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_declaration_struct
  * -------------------------------------------------------------------------- */
 
-node_t create_declaration_struct(context_t ctx, location_t loc,
+node_t create_declaration_struct(vm_t vm, location_t loc,
                                      vec_t generic_params, vec_t members) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_declaration_struct_init_t init = {
       .location = loc,
       .parent = NULL,

@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_ENGINE_NAME_COLLECTOR_
 #define _H_CUBEC_ENGINE_NAME_COLLECTOR_
-#include "engine/context.h"
+#include "engine/vm.h"
 #include "engine/module.h"
 #ifdef __cplusplus
 extern "C" {
@@ -18,7 +18,7 @@ extern "C" {
  * first (recursive name collection), and its exported names are registered
  * as NAME_NAMESPACE entries.
  */
-void name_collector_run(context_t ctx, module_t mod);
+void name_collector_run(vm_t vm, module_t mod);
 
 #ifdef __cplusplus
 }

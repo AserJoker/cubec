@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -42,10 +42,10 @@ typedef struct _cubec_statement_while_init_t cubec_statement_while_init_t;
 /**
  * @brief Try to parse a while statement.
  */
-node_t read_statement_while(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_while(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename);
 
-node_t create_create_while(context_t ctx, location_t loc, node_t cond,
+node_t create_create_while(vm_t vm, location_t loc, node_t cond,
                            node_t body);
 
 

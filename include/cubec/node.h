@@ -1,7 +1,7 @@
 #ifndef _H_CUBEC_CUBEC_NODE_
 #define _H_CUBEC_CUBEC_NODE_
 #include "core/vec.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -88,7 +88,7 @@ enum _cubec_node_kind_t {
 };
 typedef enum _cubec_node_kind_t cubec_node_kind_t;
 void skip_whitespace(vec_t tokens, size_t *position);
-vec_t create_vec(context_t ctx, bool auto_dispose);
+vec_t create_vec(vm_t vm, bool auto_dispose);
 #ifdef __cplusplus
 }
 #endif

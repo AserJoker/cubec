@@ -88,9 +88,9 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   return location_is(token_get_location(token), keyword);
 }
 
-node_t read_statement_declaration(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_declaration(vm_t vm, vec_t tokens, size_t *position,
                                   const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_statement_declaration_t node = NULL;
   node_t declarator = NULL;
@@ -106,7 +106,7 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens, size_t *position,
   {
     while (true) {
       skip_whitespace(tokens, &current);
-      node_t dec = read_decorator(ctx, tokens, &current, filename);
+      node_t dec = read_decorator(vm, tokens, &current, filename);
       if (node_is_error(dec))
         return dec;
       if (!dec)
@@ -233,7 +233,7 @@ node_t read_statement_declaration(context_t ctx, vec_t tokens, size_t *position,
   }
 
   /* 4. Parse single declarator */
-  declarator = read_declaration_variable(ctx, tokens, &current, filename);
+  declarator = read_declaration_variable(vm, tokens, &current, filename);
   if (node_is_error(declarator)) {
     allocator_free(allocator, &decorators);
     return declarator;
@@ -298,16 +298,16 @@ onerror:
   allocator_free(allocator, &decorators);
   allocator_free(allocator, &declarator);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_declaration(context_t ctx, location_t loc,
+node_t create_statement_declaration(vm_t vm, location_t loc,
                                     const char *name, node_t type, node_t expr,
                                     bool is_export, bool is_extern,
                                     bool is_builtin, bool is_comptime,
                                     bool is_using) {
-  allocator_t alloc = ctx->allocator;
-  node_t name_node = create_literal_identifier(ctx, loc, name);
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t name_node = create_literal_identifier(vm, loc, name);
   cubec_declaration_variable_init_t dv_init = {
       .location = loc,
       .parent = NULL,

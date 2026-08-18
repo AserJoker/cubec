@@ -98,9 +98,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *    foreach(var <identifier>[:<type>] of <expr>) <stmt>
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_foreach(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_foreach(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t variable = NULL;
   node_t var_type = NULL;
@@ -134,7 +134,7 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens, size_t *position,
     skip_whitespace(tokens, &current);
 
     /* Parse identifier */
-    variable = read_literal_identifier(ctx, tokens, &current, filename);
+    variable = read_literal_identifier(vm, tokens, &current, filename);
     if (node_is_error(variable))
       return variable;
     if (!variable)
@@ -145,7 +145,7 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens, size_t *position,
     if (_is_symbol(tokens, current, ":")) {
       current++;
       skip_whitespace(tokens, &current);
-      var_type = read_expression_type(ctx, tokens, &current, filename);
+      var_type = read_expression_type(vm, tokens, &current, filename);
       if (node_is_error(var_type)) {
         allocator_free(allocator, &variable);
         return var_type;
@@ -157,7 +157,7 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens, size_t *position,
   } else {
     /* lvalue mode: foreach(<identifier> of <expr>) */
     is_var_decl = false;
-    variable = read_literal_identifier(ctx, tokens, &current, filename);
+    variable = read_literal_identifier(vm, tokens, &current, filename);
     if (node_is_error(variable))
       return variable;
     if (!variable)
@@ -173,7 +173,7 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 5. Parse iterator expression */
-  iterator = read_expression(ctx, tokens, &current, filename);
+  iterator = read_expression(vm, tokens, &current, filename);
   if (node_is_error(iterator)) {
     allocator_free(allocator, &var_type);
     allocator_free(allocator, &variable);
@@ -191,7 +191,7 @@ node_t read_statement_foreach(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 7. Parse body (any statement, not just block) */
-  body = read_statement(ctx, tokens, &current, filename);
+  body = read_statement(vm, tokens, &current, filename);
   if (node_is_error(body)) {
     allocator_free(allocator, &iterator);
     allocator_free(allocator, &var_type);
@@ -224,13 +224,13 @@ onerror:
   allocator_free(allocator, &var_type);
   allocator_free(allocator, &variable);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_foreach(context_t ctx, location_t loc, bool is_var_decl,
+node_t create_statement_foreach(vm_t vm, location_t loc, bool is_var_decl,
                                 node_t variable, node_t var_type,
                                 node_t iterator, node_t body) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_statement_foreach_init_t init = {.location = loc,
                                          .parent = NULL,
                                          .is_var_decl = is_var_decl,

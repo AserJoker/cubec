@@ -6,7 +6,6 @@
 #include "engine/array_type.h"
 #include "engine/bool_type.h"
 #include "engine/callable_type.h"
-#include "engine/context.h"
 #include "engine/exception_type.h"
 #include "engine/interrupt_type.h"
 #include "engine/float_type.h"
@@ -97,10 +96,12 @@ struct _vm_t {
   value_t v_wildcard_value; /* borrowed: global unique wildcard value for
                                generic params */
   value_t v_error;          /* borrowed: user-facing error struct type value */
+  strmap_t builtin_templates; /* name → create_instance_fn_t (borrowed fn ptrs) */
   const char
       *current_module_id; /* borrowed: current module path or "<builtin>" */
   vec_t call_stack;       /* vec of call_frame_t (auto_dispose=true, owned
                              name/message) */
+  diagnostic_list_t diagnostics; /* owned: diagnostic collection */
 };
 
 static void _vm_init(void *self, allocator_t allocator, void *arg) {
@@ -117,10 +118,18 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   vm->builtins =
       (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_builtins);
 
+  strmap_init_t sm_bt = {.value_auto_dispose = false};
+  vm->builtin_templates =
+      (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_bt);
+
   vm->global_scope = scope_create(allocator, SCOPE_GLOBAL, NULL, NULL);
   vm->root_scope = NULL;
   vm->current_scope = vm->global_scope;
   vm->call_stack = NULL;
+
+  diagnostic_list_init_t dl_init = {.output = NULL};
+  vm->diagnostics = (diagnostic_list_t)allocator_create(
+      allocator, &g_diagnostic_list_class, &dl_init);
 
   /* v_type must be created first — create_type_value depends on it.
    * Cannot use create_type_value for v_type itself (circular dependency). */
@@ -369,8 +378,10 @@ static void _vm_dispose(void *self, allocator_t allocator) {
   (void)allocator;
   allocator_free(vm->allocator, &vm->call_stack);
   allocator_free(vm->allocator, &vm->builtins);
+  allocator_free(vm->allocator, &vm->builtin_templates);
   allocator_free(vm->allocator, &vm->modules);
   allocator_free(vm->allocator, &vm->global_scope);
+  allocator_free(vm->allocator, &vm->diagnostics);
 }
 
 class_t g_vm_class = {
@@ -395,6 +406,7 @@ void vm_dispose(vm_t self, allocator_t allocator) {
 allocator_t vm_get_allocator(vm_t self) { return self->allocator; }
 strmap_t vm_get_modules(vm_t self) { return self->modules; }
 strmap_t vm_get_builtins(vm_t self) { return self->builtins; }
+diagnostic_list_t vm_get_diagnostics(vm_t self) { return self->diagnostics; }
 scope_t vm_get_global_scope(vm_t self) { return self->global_scope; }
 scope_t vm_get_root_scope(vm_t self) { return self->root_scope; }
 scope_t vm_get_current_scope(vm_t self) { return self->current_scope; }
@@ -462,6 +474,16 @@ value_t vm_add_builtin(vm_t self, const char *name, value_t value) {
 
 value_t vm_get_builtin(vm_t self, const char *name) {
   return (value_t)strmap_find(self->builtins, name);
+}
+
+/* ---- Builtin templates ---- */
+
+void vm_register_builtin_template(vm_t self, const char *name, create_instance_fn_t fn) {
+  strmap_insert(self->builtin_templates, name, (void *)fn);
+}
+
+create_instance_fn_t vm_get_builtin_template(vm_t self, const char *name) {
+  return (create_instance_fn_t)strmap_find(self->builtin_templates, name);
 }
 
 /* ---- File I/O ---- */
@@ -564,7 +586,7 @@ static char *_resolve_import_path(vm_t vm, const char *import_path) {
 
 /* ---- vm_import ---- */
 
-module_t vm_import(vm_t self, context_t ctx, const char *import_path) {
+module_t vm_import(vm_t self, const char *import_path) {
   char *abs_path = _resolve_import_path(self, import_path);
   if (!abs_path)
     return NULL;
@@ -581,7 +603,7 @@ module_t vm_import(vm_t self, context_t ctx, const char *import_path) {
     return NULL;
   }
 
-  vec_t tokens = resolve_token_list(ctx, abs_path, source);
+  vec_t tokens = resolve_token_list(self, abs_path, source);
   if (!tokens) {
     allocator_free(self->allocator, (void **)&source);
     allocator_free(self->allocator, (void **)&abs_path);
@@ -589,7 +611,7 @@ module_t vm_import(vm_t self, context_t ctx, const char *import_path) {
   }
 
   size_t pos = 0;
-  node_t program = read_program_node(ctx, tokens, &pos, abs_path);
+  node_t program = read_program_node(self, tokens, &pos, abs_path);
   if (!program) {
     allocator_free(self->allocator, &tokens);
     allocator_free(self->allocator, (void **)&source);

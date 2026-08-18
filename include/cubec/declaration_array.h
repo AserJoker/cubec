@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "cubec/declaration.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,10 +37,10 @@ typedef struct _cubec_declaration_array_init_t cubec_declaration_array_init_t;
  * @return A new cubec_declaration_array_t node, or NULL if current token
  *         is not '[' followed by non-']' token.
  */
-node_t read_declaration_array(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_array(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename);
 
-node_t create_declaration_array(context_t ctx, location_t loc, node_t size,
+node_t create_declaration_array(vm_t vm, location_t loc, node_t size,
                                 node_t base);
 
 

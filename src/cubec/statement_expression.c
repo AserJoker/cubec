@@ -54,13 +54,13 @@ class_t g_cubec_statement_expression_class = {
     .move = (class_move_fn_t)_cubec_statement_expression_move,
 };
 
-node_t read_statement_expression(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_expression(vm_t vm, vec_t tokens, size_t *position,
                                  const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
 
   /* Try to parse the expression */
-  node_t expr = read_expression(ctx, tokens, &current, filename);
+  node_t expr = read_expression(vm, tokens, &current, filename);
   if (node_is_error(expr))
     return expr;
   if (!expr) {
@@ -99,11 +99,11 @@ node_t read_statement_expression(context_t ctx, vec_t tokens, size_t *position,
 
 onerror:
   allocator_free(allocator, &expr);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_expression(context_t ctx, location_t loc, node_t expr) {
-  allocator_t alloc = ctx->allocator;
+node_t create_statement_expression(vm_t vm, location_t loc, node_t expr) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_statement_expression_init_t init = {.expression = expr};
   return (node_t)allocator_create(alloc, &g_cubec_statement_expression_class,
                                   &init);

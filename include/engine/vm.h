@@ -4,8 +4,10 @@
 #include "core/class.h"
 #include "core/strmap.h"
 #include "core/vec.h"
+#include "engine/diagnostic.h"
 #include "engine/name.h"
 #include "engine/value.h"
+#include "engine/generic_param.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -114,8 +116,7 @@ module_t vm_get_module(vm_t self, const char *abs_path);
  * Pipeline: resolve path → read file → tokenize → parse AST → create module.
  * Results are cached; repeated imports return the existing module.
  */
-struct context;
-module_t vm_import(vm_t self, struct context *ctx, const char *import_path);
+module_t vm_import(vm_t self, const char *import_path);
 
 /* ---- Builtins ---- */
 
@@ -138,6 +139,21 @@ value_t vm_add_builtin(vm_t self, const char *name, value_t value);
  * Returns the value, or NULL if not found.
  */
 value_t vm_get_builtin(vm_t self, const char *name);
+
+/* ---- Builtin templates ---- */
+
+/**
+ * @brief Register a builtin template by name.
+ * The callback is stored as a borrowed function pointer in the builtin_templates strmap.
+ * Used when a builtin+generic declaration needs a C function as the create_instance callback.
+ */
+void vm_register_builtin_template(vm_t self, const char *name, create_instance_fn_t fn);
+
+/**
+ * @brief Look up a builtin template callback by name.
+ * Returns the callback, or NULL if not found.
+ */
+create_instance_fn_t vm_get_builtin_template(vm_t self, const char *name);
 
 /* ---- Scope management ---- */
 
@@ -170,6 +186,10 @@ void vm_pop_frame(vm_t self);
 /** @brief Get the current call stack (vec of call_frame_t).
  *  Index 0 = bottom (oldest), last = top (most recent). */
 vec_t vm_get_call_stack(vm_t self);
+
+/** @brief Get the diagnostic list (owned by vm).
+ *  Used by parser, name_collector, and run layers to report diagnostics. */
+diagnostic_list_t vm_get_diagnostics(vm_t self);
 
 /* ---- Value creation ---- */
 

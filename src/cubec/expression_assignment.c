@@ -102,9 +102,9 @@ static bool is_assignment_operator_token(token_t tok) {
   return false;
 }
 
-node_t read_expression_assignment(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_assignment(vm_t vm, vec_t tokens, size_t *position,
                                   const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t lvalue = NULL;
   node_t rvalue = NULL;
@@ -113,7 +113,7 @@ node_t read_expression_assignment(context_t ctx, vec_t tokens, size_t *position,
   token_t op_token = NULL;
 
   /* First, read a value as the potential lvalue */
-  lvalue = read_value(ctx, tokens, &current, filename);
+  lvalue = read_value(vm, tokens, &current, filename);
   if (node_is_error(lvalue))
     return lvalue;
   if (!lvalue) {
@@ -144,7 +144,7 @@ node_t read_expression_assignment(context_t ctx, vec_t tokens, size_t *position,
 
   /* Parse rvalue expression */
   skip_whitespace(tokens, &current);
-  rvalue = read_expression_base(ctx, tokens, &current, filename);
+  rvalue = read_expression_base(vm, tokens, &current, filename);
   if (node_is_error(rvalue)) {
     allocator_free(allocator, &lvalue);
     allocator_free(allocator, &opt);
@@ -175,23 +175,23 @@ node_t read_expression_assignment(context_t ctx, vec_t tokens, size_t *position,
   return (node_t)node;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid assignment expression");
   allocator_free(allocator, &opt);
   allocator_free(allocator, &rvalue);
   allocator_free(allocator, &lvalue);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_expression_assignment
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_assignment(context_t ctx, location_t loc,
+node_t create_expression_assignment(vm_t vm, location_t loc,
                                     const char *op, node_t lvalue,
                                     node_t rvalue) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   string_t op_str =
       allocator_create(alloc, &g_string_class, &(string_init_t){.str = op});
   cubec_expression_assignment_init_t init = {.location = loc,

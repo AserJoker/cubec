@@ -6,7 +6,7 @@
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "cubec/declaration.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -43,10 +43,10 @@ typedef struct _cubec_declaration_variable_init_t
  * @return A new cubec_declaration_variable_t node, or NULL if current token
  *         is not an identifier.
  */
-node_t read_declaration_variable(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_variable(vm_t vm, vec_t tokens, size_t *position,
                                  const char *filename);
 
-node_t create_declaration_variable(context_t ctx, location_t loc,
+node_t create_declaration_variable(vm_t vm, location_t loc,
                                    node_t identifier, node_t type,
                                    node_t expression);
 

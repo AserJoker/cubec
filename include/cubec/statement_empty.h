@@ -5,7 +5,7 @@
 #include "core/node.h"
 #include "core/class.h"
 #include "core/vec.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -24,10 +24,10 @@ struct _cubec_statement_empty_init_t {
 };
 typedef struct _cubec_statement_empty_init_t cubec_statement_empty_init_t;
 
-node_t read_statement_empty(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_empty(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename);
 
-node_t create_statement_empty(context_t ctx, location_t loc);
+node_t create_statement_empty(vm_t vm, location_t loc);
 
 
 void emit_statement_empty(emit_context_t ctx, node_t node);

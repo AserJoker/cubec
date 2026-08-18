@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "cubec/declaration.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,10 +39,10 @@ typedef struct _cubec_declaration_slice_init_t cubec_declaration_slice_init_t;
  * @return A new cubec_declaration_slice_t node, or NULL if current token
  *         is not '[' followed by ']'.
  */
-node_t read_declaration_slice(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_slice(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename);
 
-node_t create_declaration_slice(context_t ctx, location_t loc, node_t base,
+node_t create_declaration_slice(vm_t vm, location_t loc, node_t base,
                                 bool is_const, bool is_volatile);
 
 void emit_declaration_slice(emit_context_t ctx, node_t node);

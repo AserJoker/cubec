@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -63,10 +63,10 @@ typedef struct _cubec_generic_param_init_t cubec_generic_param_init_t;
  * @return A vec_t of cubec_generic_param_t nodes with auto_dispose=true,
  *         or NULL if the current token is not '['.
  */
-vec_t read_generic_params(context_t ctx, vec_t tokens, size_t *position,
+vec_t read_generic_params(vm_t vm, vec_t tokens, size_t *position,
                           const char *filename);
 
-node_t create_generic_param(context_t ctx, location_t loc, const char *name,
+node_t create_generic_param(vm_t vm, location_t loc, const char *name,
                             vec_t constraints, node_t value_type, bool is_rest);
 
 

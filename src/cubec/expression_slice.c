@@ -80,9 +80,9 @@ class_t g_cubec_expression_slice_class = {
  *  Parser: read_expression_slice
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_slice(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_slice(vm_t vm, vec_t tokens, size_t *position,
                              const char *filename, node_t host) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_expression_slice_t node = NULL;
   node_t start = NULL;
@@ -161,14 +161,14 @@ node_t read_expression_slice(context_t ctx, vec_t tokens, size_t *position,
     /* Parse optional length expression */
     peek = vec_get(tokens, current);
     if (!token_is(peek, CUBEC_TOKEN_SYMBOL, "]")) {
-      length = read_expression(ctx, tokens, &current, filename);
+      length = read_expression(vm, tokens, &current, filename);
       if (!length) {
         goto onerror;
       }
     }
   } else {
     /* Parse start expression first */
-    start = read_expression(ctx, tokens, &current, filename);
+    start = read_expression(vm, tokens, &current, filename);
     if (!start) {
       goto onerror;
     }
@@ -186,7 +186,7 @@ node_t read_expression_slice(context_t ctx, vec_t tokens, size_t *position,
     /* Parse optional length expression */
     peek = vec_get(tokens, current);
     if (!token_is(peek, CUBEC_TOKEN_SYMBOL, "]")) {
-      length = read_expression(ctx, tokens, &current, filename);
+      length = read_expression(vm, tokens, &current, filename);
       if (!length) {
         goto onerror;
       }
@@ -221,7 +221,7 @@ node_t read_expression_slice(context_t ctx, vec_t tokens, size_t *position,
   return (node_t)node;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
                        open_bracket ? *token_get_location(open_bracket)
                                     : (location_t){0},
                        "invalid slice expression syntax");
@@ -229,7 +229,7 @@ onerror:
   allocator_free(allocator, &length);
   /* host ownership: caller (read_value) owns it and will clean up */
   allocator_free(allocator, &node);
-  return create_error(ctx, open_bracket ? *token_get_location(open_bracket)
+  return create_error(vm, open_bracket ? *token_get_location(open_bracket)
                                         : (location_t){0});
 }
 
@@ -237,9 +237,9 @@ onerror:
  *  Factory: create_expression_slice
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_slice(context_t ctx, location_t loc, node_t host,
+node_t create_expression_slice(vm_t vm, location_t loc, node_t host,
                                node_t start, node_t length) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_expression_slice_init_t init = {
       .host = host, .start = start, .length = length};
   return (node_t)allocator_create(alloc, &g_cubec_expression_slice_class, &init);

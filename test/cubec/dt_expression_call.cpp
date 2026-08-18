@@ -25,11 +25,11 @@ protected:
 
 TEST_F(dt_expression_call, call_no_args) {
   const char *source = "foo()";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -53,11 +53,11 @@ TEST_F(dt_expression_call, call_no_args) {
 
 TEST_F(dt_expression_call, call_one_arg) {
   const char *source = "foo(a)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -78,11 +78,11 @@ TEST_F(dt_expression_call, call_one_arg) {
 
 TEST_F(dt_expression_call, call_two_args) {
   const char *source = "foo(a, b)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -112,11 +112,11 @@ TEST_F(dt_expression_call, call_two_args) {
 
 TEST_F(dt_expression_call, call_numeric_arg) {
   const char *source = "max(0, 42)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -135,11 +135,11 @@ TEST_F(dt_expression_call, call_numeric_arg) {
 
 TEST_F(dt_expression_call, call_binary_arg) {
   const char *source = "foo(a + b, c)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -166,11 +166,11 @@ TEST_F(dt_expression_call, call_binary_arg) {
 
 TEST_F(dt_expression_call, call_spread_arg) {
   const char *source = "foo(...a)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -191,11 +191,11 @@ TEST_F(dt_expression_call, call_spread_arg) {
 
 TEST_F(dt_expression_call, call_mixed_spread) {
   const char *source = "foo(a, ...b, c)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -220,11 +220,11 @@ TEST_F(dt_expression_call, call_mixed_spread) {
 
 TEST_F(dt_expression_call, call_multiple_spreads) {
   const char *source = "foo(...a, ...b)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -246,11 +246,11 @@ TEST_F(dt_expression_call, call_multiple_spreads) {
 TEST_F(dt_expression_call, call_then_member) {
   /* foo().field */
   const char *source = "foo().field";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
@@ -265,11 +265,11 @@ TEST_F(dt_expression_call, call_then_member) {
 TEST_F(dt_expression_call, member_then_call) {
   /* foo.field() */
   const char *source = "foo.field()";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -284,11 +284,11 @@ TEST_F(dt_expression_call, member_then_call) {
 TEST_F(dt_expression_call, chained_call) {
   /* foo()() */
   const char *source = "foo()()";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -310,11 +310,11 @@ TEST_F(dt_expression_call, chained_call) {
 
 TEST_F(dt_expression_call, not_a_call_no_paren) {
   const char *source = "foo";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* Should just be an identifier, not a call */
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
@@ -325,13 +325,13 @@ TEST_F(dt_expression_call, not_a_call_no_paren) {
 
 TEST_F(dt_expression_call, unclosed_paren) {
   const char *source = "foo(a";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   /* parse error expected: unclosed paren 鈫?recorded in diagnostics */
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
-  EXPECT_GT(context_get_error_count(ctx), 0);
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
+  EXPECT_GT(diagnostic_list_get_error_count(vm_get_diagnostics(vm)), 0);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -339,13 +339,13 @@ TEST_F(dt_expression_call, unclosed_paren) {
 
 TEST_F(dt_expression_call, trailing_comma) {
   const char *source = "foo(a, )";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   /* parse error expected: trailing comma 鈫?recorded in diagnostics */
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
-  EXPECT_GT(context_get_error_count(ctx), 0);
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
+  EXPECT_GT(diagnostic_list_get_error_count(vm_get_diagnostics(vm)), 0);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -358,11 +358,11 @@ TEST_F(dt_expression_call, trailing_comma) {
 TEST_F(dt_expression_call, group_callee) {
   /* (func_ptr)(arg)  鈫? call with group as callee */
   const char *source = "(fp)(a)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -376,10 +376,10 @@ TEST_F(dt_expression_call, group_callee) {
 
 TEST_F(dt_expression_call, write_call_no_args) {
   const char *source = "foo()";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);
@@ -396,10 +396,10 @@ TEST_F(dt_expression_call, write_call_no_args) {
 
 TEST_F(dt_expression_call, write_call_with_args) {
   const char *source = "foo(1, 2)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

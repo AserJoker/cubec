@@ -67,9 +67,9 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
   return location_is(token_get_location(token), keyword);
 }
 
-node_t read_declaration_slice(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_slice(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_declaration_slice_t node = NULL;
   node_t type = NULL;
@@ -124,7 +124,7 @@ node_t read_declaration_slice(context_t ctx, vec_t tokens, size_t *position,
    * including ternary: []a ? b : c → slice(ternary(a, b, c)).
    * Use grouping for the alternative: ([] a) ? b : c → ternary(slice(a), b, c).
    * Namespace access binds tighter: []std::vec::Vec → [](std::vec::Vec). */
-  type = read_expression_base(ctx, tokens, &current, filename);
+  type = read_expression_base(vm, tokens, &current, filename);
   if (!type) {
     goto onerror;
   }
@@ -155,9 +155,9 @@ onerror:
  *  Factory: create_declaration_slice
  * -------------------------------------------------------------------------- */
 
-node_t create_declaration_slice(context_t ctx, location_t loc, node_t base,
+node_t create_declaration_slice(vm_t vm, location_t loc, node_t base,
                                 bool is_const, bool is_volatile) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_declaration_slice_init_t init = {
       .type = base, .is_const = is_const, .is_volatile = is_volatile};
   return (node_t)allocator_create(alloc, &g_cubec_declaration_slice_class,

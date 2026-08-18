@@ -4,7 +4,7 @@
 #include "core/node.h"
 #include "core/class.h"
 #include "core/emit_context.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -23,7 +23,7 @@ struct _cubec_statement_error_init_t {
 };
 typedef struct _cubec_statement_error_init_t cubec_statement_error_init_t;
 
-node_t create_statement_error(context_t ctx, location_t loc);
+node_t create_statement_error(vm_t vm, location_t loc);
 
 
 void emit_statement_error(emit_context_t ctx, node_t node);

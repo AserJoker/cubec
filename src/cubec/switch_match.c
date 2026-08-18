@@ -90,9 +90,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_switch_match — case(v1, v2) -> { } | else -> { }
  * -------------------------------------------------------------------------- */
 
-node_t read_switch_match(context_t ctx, vec_t tokens, size_t *position,
+node_t read_switch_match(vm_t vm, vec_t tokens, size_t *position,
                          const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   vec_t values = NULL;
   node_t body = NULL;
@@ -127,7 +127,7 @@ node_t read_switch_match(context_t ctx, vec_t tokens, size_t *position,
 
     while (true) {
       skip_whitespace(tokens, &current);
-      node_t value = read_expression_base(ctx, tokens, &current, filename);
+      node_t value = read_expression_base(vm, tokens, &current, filename);
       if (!value) {
         goto cleanup;
       }
@@ -161,7 +161,7 @@ node_t read_switch_match(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* Parse body (block) */
-  body = read_statement_block(ctx, tokens, &current, filename);
+  body = read_statement_block(vm, tokens, &current, filename);
   if (!body) {
     goto cleanup;
   }
@@ -198,9 +198,9 @@ onerror:
  *  Factory: create_switch_match
  * -------------------------------------------------------------------------- */
 
-node_t create_switch_match(context_t ctx, location_t loc, bool is_else,
+node_t create_switch_match(vm_t vm, location_t loc, bool is_else,
                            vec_t values, node_t body) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_switch_match_init_t init = {
       .is_else = is_else, .values = values, .body = body};
   return (node_t)allocator_create(alloc, &g_cubec_switch_match_class, &init);

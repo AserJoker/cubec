@@ -27,11 +27,11 @@ protected:
 
 TEST_F(dt_expression_typeof, typeof_identifier) {
   const char *source = "typeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_typeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_typeof(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
 
@@ -47,11 +47,11 @@ TEST_F(dt_expression_typeof, typeof_identifier) {
 
 TEST_F(dt_expression_typeof, typeof_binary_expression) {
   const char *source = "typeof(a + b)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_typeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_typeof(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
 
@@ -67,11 +67,11 @@ TEST_F(dt_expression_typeof, typeof_binary_expression) {
 
 TEST_F(dt_expression_typeof, typeof_function_call) {
   const char *source = "typeof(foo())";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_typeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_typeof(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
 
@@ -87,11 +87,11 @@ TEST_F(dt_expression_typeof, typeof_function_call) {
 
 TEST_F(dt_expression_typeof, typeof_as_type_expression) {
   const char *source = "typeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
 
@@ -103,11 +103,11 @@ TEST_F(dt_expression_typeof, typeof_as_type_expression) {
 
 TEST_F(dt_expression_typeof, typeof_with_namespace_access) {
   const char *source = "typeof(File)::open";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
@@ -124,11 +124,11 @@ TEST_F(dt_expression_typeof, typeof_with_namespace_access) {
 
 TEST_F(dt_expression_typeof, typeof_as_pointer_base) {
   const char *source = "* typeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -144,11 +144,11 @@ TEST_F(dt_expression_typeof, typeof_as_pointer_base) {
 
 TEST_F(dt_expression_typeof, typeof_as_slice_base) {
   const char *source = "[] typeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -164,11 +164,11 @@ TEST_F(dt_expression_typeof, typeof_as_slice_base) {
 
 TEST_F(dt_expression_typeof, typeof_with_generic_instantiation) {
   const char *source = "typeof(Vec)[i32]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -185,11 +185,11 @@ TEST_F(dt_expression_typeof, typeof_with_generic_instantiation) {
 
 TEST_F(dt_expression_typeof, consume_all_tokens) {
   const char *source = "typeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_typeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_typeof(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* typeof, (, x, ) 鈫?4 tokens */
   EXPECT_EQ(position, 4);
@@ -202,11 +202,11 @@ TEST_F(dt_expression_typeof, consume_all_tokens) {
 
 TEST_F(dt_expression_typeof, missing_lparen_is_error) {
   const char *source = "typeof x";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_typeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_typeof(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -217,11 +217,11 @@ TEST_F(dt_expression_typeof, missing_lparen_is_error) {
 
 TEST_F(dt_expression_typeof, missing_rparen_is_error) {
   const char *source = "typeof(x";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_typeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_typeof(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -232,11 +232,11 @@ TEST_F(dt_expression_typeof, missing_rparen_is_error) {
 
 TEST_F(dt_expression_typeof, not_typeof_returns_null) {
   const char *source = "foo";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_typeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_typeof(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -246,11 +246,11 @@ TEST_F(dt_expression_typeof, not_typeof_returns_null) {
 
 TEST_F(dt_expression_typeof, clone) {
   const char *source = "typeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_typeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_typeof(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)alloc_clone(allocator, node);
@@ -270,11 +270,11 @@ TEST_F(dt_expression_typeof, clone) {
 
 TEST_F(dt_expression_typeof, move) {
   const char *source = "typeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_typeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_typeof(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)alloc_move(allocator, node);
@@ -298,11 +298,11 @@ TEST_F(dt_expression_typeof, move) {
 
 TEST_F(dt_expression_typeof, via_read_expression) {
   const char *source = "typeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TYPEOF);
 
@@ -318,11 +318,11 @@ TEST_F(dt_expression_typeof, via_read_expression) {
 
 TEST_F(dt_expression_typeof, typeof_member_access_in_expression) {
   const char *source = "typeof(x).field";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
@@ -338,11 +338,11 @@ TEST_F(dt_expression_typeof, typeof_member_access_in_expression) {
 
 TEST_F(dt_expression_typeof, typeof_call_in_expression) {
   const char *source = "typeof(x)()";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -358,11 +358,11 @@ TEST_F(dt_expression_typeof, typeof_call_in_expression) {
 
 TEST_F(dt_expression_typeof, typeof_namespace_access_in_expression) {
   const char *source = "typeof(x)::method";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_NAMESPACE_ACCESS);
 
@@ -378,11 +378,11 @@ TEST_F(dt_expression_typeof, typeof_namespace_access_in_expression) {
 
 TEST_F(dt_expression_typeof, typeof_in_ternary) {
   const char *source = "typeof(x) == i32 ? a : b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -392,10 +392,10 @@ TEST_F(dt_expression_typeof, typeof_in_ternary) {
 
 TEST_F(dt_expression_typeof, write_typeof) {
   const char *source = "typeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

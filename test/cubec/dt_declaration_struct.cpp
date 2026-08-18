@@ -27,11 +27,11 @@ protected:
 /* Simple: struct { } */
 TEST_F(dt_declaration_struct, simple_empty) {
   const char *source = "struct { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_STRUCT);
 
@@ -48,11 +48,11 @@ TEST_F(dt_declaration_struct, simple_empty) {
 /* struct with instance field: struct { x: i32; } */
 TEST_F(dt_declaration_struct, with_instance_field) {
   const char *source = "struct { x: i32; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_STRUCT);
 
@@ -71,11 +71,11 @@ TEST_F(dt_declaration_struct, with_instance_field) {
 /* struct with pub field */
 TEST_F(dt_declaration_struct, with_pub_field) {
   const char *source = "struct { pub x: i32; y: f64; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_declaration_struct_t struct_node =
@@ -100,11 +100,11 @@ TEST_F(dt_declaration_struct, with_pub_field) {
 /* struct with static var and instance field */
 TEST_F(dt_declaration_struct, with_static_var_and_field) {
   const char *source = "struct { var count: i32 = 0; x: f64; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_declaration_struct_t struct_node =
@@ -131,11 +131,11 @@ TEST_F(dt_declaration_struct, with_static_var_and_field) {
 /* struct[T] { data: *T; } */
 TEST_F(dt_declaration_struct, generic) {
   const char *source = "struct[T] { data: *T; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_STRUCT);
 
@@ -155,11 +155,11 @@ TEST_F(dt_declaration_struct, generic) {
 /* Pointer to struct: *struct { x: i32; } */
 TEST_F(dt_declaration_struct, pointer_to_struct) {
   const char *source = "*struct { x: i32; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -174,11 +174,11 @@ TEST_F(dt_declaration_struct, pointer_to_struct) {
 /* Slice of struct: []struct { x: i32; } */
 TEST_F(dt_declaration_struct, slice_of_struct) {
   const char *source = "[]struct { x: i32; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -193,11 +193,11 @@ TEST_F(dt_declaration_struct, slice_of_struct) {
 /* Const struct: const struct { x: i32; } */
 TEST_F(dt_declaration_struct, const_struct) {
   const char *source = "const struct { x: i32; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_QUALIFIER);
 
@@ -216,11 +216,11 @@ TEST_F(dt_declaration_struct, const_struct) {
 
 TEST_F(dt_declaration_struct, consume_all_tokens) {
   const char *source = "struct { x: i32; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   skip_whitespace(tokens, &position);
@@ -238,11 +238,11 @@ TEST_F(dt_declaration_struct, consume_all_tokens) {
 
 TEST_F(dt_declaration_struct, non_struct_returns_null) {
   const char *source = "i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_declaration_struct(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_struct(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -254,11 +254,11 @@ TEST_F(dt_declaration_struct, non_struct_returns_null) {
 
 TEST_F(dt_declaration_struct, clone) {
   const char *source = "struct { x: i32; y: f64; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)alloc_clone(allocator, node);
@@ -277,11 +277,11 @@ TEST_F(dt_declaration_struct, clone) {
 
 TEST_F(dt_declaration_struct, move) {
   const char *source = "struct { x: i32; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)alloc_move(allocator, node);
@@ -303,11 +303,11 @@ TEST_F(dt_declaration_struct, move) {
 
 TEST_F(dt_declaration_struct, via_read_atom) {
   const char *source = "struct { x: i32; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_atom(ctx, tokens, &position, "test.cubec");
+  node_t node = read_atom(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_STRUCT);
 
@@ -317,11 +317,11 @@ TEST_F(dt_declaration_struct, via_read_atom) {
 
 TEST_F(dt_declaration_struct, via_read_expression) {
   const char *source = "struct { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_STRUCT);
 
@@ -331,10 +331,10 @@ TEST_F(dt_declaration_struct, via_read_expression) {
 
 TEST_F(dt_declaration_struct, write_empty_struct) {
   const char *source = "struct { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   emit_context_t ectx = emit_context_create(allocator, tokens);
   emit_expression(ectx, node);

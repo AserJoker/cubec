@@ -5,7 +5,7 @@
 #include "core/node.h"
 #include "core/class.h"
 #include "core/vec.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -35,10 +35,10 @@ typedef struct _cubec_statement_block_init_t cubec_statement_block_init_t;
  * @return A new cubec_statement_block_t node, or NULL if the current token
  *         is not \c "{".
  */
-node_t read_statement_block(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_block(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename);
 
-node_t create_statement_block(context_t ctx, location_t loc, vec_t statements);
+node_t create_statement_block(vm_t vm, location_t loc, vec_t statements);
 
 
 void emit_statement_block(emit_context_t ctx, node_t stmt);

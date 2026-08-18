@@ -33,7 +33,7 @@ static inline bool node_is_ok(node_t node) {
   return node && !node_is_error(node);
 }
 
-node_t create_error(context_t ctx, location_t loc);
+node_t create_error(vm_t vm, location_t loc);
 
 void emit_node_error(emit_context_t ctx, node_t node);
 

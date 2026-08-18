@@ -41,9 +41,8 @@ static type_t get_numeric_type(vm_t vm,
   }
 }
 
-value_t run_literal_numeric(context_t ctx, node_t node, bool shadow) {
+value_t run_literal_numeric(vm_t vm, node_t node, bool shadow) {
   cubec_literal_numeric_t lit = (cubec_literal_numeric_t)node;
-  vm_t vm = ctx->vm;
   const char *str = string_get(lit->value);
 
   type_t type = get_numeric_type(vm, lit->numeric_type);

@@ -101,9 +101,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_interface_method
  * -------------------------------------------------------------------------- */
 
-node_t read_interface_method(context_t ctx, vec_t tokens, size_t *position,
+node_t read_interface_method(vm_t vm, vec_t tokens, size_t *position,
                              const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t name = NULL;
   vec_t generic_params = NULL;
@@ -122,7 +122,7 @@ node_t read_interface_method(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 2. Parse method name (required) */
-  name = read_literal_identifier(ctx, tokens, &current, filename);
+  name = read_literal_identifier(vm, tokens, &current, filename);
   if (!name) {
     goto cleanup;
   }
@@ -130,7 +130,7 @@ node_t read_interface_method(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 3. Parse optional generic parameters */
-  generic_params = read_generic_params(ctx, tokens, &current, filename);
+  generic_params = read_generic_params(vm, tokens, &current, filename);
   if (generic_params) {
     skip_whitespace(tokens, &current);
   }
@@ -145,7 +145,7 @@ node_t read_interface_method(context_t ctx, vec_t tokens, size_t *position,
   /* 5. Parse parameter list */
   arguments = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   while (!_is_symbol(tokens, current, ")")) {
-    node_t arg = read_function_argument(ctx, tokens, &current, filename);
+    node_t arg = read_function_argument(vm, tokens, &current, filename);
     if (!arg) {
       goto cleanup;
     }
@@ -166,7 +166,7 @@ node_t read_interface_method(context_t ctx, vec_t tokens, size_t *position,
   if (_is_symbol(tokens, current, ":")) {
     current++;
     skip_whitespace(tokens, &current);
-    return_type = read_expression_type(ctx, tokens, &current, filename);
+    return_type = read_expression_type(vm, tokens, &current, filename);
     if (!return_type) {
       goto cleanup;
     }
@@ -220,10 +220,10 @@ onerror:
  *  Factory: create_interface_method
  * -------------------------------------------------------------------------- */
 
-node_t create_interface_method(context_t ctx, location_t loc, const char *name,
+node_t create_interface_method(vm_t vm, location_t loc, const char *name,
                                vec_t args, node_t return_type) {
-  allocator_t alloc = ctx->allocator;
-  node_t name_node = create_literal_identifier(ctx, loc, name);
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t name_node = create_literal_identifier(vm, loc, name);
   cubec_interface_method_init_t init = {
       .location = loc,
       .name = name_node,

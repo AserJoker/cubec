@@ -1,4 +1,4 @@
-﻿#include "core/strmap.h"
+#include "core/strmap.h"
 #include "core/string.h"
 #include "core/token_writer.h"
 #include "cubec/node.h"
@@ -22,14 +22,14 @@ protected:
   module_t parse_and_collect(const char *source, const char *filename) {
     /* module_create takes ownership of source (allocator_free), so clone it */
     char *owned_source = cstring_clone(allocator, source);
-    vec_t tokens = resolve_token_list(ctx, filename, owned_source);
+    vec_t tokens = resolve_token_list(vm, filename, owned_source);
     EXPECT_NE(tokens, nullptr);
     size_t pos = 0;
-    node_t program = read_program_node(ctx, tokens, &pos, filename);
+    node_t program = read_program_node(vm, tokens, &pos, filename);
     EXPECT_NE(program, nullptr);
     module_t mod =
-        module_create(allocator, vm_get_global_scope(ctx->vm), filename, owned_source, tokens, program);
-    name_collector_run(ctx, mod);
+        module_create(allocator, vm_get_global_scope(vm), filename, owned_source, tokens, program);
+    name_collector_run(vm, mod);
     return mod;
   }
 
@@ -212,7 +212,7 @@ TEST_F(it_name_collector, duplicate_name_error) {
   module_t mod = parse_and_collect(source, "test.cubec");
 
   /* Second declaration should produce a duplicate error */
-  EXPECT_GT(context_get_error_count(ctx), 0);
+  EXPECT_GT(diagnostic_list_get_error_count(vm_get_diagnostics(vm)), 0);
 
   /* First declaration should still be in scope (not overwritten) */
   name_t name = find_name(mod, "foo");
@@ -233,12 +233,12 @@ TEST_F(it_name_collector, vm_import_creates_module) {
   fclose(f);
 
   /* vm_import loads the module; name collection is separate */
-  module_t mod = vm_import(ctx->vm, ctx, tmp_path.c_str());
+  module_t mod = vm_import(vm, tmp_path.c_str());
   ASSERT_NE(mod, nullptr);
   EXPECT_NE(mod->program, nullptr);
 
   /* Run name collection explicitly */
-  name_collector_run(ctx, mod);
+  name_collector_run(vm, mod);
 
   name_t name = (name_t)strmap_find(mod->root_scope->names, "hello");
   ASSERT_NE(name, nullptr);
@@ -251,10 +251,10 @@ TEST_F(it_name_collector, vm_import_caches_by_abs_path) {
   fputs("func hello(): void {}", f);
   fclose(f);
 
-  module_t mod1 = vm_import(ctx->vm, ctx, tmp_path.c_str());
+  module_t mod1 = vm_import(vm, tmp_path.c_str());
   ASSERT_NE(mod1, nullptr);
 
-  module_t mod2 = vm_import(ctx->vm, ctx, tmp_path.c_str());
+  module_t mod2 = vm_import(vm, tmp_path.c_str());
   EXPECT_EQ(mod1, mod2); /* same pointer, cached */
 }
 
@@ -356,7 +356,7 @@ TEST_F(it_name_collector, import_bare_module_name_error) {
   const char *source = "import std from \"std\";";
   module_t mod = parse_and_collect(source, "test.cubec");
 
-  EXPECT_GT(context_get_error_count(ctx), 0);
+  EXPECT_GT(diagnostic_list_get_error_count(vm_get_diagnostics(vm)), 0);
 
   module_dispose(mod);
 }
@@ -367,7 +367,7 @@ TEST_F(it_name_collector, import_nonexistent_file_error) {
   const char *source = "import foo from \"/tmp/cubec_nonexistent.cubec\";";
   module_t mod = parse_and_collect(source, "test.cubec");
 
-  EXPECT_GT(context_get_error_count(ctx), 0);
+  EXPECT_GT(diagnostic_list_get_error_count(vm_get_diagnostics(vm)), 0);
   /* foo should not be registered as a namespace */
   name_t name = find_name(mod, "foo");
   EXPECT_EQ(name, nullptr);

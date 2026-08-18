@@ -88,7 +88,7 @@ static void _sync_to_recovery_point(vec_t tokens, size_t *position) {
 
 /* ===== Statement dispatcher ===== */
 
-node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement(vm_t vm, vec_t tokens, size_t *position,
                       const char *filename) {
   size_t start = *position;
   skip_whitespace(tokens, &start);
@@ -107,9 +107,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try block statement ({...}) */
   current = *position;
-  node = read_statement_block(ctx, tokens, &current, filename);
+  node = read_statement_block(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -119,9 +119,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
   /* Try comptime statement (comptime { } / comptime if / comptime for) —
      must be before declaration/function since 'comptime' is also a modifier */
   current = *position;
-  node = read_statement_comptime(ctx, tokens, &current, filename);
+  node = read_statement_comptime(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -130,9 +130,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try declaration statement (var ...) */
   current = *position;
-  node = read_statement_declaration(ctx, tokens, &current, filename);
+  node = read_statement_declaration(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -141,9 +141,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try type declaration statement (type ...) */
   current = *position;
-  node = read_statement_declaration_type(ctx, tokens, &current, filename);
+  node = read_statement_declaration_type(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -153,9 +153,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
   /* Try function statement (func ... / export func ... / inline func ... /
    * extern func ...) */
   current = *position;
-  node = read_statement_function(ctx, tokens, &current, filename);
+  node = read_statement_function(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -164,9 +164,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try interface statement (interface ... / export interface ...) */
   current = *position;
-  node = read_statement_interface(ctx, tokens, &current, filename);
+  node = read_statement_interface(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -175,9 +175,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try struct statement (struct ... / export struct ...) */
   current = *position;
-  node = read_statement_struct(ctx, tokens, &current, filename);
+  node = read_statement_struct(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -186,9 +186,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try enum statement (enum ... / export enum ...) */
   current = *position;
-  node = read_statement_enum(ctx, tokens, &current, filename);
+  node = read_statement_enum(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -197,9 +197,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try cunion statement (cunion ...) */
   current = *position;
-  node = read_statement_cunion(ctx, tokens, &current, filename);
+  node = read_statement_cunion(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -208,9 +208,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try union statement (union ... / export union ...) */
   current = *position;
-  node = read_statement_union(ctx, tokens, &current, filename);
+  node = read_statement_union(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -219,9 +219,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try if statement (if(...) { } else ...) */
   current = *position;
-  node = read_statement_if(ctx, tokens, &current, filename);
+  node = read_statement_if(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -230,9 +230,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try while statement (while(...) { }) */
   current = *position;
-  node = read_statement_while(ctx, tokens, &current, filename);
+  node = read_statement_while(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -241,9 +241,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try do-while statement (do { } while(...);) */
   current = *position;
-  node = read_statement_do_while(ctx, tokens, &current, filename);
+  node = read_statement_do_while(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -252,9 +252,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try for statement (for(init; cond; incr) { }) */
   current = *position;
-  node = read_statement_for(ctx, tokens, &current, filename);
+  node = read_statement_for(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -263,9 +263,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try foreach statement (foreach(name : iter) { }) */
   current = *position;
-  node = read_statement_foreach(ctx, tokens, &current, filename);
+  node = read_statement_foreach(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -274,9 +274,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try switch statement (switch(value) { case(...) -> { } else -> { } }) */
   current = *position;
-  node = read_statement_switch(ctx, tokens, &current, filename);
+  node = read_statement_switch(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -285,9 +285,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try import statement (import ...) */
   current = *position;
-  node = read_statement_import(ctx, tokens, &current, filename);
+  node = read_statement_import(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -297,9 +297,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
   /* Try export-from statement (export * from "..."; / export { ... } from
    * "...";) */
   current = *position;
-  node = read_statement_export(ctx, tokens, &current, filename);
+  node = read_statement_export(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -308,9 +308,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try return statement (return ...;) */
   current = *position;
-  node = read_statement_return(ctx, tokens, &current, filename);
+  node = read_statement_return(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -319,9 +319,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try break statement (break;) */
   current = *position;
-  node = read_statement_break(ctx, tokens, &current, filename);
+  node = read_statement_break(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -330,9 +330,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try continue statement (continue;) */
   current = *position;
-  node = read_statement_continue(ctx, tokens, &current, filename);
+  node = read_statement_continue(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -341,9 +341,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try defer statement (defer expr; / defer { }) */
   current = *position;
-  node = read_statement_defer(ctx, tokens, &current, filename);
+  node = read_statement_defer(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -352,9 +352,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try test statement (test "name" { }) */
   current = *position;
-  node = read_statement_test(ctx, tokens, &current, filename);
+  node = read_statement_test(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -363,9 +363,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
 
   /* Try empty statement (;) */
   current = *position;
-  node = read_statement_empty(ctx, tokens, &current, filename);
+  node = read_statement_empty(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -375,9 +375,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
   /* Expression statement is the fallback — it has no distinguishing prefix,
      any expression can start it, so it must be tried last. */
   current = *position;
-  node = read_statement_expression(ctx, tokens, &current, filename);
+  node = read_statement_expression(vm, tokens, &current, filename);
   if (node_is_error(node)) {
-    allocator_free(ctx->allocator, &node);
+    allocator_free(vm_get_allocator(vm), &node);
     had_error = true;
   } else if (node) {
     *position = current;
@@ -393,9 +393,9 @@ node_t read_statement(context_t ctx, vec_t tokens, size_t *position,
     if (sync_pos <= start)
       sync_pos = start + 1; /* ensure progress */
     *position = sync_pos;
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+    diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                          "invalid statement");
-    return create_statement_error(ctx, start_location);
+    return create_statement_error(vm, start_location);
   }
 
   return NULL;

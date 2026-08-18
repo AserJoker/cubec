@@ -88,9 +88,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_defer — defer [|captures|] { }
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_defer(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_defer(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   vec_t captures = NULL;
   node_t body = NULL;
@@ -119,7 +119,7 @@ node_t read_statement_defer(context_t ctx, vec_t tokens, size_t *position,
     captures = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
 
     while (true) {
-      node_t cap = read_function_capture(ctx, tokens, &current, filename);
+      node_t cap = read_function_capture(vm, tokens, &current, filename);
       if (!cap) {
         goto onerror;
       }
@@ -141,7 +141,7 @@ node_t read_statement_defer(context_t ctx, vec_t tokens, size_t *position,
   }
 
   /* 3. Parse block body: defer { ... } */
-  body = read_statement_block(ctx, tokens, &current, filename);
+  body = read_statement_block(vm, tokens, &current, filename);
   if (!body) {
     goto onerror;
   }
@@ -161,17 +161,17 @@ node_t read_statement_defer(context_t ctx, vec_t tokens, size_t *position,
   return &node->super;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid defer statement");
   allocator_free(allocator, &body);
   allocator_free(allocator, &captures);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_defer(context_t ctx, location_t loc, vec_t captures,
+node_t create_statement_defer(vm_t vm, location_t loc, vec_t captures,
                               node_t body) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_statement_defer_init_t init = {.captures = captures, .body = body};
   return (node_t)allocator_create(alloc, &g_cubec_statement_defer_class, &init);
 }

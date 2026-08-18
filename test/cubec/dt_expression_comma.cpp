@@ -39,11 +39,11 @@ static void expect_comma(node_t node, cubec_node_kind_t left_kind,
 
 TEST_F(dt_expression_comma, simple_two_elements) {
   const char *source = "a, b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_comma(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_comma(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_comma(node, CUBEC_NODE_LITERAL_IDENTIFIER, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -53,11 +53,11 @@ TEST_F(dt_expression_comma, simple_two_elements) {
 
 TEST_F(dt_expression_comma, two_numeric_literals) {
   const char *source = "1, 2";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_comma(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_comma(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_comma(node, CUBEC_NODE_LITERAL_NUMERIC, CUBEC_NODE_LITERAL_NUMERIC);
 
@@ -72,11 +72,11 @@ TEST_F(dt_expression_comma, two_numeric_literals) {
 TEST_F(dt_expression_comma, three_identifiers_right_associative) {
   /* a, b, c should parse as comma(a, comma(b, c)) */
   const char *source = "a, b, c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_comma(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_comma(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_COMMA);
 
@@ -95,11 +95,11 @@ TEST_F(dt_expression_comma, three_identifiers_right_associative) {
 TEST_F(dt_expression_comma, four_identifiers_right_associative) {
   /* a, b, c, d should parse as comma(a, comma(b, comma(c, d))) */
   const char *source = "a, b, c, d";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_comma(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_comma(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_COMMA);
 
@@ -126,11 +126,11 @@ TEST_F(dt_expression_comma, four_identifiers_right_associative) {
 TEST_F(dt_expression_comma, left_is_assignment) {
   /* a = b, c should parse as comma(assignment(a, b), c) */
   const char *source = "a = b, c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_comma(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_comma(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_COMMA);
 
@@ -145,11 +145,11 @@ TEST_F(dt_expression_comma, left_is_assignment) {
 TEST_F(dt_expression_comma, right_is_assignment) {
   /* a, b = c should parse as comma(a, assignment(b, c)) */
   const char *source = "a, b = c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_comma(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_comma(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_COMMA);
 
@@ -168,11 +168,11 @@ TEST_F(dt_expression_comma, right_is_assignment) {
 TEST_F(dt_expression_comma, comma_with_binary_expression) {
   /* a + b, c */
   const char *source = "a + b, c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_comma(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_comma(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_COMMA);
 
@@ -187,11 +187,11 @@ TEST_F(dt_expression_comma, comma_with_binary_expression) {
 TEST_F(dt_expression_comma, comma_with_call_expression) {
   /* foo(), bar */
   const char *source = "foo(), bar";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_comma(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_comma(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_COMMA);
 
@@ -210,11 +210,11 @@ TEST_F(dt_expression_comma, comma_with_call_expression) {
 TEST_F(dt_expression_comma, non_comma_returns_identifier) {
   /* A simple identifier without comma should return that identifier */
   const char *source = "x";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_comma(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_comma(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -225,11 +225,11 @@ TEST_F(dt_expression_comma, non_comma_returns_identifier) {
 TEST_F(dt_expression_comma, binary_without_comma_returns_binary) {
   /* a + b without comma should return the binary expression */
   const char *source = "a + b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_comma(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_comma(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -243,11 +243,11 @@ TEST_F(dt_expression_comma, binary_without_comma_returns_binary) {
 
 TEST_F(dt_expression_comma, with_whitespace) {
   const char *source = "a    ,    b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_comma(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_comma(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_comma(node, CUBEC_NODE_LITERAL_IDENTIFIER, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -257,11 +257,11 @@ TEST_F(dt_expression_comma, with_whitespace) {
 
 TEST_F(dt_expression_comma, no_whitespace) {
   const char *source = "a,b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_comma(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_comma(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   expect_comma(node, CUBEC_NODE_LITERAL_IDENTIFIER, CUBEC_NODE_LITERAL_IDENTIFIER);
 
@@ -271,10 +271,10 @@ TEST_F(dt_expression_comma, no_whitespace) {
 
 TEST_F(dt_expression_comma, write_simple_comma) {
   const char *source = "a, b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

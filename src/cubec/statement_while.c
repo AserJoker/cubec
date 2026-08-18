@@ -83,9 +83,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_while — while(condition) { }
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_while(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_while(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t condition = NULL;
   node_t body = NULL;
@@ -109,7 +109,7 @@ node_t read_statement_while(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 3. Parse condition */
-  condition = read_expression(ctx, tokens, &current, filename);
+  condition = read_expression(vm, tokens, &current, filename);
   if (node_is_error(condition))
     return condition;
   if (!condition)
@@ -124,7 +124,7 @@ node_t read_statement_while(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 5. Parse body (any statement) */
-  body = read_statement(ctx, tokens, &current, filename);
+  body = read_statement(vm, tokens, &current, filename);
   if (node_is_error(body)) {
     allocator_free(allocator, &condition);
     return body;
@@ -150,12 +150,12 @@ onerror:
   allocator_free(allocator, &body);
   allocator_free(allocator, &condition);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_create_while(context_t ctx, location_t loc, node_t cond,
+node_t create_create_while(vm_t vm, location_t loc, node_t cond,
                            node_t body) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_statement_while_init_t init = {.condition = cond, .body = body};
   return (node_t)allocator_create(alloc, &g_cubec_statement_while_class, &init);
 }

@@ -8,7 +8,7 @@
 #include <inttypes.h>
 
 /* Forward declaration for read_expression_binary */
-extern node_t read_expression_binary(context_t ctx, vec_t tokens,
+extern node_t read_expression_binary(vm_t vm, vec_t tokens,
                                      size_t *position, const char *filename);
 
 /* --------------------------------------------------------------------------
@@ -84,9 +84,9 @@ class_t g_cubec_expression_ternary_class = {
  *  Parser: read_expression_ternary
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_ternary(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_ternary(vm_t vm, vec_t tokens, size_t *position,
                                const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t condition = NULL;
   cubec_expression_ternary_t node = NULL;
@@ -96,7 +96,7 @@ node_t read_expression_ternary(context_t ctx, vec_t tokens, size_t *position,
   /* Parse condition using read_expression_binary.
    * This handles all binary ops including ==, !=, extends.
    * If no '?' follows, returns the condition as-is. */
-  condition = read_expression_binary(ctx, tokens, &current, filename);
+  condition = read_expression_binary(vm, tokens, &current, filename);
   if (node_is_error(condition))
     return condition;
   if (!condition) {
@@ -116,7 +116,7 @@ node_t read_expression_ternary(context_t ctx, vec_t tokens, size_t *position,
 
   /* Parse consequent expression (the true branch) */
   skip_whitespace(tokens, &current);
-  consequent = read_expression(ctx, tokens, &current, filename);
+  consequent = read_expression(vm, tokens, &current, filename);
   if (node_is_error(consequent)) {
     allocator_free(allocator, &condition);
     return consequent;
@@ -136,7 +136,7 @@ node_t read_expression_ternary(context_t ctx, vec_t tokens, size_t *position,
   /* Parse alternate expression (the false branch) via read_expression
    * to handle nested ternaries naturally */
   skip_whitespace(tokens, &current);
-  alternate = read_expression(ctx, tokens, &current, filename);
+  alternate = read_expression(vm, tokens, &current, filename);
   if (node_is_error(alternate)) {
     allocator_free(allocator, &condition);
     allocator_free(allocator, &consequent);
@@ -169,16 +169,16 @@ onerror:
   allocator_free(allocator, &alternate);
   allocator_free(allocator, &consequent);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_expression_ternary
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_ternary(context_t ctx, location_t loc, node_t cond,
+node_t create_expression_ternary(vm_t vm, location_t loc, node_t cond,
                                  node_t then_branch, node_t else_branch) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_expression_ternary_init_t init = {.location = loc,
                                           .parent = NULL,
                                           .condition = cond,

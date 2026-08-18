@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_EXPRESSION_SUBSCRIPT_
 #define _H_CUBEC_CUBEC_EXPRESSION_SUBSCRIPT_
-#include "engine/context.h"
+#include "engine/vm.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/class.h"
@@ -48,11 +48,11 @@ typedef struct _cubec_expression_subscript_init_t cubec_expression_subscript_ini
  * @return A new cubec_expression_subscript_t node, or NULL if the next token
  *         is not a valid subscript (position is NOT advanced on NULL return).
  */
-node_t read_expression_subscript(context_t ctx, vec_t tokens,
+node_t read_expression_subscript(vm_t vm, vec_t tokens,
                                  size_t *position, const char *filename,
                                  node_t host);
 
-node_t create_expression_subscript(context_t ctx, location_t loc, node_t host,
+node_t create_expression_subscript(vm_t vm, location_t loc, node_t host,
                                    vec_t args);
 
 

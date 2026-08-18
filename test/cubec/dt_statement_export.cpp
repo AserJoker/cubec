@@ -22,11 +22,11 @@ protected:
 
 TEST_F(dt_statement_export, export_star_from) {
   const char *source = "export * from \"std/vec\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_export(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_export(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_EXPORT);
 
@@ -44,11 +44,11 @@ TEST_F(dt_statement_export, export_star_from) {
 
 TEST_F(dt_statement_export, export_names_from) {
   const char *source = "export { Vec, Map } from \"std/collections\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_export(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_export(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_EXPORT);
 
@@ -66,11 +66,11 @@ TEST_F(dt_statement_export, export_names_from) {
 
 TEST_F(dt_statement_export, export_single_name) {
   const char *source = "export { Point } from \"./geom\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_export(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_export(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_export_t exp = (cubec_statement_export_t)node;
@@ -86,11 +86,11 @@ TEST_F(dt_statement_export, export_single_name) {
 
 TEST_F(dt_statement_export, export_struct_not_matched) {
   const char *source = "export struct Foo {}";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_export(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_export(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -100,11 +100,11 @@ TEST_F(dt_statement_export, export_struct_not_matched) {
 
 TEST_F(dt_statement_export, export_func_not_matched) {
   const char *source = "export func add(a: i32): i32 { return a; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_export(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_export(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -114,11 +114,11 @@ TEST_F(dt_statement_export, export_func_not_matched) {
 
 TEST_F(dt_statement_export, non_export_returns_null) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_export(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_export(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -128,11 +128,11 @@ TEST_F(dt_statement_export, non_export_returns_null) {
 
 TEST_F(dt_statement_export, missing_from_keyword) {
   const char *source = "export * \"std/vec\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_export(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_export(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -143,11 +143,11 @@ TEST_F(dt_statement_export, missing_from_keyword) {
 
 TEST_F(dt_statement_export, missing_semicolon) {
   const char *source = "export * from \"std/vec\"";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_export(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_export(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -158,11 +158,11 @@ TEST_F(dt_statement_export, missing_semicolon) {
 
 TEST_F(dt_statement_export, missing_path) {
   const char *source = "export * from ;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_export(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_export(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -173,11 +173,11 @@ TEST_F(dt_statement_export, missing_path) {
 
 TEST_F(dt_statement_export, consume_all_tokens) {
   const char *source = "export * from \"std\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_export(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_export(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(position, vec_get_size(tokens) - 1);
 
@@ -189,11 +189,11 @@ TEST_F(dt_statement_export, consume_all_tokens) {
 
 TEST_F(dt_statement_export, clone) {
   const char *source = "export { a, b } from \"mod\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_export(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_export(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)alloc_clone(allocator, node);
@@ -215,11 +215,11 @@ TEST_F(dt_statement_export, clone) {
 
 TEST_F(dt_statement_export, move) {
   const char *source = "export * from \"mod\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_export(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_export(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)alloc_move(allocator, node);
@@ -239,11 +239,11 @@ TEST_F(dt_statement_export, move) {
 
 TEST_F(dt_statement_export, via_program_node) {
   const char *source = "export * from \"std\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_program_node(ctx, tokens, &position, "test.cubec");
+  node_t node = read_program_node(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_PROGRAM);
 
@@ -255,10 +255,10 @@ TEST_F(dt_statement_export, via_program_node) {
 
 TEST_F(dt_statement_export, write_export_star) {
   const char *source = "export * from \"std\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   emit_context_t ectx = emit_context_create(allocator, tokens);
   emit_statement(ectx, node);

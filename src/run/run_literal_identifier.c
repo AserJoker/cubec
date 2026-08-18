@@ -7,9 +7,8 @@
 #include "engine/exception_type.h"
 #include "core/string.h"
 
-value_t run_literal_identifier(context_t ctx, node_t node, bool shadow) {
+value_t run_literal_identifier(vm_t vm, node_t node, bool shadow) {
   cubec_literal_identifier_t lit = (cubec_literal_identifier_t)node;
-  vm_t vm = ctx->vm;
   const char *name_str = string_get(lit->value);
 
   scope_t scope = vm_get_current_scope(vm);

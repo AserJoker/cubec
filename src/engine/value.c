@@ -464,3 +464,11 @@ value_t value_is(vm_t vm, value_t self, type_t type) {
                               type_get_name(value_get_type(self)));
   return vt.is_instance(vm, self, type);
 }
+
+value_t value_instantiate(vm_t vm, value_t self, size_t argc, value_t *argv) {
+  vtable_t vt = type_get_vtable(value_get_type(self));
+  if (!vt.instantiate)
+    return create_exception_value(vm, "type '%s' does not support instantiation",
+                                  type_get_name(value_get_type(self)));
+  return vt.instantiate(vm, self, argc, argv);
+}

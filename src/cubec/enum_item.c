@@ -65,9 +65,9 @@ class_t g_cubec_enum_item_class = {
  *  Parser: read_enum_item — <identifier> [: <type>] [= <value>]
  * -------------------------------------------------------------------------- */
 
-node_t read_enum_item(context_t ctx, vec_t tokens, size_t *position,
+node_t read_enum_item(vm_t vm, vec_t tokens, size_t *position,
                       const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t name = NULL;
   node_t type_expr = NULL;
@@ -75,7 +75,7 @@ node_t read_enum_item(context_t ctx, vec_t tokens, size_t *position,
   cubec_enum_item_t node = NULL;
 
   /* Parse item name (identifier) */
-  name = read_literal_identifier(ctx, tokens, &current, filename);
+  name = read_literal_identifier(vm, tokens, &current, filename);
   if (!name) {
     goto cleanup;
   }
@@ -88,7 +88,7 @@ node_t read_enum_item(context_t ctx, vec_t tokens, size_t *position,
     current++;
     skip_whitespace(tokens, &current);
 
-    type_expr = read_type_expression_primary(ctx, tokens, &current, filename);
+    type_expr = read_type_expression_primary(vm, tokens, &current, filename);
     if (!type_expr) {
       goto cleanup;
     }
@@ -101,7 +101,7 @@ node_t read_enum_item(context_t ctx, vec_t tokens, size_t *position,
     current++;
     skip_whitespace(tokens, &current);
 
-    value_expr = read_expression_base(ctx, tokens, &current, filename);
+    value_expr = read_expression_base(vm, tokens, &current, filename);
     if (!value_expr) {
       goto cleanup;
     }
@@ -143,10 +143,10 @@ cleanup:
  *  Factory: create_enum_item
  * -------------------------------------------------------------------------- */
 
-node_t create_enum_item(context_t ctx, location_t loc, const char *name,
+node_t create_enum_item(vm_t vm, location_t loc, const char *name,
                         node_t type, node_t value) {
-  allocator_t alloc = ctx->allocator;
-  node_t name_node = create_literal_identifier(ctx, loc, name);
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t name_node = create_literal_identifier(vm, loc, name);
   cubec_enum_item_init_t init = {.location = loc,
                                  .parent = NULL,
                                  .name = (node_t)name_node,

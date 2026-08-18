@@ -39,9 +39,9 @@ class_t g_cubec_literal_bool_class = {
     .move = (class_move_fn_t)_cubec_literal_bool_move,
 };
 
-node_t read_literal_bool(context_t ctx, vec_t tokens, size_t *position,
+node_t read_literal_bool(vm_t vm, vec_t tokens, size_t *position,
                          const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
 
   token_t token = vec_get(tokens, current);
@@ -74,8 +74,8 @@ node_t read_literal_bool(context_t ctx, vec_t tokens, size_t *position,
   return (node_t)node;
 }
 
-node_t create_literal_bool(context_t ctx, location_t loc, bool value) {
-  allocator_t alloc = ctx->allocator;
+node_t create_literal_bool(vm_t vm, location_t loc, bool value) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_literal_init_t init = {
       .kind = CUBEC_NODE_LITERAL_BOOL, .location = loc, .parent = NULL};
   cubec_literal_bool_t node =

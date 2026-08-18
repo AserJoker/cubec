@@ -32,11 +32,11 @@ protected:
 /* Simple: func(i32) -> i32 */
 TEST_F(dt_declaration_callable, simple) {
   const char *source = "func(i32) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
@@ -55,11 +55,11 @@ TEST_F(dt_declaration_callable, simple) {
 /* Two params: func(i32, i32) -> void */
 TEST_F(dt_declaration_callable, two_params) {
   const char *source = "func(i32, i32) -> void";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
@@ -76,11 +76,11 @@ TEST_F(dt_declaration_callable, two_params) {
 /* No params: func() -> i32 */
 TEST_F(dt_declaration_callable, no_params) {
   const char *source = "func() -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
@@ -101,11 +101,11 @@ TEST_F(dt_declaration_callable, no_params) {
 /* Pointer param and return: func(*i32) -> *i32 */
 TEST_F(dt_declaration_callable, pointer_param_and_return) {
   const char *source = "func(*i32) -> *i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
@@ -125,11 +125,11 @@ TEST_F(dt_declaration_callable, pointer_param_and_return) {
 /* Generic type param: func(Vec[i32]) -> []i32 */
 TEST_F(dt_declaration_callable, generic_param) {
   const char *source = "func(Vec[i32]) -> []i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
@@ -146,11 +146,11 @@ TEST_F(dt_declaration_callable, generic_param) {
 /* Namespace type param: func(std::vec::Vec) -> i32 */
 TEST_F(dt_declaration_callable, namespace_param) {
   const char *source = "func(std::vec::Vec) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
@@ -170,11 +170,11 @@ TEST_F(dt_declaration_callable, namespace_param) {
 /* func(i32, ...) -> void */
 TEST_F(dt_declaration_callable, c_variadic) {
   const char *source = "func(i32, ...) -> void";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
@@ -190,11 +190,11 @@ TEST_F(dt_declaration_callable, c_variadic) {
 /* func(...) -> void 鈥?variadic only, no named params */
 TEST_F(dt_declaration_callable, c_variadic_only) {
   const char *source = "func(...) -> void";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
@@ -214,11 +214,11 @@ TEST_F(dt_declaration_callable, c_variadic_only) {
 /* Function type as parameter: func(func(i32) -> i32) -> void */
 TEST_F(dt_declaration_callable, function_type_as_param) {
   const char *source = "func(func(i32) -> i32) -> void";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
@@ -242,11 +242,11 @@ TEST_F(dt_declaration_callable, function_type_as_param) {
 /* Pointer to function type: *func(i32) -> i32 */
 TEST_F(dt_declaration_callable, pointer_to_function) {
   const char *source = "*func(i32) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -261,11 +261,11 @@ TEST_F(dt_declaration_callable, pointer_to_function) {
 /* Slice of function type: []func(i32) -> i32 */
 TEST_F(dt_declaration_callable, slice_of_function) {
   const char *source = "[]func(i32) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -280,11 +280,11 @@ TEST_F(dt_declaration_callable, slice_of_function) {
 /* Const function type: const func(i32) -> i32 */
 TEST_F(dt_declaration_callable, const_function) {
   const char *source = "const func(i32) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_QUALIFIER);
 
@@ -300,11 +300,11 @@ TEST_F(dt_declaration_callable, const_function) {
 /* Volatile function type: volatile func(i32) -> i32 */
 TEST_F(dt_declaration_callable, volatile_function) {
   const char *source = "volatile func(i32) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_QUALIFIER);
 
@@ -324,11 +324,11 @@ TEST_F(dt_declaration_callable, volatile_function) {
 /* Consume all tokens */
 TEST_F(dt_declaration_callable, consume_all_tokens) {
   const char *source = "func(i32) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   /* All non-EOF tokens should be consumed */
@@ -344,11 +344,11 @@ TEST_F(dt_declaration_callable, consume_all_tokens) {
 /* With spaces around delimiters */
 TEST_F(dt_declaration_callable, with_spaces) {
   const char *source = "func ( i32 , i32 ) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
@@ -366,11 +366,11 @@ TEST_F(dt_declaration_callable, with_spaces) {
 
 TEST_F(dt_declaration_callable, non_func_returns_null) {
   const char *source = "i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_declaration_callable(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_callable(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -383,12 +383,12 @@ TEST_F(dt_declaration_callable, non_func_returns_null) {
 /* Missing open paren: func i32) -> i32 鈥?falls back to declaration_function which also fails */
 TEST_F(dt_declaration_callable, missing_open_paren_returns_null) {
   const char *source = "func i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   /* read_declaration_callable should return NULL because no '(' follows func */
-  node_t node = read_declaration_callable(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_callable(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -397,11 +397,11 @@ TEST_F(dt_declaration_callable, missing_open_paren_returns_null) {
 /* Missing ')' is error */
 TEST_F(dt_declaration_callable, missing_close_paren_error) {
   const char *source = "func(i32 -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_declaration_callable(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_callable(vm, tokens, &position, "test.cubec");
   /* Should fail 鈥?no ')' before '->' */
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
@@ -412,11 +412,11 @@ TEST_F(dt_declaration_callable, missing_close_paren_error) {
 /* Missing '->' is error */
 TEST_F(dt_declaration_callable, missing_arrow_error) {
   const char *source = "func(i32) i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_declaration_callable(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_callable(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -426,11 +426,11 @@ TEST_F(dt_declaration_callable, missing_arrow_error) {
 /* Missing return type after '->' is error */
 TEST_F(dt_declaration_callable, missing_return_type_error) {
   const char *source = "func(i32) ->";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_declaration_callable(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_callable(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -440,11 +440,11 @@ TEST_F(dt_declaration_callable, missing_return_type_error) {
 /* Trailing comma is error */
 TEST_F(dt_declaration_callable, trailing_comma_error) {
   const char *source = "func(i32,) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_declaration_callable(ctx, tokens, &position, "test.cubec");
+  node_t node = read_declaration_callable(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -458,11 +458,11 @@ TEST_F(dt_declaration_callable, trailing_comma_error) {
 /* func(i32) -> A ? B : C 鈫?func(i32) -> ternary(A, B, C) */
 TEST_F(dt_declaration_callable, greedy_ternary_return) {
   const char *source = "func(i32) -> A ? B : C";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
@@ -487,11 +487,11 @@ TEST_F(dt_declaration_callable, greedy_ternary_return) {
 /* func(A ? B : C) -> i32 鈫?ternary as parameter type */
 TEST_F(dt_declaration_callable, greedy_ternary_param) {
   const char *source = "func(A ? B : C) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_CALLABLE);
 
@@ -511,11 +511,11 @@ TEST_F(dt_declaration_callable, greedy_ternary_param) {
 
 TEST_F(dt_declaration_callable, clone) {
   const char *source = "func(i32, i32) -> void";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)alloc_clone(allocator, node);
@@ -537,11 +537,11 @@ TEST_F(dt_declaration_callable, clone) {
 
 TEST_F(dt_declaration_callable, move) {
   const char *source = "func(i32) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)alloc_move(allocator, node);
@@ -562,10 +562,10 @@ TEST_F(dt_declaration_callable, move) {
 
 TEST_F(dt_declaration_callable, write_callable) {
   const char *source = "func(i32) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   emit_context_t ectx = emit_context_create(allocator, tokens);
   emit_expression(ectx, node);

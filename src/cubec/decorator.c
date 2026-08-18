@@ -70,10 +70,10 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *        Keywords like 'inline', 'export' are valid decorator names.
  *        Also handles call syntax: keyword(args).
  */
-static node_t _read_keyword_as_identifier(context_t ctx, vec_t tokens,
+static node_t _read_keyword_as_identifier(vm_t vm, vec_t tokens,
                                           size_t *position,
                                           const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   token_t tok = vec_get(tokens, current);
   if (!tok || token_get_kind(tok) != CUBEC_TOKEN_KEYWORD) {
@@ -100,7 +100,7 @@ static node_t _read_keyword_as_identifier(context_t ctx, vec_t tokens,
 
   /* Try call syntax: keyword(args) — e.g., [[deprecated("reason")]] */
   node_t call =
-      read_expression_call(ctx, tokens, &current, filename, expression);
+      read_expression_call(vm, tokens, &current, filename, expression);
   if (call) {
     expression = call;
   }
@@ -117,9 +117,9 @@ onerror:
  *  Parser: read_decorator — [[expression]]
  * -------------------------------------------------------------------------- */
 
-node_t read_decorator(context_t ctx, vec_t tokens, size_t *position,
+node_t read_decorator(vm_t vm, vec_t tokens, size_t *position,
                       const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t expression = NULL;
   cubec_decorator_t node = NULL;
@@ -147,9 +147,9 @@ node_t read_decorator(context_t ctx, vec_t tokens, size_t *position,
 
   /* 2. Parse expression — try keyword-as-identifier first, then normal
    * expression */
-  expression = _read_keyword_as_identifier(ctx, tokens, &current, filename);
+  expression = _read_keyword_as_identifier(vm, tokens, &current, filename);
   if (!expression) {
-    expression = read_expression(ctx, tokens, &current, filename);
+    expression = read_expression(vm, tokens, &current, filename);
     if (!expression) {
       goto cleanup;
     }
@@ -197,8 +197,8 @@ onerror:
  *  Factory: create_decorator
  * -------------------------------------------------------------------------- */
 
-node_t create_decorator(context_t ctx, location_t loc, node_t expr) {
-  allocator_t alloc = ctx->allocator;
+node_t create_decorator(vm_t vm, location_t loc, node_t expr) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_decorator_init_t init = {.expression = expr};
   return (node_t)allocator_create(alloc, &g_cubec_decorator_class, &init);
 }

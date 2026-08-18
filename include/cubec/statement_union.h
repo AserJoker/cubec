@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -65,10 +65,10 @@ typedef struct _cubec_statement_union_init_t cubec_statement_union_init_t;
  * @return A new cubec_statement_union_t node, or NULL if current token
  *         is not a union declaration prefix (export/union).
  */
-node_t read_statement_union(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_union(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename);
 
-node_t create_statement_union(context_t ctx, location_t loc, const char *name,
+node_t create_statement_union(vm_t vm, location_t loc, const char *name,
                               vec_t members, bool is_export, vec_t implements,
                               vec_t decorators);
 

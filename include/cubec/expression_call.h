@@ -6,7 +6,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,10 +45,10 @@ typedef struct _cubec_expression_call_init_t cubec_expression_call_init_t;
  * @return A new cubec_expression_call_t node, or NULL if the next token
  *         is not \c '(' (position is NOT advanced on NULL return).
  */
-node_t read_expression_call(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_call(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename, node_t callee);
 
-node_t create_expression_call(context_t ctx, location_t loc, node_t callee,
+node_t create_expression_call(vm_t vm, location_t loc, node_t callee,
                               vec_t args);
 
 

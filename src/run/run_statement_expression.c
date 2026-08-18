@@ -7,12 +7,11 @@
 #include "engine/value.h"
 #include "cubec/statement_expression.h"
 
-value_t run_statement_expression(context_t ctx, node_t node, bool shadow) {
-  vm_t vm = ctx->vm;
+value_t run_statement_expression(vm_t vm, node_t node, bool shadow) {
   cubec_statement_expression_t stmt = (cubec_statement_expression_t)node;
 
   scope_t scope_before = vm_get_current_scope(vm);
-  value_t v = run_expression(ctx, stmt->expression, shadow);
+  value_t v = run_expression(vm, stmt->expression, shadow);
 
   /* interrupt (break/continue/return) — propagate immediately. The
    * function-level handler will loop vm_pop_scope until the call-site
@@ -26,7 +25,7 @@ value_t run_statement_expression(context_t ctx, node_t node, bool shadow) {
       /* shadow mode: loop pop to restore scope, write diagnostic, return void */
       while (vm_get_current_scope(vm) != scope_before)
         vm_pop_scope(vm);
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+      diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, node->location,
                            "expression statement error in compile-time check");
       return create_void_value(vm);
     }
@@ -41,7 +40,7 @@ value_t run_statement_expression(context_t ctx, node_t node, bool shadow) {
       /* shadow mode: loop pop to restore scope, write compile error, return void */
       while (vm_get_current_scope(vm) != scope_before)
         vm_pop_scope(vm);
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, node->location,
+      diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, node->location,
                            "expression statement discards non-void value of type '%s'",
                            type_get_name(result_type));
       return create_void_value(vm);

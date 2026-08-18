@@ -6,7 +6,7 @@
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "cubec/declaration.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -83,10 +83,10 @@ typedef struct _cubec_declaration_function_init_t
  * @return A new declaration_function_t node, or NULL if 'func' keyword not
  * found.
  */
-node_t read_declaration_function(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_function(vm_t vm, vec_t tokens, size_t *position,
                                 const char *filename);
 
-node_t create_declaration_function(context_t ctx, location_t loc, node_t name,
+node_t create_declaration_function(vm_t vm, location_t loc, node_t name,
                                    vec_t captures, vec_t generic_params,
                                    vec_t args, node_t return_type, node_t body,
                                    bool is_inline, bool is_extern,

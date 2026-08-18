@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_DECLARATION_UNION_
 #define _H_CUBEC_CUBEC_DECLARATION_UNION_
-#include "engine/context.h"
+#include "engine/vm.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/class.h"
@@ -60,7 +60,7 @@ typedef struct _cubec_declaration_union_init_t cubec_declaration_union_init_t;
  * @return A new cubec_declaration_union_t node, or NULL if current token
  *         is not 'union' keyword.
  */
-node_t read_declaration_union(context_t ctx, vec_t tokens,
+node_t read_declaration_union(vm_t vm, vec_t tokens,
                                    size_t *position, const char *filename);
 
 /**
@@ -76,12 +76,12 @@ node_t read_declaration_union(context_t ctx, vec_t tokens,
  * @param start_location Location of the 'union' keyword (for error span).
  * @return A new cubec_declaration_union_t node, or NULL on error.
  */
-node_t read_declaration_union_body(context_t ctx, vec_t tokens,
+node_t read_declaration_union_body(vm_t vm, vec_t tokens,
                                         size_t *position, const char *filename,
                                         location_t start_location,
                                         vec_t *out_implements);
 
-node_t create_declaration_union(context_t ctx, location_t loc,
+node_t create_declaration_union(vm_t vm, location_t loc,
                                     vec_t generic_params, vec_t members);
 
 

@@ -26,11 +26,11 @@ protected:
 
 TEST_F(dt_expression_generic_instantiation, no_args) {
   const char *source = "foo[]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -51,11 +51,11 @@ TEST_F(dt_expression_generic_instantiation, no_args) {
 
 TEST_F(dt_expression_generic_instantiation, one_arg) {
   const char *source = "foo[a]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -78,11 +78,11 @@ TEST_F(dt_expression_generic_instantiation, one_arg) {
 
 TEST_F(dt_expression_generic_instantiation, two_args) {
   const char *source = "foo[a, b]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -113,11 +113,11 @@ TEST_F(dt_expression_generic_instantiation, two_args) {
 
 TEST_F(dt_expression_generic_instantiation, numeric_args) {
   const char *source = "foo[0, 42]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -137,11 +137,11 @@ TEST_F(dt_expression_generic_instantiation, numeric_args) {
 
 TEST_F(dt_expression_generic_instantiation, binary_arg) {
   const char *source = "foo[a + b, c]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -169,11 +169,11 @@ TEST_F(dt_expression_generic_instantiation, binary_arg) {
 
 TEST_F(dt_expression_generic_instantiation, spread_arg) {
   const char *source = "foo[...a]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -195,11 +195,11 @@ TEST_F(dt_expression_generic_instantiation, spread_arg) {
 
 TEST_F(dt_expression_generic_instantiation, mixed_spread) {
   const char *source = "foo[a, ...b, c]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -230,11 +230,11 @@ TEST_F(dt_expression_generic_instantiation, mixed_spread) {
 TEST_F(dt_expression_generic_instantiation, wildcard_arg) {
   /* foo[?]  鈫? generic instantiation with wildcard argument */
   const char *source = "foo[?]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -257,11 +257,11 @@ TEST_F(dt_expression_generic_instantiation, wildcard_arg) {
 TEST_F(dt_expression_generic_instantiation, wildcard_mixed) {
   /* foo[a, ?, b]  鈫? generic instantiation with wildcard among other args */
   const char *source = "foo[a, ?, b]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -290,11 +290,11 @@ TEST_F(dt_expression_generic_instantiation, wildcard_mixed) {
 TEST_F(dt_expression_generic_instantiation, multiple_wildcards) {
   /* foo[?, ?, ?]  鈫? generic instantiation with multiple wildcards */
   const char *source = "foo[?, ?, ?]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -318,11 +318,11 @@ TEST_F(dt_expression_generic_instantiation, multiple_wildcards) {
 TEST_F(dt_expression_generic_instantiation, generic_then_call) {
   /* foo[a]()  鈫? generic instantiation, then call with no args */
   const char *source = "foo[a]()";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_CALL);
 
@@ -341,11 +341,11 @@ TEST_F(dt_expression_generic_instantiation, generic_then_call) {
 TEST_F(dt_expression_generic_instantiation, generic_then_member) {
   /* foo[a].field  鈫? generic instantiation, then member access */
   const char *source = "foo[a].field";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
@@ -360,11 +360,11 @@ TEST_F(dt_expression_generic_instantiation, generic_then_member) {
 TEST_F(dt_expression_generic_instantiation, call_then_generic) {
   /* foo()[a]  鈫? call first, then generic instantiation on result */
   const char *source = "foo()[a]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -380,11 +380,11 @@ TEST_F(dt_expression_generic_instantiation, call_then_generic) {
 TEST_F(dt_expression_generic_instantiation, chained_generic) {
   /* foo[a][b]  鈫? nested generic instantiation */
   const char *source = "foo[a][b]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SUBSCRIPT);
 
@@ -409,11 +409,11 @@ TEST_F(dt_expression_generic_instantiation, chained_generic) {
 TEST_F(dt_expression_generic_instantiation, generic_call_member) {
   /* foo[a]().field  鈫? generic 鈫?call 鈫?member */
   const char *source = "foo[a]().field";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
@@ -433,11 +433,11 @@ TEST_F(dt_expression_generic_instantiation, generic_call_member) {
 
 TEST_F(dt_expression_generic_instantiation, not_a_generic_no_bracket) {
   const char *source = "foo";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* Should just be an identifier, not a generic instantiation */
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
@@ -448,13 +448,13 @@ TEST_F(dt_expression_generic_instantiation, not_a_generic_no_bracket) {
 
 TEST_F(dt_expression_generic_instantiation, unclosed_bracket) {
   const char *source = "foo[a";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   /* parse error expected: unclosed bracket 鈫?recorded in diagnostics */
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
-  EXPECT_GT(context_get_error_count(ctx), 0);
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
+  EXPECT_GT(diagnostic_list_get_error_count(vm_get_diagnostics(vm)), 0);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -462,13 +462,13 @@ TEST_F(dt_expression_generic_instantiation, unclosed_bracket) {
 
 TEST_F(dt_expression_generic_instantiation, trailing_comma) {
   const char *source = "foo[a, ]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   /* parse error expected: trailing comma 鈫?recorded in diagnostics */
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
-  EXPECT_GT(context_get_error_count(ctx), 0);
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
+  EXPECT_GT(diagnostic_list_get_error_count(vm_get_diagnostics(vm)), 0);
 
   allocator_free(allocator, &node);
   allocator_free(allocator, &tokens);
@@ -476,10 +476,10 @@ TEST_F(dt_expression_generic_instantiation, trailing_comma) {
 
 TEST_F(dt_expression_generic_instantiation, write_generic_instantiation) {
   const char *source = "Vec[i32]";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

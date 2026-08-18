@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,10 +54,10 @@ typedef struct _cubec_statement_if_init_t cubec_statement_if_init_t;
  * @return A new cubec_statement_if_t node, or NULL if current token
  *         is not 'if' keyword.
  */
-node_t read_statement_if(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_if(vm_t vm, vec_t tokens, size_t *position,
                          const char *filename);
 
-node_t create_statement_if(context_t ctx, location_t loc, node_t cond,
+node_t create_statement_if(vm_t vm, location_t loc, node_t cond,
                            node_t then_branch, node_t else_branch);
 
 

@@ -62,29 +62,27 @@ protected:
     return loc;
   }
 
-  vm_t vm() { return ctx->vm; }
-
   void free_node(node_t &node) {
-    if (node) allocator_free(ctx->allocator, &node);
+    if (node) allocator_free(vm_get_allocator(vm), &node);
   }
 
   void free_tokens(vec_t &tokens) {
-    if (tokens) allocator_free(ctx->allocator, &tokens);
+    if (tokens) allocator_free(vm_get_allocator(vm), &tokens);
   }
 
   /* Register a value in current scope under the given name */
   void _bind(const char *name, value_t val) {
-    scope_t scope = vm_get_current_scope(vm());
+    scope_t scope = vm_get_current_scope(vm);
     name_t n = name_create(scope->allocator, val);
     strmap_insert(scope->names, name, n);
   }
 
   /* Parse a source string into an expression node via lexer→parser */
   node_t _parse_expr(const char *source) {
-    vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+    vec_t tokens = resolve_token_list(vm, "test.cubec", source);
     if (!tokens) return NULL;
     size_t position = 0;
-    node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+    node_t node = read_expression(vm, tokens, &position, "test.cubec");
     free_tokens(tokens);
     return node;
   }
@@ -92,7 +90,7 @@ protected:
   /* Parse + run a source string as an expression */
   value_t _run_expr(const char *source, bool shadow = false) {
     node_t node = _parse_expr(source);
-    value_t v = run_expression(ctx, node, shadow);
+    value_t v = run_expression(vm, node, shadow);
     free_node(node);
     return v;
   }
@@ -103,7 +101,7 @@ protected:
  * ================================================================== */
 
 TEST_F(it_run_expression, null_node_returns_void) {
-  value_t v = run_expression(ctx, NULL, false);
+  value_t v = run_expression(vm, NULL, false);
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 }
 
@@ -324,26 +322,26 @@ TEST_F(it_run_expression, logical_and_shadow_left) {
  * ================================================================== */
 
 TEST_F(it_run_expression, assign_identifier_returns_void) {
-  value_t i32_val = create_i32_value(vm(), 0);
+  value_t i32_val = create_i32_value(vm, 0);
   _bind("x", i32_val);
 
   value_t v = _run_expr("x = 99");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 
-  scope_t scope = vm_get_current_scope(vm());
+  scope_t scope = vm_get_current_scope(vm);
   name_t n = scope_lookup(scope, "x");
   ASSERT_NE(n, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(n->ref), 99);
 }
 
 TEST_F(it_run_expression, assign_compound_add) {
-  value_t i32_val = create_i32_value(vm(), 10);
+  value_t i32_val = create_i32_value(vm, 10);
   _bind("y", i32_val);
 
   value_t v = _run_expr("y += 5");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 
-  scope_t scope = vm_get_current_scope(vm());
+  scope_t scope = vm_get_current_scope(vm);
   name_t n = scope_lookup(scope, "y");
   ASSERT_NE(n, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(n->ref), 15);
@@ -359,8 +357,8 @@ TEST_F(it_run_expression, assign_discard_wildcard) {
  * ================================================================== */
 
 TEST_F(it_run_expression, deref_pointer) {
-  value_t i32_val = create_i32_value(vm(), 77);
-  value_t ptr_val = value_addrof(vm(), i32_val);
+  value_t i32_val = create_i32_value(vm, 77);
+  value_t ptr_val = value_addrof(vm, i32_val);
   ASSERT_NE(ptr_val, nullptr);
   _bind("p", ptr_val);
 
@@ -374,7 +372,7 @@ TEST_F(it_run_expression, deref_pointer) {
  * ================================================================== */
 
 TEST_F(it_run_expression, addr_of_value) {
-  value_t i32_val = create_i32_value(vm(), 55);
+  value_t i32_val = create_i32_value(vm, 55);
   _bind("a", i32_val);
 
   value_t v = _run_expr("a.&");
@@ -387,17 +385,17 @@ TEST_F(it_run_expression, addr_of_value) {
 
 TEST_F(it_run_expression, member_get_struct_field) {
   /* Build a struct type Point { x: i32, y: i32 } and a value */
-  value_t tv = vm_create_struct_type_value(vm(), "Point", true, "test");
-  (void)vm_struct_add_field(vm(), tv, "x", vm_get_i32_type(vm()), true);
-  (void)vm_struct_add_field(vm(), tv, "y", vm_get_i32_type(vm()), true);
-  (void)vm_struct_seal(vm(), tv);
+  value_t tv = vm_create_struct_type_value(vm, "Point", true, "test");
+  (void)vm_struct_add_field(vm, tv, "x", vm_get_i32_type(vm), true);
+  (void)vm_struct_add_field(vm, tv, "y", vm_get_i32_type(vm), true);
+  (void)vm_struct_seal(vm, tv);
 
-  vm_set_current_module_id(vm(), "test");
+  vm_set_current_module_id(vm, "test");
 
-  value_t vx = create_i32_value(vm(), 10);
-  value_t vy = create_i32_value(vm(), 20);
+  value_t vx = create_i32_value(vm, 10);
+  value_t vy = create_i32_value(vm, 20);
   value_t fields[] = {vx, vy};
-  value_t sv = vm_create_struct_value(vm(), tv, fields);
+  value_t sv = vm_create_struct_value(vm, tv, fields);
   _bind("pt", sv);
 
   /* Access pt.x */
@@ -408,7 +406,7 @@ TEST_F(it_run_expression, member_get_struct_field) {
 }
 
 TEST_F(it_run_expression, member_on_non_struct_returns_error) {
-  value_t i32_val = create_i32_value(vm(), 123);
+  value_t i32_val = create_i32_value(vm, 123);
   _bind("simple", i32_val);
 
   value_t v = _run_expr("simple.field");
@@ -421,15 +419,15 @@ TEST_F(it_run_expression, member_on_non_struct_returns_error) {
 
 TEST_F(it_run_expression, subscript_array_element) {
   /* Create an array [3]i32 { 10, 20, 30 } */
-  type_t i32_t = (type_t)value_get_data(vm_get_i32_type(vm()));
-  array_type_t at = array_type_create(ctx->allocator, i32_t, 3, true);
-  vec_push(vm_get_current_scope(vm())->types, at);
+  type_t i32_t = (type_t)value_get_data(vm_get_i32_type(vm));
+  array_type_t at = array_type_create(vm_get_allocator(vm), i32_t, 3, true);
+  vec_push(vm_get_current_scope(vm)->types, at);
 
-  value_t e0 = create_i32_value(vm(), 10);
-  value_t e1 = create_i32_value(vm(), 20);
-  value_t e2 = create_i32_value(vm(), 30);
+  value_t e0 = create_i32_value(vm, 10);
+  value_t e1 = create_i32_value(vm, 20);
+  value_t e2 = create_i32_value(vm, 30);
   value_t elems[] = {e0, e1, e2};
-  value_t av = create_array_value(vm(), at, elems);
+  value_t av = create_array_value(vm, at, elems);
   _bind("arr", av);
 
   /* arr[1] should be 20 */
@@ -440,7 +438,7 @@ TEST_F(it_run_expression, subscript_array_element) {
 }
 
 TEST_F(it_run_expression, subscript_on_non_indexable_returns_error) {
-  value_t i32_val = create_i32_value(vm(), 0);
+  value_t i32_val = create_i32_value(vm, 0);
   _bind("num", i32_val);
 
   value_t v = _run_expr("num[0]");
@@ -452,7 +450,7 @@ TEST_F(it_run_expression, subscript_on_non_indexable_returns_error) {
  * ================================================================== */
 
 TEST_F(it_run_expression, call_panic_returns_exception) {
-  value_t panic_fn = vm_get_builtin(vm(), "panic");
+  value_t panic_fn = vm_get_builtin(vm, "panic");
   ASSERT_NE(panic_fn, nullptr);
   /* panic is already registered in global scope by vm bootstrap */
 
@@ -465,7 +463,7 @@ TEST_F(it_run_expression, call_panic_returns_exception) {
  * ================================================================== */
 
 TEST_F(it_run_expression, namespace_access_on_non_type_returns_error) {
-  value_t i32_val = create_i32_value(vm(), 1);
+  value_t i32_val = create_i32_value(vm, 1);
   _bind("nottype", i32_val);
 
   value_t v = _run_expr("nottype::prop");
@@ -478,7 +476,7 @@ TEST_F(it_run_expression, namespace_access_on_non_type_returns_error) {
 
 TEST_F(it_run_expression, assign_i32_to_i8_safe_cast_rejected) {
   /* x: i8 = 42 — i32→i8 is narrowing, safe_cast rejects */
-  value_t i8_val = create_i8_value(vm(), 0);
+  value_t i8_val = create_i8_value(vm, 0);
   _bind("x", i8_val);
 
   value_t v = _run_expr("x = 42");
@@ -487,10 +485,10 @@ TEST_F(it_run_expression, assign_i32_to_i8_safe_cast_rejected) {
 
 TEST_F(it_run_expression, assign_i64_to_i32_narrowing_rejected) {
   /* y: i32 = big_i64 — i64→i32 is narrowing, safe_cast rejects */
-  value_t i32_val = create_i32_value(vm(), 0);
+  value_t i32_val = create_i32_value(vm, 0);
   _bind("y", i32_val);
 
-  value_t big_val = create_i64_value(vm(), 0x1FFFFFFFF);
+  value_t big_val = create_i64_value(vm, 0x1FFFFFFFF);
   _bind("big", big_val);
 
   value_t v = _run_expr("y = big");
@@ -499,16 +497,16 @@ TEST_F(it_run_expression, assign_i64_to_i32_narrowing_rejected) {
 
 TEST_F(it_run_expression, assign_i8_to_i32_safe_cast_ok) {
   /* z: i32 = small_i8 — i8→i32 is widening, safe_cast allows */
-  value_t i32_val = create_i32_value(vm(), 0);
+  value_t i32_val = create_i32_value(vm, 0);
   _bind("z", i32_val);
 
-  value_t small_val = create_i8_value(vm(), 42);
+  value_t small_val = create_i8_value(vm, 42);
   _bind("small", small_val);
 
   value_t v = _run_expr("z = small");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 
-  scope_t scope = vm_get_current_scope(vm());
+  scope_t scope = vm_get_current_scope(vm);
   name_t n = scope_lookup(scope, "z");
   ASSERT_NE(n, nullptr);
   EXPECT_EQ(*(int32_t *)value_get_data(n->ref), 42);
@@ -516,16 +514,16 @@ TEST_F(it_run_expression, assign_i8_to_i32_safe_cast_ok) {
 
 TEST_F(it_run_expression, assign_i32_to_u32_same_width_safe_cast_ok) {
   /* z: u32 = neg_i32 — same width, safe_cast allows */
-  value_t u32_val = create_u32_value(vm(), 0);
+  value_t u32_val = create_u32_value(vm, 0);
   _bind("z", u32_val);
 
-  value_t neg_val = create_i32_value(vm(), -1);
+  value_t neg_val = create_i32_value(vm, -1);
   _bind("neg", neg_val);
 
   value_t v = _run_expr("z = neg");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
 
-  scope_t scope = vm_get_current_scope(vm());
+  scope_t scope = vm_get_current_scope(vm);
   name_t n = scope_lookup(scope, "z");
   ASSERT_NE(n, nullptr);
   EXPECT_EQ(*(uint32_t *)value_get_data(n->ref), 0xFFFFFFFFu);
@@ -533,7 +531,7 @@ TEST_F(it_run_expression, assign_i32_to_u32_same_width_safe_cast_ok) {
 
 TEST_F(it_run_expression, assign_incompatible_type_returns_error) {
   /* i32 = bool — safe_cast fails, returns exception */
-  value_t i32_val = create_i32_value(vm(), 0);
+  value_t i32_val = create_i32_value(vm, 0);
   _bind("x", i32_val);
 
   value_t v = _run_expr("x = true");
@@ -544,7 +542,7 @@ TEST_F(it_run_expression, assign_incompatible_type_shadow_skips_write) {
   /* shadow mode: x = true → shadow path evaluates rvalue only,
    * does not attempt safe_cast/write (type mismatch not detected at
    * expression level in shadow mode; statement layer handles it) */
-  value_t i32_val = create_i32_value(vm(), 0);
+  value_t i32_val = create_i32_value(vm, 0);
   _bind("x", i32_val);
 
   value_t v = _run_expr("x = true", true);
@@ -558,7 +556,7 @@ TEST_F(it_run_expression, assign_incompatible_type_shadow_skips_write) {
 
 TEST_F(it_run_expression, add_i8_i32_promotes_to_i32) {
   /* i8 + i32 → i32 (wider type wins) */
-  value_t a8 = create_i8_value(vm(), 10);
+  value_t a8 = create_i8_value(vm, 10);
   _bind("a", a8);
 
   value_t v = _run_expr("a + 20");
@@ -568,9 +566,9 @@ TEST_F(it_run_expression, add_i8_i32_promotes_to_i32) {
 
 TEST_F(it_run_expression, add_i32_i64_promotes_to_i64) {
   /* i32 + i64 → i64 */
-  value_t a32 = create_i32_value(vm(), 100);
+  value_t a32 = create_i32_value(vm, 100);
   _bind("a", a32);
-  value_t b64 = create_i64_value(vm(), 200);
+  value_t b64 = create_i64_value(vm, 200);
   _bind("b", b64);
 
   value_t v = _run_expr("a + b");
@@ -580,9 +578,9 @@ TEST_F(it_run_expression, add_i32_i64_promotes_to_i64) {
 
 TEST_F(it_run_expression, add_i32_u32_promotes_to_u32) {
   /* i32 + u32 → u32 (same size, unsigned wins) */
-  value_t a32 = create_i32_value(vm(), 10);
+  value_t a32 = create_i32_value(vm, 10);
   _bind("a", a32);
-  value_t b32 = create_u32_value(vm(), 20);
+  value_t b32 = create_u32_value(vm, 20);
   _bind("b", b32);
 
   value_t v = _run_expr("a + b");
@@ -592,9 +590,9 @@ TEST_F(it_run_expression, add_i32_u32_promotes_to_u32) {
 
 TEST_F(it_run_expression, add_i8_u64_promotes_to_u64) {
   /* i8 + u64 → u64 (wider wins) */
-  value_t a8 = create_i8_value(vm(), 5);
+  value_t a8 = create_i8_value(vm, 5);
   _bind("a", a8);
-  value_t b64 = create_u64_value(vm(), 100);
+  value_t b64 = create_u64_value(vm, 100);
   _bind("b", b64);
 
   value_t v = _run_expr("a + b");
@@ -604,7 +602,7 @@ TEST_F(it_run_expression, add_i8_u64_promotes_to_u64) {
 
 TEST_F(it_run_expression, sub_u8_i32_promotes_to_i32) {
   /* u8 - i32 → i32 (wider signed wins) */
-  value_t a8 = create_u8_value(vm(), 50);
+  value_t a8 = create_u8_value(vm, 50);
   _bind("a", a8);
 
   value_t v = _run_expr("a - 20");
@@ -614,9 +612,9 @@ TEST_F(it_run_expression, sub_u8_i32_promotes_to_i32) {
 
 TEST_F(it_run_expression, mul_i16_u16_promotes_to_u16) {
   /* i16 * u16 → u16 (same size, unsigned wins) */
-  value_t a16 = create_i16_value(vm(), 3);
+  value_t a16 = create_i16_value(vm, 3);
   _bind("a", a16);
-  value_t b16 = create_u16_value(vm(), 7);
+  value_t b16 = create_u16_value(vm, 7);
   _bind("b", b16);
 
   value_t v = _run_expr("a * b");
@@ -626,7 +624,7 @@ TEST_F(it_run_expression, mul_i16_u16_promotes_to_u16) {
 
 TEST_F(it_run_expression, type_negotiation_shadow_propagates) {
   /* shadow: i8 + i32 → shadow i32 */
-  value_t a8 = create_i8_value(vm(), 10);
+  value_t a8 = create_i8_value(vm, 10);
   _bind("a", a8);
 
   value_t v = _run_expr("a + 20", true);

@@ -7,7 +7,7 @@
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "cubec/literal.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,13 +54,13 @@ struct _cubec_literal_numeric_init_t {
 };
 typedef struct _cubec_literal_numeric_init_t cubec_literal_numeric_init_t;
 
-node_t read_literal_numeric(context_t ctx, vec_t tokens, size_t *position,
+node_t read_literal_numeric(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename);
 
 const char *
 cubec_literal_numeric_type_to_string(cubec_literal_numeric_type_t type);
 
-node_t create_literal_numeric(context_t ctx, location_t loc, const char *value,
+node_t create_literal_numeric(vm_t vm, location_t loc, const char *value,
                               cubec_literal_numeric_kind_t kind,
                               cubec_literal_numeric_type_t ntype);
 

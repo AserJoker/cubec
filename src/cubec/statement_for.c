@@ -98,9 +98,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_for — for(init; cond; incr) { }
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_for(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_for(vm_t vm, vec_t tokens, size_t *position,
                           const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t init = NULL;
   node_t condition = NULL;
@@ -135,7 +135,7 @@ node_t read_statement_for(context_t ctx, vec_t tokens, size_t *position,
       current++;
       skip_whitespace(tokens, &current);
       node_t declarator =
-          read_declaration_variable(ctx, tokens, &current, filename);
+          read_declaration_variable(vm, tokens, &current, filename);
       if (node_is_error(declarator))
         return declarator;
       if (!declarator)
@@ -159,7 +159,7 @@ node_t read_statement_for(context_t ctx, vec_t tokens, size_t *position,
       }
     } else {
       /* Parse as expression (including assignment) */
-      init = read_expression_comma(ctx, tokens, &current, filename);
+      init = read_expression_comma(vm, tokens, &current, filename);
       if (node_is_error(init))
         return init;
       if (!init)
@@ -177,7 +177,7 @@ node_t read_statement_for(context_t ctx, vec_t tokens, size_t *position,
 
   /* 5. Parse condition (optional, ends at ';') */
   if (!_is_symbol(tokens, current, ";")) {
-    condition = read_expression_comma(ctx, tokens, &current, filename);
+    condition = read_expression_comma(vm, tokens, &current, filename);
     if (node_is_error(condition)) {
       allocator_free(allocator, &init);
       return condition;
@@ -196,7 +196,7 @@ node_t read_statement_for(context_t ctx, vec_t tokens, size_t *position,
 
   /* 7. Parse increment (optional, ends at ')') */
   if (!_is_symbol(tokens, current, ")")) {
-    increment = read_expression_comma(ctx, tokens, &current, filename);
+    increment = read_expression_comma(vm, tokens, &current, filename);
     if (node_is_error(increment)) {
       allocator_free(allocator, &condition);
       allocator_free(allocator, &init);
@@ -215,7 +215,7 @@ node_t read_statement_for(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 9. Parse body (any statement) */
-  body = read_statement(ctx, tokens, &current, filename);
+  body = read_statement(vm, tokens, &current, filename);
   if (node_is_error(body)) {
     allocator_free(allocator, &increment);
     allocator_free(allocator, &condition);
@@ -247,12 +247,12 @@ onerror:
   allocator_free(allocator, &condition);
   allocator_free(allocator, &init);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_for(context_t ctx, location_t loc, node_t init_node,
+node_t create_statement_for(vm_t vm, location_t loc, node_t init_node,
                             node_t cond, node_t incr, node_t body) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_statement_for_init_t init = {.location = loc,
                                      .parent = NULL,
                                      .init = init_node,

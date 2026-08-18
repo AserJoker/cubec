@@ -6,7 +6,7 @@
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "cubec/expression.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -38,10 +38,10 @@ typedef struct _cubec_expression_spread_init_t cubec_expression_spread_init_t;
  * @return A new cubec_expression_spread_t node, or NULL if the current
  *         token is not three consecutive '.' symbols.
  */
-node_t read_expression_spread(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_spread(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename);
 
-node_t create_expression_spread(context_t ctx, location_t loc, node_t value);
+node_t create_expression_spread(vm_t vm, location_t loc, node_t value);
 
 
 void emit_expression_spread(emit_context_t ctx, node_t node);

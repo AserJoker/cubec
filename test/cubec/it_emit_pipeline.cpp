@@ -15,11 +15,11 @@ class it_emit_pipeline : public CubecTest {
 protected:
   /* Helper: parse + emit a statement and return the output string */
   string_t emit_statement_str(const char *source) {
-    vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+    vec_t tokens = resolve_token_list(vm, "test.cubec", source);
     emit_context_t ectx = emit_context_create(allocator, tokens);
 
     size_t position = 0;
-    node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+    node_t node = read_statement(vm, tokens, &position, "test.cubec");
     if (!node) {
       emit_context_dispose(ectx);
       allocator_free(allocator, &tokens);
@@ -39,11 +39,11 @@ protected:
 
   /* Helper: parse + emit a full program and return the output string */
   string_t emit_program_str(const char *source) {
-    vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+    vec_t tokens = resolve_token_list(vm, "test.cubec", source);
     emit_context_t ectx = emit_context_create(allocator, tokens);
 
     size_t position = 0;
-    node_t node = read_program_node(ctx, tokens, &position, "test.cubec");
+    node_t node = read_program_node(vm, tokens, &position, "test.cubec");
     if (!node) {
       emit_context_dispose(ectx);
       allocator_free(allocator, &tokens);
@@ -62,11 +62,11 @@ protected:
 
   /* Helper: emit an expression and return the output string */
   string_t emit_expression_str(const char *source) {
-    vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+    vec_t tokens = resolve_token_list(vm, "test.cubec", source);
     emit_context_t ectx = emit_context_create(allocator, tokens);
 
     size_t position = 0;
-    node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+    node_t node = read_expression(vm, tokens, &position, "test.cubec");
     if (!node) {
       emit_context_dispose(ectx);
       allocator_free(allocator, &tokens);

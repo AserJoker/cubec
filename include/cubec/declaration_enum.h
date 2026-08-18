@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_DECLARATION_ENUM_
 #define _H_CUBEC_CUBEC_DECLARATION_ENUM_
-#include "engine/context.h"
+#include "engine/vm.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/class.h"
@@ -53,7 +53,7 @@ typedef struct _cubec_declaration_enum_init_t cubec_declaration_enum_init_t;
  * @return A new cubec_declaration_enum_t node, or NULL if current token
  *         is not 'enum' keyword.
  */
-node_t read_declaration_enum(context_t ctx, vec_t tokens,
+node_t read_declaration_enum(vm_t vm, vec_t tokens,
                                   size_t *position, const char *filename);
 
 /**
@@ -69,11 +69,11 @@ node_t read_declaration_enum(context_t ctx, vec_t tokens,
  * @param start_location Location of the 'enum' keyword (for error span).
  * @return A new cubec_declaration_enum_t node, or NULL on error.
  */
-node_t read_declaration_enum_body(context_t ctx, vec_t tokens,
+node_t read_declaration_enum_body(vm_t vm, vec_t tokens,
                                        size_t *position, const char *filename,
                                        location_t start_location);
 
-node_t create_declaration_enum(context_t ctx, location_t loc, vec_t items);
+node_t create_declaration_enum(vm_t vm, location_t loc, vec_t items);
 
 
 void emit_declaration_enum(emit_context_t ctx, node_t node);

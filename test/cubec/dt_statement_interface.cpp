@@ -28,11 +28,11 @@ protected:
 
 TEST_F(dt_statement_interface, basic_interface) {
   const char *source = "interface Foo { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_INTERFACE);
 
@@ -52,11 +52,11 @@ TEST_F(dt_statement_interface, basic_interface) {
 
 TEST_F(dt_statement_interface, interface_with_method) {
   const char *source = "interface Iterator { func next(self): Item; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_INTERFACE);
 
@@ -82,11 +82,11 @@ TEST_F(dt_statement_interface, interface_with_method) {
 
 TEST_F(dt_statement_interface, interface_with_type_member) {
   const char *source = "interface Iterator { type Item; func next(self): Item; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_interface_t iface = (cubec_statement_interface_t)node;
@@ -119,11 +119,11 @@ TEST_F(dt_statement_interface, interface_with_type_member) {
 
 TEST_F(dt_statement_interface, interface_generic) {
   const char *source = "interface Container[T] { func len(self): u64; func get(self, idx: u64): T; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_interface_t iface = (cubec_statement_interface_t)node;
@@ -140,11 +140,11 @@ TEST_F(dt_statement_interface, interface_generic) {
 
 TEST_F(dt_statement_interface, interface_generic_multi) {
   const char *source = "interface Mapper[K, V] { func map(self, key: K): V; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_interface_t iface = (cubec_statement_interface_t)node;
@@ -163,11 +163,11 @@ TEST_F(dt_statement_interface, interface_generic_multi) {
 
 TEST_F(dt_statement_interface, interface_method_no_return_type) {
   const char *source = "interface Foo { func bar(); }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_interface_t iface = (cubec_statement_interface_t)node;
@@ -185,11 +185,11 @@ TEST_F(dt_statement_interface, interface_method_no_return_type) {
 
 TEST_F(dt_statement_interface, interface_method_generic) {
   const char *source = "interface Foo { func identity[T](x: T): T; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_interface_t iface = (cubec_statement_interface_t)node;
@@ -205,11 +205,11 @@ TEST_F(dt_statement_interface, interface_method_generic) {
 
 TEST_F(dt_statement_interface, interface_method_with_pointer_type) {
   const char *source = "interface Foo { func read(self): *u8; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_interface_t iface = (cubec_statement_interface_t)node;
@@ -224,11 +224,11 @@ TEST_F(dt_statement_interface, interface_method_with_pointer_type) {
 
 TEST_F(dt_statement_interface, interface_method_with_slice_type) {
   const char *source = "interface Foo { func data(self): []u8; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_interface_t iface = (cubec_statement_interface_t)node;
@@ -247,11 +247,11 @@ TEST_F(dt_statement_interface, interface_method_with_slice_type) {
 
 TEST_F(dt_statement_interface, export_interface) {
   const char *source = "export interface Foo { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_interface_t iface = (cubec_statement_interface_t)node;
@@ -265,11 +265,11 @@ TEST_F(dt_statement_interface, export_interface) {
 
 TEST_F(dt_statement_interface, non_export_interface) {
   const char *source = "interface Foo { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_interface_t iface = (cubec_statement_interface_t)node;
@@ -283,11 +283,11 @@ TEST_F(dt_statement_interface, non_export_interface) {
 
 TEST_F(dt_statement_interface, export_interface_with_method) {
   const char *source = "export interface Serializable { func serialize(self): []u8; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_interface_t iface = (cubec_statement_interface_t)node;
@@ -307,11 +307,11 @@ TEST_F(dt_statement_interface, export_interface_with_method) {
 
 TEST_F(dt_statement_interface, clone) {
   const char *source = "interface Foo { func bar(self): i32; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)alloc_clone(allocator, node);
@@ -332,11 +332,11 @@ TEST_F(dt_statement_interface, clone) {
 
 TEST_F(dt_statement_interface, move) {
   const char *source = "interface Foo { func bar(self): i32; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)alloc_move(allocator, node);
@@ -360,11 +360,11 @@ TEST_F(dt_statement_interface, move) {
 
 TEST_F(dt_statement_interface, consume_all_tokens) {
   const char *source = "interface Foo { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(position, vec_get_size(tokens) - 1);
 
@@ -380,11 +380,11 @@ TEST_F(dt_statement_interface, consume_all_tokens) {
 
 TEST_F(dt_statement_interface, via_read_statement) {
   const char *source = "interface Foo { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_INTERFACE);
 
@@ -396,11 +396,11 @@ TEST_F(dt_statement_interface, via_read_statement) {
 
 TEST_F(dt_statement_interface, via_read_program) {
   const char *source = "interface Foo { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_program_node(ctx, tokens, &position, "test.cubec");
+  node_t node = read_program_node(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_PROGRAM);
 
@@ -416,11 +416,11 @@ TEST_F(dt_statement_interface, via_read_program) {
 
 TEST_F(dt_statement_interface, interface_type_member_with_generic) {
   const char *source = "interface Foo { type Item[T]; func get(self): Item[T]; }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_interface(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_interface(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_interface_t iface = (cubec_statement_interface_t)node;
@@ -440,10 +440,10 @@ TEST_F(dt_statement_interface, interface_type_member_with_generic) {
 
 TEST_F(dt_statement_interface, write_empty_interface) {
   const char *source = "interface Foo { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   emit_context_t ectx = emit_context_create(allocator, tokens);
   emit_statement(ectx, node);

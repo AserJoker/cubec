@@ -57,9 +57,9 @@ class_t g_cubec_expression_group_class = {
  *  Parser: read_expression_group
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_group(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_group(vm_t vm, vec_t tokens, size_t *position,
                              const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_expression_group_t node = NULL;
   node_t inner = NULL;
@@ -75,7 +75,7 @@ node_t read_expression_group(context_t ctx, vec_t tokens, size_t *position,
 
   /* Parse inner expression */
   skip_whitespace(tokens, &current);
-  inner = read_expression(ctx, tokens, &current, filename);
+  inner = read_expression(vm, tokens, &current, filename);
   if (node_is_error(inner))
     return inner;
   if (!inner) {
@@ -102,19 +102,19 @@ node_t read_expression_group(context_t ctx, vec_t tokens, size_t *position,
   return (node_t)node;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid grouped expression");
   allocator_free(allocator, &inner);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_expression_group
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_group(context_t ctx, location_t loc, node_t inner) {
-  allocator_t alloc = ctx->allocator;
+node_t create_expression_group(vm_t vm, location_t loc, node_t inner) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_expression_group_init_t init = {.inner = inner};
   return (node_t)allocator_create(alloc, &g_cubec_expression_group_class, &init);
 }

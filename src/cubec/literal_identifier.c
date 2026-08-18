@@ -56,9 +56,9 @@ class_t g_cubec_literal_identifier_class = {
     .move = (class_move_fn_t)_cubec_literal_identifier_move,
 };
 
-node_t read_literal_identifier(context_t ctx, vec_t tokens, size_t *position,
+node_t read_literal_identifier(vm_t vm, vec_t tokens, size_t *position,
                                const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
 
   token_t token = vec_get(tokens, current);
@@ -90,15 +90,15 @@ node_t read_literal_identifier(context_t ctx, vec_t tokens, size_t *position,
   *position = current;
   return node_base;
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid identifier");
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_literal_identifier(context_t ctx, location_t loc,
+node_t create_literal_identifier(vm_t vm, location_t loc,
                                  const char *name) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_literal_identifier_init_t init = {
       .location = loc, .parent = NULL, .value = name};
   return allocator_create(alloc, &g_cubec_literal_identifier_class, &init);

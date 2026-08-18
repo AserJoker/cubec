@@ -21,11 +21,11 @@ protected:
 /* typeof(fn) == func(i32) -> i32 鈥?binary == with function type */
 TEST_F(test_func_type_extends, typeof_eq_func_type) {
   const char *source = "typeof(fn) == func(i32) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* This should parse as a binary (==), not just typeof */
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
@@ -43,11 +43,11 @@ TEST_F(test_func_type_extends, typeof_eq_func_type) {
  * binary(typeof(fn), ==, func(i32) -> ternary(i32, Vec[i32], f32)) */
 TEST_F(test_func_type_extends, typeof_eq_func_type_ternary) {
   const char *source = "typeof(fn) == func(i32) -> i32 ? Vec[i32] : f32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* Greedy strategy: func return type greedily consumes ternary,
    * so the whole expression is a binary, not a ternary. */
@@ -71,11 +71,11 @@ TEST_F(test_func_type_extends, typeof_eq_func_type_ternary) {
  * Group disambiguation: ternary at the top level */
 TEST_F(test_func_type_extends, typeof_eq_func_type_grouped_ternary) {
   const char *source = "typeof(fn) == (func(i32) -> i32) ? Vec[i32] : f32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -93,10 +93,10 @@ TEST_F(test_func_type_extends, typeof_eq_func_type_grouped_ternary) {
 
 TEST_F(test_func_type_extends, write_func_type_eq) {
   const char *source = "typeof(fn) == func(i32) -> i32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   emit_context_t ectx = emit_context_create(allocator, tokens);
   emit_expression(ectx, node);

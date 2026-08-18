@@ -18,8 +18,8 @@ void skip_whitespace(vec_t tokens, size_t *position) {
   }
 }
 
-vec_t create_vec(context_t ctx, bool auto_dispose) {
-  allocator_t alloc = ctx->allocator;
+vec_t create_vec(vm_t vm, bool auto_dispose) {
+  allocator_t alloc = vm_get_allocator(vm);
   vec_init_t vi = {.auto_dispose = auto_dispose};
   return (vec_t)allocator_create(alloc, &g_vec_class, &vi);
 }

@@ -79,9 +79,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_declaration_tuple
  * -------------------------------------------------------------------------- */
 
-node_t read_declaration_tuple(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_tuple(vm_t vm, vec_t tokens, size_t *position,
                                   const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   /* In a type context, '<' starts a tuple type expression.
      Special cases:
@@ -148,9 +148,9 @@ node_t read_declaration_tuple(context_t ctx, vec_t tokens, size_t *position,
     skip_whitespace(tokens, &current);
 
     /* Check for spread: ...Args in <...Args> */
-    node_t elem = read_expression_spread(ctx, tokens, &current, filename);
+    node_t elem = read_expression_spread(vm, tokens, &current, filename);
     if (!elem) {
-      elem = read_type_expression_primary(ctx, tokens, &current, filename);
+      elem = read_type_expression_primary(vm, tokens, &current, filename);
     }
     if (!elem)
       break;
@@ -165,10 +165,10 @@ node_t read_declaration_tuple(context_t ctx, vec_t tokens, size_t *position,
 
   /* Expect closing '>' */
   if (!_is_symbol(tokens, current, ">")) {
-    diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+    diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                          "missing '>' in tuple type expression");
     allocator_free(allocator, &element_types);
-    return create_error(ctx, start_location);
+    return create_error(vm, start_location);
   }
   current++; /* skip '>' */
 
@@ -192,9 +192,9 @@ node_t read_declaration_tuple(context_t ctx, vec_t tokens, size_t *position,
  *  Factory: create_declaration_tuple
  * -------------------------------------------------------------------------- */
 
-node_t create_declaration_tuple(context_t ctx, location_t loc,
+node_t create_declaration_tuple(vm_t vm, location_t loc,
                                     vec_t element_types) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_declaration_tuple_init_t init = {
       .location = loc,
       .parent = NULL,

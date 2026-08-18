@@ -24,11 +24,11 @@ protected:
 
 TEST_F(dt_expression_sizeof, sizeof_identifier) {
   const char *source = "sizeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_sizeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_sizeof(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SIZEOF);
 
@@ -44,11 +44,11 @@ TEST_F(dt_expression_sizeof, sizeof_identifier) {
 
 TEST_F(dt_expression_sizeof, sizeof_binary_expression) {
   const char *source = "sizeof(a + b)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_sizeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_sizeof(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_expression_sizeof_t s = (cubec_expression_sizeof_t)node;
@@ -63,11 +63,11 @@ TEST_F(dt_expression_sizeof, sizeof_binary_expression) {
 
 TEST_F(dt_expression_sizeof, sizeof_function_call) {
   const char *source = "sizeof(foo())";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_sizeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_sizeof(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_expression_sizeof_t s = (cubec_expression_sizeof_t)node;
@@ -82,11 +82,11 @@ TEST_F(dt_expression_sizeof, sizeof_function_call) {
 
 TEST_F(dt_expression_sizeof, via_read_expression) {
   const char *source = "sizeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SIZEOF);
 
@@ -98,11 +98,11 @@ TEST_F(dt_expression_sizeof, via_read_expression) {
 
 TEST_F(dt_expression_sizeof, sizeof_member_access_in_expression) {
   const char *source = "sizeof(x).field";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
 
@@ -118,11 +118,11 @@ TEST_F(dt_expression_sizeof, sizeof_member_access_in_expression) {
 
 TEST_F(dt_expression_sizeof, sizeof_in_binary) {
   const char *source = "sizeof(x) + sizeof(y)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -141,11 +141,11 @@ TEST_F(dt_expression_sizeof, sizeof_in_binary) {
 
 TEST_F(dt_expression_sizeof, consume_all_tokens) {
   const char *source = "sizeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_sizeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_sizeof(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(position, 4);
 
@@ -157,11 +157,11 @@ TEST_F(dt_expression_sizeof, consume_all_tokens) {
 
 TEST_F(dt_expression_sizeof, missing_lparen_is_error) {
   const char *source = "sizeof x";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_sizeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_sizeof(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -172,11 +172,11 @@ TEST_F(dt_expression_sizeof, missing_lparen_is_error) {
 
 TEST_F(dt_expression_sizeof, missing_rparen_is_error) {
   const char *source = "sizeof(x";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_sizeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_sizeof(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -187,11 +187,11 @@ TEST_F(dt_expression_sizeof, missing_rparen_is_error) {
 
 TEST_F(dt_expression_sizeof, not_sizeof_returns_null) {
   const char *source = "foo";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_sizeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_sizeof(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -201,11 +201,11 @@ TEST_F(dt_expression_sizeof, not_sizeof_returns_null) {
 
 TEST_F(dt_expression_sizeof, clone) {
   const char *source = "sizeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_sizeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_sizeof(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)alloc_clone(allocator, node);
@@ -225,11 +225,11 @@ TEST_F(dt_expression_sizeof, clone) {
 
 TEST_F(dt_expression_sizeof, move) {
   const char *source = "sizeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_sizeof(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_sizeof(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)alloc_move(allocator, node);
@@ -247,10 +247,10 @@ TEST_F(dt_expression_sizeof, move) {
 
 TEST_F(dt_expression_sizeof, write_sizeof) {
   const char *source = "sizeof(x)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

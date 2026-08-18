@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,10 +39,10 @@ typedef struct _cubec_declaration_qualifier_init_t
  * @return A new cubec_declaration_qualifier_t node, or NULL if the current
  *         token is not the keyword const or volatile.
  */
-node_t read_declaration_qualifier(context_t ctx, vec_t tokens,
+node_t read_declaration_qualifier(vm_t vm, vec_t tokens,
                                       size_t *position, const char *filename);
 
-node_t create_declaration_qualifier(context_t ctx, location_t loc,
+node_t create_declaration_qualifier(vm_t vm, location_t loc,
                                         node_t base, bool is_const,
                                         bool is_volatile);
 

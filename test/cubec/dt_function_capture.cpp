@@ -17,11 +17,11 @@ protected:
 
 TEST_F(dt_function_capture, parse_identifier) {
   const char *source = "x";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_function_capture(ctx, tokens, &position, "test.cubec");
+  node_t node = read_function_capture(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_FUNCTION_CAPTURE);
 
@@ -36,11 +36,11 @@ TEST_F(dt_function_capture, parse_identifier) {
 
 TEST_F(dt_function_capture, non_identifier_returns_null) {
   const char *source = "123";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_function_capture(ctx, tokens, &position, "test.cubec");
+  node_t node = read_function_capture(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -48,10 +48,10 @@ TEST_F(dt_function_capture, non_identifier_returns_null) {
 
 TEST_F(dt_function_capture, write_basic) {
   const char *source = "x";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_function_capture(ctx, tokens, &position, "test.cubec");
+  node_t node = read_function_capture(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

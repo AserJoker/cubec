@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_STATEMENT_COMPTIME_
 #define _H_CUBEC_CUBEC_STATEMENT_COMPTIME_
-#include "engine/context.h"
+#include "engine/vm.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/class.h"
@@ -75,13 +75,13 @@ typedef struct _cubec_statement_comptime_foreach_init_t
  * Returns NULL if 'comptime' is followed by 'var', 'func', or other modifiers
  * (those are handled by declaration/function parsers).
  */
-node_t read_statement_comptime(context_t ctx, vec_t tokens,
+node_t read_statement_comptime(vm_t vm, vec_t tokens,
                                 size_t *position, const char *filename);
 
-node_t create_statement_comptime_if(context_t ctx, location_t loc,
+node_t create_statement_comptime_if(vm_t vm, location_t loc,
                                     node_t condition, node_t then_branch,
                                     node_t else_branch);
-node_t create_statement_comptime_foreach(context_t ctx, location_t loc,
+node_t create_statement_comptime_foreach(vm_t vm, location_t loc,
                                          bool is_var_decl, node_t variable,
                                          node_t var_type, node_t iterator,
                                          node_t body);

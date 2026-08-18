@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "core/emit_context.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,10 +48,10 @@ typedef struct _cubec_function_argument_init_t cubec_function_argument_init_t;
  * @return A new cubec_function_argument_t node, or NULL if current token
  *         is not an identifier.
  */
-node_t read_function_argument(context_t ctx, vec_t tokens, size_t *position,
+node_t read_function_argument(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename);
 
-node_t create_function_argument(context_t ctx, location_t loc, const char *name,
+node_t create_function_argument(vm_t vm, location_t loc, const char *name,
                                 node_t type);
 
 

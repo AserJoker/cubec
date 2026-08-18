@@ -134,9 +134,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_declaration_function
  * -------------------------------------------------------------------------- */
 
-node_t read_declaration_function(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_function(vm_t vm, vec_t tokens, size_t *position,
                                 const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t name = NULL;
   vec_t captures = NULL;
@@ -173,7 +173,7 @@ node_t read_declaration_function(context_t ctx, vec_t tokens, size_t *position,
     captures = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
 
     while (true) {
-      node_t cap = read_function_capture(ctx, tokens, &current, filename);
+      node_t cap = read_function_capture(vm, tokens, &current, filename);
       if (!cap) {
         goto onerror;
       }
@@ -196,7 +196,7 @@ node_t read_declaration_function(context_t ctx, vec_t tokens, size_t *position,
     /* After capture list, try to parse function name if present */
     token_t name_tok = vec_get(tokens, current);
     if (name_tok && token_get_kind(name_tok) == CUBEC_TOKEN_IDENTIFIER) {
-      name = read_literal_identifier(ctx, tokens, &current, filename);
+      name = read_literal_identifier(vm, tokens, &current, filename);
       skip_whitespace(tokens, &current);
     }
   } else {
@@ -204,13 +204,13 @@ node_t read_declaration_function(context_t ctx, vec_t tokens, size_t *position,
        Try to parse function name (identifier) if present. */
     token_t tok = vec_get(tokens, current);
     if (tok && token_get_kind(tok) == CUBEC_TOKEN_IDENTIFIER) {
-      name = read_literal_identifier(ctx, tokens, &current, filename);
+      name = read_literal_identifier(vm, tokens, &current, filename);
       skip_whitespace(tokens, &current);
     }
   }
 
   /* 3. Parse optional generic parameters */
-  generic_params = read_generic_params(ctx, tokens, &current, filename);
+  generic_params = read_generic_params(vm, tokens, &current, filename);
   if (generic_params) {
     skip_whitespace(tokens, &current);
   }
@@ -232,7 +232,7 @@ node_t read_declaration_function(context_t ctx, vec_t tokens, size_t *position,
     /* Parse parameters (read_function_argument handles ... prefix for pack
      * params) */
     while (true) {
-      node_t arg = read_function_argument(ctx, tokens, &current, filename);
+      node_t arg = read_function_argument(vm, tokens, &current, filename);
       if (!arg) {
         /* Check for C-style variadic with no named params: func(...)  */
         if (_is_symbol(tokens, current, "...")) {
@@ -272,7 +272,7 @@ node_t read_declaration_function(context_t ctx, vec_t tokens, size_t *position,
     current++;
     skip_whitespace(tokens, &current);
 
-    return_type = read_expression_base(ctx, tokens, &current, filename);
+    return_type = read_expression_base(vm, tokens, &current, filename);
     if (node_is_error(return_type))
       goto onerror;
     if (!return_type) {
@@ -284,7 +284,7 @@ node_t read_declaration_function(context_t ctx, vec_t tokens, size_t *position,
   /* 8. Parse function body or semicolon */
   token_t brace_or_semi = vec_get(tokens, current);
   if (token_is(brace_or_semi, CUBEC_TOKEN_SYMBOL, "{")) {
-    body = read_statement_block(ctx, tokens, &current, filename);
+    body = read_statement_block(vm, tokens, &current, filename);
     if (node_is_error(body))
       goto onerror;
     if (!body) {
@@ -337,20 +337,20 @@ onerror:
   allocator_free(allocator, &captures);
   allocator_free(allocator, &name);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_declaration_function
  * -------------------------------------------------------------------------- */
 
-node_t create_declaration_function(context_t ctx, location_t loc, node_t name,
+node_t create_declaration_function(vm_t vm, location_t loc, node_t name,
                                    vec_t captures, vec_t generic_params,
                                    vec_t args, node_t return_type, node_t body,
                                    bool is_inline, bool is_extern,
                                    bool is_builtin, bool is_comptime,
                                    bool is_c_variadic) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_declaration_function_init_t init = {
       .location = loc,
       .parent = NULL,
@@ -373,77 +373,77 @@ node_t create_declaration_function(context_t ctx, location_t loc, node_t name,
  *  Emit: emit_declaration_function
  * -------------------------------------------------------------------------- */
 
-void emit_declaration_function(emit_context_t ctx, node_t node) {
+void emit_declaration_function(emit_context_t vm, node_t node) {
   cubec_declaration_function_t decl = (cubec_declaration_function_t)node;
-  recover_comments_to(ctx, node->location.begin.offset);
+  recover_comments_to(vm, node->location.begin.offset);
   if (decl->is_inline) {
-    emit_keyword(ctx, "inline");
-    emit_space(ctx);
+    emit_keyword(vm, "inline");
+    emit_space(vm);
   }
   if (decl->is_extern) {
-    emit_keyword(ctx, "extern");
-    emit_space(ctx);
+    emit_keyword(vm, "extern");
+    emit_space(vm);
   }
   if (decl->is_builtin) {
-    emit_keyword(ctx, "builtin");
-    emit_space(ctx);
+    emit_keyword(vm, "builtin");
+    emit_space(vm);
   }
   if (decl->is_comptime) {
-    emit_keyword(ctx, "comptime");
-    emit_space(ctx);
+    emit_keyword(vm, "comptime");
+    emit_space(vm);
   }
-  emit_keyword(ctx, "func");
+  emit_keyword(vm, "func");
   if (decl->captures) {
-    emit_symbol(ctx, "|");
+    emit_symbol(vm, "|");
     for (size_t i = 0; i < vec_get_size(decl->captures); i++) {
       if (i != 0) {
-        emit_symbol(ctx, ",");
-        emit_space(ctx);
+        emit_symbol(vm, ",");
+        emit_space(vm);
       }
-      emit_function_capture(ctx, vec_get(decl->captures, i));
+      emit_function_capture(vm, vec_get(decl->captures, i));
     }
-    emit_symbol(ctx, "|");
+    emit_symbol(vm, "|");
   }
   if (decl->name) {
-    emit_space(ctx);
-    emit_expression(ctx, decl->name);
+    emit_space(vm);
+    emit_expression(vm, decl->name);
   }
   if (decl->generic_params) {
-    emit_symbol(ctx, "[");
+    emit_symbol(vm, "[");
     for (size_t i = 0; i < vec_get_size(decl->generic_params); i++) {
       if (i != 0) {
-        emit_symbol(ctx, ",");
-        emit_space(ctx);
+        emit_symbol(vm, ",");
+        emit_space(vm);
       }
-      emit_generic_param(ctx, vec_get(decl->generic_params, i));
+      emit_generic_param(vm, vec_get(decl->generic_params, i));
     }
-    emit_symbol(ctx, "]");
+    emit_symbol(vm, "]");
   }
-  emit_symbol(ctx, "(");
+  emit_symbol(vm, "(");
   for (size_t i = 0; i < vec_get_size(decl->arguments); i++) {
     if (i != 0) {
-      emit_symbol(ctx, ",");
-      emit_space(ctx);
+      emit_symbol(vm, ",");
+      emit_space(vm);
     }
-    emit_function_argument(ctx, vec_get(decl->arguments, i));
+    emit_function_argument(vm, vec_get(decl->arguments, i));
   }
   if (decl->is_c_variadic) {
     if (vec_get_size(decl->arguments) > 0) {
-      emit_symbol(ctx, ",");
-      emit_space(ctx);
+      emit_symbol(vm, ",");
+      emit_space(vm);
     }
-    emit_symbol(ctx, "...");
+    emit_symbol(vm, "...");
   }
-  emit_symbol(ctx, ")");
+  emit_symbol(vm, ")");
   if (decl->return_type) {
-    emit_symbol(ctx, ":");
-    emit_space(ctx);
-    emit_expression(ctx, decl->return_type);
+    emit_symbol(vm, ":");
+    emit_space(vm);
+    emit_expression(vm, decl->return_type);
   }
   if (decl->body) {
-    emit_space(ctx);
-    emit_statement(ctx, decl->body);
+    emit_space(vm);
+    emit_statement(vm, decl->body);
   } else {
-    emit_symbol(ctx, ";");
+    emit_symbol(vm, ";");
   }
 }

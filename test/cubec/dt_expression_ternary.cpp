@@ -26,7 +26,7 @@ protected:
 
 TEST_F(dt_expression_ternary, indirect_ternary_simple) {
   const char *source = "a ? b : c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
@@ -36,7 +36,7 @@ TEST_F(dt_expression_ternary, indirect_ternary_simple) {
   /* After skipping whitespace at start, position = 0 (token "a") */
   /* read_expression will parse "a ? b : c" as a complete ternary */
 
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -50,13 +50,13 @@ TEST_F(dt_expression_ternary, indirect_ternary_simple) {
 
 TEST_F(dt_expression_ternary, indirect_ternary_with_binary_condition) {
   const char *source = "x + a ? b : c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   skip_whitespace(tokens, &position);
 
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
@@ -75,11 +75,11 @@ TEST_F(dt_expression_ternary, indirect_ternary_with_binary_condition) {
 /* Missing '?' 鈫?returns condition as-is (graceful fallback, no error) */
 TEST_F(dt_expression_ternary, missing_question_mark_returns_condition) {
   const char *source = "a : b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   /* Should return 'a' identifier, no error */
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
@@ -91,11 +91,11 @@ TEST_F(dt_expression_ternary, missing_question_mark_returns_condition) {
 /* Missing ':' after consequent 鈫?error */
 TEST_F(dt_expression_ternary, missing_colon_error) {
   const char *source = "a ? b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -105,11 +105,11 @@ TEST_F(dt_expression_ternary, missing_colon_error) {
 /* Missing consequent (empty between ? and :) 鈫?error */
 TEST_F(dt_expression_ternary, missing_consequent_error) {
   const char *source = "a ? : b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -119,11 +119,11 @@ TEST_F(dt_expression_ternary, missing_consequent_error) {
 /* Missing alternate (empty after :) 鈫?error */
 TEST_F(dt_expression_ternary, missing_alternate_error) {
   const char *source = "a ? b :";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -137,11 +137,11 @@ TEST_F(dt_expression_ternary, missing_alternate_error) {
 /* Nested ternary: a ? (b ? c : d) : e */
 TEST_F(dt_expression_ternary, nested_ternary) {
   const char *source = "a ? b ? c : d : e";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -158,11 +158,11 @@ TEST_F(dt_expression_ternary, nested_ternary) {
 /* Ternary with complex alternate: a ? b : c + d */
 TEST_F(dt_expression_ternary, ternary_with_complex_alternate) {
   const char *source = "a ? b : c + d";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -175,10 +175,10 @@ TEST_F(dt_expression_ternary, ternary_with_complex_alternate) {
 
 TEST_F(dt_expression_ternary, write_ternary) {
   const char *source = "a ? b : c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

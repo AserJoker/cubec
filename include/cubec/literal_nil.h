@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/emit_context.h"
 #include "cubec/literal.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,10 +17,10 @@ typedef struct _cubec_literal_nil_t *cubec_literal_nil_t;
 
 extern class_t g_cubec_literal_nil_class;
 
-node_t read_literal_nil(context_t ctx, vec_t tokens, size_t *position,
+node_t read_literal_nil(vm_t vm, vec_t tokens, size_t *position,
                         const char *filename);
 
-node_t create_literal_nil(context_t ctx, location_t loc);
+node_t create_literal_nil(vm_t vm, location_t loc);
 
 void emit_literal_nil(emit_context_t ctx, node_t node);
 

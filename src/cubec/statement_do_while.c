@@ -85,9 +85,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_statement_do_while — do { } while(condition);
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_do_while(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_do_while(vm_t vm, vec_t tokens, size_t *position,
                                const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t body = NULL;
   node_t condition = NULL;
@@ -104,7 +104,7 @@ node_t read_statement_do_while(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 2. Parse body (any statement) */
-  body = read_statement(ctx, tokens, &current, filename);
+  body = read_statement(vm, tokens, &current, filename);
   if (node_is_error(body))
     return body;
   if (!body)
@@ -126,7 +126,7 @@ node_t read_statement_do_while(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 5. Parse condition */
-  condition = read_expression(ctx, tokens, &current, filename);
+  condition = read_expression(vm, tokens, &current, filename);
   if (node_is_error(condition)) {
     allocator_free(allocator, &body);
     return condition;
@@ -167,12 +167,12 @@ onerror:
   allocator_free(allocator, &condition);
   allocator_free(allocator, &body);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_do_while(context_t ctx, location_t loc, node_t body,
+node_t create_statement_do_while(vm_t vm, location_t loc, node_t body,
                                  node_t cond) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_statement_do_while_init_t init = {.body = body, .condition = cond};
   return (node_t)allocator_create(alloc, &g_cubec_statement_do_while_class,
                                   &init);

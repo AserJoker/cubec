@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/emit_context.h"
 #include "cubec/expression.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -47,10 +47,10 @@ typedef struct _cubec_expression_slice_init_t cubec_expression_slice_init_t;
  * @return A new cubec_expression_slice_t node, or NULL if the next token
  *         is not '[' (position is NOT advanced on NULL return).
  */
-node_t read_expression_slice(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_slice(vm_t vm, vec_t tokens, size_t *position,
                              const char *filename, node_t host);
 
-node_t create_expression_slice(context_t ctx, location_t loc, node_t host,
+node_t create_expression_slice(vm_t vm, location_t loc, node_t host,
                                node_t start, node_t length);
 
 

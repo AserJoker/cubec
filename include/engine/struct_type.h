@@ -140,6 +140,16 @@ value_t _struct_value_member_addr(struct _vm_t *vm, value_t self, const char *na
 value_t vm_create_struct_type_value(struct _vm_t *vm, const char *name,
                                      bool mut, const char *module_id);
 
+/* ---- Generic instantiation ---- */
+
+/** @brief Standard generic instantiation callback for struct types.
+ *  Checks instance cache, creates a concrete struct type on miss by
+ *  evaluating the struct declaration's field type expressions with
+ *  generic parameter substitution.
+ *  Follows create_instance_fn_t signature. */
+value_t create_struct_instance(struct _vm_t *vm, value_t tmpl,
+                               size_t argc, value_t *argv);
+
 #ifdef __cplusplus
 }
 #endif

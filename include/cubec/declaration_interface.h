@@ -1,6 +1,6 @@
 #ifndef _H_CUBEC_CUBEC_DECLARATION_INTERFACE_
 #define _H_CUBEC_CUBEC_DECLARATION_INTERFACE_
-#include "engine/context.h"
+#include "engine/vm.h"
 #include "core/location.h"
 #include "core/node.h"
 #include "core/class.h"
@@ -59,7 +59,7 @@ typedef struct _cubec_declaration_interface_init_t cubec_declaration_interface_i
  * @return A new cubec_declaration_interface_t node, or NULL if current token
  *         is not 'interface' keyword.
  */
-node_t read_declaration_interface(context_t ctx, vec_t tokens,
+node_t read_declaration_interface(vm_t vm, vec_t tokens,
                                        size_t *position, const char *filename);
 
 /**
@@ -76,11 +76,11 @@ node_t read_declaration_interface(context_t ctx, vec_t tokens,
  * @param start_location Location of the 'interface' keyword (for error span).
  * @return A new cubec_declaration_interface_t node, or NULL on error.
  */
-node_t read_declaration_interface_body(context_t ctx, vec_t tokens,
+node_t read_declaration_interface_body(vm_t vm, vec_t tokens,
                                             size_t *position, const char *filename,
                                             location_t start_location);
 
-node_t create_declaration_interface(context_t ctx, location_t loc,
+node_t create_declaration_interface(vm_t vm, location_t loc,
                                         vec_t generic_params, vec_t members);
 
 

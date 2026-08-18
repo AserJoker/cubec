@@ -1,7 +1,7 @@
 #include "cubec/node_error.h"
 #include "core/emit_context.h"
 #include "core/token_writer.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 
 static void _cubec_node_error_init(cubec_node_error_t self,
                                    allocator_t allocator,
@@ -42,8 +42,8 @@ class_t g_cubec_node_error_class = {
     .move = (class_move_fn_t)_cubec_node_error_move,
 };
 
-node_t create_error(context_t ctx, location_t loc) {
-  allocator_t alloc = ctx->allocator;
+node_t create_error(vm_t vm, location_t loc) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_node_error_init_t init = {.location = loc, .parent = NULL};
   return (node_t)allocator_create(alloc, &g_cubec_node_error_class, &init);
 }

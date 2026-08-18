@@ -29,12 +29,12 @@ protected:
 
 TEST_F(dt_expression_spread, spread_identifier) {
   const char *source = "...a";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node =
-      read_expression_spread(ctx, tokens, &position, "test.cubec");
+      read_expression_spread(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SPREAD);
 
@@ -52,12 +52,12 @@ TEST_F(dt_expression_spread, spread_identifier) {
 
 TEST_F(dt_expression_spread, spread_numeric) {
   const char *source = "...42";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node =
-      read_expression_spread(ctx, tokens, &position, "test.cubec");
+      read_expression_spread(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SPREAD);
 
@@ -73,12 +73,12 @@ TEST_F(dt_expression_spread, spread_numeric) {
 
 TEST_F(dt_expression_spread, spread_with_spaces) {
   const char *source = "... a";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node =
-      read_expression_spread(ctx, tokens, &position, "test.cubec");
+      read_expression_spread(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SPREAD);
 
@@ -99,12 +99,12 @@ TEST_F(dt_expression_spread, spread_with_spaces) {
 TEST_F(dt_expression_spread, spread_member_access) {
   /* ...obj.field  鈫? spread wraps member access */
   const char *source = "...obj.field";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node =
-      read_expression_spread(ctx, tokens, &position, "test.cubec");
+      read_expression_spread(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SPREAD);
 
@@ -123,12 +123,12 @@ TEST_F(dt_expression_spread, spread_member_access) {
 TEST_F(dt_expression_spread, spread_group) {
   /* ...(a + b)  鈫? spread wraps grouped binary */
   const char *source = "...(a + b)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node =
-      read_expression_spread(ctx, tokens, &position, "test.cubec");
+      read_expression_spread(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SPREAD);
 
@@ -147,12 +147,12 @@ TEST_F(dt_expression_spread, spread_group) {
 TEST_F(dt_expression_spread, spread_binary_value) {
   /* ...a + b  鈫? spread wraps the entire binary expression a + b */
   const char *source = "...a + b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node =
-      read_expression_spread(ctx, tokens, &position, "test.cubec");
+      read_expression_spread(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SPREAD);
 
@@ -176,12 +176,12 @@ TEST_F(dt_expression_spread, spread_binary_value) {
 
 TEST_F(dt_expression_spread, non_spread_returns_null) {
   const char *source = "hello";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node =
-      read_expression_spread(ctx, tokens, &position, "test.cubec");
+      read_expression_spread(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
   EXPECT_EQ(position, 0); /* NOT advanced */
 
@@ -190,12 +190,12 @@ TEST_F(dt_expression_spread, non_spread_returns_null) {
 
 TEST_F(dt_expression_spread, single_dot_returns_null) {
   const char *source = ".a";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node =
-      read_expression_spread(ctx, tokens, &position, "test.cubec");
+      read_expression_spread(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
   EXPECT_EQ(position, 0);
 
@@ -204,12 +204,12 @@ TEST_F(dt_expression_spread, single_dot_returns_null) {
 
 TEST_F(dt_expression_spread, double_dot_returns_null) {
   const char *source = "..a";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node =
-      read_expression_spread(ctx, tokens, &position, "test.cubec");
+      read_expression_spread(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
   EXPECT_EQ(position, 0);
 
@@ -219,12 +219,12 @@ TEST_F(dt_expression_spread, double_dot_returns_null) {
 TEST_F(dt_expression_spread, spread_without_value) {
   /* ... alone is invalid */
   const char *source = "...";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node =
-      read_expression_spread(ctx, tokens, &position, "test.cubec");
+      read_expression_spread(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -234,13 +234,13 @@ TEST_F(dt_expression_spread, spread_without_value) {
 TEST_F(dt_expression_spread, dots_not_at_start) {
   /* ... is only valid as a spread prefix, and the function checks from position */
   const char *source = "a...b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   /* position at 0: expect NULL since 'a' is not '.' */
   size_t position = 0;
   node_t node =
-      read_expression_spread(ctx, tokens, &position, "test.cubec");
+      read_expression_spread(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
   EXPECT_EQ(position, 0);
 
@@ -254,12 +254,12 @@ TEST_F(dt_expression_spread, dots_not_at_start) {
 TEST_F(dt_expression_spread, spread_with_prefix) {
   /* ...ptr.* 鈫?spread wraps dereferenced ptr */
   const char *source = "...ptr.*";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node =
-      read_expression_spread(ctx, tokens, &position, "test.cubec");
+      read_expression_spread(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_SPREAD);
 
@@ -274,10 +274,10 @@ TEST_F(dt_expression_spread, spread_with_prefix) {
 
 TEST_F(dt_expression_spread, write_spread) {
   const char *source = "...items";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression_spread(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_spread(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

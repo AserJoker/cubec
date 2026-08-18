@@ -5,7 +5,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "cubec/declaration.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,10 +40,10 @@ typedef struct _cubec_declaration_pointer_init_t
  * @return A new cubec_declaration_pointer_t node, or NULL if current token
  *         is not '*'.
  */
-node_t read_declaration_pointer(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_pointer(vm_t vm, vec_t tokens, size_t *position,
                                 const char *filename);
 
-node_t create_declaration_pointer(context_t ctx, location_t loc, node_t base,
+node_t create_declaration_pointer(vm_t vm, location_t loc, node_t base,
                                   bool is_volatile);
 
 

@@ -25,11 +25,11 @@ protected:
 
 TEST_F(dt_statement_enum, basic_enum) {
   const char *source = "enum Color { Red, Green, Blue }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_enum(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_enum(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_ENUM);
 
@@ -48,11 +48,11 @@ TEST_F(dt_statement_enum, basic_enum) {
 
 TEST_F(dt_statement_enum, enum_empty) {
   const char *source = "enum Empty { }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_enum(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_enum(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_ENUM);
 
@@ -68,11 +68,11 @@ TEST_F(dt_statement_enum, enum_empty) {
 
 TEST_F(dt_statement_enum, enum_with_type) {
   const char *source = "enum Status { Ok: u8, Error: u8 }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_enum(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_enum(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_enum_t enum_node = (cubec_statement_enum_t)node;
@@ -91,11 +91,11 @@ TEST_F(dt_statement_enum, enum_with_type) {
 
 TEST_F(dt_statement_enum, enum_with_type_and_value) {
   const char *source = "enum Color { Red: u8 = 0, Green: u8 = 1, Blue: u8 = 2 }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_enum(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_enum(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_enum_t enum_node = (cubec_statement_enum_t)node;
@@ -115,11 +115,11 @@ TEST_F(dt_statement_enum, enum_with_type_and_value) {
 
 TEST_F(dt_statement_enum, enum_value_only) {
   const char *source = "enum Color { Red = 0, Green = 1 }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_enum(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_enum(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_enum_t enum_node = (cubec_statement_enum_t)node;
@@ -141,11 +141,11 @@ TEST_F(dt_statement_enum, enum_value_only) {
 
 TEST_F(dt_statement_enum, export_enum) {
   const char *source = "export enum Color { Red, Green, Blue }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_enum(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_enum(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_enum_t enum_node = (cubec_statement_enum_t)node;
@@ -157,11 +157,11 @@ TEST_F(dt_statement_enum, export_enum) {
 
 TEST_F(dt_statement_enum, non_export_enum) {
   const char *source = "enum Color { Red }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_enum(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_enum(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_enum_t enum_node = (cubec_statement_enum_t)node;
@@ -177,11 +177,11 @@ TEST_F(dt_statement_enum, non_export_enum) {
 
 TEST_F(dt_statement_enum, enum_trailing_comma) {
   const char *source = "enum Color { Red, Green, Blue, }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_enum(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_enum(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   cubec_statement_enum_t enum_node = (cubec_statement_enum_t)node;
@@ -198,11 +198,11 @@ TEST_F(dt_statement_enum, enum_trailing_comma) {
 
 TEST_F(dt_statement_enum, clone) {
   const char *source = "enum Color { Red: u8 = 0, Green: u8 = 1 }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_enum(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_enum(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)alloc_clone(allocator, node);
@@ -221,11 +221,11 @@ TEST_F(dt_statement_enum, clone) {
 
 TEST_F(dt_statement_enum, move) {
   const char *source = "enum Color { Red, Green }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_enum(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_enum(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)alloc_move(allocator, node);
@@ -247,11 +247,11 @@ TEST_F(dt_statement_enum, move) {
 
 TEST_F(dt_statement_enum, consume_all_tokens) {
   const char *source = "enum Color { Red, Green, Blue }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_enum(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_enum(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(position, vec_get_size(tokens) - 1);
 
@@ -265,11 +265,11 @@ TEST_F(dt_statement_enum, consume_all_tokens) {
 
 TEST_F(dt_statement_enum, via_read_statement) {
   const char *source = "enum Color { Red }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_ENUM);
 
@@ -279,11 +279,11 @@ TEST_F(dt_statement_enum, via_read_statement) {
 
 TEST_F(dt_statement_enum, via_read_program) {
   const char *source = "enum Color { Red }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_program_node(ctx, tokens, &position, "test.cubec");
+  node_t node = read_program_node(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_PROGRAM);
 
@@ -293,10 +293,10 @@ TEST_F(dt_statement_enum, via_read_program) {
 
 TEST_F(dt_statement_enum, write_simple_enum) {
   const char *source = "enum Color { Red }";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   emit_context_t ectx = emit_context_create(allocator, tokens);
   emit_statement(ectx, node);

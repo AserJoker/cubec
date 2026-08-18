@@ -59,9 +59,9 @@ class_t g_cubec_expression_spread_class = {
  *  Parser: read_expression_spread
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_spread(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_spread(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_expression_spread_t node = NULL;
   node_t value = NULL;
@@ -77,7 +77,7 @@ node_t read_expression_spread(context_t ctx, vec_t tokens, size_t *position,
 
   /* Expect a value expression after the spread operator */
   skip_whitespace(tokens, &current);
-  value = read_expression_base(ctx, tokens, &current, filename);
+  value = read_expression_base(vm, tokens, &current, filename);
   if (node_is_error(value))
     return value;
   if (!value) {
@@ -99,19 +99,19 @@ node_t read_expression_spread(context_t ctx, vec_t tokens, size_t *position,
   return (node_t)node;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid spread expression");
   allocator_free(allocator, &value);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_expression_spread
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_spread(context_t ctx, location_t loc, node_t value) {
-  allocator_t alloc = ctx->allocator;
+node_t create_expression_spread(vm_t vm, location_t loc, node_t value) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_expression_spread_init_t init = {.value = value};
   return (node_t)allocator_create(alloc, &g_cubec_expression_spread_class,
                                   &init);

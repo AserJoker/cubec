@@ -96,9 +96,9 @@ class_t g_cubec_expression_initialize_list_class = {
  *   - All positional expressions: expr1, expr2
  * Mixing field and positional items is an error.
  */
-node_t read_expression_initialize_list(context_t ctx, vec_t tokens,
+node_t read_expression_initialize_list(vm_t vm, vec_t tokens,
                                        size_t *position, const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_expression_initialize_list_t node = NULL;
   node_t type = NULL;
@@ -123,7 +123,7 @@ node_t read_expression_initialize_list(context_t ctx, vec_t tokens,
     current++;
   } else {
     /* Possible typed: .<type>{ ... } — type is a type expression */
-    type = read_expression_type(ctx, tokens, &current, filename);
+    type = read_expression_type(vm, tokens, &current, filename);
     if (!type) {
       return NULL;
     }
@@ -160,7 +160,7 @@ node_t read_expression_initialize_list(context_t ctx, vec_t tokens,
        */
       size_t field_pos = current;
       node_t field_item =
-          read_initialize_field(ctx, tokens, &field_pos, filename);
+          read_initialize_field(vm, tokens, &field_pos, filename);
       if (field_item) {
         is_field_mode = true;
         mode_determined = true;
@@ -171,9 +171,9 @@ node_t read_expression_initialize_list(context_t ctx, vec_t tokens,
         is_field_mode = false;
         mode_determined = true;
         node_t expr_item =
-            read_expression_spread(ctx, tokens, &current, filename);
+            read_expression_spread(vm, tokens, &current, filename);
         if (!expr_item) {
-          expr_item = read_expression_base(ctx, tokens, &current, filename);
+          expr_item = read_expression_base(vm, tokens, &current, filename);
         }
         if (!expr_item) {
           goto onerror;
@@ -184,7 +184,7 @@ node_t read_expression_initialize_list(context_t ctx, vec_t tokens,
       /* Mode already determined */
       if (is_field_mode) {
         node_t field_item =
-            read_initialize_field(ctx, tokens, &current, filename);
+            read_initialize_field(vm, tokens, &current, filename);
         if (!field_item) {
           /* In field mode, non-field item is an error (mixed items) */
           goto onerror;
@@ -199,16 +199,16 @@ node_t read_expression_initialize_list(context_t ctx, vec_t tokens,
            * error */
           size_t field_test = current;
           node_t field_test_item =
-              read_initialize_field(ctx, tokens, &field_test, filename);
+              read_initialize_field(vm, tokens, &field_test, filename);
           if (field_test_item) {
             allocator_free(allocator, &field_test_item);
             goto onerror;
           }
         }
         node_t expr_item =
-            read_expression_spread(ctx, tokens, &current, filename);
+            read_expression_spread(vm, tokens, &current, filename);
         if (!expr_item) {
-          expr_item = read_expression_base(ctx, tokens, &current, filename);
+          expr_item = read_expression_base(vm, tokens, &current, filename);
         }
         if (!expr_item) {
           goto onerror;
@@ -262,17 +262,17 @@ onerror:
   allocator_free(allocator, &items);
   allocator_free(allocator, &type);
   allocator_free(allocator, &node);
-  return create_error(ctx, dot_location);
+  return create_error(vm, dot_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_expression_initialize_list
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_initialize_list(context_t ctx, location_t loc,
+node_t create_expression_initialize_list(vm_t vm, location_t loc,
                                          node_t type, vec_t items,
                                          bool is_field) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_expression_initialize_list_init_t init = {.location = loc,
                                                   .parent = NULL,
                                                   .type = type,

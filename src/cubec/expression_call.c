@@ -90,9 +90,9 @@ class_t g_cubec_expression_call_class = {
  *  Parser: read_expression_call
  * -------------------------------------------------------------------------- */
 
-node_t read_expression_call(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_call(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename, node_t callee) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_expression_call_t node = NULL;
   vec_t arguments = NULL;
@@ -124,9 +124,9 @@ node_t read_expression_call(context_t ctx, vec_t tokens, size_t *position,
     }
 
     /* Parse one argument: try spread first, then regular expression */
-    node_t arg = read_expression_spread(ctx, tokens, &current, filename);
+    node_t arg = read_expression_spread(vm, tokens, &current, filename);
     if (!arg) {
-      arg = read_expression_base(ctx, tokens, &current, filename);
+      arg = read_expression_base(vm, tokens, &current, filename);
     }
     if (!arg) {
       goto onerror;
@@ -168,7 +168,7 @@ node_t read_expression_call(context_t ctx, vec_t tokens, size_t *position,
   return (node_t)node;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
                        open_paren ? *token_get_location(open_paren)
                                   : (location_t){0},
                        "invalid function call syntax");
@@ -177,7 +177,7 @@ onerror:
   /* NOTE: callee is NOT freed here — the caller (read_value) still owns the
    *       pointer and will clean it up when the error propagates */
   allocator_free(allocator, &node);
-  return create_error(ctx, open_paren ? *token_get_location(open_paren)
+  return create_error(vm, open_paren ? *token_get_location(open_paren)
                                       : (location_t){0});
 }
 
@@ -185,9 +185,9 @@ onerror:
  *  Factory: create_expression_call
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_call(context_t ctx, location_t loc, node_t callee,
+node_t create_expression_call(vm_t vm, location_t loc, node_t callee,
                               vec_t args) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_expression_call_init_t init = {.callee = callee, .arguments = args};
   return (node_t)allocator_create(alloc, &g_cubec_expression_call_class, &init);
 }

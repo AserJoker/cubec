@@ -87,9 +87,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  * }
  * -------------------------------------------------------------------------- */
 
-node_t read_statement_switch(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_switch(vm_t vm, vec_t tokens, size_t *position,
                              const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   node_t condition = NULL;
   vec_t matches = NULL;
@@ -113,7 +113,7 @@ node_t read_statement_switch(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* 3. Parse condition expression */
-  condition = read_expression(ctx, tokens, &current, filename);
+  condition = read_expression(vm, tokens, &current, filename);
   if (node_is_error(condition))
     return condition;
   if (!condition)
@@ -143,7 +143,7 @@ node_t read_statement_switch(context_t ctx, vec_t tokens, size_t *position,
     if (_is_symbol(tokens, current, "}")) {
       break;
     }
-    node_t match = read_switch_match(ctx, tokens, &current, filename);
+    node_t match = read_switch_match(vm, tokens, &current, filename);
     if (node_is_error(match)) {
       allocator_free(allocator, &matches);
       allocator_free(allocator, &condition);
@@ -181,12 +181,12 @@ onerror:
   allocator_free(allocator, &matches);
   allocator_free(allocator, &condition);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_switch(context_t ctx, location_t loc, node_t cond,
+node_t create_statement_switch(vm_t vm, location_t loc, node_t cond,
                                vec_t matches) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_statement_switch_init_t init = {.condition = cond, .matches = matches};
   return (node_t)allocator_create(alloc, &g_cubec_statement_switch_class, &init);
 }

@@ -94,11 +94,11 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Helper: parse a single generic parameter
  * -------------------------------------------------------------------------- */
 
-static cubec_generic_param_t _parse_one_generic_param(context_t ctx,
+static cubec_generic_param_t _parse_one_generic_param(vm_t vm,
                                                       vec_t tokens,
                                                       size_t *current,
                                                       const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
 
   node_t name = NULL;
   vec_t constraints = NULL;
@@ -113,7 +113,7 @@ static cubec_generic_param_t _parse_one_generic_param(context_t ctx,
   }
 
   /* 1. Parse identifier (param name) */
-  name = read_literal_identifier(ctx, tokens, current, filename);
+  name = read_literal_identifier(vm, tokens, current, filename);
   if (!name) {
     goto fail;
   }
@@ -124,7 +124,7 @@ static cubec_generic_param_t _parse_one_generic_param(context_t ctx,
   if (_is_keyword(tokens, *current, "extends")) {
     (*current)++;
     skip_whitespace(tokens, current);
-    node_t first = read_type_expression_primary(ctx, tokens, current, filename);
+    node_t first = read_type_expression_primary(vm, tokens, current, filename);
     if (!first) {
       goto fail;
     }
@@ -135,7 +135,7 @@ static cubec_generic_param_t _parse_one_generic_param(context_t ctx,
       (*current)++;
       skip_whitespace(tokens, current);
       node_t next =
-          read_type_expression_primary(ctx, tokens, current, filename);
+          read_type_expression_primary(vm, tokens, current, filename);
       if (!next) {
         goto fail;
       }
@@ -147,7 +147,7 @@ static cubec_generic_param_t _parse_one_generic_param(context_t ctx,
   else if (_is_symbol(tokens, *current, ":")) {
     (*current)++;
     skip_whitespace(tokens, current);
-    value_type = read_type_expression_primary(ctx, tokens, current, filename);
+    value_type = read_type_expression_primary(vm, tokens, current, filename);
     if (!value_type) {
       goto fail;
     }
@@ -176,9 +176,9 @@ fail:
  *  Parser: read_generic_params
  * -------------------------------------------------------------------------- */
 
-vec_t read_generic_params(context_t ctx, vec_t tokens, size_t *position,
+vec_t read_generic_params(vm_t vm, vec_t tokens, size_t *position,
                           const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   vec_t params = NULL;
 
@@ -196,7 +196,7 @@ vec_t read_generic_params(context_t ctx, vec_t tokens, size_t *position,
 
   /* Parse first param (required) */
   cubec_generic_param_t param =
-      _parse_one_generic_param(ctx, tokens, &current, filename);
+      _parse_one_generic_param(vm, tokens, &current, filename);
   if (!param) {
     goto cleanup_params;
   }
@@ -212,7 +212,7 @@ vec_t read_generic_params(context_t ctx, vec_t tokens, size_t *position,
     current++;
     skip_whitespace(tokens, &current);
 
-    param = _parse_one_generic_param(ctx, tokens, &current, filename);
+    param = _parse_one_generic_param(vm, tokens, &current, filename);
     if (!param) {
       goto cleanup_params;
     }
@@ -239,11 +239,11 @@ onerror:
  *  Factory: create_generic_param
  * -------------------------------------------------------------------------- */
 
-node_t create_generic_param(context_t ctx, location_t loc, const char *name,
+node_t create_generic_param(vm_t vm, location_t loc, const char *name,
                             vec_t constraints, node_t value_type,
                             bool is_rest) {
-  allocator_t alloc = ctx->allocator;
-  node_t name_node = create_literal_identifier(ctx, loc, name);
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t name_node = create_literal_identifier(vm, loc, name);
   cubec_generic_param_init_t init = {
       .location = loc,
       .name = name_node,

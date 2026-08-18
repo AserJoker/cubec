@@ -66,9 +66,9 @@ class_t g_cubec_expression_assert_class = {
  * Expects '.' token followed by '!' token.
  * Returns NULL if tokens don't match.
  */
-node_t read_expression_assert(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_assert(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename, node_t host) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_expression_assert_t node = NULL;
 
@@ -109,8 +109,8 @@ onerror:
  *  Factory: create_expression_assert
  * -------------------------------------------------------------------------- */
 
-node_t create_expression_assert(context_t ctx, location_t loc, node_t host) {
-  allocator_t alloc = ctx->allocator;
+node_t create_expression_assert(vm_t vm, location_t loc, node_t host) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_expression_assert_init_t init = {
       .location = loc,
       .parent = NULL,

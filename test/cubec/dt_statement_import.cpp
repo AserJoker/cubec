@@ -22,11 +22,11 @@ protected:
 
 TEST_F(dt_statement_import, simple_import) {
   const char *source = "import std from \"std\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_import(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_IMPORT);
 
@@ -44,11 +44,11 @@ TEST_F(dt_statement_import, simple_import) {
 
 TEST_F(dt_statement_import, relative_path) {
   const char *source = "import io from \"./io\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_import(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_IMPORT);
 
@@ -63,11 +63,11 @@ TEST_F(dt_statement_import, relative_path) {
 
 TEST_F(dt_statement_import, parent_path) {
   const char *source = "import parent from \"../parent\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_import(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_IMPORT);
 
@@ -82,11 +82,11 @@ TEST_F(dt_statement_import, parent_path) {
 
 TEST_F(dt_statement_import, multi_segment_path) {
   const char *source = "import vec from \"std/vec\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_import(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_IMPORT);
 
@@ -98,11 +98,11 @@ TEST_F(dt_statement_import, multi_segment_path) {
 
 TEST_F(dt_statement_import, consume_all_tokens) {
   const char *source = "import std from \"std\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_import(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* import, std, from, "std", ;, + whitespace/comment tokens + EOF */
   EXPECT_EQ(position, vec_get_size(tokens) - 1);
@@ -115,11 +115,11 @@ TEST_F(dt_statement_import, consume_all_tokens) {
 
 TEST_F(dt_statement_import, missing_from_keyword) {
   const char *source = "import std \"std\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_import(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -130,11 +130,11 @@ TEST_F(dt_statement_import, missing_from_keyword) {
 
 TEST_F(dt_statement_import, missing_semicolon) {
   const char *source = "import std from \"std\"";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_import(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -145,11 +145,11 @@ TEST_F(dt_statement_import, missing_semicolon) {
 
 TEST_F(dt_statement_import, non_import_returns_null) {
   const char *source = "var x = 1;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_import(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
 
   allocator_free(allocator, &tokens);
@@ -159,11 +159,11 @@ TEST_F(dt_statement_import, non_import_returns_null) {
 
 TEST_F(dt_statement_import, missing_module_name) {
   const char *source = "import from \"std\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_import(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -174,11 +174,11 @@ TEST_F(dt_statement_import, missing_module_name) {
 
 TEST_F(dt_statement_import, missing_path) {
   const char *source = "import std from ;";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_import(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -189,11 +189,11 @@ TEST_F(dt_statement_import, missing_path) {
 
 TEST_F(dt_statement_import, clone) {
   const char *source = "import vec from \"std/vec\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_import(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t cloned = (node_t)alloc_clone(allocator, node);
@@ -213,11 +213,11 @@ TEST_F(dt_statement_import, clone) {
 
 TEST_F(dt_statement_import, move) {
   const char *source = "import vec from \"std/vec\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement_import(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement_import(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   node_t moved = (node_t)alloc_move(allocator, node);
@@ -237,11 +237,11 @@ TEST_F(dt_statement_import, move) {
 
 TEST_F(dt_statement_import, via_statement_dispatcher) {
   const char *source = "import std from \"std\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_STATEMENT_IMPORT);
 
@@ -253,11 +253,11 @@ TEST_F(dt_statement_import, via_statement_dispatcher) {
 
 TEST_F(dt_statement_import, via_program_node) {
   const char *source = "import std from \"std\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_program_node(ctx, tokens, &position, "test.cubec");
+  node_t node = read_program_node(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_PROGRAM);
 
@@ -267,10 +267,10 @@ TEST_F(dt_statement_import, via_program_node) {
 
 TEST_F(dt_statement_import, write_import) {
   const char *source = "import std from \"std\";";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_statement(ctx, tokens, &position, "test.cubec");
+  node_t node = read_statement(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   emit_context_t ectx = emit_context_create(allocator, tokens);
   emit_statement(ectx, node);

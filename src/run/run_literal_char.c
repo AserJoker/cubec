@@ -4,9 +4,8 @@
 #include "engine/value.h"
 #include "engine/integer_type.h"
 
-value_t run_literal_char(context_t ctx, node_t node, bool shadow) {
+value_t run_literal_char(vm_t vm, node_t node, bool shadow) {
   cubec_literal_char_t lit = (cubec_literal_char_t)node;
-  vm_t vm = ctx->vm;
   type_t type = (type_t)value_get_data(vm_get_u8_type(vm));
 
   if (shadow)

@@ -16,11 +16,11 @@ protected:
 
 TEST_F(dt_expression_wildcard, parse_simple) {
   const char *source = "?";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_wildcard(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_wildcard(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_WILDCARD);
 
@@ -30,11 +30,11 @@ TEST_F(dt_expression_wildcard, parse_simple) {
 
 TEST_F(dt_expression_wildcard, parse_tuple) {
   const char *source = "<?>";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_WILDCARD);
 
@@ -44,10 +44,10 @@ TEST_F(dt_expression_wildcard, parse_tuple) {
 
 TEST_F(dt_expression_wildcard, write_simple) {
   const char *source = "?";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression_wildcard(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_wildcard(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);
@@ -64,10 +64,10 @@ TEST_F(dt_expression_wildcard, write_simple) {
 
 TEST_F(dt_expression_wildcard, write_tuple) {
   const char *source = "<?>";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

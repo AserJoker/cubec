@@ -43,9 +43,9 @@ class_t g_cubec_statement_empty_class = {
     .move = (class_move_fn_t)_cubec_statement_empty_move,
 };
 
-node_t read_statement_empty(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_empty(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   location_t start_location = {0};
   token_t token = vec_get(tokens, current);
@@ -66,14 +66,14 @@ node_t read_statement_empty(context_t ctx, vec_t tokens, size_t *position,
   *position = current;
   return &node->super;
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "expected ';'");
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_statement_empty(context_t ctx, location_t loc) {
-  allocator_t alloc = ctx->allocator;
+node_t create_statement_empty(vm_t vm, location_t loc) {
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_statement_empty_init_t init = {.location = loc, .parent = NULL};
   return (node_t)allocator_create(alloc, &g_cubec_statement_empty_class, &init);
 }

@@ -38,7 +38,7 @@ typedef struct _module_t *module_t;
 /**
  * @brief Create a module with pre-compiled tokens and AST.
  * @param allocator    Allocator for all allocations
- * @param parent_scope Parent scope (typically ctx->global_scope)
+ * @param parent_scope Parent scope (typically vm->global_scope)
  * @param filename     Source file path (copied via cstring_clone)
  * @param source       Source text (ownership taken)
  * @param tokens       Token list (ownership taken, must be auto-dispose vec)

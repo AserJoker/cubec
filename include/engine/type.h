@@ -40,6 +40,8 @@ typedef enum type_kind_t {
   TYPE_KIND_POINTER, TYPE_KIND_ARRAY, TYPE_KIND_SLICE, TYPE_KIND_TUPLE,
   TYPE_KIND_STRUCT, TYPE_KIND_UNION, TYPE_KIND_CUNION,
   TYPE_KIND_ENUM, TYPE_KIND_INTERFACE,
+  /* Compile-time only */
+  TYPE_KIND_GENERIC, TYPE_KIND_GENERIC_FN,
 } type_kind_t;
 
 /**
@@ -123,6 +125,10 @@ struct vtable_t {
    * Only union types implement this; returns the field value directly without result[T,error].
    * NULL for types that do not support raw field access. */
   value_t (*get_field_raw)(vm_t vm, value_t self, const char *name);
+  /* Generic instantiation — only TYPE_KIND_GENERIC / TYPE_KIND_GENERIC_FN implement.
+   * Validates extends constraints, then delegates to the create_instance callback
+   * stored in value.data. No shadow handling — instantiation is always concrete. */
+  value_t (*instantiate)(vm_t vm, value_t self, size_t argc, value_t *argv);
 };
 typedef struct vtable_t vtable_t;
 
@@ -187,6 +193,16 @@ type_t type_get_type_type(allocator_t allocator);
  *  The value is added to vm's current_scope->values.
  */
 value_t create_type_value(vm_t vm, type_t type, const char *name, bool own);
+
+/* ---- Generic instantiation ---- */
+
+/** @brief Generic instantiation callback for type aliases.
+ *  Evaluates the type alias's RHS type expression with generic parameter
+ *  substitution, returning a type value (TYPE_KIND_TYPE wrapping the
+ *  computed type).
+ *  Follows create_instance_fn_t signature. */
+value_t create_type_instance(struct _vm_t *vm, value_t tmpl,
+                             size_t argc, value_t *argv);
 
 #ifdef __cplusplus
 }

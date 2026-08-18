@@ -126,9 +126,9 @@ static bool is_float_token(const char *value, size_t len) {
   return false;
 }
 
-node_t read_literal_numeric(context_t ctx, vec_t tokens, size_t *position,
+node_t read_literal_numeric(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
 
   token_t first_token = vec_get(tokens, current);
@@ -183,16 +183,16 @@ node_t read_literal_numeric(context_t ctx, vec_t tokens, size_t *position,
   *position = current;
   return node_base;
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid numeric literal");
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
-node_t create_literal_numeric(context_t ctx, location_t loc, const char *value,
+node_t create_literal_numeric(vm_t vm, location_t loc, const char *value,
                               cubec_literal_numeric_kind_t kind,
                               cubec_literal_numeric_type_t ntype) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_literal_numeric_init_t init = {
       .value = value, .kind = kind, .numeric_type = ntype};
   return (node_t)allocator_create(alloc, &g_cubec_literal_numeric_class, &init);

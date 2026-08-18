@@ -25,11 +25,11 @@ protected:
 
 TEST_F(dt_expression_group, simple_group) {
   const char *source = "(a)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
@@ -48,11 +48,11 @@ TEST_F(dt_expression_group, simple_group) {
 
 TEST_F(dt_expression_group, numeric_in_group) {
   const char *source = "(42)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
@@ -66,11 +66,11 @@ TEST_F(dt_expression_group, numeric_in_group) {
 
 TEST_F(dt_expression_group, group_with_spaces) {
   const char *source = "( a )";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
@@ -90,11 +90,11 @@ TEST_F(dt_expression_group, group_with_spaces) {
 
 TEST_F(dt_expression_group, binary_inside_group) {
   const char *source = "(a + b)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
@@ -121,11 +121,11 @@ TEST_F(dt_expression_group, group_overrides_precedence) {
   /* Without group: a + b * c  鈫? a + (b * c)
    * With group:    (a + b) * c  鈫? add binds first */
   const char *source = "(a + b) * c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* Outer should be * */
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
@@ -158,11 +158,11 @@ TEST_F(dt_expression_group, group_overrides_precedence) {
 
 TEST_F(dt_expression_group, nested_groups) {
   const char *source = "((a))";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
@@ -186,11 +186,11 @@ TEST_F(dt_expression_group, nested_groups) {
 
 TEST_F(dt_expression_group, deeply_nested) {
   const char *source = "(((1 + 2)))";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_GROUP);
 
@@ -218,11 +218,11 @@ TEST_F(dt_expression_group, deeply_nested) {
 TEST_F(dt_expression_group, group_with_member_access) {
   /* (obj).field  鈫? group wraps obj, then .field applied */
   const char *source = "(obj).field";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* Outer should be member access */
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_MEMBER);
@@ -241,11 +241,11 @@ TEST_F(dt_expression_group, group_with_member_access) {
 TEST_F(dt_expression_group, prefix_on_group) {
   /* !(a + b)  鈫? prefix ! applies to group (a + b) */
   const char *source = "!(a + b)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -263,11 +263,11 @@ TEST_F(dt_expression_group, prefix_on_group) {
 TEST_F(dt_expression_group, group_inside_binary) {
   /* a * (b + c)  鈫? group on right side of * */
   const char *source = "a * (b + c)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -294,11 +294,11 @@ TEST_F(dt_expression_group, group_inside_binary) {
 
 TEST_F(dt_expression_group, missing_close_paren) {
   const char *source = "(a + b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -307,11 +307,11 @@ TEST_F(dt_expression_group, missing_close_paren) {
 
 TEST_F(dt_expression_group, empty_group) {
   const char *source = "()";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
 
   allocator_free(allocator, &node);
@@ -321,12 +321,12 @@ TEST_F(dt_expression_group, empty_group) {
 TEST_F(dt_expression_group, non_group_returns_null_from_standalone) {
   /* Calling read_expression_group directly on non-'(' should return NULL */
   const char *source = "hello";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
   node_t node =
-      read_expression_group(ctx, tokens, &position, "test.cubec");
+      read_expression_group(vm, tokens, &position, "test.cubec");
   EXPECT_EQ(node, nullptr);
   /* position should NOT advance */
   EXPECT_EQ(position, 0);
@@ -336,10 +336,10 @@ TEST_F(dt_expression_group, non_group_returns_null_from_standalone) {
 
 TEST_F(dt_expression_group, write_group) {
   const char *source = "(a + b)";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

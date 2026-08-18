@@ -6,7 +6,7 @@
 #include "core/class.h"
 #include "core/vec.h"
 #include "cubec/expression.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,7 +37,7 @@ typedef struct _cubec_expression_binary_init_t cubec_expression_binary_init_t;
  * @return A new cubec_expression_binary_t node (with left=NULL), or NULL if
  *         the current token is not a prefix operator.
  */
-node_t read_expression_prefix(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_prefix(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename);
 
 /**
@@ -48,10 +48,10 @@ node_t read_expression_prefix(context_t ctx, vec_t tokens, size_t *position,
  * @return A cubec_expression_binary_t node for binary ops, or a unary/value
  *         node if no binary operators are present.
  */
-node_t read_expression_binary(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_binary(vm_t vm, vec_t tokens, size_t *position,
                               const char *filename);
 
-node_t create_expression_binary(context_t ctx, location_t loc, const char *op,
+node_t create_expression_binary(vm_t vm, location_t loc, const char *op,
                                 node_t left, node_t right);
 
 

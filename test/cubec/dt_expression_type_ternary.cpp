@@ -31,11 +31,11 @@ protected:
 /* Simple ternary type expression: a ? b : c */
 TEST_F(dt_expression_type_ternary, simple) {
   const char *source = "a ? b : c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -58,11 +58,11 @@ TEST_F(dt_expression_type_ternary, simple) {
 /* type_group condition: ( a ) ? b : c */
 TEST_F(dt_expression_type_ternary, with_type_group_condition) {
   const char *source = "( a ) ? b : c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -87,11 +87,11 @@ TEST_F(dt_expression_type_ternary, with_type_group_condition) {
 /* expression_group condition (compile-time expr): ( 1 ) ? a : b */
 TEST_F(dt_expression_type_ternary, with_expr_group_condition) {
   const char *source = "( 1 ) ? a : b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -122,11 +122,11 @@ TEST_F(dt_expression_type_ternary, with_expr_group_condition) {
 /* Nested with group boundary: ( a ? b : c ) ? d : e */
 TEST_F(dt_expression_type_ternary, nested_with_group) {
   const char *source = "( a ? b : c ) ? d : e";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -156,11 +156,11 @@ TEST_F(dt_expression_type_ternary, nested_with_group) {
  * ( a ? b : c ) ? ( d ? e : f ) : ( g ? h : i ) */
 TEST_F(dt_expression_type_ternary, deeply_nested) {
   const char *source = "( a ? b : c ) ? ( d ? e : f ) : ( g ? h : i )";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -186,11 +186,11 @@ TEST_F(dt_expression_type_ternary, deeply_nested) {
 /* Pointer greedily consumes ternary: * a ? b : c  鈫? *(a ? b : c) */
 TEST_F(dt_expression_type_ternary, pointer_greedy_ternary) {
   const char *source = "* a ? b : c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -214,11 +214,11 @@ TEST_F(dt_expression_type_ternary, pointer_greedy_ternary) {
 /* Condition with grouped pointer: ( * a ) ? b : c */
 TEST_F(dt_expression_type_ternary, with_pointer_condition) {
   const char *source = "( * a ) ? b : c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -238,11 +238,11 @@ TEST_F(dt_expression_type_ternary, with_pointer_condition) {
 /* Slice greedily consumes ternary: [] a ? b : c  鈫? [](a ? b : c) */
 TEST_F(dt_expression_type_ternary, slice_greedy_ternary) {
   const char *source = "[] a ? b : c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -266,11 +266,11 @@ TEST_F(dt_expression_type_ternary, slice_greedy_ternary) {
 /* Array greedily consumes ternary: [ 10 ] a ? b : c  鈫? [10](a ? b : c) */
 TEST_F(dt_expression_type_ternary, array_greedy_ternary) {
   const char *source = "[ 10 ] a ? b : c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
 
@@ -294,11 +294,11 @@ TEST_F(dt_expression_type_ternary, array_greedy_ternary) {
 /* Pointer to ternary via type_group: * ( a ? b : c ) */
 TEST_F(dt_expression_type_ternary, pointer_to_ternary_via_group) {
   const char *source = "* ( a ? b : c )";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_POINTER);
 
@@ -324,11 +324,11 @@ TEST_F(dt_expression_type_ternary, pointer_to_ternary_via_group) {
 /* Slice to ternary via type_group: [] ( a ? b : c ) */
 TEST_F(dt_expression_type_ternary, slice_to_ternary_via_group) {
   const char *source = "[] ( a ? b : c )";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_SLICE);
 
@@ -348,11 +348,11 @@ TEST_F(dt_expression_type_ternary, slice_to_ternary_via_group) {
 /* Array to ternary via type_group: [ 10 ] ( a ? b : c ) */
 TEST_F(dt_expression_type_ternary, array_to_ternary_via_group) {
   const char *source = "[ 10 ] ( a ? b : c )";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_DECLARATION_ARRAY);
 
@@ -377,11 +377,11 @@ TEST_F(dt_expression_type_ternary, array_to_ternary_via_group) {
  * ( a + b ) ? X : Y 鈫?condition is expression_group wrapping binary */
 TEST_F(dt_expression_type_ternary, expression_group_with_binary_condition) {
   const char *source = "( a + b ) ? X : Y";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -404,11 +404,11 @@ TEST_F(dt_expression_type_ternary, expression_group_with_binary_condition) {
 /* type_group in consequent: a ? ( b ) : c 鈫?consequent wrapped in type_group */
 TEST_F(dt_expression_type_ternary, type_group_in_consequent) {
   const char *source = "a ? ( b ) : c";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -431,11 +431,11 @@ TEST_F(dt_expression_type_ternary, type_group_in_consequent) {
 /* type_group in alternate: a ? b : ( c ) 鈫?alternate wrapped in type_group */
 TEST_F(dt_expression_type_ternary, type_group_in_alternate) {
   const char *source = "a ? b : ( c )";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -458,11 +458,11 @@ TEST_F(dt_expression_type_ternary, type_group_in_alternate) {
  * a ? ( 1 ) : b 鈫?consequent is expression_group (1 is not a valid type) */
 TEST_F(dt_expression_type_ternary, expression_group_in_consequent) {
   const char *source = "a ? ( 1 ) : b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -485,11 +485,11 @@ TEST_F(dt_expression_type_ternary, expression_group_in_consequent) {
 /* expression_group in alternate: a ? b : ( 1 ) */
 TEST_F(dt_expression_type_ternary, expression_group_in_alternate) {
   const char *source = "a ? b : ( 1 )";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -512,11 +512,11 @@ TEST_F(dt_expression_type_ternary, expression_group_in_alternate) {
  * ( a + b ) ? ( X ) : Y */
 TEST_F(dt_expression_type_ternary, mixed_group_and_type_group) {
   const char *source = "( a + b ) ? ( X ) : Y";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -547,11 +547,11 @@ TEST_F(dt_expression_type_ternary, mixed_group_and_type_group) {
  * ( a ) ? ( b ) : ( c ) 鈥?all type_groups */
 TEST_F(dt_expression_type_ternary, all_branches_type_group) {
   const char *source = "( a ) ? ( b ) : ( c )";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -589,11 +589,11 @@ TEST_F(dt_expression_type_ternary, all_branches_type_group) {
 /* Basic extends constraint: T extends U ? X : Y */
 TEST_F(dt_expression_type_ternary, extends_constraint_condition) {
   const char *source = "T extends U ? X : Y";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -620,11 +620,11 @@ TEST_F(dt_expression_type_ternary, extends_constraint_condition) {
 /* Equality constraint: T == U ? X : Y */
 TEST_F(dt_expression_type_ternary, eq_constraint_condition) {
   const char *source = "T == U ? X : Y";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -650,11 +650,11 @@ TEST_F(dt_expression_type_ternary, eq_constraint_condition) {
 /* Inequality constraint: T != U ? X : Y */
 TEST_F(dt_expression_type_ternary, ne_constraint_condition) {
   const char *source = "T != U ? X : Y";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -679,11 +679,11 @@ TEST_F(dt_expression_type_ternary, ne_constraint_condition) {
  * T extends (* U) ? X : Y */
 TEST_F(dt_expression_type_ternary, constraint_right_is_pointer) {
   const char *source = "T extends (* U) ? X : Y";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -712,11 +712,11 @@ TEST_F(dt_expression_type_ternary, constraint_right_is_pointer) {
  * T extends K ? Vec[ T ] : f32 */
 TEST_F(dt_expression_type_ternary, extends_with_generic_consequent) {
   const char *source = "T extends K ? Vec[ T ] : f32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -740,11 +740,11 @@ TEST_F(dt_expression_type_ternary, extends_with_generic_consequent) {
  * T extends U 鈫?returns a binary node */
 TEST_F(dt_expression_type_ternary, bare_constraint_is_valid) {
   const char *source = "T extends U";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_BINARY);
 
@@ -761,11 +761,11 @@ TEST_F(dt_expression_type_ternary, bare_constraint_is_valid) {
  * ( a extends b ? c : d ) ? e : f 鈫?outer condition is type_group */
 TEST_F(dt_expression_type_ternary, constraint_nested_in_group) {
   const char *source = "( a extends b ? c : d ) ? e : f";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -794,11 +794,11 @@ TEST_F(dt_expression_type_ternary, constraint_nested_in_group) {
 /* Missing '?' returns condition as-is (graceful fallback) */
 TEST_F(dt_expression_type_ternary, missing_question_mark) {
   const char *source = "a : b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   /* No '?', so ternary returns condition as-is. */
   EXPECT_EQ(node->kind, CUBEC_NODE_LITERAL_IDENTIFIER);
@@ -816,11 +816,11 @@ TEST_F(dt_expression_type_ternary, missing_question_mark) {
 /* Missing ':' is an error */
 TEST_F(dt_expression_type_ternary, missing_colon_error) {
   const char *source = "a ? b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -830,11 +830,11 @@ TEST_F(dt_expression_type_ternary, missing_colon_error) {
 /* Missing consequent is an error */
 TEST_F(dt_expression_type_ternary, missing_consequent_error) {
   const char *source = "a ? : b";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -844,11 +844,11 @@ TEST_F(dt_expression_type_ternary, missing_consequent_error) {
 /* Missing alternate is an error */
 TEST_F(dt_expression_type_ternary, missing_alternate_error) {
   const char *source = "a ? b :";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   EXPECT_TRUE(node_is_error(node));
   allocator_free(allocator, &node);
 
@@ -862,11 +862,11 @@ TEST_F(dt_expression_type_ternary, missing_alternate_error) {
 /* Generic instantiation as consequent: a ? Vec[ i32 ] : f32 */
 TEST_F(dt_expression_type_ternary, consequent_generic) {
   const char *source = "a ? Vec[ i32 ] : f32";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
 
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
   EXPECT_EQ(node->kind, CUBEC_NODE_EXPRESSION_TERNARY);
 
@@ -882,10 +882,10 @@ TEST_F(dt_expression_type_ternary, consequent_generic) {
 
 TEST_F(dt_expression_type_ternary, write_conditional_type) {
   const char *source = "flag ? i32 : f64";
-  vec_t tokens = resolve_token_list(ctx, "test.cubec", source);
+  vec_t tokens = resolve_token_list(vm, "test.cubec", source);
   ASSERT_NE(tokens, nullptr);
   size_t position = 0;
-  node_t node = read_expression_type(ctx, tokens, &position, "test.cubec");
+  node_t node = read_expression_type(vm, tokens, &position, "test.cubec");
   ASSERT_NE(node, nullptr);
 
   emit_context_t ectx = emit_context_create(allocator, tokens);

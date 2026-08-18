@@ -6,7 +6,7 @@
 #include "core/vec.h"
 #include "core/emit_context.h"
 #include "cubec/node.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,10 +27,10 @@ struct _cubec_expression_init_t {
 };
 typedef struct _cubec_expression_init_t cubec_expression_init_t;
 
-node_t read_atom(context_t ctx, vec_t tokens, size_t *position,
+node_t read_atom(vm_t vm, vec_t tokens, size_t *position,
                  const char *filename);
 
-node_t read_value(context_t ctx, vec_t tokens, size_t *position,
+node_t read_value(vm_t vm, vec_t tokens, size_t *position,
                   const char *filename);
 
 /** @brief Parse a type expression. Now identical to read_expression —
@@ -39,7 +39,7 @@ node_t read_value(context_t ctx, vec_t tokens, size_t *position,
  *  consume their inner type, including ternary: const a ? b : c →
  * const(ternary). Use grouping to prevent greedy consumption: (const a) ? b :
  * c. */
-node_t read_expression_type(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_type(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename);
 
 /** @brief Parse a primary (non-ternary, non-binary) type expression:
@@ -49,18 +49,18 @@ node_t read_expression_type(context_t ctx, vec_t tokens, size_t *position,
  *  grouping.
  *  @note Internal helper for read_atom and type_constraint parsing.
  *        External callers should use read_expression_type. */
-node_t read_type_expression_primary(context_t ctx, vec_t tokens,
+node_t read_type_expression_primary(vm_t vm, vec_t tokens,
                                     size_t *position, const char *filename);
 
 /** @brief Parse a base expression (ternary and below — no comma/assignment).
  *  Used as the inner parser for rvalue in assignments and in type contexts
  *  where assignment/comma are not meaningful. */
-node_t read_expression_base(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression_base(vm_t vm, vec_t tokens, size_t *position,
                             const char *filename);
 
 /** @brief Parse a full expression: comma → assignment → ternary → binary →
  *  unary → value. This is the top-level entry point for expression parsing. */
-node_t read_expression(context_t ctx, vec_t tokens, size_t *position,
+node_t read_expression(vm_t vm, vec_t tokens, size_t *position,
                        const char *filename);
 
 

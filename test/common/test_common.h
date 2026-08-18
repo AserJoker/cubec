@@ -2,14 +2,14 @@
 #define _H_CUBEC_TEST_COMMON_
 
 #include "core/allocator.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #include <gtest/gtest.h>
 
 /**
  * @brief Base test fixture. Provides common setup/teardown.
  *
  * All test classes inherit from CubecTest and use the @c allocator (and
- * optional @c ctx) members created here, instead of allocating their own
+ * optional @c vm) members created here, instead of allocating their own
  * per-class allocator. The allocator is created in SetUp() and disposed in
  * TearDown() with a leak check, so individual tests must NOT call
  * create_allocator()/delete_allocator() for the shared allocator.
@@ -17,17 +17,17 @@
 class CubecTest : public ::testing::Test {
 protected:
   allocator_t allocator = NULL;
-  context_t ctx = NULL;
+  vm_t vm = NULL;
 
   void SetUp() override {
     allocator = create_allocator_with_limit(NULL, NULL, 256 * 1024 * 1024);
-    ctx = context_create(allocator);
+    vm = vm_create(allocator);
   }
 
   void TearDown() override {
-    if (ctx) {
-      context_dispose(ctx);
-      ctx = NULL;
+    if (vm) {
+      vm_dispose(vm, allocator);
+      vm = NULL;
     }
     if (allocator) {
       size_t peak = allocator_get_peak(allocator);

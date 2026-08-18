@@ -80,9 +80,9 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
  *  Parser: read_struct_field — [pub] <identifier> : <type> ;
  * -------------------------------------------------------------------------- */
 
-node_t read_struct_field(context_t ctx, vec_t tokens, size_t *position,
+node_t read_struct_field(vm_t vm, vec_t tokens, size_t *position,
                          const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   bool is_pub = false;
   node_t name = NULL;
@@ -97,7 +97,7 @@ node_t read_struct_field(context_t ctx, vec_t tokens, size_t *position,
   }
 
   /* Parse field name (identifier) */
-  name = read_literal_identifier(ctx, tokens, &current, filename);
+  name = read_literal_identifier(vm, tokens, &current, filename);
   if (!name) {
     /* Not a struct field — no identifier found (possibly after 'pub' too) */
     goto cleanup;
@@ -114,7 +114,7 @@ node_t read_struct_field(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* Parse type expression */
-  type_expr = read_expression_type(ctx, tokens, &current, filename);
+  type_expr = read_expression_type(vm, tokens, &current, filename);
   if (!type_expr) {
     goto cleanup;
   }
@@ -166,10 +166,10 @@ cleanup:
  *  Factory: create_struct_field
  * -------------------------------------------------------------------------- */
 
-node_t create_struct_field(context_t ctx, location_t loc, const char *name,
+node_t create_struct_field(vm_t vm, location_t loc, const char *name,
                            node_t type, bool is_pub) {
-  allocator_t alloc = ctx->allocator;
-  node_t name_node = create_literal_identifier(ctx, loc, name);
+  allocator_t alloc = vm_get_allocator(vm);
+  node_t name_node = create_literal_identifier(vm, loc, name);
   cubec_struct_field_init_t init = {
       .location = loc,
       .parent = NULL,

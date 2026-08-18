@@ -104,9 +104,9 @@ static bool _is_symbol(vec_t tokens, size_t position, const char *symbol) {
  *  Parser: read_declaration_callable
  * -------------------------------------------------------------------------- */
 
-node_t read_declaration_callable(context_t ctx, vec_t tokens, size_t *position,
+node_t read_declaration_callable(vm_t vm, vec_t tokens, size_t *position,
                                 const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   vec_t parameters = NULL;
   node_t return_type = NULL;
@@ -176,7 +176,7 @@ node_t read_declaration_callable(context_t ctx, vec_t tokens, size_t *position,
         current++; /* skip '...' */
         skip_whitespace(tokens, &current);
         /* If next token can be a type expression, it's a pack spread */
-        node_t inner = read_expression_base(ctx, tokens, &current, filename);
+        node_t inner = read_expression_base(vm, tokens, &current, filename);
         if (inner) {
           /* Pack spread: ...Args — wrap in expression_spread node */
           cubec_expression_spread_init_t spread_init = {
@@ -218,7 +218,7 @@ node_t read_declaration_callable(context_t ctx, vec_t tokens, size_t *position,
         }
       }
 
-      node_t param = read_expression_base(ctx, tokens, &current, filename);
+      node_t param = read_expression_base(vm, tokens, &current, filename);
       if (!param) {
         goto onerror;
       }
@@ -283,7 +283,7 @@ node_t read_declaration_callable(context_t ctx, vec_t tokens, size_t *position,
   /* 6. Parse return type (greedy — consumes ternary/constraint, but not comma).
    * func(i32) -> A ? B : C → func(i32) -> ternary(A, B, C).
    * Use grouping for the alternative: (func(i32) -> A) ? B : C. */
-  return_type = read_expression_base(ctx, tokens, &current, filename);
+  return_type = read_expression_base(vm, tokens, &current, filename);
   if (node_is_error(return_type))
     goto onerror;
   if (!return_type) {
@@ -313,17 +313,17 @@ onerror:
   allocator_free(allocator, &return_type);
   allocator_free(allocator, &parameters);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_declaration_callable
  * -------------------------------------------------------------------------- */
 
-node_t create_declaration_callable(context_t ctx, location_t loc,
+node_t create_declaration_callable(vm_t vm, location_t loc,
                                   vec_t parameters, node_t return_type,
                                   bool is_c_variadic) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_declaration_callable_init_t init = {
       .location = loc,
       .parent = NULL,

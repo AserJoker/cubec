@@ -7,7 +7,7 @@
 #include "core/emit_context.h"
 #include "cubec/expression.h"
 #include "cubec/literal_identifier.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,11 +45,11 @@ typedef struct _cubec_expression_namespace_access_init_t
  * @return A new cubec_expression_namespace_access_t node, or NULL if the
  *         current token is not \c "::".
  */
-node_t read_expression_namespace_access(context_t ctx, vec_t tokens,
+node_t read_expression_namespace_access(vm_t vm, vec_t tokens,
                                         size_t *position, const char *filename,
                                         node_t host);
 
-node_t create_expression_namespace_access(context_t ctx, location_t loc,
+node_t create_expression_namespace_access(vm_t vm, location_t loc,
                                           node_t host, const char *field);
 
 

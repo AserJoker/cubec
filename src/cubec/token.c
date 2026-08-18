@@ -1,70 +1,70 @@
 #include "cubec/token.h"
 #include "engine/diagnostic.h"
-#include "engine/context.h"
+#include "engine/vm.h"
 #include <inttypes.h>
 #include <unicode/uchar.h>
 #include <unicode/urename.h>
 #include <unicode/utypes.h>
 
-static token_t create_eof_token(context_t ctx, location_t location) {
-  allocator_t allocator = ctx->allocator;
+static token_t create_eof_token(vm_t vm, location_t location) {
+  allocator_t allocator = vm_get_allocator(vm);
   return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_EOF, location});
 }
 
-static token_t create_error_token(context_t ctx, location_t location) {
-  allocator_t allocator = ctx->allocator;
+static token_t create_error_token(vm_t vm, location_t location) {
+  allocator_t allocator = vm_get_allocator(vm);
   return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_ERROR, location});
 }
 
-static token_t create_literal_identifier_token(context_t ctx,
+static token_t create_literal_identifier_token(vm_t vm,
                                                location_t location) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_IDENTIFIER, location});
 }
-static token_t create_keyword_token(context_t ctx, location_t location) {
-  allocator_t allocator = ctx->allocator;
+static token_t create_keyword_token(vm_t vm, location_t location) {
+  allocator_t allocator = vm_get_allocator(vm);
   return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_KEYWORD, location});
 }
-static token_t create_literal_numeric_token(context_t ctx,
+static token_t create_literal_numeric_token(vm_t vm,
                                             location_t location) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_NUMERIC, location});
 }
-static token_t create_literal_string_token(context_t ctx, location_t location) {
-  allocator_t allocator = ctx->allocator;
+static token_t create_literal_string_token(vm_t vm, location_t location) {
+  allocator_t allocator = vm_get_allocator(vm);
   return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_STRING, location});
 }
 
-static token_t create_literal_char_token(context_t ctx, location_t location) {
-  allocator_t allocator = ctx->allocator;
+static token_t create_literal_char_token(vm_t vm, location_t location) {
+  allocator_t allocator = vm_get_allocator(vm);
   return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_CHAR, location});
 }
 
-static token_t create_symbol_token(context_t ctx, location_t location) {
-  allocator_t allocator = ctx->allocator;
+static token_t create_symbol_token(vm_t vm, location_t location) {
+  allocator_t allocator = vm_get_allocator(vm);
   return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_SYMBOL, location});
 }
-static token_t create_whitespace_token(context_t ctx, location_t location) {
-  allocator_t allocator = ctx->allocator;
+static token_t create_whitespace_token(vm_t vm, location_t location) {
+  allocator_t allocator = vm_get_allocator(vm);
   return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_WHITESPACE, location});
 }
-static token_t create_comment_token(context_t ctx, location_t location) {
-  allocator_t allocator = ctx->allocator;
+static token_t create_comment_token(vm_t vm, location_t location) {
+  allocator_t allocator = vm_get_allocator(vm);
   return allocator_create(allocator, &g_token_class,
                           &(token_init_t){CUBEC_TOKEN_COMMENT, location});
 }
-static token_t create_multiline_comment_token(context_t ctx,
+static token_t create_multiline_comment_token(vm_t vm,
                                               location_t location) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   return allocator_create(
       allocator, &g_token_class,
       &(token_init_t){CUBEC_TOKEN_MULTILINE_COMMENT, location});
@@ -156,7 +156,7 @@ static const char *symbols[] = {
     "%",   "[",   "]",   "{",  "}",  "(",   ")",   "~",  0,
 };
 
-static token_t read_symbol_token(context_t ctx, position_t *position,
+static token_t read_symbol_token(vm_t vm, position_t *position,
                                  const char *filename) {
   position_t current = *position;
   size_t idx = 0;
@@ -177,11 +177,11 @@ static token_t read_symbol_token(context_t ctx, position_t *position,
     return NULL;
   }
   token_t token =
-      create_symbol_token(ctx, (location_t){filename, *position, current});
+      create_symbol_token(vm, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
-static token_t read_whitespace_token(context_t ctx, position_t *position,
+static token_t read_whitespace_token(vm_t vm, position_t *position,
                                      const char *filename) {
   position_t current = *position;
   size_t length = 0;
@@ -200,11 +200,11 @@ static token_t read_whitespace_token(context_t ctx, position_t *position,
     return NULL;
   }
   token_t token =
-      create_whitespace_token(ctx, (location_t){filename, *position, current});
+      create_whitespace_token(vm, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
-static token_t read_comment_token(context_t ctx, position_t *position,
+static token_t read_comment_token(vm_t vm, position_t *position,
                                   const char *filename) {
   position_t current = *position;
   if (*current.offset == '/' && *(current.offset + 1) == '/') {
@@ -222,7 +222,7 @@ static token_t read_comment_token(context_t ctx, position_t *position,
       current.column += length;
     }
     token_t token =
-        create_comment_token(ctx, (location_t){filename, *position, current});
+        create_comment_token(vm, (location_t){filename, *position, current});
     *position = current;
     return token;
   } else {
@@ -230,7 +230,7 @@ static token_t read_comment_token(context_t ctx, position_t *position,
   }
 }
 
-static token_t read_multiline_comment_token(context_t ctx, position_t *position,
+static token_t read_multiline_comment_token(vm_t vm, position_t *position,
                                             const char *filename) {
   position_t current = *position;
   if (*current.offset == '/' && *(current.offset + 1) == '*') {
@@ -241,11 +241,11 @@ static token_t read_multiline_comment_token(context_t ctx, position_t *position,
       if (!*current.offset) {
         /* Unterminated multiline comment — record error and return the
          * partial comment token so the lexer can continue normally */
-        diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+        diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
                              (location_t){filename, *position, current},
                              "unterminated multiline comment");
         token_t token = create_multiline_comment_token(
-            ctx, (location_t){filename, *position, current});
+            vm, (location_t){filename, *position, current});
         *position = current;
         return token;
       }
@@ -276,7 +276,7 @@ static token_t read_multiline_comment_token(context_t ctx, position_t *position,
       }
     }
     token_t token = create_multiline_comment_token(
-        ctx, (location_t){filename, *position, current});
+        vm, (location_t){filename, *position, current});
     *position = current;
     return token;
   } else {
@@ -284,7 +284,7 @@ static token_t read_multiline_comment_token(context_t ctx, position_t *position,
   }
 }
 
-static token_t read_numeric_token(context_t ctx, position_t *position,
+static token_t read_numeric_token(vm_t vm, position_t *position,
                                   const char *filename) {
   position_t current = *position;
   if (*current.offset >= '0' && *current.offset <= '9') {
@@ -371,11 +371,11 @@ static token_t read_numeric_token(context_t ctx, position_t *position,
     return NULL;
   }
   token_t token = create_literal_numeric_token(
-      ctx, (location_t){filename, *position, current});
+      vm, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
-static token_t read_string_token(context_t ctx, position_t *position,
+static token_t read_string_token(vm_t vm, position_t *position,
                                  const char *filename) {
   position_t current = *position;
   if (*current.offset != '\"') {
@@ -448,11 +448,11 @@ static token_t read_string_token(context_t ctx, position_t *position,
     }
   }
   token_t token = create_literal_string_token(
-      ctx, (location_t){filename, *position, current});
+      vm, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
-static token_t read_char_token(context_t ctx, position_t *position,
+static token_t read_char_token(vm_t vm, position_t *position,
                                const char *filename) {
   position_t current = *position;
   if (*current.offset != '\'') {
@@ -554,7 +554,7 @@ static token_t read_char_token(context_t ctx, position_t *position,
   current.offset++;
   current.column++;
   token_t token = create_literal_char_token(
-      ctx, (location_t){filename, *position, current});
+      vm, (location_t){filename, *position, current});
   *position = current;
   return token;
 }
@@ -569,7 +569,7 @@ static const char *keywords[] = {
     "nil",       "true",    "false",
     0,
 };
-static token_t read_identifier_token(context_t ctx, position_t *position,
+static token_t read_identifier_token(vm_t vm, position_t *position,
                                      const char *filename) {
   position_t current = *position;
   size_t length = 0;
@@ -592,54 +592,54 @@ static token_t read_identifier_token(context_t ctx, position_t *position,
     token_t token = NULL;
     for (size_t idx = 0; keywords[idx]; idx++) {
       if (location_is(&location, keywords[idx])) {
-        token = create_keyword_token(ctx, location);
+        token = create_keyword_token(vm, location);
         break;
       }
     }
     if (!token) {
-      token = create_literal_identifier_token(ctx, location);
+      token = create_literal_identifier_token(vm, location);
     }
     *position = current;
     return token;
   }
   return NULL;
 }
-static token_t read_eof_token(context_t ctx, position_t *position,
+static token_t read_eof_token(vm_t vm, position_t *position,
                               const char *filename) {
   if (*position->offset) {
     return NULL;
   }
-  return create_eof_token(ctx, (location_t){filename, *position, *position});
+  return create_eof_token(vm, (location_t){filename, *position, *position});
 }
 
-token_t read_token(context_t ctx, position_t *position, const char *filename) {
+token_t read_token(vm_t vm, position_t *position, const char *filename) {
   token_t token = NULL;
   if (!token) {
-    token = read_eof_token(ctx, position, filename);
+    token = read_eof_token(vm, position, filename);
   }
   if (!token) {
-    token = read_numeric_token(ctx, position, filename);
+    token = read_numeric_token(vm, position, filename);
   }
   if (!token) {
-    token = read_string_token(ctx, position, filename);
+    token = read_string_token(vm, position, filename);
   }
   if (!token) {
-    token = read_char_token(ctx, position, filename);
+    token = read_char_token(vm, position, filename);
   }
   if (!token) {
-    token = read_comment_token(ctx, position, filename);
+    token = read_comment_token(vm, position, filename);
   }
   if (!token) {
-    token = read_multiline_comment_token(ctx, position, filename);
+    token = read_multiline_comment_token(vm, position, filename);
   }
   if (!token) {
-    token = read_whitespace_token(ctx, position, filename);
+    token = read_whitespace_token(vm, position, filename);
   }
   if (!token) {
-    token = read_identifier_token(ctx, position, filename);
+    token = read_identifier_token(vm, position, filename);
   }
   if (!token) {
-    token = read_symbol_token(ctx, position, filename);
+    token = read_symbol_token(vm, position, filename);
   }
   if (!token) {
     /* Unrecognized character — create error token and skip 1 byte */
@@ -661,14 +661,14 @@ token_t read_token(context_t ctx, position_t *position, const char *filename) {
                 .column = end_pos.column,
                 .offset = end_pos.offset},
     };
-    token = create_error_token(ctx, loc);
+    token = create_error_token(vm, loc);
     *position = end_pos;
   }
   return token;
 }
-vec_t resolve_token_list(context_t ctx, const char *filename,
+vec_t resolve_token_list(vm_t vm, const char *filename,
                          const char *source) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   vec_t vec = allocator_create(allocator, &g_vec_class, &(vec_init_t){true});
   position_t position = {
       .column = 0,
@@ -676,12 +676,12 @@ vec_t resolve_token_list(context_t ctx, const char *filename,
       .offset = source,
   };
   while (true) {
-    token_t token = read_token(ctx, &position, filename);
+    token_t token = read_token(vm, &position, filename);
     if (!token)
       goto onerror;
     vec_push(vec, token);
     if (token_get_kind(token) == CUBEC_TOKEN_ERROR) {
-      diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR,
+      diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
                            *token_get_location(token),
                            "unrecognized character");
       continue;

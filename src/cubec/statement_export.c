@@ -78,9 +78,9 @@ static bool _is_keyword(vec_t tokens, size_t position, const char *keyword) {
 
 /* ===== parser ===== */
 
-node_t read_statement_export(context_t ctx, vec_t tokens, size_t *position,
+node_t read_statement_export(vm_t vm, vec_t tokens, size_t *position,
                                   const char *filename) {
-  allocator_t allocator = ctx->allocator;
+  allocator_t allocator = vm_get_allocator(vm);
   size_t current = *position;
   cubec_statement_export_t node = NULL;
   node_t path = NULL;
@@ -119,7 +119,7 @@ node_t read_statement_export(context_t ctx, vec_t tokens, size_t *position,
     /* Read comma-separated identifiers */
     while (true) {
       skip_whitespace(tokens, &current);
-      node_t name = read_literal_identifier(ctx, tokens, &current, filename);
+      node_t name = read_literal_identifier(vm, tokens, &current, filename);
       if (!name) {
         goto onerror;
       }
@@ -153,7 +153,7 @@ node_t read_statement_export(context_t ctx, vec_t tokens, size_t *position,
   skip_whitespace(tokens, &current);
 
   /* Parse module path (required string literal) */
-  path = read_literal_string(ctx, tokens, &current, filename);
+  path = read_literal_string(vm, tokens, &current, filename);
   if (!path) {
     goto onerror;
   }
@@ -188,21 +188,21 @@ node_t read_statement_export(context_t ctx, vec_t tokens, size_t *position,
   return &node->super;
 
 onerror:
-  diagnostic_list_push(ctx->diagnostics, DIAGNOSTIC_ERROR, start_location,
+  diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR, start_location,
                        "invalid export from statement");
   allocator_free(allocator, &names);
   allocator_free(allocator, &path);
   allocator_free(allocator, &node);
-  return create_error(ctx, start_location);
+  return create_error(vm, start_location);
 }
 
 /* --------------------------------------------------------------------------
  *  Factory: create_statement_export
  * -------------------------------------------------------------------------- */
 
-node_t create_statement_export(context_t ctx, location_t loc, node_t path,
+node_t create_statement_export(vm_t vm, location_t loc, node_t path,
                                     bool is_star, vec_t names) {
-  allocator_t alloc = ctx->allocator;
+  allocator_t alloc = vm_get_allocator(vm);
   cubec_statement_export_init_t init = {
       .location = loc,
       .parent = NULL,
@@ -214,27 +214,27 @@ node_t create_statement_export(context_t ctx, location_t loc, node_t path,
                                   &init);
 }
 
-void emit_statement_export(emit_context_t ctx, node_t node) {
+void emit_statement_export(emit_context_t vm, node_t node) {
   cubec_statement_export_t export_node = (cubec_statement_export_t)node;
-  recover_comments_to(ctx, node->location.begin.offset);
-  emit_keyword(ctx, "export");
-  emit_space(ctx);
+  recover_comments_to(vm, node->location.begin.offset);
+  emit_keyword(vm, "export");
+  emit_space(vm);
   if (export_node->is_star) {
-    emit_symbol(ctx, "*");
+    emit_symbol(vm, "*");
   } else {
-    emit_symbol(ctx, "{");
+    emit_symbol(vm, "{");
     for (size_t i = 0; i < vec_get_size(export_node->names); i++) {
       if (i > 0) {
-        emit_symbol(ctx, ",");
-        emit_space(ctx);
+        emit_symbol(vm, ",");
+        emit_space(vm);
       }
-      emit_literal_identifier(ctx, vec_get(export_node->names, i));
+      emit_literal_identifier(vm, vec_get(export_node->names, i));
     }
-    emit_symbol(ctx, "}");
+    emit_symbol(vm, "}");
   }
-  emit_space(ctx);
-  emit_keyword(ctx, "from");
-  emit_space(ctx);
-  emit_literal_string(ctx, export_node->path);
-  emit_symbol(ctx, ";");
+  emit_space(vm);
+  emit_keyword(vm, "from");
+  emit_space(vm);
+  emit_literal_string(vm, export_node->path);
+  emit_symbol(vm, ";");
 }
