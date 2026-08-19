@@ -257,6 +257,42 @@ value_t create_callable_shadow(vm_t vm, callable_type_t ct, bool initialized) {
   return vm_create_value_shadow(vm, (type_t)ct, NULL, initialized);
 }
 
+/* ---- Closure capture ---- */
+
+value_t callable_capture(vm_t vm, value_t callable, const char *name) {
+  /* lookup in current scope chain */
+  scope_t current = vm_get_current_scope(vm);
+  name_t n = scope_lookup(current, name);
+  if (!n || !n->ref)
+    return create_exception_value(vm, "cannot capture '%s': not found in scope",
+                                  name);
+
+  /* ensure closure scope exists (isolated, SCOPE_CLOSURE) */
+  cfunc_t fc = (cfunc_t)value_get_data(callable);
+  scope_t closure = cfunc_get_closure_scope(fc);
+  if (!closure) {
+    allocator_t alloc = vm_get_allocator(vm);
+    closure = scope_create(alloc, SCOPE_CLOSURE, NULL, NULL);
+    cfunc_set_closure_scope(fc, closure);
+  }
+
+  /* clone value into closure scope: switch scope, clone, switch back */
+  scope_t prev = vm_set_scope(vm, closure);
+  value_t captured = value_clone(vm, n->ref);
+  vm_set_scope(vm, prev);
+
+  /* bind name in closure scope — value_clone already registered to
+   * closure->values, but name binding happens via vm_set_scope context
+   * only when using vm_create_value. value_clone does NOT add name
+   * binding, so we do it manually here. */
+  name_t cn = name_create(closure->allocator, captured);
+  char *owned_name = cstring_clone(closure->allocator, name);
+  strmap_insert(closure->names, owned_name, cn);
+  allocator_free(closure->allocator, &owned_name);
+
+  return captured;
+}
+
 /* ---- VTable: clone ---- */
 
 static value_t _callable_clone(vm_t vm, value_t self) {

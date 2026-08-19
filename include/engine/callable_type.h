@@ -75,6 +75,17 @@ value_t create_callable_value(struct _vm_t *vm, callable_type_t ct,
 value_t create_callable_shadow(struct _vm_t *vm, callable_type_t ct,
                                 bool initialized);
 
+/** @brief Capture a variable from the current scope into the callable's closure.
+ *
+ *  Looks up @p name in the current scope chain, clones the value into the
+ *  callable's closure scope, and binds it under the same name.
+ *  Creates an isolated closure scope (SCOPE_CLOSURE, parent=NULL) if none
+ *  exists yet.
+ *
+ *  @return The captured value in the closure scope, or exception on error. */
+value_t callable_capture(struct _vm_t *vm, value_t callable,
+                          const char *name);
+
 #ifdef __cplusplus
 }
 #endif

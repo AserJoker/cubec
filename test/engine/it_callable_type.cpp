@@ -560,20 +560,17 @@ static value_t _read_captured(vm_t vm, value_t fn, size_t argc, value_t *argv) {
 }
 
 TEST_F(it_callable_type, closure_scope_create_and_dispose) {
-  /* Create closure scope with a value, then vm_dispose should handle it */
+  /* Create closure scope with a captured value, then vm_dispose should handle it */
   vm_t vm = vm_create(allocator);
   allocator_t alloc = vm_get_allocator(vm);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
   value_t cv = create_callable_value(vm, ct, _add_one, "test_fn");
-  cfunc_t fc = (cfunc_t)value_get_data(cv);
 
-  scope_t closure = scope_create(alloc, SCOPE_FUNCTION, NULL, NULL);
-  cfunc_set_closure_scope(fc, closure);
-
-  scope_t prev = vm_set_scope(vm, closure);
+  /* Create a value in current scope, then capture it */
   int32_t val = 42;
   vm_create_value(vm, _get_i32_type(vm), &val, "captured");
-  vm_set_scope(vm, prev);
+  value_t result = callable_capture(vm, cv, "captured");
+  EXPECT_FALSE(value_is_error(result));
 
   vm_dispose(vm, allocator);
 }
@@ -583,19 +580,13 @@ TEST_F(it_callable_type, closure_scope_accessible_during_call) {
   allocator_t alloc = vm_get_allocator(vm);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
 
-  /* Create a callable with a closure scope containing a captured variable */
+  /* Create a callable that reads "captured" from its closure scope */
   value_t cv = create_callable_value(vm, ct, _read_captured, "clojure");
-  cfunc_t fc = (cfunc_t)value_get_data(cv);
 
-  /* Closure scope is isolated (parent=NULL) — owned by cfunc_t */
-  scope_t closure = scope_create(alloc, SCOPE_FUNCTION, NULL, NULL);
-  cfunc_set_closure_scope(fc, closure);
-
-  /* Capture: switch to closure scope, create the value, switch back */
-  scope_t prev = vm_set_scope(vm, closure);
+  /* Create a value in current scope, then capture it into the callable */
   int32_t val = 42;
   vm_create_value(vm, _get_i32_type(vm), &val, "captured");
-  vm_set_scope(vm, prev);
+  callable_capture(vm, cv, "captured");
 
   /* Call the callable — callback reads "captured" from its own closure scope */
   int32_t arg = 0;
@@ -624,14 +615,16 @@ TEST_F(it_callable_type, clone_has_no_closure) {
   callable_type_t ct = _make_i32_to_i32_callable(vm);
 
   value_t cv = create_callable_value(vm, ct, _add_one, "original");
-  cfunc_t fc = (cfunc_t)value_get_data(cv);
-  scope_t closure = scope_create(alloc, SCOPE_FUNCTION, NULL, NULL);
-  cfunc_set_closure_scope(fc, closure);
+  /* Capture a variable so the callable has a closure scope */
+  int32_t val = 99;
+  vm_create_value(vm, _get_i32_type(vm), &val, "x");
+  callable_capture(vm, cv, "x");
 
   /* Clone should share func+name but have no closure (closures are unique) */
   value_t cloned = value_clone(vm, cv);
+  cfunc_t orig_fc = (cfunc_t)value_get_data(cv);
   cfunc_t clone_fc = (cfunc_t)value_get_data(cloned);
-  EXPECT_EQ(fc->func, clone_fc->func);
+  EXPECT_EQ(orig_fc->func, clone_fc->func);
   EXPECT_EQ(cfunc_get_closure_scope(clone_fc), nullptr);
 
   vm_dispose(vm, allocator);
