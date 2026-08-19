@@ -241,13 +241,13 @@ const char *callable_type_get_module_id(callable_type_t self) { return self->mod
 value_t create_callable_value(vm_t vm, callable_type_t ct, cfunction_t func,
                                const char *name) {
   allocator_t alloc = vm_get_allocator(vm);
-  cfunc_t *data = (cfunc_t *)allocator_alloc(alloc, sizeof(cfunc_t));
   cfunc_init_t fn_init = {.func = func, .name = name};
-  *data = (cfunc_t)allocator_create(alloc, &g_cfunc_class, &fn_init);
-  value_t v = value_create(alloc, (type_t)ct, data, true);
+  cfunc_t fc = (cfunc_t)allocator_create(alloc, &g_cfunc_class, &fn_init);
+  /* value.data = cfunc_t (borrowed ref), scope->cfuncs owns the lifecycle */
+  value_t v = value_create(alloc, (type_t)ct, fc, false);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) {
-    vec_push(scope->cfuncs, *data);
+    vec_push(scope->cfuncs, fc);
     vec_push(scope->values, v);
   }
   return v;
@@ -269,7 +269,7 @@ static value_t _callable_clone(vm_t vm, value_t self) {
   if (value_is_shadow(self))
     return create_callable_shadow(vm, dst_ct, value_is_initialized(self));
 
-  cfunc_t src_fc = *(cfunc_t *)value_get_data(self);
+  cfunc_t src_fc = (cfunc_t)value_get_data(self);
 
   if (!value_is_initialized(self) || src_fc->func == NULL)
     return create_callable_shadow(vm, dst_ct, value_is_initialized(self));
@@ -298,8 +298,8 @@ static value_t _callable_equal(vm_t vm, value_t a, value_t b) {
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
 
   /* same func pointer + type_equal → equal */
-  cfunc_t fa = *(cfunc_t *)value_get_data(a);
-  cfunc_t fb = *(cfunc_t *)value_get_data(b);
+  cfunc_t fa = (cfunc_t)value_get_data(a);
+  cfunc_t fb = (cfunc_t)value_get_data(b);
   if (fa->func != fb->func)
     return create_bool_value(vm, false);
 
@@ -420,7 +420,7 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
   const char *prev_module = vm_get_current_module_id(vm);
   vm_set_current_module_id(vm, callable_type_get_module_id(ct));
 
-  cfunc_t fc = *(cfunc_t *)value_get_data(self);
+  cfunc_t fc = (cfunc_t)value_get_data(self);
   value_t result = fc->func(vm, self, argc, casted);
 
   /* restore module context */
@@ -467,9 +467,9 @@ static value_t _callable_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
     return create_void_value(vm);
   }
   /* copy func pointer */
-  cfunc_t src_fc = *(cfunc_t *)value_get_data(rvalue);
-  cfunc_t *dst_ptr = (cfunc_t *)value_get_data(lvalue);
-  (*dst_ptr)->func = src_fc->func;
+  cfunc_t src_fc = (cfunc_t)value_get_data(rvalue);
+  cfunc_t dst_fc = (cfunc_t)value_get_data(lvalue);
+  dst_fc->func = src_fc->func;
   value_set_initialized(lvalue, true);
   return create_void_value(vm);
 }

@@ -9,6 +9,7 @@
 #include "engine/str_type.h"
 #include "engine/callable_type.h"
 #include "engine/cfunc.h"
+#include "engine/name.h"
 #include "core/string.h"
 #include "core/vec.h"
 #include "common/test_common.h"
@@ -163,7 +164,7 @@ TEST_F(it_callable_type, create_callable_value) {
   EXPECT_NE(cv, nullptr);
   EXPECT_EQ(type_get_kind(value_get_type(cv)), TYPE_KIND_CALLABLE);
   EXPECT_NE(value_get_data(cv), nullptr);
-  EXPECT_TRUE(value_is_own(cv));
+  EXPECT_FALSE(value_is_own(cv)); /* data is borrowed cfunc_t, scope->cfuncs owns it */
   EXPECT_TRUE(value_is_initialized(cv));
 
   /* cfunc_t registered in scope (+1 for builtin panic) */
@@ -395,8 +396,8 @@ TEST_F(it_callable_type, clone) {
   EXPECT_EQ(type_get_kind(value_get_type(cloned)), TYPE_KIND_CALLABLE);
 
   /* cloned has same func pointer */
-  cfunc_t orig_fc = *(cfunc_t *)value_get_data(cv);
-  cfunc_t clone_fc = *(cfunc_t *)value_get_data(cloned);
+  cfunc_t orig_fc = (cfunc_t)value_get_data(cv);
+  cfunc_t clone_fc = (cfunc_t)value_get_data(cloned);
   EXPECT_EQ(orig_fc->func, clone_fc->func);
 
   vm_dispose(vm, allocator);
@@ -440,8 +441,8 @@ TEST_F(it_callable_type, assignment) {
   EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_VOID);
 
   /* b now has _add_one func pointer */
-  cfunc_t fa = *(cfunc_t *)value_get_data(a);
-  cfunc_t fb = *(cfunc_t *)value_get_data(b);
+  cfunc_t fa = (cfunc_t)value_get_data(a);
+  cfunc_t fb = (cfunc_t)value_get_data(b);
   EXPECT_EQ(fa->func, fb->func);
 
   vm_dispose(vm, allocator);
@@ -539,5 +540,99 @@ TEST_F(it_callable_type, shadow_to_string) {
   value_t cv = create_callable_shadow(vm, ct, true);
   value_t result = value_to_string(vm, cv);
   EXPECT_TRUE(value_is_shadow(result));
+  vm_dispose(vm, allocator);
+}
+
+/* ---- Closure scope ---- */
+
+static value_t _read_captured(vm_t vm, value_t fn, size_t argc, value_t *argv) {
+  (void)argc; (void)argv;
+  /* The callback retrieves its own closure scope and looks up captured vars.
+   * callable does NOT push/pop the closure scope — it's the callback's job. */
+  cfunc_t fc = (cfunc_t)value_get_data(fn);
+  scope_t closure = cfunc_get_closure_scope(fc);
+  if (!closure)
+    return create_exception_value(vm, "closure: no closure scope");
+  name_t n = scope_lookup(closure, "captured");
+  if (!n || !n->ref)
+    return create_exception_value(vm, "closure: 'captured' not found");
+  return n->ref;
+}
+
+TEST_F(it_callable_type, closure_scope_create_and_dispose) {
+  /* Create closure scope with a value, then vm_dispose should handle it */
+  vm_t vm = vm_create(allocator);
+  allocator_t alloc = vm_get_allocator(vm);
+  callable_type_t ct = _make_i32_to_i32_callable(vm);
+  value_t cv = create_callable_value(vm, ct, _add_one, "test_fn");
+  cfunc_t fc = (cfunc_t)value_get_data(cv);
+
+  scope_t closure = scope_create(alloc, SCOPE_FUNCTION, NULL, NULL);
+  cfunc_set_closure_scope(fc, closure);
+
+  scope_t prev = vm_set_scope(vm, closure);
+  int32_t val = 42;
+  vm_create_value(vm, _get_i32_type(vm), &val, "captured");
+  vm_set_scope(vm, prev);
+
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_callable_type, closure_scope_accessible_during_call) {
+  vm_t vm = vm_create(allocator);
+  allocator_t alloc = vm_get_allocator(vm);
+  callable_type_t ct = _make_i32_to_i32_callable(vm);
+
+  /* Create a callable with a closure scope containing a captured variable */
+  value_t cv = create_callable_value(vm, ct, _read_captured, "clojure");
+  cfunc_t fc = (cfunc_t)value_get_data(cv);
+
+  /* Closure scope is isolated (parent=NULL) — owned by cfunc_t */
+  scope_t closure = scope_create(alloc, SCOPE_FUNCTION, NULL, NULL);
+  cfunc_set_closure_scope(fc, closure);
+
+  /* Capture: switch to closure scope, create the value, switch back */
+  scope_t prev = vm_set_scope(vm, closure);
+  int32_t val = 42;
+  vm_create_value(vm, _get_i32_type(vm), &val, "captured");
+  vm_set_scope(vm, prev);
+
+  /* Call the callable — callback reads "captured" from its own closure scope */
+  int32_t arg = 0;
+  value_t argv[1] = { vm_create_value(vm, _get_i32_type(vm), &arg, NULL) };
+  value_t result = value_call(vm, cv, 1, argv);
+  EXPECT_FALSE(value_is_error(result));
+  EXPECT_EQ(type_get_kind(value_get_type(result)), TYPE_KIND_I32);
+  EXPECT_EQ(*(int32_t *)value_get_data(result), 42);
+
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_callable_type, closure_scope_null_for_plain_cfunc) {
+  vm_t vm = vm_create(allocator);
+  callable_type_t ct = _make_i32_to_i32_callable(vm);
+  value_t cv = create_callable_value(vm, ct, _add_one, NULL);
+  cfunc_t fc = (cfunc_t)value_get_data(cv);
+  /* Plain C functions have no closure scope */
+  EXPECT_EQ(cfunc_get_closure_scope(fc), nullptr);
+  vm_dispose(vm, allocator);
+}
+
+TEST_F(it_callable_type, clone_has_no_closure) {
+  vm_t vm = vm_create(allocator);
+  allocator_t alloc = vm_get_allocator(vm);
+  callable_type_t ct = _make_i32_to_i32_callable(vm);
+
+  value_t cv = create_callable_value(vm, ct, _add_one, "original");
+  cfunc_t fc = (cfunc_t)value_get_data(cv);
+  scope_t closure = scope_create(alloc, SCOPE_FUNCTION, NULL, NULL);
+  cfunc_set_closure_scope(fc, closure);
+
+  /* Clone should share func+name but have no closure (closures are unique) */
+  value_t cloned = value_clone(vm, cv);
+  cfunc_t clone_fc = (cfunc_t)value_get_data(cloned);
+  EXPECT_EQ(fc->func, clone_fc->func);
+  EXPECT_EQ(cfunc_get_closure_scope(clone_fc), nullptr);
+
   vm_dispose(vm, allocator);
 }
