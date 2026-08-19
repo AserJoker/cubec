@@ -7,7 +7,7 @@ value_t run_expression_addr(vm_t vm, node_t node, bool shadow) {
   cubec_expression_addr_t addr = (cubec_expression_addr_t)node;
 
   value_t host = run_expression(vm, addr->host, shadow);
-  if (value_is_error(host)) return host;
+  if (value_is_abnormal(host)) return host;
 
   return value_addrof(vm, host);
 }

@@ -2,7 +2,7 @@
 #define _H_CUBEC_ENGINE_CALLABLE_TYPE_
 #include "engine/type.h"
 #include "engine/value.h"
-#include "engine/cfunc.h"
+#include "engine/func.h"
 #include "core/vec.h"
 #ifdef __cplusplus
 extern "C" {
@@ -11,7 +11,7 @@ extern "C" {
 /**
  * @brief Callable type — extends _type_t with parameter types and return type.
  *
- * Callable values store a cfunc_t object (double pointer, same pattern as str/string_t).
+ * Callable values store a func_t object (borrowed ref), scope->cfuncs owns the lifecycle.
  * The callable type defines the function signature: parameter types + return type + is_variadic.
  *
  * Safe to cast callable_type_t → type_t (base is first field).
@@ -47,7 +47,7 @@ typedef struct callable_type_init_t {
 /* ---- Type creation ---- */
 
 /** @brief Create a callable type: (T1, T2, ...) -> R.
- *  name is auto-generated. size/align are sizeof(cfunc_t)/_Alignof(cfunc_t).
+ *  name is auto-generated. size/align are sizeof(func_t)/_Alignof(func_t).
  *  param_types and return_type are deep-copied (owned by callable_type_t). */
 callable_type_t callable_type_create(allocator_t allocator, vec_t param_types,
                                       type_t return_type, bool is_variadic,
@@ -66,12 +66,11 @@ const char *callable_type_get_module_id(callable_type_t self);
 struct _vm_t;
 
 /** @brief Create a callable value from a cfunction_t.
- *  Follows the str double-pointer pattern:
- *  value.data = cfunc_t* → cfunc_t (registered in scope->cfuncs). */
+ *  value.data = func_t (borrowed ref, registered in scope->cfuncs). */
 value_t create_callable_value(struct _vm_t *vm, callable_type_t ct,
                                cfunction_t func, const char *name);
 
-/** @brief Create a callable shadow value (no cfunc_t). */
+/** @brief Create a callable shadow value (no func_t). */
 value_t create_callable_shadow(struct _vm_t *vm, callable_type_t ct,
                                 bool initialized);
 

@@ -11,7 +11,7 @@ value_t run_declaration_pointer(vm_t vm, node_t node, bool shadow) {
 
   /* evaluate pointee type expression */
   value_t pointee_type_val = run_expression(vm, ptr->type, false);
-  if (value_is_error(pointee_type_val)) return pointee_type_val;
+  if (value_is_abnormal(pointee_type_val)) return pointee_type_val;
 
   /* pointee type expression must produce a type value */
   if (type_get_kind(value_get_type(pointee_type_val)) != TYPE_KIND_TYPE)

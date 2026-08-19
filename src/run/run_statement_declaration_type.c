@@ -72,7 +72,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
         type_t param_type = type_type;
         if (ast_param->value_type) {
           value_t vt = run_expression(vm, ast_param->value_type, false);
-          if (value_is_error(vt)) {
+          if (value_is_abnormal(vt)) {
             if (shadow) {
               while (vm_get_current_scope(vm) != scope_before)
                 vm_pop_scope(vm);
@@ -102,7 +102,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
           for (size_t j = 0; j < cc; j++) {
             node_t constraint_node = (node_t)vec_get(ast_param->constraints, j);
             value_t cv = run_expression(vm, constraint_node, false);
-            if (value_is_error(cv)) {
+            if (value_is_abnormal(cv)) {
               allocator_free(allocator, &extends);
               allocator_free(allocator, &params_vec);
               if (shadow) {
@@ -158,7 +158,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
     /* if type_value is provided, verify it matches the builtin */
     if (stmt->type_value) {
       value_t type_val = run_expression(vm, stmt->type_value, false);
-      if (value_is_error(type_val)) {
+      if (value_is_abnormal(type_val)) {
         if (shadow) {
           while (vm_get_current_scope(vm) != scope_before)
             vm_pop_scope(vm);
@@ -170,7 +170,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
         return type_val;
       }
       value_t eq = value_equal(vm, builtin_val, type_val);
-      if (value_is_error(eq)) {
+      if (value_is_abnormal(eq)) {
         if (shadow) {
           while (vm_get_current_scope(vm) != scope_before)
             vm_pop_scope(vm);
@@ -220,7 +220,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
       type_t param_type = type_type;
       if (ast_param->value_type) {
         value_t vt = run_expression(vm, ast_param->value_type, false);
-        if (value_is_error(vt)) {
+        if (value_is_abnormal(vt)) {
           if (shadow) {
             while (vm_get_current_scope(vm) != scope_before)
               vm_pop_scope(vm);
@@ -250,7 +250,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
         for (size_t j = 0; j < cc; j++) {
           node_t constraint_node = (node_t)vec_get(ast_param->constraints, j);
           value_t cv = run_expression(vm, constraint_node, false);
-          if (value_is_error(cv)) {
+          if (value_is_abnormal(cv)) {
             allocator_free(allocator, &extends);
             allocator_free(allocator, &params_vec);
             if (shadow) {
@@ -302,7 +302,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
                                   name);
 
   value_t type_val = run_expression(vm, stmt->type_value, false);
-  if (value_is_error(type_val)) {
+  if (value_is_abnormal(type_val)) {
     if (shadow) {
       while (vm_get_current_scope(vm) != scope_before)
         vm_pop_scope(vm);

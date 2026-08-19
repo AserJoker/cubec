@@ -43,7 +43,7 @@ static value_t _cache_lookup(vm_t vm, generic_type_t gt,
        * The error value is registered on the current scope and will be
        * cleaned up on scope_dispose; it must not propagate, since "cannot
        * compare" for cache purposes means "not equal", not a real failure. */
-      if (value_is_error(eq)) {
+      if (value_is_abnormal(eq)) {
         match = false;
         break;
       }
@@ -129,7 +129,7 @@ value_t create_struct_instance(vm_t vm, value_t tmpl,
     /* evaluate the field's type expression with parameter substitution */
     value_t field_type_val = run_expression(vm, field->type, false);
 
-    if (value_is_error(field_type_val)) {
+    if (value_is_abnormal(field_type_val)) {
       vm_pop_scope(vm);
       scope_dispose(temp);
       return field_type_val;
@@ -167,7 +167,7 @@ value_t create_struct_instance(vm_t vm, value_t tmpl,
    *     and intermediate field types). The clone in gt_scope survives. */
   scope_dispose(temp);
 
-  if (value_is_error(instance))
+  if (value_is_abnormal(instance))
     return instance;
 
   /* 10. build cache entry (borrows both params vec + instance).
@@ -216,7 +216,7 @@ value_t create_type_instance(vm_t vm, value_t tmpl,
    *    vm state is consistent even on failure paths. */
   vm_pop_scope(vm);
 
-  if (value_is_error(result)) {
+  if (value_is_abnormal(result)) {
     scope_dispose(temp);
     return create_exception_value(vm, "type expression evaluation failed");
   }
@@ -243,7 +243,7 @@ value_t create_type_instance(vm_t vm, value_t tmpl,
    *     and any intermediate types). The clone in gt_scope survives. */
   scope_dispose(temp);
 
-  if (value_is_error(instance))
+  if (value_is_abnormal(instance))
     return instance;
 
   /* 8. build cache entry (borrows both params vec + instance).

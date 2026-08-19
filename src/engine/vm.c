@@ -484,7 +484,7 @@ value_t vm_add_builtin(vm_t self, const char *name, value_t value) {
   scope_t prev = vm_set_scope(self, self->global_scope);
   value_t cloned = value_clone(self, value);
   vm_set_scope(self, prev);
-  if (value_is_error(cloned))
+  if (value_is_abnormal(cloned))
     return cloned;
   /* insert borrowed reference into builtins strmap */
   strmap_insert(self->builtins, name, cloned);

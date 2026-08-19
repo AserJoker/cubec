@@ -12,7 +12,7 @@
 static value_t _run_unary(vm_t vm, const char *op, node_t right,
                           bool shadow) {
   value_t rv = run_expression(vm, right, shadow);
-  if (value_is_error(rv)) return rv;
+  if (value_is_abnormal(rv)) return rv;
 
   if (strcmp(op, "!") == 0) return value_lnot(vm, rv);
   if (strcmp(op, "+") == 0) return value_pos(vm, rv);
@@ -30,7 +30,7 @@ static value_t _run_binary(vm_t vm, const char *op, node_t left,
   /* short-circuit: && and || */
   if (strcmp(op, "&&") == 0) {
     value_t lv = run_expression(vm, left, shadow);
-    if (value_is_error(lv)) return lv;
+    if (value_is_abnormal(lv)) return lv;
     if (value_is_shadow(lv))
       return vm_create_value_shadow(vm,
                                     (type_t)value_get_data(vm_get_bool_type(vm)),
@@ -38,13 +38,13 @@ static value_t _run_binary(vm_t vm, const char *op, node_t left,
     bool lb = *(bool *)value_get_data(lv);
     if (!lb) return create_bool_value(vm, false);
     value_t rv = run_expression(vm, right, shadow);
-    if (value_is_error(rv)) return rv;
+    if (value_is_abnormal(rv)) return rv;
     /* coerce to bool via double lnot */
     return value_lnot(vm, value_lnot(vm, rv));
   }
   if (strcmp(op, "||") == 0) {
     value_t lv = run_expression(vm, left, shadow);
-    if (value_is_error(lv)) return lv;
+    if (value_is_abnormal(lv)) return lv;
     if (value_is_shadow(lv))
       return vm_create_value_shadow(vm,
                                     (type_t)value_get_data(vm_get_bool_type(vm)),
@@ -52,15 +52,15 @@ static value_t _run_binary(vm_t vm, const char *op, node_t left,
     bool lb = *(bool *)value_get_data(lv);
     if (lb) return create_bool_value(vm, true);
     value_t rv = run_expression(vm, right, shadow);
-    if (value_is_error(rv)) return rv;
+    if (value_is_abnormal(rv)) return rv;
     return value_lnot(vm, value_lnot(vm, rv));
   }
 
   /* eager: evaluate both */
   value_t lv = run_expression(vm, left, shadow);
-  if (value_is_error(lv)) return lv;
+  if (value_is_abnormal(lv)) return lv;
   value_t rv = run_expression(vm, right, shadow);
-  if (value_is_error(rv)) return rv;
+  if (value_is_abnormal(rv)) return rv;
 
   /* arithmetic */
   if (strcmp(op, "+") == 0) return value_add(vm, lv, rv);
@@ -80,19 +80,19 @@ static value_t _run_binary(vm_t vm, const char *op, node_t left,
   if (strcmp(op, "==") == 0) return value_equal(vm, lv, rv);
   if (strcmp(op, "!=") == 0) {
     value_t eq = value_equal(vm, lv, rv);
-    if (value_is_error(eq)) return eq;
+    if (value_is_abnormal(eq)) return eq;
     return value_lnot(vm, eq);
   }
   if (strcmp(op, "<") == 0) return value_lt(vm, lv, rv);
   if (strcmp(op, ">") == 0) return value_gt(vm, lv, rv);
   if (strcmp(op, "<=") == 0) {
     value_t gt = value_gt(vm, lv, rv);
-    if (value_is_error(gt)) return gt;
+    if (value_is_abnormal(gt)) return gt;
     return value_lnot(vm, gt);
   }
   if (strcmp(op, ">=") == 0) {
     value_t lt = value_lt(vm, lv, rv);
-    if (value_is_error(lt)) return lt;
+    if (value_is_abnormal(lt)) return lt;
     return value_lnot(vm, lt);
   }
 

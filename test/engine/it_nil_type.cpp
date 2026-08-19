@@ -118,7 +118,7 @@ TEST_F(it_nil_type, equal_nil_int) {
   value_t i32_val = create_i32_value(vm, 42);
 
   value_t eq = value_equal(vm, nil_val, i32_val);
-  EXPECT_TRUE(value_is_error(eq));
+  EXPECT_TRUE(value_is_abnormal(eq));
 
   vm_dispose(vm, allocator);
 }
@@ -204,7 +204,7 @@ TEST_F(it_nil_type, type_equal_i32_fails) {
 
   /* comparing type values of different kinds returns exception */
   value_t eq = value_equal(vm, nt_val, it_val);
-  EXPECT_TRUE(value_is_error(eq));
+  EXPECT_TRUE(value_is_abnormal(eq));
 
   vm_dispose(vm, allocator);
 }

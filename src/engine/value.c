@@ -90,7 +90,7 @@ bool    value_is_shadow(value_t self) { return self->data == NULL; }
 bool    value_is_interrupt(value_t self) {
   return type_get_kind(value_get_type(self)) == TYPE_KIND_INTERRUPT;
 }
-bool    value_is_error(value_t self) {
+bool    value_is_abnormal(value_t self) {
   type_kind_t kind = type_get_kind(value_get_type(self));
   return kind == TYPE_KIND_EXCEPTION || kind == TYPE_KIND_INTERRUPT;
 }
@@ -320,7 +320,7 @@ value_t value_lt(vm_t vm, value_t a, value_t b) {
 /* != is derived from equal: negate the result */
 value_t value_ne(vm_t vm, value_t a, value_t b) {
   value_t eq = value_equal(vm, a, b);
-  if (value_is_error(eq))
+  if (value_is_abnormal(eq))
     return eq;
   if (value_is_shadow(eq))
     return vm_create_value_shadow(vm, value_get_type(eq), NULL, true);
@@ -331,7 +331,7 @@ value_t value_ne(vm_t vm, value_t a, value_t b) {
 /* >= is derived from lt: negate the result */
 value_t value_ge(vm_t vm, value_t a, value_t b) {
   value_t lt_result = value_lt(vm, a, b);
-  if (value_is_error(lt_result))
+  if (value_is_abnormal(lt_result))
     return lt_result;
   if (value_is_shadow(lt_result))
     return vm_create_value_shadow(vm, value_get_type(lt_result), NULL, true);
@@ -342,7 +342,7 @@ value_t value_ge(vm_t vm, value_t a, value_t b) {
 /* <= is derived from gt: negate the result */
 value_t value_le(vm_t vm, value_t a, value_t b) {
   value_t gt_result = value_gt(vm, a, b);
-  if (value_is_error(gt_result))
+  if (value_is_abnormal(gt_result))
     return gt_result;
   if (value_is_shadow(gt_result))
     return vm_create_value_shadow(vm, value_get_type(gt_result), NULL, true);

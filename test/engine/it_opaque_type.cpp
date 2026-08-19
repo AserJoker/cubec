@@ -132,7 +132,7 @@ TEST_F(it_opaque_type, equal_opaque_int_fails) {
   value_t i32_val = create_i32_value(vm, 42);
 
   value_t eq = value_equal(vm, a, i32_val);
-  EXPECT_TRUE(value_is_error(eq));
+  EXPECT_TRUE(value_is_abnormal(eq));
 
   vm_dispose(vm, allocator);
 }
@@ -226,7 +226,7 @@ TEST_F(it_opaque_type, type_equal_nil_fails) {
 
   /* comparing type values of different kinds returns exception */
   value_t eq = value_equal(vm, ot_val, nt_val);
-  EXPECT_TRUE(value_is_error(eq));
+  EXPECT_TRUE(value_is_abnormal(eq));
 
   vm_dispose(vm, allocator);
 }

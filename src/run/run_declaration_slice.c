@@ -11,7 +11,7 @@ value_t run_declaration_slice(vm_t vm, node_t node, bool shadow) {
 
   /* evaluate element type expression */
   value_t elem_type_val = run_expression(vm, sl->type, false);
-  if (value_is_error(elem_type_val)) return elem_type_val;
+  if (value_is_abnormal(elem_type_val)) return elem_type_val;
 
   /* element type expression must produce a type value */
   if (type_get_kind(value_get_type(elem_type_val)) != TYPE_KIND_TYPE)

@@ -201,7 +201,7 @@ static value_t _##Prefix##_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   /* check type compatibility via safe_cast */                                 \
   if (rt != lt) {                                                              \
     value_t casted = value_safe_cast(vm, rvalue, lt);                          \
-    if (value_is_error(casted)) return casted;                                 \
+    if (value_is_abnormal(casted)) return casted;                                 \
   }                                                                            \
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {                    \
     value_set_initialized(lvalue, true);                                       \
@@ -285,7 +285,7 @@ static value_t _##Prefix##_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
   /* check type compatibility via safe_cast */                                 \
   if (rt != lt) {                                                              \
     value_t casted = value_safe_cast(vm, rvalue, lt);                          \
-    if (value_is_error(casted)) return casted;                                 \
+    if (value_is_abnormal(casted)) return casted;                                 \
   }                                                                            \
   if (value_is_shadow(lvalue) || value_is_shadow(rvalue)) {                    \
     value_set_initialized(lvalue, true);                                       \

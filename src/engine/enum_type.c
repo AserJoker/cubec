@@ -307,7 +307,7 @@ static value_t _enum_equal(vm_t vm, value_t a, value_t b) {
   if (scope_values) { vec_push(scope_values, av); vec_push(scope_values, bv); }
 
   value_t eq = uv.equal(vm, av, bv);
-  if (value_is_error(eq))
+  if (value_is_abnormal(eq))
     return eq;
   if (value_is_shadow(eq))
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);

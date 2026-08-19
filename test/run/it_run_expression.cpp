@@ -14,7 +14,7 @@
 #include "engine/diagnostic.h"
 #include "engine/pointer_type.h"
 #include "engine/callable_type.h"
-#include "engine/cfunc.h"
+#include "engine/func.h"
 #include "engine/struct_type.h"
 #include "engine/slice_type.h"
 #include "engine/array_type.h"
@@ -298,7 +298,7 @@ TEST_F(it_run_expression, chained_arithmetic) {
 
 TEST_F(it_run_expression, add_i32_str_returns_exception) {
   value_t v = _run_expr("10 + \"hello\"");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 /* ==================================================================
@@ -331,7 +331,7 @@ TEST_F(it_run_expression, script_guard_rejects_shadow_identifier) {
   _bind("compileonly", sh);
 
   value_t v = _run_expr("compileonly");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_expression, script_guard_allows_void_result) {
@@ -342,7 +342,7 @@ TEST_F(it_run_expression, script_guard_allows_void_result) {
 
   value_t v = _run_expr("g = 1");
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
-  EXPECT_FALSE(value_is_error(v));
+  EXPECT_FALSE(value_is_abnormal(v));
 }
 
 /* ==================================================================
@@ -428,7 +428,7 @@ TEST_F(it_run_expression, member_get_struct_field) {
 
   /* Access pt.x */
   value_t v = _run_expr("pt.x");
-  ASSERT_FALSE(value_is_error(v)) << "member access on struct failed";
+  ASSERT_FALSE(value_is_abnormal(v)) << "member access on struct failed";
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(v), 10);
 }
@@ -438,7 +438,7 @@ TEST_F(it_run_expression, member_on_non_struct_returns_error) {
   _bind("simple", i32_val);
 
   value_t v = _run_expr("simple.field");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 /* ==================================================================
@@ -460,7 +460,7 @@ TEST_F(it_run_expression, subscript_array_element) {
 
   /* arr[1] should be 20 */
   value_t v = _run_expr("arr[1]");
-  ASSERT_FALSE(value_is_error(v)) << "subscript on array failed";
+  ASSERT_FALSE(value_is_abnormal(v)) << "subscript on array failed";
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(v), 20);
 }
@@ -470,7 +470,7 @@ TEST_F(it_run_expression, subscript_on_non_indexable_returns_error) {
   _bind("num", i32_val);
 
   value_t v = _run_expr("num[0]");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 /* ==================================================================
@@ -495,7 +495,7 @@ TEST_F(it_run_expression, namespace_access_on_non_type_returns_error) {
   _bind("nottype", i32_val);
 
   value_t v = _run_expr("nottype::prop");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 /* ==================================================================
@@ -508,7 +508,7 @@ TEST_F(it_run_expression, assign_i32_to_i8_safe_cast_rejected) {
   _bind("x", i8_val);
 
   value_t v = _run_expr("x = 42");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_expression, assign_i64_to_i32_narrowing_rejected) {
@@ -520,7 +520,7 @@ TEST_F(it_run_expression, assign_i64_to_i32_narrowing_rejected) {
   _bind("big", big_val);
 
   value_t v = _run_expr("y = big");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_expression, assign_i8_to_i32_safe_cast_ok) {
@@ -563,7 +563,7 @@ TEST_F(it_run_expression, assign_incompatible_type_returns_error) {
   _bind("x", i32_val);
 
   value_t v = _run_expr("x = true");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_expression, assign_incompatible_type_shadow_skips_write) {

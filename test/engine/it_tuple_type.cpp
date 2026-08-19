@@ -558,7 +558,7 @@ TEST_F(it_tuple_type, safe_cast_tuple_to_array_homogeneous) {
   value_t tup = create_tuple_value(vm, tt, elems);
 
   value_t cast = value_safe_cast(vm, tup, (type_t)at);
-  ASSERT_FALSE(value_is_error(cast));
+  ASSERT_FALSE(value_is_abnormal(cast));
   EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_ARRAY);
   EXPECT_EQ(array_type_get_count((array_type_t)value_get_type(cast)), 3u);
 
@@ -566,7 +566,7 @@ TEST_F(it_tuple_type, safe_cast_tuple_to_array_homogeneous) {
   for (uint64_t i = 0; i < 3; i++) {
     value_t idx = create_i32_value(vm, (int32_t)i);
     value_t elem = value_get_item(vm, cast, idx);
-    ASSERT_FALSE(value_is_error(elem));
+    ASSERT_FALSE(value_is_abnormal(elem));
     EXPECT_EQ(*(int32_t *)value_get_data(elem), (int32_t)((i + 1) * 10));
   }
 
@@ -587,7 +587,7 @@ TEST_F(it_tuple_type, safe_cast_tuple_to_array_mut_to_const) {
   value_t tup = create_tuple_value(vm, tt, elems);
 
   value_t cast = value_safe_cast(vm, tup, (type_t)const_at);
-  ASSERT_FALSE(value_is_error(cast));
+  ASSERT_FALSE(value_is_abnormal(cast));
   EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_ARRAY);
   EXPECT_FALSE(type_is_mut(value_get_type(cast)));
 
@@ -608,7 +608,7 @@ TEST_F(it_tuple_type, safe_cast_tuple_to_array_const_to_mut_error) {
   value_t tup = create_tuple_value(vm, const_tt, elems);
 
   value_t cast = value_safe_cast(vm, tup, (type_t)at);
-  EXPECT_TRUE(value_is_error(cast));
+  EXPECT_TRUE(value_is_abnormal(cast));
 
   vm_dispose(vm, allocator);
 }
@@ -630,7 +630,7 @@ TEST_F(it_tuple_type, safe_cast_tuple_to_array_count_mismatch_error) {
   value_t tup = create_tuple_value(vm, tt, elems);
 
   value_t cast = value_safe_cast(vm, tup, (type_t)at);
-  EXPECT_TRUE(value_is_error(cast));
+  EXPECT_TRUE(value_is_abnormal(cast));
 
   vm_dispose(vm, allocator);
 }
@@ -652,7 +652,7 @@ TEST_F(it_tuple_type, safe_cast_tuple_to_array_incompatible_element_error) {
   value_t tup = create_tuple_value(vm, tt, elems);
 
   value_t cast = value_safe_cast(vm, tup, (type_t)at);
-  EXPECT_TRUE(value_is_error(cast));
+  EXPECT_TRUE(value_is_abnormal(cast));
 
   vm_dispose(vm, allocator);
 }
@@ -681,12 +681,12 @@ TEST_F(it_tuple_type, safe_cast_tuple_to_array_widening_element) {
   value_t tup = create_tuple_value(vm, tt, elems);
 
   value_t cast = value_safe_cast(vm, tup, (type_t)at);
-  ASSERT_FALSE(value_is_error(cast)) << "i32→i64 widening should succeed";
+  ASSERT_FALSE(value_is_abnormal(cast)) << "i32→i64 widening should succeed";
   EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_ARRAY);
 
   value_t idx0 = create_i32_value(vm, 0);
   value_t e0 = value_get_item(vm, cast, idx0);
-  ASSERT_FALSE(value_is_error(e0));
+  ASSERT_FALSE(value_is_abnormal(e0));
   EXPECT_EQ(type_get_kind(value_get_type(e0)), TYPE_KIND_I64);
   EXPECT_EQ(*(int64_t *)value_get_data(e0), 42);
 
@@ -700,7 +700,7 @@ TEST_F(it_tuple_type, safe_cast_tuple_to_array_shadow) {
 
   value_t tup = create_tuple_shadow(vm, tt, true);
   value_t cast = value_safe_cast(vm, tup, (type_t)at);
-  ASSERT_FALSE(value_is_error(cast));
+  ASSERT_FALSE(value_is_abnormal(cast));
   EXPECT_TRUE(value_is_shadow(cast));
   EXPECT_EQ(type_get_kind(value_get_type(cast)), TYPE_KIND_ARRAY);
 

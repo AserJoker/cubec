@@ -593,7 +593,7 @@ static value_t _struct_equal(vm_t vm, value_t a, value_t b) {
     allocator_free(alloc, &fa);
     allocator_free(alloc, &fb);
 
-    if (value_is_error(eq))
+    if (value_is_abnormal(eq))
       return eq;
     if (value_is_shadow(eq))
       return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
@@ -636,7 +636,7 @@ static value_t _struct_type_equal(vm_t vm, type_t a, type_t b) {
       eq = evt.type_equal(vm, fia->type, fib->type);
     else
       eq = create_bool_value(vm, type_get_kind(fia->type) == type_get_kind(fib->type));
-    if (value_is_error(eq))
+    if (value_is_abnormal(eq))
       return eq;
     if (value_is_shadow(eq))
       return vm_create_value_shadow(vm, a, NULL, true);
@@ -686,7 +686,7 @@ static value_t _struct_type_extends(vm_t vm, type_t sub, type_t super) {
       ext = create_bool_value(vm, true);
     else
       ext = create_bool_value(vm, type_get_kind(fi_sub->type) == type_get_kind(fi_sup->type));
-    if (value_is_error(ext))
+    if (value_is_abnormal(ext))
       return ext;
     if (value_is_shadow(ext))
       return vm_create_value_shadow(vm, sub, NULL, true);
@@ -704,7 +704,7 @@ static value_t _struct_safe_cast(vm_t vm, value_t self, type_t to) {
   type_t from = value_get_type(self);
   /* strict type_equal required */
   value_t eq = _struct_type_equal(vm, from, to);
-  if (value_is_error(eq))
+  if (value_is_abnormal(eq))
     return eq;
   if (value_is_shadow(eq) || !(*(bool *)value_get_data(eq)))
     return create_exception_value(vm, "cannot safe_cast '%s' to '%s'",
@@ -726,7 +726,7 @@ static value_t _struct_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
 
   /* type_equal check */
   value_t eq = _struct_type_equal(vm, lt, value_get_type(rvalue));
-  if (value_is_error(eq))
+  if (value_is_abnormal(eq))
     return eq;
   if (!(*(bool *)value_get_data(eq)))
     return create_exception_value(vm, "cannot assign '%s' to '%s'",
@@ -783,7 +783,7 @@ static value_t _struct_to_string(vm_t vm, value_t self) {
                                 (char *)value_get_data(self) + fi->offset, false);
       value_t fvs = value_to_string(vm, fv);
       allocator_free(alloc, &fv);
-      if (!value_is_error(fvs) &&
+      if (!value_is_abnormal(fvs) &&
           type_get_kind(value_get_type(fvs)) == TYPE_KIND_STR) {
         string_t sdata = *(string_t *)value_get_data(fvs);
         const char *s = string_get(sdata);
@@ -857,7 +857,7 @@ static value_t _struct_set_field(vm_t vm, value_t self, const char *name, value_
 
   /* safe_cast val to field type */
   value_t casted = value_safe_cast(vm, val, fi->type);
-  if (value_is_error(casted))
+  if (value_is_abnormal(casted))
     return casted;
 
   if (!value_is_shadow(self) && value_get_data(self) && value_get_data(casted)) {
@@ -943,7 +943,7 @@ static value_t _struct_type_set_prop(vm_t vm, type_t self, const char *name, val
 
   /* assign value */
   value_t result = value_assignment(vm, existing, val);
-  if (value_is_error(result))
+  if (value_is_abnormal(result))
     return result;
 
   return create_void_value(vm);

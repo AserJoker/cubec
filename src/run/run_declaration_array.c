@@ -12,7 +12,7 @@ value_t run_declaration_array(vm_t vm, node_t node, bool shadow) {
 
   /* evaluate size expression */
   value_t size_val = run_expression(vm, arr->size, false);
-  if (value_is_error(size_val)) return size_val;
+  if (value_is_abnormal(size_val)) return size_val;
 
   /* size must be an integer value */
   type_kind_t size_kind = type_get_kind(value_get_type(size_val));
@@ -27,7 +27,7 @@ value_t run_declaration_array(vm_t vm, node_t node, bool shadow) {
 
   /* evaluate element type expression */
   value_t elem_type_val = run_expression(vm, arr->type, false);
-  if (value_is_error(elem_type_val)) return elem_type_val;
+  if (value_is_abnormal(elem_type_val)) return elem_type_val;
 
   /* element type expression must produce a type value */
   if (type_get_kind(value_get_type(elem_type_val)) != TYPE_KIND_TYPE)

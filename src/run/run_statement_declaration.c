@@ -37,7 +37,7 @@ static const char *_get_name(node_t identifier) {
 static type_t _eval_type(vm_t vm, node_t type_node, scope_t scope_before,
                          bool shadow) {
   value_t type_val = run_expression(vm, type_node, false);
-  if (value_is_error(type_val)) {
+  if (value_is_abnormal(type_val)) {
     if (shadow) {
       while (vm_get_current_scope(vm) != scope_before)
         vm_pop_scope(vm);
@@ -96,7 +96,7 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
                                     "run: comptime variable '%s' requires initializer",
                                     name);
     value_t result = run_expression(vm, decl->expression, true);
-    if (value_is_error(result)) {
+    if (value_is_abnormal(result)) {
       if (shadow) {
         while (vm_get_current_scope(vm) != scope_before)
           vm_pop_scope(vm);
@@ -117,7 +117,7 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
                                       name);
       }
       value_t casted = value_safe_cast(vm, result, annotated);
-      if (value_is_error(casted)) {
+      if (value_is_abnormal(casted)) {
         if (shadow) {
           while (vm_get_current_scope(vm) != scope_before)
             vm_pop_scope(vm);
@@ -161,7 +161,7 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
 
   /* ---- normal: evaluate initializer ---- */
   value_t result = run_expression(vm, decl->expression, shadow);
-  if (value_is_error(result)) {
+  if (value_is_abnormal(result)) {
     if (shadow) {
       while (vm_get_current_scope(vm) != scope_before)
         vm_pop_scope(vm);
@@ -183,7 +183,7 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow) {
                                     name);
     }
     value_t casted = value_safe_cast(vm, result, annotated);
-    if (value_is_error(casted)) {
+    if (value_is_abnormal(casted)) {
       if (shadow) {
         while (vm_get_current_scope(vm) != scope_before)
           vm_pop_scope(vm);

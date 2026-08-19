@@ -168,7 +168,7 @@ protected:
 
 TEST_F(it_generic_type, type_alias_instantiate_array) {
   value_t gv = _make_array_generic();
-  ASSERT_FALSE(value_is_error(gv));
+  ASSERT_FALSE(value_is_abnormal(gv));
 
   /* build args: i32 type value, u64 value 4 */
   type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
@@ -184,9 +184,9 @@ TEST_F(it_generic_type, type_alias_instantiate_array) {
 
   /* instantiate */
   value_t result = value_instantiate(vm, gv, 2, argv);
-  ASSERT_FALSE(value_is_error(result))
+  ASSERT_FALSE(value_is_abnormal(result))
       << "instantiation failed: "
-      << (value_is_error(result)
+      << (value_is_abnormal(result)
               ? (const char *)value_get_data(result)
               : "");
 
@@ -210,7 +210,7 @@ TEST_F(it_generic_type, type_alias_cache_hit) {
   value_t argv_a[2] = {arg0a, arg1a};
 
   value_t result1 = value_instantiate(vm, gv, 2, argv_a);
-  ASSERT_FALSE(value_is_error(result1));
+  ASSERT_FALSE(value_is_abnormal(result1));
 
   /* second instantiation with same args */
   value_t arg0b = _type_val(i32_type);
@@ -218,7 +218,7 @@ TEST_F(it_generic_type, type_alias_cache_hit) {
   value_t argv_b[2] = {arg0b, arg1b};
 
   value_t result2 = value_instantiate(vm, gv, 2, argv_b);
-  ASSERT_FALSE(value_is_error(result2));
+  ASSERT_FALSE(value_is_abnormal(result2));
 
   /* cache hit: same pointer */
   EXPECT_EQ(result1, result2);
@@ -235,7 +235,7 @@ TEST_F(it_generic_type, type_alias_cache_miss) {
   value_t arg1a = _u64_val(4);
   value_t argv_a[2] = {arg0a, arg1a};
   value_t result1 = value_instantiate(vm, gv, 2, argv_a);
-  ASSERT_FALSE(value_is_error(result1));
+  ASSERT_FALSE(value_is_abnormal(result1));
 
   /* second: Array[i64, 8] */
   type_t i64_type = (type_t)value_get_data(vm_get_i64_type(vm));
@@ -243,9 +243,9 @@ TEST_F(it_generic_type, type_alias_cache_miss) {
   value_t arg1b = _u64_val(8);
   value_t argv_b[2] = {arg0b, arg1b};
   value_t result2 = value_instantiate(vm, gv, 2, argv_b);
-  ASSERT_FALSE(value_is_error(result2))
+  ASSERT_FALSE(value_is_abnormal(result2))
       << "second instantiation failed: "
-      << (value_is_error(result2)
+      << (value_is_abnormal(result2)
               ? (const char *)value_get_data(result2)
               : "");
 

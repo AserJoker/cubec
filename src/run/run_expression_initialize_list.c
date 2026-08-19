@@ -77,12 +77,12 @@ static value_t _build_typed_struct(vm_t vm, value_t type_val,
       if (dj == fi) break;
     }
     value_t v = _eval_field_value(vm, item, false);
-    if (value_is_error(v)) {
+    if (value_is_abnormal(v)) {
       allocator_free(alloc, &ordered);
       return v;
     }
     value_t cast = value_safe_cast(vm, v, field_info_get_type(fi));
-    if (value_is_error(cast)) {
+    if (value_is_abnormal(cast)) {
       allocator_free(alloc, &ordered);
       return cast;
     }
@@ -117,12 +117,12 @@ static value_t _build_typed_tuple(vm_t vm, tuple_type_t tt,
   for (size_t i = 0; i < count; i++) {
     node_t item = (node_t)vec_get(node->items, i);
     value_t v = _eval_positional(vm, item, false);
-    if (value_is_error(v)) {
+    if (value_is_abnormal(v)) {
       allocator_free(alloc, &elems);
       return v;
     }
     value_t cast = value_safe_cast(vm, v, tuple_type_get_element_type(tt, (uint64_t)i));
-    if (value_is_error(cast)) {
+    if (value_is_abnormal(cast)) {
       allocator_free(alloc, &elems);
       return cast;
     }
@@ -158,12 +158,12 @@ static value_t _build_typed_array(vm_t vm, array_type_t at,
   for (size_t i = 0; i < count; i++) {
     node_t item = (node_t)vec_get(node->items, i);
     value_t v = _eval_positional(vm, item, false);
-    if (value_is_error(v)) {
+    if (value_is_abnormal(v)) {
       allocator_free(alloc, &elems);
       return v;
     }
     value_t cast = value_safe_cast(vm, v, elem_type);
-    if (value_is_error(cast)) {
+    if (value_is_abnormal(cast)) {
       allocator_free(alloc, &elems);
       return cast;
     }
@@ -185,7 +185,7 @@ static value_t _build_anon_struct(vm_t vm,
 
   /* build the anonymous struct type (name=NULL) from field values */
   value_t type_val = vm_create_struct_type_value(vm, NULL, true, module_id);
-  if (value_is_error(type_val))
+  if (value_is_abnormal(type_val))
     return type_val;
 
   /* evaluate field values to derive their types; keep values for later use.
@@ -202,26 +202,26 @@ static value_t _build_anon_struct(vm_t vm,
     node_t item = (node_t)vec_get(node->items, i);
     const char *name = _field_name(item);
     value_t v = _eval_field_value(vm, item, shadow);
-    if (value_is_error(v)) {
+    if (value_is_abnormal(v)) {
       allocator_free(alloc, &field_vals);
       return v;
     }
     field_vals[i] = v;
     type_t ft = value_get_type(v);
     value_t ft_val = create_type_value(vm, ft, NULL, false);
-    if (value_is_error(ft_val)) {
+    if (value_is_abnormal(ft_val)) {
       allocator_free(alloc, &field_vals);
       return ft_val;
     }
     value_t r = vm_struct_add_field(vm, type_val, name, ft_val, true);
-    if (value_is_error(r)) {
+    if (value_is_abnormal(r)) {
       allocator_free(alloc, &field_vals);
       return r;
     }
   }
 
   value_t seal_res = vm_struct_seal(vm, type_val);
-  if (value_is_error(seal_res)) {
+  if (value_is_abnormal(seal_res)) {
     allocator_free(alloc, &field_vals);
     return seal_res;
   }
@@ -258,7 +258,7 @@ static value_t _build_anon_tuple(vm_t vm,
   for (size_t i = 0; i < count; i++) {
     node_t item = (node_t)vec_get(node->items, i);
     value_t v = _eval_positional(vm, item, shadow);
-    if (value_is_error(v)) {
+    if (value_is_abnormal(v)) {
       allocator_free(alloc, &elems);
       allocator_free(alloc, &elem_types);
       return v;
@@ -269,7 +269,7 @@ static value_t _build_anon_tuple(vm_t vm,
 
   value_t tv = vm_create_tuple_type_value(vm, elem_types, true);
   allocator_free(alloc, &elem_types);
-  if (value_is_error(tv)) {
+  if (value_is_abnormal(tv)) {
     allocator_free(alloc, &elems);
     return tv;
   }
@@ -298,7 +298,7 @@ value_t run_expression_initialize_list(vm_t vm, node_t node, bool shadow) {
    * (shadow=false) — the shadow flag only governs the resulting value. */
   if (init_list->type) {
     value_t type_val = run_expression(vm, init_list->type, false);
-    if (value_is_error(type_val))
+    if (value_is_abnormal(type_val))
       return type_val;
 
     type_t concrete = (type_t)value_get_data(type_val);

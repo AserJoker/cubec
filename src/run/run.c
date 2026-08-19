@@ -77,7 +77,7 @@ value_t run_expression(vm_t vm, node_t node, bool shadow) {
    * errors/interrupts are never shadow, and void is a legitimate runtime
    * "no value" (e.g. assignment result), not a compile-time placeholder. */
   if (!shadow && value_is_shadow(result) &&
-      !value_is_error(result) && !value_is_interrupt(result) &&
+      !value_is_abnormal(result) && !value_is_interrupt(result) &&
       type_get_kind(value_get_type(result)) != TYPE_KIND_VOID)
     return create_exception_value(vm,
                                   "run: cannot use compile-time value of type '%s' at runtime",
@@ -101,6 +101,8 @@ value_t run_statement(vm_t vm, node_t node, bool shadow) {
     return run_statement_declaration(vm, node, shadow);
   case CUBEC_NODE_STATEMENT_DECLARATION_TYPE:
     return run_statement_declaration_type(vm, node, shadow);
+  case CUBEC_NODE_STATEMENT_RETURN:
+    return run_statement_return(vm, node, shadow);
   default:
     if (shadow) {
       diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,

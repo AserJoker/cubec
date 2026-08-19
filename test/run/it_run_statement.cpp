@@ -144,7 +144,7 @@ TEST_F(it_run_statement, expression_statement_discard_wildcard) {
 TEST_F(it_run_statement, expression_statement_non_void_returns_error) {
   /* bare i32 expression is non-void → error in script mode */
   value_t v = _run_source("42;");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_statement, expression_statement_non_void_shadow_writes_diagnostic) {
@@ -170,7 +170,7 @@ TEST_F(it_run_statement, expression_statement_shadow_error_absorbed) {
 
 TEST_F(it_run_statement, expression_statement_script_error_propagated) {
   value_t v = _run_source("1 + \"bad\";");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 /* ==================================================================
@@ -203,7 +203,7 @@ TEST_F(it_run_statement, block_with_void_statements) {
 TEST_F(it_run_statement, block_error_propagated) {
   /* block with non-void expression statement → error in script mode */
   value_t v = _run_source("{ 42; }");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_statement, block_shadow_error_continues) {
@@ -298,7 +298,7 @@ TEST_F(it_run_statement, assign_i32_literal_to_i8_rejected) {
   _bind("x", x);
 
   value_t v = _run_source("x = 42;");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_statement, assign_i64_to_i32_rejected) {
@@ -309,7 +309,7 @@ TEST_F(it_run_statement, assign_i64_to_i32_rejected) {
   _bind("big", big);
 
   value_t v = _run_source("y = big;");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_statement, assign_incompatible_type_statement_error) {
@@ -318,7 +318,7 @@ TEST_F(it_run_statement, assign_incompatible_type_statement_error) {
   _bind("x", x);
 
   value_t v = _run_source("x = true;");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_statement, compound_assign_same_type) {
@@ -342,5 +342,5 @@ TEST_F(it_run_statement, compound_assign_widening_then_narrowing_rejected) {
   _bind("y", y);
 
   value_t v = _run_source("y += 10;");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }

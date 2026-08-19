@@ -36,7 +36,7 @@ static value_t _result_ok(vm_t vm, value_t fn, size_t argc, value_t *argv) {
     return create_exception_value(vm, "result.ok expected 1 argument");
   /* argv[0] = *const result[T,E] (pointer from member_call) */
   value_t self = value_deref_get(vm, argv[0]);
-  if (value_is_error(self))
+  if (value_is_abnormal(self))
     return self;
   union_type_t ut = (union_type_t)value_get_type(self);
   type_t T = field_info_get_type(_union_type_find_field(ut, "_value"));
@@ -51,12 +51,12 @@ static value_t _result_value(vm_t vm, value_t fn, size_t argc, value_t *argv) {
   if (argc < 1)
     return create_exception_value(vm, "result.value expected 1 argument");
   value_t self = value_deref_get(vm, argv[0]);
-  if (value_is_error(self))
+  if (value_is_abnormal(self))
     return self;
   union_type_t ut = (union_type_t)value_get_type(self);
   type_t T = field_info_get_type(_union_type_find_field(ut, "_value"));
   value_t is_ok = value_is(vm, self, T);
-  if (value_is_error(is_ok))
+  if (value_is_abnormal(is_ok))
     return is_ok;
   if (!*(bool *)value_get_data(is_ok))
     return create_exception_value(vm, "result.value called on error variant");
@@ -72,12 +72,12 @@ static value_t _result_error(vm_t vm, value_t fn, size_t argc, value_t *argv) {
   if (argc < 1)
     return create_exception_value(vm, "result.error expected 1 argument");
   value_t self = value_deref_get(vm, argv[0]);
-  if (value_is_error(self))
+  if (value_is_abnormal(self))
     return self;
   union_type_t ut = (union_type_t)value_get_type(self);
   type_t T = field_info_get_type(_union_type_find_field(ut, "_value"));
   value_t is_ok = value_is(vm, self, T);
-  if (value_is_error(is_ok))
+  if (value_is_abnormal(is_ok))
     return is_ok;
   if (*(bool *)value_get_data(is_ok))
     return create_exception_value(vm, "result.error called on ok variant");
@@ -95,7 +95,7 @@ static value_t _result_of_value(vm_t vm, value_t fn, size_t argc, value_t *argv)
   union_type_t ut = (union_type_t)callable_type_get_return_type(ct);
   type_t T = field_info_get_type(_union_type_find_field(ut, "_value"));
   value_t val = value_safe_cast(vm, argv[0], T);
-  if (value_is_error(val))
+  if (value_is_abnormal(val))
     return val;
   return _union_type_create_value(vm, ut, 0, val);
 }
@@ -110,7 +110,7 @@ static value_t _result_of_error(vm_t vm, value_t fn, size_t argc, value_t *argv)
   union_type_t ut = (union_type_t)callable_type_get_return_type(ct);
   type_t E = field_info_get_type(_union_type_find_field(ut, "_error"));
   value_t err = value_safe_cast(vm, argv[0], E);
-  if (value_is_error(err))
+  if (value_is_abnormal(err))
     return err;
   return _union_type_create_value(vm, ut, 1, err);
 }
@@ -157,7 +157,7 @@ value_t vm_create_result_type_value(vm_t vm, type_t T, type_t E) {
 
   /* seal the union type */
   value_t seal_err = vm_union_seal(vm, type_val);
-  if (value_is_error(seal_err)) {
+  if (value_is_abnormal(seal_err)) {
     vm_pop_scope(vm);
     scope_dispose(bootstrap_scope);
     return seal_err;

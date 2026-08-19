@@ -113,13 +113,13 @@ TEST_F(it_run_statement_declaration, var_safe_cast_widening) {
 TEST_F(it_run_statement_declaration, var_safe_cast_mismatch_error) {
   /* i32 → bool: incompatible safe_cast → error */
   value_t v = _run_source("var x: bool = 42;");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_statement_declaration, var_no_initializer_error) {
   /* non-extern/non-builtin var without initializer → error */
   value_t v = _run_source("var x: i32;");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_statement_declaration, var_bool_init) {
@@ -172,7 +172,7 @@ TEST_F(it_run_statement_declaration, builtin_var_creates_shadow) {
 TEST_F(it_run_statement_declaration, extern_var_no_type_error) {
   /* extern without type annotation → error */
   value_t v = _run_source("extern var x;");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 /* ==================================================================
@@ -194,7 +194,7 @@ TEST_F(it_run_statement_declaration, comptime_var_eval) {
 TEST_F(it_run_statement_declaration, comptime_var_no_init_error) {
   /* comptime without initializer → error */
   value_t v = _run_source("comptime var PI: i32;");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 /* ==================================================================
@@ -215,7 +215,7 @@ TEST_F(it_run_statement_declaration, undefined_creates_tdz) {
 TEST_F(it_run_statement_declaration, undefined_no_type_error) {
   /* undefined without type annotation → error */
   value_t v = _run_source("var x = undefined;");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 /* ==================================================================
@@ -325,7 +325,7 @@ TEST_F(it_run_statement_declaration, type_alias_generic_instantiation) {
 TEST_F(it_run_statement_declaration, type_alias_generic_no_type_value_error) {
   /* generic type alias without type expression → error */
   value_t v = _run_source("type Foo[T];");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_statement_declaration, type_alias_generic_value_param) {
@@ -386,7 +386,7 @@ TEST_F(it_run_statement_declaration, var_and_type_in_block) {
 TEST_F(it_run_statement_declaration, builtin_generic_remove_const_decl) {
   /* builtin generic type with extends const ? constraint */
   value_t v = _run_source("builtin type remove_const[T extends const ?];");
-  if (value_is_error(v)) {
+  if (value_is_abnormal(v)) {
     const char *msg = (const char *)value_get_data(v);
     FAIL() << "unexpected error: " << (msg ? msg : "(null)");
   }
@@ -403,7 +403,7 @@ TEST_F(it_run_statement_declaration, builtin_generic_remove_const_instantiate) {
   value_t v = _run_source(
       "builtin type remove_const[T extends const ?]; "
       "type T = remove_const[const i32];");
-  if (value_is_error(v)) {
+  if (value_is_abnormal(v)) {
     const char *msg = (const char *)value_get_data(v);
     FAIL() << "unexpected error: " << (msg ? msg : "(null)");
   }
@@ -424,5 +424,5 @@ TEST_F(it_run_statement_declaration, builtin_generic_remove_const_extends_violat
   value_t v = _run_source(
       "builtin type remove_const[T extends const ?]; "
       "type T = remove_const[i32];");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }

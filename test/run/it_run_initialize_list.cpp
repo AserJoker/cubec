@@ -115,7 +115,7 @@ protected:
 
 TEST_F(it_run_initialize_list, anon_empty_is_empty_struct) {
   value_t v = _run_expr(".{}");
-  ASSERT_FALSE(value_is_error(v)) << ".{} should produce a value";
+  ASSERT_FALSE(value_is_abnormal(v)) << ".{} should produce a value";
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_STRUCT);
   EXPECT_EQ(type_get_name(value_get_type(v)), nullptr);
   /* struct value has no fields — check via its type */
@@ -130,7 +130,7 @@ TEST_F(it_run_initialize_list, anon_empty_is_empty_struct) {
 
 TEST_F(it_run_initialize_list, anon_named_fields_struct) {
   value_t v = _run_expr(".{.x = 10, .y = 20}");
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_STRUCT);
   EXPECT_EQ(type_get_name(value_get_type(v)), nullptr);
   struct_type_t st = (struct_type_t)value_get_type(v);
@@ -138,27 +138,27 @@ TEST_F(it_run_initialize_list, anon_named_fields_struct) {
 
   /* x field */
   value_t fx = value_get_field(vm, v, "x");
-  ASSERT_FALSE(value_is_error(fx));
+  ASSERT_FALSE(value_is_abnormal(fx));
   EXPECT_EQ(*(int32_t *)value_get_data(fx), 10);
 
   /* y field */
   value_t fy = value_get_field(vm, v, "y");
-  ASSERT_FALSE(value_is_error(fy));
+  ASSERT_FALSE(value_is_abnormal(fy));
   EXPECT_EQ(*(int32_t *)value_get_data(fy), 20);
 }
 
 TEST_F(it_run_initialize_list, anon_named_fields_mixed_types) {
   value_t v = _run_expr(".{.a = 1, .b = 2.5}");
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_STRUCT);
 
   value_t fa = value_get_field(vm, v, "a");
-  ASSERT_FALSE(value_is_error(fa));
+  ASSERT_FALSE(value_is_abnormal(fa));
   EXPECT_EQ(type_get_kind(value_get_type(fa)), TYPE_KIND_I32);
   EXPECT_EQ(*(int32_t *)value_get_data(fa), 1);
 
   value_t fb = value_get_field(vm, v, "b");
-  ASSERT_FALSE(value_is_error(fb));
+  ASSERT_FALSE(value_is_abnormal(fb));
   EXPECT_EQ(type_get_kind(value_get_type(fb)), TYPE_KIND_F64);
   EXPECT_DOUBLE_EQ(*(double *)value_get_data(fb), 2.5);
 }
@@ -169,7 +169,7 @@ TEST_F(it_run_initialize_list, anon_named_fields_mixed_types) {
 
 TEST_F(it_run_initialize_list, anon_positional_tuple) {
   value_t v = _run_expr(".{1, 2, 3}");
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_TUPLE);
   tuple_type_t tt = (tuple_type_t)value_get_type(v);
   EXPECT_EQ(tuple_type_get_field_count(tt), 3u);
@@ -178,7 +178,7 @@ TEST_F(it_run_initialize_list, anon_positional_tuple) {
   for (uint64_t i = 0; i < 3; i++) {
     value_t idx = create_u64_value(vm, i);
     value_t elem = value_get_item(vm, v, idx);
-    ASSERT_FALSE(value_is_error(elem));
+    ASSERT_FALSE(value_is_abnormal(elem));
     EXPECT_EQ(type_get_kind(value_get_type(elem)), TYPE_KIND_I32);
     EXPECT_EQ(*(int32_t *)value_get_data(elem), (int32_t)(i + 1));
   }
@@ -186,7 +186,7 @@ TEST_F(it_run_initialize_list, anon_positional_tuple) {
 
 TEST_F(it_run_initialize_list, anon_positional_mixed_types_tuple) {
   value_t v = _run_expr(".{42, 3.14}");
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_TUPLE);
   tuple_type_t tt = (tuple_type_t)value_get_type(v);
   EXPECT_EQ(type_get_kind(tuple_type_get_element_type(tt, 0)), TYPE_KIND_I32);
@@ -200,16 +200,16 @@ TEST_F(it_run_initialize_list, anon_positional_mixed_types_tuple) {
 TEST_F(it_run_initialize_list, typed_struct_named_fields_in_order) {
   _make_point_type();
   value_t v = _run_expr(".Point{.x = 10, .y = 20}");
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_STRUCT);
   EXPECT_STREQ(type_get_name(value_get_type(v)), "Point");
 
   value_t fx = value_get_field(vm, v, "x");
-  ASSERT_FALSE(value_is_error(fx));
+  ASSERT_FALSE(value_is_abnormal(fx));
   EXPECT_EQ(*(int32_t *)value_get_data(fx), 10);
 
   value_t fy = value_get_field(vm, v, "y");
-  ASSERT_FALSE(value_is_error(fy));
+  ASSERT_FALSE(value_is_abnormal(fy));
   EXPECT_EQ(*(int32_t *)value_get_data(fy), 20);
 }
 
@@ -217,33 +217,33 @@ TEST_F(it_run_initialize_list, typed_struct_named_fields_reordered) {
   /* Provide fields in reverse order; runner must reorder by declaration */
   _make_point_type();
   value_t v = _run_expr(".Point{.y = 99, .x = 1}");
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
 
   value_t fx = value_get_field(vm, v, "x");
-  ASSERT_FALSE(value_is_error(fx));
+  ASSERT_FALSE(value_is_abnormal(fx));
   EXPECT_EQ(*(int32_t *)value_get_data(fx), 1);
 
   value_t fy = value_get_field(vm, v, "y");
-  ASSERT_FALSE(value_is_error(fy));
+  ASSERT_FALSE(value_is_abnormal(fy));
   EXPECT_EQ(*(int32_t *)value_get_data(fy), 99);
 }
 
 TEST_F(it_run_initialize_list, typed_struct_wrong_field_count_error) {
   _make_point_type();
   value_t v = _run_expr(".Point{.x = 1}");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_initialize_list, typed_struct_unknown_field_error) {
   _make_point_type();
   value_t v = _run_expr(".Point{.x = 1, .z = 2}");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_initialize_list, typed_struct_positional_on_struct_error) {
   _make_point_type();
   value_t v = _run_expr(".Point{1, 2}");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_initialize_list, typed_struct_safe_cast_widening) {
@@ -254,9 +254,9 @@ TEST_F(it_run_initialize_list, typed_struct_safe_cast_widening) {
   _bind("Big", tv);
 
   value_t v = _run_expr(".Big{.v = 42}");
-  ASSERT_FALSE(value_is_error(v)) << "i32→i64 widening should succeed";
+  ASSERT_FALSE(value_is_abnormal(v)) << "i32→i64 widening should succeed";
   value_t fv = value_get_field(vm, v, "v");
-  ASSERT_FALSE(value_is_error(fv));
+  ASSERT_FALSE(value_is_abnormal(fv));
   EXPECT_EQ(type_get_kind(value_get_type(fv)), TYPE_KIND_I64);
   EXPECT_EQ(*(int64_t *)value_get_data(fv), 42);
 }
@@ -268,7 +268,7 @@ TEST_F(it_run_initialize_list, typed_struct_safe_cast_widening) {
 TEST_F(it_run_initialize_list, typed_tuple_positional) {
   _make_pair_type();
   value_t v = _run_expr(".Pair{42, 3.14}");
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_TUPLE);
   tuple_type_t tt = (tuple_type_t)value_get_type(v);
   EXPECT_EQ(type_get_kind(tuple_type_get_element_type(tt, 0)), TYPE_KIND_I32);
@@ -277,32 +277,32 @@ TEST_F(it_run_initialize_list, typed_tuple_positional) {
   /* verify values */
   value_t idx0 = create_u64_value(vm, 0);
   value_t e0 = value_get_item(vm, v, idx0);
-  ASSERT_FALSE(value_is_error(e0));
+  ASSERT_FALSE(value_is_abnormal(e0));
   EXPECT_EQ(*(int32_t *)value_get_data(e0), 42);
 
   value_t idx1 = create_u64_value(vm, 1);
   value_t e1 = value_get_item(vm, v, idx1);
-  ASSERT_FALSE(value_is_error(e1));
+  ASSERT_FALSE(value_is_abnormal(e1));
   EXPECT_DOUBLE_EQ(*(double *)value_get_data(e1), 3.14);
 }
 
 TEST_F(it_run_initialize_list, typed_tuple_wrong_count_error) {
   _make_pair_type();
   value_t v = _run_expr(".Pair{1}");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_initialize_list, typed_tuple_named_fields_error) {
   _make_pair_type();
   value_t v = _run_expr(".Pair{.a = 1, .b = 2}");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_initialize_list, typed_tuple_incompatible_type_error) {
   /* str → i32 safe_cast fails */
   _make_pair_type();
   value_t v = _run_expr(".Pair{\"hello\", 3.14}");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 /* ==================================================================
@@ -312,7 +312,7 @@ TEST_F(it_run_initialize_list, typed_tuple_incompatible_type_error) {
 TEST_F(it_run_initialize_list, typed_array_positional) {
   _make_triple_type();
   value_t v = _run_expr(".Triple{10, 20, 30}");
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_ARRAY);
   array_type_t at = (array_type_t)value_get_type(v);
   EXPECT_EQ(array_type_get_count(at), 3u);
@@ -320,7 +320,7 @@ TEST_F(it_run_initialize_list, typed_array_positional) {
   for (uint64_t i = 0; i < 3; i++) {
     value_t idx = create_u64_value(vm, i);
     value_t elem = value_get_item(vm, v, idx);
-    ASSERT_FALSE(value_is_error(elem));
+    ASSERT_FALSE(value_is_abnormal(elem));
     EXPECT_EQ(*(int32_t *)value_get_data(elem), (int32_t)((i + 1) * 10));
   }
 }
@@ -328,13 +328,13 @@ TEST_F(it_run_initialize_list, typed_array_positional) {
 TEST_F(it_run_initialize_list, typed_array_wrong_count_error) {
   _make_triple_type();
   value_t v = _run_expr(".Triple{1, 2}");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 TEST_F(it_run_initialize_list, typed_array_named_fields_error) {
   _make_triple_type();
   value_t v = _run_expr(".Triple{.a = 1, .b = 2, .c = 3}");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 /* ==================================================================
@@ -343,21 +343,21 @@ TEST_F(it_run_initialize_list, typed_array_named_fields_error) {
 
 TEST_F(it_run_initialize_list, anon_struct_shadow) {
   value_t v = _run_expr(".{.x = 1, .y = 2}", true);
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_TRUE(value_is_shadow(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_STRUCT);
 }
 
 TEST_F(it_run_initialize_list, anon_tuple_shadow) {
   value_t v = _run_expr(".{1, 2, 3}", true);
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_TRUE(value_is_shadow(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_TUPLE);
 }
 
 TEST_F(it_run_initialize_list, anon_empty_shadow) {
   value_t v = _run_expr(".{}", true);
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_TRUE(value_is_shadow(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_STRUCT);
 }
@@ -365,7 +365,7 @@ TEST_F(it_run_initialize_list, anon_empty_shadow) {
 TEST_F(it_run_initialize_list, typed_struct_shadow) {
   _make_point_type();
   value_t v = _run_expr(".Point{.x = 1, .y = 2}", true);
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_TRUE(value_is_shadow(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_STRUCT);
 }
@@ -373,7 +373,7 @@ TEST_F(it_run_initialize_list, typed_struct_shadow) {
 TEST_F(it_run_initialize_list, typed_tuple_shadow) {
   _make_pair_type();
   value_t v = _run_expr(".Pair{1, 2.5}", true);
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_TRUE(value_is_shadow(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_TUPLE);
 }
@@ -381,7 +381,7 @@ TEST_F(it_run_initialize_list, typed_tuple_shadow) {
 TEST_F(it_run_initialize_list, typed_array_shadow) {
   _make_triple_type();
   value_t v = _run_expr(".Triple{1, 2, 3}", true);
-  ASSERT_FALSE(value_is_error(v));
+  ASSERT_FALSE(value_is_abnormal(v));
   EXPECT_TRUE(value_is_shadow(v));
   EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_ARRAY);
 }
@@ -394,7 +394,7 @@ TEST_F(it_run_initialize_list, typed_i32_unsupported_error) {
   /* i32 is not a composite type — initialize_list should fail */
   _bind("MyInt", vm_get_i32_type(vm));
   value_t v = _run_expr(".MyInt{1}");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }
 
 /* ==================================================================
@@ -403,5 +403,5 @@ TEST_F(it_run_initialize_list, typed_i32_unsupported_error) {
 
 TEST_F(it_run_initialize_list, typed_undeclared_type_error) {
   value_t v = _run_expr(".NoSuchType{.x = 1}");
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
 }

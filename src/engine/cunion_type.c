@@ -413,7 +413,7 @@ static value_t _cunion_equal(vm_t vm, value_t a, value_t b) {
 
   /* check structural compatibility */
   value_t teq = _cunion_type_equal(vm, (type_t)cta, (type_t)ctb);
-  if (value_is_error(teq))
+  if (value_is_abnormal(teq))
     return teq;
   if (!(*(bool *)value_get_data(teq)))
     return create_exception_value(vm, "cannot compare cunion '%s' with cunion '%s'",
@@ -467,7 +467,7 @@ static value_t _cunion_type_equal(vm_t vm, type_t a, type_t b) {
       eq = evt.type_equal(vm, ta, tb);
     else
       eq = create_bool_value(vm, type_get_kind(ta) == type_get_kind(tb));
-    if (value_is_error(eq))
+    if (value_is_abnormal(eq))
       return eq;
     if (value_is_shadow(eq))
       return vm_create_value_shadow(vm, a, NULL, true);
@@ -499,7 +499,7 @@ static value_t _cunion_type_extends(vm_t vm, type_t sub, type_t super) {
 static value_t _cunion_safe_cast(vm_t vm, value_t self, type_t to) {
   type_t from = value_get_type(self);
   value_t eq = _cunion_type_equal(vm, from, to);
-  if (value_is_error(eq))
+  if (value_is_abnormal(eq))
     return eq;
   if (value_is_shadow(eq) || !(*(bool *)value_get_data(eq)))
     return create_exception_value(vm, "cannot safe_cast '%s' to '%s'",
@@ -539,7 +539,7 @@ static value_t _cunion_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
     return create_exception_value(vm, "cannot assign to const '%s'", lt->name);
 
   value_t eq = _cunion_type_equal(vm, lt, value_get_type(rvalue));
-  if (value_is_error(eq))
+  if (value_is_abnormal(eq))
     return eq;
   if (!(*(bool *)value_get_data(eq)))
     return create_exception_value(vm, "cannot assign '%s' to '%s'",
@@ -631,7 +631,7 @@ static value_t _cunion_set_field(vm_t vm, value_t self, const char *name, value_
     return create_exception_value(vm, "cannot assign to field of const cunion");
 
   value_t casted = value_safe_cast(vm, val, field_info_get_type(fi));
-  if (value_is_error(casted))
+  if (value_is_abnormal(casted))
     return casted;
 
   if (!value_is_shadow(self) && value_get_data(self)) {

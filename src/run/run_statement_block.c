@@ -27,7 +27,7 @@ value_t run_statement_block(vm_t vm, node_t node, bool shadow) {
      * call-site scope is restored. */
     if (value_is_interrupt(v)) return v;
 
-    /* exception — check after interrupt since value_is_error includes both */
+    /* exception — check after interrupt since value_is_abnormal includes both */
     if (type_get_kind(value_get_type(v)) == TYPE_KIND_EXCEPTION) {
       if (shadow) {
         /* shadow mode: sub-statement should have handled its own error

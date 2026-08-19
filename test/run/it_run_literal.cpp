@@ -167,7 +167,7 @@ TEST_F(it_run_literal, undefined_returns_exception) {
   node_t node = create_literal_undefined(vm, _loc());
   value_t v = run_literal_undefined(vm, node, false);
 
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
   free_node(node);
 }
 
@@ -175,7 +175,7 @@ TEST_F(it_run_literal, undefined_shadow_returns_exception) {
   node_t node = create_literal_undefined(vm, _loc());
   value_t v = run_literal_undefined(vm, node, true);
 
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
   free_node(node);
 }
 
@@ -200,7 +200,7 @@ TEST_F(it_run_literal, identifier_not_found) {
   node_t node = create_literal_identifier(vm, _loc(), "nonexistent");
   value_t v = run_literal_identifier(vm, node, false);
 
-  EXPECT_TRUE(value_is_error(v));
+  EXPECT_TRUE(value_is_abnormal(v));
   free_node(node);
 }
 

@@ -673,7 +673,7 @@ TEST_F(it_float_type, f32_assign_f64_narrowing_rejected) {
   value_t result = value_assignment(vm, a, b);
 
   /* f64→f32 is narrowing, safe_cast rejects */
-  EXPECT_TRUE(value_is_error(result));
+  EXPECT_TRUE(value_is_abnormal(result));
 
   vm_dispose(vm, allocator);
 }
@@ -687,7 +687,7 @@ TEST_F(it_float_type, f64_safe_cast_to_f32_rejected) {
   value_t result = value_safe_cast(vm, a, f32t);
 
   /* f64→f32 is narrowing, safe_cast rejects */
-  EXPECT_TRUE(value_is_error(result));
+  EXPECT_TRUE(value_is_abnormal(result));
 
   vm_dispose(vm, allocator);
 }

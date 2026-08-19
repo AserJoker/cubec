@@ -367,7 +367,7 @@ TEST_F(it_cunion_type, equal_kind_mismatch) {
 
   value_t u2 = create_bool_value(vm, true);
   value_t eq = value_equal(vm, u1, u2);
-  EXPECT_TRUE(value_is_error(eq));
+  EXPECT_TRUE(value_is_abnormal(eq));
 
   vm_dispose(vm, allocator);
 }

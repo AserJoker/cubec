@@ -2,7 +2,7 @@
 #include "engine/value.h"
 #include "engine/vm.h"
 #include "engine/scope.h"
-#include "engine/cfunc.h"
+#include "engine/func.h"
 #include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
@@ -207,8 +207,8 @@ callable_type_t callable_type_create(allocator_t allocator, vec_t param_types,
   callable_type_init_t init = {
       .kind         = TYPE_KIND_CALLABLE,
       .name         = name,
-      .size         = sizeof(cfunc_t),
-      .align        = _Alignof(cfunc_t),
+      .size         = sizeof(func_t),
+      .align        = _Alignof(func_t),
       .mut          = mut,
       .vtable       = _make_callable_vtable(),
       .param_types  = param_types,
@@ -241,10 +241,10 @@ const char *callable_type_get_module_id(callable_type_t self) { return self->mod
 value_t create_callable_value(vm_t vm, callable_type_t ct, cfunction_t func,
                                const char *name) {
   allocator_t alloc = vm_get_allocator(vm);
-  cfunc_init_t fn_init = {.func = func, .name = name,
+  func_init_t fn_init = {.func = func, .name = name,
                           .root_scope = vm_get_root_scope(vm)};
-  cfunc_t fc = (cfunc_t)allocator_create(alloc, &g_cfunc_class, &fn_init);
-  /* value.data = cfunc_t (borrowed ref), scope->cfuncs owns the lifecycle */
+  func_t fc = (func_t)allocator_create(alloc, &g_func_class, &fn_init);
+  /* value.data = func_t (borrowed ref), scope->cfuncs owns the lifecycle */
   value_t v = value_create(alloc, (type_t)ct, fc, false);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) {
@@ -270,14 +270,14 @@ value_t callable_capture(vm_t vm, value_t callable, const char *name) {
 
   /* ensure closure scope exists — isolated scope (parent=NULL via
    * scope_create), then manually set parent=root_scope for lookup chain
-   * without add_child.  cfunc_t owns the lifecycle. */
-  cfunc_t fc = (cfunc_t)value_get_data(callable);
-  scope_t closure = cfunc_get_closure_scope(fc);
+   * without add_child.  func_t owns the lifecycle. */
+  func_t fc = (func_t)value_get_data(callable);
+  scope_t closure = func_get_closure_scope(fc);
   if (!closure) {
     allocator_t alloc = vm_get_allocator(vm);
     closure = scope_create(alloc, SCOPE_CLOSURE, NULL, NULL);
-    closure->parent = cfunc_get_root_scope(fc);
-    cfunc_set_closure_scope(fc, closure);
+    closure->parent = func_get_root_scope(fc);
+    func_set_closure_scope(fc, closure);
   }
 
   /* clone value into closure scope: switch scope, clone, switch back */
@@ -309,13 +309,25 @@ static value_t _callable_clone(vm_t vm, value_t self) {
   if (value_is_shadow(self))
     return create_callable_shadow(vm, dst_ct, value_is_initialized(self));
 
-  cfunc_t src_fc = (cfunc_t)value_get_data(self);
+  func_t src_fc = (func_t)value_get_data(self);
 
   if (!value_is_initialized(self) || src_fc->func == NULL)
     return create_callable_shadow(vm, dst_ct, value_is_initialized(self));
 
-  /* create new cfunc_t with same func pointer and name */
-  return create_callable_value(vm, dst_ct, src_fc->func, src_fc->name);
+  /* Clone the func object via alloc_clone (preserves ast_func_t subclass).
+   * func_t / ast_func_t are class objects — alloc_clone dispatches to the
+   * correct class_t.clone (g_func_class or g_ast_func_class). */
+  allocator_t alloc = vm_get_allocator(vm);
+  func_t cloned_fc = (func_t)alloc_clone(alloc, src_fc);
+
+  /* Create value wrapping the cloned func (borrowed ref, scope->cfuncs owns) */
+  value_t v = value_create(alloc, (type_t)dst_ct, cloned_fc, false);
+  scope_t scope = vm_get_current_scope(vm);
+  if (scope) {
+    vec_push(scope->cfuncs, cloned_fc);
+    vec_push(scope->values, v);
+  }
+  return v;
 }
 
 /* ---- VTable: equal ---- */
@@ -328,7 +340,7 @@ static value_t _callable_equal(vm_t vm, value_t a, value_t b) {
 
   /* check type compatibility */
   value_t teq = _callable_type_equal(vm, value_get_type(a), tb);
-  if (value_is_error(teq))
+  if (value_is_abnormal(teq))
     return teq;
   if (!(*(bool *)value_get_data(teq)))
     return create_exception_value(vm, "cannot compare callable '%s' with callable '%s'",
@@ -338,8 +350,8 @@ static value_t _callable_equal(vm_t vm, value_t a, value_t b) {
     return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
 
   /* same func pointer + type_equal → equal */
-  cfunc_t fa = (cfunc_t)value_get_data(a);
-  cfunc_t fb = (cfunc_t)value_get_data(b);
+  func_t fa = (func_t)value_get_data(a);
+  func_t fb = (func_t)value_get_data(b);
   if (fa->func != fb->func)
     return create_bool_value(vm, false);
 
@@ -373,7 +385,7 @@ static value_t _callable_type_equal(vm_t vm, type_t a, type_t b) {
     vtable_t pvt = type_get_vtable(pa);
     if (pvt.type_equal) {
       value_t eq = pvt.type_equal(vm, pa, pb);
-      if (value_is_error(eq))
+      if (value_is_abnormal(eq))
         return eq;
       if (value_is_shadow(eq))
         continue;
@@ -391,7 +403,7 @@ static value_t _callable_type_equal(vm_t vm, type_t a, type_t b) {
     vtable_t rvt = type_get_vtable(ra);
     if (rvt.type_equal) {
       value_t eq = rvt.type_equal(vm, ra, rb);
-      if (value_is_error(eq))
+      if (value_is_abnormal(eq))
         return eq;
       if (!value_is_shadow(eq) && !(*(bool *)value_get_data(eq)))
         return eq;
@@ -445,7 +457,7 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
     for (uint64_t i = 0; i < ct->param_count; i++) {
       type_t param_t = (type_t)vec_get(ct->param_types, (size_t)i);
       casted[i] = value_safe_cast(vm, argv[i], param_t);
-      if (value_is_error(casted[i])) {
+      if (value_is_abnormal(casted[i])) {
         value_t err = casted[i];
         allocator_free(alloc, &casted);
         return err;
@@ -460,7 +472,7 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
   const char *prev_module = vm_get_current_module_id(vm);
   vm_set_current_module_id(vm, callable_type_get_module_id(ct));
 
-  cfunc_t fc = (cfunc_t)value_get_data(self);
+  func_t fc = (func_t)value_get_data(self);
   value_t result = fc->func(vm, self, argc, casted);
 
   /* restore module context */
@@ -470,7 +482,7 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
     allocator_free(alloc, &casted);
 
   /* safe_cast return value to declared return type */
-  if (value_is_error(result))
+  if (value_is_abnormal(result))
     return result;
   result = value_safe_cast(vm, result, ct->return_type);
   return result;
@@ -497,7 +509,7 @@ static value_t _callable_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
     return create_exception_value(vm, "cannot assign non-callable to callable");
   /* check type compatibility */
   value_t eq = _callable_type_equal(vm, lt, rt);
-  if (value_is_error(eq))
+  if (value_is_abnormal(eq))
     return eq;
   if (!(*(bool *)value_get_data(eq)))
     return create_exception_value(vm, "cannot assign '%s' to '%s'",
@@ -507,8 +519,8 @@ static value_t _callable_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
     return create_void_value(vm);
   }
   /* copy func pointer */
-  cfunc_t src_fc = (cfunc_t)value_get_data(rvalue);
-  cfunc_t dst_fc = (cfunc_t)value_get_data(lvalue);
+  func_t src_fc = (func_t)value_get_data(rvalue);
+  func_t dst_fc = (func_t)value_get_data(lvalue);
   dst_fc->func = src_fc->func;
   value_set_initialized(lvalue, true);
   return create_void_value(vm);

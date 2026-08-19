@@ -290,7 +290,7 @@ static value_t _tuple_equal(vm_t vm, value_t a, value_t b) {
     value_t ea = _make_elem_from_tuple(vm, ta, a, i);
     value_t eb = _make_elem_from_tuple(vm, tbb, b, i);
     value_t eq = value_equal(vm, ea, eb);
-    if (value_is_error(eq))
+    if (value_is_abnormal(eq))
       return eq;
     if (value_is_shadow(eq))
       return vm_create_value_shadow(vm, value_get_type(a), NULL, true);
@@ -405,12 +405,12 @@ static value_t _tuple_safe_cast_to_array(vm_t vm, value_t self,
 
   for (uint64_t i = 0; i < count; i++) {
     value_t elem = _make_elem_from_tuple(vm, from_tt, self, i);
-    if (value_is_error(elem)) {
+    if (value_is_abnormal(elem)) {
       allocator_free(alloc, &elems);
       return elem;
     }
     value_t cast = value_safe_cast(vm, elem, to_at->element_type);
-    if (value_is_error(cast)) {
+    if (value_is_abnormal(cast)) {
       allocator_free(alloc, &elems);
       return create_exception_value(vm,
                                     "cannot safe_cast tuple element %llu to array element type '%s'",
@@ -539,7 +539,7 @@ static value_t _tuple_to_string(vm_t vm, value_t self) {
     if (i > 0) string_concat(result, ", ");
     value_t idx = create_i32_value(vm, (int32_t)i);
     value_t elem = _tuple_get_item(vm, self, idx);
-    if (value_is_error(elem)) {
+    if (value_is_abnormal(elem)) {
       string_concat(result, "<error>");
     } else {
       value_t s = value_to_string(vm, elem);

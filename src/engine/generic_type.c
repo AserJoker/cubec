@@ -165,7 +165,7 @@ static value_t _generic_instantiate(vm_t vm, value_t self, size_t argc, value_t 
       value_t ext_result = value_extends(vm, arg, constraint_val);
       /* free the temporary type value (not registered in any scope) */
       allocator_free(allocator, &constraint_val);
-      if (value_is_error(ext_result)) return ext_result;
+      if (value_is_abnormal(ext_result)) return ext_result;
       bool ok = *(bool *)value_get_data(ext_result);
       if (!ok)
         return create_exception_value(vm, "generic param '%s' constraint not satisfied",

@@ -10,7 +10,7 @@ value_t run_expression_subscript(vm_t vm, node_t node, bool shadow) {
   cubec_expression_subscript_t sub = (cubec_expression_subscript_t)node;
 
   value_t host = run_expression(vm, sub->host, shadow);
-  if (value_is_error(host)) return host;
+  if (value_is_abnormal(host)) return host;
 
   /* Disambiguate: generic instantiation vs subscript.
    * Generic values are TYPE_KIND_GENERIC / TYPE_KIND_GENERIC_FN — their own values,
@@ -33,7 +33,7 @@ value_t run_expression_subscript(vm_t vm, node_t node, bool shadow) {
     for (size_t i = 0; i < argc; i++) {
       node_t arg_node = (node_t)vec_get(sub->arguments, i);
       argv[i] = run_expression(vm, arg_node, false);
-      if (value_is_error(argv[i])) {
+      if (value_is_abnormal(argv[i])) {
         if (heap_alloc) {
           void *p = argv;
           allocator_free(vm_get_allocator(vm), &p);
@@ -60,7 +60,7 @@ value_t run_expression_subscript(vm_t vm, node_t node, bool shadow) {
 
   node_t index_node = (node_t)vec_get(sub->arguments, 0);
   value_t index = run_expression(vm, index_node, shadow);
-  if (value_is_error(index)) return index;
+  if (value_is_abnormal(index)) return index;
 
   return value_get_item(vm, host, index);
 }
