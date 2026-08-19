@@ -241,7 +241,8 @@ const char *callable_type_get_module_id(callable_type_t self) { return self->mod
 value_t create_callable_value(vm_t vm, callable_type_t ct, cfunction_t func,
                                const char *name) {
   allocator_t alloc = vm_get_allocator(vm);
-  cfunc_init_t fn_init = {.func = func, .name = name};
+  cfunc_init_t fn_init = {.func = func, .name = name,
+                          .root_scope = vm_get_root_scope(vm)};
   cfunc_t fc = (cfunc_t)allocator_create(alloc, &g_cfunc_class, &fn_init);
   /* value.data = cfunc_t (borrowed ref), scope->cfuncs owns the lifecycle */
   value_t v = value_create(alloc, (type_t)ct, fc, false);
@@ -267,12 +268,15 @@ value_t callable_capture(vm_t vm, value_t callable, const char *name) {
     return create_exception_value(vm, "cannot capture '%s': not found in scope",
                                   name);
 
-  /* ensure closure scope exists (isolated, SCOPE_CLOSURE) */
+  /* ensure closure scope exists — isolated scope (parent=NULL via
+   * scope_create), then manually set parent=root_scope for lookup chain
+   * without add_child.  cfunc_t owns the lifecycle. */
   cfunc_t fc = (cfunc_t)value_get_data(callable);
   scope_t closure = cfunc_get_closure_scope(fc);
   if (!closure) {
     allocator_t alloc = vm_get_allocator(vm);
     closure = scope_create(alloc, SCOPE_CLOSURE, NULL, NULL);
+    closure->parent = cfunc_get_root_scope(fc);
     cfunc_set_closure_scope(fc, closure);
   }
 

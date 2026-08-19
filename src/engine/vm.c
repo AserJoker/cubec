@@ -125,7 +125,9 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
       (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_bt);
 
   vm->global_scope = scope_create(allocator, SCOPE_GLOBAL, NULL, NULL);
-  vm->root_scope = NULL;
+  vm->root_scope = scope_create(allocator, SCOPE_BLOCK, vm->global_scope, NULL);
+  /* current_scope starts at global_scope so builtin values are registered
+   * there. After bootstrap, current_scope is set to root_scope. */
   vm->current_scope = vm->global_scope;
   vm->call_stack = NULL;
 
@@ -382,6 +384,11 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
 
   /* ---- builtin templates ---- */
   vm_register_builtin_template(vm, "remove_const", create_remove_const_instance);
+
+  /* After bootstrap, current_scope is root_scope (module-level entry point).
+   * global_scope holds module-independent builtins; root_scope is their
+   * child and serves as the closure lookup anchor. */
+  vm->current_scope = vm->root_scope;
 }
 
 static void _vm_dispose(void *self, allocator_t allocator) {
@@ -645,7 +652,6 @@ module_t vm_import(vm_t self, const char *import_path) {
 void vm_push_scope(vm_t self, scope_t scope) {
   if (!self || !scope)
     return;
-  self->root_scope = scope;
   self->current_scope = scope;
 }
 

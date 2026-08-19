@@ -234,10 +234,12 @@ TEST_F(it_scope, vm_child_lookup_not_found) {
 
 TEST_F(it_scope, dispose_scope_with_values) {
   vm_t vm = vm_create(allocator);
-  /* create_bool_value adds to current_scope (global) */
+  scope_t global = vm_get_global_scope(vm);
+  /* create_bool_value adds to current_scope — switch to global first */
+  scope_t prev = vm_set_scope(vm, global);
   value_t v = create_bool_value(vm, true);
   (void)v;
-  scope_t global = vm_get_global_scope(vm);
+  vm_set_scope(vm, prev);
   /* 32 bootstrap types (incl. error struct) + 1 interrupt type + 2 nil/opaque type values + 1 wildcard value + 1 const wildcard value + 1 bool value + 1 panic callable = 39 */
   EXPECT_EQ(vec_get_size(global->values), 39u);
 
@@ -250,9 +252,11 @@ TEST_F(it_scope, vm_dispose_cleans_child_scope_values) {
   scope_t global = vm_get_global_scope(vm);
   scope_t child = scope_create(vm_alloc, SCOPE_BLOCK, global, NULL);
 
+  scope_t prev = vm_set_scope(vm, global);
   value_t v = create_bool_value(vm, true);
   (void)v;
-  /* bool value is in vm->current_scope (global) */
+  vm_set_scope(vm, prev);
+  /* bool value is in global scope */
   EXPECT_EQ(vec_get_size(global->values), 39u); /* 32 bootstrap types + interrupt type + nil/opaque + wildcard + const_wildcard + bool_value + panic callable */
 
   /* child scope has no values */

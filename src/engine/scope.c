@@ -38,6 +38,12 @@ static void _scope_dispose(void *self, allocator_t allocator) {
   if (scope->parent) {
     scope_remove_child(scope->parent, scope);
   }
+  allocator_free(allocator, &scope->defers);
+  allocator_free(allocator, &scope->values);
+  allocator_free(allocator, &scope->cfuncs);
+  allocator_free(allocator, &scope->strings);
+  allocator_free(allocator, &scope->types);
+  allocator_free(allocator, &scope->names);
   /* Free all children — iterate and free each, then destroy the vec.
    * children vec is auto_dispose=false, so we manage child lifecycle manually.
    * Clear parent pointer first to prevent double-remove from parent's vec. */
@@ -47,12 +53,6 @@ static void _scope_dispose(void *self, allocator_t allocator) {
     child->parent = NULL;
     allocator_free(allocator, &child);
   }
-  allocator_free(allocator, &scope->defers);
-  allocator_free(allocator, &scope->values);
-  allocator_free(allocator, &scope->cfuncs);
-  allocator_free(allocator, &scope->strings);
-  allocator_free(allocator, &scope->types);
-  allocator_free(allocator, &scope->names);
   allocator_free(allocator, &scope->children);
 }
 
@@ -61,6 +61,8 @@ class_t g_scope_class = {
     .name = "cubec.engine.scope",
     .init = (class_init_fn_t)_scope_init,
     .dispose = (class_dispose_fn_t)_scope_dispose,
+    .clone = NULL,
+    .move = NULL,
 };
 
 scope_t scope_create(allocator_t allocator, enum scope_kind kind,
@@ -75,9 +77,8 @@ scope_t scope_create(allocator_t allocator, enum scope_kind kind,
 }
 
 void scope_add_child(struct _scope_t *parent, scope_t child) {
-  if (parent && child) {
+  if (parent && child)
     vec_push(parent->children, child);
-  }
 }
 
 void scope_remove_child(struct _scope_t *parent, scope_t child) {

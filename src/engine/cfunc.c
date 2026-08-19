@@ -8,9 +8,11 @@ static void _cfunc_init(void *self, allocator_t allocator, void *arg) {
   cf->func = init ? init->func : NULL;
   cf->name = init ? init->name : NULL;
   cf->closure_scope = init ? init->closure_scope : NULL;
+  cf->root_scope = init ? init->root_scope : NULL;
 }
 
 static void _cfunc_dispose(void *self, allocator_t allocator) {
+  (void)allocator;
   cfunc_t cf = (cfunc_t)self;
   /* func pointer and name are borrowed references, not owned */
   if (cf->closure_scope) {
@@ -29,6 +31,7 @@ static void _cfunc_clone(void *self, allocator_t allocator, void *another) {
   /* closure_scope is NOT cloned — closures are unique instances.
    * A cloned callable shares the same func/name but has no closure. */
   dst->closure_scope = NULL;
+  dst->root_scope = src->root_scope;
 }
 
 class_t g_cfunc_class = {
@@ -47,3 +50,5 @@ scope_t cfunc_get_closure_scope(cfunc_t self) { return self->closure_scope; }
 void cfunc_set_closure_scope(cfunc_t self, scope_t scope) {
   self->closure_scope = scope;
 }
+
+scope_t cfunc_get_root_scope(cfunc_t self) { return self->root_scope; }

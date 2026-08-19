@@ -36,6 +36,7 @@ struct _cfunc_t {
   cfunction_t func;
   const char *name;  /* nullable: function name for call stack / debugging */
   struct _scope_t *closure_scope; /* owned: isolated scope for captured vars */
+  struct _scope_t *root_scope;    /* borrowed: vm->root_scope at creation time */
 };
 typedef struct _cfunc_t *cfunc_t;
 
@@ -47,11 +48,13 @@ typedef struct cfunc_init_t {
   cfunction_t func;
   const char *name;  /* nullable, borrowed reference (not cloned/freed) */
   struct _scope_t *closure_scope; /* nullable, owned (transferred to cfunc_t) */
+  struct _scope_t *root_scope;    /* borrowed: vm->root_scope at creation */
 } cfunc_init_t;
 
 /** @brief Accessors */
 struct _scope_t *cfunc_get_closure_scope(cfunc_t self);
 void            cfunc_set_closure_scope(cfunc_t self, struct _scope_t *scope);
+struct _scope_t *cfunc_get_root_scope(cfunc_t self);
 
 #ifdef __cplusplus
 }
