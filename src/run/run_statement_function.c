@@ -35,7 +35,20 @@ value_t run_statement_function(vm_t vm, node_t node, bool shadow) {
   cubec_statement_function_t stmt = (cubec_statement_function_t)node;
   cubec_declaration_function_t decl =
       (cubec_declaration_function_t)stmt->declarator;
-  const char *name = decl->name ? _get_name(decl->name) : NULL;
+
+  /* function statement requires a named declarator */
+  if (!decl->name) {
+    if (shadow) {
+      diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
+                           node->location,
+                           "function statement requires a name");
+      return create_void_value(vm);
+    }
+    return create_exception_value(vm,
+        "run: function statement requires a name");
+  }
+
+  const char *name = _get_name(decl->name);
 
   /* construct the function value via declaration runner */
   value_t func_val = run_declaration_function(vm, (node_t)decl, shadow);
