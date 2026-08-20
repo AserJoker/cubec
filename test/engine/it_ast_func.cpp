@@ -251,7 +251,7 @@ TEST_F(it_ast_func, dispose_cleans_closure_scope) {
 
 /* ---- Clone behavior ---- */
 
-TEST_F(it_ast_func, clone_has_no_closure_nor_template) {
+TEST_F(it_ast_func, clone_shares_ast_func) {
   vm_t vm = vm_create(allocator);
   allocator_t alloc = vm_get_allocator(vm);
 
@@ -270,27 +270,21 @@ TEST_F(it_ast_func, clone_has_no_closure_nor_template) {
   vm_create_value(vm, _get_i32_type(vm), &val, "x");
   callable_capture(vm, afv, "x");
 
-  /* Clone */
+  /* Clone shares the same ast_func_t (global resource, borrowed ref) */
   value_t cloned = value_clone(vm, afv);
   ast_func_t orig_af = (ast_func_t)value_get_data(afv);
   ast_func_t clone_af = (ast_func_t)value_get_data(cloned);
 
-  /* Same func pointer and name */
+  /* Same ast_func_t pointer — shared, not cloned */
+  EXPECT_EQ(orig_af, clone_af);
   EXPECT_EQ(orig_af->base.func, clone_af->base.func);
   EXPECT_STREQ(orig_af->base.name, clone_af->base.name);
 
-  /* Clone gets a new isolated closure_scope (closures are unique per instance) */
-  EXPECT_NE(func_get_closure_scope((func_t)clone_af), nullptr);
-  EXPECT_NE(func_get_closure_scope((func_t)clone_af),
-            func_get_closure_scope((func_t)orig_af));
-  EXPECT_EQ(func_get_closure_scope((func_t)clone_af)->parent, nullptr);
-
-  /* template_scope IS cloned (always exists, child of clone's closure) */
-  EXPECT_NE(ast_func_get_template_scope(clone_af), nullptr);
-  EXPECT_NE(ast_func_get_template_scope(clone_af),
-            ast_func_get_template_scope(orig_af));
-  EXPECT_EQ(ast_func_get_template_scope(clone_af)->parent,
-            func_get_closure_scope((func_t)clone_af)); /* child of clone's closure */
+  /* Same closure_scope and template_scope (shared) */
+  EXPECT_EQ(func_get_closure_scope((func_t)orig_af),
+            func_get_closure_scope((func_t)clone_af));
+  EXPECT_EQ(ast_func_get_template_scope(orig_af),
+            ast_func_get_template_scope(clone_af));
 
   vm_dispose(vm, allocator);
 }

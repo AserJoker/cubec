@@ -22,24 +22,12 @@ static void _func_dispose(void *self, allocator_t allocator) {
   }
 }
 
-static void _func_clone(void *self, allocator_t allocator, void *another) {
-  (void)allocator;
-  func_t dst = (func_t)self;
-  func_t src = (func_t)another;
-  dst->func = src->func;
-  dst->name = src->name;
-  /* closure_scope is NOT cloned — closures are unique instances.
-   * A cloned callable shares the same func/name but has no closure. */
-  dst->closure_scope = NULL;
-  dst->root_scope = src->root_scope;
-}
-
 class_t g_func_class = {
     .size = sizeof(struct _func_t),
     .name = "cubec.engine.func",
     .init = (class_init_fn_t)_func_init,
     .dispose = (class_dispose_fn_t)_func_dispose,
-    .clone = (class_clone_fn_t)_func_clone,
+    .clone = NULL,
     .move = NULL,
 };
 

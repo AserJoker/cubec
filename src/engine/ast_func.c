@@ -49,37 +49,12 @@ static void _ast_func_dispose(void *self, allocator_t allocator) {
   /* func pointer and name are borrowed, node is borrowed */
 }
 
-static void _ast_func_clone(void *self, allocator_t allocator, void *another) {
-  (void)allocator;
-  ast_func_t dst = (ast_func_t)self;
-  ast_func_t src = (ast_func_t)another;
-  dst->base.func = src->base.func;
-  dst->base.name = src->base.name;
-  /* closures are unique — create a new isolated scope */
-  dst->base.closure_scope = scope_create(allocator, SCOPE_CLOSURE, NULL, NULL);
-  dst->base.root_scope = src->base.root_scope;
-  dst->node = src->node;
-  /* template_scope always exists as child of closure — create a new one
-   * and copy name bindings (borrowed refs, own=false) from source. */
-  dst->template_scope = scope_create(allocator, SCOPE_TYPE,
-                                     dst->base.closure_scope, NULL);
-  strmap_iter_t it = strmap_iter_first(src->template_scope->names);
-  const char *key;
-  while ((key = strmap_iter_next(&it)) != NULL) {
-    name_t val = (name_t)strmap_find(src->template_scope->names, key);
-    name_t n = name_create(dst->template_scope->allocator, val->ref);
-    char *owned = cstring_clone(dst->template_scope->allocator, key);
-    strmap_insert(dst->template_scope->names, owned, n);
-    allocator_free(dst->template_scope->allocator, &owned);
-  }
-}
-
 class_t g_ast_func_class = {
     .size = sizeof(struct _ast_func_t),
     .name = "cubec.engine.ast_func",
     .init = (class_init_fn_t)_ast_func_init,
     .dispose = (class_dispose_fn_t)_ast_func_dispose,
-    .clone = (class_clone_fn_t)_ast_func_clone,
+    .clone = NULL,
     .move = NULL,
 };
 

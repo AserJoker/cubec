@@ -608,7 +608,7 @@ TEST_F(it_callable_type, closure_scope_null_for_plain_cfunc) {
   vm_dispose(vm, allocator);
 }
 
-TEST_F(it_callable_type, clone_has_no_closure) {
+TEST_F(it_callable_type, clone_shares_func) {
   vm_t vm = vm_create(allocator);
   allocator_t alloc = vm_get_allocator(vm);
   callable_type_t ct = _make_i32_to_i32_callable(vm);
@@ -619,12 +619,16 @@ TEST_F(it_callable_type, clone_has_no_closure) {
   vm_create_value(vm, _get_i32_type(vm), &val, "x");
   callable_capture(vm, cv, "x");
 
-  /* Clone should share func+name but have no closure (closures are unique) */
+  /* Clone shares the same func_t (global resource, borrowed ref) */
   value_t cloned = value_clone(vm, cv);
   func_t orig_fc = (func_t)value_get_data(cv);
   func_t clone_fc = (func_t)value_get_data(cloned);
+  EXPECT_EQ(orig_fc, clone_fc); /* same func_t pointer */
   EXPECT_EQ(orig_fc->func, clone_fc->func);
-  EXPECT_EQ(func_get_closure_scope(clone_fc), nullptr);
+  EXPECT_STREQ(orig_fc->name, clone_fc->name);
+
+  /* Both share the same closure_scope */
+  EXPECT_EQ(func_get_closure_scope(orig_fc), func_get_closure_scope(clone_fc));
 
   vm_dispose(vm, allocator);
 }

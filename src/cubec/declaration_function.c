@@ -267,8 +267,8 @@ node_t read_declaration_function(vm_t vm, vec_t tokens, size_t *position,
   current++;
   skip_whitespace(tokens, &current);
 
-  /* 7. Parse optional return type: : type */
-  if (_is_symbol(tokens, current, ":")) {
+  /* 7. Parse optional return type: : type  or  -> type */
+  if (_is_symbol(tokens, current, ":") || _is_symbol(tokens, current, "->")) {
     current++;
     skip_whitespace(tokens, &current);
 

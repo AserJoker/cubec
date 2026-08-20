@@ -3,12 +3,14 @@
 #include "engine/vm.h"
 #include "engine/scope.h"
 #include "engine/func.h"
+#include "engine/name.h"
 #include "engine/exception_type.h"
 #include "engine/void_type.h"
 #include "engine/bool_type.h"
 #include "engine/str_type.h"
 #include "engine/type.h"
 #include "core/string.h"
+#include "core/strmap.h"
 #include <stdbool.h>
 #include <string.h>
 
@@ -337,27 +339,18 @@ value_t callable_capture(vm_t vm, value_t callable, const char *name) {
 static value_t _callable_clone(vm_t vm, value_t self) {
   callable_type_t ct = (callable_type_t)value_get_type(self);
 
-  /* clone the type into current scope */
-  type_t cloned_type = (type_t)ct;
-  callable_type_t dst_ct = (callable_type_t)cloned_type;
-
   if (value_is_shadow(self))
-    return create_callable_shadow(vm, dst_ct, value_is_initialized(self));
+    return create_callable_shadow(vm, ct, value_is_initialized(self));
 
-  func_t src_fc = (func_t)value_get_data(self);
+  func_t fc = (func_t)value_get_data(self);
 
-  if (!value_is_initialized(self) || src_fc->func == NULL)
-    return create_callable_shadow(vm, dst_ct, value_is_initialized(self));
+  if (!value_is_initialized(self) || fc->func == NULL)
+    return create_callable_shadow(vm, ct, value_is_initialized(self));
 
-  /* Clone the func object via alloc_clone (preserves ast_func_t subclass).
-   * func_t / ast_func_t are class objects — alloc_clone dispatches to the
-   * correct class_t.clone (g_func_class or g_ast_func_class). */
+  /* func_t is a global resource — shared, not cloned.
+   * vm->cfuncs owns the lifecycle; value.data is a borrowed ref (own=false). */
   allocator_t alloc = vm_get_allocator(vm);
-  func_t cloned_fc = (func_t)alloc_clone(alloc, src_fc);
-
-  /* Create value wrapping the cloned func (borrowed ref, vm->cfuncs owns) */
-  value_t v = value_create(alloc, (type_t)dst_ct, cloned_fc, false);
-  vec_push(vm_get_cfuncs(vm), cloned_fc);
+  value_t v = value_create(alloc, (type_t)ct, fc, false);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) {
     vec_push(scope->values, v);
