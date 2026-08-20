@@ -48,6 +48,7 @@ value_t run_declaration_array(vm_t vm, node_t node, bool shadow);
 value_t run_declaration_pointer(vm_t vm, node_t node, bool shadow);
 value_t run_declaration_slice(vm_t vm, node_t node, bool shadow);
 value_t run_declaration_qualifier(vm_t vm, node_t node, bool shadow);
+value_t run_declaration_function(vm_t vm, node_t node, bool shadow);
 
 /* ---- Program runner ---- */
 
