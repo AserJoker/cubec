@@ -583,7 +583,7 @@ TEST_F(it_struct_type, clone_value) {
   value_t sv = vm_create_struct_value(vm, tv, fields);
 
   /* test type clone first */
-  type_t cloned_type = value_type_clone(vm, (type_t)value_get_data(tv));
+  type_t cloned_type = (type_t)value_get_data(tv);
   ASSERT_NE(cloned_type, nullptr);
   EXPECT_EQ(type_get_kind(cloned_type), TYPE_KIND_STRUCT);
 

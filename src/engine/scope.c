@@ -17,15 +17,6 @@ static void _scope_init(void *self, allocator_t allocator, void *arg) {
   vec_init_t val_init = {.auto_dispose = true};
   scope->values = (vec_t)allocator_create(allocator, &g_vec_class, &val_init);
 
-  vec_init_t type_init = {.auto_dispose = true};
-  scope->types = (vec_t)allocator_create(allocator, &g_vec_class, &type_init);
-
-  vec_init_t str_init = {.auto_dispose = true};
-  scope->strings = (vec_t)allocator_create(allocator, &g_vec_class, &str_init);
-
-  vec_init_t cfunc_init = {.auto_dispose = true};
-  scope->cfuncs = (vec_t)allocator_create(allocator, &g_vec_class, &cfunc_init);
-
   vec_init_t defer_init = {.auto_dispose = false};
   scope->defers = (vec_t)allocator_create(allocator, &g_vec_class, &defer_init);
 
@@ -40,9 +31,6 @@ static void _scope_dispose(void *self, allocator_t allocator) {
   }
   allocator_free(allocator, &scope->defers);
   allocator_free(allocator, &scope->values);
-  allocator_free(allocator, &scope->cfuncs);
-  allocator_free(allocator, &scope->strings);
-  allocator_free(allocator, &scope->types);
   allocator_free(allocator, &scope->names);
   /* Free all children — iterate and free each, then destroy the vec.
    * children vec is auto_dispose=false, so we manage child lifecycle manually.

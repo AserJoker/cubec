@@ -26,6 +26,41 @@ static bool _it_is_sealed(interface_type_t self);
 static callable_type_t _it_find_method(interface_type_t self, const char *name);
 static const char *_it_get_module_id(interface_type_t self);
 
+static type_t _interface_type_type_clone(vm_t vm, type_t self) {
+  interface_type_t src = (interface_type_t)self;
+  allocator_t allocator = vm_get_allocator(vm);
+  interface_type_t dst = (interface_type_t)allocator_create(allocator, &g_interface_type_class, NULL);
+
+  dst->base.kind   = src->base.kind;
+  dst->base.name   = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
+  dst->base.size   = src->base.size;
+  dst->base.align  = src->base.align;
+  dst->base.mut    = src->base.mut;
+  dst->base.vtable = src->base.vtable;
+
+  /* borrow each method callable_type_t (types are global singletons) */
+  strmap_init_t si = {.value_auto_dispose = false};
+  dst->methods = (strmap_t)allocator_create(allocator, &g_strmap_class, &si);
+  strmap_iter_t iter = strmap_iter_first(src->methods);
+  const char *key;
+  while ((key = strmap_iter_next(&iter)) != NULL) {
+    callable_type_t src_ct = (callable_type_t)strmap_find(src->methods, key);
+    strmap_insert(dst->methods, key, src_ct);
+  }
+
+  dst->sealed    = src->sealed;
+  dst->module_id = src->module_id;
+
+  vec_push(vm_get_types(vm), dst);
+  return (type_t)dst;
+}
+
+static vtable_t _make_interface_vtable(void) {
+  return (vtable_t){
+      .type_clone = _interface_type_type_clone,
+  };
+}
+
 /* ---- Interface type class ---- */
 
 static void _interface_type_init(void *self, allocator_t allocator, void *arg) {
@@ -39,7 +74,7 @@ static void _interface_type_init(void *self, allocator_t allocator, void *arg) {
   it->base.mut   = init->mut;
   it->base.vtable = init->vtable;
 
-  strmap_init_t si = {.value_auto_dispose = true};
+  strmap_init_t si = {.value_auto_dispose = false};
   it->methods = (strmap_t)allocator_create(allocator, &g_strmap_class, &si);
   it->sealed   = false;
   it->module_id = init->module_id;
@@ -68,13 +103,12 @@ static void _interface_type_clone(void *self, allocator_t allocator, void *anoth
 
   strmap_init_t si = {.value_auto_dispose = false};
   dst->methods = (strmap_t)allocator_create(allocator, &g_strmap_class, &si);
-  /* deep-clone each method callable_type_t */
+  /* borrow each method callable_type_t (types are global singletons) */
   strmap_iter_t iter = strmap_iter_first(src->methods);
   const char *key;
   while ((key = strmap_iter_next(&iter)) != NULL) {
     callable_type_t src_ct = (callable_type_t)strmap_find(src->methods, key);
-    callable_type_t cloned_ct = (callable_type_t)alloc_clone(allocator, src_ct);
-    strmap_insert(dst->methods, key, cloned_ct);
+    strmap_insert(dst->methods, key, src_ct);
   }
 
   dst->sealed   = src->sealed;
@@ -86,7 +120,7 @@ class_t g_interface_type_class = {
     .name    = "cubec.engine.interface_type",
     .init    = (class_init_fn_t)_interface_type_init,
     .dispose = (class_dispose_fn_t)_interface_type_dispose,
-    .clone   = (class_clone_fn_t)_interface_type_clone,
+    .clone   = NULL, /* types are global singletons — use vtable.type_clone instead */
     .move    = NULL,
 };
 
@@ -98,7 +132,7 @@ static interface_type_t _it_create(allocator_t allocator, const char *name,
       .kind      = TYPE_KIND_INTERFACE,
       .name      = name,
       .mut       = mut,
-      .vtable    = (vtable_t){0}, /* no vtable — interface is compile-time only */
+      .vtable    = _make_interface_vtable(),
       .module_id = module_id,
   };
   return (interface_type_t)allocator_create(allocator, &g_interface_type_class, &init);
@@ -116,8 +150,8 @@ static void _it_add_method(allocator_t allocator, interface_type_t it,
             name, type_get_name((type_t)it));
     return;
   }
-  callable_type_t cloned = (callable_type_t)alloc_clone(allocator, ct);
-  strmap_insert(it->methods, name, cloned);
+  /* types are global singletons — borrow, don't clone */
+  strmap_insert(it->methods, name, ct);
 }
 
 static bool _it_seal(interface_type_t it) {
@@ -142,8 +176,7 @@ static callable_type_t _it_find_method(interface_type_t self, const char *name) 
 value_t vm_create_interface_type_value(vm_t vm, const char *name,
                                         bool mut, const char *module_id) {
   interface_type_t it = _it_create(vm_get_allocator(vm), name, mut, module_id);
-  if (vm_get_current_scope(vm))
-    vec_push(vm_get_current_scope(vm)->types, it);
+  vec_push(vm_get_types(vm), it);
   return create_type_value(vm, (type_t)it, NULL, false);
 }
 

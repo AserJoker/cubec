@@ -11,7 +11,6 @@
 #include "core/string.h"
 #include <stdbool.h>
 #include <string.h>
-#include <stdio.h>
 
 /* ---- Forward declarations for vtable functions ---- */
 
@@ -23,6 +22,35 @@ static value_t _callable_call(vm_t vm, value_t self, size_t argc, value_t *argv)
 static value_t _callable_safe_cast(vm_t vm, value_t self, type_t to);
 static value_t _callable_assignment(vm_t vm, value_t lvalue, value_t rvalue);
 static value_t _callable_to_string(vm_t vm, value_t self);
+
+static type_t _callable_type_type_clone(vm_t vm, type_t self) {
+  callable_type_t src = (callable_type_t)self;
+  allocator_t allocator = vm_get_allocator(vm);
+  callable_type_t dst = (callable_type_t)allocator_create(allocator, &g_callable_type_class, NULL);
+
+  dst->base.kind   = src->base.kind;
+  dst->base.name   = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
+  dst->base.size   = src->base.size;
+  dst->base.align  = src->base.align;
+  dst->base.mut    = src->base.mut;
+  dst->base.vtable = src->base.vtable;
+
+  /* borrow param_types (types are global singletons managed by vm->types) */
+  vec_init_t vi = {.auto_dispose = false};
+  dst->param_types = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+  for (uint64_t i = 0; i < src->param_count; i++) {
+    type_t elem = (type_t)vec_get(src->param_types, (size_t)i);
+    vec_push(dst->param_types, elem);
+  }
+
+  dst->return_type = src->return_type; /* borrowed: types managed by vm->types */
+  dst->param_count = src->param_count;
+  dst->is_variadic = src->is_variadic;
+  dst->module_id   = src->module_id;
+
+  vec_push(vm_get_types(vm), dst);
+  return (type_t)dst;
+}
 
 static vtable_t _make_callable_vtable(void) {
   return (vtable_t){
@@ -61,6 +89,7 @@ static vtable_t _make_callable_vtable(void) {
       .member_call  = NULL,
       .get_prop     = NULL,
       .set_prop     = NULL,
+      .type_clone   = _callable_type_type_clone,
   };
 }
 
@@ -78,17 +107,16 @@ static void _callable_type_init(void *self, allocator_t allocator, void *arg) {
   ct->base.mut   = init->mut;
   ct->base.vtable = init->vtable;
 
-  /* deep-copy param_types (each element alloc_clone'd) */
-  vec_init_t vi = {.auto_dispose = true};
+  /* borrow param_types (types are global singletons managed by vm->types) */
+  vec_init_t vi = {.auto_dispose = false};
   ct->param_types = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
   for (uint64_t i = 0; i < init->param_count; i++) {
     type_t elem = (type_t)vec_get(init->param_types, (size_t)i);
-    type_t cloned = (type_t)alloc_clone(allocator, elem);
-    vec_push(ct->param_types, cloned);
+    vec_push(ct->param_types, elem);
   }
 
-  /* deep-copy return_type */
-  ct->return_type = (type_t)alloc_clone(allocator, init->return_type);
+  /* borrow return_type */
+  ct->return_type = init->return_type;
   ct->param_count = init->param_count;
   ct->is_variadic = init->is_variadic;
   ct->module_id   = init->module_id;
@@ -96,8 +124,10 @@ static void _callable_type_init(void *self, allocator_t allocator, void *arg) {
 
 static void _callable_type_dispose(void *self, allocator_t allocator) {
   callable_type_t ct = (callable_type_t)self;
+  /* param_types vec has auto_dispose=false (borrowed type pointers) */
   allocator_free(allocator, &ct->param_types);
-  allocator_free(allocator, &ct->return_type);
+  /* return_type is borrowed from vm->types — do not free */
+  ct->return_type = NULL;
   if (ct->base.name) {
     void *p = ct->base.name;
     allocator_free(allocator, &p);
@@ -116,15 +146,14 @@ static void _callable_type_clone(void *self, allocator_t allocator, void *anothe
   dst->base.mut    = src->base.mut;
   dst->base.vtable = src->base.vtable;
 
-  vec_init_t vi = {.auto_dispose = true};
+  vec_init_t vi = {.auto_dispose = false};
   dst->param_types = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
   for (uint64_t i = 0; i < src->param_count; i++) {
     type_t elem = (type_t)vec_get(src->param_types, (size_t)i);
-    type_t cloned = (type_t)alloc_clone(allocator, elem);
-    vec_push(dst->param_types, cloned);
+    vec_push(dst->param_types, elem);
   }
 
-  dst->return_type = (type_t)alloc_clone(allocator, src->return_type);
+  dst->return_type = src->return_type; /* borrowed: types managed by vm->types */
   dst->param_count = src->param_count;
   dst->is_variadic = src->is_variadic;
   dst->module_id   = src->module_id;
@@ -135,7 +164,7 @@ class_t g_callable_type_class = {
     .name    = "cubec.engine.callable_type",
     .init    = (class_init_fn_t)_callable_type_init,
     .dispose = (class_dispose_fn_t)_callable_type_dispose,
-    .clone   = (class_clone_fn_t)_callable_type_clone,
+    .clone   = NULL, /* types are global singletons — use vtable.type_clone instead */
     .move    = NULL,
 };
 
@@ -244,11 +273,11 @@ value_t create_callable_value(vm_t vm, callable_type_t ct, cfunction_t func,
   func_init_t fn_init = {.func = func, .name = name,
                           .root_scope = vm_get_root_scope(vm)};
   func_t fc = (func_t)allocator_create(alloc, &g_func_class, &fn_init);
-  /* value.data = func_t (borrowed ref), scope->cfuncs owns the lifecycle */
+  /* value.data = func_t (borrowed ref), vm->cfuncs owns the lifecycle */
   value_t v = value_create(alloc, (type_t)ct, fc, false);
+  vec_push(vm_get_cfuncs(vm), fc);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) {
-    vec_push(scope->cfuncs, fc);
     vec_push(scope->values, v);
   }
   return v;
@@ -268,17 +297,20 @@ value_t callable_capture(vm_t vm, value_t callable, const char *name) {
     return create_exception_value(vm, "cannot capture '%s': not found in scope",
                                   name);
 
-  /* ensure closure scope exists — isolated scope (parent=NULL via
-   * scope_create), then manually set parent=root_scope for lookup chain
-   * without add_child.  func_t owns the lifecycle. */
+  /* ensure closure scope exists — isolated scope (parent=NULL).
+   * Parent is temporarily set to root_scope during capture lookups,
+   * then restored to NULL.  This avoids use-after-free: closure_scope
+   * is owned by the function (not a child of root_scope). */
   func_t fc = (func_t)value_get_data(callable);
   scope_t closure = func_get_closure_scope(fc);
   if (!closure) {
     allocator_t alloc = vm_get_allocator(vm);
     closure = scope_create(alloc, SCOPE_CLOSURE, NULL, NULL);
-    closure->parent = func_get_root_scope(fc);
     func_set_closure_scope(fc, closure);
   }
+  /* Temporarily link closure into scope chain for lookups */
+  scope_t saved_parent = closure->parent;
+  closure->parent = func_get_root_scope(fc);
 
   /* clone value into closure scope: switch scope, clone, switch back */
   scope_t prev = vm_set_scope(vm, closure);
@@ -294,6 +326,9 @@ value_t callable_capture(vm_t vm, value_t callable, const char *name) {
   strmap_insert(closure->names, owned_name, cn);
   allocator_free(closure->allocator, &owned_name);
 
+  /* Restore closure parent (isolated scope) */
+  closure->parent = saved_parent;
+
   return captured;
 }
 
@@ -303,7 +338,7 @@ static value_t _callable_clone(vm_t vm, value_t self) {
   callable_type_t ct = (callable_type_t)value_get_type(self);
 
   /* clone the type into current scope */
-  type_t cloned_type = value_type_clone(vm, (type_t)ct);
+  type_t cloned_type = (type_t)ct;
   callable_type_t dst_ct = (callable_type_t)cloned_type;
 
   if (value_is_shadow(self))
@@ -320,11 +355,11 @@ static value_t _callable_clone(vm_t vm, value_t self) {
   allocator_t alloc = vm_get_allocator(vm);
   func_t cloned_fc = (func_t)alloc_clone(alloc, src_fc);
 
-  /* Create value wrapping the cloned func (borrowed ref, scope->cfuncs owns) */
+  /* Create value wrapping the cloned func (borrowed ref, vm->cfuncs owns) */
   value_t v = value_create(alloc, (type_t)dst_ct, cloned_fc, false);
+  vec_push(vm_get_cfuncs(vm), cloned_fc);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) {
-    vec_push(scope->cfuncs, cloned_fc);
     vec_push(scope->values, v);
   }
   return v;

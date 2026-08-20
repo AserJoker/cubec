@@ -61,6 +61,13 @@ typedef struct _value_t *value_t;
 typedef value_t (*create_instance_fn_t)(vm_t vm, value_t tmpl,
                                         size_t argc, value_t *argv);
 
+/**
+ * @brief Create a concrete callable instance from a generic function template.
+ * Cache lookup → bind params → eval param/return types → create callable_type +
+ * ast_func with template_scope → clone into isolated scope → cache entry.
+ */
+value_t create_fn_instance(vm_t vm, value_t tmpl, size_t argc, value_t *argv);
+
 /* ---- generic_instance_t — instance cache entry ---- */
 
 /**

@@ -8,16 +8,15 @@ static void _generic_param_init(void *self, allocator_t allocator, void *arg) {
   generic_param_init_t *init = (generic_param_init_t *)arg;
 
   gp->name = init->name ? cstring_clone(allocator, init->name) : NULL;
-  gp->type = init->type ? (type_t)alloc_clone(allocator, init->type) : NULL;
+  gp->type = init->type; /* borrowed: types managed by vm->types */
 
-  vec_init_t vi = {.auto_dispose = true};
+  vec_init_t vi = {.auto_dispose = false};
   gp->extends = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
   if (init->extends) {
     size_t n = vec_get_size(init->extends);
     for (size_t i = 0; i < n; i++) {
       type_t t = (type_t)vec_get(init->extends, i);
-      type_t cloned = (type_t)alloc_clone(allocator, t);
-      vec_push(gp->extends, cloned);
+      vec_push(gp->extends, t);
     }
   }
 }
@@ -29,7 +28,8 @@ static void _generic_param_dispose(void *self, allocator_t allocator) {
     allocator_free(allocator, &p);
     gp->name = NULL;
   }
-  allocator_free(allocator, &gp->type);
+  /* type is borrowed from vm->types — do not free */
+  gp->type = NULL;
   allocator_free(allocator, &gp->extends);
 }
 
@@ -38,15 +38,14 @@ static void _generic_param_clone(void *self, allocator_t allocator, void *anothe
   generic_param_t src = (generic_param_t)another;
 
   dst->name = src->name ? cstring_clone(allocator, src->name) : NULL;
-  dst->type = src->type ? (type_t)alloc_clone(allocator, src->type) : NULL;
+  dst->type = src->type; /* borrowed: types managed by vm->types */
 
-  vec_init_t vi = {.auto_dispose = true};
+  vec_init_t vi = {.auto_dispose = false};
   dst->extends = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
   size_t n = vec_get_size(src->extends);
   for (size_t i = 0; i < n; i++) {
     type_t t = (type_t)vec_get(src->extends, i);
-    type_t cloned = (type_t)alloc_clone(allocator, t);
-    vec_push(dst->extends, cloned);
+    vec_push(dst->extends, t);
   }
 }
 

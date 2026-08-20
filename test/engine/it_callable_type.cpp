@@ -164,14 +164,11 @@ TEST_F(it_callable_type, create_callable_value) {
   EXPECT_NE(cv, nullptr);
   EXPECT_EQ(type_get_kind(value_get_type(cv)), TYPE_KIND_CALLABLE);
   EXPECT_NE(value_get_data(cv), nullptr);
-  EXPECT_FALSE(value_is_own(cv)); /* data is borrowed func_t, scope->cfuncs owns it */
+  EXPECT_FALSE(value_is_own(cv)); /* data is borrowed func_t, vm->cfuncs owns it */
   EXPECT_TRUE(value_is_initialized(cv));
 
-  /* func_t registered in current scope (root_scope) */
-  scope_t scope = vm_get_current_scope(vm);
-  EXPECT_EQ(vec_get_size(scope->cfuncs), 1u);
-  /* panic is in global scope */
-  EXPECT_EQ(vec_get_size(vm_get_global_scope(vm)->cfuncs), 1u);
+  /* func_t registered in vm's global cfuncs */
+  EXPECT_GE(vec_get_size(vm_get_cfuncs(vm)), 2u); /* _add_one + panic */
 
   vm_dispose(vm, allocator);
 }

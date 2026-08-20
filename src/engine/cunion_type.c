@@ -42,6 +42,8 @@ static value_t _cunion_to_string(vm_t vm, value_t self);
 static value_t _cunion_get_field(vm_t vm, value_t self, const char *name);
 static value_t _cunion_set_field(vm_t vm, value_t self, const char *name, value_t val);
 
+static type_t _cunion_type_type_clone(vm_t vm, type_t self);
+
 /* ---- Shared vtable for all cunion types ---- */
 
 static vtable_t _make_cunion_vtable(void) {
@@ -85,6 +87,7 @@ static vtable_t _make_cunion_vtable(void) {
       .type_set_prop= NULL,
       .is_instance  = NULL,
       .get_field_raw= NULL,
+      .type_clone   = _cunion_type_type_clone,
   };
 }
 
@@ -99,6 +102,45 @@ typedef struct {
   uint64_t    offset;
   bool        pub;
 } _field_info_init_t;
+
+static type_t _cunion_type_type_clone(vm_t vm, type_t self) {
+  cunion_type_t src = (cunion_type_t)self;
+  allocator_t allocator = vm_get_allocator(vm);
+  cunion_type_t dst = (cunion_type_t)allocator_create(allocator, &g_cunion_type_class, NULL);
+
+  dst->base.kind    = src->base.kind;
+  dst->base.name    = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
+  dst->base.size    = src->base.size;
+  dst->base.align   = src->base.align;
+  dst->base.mut     = src->base.mut;
+  dst->base.vtable  = src->base.vtable;
+
+  /* clone scope — isolated, no parent */
+  dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
+
+  /* clone fields — field types are borrowed (vm->types singletons) */
+  vec_init_t vi = {.auto_dispose = true};
+  dst->fields = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+  size_t fc = vec_get_size(src->fields);
+  for (size_t i = 0; i < fc; i++) {
+    field_info_t fi = (field_info_t)vec_get(src->fields, i);
+    _field_info_init_t fiinit = {
+        .name   = field_info_get_name(fi),
+        .type   = field_info_get_type(fi), /* borrowed */
+        .offset = field_info_get_offset(fi),
+        .pub    = field_info_is_pub(fi),
+    };
+    field_info_t cloned = (field_info_t)allocator_create(allocator,
+                                                          &g_field_info_class, &fiinit);
+    vec_push(dst->fields, cloned);
+  }
+
+  dst->sealed    = src->sealed;
+  dst->module_id = src->module_id;
+
+  vec_push(vm_get_types(vm), dst);
+  return (type_t)dst;
+}
 
 static void _cunion_type_init(void *self, allocator_t allocator, void *arg) {
   cunion_type_t ct = (cunion_type_t)self;
@@ -147,21 +189,19 @@ static void _cunion_type_clone(void *self, allocator_t allocator, void *another)
   dst->base.mut     = src->base.mut;
   dst->base.vtable  = src->base.vtable;
 
-  /* clone scope — isolated, no parent (must be created before fields,
-   * because _ct_add_field pushes cloned field types into scope->types) */
+  /* clone scope — isolated, no parent */
   dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
 
-  /* clone fields — clone each field type into dst->scope->types */
+  /* clone fields — field types are global singletons (vm->types), do not
+   * clone; share the same type_t pointer. */
   vec_init_t vi = {.auto_dispose = true};
   dst->fields = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
   size_t fc = vec_get_size(src->fields);
   for (size_t i = 0; i < fc; i++) {
     field_info_t fi = (field_info_t)vec_get(src->fields, i);
-    type_t cloned_type = (type_t)alloc_clone(allocator, field_info_get_type(fi));
-    vec_push(dst->scope->types, cloned_type);
     _field_info_init_t fiinit = {
         .name   = field_info_get_name(fi),
-        .type   = cloned_type,
+        .type   = field_info_get_type(fi), /* borrowed: types managed by vm->types */
         .offset = field_info_get_offset(fi),
         .pub    = field_info_is_pub(fi),
     };
@@ -179,7 +219,7 @@ class_t g_cunion_type_class = {
     .name    = "cubec.engine.cunion_type",
     .init    = (class_init_fn_t)_cunion_type_init,
     .dispose = (class_dispose_fn_t)_cunion_type_dispose,
-    .clone   = (class_clone_fn_t)_cunion_type_clone,
+    .clone   = NULL, /* types are global singletons — use vtable.type_clone instead */
     .move    = NULL,
 };
 
@@ -222,14 +262,12 @@ static void _ct_add_field(allocator_t allocator, cunion_type_t ct,
     return;
   }
 
-  /* Clone the field type into the cunion's own scope.
-   * field_info_t.type borrows from scope->types, so the type's lifecycle
-   * is tied to the cunion, not the caller's value. */
-  type_t cloned = (type_t)alloc_clone(allocator, field_type);
-  vec_push(ct->scope->types, cloned);
+  /* Types are global singletons managed by vm->types — share the pointer
+   * directly, no clone. */
+  type_t ft = field_type;
 
-  uint64_t field_align = type_get_align(cloned);
-  uint64_t field_size  = type_get_size(cloned);
+  uint64_t field_align = type_get_align(ft);
+  uint64_t field_size  = type_get_size(ft);
 
   /* C-compatible union: all fields overlap at offset 0.
    * align = max(field aligns), size = max(field sizes) aligned up. */
@@ -241,7 +279,7 @@ static void _ct_add_field(allocator_t allocator, cunion_type_t ct,
 
   _field_info_init_t fiinit = {
       .name   = name,
-      .type   = cloned,
+      .type   = ft,
       .offset = 0, /* C union: every field starts at offset 0 */
       .pub    = pub,
   };
@@ -294,8 +332,7 @@ static field_info_t _ct_find_field(cunion_type_t self, const char *name) {
 value_t vm_create_cunion_type_value(vm_t vm, const char *name,
                                     bool mut, const char *module_id) {
   cunion_type_t ct = _ct_create(vm_get_allocator(vm), name, mut, module_id);
-  if (vm_get_current_scope(vm))
-    vec_push(vm_get_current_scope(vm)->types, ct);
+  vec_push(vm_get_types(vm), ct);
   return create_type_value(vm, (type_t)ct, NULL, false);
 }
 
@@ -365,8 +402,7 @@ value_t _cunion_value_member_addr(vm_t vm, value_t self, const char *name) {
   /* C-compatible: no active-variant check, field is at offset 0. */
   allocator_t alloc = vm_get_allocator(vm);
   pointer_type_t pt = pointer_type_create(alloc, field_info_get_type(fi), true, false);
-  scope_t scope = vm_get_current_scope(vm);
-  if (scope) vec_push(scope->types, pt);
+  vec_push(vm_get_types(vm), pt);
 
   void *field_addr = value_get_data(self); /* offset 0 */
   return create_pointer_value_from_addr(vm, pt, field_addr);
@@ -381,7 +417,7 @@ static value_t _cunion_clone(vm_t vm, value_t self) {
   if (value_is_shadow(self))
     return _create_cunion_shadow(vm, ct, value_is_initialized(self));
 
-  type_t cloned_type = value_type_clone(vm, (type_t)ct);
+  type_t cloned_type = (type_t)ct;
 
   allocator_t alloc = vm_get_allocator(vm);
   uint64_t total_size = ct->base.size;
@@ -510,7 +546,7 @@ static value_t _cunion_safe_cast(vm_t vm, value_t self, type_t to) {
 
   cunion_type_t to_ct = (cunion_type_t)to;
 
-  type_t cloned_type = value_type_clone(vm, to);
+  type_t cloned_type = to;
 
   allocator_t alloc = vm_get_allocator(vm);
   uint64_t total_size = to_ct->base.size;

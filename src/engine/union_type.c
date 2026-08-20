@@ -69,6 +69,7 @@ static value_t _union_member_call(vm_t vm, value_t self, const char *name,
 static value_t _union_type_get_prop(vm_t vm, type_t self, const char *name);
 static value_t _union_type_set_prop(vm_t vm, type_t self, const char *name, value_t val);
 static value_t _union_is_instance(vm_t vm, value_t self, type_t type);
+static type_t _union_type_type_clone(vm_t vm, type_t self);
 
 /* ---- Shared vtable for all union types ---- */
 
@@ -113,6 +114,7 @@ static vtable_t _make_union_vtable(void) {
       .type_set_prop= _union_type_set_prop,
       .is_instance  = _union_is_instance,
       .get_field_raw= _union_get_field_raw,
+      .type_clone   = _union_type_type_clone,
   };
 }
 
@@ -199,6 +201,74 @@ static value_t _shallow_clone_value(allocator_t allocator, value_t src) {
   return dst;
 }
 
+static type_t _union_type_type_clone(vm_t vm, type_t self) {
+  union_type_t src = (union_type_t)self;
+  allocator_t allocator = vm_get_allocator(vm);
+  union_type_t dst = (union_type_t)allocator_create(allocator, &g_union_type_class, NULL);
+
+  dst->base.kind    = src->base.kind;
+  dst->base.name    = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
+  dst->base.size    = src->base.size;
+  dst->base.align   = src->base.align;
+  dst->base.mut     = src->base.mut;
+  dst->base.vtable  = src->base.vtable;
+
+  /* clone scope — isolated, no parent */
+  dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
+
+  /* clone fields — field types are borrowed (vm->types singletons) */
+  vec_init_t vi = {.auto_dispose = true};
+  dst->fields = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+  size_t fc = vec_get_size(src->fields);
+  for (size_t i = 0; i < fc; i++) {
+    field_info_t fi = (field_info_t)vec_get(src->fields, i);
+    _field_info_init_t fiinit = {
+        .name   = field_info_get_name(fi),
+        .type   = field_info_get_type(fi), /* borrowed */
+        .offset = field_info_get_offset(fi),
+        .pub    = field_info_is_pub(fi),
+    };
+    field_info_t cloned = (field_info_t)allocator_create(allocator,
+                                                          &g_field_info_class, &fiinit);
+    vec_push(dst->fields, cloned);
+  }
+
+  strmap_init_t smi = {.value_auto_dispose = false};
+  dst->props = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  strmap_iter_t it = strmap_iter_first(src->props);
+  const char *key;
+  while ((key = strmap_iter_next(&it)) != NULL) {
+    value_t sv = (value_t)strmap_find(src->props, key);
+    value_t cv = _shallow_clone_value(allocator, sv);
+    vec_push(dst->scope->values, cv);
+    strmap_insert(dst->props, key, cv);
+  }
+
+  dst->methods = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  it = strmap_iter_first(src->methods);
+  while ((key = strmap_iter_next(&it)) != NULL) {
+    value_t sv = (value_t)strmap_find(src->methods, key);
+    value_t cv = _shallow_clone_value(allocator, sv);
+    vec_push(dst->scope->values, cv);
+    strmap_insert(dst->methods, key, cv);
+  }
+
+  dst->sealed         = src->sealed;
+  dst->payload_size   = src->payload_size;
+  dst->payload_offset = src->payload_offset;
+  dst->module_id      = src->module_id;
+
+  /* clone pub_names */
+  dst->pub_names = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  it = strmap_iter_first(src->pub_names);
+  while ((key = strmap_iter_next(&it)) != NULL) {
+    strmap_insert(dst->pub_names, key, (void *)1);
+  }
+
+  vec_push(vm_get_types(vm), dst);
+  return (type_t)dst;
+}
+
 static void _union_type_clone(void *self, allocator_t allocator, void *another) {
   union_type_t dst = (union_type_t)self;
   union_type_t src = (union_type_t)another;
@@ -210,21 +280,19 @@ static void _union_type_clone(void *self, allocator_t allocator, void *another) 
   dst->base.mut     = src->base.mut;
   dst->base.vtable  = src->base.vtable;
 
-  /* clone scope — isolated, no parent (must be created before fields,
-   * because _ut_add_field pushes cloned field types into scope->types) */
+  /* clone scope — isolated, no parent */
   dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
 
-  /* clone fields — clone each field type into dst->scope->types */
+  /* clone fields — field types are global singletons (vm->types), do not
+   * clone; share the same type_t pointer. */
   vec_init_t vi = {.auto_dispose = true};
   dst->fields = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
   size_t fc = vec_get_size(src->fields);
   for (size_t i = 0; i < fc; i++) {
     field_info_t fi = (field_info_t)vec_get(src->fields, i);
-    type_t cloned_type = (type_t)alloc_clone(allocator, field_info_get_type(fi));
-    vec_push(dst->scope->types, cloned_type);
     _field_info_init_t fiinit = {
         .name   = field_info_get_name(fi),
-        .type   = cloned_type,
+        .type   = field_info_get_type(fi), /* borrowed: types managed by vm->types */
         .offset = field_info_get_offset(fi),
         .pub    = field_info_is_pub(fi),
     };
@@ -271,7 +339,7 @@ class_t g_union_type_class = {
     .name    = "cubec.engine.union_type",
     .init    = (class_init_fn_t)_union_type_init,
     .dispose = (class_dispose_fn_t)_union_type_dispose,
-    .clone   = (class_clone_fn_t)_union_type_clone,
+    .clone   = NULL, /* types are global singletons — use vtable.type_clone instead */
     .move    = NULL,
 };
 
@@ -313,14 +381,12 @@ static void _ut_add_field(allocator_t allocator, union_type_t ut,
     return;
   }
 
-  /* Clone the field type into the union's own scope.
-   * field_info_t.type borrows from scope->types, so the type's lifecycle
-   * is tied to the union, not the caller's value. */
-  type_t cloned = (type_t)alloc_clone(allocator, field_type);
-  vec_push(ut->scope->types, cloned);
+  /* Types are global singletons managed by vm->types — share the pointer
+   * directly, no clone. */
+  type_t ft = field_type;
 
-  uint64_t field_align = type_get_align(cloned);
-  uint64_t field_size  = type_get_size(cloned);
+  uint64_t field_align = type_get_align(ft);
+  uint64_t field_size  = type_get_size(ft);
 
   if (field_align > ut->base.align)
     ut->base.align = field_align;
@@ -330,7 +396,7 @@ static void _ut_add_field(allocator_t allocator, union_type_t ut,
 
   _field_info_init_t fiinit = {
       .name   = name,
-      .type   = cloned,
+      .type   = ft,
       .offset = 0, /* set in seal */
       .pub    = pub,
   };
@@ -460,8 +526,7 @@ static void _union_write_tag(value_t v, uint32_t tag) {
 value_t vm_create_union_type_value(vm_t vm, const char *name,
                                     bool mut, const char *module_id) {
   union_type_t ut = _ut_create(vm_get_allocator(vm), name, mut, module_id);
-  if (vm_get_current_scope(vm))
-    vec_push(vm_get_current_scope(vm)->types, ut);
+  vec_push(vm_get_types(vm), ut);
   return create_type_value(vm, (type_t)ut, NULL, false);
 }
 
@@ -546,8 +611,7 @@ value_t _union_value_member_addr(vm_t vm, value_t self, const char *name) {
 
   allocator_t alloc = vm_get_allocator(vm);
   pointer_type_t pt = pointer_type_create(alloc, field_info_get_type(fi), true, false);
-  scope_t scope = vm_get_current_scope(vm);
-  if (scope) vec_push(scope->types, pt);
+  vec_push(vm_get_types(vm), pt);
 
   void *field_addr = (char *)value_get_data(self) + ut->payload_offset;
   return create_pointer_value_from_addr(vm, pt, field_addr);
@@ -562,7 +626,7 @@ static value_t _union_clone(vm_t vm, value_t self) {
   if (value_is_shadow(self))
     return _create_union_shadow(vm, ut, value_is_initialized(self));
 
-  type_t cloned_type = value_type_clone(vm, (type_t)ut);
+  type_t cloned_type = (type_t)ut;
 
   allocator_t alloc = vm_get_allocator(vm);
   uint64_t total_size = ut->base.size;
@@ -740,7 +804,7 @@ static value_t _union_safe_cast(vm_t vm, value_t self, type_t to) {
   uint32_t dst_tag = _union_find_field_index(to_ut, dst_fi);
 
   /* create new value with cloned type and remapped tag */
-  type_t cloned_type = value_type_clone(vm, to);
+  type_t cloned_type = to;
 
   allocator_t alloc = vm_get_allocator(vm);
   uint64_t total_size = to_ut->base.size;

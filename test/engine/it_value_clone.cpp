@@ -1,4 +1,4 @@
-﻿#include "engine/vm.h"
+#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/bool_type.h"
@@ -192,8 +192,8 @@ TEST_F(it_value_clone, function_arg_str) {
 
   value_t local = value_clone(vm, arg);
   EXPECT_STREQ(string_get(*(string_t *)value_get_data(local)), "hello");
-  /* cloned string_t is in callee->strings */
-  EXPECT_EQ(vec_get_size(callee->strings), 1u);
+  /* cloned string_t is in vm->strings */
+  EXPECT_GE(vec_get_size(vm_get_strings(vm)), 1u);
 
   vm_set_scope(vm, prev_scope);
   vm_set_root_scope(vm, prev_root);
@@ -268,9 +268,8 @@ TEST_F(it_value_clone, return_value_str) {
 
   value_t ret = value_clone(vm, result);
   EXPECT_STREQ(string_get(*(string_t *)value_get_data(ret)), "result");
-  /* cloned string_t in caller scope */
-  scope_t caller = vm_get_current_scope(vm);
-  EXPECT_EQ(vec_get_size(caller->strings), 1u);
+  /* cloned string_t in vm->strings */
+  EXPECT_GE(vec_get_size(vm_get_strings(vm)), 2u);
 
   allocator_free(alloc, &callee);
   vm_dispose(vm, allocator);
@@ -319,7 +318,7 @@ TEST_F(it_value_clone, closure_capture_str) {
 
   value_t local_copy = value_clone(vm, captured);
   EXPECT_STREQ(string_get(*(string_t *)value_get_data(local_copy)), "captured");
-  EXPECT_EQ(vec_get_size(closure_scope->strings), 1u);
+  EXPECT_GE(vec_get_size(vm_get_strings(vm)), 2u);
 
   vm_set_scope(vm, prev_scope);
   vm_set_root_scope(vm, prev_root);

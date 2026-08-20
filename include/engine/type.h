@@ -129,6 +129,10 @@ struct vtable_t {
    * Validates extends constraints, then delegates to the create_instance callback
    * stored in value.data. No shadow handling — instantiation is always concrete. */
   value_t (*instantiate)(vm_t vm, value_t self, size_t argc, value_t *argv);
+  /* Type cloning — creates a shallow copy of the type, registers it in vm->types.
+   * Sub-type pointers remain borrowed (point to vm->types singletons), no recursive clone.
+   * Returns the new type_t. NULL for primitive types (use vm's pre-defined variants). */
+  type_t (*type_clone)(vm_t vm, type_t self);
 };
 typedef struct vtable_t vtable_t;
 
@@ -178,6 +182,23 @@ typedef struct type_init_t {
  *  Convenience wrapper around allocator_create(&g_type_class, &init). */
 type_t type_create(allocator_t allocator, type_kind_t kind, const char *name,
                    uint64_t size, uint64_t align, bool mut, vtable_t vtable);
+
+struct _vm_t;
+
+/** @brief Create a variant of src with the specified mut flag.
+ *  For primitive types (bool, i8-i64, u8-u64, f16-f64, str, wildcard),
+ *  returns the vm's pre-created variant directly — no new type is created.
+ *  For composite types (pointer, array, slice, tuple, struct, union, etc.),
+ *  creates a new type_t with borrowed sub-type pointers and registers it
+ *  in vm->types. */
+type_t type_create_with_mut(struct _vm_t *vm, type_t src, bool mut);
+
+/** @brief Clone a type_t — dispatches to vtable.type_clone.
+ *  Creates a shallow copy of the type (no recursive clone of sub-types),
+ *  registers the new type in vm->types, and returns it.
+ *  Returns NULL if the type does not support cloning (primitives, void, etc.).
+ *  For primitives, use type_create_with_mut or vm_get_*_type instead. */
+type_t type_clone(struct _vm_t *vm, type_t self);
 
 /* ---- Bootstrap ---- */
 

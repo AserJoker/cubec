@@ -103,6 +103,8 @@ value_t run_statement(vm_t vm, node_t node, bool shadow) {
     return run_statement_declaration_type(vm, node, shadow);
   case CUBEC_NODE_STATEMENT_RETURN:
     return run_statement_return(vm, node, shadow);
+  case CUBEC_NODE_STATEMENT_FUNCTION:
+    return run_statement_function(vm, node, shadow);
   default:
     if (shadow) {
       diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,

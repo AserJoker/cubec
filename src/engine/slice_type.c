@@ -28,6 +28,21 @@ static value_t _slice_set_item(vm_t vm, value_t self, value_t index, value_t val
 static value_t _slice_deref_get(vm_t vm, value_t self);
 static value_t _slice_slice(vm_t vm, value_t self, uint64_t start, uint64_t count);
 
+static type_t _slice_type_clone(vm_t vm, type_t self) {
+  slice_type_t src = (slice_type_t)self;
+  allocator_t allocator = vm_get_allocator(vm);
+  slice_type_t dst = (slice_type_t)allocator_create(allocator, &g_slice_type_class, NULL);
+  dst->base.kind    = src->base.kind;
+  dst->base.name    = cstring_clone(allocator, src->base.name);
+  dst->base.size    = src->base.size;
+  dst->base.align   = src->base.align;
+  dst->base.mut     = src->base.mut;
+  dst->base.vtable  = src->base.vtable;
+  dst->element_type = src->element_type; /* borrowed from vm->types */
+  vec_push(vm_get_types(vm), dst);
+  return (type_t)dst;
+}
+
 /* ---- Shared vtable for all slice types ---- */
 
 static vtable_t _make_slice_vtable(void) {
@@ -67,6 +82,7 @@ static vtable_t _make_slice_vtable(void) {
       .member_call  = NULL,
       .get_prop     = NULL,
       .set_prop     = NULL,
+      .type_clone   = _slice_type_clone,
   };
 }
 
@@ -81,26 +97,15 @@ static void _slice_type_init(void *self, allocator_t allocator, void *arg) {
   st->base.align  = init->align;
   st->base.mut    = init->mut;
   st->base.vtable = init->vtable;
-  st->element_type = (type_t)alloc_clone(allocator, init->element_type);
+  st->element_type = init->element_type; /* borrowed: types managed by vm->types */
 }
 
 static void _slice_type_dispose(void *self, allocator_t allocator) {
   slice_type_t st = (slice_type_t)self;
   allocator_free(allocator, &st->base.name);
   st->base.name = NULL;
-  allocator_free(allocator, &st->element_type);
-}
-
-static void _slice_type_clone(void *self, allocator_t allocator, void *another) {
-  slice_type_t dst = (slice_type_t)self;
-  slice_type_t src = (slice_type_t)another;
-  dst->base.kind   = src->base.kind;
-  dst->base.name   = cstring_clone(allocator, src->base.name);
-  dst->base.size   = src->base.size;
-  dst->base.align  = src->base.align;
-  dst->base.mut    = src->base.mut;
-  dst->base.vtable = src->base.vtable;
-  dst->element_type = (type_t)alloc_clone(allocator, src->element_type);
+  /* element_type is borrowed from vm->types — do not free */
+  st->element_type = NULL;
 }
 
 static void _slice_type_move(void *self, allocator_t allocator, void *another) {
@@ -116,7 +121,7 @@ class_t g_slice_type_class = {
     .name    = "cubec.engine.slice_type",
     .init    = (class_init_fn_t)_slice_type_init,
     .dispose = (class_dispose_fn_t)_slice_type_dispose,
-    .clone   = (class_clone_fn_t)_slice_type_clone,
+    .clone   = NULL, /* types are global singletons — alloc_clone aborts */
     .move    = (class_move_fn_t)_slice_type_move,
 };
 
@@ -179,7 +184,7 @@ static value_t _slice_clone(vm_t vm, value_t self) {
     return create_slice_shadow(vm, src_st, value_is_initialized(self));
 
   /* clone slice type into current scope */
-  type_t cloned_type = value_type_clone(vm, (type_t)src_st);
+  type_t cloned_type = (type_t)src_st;
   slice_type_t dst_st = (slice_type_t)cloned_type;
 
   /* clone slice data struct (shallow copy of ptr/start/len) */
@@ -380,7 +385,7 @@ static value_t _slice_slice(vm_t vm, value_t self, uint64_t start,
   new_sd->len   = count;
 
   /* clone slice type into current scope */
-  type_t cloned_type = value_type_clone(vm, (type_t)st);
+  type_t cloned_type = (type_t)st;
   value_t v = value_create(alloc, cloned_type, new_sd, true);
   value_set_initialized(v, true);
   scope_t scope = vm_get_current_scope(vm);

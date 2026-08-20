@@ -26,6 +26,35 @@ static value_t _tuple_to_string(vm_t vm, value_t self);
 static value_t _tuple_get_item(vm_t vm, value_t self, value_t index);
 static value_t _tuple_set_item(vm_t vm, value_t self, value_t index, value_t val);
 
+static type_t _tuple_type_clone(vm_t vm, type_t self) {
+  tuple_type_t src = (tuple_type_t)self;
+  allocator_t allocator = vm_get_allocator(vm);
+  tuple_type_t dst = (tuple_type_t)allocator_create(allocator, &g_tuple_type_class, NULL);
+  dst->base.kind    = src->base.kind;
+  dst->base.name    = cstring_clone(allocator, src->base.name);
+  dst->base.size    = src->base.size;
+  dst->base.align   = src->base.align;
+  dst->base.mut     = src->base.mut;
+  dst->base.vtable  = src->base.vtable;
+  dst->field_count  = src->field_count;
+  /* shallow-copy element_types (borrowed type_t refs from vm->types) */
+  vec_init_t vi = {.auto_dispose = false};
+  dst->element_types = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+  for (uint64_t i = 0; i < src->field_count; i++)
+    vec_push(dst->element_types, vec_get(src->element_types, (size_t)i));
+  /* deep-copy offsets */
+  if (src->offsets && src->field_count > 0) {
+    dst->offsets = (uint64_t *)allocator_alloc(allocator,
+        src->field_count * sizeof(uint64_t));
+    memcpy(dst->offsets, src->offsets,
+           src->field_count * sizeof(uint64_t));
+  } else {
+    dst->offsets = NULL;
+  }
+  vec_push(vm_get_types(vm), dst);
+  return (type_t)dst;
+}
+
 /* ---- Shared vtable for all tuple types ---- */
 
 static vtable_t _make_tuple_vtable(void) {
@@ -65,6 +94,7 @@ static vtable_t _make_tuple_vtable(void) {
       .member_call  = NULL,
       .get_prop     = NULL,
       .set_prop     = NULL,
+      .type_clone   = _tuple_type_clone,
   };
 }
 
@@ -80,13 +110,12 @@ static void _tuple_type_init(void *self, allocator_t allocator, void *arg) {
   tt->base.mut     = init->mut;
   tt->base.vtable  = init->vtable;
   tt->field_count  = init->field_count;
-  /* own element_types via alloc_clone (auto_dispose=true to free each type_t) */
-  vec_init_t vi = {.auto_dispose = true};
+  /* borrow element_types (types are global singletons managed by vm->types) */
+  vec_init_t vi = {.auto_dispose = false};
   tt->element_types = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
   for (uint64_t i = 0; i < init->field_count; i++) {
     type_t et = (type_t)vec_get(init->element_types, (size_t)i);
-    type_t owned = (type_t)alloc_clone(allocator, et);
-    vec_push(tt->element_types, owned);
+    vec_push(tt->element_types, et);
   }
   /* clone offsets array */
   if (init->offsets && init->field_count > 0) {
@@ -104,36 +133,8 @@ static void _tuple_type_dispose(void *self, allocator_t allocator) {
   allocator_free(allocator, &tt->base.name);
   tt->base.name = NULL;
   allocator_free(allocator, (void **)&tt->offsets);
-  allocator_free(allocator, &tt->element_types); /* auto_dispose frees each type_t */
+  allocator_free(allocator, &tt->element_types); /* auto_dispose=false, borrowed type ptrs */
   tt->field_count = 0;
-}
-
-static void _tuple_type_clone(void *self, allocator_t allocator, void *another) {
-  tuple_type_t dst = (tuple_type_t)self;
-  tuple_type_t src = (tuple_type_t)another;
-  dst->base.kind    = src->base.kind;
-  dst->base.name    = cstring_clone(allocator, src->base.name);
-  dst->base.size    = src->base.size;
-  dst->base.align   = src->base.align;
-  dst->base.mut     = src->base.mut;
-  dst->base.vtable  = src->base.vtable;
-  dst->field_count  = src->field_count;
-  /* deep-clone element_types (auto_dispose=true, each alloc_clone'd) */
-  vec_init_t vi = {.auto_dispose = true};
-  dst->element_types = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
-  for (uint64_t i = 0; i < src->field_count; i++) {
-    type_t et = (type_t)vec_get(src->element_types, (size_t)i);
-    type_t owned = (type_t)alloc_clone(allocator, et);
-    vec_push(dst->element_types, owned);
-  }
-  if (src->offsets && src->field_count > 0) {
-    dst->offsets = (uint64_t *)allocator_alloc(allocator,
-        src->field_count * sizeof(uint64_t));
-    memcpy(dst->offsets, src->offsets,
-           src->field_count * sizeof(uint64_t));
-  } else {
-    dst->offsets = NULL;
-  }
 }
 
 static void _tuple_type_move(void *self, allocator_t allocator, void *another) {
@@ -149,7 +150,7 @@ class_t g_tuple_type_class = {
     .name    = "cubec.engine.tuple_type",
     .init    = (class_init_fn_t)_tuple_type_init,
     .dispose = (class_dispose_fn_t)_tuple_type_dispose,
-    .clone   = (class_clone_fn_t)_tuple_type_clone,
+    .clone   = NULL, /* types are global singletons — alloc_clone aborts */
     .move    = (class_move_fn_t)_tuple_type_move,
 };
 
@@ -252,7 +253,7 @@ static value_t _tuple_clone(vm_t vm, value_t self) {
     return create_tuple_shadow(vm, src_tt, value_is_initialized(self));
 
   /* clone tuple type into current scope (recursive) */
-  type_t cloned_type = value_type_clone(vm, (type_t)src_tt);
+  type_t cloned_type = (type_t)src_tt;
   tuple_type_t dst_tt = (tuple_type_t)cloned_type;
 
   allocator_t alloc = vm_get_allocator(vm);

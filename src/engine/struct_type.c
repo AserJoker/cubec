@@ -43,6 +43,7 @@ static value_t _struct_member_call(vm_t vm, value_t self, const char *name,
                                    size_t argc, value_t *argv);
 static value_t _struct_type_get_prop(vm_t vm, type_t self, const char *name);
 static value_t _struct_type_set_prop(vm_t vm, type_t self, const char *name, value_t val);
+static type_t  _struct_type_type_clone(vm_t vm, type_t self);
 
 /* ---- Shared vtable for all struct types ---- */
 
@@ -85,6 +86,7 @@ static vtable_t _make_struct_vtable(void) {
       .set_prop     = NULL,
       .type_get_prop= _struct_type_get_prop,
       .type_set_prop= _struct_type_set_prop,
+      .type_clone   = _struct_type_type_clone,
   };
 }
 
@@ -94,7 +96,7 @@ static vtable_t _make_struct_vtable(void) {
 
 struct _field_info_t {
   char    *name;     /* owned */
-  type_t   type;     /* owned (alloc_clone) */
+  type_t   type;     /* borrowed: types managed by vm->types */
   uint64_t offset;   /* computed */
   bool     pub;      /* true = accessible across modules */
 };
@@ -110,7 +112,7 @@ static void _field_info_init(void *self, allocator_t allocator, void *arg) {
   field_info_t fi = (field_info_t)self;
   field_info_init_t *init = (field_info_init_t *)arg;
   fi->name   = cstring_clone(allocator, init->name);
-  fi->type   = (type_t)alloc_clone(allocator, init->type);
+  fi->type   = init->type; /* borrowed: types managed by vm->types */
   fi->offset = init->offset;
   fi->pub    = init ? init->pub : false;
 }
@@ -122,7 +124,7 @@ static void _field_info_dispose(void *self, allocator_t allocator) {
     allocator_free(allocator, &p);
     fi->name = NULL;
   }
-  allocator_free(allocator, &fi->type);
+  /* type is borrowed from vm->types — do not free */
   fi->type   = NULL;
   fi->offset = 0;
   fi->pub    = false;
@@ -132,7 +134,7 @@ static void _field_info_clone(void *self, allocator_t allocator, void *another) 
   field_info_t dst = (field_info_t)self;
   field_info_t src = (field_info_t)another;
   dst->name   = cstring_clone(allocator, src->name);
-  dst->type   = (type_t)alloc_clone(allocator, src->type);
+  dst->type   = src->type; /* borrowed: types managed by vm->types */
   dst->offset = src->offset;
   dst->pub    = src->pub;
 }
@@ -234,6 +236,74 @@ static value_t _shallow_clone_value(allocator_t allocator, value_t src) {
   return dst;
 }
 
+static type_t _struct_type_type_clone(vm_t vm, type_t self) {
+  struct_type_t src = (struct_type_t)self;
+  allocator_t allocator = vm_get_allocator(vm);
+  struct_type_t dst = (struct_type_t)allocator_create(allocator, &g_struct_type_class, NULL);
+
+  dst->base.kind    = src->base.kind;
+  dst->base.name    = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
+  dst->base.size    = src->base.size;
+  dst->base.align   = src->base.align;
+  dst->base.mut     = src->base.mut;
+  dst->base.vtable  = src->base.vtable;
+
+  /* clone scope — isolated, no parent */
+  dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
+
+  /* clone fields — field types are borrowed (vm->types singletons) */
+  vec_init_t vi = {.auto_dispose = true};
+  dst->fields = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+  size_t fc = vec_get_size(src->fields);
+  for (size_t i = 0; i < fc; i++) {
+    field_info_t fi = (field_info_t)vec_get(src->fields, i);
+    field_info_init_t fiinit = {
+        .name   = fi->name,
+        .type   = fi->type, /* borrowed: types managed by vm->types */
+        .offset = fi->offset,
+        .pub    = fi->pub,
+    };
+    field_info_t cloned = (field_info_t)allocator_create(allocator,
+                                                          &g_field_info_class, &fiinit);
+    vec_push(dst->fields, cloned);
+  }
+
+  /* clone props: shallow-clone values, register in dst->scope */
+  strmap_init_t smi = {.value_auto_dispose = false};
+  dst->props = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  strmap_iter_t it = strmap_iter_first(src->props);
+  const char *key;
+  while ((key = strmap_iter_next(&it)) != NULL) {
+    value_t sv = (value_t)strmap_find(src->props, key);
+    value_t cv = _shallow_clone_value(allocator, sv);
+    vec_push(dst->scope->values, cv);
+    strmap_insert(dst->props, key, cv);
+  }
+
+  /* clone methods similarly */
+  dst->methods = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  it = strmap_iter_first(src->methods);
+  while ((key = strmap_iter_next(&it)) != NULL) {
+    value_t sv = (value_t)strmap_find(src->methods, key);
+    value_t cv = _shallow_clone_value(allocator, sv);
+    vec_push(dst->scope->values, cv);
+    strmap_insert(dst->methods, key, cv);
+  }
+
+  /* clone pub_names */
+  dst->pub_names = (strmap_t)allocator_create(allocator, &g_strmap_class, &smi);
+  it = strmap_iter_first(src->pub_names);
+  while ((key = strmap_iter_next(&it)) != NULL) {
+    strmap_insert(dst->pub_names, key, (void *)1);
+  }
+
+  dst->sealed = src->sealed;
+  dst->module_id = src->module_id;
+
+  vec_push(vm_get_types(vm), dst);
+  return (type_t)dst;
+}
+
 static void _struct_type_clone(void *self, allocator_t allocator, void *another) {
   struct_type_t dst = (struct_type_t)self;
   struct_type_t src = (struct_type_t)another;
@@ -245,21 +315,19 @@ static void _struct_type_clone(void *self, allocator_t allocator, void *another)
   dst->base.mut     = src->base.mut;
   dst->base.vtable  = src->base.vtable;
 
-  /* clone scope — isolated, no parent (must be created before fields,
-   * because _st_add_field pushes cloned field types into scope->types) */
+  /* clone scope — isolated, no parent */
   dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
 
-  /* clone fields — clone each field type into dst->scope->types */
+  /* clone fields — field types are global singletons (vm->types), do not
+   * clone; share the same type_t pointer. */
   vec_init_t vi = {.auto_dispose = true};
   dst->fields = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
   size_t fc = vec_get_size(src->fields);
   for (size_t i = 0; i < fc; i++) {
     field_info_t fi = (field_info_t)vec_get(src->fields, i);
-    type_t cloned_type = (type_t)alloc_clone(allocator, fi->type);
-    vec_push(dst->scope->types, cloned_type);
     field_info_init_t fiinit = {
         .name   = fi->name,
-        .type   = cloned_type,
+        .type   = fi->type, /* borrowed: types managed by vm->types */
         .offset = fi->offset,
         .pub    = fi->pub,
     };
@@ -306,7 +374,7 @@ class_t g_struct_type_class = {
     .name    = "cubec.engine.struct_type",
     .init    = (class_init_fn_t)_struct_type_init,
     .dispose = (class_dispose_fn_t)_struct_type_dispose,
-    .clone   = (class_clone_fn_t)_struct_type_clone,
+    .clone   = NULL, /* types are global singletons — use vtable.type_clone instead */
     .move    = NULL,
 };
 
@@ -354,15 +422,13 @@ static void _st_add_field(allocator_t allocator, struct_type_t st,
     return;
   }
 
-  /* Clone the field type into the struct's own scope.
-   * field_info_t.type borrows from scope->types, so the type's lifecycle
-   * is tied to the struct, not the caller's value. */
-  type_t cloned = (type_t)alloc_clone(allocator, field_type);
-  vec_push(st->scope->types, cloned);
+  /* Types are global singletons managed by vm->types — share the pointer
+   * directly, no clone. */
+  type_t ft = field_type;
 
   /* compute offset using C alignment rules */
-  uint64_t field_align = type_get_align(cloned);
-  uint64_t field_size  = type_get_size(cloned);
+  uint64_t field_align = type_get_align(ft);
+  uint64_t field_size  = type_get_size(ft);
 
   /* update struct alignment to max of all fields */
   if (field_align > st->base.align)
@@ -373,7 +439,7 @@ static void _st_add_field(allocator_t allocator, struct_type_t st,
 
   field_info_init_t fiinit = {
       .name   = name,
-      .type   = cloned,
+      .type   = ft,
       .offset = offset,
       .pub    = pub,
   };
@@ -514,8 +580,7 @@ value_t _struct_value_member_addr(vm_t vm, value_t self, const char *name) {
   /* create pointer type: *FieldType */
   allocator_t alloc = vm_get_allocator(vm);
   pointer_type_t pt = pointer_type_create(alloc, fi->type, true, false);
-  scope_t scope = vm_get_current_scope(vm);
-  if (scope) vec_push(scope->types, pt);
+  vec_push(vm_get_types(vm), pt);
 
   /* pointer value data = address of field within struct buffer */
   void *field_addr = (char *)value_get_data(self) + fi->offset;
@@ -529,8 +594,7 @@ value_t _struct_value_member_addr(vm_t vm, value_t self, const char *name) {
 value_t vm_create_struct_type_value(vm_t vm, const char *name,
                                      bool mut, const char *module_id) {
   struct_type_t st = _st_create(vm_get_allocator(vm), name, mut, module_id);
-  if (vm_get_current_scope(vm))
-    vec_push(vm_get_current_scope(vm)->types, st);
+  vec_push(vm_get_types(vm), st);
   return create_type_value(vm, (type_t)st, NULL, false);
 }
 
@@ -543,7 +607,7 @@ static value_t _struct_clone(vm_t vm, value_t self) {
   if (value_is_shadow(self))
     return _create_struct_shadow(vm, st, value_is_initialized(self));
 
-  type_t cloned_type = value_type_clone(vm, (type_t)st);
+  type_t cloned_type = (type_t)st;
 
   /* memcpy the entire buffer */
   allocator_t alloc = vm_get_allocator(vm);

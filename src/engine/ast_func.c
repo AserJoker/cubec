@@ -1,4 +1,5 @@
 #include "engine/ast_func.h"
+#include "core/allocator.h"
 #include "engine/callable_type.h"
 #include "engine/func.h"
 #include "engine/vm.h"
@@ -9,6 +10,7 @@
 #include "engine/interrupt_type.h"
 #include "engine/name.h"
 #include "core/string.h"
+#include "core/strmap.h"
 #include "core/vec.h"
 #include "run/run.h"
 #include "cubec/declaration_function.h"
@@ -36,18 +38,13 @@ static void _ast_func_init(void *self, allocator_t allocator, void *arg) {
 static void _ast_func_dispose(void *self, allocator_t allocator) {
   (void)allocator;
   ast_func_t af = (ast_func_t)self;
-  /* base closure_scope is disposed by func_t class — but since we're using
-   * our own class, we must do it here. */
+  /* Disposing closure_scope also recursively disposes its children
+   * (including template_scope). Both always exist. */
   if (af->base.closure_scope) {
     scope_t cs = af->base.closure_scope;
     af->base.closure_scope = NULL;
+    af->template_scope = NULL; /* cleared to avoid dangling pointer */
     scope_dispose(cs);
-  }
-  /* template_scope is owned; dispose it */
-  if (af->template_scope) {
-    scope_t ts = af->template_scope;
-    af->template_scope = NULL;
-    scope_dispose(ts);
   }
   /* func pointer and name are borrowed, node is borrowed */
 }
@@ -58,10 +55,23 @@ static void _ast_func_clone(void *self, allocator_t allocator, void *another) {
   ast_func_t src = (ast_func_t)another;
   dst->base.func = src->base.func;
   dst->base.name = src->base.name;
-  dst->base.closure_scope = NULL; /* closures are unique */
+  /* closures are unique — create a new isolated scope */
+  dst->base.closure_scope = scope_create(allocator, SCOPE_CLOSURE, NULL, NULL);
   dst->base.root_scope = src->base.root_scope;
   dst->node = src->node;
-  dst->template_scope = NULL; /* template scope not cloned */
+  /* template_scope always exists as child of closure — create a new one
+   * and copy name bindings (borrowed refs, own=false) from source. */
+  dst->template_scope = scope_create(allocator, SCOPE_TYPE,
+                                     dst->base.closure_scope, NULL);
+  strmap_iter_t it = strmap_iter_first(src->template_scope->names);
+  const char *key;
+  while ((key = strmap_iter_next(&it)) != NULL) {
+    name_t val = (name_t)strmap_find(src->template_scope->names, key);
+    name_t n = name_create(dst->template_scope->allocator, val->ref);
+    char *owned = cstring_clone(dst->template_scope->allocator, key);
+    strmap_insert(dst->template_scope->names, owned, n);
+    allocator_free(dst->template_scope->allocator, &owned);
+  }
 }
 
 class_t g_ast_func_class = {
@@ -86,10 +96,26 @@ scope_t ast_func_get_template_scope(ast_func_t self) {
 value_t create_ast_func_value(vm_t vm, callable_type_t ct, const char *name,
                                node_t node, scope_t template_scope) {
   allocator_t alloc = vm_get_allocator(vm);
+
+  /* closure_scope always exists — isolated scope (parent=NULL).
+   * Parent is temporarily set to root_scope during execution to enable
+   * scope chain lookups, then restored to NULL on exit. */
+  scope_t closure = scope_create(alloc, SCOPE_CLOSURE, NULL, NULL);
+
+  /* template_scope always exists as child of closure.
+   * If caller provides one (generic function), re-parent under closure.
+   * Otherwise create an empty one. */
+  if (template_scope) {
+    template_scope->parent = closure;
+    scope_add_child(closure, template_scope);
+  } else {
+    template_scope = scope_create(alloc, SCOPE_TYPE, closure, NULL);
+  }
+
   ast_func_init_t init = {
       .func = _ast_func_call,
       .name = name,
-      .closure_scope = NULL,
+      .closure_scope = closure,
       .root_scope = vm_get_root_scope(vm),
       .node = node,
       .template_scope = template_scope,
@@ -97,11 +123,11 @@ value_t create_ast_func_value(vm_t vm, callable_type_t ct, const char *name,
   ast_func_t af =
       (ast_func_t)allocator_create(alloc, &g_ast_func_class, &init);
 
-  /* value.data = ast_func_t (borrowed ref), scope->cfuncs owns the lifecycle */
+  /* value.data = ast_func_t (borrowed ref), vm->cfuncs owns the lifecycle */
   value_t v = value_create(alloc, (type_t)ct, af, false);
+  vec_push(vm_get_cfuncs(vm), af);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) {
-    vec_push(scope->cfuncs, af);
     vec_push(scope->values, v);
   }
   return v;
@@ -121,8 +147,9 @@ value_t create_ast_func_value(vm_t vm, callable_type_t ct, const char *name,
  * @param shadow true for check (type-only), false for call (runtime)
  * @return Result value
  */
-static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc,
-                               value_t *argv, bool shadow) {
+static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc, value_t *argv,
+                              bool shadow) {
+  allocator_t alloc = vm_get_allocator(vm);
   ast_func_t af = (ast_func_t)value_get_data(fn);
   if (!af || !af->node)
     return create_exception_value(vm, "ast_func: no AST node");
@@ -132,19 +159,23 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc,
   /* ---- Save caller state ---- */
   scope_t caller_scope = vm_get_current_scope(vm);
   scope_t prev_root = vm_set_root_scope(vm, af->base.root_scope);
-  /* vm_set_scope returns previous current_scope, but we already saved it
-   * as caller_scope.  Set current to closure_scope (or root_scope if none). */
-  scope_t entry_scope = af->base.closure_scope
-                            ? af->base.closure_scope
-                            : af->base.root_scope;
-  vm_set_scope(vm, entry_scope);
 
-  /* ---- Push template_scope (generic params) if present ---- */
-  if (af->template_scope)
-    vm_push_scope(vm, af->template_scope);
+  /* ---- Build scope chain: root → closure → template → args → body ----
+   *  closure_scope always exists (created in create_ast_func_value / clone).
+   *  Its parent is temporarily set to root_scope for execution to enable
+   *  scope chain lookups, then restored to NULL on exit.  This avoids
+   *  use-after-free: closure_scope is owned by the function (not a child
+   *  of root_scope), so root_scope may be disposed first.
+   *  template_scope always exists as child of closure (parent set at creation). */
+  scope_t closure = func_get_closure_scope((func_t)af);
+  scope_t saved_closure_parent = closure->parent;
+  closure->parent = af->base.root_scope;
+
+  /* base = template_scope (child of closure, always present) */
+  scope_t base = af->template_scope;
+  vm_set_scope(vm, base);
 
   /* ---- Create arguments scope and bind parameters ---- */
-  allocator_t alloc = vm_get_allocator(vm);
   scope_t args_scope =
       scope_create(alloc, SCOPE_FUNCTION, vm_get_current_scope(vm), NULL);
   vm_push_scope(vm, args_scope);
@@ -193,46 +224,64 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc,
 
   if (value_is_interrupt(result)) {
     /* Interrupt (return statement): extract value, safe_cast, clone into
-     * caller scope, then pop scopes back to entry_scope */
+     * caller scope, then pop+dispose runtime scopes back to base */
     value_t inner = interrupt_get_value(result);
 
-    /* safe_cast to declared return type */
+    /* safe_cast to declared return type.
+     * Note: safe_cast may return self (same-type cast). The returned value
+     * is registered in the current scope (function-internal). We must NOT
+     * add it to another scope — instead, we clone it into the caller scope. */
     type_t ret_type = callable_type_get_return_type(ct);
     inner = value_safe_cast(vm, inner, ret_type);
     if (value_is_abnormal(inner)) {
-      /* safe_cast failed — treat as exception */
-      vm_set_scope(vm, caller_scope);
-      vm_set_root_scope(vm, prev_root);
+      /* safe_cast failed — treat as exception. Clone BEFORE disposing
+       * runtime scopes (inner is registered in a function-internal scope). */
       scope_t prev_s = vm_set_scope(vm, caller_scope);
       return_value = value_clone(vm, inner);
       vm_set_scope(vm, prev_s);
+
+      /* Pop+dispose runtime scopes back to base */
+      while (vm_get_current_scope(vm) != base)
+        vm_pop_scope(vm);
+
+      vm_set_scope(vm, caller_scope);
+      vm_set_root_scope(vm, prev_root);
+      closure->parent = saved_closure_parent;
       return return_value;
     }
 
-    /* Clone into caller scope */
+    /* Clone into caller scope (safe_cast result may be self, registered in
+     * function-internal scope — must clone, not add directly) */
     scope_t prev_s = vm_set_scope(vm, caller_scope);
     return_value = value_clone(vm, inner);
     vm_set_scope(vm, prev_s);
 
-    /* Pop scopes back to entry_scope */
-    while (vm_get_current_scope(vm) != entry_scope)
+    /* Pop+dispose runtime scopes back to base (template_scope or closure) */
+    while (vm_get_current_scope(vm) != base)
       vm_pop_scope(vm);
 
     /* Restore caller state */
     vm_set_scope(vm, caller_scope);
     vm_set_root_scope(vm, prev_root);
+    closure->parent = saved_closure_parent;
     return return_value;
   }
 
   if (value_is_abnormal(result)) {
-    /* Exception: restore scope directly (no pop), clone exception into
-     * caller scope */
-    vm_set_scope(vm, caller_scope);
-    vm_set_root_scope(vm, prev_root);
-    /* Clone exception into caller scope */
+    /* Exception: clone exception into caller scope BEFORE disposing
+     * runtime scopes (result is registered in a function-internal scope
+     * that will be freed by vm_pop_scope). */
     scope_t prev_s = vm_set_scope(vm, caller_scope);
     return_value = value_clone(vm, result);
     vm_set_scope(vm, prev_s);
+
+    /* Pop+dispose runtime scopes back to base */
+    while (vm_get_current_scope(vm) != base)
+      vm_pop_scope(vm);
+
+    vm_set_scope(vm, caller_scope);
+    vm_set_root_scope(vm, prev_root);
+    closure->parent = saved_closure_parent;
     return return_value;
   }
 
@@ -241,8 +290,11 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc,
     type_t ret_type = callable_type_get_return_type(ct);
     if (type_get_kind(ret_type) != TYPE_KIND_VOID) {
       /* Non-void function missing return — error */
+      while (vm_get_current_scope(vm) != base)
+        vm_pop_scope(vm);
       vm_set_scope(vm, caller_scope);
       vm_set_root_scope(vm, prev_root);
+      closure->parent = saved_closure_parent;
       return create_exception_value(
           vm, "non-void function '%s' missing return statement",
           af->base.name ? af->base.name : "<anonymous>");
@@ -253,13 +305,14 @@ static value_t _ast_func_exec(vm_t vm, value_t fn, size_t argc,
     return_value = value_clone(vm, result);
     vm_set_scope(vm, prev_s);
 
-    /* Pop scopes back to entry_scope */
-    while (vm_get_current_scope(vm) != entry_scope)
+    /* Pop+dispose runtime scopes back to base (template_scope or closure) */
+    while (vm_get_current_scope(vm) != base)
       vm_pop_scope(vm);
 
     /* Restore caller state */
     vm_set_scope(vm, caller_scope);
     vm_set_root_scope(vm, prev_root);
+    closure->parent = saved_closure_parent;
     return return_value;
   }
 }

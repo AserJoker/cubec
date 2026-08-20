@@ -94,8 +94,8 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
           param_type = (type_t)value_get_data(vt);
         }
 
-        /* evaluate extends constraints */
-        vec_init_t evi = {.auto_dispose = true};
+        /* evaluate extends constraints (borrowed type pointers) */
+        vec_init_t evi = {.auto_dispose = false};
         vec_t extends = (vec_t)allocator_create(allocator, &g_vec_class, &evi);
         if (ast_param->constraints) {
           size_t cc = vec_get_size(ast_param->constraints);
@@ -123,7 +123,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
                   type_get_name(value_get_type(cv)));
             }
             type_t constraint_type = (type_t)value_get_data(cv);
-            vec_push(extends, alloc_clone(allocator, constraint_type));
+            vec_push(extends, constraint_type); /* borrowed: types managed by vm->types */
           }
         }
 
@@ -137,9 +137,8 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
       generic_type_t gt = generic_type_create(allocator, name, params_vec, NULL);
       allocator_free(allocator, &params_vec);
 
-      /* register in scope->types */
-      scope_t scope = vm_get_current_scope(vm);
-      vec_push(scope->types, gt);
+      /* register in vm->types */
+      vec_push(vm_get_types(vm), gt);
 
       /* create generic value: value.data = builtin callback.
        * vm_create_value_ref registers in scope->values and binds the name. */
@@ -242,8 +241,8 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
         param_type = (type_t)value_get_data(vt);
       }
 
-      /* evaluate extends constraints */
-      vec_init_t evi = {.auto_dispose = true};
+      /* evaluate extends constraints (borrowed type pointers) */
+      vec_init_t evi = {.auto_dispose = false};
       vec_t extends = (vec_t)allocator_create(allocator, &g_vec_class, &evi);
       if (ast_param->constraints) {
         size_t cc = vec_get_size(ast_param->constraints);
@@ -271,7 +270,7 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
                 type_get_name(value_get_type(cv)));
           }
           type_t constraint_type = (type_t)value_get_data(cv);
-          vec_push(extends, alloc_clone(allocator, constraint_type));
+          vec_push(extends, constraint_type); /* borrowed: types managed by vm->types */
         }
       }
 
@@ -286,9 +285,8 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
                                             stmt->type_value);
     allocator_free(allocator, &params_vec);
 
-    /* register in scope->types */
-    scope_t scope = vm_get_current_scope(vm);
-    vec_push(scope->types, gt);
+    /* register in vm->types */
+    vec_push(vm_get_types(vm), gt);
 
     /* create generic value: value.data = create_type_instance callback.
      * vm_create_value_ref registers in scope->values and binds the name. */

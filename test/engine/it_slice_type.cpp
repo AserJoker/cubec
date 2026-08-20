@@ -1,4 +1,4 @@
-﻿#include "engine/vm.h"
+#include "engine/vm.h"
 #include "engine/type.h"
 #include "engine/value.h"
 #include "engine/bool_type.h"
@@ -521,15 +521,12 @@ TEST_F(it_slice_type, type_clone_cross_scope) {
   scope_t prev = vm_set_scope(vm, inner);
   scope_t prev_root = vm_set_root_scope(vm, inner);
 
-  /* type_clone into inner scope */
-  type_t inner_type = value_type_clone(vm, (type_t)outer_st);
+  /* types are global singletons (vm->types) — same pointer, not cloned */
+  type_t inner_type = (type_t)outer_st;
   slice_type_t inner_st = (slice_type_t)inner_type;
-  EXPECT_NE(inner_type, (type_t)outer_st);
+  EXPECT_EQ(inner_type, (type_t)outer_st);
   EXPECT_EQ(type_get_kind(inner_type), TYPE_KIND_SLICE);
   EXPECT_EQ(type_get_kind(slice_type_get_element_type(inner_st)), TYPE_KIND_I32);
-
-  /* inner scope owns the cloned type */
-  EXPECT_GT(vec_get_size(inner->types), 0u);
 
   vm_set_scope(vm, prev);
   vm_set_root_scope(vm, prev_root);
@@ -545,7 +542,7 @@ TEST_F(it_slice_type, vm_create_slice_type_value_registers_in_scope) {
   type_t i32t = _get_i32_type(vm);
 
   scope_t scope = vm_get_current_scope(vm);
-  size_t types_before = vec_get_size(scope->types);
+  size_t types_before = vec_get_size(vm_get_types(vm));
 
   value_t tv = vm_create_slice_type_value(vm, i32t, true);
   EXPECT_NE(tv, nullptr);
@@ -554,8 +551,8 @@ TEST_F(it_slice_type, vm_create_slice_type_value_registers_in_scope) {
   slice_type_t st = (slice_type_t)value_get_data(tv);
   EXPECT_EQ(type_get_kind((type_t)st), TYPE_KIND_SLICE);
 
-  /* registered in scope->types */
-  EXPECT_EQ(vec_get_size(scope->types), types_before + 1);
+  /* registered in vm->types */
+  EXPECT_EQ(vec_get_size(vm_get_types(vm)), types_before + 1);
 
   vm_dispose(vm, allocator);
 }

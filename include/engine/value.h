@@ -50,12 +50,6 @@ value_t value_equal(struct _vm_t *vm, value_t a, value_t b);
 value_t value_clone(struct _vm_t *vm, value_t self);
 
 /**
- * @brief Clone a type into vm's current scope via alloc_clone.
- *  Uses the type's class_t.clone to deep-copy, then registers in scope->types.
- * @return cloned type_t registered in current scope. */
-type_t value_type_clone(struct _vm_t *vm, type_t self);
-
-/**
  * @brief Dereference: delegates to type->vtable.deref_get.
  *  Reads the value pointed to by a pointer/reference.
  * @return pointed-to value, or error if vtable.deref_get is NULL. */

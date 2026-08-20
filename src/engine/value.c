@@ -112,14 +112,6 @@ value_t value_clone(vm_t vm, value_t self) {
   return vt.clone(vm, self);
 }
 
-type_t value_type_clone(vm_t vm, type_t self) {
-  allocator_t alloc = vm_get_allocator(vm);
-  type_t cloned = (type_t)alloc_clone(alloc, self);
-  scope_t scope = vm_get_current_scope(vm);
-  if (scope) vec_push(scope->types, cloned);
-  return cloned;
-}
-
 value_t value_deref_get(vm_t vm, value_t self) {
   vtable_t vt = type_get_vtable(value_get_type(self));
   if (!vt.deref_get)

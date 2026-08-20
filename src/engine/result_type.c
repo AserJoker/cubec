@@ -159,7 +159,6 @@ value_t vm_create_result_type_value(vm_t vm, type_t T, type_t E) {
   value_t seal_err = vm_union_seal(vm, type_val);
   if (value_is_abnormal(seal_err)) {
     vm_pop_scope(vm);
-    scope_dispose(bootstrap_scope);
     return seal_err;
   }
 
@@ -170,7 +169,7 @@ value_t vm_create_result_type_value(vm_t vm, type_t T, type_t E) {
 
   /* *const result[T,E] type — used as self parameter for instance methods */
   pointer_type_t const_result_ptr = pointer_type_create(alloc, (type_t)ut, false, false);
-  vec_push(bootstrap_scope->types, const_result_ptr);
+  vec_push(vm_get_types(vm), const_result_ptr);
 
   type_t bool_t = (type_t)value_get_data(vm_get_bool_type(vm));
 
@@ -182,7 +181,7 @@ value_t vm_create_result_type_value(vm_t vm, type_t T, type_t E) {
     callable_type_t ct = callable_type_create(alloc, params, bool_t, false, true,
                                                module_id);
     allocator_free(alloc, &params);
-    vec_push(bootstrap_scope->types, ct);
+    vec_push(vm_get_types(vm), ct);
     value_t fn = create_callable_value(vm, ct, _result_ok, "ok");
     (void)vm_union_add_prop(vm, type_val, "ok", fn, true, true);
   }
@@ -195,7 +194,7 @@ value_t vm_create_result_type_value(vm_t vm, type_t T, type_t E) {
     callable_type_t ct = callable_type_create(alloc, params, T, false, true,
                                                module_id);
     allocator_free(alloc, &params);
-    vec_push(bootstrap_scope->types, ct);
+    vec_push(vm_get_types(vm), ct);
     value_t fn = create_callable_value(vm, ct, _result_value, "value");
     (void)vm_union_add_prop(vm, type_val, "value", fn, true, true);
   }
@@ -208,7 +207,7 @@ value_t vm_create_result_type_value(vm_t vm, type_t T, type_t E) {
     callable_type_t ct = callable_type_create(alloc, params, E, false, true,
                                                module_id);
     allocator_free(alloc, &params);
-    vec_push(bootstrap_scope->types, ct);
+    vec_push(vm_get_types(vm), ct);
     value_t fn = create_callable_value(vm, ct, _result_error, "error");
     (void)vm_union_add_prop(vm, type_val, "error", fn, true, true);
   }
@@ -221,7 +220,7 @@ value_t vm_create_result_type_value(vm_t vm, type_t T, type_t E) {
     callable_type_t ct = callable_type_create(alloc, params, (type_t)ut, false, true,
                                                module_id);
     allocator_free(alloc, &params);
-    vec_push(bootstrap_scope->types, ct);
+    vec_push(vm_get_types(vm), ct);
     value_t fn = create_callable_value(vm, ct, _result_of_value, "of_value");
     (void)vm_union_add_prop(vm, type_val, "of_value", fn, false, true);
   }
@@ -234,7 +233,7 @@ value_t vm_create_result_type_value(vm_t vm, type_t T, type_t E) {
     callable_type_t ct = callable_type_create(alloc, params, (type_t)ut, false, true,
                                                module_id);
     allocator_free(alloc, &params);
-    vec_push(bootstrap_scope->types, ct);
+    vec_push(vm_get_types(vm), ct);
     value_t fn = create_callable_value(vm, ct, _result_of_error, "of_error");
     (void)vm_union_add_prop(vm, type_val, "of_error", fn, false, true);
   }
@@ -242,7 +241,6 @@ value_t vm_create_result_type_value(vm_t vm, type_t T, type_t E) {
   /* Pop and dispose bootstrap scope — void values and original callable values
    * are freed, but union's props hold clones (owned by union's scope). */
   vm_pop_scope(vm);
-  scope_dispose(bootstrap_scope);
 
   return type_val;
 }

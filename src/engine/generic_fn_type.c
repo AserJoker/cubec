@@ -25,12 +25,47 @@ typedef struct generic_fn_type_init_t {
 
 static value_t _generic_fn_instantiate(vm_t vm, value_t self, size_t argc, value_t *argv);
 
+static type_t _generic_fn_type_type_clone(vm_t vm, type_t self) {
+  generic_fn_type_t src = (generic_fn_type_t)self;
+  allocator_t allocator = vm_get_allocator(vm);
+  generic_fn_type_t dst = (generic_fn_type_t)allocator_create(allocator, &g_generic_fn_type_class, NULL);
+
+  dst->base.kind   = src->base.kind;
+  dst->base.name   = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
+  dst->base.size   = src->base.size;
+  dst->base.align  = src->base.align;
+  dst->base.mut    = src->base.mut;
+  dst->base.vtable = src->base.vtable;
+
+  /* clone params (each generic_param_t alloc_clone'd — owned class objects) */
+  vec_init_t vi = {.auto_dispose = true};
+  dst->params = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+  size_t n = vec_get_size(src->params);
+  for (size_t i = 0; i < n; i++) {
+    generic_param_t p = (generic_param_t)vec_get(src->params, i);
+    generic_param_t cloned = (generic_param_t)alloc_clone(allocator, p);
+    vec_push(dst->params, cloned);
+  }
+
+  /* instances: start empty (cache is not cloned) */
+  dst->instances = (vec_t)allocator_create(allocator, &g_vec_class, &vi);
+
+  /* clone isolated scope */
+  dst->scope = scope_create(allocator, SCOPE_TYPE, NULL, NULL);
+
+  /* node: borrowed, shallow copy */
+  dst->node = src->node;
+
+  vec_push(vm_get_types(vm), dst);
+  return (type_t)dst;
+}
+
 /* ---- Shared vtable factory ---- */
 
 static vtable_t _make_generic_fn_vtable(void) {
   return (vtable_t){
       .instantiate = _generic_fn_instantiate,
-      /* all other entries NULL — compile-time only type */
+      .type_clone  = _generic_fn_type_type_clone,
   };
 }
 
@@ -129,7 +164,7 @@ class_t g_generic_fn_type_class = {
     .name    = "cubec.engine.generic_fn_type",
     .init    = (class_init_fn_t)_generic_fn_type_init,
     .dispose = (class_dispose_fn_t)_generic_fn_type_dispose,
-    .clone   = (class_clone_fn_t)_generic_fn_type_clone,
+    .clone   = NULL, /* types are global singletons — use vtable.type_clone instead */
     .move    = NULL,
 };
 

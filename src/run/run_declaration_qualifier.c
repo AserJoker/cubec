@@ -20,21 +20,15 @@ value_t run_declaration_qualifier(vm_t vm, node_t node, bool shadow) {
                                   type_get_name(value_get_type(inner_type_val)));
   type_t inner_type = (type_t)value_get_data(inner_type_val);
 
-  /* const qualifier: clone the type and set mut=false */
+  /* const qualifier: create a const variant (mut=false) */
   if (qual->is_const) {
     if (!type_is_mut(inner_type))
       return inner_type_val; /* already const — return as-is */
 
-    allocator_t allocator = vm_get_allocator(vm);
-    type_t const_type = (type_t)alloc_clone(allocator, inner_type);
-    type_set_mut(const_type, false);
-
-    /* register in scope->types so it's disposed with the scope */
-    scope_t scope = vm_get_current_scope(vm);
-    vec_push(scope->types, const_type);
+    type_t const_type = type_create_with_mut(vm, inner_type, false);
 
     /* create a type value wrapping the const type.
-     * Use vm_create_value_ref: data is the cloned type_t (ref, not copied). */
+     * Use vm_create_value_ref: data is the type_t (ref, not copied). */
     type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
     return vm_create_value_ref(vm, type_type, const_type, NULL);
   }

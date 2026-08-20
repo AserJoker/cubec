@@ -93,18 +93,19 @@ TEST_F(it_ast_func, create_ast_func_value) {
   EXPECT_FALSE(value_is_own(afv)); /* borrowed ref */
   EXPECT_TRUE(value_is_initialized(afv));
 
-  /* ast_func_t registered in current scope's cfuncs */
-  scope_t scope = vm_get_current_scope(vm);
-  EXPECT_GE(vec_get_size(scope->cfuncs), 1u);
+  /* ast_func_t registered in vm's global cfuncs */
+  EXPECT_GE(vec_get_size(vm_get_cfuncs(vm)), 1u);
 
   /* Verify ast_func internals */
   ast_func_t af = (ast_func_t)value_get_data(afv);
   EXPECT_EQ(af->base.func, _ast_func_call);
   EXPECT_STREQ(af->base.name, "test_func");
-  EXPECT_EQ(af->base.closure_scope, nullptr);
+  EXPECT_NE(af->base.closure_scope, nullptr); /* always created */
+  EXPECT_EQ(func_get_closure_scope((func_t)af)->parent, nullptr); /* isolated */
   EXPECT_NE(af->base.root_scope, nullptr);
   EXPECT_EQ(af->node, nullptr);
-  EXPECT_EQ(af->template_scope, nullptr);
+  EXPECT_NE(af->template_scope, nullptr); /* always created */
+  EXPECT_EQ(af->template_scope->parent, af->base.closure_scope); /* child of closure */
 
   vm_dispose(vm, allocator);
 }
@@ -126,6 +127,8 @@ TEST_F(it_ast_func, create_with_template_scope) {
   value_t afv = create_ast_func_value(vm, ct, "generic_fn", NULL, tpl_scope);
   ast_func_t af = (ast_func_t)value_get_data(afv);
   EXPECT_EQ(ast_func_get_template_scope(af), tpl_scope);
+  /* Re-parented: template_scope->parent = closure */
+  EXPECT_EQ(tpl_scope->parent, func_get_closure_scope((func_t)af));
 
   vm_dispose(vm, allocator);
 }
@@ -149,11 +152,14 @@ TEST_F(it_ast_func, ast_func_class_init) {
   EXPECT_EQ(af->base.func, _ast_func_call);
   EXPECT_STREQ(af->base.name, "my_func");
   EXPECT_EQ(af->base.root_scope, vm_get_root_scope(vm));
-  EXPECT_EQ(af->base.closure_scope, nullptr);
+  EXPECT_NE(af->base.closure_scope, nullptr); /* always created */
+  EXPECT_EQ(func_get_closure_scope((func_t)af)->parent, nullptr); /* isolated */
 
   /* ast_func fields */
   EXPECT_EQ(ast_func_get_node(af), nullptr);
-  EXPECT_EQ(ast_func_get_template_scope(af), nullptr);
+  EXPECT_NE(ast_func_get_template_scope(af), nullptr); /* always created */
+  EXPECT_EQ(ast_func_get_template_scope(af)->parent,
+            func_get_closure_scope((func_t)af)); /* child of closure */
 
   vm_dispose(vm, allocator);
 }
@@ -234,7 +240,10 @@ TEST_F(it_ast_func, dispose_cleans_closure_scope) {
   callable_capture(vm, afv, "captured");
 
   ast_func_t af = (ast_func_t)value_get_data(afv);
-  EXPECT_NE(af->base.closure_scope, nullptr);
+  EXPECT_NE(af->base.closure_scope, nullptr); /* always created */
+  /* After capture, closure scope should have the captured binding */
+  name_t captured_name = scope_lookup(af->base.closure_scope, "captured");
+  EXPECT_NE(captured_name, nullptr);
 
   /* vm_dispose should clean up the closure scope */
   vm_dispose(vm, allocator);
@@ -270,9 +279,18 @@ TEST_F(it_ast_func, clone_has_no_closure_nor_template) {
   EXPECT_EQ(orig_af->base.func, clone_af->base.func);
   EXPECT_STREQ(orig_af->base.name, clone_af->base.name);
 
-  /* No closure, no template scope in clone */
-  EXPECT_EQ(func_get_closure_scope((func_t)clone_af), nullptr);
-  EXPECT_EQ(ast_func_get_template_scope(clone_af), nullptr);
+  /* Clone gets a new isolated closure_scope (closures are unique per instance) */
+  EXPECT_NE(func_get_closure_scope((func_t)clone_af), nullptr);
+  EXPECT_NE(func_get_closure_scope((func_t)clone_af),
+            func_get_closure_scope((func_t)orig_af));
+  EXPECT_EQ(func_get_closure_scope((func_t)clone_af)->parent, nullptr);
+
+  /* template_scope IS cloned (always exists, child of clone's closure) */
+  EXPECT_NE(ast_func_get_template_scope(clone_af), nullptr);
+  EXPECT_NE(ast_func_get_template_scope(clone_af),
+            ast_func_get_template_scope(orig_af));
+  EXPECT_EQ(ast_func_get_template_scope(clone_af)->parent,
+            func_get_closure_scope((func_t)clone_af)); /* child of clone's closure */
 
   vm_dispose(vm, allocator);
 }

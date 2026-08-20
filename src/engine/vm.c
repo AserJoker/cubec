@@ -99,6 +99,9 @@ struct _vm_t {
                                generic params */
   value_t v_error;          /* borrowed: user-facing error struct type value */
   strmap_t builtin_templates; /* name → create_instance_fn_t (borrowed fn ptrs) */
+  vec_t cfuncs;               /* global func_t/ast_func_t table (auto-dispose) */
+  vec_t strings;              /* global string_t table (auto-dispose) */
+  vec_t types;                /* global type_t table (auto-dispose) */
   const char
       *current_module_id; /* borrowed: current module path or "<builtin>" */
   vec_t call_stack;       /* vec of call_frame_t (auto_dispose=true, owned
@@ -124,6 +127,15 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   vm->builtin_templates =
       (strmap_t)allocator_create(allocator, &g_strmap_class, &sm_bt);
 
+  vec_init_t cfunc_init = {.auto_dispose = true};
+  vm->cfuncs = (vec_t)allocator_create(allocator, &g_vec_class, &cfunc_init);
+
+  vec_init_t str_init = {.auto_dispose = true};
+  vm->strings = (vec_t)allocator_create(allocator, &g_vec_class, &str_init);
+
+  vec_init_t type_init = {.auto_dispose = true};
+  vm->types = (vec_t)allocator_create(allocator, &g_vec_class, &type_init);
+
   vm->global_scope = scope_create(allocator, SCOPE_GLOBAL, NULL, NULL);
   vm->root_scope = scope_create(allocator, SCOPE_BLOCK, vm->global_scope, NULL);
   /* current_scope starts at global_scope so builtin values are registered
@@ -138,158 +150,158 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   /* v_type must be created first — create_type_value depends on it.
    * Cannot use create_type_value for v_type itself (circular dependency). */
   type_t type_type = type_get_type_type(allocator);
-  vec_push(vm->global_scope->types, type_type);
+  vec_push(vm->types, type_type);
   vm->v_type = value_create(allocator, type_type, type_type, false);
   vec_push(vm->global_scope->values, vm->v_type);
   name_t n_type = name_create(vm->global_scope->allocator, vm->v_type);
   strmap_insert(vm->global_scope->names, "type", n_type);
 
   /* Subsequent builtin types use create_type_value.
-   * Each type is heap-allocated and registered in global_scope->types
+   * Each type is heap-allocated and registered in vm->types
    * so scope dispose auto-frees them. value.data = type (ref, own=false). */
   type_t exception_type = type_get_exception_type(allocator);
-  vec_push(vm->global_scope->types, exception_type);
+  vec_push(vm->types, exception_type);
   vm->v_exception = create_type_value(vm, exception_type, NULL, false);
 
   type_t interrupt_type = type_get_interrupt_type(allocator);
-  vec_push(vm->global_scope->types, interrupt_type);
+  vec_push(vm->types, interrupt_type);
   vm->v_interrupt = create_type_value(vm, interrupt_type, NULL, false);
 
   type_t bool_type = type_get_bool_type(allocator);
-  vec_push(vm->global_scope->types, bool_type);
+  vec_push(vm->types, bool_type);
   vm->v_bool = create_type_value(vm, bool_type, "bool", false);
 
   type_t wildcard_type = type_get_wildcard_type(allocator);
-  vec_push(vm->global_scope->types, wildcard_type);
+  vec_push(vm->types, wildcard_type);
   vm->v_wildcard = create_type_value(vm, wildcard_type, NULL, false);
 
-  type_t const_wildcard_type = (type_t)alloc_clone(allocator, wildcard_type);
+  type_t const_wildcard_type = type_get_wildcard_type(allocator);
   type_set_mut(const_wildcard_type, false);
-  vec_push(vm->global_scope->types, const_wildcard_type);
+  vec_push(vm->types, const_wildcard_type);
   vm->v_const_wildcard =
       create_type_value(vm, const_wildcard_type, "const ?", false);
 
   type_t void_type = type_get_void_type(allocator);
-  vec_push(vm->global_scope->types, void_type);
+  vec_push(vm->types, void_type);
   vm->v_void = create_type_value(vm, void_type, "void", false);
 
   type_t nil_type = type_get_nil_type(allocator);
-  vec_push(vm->global_scope->types, nil_type);
+  vec_push(vm->types, nil_type);
   vm->v_nil = create_type_value(vm, nil_type, "nil", false);
 
   type_t opaque_type = type_get_opaque_type(allocator);
-  vec_push(vm->global_scope->types, opaque_type);
+  vec_push(vm->types, opaque_type);
   vm->v_opaque = create_type_value(vm, opaque_type, "opaque", false);
 
   type_t const_bool_type = type_get_const_bool_type(allocator);
-  vec_push(vm->global_scope->types, const_bool_type);
+  vec_push(vm->types, const_bool_type);
   vm->v_const_bool =
       create_type_value(vm, const_bool_type, "const bool", false);
 
   /* Integer types */
   type_t i8_type = type_get_i8_type(allocator);
-  vec_push(vm->global_scope->types, i8_type);
+  vec_push(vm->types, i8_type);
   vm->v_i8 = create_type_value(vm, i8_type, "i8", false);
 
   type_t i16_type = type_get_i16_type(allocator);
-  vec_push(vm->global_scope->types, i16_type);
+  vec_push(vm->types, i16_type);
   vm->v_i16 = create_type_value(vm, i16_type, "i16", false);
 
   type_t i32_type = type_get_i32_type(allocator);
-  vec_push(vm->global_scope->types, i32_type);
+  vec_push(vm->types, i32_type);
   vm->v_i32 = create_type_value(vm, i32_type, "i32", false);
 
   type_t i64_type = type_get_i64_type(allocator);
-  vec_push(vm->global_scope->types, i64_type);
+  vec_push(vm->types, i64_type);
   vm->v_i64 = create_type_value(vm, i64_type, "i64", false);
 
   type_t const_i8_type = type_get_const_i8_type(allocator);
-  vec_push(vm->global_scope->types, const_i8_type);
+  vec_push(vm->types, const_i8_type);
   vm->v_const_i8 = create_type_value(vm, const_i8_type, "const i8", false);
 
   type_t const_i16_type = type_get_const_i16_type(allocator);
-  vec_push(vm->global_scope->types, const_i16_type);
+  vec_push(vm->types, const_i16_type);
   vm->v_const_i16 = create_type_value(vm, const_i16_type, "const i16", false);
 
   type_t const_i32_type = type_get_const_i32_type(allocator);
-  vec_push(vm->global_scope->types, const_i32_type);
+  vec_push(vm->types, const_i32_type);
   vm->v_const_i32 = create_type_value(vm, const_i32_type, "const i32", false);
 
   type_t const_i64_type = type_get_const_i64_type(allocator);
-  vec_push(vm->global_scope->types, const_i64_type);
+  vec_push(vm->types, const_i64_type);
   vm->v_const_i64 = create_type_value(vm, const_i64_type, "const i64", false);
 
   /* Unsigned integer types */
   type_t u8_type = type_get_u8_type(allocator);
-  vec_push(vm->global_scope->types, u8_type);
+  vec_push(vm->types, u8_type);
   vm->v_u8 = create_type_value(vm, u8_type, "u8", false);
 
   type_t u16_type = type_get_u16_type(allocator);
-  vec_push(vm->global_scope->types, u16_type);
+  vec_push(vm->types, u16_type);
   vm->v_u16 = create_type_value(vm, u16_type, "u16", false);
 
   type_t u32_type = type_get_u32_type(allocator);
-  vec_push(vm->global_scope->types, u32_type);
+  vec_push(vm->types, u32_type);
   vm->v_u32 = create_type_value(vm, u32_type, "u32", false);
 
   type_t u64_type = type_get_u64_type(allocator);
-  vec_push(vm->global_scope->types, u64_type);
+  vec_push(vm->types, u64_type);
   vm->v_u64 = create_type_value(vm, u64_type, "u64", false);
 
   type_t const_u8_type = type_get_const_u8_type(allocator);
-  vec_push(vm->global_scope->types, const_u8_type);
+  vec_push(vm->types, const_u8_type);
   vm->v_const_u8 = create_type_value(vm, const_u8_type, "const u8", false);
 
   type_t const_u16_type = type_get_const_u16_type(allocator);
-  vec_push(vm->global_scope->types, const_u16_type);
+  vec_push(vm->types, const_u16_type);
   vm->v_const_u16 = create_type_value(vm, const_u16_type, "const u16", false);
 
   type_t const_u32_type = type_get_const_u32_type(allocator);
-  vec_push(vm->global_scope->types, const_u32_type);
+  vec_push(vm->types, const_u32_type);
   vm->v_const_u32 = create_type_value(vm, const_u32_type, "const u32", false);
 
   type_t const_u64_type = type_get_const_u64_type(allocator);
-  vec_push(vm->global_scope->types, const_u64_type);
+  vec_push(vm->types, const_u64_type);
   vm->v_const_u64 = create_type_value(vm, const_u64_type, "const u64", false);
 
   /* Float types */
   type_t f16_type = type_get_f16_type(allocator);
-  vec_push(vm->global_scope->types, f16_type);
+  vec_push(vm->types, f16_type);
   vm->v_f16 = create_type_value(vm, f16_type, "f16", false);
 
   type_t f32_type = type_get_f32_type(allocator);
-  vec_push(vm->global_scope->types, f32_type);
+  vec_push(vm->types, f32_type);
   vm->v_f32 = create_type_value(vm, f32_type, "f32", false);
 
   type_t f64_type = type_get_f64_type(allocator);
-  vec_push(vm->global_scope->types, f64_type);
+  vec_push(vm->types, f64_type);
   vm->v_f64 = create_type_value(vm, f64_type, "f64", false);
 
   type_t const_f16_type = type_get_const_f16_type(allocator);
-  vec_push(vm->global_scope->types, const_f16_type);
+  vec_push(vm->types, const_f16_type);
   vm->v_const_f16 = create_type_value(vm, const_f16_type, "const f16", false);
 
   type_t const_f32_type = type_get_const_f32_type(allocator);
-  vec_push(vm->global_scope->types, const_f32_type);
+  vec_push(vm->types, const_f32_type);
   vm->v_const_f32 = create_type_value(vm, const_f32_type, "const f32", false);
 
   type_t const_f64_type = type_get_const_f64_type(allocator);
-  vec_push(vm->global_scope->types, const_f64_type);
+  vec_push(vm->types, const_f64_type);
   vm->v_const_f64 = create_type_value(vm, const_f64_type, "const f64", false);
 
   /* Str type */
   type_t str_type = type_get_str_type(allocator);
-  vec_push(vm->global_scope->types, str_type);
+  vec_push(vm->types, str_type);
   vm->v_str = create_type_value(vm, str_type, "str", false);
 
   type_t const_str_type = type_get_const_str_type(allocator);
-  vec_push(vm->global_scope->types, const_str_type);
+  vec_push(vm->types, const_str_type);
   vm->v_const_str = create_type_value(vm, const_str_type, "const str", false);
 
   /* Wildcard tuple type <?> — extends placeholder for any tuple */
   type_t wildcard_tuple_type = type_create(allocator, TYPE_KIND_TUPLE, "<?>", 0,
                                            0, false, (vtable_t){0});
-  vec_push(vm->global_scope->types, wildcard_tuple_type);
+  vec_push(vm->types, wildcard_tuple_type);
   vm->v_wildcard_tuple =
       create_type_value(vm, wildcard_tuple_type, NULL, false);
 
@@ -317,12 +329,12 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   type_t err_u8_type = (type_t)value_get_data(vm->v_u8);
   type_t msg_array_type =
       (type_t)array_type_create(allocator, err_u8_type, 128, true);
+  vec_push(vm->types, msg_array_type); /* register in vm->types for lifecycle */
   {
     value_t tmp = value_create(allocator, type_type_val, msg_array_type, false);
     vm_struct_add_field(vm, error_tv, "message", tmp, true);
     allocator_free(allocator, &tmp);
   }
-  allocator_free(allocator, &msg_array_type);
 
   /* error_code: u64 */
   type_t err_u64_type = (type_t)value_get_data(vm->v_u64);
@@ -335,12 +347,12 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   /* backtrace: [32]u64 */
   type_t bt_array_type =
       (type_t)array_type_create(allocator, err_u64_type, 32, true);
+  vec_push(vm->types, bt_array_type); /* register in vm->types for lifecycle */
   {
     value_t tmp = value_create(allocator, type_type_val, bt_array_type, false);
     vm_struct_add_field(vm, error_tv, "backtrace", tmp, true);
     allocator_free(allocator, &tmp);
   }
-  allocator_free(allocator, &bt_array_type);
 
   /* backtrace_count: u64 */
   {
@@ -352,7 +364,6 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
   vm_struct_seal(vm, error_tv);
 
   vm_pop_scope(vm);
-  scope_dispose(bootstrap_scope);
 
   /* Register "error" name in global scope so scope_lookup("error") works */
   scope_t gscope = vm_get_global_scope(vm);
@@ -374,7 +385,7 @@ static void _vm_init(void *self, allocator_t allocator, void *arg) {
     callable_type_t panic_ct = callable_type_create(
         allocator, panic_params, void_t, false, true, "<builtin>");
     allocator_free(allocator, &panic_params);
-    vec_push(vm->global_scope->types, panic_ct);
+    vec_push(vm->types, panic_ct);
     value_t panic_val =
         create_callable_value(vm, panic_ct, _builtin_panic, "panic");
     strmap_insert(vm->builtins, "panic", panic_val);
@@ -395,6 +406,9 @@ static void _vm_dispose(void *self, allocator_t allocator) {
   vm_t vm = (vm_t)self;
   (void)allocator;
   allocator_free(vm->allocator, &vm->call_stack);
+  allocator_free(vm->allocator, &vm->cfuncs);
+  allocator_free(vm->allocator, &vm->strings);
+  allocator_free(vm->allocator, &vm->types);
   allocator_free(vm->allocator, &vm->builtins);
   allocator_free(vm->allocator, &vm->builtin_templates);
   allocator_free(vm->allocator, &vm->modules);
@@ -504,6 +518,10 @@ void vm_register_builtin_template(vm_t self, const char *name, create_instance_f
 create_instance_fn_t vm_get_builtin_template(vm_t self, const char *name) {
   return (create_instance_fn_t)strmap_find(self->builtin_templates, name);
 }
+
+vec_t vm_get_cfuncs(vm_t self) { return self->cfuncs; }
+vec_t vm_get_strings(vm_t self) { return self->strings; }
+vec_t vm_get_types(vm_t self) { return self->types; }
 
 /* ---- File I/O ---- */
 
@@ -658,7 +676,9 @@ void vm_push_scope(vm_t self, scope_t scope) {
 void vm_pop_scope(vm_t self) {
   if (!self || !self->current_scope)
     return;
-  self->current_scope = self->current_scope->parent;
+  scope_t popped = self->current_scope;
+  self->current_scope = popped->parent;
+  scope_dispose(popped);
 }
 
 scope_t vm_set_scope(vm_t self, scope_t scope) {
@@ -806,19 +826,17 @@ value_t vm_create_array_type_value(vm_t self, type_t element_type,
       array_type_create(self->allocator, element_type, count, mut);
   if (!at)
     return create_exception_value(self, "zero-length array is not valid");
-  /* register array_type_t in scope->types for auto-dispose */
-  if (self->current_scope)
-    vec_push(self->current_scope->types, at);
-  /* wrap as a type value — own=false because scope->types owns the type_t */
+  /* register array_type_t in vm->types for auto-dispose */
+  vec_push(vm_get_types(self), at);
+  /* wrap as a type value — own=false because vm->types owns the type_t */
   return create_type_value(self, (type_t)at, NULL, false);
 }
 
 value_t vm_create_slice_type_value(vm_t self, type_t element_type, bool mut) {
   slice_type_t st = slice_type_create(self->allocator, element_type, mut);
-  /* register slice_type_t in scope->types for auto-dispose */
-  if (self->current_scope)
-    vec_push(self->current_scope->types, st);
-  /* wrap as a type value — own=false because scope->types owns the type_t */
+  /* register slice_type_t in vm->types for auto-dispose */
+  vec_push(vm_get_types(self), st);
+  /* wrap as a type value — own=false because vm->types owns the type_t */
   return create_type_value(self, (type_t)st, NULL, false);
 }
 
@@ -826,10 +844,9 @@ value_t vm_create_tuple_type_value(vm_t self, vec_t element_types, bool mut) {
   tuple_type_t tt = tuple_type_create(self->allocator, element_types, mut);
   if (!tt)
     return create_exception_value(self, "zero-field tuple is not valid");
-  /* register tuple_type_t in scope->types for auto-dispose */
-  if (self->current_scope)
-    vec_push(self->current_scope->types, tt);
-  /* wrap as a type value — own=false because scope->types owns the type_t */
+  /* register tuple_type_t in vm->types for auto-dispose */
+  vec_push(vm_get_types(self), tt);
+  /* wrap as a type value — own=false because vm->types owns the type_t */
   return create_type_value(self, (type_t)tt, NULL, false);
 }
 
@@ -838,8 +855,7 @@ value_t vm_create_callable_type_value(vm_t self, vec_t param_types,
                                       bool mut, const char *module_id) {
   callable_type_t ct = callable_type_create(
       self->allocator, param_types, return_type, is_variadic, mut, module_id);
-  if (self->current_scope)
-    vec_push(self->current_scope->types, ct);
+  vec_push(vm_get_types(self), ct);
   return create_type_value(self, (type_t)ct, NULL, false);
 }
 
@@ -847,7 +863,6 @@ value_t vm_create_pointer_type_value(vm_t self, type_t pointee_type, bool mut,
                                      bool is_volatile) {
   pointer_type_t pt =
       pointer_type_create(self->allocator, pointee_type, mut, is_volatile);
-  if (self->current_scope)
-    vec_push(self->current_scope->types, pt);
+  vec_push(vm_get_types(self), pt);
   return create_type_value(self, (type_t)pt, NULL, false);
 }

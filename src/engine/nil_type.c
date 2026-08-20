@@ -80,7 +80,7 @@ static value_t _nil_safe_cast(vm_t vm, value_t self, type_t to) {
   if (to->kind == TYPE_KIND_POINTER) {
     if (value_is_shadow(self))
       return vm_create_value_shadow(vm, to, NULL, true);
-    type_t cloned_type = value_type_clone(vm, to);
+    type_t cloned_type = to;
     pointer_type_t dst_pt = (pointer_type_t)cloned_type;
     return create_pointer_value_from_addr(vm, dst_pt, NULL);
   }

@@ -32,6 +32,22 @@ static value_t _pointer_member_call(vm_t vm, value_t self, const char *name,
                                      size_t argc, value_t *argv);
 static value_t _pointer_is_instance(vm_t vm, value_t self, type_t type);
 
+static type_t _pointer_type_clone(vm_t vm, type_t self) {
+  pointer_type_t src = (pointer_type_t)self;
+  allocator_t allocator = vm_get_allocator(vm);
+  pointer_type_t dst = (pointer_type_t)allocator_create(allocator, &g_pointer_type_class, NULL);
+  dst->base.kind    = src->base.kind;
+  dst->base.name    = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
+  dst->base.size    = src->base.size;
+  dst->base.align   = src->base.align;
+  dst->base.mut     = src->base.mut;
+  dst->base.vtable  = src->base.vtable;
+  dst->pointee_type = src->pointee_type; /* borrowed from vm->types */
+  dst->is_volatile  = src->is_volatile;
+  vec_push(vm_get_types(vm), dst);
+  return (type_t)dst;
+}
+
 static vtable_t _make_pointer_vtable(void) {
   return (vtable_t){
       .clone        = _pointer_clone,
@@ -71,6 +87,7 @@ static vtable_t _make_pointer_vtable(void) {
       .set_prop     = NULL,
       .is_instance  = _pointer_is_instance,
       .get_field_raw= _pointer_get_field_raw,
+      .type_clone   = _pointer_type_clone,
   };
 }
 
@@ -87,13 +104,14 @@ static void _pointer_type_init(void *self, allocator_t allocator, void *arg) {
   pt->base.mut     = init->mut;
   pt->base.vtable  = init->vtable;
 
-  pt->pointee_type = (type_t)alloc_clone(allocator, init->pointee_type);
+  pt->pointee_type = init->pointee_type; /* borrowed: types managed by vm->types */
   pt->is_volatile  = init->is_volatile;
 }
 
 static void _pointer_type_dispose(void *self, allocator_t allocator) {
   pointer_type_t pt = (pointer_type_t)self;
-  allocator_free(allocator, &pt->pointee_type);
+  /* pointee_type is borrowed from vm->types — do not free */
+  pt->pointee_type = NULL;
   if (pt->base.name) {
     void *p = pt->base.name;
     allocator_free(allocator, &p);
@@ -101,27 +119,12 @@ static void _pointer_type_dispose(void *self, allocator_t allocator) {
   }
 }
 
-static void _pointer_type_clone(void *self, allocator_t allocator, void *another) {
-  pointer_type_t dst = (pointer_type_t)self;
-  pointer_type_t src = (pointer_type_t)another;
-
-  dst->base.kind    = src->base.kind;
-  dst->base.name    = src->base.name ? cstring_clone(allocator, src->base.name) : NULL;
-  dst->base.size    = src->base.size;
-  dst->base.align   = src->base.align;
-  dst->base.mut     = src->base.mut;
-  dst->base.vtable  = src->base.vtable;
-
-  dst->pointee_type = (type_t)alloc_clone(allocator, src->pointee_type);
-  dst->is_volatile  = src->is_volatile;
-}
-
 class_t g_pointer_type_class = {
     .size    = sizeof(struct _pointer_type_t),
     .name    = "cubec.engine.pointer_type",
     .init    = (class_init_fn_t)_pointer_type_init,
     .dispose = (class_dispose_fn_t)_pointer_type_dispose,
-    .clone   = (class_clone_fn_t)_pointer_type_clone,
+    .clone   = NULL, /* types are global singletons — alloc_clone aborts */
     .move    = NULL,
 };
 
@@ -227,8 +230,7 @@ value_t value_addrof(vm_t vm, value_t target) {
   /* pointer is always mutable by default — const pointer requires explicit type annotation */
   pointer_type_t pt = pointer_type_create(alloc, value_get_type(target),
                                            true, false);
-  scope_t scope = vm_get_current_scope(vm);
-  if (scope) vec_push(scope->types, pt);
+  vec_push(vm_get_types(vm), pt);
 
   /* shadow target → shadow pointer (compile-time type-only) */
   if (value_is_shadow(target))
@@ -244,7 +246,7 @@ static value_t _pointer_clone(vm_t vm, value_t self) {
   if (value_is_shadow(self))
     return create_pointer_shadow(vm, pt, value_is_initialized(self));
 
-  type_t cloned_type = value_type_clone(vm, (type_t)pt);
+  type_t cloned_type = (type_t)pt;
   pointer_type_t dst_pt = (pointer_type_t)cloned_type;
 
   void **src_data = (void **)value_get_data(self);
@@ -462,7 +464,7 @@ static value_t _pointer_safe_cast(vm_t vm, value_t self, type_t to) {
 
   void **src_data = (void **)value_get_data(self);
   /* clone pointer type into current scope */
-  type_t cloned_type = value_type_clone(vm, to);
+  type_t cloned_type = to;
   pointer_type_t dst_pt = (pointer_type_t)cloned_type;
   return create_pointer_value_from_addr(vm, dst_pt, *src_data);
 }

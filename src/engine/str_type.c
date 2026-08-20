@@ -25,9 +25,9 @@ static value_t _str_value_create(vm_t vm, const char *val) {
   *data = (string_t)allocator_create(alloc, &g_string_class, &si);
   type_t t = (type_t)value_get_data(vm_get_str_type(vm));
   value_t v = value_create(alloc, t, data, true);
+  vec_push(vm_get_strings(vm), *data);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) {
-    vec_push(scope->strings, *data);
     vec_push(scope->values, v);
   }
   return v;
@@ -40,9 +40,9 @@ static value_t _str_value_from_owned(vm_t vm, string_t owned) {
   *data = owned;
   type_t t = (type_t)value_get_data(vm_get_str_type(vm));
   value_t v = value_create(alloc, t, data, true);
+  vec_push(vm_get_strings(vm), owned);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) {
-    vec_push(scope->strings, owned);
     vec_push(scope->values, v);
   }
   return v;
@@ -131,9 +131,9 @@ static value_t _str_safe_cast(vm_t vm, value_t self, type_t to) {
   string_init_t si = {.str = string_get(_str_read(self))};
   *data = (string_t)allocator_create(alloc, &g_string_class, &si);
   value_t v = value_create(alloc, to, data, true);
+  vec_push(vm_get_strings(vm), *data);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) {
-    vec_push(scope->strings, *data);
     vec_push(scope->values, v);
   }
   return v;
@@ -152,9 +152,9 @@ static value_t _const_str_safe_cast(vm_t vm, value_t self, type_t to) {
   string_init_t si = {.str = string_get(_str_read(self))};
   *data = (string_t)allocator_create(alloc, &g_string_class, &si);
   value_t v = value_create(alloc, to, data, true);
+  vec_push(vm_get_strings(vm), *data);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) {
-    vec_push(scope->strings, *data);
     vec_push(scope->values, v);
   }
   return v;
@@ -197,14 +197,13 @@ static value_t _str_assignment(vm_t vm, value_t lvalue, value_t rvalue) {
     value_set_initialized(lvalue, true);
     return create_void_value(vm);
   }
-  /* Create new string_t in scope->strings; old one is managed by scope */
+  /* Create new string_t; old one is managed by vm->strings */
   allocator_t alloc = vm_get_allocator(vm);
   string_t new_str = (string_t)allocator_create(alloc, &g_string_class,
       &(string_init_t){.str = string_get(_str_read(rvalue))});
   string_t *slot = (string_t *)value_get_data(lvalue);
   *slot = new_str;
-  scope_t scope = vm_get_current_scope(vm);
-  if (scope) vec_push(scope->strings, new_str);
+  vec_push(vm_get_strings(vm), new_str);
   value_set_initialized(lvalue, true);
   return create_void_value(vm);
 }

@@ -156,6 +156,12 @@ void vm_register_builtin_template(vm_t self, const char *name, create_instance_f
  */
 create_instance_fn_t vm_get_builtin_template(vm_t self, const char *name);
 
+/** @brief Access global cfunc/string/type tables (auto-dispose). */
+struct _vec_t;
+struct _vec_t *vm_get_cfuncs(vm_t self);
+struct _vec_t *vm_get_strings(vm_t self);
+struct _vec_t *vm_get_types(vm_t self);
+
 /* ---- Scope management ---- */
 
 /** @brief Push a child scope of current_scope. For block/for/while etc.

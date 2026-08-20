@@ -816,7 +816,7 @@ TEST_F(it_tuple_type, vm_create_tuple_type_value_registers_in_scope) {
   type_t f64t = _get_f64_type(vm);
 
   scope_t scope = vm_get_current_scope(vm);
-  size_t types_before = vec_get_size(scope->types);
+  size_t types_before = vec_get_size(vm_get_types(vm));
 
   allocator_t alloc = vm_get_allocator(vm);
   vec_init_t vi = {.auto_dispose = false};
@@ -832,8 +832,8 @@ TEST_F(it_tuple_type, vm_create_tuple_type_value_registers_in_scope) {
   EXPECT_EQ(type_get_kind((type_t)tt), TYPE_KIND_TUPLE);
   EXPECT_EQ(tuple_type_get_field_count(tt), 2u);
 
-  /* registered in scope->types */
-  EXPECT_EQ(vec_get_size(scope->types), types_before + 1);
+  /* registered in vm->types */
+  EXPECT_EQ(vec_get_size(vm_get_types(vm)), types_before + 1);
 
   vm_dispose(vm, allocator);
 }
@@ -852,17 +852,14 @@ TEST_F(it_tuple_type, type_clone_cross_scope) {
   scope_t prev = vm_set_scope(vm, inner);
   scope_t prev_root = vm_set_root_scope(vm, inner);
 
-  /* type_clone into inner scope */
-  type_t inner_type = value_type_clone(vm, (type_t)outer_tt);
+  /* types are global singletons (vm->types) — same pointer, not cloned */
+  type_t inner_type = (type_t)outer_tt;
   tuple_type_t inner_tt = (tuple_type_t)inner_type;
-  EXPECT_NE(inner_type, (type_t)outer_tt);
+  EXPECT_EQ(inner_type, (type_t)outer_tt);
   EXPECT_EQ(type_get_kind(inner_type), TYPE_KIND_TUPLE);
   EXPECT_EQ(tuple_type_get_field_count(inner_tt), 2u);
   EXPECT_EQ(type_get_kind(tuple_type_get_element_type(inner_tt, 0)), TYPE_KIND_I32);
   EXPECT_EQ(type_get_kind(tuple_type_get_element_type(inner_tt, 1)), TYPE_KIND_F64);
-
-  /* inner scope owns the cloned type */
-  EXPECT_GT(vec_get_size(inner->types), 0u);
 
   vm_set_scope(vm, prev);
   vm_set_root_scope(vm, prev_root);

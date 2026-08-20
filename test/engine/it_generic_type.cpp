@@ -147,8 +147,8 @@ protected:
     /* create generic type — node is the RHS expression (borrowed) */
     generic_type_t gt = generic_type_create(alloc(), "Array", params_vec, rhs_node);
 
-    /* register in scope->types */
-    vec_push(vm_get_current_scope(vm)->types, gt);
+    /* register in vm->types */
+    vec_push(vm_get_types(vm), gt);
 
     /* create generic value: value.type = gt, value.data = callback */
     value_t gv = value_create(alloc(), (type_t)gt,

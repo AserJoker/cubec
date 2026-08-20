@@ -27,6 +27,22 @@ static value_t _array_get_item(vm_t vm, value_t self, value_t index);
 static value_t _array_set_item(vm_t vm, value_t self, value_t index, value_t val);
 static value_t _array_slice(vm_t vm, value_t self, uint64_t start, uint64_t count);
 
+static type_t _array_type_clone(vm_t vm, type_t self) {
+  array_type_t src = (array_type_t)self;
+  allocator_t allocator = vm_get_allocator(vm);
+  array_type_t dst = (array_type_t)allocator_create(allocator, &g_array_type_class, NULL);
+  dst->base.kind    = src->base.kind;
+  dst->base.name    = cstring_clone(allocator, src->base.name);
+  dst->base.size    = src->base.size;
+  dst->base.align   = src->base.align;
+  dst->base.mut     = src->base.mut;
+  dst->base.vtable  = src->base.vtable;
+  dst->element_type = src->element_type; /* borrowed from vm->types */
+  dst->count        = src->count;
+  vec_push(vm_get_types(vm), dst);
+  return (type_t)dst;
+}
+
 /* ---- Shared vtable for all array types ---- */
 
 static vtable_t _make_array_vtable(void) {
@@ -64,6 +80,7 @@ static vtable_t _make_array_vtable(void) {
       .member_call  = NULL,
       .get_prop     = NULL,
       .set_prop     = NULL,
+      .type_clone   = _array_type_clone,
   };
 }
 
@@ -78,7 +95,7 @@ static void _array_type_init(void *self, allocator_t allocator, void *arg) {
   at->base.align  = init->align;
   at->base.mut    = init->mut;
   at->base.vtable = init->vtable;
-  at->element_type = (type_t)alloc_clone(allocator, init->element_type);
+  at->element_type = init->element_type; /* borrowed: types managed by vm->types */
   at->count        = init->count;
 }
 
@@ -86,21 +103,9 @@ static void _array_type_dispose(void *self, allocator_t allocator) {
   array_type_t at = (array_type_t)self;
   allocator_free(allocator, &at->base.name);
   at->base.name = NULL;
-  allocator_free(allocator, &at->element_type);
+  /* element_type is borrowed from vm->types — do not free */
+  at->element_type = NULL;
   at->count = 0;
-}
-
-static void _array_type_clone(void *self, allocator_t allocator, void *another) {
-  array_type_t dst = (array_type_t)self;
-  array_type_t src = (array_type_t)another;
-  dst->base.kind   = src->base.kind;
-  dst->base.name   = cstring_clone(allocator, src->base.name);
-  dst->base.size   = src->base.size;
-  dst->base.align  = src->base.align;
-  dst->base.mut    = src->base.mut;
-  dst->base.vtable = src->base.vtable;
-  dst->element_type = (type_t)alloc_clone(allocator, src->element_type);
-  dst->count        = src->count;
 }
 
 static void _array_type_move(void *self, allocator_t allocator, void *another) {
@@ -116,7 +121,7 @@ class_t g_array_type_class = {
     .name    = "cubec.engine.array_type",
     .init    = (class_init_fn_t)_array_type_init,
     .dispose = (class_dispose_fn_t)_array_type_dispose,
-    .clone   = (class_clone_fn_t)_array_type_clone,
+    .clone   = NULL, /* types are global singletons — alloc_clone aborts */
     .move    = (class_move_fn_t)_array_type_move,
 };
 
@@ -188,7 +193,7 @@ static value_t _array_clone(vm_t vm, value_t self) {
     return create_array_shadow(vm, src_at, value_is_initialized(self));
 
   /* clone array type into current scope (recursive) */
-  type_t cloned_type = value_type_clone(vm, (type_t)src_at);
+  type_t cloned_type = (type_t)src_at;
   array_type_t dst_at = (array_type_t)cloned_type;
 
   allocator_t alloc = vm_get_allocator(vm);

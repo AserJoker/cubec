@@ -7,6 +7,7 @@
 #include "engine/void_type.h"
 #include "engine/exception_type.h"
 #include "core/string.h"
+#include "core/vec.h"
 #include <string.h>
 
 type_kind_t type_get_kind(type_t self) { return self->kind; }
@@ -37,17 +38,6 @@ static void _gtype_dispose(void *self, allocator_t allocator) {
   t->name = NULL;
 }
 
-static void _gtype_clone(void *self, allocator_t allocator, void *another) {
-  type_t dst = (type_t)self;
-  type_t src = (type_t)another;
-  dst->kind   = src->kind;
-  dst->name   = cstring_clone(allocator, src->name);
-  dst->size   = src->size;
-  dst->align  = src->align;
-  dst->mut    = src->mut;
-  dst->vtable = src->vtable;
-}
-
 static void _gtype_move(void *self, allocator_t allocator, void *another) {
   (void)allocator;
   type_t dst = (type_t)self;
@@ -61,7 +51,7 @@ class_t g_type_class = {
     .name    = "cubec.engine.type",
     .init    = (class_init_fn_t)_gtype_init,
     .dispose = (class_dispose_fn_t)_gtype_dispose,
-    .clone   = (class_clone_fn_t)_gtype_clone,
+    .clone   = NULL, /* types are global singletons — alloc_clone aborts */
     .move    = (class_move_fn_t)_gtype_move,
 };
 
@@ -74,6 +64,97 @@ type_t type_create(allocator_t allocator, type_kind_t kind, const char *name,
   return (type_t)allocator_create(allocator, &g_type_class, &init);
 }
 
+type_t type_clone(vm_t vm, type_t self) {
+  if (!self || !self->vtable.type_clone)
+    return NULL;
+  return self->vtable.type_clone(vm, self);
+}
+
+/* ---- type_create_with_mut: create a variant of a type with different mut ---- */
+
+/**
+ * @brief Look up a pre-created primitive type variant from vm.
+ * For primitive types (bool, i8-i64, u8-u64, f16-f64, str, wildcard),
+ * the vm already has both mutable and const variants pre-created.
+ * @return the type_t if found, NULL if not a primitive type.
+ */
+static type_t _lookup_primitive_variant(vm_t vm, type_t src, bool mut) {
+  if (type_is_mut(src) == mut)
+    return src; /* already the requested mutability */
+
+  switch (src->kind) {
+    case TYPE_KIND_BOOL:
+      return (type_t)value_get_data(mut ? vm_get_bool_type(vm)
+                                        : vm_get_const_bool_type(vm));
+    case TYPE_KIND_I8:
+      return (type_t)value_get_data(mut ? vm_get_i8_type(vm)
+                                        : vm_get_const_i8_type(vm));
+    case TYPE_KIND_I16:
+      return (type_t)value_get_data(mut ? vm_get_i16_type(vm)
+                                        : vm_get_const_i16_type(vm));
+    case TYPE_KIND_I32:
+      return (type_t)value_get_data(mut ? vm_get_i32_type(vm)
+                                        : vm_get_const_i32_type(vm));
+    case TYPE_KIND_I64:
+      return (type_t)value_get_data(mut ? vm_get_i64_type(vm)
+                                        : vm_get_const_i64_type(vm));
+    case TYPE_KIND_U8:
+      return (type_t)value_get_data(mut ? vm_get_u8_type(vm)
+                                        : vm_get_const_u8_type(vm));
+    case TYPE_KIND_U16:
+      return (type_t)value_get_data(mut ? vm_get_u16_type(vm)
+                                        : vm_get_const_u16_type(vm));
+    case TYPE_KIND_U32:
+      return (type_t)value_get_data(mut ? vm_get_u32_type(vm)
+                                        : vm_get_const_u32_type(vm));
+    case TYPE_KIND_U64:
+      return (type_t)value_get_data(mut ? vm_get_u64_type(vm)
+                                        : vm_get_const_u64_type(vm));
+    case TYPE_KIND_F16:
+      return (type_t)value_get_data(mut ? vm_get_f16_type(vm)
+                                        : vm_get_const_f16_type(vm));
+    case TYPE_KIND_F32:
+      return (type_t)value_get_data(mut ? vm_get_f32_type(vm)
+                                        : vm_get_const_f32_type(vm));
+    case TYPE_KIND_F64:
+      return (type_t)value_get_data(mut ? vm_get_f64_type(vm)
+                                        : vm_get_const_f64_type(vm));
+    case TYPE_KIND_STR:
+      return (type_t)value_get_data(mut ? vm_get_str_type(vm)
+                                        : vm_get_const_str_type(vm));
+    case TYPE_KIND_WILDCARD:
+      return (type_t)value_get_data(mut ? vm_get_wildcard_type(vm)
+                                        : vm_get_const_wildcard_type(vm));
+    default:
+      return NULL; /* not a primitive type — caller must create a new one */
+  }
+}
+
+/**
+ * @brief Create a new type that is identical to src but with the specified
+ * mut flag. For primitive types, returns the vm's pre-created variant.
+ * For composite types, creates a new type_t with borrowed sub-type pointers.
+ *
+ * The returned type_t is registered in vm->types.
+ */
+type_t type_create_with_mut(vm_t vm, type_t src, bool mut) {
+  /* 1. same mutability — return as-is */
+  if (type_is_mut(src) == mut)
+    return src;
+
+  /* 2. primitive types: use vm's pre-created variants */
+  type_t prim = _lookup_primitive_variant(vm, src, mut);
+  if (prim)
+    return prim;
+
+  /* 3. composite types: type_clone + set mut */
+  type_t cloned = type_clone(vm, src);
+  if (!cloned)
+    return NULL;
+  cloned->mut = mut;
+  return cloned;
+}
+
 /* ---- Bootstrap type "type" vtable ---- */
 
 static value_t _type_clone(vm_t vm, value_t self) {
@@ -82,9 +163,9 @@ static value_t _type_clone(vm_t vm, value_t self) {
   type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
   type_t inner = (type_t)value_get_data(self);
   allocator_t allocator = vm_get_allocator(vm);
-  /* Clone the inner type_t via g_type_class */
-  type_t cloned_inner = (type_t)alloc_clone(allocator, inner);
-  value_t v = value_create(allocator, type_type, cloned_inner, true);
+  /* types are global singletons managed by vm->types — share the same pointer.
+   * own=false: value does not own the type_t lifecycle. */
+  value_t v = value_create(allocator, type_type, inner, false);
   scope_t scope = vm_get_current_scope(vm);
   if (scope) vec_push(scope->values, v);
   return v;
@@ -180,4 +261,3 @@ value_t create_type_value(vm_t vm, type_t type, const char *name, bool own) {
   }
   return v;
 }
-
