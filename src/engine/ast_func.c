@@ -105,6 +105,23 @@ value_t create_ast_func_value(vm_t vm, callable_type_t ct, const char *name,
   if (scope) {
     vec_push(scope->values, v);
   }
+
+  /* Register self-reference in closure_scope for recursion.
+   * Create a new value_t (own=false) with the same borrowed data.
+   * name_t.ref is a borrowing reference, so this creates no ownership
+   * cycle — the ast_func_t lifecycle is managed by vm->cfuncs.
+   * During execution the scope chain is:
+   * body → args → template → closure → root, so the function finds
+   * itself by name through closure_scope->names. */
+  if (name) {
+    value_t self_ref = value_create(alloc, (type_t)ct, af, false);
+    vec_push(closure->values, self_ref);
+    name_t self_name = name_create(closure->allocator, self_ref);
+    char *owned = cstring_clone(closure->allocator, name);
+    strmap_insert(closure->names, owned, self_name);
+    allocator_free(closure->allocator, &owned);
+  }
+
   return v;
 }
 

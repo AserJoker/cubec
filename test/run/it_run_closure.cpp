@@ -404,3 +404,68 @@ TEST_F(it_run_closure, nested_closure_capture) {
   ASSERT_TRUE(n && n->ref);
   EXPECT_EQ(*(int32_t *)value_get_data(n->ref), 35);
 }
+
+/* ==== Recursive function self-reference ==== */
+
+TEST_F(it_run_closure, recursive_factorial) {
+  /* func fact(n: i32): i32 {
+   *   if (n <= 1) { return 1; }
+   *   return n * fact(n - 1);
+   * }
+   * var result = fact(5); → 120
+   */
+  value_t v = _run_source(
+      "func fact(n: i32): i32 {\n"
+      "  if (n <= 1) { return 1; }\n"
+      "  return n * fact(n - 1);\n"
+      "}\n"
+      "var result = fact(5);\n");
+  ASSERT_FALSE(value_is_abnormal(v)) << _error_msg(v);
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "result");
+  ASSERT_TRUE(n && n->ref);
+  EXPECT_EQ(*(int32_t *)value_get_data(n->ref), 120);
+}
+
+TEST_F(it_run_closure, recursive_fibonacci) {
+  /* func fib(n: i32): i32 {
+   *   if (n <= 1) { return n; }
+   *   return fib(n - 1) + fib(n - 2);
+   * }
+   * var result = fib(7); → 13
+   */
+  value_t v = _run_source(
+      "func fib(n: i32): i32 {\n"
+      "  if (n <= 1) { return n; }\n"
+      "  return fib(n - 1) + fib(n - 2);\n"
+      "}\n"
+      "var result = fib(7);\n");
+  ASSERT_FALSE(value_is_abnormal(v)) << _error_msg(v);
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "result");
+  ASSERT_TRUE(n && n->ref);
+  EXPECT_EQ(*(int32_t *)value_get_data(n->ref), 13);
+}
+
+TEST_F(it_run_closure, recursive_generic_fibonacci) {
+  /* func fib[T](n: T): T {
+   *   if (n <= 1) { return n; }
+   *   return fib[T](n - 1) + fib[T](n - 2);
+   * }
+   * var result = fib[i32](7); → 13
+   */
+  value_t v = _run_source(
+      "func fib[T](n: T): T {\n"
+      "  if (n <= 1) { return n; }\n"
+      "  return fib[T](n - 1) + fib[T](n - 2);\n"
+      "}\n"
+      "var result = fib[i32](7);\n");
+  ASSERT_FALSE(value_is_abnormal(v)) << _error_msg(v);
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t n = scope_lookup(scope, "result");
+  ASSERT_TRUE(n && n->ref);
+  EXPECT_EQ(*(int32_t *)value_get_data(n->ref), 13);
+}

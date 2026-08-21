@@ -344,3 +344,77 @@ TEST_F(it_run_statement, compound_assign_widening_then_narrowing_rejected) {
   value_t v = _run_source("y += 10;");
   EXPECT_TRUE(value_is_abnormal(v));
 }
+
+/* ==================================================================
+ *  If statement
+ * ================================================================== */
+
+TEST_F(it_run_statement, if_true_branch) {
+  value_t x = create_i32_value(vm, 0);
+  _bind("x", x);
+
+  value_t v = _run_source("if (true) { x = 1; }");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t nx = scope_lookup(scope, "x");
+  ASSERT_NE(nx, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(nx->ref), 1);
+}
+
+TEST_F(it_run_statement, if_false_branch_skips) {
+  value_t x = create_i32_value(vm, 0);
+  _bind("x", x);
+
+  value_t v = _run_source("if (false) { x = 1; }");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t nx = scope_lookup(scope, "x");
+  ASSERT_NE(nx, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(nx->ref), 0);
+}
+
+TEST_F(it_run_statement, if_else_true) {
+  value_t x = create_i32_value(vm, 0);
+  _bind("x", x);
+
+  value_t v = _run_source("if (true) { x = 1; } else { x = 2; }");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t nx = scope_lookup(scope, "x");
+  ASSERT_NE(nx, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(nx->ref), 1);
+}
+
+TEST_F(it_run_statement, if_else_false) {
+  value_t x = create_i32_value(vm, 0);
+  _bind("x", x);
+
+  value_t v = _run_source("if (false) { x = 1; } else { x = 2; }");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t nx = scope_lookup(scope, "x");
+  ASSERT_NE(nx, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(nx->ref), 2);
+}
+
+TEST_F(it_run_statement, if_condition_must_be_bool) {
+  value_t v = _run_source("if (42) {}");
+  EXPECT_TRUE(value_is_abnormal(v));
+}
+
+TEST_F(it_run_statement, if_with_comparison_condition) {
+  value_t x = create_i32_value(vm, 5);
+  _bind("x", x);
+
+  value_t v = _run_source("if (x > 3) { x = 10; }");
+  EXPECT_EQ(type_get_kind(value_get_type(v)), TYPE_KIND_VOID);
+
+  scope_t scope = vm_get_current_scope(vm);
+  name_t nx = scope_lookup(scope, "x");
+  ASSERT_NE(nx, nullptr);
+  EXPECT_EQ(*(int32_t *)value_get_data(nx->ref), 10);
+}

@@ -219,8 +219,27 @@ value_t run_declaration_function(vm_t vm, node_t node, bool shadow) {
     /* create generic value: value.data = create_fn_instance callback.
      * vm_create_value_ref registers in scope->values but does NOT bind name
      * (name=NULL) — caller (run_statement_function) binds the name. */
-    return vm_create_value_ref(vm, (type_t)gt,
+    value_t generic_val = vm_create_value_ref(vm, (type_t)gt,
                                (const void *)create_fn_instance, NULL);
+
+    /* Register self-reference in gt->scope for recursion.
+     * Generic function instances (created by create_fn_instance) need to find
+     * the generic template in their closure_scope, not the specific instance.
+     * The gt->scope is the isolated scope that manages instance lifecycle,
+     * so we store a borrowed ref here. create_fn_instance can then bind it
+     * into each instance's closure_scope. */
+    if (name) {
+      scope_t gt_scope = generic_fn_type_get_scope(gt);
+      value_t self_ref = value_create(allocator, (type_t)gt,
+                                      (void *)create_fn_instance, false);
+      vec_push(gt_scope->values, self_ref);
+      name_t self_name = name_create(gt_scope->allocator, self_ref);
+      char *owned = cstring_clone(gt_scope->allocator, name);
+      strmap_insert(gt_scope->names, owned, self_name);
+      allocator_free(gt_scope->allocator, &owned);
+    }
+
+    return generic_val;
   }
 
   /* ---- non-generic function ---- */

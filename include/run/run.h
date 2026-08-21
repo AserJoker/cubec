@@ -77,6 +77,7 @@ value_t run_statement_declaration(vm_t vm, node_t node, bool shadow);
 value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow);
 value_t run_statement_return(vm_t vm, node_t node, bool shadow);
 value_t run_statement_function(vm_t vm, node_t node, bool shadow);
+value_t run_statement_if(vm_t vm, node_t node, bool shadow);
 
 #ifdef __cplusplus
 }

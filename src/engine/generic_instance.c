@@ -492,11 +492,14 @@ value_t create_fn_instance(vm_t vm, value_t tmpl, size_t argc, value_t *argv) {
     fn_name = string_get(((cubec_literal_identifier_t)decl->name)->value);
 
   /* 10. create ast_func_value with the template_scope.
+   *    Pass name=NULL — the instance should NOT use the generic function's
+   *    name as its own; the self-reference in closure_scope will be the
+   *    generic template value (registered in step 10c), not the instance.
    *    Pass the full declaration node (not just body) — _ast_func_exec
    *    casts af->node to cubec_declaration_function_t to extract
    *    arguments and body. */
   value_t callable_val =
-      create_ast_func_value(vm, ct, fn_name, (node_t)decl, template_scope);
+      create_ast_func_value(vm, ct, NULL, (node_t)decl, template_scope);
 
   /* 10b. bind closure captures into closure_scope */
   if (decl->captures && vec_get_size(decl->captures) > 0) {
@@ -536,6 +539,31 @@ value_t create_fn_instance(vm_t vm, value_t tmpl, size_t argc, value_t *argv) {
       }
       name_t n = name_create(closure->allocator, cloned);
       char *owned = cstring_clone(closure->allocator, cap_name);
+      strmap_insert(closure->names, owned, n);
+      allocator_free(closure->allocator, &owned);
+    }
+  }
+
+  /* 10c. Override self-reference in closure_scope with the generic template.
+   * create_ast_func_value already registered an instance callable as self-ref
+   * (type=callable_type_t), but generic function bodies need to find the
+   * generic template (type=generic_fn_type_t) so recursive calls trigger
+   * re-instantiation with potentially different type arguments.
+   * The generic template value is a global resource (lifecycle managed by
+   * vm->cfuncs), so we create a new value_t with borrowed data (own=false)
+   * instead of cloning. */
+  if (fn_name) {
+    ast_func_t af = (ast_func_t)value_get_data(callable_val);
+    scope_t closure = func_get_closure_scope((func_t)af);
+    scope_t gt_scope = generic_fn_type_get_scope(gt_fn);
+    name_t gen_name = scope_lookup(gt_scope, fn_name);
+    if (gen_name && gen_name->ref) {
+      value_t src = gen_name->ref;
+      value_t self_ref = value_create(allocator, value_get_type(src),
+                                      value_get_data(src), false);
+      vec_push(closure->values, self_ref);
+      name_t n = name_create(closure->allocator, self_ref);
+      char *owned = cstring_clone(closure->allocator, fn_name);
       strmap_insert(closure->names, owned, n);
       allocator_free(closure->allocator, &owned);
     }
