@@ -11,6 +11,7 @@
 #include "engine/callable_type.h"
 #include "engine/generic_fn_type.h"
 #include "engine/generic_param.h"
+#include "engine/enum_type.h"
 #include "engine/ast_func.h"
 #include "engine/func.h"
 #include "engine/pack_type.h"
@@ -498,4 +499,49 @@ TEST_F(it_generic_fn_type, pack_param_too_few_args) {
 
   allocator_free(alloc, &func_node);
   vm_dispose(vm, allocator);
+}
+
+/* ==================================================================
+ *  generic_param_is_value_type_allowed
+ * ================================================================== */
+
+TEST_F(it_generic_fn_type, value_param_bool_allowed) {
+  EXPECT_TRUE(generic_param_is_value_type_allowed(_get_bool_type(vm)));
+}
+
+TEST_F(it_generic_fn_type, value_param_i32_allowed) {
+  EXPECT_TRUE(generic_param_is_value_type_allowed(_get_i32_type(vm)));
+}
+
+TEST_F(it_generic_fn_type, value_param_f64_allowed) {
+  type_t f64 = (type_t)value_get_data(vm_get_f64_type(vm));
+  EXPECT_TRUE(generic_param_is_value_type_allowed(f64));
+}
+
+TEST_F(it_generic_fn_type, value_param_str_allowed) {
+  EXPECT_TRUE(generic_param_is_value_type_allowed(_get_str_type(vm)));
+}
+
+TEST_F(it_generic_fn_type, value_param_enum_with_i32_underlying_allowed) {
+  /* Create an enum with i32 underlying → should be allowed */
+  allocator_t alloc = vm_get_allocator(vm);
+  enum_type_t et = enum_type_create(alloc, "Color", _get_i32_type(vm), false, "<test>");
+  EXPECT_TRUE(generic_param_is_value_type_allowed((type_t)et));
+  allocator_free(alloc, &et);
+}
+
+TEST_F(it_generic_fn_type, value_param_type_meta_rejected) {
+  /* TYPE_KIND_TYPE (the "type" meta-type) → not allowed */
+  type_t type_type = (type_t)value_get_data(vm_get_type_type(vm));
+  EXPECT_FALSE(generic_param_is_value_type_allowed(type_type));
+}
+
+TEST_F(it_generic_fn_type, value_param_nil_rejected) {
+  /* nil type → not allowed */
+  type_t nil_type = (type_t)value_get_data(vm_get_nil_type(vm));
+  EXPECT_FALSE(generic_param_is_value_type_allowed(nil_type));
+}
+
+TEST_F(it_generic_fn_type, value_param_void_rejected) {
+  EXPECT_FALSE(generic_param_is_value_type_allowed(_get_void_type(vm)));
 }

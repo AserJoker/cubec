@@ -92,6 +92,26 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
                 pname, type_get_name(value_get_type(vt)));
           }
           param_type = (type_t)value_get_data(vt);
+
+          /* Value-type generic params only allow basic types and enum */
+          if (!generic_param_is_value_type_allowed(param_type)) {
+            if (shadow) {
+              while (vm_get_current_scope(vm) != scope_before)
+                vm_pop_scope(vm);
+              diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
+                                   node->location,
+                                   "builtin generic value param '%s' has unsupported type '%s' "
+                                   "(only bool/integer/float/str and enum are allowed)",
+                                   pname ? pname : "_", type_get_name(param_type));
+              allocator_free(allocator, &params_vec);
+              return create_void_value(vm);
+            }
+            allocator_free(allocator, &params_vec);
+            return create_exception_value(vm,
+                "builtin generic value param '%s' has unsupported type '%s' "
+                "(only bool/integer/float/str and enum are allowed)",
+                pname ? pname : "_", type_get_name(param_type));
+          }
         }
 
         /* evaluate extends constraints (borrowed type pointers) */
@@ -239,6 +259,27 @@ value_t run_statement_declaration_type(vm_t vm, node_t node, bool shadow) {
               pname, type_get_name(value_get_type(vt)));
         }
         param_type = (type_t)value_get_data(vt);
+
+        /* Value-type generic params only allow basic types (bool/integer/float/str)
+         * and enums whose underlying type is a basic type. */
+        if (!generic_param_is_value_type_allowed(param_type)) {
+          if (shadow) {
+            while (vm_get_current_scope(vm) != scope_before)
+              vm_pop_scope(vm);
+            diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
+                                 node->location,
+                                 "generic value param '%s' has unsupported type '%s' "
+                                 "(only bool/integer/float/str and enum are allowed)",
+                                 pname ? pname : "_", type_get_name(param_type));
+            allocator_free(allocator, &params_vec);
+            return create_void_value(vm);
+          }
+          allocator_free(allocator, &params_vec);
+          return create_exception_value(vm,
+              "generic value param '%s' has unsupported type '%s' "
+              "(only bool/integer/float/str and enum are allowed)",
+              pname ? pname : "_", type_get_name(param_type));
+        }
       }
 
       /* evaluate extends constraints (borrowed type pointers) */

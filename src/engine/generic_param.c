@@ -1,4 +1,5 @@
 #include "engine/generic_param.h"
+#include "engine/enum_type.h"
 #include "core/string.h"
 
 /* ---- generic_param_t class ---- */
@@ -77,6 +78,19 @@ const char *generic_param_get_name(generic_param_t self) { return self->name; }
 type_t      generic_param_get_type(generic_param_t self) { return self->type; }
 vec_t       generic_param_get_extends(generic_param_t self) { return self->extends; }
 bool        generic_param_is_rest(generic_param_t self) { return self->is_rest; }
+
+bool generic_param_is_value_type_allowed(type_t t) {
+  type_kind_t kind = type_get_kind(t);
+  if (kind == TYPE_KIND_BOOL) return true;
+  if (kind >= TYPE_KIND_I8 && kind <= TYPE_KIND_U64) return true;
+  if (kind >= TYPE_KIND_F16 && kind <= TYPE_KIND_F64) return true;
+  if (kind == TYPE_KIND_STR) return true;
+  if (kind == TYPE_KIND_ENUM) {
+    type_t underlying = enum_type_get_underlying((enum_type_t)t);
+    return generic_param_is_value_type_allowed(underlying);
+  }
+  return false;
+}
 
 /* ---- generic_instance_t class ---- */
 

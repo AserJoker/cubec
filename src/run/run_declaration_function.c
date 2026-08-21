@@ -67,6 +67,24 @@ static vec_t _build_generic_params(vm_t vm, vec_t ast_params,
         return NULL;
       }
       param_type = (type_t)value_get_data(vt);
+
+      /* Value-type generic params only allow basic types (bool/integer/float/str)
+       * and enums whose underlying type is a basic type. */
+      if (!generic_param_is_value_type_allowed(param_type)) {
+        if (shadow) {
+          while (vm_get_current_scope(vm) != scope_before)
+            vm_pop_scope(vm);
+          diagnostic_list_push(vm_get_diagnostics(vm), DIAGNOSTIC_ERROR,
+                               ast_param->super.location,
+                               "generic value param '%s' has unsupported type '%s' "
+                               "(only bool/integer/float/str and enum are allowed)",
+                               pname ? pname : "_", type_get_name(param_type));
+          allocator_free(allocator, &params_vec);
+          return NULL;
+        }
+        allocator_free(allocator, &params_vec);
+        return NULL;
+      }
     }
 
     /* evaluate extends constraints (borrowed type pointers) */

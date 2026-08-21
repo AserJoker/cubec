@@ -45,6 +45,13 @@ type_t      generic_param_get_type(generic_param_t self);
 vec_t       generic_param_get_extends(generic_param_t self);
 bool        generic_param_is_rest(generic_param_t self);
 
+/**
+ * @brief Check whether a type is allowed as a value-type generic parameter.
+ * Only basic types (bool, integer, float, str) and enums whose underlying
+ * type is a basic type are permitted. Type params (T) are unrestricted.
+ */
+bool generic_param_is_value_type_allowed(type_t t);
+
 /* ---- create_instance callback ---- */
 
 struct _vm_t;
